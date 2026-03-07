@@ -9,7 +9,7 @@ from .exceptions import UnsupportedOptionError
 from .ip import ip_compute, ip_create
 from .optics import oi_compute, oi_create
 from .scene import Scene
-from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_get, sensor_set
+from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_get, sensor_set, sensor_set_size_to_fov
 from .types import Camera, OpticalImage, Sensor
 from .utils import param_format
 
@@ -111,8 +111,12 @@ def camera_compute(
         if scene is None:
             raise ValueError("A Scene object is required when starting from scene.")
         if sensor_resize:
-            sensor = sensor_set(sensor.clone(), "size", scene.data["photons"].shape[:2])
-        oi = oi_compute(oi, scene, crop=True)
+            sensor = sensor_set_size_to_fov(
+                sensor.clone(),
+                (float(scene.fields["fov_deg"]), float(scene.fields["vfov_deg"])),
+                oi,
+            )
+        oi = oi_compute(oi, scene)
         sensor = sensor_compute(sensor, oi)
         ip = ip_compute(ip, sensor, asset_store=store)
     elif start_type == "oi":
@@ -128,4 +132,3 @@ def camera_compute(
     camera.fields["ip"] = ip
     camera.data["result"] = ip.data.get("result")
     return camera
-

@@ -99,6 +99,22 @@ def _load_d65(wave: np.ndarray, asset_store: AssetStore) -> tuple[np.ndarray, np
     return wave_nm, energy
 
 
+def _scale_energy_to_luminance(
+    energy: np.ndarray,
+    wave: np.ndarray,
+    *,
+    asset_store: AssetStore,
+    luminance_cd_m2: float = 100.0,
+) -> np.ndarray:
+    _, xyz_energy = asset_store.load_xyz(wave_nm=wave, energy=True)
+    y_bar = np.asarray(xyz_energy, dtype=float)[:, 1]
+    delta = np.mean(np.diff(wave)) if wave.size > 1 else 1.0
+    current = 683.0 * float(np.sum(np.asarray(energy, dtype=float) * y_bar * delta))
+    if current <= 0.0:
+        return np.asarray(energy, dtype=float)
+    return np.asarray(energy, dtype=float) * (float(luminance_cd_m2) / current)
+
+
 def _create_macbeth_scene(
     patch_size: int,
     wave: np.ndarray,
@@ -159,19 +175,29 @@ def _checkerboard_scene(
 ) -> Scene:
     size = 2 * pixels_per_check * number_of_checks
     yy, xx = np.indices((size, size))
-    tiles = (yy // pixels_per_check + xx // pixels_per_check) % 2
+    tiles = 1 - ((yy // pixels_per_check + xx // pixels_per_check) % 2)
     pattern = np.clip(tiles.astype(float), 1e-6, 1.0)
 
     spectral_key = param_format(spectral_type)
     if spectral_key == "d65":
         _, illuminant_energy = _load_d65(wave, asset_store)
+        illuminant_energy = _scale_energy_to_luminance(illuminant_energy, wave, asset_store=asset_store)
         illuminant_photons = energy_to_quanta(illuminant_energy, wave)
     elif spectral_key in {"ee", "equalenergy"}:
-        illuminant_energy = np.ones(wave.size, dtype=float)
+        illuminant_energy = _scale_energy_to_luminance(
+            np.ones(wave.size, dtype=float),
+            wave,
+            asset_store=asset_store,
+        )
         illuminant_photons = energy_to_quanta(illuminant_energy, wave)
     elif spectral_key in {"ep", "equalphoton", "equalphotons"}:
         illuminant_photons = np.ones(wave.size, dtype=float)
-        illuminant_energy = quanta_to_energy(illuminant_photons, wave)
+        illuminant_energy = _scale_energy_to_luminance(
+            quanta_to_energy(illuminant_photons, wave),
+            wave,
+            asset_store=asset_store,
+        )
+        illuminant_photons = energy_to_quanta(illuminant_energy, wave)
     else:
         raise UnsupportedOptionError("sceneCreate", f"checkerboard spectralType={spectral_type}")
 
@@ -184,7 +210,8 @@ def _checkerboard_scene(
     scene.fields["distance_m"] = DEFAULT_DISTANCE_M
     scene.fields["fov_deg"] = DEFAULT_FOV_DEG
     scene.data["photons"] = photons
-    return _update_scene_geometry(scene)
+    _update_scene_geometry(scene)
+    return scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
 
 
 def _slanted_bar_scene(
@@ -193,12 +220,18 @@ def _slanted_bar_scene(
     wave: np.ndarray,
     fov_deg: float,
     dark_level: float,
+    *,
+    asset_store: AssetStore,
 ) -> Scene:
     yy, xx = np.mgrid[0:image_size, 0:image_size]
     center = image_size / 2.0
     threshold = center + edge_slope * (yy - center)
     bar = np.where(xx >= threshold, 1.0, dark_level)
-    illuminant_energy = np.ones(wave.size, dtype=float)
+    illuminant_energy = _scale_energy_to_luminance(
+        np.ones(wave.size, dtype=float),
+        wave,
+        asset_store=asset_store,
+    )
     photons = bar[:, :, None] * energy_to_quanta(illuminant_energy, wave).reshape(1, 1, -1)
     scene = Scene(name="Slanted Bar")
     scene.fields["wave"] = wave
@@ -208,7 +241,8 @@ def _slanted_bar_scene(
     scene.fields["distance_m"] = DEFAULT_DISTANCE_M
     scene.fields["fov_deg"] = float(fov_deg)
     scene.data["photons"] = photons
-    return _update_scene_geometry(scene)
+    _update_scene_geometry(scene)
+    return scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
 
 
 def scene_create(scene_name: str = "default", *args: Any, asset_store: AssetStore | None = None) -> Scene:
@@ -259,7 +293,7 @@ def scene_create(scene_name: str = "default", *args: Any, asset_store: AssetStor
         fov_deg = float(args[2]) if len(args) > 2 else 2.0
         wave = _wave_or_default(args[3] if len(args) > 3 else None)
         dark_level = float(args[4]) if len(args) > 4 else 0.0
-        return _slanted_bar_scene(image_size, edge_slope, wave, fov_deg, dark_level)
+        return _slanted_bar_scene(image_size, edge_slope, wave, fov_deg, dark_level, asset_store=store)
 
     raise UnsupportedOptionError("sceneCreate", scene_name)
 

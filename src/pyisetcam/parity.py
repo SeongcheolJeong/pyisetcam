@@ -10,7 +10,7 @@ from .assets import AssetStore
 from .camera import camera_compute, camera_create
 from .display import display_create
 from .ip import ip_compute, ip_create
-from .optics import oi_compute, oi_create, wvf_create
+from .optics import oi_compute, oi_create
 from .scene import scene_adjust_illuminant, scene_create, scene_get
 from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_set
 from .utils import blackbody
@@ -67,7 +67,7 @@ def run_python_case(case_name: str, *, asset_store: AssetStore | None = None) ->
 
     if case_name == "oi_wvf_small_scene":
         scene = scene_create("checkerboard", 8, 4, asset_store=store)
-        oi = oi_compute(oi_create("wvf", wvf_create(aberration_scale=0.5)), scene, crop=True)
+        oi = oi_compute(oi_create("wvf"), scene, crop=True)
         return {"case_name": case_name, "wave": oi.fields["wave"], "photons": oi.data["photons"]}
 
     if case_name == "sensor_bayer_noiseless":

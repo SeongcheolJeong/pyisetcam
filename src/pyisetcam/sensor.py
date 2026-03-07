@@ -5,22 +5,24 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
+from scipy.interpolate import RegularGridInterpolator
+from scipy.ndimage import gaussian_filter
 
 from .assets import AssetStore
 from .exceptions import UnsupportedOptionError
 from .optics import DEFAULT_FOCAL_LENGTH_M
 from .optics import oi_get
 from .types import OpticalImage, Sensor
-from .utils import DEFAULT_WAVE, array_percentile, ensure_multiple, param_format, resample_cube, tile_pattern
+from .utils import DEFAULT_WAVE, ensure_multiple, param_format, tile_pattern
 
 _DEFAULT_PIXEL = {
     "size_m": np.array([2.8e-6, 2.8e-6], dtype=float),
     "fill_factor": 0.75,
-    "conversion_gain_v_per_electron": 1.0e-5,
+    "conversion_gain_v_per_electron": 1.0e-4,
     "voltage_swing": 1.0,
     "read_noise_v": 1.0e-3,
-    "dsnu_sigma_v": 2.0e-4,
-    "prnu_sigma": 0.01,
+    "dsnu_sigma_v": 0.0,
+    "prnu_sigma": 0.0,
 }
 
 
@@ -53,7 +55,7 @@ def _sensor_base(
             "nbits": 10,
             "noise_flag": 2,
             "auto_exposure": True,
-            "integration_time": 0.01,
+            "integration_time": 0.0,
             "quantization": "analog",
             "mosaic": True,
         }
@@ -68,10 +70,7 @@ def _filter_bundle(
     asset_store: AssetStore,
 ) -> tuple[np.ndarray, list[str]]:
     _, spectra, names = asset_store.load_color_filters(filter_name, wave_nm=wave)
-    spectra = np.asarray(spectra, dtype=float)
-    if np.max(spectra) > 0:
-        spectra = spectra / np.max(spectra)
-    return spectra, names
+    return np.asarray(spectra, dtype=float), names
 
 
 def sensor_create(
@@ -86,7 +85,7 @@ def sensor_create(
     normalized = param_format(sensor_type)
     pixel_dict = _default_pixel(pixel)
     wave = np.asarray(pixel_dict.get("wave", DEFAULT_WAVE), dtype=float)
-    size = tuple(pixel_dict.get("size", (64, 96)))
+    size = tuple(pixel_dict.get("size", (72, 88)))
 
     if normalized in {"default", "color", "bayer", "rgb", "bayergrbg", "bayer-grbg"}:
         sensor = _sensor_base("bayer-grbg", wave, size, pixel_dict)
@@ -127,7 +126,7 @@ def sensor_create_ideal(
     if pixel_size_m is not None:
         pixel["size_m"] = np.array([pixel_size_m, pixel_size_m], dtype=float)
     pixel["fill_factor"] = 1.0
-    size = sensor_example.fields["size"] if sensor_example is not None else (64, 96)
+    size = sensor_example.fields["size"] if sensor_example is not None else (72, 88)
     wave = sensor_example.fields["wave"] if sensor_example is not None else DEFAULT_WAVE.copy()
 
     if normalized in {"monochrome"}:
@@ -278,13 +277,19 @@ def sensor_set_size_to_fov(sensor: Sensor, fov: float | tuple[float, float], oi:
     if isinstance(fov, (tuple, list, np.ndarray)):
         hfov = float(fov[0])
         vfov = float(fov[1] if len(fov) > 1 else fov[0])
+        width = 2.0 * focal_length * np.tan(np.deg2rad(hfov) / 2.0)
+        height = 2.0 * focal_length * np.tan(np.deg2rad(vfov) / 2.0)
+        cols = max(2, int(round(width / pixel_size[1])))
+        rows = max(2, int(round(height / pixel_size[0])))
     else:
         hfov = float(fov)
-        vfov = float(fov)
-    width = 2.0 * focal_length * np.tan(np.deg2rad(hfov) / 2.0)
-    height = 2.0 * focal_length * np.tan(np.deg2rad(vfov) / 2.0)
-    cols = ensure_multiple(max(2, int(round(width / pixel_size[1]))), pattern_cols)
-    rows = ensure_multiple(max(2, int(round(height / pixel_size[0]))), pattern_rows)
+        width = 2.0 * focal_length * np.tan(np.deg2rad(hfov) / 2.0)
+        current_width = sensor.fields["size"][1] * pixel_size[1]
+        scale = width / max(current_width, 1e-12)
+        rows = max(2, int(round(sensor.fields["size"][0] * scale)))
+        cols = max(2, int(round(sensor.fields["size"][1] * scale)))
+    cols = ensure_multiple(cols, pattern_cols)
+    rows = ensure_multiple(rows, pattern_rows)
     sensor.fields["size"] = (rows, cols)
     return sensor
 
@@ -298,6 +303,40 @@ def _poisson_like(rng: np.random.Generator, lam: np.ndarray) -> np.ndarray:
     return np.clip(out, 0.0, None)
 
 
+def _sample_centers(count: int, spacing_m: float) -> np.ndarray:
+    return ((np.arange(count, dtype=float) + 0.5) - (count / 2.0)) * float(spacing_m)
+
+
+def _regrid_electron_rate_density(
+    density_cube: np.ndarray,
+    oi: OpticalImage,
+    sensor: Sensor,
+) -> np.ndarray:
+    oi_rows, oi_cols = density_cube.shape[:2]
+    sensor_rows, sensor_cols = sensor.fields["size"]
+    pixel_size = np.asarray(sensor.fields["pixel"]["size_m"], dtype=float)
+    oi_spacing = float(oi.fields.get("sample_spacing_m") or (oi.fields["width_m"] / max(oi_cols, 1)))
+
+    oi_y = _sample_centers(oi_rows, oi_spacing)
+    oi_x = _sample_centers(oi_cols, oi_spacing)
+    sensor_y = _sample_centers(sensor_rows, pixel_size[0])
+    sensor_x = _sample_centers(sensor_cols, pixel_size[1])
+    sensor_yy, sensor_xx = np.meshgrid(sensor_y, sensor_x, indexing="ij")
+
+    row_samples_per_pixel = max(1.0, float(np.ceil(pixel_size[0] / max(oi_spacing, 1e-12))))
+    col_samples_per_pixel = max(1.0, float(np.ceil(pixel_size[1] / max(oi_spacing, 1e-12))))
+    sigma = (row_samples_per_pixel / 4.0, col_samples_per_pixel / 4.0)
+
+    regridded = np.empty((sensor_rows, sensor_cols, density_cube.shape[2]), dtype=float)
+    for channel_index in range(density_cube.shape[2]):
+        plane = density_cube[:, :, channel_index]
+        if row_samples_per_pixel > 1.0 or col_samples_per_pixel > 1.0:
+            plane = gaussian_filter(plane, sigma=sigma, mode="nearest")
+        interpolator = RegularGridInterpolator((oi_y, oi_x), plane, bounds_error=False, fill_value=0.0)
+        regridded[:, :, channel_index] = interpolator(np.stack([sensor_yy, sensor_xx], axis=-1))
+    return regridded
+
+
 def sensor_compute(sensor: Sensor, oi: OpticalImage, show_bar: bool | None = None, *, seed: int = 0) -> Sensor:
     """Compute sensor response from an optical image."""
 
@@ -305,7 +344,6 @@ def sensor_compute(sensor: Sensor, oi: OpticalImage, show_bar: bool | None = Non
     computed = sensor.clone()
     cube = np.asarray(oi.data["photons"], dtype=float)
     rows, cols = computed.fields["size"]
-    cube = resample_cube(cube, (rows, cols))
     wave = np.asarray(computed.fields["wave"], dtype=float)
     filter_spectra = np.asarray(computed.fields["filter_spectra"], dtype=float)
     pattern = np.asarray(computed.fields["pattern"], dtype=int)
@@ -313,11 +351,20 @@ def sensor_compute(sensor: Sensor, oi: OpticalImage, show_bar: bool | None = Non
     delta_nm = np.mean(np.diff(wave)) if wave.size > 1 else 1.0
     pixel_area = float(np.prod(np.asarray(pixel["size_m"], dtype=float)) * pixel["fill_factor"])
     conversion_gain = float(pixel["conversion_gain_v_per_electron"])
-    electron_rate = np.tensordot(cube * pixel_area * delta_nm, filter_spectra, axes=([2], [0]))
+    electron_rate_density = np.tensordot(cube * delta_nm, filter_spectra, axes=([2], [0]))
+    electron_rate = _regrid_electron_rate_density(electron_rate_density, oi, computed) * pixel_area
 
     if computed.fields["auto_exposure"] or computed.fields["integration_time"] <= 0.0:
-        target_voltage = 0.9 * float(pixel["voltage_swing"])
-        reference_rate = max(array_percentile(electron_rate, 95.0), 1e-12)
+        target_voltage = 0.95 * float(pixel["voltage_swing"])
+        if computed.fields["mosaic"]:
+            preview = np.zeros((rows, cols), dtype=float)
+            tiled_pattern = tile_pattern(pattern, rows, cols)
+            for channel_index in range(electron_rate.shape[2]):
+                mask = tiled_pattern == (channel_index + 1)
+                preview[mask] = electron_rate[:, :, channel_index][mask]
+            reference_rate = max(float(np.max(preview)), 1e-12)
+        else:
+            reference_rate = max(float(np.max(electron_rate)), 1e-12)
         computed.fields["integration_time"] = target_voltage / max(reference_rate * conversion_gain, 1e-12)
 
     integration_time = float(computed.fields["integration_time"])
@@ -334,11 +381,9 @@ def sensor_compute(sensor: Sensor, oi: OpticalImage, show_bar: bool | None = Non
         volts_full += rng.normal(0.0, float(pixel["dsnu_sigma_v"]), size=volts_full.shape)
         volts_full += rng.normal(0.0, float(pixel["read_noise_v"]), size=volts_full.shape)
 
-    volts_full = np.clip(
-        volts_full * float(computed.fields["analog_gain"]) + float(computed.fields["analog_offset"]),
-        0.0,
-        float(pixel["voltage_swing"]),
-    )
+    analog_gain = float(computed.fields["analog_gain"])
+    analog_offset = float(computed.fields["analog_offset"])
+    volts_full = np.clip((volts_full + analog_offset) / max(analog_gain, 1e-12), 0.0, float(pixel["voltage_swing"]))
 
     computed.data["channel_volts"] = volts_full
 

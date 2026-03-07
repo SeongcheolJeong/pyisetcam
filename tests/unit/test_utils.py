@@ -18,9 +18,10 @@ def test_energy_quanta_round_trip() -> None:
     assert np.allclose(restored, energy)
 
 
-def test_blackbody_normalized() -> None:
+def test_blackbody_matlab_scaling() -> None:
     wave = np.arange(400.0, 701.0, 10.0)
-    spectrum = blackbody(wave, 3000.0)
-    assert spectrum.shape == wave.shape
-    assert np.isclose(np.max(spectrum), 1.0)
-
+    spectra = blackbody(wave, np.array([3000.0, 5000.0]))
+    assert spectra.shape == (wave.size, 2)
+    assert np.all(spectra > 0.0)
+    eq_index = int(np.argmin(np.abs(wave - 550.0)))
+    assert np.isclose(spectra[eq_index, 0], spectra[eq_index, 1])

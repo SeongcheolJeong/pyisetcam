@@ -14,7 +14,6 @@ from .utils import (
     apply_channelwise_gaussian,
     gaussian_sigma_pixels,
     param_format,
-    spectral_step,
 )
 
 DEFAULT_FOCAL_LENGTH_M = 0.003862755099228
@@ -50,6 +49,7 @@ def oi_create(oi_type: str = "diffraction limited", *args: Any) -> OpticalImage:
             "focal_length_m": DEFAULT_FOCAL_LENGTH_M,
             "compute_method": "opticsotf",
             "aberration_scale": 0.0,
+            "offaxis_method": "cos4th",
         }
     elif normalized in {"wvf", "shiftinvariant"}:
         wavefront = args[0] if args and isinstance(args[0], dict) else wvf_create()
@@ -60,6 +60,7 @@ def oi_create(oi_type: str = "diffraction limited", *args: Any) -> OpticalImage:
             "compute_method": "opticspsf",
             "aberration_scale": float(wavefront.get("aberration_scale", 0.35)),
             "wavefront": wavefront,
+            "offaxis_method": "cos4th",
         }
     elif normalized == "pinhole":
         optics = {
@@ -68,6 +69,7 @@ def oi_create(oi_type: str = "diffraction limited", *args: Any) -> OpticalImage:
             "focal_length_m": 1e-2,
             "compute_method": "skip",
             "aberration_scale": 0.0,
+            "offaxis_method": "skip",
         }
     elif normalized == "empty":
         optics = {
@@ -76,6 +78,7 @@ def oi_create(oi_type: str = "diffraction limited", *args: Any) -> OpticalImage:
             "focal_length_m": DEFAULT_FOCAL_LENGTH_M,
             "compute_method": "opticsotf",
             "aberration_scale": 0.0,
+            "offaxis_method": "cos4th",
         }
     else:
         raise UnsupportedOptionError("oiCreate", oi_type)
@@ -93,25 +96,127 @@ def _scene_sample_spacing(scene: Scene) -> float:
     return width / max(cols, 1)
 
 
-def _pad_scene(scene_cube: np.ndarray, pad_pixels: int, pad_value: str) -> tuple[np.ndarray, str, float]:
-    if pad_pixels <= 0:
+def _image_distance_m(optics: dict[str, Any], scene: Scene) -> float:
+    focal_length = float(optics["focal_length_m"])
+    if param_format(optics.get("model", "")) == "skip":
+        return focal_length
+    scene_distance = float(scene.fields.get("distance_m", np.inf))
+    if not np.isfinite(scene_distance) or scene_distance <= focal_length:
+        return focal_length
+    return 1.0 / max((1.0 / focal_length) - (1.0 / scene_distance), 1e-12)
+
+
+def _magnification(optics: dict[str, Any], scene: Scene) -> float:
+    if param_format(optics.get("model", "")) == "skip":
+        return -1.0
+    scene_distance = float(scene.fields.get("distance_m", np.inf))
+    if not np.isfinite(scene_distance) or scene_distance <= 0.0:
+        return 0.0
+    return -_image_distance_m(optics, scene) / scene_distance
+
+
+def _oi_geometry(optics: dict[str, Any], scene: Scene) -> tuple[float, float, float]:
+    image_distance = _image_distance_m(optics, scene)
+    hfov_deg = float(scene.fields.get("fov_deg", 10.0))
+    vfov_deg = float(scene.fields.get("vfov_deg", hfov_deg))
+    width_m = 2.0 * image_distance * np.tan(np.deg2rad(hfov_deg) / 2.0)
+    height_m = 2.0 * image_distance * np.tan(np.deg2rad(vfov_deg) / 2.0)
+    return image_distance, width_m, height_m
+
+
+def _radiance_to_irradiance(scene_cube: np.ndarray, optics: dict[str, Any], scene: Scene) -> np.ndarray:
+    f_number = float(optics["f_number"])
+    magnification = _magnification(optics, scene)
+    scale = np.pi / (1.0 + 4.0 * (f_number**2) * ((1.0 + abs(magnification)) ** 2))
+    return np.asarray(scene_cube, dtype=float) * scale
+
+
+def _cos4th_factor(rows: int, cols: int, optics: dict[str, Any], scene: Scene) -> np.ndarray:
+    image_distance, width_m, height_m = _oi_geometry(optics, scene)
+    x = np.linspace(-width_m / 2.0 + width_m / (2.0 * cols), width_m / 2.0 - width_m / (2.0 * cols), cols)
+    y = np.linspace(-height_m / 2.0 + height_m / (2.0 * rows), height_m / 2.0 - height_m / (2.0 * rows), rows)
+    xx, yy = np.meshgrid(x, y)
+    s_factor = np.sqrt(image_distance**2 + xx**2 + yy**2)
+    image_diagonal = np.sqrt(width_m**2 + height_m**2)
+    if image_distance > 10.0 * image_diagonal:
+        return (image_distance / np.maximum(s_factor, 1e-12)) ** 4
+
+    magnification = _magnification(optics, scene)
+    cos_phi = image_distance / np.maximum(s_factor, 1e-12)
+    sin_phi = np.sqrt(np.clip(1.0 - cos_phi**2, 0.0, None))
+    tan_phi = sin_phi / np.maximum(cos_phi, 1e-12)
+
+    f_number = float(optics["f_number"])
+    sin_theta = 1.0 / (1.0 + 4.0 * (f_number * (1.0 - magnification)) ** 2)
+    cos_theta = np.sqrt(max(1e-12, 1.0 - sin_theta**2))
+    tan_theta = sin_theta / cos_theta
+    numerator = 1.0 - tan_theta**2 + tan_phi**2
+    denominator = np.sqrt(tan_phi**4 + 2.0 * tan_phi**2 * (1.0 - tan_theta**2) + 1.0 / (cos_theta**4))
+    spatial_fall = (np.pi / 2.0) * (1.0 - numerator / np.maximum(denominator, 1e-12))
+    return spatial_fall / max(np.pi * (sin_theta**2), 1e-12)
+
+
+def _pad_scene(
+    scene_cube: np.ndarray,
+    pad_pixels: tuple[int, int],
+    pad_value: str,
+) -> tuple[np.ndarray, str, float]:
+    pad_rows, pad_cols = int(pad_pixels[0]), int(pad_pixels[1])
+    if pad_rows <= 0 and pad_cols <= 0:
         return scene_cube, "nearest", 0.0
     mode = param_format(pad_value)
     if mode == "zero":
-        return np.pad(scene_cube, ((pad_pixels, pad_pixels), (pad_pixels, pad_pixels), (0, 0))), "constant", 0.0
+        return np.pad(scene_cube, ((pad_rows, pad_rows), (pad_cols, pad_cols), (0, 0))), "constant", 0.0
     if mode == "border":
-        return np.pad(scene_cube, ((pad_pixels, pad_pixels), (pad_pixels, pad_pixels), (0, 0)), mode="edge"), "nearest", 0.0
+        return np.pad(scene_cube, ((pad_rows, pad_rows), (pad_cols, pad_cols), (0, 0)), mode="edge"), "nearest", 0.0
     if mode == "mean":
         padded = np.empty(
-            (scene_cube.shape[0] + 2 * pad_pixels, scene_cube.shape[1] + 2 * pad_pixels, scene_cube.shape[2]),
+            (scene_cube.shape[0] + 2 * pad_rows, scene_cube.shape[1] + 2 * pad_cols, scene_cube.shape[2]),
             dtype=float,
         )
         band_means = scene_cube.mean(axis=(0, 1))
+        row_slice = slice(pad_rows, None if pad_rows == 0 else -pad_rows)
+        col_slice = slice(pad_cols, None if pad_cols == 0 else -pad_cols)
         for band_index, mean_value in enumerate(band_means):
             padded[:, :, band_index] = mean_value
-            padded[pad_pixels:-pad_pixels, pad_pixels:-pad_pixels, band_index] = scene_cube[:, :, band_index]
+            padded[row_slice, col_slice, band_index] = scene_cube[:, :, band_index]
         return padded, "constant", float(np.mean(band_means))
     raise UnsupportedOptionError("oiCompute", pad_value)
+
+
+def _diffraction_otf(
+    shape: tuple[int, int],
+    sample_spacing_m: float,
+    wave: np.ndarray,
+    optics: dict[str, Any],
+    scene: Scene,
+) -> np.ndarray:
+    rows, cols = shape
+    fy = np.fft.fftfreq(rows, d=sample_spacing_m)
+    fx = np.fft.fftfreq(cols, d=sample_spacing_m)
+    rho = np.sqrt(fy[:, None] ** 2 + fx[None, :] ** 2)
+
+    aperture_diameter = float(optics["focal_length_m"]) / max(float(optics["f_number"]), 1e-12)
+    focal_plane_distance = _image_distance_m(optics, scene)
+    wavelengths_m = np.asarray(wave, dtype=float) * 1e-9
+    cutoff = (aperture_diameter / max(focal_plane_distance, 1e-12)) / np.maximum(wavelengths_m, 1e-12)
+
+    otf = np.zeros((rows, cols, wavelengths_m.size), dtype=float)
+    for index, cutoff_frequency in enumerate(cutoff):
+        normalized = rho / max(float(cutoff_frequency), 1e-12)
+        clipped = np.clip(normalized, 0.0, 1.0)
+        current = (2.0 / np.pi) * (np.arccos(clipped) - clipped * np.sqrt(1.0 - clipped**2))
+        current[normalized >= 1.0] = 0.0
+        otf[:, :, index] = current
+    return otf
+
+
+def _apply_otf(cube: np.ndarray, otf: np.ndarray) -> np.ndarray:
+    result = np.empty_like(cube, dtype=float)
+    for band_index in range(cube.shape[2]):
+        filtered = np.fft.ifft2(np.fft.fft2(cube[:, :, band_index]) * otf[:, :, band_index])
+        result[:, :, band_index] = np.abs(filtered)
+    return result
 
 
 def oi_compute(
@@ -127,9 +232,13 @@ def oi_compute(
 
     del args, aperture
     optics = dict(oi.fields["optics"])
-    photons = np.asarray(scene.data["photons"], dtype=float)
+    scene_photons = np.asarray(scene.data["photons"], dtype=float)
     wave = np.asarray(scene.fields["wave"], dtype=float)
-    sample_spacing_m = _scene_sample_spacing(scene)
+    image_distance_m, width_m, height_m = _oi_geometry(optics, scene)
+    sample_spacing_m = width_m / max(scene_photons.shape[1], 1)
+    photons = _radiance_to_irradiance(scene_photons, optics, scene)
+    if param_format(optics.get("offaxis_method", "cos4th")) == "cos4th":
+        photons = photons * _cos4th_factor(photons.shape[0], photons.shape[1], optics, scene)[:, :, None]
     extra_blur = float(optics.get("aberration_scale", 0.0))
     sigmas = np.array(
         [
@@ -144,12 +253,22 @@ def oi_compute(
         dtype=float,
     )
 
-    pad_pixels = int(np.ceil(max(float(sigmas.max()) * 3.0, 0.0))) if sigmas.size else 0
+    pad_pixels = (
+        int(np.round(scene_photons.shape[0] / 8.0)),
+        int(np.round(scene_photons.shape[1] / 8.0)),
+    )
     padded, blur_mode, blur_cval = _pad_scene(photons, pad_pixels, pad_value)
-    blurred = apply_channelwise_gaussian(padded, sigmas, mode=blur_mode, cval=blur_cval)
+    if param_format(optics.get("model", "")) in {"diffractionlimited", "skip"}:
+        otf = _diffraction_otf(padded.shape[:2], sample_spacing_m, wave, optics, scene)
+        blurred = _apply_otf(padded, otf)
+    else:
+        blurred = apply_channelwise_gaussian(padded, sigmas, mode=blur_mode, cval=blur_cval)
 
-    if crop and pad_pixels > 0:
-        result = blurred[pad_pixels:-pad_pixels, pad_pixels:-pad_pixels, :]
+    pad_rows, pad_cols = pad_pixels
+    if crop and (pad_rows > 0 or pad_cols > 0):
+        row_slice = slice(pad_rows, None if pad_rows == 0 else -pad_rows)
+        col_slice = slice(pad_cols, None if pad_cols == 0 else -pad_cols)
+        result = blurred[row_slice, col_slice, :]
     else:
         result = blurred
 
@@ -166,6 +285,9 @@ def oi_compute(
     computed.fields["crop"] = bool(crop)
     computed.fields["padding_pixels"] = pad_pixels
     computed.fields["sample_spacing_m"] = sample_spacing_m
+    computed.fields["image_distance_m"] = image_distance_m
+    computed.fields["width_m"] = width_m
+    computed.fields["height_m"] = height_m
     computed.data["photons"] = result
     return computed
 
@@ -209,4 +331,3 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any) -> OpticalImage:
         oi.fields["optics"]["f_number"] = float(value)
         return oi
     raise KeyError(f"Unsupported oiSet parameter: {parameter}")
-
