@@ -109,6 +109,48 @@ def test_sensor_compute_noiseless(asset_store) -> None:
     assert np.all(sensor.data["volts"] >= 0.0)
 
 
+def test_sensor_set_integration_time_disables_auto_exposure(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "auto exposure", True)
+    sensor = sensor_set(sensor, "integration time", 0.125)
+    assert sensor.fields["auto_exposure"] is False
+    assert np.isclose(sensor.fields["integration_time"], 0.125)
+
+
+def test_sensor_noise_flag_one_includes_fpn(asset_store) -> None:
+    scene = scene_create("uniform ee", 16, asset_store=asset_store)
+    oi = oi_compute(oi_create(), scene, crop=True)
+    oi.data["photons"][:] = 0.0
+
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "integration time", 1.0)
+    sensor = sensor_set(sensor, "noise flag", 1)
+    sensor.fields["pixel"]["dark_voltage_v_per_sec"] = 0.0
+    sensor.fields["pixel"]["read_noise_v"] = 0.0
+    sensor.fields["pixel"]["dsnu_sigma_v"] = 0.01
+    sensor.fields["pixel"]["prnu_sigma"] = 0.0
+
+    noisy = sensor_compute(sensor, oi, seed=0)
+    assert np.any(noisy.data["volts"] > 0.0)
+
+
+def test_sensor_noise_flag_minus_two_keeps_zero_signal_zero(asset_store) -> None:
+    scene = scene_create("uniform ee", 16, asset_store=asset_store)
+    oi = oi_compute(oi_create(), scene, crop=True)
+    oi.data["photons"][:] = 0.0
+
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "integration time", 1.0)
+    sensor = sensor_set(sensor, "noise flag", -2)
+    sensor.fields["pixel"]["dark_voltage_v_per_sec"] = 0.1
+    sensor.fields["pixel"]["read_noise_v"] = 0.0
+    sensor.fields["pixel"]["dsnu_sigma_v"] = 0.01
+    sensor.fields["pixel"]["prnu_sigma"] = 0.25
+
+    noisy = sensor_compute(sensor, oi, seed=0)
+    assert np.allclose(noisy.data["volts"], 0.0)
+
+
 def test_ip_compute_default_pipeline(asset_store) -> None:
     scene = scene_create(asset_store=asset_store)
     oi = oi_compute(oi_create(), scene, crop=True)

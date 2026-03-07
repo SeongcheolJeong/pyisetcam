@@ -21,6 +21,7 @@ _DEFAULT_PIXEL = {
     "fill_factor": 0.75,
     "conversion_gain_v_per_electron": 1.0e-4,
     "voltage_swing": 1.0,
+    "dark_voltage_v_per_sec": 1.0e-3,
     "read_noise_v": 1.0e-3,
     "dsnu_sigma_v": 0.0,
     "prnu_sigma": 0.0,
@@ -135,6 +136,9 @@ def sensor_create_ideal(
         sensor.fields["pattern"] = np.array([[1]], dtype=int)
         sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle("monochrome", np.asarray(wave, dtype=float), asset_store=store)
         sensor.fields["noise_flag"] = 0
+        sensor.fields["pixel"]["dark_voltage_v_per_sec"] = 0.0
+        sensor.fields["pixel"]["read_noise_v"] = 0.0
+        sensor.fields["pixel"]["voltage_swing"] = 1e6
         return sensor
 
     if normalized in {"xyz", "matchxyz"}:
@@ -143,6 +147,9 @@ def sensor_create_ideal(
         sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle("xyz", np.asarray(wave, dtype=float), asset_store=store)
         sensor.fields["noise_flag"] = 0
         sensor.fields["mosaic"] = False
+        sensor.fields["pixel"]["dark_voltage_v_per_sec"] = 0.0
+        sensor.fields["pixel"]["read_noise_v"] = 0.0
+        sensor.fields["pixel"]["voltage_swing"] = 1e6
         return sensor
 
     if normalized == "match" and sensor_example is not None:
@@ -220,13 +227,13 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return 0.0
     if key in {"fovhorizontal", "fov"}:
         oi = args[1] if len(args) >= 2 else args[0] if args else None
-        focal_length = DEFAULT_FOCAL_LENGTH_M if oi is None else float(oi_get(oi, "focal length"))
+        focal_length = DEFAULT_FOCAL_LENGTH_M if oi is None else float(oi.fields.get("image_distance_m", oi_get(oi, "focal length")))
         pixel_size = np.asarray(sensor.fields["pixel"]["size_m"], dtype=float)
         width = sensor.fields["size"][1] * pixel_size[1]
         return float(np.rad2deg(2.0 * np.arctan2(width / 2.0, focal_length)))
     if key in {"fovvertical", "vfov"}:
         oi = args[1] if len(args) >= 2 else args[0] if args else None
-        focal_length = DEFAULT_FOCAL_LENGTH_M if oi is None else float(oi_get(oi, "focal length"))
+        focal_length = DEFAULT_FOCAL_LENGTH_M if oi is None else float(oi.fields.get("image_distance_m", oi_get(oi, "focal length")))
         pixel_size = np.asarray(sensor.fields["pixel"]["size_m"], dtype=float)
         height = sensor.fields["size"][0] * pixel_size[0]
         return float(np.rad2deg(2.0 * np.arctan2(height / 2.0, focal_length)))
@@ -261,9 +268,13 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         return sensor
     if key in {"integrationtime", "exptime"}:
         sensor.fields["integration_time"] = float(value)
+        sensor.fields["auto_exposure"] = False
         return sensor
     if key == "autoexposure":
-        sensor.fields["auto_exposure"] = bool(value)
+        enabled = bool(value)
+        sensor.fields["auto_exposure"] = enabled
+        if enabled:
+            sensor.fields["integration_time"] = 0.0
         return sensor
     if key == "analoggain":
         sensor.fields["analog_gain"] = float(value)
@@ -308,13 +319,43 @@ def sensor_set_size_to_fov(sensor: Sensor, fov: float | tuple[float, float], oi:
     return sensor
 
 
-def _poisson_like(rng: np.random.Generator, lam: np.ndarray) -> np.ndarray:
-    lam = np.clip(np.asarray(lam, dtype=float), 0.0, None)
-    out = np.empty_like(lam, dtype=float)
-    low = lam < 1e6
-    out[low] = rng.poisson(lam[low])
-    out[~low] = rng.normal(lam[~low], np.sqrt(lam[~low]))
-    return np.clip(out, 0.0, None)
+def _shot_noise_electrons(rng: np.random.Generator, electrons: np.ndarray) -> np.ndarray:
+    electrons = np.asarray(electrons, dtype=float)
+    clipped = np.clip(electrons, 0.0, None)
+    noisy = clipped + (np.sqrt(clipped) * rng.standard_normal(clipped.shape))
+    low_count = clipped < 25.0
+    if np.any(low_count):
+        noisy[low_count] = rng.poisson(clipped[low_count])
+    return np.rint(noisy)
+
+
+def _pixel_plane(volume: np.ndarray, values: np.ndarray) -> np.ndarray:
+    plane = np.asarray(values, dtype=float)
+    if np.asarray(volume).ndim == 2:
+        return plane
+    return plane[:, :, np.newaxis]
+
+
+def _apply_read_noise(rng: np.random.Generator, volts: np.ndarray, sigma_v: float) -> np.ndarray:
+    if sigma_v <= 0.0:
+        return volts
+    return volts + _pixel_plane(volts, rng.normal(0.0, sigma_v, size=volts.shape[:2]))
+
+
+def _apply_fixed_pattern_noise(
+    rng: np.random.Generator,
+    volts: np.ndarray,
+    *,
+    dsnu_sigma_v: float,
+    prnu_sigma: float,
+    integration_time: float,
+    auto_exposure: bool,
+) -> np.ndarray:
+    dsnu = _pixel_plane(volts, rng.normal(0.0, dsnu_sigma_v, size=volts.shape[:2]))
+    if np.isclose(integration_time, 0.0) and not auto_exposure:
+        return dsnu
+    prnu = _pixel_plane(volts, 1.0 + rng.normal(0.0, prnu_sigma, size=volts.shape[:2]))
+    return (volts * prnu) + dsnu
 
 
 def _sample_centers(count: int, spacing_m: float) -> np.ndarray:
@@ -435,30 +476,39 @@ def sensor_compute(sensor: Sensor, oi: OpticalImage, show_bar: bool | None = Non
     rng = np.random.default_rng(seed)
     noise_flag = int(computed.fields["noise_flag"])
 
-    if noise_flag in {1, 2}:
-        electrons = _poisson_like(rng, electrons)
-
     volts_full = electrons * conversion_gain
-    if noise_flag == 2:
-        volts_full *= 1.0 + rng.normal(0.0, float(pixel["prnu_sigma"]), size=volts_full.shape)
-        volts_full += rng.normal(0.0, float(pixel["dsnu_sigma_v"]), size=volts_full.shape)
-        volts_full += rng.normal(0.0, float(pixel["read_noise_v"]), size=volts_full.shape)
-
-    analog_gain = float(computed.fields["analog_gain"])
-    analog_offset = float(computed.fields["analog_offset"])
-    volts_full = np.clip((volts_full + analog_offset) / max(analog_gain, 1e-12), 0.0, float(pixel["voltage_swing"]))
-
-    computed.data["channel_volts"] = volts_full
+    computed.data["channel_volts"] = volts_full.copy()
 
     if computed.fields["mosaic"]:
         tiled_pattern = tile_pattern(pattern, rows, cols)
-        mosaic = np.zeros((rows, cols), dtype=float)
+        volts = np.zeros((rows, cols), dtype=float)
         for channel_index in range(volts_full.shape[2]):
             mask = tiled_pattern == (channel_index + 1)
-            mosaic[mask] = volts_full[:, :, channel_index][mask]
-        computed.data["volts"] = mosaic
+            volts[mask] = volts_full[:, :, channel_index][mask]
     else:
-        computed.data["volts"] = volts_full
+        volts = volts_full.copy()
+
+    if noise_flag in {1, 2, -2}:
+        if noise_flag == 2:
+            volts = volts + (float(pixel["dark_voltage_v_per_sec"]) * integration_time)
+        volts = _shot_noise_electrons(rng, volts / max(conversion_gain, 1e-12)) * conversion_gain
+        if noise_flag == 2:
+            volts = _apply_read_noise(rng, volts, float(pixel["read_noise_v"]))
+        if noise_flag in {1, 2}:
+            volts = _apply_fixed_pattern_noise(
+                rng,
+                volts,
+                dsnu_sigma_v=float(pixel["dsnu_sigma_v"]),
+                prnu_sigma=float(pixel["prnu_sigma"]),
+                integration_time=integration_time,
+                auto_exposure=bool(computed.fields["auto_exposure"]),
+            )
+    elif noise_flag not in {0, -1}:
+        raise UnsupportedOptionError("sensorCompute", f"noise flag {noise_flag}")
+
+    analog_gain = float(computed.fields["analog_gain"])
+    analog_offset = float(computed.fields["analog_offset"])
+    computed.data["volts"] = np.clip((volts + analog_offset) / max(analog_gain, 1e-12), 0.0, float(pixel["voltage_swing"]))
 
     if param_format(computed.fields["quantization"]) != "analog":
         nbits = int(computed.fields["nbits"])
