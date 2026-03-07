@@ -116,6 +116,9 @@ def oi_create(oi_type: str = "diffraction limited", *args: Any) -> OpticalImage:
 
     oi.fields["optics"] = optics
     oi.fields["wave"] = np.asarray(args[1], dtype=float) if len(args) > 1 else DEFAULT_WAVE.copy()
+    oi.fields["compute_method"] = optics["compute_method"]
+    oi.fields["diffuser_method"] = "skip"
+    oi.fields["diffuser_blur_m"] = 2e-6
     oi.fields["sample_spacing_m"] = None
     oi.data["photons"] = np.empty((0, 0, 0), dtype=float)
     return oi
@@ -498,6 +501,7 @@ def oi_compute(
     computed = oi.clone()
     computed.name = scene.name
     computed.fields["wave"] = wave
+    computed.fields["compute_method"] = optics.get("compute_method", computed.fields.get("compute_method", "opticsotf"))
     computed.fields["pad_value"] = pad_value
     computed.fields["crop"] = bool(crop)
     computed.fields["padding_pixels"] = pad_pixels
@@ -511,24 +515,170 @@ def oi_compute(
     return computed
 
 
+def _oi_shape(oi: OpticalImage) -> tuple[int, int]:
+    photons = np.asarray(oi.data.get("photons", np.empty((0, 0, 0))), dtype=float)
+    if photons.ndim >= 2:
+        return int(photons.shape[0]), int(photons.shape[1])
+    return int(oi.fields.get("rows", 0)), int(oi.fields.get("cols", 0))
+
+
+def _oi_image_distance_m(oi: OpticalImage) -> float:
+    if oi.fields.get("image_distance_m") is not None:
+        return float(oi.fields["image_distance_m"])
+    return float(oi.fields["optics"]["focal_length_m"])
+
+
+def _oi_width_m(oi: OpticalImage) -> float:
+    rows, cols = _oi_shape(oi)
+    if oi.fields.get("width_m") is not None:
+        return float(oi.fields["width_m"])
+    image_distance = _oi_image_distance_m(oi)
+    fov_deg = float(oi.fields.get("fov_deg", 10.0))
+    width_m = 2.0 * image_distance * np.tan(np.deg2rad(fov_deg) / 2.0)
+    if cols > 0 and rows > 0:
+        return float(width_m)
+    return float(width_m)
+
+
+def _oi_height_m(oi: OpticalImage) -> float:
+    rows, cols = _oi_shape(oi)
+    if oi.fields.get("height_m") is not None:
+        return float(oi.fields["height_m"])
+    width_m = _oi_width_m(oi)
+    if rows > 0 and cols > 0:
+        return float(width_m * rows / max(cols, 1))
+    image_distance = _oi_image_distance_m(oi)
+    vfov_deg = float(oi.fields.get("vfov_deg", oi.fields.get("fov_deg", 10.0)))
+    return float(2.0 * image_distance * np.tan(np.deg2rad(vfov_deg) / 2.0))
+
+
+def _oi_sample_size_m(oi: OpticalImage) -> float | None:
+    sample_spacing = oi.fields.get("sample_spacing_m")
+    if sample_spacing is not None:
+        return float(sample_spacing)
+    _, cols = _oi_shape(oi)
+    if cols <= 0:
+        return None
+    return float(_oi_width_m(oi) / cols)
+
+
+def _sync_oi_geometry_fields(oi: OpticalImage) -> None:
+    rows, cols = _oi_shape(oi)
+    oi.fields["rows"] = rows
+    oi.fields["cols"] = cols
+    if rows <= 0 or cols <= 0:
+        return
+
+    image_distance = _oi_image_distance_m(oi)
+    fov_deg = float(oi.fields.get("fov_deg", 10.0))
+    width_m = 2.0 * image_distance * np.tan(np.deg2rad(fov_deg) / 2.0)
+    sample_spacing_m = width_m / cols
+    height_m = sample_spacing_m * rows
+    vfov_deg = float(np.rad2deg(2.0 * np.arctan2(height_m / 2.0, image_distance)))
+
+    oi.fields["image_distance_m"] = image_distance
+    oi.fields["width_m"] = float(width_m)
+    oi.fields["height_m"] = float(height_m)
+    oi.fields["sample_spacing_m"] = float(sample_spacing_m)
+    oi.fields["vfov_deg"] = vfov_deg
+
+
 def oi_get(oi: OpticalImage, parameter: str) -> Any:
     key = param_format(parameter)
     if key == "type":
         return oi.type
     if key == "name":
         return oi.name
+    if key == "metadata":
+        return oi.metadata
     if key == "wave":
         return np.asarray(oi.fields["wave"], dtype=float)
     if key == "photons":
         return np.asarray(oi.data["photons"], dtype=float)
+    if key == "rows":
+        return _oi_shape(oi)[0]
+    if key == "cols":
+        return _oi_shape(oi)[1]
+    if key == "size":
+        return _oi_shape(oi)
+    if key in {"imagedistance", "focalplanedistance", "distance"}:
+        return _oi_image_distance_m(oi)
+    if key in {"wangular", "widthangular", "hfov", "horizontalfieldofview", "fov"}:
+        return float(oi.fields.get("fov_deg", 10.0))
+    if key in {"hangular", "heightangular", "vfov", "verticalfieldofview"}:
+        return float(oi.fields.get("vfov_deg", oi.fields.get("fov_deg", 10.0)))
+    if key == "width":
+        return _oi_width_m(oi)
+    if key == "height":
+        return _oi_height_m(oi)
+    if key in {"diagonal", "diagonalsize"}:
+        return float(np.hypot(_oi_height_m(oi), _oi_width_m(oi)))
+    if key in {"heightwidth", "heightandwidth"}:
+        return np.array([_oi_height_m(oi), _oi_width_m(oi)], dtype=float)
+    if key in {"samplespacing", "sample spacing"}:
+        rows, cols = _oi_shape(oi)
+        width_spacing = 0.0 if cols <= 0 else _oi_width_m(oi) / cols
+        height_spacing = 0.0 if rows <= 0 else _oi_height_m(oi) / rows
+        return np.array([width_spacing, height_spacing], dtype=float)
+    if key in {"samplesize"}:
+        return _oi_sample_size_m(oi)
+    if key in {"hspatialresolution", "heightspatialresolution", "hres"}:
+        rows, _ = _oi_shape(oi)
+        return 0.0 if rows <= 0 else float(_oi_height_m(oi) / rows)
+    if key in {"wspatialresolution", "widthspatialresolution", "wres"}:
+        _, cols = _oi_shape(oi)
+        return 0.0 if cols <= 0 else float(_oi_width_m(oi) / cols)
+    if key in {"spatialresolution", "distancepersample", "distpersamp"}:
+        return np.array(
+            [
+                oi_get(oi, "hspatialresolution"),
+                oi_get(oi, "wspatialresolution"),
+            ],
+            dtype=float,
+        )
+    if key in {"distanceperdegree", "distperdeg"}:
+        fov_deg = float(oi.fields.get("fov_deg", 10.0))
+        return _oi_width_m(oi) / max(fov_deg, 1e-12)
+    if key in {"degreesperdistance", "degperdist"}:
+        return 1.0 / max(float(oi_get(oi, "distanceperdegree")), 1e-12)
+    if key in {"hangularresolution", "heightangularresolution"}:
+        spatial = float(oi_get(oi, "hspatialresolution"))
+        image_distance = _oi_image_distance_m(oi)
+        return float(np.rad2deg(2.0 * np.arctan((spatial / image_distance) / 2.0)))
+    if key in {"wangularresolution", "widthangularresolution"}:
+        spatial = float(oi_get(oi, "wspatialresolution"))
+        image_distance = _oi_image_distance_m(oi)
+        return float(np.rad2deg(2.0 * np.arctan((spatial / image_distance) / 2.0)))
+    if key in {"angularresolution", "degperpixel", "degpersample", "degreepersample", "degreeperpixel"}:
+        return np.array(
+            [
+                oi_get(oi, "hangularresolution"),
+                oi_get(oi, "wangularresolution"),
+            ],
+            dtype=float,
+        )
+    if key == "optics":
+        return oi.fields["optics"]
     if key in {"focallength", "opticsfocallength"}:
         return float(oi.fields["optics"]["focal_length_m"])
     if key in {"fnumber", "opticsfnumber"}:
         return float(oi.fields["optics"]["f_number"])
     if key in {"opticsmodel", "model"}:
         return oi.fields["optics"]["model"]
-    if key == "samplespacing":
-        return oi.fields["sample_spacing_m"]
+    if key in {"computemethod"}:
+        return oi.fields["optics"].get("compute_method", oi.fields.get("compute_method"))
+    if key in {"diffusermethod"}:
+        return oi.fields.get("diffuser_method", "skip")
+    if key in {"diffuserblur"}:
+        return float(oi.fields.get("diffuser_blur_m", 0.0))
+    if key in {"offaxismethod", "opticsoffaxismethod"}:
+        return oi.fields["optics"].get("offaxis_method", "cos4th")
+    if key in {"crop"}:
+        return bool(oi.fields.get("crop", False))
+    if key in {"padvalue"}:
+        return oi.fields.get("pad_value", "zero")
+    if key in {"paddingpixels"}:
+        return tuple(oi.fields.get("padding_pixels", (0, 0)))
     raise KeyError(f"Unsupported oiGet parameter: {parameter}")
 
 
@@ -542,11 +692,50 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any) -> OpticalImage:
         return oi
     if key == "photons":
         oi.data["photons"] = np.asarray(value, dtype=float)
+        _sync_oi_geometry_fields(oi)
+        return oi
+    if key in {"wangular", "widthangular", "hfov", "horizontalfieldofview", "fov"}:
+        oi.fields["fov_deg"] = float(value)
+        _sync_oi_geometry_fields(oi)
+        return oi
+    if key in {"hangular", "heightangular", "vfov", "verticalfieldofview"}:
+        oi.fields["vfov_deg"] = float(value)
+        return oi
+    if key in {"imagedistance", "focalplanedistance", "distance"}:
+        oi.fields["image_distance_m"] = float(value)
+        _sync_oi_geometry_fields(oi)
+        return oi
+    if key == "optics":
+        oi.fields["optics"] = dict(value)
+        oi.fields["compute_method"] = oi.fields["optics"].get("compute_method", oi.fields.get("compute_method"))
+        _sync_oi_geometry_fields(oi)
         return oi
     if key in {"focallength", "opticsfocallength"}:
         oi.fields["optics"]["focal_length_m"] = float(value)
+        if oi.fields.get("image_distance_m") is None:
+            oi.fields["image_distance_m"] = float(value)
+        _sync_oi_geometry_fields(oi)
         return oi
     if key in {"fnumber", "opticsfnumber"}:
         oi.fields["optics"]["f_number"] = float(value)
+        return oi
+    if key in {"opticsmodel", "model"}:
+        oi.fields["optics"]["model"] = str(value)
+        return oi
+    if key in {"computemethod"}:
+        oi.fields["compute_method"] = str(value)
+        oi.fields["optics"]["compute_method"] = str(value)
+        return oi
+    if key in {"diffusermethod"}:
+        oi.fields["diffuser_method"] = str(value)
+        return oi
+    if key in {"diffuserblur"}:
+        oi.fields["diffuser_blur_m"] = float(value)
+        return oi
+    if key in {"offaxismethod", "opticsoffaxismethod"}:
+        oi.fields["optics"]["offaxis_method"] = str(value)
+        return oi
+    if key == "opticswvf":
+        oi.fields["optics"]["wavefront"] = dict(value)
         return oi
     raise KeyError(f"Unsupported oiSet parameter: {parameter}")

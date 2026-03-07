@@ -9,6 +9,8 @@ from pyisetcam import (
     ip_create,
     oi_compute,
     oi_create,
+    oi_get,
+    oi_set,
     run_python_case,
     scene_create,
     sensor_compute,
@@ -47,6 +49,44 @@ def test_oi_compute_crop_matches_matlab_crop_geometry(asset_store) -> None:
         oi_uncropped.fields["sample_spacing_m"] * expected_scale,
     )
     assert oi_cropped.data["photons"].shape[:2] == scene.data["photons"].shape[:2]
+
+
+def test_oi_get_reports_matlab_style_geometry_vectors(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    oi = oi_compute(oi_create(), scene, crop=True)
+
+    rows, cols = oi.data["photons"].shape[:2]
+    sample_spacing = oi_get(oi, "sample spacing")
+    spatial_resolution = oi_get(oi, "distance per sample")
+    angular_resolution = oi_get(oi, "angular resolution")
+
+    assert oi_get(oi, "rows") == rows
+    assert oi_get(oi, "cols") == cols
+    assert oi_get(oi, "size") == (rows, cols)
+    assert np.isclose(sample_spacing[0], oi_get(oi, "width") / cols)
+    assert np.isclose(sample_spacing[1], oi_get(oi, "height") / rows)
+    assert np.isclose(spatial_resolution[0], oi_get(oi, "height") / rows)
+    assert np.isclose(spatial_resolution[1], oi_get(oi, "width") / cols)
+    assert angular_resolution.shape == (2,)
+    assert np.all(angular_resolution > 0.0)
+
+
+def test_oi_set_updates_geometry_and_optics_accessors() -> None:
+    oi = oi_create()
+    oi = oi_set(oi, "photons", np.ones((4, 6, 3), dtype=float))
+    oi = oi_set(oi, "focal length", 0.02)
+    oi = oi_set(oi, "fov", 5.0)
+    oi = oi_set(oi, "compute method", "opticspsf")
+    oi = oi_set(oi, "diffuser method", "skip")
+    oi = oi_set(oi, "off axis method", "cos4th")
+
+    expected_width = 2.0 * oi_get(oi, "image distance") * np.tan(np.deg2rad(2.5))
+
+    assert np.isclose(oi_get(oi, "width"), expected_width)
+    assert np.isclose(oi_get(oi, "sample size"), expected_width / 6.0)
+    assert oi_get(oi, "compute method") == "opticspsf"
+    assert oi_get(oi, "diffuser method") == "skip"
+    assert oi_get(oi, "off axis method") == "cos4th"
 
 
 def test_oi_compute_skip_model_avoids_blur(asset_store) -> None:
