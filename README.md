@@ -46,6 +46,19 @@ Generate the current machine-readable parity summary:
 python tools/parity_report.py
 ```
 
+Regenerate Octave baselines for the curated parity cases:
+
+```bash
+python tools/regenerate_parity_baselines.py
+```
+
+If the default `octave` wrapper in your environment is broken, point the
+tool at a working `octave-cli` binary:
+
+```bash
+PYISETCAM_OCTAVE_BIN=/abs/path/to/octave-cli-10.3.0 python tools/regenerate_parity_baselines.py
+```
+
 ## Layout
 
 - `src/pyisetcam/`: package source
