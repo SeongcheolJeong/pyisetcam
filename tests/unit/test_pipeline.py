@@ -9,9 +9,11 @@ from pyisetcam import (
     ip_create,
     oi_compute,
     oi_create,
+    run_python_case,
     scene_create,
     sensor_compute,
     sensor_create,
+    sensor_get,
     sensor_set,
 )
 
@@ -167,3 +169,33 @@ def test_camera_compute_end_to_end(asset_store) -> None:
     result = camera.fields["ip"].data["result"]
     assert result.shape[:2] == camera.fields["sensor"].fields["size"]
     assert result.shape[2] == 3
+
+
+def test_camera_compute_skips_resize_when_sensor_fov_is_already_close(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    camera = camera_create(asset_store=asset_store)
+    sensor = camera.fields["sensor"].clone()
+    oi = camera.fields["oi"]
+
+    target_hfov = float(sensor_get(sensor, "fov horizontal", scene, oi))
+    target_vfov = float(sensor_get(sensor, "fov vertical", scene, oi))
+    scene.fields["fov_deg"] = target_hfov * 1.005
+    scene.fields["vfov_deg"] = target_vfov * 0.995
+    original_size = sensor.fields["size"]
+
+    camera.fields["sensor"] = sensor
+    camera = camera_compute(camera, scene, asset_store=asset_store)
+
+    assert camera.fields["sensor"].fields["size"] == original_size
+
+
+def test_camera_parity_case_disables_sensor_noise(asset_store) -> None:
+    payload = run_python_case("camera_default_pipeline", asset_store=asset_store)
+    assert payload["sensor_volts"].ndim == 2
+
+    scene = scene_create(asset_store=asset_store)
+    noiseless_camera = camera_create(asset_store=asset_store)
+    noiseless_camera.fields["sensor"] = sensor_set(noiseless_camera.fields["sensor"], "noise flag", 0)
+    noiseless_camera = camera_compute(noiseless_camera, scene, asset_store=asset_store)
+
+    assert np.allclose(payload["sensor_volts"], noiseless_camera.fields["sensor"].data["volts"])

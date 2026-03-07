@@ -103,7 +103,9 @@ def run_python_case(case_name: str, *, asset_store: AssetStore | None = None) ->
 
     if case_name == "camera_default_pipeline":
         scene = scene_create(asset_store=store)
-        camera = camera_compute(camera_create(asset_store=store), scene, asset_store=store)
+        camera = camera_create(asset_store=store)
+        camera.fields["sensor"] = sensor_set(camera.fields["sensor"], "noise flag", 0)
+        camera = camera_compute(camera, scene, asset_store=store)
         return {
             "case_name": case_name,
             "result": camera.fields["ip"].data["result"],

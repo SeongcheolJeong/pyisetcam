@@ -93,6 +93,7 @@ switch case_name
     case 'camera_default_pipeline'
         scene = sceneCreate();
         camera = cameraCreate();
+        camera = cameraSet(camera, 'sensor', sensorSet(cameraGet(camera, 'sensor'), 'noise flag', 0));
         camera = cameraCompute(camera, scene);
         payload.result = cameraGet(camera, 'ip').data.result;
         payload.sensor_volts = cameraGet(camera, 'sensor').data.volts;
@@ -104,4 +105,3 @@ end
 
 save('-mat7-binary', output_path, '-struct', 'payload');
 end
-

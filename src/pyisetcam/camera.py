@@ -111,11 +111,15 @@ def camera_compute(
         if scene is None:
             raise ValueError("A Scene object is required when starting from scene.")
         if sensor_resize:
-            sensor = sensor_set_size_to_fov(
-                sensor.clone(),
-                (float(scene.fields["fov_deg"]), float(scene.fields["vfov_deg"])),
-                oi,
-            )
+            scene_hfov = float(scene.fields["fov_deg"])
+            scene_vfov = float(scene.fields["vfov_deg"])
+            sensor_hfov = float(sensor_get(sensor, "fov horizontal", scene, oi))
+            sensor_vfov = float(sensor_get(sensor, "fov vertical", scene, oi))
+            if (
+                abs((scene_hfov - sensor_hfov) / max(scene_hfov, 1e-12)) > 0.01
+                or abs((scene_vfov - sensor_vfov) / max(scene_vfov, 1e-12)) > 0.01
+            ):
+                sensor = sensor_set_size_to_fov(sensor.clone(), (scene_hfov, scene_vfov), oi)
         oi = oi_compute(oi, scene)
         sensor = sensor_compute(sensor, oi)
         ip = ip_compute(ip, sensor, asset_store=store)
