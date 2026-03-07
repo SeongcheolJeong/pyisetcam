@@ -24,7 +24,7 @@ def wvf_create(
     wave: np.ndarray | None = None,
     focal_length_m: float = DEFAULT_FOCAL_LENGTH_M,
     f_number: float = 4.0,
-    aberration_scale: float = 0.35,
+    aberration_scale: float = 0.0,
 ) -> dict[str, Any]:
     return {
         "type": "wvf",
@@ -58,7 +58,7 @@ def oi_create(oi_type: str = "diffraction limited", *args: Any) -> OpticalImage:
             "f_number": float(wavefront.get("f_number", 4.0)),
             "focal_length_m": float(wavefront.get("focal_length_m", DEFAULT_FOCAL_LENGTH_M)),
             "compute_method": "opticspsf",
-            "aberration_scale": float(wavefront.get("aberration_scale", 0.35)),
+            "aberration_scale": float(wavefront.get("aberration_scale", 0.0)),
             "wavefront": wavefront,
             "offaxis_method": "cos4th",
         }
@@ -197,7 +197,10 @@ def _diffraction_otf(
     rho = np.sqrt(fy[:, None] ** 2 + fx[None, :] ** 2)
 
     aperture_diameter = float(optics["focal_length_m"]) / max(float(optics["f_number"]), 1e-12)
-    focal_plane_distance = _image_distance_m(optics, scene)
+    # ISETCam's dlMTF() uses opticsGet(optics, 'focalPlaneDistance') without
+    # passing the scene distance, which resolves to the focal length rather
+    # than the thin-lens image distance for finite scene depth.
+    focal_plane_distance = float(optics["focal_length_m"])
     wavelengths_m = np.asarray(wave, dtype=float) * 1e-9
     cutoff = (aperture_diameter / max(focal_plane_distance, 1e-12)) / np.maximum(wavelengths_m, 1e-12)
 
@@ -258,9 +261,12 @@ def oi_compute(
         int(np.round(scene_photons.shape[1] / 8.0)),
     )
     padded, blur_mode, blur_cval = _pad_scene(photons, pad_pixels, pad_value)
-    if param_format(optics.get("model", "")) in {"diffractionlimited", "skip"}:
+    model = param_format(optics.get("model", ""))
+    if model == "diffractionlimited":
         otf = _diffraction_otf(padded.shape[:2], sample_spacing_m, wave, optics, scene)
         blurred = _apply_otf(padded, otf)
+    elif model == "skip":
+        blurred = padded
     else:
         blurred = apply_channelwise_gaussian(padded, sigmas, mode=blur_mode, cval=blur_cval)
 
@@ -272,11 +278,16 @@ def oi_compute(
     else:
         result = blurred
 
+    output_width_m = float(result.shape[1] * sample_spacing_m)
+    output_height_m = float(result.shape[0] * sample_spacing_m)
+
     if pixel_size is not None:
         current_spacing = sample_spacing_m
         factor = current_spacing / float(pixel_size)
         result = zoom(result, (factor, factor, 1.0), order=1)
         sample_spacing_m = float(pixel_size)
+        output_width_m = float(result.shape[1] * sample_spacing_m)
+        output_height_m = float(result.shape[0] * sample_spacing_m)
 
     computed = oi.clone()
     computed.name = scene.name
@@ -286,8 +297,10 @@ def oi_compute(
     computed.fields["padding_pixels"] = pad_pixels
     computed.fields["sample_spacing_m"] = sample_spacing_m
     computed.fields["image_distance_m"] = image_distance_m
-    computed.fields["width_m"] = width_m
-    computed.fields["height_m"] = height_m
+    computed.fields["width_m"] = output_width_m
+    computed.fields["height_m"] = output_height_m
+    computed.fields["fov_deg"] = float(np.rad2deg(2.0 * np.arctan2(output_width_m / 2.0, image_distance_m)))
+    computed.fields["vfov_deg"] = float(np.rad2deg(2.0 * np.arctan2(output_height_m / 2.0, image_distance_m)))
     computed.data["photons"] = result
     return computed
 

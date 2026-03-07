@@ -23,6 +23,27 @@ def test_oi_compute_matches_scene_wave(asset_store) -> None:
     assert np.array_equal(oi.fields["wave"], scene.fields["wave"])
 
 
+def test_oi_compute_tracks_output_geometry(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    oi = oi_compute(oi_create(), scene)
+    rows, cols = oi.data["photons"].shape[:2]
+    assert np.isclose(oi.fields["width_m"], cols * oi.fields["sample_spacing_m"])
+    assert np.isclose(oi.fields["height_m"], rows * oi.fields["sample_spacing_m"])
+
+
+def test_oi_compute_skip_model_avoids_blur(asset_store) -> None:
+    scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
+    oi = oi_create()
+    oi.fields["optics"]["model"] = "skip"
+    oi.fields["optics"]["offaxis_method"] = "skip"
+    oi = oi_compute(oi, scene, crop=True)
+
+    scene_photons = np.asarray(scene.data["photons"], dtype=float)
+    oi_photons = np.asarray(oi.data["photons"], dtype=float)
+    scale = oi_photons[0, 0, 0] / scene_photons[0, 0, 0]
+    assert np.allclose(oi_photons, scene_photons * scale)
+
+
 def test_sensor_compute_noiseless(asset_store) -> None:
     scene = scene_create(asset_store=asset_store)
     oi = oi_compute(oi_create(), scene, crop=True)
