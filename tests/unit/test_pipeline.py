@@ -31,6 +31,22 @@ def test_oi_compute_tracks_output_geometry(asset_store) -> None:
     assert np.isclose(oi.fields["height_m"], rows * oi.fields["sample_spacing_m"])
 
 
+def test_oi_compute_crop_matches_matlab_crop_geometry(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    oi_uncropped = oi_compute(oi_create(), scene, crop=False)
+    oi_cropped = oi_compute(oi_create(), scene, crop=True)
+
+    image_distance = float(oi_uncropped.fields["image_distance_m"])
+    focal_length = float(oi_uncropped.fields["optics"]["focal_length_m"])
+    expected_scale = image_distance / focal_length
+
+    assert np.isclose(
+        oi_cropped.fields["sample_spacing_m"],
+        oi_uncropped.fields["sample_spacing_m"] * expected_scale,
+    )
+    assert oi_cropped.data["photons"].shape[:2] == scene.data["photons"].shape[:2]
+
+
 def test_oi_compute_skip_model_avoids_blur(asset_store) -> None:
     scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
     oi = oi_create()

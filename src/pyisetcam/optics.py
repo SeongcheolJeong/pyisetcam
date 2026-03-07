@@ -469,16 +469,31 @@ def oi_compute(
     else:
         result = blurred
 
-    output_width_m = float(result.shape[1] * sample_spacing_m)
-    output_height_m = float(result.shape[0] * sample_spacing_m)
+    output_sample_spacing_m = float(sample_spacing_m)
+    output_width_m = float(result.shape[1] * output_sample_spacing_m)
+    output_height_m = float(result.shape[0] * output_sample_spacing_m)
+    output_fov_deg = float(np.rad2deg(2.0 * np.arctan2(output_width_m / 2.0, image_distance_m)))
+    output_vfov_deg = float(np.rad2deg(2.0 * np.arctan2(output_height_m / 2.0, image_distance_m)))
+
+    if crop:
+        focal_length_m = float(optics["focal_length_m"])
+        output_fov_deg = float(
+            np.rad2deg(2.0 * np.arctan2((result.shape[1] * sample_spacing_m) / 2.0, focal_length_m))
+        )
+        output_width_m = float(2.0 * image_distance_m * np.tan(np.deg2rad(output_fov_deg) / 2.0))
+        output_sample_spacing_m = output_width_m / max(result.shape[1], 1)
+        output_height_m = float(result.shape[0] * output_sample_spacing_m)
+        output_vfov_deg = float(np.rad2deg(2.0 * np.arctan2(output_height_m / 2.0, image_distance_m)))
 
     if pixel_size is not None:
-        current_spacing = sample_spacing_m
+        current_spacing = output_sample_spacing_m
         factor = current_spacing / float(pixel_size)
         result = zoom(result, (factor, factor, 1.0), order=1)
-        sample_spacing_m = float(pixel_size)
-        output_width_m = float(result.shape[1] * sample_spacing_m)
-        output_height_m = float(result.shape[0] * sample_spacing_m)
+        output_sample_spacing_m = float(pixel_size)
+        output_width_m = float(result.shape[1] * output_sample_spacing_m)
+        output_height_m = float(result.shape[0] * output_sample_spacing_m)
+        output_fov_deg = float(np.rad2deg(2.0 * np.arctan2(output_width_m / 2.0, image_distance_m)))
+        output_vfov_deg = float(np.rad2deg(2.0 * np.arctan2(output_height_m / 2.0, image_distance_m)))
 
     computed = oi.clone()
     computed.name = scene.name
@@ -486,12 +501,12 @@ def oi_compute(
     computed.fields["pad_value"] = pad_value
     computed.fields["crop"] = bool(crop)
     computed.fields["padding_pixels"] = pad_pixels
-    computed.fields["sample_spacing_m"] = sample_spacing_m
+    computed.fields["sample_spacing_m"] = output_sample_spacing_m
     computed.fields["image_distance_m"] = image_distance_m
     computed.fields["width_m"] = output_width_m
     computed.fields["height_m"] = output_height_m
-    computed.fields["fov_deg"] = float(np.rad2deg(2.0 * np.arctan2(output_width_m / 2.0, image_distance_m)))
-    computed.fields["vfov_deg"] = float(np.rad2deg(2.0 * np.arctan2(output_height_m / 2.0, image_distance_m)))
+    computed.fields["fov_deg"] = output_fov_deg
+    computed.fields["vfov_deg"] = output_vfov_deg
     computed.data["photons"] = result
     return computed
 
