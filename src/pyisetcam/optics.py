@@ -207,7 +207,17 @@ def _pad_scene(
     if mode == "zero":
         return np.pad(scene_cube, ((pad_rows, pad_rows), (pad_cols, pad_cols), (0, 0))), "constant", 0.0
     if mode == "border":
-        return np.pad(scene_cube, ((pad_rows, pad_rows), (pad_cols, pad_cols), (0, 0)), mode="edge"), "nearest", 0.0
+        padded = np.empty(
+            (scene_cube.shape[0] + 2 * pad_rows, scene_cube.shape[1] + 2 * pad_cols, scene_cube.shape[2]),
+            dtype=float,
+        )
+        band_corner = scene_cube[0, 0, :]
+        row_slice = slice(pad_rows, None if pad_rows == 0 else -pad_rows)
+        col_slice = slice(pad_cols, None if pad_cols == 0 else -pad_cols)
+        for band_index, corner_value in enumerate(band_corner):
+            padded[:, :, band_index] = corner_value
+            padded[row_slice, col_slice, band_index] = scene_cube[:, :, band_index]
+        return padded, "constant", float(np.mean(band_corner))
     if mode == "mean":
         padded = np.empty(
             (scene_cube.shape[0] + 2 * pad_rows, scene_cube.shape[1] + 2 * pad_cols, scene_cube.shape[2]),
@@ -562,6 +572,55 @@ def _oi_sample_size_m(oi: OpticalImage) -> float | None:
     return float(_oi_width_m(oi) / cols)
 
 
+def _oi_distance_per_degree_m(oi: OpticalImage) -> float:
+    return _oi_width_m(oi) / max(float(oi.fields.get("fov_deg", 10.0)), 1e-12)
+
+
+def _oi_spatial_support_linear(oi: OpticalImage) -> tuple[np.ndarray, np.ndarray]:
+    rows, cols = _oi_shape(oi)
+    spatial = np.asarray(oi_get(oi, "distancepersample"), dtype=float)
+    if rows <= 0 or cols <= 0:
+        return np.empty(0, dtype=float), np.empty(0, dtype=float)
+    y = np.linspace(-(rows * spatial[0]) / 2.0 + spatial[0] / 2.0, (rows * spatial[0]) / 2.0 - spatial[0] / 2.0, rows)
+    x = np.linspace(-(cols * spatial[1]) / 2.0 + spatial[1] / 2.0, (cols * spatial[1]) / 2.0 - spatial[1] / 2.0, cols)
+    return x, y
+
+
+def _oi_angular_support_linear_deg(oi: OpticalImage) -> tuple[np.ndarray, np.ndarray]:
+    rows, cols = _oi_shape(oi)
+    angular = np.asarray(oi_get(oi, "angularresolution"), dtype=float)
+    if rows <= 0 or cols <= 0:
+        return np.empty(0, dtype=float), np.empty(0, dtype=float)
+    x = angular[1] * (np.arange(cols, dtype=float) + 1.0)
+    y = angular[0] * (np.arange(rows, dtype=float) + 1.0)
+    return x - np.mean(x), y - np.mean(y)
+
+
+def _oi_frequency_support_1d(oi: OpticalImage, unit: str = "cyclesperdegree") -> tuple[np.ndarray, np.ndarray]:
+    rows, cols = _oi_shape(oi)
+    fov_width = float(oi.fields.get("fov_deg", 10.0))
+    fov_height = float(oi.fields.get("vfov_deg", oi.fields.get("fov_deg", 10.0)))
+    max_frequency_cpd = np.array(
+        [
+            (cols / 2.0) / max(fov_width, 1e-12),
+            (rows / 2.0) / max(fov_height, 1e-12),
+        ],
+        dtype=float,
+    )
+    normalized_unit = param_format(unit)
+    if normalized_unit in {"cyclesperdegree", "cycperdeg"}:
+        max_frequency = max_frequency_cpd
+    elif normalized_unit in {"meters", "m", "millimeters", "mm", "microns", "um"}:
+        unit_scale = {"meters": 1.0, "m": 1.0, "millimeters": 1e3, "mm": 1e3, "microns": 1e6, "um": 1e6}
+        deg_per_dist = 1.0 / max(_oi_distance_per_degree_m(oi) * unit_scale[normalized_unit], 1e-12)
+        max_frequency = max_frequency_cpd * deg_per_dist
+    else:
+        raise KeyError(f"Unsupported oiGet frequency unit: {unit}")
+    fx = unit_frequency_list(cols) * max_frequency[0]
+    fy = unit_frequency_list(rows) * max_frequency[1]
+    return fx, fy
+
+
 def _sync_oi_geometry_fields(oi: OpticalImage) -> None:
     rows, cols = _oi_shape(oi)
     oi.fields["rows"] = rows
@@ -583,7 +642,7 @@ def _sync_oi_geometry_fields(oi: OpticalImage) -> None:
     oi.fields["vfov_deg"] = vfov_deg
 
 
-def oi_get(oi: OpticalImage, parameter: str) -> Any:
+def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
     key = param_format(parameter)
     if key == "type":
         return oi.type
@@ -637,10 +696,13 @@ def oi_get(oi: OpticalImage, parameter: str) -> Any:
             dtype=float,
         )
     if key in {"distanceperdegree", "distperdeg"}:
-        fov_deg = float(oi.fields.get("fov_deg", 10.0))
-        return _oi_width_m(oi) / max(fov_deg, 1e-12)
+        unit = param_format(args[0]) if args else "m"
+        val = _oi_distance_per_degree_m(oi)
+        unit_scale = {"meters": 1.0, "m": 1.0, "millimeters": 1e3, "mm": 1e3, "microns": 1e6, "um": 1e6}
+        return val * unit_scale.get(unit, 1.0)
     if key in {"degreesperdistance", "degperdist"}:
-        return 1.0 / max(float(oi_get(oi, "distanceperdegree")), 1e-12)
+        unit = args[0] if args else "m"
+        return 1.0 / max(float(oi_get(oi, "distanceperdegree", unit)), 1e-12)
     if key in {"hangularresolution", "heightangularresolution"}:
         spatial = float(oi_get(oi, "hspatialresolution"))
         image_distance = _oi_image_distance_m(oi)
@@ -657,6 +719,52 @@ def oi_get(oi: OpticalImage, parameter: str) -> Any:
             ],
             dtype=float,
         )
+    if key in {"spatialsupportlinear"}:
+        x, y = _oi_spatial_support_linear(oi)
+        unit = param_format(args[0]) if args else "m"
+        unit_scale = {"meters": 1.0, "m": 1.0, "millimeters": 1e3, "mm": 1e3, "microns": 1e6, "um": 1e6}
+        scale = unit_scale.get(unit, 1.0)
+        return {"x": x * scale, "y": y * scale}
+    if key in {"spatialsupportmesh", "spatialsupport"}:
+        support = oi_get(oi, "spatialsupportlinear", *(args[:1] if args else ()))
+        xx, yy = np.meshgrid(support["x"], support["y"])
+        return np.stack((xx, yy), axis=2)
+    if key in {"angularsupport", "angularsamplingpositions"}:
+        x, y = _oi_angular_support_linear_deg(oi)
+        unit = param_format(args[0]) if args else "deg"
+        if unit == "deg":
+            scale = 1.0
+        elif unit == "min":
+            scale = 60.0
+        elif unit == "sec":
+            scale = 3600.0
+        elif unit == "radians":
+            scale = np.pi / 180.0
+        else:
+            raise KeyError(f"Unsupported oiGet angular support unit: {args[0]}")
+        xx, yy = np.meshgrid(x * scale, y * scale)
+        return np.stack((xx, yy), axis=2)
+    if key in {"frequencyresolution", "freqres"}:
+        unit = args[0] if args else "cyclesperdegree"
+        fx, fy = _oi_frequency_support_1d(oi, str(unit))
+        return {"fx": fx, "fy": fy}
+    if key in {"maxfrequencyresolution", "maxfreqres"}:
+        unit = args[0] if args else "cyclesperdegree"
+        support = oi_get(oi, "frequencyresolution", unit)
+        return float(max(np.max(support["fx"]), np.max(support["fy"])))
+    if key in {"frequencysupport", "fsupportxy", "fsupport2d", "fsupport"}:
+        unit = args[0] if args else "cyclesperdegree"
+        fx, fy = _oi_frequency_support_1d(oi, str(unit))
+        xx, yy = np.meshgrid(fx, fy)
+        return np.stack((xx, yy), axis=2)
+    if key in {"frequencysupportcol", "fsupportx"}:
+        unit = args[0] if args else "cyclesperdegree"
+        fx, _ = _oi_frequency_support_1d(oi, str(unit))
+        return fx
+    if key in {"frequencysupportrow", "fsupporty"}:
+        unit = args[0] if args else "cyclesperdegree"
+        _, fy = _oi_frequency_support_1d(oi, str(unit))
+        return fy
     if key == "optics":
         return oi.fields["optics"]
     if key in {"focallength", "opticsfocallength"}:

@@ -89,6 +89,27 @@ def test_oi_set_updates_geometry_and_optics_accessors() -> None:
     assert oi_get(oi, "off axis method") == "cos4th"
 
 
+def test_oi_get_reports_spatial_and_frequency_support(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    oi = oi_compute(oi_create(), scene, crop=True)
+
+    spatial = oi_get(oi, "spatial support linear", "mm")
+    mesh = oi_get(oi, "spatial support", "mm")
+    angular = oi_get(oi, "angular support", "radians")
+    freq = oi_get(oi, "frequency resolution", "mm")
+    fsupport = oi_get(oi, "frequency support", "mm")
+
+    rows, cols = oi.data["photons"].shape[:2]
+    assert spatial["x"].shape == (cols,)
+    assert spatial["y"].shape == (rows,)
+    assert mesh.shape == (rows, cols, 2)
+    assert angular.shape == (rows, cols, 2)
+    assert freq["fx"].shape == (cols,)
+    assert freq["fy"].shape == (rows,)
+    assert fsupport.shape == (rows, cols, 2)
+    assert np.isclose(oi_get(oi, "max frequency resolution", "mm"), max(freq["fx"].max(), freq["fy"].max()))
+
+
 def test_oi_compute_skip_model_avoids_blur(asset_store) -> None:
     scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
     oi = oi_create()
@@ -100,6 +121,22 @@ def test_oi_compute_skip_model_avoids_blur(asset_store) -> None:
     oi_photons = np.asarray(oi.data["photons"], dtype=float)
     scale = oi_photons[0, 0, 0] / scene_photons[0, 0, 0]
     assert np.allclose(oi_photons, scene_photons * scale)
+
+
+def test_oi_compute_border_padding_matches_corner_photons(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    oi = oi_create()
+    oi.fields["optics"]["model"] = "skip"
+    oi.fields["optics"]["offaxis_method"] = "skip"
+    oi = oi_compute(oi, scene, pad_value="border", crop=False)
+
+    pad_rows, pad_cols = oi.fields["padding_pixels"]
+    corner = oi.data["photons"][pad_rows, pad_cols, :]
+
+    assert np.allclose(oi.data["photons"][0, 0, :], corner)
+    assert np.allclose(oi.data["photons"][0, -1, :], corner)
+    assert np.allclose(oi.data["photons"][-1, 0, :], corner)
+    assert np.allclose(oi.data["photons"][-1, -1, :], corner)
 
 
 def test_wvf_path_preserves_more_checkerboard_contrast_than_diffraction(asset_store) -> None:
