@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import numpy as np
@@ -33,6 +34,30 @@ def param_format(value: Any) -> Any:
             formatted[index] = param_format(formatted[index])
         return tuple(formatted)
     return value
+
+
+def split_prefixed_parameter(parameter: Any, prefixes: tuple[str, ...]) -> tuple[str | None, str]:
+    """Split MATLAB-style object-prefixed parameter names.
+
+    Examples:
+        ``display spd`` -> (``display``, ``spd``)
+        ``display/spd`` -> (``display``, ``spd``)
+        ``displayspd`` -> (``display``, ``spd``)
+    """
+
+    if not isinstance(parameter, str):
+        return None, ""
+
+    normalized = param_format(parameter)
+    ordered_prefixes = sorted((param_format(prefix) for prefix in prefixes), key=len, reverse=True)
+    for prefix in ordered_prefixes:
+        if normalized == prefix:
+            return prefix, ""
+        if normalized.startswith(prefix):
+            remainder = normalized[len(prefix) :]
+            remainder = re.sub(r"^[/\\-]+", "", remainder)
+            return prefix, remainder
+    return None, normalized
 
 
 def spectral_step(wave_nm: NDArray[np.float64]) -> float:

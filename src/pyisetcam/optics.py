@@ -781,6 +781,8 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         return float(oi.fields.get("diffuser_blur_m", 0.0))
     if key in {"offaxismethod", "opticsoffaxismethod"}:
         return oi.fields["optics"].get("offaxis_method", "cos4th")
+    if key in {"opticswvf"}:
+        return oi.fields["optics"].get("wavefront")
     if key in {"crop"}:
         return bool(oi.fields.get("crop", False))
     if key in {"padvalue"}:

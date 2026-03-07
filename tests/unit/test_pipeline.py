@@ -5,6 +5,10 @@ import numpy as np
 from pyisetcam import (
     camera_compute,
     camera_create,
+    camera_get,
+    camera_set,
+    ip_get,
+    ip_set,
     ip_compute,
     ip_create,
     oi_compute,
@@ -257,6 +261,39 @@ def test_ip_compute_default_pipeline(asset_store) -> None:
     assert ip.data["result"].shape[:2] == sensor.fields["size"]
     assert ip.data["result"].shape[2] == 3
     assert np.all((ip.data["result"] >= 0.0) & (ip.data["result"] <= 1.0))
+
+
+def test_ip_get_set_support_matlab_style_transforms(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    ip = ip_create(sensor=sensor, asset_store=asset_store)
+
+    ip = ip_set(ip, "display dpi", 110)
+    ip = ip_set(ip, "render flag", "gray")
+    ip = ip_set(ip, "scale display", False)
+    ip = ip_set(ip, "sensor conversion matrix", np.eye(3))
+    ip = ip_set(ip, "illuminant correction matrix", 2.0 * np.eye(3))
+    ip = ip_set(ip, "ics2display transform", 3.0 * np.eye(3))
+
+    assert ip_get(ip, "display dpi") == 110
+    assert ip_get(ip, "display spd").shape[1] == 3
+    assert ip_get(ip, "render flag") == 3
+    assert ip_get(ip, "scale display") is False
+    assert np.allclose(ip_get(ip, "combined transform"), 6.0 * np.eye(3))
+
+
+def test_camera_get_set_routes_matlab_style_subobjects(asset_store) -> None:
+    camera = camera_create(asset_store=asset_store)
+
+    camera = camera_set(camera, "sensor integration time", 0.125)
+    camera = camera_set(camera, "pixel voltage swing", 1.5)
+    camera = camera_set(camera, "ip display dpi", 110)
+    camera = camera_set(camera, "optics f number", 5.6)
+
+    assert np.isclose(camera_get(camera, "sensor integration time"), 0.125)
+    assert np.isclose(camera_get(camera, "pixel voltage swing"), 1.5)
+    assert camera_get(camera, "ip display dpi") == 110
+    assert np.isclose(camera_get(camera, "optics f number"), 5.6)
+    assert camera_get(camera, "vci type") == "default"
 
 
 def test_camera_compute_end_to_end(asset_store) -> None:
