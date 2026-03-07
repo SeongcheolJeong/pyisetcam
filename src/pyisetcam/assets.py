@@ -187,6 +187,19 @@ class AssetStore:
             wavelengths = np.asarray(wave_nm, dtype=float)
         return wavelengths, xyz
 
+    def load_xyz_quanta(
+        self,
+        *,
+        wave_nm: np.ndarray | None = None,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        data = self.load_mat("data/human/xyzQuanta.mat")
+        wavelengths = np.asarray(data["wavelength"], dtype=float)
+        xyz = np.asarray(data["data"], dtype=float)
+        if wave_nm is not None:
+            xyz = interp_spectra(wavelengths, xyz, np.asarray(wave_nm, dtype=float))
+            wavelengths = np.asarray(wave_nm, dtype=float)
+        return wavelengths, xyz
+
     def load_color_filters(
         self,
         filter_name: str,
@@ -199,7 +212,7 @@ class AssetStore:
             "monochrome": None,
         }
         if normalized == "xyz":
-            wavelengths, xyz = self.load_xyz(wave_nm=wave_nm, energy=False)
+            wavelengths, xyz = self.load_xyz_quanta(wave_nm=wave_nm)
             return wavelengths, xyz / np.max(xyz), ["rX", "gY", "bZ"]
         if normalized == "monochrome":
             if wave_nm is None:
@@ -226,4 +239,3 @@ class AssetStore:
             name = f"{name}.mat"
         data = self.load_mat(Path("data/displays") / name)
         return data["d"]
-

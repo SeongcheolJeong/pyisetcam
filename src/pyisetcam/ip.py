@@ -8,11 +8,12 @@ import numpy as np
 from scipy.signal import convolve2d
 
 from .assets import AssetStore
-from .color import sensor_to_xyz_matrix
+from .color import internal_to_display_matrix, sensor_to_target_matrix
 from .display import Display, display_create
 from .exceptions import UnsupportedOptionError
+from .sensor import sensor_get
 from .types import ImageProcessor, Sensor
-from .utils import invert_gamma_table, linear_to_srgb, param_format, tile_pattern, xyz_to_linear_srgb
+from .utils import invert_gamma_table, linear_to_srgb, param_format, tile_pattern
 
 
 def _store(asset_store: AssetStore | None) -> AssetStore:
@@ -91,9 +92,83 @@ def _sensor_space(sensor: Sensor) -> np.ndarray:
             mask = tiled == (channel_index + 1)
             planes[:, :, channel_index][mask] = np.asarray(volts, dtype=float)[mask]
         if nfilters == 1:
-            return np.repeat(planes, 3, axis=2)
+            return planes
         return _ie_bilinear(planes, pattern)
     return np.repeat(np.asarray(volts, dtype=float)[..., None], 3, axis=2)
+
+
+def _sensor_to_internal(
+    sensor_space: np.ndarray,
+    ip: ImageProcessor,
+    sensor: Sensor,
+    *,
+    asset_store: AssetStore,
+) -> tuple[np.ndarray, np.ndarray]:
+    conversion_method = param_format(ip.fields.get("conversion_method_sensor", "mcc optimized"))
+    filter_spectra = np.asarray(sensor.fields["filter_spectra"], dtype=float)
+    wave = np.asarray(sensor.fields["wave"], dtype=float)
+
+    if conversion_method in {"none", "sensor"}:
+        transform = np.eye(sensor_space.shape[2], dtype=float)
+        internal = sensor_space.copy()
+    elif conversion_method in {"mccoptimized", "mcc", "esseroptimized", "esser"}:
+        surfaces = "esser" if "esser" in conversion_method else "mcc"
+        transform = sensor_to_target_matrix(
+            wave,
+            filter_spectra,
+            target_space="xyz",
+            illuminant="D65",
+            surfaces=surfaces,
+            asset_store=asset_store,
+        )
+        internal = sensor_space @ transform
+    else:
+        raise UnsupportedOptionError("ipCompute", conversion_method)
+
+    internal = np.clip(internal, 0.0, None)
+    internal_max = float(np.max(internal))
+    if internal_max > 0.0:
+        internal = internal / internal_max
+    return internal, transform
+
+
+def _display_render(
+    internal_image: np.ndarray,
+    ip: ImageProcessor,
+    sensor: Sensor,
+    *,
+    asset_store: AssetStore,
+) -> tuple[np.ndarray, np.ndarray]:
+    internal_cs = str(ip.fields.get("internal_cs", "xyz"))
+    display = ip.fields["display"]
+    display_spd = np.asarray(display.fields["spd"], dtype=float)
+    conversion_method = param_format(ip.fields.get("conversion_method_sensor", "mcc optimized"))
+
+    if param_format(internal_cs) == "xyz":
+        transform = internal_to_display_matrix(
+            np.asarray(ip.fields["wave"], dtype=float),
+            display_spd,
+            internal_cs=internal_cs,
+            asset_store=asset_store,
+        )
+    elif param_format(internal_cs) == "sensor":
+        sensor_qe = np.asarray(sensor.fields["filter_spectra"], dtype=float)
+        transform = np.linalg.pinv(sensor_qe.T @ display_spd).T
+    else:
+        raise UnsupportedOptionError("displayRender", internal_cs)
+
+    if conversion_method in {"current", "currentmatrix", "manualmatrixentry", "none"}:
+        display_linear = internal_image.copy()
+    elif conversion_method in {"sensor", "mccoptimized", "mcc", "esseroptimized", "esser"}:
+        display_linear = internal_image @ transform
+    else:
+        raise UnsupportedOptionError("displayRender", conversion_method)
+
+    display_max = float(np.max(display_linear))
+    if bool(ip.fields["render"].get("scale", True)) and display_max > 0.0:
+        display_linear = display_linear / display_max * float(sensor_get(sensor, "response ratio"))
+    display_linear = np.maximum(display_linear, 0.0)
+    return display_linear, transform
 
 
 def ip_compute(
@@ -113,41 +188,26 @@ def ip_compute(
     computed = ip.clone()
     computed.data["input"] = sensor.data.get("dv", sensor.data.get("volts"))
     sensor_space = _sensor_space(sensor)
-    if sensor_space.shape[2] == 1:
-        sensor_space = np.repeat(sensor_space, 3, axis=2)
-    if sensor_space.shape[2] > 3:
-        raise UnsupportedOptionError("ipCompute", f"{sensor_space.shape[2]}-channel sensor space")
-
-    filter_spectra = np.asarray(sensor.fields["filter_spectra"], dtype=float)
-    if filter_spectra.shape[1] == 1:
-        xyz = np.repeat(sensor_space, 3, axis=2)
-    else:
-        transform = sensor_to_xyz_matrix(np.asarray(sensor.fields["wave"], dtype=float), filter_spectra, asset_store=store)
-        xyz = sensor_space @ transform
-
-    linear_rgb = xyz_to_linear_srgb(xyz)
-    linear_rgb = np.clip(linear_rgb, 0.0, None)
+    internal_image, sensor_transform = _sensor_to_internal(sensor_space, computed, sensor, asset_store=store)
+    display_linear, display_transform = _display_render(internal_image, computed, sensor, asset_store=store)
 
     if hdr_white:
-        max_channel = np.max(linear_rgb, axis=2, keepdims=True)
+        max_channel = np.max(display_linear, axis=2, keepdims=True)
         blend = np.clip((max_channel - hdr_level) / max(1e-6, 1.0 - hdr_level), 0.0, 1.0)
-        linear_rgb = linear_rgb * (1.0 - blend) + blend
+        display_linear = display_linear * (1.0 - blend) + blend
 
-    if computed.fields["render"]["scale"]:
-        scale = np.percentile(linear_rgb, 99.5)
-        if scale > 0.0:
-            linear_rgb = linear_rgb / scale
-
-    linear_rgb = np.clip(linear_rgb, 0.0, 1.0)
     display = computed.fields["display"]
-    display_rgb = invert_gamma_table(linear_rgb, np.asarray(display.fields["gamma"], dtype=float))
-    srgb = linear_to_srgb(linear_rgb)
+    clamped_display = np.clip(display_linear, 0.0, 1.0)
+    display_rgb = invert_gamma_table(clamped_display, np.asarray(display.fields["gamma"], dtype=float))
+    srgb = linear_to_srgb(clamped_display)
 
+    computed.fields["sensor_conversion_matrix"] = sensor_transform
+    computed.fields["ics2display"] = display_transform
     computed.data["sensorspace"] = sensor_space
-    computed.data["xyz"] = xyz
+    computed.data["xyz"] = internal_image
     computed.data["display_rgb"] = display_rgb
     computed.data["srgb"] = srgb
-    computed.data["result"] = linear_rgb
+    computed.data["result"] = display_linear
     return computed
 
 
@@ -189,4 +249,3 @@ def ip_set(ip: ImageProcessor, parameter: str, value: Any) -> ImageProcessor:
         ip.data["result"] = np.asarray(value, dtype=float)
         return ip
     raise KeyError(f"Unsupported ipSet parameter: {parameter}")
-

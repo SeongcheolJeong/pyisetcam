@@ -9,6 +9,7 @@ from scipy.interpolate import RegularGridInterpolator
 from scipy.ndimage import gaussian_filter
 
 from .assets import AssetStore
+from .color import luminance_from_photons
 from .exceptions import UnsupportedOptionError
 from .optics import DEFAULT_FOCAL_LENGTH_M
 from .optics import oi_get
@@ -168,6 +169,8 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return np.asarray(sensor.fields["pattern"], dtype=int)
     if key in {"filterspectra", "colorfilters"}:
         return np.asarray(sensor.fields["filter_spectra"], dtype=float)
+    if key in {"spectralqe", "qe"}:
+        return np.asarray(sensor.fields["filter_spectra"], dtype=float)
     if key in {"filternames", "filtername"}:
         return list(sensor.fields["filter_names"])
     if key == "nfilters":
@@ -204,6 +207,17 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return sensor.data.get("dv")
     if key == "dvorvolts":
         return sensor.data.get("dv", sensor.data.get("volts"))
+    if key in {"responseratio", "volts2maxratio"}:
+        volts = sensor.data.get("volts")
+        if volts is not None:
+            voltage_swing = float(sensor.fields["pixel"]["voltage_swing"])
+            return float(np.max(np.asarray(volts, dtype=float)) / max(voltage_swing, 1e-12))
+        dv = sensor.data.get("dv")
+        if dv is not None:
+            nbits = int(sensor.fields["nbits"])
+            max_digital = float(2**nbits)
+            return float(np.max(np.asarray(dv, dtype=float)) / max(max_digital, 1e-12))
+        return 0.0
     if key in {"fovhorizontal", "fov"}:
         oi = args[1] if len(args) >= 2 else args[0] if args else None
         focal_length = DEFAULT_FOCAL_LENGTH_M if oi is None else float(oi_get(oi, "focal length"))
@@ -314,6 +328,11 @@ def _regrid_electron_rate_density(
 ) -> np.ndarray:
     oi_rows, oi_cols = density_cube.shape[:2]
     sensor_rows, sensor_cols = sensor.fields["size"]
+    if oi_rows == 1 and oi_cols == 1:
+        return np.broadcast_to(
+            np.asarray(density_cube[0, 0, :], dtype=float),
+            (sensor_rows, sensor_cols, density_cube.shape[2]),
+        ).copy()
     pixel_size = np.asarray(sensor.fields["pixel"]["size_m"], dtype=float)
     oi_spacing = float(oi.fields.get("sample_spacing_m") or (oi.fields["width_m"] / max(oi_cols, 1)))
 
@@ -337,6 +356,43 @@ def _regrid_electron_rate_density(
     return regridded
 
 
+def _auto_exposure_default(sensor: Sensor, oi: OpticalImage) -> float:
+    cube = np.asarray(oi.data["photons"], dtype=float)
+    wave = np.asarray(sensor.fields["wave"], dtype=float)
+    voltage_swing = float(sensor.fields["pixel"]["voltage_swing"])
+
+    illuminance = luminance_from_photons(cube, wave, asset_store=AssetStore.default())
+    bright_row, bright_col = np.unravel_index(int(np.argmax(illuminance)), illuminance.shape)
+
+    small_oi = oi.clone()
+    small_oi.data["photons"] = cube[bright_row : bright_row + 1, bright_col : bright_col + 1, :].copy()
+    small_oi.fields["optics"] = dict(small_oi.fields["optics"])
+    small_oi.fields["optics"]["model"] = "skip"
+    small_oi.fields["optics"]["compute_method"] = "skip"
+    small_oi.fields["optics"]["offaxis_method"] = "skip"
+
+    pattern = np.asarray(sensor.fields["pattern"], dtype=int)
+    small_sensor = sensor.clone()
+    small_sensor.fields["size"] = (8 * pattern.shape[0], 8 * pattern.shape[1])
+    small_sensor.fields["integration_time"] = 1.0
+    small_sensor.fields["auto_exposure"] = False
+    small_sensor.fields["pixel"] = dict(small_sensor.fields["pixel"])
+    small_sensor.fields["pixel"]["voltage_swing"] = 1e6
+    small_sensor.data.clear()
+
+    sensor_fov = float(sensor_get(small_sensor, "fov", oi))
+    image_distance = float(oi.fields.get("image_distance_m", oi_get(oi, "focal length")))
+    width_m = 2.0 * image_distance * np.tan(np.deg2rad(2.0 * sensor_fov) / 2.0)
+    small_oi.fields["width_m"] = width_m
+    small_oi.fields["height_m"] = width_m
+    small_oi.fields["sample_spacing_m"] = width_m
+
+    signal_sensor = sensor_compute(small_sensor, small_oi, seed=0)
+    signal_voltage = np.asarray(signal_sensor.data["volts"], dtype=float)
+    max_signal_voltage = float(np.max(signal_voltage))
+    return (0.95 * voltage_swing) / max(max_signal_voltage, 1e-12)
+
+
 def sensor_compute(sensor: Sensor, oi: OpticalImage, show_bar: bool | None = None, *, seed: int = 0) -> Sensor:
     """Compute sensor response from an optical image."""
 
@@ -355,17 +411,7 @@ def sensor_compute(sensor: Sensor, oi: OpticalImage, show_bar: bool | None = Non
     electron_rate = _regrid_electron_rate_density(electron_rate_density, oi, computed) * pixel_area
 
     if computed.fields["auto_exposure"] or computed.fields["integration_time"] <= 0.0:
-        target_voltage = 0.95 * float(pixel["voltage_swing"])
-        if computed.fields["mosaic"]:
-            preview = np.zeros((rows, cols), dtype=float)
-            tiled_pattern = tile_pattern(pattern, rows, cols)
-            for channel_index in range(electron_rate.shape[2]):
-                mask = tiled_pattern == (channel_index + 1)
-                preview[mask] = electron_rate[:, :, channel_index][mask]
-            reference_rate = max(float(np.max(preview)), 1e-12)
-        else:
-            reference_rate = max(float(np.max(electron_rate)), 1e-12)
-        computed.fields["integration_time"] = target_voltage / max(reference_rate * conversion_gain, 1e-12)
+        computed.fields["integration_time"] = _auto_exposure_default(computed, oi)
 
     integration_time = float(computed.fields["integration_time"])
     electrons = electron_rate * integration_time
