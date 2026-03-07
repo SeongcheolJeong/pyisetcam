@@ -40,6 +40,12 @@ Run the example pipeline:
 python examples/end_to_end.py
 ```
 
+Generate the current machine-readable parity summary:
+
+```bash
+python tools/parity_report.py
+```
+
 ## Layout
 
 - `src/pyisetcam/`: package source
@@ -48,4 +54,3 @@ python examples/end_to_end.py
 - `tests/unit/`: deterministic unit tests
 - `tests/parity/`: curated parity case definitions and baseline comparator
 - `docs/migration.md`: MATLAB-to-Python name mapping
-

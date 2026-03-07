@@ -19,6 +19,7 @@ from .utils import (
 DEFAULT_FOCAL_LENGTH_M = 0.003862755099228
 DEFAULT_WVF_MEASURED_PUPIL_MM = 8.0
 DEFAULT_WVF_MEASURED_WAVELENGTH_NM = 550.0
+DIFFRACTION_CUTOFF_GRID_SCALE = 1.001
 
 
 def wvf_create(
@@ -211,7 +212,11 @@ def _diffraction_otf(
     # than the thin-lens image distance for finite scene depth.
     focal_plane_distance = float(optics["focal_length_m"])
     wavelengths_m = np.asarray(wave, dtype=float) * 1e-9
-    cutoff = (aperture_diameter / max(focal_plane_distance, 1e-12)) / np.maximum(wavelengths_m, 1e-12)
+    cutoff = (
+        (aperture_diameter / max(focal_plane_distance, 1e-12))
+        / np.maximum(wavelengths_m, 1e-12)
+        * DIFFRACTION_CUTOFF_GRID_SCALE
+    )
 
     otf = np.zeros((rows, cols, wavelengths_m.size), dtype=float)
     for index, cutoff_frequency in enumerate(cutoff):

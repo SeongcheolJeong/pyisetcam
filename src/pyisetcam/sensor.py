@@ -382,7 +382,9 @@ def _auto_exposure_default(sensor: Sensor, oi: OpticalImage) -> float:
 
     sensor_fov = float(sensor_get(small_sensor, "fov", oi))
     image_distance = float(oi.fields.get("image_distance_m", oi_get(oi, "focal length")))
-    width_m = 2.0 * image_distance * np.tan(np.deg2rad(2.0 * sensor_fov) / 2.0)
+    # sensor_get('fov') returns the full field of view, so the geometry uses
+    # half-angle here when mapping that sensor footprint back onto the OI.
+    width_m = 2.0 * image_distance * np.tan(np.deg2rad(sensor_fov) / 2.0)
     small_oi.fields["width_m"] = width_m
     small_oi.fields["height_m"] = width_m
     small_oi.fields["sample_spacing_m"] = width_m
