@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from pyisetcam.utils import blackbody, energy_to_quanta, param_format, quanta_to_energy
+from pyisetcam.utils import blackbody, energy_to_quanta, param_format, quanta_to_energy, unit_frequency_list
 
 
 def test_param_format_string_and_key_value_list() -> None:
@@ -25,3 +25,8 @@ def test_blackbody_matlab_scaling() -> None:
     assert np.all(spectra > 0.0)
     eq_index = int(np.argmin(np.abs(wave - 550.0)))
     assert np.isclose(spectra[eq_index, 0], spectra[eq_index, 1])
+
+
+def test_unit_frequency_list_matches_matlab_even_and_odd() -> None:
+    assert np.allclose(unit_frequency_list(4), np.array([-1.0, -0.5, 0.0, 0.5]))
+    assert np.allclose(unit_frequency_list(5), np.array([-1.0, -0.5, 0.0, 0.5, 1.0]))

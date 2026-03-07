@@ -58,6 +58,21 @@ def test_wvf_path_preserves_more_checkerboard_contrast_than_diffraction(asset_st
     assert dark_wvf < dark_diffraction
 
 
+def test_oi_create_wvf_matches_upstream_default_wavefront_metadata() -> None:
+    oi = oi_create("wvf")
+    wavefront = oi.fields["optics"]["wavefront"]
+    assert oi.fields["optics"]["compute_method"] == "opticspsf"
+    assert oi.fields["optics"]["model"] == "shiftinvariant"
+    assert np.isclose(wavefront["measured_pupil_diameter_mm"], 8.0)
+    assert np.isclose(wavefront["measured_wavelength_nm"], 550.0)
+    assert wavefront["sample_interval_domain"] == "psf"
+    assert wavefront["spatial_samples"] == 201
+    assert np.isclose(wavefront["ref_pupil_plane_size_mm"], 16.212)
+    assert np.isclose(wavefront["calc_pupil_diameter_mm"], 9.6569e-01)
+    assert np.isclose(wavefront["focal_length_m"], 0.003862755099228)
+    assert np.isclose(wavefront["f_number"], 4.0)
+
+
 def test_sensor_compute_noiseless(asset_store) -> None:
     scene = scene_create(asset_store=asset_store)
     oi = oi_compute(oi_create(), scene, crop=True)

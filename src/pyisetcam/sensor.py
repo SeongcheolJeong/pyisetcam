@@ -6,7 +6,7 @@ from typing import Any
 
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
-from scipy.ndimage import gaussian_filter
+from scipy.signal import convolve2d
 
 from .assets import AssetStore
 from .color import luminance_from_photons
@@ -321,6 +321,20 @@ def _sample_centers(count: int, spacing_m: float) -> np.ndarray:
     return ((np.arange(count, dtype=float) + 0.5) - (count / 2.0)) * float(spacing_m)
 
 
+def _gaussian_kernel(shape: tuple[int, int], sigma: float) -> np.ndarray:
+    rows, cols = int(shape[0]), int(shape[1])
+    if rows <= 1 and cols <= 1:
+        return np.ones((1, 1), dtype=float)
+    y = np.arange(rows, dtype=float) - ((rows - 1.0) / 2.0)
+    x = np.arange(cols, dtype=float) - ((cols - 1.0) / 2.0)
+    yy, xx = np.meshgrid(y, x, indexing="ij")
+    kernel = np.exp(-(xx**2 + yy**2) / max(2.0 * sigma * sigma, 1e-12))
+    kernel_sum = float(np.sum(kernel))
+    if kernel_sum <= 0.0:
+        return np.ones((1, 1), dtype=float)
+    return kernel / kernel_sum
+
+
 def _regrid_electron_rate_density(
     density_cube: np.ndarray,
     oi: OpticalImage,
@@ -344,13 +358,14 @@ def _regrid_electron_rate_density(
 
     row_samples_per_pixel = max(1.0, float(np.ceil(pixel_size[0] / max(oi_spacing, 1e-12))))
     col_samples_per_pixel = max(1.0, float(np.ceil(pixel_size[1] / max(oi_spacing, 1e-12))))
-    sigma = (row_samples_per_pixel / 4.0, col_samples_per_pixel / 4.0)
+    kernel_shape = (int(row_samples_per_pixel), int(col_samples_per_pixel))
+    kernel_sigma = row_samples_per_pixel / 4.0
 
     regridded = np.empty((sensor_rows, sensor_cols, density_cube.shape[2]), dtype=float)
     for channel_index in range(density_cube.shape[2]):
         plane = density_cube[:, :, channel_index]
         if row_samples_per_pixel > 1.0 or col_samples_per_pixel > 1.0:
-            plane = gaussian_filter(plane, sigma=sigma, mode="nearest")
+            plane = convolve2d(plane, _gaussian_kernel(kernel_shape, kernel_sigma), mode="same")
         interpolator = RegularGridInterpolator((oi_y, oi_x), plane, bounds_error=False, fill_value=0.0)
         regridded[:, :, channel_index] = interpolator(np.stack([sensor_yy, sensor_xx], axis=-1))
     return regridded

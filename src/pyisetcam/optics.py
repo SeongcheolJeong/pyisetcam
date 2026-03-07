@@ -14,29 +14,46 @@ from .utils import (
     apply_channelwise_gaussian,
     gaussian_sigma_pixels,
     param_format,
+    unit_frequency_list,
 )
 
 DEFAULT_FOCAL_LENGTH_M = 0.003862755099228
+DEFAULT_WVF_FOCAL_LENGTH_M = 0.0171883
 DEFAULT_WVF_MEASURED_PUPIL_MM = 8.0
 DEFAULT_WVF_MEASURED_WAVELENGTH_NM = 550.0
+DEFAULT_WVF_SPATIAL_SAMPLES = 201
+DEFAULT_WVF_REF_PUPIL_PLANE_SIZE_MM = 16.212
+DEFAULT_WVF_CALC_PUPIL_DIAMETER_MM = 3.0
+DEFAULT_CAMERA_WVF_CALC_PUPIL_DIAMETER_MM = 9.6569e-01
 DIFFRACTION_CUTOFF_GRID_SCALE = 1.001
 
 
 def wvf_create(
     *,
     wave: np.ndarray | None = None,
-    focal_length_m: float = DEFAULT_FOCAL_LENGTH_M,
-    f_number: float = 4.0,
+    focal_length_m: float = DEFAULT_WVF_FOCAL_LENGTH_M,
+    f_number: float | None = None,
     aberration_scale: float = 0.0,
+    measured_pupil_diameter_mm: float = DEFAULT_WVF_MEASURED_PUPIL_MM,
+    measured_wavelength_nm: float = DEFAULT_WVF_MEASURED_WAVELENGTH_NM,
+    calc_pupil_diameter_mm: float = DEFAULT_WVF_CALC_PUPIL_DIAMETER_MM,
 ) -> dict[str, Any]:
+    calc_pupil = float(calc_pupil_diameter_mm)
+    focal_length = float(focal_length_m)
+    if f_number is None:
+        f_number = (focal_length * 1e3) / max(calc_pupil, 1e-12)
     return {
         "type": "wvf",
         "wave": np.asarray(DEFAULT_WAVE if wave is None else wave, dtype=float),
-        "focal_length_m": float(focal_length_m),
+        "focal_length_m": focal_length,
         "f_number": float(f_number),
         "aberration_scale": float(aberration_scale),
-        "measured_pupil_diameter_mm": DEFAULT_WVF_MEASURED_PUPIL_MM,
-        "measured_wavelength_nm": DEFAULT_WVF_MEASURED_WAVELENGTH_NM,
+        "measured_pupil_diameter_mm": float(measured_pupil_diameter_mm),
+        "measured_wavelength_nm": float(measured_wavelength_nm),
+        "sample_interval_domain": "psf",
+        "spatial_samples": DEFAULT_WVF_SPATIAL_SAMPLES,
+        "ref_pupil_plane_size_mm": DEFAULT_WVF_REF_PUPIL_PLANE_SIZE_MM,
+        "calc_pupil_diameter_mm": calc_pupil,
     }
 
 
@@ -57,7 +74,16 @@ def oi_create(oi_type: str = "diffraction limited", *args: Any) -> OpticalImage:
             "offaxis_method": "cos4th",
         }
     elif normalized in {"wvf", "shiftinvariant"}:
-        wavefront = args[0] if args and isinstance(args[0], dict) else wvf_create()
+        wavefront = (
+            args[0]
+            if args and isinstance(args[0], dict)
+            else wvf_create(
+                wave=DEFAULT_WAVE.copy(),
+                focal_length_m=DEFAULT_FOCAL_LENGTH_M,
+                f_number=4.0,
+                calc_pupil_diameter_mm=DEFAULT_CAMERA_WVF_CALC_PUPIL_DIAMETER_MM,
+            )
+        )
         optics = {
             "model": "shiftinvariant",
             "f_number": float(wavefront.get("f_number", 4.0)),
@@ -202,8 +228,9 @@ def _diffraction_otf(
     scene: Scene,
 ) -> np.ndarray:
     rows, cols = shape
-    fy = np.fft.fftfreq(rows, d=sample_spacing_m)
-    fx = np.fft.fftfreq(cols, d=sample_spacing_m)
+    nyquist = 1.0 / max(2.0 * sample_spacing_m, 1e-12)
+    fx = np.fft.ifftshift(unit_frequency_list(cols) * nyquist)
+    fy = np.fft.ifftshift(unit_frequency_list(rows) * nyquist)
     rho = np.sqrt(fy[:, None] ** 2 + fx[None, :] ** 2)
 
     aperture_diameter = float(optics["focal_length_m"]) / max(float(optics["f_number"]), 1e-12)

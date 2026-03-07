@@ -27,6 +27,8 @@ def _normalize(value: Any) -> Any:
     if isinstance(value, dict):
         return {key: _normalize(item) for key, item in value.items()}
     if isinstance(value, np.ndarray):
+        if np.iscomplexobj(value):
+            value = np.real(value)
         return np.squeeze(np.asarray(value))
     return value
 
