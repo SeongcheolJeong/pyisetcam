@@ -1,0 +1,59 @@
+{
+  "cases": [
+    {
+      "name": "scene_macbeth_default",
+      "matlab_function": "sceneCreate",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
+      "name": "scene_illuminant_change",
+      "matlab_function": "sceneAdjustIlluminant",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
+      "name": "display_create_lcd_example",
+      "matlab_function": "displayCreate",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
+      "name": "oi_diffraction_limited_default",
+      "matlab_function": "oiCompute",
+      "rtol": 1e-04,
+      "atol": 1e-06
+    },
+    {
+      "name": "oi_wvf_small_scene",
+      "matlab_function": "oiCompute",
+      "rtol": 1e-04,
+      "atol": 1e-06
+    },
+    {
+      "name": "sensor_bayer_noiseless",
+      "matlab_function": "sensorCompute",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
+      "name": "sensor_monochrome_noise_stats",
+      "matlab_function": "sensorCompute",
+      "rtol": 0.01,
+      "atol": 0.02
+    },
+    {
+      "name": "ip_default_pipeline",
+      "matlab_function": "ipCompute",
+      "rtol": 0.001,
+      "atol": 0.001
+    },
+    {
+      "name": "camera_default_pipeline",
+      "matlab_function": "cameraCompute",
+      "rtol": 0.001,
+      "atol": 0.001
+    }
+  ]
+}
+

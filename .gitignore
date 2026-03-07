@@ -1,0 +1,12 @@
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+build/
+dist/
+*.egg-info/
+.DS_Store
+.cache/upstream/
+reports/parity/*.json
+
