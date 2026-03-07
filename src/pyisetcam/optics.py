@@ -17,6 +17,8 @@ from .utils import (
 )
 
 DEFAULT_FOCAL_LENGTH_M = 0.003862755099228
+DEFAULT_WVF_MEASURED_PUPIL_MM = 8.0
+DEFAULT_WVF_MEASURED_WAVELENGTH_NM = 550.0
 
 
 def wvf_create(
@@ -32,6 +34,8 @@ def wvf_create(
         "focal_length_m": float(focal_length_m),
         "f_number": float(f_number),
         "aberration_scale": float(aberration_scale),
+        "measured_pupil_diameter_mm": DEFAULT_WVF_MEASURED_PUPIL_MM,
+        "measured_wavelength_nm": DEFAULT_WVF_MEASURED_WAVELENGTH_NM,
     }
 
 
@@ -132,7 +136,12 @@ def _radiance_to_irradiance(scene_cube: np.ndarray, optics: dict[str, Any], scen
 
 
 def _cos4th_factor(rows: int, cols: int, optics: dict[str, Any], scene: Scene) -> np.ndarray:
-    image_distance, width_m, height_m = _oi_geometry(optics, scene)
+    _, width_m, height_m = _oi_geometry(optics, scene)
+    # ISETCam's cos4th.m uses the OI spatial support that reflects the
+    # scene-focused image size, but then calls opticsGet('imageDistance')
+    # without a scene-distance argument. That getter falls back to the focal
+    # length, so we mirror that behavior here.
+    image_distance = float(optics["focal_length_m"])
     x = np.linspace(-width_m / 2.0 + width_m / (2.0 * cols), width_m / 2.0 - width_m / (2.0 * cols), cols)
     y = np.linspace(-height_m / 2.0 + height_m / (2.0 * rows), height_m / 2.0 - height_m / (2.0 * rows), rows)
     xx, yy = np.meshgrid(x, y)
@@ -222,6 +231,76 @@ def _apply_otf(cube: np.ndarray, otf: np.ndarray) -> np.ndarray:
     return result
 
 
+def _wvf_psf_stack(
+    shape: tuple[int, int],
+    sample_spacing_m: float,
+    wave: np.ndarray,
+    optics: dict[str, Any],
+) -> np.ndarray:
+    rows, cols = shape
+    n_pixels = int(max(rows, cols))
+    wavefront = dict(optics.get("wavefront", {}))
+    measured_pupil_mm = float(wavefront.get("measured_pupil_diameter_mm", DEFAULT_WVF_MEASURED_PUPIL_MM))
+    measured_wavelength_nm = float(wavefront.get("measured_wavelength_nm", DEFAULT_WVF_MEASURED_WAVELENGTH_NM))
+    focal_length_mm = float(optics["focal_length_m"]) * 1e3
+    calc_pupil_mm = float(
+        wavefront.get(
+            "calc_pupil_diameter_mm",
+            focal_length_mm / max(float(optics["f_number"]), 1e-12),
+        )
+    )
+    psf_spacing_mm = float(sample_spacing_m) * 1e3
+    ref_field_size_mm = measured_wavelength_nm * 1e-6 * focal_length_mm / max(psf_spacing_mm, 1e-12)
+
+    middle_row = np.floor(n_pixels / 2.0) + 1.0
+    sample_positions = (np.arange(n_pixels, dtype=float) + 1.0) - middle_row
+    calc_radius = calc_pupil_mm / max(measured_pupil_mm, 1e-12)
+
+    psf_stack = np.empty((n_pixels, n_pixels, len(wave)), dtype=float)
+    for band_index, wavelength_nm in enumerate(np.asarray(wave, dtype=float).reshape(-1)):
+        pupil_plane_size_mm = ref_field_size_mm * (float(wavelength_nm) / max(measured_wavelength_nm, 1e-12))
+        pupil_sample_spacing_mm = pupil_plane_size_mm / max(n_pixels, 1)
+        pupil_pos = sample_positions * pupil_sample_spacing_mm
+        xpos, ypos = np.meshgrid(pupil_pos, -pupil_pos)
+        norm_radius = np.sqrt(xpos**2 + ypos**2) / max(measured_pupil_mm / 2.0, 1e-12)
+        pupil_function = (norm_radius < calc_radius).astype(float)
+
+        amp = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(pupil_function)))
+        intensity = np.real(amp * np.conj(amp))
+        psf_stack[:, :, band_index] = intensity / max(float(np.sum(intensity)), 1e-12)
+
+    return psf_stack
+
+
+def _apply_psf(cube: np.ndarray, psf_stack: np.ndarray) -> np.ndarray:
+    rows, cols = cube.shape[:2]
+    result = np.empty_like(cube, dtype=float)
+
+    for band_index in range(cube.shape[2]):
+        plane = cube[:, :, band_index]
+        psf = psf_stack[:, :, band_index]
+
+        if rows != cols:
+            delta = abs(cols - rows)
+            pre = delta // 2
+            post = delta - pre
+            if cols < rows:
+                padded_plane = np.pad(plane, ((0, 0), (pre, post)))
+                filtered = np.fft.fftshift(np.fft.ifft2(np.fft.fft2(padded_plane) * np.fft.fft2(psf)))
+                plane_result = np.real(filtered[:, pre : pre + cols])
+            else:
+                padded_plane = np.pad(plane, ((pre, post), (0, 0)))
+                filtered = np.fft.fftshift(np.fft.ifft2(np.fft.fft2(padded_plane) * np.fft.fft2(psf)))
+                plane_result = np.real(filtered[pre : pre + rows, :])
+        else:
+            filtered = np.fft.ifft2(np.fft.fft2(plane) * np.fft.fft2(np.fft.ifftshift(psf)))
+            plane_result = np.real(filtered)
+
+        result[:, :, band_index] = plane_result
+
+    return result
+
+
 def oi_compute(
     oi: OpticalImage,
     scene: Scene,
@@ -243,18 +322,6 @@ def oi_compute(
     if param_format(optics.get("offaxis_method", "cos4th")) == "cos4th":
         photons = photons * _cos4th_factor(photons.shape[0], photons.shape[1], optics, scene)[:, :, None]
     extra_blur = float(optics.get("aberration_scale", 0.0))
-    sigmas = np.array(
-        [
-            gaussian_sigma_pixels(
-                float(optics["f_number"]),
-                float(wavelength),
-                sample_spacing_m,
-                extra_blur_pixels=extra_blur,
-            )
-            for wavelength in wave
-        ],
-        dtype=float,
-    )
 
     pad_pixels = (
         int(np.round(scene_photons.shape[0] / 8.0)),
@@ -267,7 +334,29 @@ def oi_compute(
         blurred = _apply_otf(padded, otf)
     elif model == "skip":
         blurred = padded
+    elif model == "shiftinvariant":
+        psf_stack = _wvf_psf_stack(padded.shape[:2], sample_spacing_m, wave, optics)
+        blurred = _apply_psf(padded, psf_stack)
+        if extra_blur > 0.0:
+            blurred = apply_channelwise_gaussian(
+                blurred,
+                np.full(wave.shape, extra_blur, dtype=float),
+                mode=blur_mode,
+                cval=blur_cval,
+            )
     else:
+        sigmas = np.array(
+            [
+                gaussian_sigma_pixels(
+                    float(optics["f_number"]),
+                    float(wavelength),
+                    sample_spacing_m,
+                    extra_blur_pixels=extra_blur,
+                )
+                for wavelength in wave
+            ],
+            dtype=float,
+        )
         blurred = apply_channelwise_gaussian(padded, sigmas, mode=blur_mode, cval=blur_cval)
 
     pad_rows, pad_cols = pad_pixels

@@ -44,6 +44,20 @@ def test_oi_compute_skip_model_avoids_blur(asset_store) -> None:
     assert np.allclose(oi_photons, scene_photons * scale)
 
 
+def test_wvf_path_preserves_more_checkerboard_contrast_than_diffraction(asset_store) -> None:
+    scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
+    oi_wvf = oi_compute(oi_create("wvf"), scene, crop=True)
+    oi_diffraction = oi_compute(oi_create(), scene, crop=True)
+
+    row = oi_wvf.data["photons"].shape[0] // 2
+    dark_col = 8
+    band = 0
+    dark_wvf = float(oi_wvf.data["photons"][row, dark_col, band])
+    dark_diffraction = float(oi_diffraction.data["photons"][row, dark_col, band])
+
+    assert dark_wvf < dark_diffraction
+
+
 def test_sensor_compute_noiseless(asset_store) -> None:
     scene = scene_create(asset_store=asset_store)
     oi = oi_compute(oi_create(), scene, crop=True)
