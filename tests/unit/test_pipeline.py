@@ -111,12 +111,31 @@ def test_sensor_compute_noiseless(asset_store) -> None:
     assert np.all(sensor.data["volts"] >= 0.0)
 
 
+def test_sensor_compute_noiseless_auto_exposure_matches_regression(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    oi = oi_compute(oi_create(), scene, crop=True)
+    sensor = sensor_set(sensor_create(asset_store=asset_store), "noise flag", 0)
+    sensor = sensor_compute(sensor, oi, seed=0)
+    assert np.isclose(sensor.fields["integration_time"], 0.05778050422668457, rtol=1e-5, atol=1e-8)
+
+
 def test_sensor_set_integration_time_disables_auto_exposure(asset_store) -> None:
     sensor = sensor_create(asset_store=asset_store)
     sensor = sensor_set(sensor, "auto exposure", True)
     sensor = sensor_set(sensor, "integration time", 0.125)
     assert sensor.fields["auto_exposure"] is False
     assert np.isclose(sensor.fields["integration_time"], 0.125)
+
+
+def test_sensor_get_fov_uses_scene_distance_when_provided(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    oi = oi_create()
+    scene = scene_create(asset_store=asset_store)
+
+    default_fov = float(sensor_get(sensor, "fov", None, oi))
+    scene_fov = float(sensor_get(sensor, "fov", scene, oi))
+
+    assert scene_fov < default_fov
 
 
 def test_sensor_noise_flag_one_includes_fpn(asset_store) -> None:

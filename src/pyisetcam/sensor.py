@@ -13,7 +13,7 @@ from .color import luminance_from_photons
 from .exceptions import UnsupportedOptionError
 from .optics import DEFAULT_FOCAL_LENGTH_M
 from .optics import oi_get
-from .types import OpticalImage, Sensor
+from .types import OpticalImage, Scene, Sensor
 from .utils import DEFAULT_WAVE, ensure_multiple, param_format, tile_pattern
 
 _DEFAULT_PIXEL = {
@@ -226,14 +226,16 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
             return float(np.max(np.asarray(dv, dtype=float)) / max(max_digital, 1e-12))
         return 0.0
     if key in {"fovhorizontal", "fov"}:
-        oi = args[1] if len(args) >= 2 else args[0] if args else None
-        focal_length = DEFAULT_FOCAL_LENGTH_M if oi is None else float(oi.fields.get("image_distance_m", oi_get(oi, "focal length")))
+        scene_or_distance = args[0] if args else None
+        oi = args[1] if len(args) >= 2 else args[0] if args and isinstance(args[0], OpticalImage) else None
+        focal_length = _sensor_image_distance_m(scene_or_distance, oi)
         pixel_size = np.asarray(sensor.fields["pixel"]["size_m"], dtype=float)
         width = sensor.fields["size"][1] * pixel_size[1]
         return float(np.rad2deg(2.0 * np.arctan2(width / 2.0, focal_length)))
     if key in {"fovvertical", "vfov"}:
-        oi = args[1] if len(args) >= 2 else args[0] if args else None
-        focal_length = DEFAULT_FOCAL_LENGTH_M if oi is None else float(oi.fields.get("image_distance_m", oi_get(oi, "focal length")))
+        scene_or_distance = args[0] if args else None
+        oi = args[1] if len(args) >= 2 else args[0] if args and isinstance(args[0], OpticalImage) else None
+        focal_length = _sensor_image_distance_m(scene_or_distance, oi)
         pixel_size = np.asarray(sensor.fields["pixel"]["size_m"], dtype=float)
         height = sensor.fields["size"][0] * pixel_size[0]
         return float(np.rad2deg(2.0 * np.arctan2(height / 2.0, focal_length)))
@@ -317,6 +319,34 @@ def sensor_set_size_to_fov(sensor: Sensor, fov: float | tuple[float, float], oi:
     rows = ensure_multiple(rows, pattern_rows)
     sensor.fields["size"] = (rows, cols)
     return sensor
+
+
+def _scene_distance_m(scene_or_distance: Scene | OpticalImage | float | None) -> float:
+    if scene_or_distance is None:
+        return np.inf
+    if isinstance(scene_or_distance, OpticalImage):
+        return np.inf
+    if isinstance(scene_or_distance, Scene):
+        return float(scene_or_distance.fields.get("distance_m", np.inf))
+    return float(scene_or_distance)
+
+
+def _sensor_image_distance_m(
+    scene_or_distance: Scene | OpticalImage | float | None,
+    oi: OpticalImage | None,
+) -> float:
+    if oi is None:
+        return DEFAULT_FOCAL_LENGTH_M
+
+    optics = oi.fields.get("optics", {})
+    focal_length = float(optics.get("focal_length_m", oi_get(oi, "focal length")))
+    if param_format(optics.get("model", "")) == "skip":
+        return focal_length
+
+    scene_distance = _scene_distance_m(scene_or_distance)
+    if not np.isfinite(scene_distance) or scene_distance <= focal_length:
+        return focal_length
+    return 1.0 / max((1.0 / focal_length) - (1.0 / scene_distance), 1e-12)
 
 
 def _shot_noise_electrons(rng: np.random.Generator, electrons: np.ndarray) -> np.ndarray:
@@ -419,9 +449,15 @@ def _auto_exposure_default(sensor: Sensor, oi: OpticalImage) -> float:
 
     illuminance = luminance_from_photons(cube, wave, asset_store=AssetStore.default())
     bright_row, bright_col = np.unravel_index(int(np.argmax(illuminance)), illuminance.shape)
+    # MATLAB oiExtractBright/oiCrop uses a [x y width-1 height-1] rect
+    # convention, so the "1x1" bright patch in auto exposure is a 2x2 crop.
+    row_start = min(bright_row, max(cube.shape[0] - 2, 0))
+    col_start = min(bright_col, max(cube.shape[1] - 2, 0))
+    row_stop = min(row_start + 2, cube.shape[0])
+    col_stop = min(col_start + 2, cube.shape[1])
 
     small_oi = oi.clone()
-    small_oi.data["photons"] = cube[bright_row : bright_row + 1, bright_col : bright_col + 1, :].copy()
+    small_oi.data["photons"] = cube[row_start:row_stop, col_start:col_stop, :].copy()
     small_oi.fields["optics"] = dict(small_oi.fields["optics"])
     small_oi.fields["optics"]["model"] = "skip"
     small_oi.fields["optics"]["compute_method"] = "skip"
@@ -436,14 +472,20 @@ def _auto_exposure_default(sensor: Sensor, oi: OpticalImage) -> float:
     small_sensor.fields["pixel"]["voltage_swing"] = 1e6
     small_sensor.data.clear()
 
-    sensor_fov = float(sensor_get(small_sensor, "fov", oi))
+    sensor_hfov = float(sensor_get(small_sensor, "fov", None, oi))
+    sensor_vfov = float(sensor_get(small_sensor, "vfov", None, oi))
     image_distance = float(oi.fields.get("image_distance_m", oi_get(oi, "focal length")))
-    # sensor_get('fov') returns the full field of view, so the geometry uses
-    # half-angle here when mapping that sensor footprint back onto the OI.
-    width_m = 2.0 * image_distance * np.tan(np.deg2rad(sensor_fov) / 2.0)
+    target_hfov = 2.0 * sensor_hfov
+    target_vfov = 2.0 * sensor_vfov
+    width_m = 2.0 * image_distance * np.tan(np.deg2rad(target_hfov) / 2.0)
+    height_m = 2.0 * image_distance * np.tan(np.deg2rad(target_vfov) / 2.0)
     small_oi.fields["width_m"] = width_m
-    small_oi.fields["height_m"] = width_m
-    small_oi.fields["sample_spacing_m"] = width_m
+    small_oi.fields["height_m"] = height_m
+    small_oi.fields["fov_deg"] = target_hfov
+    small_oi.fields["vfov_deg"] = target_vfov
+    small_oi.fields["rows"] = int(small_oi.data["photons"].shape[0])
+    small_oi.fields["cols"] = int(small_oi.data["photons"].shape[1])
+    small_oi.fields["sample_spacing_m"] = width_m / max(int(small_oi.data["photons"].shape[1]), 1)
 
     signal_sensor = sensor_compute(small_sensor, small_oi, seed=0)
     signal_voltage = np.asarray(signal_sensor.data["volts"], dtype=float)
