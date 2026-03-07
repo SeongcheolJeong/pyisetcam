@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
-from scipy.ndimage import zoom
+from scipy.ndimage import map_coordinates, zoom
 
 from .exceptions import UnsupportedOptionError
 from .types import OpticalImage, Scene
@@ -263,11 +263,80 @@ def _apply_otf(cube: np.ndarray, otf: np.ndarray) -> np.ndarray:
     return result
 
 
+def _resize_image(image: np.ndarray, output_shape: tuple[int, int], *, method: str) -> np.ndarray:
+    out_rows = max(int(round(output_shape[0])), 1)
+    out_cols = max(int(round(output_shape[1])), 1)
+    image = np.asarray(image, dtype=float)
+    in_rows, in_cols = image.shape
+    if (in_rows, in_cols) == (out_rows, out_cols):
+        return image.copy()
+
+    row_positions = np.linspace(0.0, max(in_rows - 1, 0), out_rows)
+    col_positions = np.linspace(0.0, max(in_cols - 1, 0), out_cols)
+    row_grid, col_grid = np.meshgrid(row_positions, col_positions, indexing="ij")
+    if method == "nearest":
+        row_index = np.clip(np.rint(row_grid).astype(int), 0, max(in_rows - 1, 0))
+        col_index = np.clip(np.rint(col_grid).astype(int), 0, max(in_cols - 1, 0))
+        return image[row_index, col_index]
+    if method == "linear":
+        return map_coordinates(image, [row_grid, col_grid], order=1, mode="nearest", prefilter=False)
+    raise ValueError(f"Unsupported resize method: {method}")
+
+
+def _resize_nearest(image: np.ndarray, output_shape: tuple[int, int]) -> np.ndarray:
+    return _resize_image(image, output_shape, method="nearest")
+
+
+def _image_bounding_box(mask: np.ndarray) -> tuple[float, float, float, float]:
+    rows, cols = np.nonzero(mask)
+    if rows.size == 0 or cols.size == 0:
+        return (0.0, 0.0, 1.0, 1.0)
+
+    min_row = float(rows.min() + 1)
+    max_row = float(rows.max() + 1)
+    min_col = float(cols.min() + 1)
+    max_col = float(cols.max() + 1)
+    center_x = (min_col + max_col) / 2.0
+    center_y = (min_row + max_row) / 2.0
+    max_diff = max(abs(max_row - center_y), abs(max_col - center_x))
+    return (center_x - max_diff, center_y - max_diff, 2.0 * max_diff, 2.0 * max_diff)
+
+
+def _wvf_aperture_mask(
+    n_pixels: int,
+    calc_radius_index: np.ndarray,
+    aperture: np.ndarray | None = None,
+) -> np.ndarray:
+    if aperture is None:
+        current = np.ones((n_pixels, n_pixels), dtype=float)
+    else:
+        current = np.asarray(aperture, dtype=float)
+        if current.shape != (n_pixels, n_pixels):
+            current = _resize_image(current, (n_pixels, n_pixels), method="linear")
+
+    bounding_box = _image_bounding_box(calc_radius_index)
+    target_shape = (
+        max(int(round(bounding_box[3])), 1),
+        max(int(round(bounding_box[2])), 1),
+    )
+    current = _resize_nearest(current, target_shape)
+
+    pad = int(round((n_pixels - bounding_box[2]) / 2.0) - 2.0)
+    if pad > 0:
+        current = np.pad(current, ((pad, pad), (pad, pad)), mode="constant")
+
+    current = _resize_nearest(current, (n_pixels, n_pixels))
+    current = np.clip(current, 0.0, 1.0)
+    current[~calc_radius_index] = 0.0
+    return current
+
+
 def _wvf_psf_stack(
     shape: tuple[int, int],
     sample_spacing_m: float,
     wave: np.ndarray,
     optics: dict[str, Any],
+    aperture: np.ndarray | None = None,
 ) -> np.ndarray:
     rows, cols = shape
     n_pixels = int(max(rows, cols))
@@ -295,7 +364,8 @@ def _wvf_psf_stack(
         pupil_pos = sample_positions * pupil_sample_spacing_mm
         xpos, ypos = np.meshgrid(pupil_pos, -pupil_pos)
         norm_radius = np.sqrt(xpos**2 + ypos**2) / max(measured_pupil_mm / 2.0, 1e-12)
-        pupil_function = (norm_radius < calc_radius).astype(float)
+        calc_radius_index = norm_radius < calc_radius
+        pupil_function = _wvf_aperture_mask(n_pixels, calc_radius_index, aperture=aperture)
 
         amp = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(pupil_function)))
         intensity = np.real(amp * np.conj(amp))
@@ -344,7 +414,7 @@ def oi_compute(
 ) -> OpticalImage:
     """Compute a supported optical image from a scene."""
 
-    del args, aperture
+    del args
     optics = dict(oi.fields["optics"])
     scene_photons = np.asarray(scene.data["photons"], dtype=float)
     wave = np.asarray(scene.fields["wave"], dtype=float)
@@ -367,7 +437,7 @@ def oi_compute(
     elif model == "skip":
         blurred = padded
     elif model == "shiftinvariant":
-        psf_stack = _wvf_psf_stack(padded.shape[:2], sample_spacing_m, wave, optics)
+        psf_stack = _wvf_psf_stack(padded.shape[:2], sample_spacing_m, wave, optics, aperture=aperture)
         blurred = _apply_psf(padded, psf_stack)
         if extra_blur > 0.0:
             blurred = apply_channelwise_gaussian(

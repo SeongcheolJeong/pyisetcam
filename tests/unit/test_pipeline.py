@@ -73,6 +73,17 @@ def test_oi_create_wvf_matches_upstream_default_wavefront_metadata() -> None:
     assert np.isclose(wavefront["f_number"], 4.0)
 
 
+def test_oi_compute_wvf_uses_custom_aperture(asset_store) -> None:
+    scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
+    default_oi = oi_compute(oi_create("wvf"), scene, crop=True)
+    aperture = np.ones((9, 9), dtype=float)
+    aperture[:, :4] = 0.0
+    custom_oi = oi_compute(oi_create("wvf"), scene, crop=True, aperture=aperture)
+
+    assert custom_oi.data["photons"].shape == default_oi.data["photons"].shape
+    assert not np.allclose(custom_oi.data["photons"], default_oi.data["photons"])
+
+
 def test_sensor_compute_noiseless(asset_store) -> None:
     scene = scene_create(asset_store=asset_store)
     oi = oi_compute(oi_create(), scene, crop=True)
