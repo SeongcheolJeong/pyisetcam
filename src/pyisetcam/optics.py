@@ -322,6 +322,20 @@ def _normalize_optics_update(value: Any, current_optics: dict[str, Any]) -> dict
             )
         ):
             merged_raw_raytrace["fNumber"] = source["fNumber"]
+        nested_effective_focal_length = nested_raw_raytrace.get("effectiveFocalLength")
+        current_nested_effective_focal_length = current_exported_raytrace.get("effectiveFocalLength")
+        if "focalLength" in source and (
+            "effectiveFocalLength" not in nested_raw_raytrace
+            or (
+                nested_effective_focal_length is not None
+                and current_nested_effective_focal_length is not None
+                and np.isclose(
+                    float(nested_effective_focal_length),
+                    float(current_nested_effective_focal_length),
+                )
+            )
+        ):
+            merged_raw_raytrace["effectiveFocalLength"] = float(source["focalLength"]) * 1e3
         source["rayTrace"] = merged_raw_raytrace
 
     nested_raytrace = source.get("raytrace")

@@ -888,6 +888,19 @@ def test_oi_set_optics_raw_nested_fnumber_overrides_exported_top_level_fnumber(a
     assert np.isclose(roundtrip["rayTrace"]["fNumber"], 3.3)
 
 
+def test_oi_set_optics_top_level_focal_length_overrides_exported_nested_effective_focal_length(asset_store) -> None:
+    oi = oi_create("ray trace", asset_store=asset_store)
+    optics = oi_get(oi, "optics")
+    optics["focalLength"] = 0.009
+
+    oi = oi_set(oi, "optics", optics)
+
+    roundtrip = oi_get(oi, "optics")
+    assert np.isclose(oi_get(oi, "focal length"), 0.009)
+    assert np.isclose(oi_get(oi, "rteffectivefocallength"), 0.009)
+    assert np.isclose(roundtrip["rayTrace"]["effectiveFocalLength"], 9.0)
+
+
 def test_oi_compute_raytrace_rotates_psf_with_field_angle(asset_store) -> None:
     wave = np.array([550.0], dtype=float)
     scene = scene_create("uniform ee", 96, wave, asset_store=asset_store)

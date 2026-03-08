@@ -197,7 +197,9 @@ updates now also merge into the current ray-trace state instead of
 dropping existing geometry / PSF tables, and the same preservation now
 applies to partial MATLAB-style nested `rayTrace` updates. Raw nested
 `rayTrace.fNumber` updates now also override the exported top-level
-`fNumber` correctly instead of being clobbered during normalization.
+`fNumber` correctly instead of being clobbered during normalization, and
+top-level `focalLength` edits now likewise override the stale exported
+nested `rayTrace.effectiveFocalLength`.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
