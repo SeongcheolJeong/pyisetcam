@@ -339,11 +339,17 @@ def _export_raytrace(raytrace: dict[str, Any]) -> dict[str, Any]:
 
 def _export_optics(optics: dict[str, Any]) -> dict[str, Any]:
     current = dict(optics)
+    raytrace = dict(current.get("raytrace", {}))
+    export_f_number = float(current.get("f_number", np.nan))
+    export_focal_length = float(current.get("focal_length_m", np.nan))
+    if param_format(current.get("model", "")) == "raytrace":
+        export_f_number = float(raytrace.get("f_number", export_f_number))
+        export_focal_length = float(raytrace.get("effective_focal_length_m", export_focal_length))
     exported: dict[str, Any] = {
         "model": str(current.get("model", "")),
         "name": str(current.get("name", "")),
-        "fNumber": float(current.get("f_number", np.nan)),
-        "focalLength": float(current.get("focal_length_m", np.nan)),
+        "fNumber": export_f_number,
+        "focalLength": export_focal_length,
         "computeMethod": str(current.get("compute_method", "")),
         "aberrationScale": float(current.get("aberration_scale", 0.0)),
         "offaxis": str(current.get("offaxis_method", "skip")),
@@ -670,6 +676,8 @@ def rt_import_data(
     current: dict[str, Any] = {}
     if optics is not None:
         current = dict(optics.fields.get("optics", {})) if isinstance(optics, OpticalImage) else dict(optics)
+    effective_focal_length_m = float(params["efl"]) / 1e3
+    effective_f_number = float(params["fnumber_eff"])
 
     raw_optics = {
         "name": str(current.get("name", base_name)),
@@ -710,7 +718,16 @@ def rt_import_data(
             },
         },
     }
-    return _normalize_raytrace_optics(raw_optics), None
+    normalized = _normalize_raytrace_optics(raw_optics)
+    normalized["name"] = str(current.get("name", normalized.get("name", base_name)))
+    normalized["focal_length_m"] = effective_focal_length_m
+    normalized["f_number"] = effective_f_number
+    normalized["compute_method"] = str(current.get("compute_method", normalized.get("compute_method", "")))
+    normalized["aberration_scale"] = float(current.get("aberration_scale", normalized.get("aberration_scale", 0.0)))
+    normalized["offaxis_method"] = str(current.get("offaxis_method", normalized.get("offaxis_method", "skip")))
+    if "transmittance" in current:
+        normalized["transmittance"] = dict(current["transmittance"])
+    return normalized, None
 
 
 def _synthetic_raytrace_general(raw: dict[str, Any] | None) -> dict[str, Any]:
@@ -3322,6 +3339,8 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
     if key in {"focallength", "opticsfocallength"}:
         return float(oi.fields["optics"]["focal_length_m"])
     if key in {"fnumber", "opticsfnumber"}:
+        if param_format(oi.fields["optics"].get("model", "")) == "raytrace":
+            return float(oi.fields["optics"].get("raytrace", {}).get("f_number", oi.fields["optics"]["f_number"]))
         return float(oi.fields["optics"]["f_number"])
     if key in {"opticsmodel", "model"}:
         return oi.fields["optics"]["model"]

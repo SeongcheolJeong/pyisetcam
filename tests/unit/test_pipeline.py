@@ -1271,13 +1271,47 @@ def test_rt_import_data_parses_column_vector_wave_syntax(tmp_path) -> None:
     assert imported_optics["raytrace"]["psf"]["function"].shape == (2, 2, 2, 2)
 
 
+def test_rt_import_data_preserves_existing_optics_fields_and_effective_top_level_state(tmp_path) -> None:
+    params_file = _write_mock_zemax_bundle(tmp_path)
+    existing = {
+        "name": "Existing Optics",
+        "compute_method": "customrt",
+        "aberration_scale": 0.25,
+        "offaxis_method": "cos4th",
+        "transmittance": {
+            "wave": np.array([500.0, 600.0], dtype=float),
+            "scale": np.array([0.7, 0.8], dtype=float),
+        },
+        "focal_length_m": 0.123,
+        "f_number": 9.9,
+    }
+
+    imported_optics, optics_file = rt_import_data(existing, p_file_full=params_file)
+
+    assert optics_file is None
+    assert imported_optics["name"] == "Existing Optics"
+    assert imported_optics["compute_method"] == "customrt"
+    assert np.isclose(imported_optics["aberration_scale"], 0.25)
+    assert imported_optics["offaxis_method"] == "cos4th"
+    assert np.array_equal(imported_optics["transmittance"]["wave"], np.array([500.0, 600.0]))
+    assert np.array_equal(imported_optics["transmittance"]["scale"], np.array([0.7, 0.8]))
+    assert np.isclose(imported_optics["focal_length_m"], 0.006)
+    assert np.isclose(imported_optics["f_number"], 1.8)
+    assert np.isclose(imported_optics["raytrace"]["f_number"], 2.0)
+    assert np.isclose(imported_optics["raytrace"]["effective_f_number"], 1.8)
+
+
 def test_oi_create_raytrace_accepts_isetparams_file(tmp_path, asset_store) -> None:
     params_file = _write_mock_zemax_bundle(tmp_path)
 
     oi = oi_create("ray trace", params_file, asset_store=asset_store)
+    exported = oi_get(oi, "optics")
 
     assert oi.fields["optics"]["model"] == "raytrace"
+    assert np.isclose(oi.fields["optics"]["f_number"], 1.8)
     assert oi_get(oi, "rtlensfile") == "CookeLens.ZMX"
+    assert np.isclose(oi_get(oi, "fnumber"), 2.0)
+    assert np.isclose(exported["fNumber"], 2.0)
     assert oi.fields["optics"]["raytrace"]["psf"]["function"].shape == (2, 2, 2, 2)
 
 

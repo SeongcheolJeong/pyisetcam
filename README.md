@@ -164,6 +164,10 @@ directory, and the importer now normalizes Windows-style `lensFile` /
 `baseLensFileName` paths the way the upstream MATLAB path does. The
 parameter parser now also accepts multiline MATLAB vector syntax,
 including `...` continuations and bracketed row/column wavelength lists.
+When importing into an existing optics object, `rt_import_data` now also
+preserves the existing name/transmittance/compute settings while updating
+the top-level ray-trace focal-length / f-number state to the imported
+effective values.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
