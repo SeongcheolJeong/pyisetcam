@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import imageio.v3 as iio
 import numpy as np
 
 from .assets import AssetStore
@@ -37,6 +38,80 @@ def _wave_or_default(wave: Any | None) -> np.ndarray:
     if wave is None:
         return DEFAULT_WAVE.copy()
     return np.asarray(wave, dtype=float).reshape(-1)
+
+
+def _scene_image_input(input_data: Any) -> tuple[np.ndarray, str, str]:
+    if isinstance(input_data, (str, Path)):
+        path = Path(input_data).expanduser()
+        image = np.asarray(iio.imread(path), dtype=float)
+        return image, str(path), path.stem
+    image = np.asarray(input_data, dtype=float)
+    return image, "numerical", "numerical"
+
+
+def _scene_display(display: Any, wave: np.ndarray | None, *, asset_store: AssetStore) -> Any:
+    from .display import display_create, display_set
+
+    if display is None:
+        return display_create("default", asset_store=asset_store, wave=wave)
+    if isinstance(display, str):
+        return display_create(display, asset_store=asset_store, wave=wave)
+
+    current = display
+    if wave is None:
+        return current
+    display_wave = np.asarray(current.fields.get("wave", wave), dtype=float).reshape(-1)
+    if not np.array_equal(display_wave, wave):
+        current = display_set(current.clone(), "wave", wave)
+    return current
+
+
+def _prepare_display_image(image: np.ndarray, im_type: str, n_primaries: int) -> np.ndarray:
+    current = np.asarray(image, dtype=float)
+    if current.ndim == 2:
+        current = current[:, :, None]
+    if current.ndim != 3:
+        raise ValueError("scene_from_file expects a 2D or 3D image array.")
+    if current.shape[2] == 4:
+        current = current[:, :, :3]
+
+    normalized_type = param_format(im_type)
+    if normalized_type in {"monochrome", "unispectral"}:
+        if current.shape[2] > 1:
+            current = np.mean(current[:, :, : min(3, current.shape[2])], axis=2, keepdims=True)
+        current = np.repeat(current, n_primaries, axis=2)
+    elif normalized_type == "rgb":
+        if current.shape[2] == 1:
+            current = np.repeat(current, n_primaries, axis=2)
+        elif current.shape[2] < n_primaries:
+            current = np.pad(current, ((0, 0), (0, 0), (0, n_primaries - current.shape[2])), mode="constant")
+        elif current.shape[2] > n_primaries:
+            current = current[:, :, :n_primaries]
+    else:
+        raise UnsupportedOptionError("sceneFromFile", im_type)
+    return current
+
+
+def _display_linear_rgb(image: np.ndarray, gamma_table: np.ndarray) -> np.ndarray:
+    gamma = np.asarray(gamma_table, dtype=float)
+    if gamma.ndim != 2:
+        raise ValueError("Display gamma table must be a 2D matrix.")
+
+    current = np.asarray(image, dtype=float)
+    max_value = float(np.max(current)) if current.size else 0.0
+    if max_value <= 1.0:
+        digital = np.rint(current * (gamma.shape[0] - 1))
+    elif max_value <= 255.0:
+        digital = np.rint(current / 255.0 * (gamma.shape[0] - 1))
+    else:
+        digital = np.rint(current / max(max_value, 1e-12) * (gamma.shape[0] - 1))
+
+    digital = np.clip(digital.astype(int), 0, gamma.shape[0] - 1)
+    linear = np.empty_like(current, dtype=float)
+    for channel in range(current.shape[2]):
+        gamma_channel = min(channel, gamma.shape[1] - 1)
+        linear[:, :, channel] = gamma[digital[:, :, channel], gamma_channel]
+    return linear
 
 
 def _invalidate_scene_caches(scene: Scene) -> None:
@@ -315,6 +390,70 @@ def scene_create(scene_name: str = "default", *args: Any, asset_store: AssetStor
     raise UnsupportedOptionError("sceneCreate", scene_name)
 
 
+def scene_from_file(
+    input_data: Any,
+    im_type: str,
+    mean_luminance: float | None = None,
+    display: Any = None,
+    wave: np.ndarray | None = None,
+    illuminant_energy: Any | None = None,
+    scale_reflectance: bool = True,
+    *,
+    asset_store: AssetStore | None = None,
+) -> Scene:
+    """Create a scene from RGB or monochrome image data and a display model."""
+
+    del scale_reflectance
+    store = _store(asset_store)
+    normalized_type = param_format(im_type)
+    if normalized_type not in {"rgb", "monochrome", "unispectral"}:
+        raise UnsupportedOptionError("sceneFromFile", im_type)
+
+    requested_wave = None if wave is None else _wave_or_default(wave)
+    current_display = _scene_display(display, requested_wave, asset_store=store)
+
+    from .display import display_get
+
+    if not bool(display_get(current_display, "is emissive")):
+        raise UnsupportedOptionError("sceneFromFile", "reflective display")
+
+    wave_nm = np.asarray(display_get(current_display, "wave"), dtype=float).reshape(-1)
+    image, filename, source_name = _scene_image_input(input_data)
+    spd = np.asarray(display_get(current_display, "spd"), dtype=float)
+    n_primaries = spd.shape[1]
+    prepared = _prepare_display_image(image, normalized_type, n_primaries)
+    linear_rgb = _display_linear_rgb(prepared, np.asarray(display_get(current_display, "gamma table"), dtype=float))
+    energy = linear_rgb.reshape(-1, n_primaries) @ spd.T
+    photons = energy_to_quanta(energy, wave_nm).reshape(prepared.shape[0], prepared.shape[1], wave_nm.size)
+
+    scene = Scene(name=f"{source_name} - {current_display.name}")
+    scene.fields["wave"] = wave_nm
+    scene.fields["illuminant_format"] = "spectral"
+    if illuminant_energy is None:
+        source_illuminant_energy = np.sum(spd, axis=1)
+        illuminant_comment = current_display.name
+    else:
+        source_illuminant_energy, illuminant_comment = _resolve_illuminant_input(
+            illuminant_energy,
+            wave_nm,
+            asset_store=store,
+        )
+    scene.fields["illuminant_energy"] = np.asarray(source_illuminant_energy, dtype=float).reshape(-1)
+    scene.fields["illuminant_photons"] = energy_to_quanta(scene.fields["illuminant_energy"], wave_nm)
+    scene.fields["illuminant_comment"] = str(illuminant_comment)
+    scene.fields["distance_m"] = float(display_get(current_display, "viewing distance"))
+    scene.fields["fov_deg"] = float(prepared.shape[1]) * float(display_get(current_display, "deg per dot"))
+    scene.fields["filename"] = filename
+    scene.fields["source_type"] = normalized_type
+    scene.fields["display_name"] = current_display.name
+    scene.data["photons"] = photons
+    _update_scene_geometry(scene)
+
+    if mean_luminance is not None:
+        scene = scene_adjust_luminance(scene, float(mean_luminance), asset_store=store)
+    return scene
+
+
 def scene_calculate_luminance(scene: Scene, *, asset_store: AssetStore | None = None) -> np.ndarray:
     store = _store(asset_store)
     luminance = luminance_from_photons(scene.data["photons"], np.asarray(scene.fields["wave"], dtype=float), asset_store=store)
@@ -411,6 +550,10 @@ def scene_get(scene: Scene, parameter: str, *args: Any, asset_store: AssetStore 
         return scene.type
     if key == "name":
         return scene.name
+    if key == "filename":
+        return scene.fields.get("filename")
+    if key == "sourcetype":
+        return scene.fields.get("source_type")
     if key == "metadata":
         return scene.metadata
     if key == "wave":
@@ -469,6 +612,9 @@ def scene_set(scene: Scene, parameter: str, value: Any) -> Scene:
     key = param_format(parameter)
     if key == "name":
         scene.name = str(value)
+        return scene
+    if key == "filename":
+        scene.fields["filename"] = str(value)
         return scene
     if key == "metadata":
         scene.metadata = dict(value)

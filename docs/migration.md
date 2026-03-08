@@ -5,6 +5,7 @@ This milestone keeps MATLAB semantics close to the source while exposing Pythoni
 | MATLAB | Python |
 | --- | --- |
 | `sceneCreate` | `scene_create` |
+| `sceneFromFile` | `scene_from_file` |
 | `sceneGet` | `scene_get` |
 | `sceneSet` | `scene_set` |
 | `sceneAdjustIlluminant` | `scene_adjust_illuminant` |
@@ -35,4 +36,3 @@ MATLAB `struct` objects are represented as dataclasses with mutable `fields` and
 - All compute functions require explicit object arguments.
 - Unsupported milestone-one features raise `NotImplementedError`.
 - Upstream assets are fetched into `.cache/upstream/isetcam/<sha>/` instead of being vendored into the package.
-

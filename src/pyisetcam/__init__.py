@@ -17,6 +17,7 @@ from .scene import (
     scene_calculate_luminance,
     scene_clear_data,
     scene_create,
+    scene_from_file,
     scene_get,
     scene_set,
 )
@@ -82,6 +83,7 @@ __all__ = [
     "sceneCalculateLuminance",
     "sceneClearData",
     "sceneCreate",
+    "sceneFromFile",
     "sceneGet",
     "sceneSet",
     "scene_adjust_illuminant",
@@ -89,6 +91,7 @@ __all__ = [
     "scene_calculate_luminance",
     "scene_clear_data",
     "scene_create",
+    "scene_from_file",
     "scene_get",
     "scene_set",
     "sensorCompute",
@@ -110,6 +113,7 @@ __version__ = "0.1.0"
 
 # MATLAB-style aliases.
 sceneCreate = scene_create
+sceneFromFile = scene_from_file
 sceneGet = scene_get
 sceneSet = scene_set
 sceneAdjustIlluminant = scene_adjust_illuminant

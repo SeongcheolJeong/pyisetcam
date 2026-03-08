@@ -38,6 +38,7 @@ Run the example pipeline:
 
 ```bash
 python examples/end_to_end.py
+python examples/scene_from_file.py
 ```
 
 Generate the current machine-readable parity summary:
@@ -79,3 +80,11 @@ binary so baseline export works even when the raw CLI crashes at startup.
 - `tests/unit/`: deterministic unit tests
 - `tests/parity/`: curated parity case definitions and baseline comparator
 - `docs/migration.md`: MATLAB-to-Python name mapping
+
+## Current Expansion
+
+Post-milestone expansion has started with `scene_from_file` / `sceneFromFile`
+for RGB and monochrome inputs backed by emissive display calibration. The
+current implementation supports in-memory arrays and image file paths, and
+keeps multispectral / EXR / reflective-display cases explicitly out of scope
+until they are ported deliberately.
