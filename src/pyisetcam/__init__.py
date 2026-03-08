@@ -62,6 +62,8 @@ from .session import (
     ie_app_get,
     ie_add_object,
     ie_delete_object,
+    ie_equivalent_objtype,
+    ie_find_object_by_name,
     ie_get_object,
     ie_get_selected_object,
     ie_init_session,
@@ -88,6 +90,7 @@ from .session import (
     session_get_selected,
     session_get_selected_pair,
     session_get_selected_id,
+    session_find_object_by_name,
     session_list_objects,
     session_new_object_name,
     session_new_object_value,
@@ -158,7 +161,9 @@ __all__ = [
     "ieAddObject",
     "ieAppGet",
     "ieDeleteObject",
+    "ieEquivalentObjtype",
     "ieFieldHeight2Index",
+    "ieFindObjectByName",
     "ieGetObject",
     "ieGetSelectedObject",
     "ieInitSession",
@@ -173,6 +178,8 @@ __all__ = [
     "ie_add_object",
     "ie_app_get",
     "ie_delete_object",
+    "ie_equivalent_objtype",
+    "ie_find_object_by_name",
     "ie_field_height_to_index",
     "ie_get_object",
     "ie_get_selected_object",
@@ -232,6 +239,7 @@ __all__ = [
     "session_get_selected",
     "session_get_selected_pair",
     "session_get_selected_id",
+    "session_find_object_by_name",
     "session_list_objects",
     "session_new_object_name",
     "session_new_object_value",
@@ -400,6 +408,8 @@ deltaEab = delta_e_ab
 ieAddObject = ie_add_object
 ieAppGet = ie_app_get
 ieDeleteObject = ie_delete_object
+ieEquivalentObjtype = ie_equivalent_objtype
+ieFindObjectByName = ie_find_object_by_name
 ieGetObject = ie_get_object
 ieGetSelectedObject = ie_get_selected_object
 ieInitSession = ie_init_session

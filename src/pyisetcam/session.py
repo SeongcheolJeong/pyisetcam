@@ -84,6 +84,10 @@ def vc_equivalent_objtype(this_obj: str | BaseISETObject | dict[str, Any] | Any)
     return type(this_obj).__name__
 
 
+def ie_equivalent_objtype(obj_type: str) -> str:
+    return vc_equivalent_objtype(obj_type)
+
+
 def _object_session_type(obj: BaseISETObject) -> str:
     if isinstance(obj, Scene):
         return "scene"
@@ -280,6 +284,18 @@ def session_get_object_names(
     if make_unique:
         return [f"{index + 1}-{name}" for index, name in enumerate(names)]
     return names
+
+
+def session_find_object_by_name(
+    session: SessionContext,
+    object_type: str,
+    object_name: str,
+) -> int | None:
+    names = session_get_object_names(session, object_type)
+    for index, name in enumerate(names, start=1):
+        if name == object_name:
+            return index
+    return None
 
 
 def session_set_objects(
@@ -833,6 +849,14 @@ def ie_refresh_window(
     return app
 
 
+def ie_find_object_by_name(
+    session: SessionContext,
+    obj_type: str,
+    obj_name: str,
+) -> int | None:
+    return session_find_object_by_name(session, obj_type, obj_name)
+
+
 def ie_main_close(session: SessionContext) -> SessionContext:
     for window_name in ("scene window", "oi window", "sensor window", "ip window", "display window", "metrics window"):
         ie_session_set(session, window_name, None)
@@ -1072,6 +1096,8 @@ ieDeleteObject = ie_delete_object
 ieGetObject = ie_get_object
 ieGetSelectedObject = ie_get_selected_object
 ieAppGet = ie_app_get
+ieEquivalentObjtype = ie_equivalent_objtype
+ieFindObjectByName = ie_find_object_by_name
 ieInitSession = ie_init_session
 ieMainClose = ie_main_close
 ieReplaceObject = ie_replace_object

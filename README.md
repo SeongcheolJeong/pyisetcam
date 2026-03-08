@@ -246,6 +246,8 @@ windows. Stored window geometry/state compatibility is now exposed too
 through `ieWindowsGet` / `ieWindowsSet`, and the adjacent lightweight
 GUI/session wrappers `vcEquivalentObjtype`, `vcSetFigureHandles`, and
 `ieRefreshWindow` are now available on top of that session state.
+Name-based lookup is now covered too through `ieEquivalentObjtype` and
+`ieFindObjectByName`.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

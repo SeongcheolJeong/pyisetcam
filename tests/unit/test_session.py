@@ -10,6 +10,8 @@ from pyisetcam import (
     ieAddObject,
     ieAppGet,
     ieDeleteObject,
+    ieEquivalentObjtype,
+    ieFindObjectByName,
     ieGetObject,
     ieGetSelectedObject,
     ieInitSession,
@@ -24,6 +26,8 @@ from pyisetcam import (
     ie_add_object,
     ie_app_get,
     ie_delete_object,
+    ie_equivalent_objtype,
+    ie_find_object_by_name,
     ie_get_object,
     ie_get_selected_object,
     ie_init_session,
@@ -54,6 +58,7 @@ from pyisetcam import (
     session_get_selected,
     session_get_selected_pair,
     session_get_selected_id,
+    session_find_object_by_name,
     session_new_object_name,
     session_new_object_value,
     session_object_id,
@@ -530,6 +535,18 @@ def test_vc_equivalent_objtype_maps_aliases_and_objects(asset_store) -> None:
     assert vc_equivalent_objtype("camera") == "CAMERA"
     assert vc_equivalent_objtype(sensor) == "ISA"
     assert vc_equivalent_objtype({"type": "vcimage"}) == "VCIMAGE"
+
+
+def test_ie_equivalent_objtype_and_find_object_by_name(asset_store) -> None:
+    session = session_create()
+    scene = scene_create("uniform ee", 8, asset_store=asset_store, session=session)
+    second = scene_create("uniform d65", 8, asset_store=asset_store, session=session)
+
+    assert ie_equivalent_objtype("oi") == "OPTICALIMAGE"
+    assert ieEquivalentObjtype("sensor") == "ISA"
+    assert session_find_object_by_name(session, "scene", scene.name) == 1
+    assert ie_find_object_by_name(session, "scene", second.name) == 2
+    assert ieFindObjectByName(session, "scene", "missing-scene") is None
 
 
 def test_vc_set_figure_handles_updates_session_slots() -> None:
