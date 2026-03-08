@@ -371,9 +371,9 @@ def _sensor_line_profile(sensor: Sensor, line_key: str, rc: Any) -> dict[str, li
     from .roi import _sensor_signal_cube
 
     normalized = param_format(line_key)
-    if normalized not in {"hlinevolts", "hlineelectrons", "vlinevolts", "vlineelectrons"}:
+    if normalized not in {"hlinevolts", "hlineelectrons", "hlinedv", "vlinevolts", "vlineelectrons", "vlinedv"}:
         raise KeyError(f"Unsupported sensor line profile parameter: {line_key}")
-    data_type = "electrons" if "electrons" in normalized else "volts"
+    data_type = "electrons" if "electrons" in normalized else "dv" if "dv" in normalized else "volts"
     cube = _sensor_signal_cube(sensor, data_type)
     support = sensor_get(sensor, "spatial support")
     nfilters = int(sensor_get(sensor, "nfilters"))
@@ -598,7 +598,7 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return sensor.data.get("dv")
     if key == "dvorvolts":
         return sensor.data.get("dv", sensor.data.get("volts"))
-    if key in {"hlinevolts", "hlineelectrons", "vlinevolts", "vlineelectrons"}:
+    if key in {"hlinevolts", "hlineelectrons", "hlinedv", "vlinevolts", "vlineelectrons", "vlinedv"}:
         if not args:
             raise ValueError("Specify row or col.")
         return _sensor_line_profile(sensor, key, args[0])
@@ -770,6 +770,12 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
             sensor.data.pop("dv", None)
         if volts.ndim >= 2:
             sensor.fields["size"] = (int(volts.shape[0]), int(volts.shape[1]))
+        return sensor
+    if key in {"dv", "digitalvalues"}:
+        dv = np.asarray(value, dtype=float)
+        sensor.data["dv"] = dv
+        if dv.ndim >= 2:
+            sensor.fields["size"] = (int(dv.shape[0]), int(dv.shape[1]))
         return sensor
     raise KeyError(f"Unsupported sensorSet parameter: {parameter}")
 

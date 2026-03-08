@@ -273,8 +273,8 @@ Scene and OI ROI getters are now covered too through
 `oiGet(..., 'roi photons/energy')` plus their ROI-mean variants.
 The adjacent sensor compatibility surface now covers direct
 `sensorGet(..., 'electrons')` as well as MATLAB-style line-profile
-queries through `sensorGet(..., 'hline volts/electrons')` and
-`sensorGet(..., 'vline volts/electrons')`, returning per-filter `data`,
+queries through `sensorGet(..., 'hline volts/electrons/dv')` and
+`sensorGet(..., 'vline volts/electrons/dv')`, returning per-filter `data`,
 `pos`, and `pixPos` vectors.
 Sensor ROI/plot compatibility now also includes
 `sensorGet(..., 'chromaticity')` and
@@ -299,6 +299,9 @@ Minimal headless `plotScene` / `oiPlot` wrappers now sit on top of those
 getters too. The supported subset returns MATLAB-style `uData` payloads
 and `None` instead of opening figures, which makes the plot APIs usable in
 tests and scripts.
+That same headless wrapper layer now also includes `plotSensor` for
+volts/electrons/dv line plots and `ipPlot` for RGB line, chromaticity,
+and luminance line data.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

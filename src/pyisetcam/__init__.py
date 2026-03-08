@@ -60,7 +60,7 @@ from .optics import (
     zemax_read_header,
 )
 from .parity import run_python_case, run_python_case_with_context
-from .plotting import oi_plot, scene_plot
+from .plotting import ip_plot, oi_plot, scene_plot, sensor_plot
 from .ptable import IEPTable, ie_p_table
 from .roi import ie_locs2_rect, ie_rect2_locs, ie_rect2_vertices, ie_roi2_locs, vc_get_roi_data, vc_rect2_locs
 from .session import (
@@ -217,10 +217,12 @@ __all__ = [
     "ipCompute",
     "ipCreate",
     "ipGet",
+    "ipPlot",
     "ipSet",
     "ip_compute",
     "ip_create",
     "ip_get",
+    "ip_plot",
     "ip_set",
     "mean_absolute_error",
     "mean_relative_error",
@@ -246,6 +248,7 @@ __all__ = [
     "peak_signal_to_noise_ratio",
     "root_mean_squared_error",
     "scene_plot",
+    "sensor_plot",
     "session_add_and_select_object",
     "session_add_object",
     "session_count_objects",
@@ -374,6 +377,7 @@ __all__ = [
     "wvf_create",
     "chromaticity_xy",
     "plotScene",
+    "plotSensor",
     "oiPlot",
     "xyz_from_energy",
     "xyz_to_lab",
@@ -406,7 +410,9 @@ oiSet = oi_set
 oiCalculateIlluminance = oi_calculate_illuminance
 oiDiffuser = oi_diffuser
 oiPlot = oi_plot
+ipPlot = ip_plot
 plotScene = scene_plot
+plotSensor = sensor_plot
 opticsRayTrace = optics_ray_trace
 ieFieldHeight2Index = ie_field_height_to_index
 rtAngleLUT = rt_angle_lut

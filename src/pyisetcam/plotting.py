@@ -7,9 +7,11 @@ from typing import Any
 import numpy as np
 
 from .exceptions import UnsupportedOptionError
+from .ip import ip_get
 from .optics import oi_get
 from .scene import scene_get
-from .types import OpticalImage, Scene
+from .sensor import sensor_get
+from .types import ImageProcessor, OpticalImage, Scene, Sensor
 from .utils import param_format
 
 
@@ -17,6 +19,84 @@ def _roi_required(function_name: str, plot_type: str, roi_locs: Any | None) -> A
     if roi_locs is None:
         raise ValueError(f"ROI required for {function_name}(..., '{plot_type}').")
     return roi_locs
+
+
+def _line_index(function_name: str, plot_type: str, xy: Any | None, orientation: str) -> tuple[int, np.ndarray]:
+    if xy is None:
+        raise ValueError(f"Line selector required for {function_name}(..., '{plot_type}').")
+    xy_array = np.rint(np.asarray(xy, dtype=float)).astype(int).reshape(-1)
+    if xy_array.size == 1:
+        return int(xy_array[0]), xy_array.copy()
+    if xy_array.size != 2:
+        raise ValueError("Line selector must be a scalar index or [col, row].")
+    index = int(xy_array[1] if orientation == "h" else xy_array[0])
+    return index, xy_array.copy()
+
+
+def _sensor_plot_line_data(sensor: Sensor, line_key: str, xy: Any) -> dict[str, Any]:
+    key = param_format(line_key)
+    orientation = "h" if "hline" in key else "v"
+    data_type = "electrons" if "electrons" in key else "dv" if "dv" in key else "volts"
+    line_index, xy_array = _line_index("plotSensor", line_key, xy, orientation)
+    profile = sensor_get(sensor, f"{orientation}line {data_type}", line_index)
+    if profile is None:
+        raise ValueError(f"Sensor has no {data_type} data for {line_key}.")
+    return {
+        "xy": xy_array,
+        "ori": orientation,
+        "dataType": data_type,
+        "data": [np.asarray(values, dtype=float).copy() for values in profile["data"]],
+        "pos": [1e6 * np.asarray(values, dtype=float).copy() for values in profile["pos"]],
+        "pixPos": [1e6 * np.asarray(values, dtype=float).copy() for values in profile["pixPos"]],
+    }
+
+
+def _ip_line_data(ip: ImageProcessor, orientation: str, xy: Any) -> dict[str, Any]:
+    line_index, xy_array = _line_index("ipPlot", f"{orientation}line", xy, orientation)
+    data = ip_get(ip, "result")
+    if data is None:
+        raise ValueError("IP has no result data for line plotting.")
+    array = np.asarray(data, dtype=float)
+    if array.ndim != 3:
+        raise ValueError("IP result data must be an RGB image for line plotting.")
+    if orientation == "h":
+        if line_index < 1 or line_index > array.shape[0]:
+            raise IndexError("Horizontal IP line index is out of range.")
+        values = np.asarray(array[line_index - 1, :, :], dtype=float)
+    else:
+        if line_index < 1 or line_index > array.shape[1]:
+            raise IndexError("Vertical IP line index is out of range.")
+        values = np.asarray(array[:, line_index - 1, :], dtype=float)
+    return {
+        "xy": xy_array,
+        "ori": orientation,
+        "pos": np.arange(1, values.shape[0] + 1, dtype=float),
+        "values": values.copy(),
+    }
+
+
+def _ip_luminance_line_data(ip: ImageProcessor, orientation: str, xy: Any) -> dict[str, Any]:
+    line_index, xy_array = _line_index("ipPlot", f"{orientation}line luminance", xy, orientation)
+    data = ip_get(ip, "data luminance")
+    if data is None:
+        raise ValueError("IP has no XYZ data for luminance line plotting.")
+    array = np.asarray(data, dtype=float)
+    if array.ndim != 2:
+        raise ValueError("IP luminance data must be a 2D image.")
+    if orientation == "h":
+        if line_index < 1 or line_index > array.shape[0]:
+            raise IndexError("Horizontal IP line index is out of range.")
+        line = np.asarray(array[line_index - 1, :], dtype=float)
+    else:
+        if line_index < 1 or line_index > array.shape[1]:
+            raise IndexError("Vertical IP line index is out of range.")
+        line = np.asarray(array[:, line_index - 1], dtype=float)
+    return {
+        "xy": xy_array,
+        "ori": orientation,
+        "pos": np.arange(1, line.shape[0] + 1, dtype=float),
+        "data": line.copy(),
+    }
 
 
 def scene_plot(
@@ -128,5 +208,53 @@ def oi_plot(
     raise UnsupportedOptionError("oiPlot", p_type)
 
 
+def sensor_plot(
+    sensor: Sensor,
+    p_type: str = "volts hline",
+    roi_locs: Any | None = None,
+    *args: Any,
+) -> tuple[dict[str, Any], None]:
+    """Return MATLAB-style `plotSensor` user-data without opening a figure."""
+
+    del args
+    key = param_format(p_type)
+    if key in {"electronshline", "hlineelectrons", "electronsvline", "vlineelectrons", "voltshline", "hlinevolts", "voltsvline", "vlinevolts", "dvhline", "hlinedv", "dvvline", "vlinedv"}:
+        xy = _roi_required("plotSensor", p_type, roi_locs)
+        return _sensor_plot_line_data(sensor, key, xy), None
+    raise UnsupportedOptionError("plotSensor", p_type)
+
+
+def ip_plot(
+    ip: ImageProcessor,
+    p_type: str = "horizontal line",
+    roi_locs: Any | None = None,
+    *args: Any,
+    asset_store: Any | None = None,
+) -> tuple[dict[str, Any], None]:
+    """Return MATLAB-style `ipPlot` user-data without opening a figure."""
+
+    del args, asset_store
+    key = param_format(p_type)
+    if key in {"horizontalline", "hline"}:
+        xy = _roi_required("ipPlot", p_type, roi_locs)
+        return _ip_line_data(ip, "h", xy), None
+    if key in {"verticalline", "vline"}:
+        xy = _roi_required("ipPlot", p_type, roi_locs)
+        return _ip_line_data(ip, "v", xy), None
+    if key in {"horizontallineluminance", "hlineluminance"}:
+        xy = _roi_required("ipPlot", p_type, roi_locs)
+        return _ip_luminance_line_data(ip, "h", xy), None
+    if key in {"verticallineluminance", "vlineluminance"}:
+        xy = _roi_required("ipPlot", p_type, roi_locs)
+        return _ip_luminance_line_data(ip, "v", xy), None
+    if key == "chromaticity":
+        roi = _roi_required("ipPlot", p_type, roi_locs)
+        data = np.asarray(ip_get(ip, "chromaticity", roi), dtype=float)
+        return {"x": data[:, 0].copy(), "y": data[:, 1].copy(), "roiLocs": np.asarray(roi, dtype=int).copy()}, None
+    raise UnsupportedOptionError("ipPlot", p_type)
+
+
 plotScene = scene_plot
 oiPlot = oi_plot
+plotSensor = sensor_plot
+ipPlot = ip_plot
