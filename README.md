@@ -202,7 +202,7 @@ top-level `focalLength` edits now likewise override the stale exported
 nested `rayTrace.effectiveFocalLength`. Whole-optics updates now also
 honor normalized top-level aliases like `f_number`, `focal_length_m`,
 and `nominal_focal_length_m` in that same export-and-edit workflow, and
-raw exported `nominalFocalLength` now round-trips too.
+raw exported `nominalFocalLength` and `offaxis` now round-trip too.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

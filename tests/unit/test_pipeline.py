@@ -949,6 +949,18 @@ def test_oi_set_optics_raw_top_level_nominal_focal_length_roundtrips(asset_store
     assert np.isclose(roundtrip["nominalFocalLength"], 0.012)
 
 
+def test_oi_set_optics_raw_top_level_offaxis_roundtrips(asset_store) -> None:
+    oi = oi_create("ray trace", asset_store=asset_store)
+    optics = oi_get(oi, "optics")
+    optics["offaxis"] = "skip"
+
+    oi = oi_set(oi, "optics", optics)
+
+    roundtrip = oi_get(oi, "optics")
+    assert oi_get(oi, "offaxis method") == "skip"
+    assert roundtrip["offaxis"] == "skip"
+
+
 def test_oi_compute_raytrace_rotates_psf_with_field_angle(asset_store) -> None:
     wave = np.array([550.0], dtype=float)
     scene = scene_create("uniform ee", 96, wave, asset_store=asset_store)

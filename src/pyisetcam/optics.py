@@ -367,7 +367,10 @@ def _normalize_optics_update(value: Any, current_optics: dict[str, Any]) -> dict
     normalized["offaxis_method"] = str(
         raw.get(
             "offaxis_method",
-            raw.get("offaxisMethod", current_optics.get("offaxis_method", normalized.get("offaxis_method", "skip"))),
+            raw.get(
+                "offaxisMethod",
+                raw.get("offaxis", current_optics.get("offaxis_method", normalized.get("offaxis_method", "skip"))),
+            ),
         )
     )
     return normalized
