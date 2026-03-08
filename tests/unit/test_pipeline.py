@@ -28,6 +28,7 @@ from pyisetcam import (
     rt_extract_block,
     rt_geometry,
     rt_insert_block,
+    rt_otf,
     rt_psf_apply,
     rt_psf_grid,
     rt_psf_interp,
@@ -978,6 +979,42 @@ def test_rt_choose_block_size_matches_upstream_formula(asset_store) -> None:
     assert n_blocks == expected_n_blocks
     assert np.array_equal(block_samples, expected_block_samples)
     assert np.array_equal(irrad_padding, expected_padding)
+
+
+def test_rt_otf_returns_padded_filtered_cube(asset_store) -> None:
+    scene = scene_create("uniform ee", 32, np.array([550.0], dtype=float), asset_store=asset_store)
+    stage = rt_geometry(oi_create("ray trace", asset_store=asset_store), scene)
+
+    result = rt_otf(scene, stage)
+    n_blocks, block_samples, _ = rt_choose_block_size(scene, stage)
+    block_padding = block_samples // 2
+    expected_shape = (
+        int(n_blocks * block_samples[0] + 2 * block_padding[0]),
+        int(n_blocks * block_samples[1] + 2 * block_padding[1]),
+        1,
+    )
+
+    assert result.shape == expected_shape
+    assert np.all(result >= 0.0)
+    assert np.sum(result) > 0.0
+
+
+def test_rt_otf_uses_rt_blocks_per_field_height_setting(asset_store) -> None:
+    scene = scene_create("uniform ee", 32, np.array([550.0], dtype=float), asset_store=asset_store)
+    stage = rt_geometry(oi_create("ray trace", asset_store=asset_store), scene)
+    stage = oi_set(stage, "rt blocks per field height", 6)
+
+    result = rt_otf(scene, stage)
+    n_blocks, block_samples, _ = rt_choose_block_size(scene, stage, steps_fh=6)
+    block_padding = block_samples // 2
+    expected_shape = (
+        int(n_blocks * block_samples[0] + 2 * block_padding[0]),
+        int(n_blocks * block_samples[1] + 2 * block_padding[1]),
+        1,
+    )
+
+    assert oi_get(stage, "rt blocks per field height") == 6
+    assert result.shape == expected_shape
 
 
 def test_rt_psf_grid_matches_oi_sample_spacing(asset_store) -> None:

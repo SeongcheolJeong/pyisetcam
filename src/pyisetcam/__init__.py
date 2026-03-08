@@ -40,6 +40,7 @@ from .optics import (
     rt_extract_block,
     rt_geometry,
     rt_insert_block,
+    rt_otf,
     rt_psf_apply,
     rt_psf_grid,
     rt_psf_interp,
@@ -142,6 +143,7 @@ __all__ = [
     "rtExtractBlock",
     "rtGeometry",
     "rtInsertBlock",
+    "rtOTF",
     "rtRIInterp",
     "rtPSFGrid",
     "rtPSFApply",
@@ -154,6 +156,7 @@ __all__ = [
     "rt_extract_block",
     "rt_geometry",
     "rt_insert_block",
+    "rt_otf",
     "rt_psf_grid",
     "rt_psf_apply",
     "rtPSFInterp",
@@ -228,6 +231,7 @@ rtDIInterp = rt_di_interp
 rtExtractBlock = rt_extract_block
 rtGeometry = rt_geometry
 rtInsertBlock = rt_insert_block
+rtOTF = rt_otf
 rtPSFApply = rt_psf_apply
 rtPSFGrid = rt_psf_grid
 rtPSFInterp = rt_psf_interp

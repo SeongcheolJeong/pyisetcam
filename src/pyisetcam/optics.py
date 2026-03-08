@@ -1304,6 +1304,109 @@ def rt_choose_block_size(
     return n_blocks, block_samples, irrad_padding
 
 
+def _rt_filtered_block_support(
+    oi: OpticalImage,
+    block_samples: np.ndarray,
+    block_padding: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, float, float]:
+    mm_row = float(oi_get(oi, "hspatialresolution")) * 1e3
+    mm_col = float(oi_get(oi, "wspatialresolution")) * 1e3
+    row_f = int(block_samples[0]) + 2 * int(block_padding[0])
+    col_f = int(block_samples[1]) + 2 * int(block_padding[1])
+
+    block_x = np.arange(1, col_f + 1, dtype=float) * mm_col
+    block_x = block_x - block_x[int(np.floor(col_f / 2.0))]
+    block_y = np.arange(1, row_f + 1, dtype=float) * mm_row
+    block_y = block_y - block_y[int(np.floor(row_f / 2.0))]
+    return block_x.reshape(-1), block_y.reshape(-1), mm_row, mm_col
+
+
+def rt_otf(
+    scene: Scene,
+    oi: OpticalImage,
+    steps_fh: int | None = None,
+) -> np.ndarray:
+    photons = np.asarray(oi.data.get("photons", np.empty((0, 0, 0), dtype=float)), dtype=float)
+    if photons.ndim != 3 or photons.size == 0:
+        raise ValueError("rtOTF requires an optical image with irradiance photons.")
+
+    optics = _coerce_optics_for_raytrace(oi)
+    if steps_fh is None:
+        steps_fh = int(
+            oi.fields.get(
+                "rt_blocks_per_field_height",
+                optics.get("raytrace", {}).get("blocks_per_field_height", 4),
+            )
+        )
+
+    wave = np.asarray(oi.fields.get("wave", scene.fields.get("wave", np.empty(0, dtype=float))), dtype=float).reshape(-1)
+    if wave.size != photons.shape[2]:
+        raise ValueError("Optical image wavelength sampling must match photon planes for rtOTF.")
+
+    n_blocks, block_samples, irrad_padding = rt_choose_block_size(scene, oi, optics=optics, steps_fh=int(steps_fh))
+    block_padding = (block_samples // 2).astype(int)
+    row_p = int(n_blocks * block_samples[0])
+    col_p = int(n_blocks * block_samples[1])
+    row_o = int(row_p + 2 * block_padding[0])
+    col_o = int(col_p + 2 * block_padding[1])
+    output = np.zeros((row_o, col_o, wave.size), dtype=float)
+
+    block_x_mm, block_y_mm, mm_row, mm_col = _rt_filtered_block_support(oi, block_samples, block_padding)
+    block_x_grid_mm, block_y_grid_mm = np.meshgrid(block_x_mm, block_y_mm)
+    image_center = np.array([np.floor(row_p / 2.0) + 1.0, np.floor(col_p / 2.0) + 1.0], dtype=float)
+
+    for wave_index, wavelength_nm in enumerate(wave):
+        irradiance = photons[:, :, wave_index]
+        irradiance_padded = np.pad(
+            irradiance,
+            ((int(irrad_padding[0]), int(irrad_padding[0])), (int(irrad_padding[1]), int(irrad_padding[1]))),
+            mode="constant",
+        )
+        for r_block in range(1, n_blocks + 1):
+            for c_block in range(1, n_blocks + 1):
+                block_data, _, _ = rt_extract_block(irradiance_padded, block_samples, r_block, c_block)
+                center_delta = rt_block_center(r_block, c_block, block_samples) - image_center
+                field_angle_deg = float(np.rad2deg(np.arctan2(center_delta[1] * mm_col, center_delta[0] * mm_row)))
+                field_height_m = float(np.hypot(center_delta[0] * mm_row, center_delta[1] * mm_col) / 1e3)
+                psf = rt_psf_interp(
+                    optics,
+                    field_height_m=field_height_m,
+                    field_angle_deg=field_angle_deg,
+                    wavelength_nm=float(wavelength_nm),
+                    x_grid_m=block_x_grid_mm / 1e3,
+                    y_grid_m=block_y_grid_mm / 1e3,
+                )
+                if psf.size == 0:
+                    filtered_data = np.pad(
+                        block_data,
+                        ((int(block_padding[0]), int(block_padding[0])), (int(block_padding[1]), int(block_padding[1]))),
+                        mode="constant",
+                    )
+                else:
+                    psf = np.asarray(psf, dtype=float)
+                    psf[np.isnan(psf)] = 0.0
+                    psf_sum = float(np.sum(psf))
+                    if psf_sum > 0.0:
+                        psf = psf / psf_sum
+                    filtered_data = np.pad(
+                        block_data,
+                        ((int(block_padding[0]), int(block_padding[0])), (int(block_padding[1]), int(block_padding[1]))),
+                        mode="constant",
+                    )
+                    if np.max(psf) < 0.98:
+                        filtered_data = fftconvolve(filtered_data, psf, mode="same")
+                output[:, :, wave_index] = rt_insert_block(
+                    output[:, :, wave_index],
+                    filtered_data,
+                    block_samples,
+                    block_padding,
+                    r_block,
+                    c_block,
+                )
+
+    return output
+
+
 def rt_psf_grid(
     oi: OpticalImage,
     units: str = "m",
@@ -2900,6 +3003,8 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         return float(oi.fields["optics"].get("raytrace", {}).get("object_distance_m", np.inf)) * _spatial_unit_scale(
             args[0] if args else None
         )
+    if key in {"rtblocksperfieldheight"}:
+        return int(oi.fields.get("rt_blocks_per_field_height", oi.fields["optics"].get("raytrace", {}).get("blocks_per_field_height", 4)))
     if key in {"rtfieldofview", "rtfov", "rthorizontalfov", "rtmaximumfieldofview", "rtmaxfov"}:
         return float(oi.fields["optics"].get("raytrace", {}).get("max_fov_deg", np.inf))
     if key in {"rtcomputespacing"}:
@@ -3149,6 +3254,10 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any, *args: Any) -> OpticalI
         return oi
     if key in {"rtobjectdistance", "rtobjdist", "rtrefobjdist", "rtreferenceobjectdistance"}:
         oi.fields["optics"].setdefault("raytrace", {})["object_distance_m"] = float(value)
+        return oi
+    if key in {"rtblocksperfieldheight"}:
+        oi.fields["rt_blocks_per_field_height"] = int(value)
+        oi.fields["optics"].setdefault("raytrace", {})["blocks_per_field_height"] = int(value)
         return oi
     if key in {"rtfieldofview", "rtfov", "rthorizontalfov", "rtmaximumfieldofview", "rtmaxfov"}:
         oi.fields["optics"].setdefault("raytrace", {})["max_fov_deg"] = float(value)

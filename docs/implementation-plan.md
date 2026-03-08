@@ -11,6 +11,7 @@
 - The MATLAB-style top-level ray-trace wrapper `optics_ray_trace` / `opticsRayTrace` is now implemented as the public staged entry point, with cached illuminance / mean-illuminance bookkeeping aligned to the computed OI state.
 - The supporting OI helpers `oi_calculate_illuminance` / `oiCalculateIlluminance` and `oi_diffuser` / `oiDiffuser` are now public and back the `opticsRayTrace` blur/illuminance path.
 - The initial `rtOTF` helper groundwork is now public as well through `rtBlockCenter`, `rtExtractBlock`, `rtInsertBlock`, and `rtChooseBlockSize`.
+- An initial public `rt_otf` / `rtOTF` block-wise ray-trace path is now exposed too, along with MATLAB-style `rtBlocksPerFieldHeight` control.
 
 ## Summary
 - Build a new Python library, `pyisetcam`, that ports the numerical `scene -> optical image -> sensor -> image processor -> camera` pipeline from ISETCam and validates it against GNU Octave runs of the upstream MATLAB code.
