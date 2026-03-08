@@ -123,7 +123,7 @@ from .sensor import (
     sensor_set_size_to_fov,
 )
 from .types import Camera, Display, ImageProcessor, OpticalImage, Scene, Sensor, SessionContext
-from .utils import DEFAULT_WAVE, blackbody, param_format
+from .utils import DEFAULT_WAVE, blackbody, ie_parameter_otype, param_format
 
 __all__ = [
     "AssetStore",
@@ -164,6 +164,7 @@ __all__ = [
     "ieEquivalentObjtype",
     "ieFieldHeight2Index",
     "ieFindObjectByName",
+    "ieParameterOtype",
     "ieGetObject",
     "ieGetSelectedObject",
     "ieInitSession",
@@ -180,6 +181,7 @@ __all__ = [
     "ie_delete_object",
     "ie_equivalent_objtype",
     "ie_find_object_by_name",
+    "ie_parameter_otype",
     "ie_field_height_to_index",
     "ie_get_object",
     "ie_get_selected_object",
@@ -410,6 +412,7 @@ ieAppGet = ie_app_get
 ieDeleteObject = ie_delete_object
 ieEquivalentObjtype = ie_equivalent_objtype
 ieFindObjectByName = ie_find_object_by_name
+ieParameterOtype = ie_parameter_otype
 ieGetObject = ie_get_object
 ieGetSelectedObject = ie_get_selected_object
 ieInitSession = ie_init_session

@@ -15,6 +15,224 @@ _PLANCK = 6.626176e-34
 _LIGHT_SPEED = 299792458.0
 _BOLTZMANN = 1.380662e-23
 
+_PARAMETER_OTYPE_PREFIXES = {
+    "scene": "scene",
+    "oi": "oi",
+    "optics": "optics",
+    "wvf": "wvf",
+    "sensor": "sensor",
+    "pixel": "pixel",
+    "vci": "ip",
+    "ip": "ip",
+    "display": "display",
+    "l3": "l3",
+}
+
+_PARAMETER_OTYPE_UNIQUE = {
+    "scene": {
+        "objectdistance",
+        "meanluminance",
+        "luminance",
+        "illuminant",
+        "illuminantname",
+        "illuminantenergy",
+        "illuminantphotons",
+        "illuminantxyz",
+        "illuminantwave",
+        "illuminantcomment",
+        "illuminantformat",
+    },
+    "oi": {
+        "optics",
+        "opticsmodel",
+        "diffusermethod",
+        "diffuserblur",
+        "psfstruct",
+        "sampledrtpsf",
+        "psfsampleangles",
+        "psfanglestep",
+        "psfimageheights",
+        "raytraceopticsname",
+    },
+    "optics": {
+        "fnumber",
+        "effectivefnumber",
+        "focallength",
+        "power",
+        "imagedistance",
+        "imageheight",
+        "imagewidth",
+        "numericalaperture",
+        "aperturedameter",
+        "apertureradius",
+        "magnification",
+        "pupilmagnification",
+        "offaxismethod",
+        "cos4thmethod",
+        "cos4thdata",
+        "otfdata",
+        "otfsize",
+        "otffx",
+        "otffy",
+        "otfsupport",
+        "psfdata",
+        "psfspacing",
+        "psfsupport",
+        "incoherentcutoffspatialfrequency",
+        "maxincoherentcutoffspatialfrequency",
+        "rtname",
+        "raytrace",
+        "rtopticsprogram",
+        "rtlensfile",
+        "rteffectivefnumber",
+        "rtfnumber",
+        "rtmagnification",
+        "rtreferencewavelength",
+        "rtobjectdistance",
+        "rtfieldofview",
+        "rteffectivefocallength",
+        "rtpsf",
+        "rtpsfdata",
+        "rtpsfsize",
+        "rtpsfwavelength",
+        "rtpsffieldheight",
+        "rtpsfsamplespacing",
+        "rtpsfsupport",
+        "rtpsfsupportrow",
+        "rtpsfsupportcol",
+        "rtotfdata",
+        "rtrelillum",
+        "rtrifunction",
+        "rtriwavelength",
+        "rtrifieldheight",
+        "rtgeometry",
+        "rtgeomfunction",
+        "rtgeomwavelength",
+        "rtgeomfieldheight",
+        "rtgeommaxfieldheight",
+    },
+    "wvf": {
+        "zcoeffs",
+        "constantsampleintervaldomain",
+        "refsizeoffieldmm",
+    },
+    "sensor": {
+        "chiefrayangle",
+        "chiefrayangledegrees",
+        "sensoretendue",
+        "microlens",
+        "volts",
+        "digitalvalues",
+        "electrons",
+        "dvorvoltsroielectrons",
+        "roivoltsmean",
+        "roielectronsmean",
+        "hlinevolts",
+        "hlineelectrons",
+        "vlinevolts",
+        "vlineelectrons",
+        "responseratio",
+        "responsedr",
+        "analoggain",
+        "analogoffset",
+        "sensordynamicrange",
+        "quantization",
+        "nbits",
+        "maxoutput",
+        "quantizatonlut",
+        "quantizationmethod",
+        "filtertransmissivities",
+        "infraredfilter",
+        "cfaname",
+        "filternames",
+        "nfilters",
+        "filtercolorletters",
+        "filtercolorletterscell",
+        "filterplotcolors",
+        "spectralqe",
+        "pattern",
+        "dsnusigma",
+        "prnusigma",
+        "fpnparameters",
+        "dsnuimage",
+        "prnuimage",
+        "columnfpn",
+        "columndsnu",
+        "columnprnu",
+        "coloffsetfpnvector",
+        "colgainfpnvector",
+        "noiseflag",
+        "reusenoise",
+        "noiseseed",
+        "pixel",
+        "autoexpsoure",
+        "exposuretime",
+        "uniqueexptime",
+        "exposureplane",
+        "cds",
+        "vignetting",
+        "nsamplesperpixel",
+        "sensormovement",
+        "movementpositions",
+        "framesperpositions",
+        "sensorpositionsx",
+        "sensorpositionsy",
+        "mccrecthandles",
+        "mcccornerpoints",
+    },
+    "pixel": {
+        "pdsize",
+        "fillfactor",
+        "pdarea",
+        "pdspectralqe",
+        "conversiongain",
+        "voltageswing",
+        "wellcapacity",
+        "darkcurrentdensity",
+        "darkcurrent",
+        "darkvoltage",
+        "darkelectrons",
+        "readnoiseelectrons",
+        "readnoisevolts",
+        "readnoisemillivolts",
+        "pdspectralsr",
+        "pixeldr",
+    },
+    "ip": {
+        "render",
+        "colorbalance",
+        "colorbalancemethod",
+        "demosaic",
+        "demosaicmethod",
+        "colorconversion",
+        "colorconversionmethod",
+        "internalcolorspace",
+        "internalcolormatchingfunciton",
+        "display",
+        "displayxyz",
+        "displayxy",
+        "displaywhitepoint",
+        "displaymaxluminance",
+        "displayspd",
+        "displaygamma",
+        "displaymaxrgb",
+        "displaydpi",
+        "displayviewingdistance",
+        "l3",
+    },
+    "l3": {
+        "trainingilluminant",
+        "clusters",
+        "filters",
+        "sensorpatches",
+    },
+    "asset": {
+        "assetobject",
+        "assetbranch",
+        "assetlight",
+    },
+}
+
 
 def param_format(value: Any) -> Any:
     """Mirror ISETCam's ieParamFormat behavior."""
@@ -34,6 +252,30 @@ def param_format(value: Any) -> Any:
             formatted[index] = param_format(formatted[index])
         return tuple(formatted)
     return value
+
+
+def ie_parameter_otype(param: str) -> tuple[str, str | None]:
+    """Infer the ISET object type associated with a parameter string."""
+
+    if not param:
+        raise ValueError("param is required")
+
+    normalized = param_format(param)
+    direct = _PARAMETER_OTYPE_PREFIXES.get(normalized)
+    if direct is not None:
+        return direct, None
+
+    positions = [idx for idx in (param.find(" "), param.find("/"), param.find("_")) if idx >= 0]
+    if positions:
+        pos = min(positions)
+        prefix = _PARAMETER_OTYPE_PREFIXES.get(param_format(param[:pos]))
+        if prefix is not None:
+            return prefix, param_format(param[(pos + 1) :])
+
+    for object_type, unique_params in _PARAMETER_OTYPE_UNIQUE.items():
+        if normalized in unique_params:
+            return object_type, normalized
+    return "", normalized
 
 
 def split_prefixed_parameter(parameter: Any, prefixes: tuple[str, ...]) -> tuple[str | None, str]:

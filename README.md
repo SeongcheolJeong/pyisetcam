@@ -248,6 +248,8 @@ GUI/session wrappers `vcEquivalentObjtype`, `vcSetFigureHandles`, and
 `ieRefreshWindow` are now available on top of that session state.
 Name-based lookup is now covered too through `ieEquivalentObjtype` and
 `ieFindObjectByName`.
+The shared MATLAB-style programming helper `ieParameterOtype` is now
+ported too for object-type inference from parameter strings.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
