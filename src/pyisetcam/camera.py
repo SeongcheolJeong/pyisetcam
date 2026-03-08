@@ -78,7 +78,6 @@ def _pixel_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
 def camera_create(camera_type: str = "default", *args: Any, asset_store: AssetStore | None = None) -> Camera:
     """Create a supported camera."""
 
-    del args
     store = _store(asset_store)
     normalized = param_format(camera_type)
     camera = Camera(name=str(camera_type))
@@ -96,7 +95,11 @@ def camera_create(camera_type: str = "default", *args: Any, asset_store: AssetSt
         oi = oi_create()
         sensor = sensor_create_ideal("monochrome", asset_store=store)
     else:
-        raise UnsupportedOptionError("cameraCreate", camera_type)
+        try:
+            oi = oi_create()
+            sensor = sensor_create(camera_type, *args, asset_store=store)
+        except UnsupportedOptionError as exc:
+            raise UnsupportedOptionError("cameraCreate", camera_type) from exc
 
     camera.fields["oi"] = oi
     camera.fields["sensor"] = sensor

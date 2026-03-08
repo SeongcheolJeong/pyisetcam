@@ -2288,6 +2288,32 @@ def test_camera_parity_case_disables_sensor_noise(asset_store) -> None:
     assert np.allclose(payload["sensor_volts"], noiseless_camera.fields["sensor"].data["volts"])
 
 
+def test_camera_create_supports_rgbw_and_rccc_sensor_variants(asset_store) -> None:
+    rgbw_camera = camera_create("rgbw", asset_store=asset_store)
+    rccc_camera = camera_create("rccc", asset_store=asset_store)
+
+    assert camera_get(rgbw_camera, "sensor filter color letters") == "rgbw"
+    assert np.array_equal(
+        camera_get(rgbw_camera, "sensor pattern colors"),
+        np.array([["r", "g"], ["b", "w"]], dtype="<U1"),
+    )
+    assert camera_get(rccc_camera, "sensor filter color letters") == "rw"
+    assert np.array_equal(
+        camera_get(rccc_camera, "sensor pattern colors"),
+        np.array([["w", "w"], ["w", "r"]], dtype="<U1"),
+    )
+
+
+def test_camera_create_supports_vendor_sensor_variants(asset_store) -> None:
+    mt9v024_rgbw = camera_create("mt9v024", "rgbw", asset_store=asset_store)
+    ar0132at_rccc = camera_create("ar0132at", "rccc", asset_store=asset_store)
+
+    assert mt9v024_rgbw.fields["sensor"].name == "MTV9V024-RGBW"
+    assert camera_get(mt9v024_rgbw, "sensor filter color letters") == "rgbw"
+    assert ar0132at_rccc.fields["sensor"].name == "AR0132AT-RCCC"
+    assert camera_get(ar0132at_rccc, "sensor filter color letters") == "rw"
+
+
 def test_run_python_case_with_context_returns_pipeline_objects(asset_store) -> None:
     case = run_python_case_with_context("camera_default_pipeline", asset_store=asset_store)
 

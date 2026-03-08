@@ -97,7 +97,10 @@ preset growth. `scene_from_file` / `sceneFromFile` supports RGB and
 monochrome inputs backed by emissive display calibration, the classic test
 scene catalog has been expanded, and `sensor_create` now includes generic
 `rgbw` / `rccc` presets plus upstream-backed `mt9v024` and `ar0132at`
-RGBW/RCCC variants. The first metrics/validation slice is also in place:
+RGBW/RCCC variants. `camera_create(...)` now forwards those expanded
+sensor presets too, so camera constructors can directly target `rgbw`,
+`rccc`, `mt9v024`, and `ar0132at` sensor variants. The first
+metrics/validation slice is also in place:
 `metrics_spd`, CIELAB helpers, and generic MAE/RMSE/PSNR utilities.
 Initial ray-trace optics support is also in place: `oi_create('ray trace')`
 loads the pinned upstream Zemax-derived optics asset, and `oi_compute`
