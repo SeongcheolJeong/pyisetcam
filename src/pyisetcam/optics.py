@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from math import factorial
 from typing import Any
 
 import numpy as np
@@ -37,6 +38,10 @@ def wvf_create(
     measured_pupil_diameter_mm: float = DEFAULT_WVF_MEASURED_PUPIL_MM,
     measured_wavelength_nm: float = DEFAULT_WVF_MEASURED_WAVELENGTH_NM,
     calc_pupil_diameter_mm: float = DEFAULT_WVF_CALC_PUPIL_DIAMETER_MM,
+    zcoeffs: np.ndarray | None = None,
+    lca_method: str = "none",
+    flip_psf_upside_down: bool = False,
+    rotate_psf_90_degs: bool = False,
 ) -> dict[str, Any]:
     calc_pupil = float(calc_pupil_diameter_mm)
     focal_length = float(focal_length_m)
@@ -54,6 +59,10 @@ def wvf_create(
         "spatial_samples": DEFAULT_WVF_SPATIAL_SAMPLES,
         "ref_pupil_plane_size_mm": DEFAULT_WVF_REF_PUPIL_PLANE_SIZE_MM,
         "calc_pupil_diameter_mm": calc_pupil,
+        "zcoeffs": np.asarray([0.0] if zcoeffs is None else zcoeffs, dtype=float).reshape(-1),
+        "lca_method": str(lca_method),
+        "flip_psf_upside_down": bool(flip_psf_upside_down),
+        "rotate_psf_90_degs": bool(rotate_psf_90_degs),
     }
 
 
@@ -426,6 +435,69 @@ def _optics_transmittance_scale(optics: dict[str, Any], wave: np.ndarray) -> np.
     return np.interp(target_wave, source_wave, source_scale, left=1.0, right=1.0)
 
 
+def _osa_index_to_nm(index: int) -> tuple[int, int]:
+    normalized_index = int(index)
+    if normalized_index < 0:
+        raise ValueError("OSA index must be non-negative.")
+    order = 0
+    offset = 0
+    while True:
+        ms = list(range(-order, order + 1, 2))
+        next_offset = offset + len(ms)
+        if normalized_index < next_offset:
+            return order, ms[normalized_index - offset]
+        offset = next_offset
+        order += 1
+
+
+def _zernike_radial(n: int, m_abs: int, radius: np.ndarray) -> np.ndarray:
+    radial = np.zeros_like(radius, dtype=float)
+    half_sum = (n + m_abs) // 2
+    half_diff = (n - m_abs) // 2
+    for s in range(half_diff + 1):
+        coefficient = (
+            ((-1) ** s)
+            * factorial(n - s)
+            / (
+                factorial(s)
+                * factorial(half_sum - s)
+                * factorial(half_diff - s)
+            )
+        )
+        radial = radial + (coefficient * np.power(radius, n - (2 * s)))
+    return radial
+
+
+def _zernike_surface_osa(zcoeffs: np.ndarray, norm_radius: np.ndarray, theta: np.ndarray) -> np.ndarray:
+    coefficients = np.asarray(zcoeffs, dtype=float).reshape(-1)
+    if coefficients.size == 0 or np.allclose(coefficients, 0.0):
+        return np.zeros_like(norm_radius, dtype=float)
+
+    valid = norm_radius <= 1.0
+    surface = np.zeros_like(norm_radius, dtype=float)
+    radius_valid = norm_radius[valid]
+    theta_valid = theta[valid]
+
+    for osa_index, coefficient in enumerate(coefficients):
+        if np.isclose(coefficient, 0.0):
+            continue
+        n, m = _osa_index_to_nm(osa_index)
+        radial = _zernike_radial(n, abs(m), radius_valid)
+        if m == 0:
+            angular = np.ones_like(theta_valid, dtype=float)
+            normalization = np.sqrt(n + 1.0)
+        elif m > 0:
+            angular = np.cos(m * theta_valid)
+            normalization = np.sqrt(2.0 * (n + 1.0))
+        else:
+            angular = np.sin(abs(m) * theta_valid)
+            normalization = np.sqrt(2.0 * (n + 1.0))
+        term = normalization * radial * angular
+        surface[valid] = surface[valid] + (float(coefficient) * term)
+
+    return surface
+
+
 def _wvf_aperture_mask(
     n_pixels: int,
     calc_radius_index: np.ndarray,
@@ -467,6 +539,10 @@ def _wvf_psf_stack(
     wavefront = dict(optics.get("wavefront", {}))
     measured_pupil_mm = float(wavefront.get("measured_pupil_diameter_mm", DEFAULT_WVF_MEASURED_PUPIL_MM))
     measured_wavelength_nm = float(wavefront.get("measured_wavelength_nm", DEFAULT_WVF_MEASURED_WAVELENGTH_NM))
+    lca_method = param_format(wavefront.get("lca_method", "none"))
+    if lca_method not in {"none", ""}:
+        raise UnsupportedOptionError("oiCompute", f"wvf lca method {wavefront.get('lca_method')}")
+    zcoeffs = np.asarray(wavefront.get("zcoeffs", np.array([0.0], dtype=float)), dtype=float).reshape(-1)
     focal_length_mm = float(optics["focal_length_m"]) * 1e3
     calc_pupil_mm = float(
         wavefront.get(
@@ -488,12 +564,22 @@ def _wvf_psf_stack(
         pupil_pos = sample_positions * pupil_sample_spacing_mm
         xpos, ypos = np.meshgrid(pupil_pos, -pupil_pos)
         norm_radius = np.sqrt(xpos**2 + ypos**2) / max(measured_pupil_mm / 2.0, 1e-12)
+        theta = np.arctan2(ypos, xpos)
         calc_radius_index = norm_radius < calc_radius
-        pupil_function = _wvf_aperture_mask(n_pixels, calc_radius_index, aperture=aperture)
+        aperture_mask = _wvf_aperture_mask(n_pixels, calc_radius_index, aperture=aperture)
+        wavefront_aberrations_um = _zernike_surface_osa(zcoeffs, norm_radius, theta)
+        pupil_phase = np.exp(-1j * 2.0 * np.pi * wavefront_aberrations_um / max(float(wavelength_nm) * 1e-3, 1e-12))
+        pupil_phase[norm_radius > calc_radius] = 0.0
+        pupil_function = aperture_mask * pupil_phase
 
         amp = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(pupil_function)))
         intensity = np.real(amp * np.conj(amp))
-        psf_stack[:, :, band_index] = intensity / max(float(np.sum(intensity)), 1e-12)
+        psf = intensity / max(float(np.sum(intensity)), 1e-12)
+        if bool(wavefront.get("flip_psf_upside_down", False)):
+            psf = np.flipud(psf)
+        if bool(wavefront.get("rotate_psf_90_degs", False)):
+            psf = np.rot90(psf)
+        psf_stack[:, :, band_index] = psf
 
     return psf_stack
 

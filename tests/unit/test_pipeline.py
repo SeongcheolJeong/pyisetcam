@@ -21,6 +21,7 @@ from pyisetcam import (
     sensor_create,
     sensor_get,
     sensor_set,
+    wvf_create,
 )
 
 
@@ -204,6 +205,8 @@ def test_oi_create_wvf_matches_upstream_default_wavefront_metadata() -> None:
     assert np.isclose(wavefront["calc_pupil_diameter_mm"], 9.6569e-01)
     assert np.isclose(wavefront["focal_length_m"], 0.003862755099228)
     assert np.isclose(wavefront["f_number"], 4.0)
+    assert wavefront["lca_method"] == "none"
+    assert np.array_equal(wavefront["zcoeffs"], np.array([0.0]))
 
 
 def test_oi_compute_wvf_uses_custom_aperture(asset_store) -> None:
@@ -215,6 +218,28 @@ def test_oi_compute_wvf_uses_custom_aperture(asset_store) -> None:
 
     assert custom_oi.data["photons"].shape == default_oi.data["photons"].shape
     assert not np.allclose(custom_oi.data["photons"], default_oi.data["photons"])
+
+
+def test_oi_compute_wvf_zcoeffs_change_wavefront_response(asset_store) -> None:
+    scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
+    default_oi = oi_compute(oi_create("wvf"), scene, crop=True)
+
+    custom_wvf = wvf_create(
+        wave=scene.fields["wave"],
+        focal_length_m=0.003862755099228,
+        f_number=4.0,
+        calc_pupil_diameter_mm=9.6569e-01,
+        zcoeffs=np.array([0.0, 0.0, 0.0, 0.0, 0.25], dtype=float),
+    )
+    custom_oi = oi_compute(oi_create("wvf", custom_wvf), scene, crop=True)
+
+    row = custom_oi.data["photons"].shape[0] // 2
+    dark_col = 8
+    band = 0
+    dark_default = float(default_oi.data["photons"][row, dark_col, band])
+    dark_custom = float(custom_oi.data["photons"][row, dark_col, band])
+
+    assert dark_custom > dark_default
 
 
 def test_sensor_compute_noiseless(asset_store) -> None:
