@@ -8,6 +8,7 @@ from .assets import (
 )
 from .camera import camera_compute, camera_create, camera_get, camera_set
 from .display import display_create, display_get, display_set
+from .fileio import vc_export_object, vc_load_object, vc_save_object
 from .ip import ip_compute, ip_create, ip_get, ip_set
 from .metrics import (
     comparison_metrics,
@@ -326,6 +327,7 @@ __all__ = [
     "vcDeleteSomeObjects",
     "vcDeleteSelectedObject",
     "vcEquivalentObjtype",
+    "vcExportObject",
     "vcGetObject",
     "vcGetObjectType",
     "vcGetObjectNames",
@@ -338,9 +340,14 @@ __all__ = [
     "vcNewObjectValue",
     "vcReplaceAndSelectObject",
     "vcReplaceObject",
+    "vcLoadObject",
+    "vcSaveObject",
     "vcSelectFigure",
     "vcSetObjects",
     "vcSetSelectedObject",
+    "vc_export_object",
+    "vc_load_object",
+    "vc_save_object",
     "vc_set_figure_handles",
     "wvf_create",
     "xyz_from_energy",
@@ -442,6 +449,7 @@ vcDeleteObject = session_delete_object
 vcDeleteSomeObjects = session_delete_some_objects
 vcDeleteSelectedObject = session_delete_selected_object
 vcEquivalentObjtype = vc_equivalent_objtype
+vcExportObject = vc_export_object
 vcGetObject = session_get_object_with_id
 vcGetObjectType = session_get_object_type
 vcGetObjectNames = session_get_object_names
@@ -453,6 +461,8 @@ vcNewObjectName = session_new_object_name
 vcNewObjectValue = session_new_object_value
 vcReplaceAndSelectObject = session_replace_and_select_object
 vcReplaceObject = session_replace_object
+vcLoadObject = vc_load_object
+vcSaveObject = vc_save_object
 vcSelectFigure = vc_select_figure
 vcSetFigureHandles = vc_set_figure_handles
 vcSetObjects = session_set_objects

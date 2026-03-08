@@ -250,6 +250,9 @@ Name-based lookup is now covered too through `ieEquivalentObjtype` and
 `ieFindObjectByName`.
 The shared MATLAB-style programming helper `ieParameterOtype` is now
 ported too for object-type inference from parameter strings.
+Headless `.mat` object persistence is now available through
+`vcSaveObject`, `vcExportObject`, and `vcLoadObject` when explicit file
+paths are provided.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
