@@ -151,7 +151,7 @@ def test_oi_get_reports_spatial_and_frequency_support(asset_store) -> None:
 def test_diffraction_otf_matches_oi_frequency_support(asset_store) -> None:
     scene = scene_create(asset_store=asset_store)
     oi = oi_compute(oi_create(), scene, crop=False)
-    optics = oi_get(oi, "optics")
+    optics = oi.fields["optics"]
     wave = oi_get(oi, "wave")
     sample_spacing = float(oi_get(oi, "sample spacing")[0])
 
@@ -253,6 +253,7 @@ def test_oi_transmittance_scales_and_interpolates(asset_store) -> None:
 
 def test_oi_create_raytrace_loads_upstream_optics(asset_store) -> None:
     oi = oi_create("ray trace", asset_store=asset_store)
+    optics = oi_get(oi, "optics")
     raytrace = oi_get(oi, "raytrace")
 
     assert oi_get(oi, "model") == "raytrace"
@@ -262,6 +263,10 @@ def test_oi_create_raytrace_loads_upstream_optics(asset_store) -> None:
     assert np.isclose(oi_get(oi, "rt object distance"), 2.0)
     assert np.isclose(oi_get(oi, "rtfov"), 38.72116733777534)
     assert oi_get(oi, "raytrace optics name") == "Asphere 2mm"
+    assert optics["model"] == "raytrace"
+    assert np.isclose(optics["fNumber"], oi_get(oi, "fnumber"))
+    assert np.isclose(optics["focalLength"], oi_get(oi, "focal length"))
+    assert optics["rayTrace"]["lensFile"].endswith(".ZMX")
     assert raytrace["lensFile"].endswith(".ZMX")
     assert np.isclose(raytrace["objectDistance"], 2000.0)
     assert oi_get(oi, "rtpsffieldheight").shape == (21,)
@@ -645,6 +650,21 @@ def test_oi_set_whole_optics_struct_normalizes_raytrace_payload(asset_store) -> 
     assert np.array_equal(oi_get(oi, "transmittance wave"), np.array([500.0, 600.0]))
     assert np.allclose(oi_get(oi, "transmittance"), np.array([0.85]))
     assert np.allclose(oi_get(oi, "rtpsfspacing", "um"), np.array([0.7, 0.7]))
+
+
+def test_oi_get_optics_roundtrips_matlab_style_raytrace_struct(asset_store) -> None:
+    oi = oi_create("ray trace", asset_store=asset_store)
+    optics = oi_get(oi, "optics")
+    optics["fNumber"] = 3.4
+    optics["rayTrace"]["referenceWavelength"] = 610.0
+
+    oi = oi_set(oi, "optics", optics)
+
+    roundtrip = oi_get(oi, "optics")
+    assert np.isclose(oi_get(oi, "fnumber"), 3.4)
+    assert np.isclose(oi_get(oi, "rtrefwave"), 610.0)
+    assert roundtrip["rayTrace"]["referenceWavelength"] == 610.0
+    assert "raytrace" not in roundtrip
 
 
 def test_oi_compute_raytrace_rotates_psf_with_field_angle(asset_store) -> None:

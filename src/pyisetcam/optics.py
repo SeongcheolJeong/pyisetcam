@@ -238,6 +238,10 @@ def _normalize_optics_update(value: Any, current_optics: dict[str, Any]) -> dict
     if "transmittance" not in source and "transmittance" in current_optics:
         source["transmittance"] = dict(current_optics["transmittance"])
 
+    nested_raw_raytrace = source.get("rayTrace")
+    if isinstance(nested_raw_raytrace, dict) and "fNumber" in source:
+        nested_raw_raytrace["fNumber"] = source["fNumber"]
+
     nested_raytrace = source.get("raytrace")
     if isinstance(nested_raytrace, dict) and not _raytrace_struct_uses_normalized_keys(nested_raytrace):
         source["rayTrace"] = dict(nested_raytrace)
@@ -280,6 +284,10 @@ def _normalize_raytrace_update(value: Any, current_optics: dict[str, Any]) -> di
         "aberration_scale": current_optics.get("aberration_scale", 0.0),
         "offaxis_method": current_optics.get("offaxis_method", "skip"),
     }
+    if "name" in raw:
+        source["name"] = raw["name"]
+    if "fNumber" in raw:
+        source["fNumber"] = raw["fNumber"]
     if _raytrace_struct_uses_normalized_keys(raw):
         source["raytrace"] = raw
     else:
@@ -322,6 +330,32 @@ def _export_raytrace(raytrace: dict[str, Any]) -> dict[str, Any]:
     computation = dict(current.get("computation", {}))
     if "psf_spacing_m" in computation:
         exported["computation"] = {"psfSpacing": computation.get("psf_spacing_m")}
+    return exported
+
+
+def _export_optics(optics: dict[str, Any]) -> dict[str, Any]:
+    current = dict(optics)
+    exported: dict[str, Any] = {
+        "model": str(current.get("model", "")),
+        "name": str(current.get("name", "")),
+        "fNumber": float(current.get("f_number", np.nan)),
+        "focalLength": float(current.get("focal_length_m", np.nan)),
+        "computeMethod": str(current.get("compute_method", "")),
+        "aberrationScale": float(current.get("aberration_scale", 0.0)),
+        "offaxis": str(current.get("offaxis_method", "skip")),
+    }
+    if "nominal_focal_length_m" in current:
+        exported["nominalFocalLength"] = float(current.get("nominal_focal_length_m", np.nan))
+    transmittance = current.get("transmittance")
+    if isinstance(transmittance, dict):
+        exported["transmittance"] = {
+            "wave": np.asarray(transmittance.get("wave", np.empty(0, dtype=float)), dtype=float).reshape(-1).copy(),
+            "scale": np.asarray(transmittance.get("scale", np.empty(0, dtype=float)), dtype=float).reshape(-1).copy(),
+        }
+    if isinstance(current.get("wavefront"), dict):
+        exported["wavefront"] = dict(current.get("wavefront", {}))
+    if isinstance(current.get("raytrace"), dict):
+        exported["rayTrace"] = _export_raytrace(current.get("raytrace", {}))
     return exported
 
 
@@ -2081,7 +2115,7 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         _, fy = _oi_frequency_support_1d(oi, str(unit))
         return fy
     if key == "optics":
-        return oi.fields["optics"]
+        return _export_optics(oi.fields["optics"])
     if key in {"focallength", "opticsfocallength"}:
         return float(oi.fields["optics"]["focal_length_m"])
     if key in {"fnumber", "opticsfnumber"}:

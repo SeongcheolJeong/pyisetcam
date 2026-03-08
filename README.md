@@ -118,8 +118,9 @@ whole-struct `optics` / `raytrace` replacement now normalizes MATLAB-style
 payloads while invalidating stale cached PSFs. Raw ray-trace table fidelity
 now also includes MATLAB-style `rtpsfsize` reporting of the underlying 4-D
 PSF table, indexed `oiSet` updates for `rtpsfdata` and `rtgeomfunction`,
-and MATLAB-style raw struct export for `raytrace`, `rtpsf`, `rtgeometry`,
-and `rtrelillum`.
+MATLAB-style raw struct export for `raytrace`, `rtpsf`, `rtgeometry`, and
+`rtrelillum`, and MATLAB-style whole-optics export via `oiGet('optics')`
+that round-trips through `oiSet('optics', ...)`.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
