@@ -1185,6 +1185,28 @@ def _raw_raytrace_psf_data(oi: OpticalImage) -> dict[str, Any]:
     return dict(oi.fields["optics"].get("raytrace", {}).get("psf", {}))
 
 
+def _raw_raytrace_table(oi: OpticalImage, name: str) -> dict[str, Any]:
+    raytrace = dict(oi.fields["optics"].get("raytrace", {}))
+    if name == "psf":
+        return dict(raytrace.get("psf", {}))
+    if name == "geometry":
+        return dict(raytrace.get("geometry", {}))
+    if name in {"relative_illumination", "relillum"}:
+        return dict(raytrace.get("relative_illumination", {}))
+    return {}
+
+
+def _nearest_wave_index(wavelengths_nm: np.ndarray, wavelength_nm: float) -> int:
+    if wavelengths_nm.size == 0:
+        raise ValueError("No wavelength samples are available.")
+    return int(np.argmin(np.abs(np.asarray(wavelengths_nm, dtype=float).reshape(-1) - float(wavelength_nm))))
+
+
+def _raw_raytrace_field_height(table: dict[str, Any], unit: Any | None = None) -> np.ndarray:
+    field_height_mm = np.asarray(table.get("field_height_mm", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    return (field_height_mm / 1e3) * _spatial_unit_scale(unit)
+
+
 def _raw_raytrace_psf_size(oi: OpticalImage) -> tuple[int, int]:
     psf_function = np.asarray(_raw_raytrace_psf_data(oi).get("function", np.empty(0, dtype=float)), dtype=float)
     if psf_function.ndim < 2:
@@ -1223,6 +1245,38 @@ def _raw_raytrace_frequency_axes(oi: OpticalImage, unit: Any | None = None) -> t
     fy = _raw_raytrace_support_axis(rows, 1.0 / max(rows * float(spacing[0]), 1e-12))
     fx = _raw_raytrace_support_axis(cols, 1.0 / max(cols * float(spacing[1]), 1e-12))
     return fx, fy
+
+
+def _raw_raytrace_psf_function(oi: OpticalImage, field_height_m: float | None = None, wavelength_nm: float | None = None) -> np.ndarray:
+    table = _raw_raytrace_table(oi, "psf")
+    function = np.asarray(table.get("function", np.empty(0, dtype=float)), dtype=float)
+    if function.size == 0 or field_height_m is None or wavelength_nm is None:
+        return function
+    field_heights_m = _raw_raytrace_field_height(table)
+    wavelengths_nm = np.asarray(table.get("wavelength_nm", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    if field_heights_m.size == 0 or wavelengths_nm.size == 0:
+        return function
+    field_index = int(np.argmin(np.abs(field_heights_m - float(field_height_m))))
+    wave_index = _nearest_wave_index(wavelengths_nm, float(wavelength_nm))
+    return function[:, :, field_index, wave_index]
+
+
+def _raw_raytrace_geometry_function(
+    oi: OpticalImage,
+    wavelength_nm: float | None = None,
+    unit: Any | None = None,
+) -> np.ndarray:
+    table = _raw_raytrace_table(oi, "geometry")
+    function = np.asarray(table.get("function", np.empty(0, dtype=float)), dtype=float)
+    if function.size == 0:
+        return function
+    if wavelength_nm is None and unit is None:
+        return function
+    if wavelength_nm is not None:
+        wavelengths_nm = np.asarray(table.get("wavelength_nm", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+        if wavelengths_nm.size > 0:
+            function = function[:, _nearest_wave_index(wavelengths_nm, float(wavelength_nm))]
+    return (np.asarray(function, dtype=float) / 1e3) * _spatial_unit_scale(unit)
 
 
 def _raytrace_padding_pixels(psf_struct: dict[str, Any] | None) -> tuple[int, int]:
@@ -1864,6 +1918,22 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         return oi.fields["optics"].get("wavefront")
     if key in {"opticsraytrace", "raytrace", "rt"}:
         return oi.fields["optics"].get("raytrace")
+    if key in {"rtname"}:
+        return oi.fields["optics"].get("raytrace", {}).get("name", oi.fields["optics"].get("name"))
+    if key in {"opticsprogram", "rtopticsprogram"}:
+        return oi.fields["optics"].get("raytrace", {}).get("program", "")
+    if key in {"lensfile", "rtlensfile"}:
+        return oi.fields["optics"].get("raytrace", {}).get("lens_file", "")
+    if key in {"rteffectivefnumber", "rtefff#"}:
+        return float(oi.fields["optics"].get("raytrace", {}).get("effective_f_number", oi.fields["optics"].get("f_number", np.nan)))
+    if key in {"rtfnumber"}:
+        return float(oi.fields["optics"].get("raytrace", {}).get("f_number", oi.fields["optics"].get("f_number", np.nan)))
+    if key in {"rtmagnification", "rtmag"}:
+        return float(oi.fields["optics"].get("raytrace", {}).get("magnification", 0.0))
+    if key in {"rtreferencewavelength", "rtrefwave"}:
+        return float(oi.fields["optics"].get("raytrace", {}).get("reference_wavelength_nm", DEFAULT_WVF_MEASURED_WAVELENGTH_NM))
+    if key in {"rteffectivefocallength", "rtefl", "rteffectivefl"}:
+        return float(oi.fields["optics"].get("raytrace", {}).get("effective_focal_length_m", oi.fields["optics"].get("focal_length_m", np.nan))) * _spatial_unit_scale(args[0] if args else None)
     if key in {"raytraceopticsname", "psfopticsname"}:
         psf_struct = oi.fields.get("psf_struct")
         if isinstance(psf_struct, dict) and "optics_name" in psf_struct:
@@ -1938,6 +2008,12 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         return float(oi.fields["optics"].get("raytrace", {}).get("object_distance_m", np.inf))
     if key in {"rtfov"}:
         return float(oi.fields["optics"].get("raytrace", {}).get("max_fov_deg", np.inf))
+    if key in {"rtpsf"}:
+        return _raw_raytrace_table(oi, "psf")
+    if key in {"rtpsffunction", "rtpsfdata"}:
+        field_height_m = float(args[0]) if len(args) >= 1 else None
+        wavelength_nm = float(args[1]) if len(args) >= 2 else None
+        return _raw_raytrace_psf_function(oi, field_height_m, wavelength_nm)
     if key in {"rtpsffieldheight"}:
         field_height_mm = np.asarray(_raw_raytrace_psf_data(oi).get("field_height_mm", np.empty(0, dtype=float)), dtype=float)
         return (field_height_mm / 1e3) * _spatial_unit_scale(args[0] if args else None)
@@ -1966,6 +2042,35 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
     if key in {"rtfreqsupport"}:
         fx, fy = _raw_raytrace_frequency_axes(oi, args[0] if args else "mm")
         return {"fx": fx, "fy": fy}
+    if key in {"rtrelillum"}:
+        return _raw_raytrace_table(oi, "relative_illumination")
+    if key in {"rtrifunction", "rtrelativeilluminationfunction", "rtrelillumfunction"}:
+        return np.asarray(_raw_raytrace_table(oi, "relative_illumination").get("function", np.empty(0, dtype=float)), dtype=float)
+    if key in {"rtriwavelength", "rtrelativeilluminationwavelength"}:
+        return np.asarray(_raw_raytrace_table(oi, "relative_illumination").get("wavelength_nm", np.empty(0, dtype=float)), dtype=float)
+    if key in {"rtrifieldheight", "rtrelativeilluminationfieldheight"}:
+        return _raw_raytrace_field_height(_raw_raytrace_table(oi, "relative_illumination"), args[0] if args else None)
+    if key in {"rtgeometry"}:
+        return _raw_raytrace_table(oi, "geometry")
+    if key in {"rtgeomfunction", "rtgeometryfunction", "rtdistortionfunction", "rtgeomdistortion"}:
+        wavelength_nm = None
+        unit = None
+        if len(args) >= 1 and args[0] is not None:
+            wavelength_nm = float(args[0])
+        if len(args) >= 2:
+            unit = args[1]
+        elif len(args) == 1 and args[0] is None:
+            unit = None
+        return _raw_raytrace_geometry_function(oi, wavelength_nm, unit)
+    if key in {"rtgeomwavelength", "rtgeometrywavelength"}:
+        return np.asarray(_raw_raytrace_table(oi, "geometry").get("wavelength_nm", np.empty(0, dtype=float)), dtype=float)
+    if key in {"rtgeomfieldheight", "rtgeometryfieldheight"}:
+        return _raw_raytrace_field_height(_raw_raytrace_table(oi, "geometry"), args[0] if args else None)
+    if key in {"rtgeommaxfieldheight", "rtmaximumfieldheight", "rtmaxfieldheight"}:
+        field_height = np.asarray(oi_get(oi, "rtgeometryfieldheight"), dtype=float).reshape(-1)
+        if field_height.size == 0:
+            return 0.0
+        return float(np.max(field_height)) * _spatial_unit_scale(args[0] if args else None)
     if key in {"transmittance", "transmittancescale", "lenstransmittance", "opticstransmittance", "opticstransmittancescale"}:
         target_wave = np.asarray(args[0], dtype=float).reshape(-1) if args else np.asarray(oi.fields["wave"], dtype=float)
         return _optics_transmittance_scale(oi.fields["optics"], target_wave)
@@ -2110,6 +2215,14 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any) -> OpticalImage:
         oi.fields["optics"].setdefault("raytrace", {}).setdefault("psf", {})["wavelength_nm"] = np.asarray(value, dtype=float).reshape(-1)
         oi.fields["psf_struct"] = None
         return oi
+    if key in {"rtpsf"}:
+        oi.fields["optics"].setdefault("raytrace", {})["psf"] = _normalize_raytrace_psf(value)
+        oi.fields["psf_struct"] = None
+        return oi
+    if key in {"rtpsffunction", "rtpsfdata"}:
+        oi.fields["optics"].setdefault("raytrace", {}).setdefault("psf", {})["function"] = np.asarray(value, dtype=float)
+        oi.fields["psf_struct"] = None
+        return oi
     if key in {"rtpsffieldheight"}:
         oi.fields["optics"].setdefault("raytrace", {}).setdefault("psf", {})["field_height_mm"] = np.asarray(value, dtype=float).reshape(-1)
         oi.fields["psf_struct"] = None
@@ -2117,6 +2230,30 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any) -> OpticalImage:
     if key in {"rtpsfsamplespacing", "rtpsfspacing"}:
         oi.fields["optics"].setdefault("raytrace", {}).setdefault("psf", {})["sample_spacing_mm"] = np.asarray(value, dtype=float).reshape(-1)
         oi.fields["psf_struct"] = None
+        return oi
+    if key in {"rtrelillum"}:
+        oi.fields["optics"].setdefault("raytrace", {})["relative_illumination"] = _normalize_raytrace_table(value)
+        return oi
+    if key in {"rtrifunction", "rtrelativeilluminationfunction", "rtrelillumfunction"}:
+        oi.fields["optics"].setdefault("raytrace", {}).setdefault("relative_illumination", {})["function"] = np.asarray(value, dtype=float)
+        return oi
+    if key in {"rtriwavelength", "rtrelativeilluminationwavelength"}:
+        oi.fields["optics"].setdefault("raytrace", {}).setdefault("relative_illumination", {})["wavelength_nm"] = np.asarray(value, dtype=float).reshape(-1)
+        return oi
+    if key in {"rtrifieldheight", "rtrelativeilluminationfieldheight"}:
+        oi.fields["optics"].setdefault("raytrace", {}).setdefault("relative_illumination", {})["field_height_mm"] = np.asarray(value, dtype=float).reshape(-1)
+        return oi
+    if key in {"rtgeometry"}:
+        oi.fields["optics"].setdefault("raytrace", {})["geometry"] = _normalize_raytrace_table(value)
+        return oi
+    if key in {"rtgeomfunction", "rtgeometryfunction", "rtdistortionfunction", "rtgeomdistortion"}:
+        oi.fields["optics"].setdefault("raytrace", {}).setdefault("geometry", {})["function"] = np.asarray(value, dtype=float)
+        return oi
+    if key in {"rtgeomwavelength", "rtgeometrywavelength"}:
+        oi.fields["optics"].setdefault("raytrace", {}).setdefault("geometry", {})["wavelength_nm"] = np.asarray(value, dtype=float).reshape(-1)
+        return oi
+    if key in {"rtgeomfieldheight", "rtgeometryfieldheight"}:
+        oi.fields["optics"].setdefault("raytrace", {}).setdefault("geometry", {})["field_height_mm"] = np.asarray(value, dtype=float).reshape(-1)
         return oi
     if key in {"opticsraytrace", "raytrace", "rt"}:
         oi.fields["optics"]["raytrace"] = dict(value)

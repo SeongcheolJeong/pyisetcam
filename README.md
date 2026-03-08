@@ -107,7 +107,10 @@ computes, plus MATLAB-style uncropped padding/output bookkeeping and
 `oiGet/oiSet` support for ray-trace PSF metadata, including MATLAB-style
 `psf struct` normalization, sample angles, image heights, wavelengths, and
 optics-name accessors, plus unit-aware raw ray-trace PSF spacing / field
-height getters and derived support / frequency axes.
+height getters and derived support / frequency axes. Raw ray-trace geometry
+and relative-illumination tables are also exposed now, including scalar
+ray-trace metadata, unit-aware field-height getters, and MATLAB-style raw
+table/function accessors.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

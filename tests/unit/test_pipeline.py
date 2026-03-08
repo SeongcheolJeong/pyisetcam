@@ -287,6 +287,32 @@ def test_oi_create_raytrace_exposes_raw_psf_support_axes(asset_store) -> None:
     assert np.isclose(freq_y[1] - freq_y[0], 1.0 / (128.0 * spacing_mm[0]))
 
 
+def test_oi_create_raytrace_exposes_raw_geometry_and_relillum_tables(asset_store) -> None:
+    oi = oi_create("ray trace", asset_store=asset_store)
+    geometry = oi_get(oi, "rtgeometry")
+    rel_illum = oi_get(oi, "rtrelillum")
+
+    assert oi_get(oi, "rtname") == "Asphere 2mm"
+    assert oi_get(oi, "rtopticsprogram") == "Zemax"
+    assert oi_get(oi, "rtlensfile").endswith(".ZMX")
+    assert np.isclose(oi_get(oi, "rtefl", "mm"), 1.999989, atol=1e-6)
+    assert np.isclose(oi_get(oi, "rteffectivefnumber"), 4.895375)
+    assert np.isclose(oi_get(oi, "rtfnumber"), 4.999973)
+    assert np.isclose(oi_get(oi, "rtmagnification"), -0.001)
+    assert np.isclose(oi_get(oi, "rtrefwave"), 450.0)
+    assert geometry["function"].shape == (21, 5)
+    assert rel_illum["function"].shape == (21, 5)
+    assert np.allclose(oi_get(oi, "rtrifieldheight", "mm"), rel_illum["field_height_mm"])
+    assert np.allclose(oi_get(oi, "rtgeomfieldheight", "mm"), geometry["field_height_mm"])
+    assert np.isclose(oi_get(oi, "rtgeommaxfieldheight", "mm"), np.max(geometry["field_height_mm"]))
+    assert np.array_equal(oi_get(oi, "rtriwavelength"), rel_illum["wavelength_nm"])
+    assert np.array_equal(oi_get(oi, "rtgeomwavelength"), geometry["wavelength_nm"])
+    assert np.allclose(oi_get(oi, "rtgeomfunction"), geometry["function"])
+    assert np.allclose(oi_get(oi, "rtgeomfunction", 550.0, "mm"), geometry["function"][:, 2])
+    assert np.allclose(oi_get(oi, "rtgeomfunction", 550.0), geometry["function"][:, 2] / 1e3)
+    assert np.allclose(oi_get(oi, "rtrifunction"), rel_illum["function"])
+
+
 def test_oi_compute_raytrace_applies_lens_shading_and_blur(asset_store) -> None:
     scene = scene_create("uniform ee", 32, asset_store=asset_store)
     raytrace = oi_compute(oi_create("ray trace", asset_store=asset_store), scene, crop=True)
@@ -412,6 +438,39 @@ def test_oi_set_raw_raytrace_psf_metadata_updates_optics_and_invalidates_cache(a
     assert np.allclose(oi_get(oi, "rtpsfspacing", "um"), np.array([0.5, 0.75]))
     assert np.allclose(oi_get(oi, "rtpsffieldheight", "mm"), np.array([0.0, 0.5, 1.0]))
     assert np.array_equal(oi_get(oi, "rtpsfwavelength"), np.array([500.0, 600.0]))
+
+
+def test_oi_set_raw_raytrace_geometry_and_relillum_updates_tables(asset_store) -> None:
+    oi = oi_create("ray trace", asset_store=asset_store)
+
+    geometry_function = np.array([[0.0, 1.0], [2.0, 3.0]], dtype=float)
+    rel_illum_function = np.array([[1.0, 0.9], [0.8, 0.7]], dtype=float)
+
+    oi = oi_set(
+        oi,
+        "rtgeometry",
+        {
+            "fieldHeight": np.array([0.0, 0.5], dtype=float),
+            "wavelength": np.array([500.0, 600.0], dtype=float),
+            "function": geometry_function,
+        },
+    )
+    oi = oi_set(
+        oi,
+        "rtrelillum",
+        {
+            "fieldHeight": np.array([0.0, 0.25], dtype=float),
+            "wavelength": np.array([500.0, 600.0], dtype=float),
+            "function": rel_illum_function,
+        },
+    )
+
+    assert np.allclose(oi_get(oi, "rtgeomfieldheight", "mm"), np.array([0.0, 0.5]))
+    assert np.array_equal(oi_get(oi, "rtgeomwavelength"), np.array([500.0, 600.0]))
+    assert np.allclose(oi_get(oi, "rtgeomfunction", 600.0, "mm"), geometry_function[:, 1])
+    assert np.allclose(oi_get(oi, "rtrifieldheight", "mm"), np.array([0.0, 0.25]))
+    assert np.array_equal(oi_get(oi, "rtriwavelength"), np.array([500.0, 600.0]))
+    assert np.allclose(oi_get(oi, "rtrifunction"), rel_illum_function)
 
 
 def test_oi_compute_raytrace_rotates_psf_with_field_angle(asset_store) -> None:
