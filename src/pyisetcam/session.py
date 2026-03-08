@@ -421,9 +421,68 @@ _WINDOW_STATE_PARAM_MAP = {
     "oidisplayflag": ("render_state", "oi_display_flag"),
 }
 
+_WINDOW_POSITION_SLOTS = (
+    ("main_window", "figure1"),
+    ("scene_window", "figure1"),
+    ("oi_window", "figure1"),
+    ("sensor_window", "figure1"),
+    ("ip_window", "figure1"),
+    ("camdesign_window", "figure1"),
+    ("imageexplore_window", "UIFigure"),
+)
+
 
 def _session_window_key(parameter: str) -> str | None:
     return _WINDOW_KEY_ALIASES.get(param_format(parameter))
+
+
+def _get_nested_value(obj: Any, attr: str) -> Any:
+    if obj is None:
+        return None
+    if isinstance(obj, dict):
+        return obj.get(attr)
+    return getattr(obj, attr, None)
+
+
+def _set_nested_value(obj: Any, attr: str, value: Any) -> None:
+    if obj is None:
+        return
+    if isinstance(obj, dict):
+        obj[attr] = value
+        return
+    setattr(obj, attr, value)
+
+
+def _window_container(session: SessionContext, window_key: str, container_attr: str) -> Any:
+    state = session.gui.get(window_key)
+    if state is None:
+        return None
+    if isinstance(state, dict):
+        app = state.get("app")
+        container = _get_nested_value(app, container_attr)
+        if container is not None:
+            return container
+        figure = state.get("hObject")
+        nested = _get_nested_value(figure, container_attr)
+        if nested is not None:
+            return nested
+        return figure
+    container = _get_nested_value(state, container_attr)
+    if container is not None:
+        return container
+    return state
+
+
+def _window_slot_defaults() -> list[Any]:
+    return [None] * len(_WINDOW_POSITION_SLOTS)
+
+
+def _normalize_window_slots(values: Any) -> list[Any]:
+    normalized = list(values)
+    slot_count = len(_WINDOW_POSITION_SLOTS)
+    if len(normalized) < slot_count:
+        normalized.extend([None] * (slot_count - len(normalized)))
+    return normalized[:slot_count]
 
 
 def _extract_app_axis(app: Any, axis_name: str) -> Any:
@@ -491,7 +550,9 @@ def ie_session_get(session: SessionContext, parameter: str, *args: Any) -> Any:
     if key == "waitbar":
         return int(bool(session.gui.get("waitbar", session.preferences.get("waitbar", 0))))
     if key in {"windowpositions", "wpos"}:
-        return list(session.preferences.get("wPos", [None, None, None, None, None, None]))
+        return _normalize_window_slots(session.preferences.get("wPos", _window_slot_defaults()))
+    if key in {"windowstates", "wstate"}:
+        return _normalize_window_slots(session.preferences.get("wState", _window_slot_defaults()))
     if key == "initclear":
         return bool(session.preferences.get("initclear", False))
 
@@ -560,12 +621,10 @@ def ie_session_set(session: SessionContext, parameter: str, value: Any, *args: A
         session.gui["waitbar"] = waitbar
         return session
     if key in {"windowpositions", "wpos"}:
-        positions = list(value)
-        if len(positions) < 6:
-            positions.extend([None] * (6 - len(positions)))
-        if len(positions) >= 6:
-            positions[5] = None
-        session.preferences["wPos"] = positions
+        session.preferences["wPos"] = _normalize_window_slots(value)
+        return session
+    if key in {"windowstates", "wstate"}:
+        session.preferences["wState"] = _normalize_window_slots(value)
         return session
     if key == "initclear":
         session.preferences["initclear"] = bool(_normalize_on_off(value))
@@ -698,6 +757,57 @@ def ie_main_close(session: SessionContext) -> SessionContext:
         ie_session_set(session, window_name, None)
     session.gui = {"waitbar": int(bool(session.gui.get("waitbar", session.preferences.get("waitbar", 0))))}
     return session
+
+
+def ie_windows_get(
+    session: SessionContext,
+    save_flag: bool = False,
+) -> tuple[list[Any], list[Any]]:
+    w_pos: list[Any] = []
+    w_state: list[Any] = []
+    for window_key, container_attr in _WINDOW_POSITION_SLOTS:
+        container = _window_container(session, window_key, container_attr)
+        position = _get_nested_value(container, "Position")
+        if isinstance(position, tuple):
+            position = list(position)
+        elif isinstance(position, list):
+            position = list(position)
+        window_state = _get_nested_value(container, "WindowState")
+        w_pos.append(position)
+        w_state.append(window_state)
+    if save_flag:
+        session.preferences["wPos"] = list(w_pos)
+        session.preferences["wState"] = list(w_state)
+    return w_pos, w_state
+
+
+def ie_windows_set(
+    session: SessionContext,
+    w_pos: list[Any] | tuple[Any, ...] | None = None,
+    w_state: list[Any] | tuple[Any, ...] | bool | None = None,
+) -> list[Any]:
+    positions = _normalize_window_slots(session.preferences.get("wPos", _window_slot_defaults()) if w_pos is None else w_pos)
+    restore_states = isinstance(w_state, (list, tuple)) or w_state is True
+    states = _window_slot_defaults()
+    if isinstance(w_state, (list, tuple)):
+        states = _normalize_window_slots(w_state)
+    elif w_state is True:
+        states = _normalize_window_slots(session.preferences.get("wState", _window_slot_defaults()))
+
+    for idx, (window_key, container_attr) in enumerate(_WINDOW_POSITION_SLOTS):
+        container = _window_container(session, window_key, container_attr)
+        if container is None:
+            continue
+        position = positions[idx]
+        if position is not None:
+            _set_nested_value(container, "Position", list(position) if isinstance(position, tuple) else position)
+        if restore_states and states[idx] is not None:
+            _set_nested_value(container, "WindowState", states[idx])
+
+    session.preferences["wPos"] = list(positions)
+    if restore_states:
+        session.preferences["wState"] = list(states)
+    return positions
 
 
 def ie_get_object(
@@ -886,6 +996,8 @@ ieMainClose = ie_main_close
 ieReplaceObject = ie_replace_object
 ieSessionGet = ie_session_get
 ieSessionSet = ie_session_set
+ieWindowsGet = ie_windows_get
+ieWindowsSet = ie_windows_set
 ieSelectObject = ie_select_object
 vcGetFigure = vc_get_figure
 vcSelectFigure = vc_select_figure

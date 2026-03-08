@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 from pyisetcam import (
     camera_compute,
     camera_create,
@@ -15,6 +17,8 @@ from pyisetcam import (
     ieReplaceObject,
     ieSessionGet,
     ieSessionSet,
+    ieWindowsGet,
+    ieWindowsSet,
     ieSelectObject,
     ie_add_object,
     ie_app_get,
@@ -25,6 +29,8 @@ from pyisetcam import (
     ie_replace_object,
     ie_session_get,
     ie_session_set,
+    ie_windows_get,
+    ie_windows_set,
     ie_select_object,
     ip_create,
     ip_set,
@@ -382,6 +388,7 @@ def test_ie_session_set_and_get_metadata_preferences_and_gui(asset_store) -> Non
         [0.4, 0.5, 0.6, 0.7],
         [0.5, 0.6, 0.7, 0.8],
         [0.6, 0.7, 0.8, 0.9],
+        [0.7, 0.8, 0.9, 1.0],
     ]
 
     ieSessionSet(session, "version", "1.2.3")
@@ -409,8 +416,7 @@ def test_ie_session_set_and_get_metadata_preferences_and_gui(asset_store) -> Non
     assert ieSessionGet(session, "help") is True
     assert ieSessionGet(session, "font size") == 14
     assert ieSessionGet(session, "wait bar") == 1
-    assert ieSessionGet(session, "wpos")[:5] == positions[:5]
-    assert ieSessionGet(session, "wpos")[5] is None
+    assert ieSessionGet(session, "wpos") == positions
     assert ieSessionGet(session, "init clear") is True
     assert ieSessionGet(session, "main window") == "main-app"
     assert ieSessionGet(session, "metrics window") == "metrics-app"
@@ -422,6 +428,91 @@ def test_ie_session_set_and_get_metadata_preferences_and_gui(asset_store) -> Non
     assert ieSessionGet(session, "selected", "scene") == 1
     assert ieSessionGet(session, "nobjects", "scene") == 1
     assert ieSessionGet(session, "names", "scene") == [scene.name]
+
+
+def test_ie_windows_get_reads_current_positions_and_states() -> None:
+    session = ie_init_session()
+    figures = [
+        SimpleNamespace(Position=[10, 20, 300, 400], WindowState="normal"),
+        SimpleNamespace(Position=[11, 21, 301, 401], WindowState="maximized"),
+        SimpleNamespace(Position=[12, 22, 302, 402], WindowState="minimized"),
+        SimpleNamespace(Position=[13, 23, 303, 403], WindowState="normal"),
+        SimpleNamespace(Position=[14, 24, 304, 404], WindowState="maximized"),
+        SimpleNamespace(Position=[15, 25, 305, 405], WindowState="normal"),
+        SimpleNamespace(Position=[16, 26, 306, 406], WindowState="fullscreen"),
+    ]
+
+    ieSessionSet(session, "main window", SimpleNamespace(figure1=figures[0]))
+    ieSessionSet(session, "scene window", SimpleNamespace(figure1=figures[1]))
+    ieSessionSet(session, "oi window", SimpleNamespace(figure1=figures[2]))
+    ieSessionSet(session, "sensor window", SimpleNamespace(figure1=figures[3]))
+    ieSessionSet(session, "ip window", SimpleNamespace(figure1=figures[4]))
+    ieSessionSet(session, "camdesign window", SimpleNamespace(figure1=figures[5]))
+    ieSessionSet(session, "image explore window", SimpleNamespace(UIFigure=figures[6]))
+
+    positions, states = ie_windows_get(session, save_flag=True)
+
+    assert positions == [figure.Position for figure in figures]
+    assert states == [figure.WindowState for figure in figures]
+    assert session.preferences["wPos"] == positions
+    assert session.preferences["wState"] == states
+    assert ieWindowsGet(session) == (positions, states)
+
+
+def test_ie_windows_set_restores_positions_and_states() -> None:
+    session = ie_init_session()
+    figures = [
+        SimpleNamespace(Position=[0, 0, 10, 10], WindowState="normal"),
+        SimpleNamespace(Position=[0, 0, 11, 11], WindowState="normal"),
+        SimpleNamespace(Position=[0, 0, 12, 12], WindowState="normal"),
+        SimpleNamespace(Position=[0, 0, 13, 13], WindowState="normal"),
+        SimpleNamespace(Position=[0, 0, 14, 14], WindowState="normal"),
+        SimpleNamespace(Position=[0, 0, 15, 15], WindowState="normal"),
+        SimpleNamespace(Position=[0, 0, 16, 16], WindowState="normal"),
+    ]
+    new_positions = [
+        [100, 200, 300, 400],
+        [101, 201, 301, 401],
+        [102, 202, 302, 402],
+        [103, 203, 303, 403],
+        [104, 204, 304, 404],
+        [105, 205, 305, 405],
+        [106, 206, 306, 406],
+    ]
+    new_states = ["maximized", "normal", "minimized", "normal", "fullscreen", "normal", "maximized"]
+    pref_positions = [
+        [200, 300, 400, 500],
+        [201, 301, 401, 501],
+        [202, 302, 402, 502],
+        [203, 303, 403, 503],
+        [204, 304, 404, 504],
+        [205, 305, 405, 505],
+        [206, 306, 406, 506],
+    ]
+    pref_states = ["normal", "fullscreen", "normal", "minimized", "normal", "maximized", "normal"]
+
+    ieSessionSet(session, "main window", SimpleNamespace(figure1=figures[0]))
+    ieSessionSet(session, "scene window", SimpleNamespace(figure1=figures[1]))
+    ieSessionSet(session, "oi window", SimpleNamespace(figure1=figures[2]))
+    ieSessionSet(session, "sensor window", SimpleNamespace(figure1=figures[3]))
+    ieSessionSet(session, "ip window", SimpleNamespace(figure1=figures[4]))
+    ieSessionSet(session, "camdesign window", SimpleNamespace(figure1=figures[5]))
+    ieSessionSet(session, "image explore window", SimpleNamespace(UIFigure=figures[6]))
+
+    restored = ie_windows_set(session, new_positions, new_states)
+
+    assert restored == new_positions
+    assert [figure.Position for figure in figures] == new_positions
+    assert [figure.WindowState for figure in figures] == new_states
+    assert session.preferences["wPos"] == new_positions
+    assert session.preferences["wState"] == new_states
+
+    session.preferences["wPos"] = pref_positions
+    session.preferences["wState"] = pref_states
+    ieWindowsSet(session, None, True)
+
+    assert [figure.Position for figure in figures] == pref_positions
+    assert [figure.WindowState for figure in figures] == pref_states
 
 
 def test_ie_session_window_aliases_and_ie_app_get(asset_store) -> None:
@@ -557,6 +648,7 @@ def test_ie_main_close_clears_window_slots() -> None:
     assert ieSessionGet(session, "ip window") is None
     assert ieSessionGet(session, "display window") is None
     assert ieSessionGet(session, "metrics window") is None
+
 
 def test_session_set_objects_and_new_object_value_follow_matlab_style(asset_store) -> None:
     session = session_create()

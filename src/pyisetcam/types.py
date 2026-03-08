@@ -11,7 +11,8 @@ def _default_session_preferences() -> dict[str, Any]:
     return {
         "fontSize": 12,
         "waitbar": 0,
-        "wPos": [None, None, None, None, None, None],
+        "wPos": [None, None, None, None, None, None, None],
+        "wState": [None, None, None, None, None, None, None],
         "initclear": False,
     }
 

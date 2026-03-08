@@ -69,6 +69,8 @@ from .session import (
     ie_replace_object,
     ie_session_get,
     ie_session_set,
+    ie_windows_get,
+    ie_windows_set,
     ie_select_object,
     session_add_and_select_object,
     session_add_object,
@@ -161,6 +163,8 @@ __all__ = [
     "ieReplaceObject",
     "ieSessionGet",
     "ieSessionSet",
+    "ieWindowsGet",
+    "ieWindowsSet",
     "ieSelectObject",
     "ie_add_object",
     "ie_app_get",
@@ -173,6 +177,8 @@ __all__ = [
     "ie_replace_object",
     "ie_session_get",
     "ie_session_set",
+    "ie_windows_get",
+    "ie_windows_set",
     "ie_select_object",
     "ieXYZ2LAB",
     "ieXYZFromEnergy",
@@ -392,6 +398,8 @@ ieMainClose = ie_main_close
 ieReplaceObject = ie_replace_object
 ieSessionGet = ie_session_get
 ieSessionSet = ie_session_set
+ieWindowsGet = ie_windows_get
+ieWindowsSet = ie_windows_set
 ieSelectObject = ie_select_object
 
 ipCreate = ip_create

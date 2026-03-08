@@ -242,7 +242,8 @@ upstream still reads such as `scene image handle`,
 `metricshandles`, `oicomputelist`, and `sensor gamma`. The
 session GUI layer now also exposes `vcGetFigure`, `vcSelectFigure`,
 and a minimal `ieMainClose` cleanup wrapper over the stored session
-windows.
+windows. Stored window geometry/state compatibility is now exposed too
+through `ieWindowsGet` / `ieWindowsSet`.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
