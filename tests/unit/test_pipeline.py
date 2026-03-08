@@ -284,6 +284,50 @@ def test_oi_compute_raytrace_applies_lens_shading_and_blur(asset_store) -> None:
     assert not np.allclose(raytrace.data["photons"], baseline.data["photons"])
 
 
+def test_oi_compute_raytrace_builds_precomputed_psf_structure(asset_store) -> None:
+    scene = scene_create("uniform ee", 32, np.array([550.0], dtype=float), asset_store=asset_store)
+    oi = oi_set(oi_create("ray trace", asset_store=asset_store), "psf angle step", 30)
+    result = oi_compute(oi, scene, crop=True)
+
+    psf_struct = oi_get(result, "psf struct")
+    sampled = oi_get(result, "sampledRTpsf")
+
+    assert np.isclose(oi_get(result, "psf angle step"), 30.0)
+    assert isinstance(psf_struct, dict)
+    assert sampled is not None
+    assert sampled.ndim == 5
+    assert np.array_equal(oi_get(result, "psfwavelength"), np.array([550.0]))
+    assert oi_get(result, "rtpsfsize")[0] >= 3
+    assert oi_get(result, "raytrace optics name") == "Asphere 2mm"
+
+
+def test_oi_compute_raytrace_rotates_psf_with_field_angle(asset_store) -> None:
+    wave = np.array([550.0], dtype=float)
+    scene = scene_create("uniform ee", 96, wave, asset_store=asset_store)
+    scene = scene_set(scene, "fov", 10.0)
+    photons = np.zeros_like(scene.data["photons"], dtype=float)
+    center = photons.shape[0] // 2
+    offset = 18
+    photons[center, center + offset, 0] = 1.0
+    photons[center - offset, center, 0] = 1.0
+    scene = scene_set(scene, "photons", photons)
+
+    oi = oi_set(oi_create("ray trace", asset_store=asset_store), "psf angle step", 30)
+    raytrace = oi_compute(oi, scene, crop=True)
+    plane = np.asarray(raytrace.data["photons"][:, :, 0], dtype=float)
+
+    radius = 4
+    right_patch = plane[center - radius : center + radius + 1, center + offset - radius : center + offset + radius + 1]
+    top_patch = plane[center - offset - radius : center - offset + radius + 1, center - radius : center + radius + 1]
+    right_patch = right_patch / max(float(np.sum(right_patch)), 1e-12)
+    top_patch = top_patch / max(float(np.sum(top_patch)), 1e-12)
+
+    plain_error = float(np.mean((top_patch - right_patch) ** 2))
+    rotated_error = min(float(np.mean((top_patch - np.rot90(right_patch, k)) ** 2)) for k in (1, 3))
+
+    assert rotated_error < plain_error
+
+
 def test_wvf_path_preserves_more_checkerboard_contrast_than_diffraction(asset_store) -> None:
     scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
     oi_wvf = oi_compute(oi_create("wvf"), scene, crop=True)

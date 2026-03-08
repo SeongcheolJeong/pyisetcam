@@ -8,7 +8,7 @@ from typing import Any
 
 import numpy as np
 from scipy.io import loadmat
-from scipy.ndimage import map_coordinates
+from scipy.ndimage import map_coordinates, rotate, uniform_filter
 from scipy.signal import fftconvolve
 
 from .assets import AssetStore
@@ -31,6 +31,7 @@ DEFAULT_WVF_SPATIAL_SAMPLES = 201
 DEFAULT_WVF_REF_PUPIL_PLANE_SIZE_MM = 16.212
 DEFAULT_WVF_CALC_PUPIL_DIAMETER_MM = 3.0
 DEFAULT_CAMERA_WVF_CALC_PUPIL_DIAMETER_MM = 9.6569e-01
+DEFAULT_RAYTRACE_ANGLE_STEP_DEG = 10.0
 _SPATIAL_UNIT_SCALE = {
     "meters": 1.0,
     "meter": 1.0,
@@ -312,6 +313,8 @@ def oi_create(
     oi.fields["compute_method"] = optics["compute_method"]
     oi.fields["diffuser_method"] = "skip"
     oi.fields["diffuser_blur_m"] = 2e-6
+    oi.fields["psf_angle_step_deg"] = DEFAULT_RAYTRACE_ANGLE_STEP_DEG
+    oi.fields["psf_struct"] = None
     oi.fields["sample_spacing_m"] = None
     oi.data["photons"] = np.empty((0, 0, 0), dtype=float)
     return oi
@@ -923,81 +926,20 @@ def _raytrace_geometry(cube: np.ndarray, wave: np.ndarray, optics: dict[str, Any
     return result
 
 
-def _raytrace_field_weights(radial_height_mm: np.ndarray, field_heights_mm: np.ndarray) -> np.ndarray:
-    field_heights = np.asarray(field_heights_mm, dtype=float).reshape(-1)
-    flat_radius = np.asarray(radial_height_mm, dtype=float).reshape(-1)
-    weights = np.zeros((field_heights.size, flat_radius.size), dtype=float)
-    if field_heights.size == 0:
-        return weights.reshape((0, *np.asarray(radial_height_mm).shape))
-    if field_heights.size == 1:
-        weights[0, :] = 1.0
-        return weights.reshape((1, *np.asarray(radial_height_mm).shape))
-
-    below = flat_radius <= field_heights[0]
-    above = flat_radius >= field_heights[-1]
-    weights[0, below] = 1.0
-    weights[-1, above] = 1.0
-
-    middle = ~(below | above)
-    middle_indices = np.nonzero(middle)[0]
-    if middle_indices.size > 0:
-        upper = np.searchsorted(field_heights, flat_radius[middle], side="right")
-        lower = upper - 1
-        height_delta = np.maximum(field_heights[upper] - field_heights[lower], 1e-12)
-        blend = (flat_radius[middle] - field_heights[lower]) / height_delta
-        weights[lower, middle_indices] = 1.0 - blend
-        weights[upper, middle_indices] = blend
-    return weights.reshape((field_heights.size, *np.asarray(radial_height_mm).shape))
-
-
-def _raytrace_resample_psf(
-    psf: np.ndarray,
-    source_spacing_mm: np.ndarray,
-    target_spacing_mm: np.ndarray,
-) -> np.ndarray:
-    source_spacing = np.asarray(source_spacing_mm, dtype=float).reshape(-1)
-    target_spacing = np.asarray(target_spacing_mm, dtype=float).reshape(-1)
-    if source_spacing.size == 1:
-        source_spacing = np.repeat(source_spacing, 2)
-    if target_spacing.size == 1:
-        target_spacing = np.repeat(target_spacing, 2)
-
-    kernel = np.asarray(psf, dtype=float)
-    if kernel.size == 0:
-        kernel = np.zeros((1, 1), dtype=float)
-        kernel[0, 0] = 1.0
-        return kernel
-
-    if not np.allclose(source_spacing[:2], target_spacing[:2]):
-        row_extent = source_spacing[0] * max(kernel.shape[0] - 1, 0)
-        col_extent = source_spacing[1] * max(kernel.shape[1] - 1, 0)
-        rows = max(int(round(row_extent / max(target_spacing[0], 1e-12))) + 1, 1)
-        cols = max(int(round(col_extent / max(target_spacing[1], 1e-12))) + 1, 1)
-        if rows % 2 == 0:
-            rows += 1
-        if cols % 2 == 0:
-            cols += 1
-        kernel = _resize_image(kernel, (rows, cols), method="linear")
-
-    kernel = np.clip(kernel, 0.0, None)
-    total = float(np.sum(kernel))
-    if total <= 0.0:
-        kernel = np.zeros_like(kernel, dtype=float)
-        kernel[kernel.shape[0] // 2, kernel.shape[1] // 2] = 1.0
-        return kernel
-    return kernel / total
-
-
-def _raytrace_apply_psf(cube: np.ndarray, wave: np.ndarray, optics: dict[str, Any], sample_spacing_m: float) -> np.ndarray:
-    raytrace = dict(optics.get("raytrace", {}))
-    psf_data = dict(raytrace.get("psf", {}))
+def _raytrace_psf_support_axes(psf_data: dict[str, Any]) -> tuple[np.ndarray, np.ndarray]:
     psf_function = np.asarray(psf_data.get("function", np.empty(0, dtype=float)), dtype=float)
-    field_heights = np.asarray(psf_data.get("field_height_mm", np.empty(0, dtype=float)), dtype=float).reshape(-1)
-    if psf_function.size == 0 or field_heights.size == 0:
-        return np.asarray(cube, dtype=float).copy()
+    if psf_function.size == 0:
+        return np.empty(0, dtype=float), np.empty(0, dtype=float)
+    sample_spacing = np.asarray(psf_data.get("sample_spacing_mm", np.array([0.0, 0.0], dtype=float)), dtype=float).reshape(-1)
+    if sample_spacing.size == 1:
+        sample_spacing = np.repeat(sample_spacing, 2)
+    rows, cols = psf_function.shape[:2]
+    y_support = np.arange((-rows / 2.0) + 1.0, (rows / 2.0) + 1.0, dtype=float) * float(sample_spacing[0])
+    x_support = np.arange((-cols / 2.0) + 1.0, (cols / 2.0) + 1.0, dtype=float) * float(sample_spacing[1])
+    return x_support, y_support
 
-    rows, cols = cube.shape[:2]
-    sample_spacing_mm = float(sample_spacing_m) * 1e3
+
+def _raytrace_sampling_axes(rows: int, cols: int, sample_spacing_mm: float) -> tuple[np.ndarray, np.ndarray]:
     x = np.linspace(
         -(cols * sample_spacing_mm) / 2.0 + sample_spacing_mm / 2.0,
         (cols * sample_spacing_mm) / 2.0 - sample_spacing_mm / 2.0,
@@ -1008,37 +950,239 @@ def _raytrace_apply_psf(cube: np.ndarray, wave: np.ndarray, optics: dict[str, An
         (rows * sample_spacing_mm) / 2.0 - sample_spacing_mm / 2.0,
         rows,
     )
-    xx, yy = np.meshgrid(x, y)
-    radial_height_mm = np.sqrt(xx**2 + yy**2)
-    field_weights = _raytrace_field_weights(radial_height_mm, field_heights)
+    return x, y
 
-    source_spacing = np.asarray(psf_data.get("sample_spacing_mm", np.array([sample_spacing_mm, sample_spacing_mm])), dtype=float)
-    target_spacing = np.array([sample_spacing_mm, sample_spacing_mm], dtype=float)
+
+def _raytrace_data_angle_height(rows: int, cols: int, sample_spacing_mm: float) -> tuple[np.ndarray, np.ndarray]:
+    x_support, y_support = _raytrace_sampling_axes(rows, cols, sample_spacing_mm)
+    xx, yy = np.meshgrid(x_support, y_support[::-1])
+    data_angle = np.rint(np.rad2deg(np.arctan2(yy, xx) + np.pi)).astype(int)
+    data_angle[data_angle == 0] = 1
+    data_angle[data_angle > 360] = 360
+    data_height = np.sqrt(xx**2 + yy**2)
+    return data_angle, data_height
+
+
+def _raytrace_sample_heights(field_heights_mm: np.ndarray, data_height_mm: np.ndarray) -> np.ndarray:
+    heights = np.asarray(field_heights_mm, dtype=float).reshape(-1)
+    if heights.size == 0:
+        return heights
+    max_height = float(np.max(np.asarray(data_height_mm, dtype=float)))
+    keep = np.zeros(heights.size, dtype=bool)
+    for index, value in enumerate(heights):
+        keep[index] = True
+        if float(value) > max_height:
+            break
+    return heights[keep]
+
+
+def _raytrace_psf_grid(sample_spacing_mm: float, psf_data: dict[str, Any]) -> tuple[np.ndarray, np.ndarray]:
+    source_x, source_y = _raytrace_psf_support_axes(psf_data)
+    if source_x.size == 0 or source_y.size == 0:
+        return np.array([0.0], dtype=float), np.array([0.0], dtype=float)
+    x_positive = np.arange(0.0, float(source_x[-1]) + sample_spacing_mm * 0.5, sample_spacing_mm)
+    x_negative = -np.flip(np.arange(0.0, abs(float(source_x[0])) + sample_spacing_mm * 0.5, sample_spacing_mm))
+    y_positive = np.arange(0.0, float(source_y[-1]) + sample_spacing_mm * 0.5, sample_spacing_mm)
+    y_negative = -np.flip(np.arange(0.0, abs(float(source_y[0])) + sample_spacing_mm * 0.5, sample_spacing_mm))
+    x_grid = np.concatenate((x_negative[:-1], x_positive))
+    y_grid = np.concatenate((y_negative[:-1], y_positive))
+    return x_grid, y_grid
+
+
+def _raytrace_resample_psf(
+    psf: np.ndarray,
+    source_x_mm: np.ndarray,
+    source_y_mm: np.ndarray,
+    target_x_mm: np.ndarray,
+    target_y_mm: np.ndarray,
+) -> np.ndarray:
+    kernel = _resample_plane_on_support(
+        np.asarray(psf, dtype=float),
+        np.asarray(source_x_mm, dtype=float),
+        np.asarray(source_y_mm, dtype=float),
+        np.asarray(target_x_mm, dtype=float),
+        np.asarray(target_y_mm, dtype=float),
+        method="linear",
+    )
+    kernel = np.clip(np.asarray(kernel, dtype=float), 0.0, None)
+    total = float(np.sum(kernel))
+    if total <= 0.0:
+        kernel = np.zeros_like(kernel, dtype=float)
+        kernel[kernel.shape[0] // 2, kernel.shape[1] // 2] = 1.0
+        return kernel
+    return kernel / total
+
+
+def _raytrace_angle_lut(sample_angles_deg: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    sample_angles = np.asarray(sample_angles_deg, dtype=float).reshape(-1)
+    if sample_angles.size < 2:
+        return np.zeros(360, dtype=int), np.ones(360, dtype=float)
+    angle_step = float(sample_angles[1] - sample_angles[0])
+    lower_index = np.zeros(360, dtype=int)
+    weight = np.zeros(360, dtype=float)
+    for degree in range(1, 361):
+        nearest = int(np.argmin(np.abs(float(degree) - sample_angles)))
+        value = float(abs(float(degree) - sample_angles[nearest]))
+        if float(degree) <= sample_angles[nearest]:
+            nearest = max(nearest - 1, 0)
+            value = angle_step - value
+        lower_index[degree - 1] = nearest
+        weight[degree - 1] = value / max(angle_step, 1e-12)
+    return lower_index, weight
+
+
+def _raytrace_psf_struct_matches(
+    psf_struct: dict[str, Any] | None,
+    optics: dict[str, Any],
+    wave: np.ndarray,
+    rows: int,
+    cols: int,
+    sample_spacing_m: float,
+    angle_step_deg: float,
+) -> bool:
+    if not isinstance(psf_struct, dict):
+        return False
+    if tuple(psf_struct.get("cube_shape", ())) != (rows, cols):
+        return False
+    if not np.isclose(float(psf_struct.get("sample_spacing_m", -1.0)), float(sample_spacing_m)):
+        return False
+    if not np.array_equal(np.asarray(psf_struct.get("wavelength_nm", np.empty(0))), np.asarray(wave, dtype=float)):
+        return False
+    if not np.isclose(float(psf_struct.get("angle_step_deg", -1.0)), float(angle_step_deg)):
+        return False
+    raytrace = optics.get("raytrace", {})
+    return str(psf_struct.get("optics_name", "")) == str(raytrace.get("name", optics.get("name", "")))
+
+
+def _raytrace_precompute_psf(
+    optics: dict[str, Any],
+    wave: np.ndarray,
+    rows: int,
+    cols: int,
+    sample_spacing_m: float,
+    *,
+    angle_step_deg: float,
+) -> dict[str, Any]:
+    raytrace = dict(optics.get("raytrace", {}))
+    psf_data = dict(raytrace.get("psf", {}))
+    psf_function = np.asarray(psf_data.get("function", np.empty(0, dtype=float)), dtype=float)
+    field_heights_all = np.asarray(psf_data.get("field_height_mm", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    if psf_function.size == 0 or field_heights_all.size == 0:
+        return {
+            "optics_name": str(raytrace.get("name", optics.get("name", "raytrace"))),
+            "psf": np.empty((0, 0, 0, 0, 0), dtype=np.float32),
+            "sample_angles_deg": np.empty(0, dtype=float),
+            "img_height_mm": np.empty(0, dtype=float),
+            "wavelength_nm": np.asarray(wave, dtype=float).copy(),
+            "angle_step_deg": float(angle_step_deg),
+            "cube_shape": (rows, cols),
+            "sample_spacing_m": float(sample_spacing_m),
+        }
+
+    sample_spacing_mm = float(sample_spacing_m) * 1e3
+    _, data_height_mm = _raytrace_data_angle_height(rows, cols, sample_spacing_mm)
+    img_height_mm = _raytrace_sample_heights(field_heights_all, data_height_mm)
+    sample_angles_deg = np.arange(0.0, 360.0 + float(angle_step_deg), float(angle_step_deg), dtype=float)
+    source_x_mm, source_y_mm = _raytrace_psf_support_axes(psf_data)
+    target_x_mm, target_y_mm = _raytrace_psf_grid(sample_spacing_mm, psf_data)
+    n_angles = int(sample_angles_deg.size)
+    n_heights = int(img_height_mm.size)
+    n_wave = int(np.asarray(wave, dtype=float).size)
+    psf_stack = np.empty((n_angles, n_heights, n_wave, target_y_mm.size, target_x_mm.size), dtype=np.float32)
     psf_wavelengths = np.asarray(psf_data.get("wavelength_nm", np.empty(0, dtype=float)), dtype=float).reshape(-1)
-    result = np.empty_like(cube, dtype=float)
 
-    for band_index, wavelength_nm in enumerate(np.asarray(wave, dtype=float).reshape(-1)):
-        if psf_function.ndim == 4 and psf_wavelengths.size > 0:
-            wave_index = int(np.argmin(np.abs(psf_wavelengths - float(wavelength_nm))))
-            band_psfs = np.asarray(psf_function[:, :, :, wave_index], dtype=float)
-        elif psf_function.ndim == 3:
-            band_psfs = np.asarray(psf_function, dtype=float)
-        else:
-            band_psfs = np.asarray(psf_function[:, :, None], dtype=float)
+    for wave_index, wavelength_nm in enumerate(np.asarray(wave, dtype=float).reshape(-1)):
+        source_wave_index = int(np.argmin(np.abs(psf_wavelengths - float(wavelength_nm)))) if psf_wavelengths.size > 0 else 0
+        for height_index, height_mm in enumerate(img_height_mm):
+            source_height_index = int(np.argmin(np.abs(field_heights_all - float(height_mm))))
+            current = np.asarray(psf_function[:, :, source_height_index, source_wave_index], dtype=float)
+            current = np.rot90(current, 2)
+            for angle_index, sample_angle in enumerate(sample_angles_deg):
+                rotation_deg = 0.0 if height_index < 2 else float(sample_angle)
+                rotated = rotate(current, rotation_deg, reshape=False, order=1, mode="constant", cval=0.0, prefilter=False)
+                rotated = uniform_filter(rotated, size=3, mode="nearest")
+                kernel = _raytrace_resample_psf(rotated, source_x_mm, source_y_mm, target_x_mm, target_y_mm)
+                psf_stack[angle_index, height_index, wave_index, :, :] = kernel.astype(np.float32, copy=False)
 
-        plane = np.asarray(cube[:, :, band_index], dtype=float)
+    lower_index, angle_weight = _raytrace_angle_lut(sample_angles_deg)
+    return {
+        "optics_name": str(raytrace.get("name", optics.get("name", "raytrace"))),
+        "psf": psf_stack,
+        "sample_angles_deg": sample_angles_deg,
+        "img_height_mm": img_height_mm,
+        "wavelength_nm": np.asarray(wave, dtype=float).copy(),
+        "angle_step_deg": float(angle_step_deg),
+        "cube_shape": (rows, cols),
+        "sample_spacing_m": float(sample_spacing_m),
+        "target_x_mm": target_x_mm,
+        "target_y_mm": target_y_mm,
+        "angle_lut_index": lower_index,
+        "angle_lut_weight": angle_weight,
+    }
+
+
+def _raytrace_apply_psf(
+    cube: np.ndarray,
+    psf_struct: dict[str, Any],
+    sample_spacing_m: float,
+) -> np.ndarray:
+    psf_stack = np.asarray(psf_struct.get("psf", np.empty((0, 0, 0, 0, 0), dtype=float)), dtype=float)
+    if psf_stack.size == 0:
+        return np.asarray(cube, dtype=float).copy()
+
+    rows, cols = cube.shape[:2]
+    sample_spacing_mm = float(sample_spacing_m) * 1e3
+    data_angle, data_height = _raytrace_data_angle_height(rows, cols, sample_spacing_mm)
+    img_height_mm = np.asarray(psf_struct.get("img_height_mm", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    angle_lut_index = np.asarray(psf_struct.get("angle_lut_index", np.zeros(360, dtype=int)), dtype=int).reshape(-1)
+    angle_lut_weight = np.asarray(psf_struct.get("angle_lut_weight", np.ones(360, dtype=float)), dtype=float).reshape(-1)
+    if img_height_mm.size < 2:
+        return np.asarray(cube, dtype=float).copy()
+
+    lower_angle = angle_lut_index[np.clip(data_angle - 1, 0, 359)]
+    lower_weight = angle_lut_weight[np.clip(data_angle - 1, 0, 359)]
+    unique_angles = np.unique(lower_angle)
+    result = np.zeros_like(cube, dtype=float)
+
+    for wave_index in range(cube.shape[2]):
+        plane = np.asarray(cube[:, :, wave_index], dtype=float)
         plane_result = np.zeros((rows, cols), dtype=float)
-        for field_index in range(field_heights.size):
-            weight = np.asarray(field_weights[field_index], dtype=float)
-            if float(np.max(weight)) <= 0.0:
+        for height_index in range(1, img_height_mm.size):
+            band_mask = (data_height >= img_height_mm[height_index - 1]) & (data_height < img_height_mm[height_index])
+            if not np.any(band_mask):
                 continue
-            kernel = _raytrace_resample_psf(
-                band_psfs[:, :, min(field_index, band_psfs.shape[2] - 1)],
-                source_spacing,
-                target_spacing,
+            inner_weight = 1.0 - (
+                np.abs(data_height - img_height_mm[height_index - 1])
+                / max(img_height_mm[height_index] - img_height_mm[height_index - 1], 1e-12)
             )
-            plane_result = plane_result + fftconvolve(plane * weight, kernel, mode="same")
-        result[:, :, band_index] = plane_result
+            for angle_index in unique_angles:
+                mask = band_mask & (lower_angle == angle_index)
+                if not np.any(mask):
+                    continue
+                masked_plane = plane * mask
+                radial_inner = inner_weight * mask
+                angular_lower = lower_weight * mask
+                plane_result = plane_result + fftconvolve(
+                    masked_plane * radial_inner * angular_lower,
+                    psf_stack[angle_index, height_index - 1, wave_index, :, :],
+                    mode="same",
+                )
+                plane_result = plane_result + fftconvolve(
+                    masked_plane * (1.0 - radial_inner) * angular_lower,
+                    psf_stack[angle_index, height_index, wave_index, :, :],
+                    mode="same",
+                )
+                plane_result = plane_result + fftconvolve(
+                    masked_plane * radial_inner * (1.0 - angular_lower),
+                    psf_stack[angle_index + 1, height_index - 1, wave_index, :, :],
+                    mode="same",
+                )
+                plane_result = plane_result + fftconvolve(
+                    masked_plane * (1.0 - radial_inner) * (1.0 - angular_lower),
+                    psf_stack[angle_index + 1, height_index, wave_index, :, :],
+                    mode="same",
+                )
+        result[:, :, wave_index] = plane_result
 
     return result
 
@@ -1084,9 +1228,31 @@ def oi_compute(
         int(np.round(scene_photons.shape[1] / 8.0)),
     )
     model = param_format(optics.get("model", ""))
+    psf_struct: dict[str, Any] | None = None
     if model == "raytrace":
         depth_map = np.asarray(scene_get(compute_scene, "depth map"), dtype=float)
-        result = _raytrace_apply_psf(_raytrace_geometry(photons, wave, optics, compute_scene), wave, optics, sample_spacing_m)
+        angle_step_deg = float(oi.fields.get("psf_angle_step_deg", DEFAULT_RAYTRACE_ANGLE_STEP_DEG))
+        current_psf_struct = oi.fields.get("psf_struct")
+        if _raytrace_psf_struct_matches(
+            current_psf_struct,
+            optics,
+            wave,
+            scene_photons.shape[0],
+            scene_photons.shape[1],
+            sample_spacing_m,
+            angle_step_deg,
+        ):
+            psf_struct = dict(current_psf_struct)
+        else:
+            psf_struct = _raytrace_precompute_psf(
+                optics,
+                wave,
+                scene_photons.shape[0],
+                scene_photons.shape[1],
+                sample_spacing_m,
+                angle_step_deg=angle_step_deg,
+            )
+        result = _raytrace_apply_psf(_raytrace_geometry(photons, wave, optics, compute_scene), psf_struct, sample_spacing_m)
         pad_pixels = (0, 0)
     else:
         padded, blur_mode, blur_cval = _pad_scene(photons, pad_pixels, pad_value)
@@ -1160,6 +1326,9 @@ def oi_compute(
     computed.fields["height_m"] = output_height_m
     computed.fields["fov_deg"] = output_fov_deg
     computed.fields["vfov_deg"] = output_vfov_deg
+    if model == "raytrace":
+        computed.fields["psf_angle_step_deg"] = float(oi.fields.get("psf_angle_step_deg", DEFAULT_RAYTRACE_ANGLE_STEP_DEG))
+        computed.fields["psf_struct"] = psf_struct
     computed.data["photons"] = result
     if pixel_size is not None:
         computed = _oi_spatial_resample(computed, float(pixel_size), method="linear")
@@ -1482,8 +1651,42 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
     if key in {"opticsraytrace", "raytrace", "rt"}:
         return oi.fields["optics"].get("raytrace")
     if key in {"raytraceopticsname", "psfopticsname"}:
+        psf_struct = oi.fields.get("psf_struct")
+        if isinstance(psf_struct, dict) and "optics_name" in psf_struct:
+            return psf_struct["optics_name"]
         raytrace = oi.fields["optics"].get("raytrace", {})
         return raytrace.get("name", oi.fields["optics"].get("name"))
+    if key in {"psfstruct"}:
+        return oi.fields.get("psf_struct")
+    if key in {"svpsf", "sampledrtpsf", "shiftvariantpsf"}:
+        psf_struct = oi.fields.get("psf_struct")
+        if isinstance(psf_struct, dict):
+            return psf_struct.get("psf")
+        return None
+    if key in {"psfanglestep", "psfsampleangles"}:
+        psf_struct = oi.fields.get("psf_struct")
+        if isinstance(psf_struct, dict):
+            angles = np.asarray(psf_struct.get("sample_angles_deg", np.empty(0, dtype=float)), dtype=float)
+            if angles.size >= 2:
+                return float(angles[1] - angles[0])
+        return float(oi.fields.get("psf_angle_step_deg", DEFAULT_RAYTRACE_ANGLE_STEP_DEG))
+    if key in {"psfimageheights"}:
+        psf_struct = oi.fields.get("psf_struct")
+        if isinstance(psf_struct, dict):
+            return np.asarray(psf_struct.get("img_height_mm", np.empty(0, dtype=float)), dtype=float)
+        return np.empty(0, dtype=float)
+    if key in {"psfwavelength"}:
+        psf_struct = oi.fields.get("psf_struct")
+        if isinstance(psf_struct, dict):
+            return np.asarray(psf_struct.get("wavelength_nm", np.empty(0, dtype=float)), dtype=float)
+        return np.empty(0, dtype=float)
+    if key in {"rtpsfsize"}:
+        psf_struct = oi.fields.get("psf_struct")
+        if isinstance(psf_struct, dict):
+            psf = np.asarray(psf_struct.get("psf", np.empty((0, 0, 0, 0, 0), dtype=float)))
+            if psf.ndim == 5 and psf.shape[3] > 0 and psf.shape[4] > 0:
+                return (int(psf.shape[3]), int(psf.shape[4]))
+        return (0, 0)
     if key in {"rtobjectdistance", "rtobjdist", "rtreferenceobjectdistance"}:
         return float(oi.fields["optics"].get("raytrace", {}).get("object_distance_m", np.inf))
     if key in {"rtfov"}:
@@ -1594,6 +1797,23 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any) -> OpticalImage:
         return oi
     if key == "opticswvf":
         oi.fields["optics"]["wavefront"] = dict(value)
+        return oi
+    if key in {"psfstruct"}:
+        oi.fields["psf_struct"] = dict(value) if value is not None else None
+        return oi
+    if key in {"svpsf", "sampledrtpsf", "shiftvariantpsf"}:
+        current = dict(oi.fields.get("psf_struct") or {})
+        current["psf"] = np.asarray(value, dtype=float)
+        oi.fields["psf_struct"] = current
+        return oi
+    if key in {"psfanglestep", "psfsampleangles"}:
+        oi.fields["psf_angle_step_deg"] = float(value)
+        oi.fields["psf_struct"] = None
+        return oi
+    if key in {"psfopticsname", "raytraceopticsname"}:
+        current = dict(oi.fields.get("psf_struct") or {})
+        current["optics_name"] = str(value)
+        oi.fields["psf_struct"] = current
         return oi
     if key in {"opticsraytrace", "raytrace", "rt"}:
         oi.fields["optics"]["raytrace"] = dict(value)
