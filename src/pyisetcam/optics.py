@@ -203,7 +203,10 @@ def _normalize_raytrace_optics(raw: dict[str, Any]) -> dict[str, Any]:
         "name": str(raw.get("name", raytrace.get("name", "raytrace"))),
         "f_number": nominal_f_number,
         "focal_length_m": effective_focal_length_m,
-        "nominal_focal_length_m": _scalar(raw.get("focalLength"), DEFAULT_FOCAL_LENGTH_M),
+        "nominal_focal_length_m": _scalar(
+            raw.get("nominal_focal_length_m", raw.get("focalLength")),
+            DEFAULT_FOCAL_LENGTH_M,
+        ),
         "compute_method": "",
         "aberration_scale": 0.0,
         "offaxis_method": "skip",
@@ -311,9 +314,10 @@ def _normalize_optics_update(value: Any, current_optics: dict[str, Any]) -> dict
     if isinstance(nested_raw_raytrace, dict):
         current_exported_raytrace = _export_raytrace(current_optics.get("raytrace", {}))
         merged_raw_raytrace = _merge_mapping(current_exported_raytrace, nested_raw_raytrace)
+        top_level_f_number = source.get("f_number", source.get("fNumber"))
         nested_fnumber = nested_raw_raytrace.get("fNumber")
         current_nested_fnumber = current_exported_raytrace.get("fNumber")
-        if "fNumber" in source and (
+        if top_level_f_number is not None and (
             "fNumber" not in nested_raw_raytrace
             or (
                 nested_fnumber is not None
@@ -321,10 +325,11 @@ def _normalize_optics_update(value: Any, current_optics: dict[str, Any]) -> dict
                 and np.isclose(float(nested_fnumber), float(current_nested_fnumber))
             )
         ):
-            merged_raw_raytrace["fNumber"] = source["fNumber"]
+            merged_raw_raytrace["fNumber"] = float(top_level_f_number)
+        top_level_effective_focal_length = source.get("focal_length_m", source.get("focalLength"))
         nested_effective_focal_length = nested_raw_raytrace.get("effectiveFocalLength")
         current_nested_effective_focal_length = current_exported_raytrace.get("effectiveFocalLength")
-        if "focalLength" in source and (
+        if top_level_effective_focal_length is not None and (
             "effectiveFocalLength" not in nested_raw_raytrace
             or (
                 nested_effective_focal_length is not None
@@ -335,7 +340,7 @@ def _normalize_optics_update(value: Any, current_optics: dict[str, Any]) -> dict
                 )
             )
         ):
-            merged_raw_raytrace["effectiveFocalLength"] = float(source["focalLength"]) * 1e3
+            merged_raw_raytrace["effectiveFocalLength"] = float(top_level_effective_focal_length) * 1e3
         source["rayTrace"] = merged_raw_raytrace
 
     nested_raytrace = source.get("raytrace")
