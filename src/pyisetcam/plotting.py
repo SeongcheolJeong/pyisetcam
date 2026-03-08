@@ -190,6 +190,88 @@ def _sensor_plot_cfa(sensor: Sensor, *, full_array: bool) -> dict[str, Any]:
     }
 
 
+def _sensor_plot_data(sensor: Sensor, *, cfa_constant: bool = False) -> tuple[np.ndarray, str]:
+    data_type = "dv" if sensor_get(sensor, "dv") is not None else "volts"
+    data = sensor_get(sensor, data_type)
+    if data is None:
+        rows, cols = sensor_get(sensor, "size")
+        fill = 1.0 if cfa_constant else 0.0
+        return np.full((int(rows), int(cols)), fill, dtype=float), data_type
+    array = np.asarray(data, dtype=float)
+    if array.ndim == 0:
+        array = array.reshape(1, 1)
+    elif array.ndim >= 3:
+        array = np.asarray(array[:, :, 0], dtype=float)
+    if cfa_constant:
+        array = np.ones(array.shape[:2], dtype=float)
+    return np.asarray(array, dtype=float), data_type
+
+
+def _sensor_plot_scale(sensor: Sensor, data_type: str) -> float:
+    if param_format(data_type) == "dv":
+        return float(max((2 ** int(sensor_get(sensor, "nbits"))) - 1, 1))
+    return float(max(sensor.fields["pixel"]["voltage_swing"], 1e-12))
+
+
+def _sensor_render_image(sensor: Sensor, data: np.ndarray, data_type: str) -> np.ndarray:
+    normalized = np.clip(np.asarray(data, dtype=float) / _sensor_plot_scale(sensor, data_type), 0.0, 1.0)
+    if int(sensor_get(sensor, "nfilters")) <= 1:
+        return normalized.copy()
+    pattern = tile_pattern(np.asarray(sensor_get(sensor, "pattern"), dtype=int), normalized.shape[0], normalized.shape[1])
+    filter_colors = _sensor_filter_display_colors(sensor)
+    linear_rgb = np.zeros(normalized.shape + (3,), dtype=float)
+    for index, color in enumerate(filter_colors, start=1):
+        mask = pattern == index
+        if np.any(mask):
+            linear_rgb[mask] = normalized[mask, None] * color.reshape(1, 3)
+    return linear_to_srgb(linear_rgb)
+
+
+def _sensor_plot_true_size(sensor: Sensor) -> dict[str, Any]:
+    data, data_type = _sensor_plot_data(sensor)
+    return {
+        "img": _sensor_render_image(sensor, data, data_type),
+        "dataType": data_type,
+    }
+
+
+def _sensor_plot_cfa_image(sensor: Sensor) -> dict[str, Any]:
+    data, data_type = _sensor_plot_data(sensor, cfa_constant=True)
+    return {
+        "img": _sensor_render_image(sensor, data, data_type),
+        "dataType": data_type,
+    }
+
+
+def _sensor_plot_channels(sensor: Sensor) -> dict[str, Any]:
+    data, data_type = _sensor_plot_data(sensor)
+    rows, cols = data.shape[:2]
+    pattern = tile_pattern(np.asarray(sensor_get(sensor, "pattern"), dtype=int), rows, cols)
+    filter_colors = _sensor_filter_display_colors(sensor)
+    normalized = np.clip(np.asarray(data, dtype=float) / _sensor_plot_scale(sensor, data_type), 0.0, 1.0)
+    channel_data: list[np.ndarray] = []
+    channel_images: list[np.ndarray] = []
+    masks: list[np.ndarray] = []
+    for index, color in enumerate(filter_colors, start=1):
+        mask = pattern == index
+        plane = np.full((rows, cols), np.nan, dtype=float)
+        plane[mask] = data[mask]
+        channel_data.append(plane)
+        masks.append(mask.copy())
+        tinted = np.zeros((rows, cols, 3), dtype=float)
+        if np.any(mask):
+            tinted[mask] = normalized[mask, None] * color.reshape(1, 3)
+        channel_images.append(linear_to_srgb(tinted))
+    return {
+        "channelData": channel_data,
+        "channelImages": channel_images,
+        "masks": masks,
+        "pattern": pattern.copy(),
+        "filterNames": list(sensor_get(sensor, "filter color letters cell")),
+        "dataType": data_type,
+    }
+
+
 def _ip_line_data(ip: ImageProcessor, orientation: str, xy: Any) -> dict[str, Any]:
     line_index, xy_array = _line_index("ipPlot", f"{orientation}line", xy, orientation)
     data = ip_get(ip, "result")
@@ -376,8 +458,14 @@ def sensor_plot(
     if key in {"electronshline", "hlineelectrons", "electronsvline", "vlineelectrons", "voltshline", "hlinevolts", "voltsvline", "vlinevolts", "dvhline", "hlinedv", "dvvline", "vlinedv"}:
         xy = _roi_required("plotSensor", p_type, roi_locs)
         return _sensor_plot_line_data(sensor, key, xy), None
+    if key == "channels":
+        return _sensor_plot_channels(sensor), None
+    if key == "truesize":
+        return _sensor_plot_true_size(sensor), None
     if key in {"cfa", "cfablock"}:
         return _sensor_plot_cfa(sensor, full_array=False), None
+    if key == "cfaimage":
+        return _sensor_plot_cfa_image(sensor), None
     if key == "cfafull":
         return _sensor_plot_cfa(sensor, full_array=True), None
     if key == "pixelsnr":

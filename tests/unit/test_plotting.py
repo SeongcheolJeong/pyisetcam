@@ -422,3 +422,72 @@ def test_plot_sensor_cfa_wrappers(asset_store) -> None:
     assert np.allclose(full_udata["imgSmall"][0, 0], np.array([0.0, 1.0, 0.0], dtype=float))
     assert np.allclose(full_udata["imgSmall"][0, 1], np.array([1.0, 0.0, 0.0], dtype=float))
     assert np.allclose(full_udata["imgSmall"][1, 0], np.array([0.0, 0.0, 1.0], dtype=float))
+
+
+def test_plot_sensor_true_size_and_cfa_image_wrappers(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 2)
+    sensor = sensor_set(sensor, "cols", 2)
+    sensor = sensor_set(
+        sensor,
+        "volts",
+        np.array(
+            [
+                [0.0, 1.0],
+                [1.0, 0.0],
+            ],
+            dtype=float,
+        ),
+    )
+
+    true_udata, true_handle = plotSensor(sensor, "true size")
+    cfa_image_udata, cfa_image_handle = plotSensor(sensor, "cfa image")
+
+    assert true_handle is None
+    assert cfa_image_handle is None
+    assert true_udata["dataType"] == "volts"
+    assert cfa_image_udata["dataType"] == "volts"
+    assert true_udata["img"].shape == (2, 2, 3)
+    assert cfa_image_udata["img"].shape == (2, 2, 3)
+    assert np.allclose(true_udata["img"][0, 0], np.array([0.0, 0.0, 0.0], dtype=float))
+    assert np.allclose(true_udata["img"][0, 1], np.array([1.0, 0.0, 0.0], dtype=float))
+    assert np.allclose(true_udata["img"][1, 0], np.array([0.0, 0.0, 1.0], dtype=float))
+    assert np.allclose(true_udata["img"][1, 1], np.array([0.0, 0.0, 0.0], dtype=float))
+    assert np.allclose(cfa_image_udata["img"][0, 0], np.array([0.0, 1.0, 0.0], dtype=float))
+    assert np.allclose(cfa_image_udata["img"][0, 1], np.array([1.0, 0.0, 0.0], dtype=float))
+    assert np.allclose(cfa_image_udata["img"][1, 0], np.array([0.0, 0.0, 1.0], dtype=float))
+    assert np.allclose(cfa_image_udata["img"][1, 1], np.array([0.0, 1.0, 0.0], dtype=float))
+
+
+def test_plot_sensor_channels_wrapper(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 4)
+    sensor = sensor_set(sensor, "cols", 4)
+    volts = np.arange(1, 17, dtype=float).reshape(4, 4) / 16.0
+    sensor = sensor_set(sensor, "volts", volts)
+
+    channels_udata, channels_handle = plotSensor(sensor, "channels")
+
+    assert channels_handle is None
+    assert channels_udata["dataType"] == "volts"
+    assert channels_udata["filterNames"] == ["r", "g", "b"]
+    assert len(channels_udata["channelData"]) == 3
+    assert len(channels_udata["channelImages"]) == 3
+    assert len(channels_udata["masks"]) == 3
+    assert channels_udata["pattern"].shape == (4, 4)
+    red_mask = channels_udata["masks"][0]
+    green_mask = channels_udata["masks"][1]
+    blue_mask = channels_udata["masks"][2]
+    assert np.array_equal(red_mask, channels_udata["pattern"] == 1)
+    assert np.array_equal(green_mask, channels_udata["pattern"] == 2)
+    assert np.array_equal(blue_mask, channels_udata["pattern"] == 3)
+    assert np.isnan(channels_udata["channelData"][0][0, 0])
+    assert np.isclose(channels_udata["channelData"][0][0, 1], volts[0, 1])
+    assert np.isclose(channels_udata["channelData"][1][0, 0], volts[0, 0])
+    assert np.isclose(channels_udata["channelData"][2][1, 0], volts[1, 0])
+    assert np.allclose(channels_udata["channelImages"][0][0, 1, 1:], np.array([0.0, 0.0], dtype=float))
+    assert channels_udata["channelImages"][0][0, 1, 0] > 0.0
+    assert np.allclose(channels_udata["channelImages"][1][0, 0, [0, 2]], np.array([0.0, 0.0], dtype=float))
+    assert channels_udata["channelImages"][1][0, 0, 1] > 0.0
+    assert np.allclose(channels_udata["channelImages"][2][1, 0, :2], np.array([0.0, 0.0], dtype=float))
+    assert channels_udata["channelImages"][2][1, 0, 2] > 0.0
