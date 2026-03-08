@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+import pyisetcam.optics as optics_module
 
 from pyisetcam.parity import run_python_case_with_context
 from pyisetcam import (
@@ -145,6 +146,31 @@ def test_oi_get_reports_spatial_and_frequency_support(asset_store) -> None:
     assert freq["fy"].shape == (rows,)
     assert fsupport.shape == (rows, cols, 2)
     assert np.isclose(oi_get(oi, "max frequency resolution", "mm"), max(freq["fx"].max(), freq["fy"].max()))
+
+
+def test_diffraction_otf_matches_oi_frequency_support(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    oi = oi_compute(oi_create(), scene, crop=False)
+    optics = oi_get(oi, "optics")
+    wave = oi_get(oi, "wave")
+    sample_spacing = float(oi_get(oi, "sample spacing")[0])
+
+    otf = optics_module._diffraction_otf(oi.data["photons"].shape[:2], sample_spacing, wave, optics, scene)
+    frequency_support = oi_get(oi, "frequency support", "m")
+    rho = np.sqrt(frequency_support[:, :, 0] ** 2 + frequency_support[:, :, 1] ** 2)
+    cutoff = (
+        (float(optics["focal_length_m"]) / float(optics["f_number"]) / float(optics["focal_length_m"]))
+        / np.maximum(np.asarray(wave, dtype=float) * 1e-9, 1e-12)
+    )
+    expected = np.zeros_like(otf)
+    for index, cutoff_frequency in enumerate(cutoff):
+        normalized = rho / max(float(cutoff_frequency), 1e-12)
+        clipped = np.clip(normalized, 0.0, 1.0)
+        current = (2.0 / np.pi) * (np.arccos(clipped) - clipped * np.sqrt(1.0 - clipped**2))
+        current[normalized >= 1.0] = 0.0
+        expected[:, :, index] = np.fft.ifftshift(current)
+
+    assert np.allclose(otf, expected)
 
 
 def test_oi_get_image_distance_uses_depth_map_when_geometry_is_not_precomputed() -> None:

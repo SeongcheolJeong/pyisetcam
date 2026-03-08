@@ -27,7 +27,6 @@ DEFAULT_WVF_SPATIAL_SAMPLES = 201
 DEFAULT_WVF_REF_PUPIL_PLANE_SIZE_MM = 16.212
 DEFAULT_WVF_CALC_PUPIL_DIAMETER_MM = 3.0
 DEFAULT_CAMERA_WVF_CALC_PUPIL_DIAMETER_MM = 9.6569e-01
-DIFFRACTION_CUTOFF_GRID_SCALE = 1.001
 _SPATIAL_UNIT_SCALE = {
     "meters": 1.0,
     "meter": 1.0,
@@ -288,9 +287,15 @@ def _diffraction_otf(
     scene: Scene,
 ) -> np.ndarray:
     rows, cols = shape
-    nyquist = 1.0 / max(2.0 * sample_spacing_m, 1e-12)
-    fx = np.fft.ifftshift(unit_frequency_list(cols) * nyquist)
-    fy = np.fft.ifftshift(unit_frequency_list(rows) * nyquist)
+    image_distance = _image_distance_m(optics, scene)
+    width_m = float(cols) * float(sample_spacing_m)
+    height_m = float(rows) * float(sample_spacing_m)
+    fov_width = float(np.rad2deg(2.0 * np.arctan2(width_m / 2.0, image_distance)))
+    fov_height = float(np.rad2deg(2.0 * np.arctan2(height_m / 2.0, image_distance)))
+    distance_per_degree = width_m / max(fov_width, 1e-12)
+    deg_per_dist = 1.0 / max(distance_per_degree, 1e-12)
+    fx = unit_frequency_list(cols) * ((cols / 2.0) / max(fov_width, 1e-12) * deg_per_dist)
+    fy = unit_frequency_list(rows) * ((rows / 2.0) / max(fov_height, 1e-12) * deg_per_dist)
     rho = np.sqrt(fy[:, None] ** 2 + fx[None, :] ** 2)
 
     aperture_diameter = float(optics["focal_length_m"]) / max(float(optics["f_number"]), 1e-12)
@@ -299,11 +304,7 @@ def _diffraction_otf(
     # than the thin-lens image distance for finite scene depth.
     focal_plane_distance = float(optics["focal_length_m"])
     wavelengths_m = np.asarray(wave, dtype=float) * 1e-9
-    cutoff = (
-        (aperture_diameter / max(focal_plane_distance, 1e-12))
-        / np.maximum(wavelengths_m, 1e-12)
-        * DIFFRACTION_CUTOFF_GRID_SCALE
-    )
+    cutoff = (aperture_diameter / max(focal_plane_distance, 1e-12)) / np.maximum(wavelengths_m, 1e-12)
 
     otf = np.zeros((rows, cols, wavelengths_m.size), dtype=float)
     for index, cutoff_frequency in enumerate(cutoff):
@@ -311,7 +312,7 @@ def _diffraction_otf(
         clipped = np.clip(normalized, 0.0, 1.0)
         current = (2.0 / np.pi) * (np.arccos(clipped) - clipped * np.sqrt(1.0 - clipped**2))
         current[normalized >= 1.0] = 0.0
-        otf[:, :, index] = current
+        otf[:, :, index] = np.fft.ifftshift(current)
     return otf
 
 
