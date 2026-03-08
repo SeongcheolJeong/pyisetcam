@@ -83,8 +83,11 @@ binary so baseline export works even when the raw CLI crashes at startup.
 
 ## Current Expansion
 
-Post-milestone expansion has started with `scene_from_file` / `sceneFromFile`
-for RGB and monochrome inputs backed by emissive display calibration. The
-current implementation supports in-memory arrays and image file paths, and
-keeps multispectral / EXR / reflective-display cases explicitly out of scope
-until they are ported deliberately.
+Post-milestone expansion now covers broader scene support and early sensor
+preset growth. `scene_from_file` / `sceneFromFile` supports RGB and
+monochrome inputs backed by emissive display calibration, the classic test
+scene catalog has been expanded, and `sensor_create` now includes generic
+`rgbw` / `rccc` presets plus upstream-backed `mt9v024` and `ar0132at`
+RGBW/RCCC variants. Multispectral / EXR / reflective-display cases and the
+rest of the vendor sensor catalog remain explicitly out of scope until they
+are ported deliberately.

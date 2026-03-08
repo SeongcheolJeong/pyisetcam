@@ -143,13 +143,105 @@ def _sensor_clear_data(sensor: Sensor) -> None:
 
 
 def _filter_bundle(
-    filter_name: str,
+    filter_name: str | list[str] | tuple[str, ...],
     wave: np.ndarray,
     *,
     asset_store: AssetStore,
 ) -> tuple[np.ndarray, list[str]]:
+    if isinstance(filter_name, (list, tuple)):
+        spectra_parts: list[np.ndarray] = []
+        names: list[str] = []
+        for current_filter in filter_name:
+            _, current_spectra, current_names = asset_store.load_color_filters(current_filter, wave_nm=wave)
+            current_spectra = np.asarray(current_spectra, dtype=float)
+            if current_spectra.ndim == 1:
+                current_spectra = current_spectra.reshape(-1, 1)
+            spectra_parts.append(current_spectra)
+            names.extend(current_names)
+        return np.concatenate(spectra_parts, axis=1), names
     _, spectra, names = asset_store.load_color_filters(filter_name, wave_nm=wave)
     return np.asarray(spectra, dtype=float), names
+
+
+def _matlab_string_list(value: Any) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    return [str(item) for item in np.atleast_1d(value)]
+
+
+def _sensor_from_upstream_model(
+    relative_path: str,
+    *,
+    asset_store: AssetStore,
+) -> Sensor:
+    data = asset_store.load_mat(relative_path)
+    model = data["sensor"]
+    wave = np.asarray(model.spectrum.wave, dtype=float).reshape(-1)
+    size = (int(model.rows), int(model.cols))
+    pixel_width = float(model.pixel.width)
+    pixel_height = float(model.pixel.height)
+    pd_width = float(getattr(model.pixel, "pdWidth", pixel_width))
+    pd_height = float(getattr(model.pixel, "pdHeight", pixel_height))
+    fill_factor = float((pd_width * pd_height) / max(pixel_width * pixel_height, 1e-12))
+    pixel = {
+        "size_m": np.array([pixel_height, pixel_width], dtype=float),
+        "height_gap_m": float(getattr(model.pixel, "heightGap", 0.0)),
+        "width_gap_m": float(getattr(model.pixel, "widthGap", 0.0)),
+        "fill_factor": fill_factor,
+        "conversion_gain_v_per_electron": float(model.pixel.conversionGain),
+        "voltage_swing": float(model.pixel.voltageSwing),
+        "dark_voltage_v_per_sec": float(model.pixel.darkVoltage),
+        "read_noise_v": float(model.pixel.readNoise),
+    }
+    sensor = _sensor_base(str(model.name), wave, size, pixel)
+    pattern = np.asarray(model.cfa.pattern, dtype=int)
+    if pattern.ndim == 0:
+        pattern = pattern.reshape(1, 1)
+    filter_spectra = np.asarray(model.color.filterSpectra, dtype=float)
+    if filter_spectra.ndim == 1:
+        filter_spectra = filter_spectra.reshape(-1, 1)
+    sensor.fields["pattern"] = pattern
+    sensor.fields["filter_spectra"] = filter_spectra
+    sensor.fields["filter_names"] = _matlab_string_list(model.color.filterNames)
+    sensor.fields["analog_gain"] = float(model.analogGain)
+    sensor.fields["analog_offset"] = float(model.analogOffset)
+    sensor.fields["quantization"] = str(model.quantization)
+    sensor.fields["integration_time"] = float(model.integrationTime)
+    sensor.fields["auto_exposure"] = bool(model.AE)
+    sensor.fields["noise_flag"] = int(model.noiseFlag)
+    return sensor
+
+
+def _sensor_variant_name(args: tuple[Any, ...], default: str) -> str:
+    if not args:
+        return default
+    return str(args[0])
+
+
+def _sensor_vendor_mt9v024(variant: str, *, asset_store: AssetStore) -> Sensor:
+    normalized = param_format(variant)
+    mapping = {
+        "mono": "data/sensor/auto/MT9V024SensorMono.mat",
+        "monochrome": "data/sensor/auto/MT9V024SensorMono.mat",
+        "rgb": "data/sensor/auto/MT9V024SensorRGB.mat",
+        "rccc": "data/sensor/auto/MT9V024SensorRCCC.mat",
+        "rgbw": "data/sensor/auto/MT9V024SensorRGBW.mat",
+    }
+    if normalized not in mapping:
+        raise UnsupportedOptionError("sensorCreate", f"MT9V024/{variant}")
+    return _sensor_from_upstream_model(mapping[normalized], asset_store=asset_store)
+
+
+def _sensor_vendor_ar0132at(variant: str, *, asset_store: AssetStore) -> Sensor:
+    normalized = param_format(variant)
+    mapping = {
+        "rgb": "data/sensor/auto/ar0132atSensorRGB.mat",
+        "rccc": "data/sensor/auto/ar0132atSensorRCCC.mat",
+        "rgbw": "data/sensor/auto/ar0132atSensorRGBW.mat",
+    }
+    if normalized not in mapping:
+        raise UnsupportedOptionError("sensorCreate", f"ar0132at/{variant}")
+    return _sensor_from_upstream_model(mapping[normalized], asset_store=asset_store)
 
 
 def sensor_create(
@@ -162,6 +254,9 @@ def sensor_create(
 
     store = _store(asset_store)
     normalized = param_format(sensor_type)
+    if normalized in {"mt9v024", "ar0132at"} and isinstance(pixel, str):
+        args = (pixel, *args)
+        pixel = None
     pixel_dict = _default_pixel(pixel)
     wave = np.asarray(pixel_dict.get("wave", DEFAULT_WAVE), dtype=float)
     size = tuple(pixel_dict.get("size", (72, 88)))
@@ -183,6 +278,24 @@ def sensor_create(
         sensor.fields["pattern"] = np.array([[1]], dtype=int)
         sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle("monochrome", wave, asset_store=store)
         return sensor
+
+    if normalized in {"rgbw", "interleaved"}:
+        sensor = _sensor_base("rgbw", wave, size, pixel_dict)
+        sensor.fields["pattern"] = np.array([[1, 2], [3, 4]], dtype=int)
+        sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle("interleavedrgbw", wave, asset_store=store)
+        return sensor
+
+    if normalized == "rccc":
+        sensor = _sensor_base("rccc", wave, size, pixel_dict)
+        sensor.fields["pattern"] = np.array([[2, 2], [2, 1]], dtype=int)
+        sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle(["r", "w"], wave, asset_store=store)
+        return sensor
+
+    if normalized == "mt9v024":
+        return _sensor_vendor_mt9v024(_sensor_variant_name(args, "rgb"), asset_store=store)
+
+    if normalized == "ar0132at":
+        return _sensor_vendor_ar0132at(_sensor_variant_name(args, "rgb"), asset_store=store)
 
     if normalized == "ideal":
         return sensor_create_ideal("xyz", None, asset_store=store)

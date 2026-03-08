@@ -409,6 +409,64 @@ def test_sensor_get_reports_matlab_style_geometry_and_cfa_metadata(asset_store) 
     assert np.array_equal(pattern_colors, np.array([["g", "r"], ["b", "g"]], dtype="<U1"))
 
 
+def test_sensor_create_rgbw_and_rccc_presets_expose_multichannel_cfas(asset_store) -> None:
+    rgbw = sensor_create("rgbw", asset_store=asset_store)
+    rccc = sensor_create("rccc", asset_store=asset_store)
+
+    assert sensor_get(rgbw, "nfilters") == 4
+    assert sensor_get(rgbw, "filter color letters") == "rgbw"
+    assert np.array_equal(sensor_get(rgbw, "pattern colors"), np.array([["r", "g"], ["b", "w"]], dtype="<U1"))
+
+    assert sensor_get(rccc, "nfilters") == 2
+    assert sensor_get(rccc, "filter color letters") == "rw"
+    assert np.array_equal(sensor_get(rccc, "pattern colors"), np.array([["w", "w"], ["w", "r"]], dtype="<U1"))
+
+
+def test_sensor_create_vendor_models_load_upstream_rgbw_and_rccc_metadata(asset_store) -> None:
+    mt9v024_rgbw = sensor_create("mt9v024", "rgbw", asset_store=asset_store)
+    mt9v024_rccc = sensor_create("mt9v024", None, "rccc", asset_store=asset_store)
+    ar0132at_rgbw = sensor_create("ar0132at", "rgbw", asset_store=asset_store)
+    ar0132at_rccc = sensor_create("ar0132at", None, "rccc", asset_store=asset_store)
+
+    assert mt9v024_rgbw.name == "MTV9V024-RGBW"
+    assert mt9v024_rgbw.fields["size"] == (480, 752)
+    assert np.allclose(mt9v024_rgbw.fields["pixel"]["size_m"], np.array([6e-6, 6e-6]))
+    assert sensor_get(mt9v024_rgbw, "filter color letters") == "rgbw"
+    assert np.array_equal(sensor_get(mt9v024_rgbw, "pattern colors"), np.array([["r", "g"], ["b", "w"]], dtype="<U1"))
+
+    assert mt9v024_rccc.name == "MTV9V024-RCCC"
+    assert sensor_get(mt9v024_rccc, "filter color letters") == "rw"
+    assert np.array_equal(sensor_get(mt9v024_rccc, "pattern colors"), np.array([["w", "w"], ["w", "r"]], dtype="<U1"))
+
+    assert ar0132at_rgbw.name == "AR0132AT-RGBW"
+    assert ar0132at_rgbw.fields["size"] == (960, 1280)
+    assert np.allclose(ar0132at_rgbw.fields["pixel"]["size_m"], np.array([3.751e-6, 3.751e-6]))
+    assert sensor_get(ar0132at_rgbw, "filter color letters") == "rgbw"
+    assert np.array_equal(sensor_get(ar0132at_rgbw, "pattern colors"), np.array([["r", "g"], ["w", "b"]], dtype="<U1"))
+
+    assert ar0132at_rccc.name == "AR0132AT-RCCC"
+    assert sensor_get(ar0132at_rccc, "filter color letters") == "rw"
+    assert np.array_equal(sensor_get(ar0132at_rccc, "pattern colors"), np.array([["w", "w"], ["w", "r"]], dtype="<U1"))
+
+
+def test_sensor_compute_supports_rgbw_and_rccc_presets(asset_store) -> None:
+    scene = scene_create("uniform ee", 16, asset_store=asset_store)
+    oi = oi_compute(oi_create(), scene, crop=True)
+
+    rgbw = sensor_set(sensor_create("rgbw", asset_store=asset_store), "noise flag", 0)
+    rgbw = sensor_set(rgbw, "integration time", 0.01)
+    rccc = sensor_set(sensor_create("rccc", asset_store=asset_store), "noise flag", 0)
+    rccc = sensor_set(rccc, "integration time", 0.01)
+
+    rgbw_result = sensor_compute(rgbw, oi, seed=0)
+    rccc_result = sensor_compute(rccc, oi, seed=0)
+
+    assert rgbw_result.data["volts"].shape == rgbw.fields["size"]
+    assert rccc_result.data["volts"].shape == rccc.fields["size"]
+    assert np.all(rgbw_result.data["volts"] >= 0.0)
+    assert np.all(rccc_result.data["volts"] >= 0.0)
+
+
 def test_sensor_set_size_respects_cfa_block_and_clears_cached_data(asset_store) -> None:
     sensor = sensor_create(asset_store=asset_store)
     sensor = sensor_set(sensor, "volts", np.ones((7, 9), dtype=float))

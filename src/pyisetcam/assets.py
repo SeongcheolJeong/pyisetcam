@@ -208,7 +208,19 @@ class AssetStore:
         normalized = filter_name.lower()
         mapping = {
             "rgb": "data/sensor/colorfilters/RGB.mat",
+            "rgbw": "data/sensor/colorfilters/RGBW.mat",
+            "interleavedrgbw": "data/sensor/colorfilters/interleavedRGBW.mat",
             "cym": "data/sensor/colorfilters/cym.mat",
+            "grbc": "data/sensor/colorfilters/GRBC.mat",
+            "r": "data/sensor/colorfilters/R.mat",
+            "w": "data/sensor/colorfilters/W.mat",
+            "mt9v024rgb": "data/sensor/colorfilters/auto/MT9V024_RGB.mat",
+            "mt9v024mono": "data/sensor/colorfilters/auto/MT9V024_Mono.mat",
+            "mt9v024rgbw": "data/sensor/colorfilters/auto/MT9V024_RGBW.mat",
+            "mt9v024rccc": "data/sensor/colorfilters/auto/MT9V024_RCCC.mat",
+            "ar0132atrgb": "data/sensor/colorfilters/auto/ar0132atRGB.mat",
+            "ar0132atrgbw": "data/sensor/colorfilters/auto/ar0132atRGBW.mat",
+            "ar0132atrccc": "data/sensor/colorfilters/auto/ar0132atRCCC.mat",
             "monochrome": None,
         }
         if normalized == "xyz":
@@ -225,6 +237,8 @@ class AssetStore:
         data = self.load_mat(relative_path)
         wavelengths = np.asarray(data["wavelength"], dtype=float)
         filters = np.asarray(data["data"], dtype=float)
+        if filters.ndim == 1:
+            filters = filters.reshape(-1, 1)
         names = [str(value) for value in np.atleast_1d(data.get("filterNames", []))]
         if not names:
             names = [f"f{index + 1}" for index in range(filters.shape[1])]
