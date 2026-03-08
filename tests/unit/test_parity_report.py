@@ -5,6 +5,8 @@ from pathlib import Path
 
 import numpy as np
 
+from pyisetcam.parity import run_python_case_with_context
+
 
 def _load_parity_report_module():
     module_path = Path(__file__).resolve().parents[2] / "tools" / "parity_report.py"
@@ -47,3 +49,42 @@ def test_array_metrics_reports_2x2_phase_breakdown() -> None:
     assert np.isclose(metrics["phase_2x2_mean_rel"]["r1c0"], 0.2)
     assert np.isclose(metrics["phase_2x2_mean_rel"]["r0c0"], 0.0)
     assert np.isclose(metrics["phase_2x2_mean_rel"]["r1c1"], 0.0)
+
+
+def test_case_diagnostics_recompute_sensor_from_reference_oi(asset_store) -> None:
+    parity_report = _load_parity_report_module()
+
+    reference = parity_report._load_reference("sensor_bayer_noiseless")
+    case = run_python_case_with_context("sensor_bayer_noiseless", asset_store=asset_store)
+    diagnostics = parity_report._case_diagnostics(
+        "sensor_bayer_noiseless",
+        reference=reference,
+        context=case.context,
+        rtol=1e-5,
+        atol=1e-8,
+    )
+
+    assert diagnostics["context"]["sensor_size"] == [72, 88]
+    assert diagnostics["reference_recompute"]["reference_oi_case"] == "oi_diffraction_limited_default"
+    assert diagnostics["reference_recompute"]["sensor_volts"]["pass"]
+    assert diagnostics["reference_recompute"]["integration_time"]["pass"]
+
+
+def test_case_diagnostics_show_camera_reference_recompute_gap(asset_store) -> None:
+    parity_report = _load_parity_report_module()
+
+    reference = parity_report._load_reference("camera_default_pipeline")
+    case = run_python_case_with_context("camera_default_pipeline", asset_store=asset_store)
+    diagnostics = parity_report._case_diagnostics(
+        "camera_default_pipeline",
+        reference=reference,
+        context=case.context,
+        rtol=1e-3,
+        atol=1e-3,
+    )
+
+    comparison = diagnostics["reference_recompute"]["sensor_volts_from_reference_oi"]
+
+    assert diagnostics["context"]["oi_size"] == [80, 120, 31]
+    assert not comparison["pass"]
+    assert comparison["mean_rel"] > 1e-2

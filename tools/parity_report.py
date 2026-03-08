@@ -20,7 +20,9 @@ DEFAULT_OUTPUT = REPO_ROOT / "reports" / "parity" / "latest.json"
 
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from pyisetcam import AssetStore, run_python_case
+from pyisetcam import AssetStore
+from pyisetcam.parity import run_python_case_with_context
+from pyisetcam.sensor import sensor_compute
 
 
 def _case_definitions() -> list[dict[str, Any]]:
@@ -174,6 +176,81 @@ def _git_commit() -> str | None:
     return result.stdout.strip() or None
 
 
+def _context_metadata(context: dict[str, Any]) -> dict[str, Any]:
+    metadata: dict[str, Any] = {}
+
+    oi = context.get("oi")
+    if oi is not None:
+        photons = np.asarray(oi.data.get("photons", np.empty((0, 0, 0))), dtype=float)
+        metadata["oi_size"] = list(photons.shape)
+        metadata["oi_sample_spacing_m"] = float(oi.fields.get("sample_spacing_m") or 0.0)
+        metadata["oi_width_m"] = float(oi.fields.get("width_m") or 0.0)
+        metadata["oi_height_m"] = float(oi.fields.get("height_m") or 0.0)
+        metadata["oi_image_distance_m"] = float(oi.fields.get("image_distance_m") or 0.0)
+
+    sensor = context.get("sensor")
+    if sensor is not None:
+        metadata["sensor_size"] = [int(sensor.fields["size"][0]), int(sensor.fields["size"][1])]
+        metadata["sensor_integration_time_s"] = float(sensor.fields.get("integration_time", 0.0))
+        metadata["sensor_noise_flag"] = int(sensor.fields.get("noise_flag", 0))
+
+    return metadata
+
+
+def _sensor_from_reference_oi(context: dict[str, Any], reference_photons: Any):
+    oi = context.get("oi")
+    sensor = context.get("sensor")
+    if oi is None or sensor is None:
+        return None
+    reference_oi = oi.clone()
+    reference_oi.data["photons"] = np.asarray(reference_photons, dtype=float).copy()
+    return sensor_compute(sensor.clone(), reference_oi, seed=0)
+
+
+def _case_diagnostics(
+    case_name: str,
+    *,
+    reference: dict[str, Any],
+    context: dict[str, Any],
+    rtol: float,
+    atol: float,
+) -> dict[str, Any]:
+    diagnostics: dict[str, Any] = {}
+    metadata = _context_metadata(context)
+    if metadata:
+        diagnostics["context"] = metadata
+
+    if case_name == "sensor_bayer_noiseless" and {"volts", "integration_time"} <= reference.keys():
+        oi_reference = _load_reference("oi_diffraction_limited_default")
+        if "photons" in oi_reference:
+            recomputed_sensor = _sensor_from_reference_oi(context, oi_reference["photons"])
+            if recomputed_sensor is not None:
+                diagnostics["reference_recompute"] = {
+                    "reference_oi_case": "oi_diffraction_limited_default",
+                    "sensor_volts": _compare(reference["volts"], recomputed_sensor.data["volts"], rtol=rtol, atol=atol),
+                    "integration_time": _compare(
+                        reference["integration_time"],
+                        recomputed_sensor.fields["integration_time"],
+                        rtol=rtol,
+                        atol=atol,
+                    ),
+                }
+
+    if case_name == "camera_default_pipeline" and {"sensor_volts", "oi_photons"} <= reference.keys():
+        recomputed_sensor = _sensor_from_reference_oi(context, reference["oi_photons"])
+        if recomputed_sensor is not None:
+            diagnostics["reference_recompute"] = {
+                "sensor_volts_from_reference_oi": _compare(
+                    reference["sensor_volts"],
+                    recomputed_sensor.data["volts"],
+                    rtol=rtol,
+                    atol=atol,
+                )
+            }
+
+    return diagnostics
+
+
 def build_report(*, asset_store: AssetStore | None = None) -> dict[str, Any]:
     store = asset_store or AssetStore.default()
     cases = _case_definitions()
@@ -196,9 +273,18 @@ def build_report(*, asset_store: AssetStore | None = None) -> dict[str, Any]:
             )
             continue
 
+        reference = _load_reference(case_name)
+        case_result = run_python_case_with_context(case_name, asset_store=store)
         comparison = _compare(
-            _load_reference(case_name),
-            run_python_case(case_name, asset_store=store),
+            reference,
+            case_result.payload,
+            rtol=float(case["rtol"]),
+            atol=float(case["atol"]),
+        )
+        diagnostics = _case_diagnostics(
+            case_name,
+            reference=reference,
+            context=case_result.context,
             rtol=float(case["rtol"]),
             atol=float(case["atol"]),
         )
@@ -207,15 +293,16 @@ def build_report(*, asset_store: AssetStore | None = None) -> dict[str, Any]:
             passed += 1
         else:
             failed += 1
-        results.append(
-            {
-                "name": case_name,
-                "status": status,
-                "rtol": float(case["rtol"]),
-                "atol": float(case["atol"]),
-                "comparison": comparison,
-            }
-        )
+        result = {
+            "name": case_name,
+            "status": status,
+            "rtol": float(case["rtol"]),
+            "atol": float(case["atol"]),
+            "comparison": comparison,
+        }
+        if diagnostics:
+            result["diagnostics"] = diagnostics
+        results.append(result)
 
     return {
         "generated_at": datetime.now(UTC).isoformat(),

@@ -47,7 +47,8 @@ python tools/parity_report.py
 ```
 
 The report includes max-error locations plus edge/interior and 2x2 phase
-diagnostics for array outputs, which helps localize remaining parity gaps.
+diagnostics for array outputs, plus case-specific context and
+reference-recompute checks for remaining sensor/camera gaps.
 
 Regenerate Octave baselines for the curated parity cases:
 

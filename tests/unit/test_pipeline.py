@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from pyisetcam.parity import run_python_case_with_context
 from pyisetcam import (
     camera_compute,
     camera_create,
@@ -572,3 +573,12 @@ def test_camera_parity_case_disables_sensor_noise(asset_store) -> None:
     noiseless_camera = camera_compute(noiseless_camera, scene, asset_store=asset_store)
 
     assert np.allclose(payload["sensor_volts"], noiseless_camera.fields["sensor"].data["volts"])
+
+
+def test_run_python_case_with_context_returns_pipeline_objects(asset_store) -> None:
+    case = run_python_case_with_context("camera_default_pipeline", asset_store=asset_store)
+
+    assert case.payload["result"].shape[:2] == tuple(case.context["sensor"].fields["size"])
+    assert np.array_equal(case.payload["oi_photons"], case.context["oi"].data["photons"])
+    assert np.array_equal(case.payload["sensor_volts"], case.context["sensor"].data["volts"])
+    assert case.context["camera"].fields["ip"] is case.context["ip"]

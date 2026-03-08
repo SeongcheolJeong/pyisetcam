@@ -13,6 +13,11 @@ Current repository contents:
 - `max_index` and the reference/actual values at that location
 - `edge_mean_rel` vs. `interior_mean_rel` for the outer 10% border
 - `phase_2x2_mean_rel` for array-shaped results, useful for CFA-pattern misses
+- `diagnostics.context` for the current Python OI/sensor geometry on cases that
+  exercise those pipeline stages
+- `diagnostics.reference_recompute` for cases where the report can rerun a
+  downstream stage from stored reference inputs to separate an upstream port
+  miss from a stale or internally inconsistent baseline
 
 Note:
 

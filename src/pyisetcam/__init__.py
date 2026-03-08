@@ -10,7 +10,7 @@ from .camera import camera_compute, camera_create, camera_get, camera_set
 from .display import display_create, display_get, display_set
 from .ip import ip_compute, ip_create, ip_get, ip_set
 from .optics import oi_compute, oi_create, oi_get, oi_set, wvf_create
-from .parity import run_python_case
+from .parity import run_python_case, run_python_case_with_context
 from .scene import (
     scene_adjust_illuminant,
     scene_adjust_luminance,
@@ -76,6 +76,7 @@ __all__ = [
     "oi_set",
     "param_format",
     "run_python_case",
+    "run_python_case_with_context",
     "sceneAdjustIlluminant",
     "sceneAdjustLuminance",
     "sceneCalculateLuminance",
@@ -141,4 +142,3 @@ cameraCreate = camera_create
 cameraCompute = camera_compute
 cameraGet = camera_get
 cameraSet = camera_set
-
