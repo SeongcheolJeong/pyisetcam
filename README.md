@@ -133,7 +133,10 @@ also includes `rt_sample_heights` / `rtSampleHeights`, `rt_psf_grid` /
 `rtPSFGrid`, and `rt_angle_lut` / `rtAngleLUT`. The staged ray-trace
 pipeline is now partially exposed as well through `rt_geometry` /
 `rtGeometry`, `rt_precompute_psf` / `rtPrecomputePSF`, and
-`rt_precompute_psf_apply` / `rtPrecomputePSFApply`.
+`rt_precompute_psf_apply` / `rtPrecomputePSFApply`. The MATLAB-style
+top-level wrapper `optics_ray_trace` / `opticsRayTrace` is now exposed as
+the staged end-to-end ray-trace entry point as well, including cached OI
+illuminance bookkeeping.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

@@ -26,6 +26,7 @@ from .metrics import (
     xyz_to_lab,
 )
 from .optics import (
+    optics_ray_trace,
     oi_compute,
     oi_create,
     oi_get,
@@ -110,6 +111,8 @@ __all__ = [
     "metricsSPD",
     "metrics_spd",
     "mired_difference",
+    "opticsRayTrace",
+    "optics_ray_trace",
     "oiCompute",
     "oiCreate",
     "oiGet",
@@ -194,6 +197,7 @@ oiCreate = oi_create
 oiCompute = oi_compute
 oiGet = oi_get
 oiSet = oi_set
+opticsRayTrace = optics_ray_trace
 rtAngleLUT = rt_angle_lut
 rtDIInterp = rt_di_interp
 rtGeometry = rt_geometry

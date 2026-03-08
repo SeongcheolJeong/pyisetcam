@@ -12,6 +12,7 @@ from scipy.ndimage import map_coordinates, rotate, uniform_filter
 from scipy.signal import fftconvolve
 
 from .assets import AssetStore
+from .color import luminance_from_photons
 from .exceptions import UnsupportedOptionError
 from .scene import scene_get
 from .types import OpticalImage, Scene
@@ -1395,6 +1396,59 @@ def rt_precompute_psf_apply(
     return computed
 
 
+def _oi_illuminance(oi: OpticalImage) -> np.ndarray:
+    photons = np.asarray(oi.data.get("photons", np.empty((0, 0, 0), dtype=float)), dtype=float)
+    wave = np.asarray(oi.fields.get("wave", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    if photons.ndim != 3 or photons.size == 0 or wave.size == 0:
+        if photons.ndim >= 2:
+            return np.empty(photons.shape[:2], dtype=float)
+        return np.empty((0, 0), dtype=float)
+    return luminance_from_photons(photons, wave, asset_store=AssetStore.default())
+
+
+def optics_ray_trace(
+    scene: Scene,
+    oi: OpticalImage,
+    angle_step_deg: float | None = None,
+) -> OpticalImage:
+    if param_format(oi.fields.get("optics", {}).get("model", "")) != "raytrace":
+        raise ValueError("opticsRayTrace requires a ray-trace optical image.")
+
+    _, compute_scene = _prepare_raytrace_scene(oi, scene)
+    staged = oi.clone()
+    staged.name = compute_scene.name
+    staged.fields["wave"] = np.asarray(compute_scene.fields["wave"], dtype=float).copy()
+    staged.fields["fov_deg"] = float(compute_scene.fields.get("fov_deg", staged.fields.get("fov_deg", 10.0)))
+    staged.fields["vfov_deg"] = float(
+        compute_scene.fields.get("vfov_deg", staged.fields.get("vfov_deg", staged.fields["fov_deg"]))
+    )
+    if angle_step_deg is not None:
+        staged = oi_set(staged, "psf angle step", float(angle_step_deg))
+
+    computed = rt_precompute_psf_apply(rt_geometry(staged, compute_scene), angle_step_deg=angle_step_deg)
+    diffuser_method = param_format(computed.fields.get("diffuser_method", "skip"))
+    if diffuser_method == "blur":
+        blur_m = float(computed.fields.get("diffuser_blur_m", 0.0))
+        sample_spacing_m = _oi_sample_size_m(computed)
+        if blur_m > 0.0 and sample_spacing_m is not None:
+            sigma_pixels = blur_m / max(sample_spacing_m, 1e-12)
+            computed.data["photons"] = apply_channelwise_gaussian(
+                np.asarray(computed.data["photons"], dtype=float),
+                np.full(np.asarray(computed.fields["wave"], dtype=float).shape, sigma_pixels, dtype=float),
+                mode="constant",
+                cval=0.0,
+            )
+    elif diffuser_method == "birefringent":
+        raise UnsupportedOptionError("opticsRayTrace", "birefringent")
+    elif diffuser_method != "skip":
+        raise UnsupportedOptionError("opticsRayTrace", computed.fields.get("diffuser_method", diffuser_method))
+
+    illuminance = _oi_illuminance(computed)
+    computed.fields["illuminance"] = illuminance
+    computed.fields["mean_illuminance"] = 0.0 if illuminance.size == 0 else float(np.mean(illuminance))
+    return computed
+
+
 def _raytrace_geometry(cube: np.ndarray, wave: np.ndarray, optics: dict[str, Any], scene: Scene) -> np.ndarray:
     raytrace = dict(optics.get("raytrace", {}))
     max_fov = float(raytrace.get("max_fov_deg", np.inf))
@@ -2404,6 +2458,17 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         return np.asarray(oi.fields["wave"], dtype=float)
     if key == "photons":
         return np.asarray(oi.data["photons"], dtype=float)
+    if key == "illuminance":
+        stored = oi.fields.get("illuminance")
+        if stored is not None:
+            return np.asarray(stored, dtype=float)
+        return _oi_illuminance(oi)
+    if key == "meanilluminance":
+        stored = oi.fields.get("mean_illuminance")
+        if stored is not None:
+            return float(stored)
+        illuminance = np.asarray(oi_get(oi, "illuminance"), dtype=float)
+        return 0.0 if illuminance.size == 0 else float(np.mean(illuminance))
     if key == "depthmap":
         depth_map = oi.fields.get("depth_map_m")
         if depth_map is None:
@@ -2750,6 +2815,12 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any, *args: Any) -> OpticalI
     if key == "photons":
         oi.data["photons"] = np.asarray(value, dtype=float)
         _sync_oi_geometry_fields(oi)
+        return oi
+    if key == "illuminance":
+        oi.fields["illuminance"] = np.asarray(value, dtype=float)
+        return oi
+    if key == "meanilluminance":
+        oi.fields["mean_illuminance"] = float(value)
         return oi
     if key == "depthmap":
         depth_map = np.asarray(value, dtype=float)

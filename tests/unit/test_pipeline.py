@@ -14,6 +14,7 @@ from pyisetcam import (
     ip_set,
     ip_compute,
     ip_create,
+    optics_ray_trace,
     oi_compute,
     oi_create,
     oi_get,
@@ -979,6 +980,28 @@ def test_rt_precompute_psf_apply_matches_oi_compute_uncropped(asset_store) -> No
     assert applied.fields["padding_pixels"] == baseline.fields["padding_pixels"]
     assert np.allclose(applied.data["photons"], baseline.data["photons"])
     assert np.allclose(oi_get(applied, "depth map"), oi_get(baseline, "depth map"))
+
+
+def test_optics_ray_trace_matches_oi_compute_uncropped(asset_store) -> None:
+    scene = scene_create("uniform ee", 32, np.array([550.0], dtype=float), asset_store=asset_store)
+    baseline = oi_compute(oi_create("ray trace", asset_store=asset_store), scene, crop=False)
+    result = optics_ray_trace(scene, oi_create("ray trace", asset_store=asset_store))
+
+    assert result.data["photons"].shape == baseline.data["photons"].shape
+    assert result.fields["padding_pixels"] == baseline.fields["padding_pixels"]
+    assert np.allclose(result.data["photons"], baseline.data["photons"])
+    assert np.allclose(oi_get(result, "depth map"), oi_get(baseline, "depth map"))
+    assert result.fields["illuminance"].shape == result.data["photons"].shape[:2]
+    assert np.allclose(result.fields["illuminance"], oi_get(baseline, "illuminance"))
+    assert np.isclose(result.fields["mean_illuminance"], oi_get(result, "mean illuminance"))
+
+
+def test_optics_ray_trace_uses_explicit_angle_step(asset_store) -> None:
+    scene = scene_create("uniform ee", 32, np.array([550.0], dtype=float), asset_store=asset_store)
+    result = optics_ray_trace(scene, oi_create("ray trace", asset_store=asset_store), angle_step_deg=30.0)
+
+    assert np.isclose(oi_get(result, "psf angle step"), 30.0)
+    assert np.array_equal(oi_get(result, "psf sample angles"), np.arange(0.0, 361.0, 30.0))
 
 
 def test_wvf_path_preserves_more_checkerboard_contrast_than_diffraction(asset_store) -> None:
