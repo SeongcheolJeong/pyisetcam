@@ -301,6 +301,41 @@ def test_oi_compute_raytrace_builds_precomputed_psf_structure(asset_store) -> No
     assert oi_get(result, "raytrace optics name") == "Asphere 2mm"
 
 
+def test_oi_compute_raytrace_crop_false_tracks_padding_and_depth_map(asset_store) -> None:
+    scene = scene_create("uniform ee", 32, np.array([550.0], dtype=float), asset_store=asset_store)
+    result = oi_compute(oi_create("ray trace", asset_store=asset_store), scene, crop=False)
+
+    pad_rows, pad_cols = oi_get(result, "padding pixels")
+    photons = np.asarray(result.data["photons"], dtype=float)
+    depth_map = np.asarray(oi_get(result, "depth map"), dtype=float)
+    base_rows, base_cols = scene.data["photons"].shape[:2]
+
+    assert pad_rows > 0
+    assert pad_cols > 0
+    assert photons.shape[:2] == (base_rows + 2 * pad_rows, base_cols + 2 * pad_cols)
+    assert depth_map.shape == photons.shape[:2]
+    assert np.allclose(depth_map[pad_rows:-pad_rows, pad_cols:-pad_cols], 2.0)
+    assert np.allclose(depth_map[:pad_rows, :], 0.0)
+    assert np.allclose(depth_map[-pad_rows:, :], 0.0)
+    assert np.allclose(depth_map[:, :pad_cols], 0.0)
+    assert np.allclose(depth_map[:, -pad_cols:], 0.0)
+
+
+def test_oi_get_set_raytrace_sample_angles_matches_matlab_surface(asset_store) -> None:
+    scene = scene_create("uniform ee", 32, np.array([550.0], dtype=float), asset_store=asset_store)
+    sample_angles = np.arange(0.0, 361.0, 45.0, dtype=float)
+    oi = oi_set(oi_create("ray trace", asset_store=asset_store), "psf sample angles", sample_angles)
+
+    assert np.array_equal(oi_get(oi, "psf sample angles"), sample_angles)
+    assert np.isclose(oi_get(oi, "psf angle step"), 45.0)
+
+    result = oi_compute(oi, scene, crop=True)
+
+    assert np.array_equal(oi_get(result, "psf sample angles"), sample_angles)
+    assert np.isclose(oi_get(result, "psf angle step"), 45.0)
+    assert np.allclose(oi_get(result, "psf image heights", "m"), oi_get(result, "psf image heights") / 1e3)
+
+
 def test_oi_compute_raytrace_rotates_psf_with_field_angle(asset_store) -> None:
     wave = np.array([550.0], dtype=float)
     scene = scene_create("uniform ee", 96, wave, asset_store=asset_store)

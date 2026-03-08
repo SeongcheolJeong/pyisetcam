@@ -1038,7 +1038,7 @@ def _raytrace_psf_struct_matches(
     rows: int,
     cols: int,
     sample_spacing_m: float,
-    angle_step_deg: float,
+    sample_angles_deg: np.ndarray,
 ) -> bool:
     if not isinstance(psf_struct, dict):
         return False
@@ -1048,10 +1048,54 @@ def _raytrace_psf_struct_matches(
         return False
     if not np.array_equal(np.asarray(psf_struct.get("wavelength_nm", np.empty(0))), np.asarray(wave, dtype=float)):
         return False
-    if not np.isclose(float(psf_struct.get("angle_step_deg", -1.0)), float(angle_step_deg)):
+    current_angles = np.asarray(psf_struct.get("sample_angles_deg", np.empty(0)), dtype=float).reshape(-1)
+    if not np.array_equal(current_angles, np.asarray(sample_angles_deg, dtype=float).reshape(-1)):
         return False
     raytrace = optics.get("raytrace", {})
     return str(psf_struct.get("optics_name", "")) == str(raytrace.get("name", optics.get("name", "")))
+
+
+def _raytrace_default_sample_angles(angle_step_deg: float) -> np.ndarray:
+    step = float(angle_step_deg)
+    if step <= 0.0:
+        raise ValueError("PSF angle step must be positive.")
+    return np.arange(0.0, 360.0 + step, step, dtype=float)
+
+
+def _raytrace_requested_sample_angles(
+    angle_step_deg: float,
+    sample_angles_deg: Any | None,
+) -> np.ndarray:
+    if sample_angles_deg is None:
+        return _raytrace_default_sample_angles(angle_step_deg)
+    sample_angles = np.asarray(sample_angles_deg, dtype=float).reshape(-1)
+    if sample_angles.size < 2:
+        raise ValueError("Ray-trace PSF sample angles must contain at least two entries.")
+    if not np.isclose(sample_angles[0], 0.0):
+        raise ValueError("Ray-trace PSF sample angles must start at 0 degrees.")
+    if sample_angles[-1] < 360.0 and not np.isclose(sample_angles[-1], 360.0):
+        raise ValueError("Ray-trace PSF sample angles must include 360 degrees.")
+    diffs = np.diff(sample_angles)
+    if np.any(diffs <= 0.0):
+        raise ValueError("Ray-trace PSF sample angles must be strictly increasing.")
+    if not np.allclose(diffs, diffs[0]):
+        raise ValueError("Ray-trace PSF sample angles must be uniformly spaced.")
+    return sample_angles
+
+
+def _raytrace_padding_pixels(psf_struct: dict[str, Any] | None) -> tuple[int, int]:
+    if not isinstance(psf_struct, dict):
+        return (0, 0)
+    psf = np.asarray(psf_struct.get("psf", np.empty((0, 0, 0, 0, 0), dtype=float)))
+    if psf.ndim != 5 or psf.shape[3] <= 0 or psf.shape[4] <= 0:
+        return (0, 0)
+    rows = int(psf.shape[3])
+    cols = int(psf.shape[4])
+    row_extent = int(np.floor(rows / 2.0))
+    col_extent = int(np.floor(cols / 2.0))
+    pad_rows = int(2 * np.ceil((np.ceil(row_extent) + 2.0) / 2.0))
+    pad_cols = int(2 * np.ceil((np.ceil(col_extent) + 2.0) / 2.0))
+    return pad_rows, pad_cols
 
 
 def _raytrace_precompute_psf(
@@ -1061,12 +1105,14 @@ def _raytrace_precompute_psf(
     cols: int,
     sample_spacing_m: float,
     *,
-    angle_step_deg: float,
+    sample_angles_deg: np.ndarray,
 ) -> dict[str, Any]:
     raytrace = dict(optics.get("raytrace", {}))
     psf_data = dict(raytrace.get("psf", {}))
     psf_function = np.asarray(psf_data.get("function", np.empty(0, dtype=float)), dtype=float)
     field_heights_all = np.asarray(psf_data.get("field_height_mm", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    sample_angles_deg = np.asarray(sample_angles_deg, dtype=float).reshape(-1)
+    angle_step_deg = float(sample_angles_deg[1] - sample_angles_deg[0]) if sample_angles_deg.size >= 2 else 0.0
     if psf_function.size == 0 or field_heights_all.size == 0:
         return {
             "optics_name": str(raytrace.get("name", optics.get("name", "raytrace"))),
@@ -1082,7 +1128,6 @@ def _raytrace_precompute_psf(
     sample_spacing_mm = float(sample_spacing_m) * 1e3
     _, data_height_mm = _raytrace_data_angle_height(rows, cols, sample_spacing_mm)
     img_height_mm = _raytrace_sample_heights(field_heights_all, data_height_mm)
-    sample_angles_deg = np.arange(0.0, 360.0 + float(angle_step_deg), float(angle_step_deg), dtype=float)
     source_x_mm, source_y_mm = _raytrace_psf_support_axes(psf_data)
     target_x_mm, target_y_mm = _raytrace_psf_grid(sample_spacing_mm, psf_data)
     n_angles = int(sample_angles_deg.size)
@@ -1125,6 +1170,8 @@ def _raytrace_apply_psf(
     cube: np.ndarray,
     psf_struct: dict[str, Any],
     sample_spacing_m: float,
+    *,
+    pad_pixels: tuple[int, int] = (0, 0),
 ) -> np.ndarray:
     psf_stack = np.asarray(psf_struct.get("psf", np.empty((0, 0, 0, 0, 0), dtype=float)), dtype=float)
     if psf_stack.size == 0:
@@ -1139,14 +1186,20 @@ def _raytrace_apply_psf(
     if img_height_mm.size < 2:
         return np.asarray(cube, dtype=float).copy()
 
+    pad_rows = int(pad_pixels[0])
+    pad_cols = int(pad_pixels[1])
     lower_angle = angle_lut_index[np.clip(data_angle - 1, 0, 359)]
     lower_weight = angle_lut_weight[np.clip(data_angle - 1, 0, 359)]
     unique_angles = np.unique(lower_angle)
-    result = np.zeros_like(cube, dtype=float)
+    if pad_rows > 0 or pad_cols > 0:
+        padded_shape = (rows + 2 * pad_rows, cols + 2 * pad_cols)
+    else:
+        padded_shape = (rows, cols)
+    result = np.zeros((padded_shape[0], padded_shape[1], cube.shape[2]), dtype=float)
 
     for wave_index in range(cube.shape[2]):
         plane = np.asarray(cube[:, :, wave_index], dtype=float)
-        plane_result = np.zeros((rows, cols), dtype=float)
+        plane_result = np.zeros(padded_shape, dtype=float)
         for height_index in range(1, img_height_mm.size):
             band_mask = (data_height >= img_height_mm[height_index - 1]) & (data_height < img_height_mm[height_index])
             if not np.any(band_mask):
@@ -1162,6 +1215,10 @@ def _raytrace_apply_psf(
                 masked_plane = plane * mask
                 radial_inner = inner_weight * mask
                 angular_lower = lower_weight * mask
+                if pad_rows > 0 or pad_cols > 0:
+                    masked_plane = np.pad(masked_plane, ((pad_rows, pad_rows), (pad_cols, pad_cols)))
+                    radial_inner = np.pad(radial_inner, ((pad_rows, pad_rows), (pad_cols, pad_cols)))
+                    angular_lower = np.pad(angular_lower, ((pad_rows, pad_rows), (pad_cols, pad_cols)))
                 plane_result = plane_result + fftconvolve(
                     masked_plane * radial_inner * angular_lower,
                     psf_stack[angle_index, height_index - 1, wave_index, :, :],
@@ -1230,8 +1287,11 @@ def oi_compute(
     model = param_format(optics.get("model", ""))
     psf_struct: dict[str, Any] | None = None
     if model == "raytrace":
-        depth_map = np.asarray(scene_get(compute_scene, "depth map"), dtype=float)
         angle_step_deg = float(oi.fields.get("psf_angle_step_deg", DEFAULT_RAYTRACE_ANGLE_STEP_DEG))
+        sample_angles_deg = _raytrace_requested_sample_angles(
+            angle_step_deg,
+            oi.fields.get("psf_sample_angles_deg"),
+        )
         current_psf_struct = oi.fields.get("psf_struct")
         if _raytrace_psf_struct_matches(
             current_psf_struct,
@@ -1240,7 +1300,7 @@ def oi_compute(
             scene_photons.shape[0],
             scene_photons.shape[1],
             sample_spacing_m,
-            angle_step_deg,
+            sample_angles_deg,
         ):
             psf_struct = dict(current_psf_struct)
         else:
@@ -1250,10 +1310,21 @@ def oi_compute(
                 scene_photons.shape[0],
                 scene_photons.shape[1],
                 sample_spacing_m,
-                angle_step_deg=angle_step_deg,
+                sample_angles_deg=sample_angles_deg,
             )
-        result = _raytrace_apply_psf(_raytrace_geometry(photons, wave, optics, compute_scene), psf_struct, sample_spacing_m)
-        pad_pixels = (0, 0)
+        pad_pixels = _raytrace_padding_pixels(psf_struct)
+        depth_map = _pad_depth_map(compute_scene, pad_pixels)
+        result = _raytrace_apply_psf(
+            _raytrace_geometry(photons, wave, optics, compute_scene),
+            psf_struct,
+            sample_spacing_m,
+            pad_pixels=pad_pixels,
+        )
+        if crop and (pad_pixels[0] > 0 or pad_pixels[1] > 0):
+            row_slice = slice(pad_pixels[0], None if pad_pixels[0] == 0 else -pad_pixels[0])
+            col_slice = slice(pad_pixels[1], None if pad_pixels[1] == 0 else -pad_pixels[1])
+            result = result[row_slice, col_slice, :]
+            depth_map = depth_map[row_slice, col_slice]
     else:
         padded, blur_mode, blur_cval = _pad_scene(photons, pad_pixels, pad_value)
         if model == "diffractionlimited":
@@ -1328,6 +1399,10 @@ def oi_compute(
     computed.fields["vfov_deg"] = output_vfov_deg
     if model == "raytrace":
         computed.fields["psf_angle_step_deg"] = float(oi.fields.get("psf_angle_step_deg", DEFAULT_RAYTRACE_ANGLE_STEP_DEG))
+        computed.fields["psf_sample_angles_deg"] = np.asarray(
+            oi.fields.get("psf_sample_angles_deg", oi_get(computed, "psf sample angles")),
+            dtype=float,
+        )
         computed.fields["psf_struct"] = psf_struct
     computed.data["photons"] = result
     if pixel_size is not None:
@@ -1663,17 +1738,26 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         if isinstance(psf_struct, dict):
             return psf_struct.get("psf")
         return None
-    if key in {"psfanglestep", "psfsampleangles"}:
+    if key in {"psfsampleangles"}:
         psf_struct = oi.fields.get("psf_struct")
         if isinstance(psf_struct, dict):
             angles = np.asarray(psf_struct.get("sample_angles_deg", np.empty(0, dtype=float)), dtype=float)
-            if angles.size >= 2:
-                return float(angles[1] - angles[0])
+            if angles.size > 0:
+                return angles
+        stored = oi.fields.get("psf_sample_angles_deg")
+        if stored is not None:
+            return np.asarray(stored, dtype=float).reshape(-1)
+        return _raytrace_default_sample_angles(float(oi.fields.get("psf_angle_step_deg", DEFAULT_RAYTRACE_ANGLE_STEP_DEG)))
+    if key in {"psfanglestep"}:
+        sample_angles = np.asarray(oi_get(oi, "psf sample angles"), dtype=float).reshape(-1)
+        if sample_angles.size >= 2:
+            return float(sample_angles[1] - sample_angles[0])
         return float(oi.fields.get("psf_angle_step_deg", DEFAULT_RAYTRACE_ANGLE_STEP_DEG))
     if key in {"psfimageheights"}:
         psf_struct = oi.fields.get("psf_struct")
         if isinstance(psf_struct, dict):
-            return np.asarray(psf_struct.get("img_height_mm", np.empty(0, dtype=float)), dtype=float)
+            scale = _SPATIAL_UNIT_SCALE.get(param_format(args[0]) if args else "mm", 1.0)
+            return np.asarray(psf_struct.get("img_height_mm", np.empty(0, dtype=float)), dtype=float) / 1e3 * scale
         return np.empty(0, dtype=float)
     if key in {"psfwavelength"}:
         psf_struct = oi.fields.get("psf_struct")
@@ -1806,8 +1890,15 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any) -> OpticalImage:
         current["psf"] = np.asarray(value, dtype=float)
         oi.fields["psf_struct"] = current
         return oi
-    if key in {"psfanglestep", "psfsampleangles"}:
+    if key in {"psfanglestep"}:
         oi.fields["psf_angle_step_deg"] = float(value)
+        oi.fields["psf_sample_angles_deg"] = None
+        oi.fields["psf_struct"] = None
+        return oi
+    if key in {"psfsampleangles"}:
+        sample_angles = _raytrace_requested_sample_angles(DEFAULT_RAYTRACE_ANGLE_STEP_DEG, value)
+        oi.fields["psf_angle_step_deg"] = float(sample_angles[1] - sample_angles[0])
+        oi.fields["psf_sample_angles_deg"] = sample_angles
         oi.fields["psf_struct"] = None
         return oi
     if key in {"psfopticsname", "raytraceopticsname"}:

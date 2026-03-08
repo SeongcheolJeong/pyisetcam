@@ -7,7 +7,7 @@
 - Additional MATLAB-style scene patterns are now implemented: `uniform bb`, `uniform monochromatic`, `line ee`, `line ep`, `bar`, `point array`, `grid lines`, and `white noise`.
 - Sensor preset expansion now includes generic `rgbw` / `rccc` creation and upstream-backed `mt9v024` / `ar0132at` RGBW and RCCC model variants.
 - Metrics expansion now includes initial `metricsSPD`-style spectral comparison plus generic MAE/RMSE/PSNR helpers.
-- Initial ray-trace optics support is now in place: `oi_create('ray trace')` loads upstream ray-trace optics assets, and `oi_compute` applies geometric distortion, relative illumination, and angle-aware precomputed PSFs with cached reuse from the pinned MATLAB data.
+- Initial ray-trace optics support is now in place: `oi_create('ray trace')` loads upstream ray-trace optics assets, and `oi_compute` applies geometric distortion, relative illumination, angle-aware precomputed PSFs with cached reuse from the pinned MATLAB data, MATLAB-style uncropped padding/output bookkeeping, and the core ray-trace PSF sample-angle `oiGet/oiSet` surface.
 
 ## Summary
 - Build a new Python library, `pyisetcam`, that ports the numerical `scene -> optical image -> sensor -> image processor -> camera` pipeline from ISETCam and validates it against GNU Octave runs of the upstream MATLAB code.
@@ -80,5 +80,5 @@
 - Add more scene patterns and `sceneFromFile`.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.
-- Expand ray-trace optics support from the current upstream-backed geometry / angle-aware PSF slice to fuller MATLAB fidelity, especially padding/output bookkeeping and remaining `oiGet/oiSet` ray-trace surfaces.
+- Expand ray-trace optics support from the current upstream-backed geometry / angle-aware PSF slice to fuller MATLAB fidelity beyond the newly landed padding/output bookkeeping and core PSF sample-angle `oiGet/oiSet` surface.
 - Introduce an optional `SessionContext` compatibility layer and only then consider GUI replacement.

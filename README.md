@@ -103,6 +103,8 @@ Initial ray-trace optics support is also in place: `oi_create('ray trace')`
 loads the pinned upstream Zemax-derived optics asset, and `oi_compute`
 applies upstream-backed geometric distortion, relative illumination, and
 angle-aware precomputed ray-trace PSFs with cached reuse on repeated
-computes. Multispectral / EXR / reflective-display cases, full MATLAB
-ray-trace padding/output bookkeeping, and the rest of the vendor sensor
-catalog remain explicitly out of scope until they are ported deliberately.
+computes, plus MATLAB-style uncropped padding/output bookkeeping and
+`oiGet/oiSet` support for ray-trace PSF sample-angle metadata.
+Multispectral / EXR / reflective-display cases and the rest of the vendor
+sensor catalog remain explicitly out of scope until they are ported
+deliberately.
