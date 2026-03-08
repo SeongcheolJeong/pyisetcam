@@ -9,13 +9,19 @@ from pyisetcam import (
     ieDeleteObject,
     ieGetObject,
     ieGetSelectedObject,
+    ieInitSession,
     ieReplaceObject,
+    ieSessionGet,
+    ieSessionSet,
     ieSelectObject,
     ie_add_object,
     ie_delete_object,
     ie_get_object,
     ie_get_selected_object,
+    ie_init_session,
     ie_replace_object,
+    ie_session_get,
+    ie_session_set,
     ie_select_object,
     ip_create,
     ip_set,
@@ -348,6 +354,69 @@ def test_ie_delete_and_replace_object_follow_session_slots(asset_store) -> None:
     assert remaining == 0
     assert session_get_selected(session, "scene") is None
 
+
+def test_ie_init_session_and_session_get_defaults() -> None:
+    session = ie_init_session()
+
+    assert session.name.startswith("iset-")
+    assert ieInitSession(directory=session.directory).directory == session.directory
+    assert ie_session_get(session, "name") == session.name
+    assert ieSessionGet(session, "dir") == session.directory
+    assert ieSessionGet(session, "wait bar") == 0
+    assert ieSessionGet(session, "font size") == 12
+    assert ieSessionGet(session, "init clear") is False
+    assert ieSessionGet(session, "image size threshold") == 1e6
+
+
+def test_ie_session_set_and_get_metadata_preferences_and_gui(asset_store) -> None:
+    session = ie_init_session()
+    positions = [
+        [0.1, 0.2, 0.3, 0.4],
+        [0.2, 0.3, 0.4, 0.5],
+        [0.3, 0.4, 0.5, 0.6],
+        [0.4, 0.5, 0.6, 0.7],
+        [0.5, 0.6, 0.7, 0.8],
+        [0.6, 0.7, 0.8, 0.9],
+    ]
+
+    ieSessionSet(session, "version", "1.2.3")
+    ieSessionSet(session, "session name", "demo-session")
+    ieSessionSet(session, "session dir", "/tmp/demo")
+    ieSessionSet(session, "init help", 1)
+    ieSessionSet(session, "font size", 14)
+    ieSessionSet(session, "wait bar", "on")
+    ieSessionSet(session, "window positions", positions)
+    ieSessionSet(session, "init clear", "on")
+    ieSessionSet(session, "main window", "main-app")
+    ieSessionSet(session, "metrics window", "metrics-app", {"event": 1}, {"handles": 2})
+    ieSessionSet(session, "graphwin figure", 17)
+    ieSessionSet(session, "graphwin handle", "graph-handle")
+    ieSessionSet(session, "gpu", True)
+    ieSessionSet(session, "image size threshold", 2048)
+
+    scene = scene_create("uniform ee", 8, asset_store=asset_store)
+    ieAddObject(session, scene)
+    ieSessionSet(session, "scene", 1)
+
+    assert ieSessionGet(session, "version") == "1.2.3"
+    assert ieSessionGet(session, "session name") == "demo-session"
+    assert ieSessionGet(session, "session dir") == "/tmp/demo"
+    assert ieSessionGet(session, "help") is True
+    assert ieSessionGet(session, "font size") == 14
+    assert ieSessionGet(session, "wait bar") == 1
+    assert ieSessionGet(session, "wpos")[:5] == positions[:5]
+    assert ieSessionGet(session, "wpos")[5] is None
+    assert ieSessionGet(session, "init clear") is True
+    assert ieSessionGet(session, "main window") == "main-app"
+    assert ieSessionGet(session, "metrics window") == "metrics-app"
+    assert ieSessionGet(session, "graphwin figure") == 17
+    assert ieSessionGet(session, "graphwin handle") == "graph-handle"
+    assert ieSessionGet(session, "gpu computing") is True
+    assert ieSessionGet(session, "image size threshold") == 2048.0
+    assert ieSessionGet(session, "scene") is scene
+    assert ieSessionGet(session, "selected", "scene") == 1
+    assert ieSessionGet(session, "nobjects", "scene") == 1
+    assert ieSessionGet(session, "names", "scene") == [scene.name]
 
 def test_session_set_objects_and_new_object_value_follow_matlab_style(asset_store) -> None:
     session = session_create()

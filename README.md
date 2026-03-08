@@ -231,7 +231,10 @@ clearing through `vcSetSelectedObject`, and type reporting through
 `ieAddObject` / `ieDeleteObject` / `ieGetObject` /
 `ieGetSelectedObject` / `ieReplaceObject` / `ieSelectObject`
 wrappers, including nested `optics`, `pixel`, and `ipdisplay`
-getter semantics.
+getter semantics, plus a minimal `ieInitSession` /
+`ieSessionGet` / `ieSessionSet` port for session metadata,
+preferences, GUI slots, selected-object queries, and
+image-size/GPU session flags.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

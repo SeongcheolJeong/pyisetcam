@@ -7,6 +7,31 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
+def _default_session_preferences() -> dict[str, Any]:
+    return {
+        "fontSize": 12,
+        "waitbar": 0,
+        "wPos": [None, None, None, None, None, None],
+        "initclear": False,
+    }
+
+
+def _default_session_selected() -> dict[str, int | None]:
+    return {
+        "scene": None,
+        "oi": None,
+        "sensor": None,
+        "ip": None,
+        "display": None,
+        "camera": None,
+        "graphwin": None,
+    }
+
+
+def _default_session_gui() -> dict[str, Any]:
+    return {"waitbar": 0}
+
+
 @dataclass
 class BaseISETObject:
     """Common mutable storage for MATLAB-like extensibility."""
@@ -62,6 +87,14 @@ class SessionContext:
     """Optional vcSESSION-style object registry for compatibility workflows."""
 
     name: str = "vcSESSION"
+    directory: str = ""
+    version: str | None = None
+    init_help: bool = False
     objects: dict[str, dict[int, BaseISETObject]] = field(default_factory=dict)
-    selected: dict[str, int | None] = field(default_factory=dict)
+    selected: dict[str, int | None] = field(default_factory=_default_session_selected)
     next_ids: dict[str, int] = field(default_factory=dict)
+    preferences: dict[str, Any] = field(default_factory=_default_session_preferences)
+    gui: dict[str, Any] = field(default_factory=_default_session_gui)
+    graphwin: dict[str, Any] = field(default_factory=dict)
+    gpu_compute: bool = False
+    image_size_threshold: float = 1e6

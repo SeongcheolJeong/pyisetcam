@@ -63,7 +63,10 @@ from .session import (
     ie_delete_object,
     ie_get_object,
     ie_get_selected_object,
+    ie_init_session,
     ie_replace_object,
+    ie_session_get,
+    ie_session_set,
     ie_select_object,
     session_add_and_select_object,
     session_add_object,
@@ -148,14 +151,20 @@ __all__ = [
     "ieFieldHeight2Index",
     "ieGetObject",
     "ieGetSelectedObject",
+    "ieInitSession",
     "ieReplaceObject",
+    "ieSessionGet",
+    "ieSessionSet",
     "ieSelectObject",
     "ie_add_object",
     "ie_delete_object",
     "ie_field_height_to_index",
     "ie_get_object",
     "ie_get_selected_object",
+    "ie_init_session",
     "ie_replace_object",
+    "ie_session_get",
+    "ie_session_set",
     "ie_select_object",
     "ieXYZ2LAB",
     "ieXYZFromEnergy",
@@ -367,7 +376,10 @@ ieAddObject = ie_add_object
 ieDeleteObject = ie_delete_object
 ieGetObject = ie_get_object
 ieGetSelectedObject = ie_get_selected_object
+ieInitSession = ie_init_session
 ieReplaceObject = ie_replace_object
+ieSessionGet = ie_session_get
+ieSessionSet = ie_session_set
 ieSelectObject = ie_select_object
 
 ipCreate = ip_create

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+from pathlib import Path
 from typing import Any, TypeVar
 
 from .types import BaseISETObject, Camera, Display, ImageProcessor, OpticalImage, Scene, Sensor, SessionContext
@@ -71,7 +73,17 @@ def _object_session_type(obj: BaseISETObject) -> str:
 
 
 def session_create(name: str = "vcSESSION") -> SessionContext:
-    return SessionContext(name=name)
+    return SessionContext(name=name, directory=str(Path.cwd()))
+
+
+def ie_init_session(
+    *,
+    name: str | None = None,
+    directory: str | Path | None = None,
+) -> SessionContext:
+    session_name = name or f"iset-{datetime.now().strftime('%Y%m%dT%H%M%S')}"
+    session_dir = str(Path.cwd() if directory is None else directory)
+    return SessionContext(name=session_name, directory=session_dir)
 
 
 def session_object_id(obj: BaseISETObject) -> int | None:
@@ -335,6 +347,159 @@ def session_new_object_name(session: SessionContext, object_type: str) -> str:
     return f"{normalized_type}{session_count_objects(session, normalized_type) + 1}"
 
 
+def _normalize_on_off(value: Any) -> Any:
+    if isinstance(value, str):
+        normalized = param_format(value)
+        if normalized == "on":
+            return True
+        if normalized == "off":
+            return False
+    return value
+
+
+def _session_window_key(parameter: str) -> str | None:
+    key = param_format(parameter)
+    mapping = {
+        "mainwindow": "main_window",
+        "scenewindow": "scene_window",
+        "oiwindow": "oi_window",
+        "sensorwindow": "sensor_window",
+        "ipwindow": "ip_window",
+        "vcimagewindow": "ip_window",
+        "displaywindow": "display_window",
+        "metricswindow": "metrics_window",
+        "camdesignwindow": "camdesign_window",
+        "imageexplorewindow": "imageexplore_window",
+    }
+    return mapping.get(key)
+
+
+def ie_session_get(session: SessionContext, parameter: str, *args: Any) -> Any:
+    key = param_format(parameter)
+    if key == "version":
+        return session.version
+    if key in {"name", "sessionname"}:
+        return session.name
+    if key in {"dir", "sessiondir"}:
+        return session.directory
+    if key in {"help", "inithelp"}:
+        return bool(session.init_help)
+    if key == "prefs":
+        return dict(session.preferences)
+    if key == "fontsize":
+        return int(session.preferences.get("fontSize", 12))
+    if key == "waitbar":
+        return int(bool(session.gui.get("waitbar", session.preferences.get("waitbar", 0))))
+    if key in {"windowpositions", "wpos"}:
+        return list(session.preferences.get("wPos", [None, None, None, None, None, None]))
+    if key == "initclear":
+        return bool(session.preferences.get("initclear", False))
+
+    window_key = _session_window_key(parameter)
+    if window_key is not None:
+        window_state = session.gui.get(window_key)
+        if isinstance(window_state, dict):
+            return window_state.get("app", window_state.get("hObject"))
+        return window_state
+
+    if key in {"graphwindow", "graphwinfigure"}:
+        return session.graphwin.get("hObject")
+    if key in {"graphwinstructure", "graphwinval"}:
+        return dict(session.graphwin)
+    if key == "graphwinhandle":
+        return session.graphwin.get("handle")
+
+    if key in {"scene", "oi", "opticalimage", "sensor", "isa", "vcimage", "ip", "display"}:
+        return ie_get_object(session, key)
+    if key == "selected":
+        if not args:
+            raise ValueError("ieSessionGet('selected', objType) requires an object type.")
+        return ie_get_selected_object(session, str(args[0]))
+    if key == "nobjects":
+        if not args:
+            raise ValueError("ieSessionGet('nobjects', objType) requires an object type.")
+        return session_count_objects(session, str(args[0]))
+    if key == "names":
+        if not args:
+            raise ValueError("ieSessionGet('names', objType) requires an object type.")
+        return session_get_object_names(session, str(args[0]))
+    if key in {"gpu", "gpucompute", "gpucomputing"}:
+        return bool(session.gpu_compute)
+    if key == "imagesizethreshold":
+        return float(session.image_size_threshold)
+    raise KeyError(f"Unknown ieSessionGet parameter: {parameter}")
+
+
+def ie_session_set(session: SessionContext, parameter: str, value: Any, *args: Any) -> SessionContext:
+    key = param_format(parameter)
+    if key == "version":
+        session.version = None if value is None else str(value)
+        return session
+    if key in {"name", "sessionname"}:
+        session.name = str(value)
+        return session
+    if key in {"dir", "sessiondir"}:
+        session.directory = str(value)
+        return session
+    if key in {"help", "inithelp"}:
+        session.init_help = bool(_normalize_on_off(value))
+        return session
+    if key == "fontsize":
+        session.preferences["fontSize"] = int(value)
+        return session
+    if key == "waitbar":
+        normalized = _normalize_on_off(value)
+        waitbar = int(bool(normalized))
+        session.preferences["waitbar"] = waitbar
+        session.gui["waitbar"] = waitbar
+        return session
+    if key in {"windowpositions", "wpos"}:
+        positions = list(value)
+        if len(positions) < 6:
+            positions.extend([None] * (6 - len(positions)))
+        if len(positions) >= 6:
+            positions[5] = None
+        session.preferences["wPos"] = positions
+        return session
+    if key == "initclear":
+        session.preferences["initclear"] = bool(_normalize_on_off(value))
+        return session
+
+    window_key = _session_window_key(parameter)
+    if window_key is not None:
+        if window_key == "metrics_window":
+            session.gui[window_key] = {
+                "app": value,
+                "hObject": value,
+                "eventdata": args[0] if len(args) >= 1 else None,
+                "handles": args[1] if len(args) >= 2 else None,
+            }
+        else:
+            session.gui[window_key] = {"app": value}
+        return session
+
+    if key in {"graphwindow", "graphwinfigure"}:
+        session.graphwin["hObject"] = value
+        return session
+    if key in {"graphwinstructure", "graphwinval"}:
+        session.graphwin = dict(value)
+        return session
+    if key == "graphwinhandle":
+        session.graphwin["handle"] = value
+        return session
+
+    if key in {"scene", "oi", "opticalimage", "sensor", "isa", "vcimage", "ip", "display"}:
+        session_set_selected(session, key, value)
+        return session
+    if key in {"gpu", "gpucompute", "gpucomputing"}:
+        session.gpu_compute = bool(_normalize_on_off(value))
+        return session
+    if key == "imagesizethreshold":
+        session.image_size_threshold = float(value)
+        return session
+    raise KeyError(f"Unknown ieSessionSet parameter: {parameter}")
+
+
 def ie_get_object(
     session: SessionContext,
     object_type: str | BaseISETObject | dict[str, Any],
@@ -515,5 +680,8 @@ ieAddObject = ie_add_object
 ieDeleteObject = ie_delete_object
 ieGetObject = ie_get_object
 ieGetSelectedObject = ie_get_selected_object
+ieInitSession = ie_init_session
 ieReplaceObject = ie_replace_object
+ieSessionGet = ie_session_get
+ieSessionSet = ie_session_set
 ieSelectObject = ie_select_object
