@@ -46,6 +46,9 @@ Generate the current machine-readable parity summary:
 python tools/parity_report.py
 ```
 
+The report includes max-error locations plus edge/interior and 2x2 phase
+diagnostics for array outputs, which helps localize remaining parity gaps.
+
 Regenerate Octave baselines for the curated parity cases:
 
 ```bash

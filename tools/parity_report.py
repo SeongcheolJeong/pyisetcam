@@ -55,7 +55,7 @@ def _array_metrics(reference: Any, actual: Any) -> dict[str, Any]:
     difference = np.abs(actual_array - reference_array)
     denominator = np.maximum(np.abs(reference_array), 1e-12)
     relative = difference / denominator
-    return {
+    metrics = {
         "shape": list(reference_array.shape),
         "mae": float(np.mean(difference)),
         "rmse": float(np.sqrt(np.mean(np.square(actual_array - reference_array)))),
@@ -63,6 +63,46 @@ def _array_metrics(reference: Any, actual: Any) -> dict[str, Any]:
         "mean_rel": float(np.mean(relative)),
         "max_rel": float(np.max(relative)),
     }
+    max_index = tuple(int(item) for item in np.unravel_index(int(np.argmax(relative)), relative.shape))
+    metrics["max_index"] = list(max_index)
+    metrics["max_index_ref"] = float(reference_array[max_index])
+    metrics["max_index_actual"] = float(actual_array[max_index])
+    metrics["max_index_abs"] = float(difference[max_index])
+    metrics["max_index_rel"] = float(relative[max_index])
+
+    if reference_array.ndim >= 2:
+        border_rows = max(1, int(round(reference_array.shape[0] / 10.0)))
+        border_cols = max(1, int(round(reference_array.shape[1] / 10.0)))
+        spatial_mask = np.zeros(reference_array.shape[:2], dtype=bool)
+        spatial_mask[:border_rows, :] = True
+        spatial_mask[-border_rows:, :] = True
+        spatial_mask[:, :border_cols] = True
+        spatial_mask[:, -border_cols:] = True
+        if reference_array.ndim > 2:
+            expand = (slice(None), slice(None), *([None] * (reference_array.ndim - 2)))
+            border_mask = np.broadcast_to(spatial_mask[expand], reference_array.shape)
+        else:
+            border_mask = spatial_mask
+        interior_mask = ~border_mask
+        metrics["border_rows"] = border_rows
+        metrics["border_cols"] = border_cols
+        metrics["edge_mean_rel"] = float(np.mean(relative[border_mask]))
+        if np.any(interior_mask):
+            metrics["interior_mean_rel"] = float(np.mean(relative[interior_mask]))
+
+    if reference_array.ndim >= 2 and reference_array.shape[0] >= 2 and reference_array.shape[1] >= 2:
+        phase_metrics: dict[str, float] = {}
+        row_index, col_index = np.indices(reference_array.shape[:2])
+        for row_phase in (0, 1):
+            for col_phase in (0, 1):
+                phase_mask = (row_index % 2 == row_phase) & (col_index % 2 == col_phase)
+                if reference_array.ndim > 2:
+                    expand = (slice(None), slice(None), *([None] * (reference_array.ndim - 2)))
+                    phase_mask = np.broadcast_to(phase_mask[expand], reference_array.shape)
+                phase_metrics[f"r{row_phase}c{col_phase}"] = float(np.mean(relative[phase_mask]))
+        metrics["phase_2x2_mean_rel"] = phase_metrics
+
+    return metrics
 
 
 def _compare(reference: Any, actual: Any, *, rtol: float, atol: float) -> dict[str, Any]:
