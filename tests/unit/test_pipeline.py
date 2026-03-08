@@ -64,6 +64,7 @@ def _write_mock_zemax_bundle(
     base_lens_has_semicolon: bool = True,
     psf_size_assignment: int = 2,
     params_file_name: str = "ISETPARAMS.txt",
+    psf_spacing_assignment_mm: float = 0.00025,
 ):
     params_file = tmp_path / params_file_name
     base_lens_line = f"baseLensFileName='{base_lens_file_name}'"
@@ -72,6 +73,7 @@ def _write_mock_zemax_bundle(
     params_file.write_text(
         f"lensFile='{lens_file}';\n"
         f"psfSize={psf_size_assignment};\n"
+        f"psfSpacing={psf_spacing_assignment_mm:.7f};\n"
         f"wave={wave_assignment};\n"
         "imgHeightNum=2;\n"
         "imgHeightMax=1.0;\n"
@@ -1233,6 +1235,7 @@ def test_rt_import_data_builds_usable_raytrace_optics(tmp_path, asset_store) -> 
     assert imported_optics["raytrace"]["relative_illumination"]["function"].shape == (2, 2)
     assert imported_optics["raytrace"]["psf"]["function"].shape == (2, 2, 2, 2)
     assert np.allclose(imported_optics["raytrace"]["psf"]["sample_spacing_mm"], np.array([0.0005, 0.0005]))
+    assert np.isclose(imported_optics["raytrace"]["computation"]["psf_spacing_m"], 2.5e-7)
     assert stage.data["photons"].shape == scene.data["photons"].shape
 
 
@@ -1377,6 +1380,7 @@ def test_oi_create_raytrace_accepts_isetparams_file(tmp_path, asset_store) -> No
     assert oi_get(oi, "rtlensfile") == "CookeLens.ZMX"
     assert np.isclose(oi_get(oi, "fnumber"), 2.0)
     assert np.isclose(exported["fNumber"], 2.0)
+    assert np.isclose(oi_get(oi, "rtcomputespacing", "um"), 0.25)
     assert oi.fields["optics"]["raytrace"]["psf"]["function"].shape == (2, 2, 2, 2)
 
 

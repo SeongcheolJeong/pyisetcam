@@ -776,6 +776,11 @@ def rt_import_data(
                 "sampleSpacing": np.array([psf_spacing_um, psf_spacing_um], dtype=float) / 1e3,
                 "wavelength": wave.copy(),
             },
+            "computation": {
+                "psfSpacing": None
+                if params.get("psfSpacing") is None
+                else float(np.asarray(params["psfSpacing"]).reshape(-1)[0]) / 1e3,
+            },
         },
     }
     normalized = _normalize_raytrace_optics(raw_optics)

@@ -172,7 +172,9 @@ When importing into an existing optics object, `rt_import_data` now also
 preserves the existing name/transmittance/compute settings while updating
 the top-level ray-trace focal-length / f-number state to the imported
 effective values, and it now enforces the upstream `psfSize` evenness
-check from the parameter file before loading PSF data.
+check from the parameter file before loading PSF data. Imported Zemax
+bundles now also carry `psfSpacing` through to the ray-trace computation
+metadata, so `rtcomputespacing` is populated on imported optics.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

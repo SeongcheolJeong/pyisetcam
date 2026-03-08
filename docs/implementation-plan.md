@@ -19,7 +19,7 @@
 - `rt_import_data(...)` and `oi_create('ray trace', ...)` now accept that standard Zemax bundle directly as either an `ISETPARAMS.txt` / `ISETPARMS.TXT` file or a containing directory.
 - The Zemax import path now also normalizes Windows-style `lensFile` / `baseLensFileName` strings when deriving DI/RI/PSF bundle filenames.
 - The Zemax parameter-file parser now accepts multiline MATLAB vector syntax too, including `...` continuations, bracketed row/column wavelength lists, transpose-style vectors such as `[500 600]'`, and legacy single-line assignments without trailing semicolons like the older Zemax macros emit for `baseLensFileName`.
-- `rt_import_data` now preserves existing optics-object name/transmittance/compute settings while updating the imported ray-trace top-level focal-length / f-number state to the effective values from the Zemax bundle, and it enforces the upstream `psfSize` evenness check from the parameter file before loading PSF data.
+- `rt_import_data` now preserves existing optics-object name/transmittance/compute settings while updating the imported ray-trace top-level focal-length / f-number state to the effective values from the Zemax bundle, carries `psfSpacing` through to the normalized ray-trace computation metadata, and enforces the upstream `psfSize` evenness check from the parameter file before loading PSF data.
 
 ## Summary
 - Build a new Python library, `pyisetcam`, that ports the numerical `scene -> optical image -> sensor -> image processor -> camera` pipeline from ISETCam and validates it against GNU Octave runs of the upstream MATLAB code.
