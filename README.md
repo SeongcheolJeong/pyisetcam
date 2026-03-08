@@ -187,7 +187,8 @@ existing ray-trace name is now preserved independently from the top-level
 optics name, and a raw `rayTrace.name` now seeds the top-level optics
 name when no explicit top-level name is present. Existing
 `blocks_per_field_height` settings are now preserved across Zemax
-imports too.
+imports too, and raw MATLAB-style ray-trace export now carries
+`blocksPerFieldHeight` for round-tripping through `oi_get('optics')`.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

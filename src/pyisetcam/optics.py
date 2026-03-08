@@ -178,6 +178,9 @@ def _normalize_raytrace_optics(raw: dict[str, Any]) -> dict[str, Any]:
                 if raytrace.get("computation", {}).get("psfSpacing") is None
                 else float(np.asarray(raytrace.get("computation", {}).get("psfSpacing")).reshape(-1)[0]),
             },
+            "blocks_per_field_height": int(
+                raytrace.get("blocksPerFieldHeight", raytrace.get("blocks_per_field_height", 4))
+            ),
             "name": str(raytrace.get("name", raw.get("name", "raytrace"))),
         },
     }
@@ -334,6 +337,8 @@ def _export_raytrace(raytrace: dict[str, Any]) -> dict[str, Any]:
     computation = dict(current.get("computation", {}))
     if "psf_spacing_m" in computation:
         exported["computation"] = {"psfSpacing": computation.get("psf_spacing_m")}
+    if "blocks_per_field_height" in current:
+        exported["blocksPerFieldHeight"] = int(current.get("blocks_per_field_height", 4))
     return exported
 
 

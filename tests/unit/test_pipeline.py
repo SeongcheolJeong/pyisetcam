@@ -785,13 +785,16 @@ def test_oi_get_optics_roundtrips_matlab_style_raytrace_struct(asset_store) -> N
     optics = oi_get(oi, "optics")
     optics["fNumber"] = 3.4
     optics["rayTrace"]["referenceWavelength"] = 610.0
+    optics["rayTrace"]["blocksPerFieldHeight"] = 7
 
     oi = oi_set(oi, "optics", optics)
 
     roundtrip = oi_get(oi, "optics")
     assert np.isclose(oi_get(oi, "fnumber"), 3.4)
     assert np.isclose(oi_get(oi, "rtrefwave"), 610.0)
+    assert oi_get(oi, "rt blocks per field height") == 7
     assert roundtrip["rayTrace"]["referenceWavelength"] == 610.0
+    assert roundtrip["rayTrace"]["blocksPerFieldHeight"] == 7
     assert "raytrace" not in roundtrip
 
 
