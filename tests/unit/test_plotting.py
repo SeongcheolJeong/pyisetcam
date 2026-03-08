@@ -360,3 +360,26 @@ def test_pixel_and_sensor_snr_helpers_and_plot_wrappers(asset_store) -> None:
     assert np.allclose(pixel_udata["volts"], pixel_snr(sensor)[1])
     assert np.allclose(sensor_udata["snr"], sensor_snr(sensor)[0])
     assert np.allclose(sensor_udata["volts"], sensor_snr(sensor)[1])
+
+
+def test_plot_sensor_spectral_wrappers(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+
+    color_udata, color_handle = plotSensor(sensor, "color filters")
+    qe_udata, qe_handle = plotSensor(sensor, "sensor spectral qe")
+
+    expected_wave = np.asarray(sensor_get(sensor, "wave"), dtype=float)
+    expected_filters = np.asarray(sensor_get(sensor, "color filters"), dtype=float)
+    expected_qe = np.asarray(sensor_get(sensor, "spectral qe"), dtype=float)
+    expected_names = list(sensor_get(sensor, "filter color letters cell"))
+
+    assert color_handle is None
+    assert qe_handle is None
+    assert np.allclose(color_udata["x"], expected_wave)
+    assert np.allclose(color_udata["y"], expected_filters)
+    assert color_udata["filterNames"] == expected_names
+    assert color_udata["yLabel"] == "Transmittance"
+    assert np.allclose(qe_udata["x"], expected_wave)
+    assert np.allclose(qe_udata["y"], expected_qe)
+    assert qe_udata["filterNames"] == expected_names
+    assert qe_udata["yLabel"] == "Quantum efficiency"

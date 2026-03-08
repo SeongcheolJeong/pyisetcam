@@ -75,6 +75,28 @@ def _sensor_plot_histogram(sensor: Sensor, data_type: str, roi_locs: Any) -> dic
     return payload
 
 
+def _sensor_plot_spectra(sensor: Sensor, data_type: str) -> dict[str, Any]:
+    key = param_format(data_type)
+    wave = np.asarray(sensor_get(sensor, "wave"), dtype=float)
+    if key == "colorfilters":
+        data = np.asarray(sensor_get(sensor, "color filters"), dtype=float)
+        names = list(sensor_get(sensor, "filter color letters cell"))
+        y_label = "Transmittance"
+    elif key in {"spectralqe", "sensorspectralqe"}:
+        data = np.asarray(sensor_get(sensor, "spectral qe"), dtype=float)
+        names = list(sensor_get(sensor, "filter color letters cell"))
+        y_label = "Quantum efficiency"
+    else:
+        raise UnsupportedOptionError("plotSensor", data_type)
+    return {
+        "x": wave.copy(),
+        "y": data.copy(),
+        "filterNames": names,
+        "dataType": key,
+        "yLabel": y_label,
+    }
+
+
 def _ip_line_data(ip: ImageProcessor, orientation: str, xy: Any) -> dict[str, Any]:
     line_index, xy_array = _line_index("ipPlot", f"{orientation}line", xy, orientation)
     data = ip_get(ip, "result")
@@ -274,6 +296,10 @@ def sensor_plot(
             "snrDSNU": snr_dsnu,
             "snrPRNU": snr_prnu,
         }, None
+    if key == "colorfilters":
+        return _sensor_plot_spectra(sensor, key), None
+    if key in {"spectralqe", "sensorspectralqe"}:
+        return _sensor_plot_spectra(sensor, key), None
     if key in {"voltshistogram", "voltshist"}:
         roi = _roi_required("plotSensor", p_type, roi_locs)
         return _sensor_plot_histogram(sensor, "volts", roi), None

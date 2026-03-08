@@ -306,7 +306,10 @@ luminance summaries, and ROI `cielab` / `cieluv` payloads. The shared
 metrics layer now exposes `xyz_to_luv` / `xyz2luv` alongside the existing
 XYZ, LAB, and chromaticity helpers, and the sensor layer now exposes
 `pixel_snr` / `pixelSNR` plus `sensor_snr` / `sensorSNR` with matching
-headless `plotSensor('pixel snr'/'sensor snr')` payloads.
+headless `plotSensor('pixel snr'/'sensor snr')` payloads. The current
+headless `plotSensor` subset also includes spectral wrappers for
+`'color filters'` and `'sensor spectral qe'` on top of the stored sensor
+spectral bundle.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
