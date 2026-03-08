@@ -190,8 +190,9 @@ name when no explicit top-level name is present. Existing
 imports too, and raw MATLAB-style ray-trace export now carries
 `blocksPerFieldHeight` for round-tripping through `oi_get('optics')`.
 Normalized ray-trace key detection now also recognizes
-`blocks_per_field_height` directly, keeping raw/normalized struct
-handling aligned for that field.
+`blocks_per_field_height` directly, plus scalar normalized fields like
+`f_number` and `magnification`, keeping raw/normalized struct handling
+aligned for those cases too.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

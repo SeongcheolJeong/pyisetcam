@@ -142,8 +142,38 @@ def _normalize_raytrace_optics(raw: dict[str, Any]) -> dict[str, Any]:
     if transmittance_scale.size != transmittance_wave.size:
         transmittance_scale = np.ones(transmittance_wave.size, dtype=float)
 
-    effective_focal_length_m = _scalar(raytrace.get("effectiveFocalLength"), DEFAULT_FOCAL_LENGTH_M * 1e3) / 1e3
-    nominal_f_number = _scalar(raytrace.get("fNumber", raw.get("fNumber")), 4.0)
+    effective_focal_length_raw = raytrace.get("effectiveFocalLength")
+    if effective_focal_length_raw is None:
+        effective_focal_length_m = _scalar(
+            raytrace.get("effective_focal_length_m"),
+            DEFAULT_FOCAL_LENGTH_M,
+        )
+    else:
+        effective_focal_length_m = _scalar(effective_focal_length_raw, DEFAULT_FOCAL_LENGTH_M * 1e3) / 1e3
+    nominal_f_number = _scalar(
+        raytrace.get("fNumber", raytrace.get("f_number", raw.get("fNumber", raw.get("f_number")))),
+        4.0,
+    )
+    reference_wavelength_nm = _scalar(
+        raytrace.get("referenceWavelength", raytrace.get("reference_wavelength_nm")),
+        DEFAULT_WVF_MEASURED_WAVELENGTH_NM,
+    )
+    object_distance_raw = raytrace.get("objectDistance")
+    if object_distance_raw is None:
+        object_distance_m = _scalar(raytrace.get("object_distance_m"), np.inf)
+    else:
+        object_distance_m = _scalar(object_distance_raw, np.inf) / 1e3
+    magnification = _scalar(raytrace.get("mag", raytrace.get("magnification")), 0.0)
+    effective_f_number = _scalar(
+        raytrace.get("effectiveFNumber", raytrace.get("effective_f_number")),
+        nominal_f_number,
+    )
+    max_fov_deg = _scalar(
+        raytrace.get("maxfov", raytrace.get("fov", raytrace.get("max_fov_deg"))),
+        np.inf,
+    )
+    computation = dict(raytrace.get("computation", {}))
+    psf_spacing_m = computation.get("psfSpacing", computation.get("psf_spacing_m"))
     return {
         "model": "raytrace",
         "name": str(raw.get("name", raytrace.get("name", "raytrace"))),
@@ -159,24 +189,19 @@ def _normalize_raytrace_optics(raw: dict[str, Any]) -> dict[str, Any]:
         },
         "raytrace": {
             "program": str(raytrace.get("program", "")),
-            "lens_file": str(raytrace.get("lensFile", "")),
-            "reference_wavelength_nm": _scalar(
-                raytrace.get("referenceWavelength"),
-                DEFAULT_WVF_MEASURED_WAVELENGTH_NM,
-            ),
-            "object_distance_m": _scalar(raytrace.get("objectDistance"), np.inf) / 1e3,
-            "magnification": _scalar(raytrace.get("mag"), 0.0),
+            "lens_file": str(raytrace.get("lensFile", raytrace.get("lens_file", ""))),
+            "reference_wavelength_nm": reference_wavelength_nm,
+            "object_distance_m": object_distance_m,
+            "magnification": magnification,
             "f_number": nominal_f_number,
             "effective_focal_length_m": effective_focal_length_m,
-            "effective_f_number": _scalar(raytrace.get("effectiveFNumber"), nominal_f_number),
-            "max_fov_deg": _scalar(raytrace.get("maxfov", raytrace.get("fov")), np.inf),
+            "effective_f_number": effective_f_number,
+            "max_fov_deg": max_fov_deg,
             "geometry": _normalize_raytrace_table(raytrace.get("geometry")),
             "relative_illumination": _normalize_raytrace_table(raytrace.get("relIllum", raytrace.get("relative_illumination"))),
             "psf": _normalize_raytrace_psf(raytrace.get("psf")),
             "computation": {
-                "psf_spacing_m": None
-                if raytrace.get("computation", {}).get("psfSpacing") is None
-                else float(np.asarray(raytrace.get("computation", {}).get("psfSpacing")).reshape(-1)[0]),
+                "psf_spacing_m": None if psf_spacing_m is None else float(np.asarray(psf_spacing_m).reshape(-1)[0]),
             },
             "blocks_per_field_height": int(
                 raytrace.get("blocksPerFieldHeight", raytrace.get("blocks_per_field_height", 4))
@@ -190,7 +215,9 @@ def _raytrace_struct_uses_normalized_keys(raytrace: dict[str, Any]) -> bool:
     if any(
         key in raytrace
         for key in (
+            "f_number",
             "lens_file",
+            "magnification",
             "reference_wavelength_nm",
             "object_distance_m",
             "effective_focal_length_m",

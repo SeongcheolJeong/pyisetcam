@@ -142,6 +142,13 @@ def test_raytrace_struct_uses_normalized_keys_recognizes_blocks_per_field_height
     assert optics_module._raytrace_struct_uses_normalized_keys({"blocksPerFieldHeight": 7}) is False
 
 
+def test_raytrace_struct_uses_normalized_keys_recognizes_scalar_normalized_fields() -> None:
+    assert optics_module._raytrace_struct_uses_normalized_keys({"f_number": 3.1}) is True
+    assert optics_module._raytrace_struct_uses_normalized_keys({"magnification": -0.2}) is True
+    assert optics_module._raytrace_struct_uses_normalized_keys({"fNumber": 3.1}) is False
+    assert optics_module._raytrace_struct_uses_normalized_keys({"mag": -0.2}) is False
+
+
 def test_oi_compute_tracks_output_geometry(asset_store) -> None:
     scene = scene_create(asset_store=asset_store)
     oi = oi_compute(oi_create(), scene)
@@ -801,6 +808,24 @@ def test_oi_get_optics_roundtrips_matlab_style_raytrace_struct(asset_store) -> N
     assert roundtrip["rayTrace"]["referenceWavelength"] == 610.0
     assert roundtrip["rayTrace"]["blocksPerFieldHeight"] == 7
     assert "raytrace" not in roundtrip
+
+
+def test_oi_set_optics_accepts_normalized_nested_raytrace_scalar_fields(asset_store) -> None:
+    oi = oi_create("ray trace", asset_store=asset_store)
+    optics = oi_get(oi, "optics")
+    optics["raytrace"] = {
+        "f_number": 3.7,
+        "magnification": -0.42,
+    }
+    optics.pop("rayTrace", None)
+
+    oi = oi_set(oi, "optics", optics)
+
+    roundtrip = oi_get(oi, "optics")
+    assert np.isclose(oi_get(oi, "fnumber"), 3.7)
+    assert np.isclose(oi_get(oi, "rtmagnification"), -0.42)
+    assert np.isclose(roundtrip["rayTrace"]["fNumber"], 3.7)
+    assert np.isclose(roundtrip["rayTrace"]["mag"], -0.42)
 
 
 def test_oi_compute_raytrace_rotates_psf_with_field_angle(asset_store) -> None:
