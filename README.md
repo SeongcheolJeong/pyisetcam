@@ -189,6 +189,9 @@ name when no explicit top-level name is present. Existing
 `blocks_per_field_height` settings are now preserved across Zemax
 imports too, and raw MATLAB-style ray-trace export now carries
 `blocksPerFieldHeight` for round-tripping through `oi_get('optics')`.
+Normalized ray-trace key detection now also recognizes
+`blocks_per_field_height` directly, keeping raw/normalized struct
+handling aligned for that field.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

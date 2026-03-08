@@ -196,6 +196,7 @@ def _raytrace_struct_uses_normalized_keys(raytrace: dict[str, Any]) -> bool:
             "effective_focal_length_m",
             "effective_f_number",
             "max_fov_deg",
+            "blocks_per_field_height",
             "relative_illumination",
         )
     ):

@@ -137,6 +137,11 @@ def test_ie_field_height_to_index_matches_matlab_rules() -> None:
     assert ie_field_height_to_index(heights, 0.9, bounding=True) == (2, 3)
 
 
+def test_raytrace_struct_uses_normalized_keys_recognizes_blocks_per_field_height() -> None:
+    assert optics_module._raytrace_struct_uses_normalized_keys({"blocks_per_field_height": 7}) is True
+    assert optics_module._raytrace_struct_uses_normalized_keys({"blocksPerFieldHeight": 7}) is False
+
+
 def test_oi_compute_tracks_output_geometry(asset_store) -> None:
     scene = scene_create(asset_store=asset_store)
     oi = oi_compute(oi_create(), scene)
