@@ -11,7 +11,7 @@ from .ip import ip_get
 from .metrics import xyz_to_lab, xyz_to_luv
 from .optics import oi_get
 from .scene import scene_get
-from .sensor import sensor_get
+from .sensor import pixel_snr, sensor_get, sensor_snr
 from .types import ImageProcessor, OpticalImage, Scene, Sensor
 from .utils import param_format
 
@@ -261,6 +261,19 @@ def sensor_plot(
     if key in {"electronshline", "hlineelectrons", "electronsvline", "vlineelectrons", "voltshline", "hlinevolts", "voltsvline", "vlinevolts", "dvhline", "hlinedv", "dvvline", "vlinedv"}:
         xy = _roi_required("plotSensor", p_type, roi_locs)
         return _sensor_plot_line_data(sensor, key, xy), None
+    if key == "pixelsnr":
+        snr, volts, snr_shot, snr_read = pixel_snr(sensor)
+        return {"volts": volts, "snr": snr, "snrShot": snr_shot, "snrRead": snr_read}, None
+    if key in {"sensorsnr", "snr"}:
+        snr, volts, snr_shot, snr_read, snr_dsnu, snr_prnu = sensor_snr(sensor)
+        return {
+            "volts": volts,
+            "snr": snr,
+            "snrShot": snr_shot,
+            "snrRead": snr_read,
+            "snrDSNU": snr_dsnu,
+            "snrPRNU": snr_prnu,
+        }, None
     if key in {"voltshistogram", "voltshist"}:
         roi = _roi_required("plotSensor", p_type, roi_locs)
         return _sensor_plot_histogram(sensor, "volts", roi), None

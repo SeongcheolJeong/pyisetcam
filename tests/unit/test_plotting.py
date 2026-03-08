@@ -7,6 +7,7 @@ from pyisetcam import (
     ip_create,
     ip_get,
     ip_set,
+    pixel_snr,
     oiPlot,
     oi_create,
     oi_get,
@@ -18,6 +19,7 @@ from pyisetcam import (
     scene_set,
     sensor_create,
     sensor_get,
+    sensor_snr,
     sensor_set,
     vc_get_roi_data,
     xyz_to_lab,
@@ -316,3 +318,45 @@ def test_ip_plot_cielab_and_cieluv(asset_store) -> None:
     assert np.allclose(luv_udata["whitePoint"], white_point)
     assert np.allclose(luv_udata["LUV"], expected_luv)
     assert np.allclose(luv_udata["meanLUV"], np.mean(expected_luv, axis=0))
+
+
+def test_pixel_and_sensor_snr_helpers_and_plot_wrappers(asset_store) -> None:
+    sensor = sensor_create("monochrome", asset_store=asset_store)
+    sensor.fields["pixel"]["conversion_gain_v_per_electron"] = 2.0e-4
+    sensor.fields["pixel"]["voltage_swing"] = 1.2
+    sensor.fields["pixel"]["read_noise_v"] = 4.0e-4
+    sensor.fields["pixel"]["dsnu_sigma_v"] = 2.0e-4
+    sensor.fields["pixel"]["prnu_sigma"] = 0.01
+    volts = np.array([1.0e-3, 1.0e-2], dtype=float)
+
+    pixel_curve, pixel_volts, pixel_shot, pixel_read = pixel_snr(sensor, volts)
+    sensor_curve, sensor_volts, sensor_shot, sensor_read, sensor_dsnu, sensor_prnu = sensor_snr(sensor, volts)
+
+    conv_gain = 2.0e-4
+    read_sd = 4.0e-4 / conv_gain
+    dsnu_sd = 2.0e-4 / conv_gain
+    prnu_gain_sd = 0.01
+    shot_sd = np.sqrt(volts / conv_gain)
+    signal_power = (volts / conv_gain) ** 2
+    expected_pixel = 10.0 * np.log10(signal_power / (read_sd**2 + shot_sd**2))
+    expected_sensor = 10.0 * np.log10(signal_power / (shot_sd**2 + read_sd**2 + dsnu_sd**2 + (prnu_gain_sd * (volts / conv_gain)) ** 2))
+
+    pixel_udata, pixel_handle = plotSensor(sensor, "pixel snr")
+    sensor_udata, sensor_handle = plotSensor(sensor, "sensor snr")
+
+    assert pixel_handle is None
+    assert sensor_handle is None
+    assert np.allclose(pixel_volts, volts)
+    assert np.allclose(sensor_volts, volts)
+    assert np.allclose(pixel_curve, expected_pixel)
+    assert np.allclose(sensor_curve, expected_sensor)
+    assert np.allclose(pixel_shot, 10.0 * np.log10(signal_power / (shot_sd**2)))
+    assert np.allclose(sensor_shot, 10.0 * np.log10(signal_power / (shot_sd**2)))
+    assert np.allclose(pixel_read, 10.0 * np.log10(signal_power / (read_sd**2)))
+    assert np.allclose(sensor_read, 10.0 * np.log10(signal_power / (read_sd**2)))
+    assert np.allclose(sensor_dsnu, 10.0 * np.log10(signal_power / (dsnu_sd**2)))
+    assert np.allclose(sensor_prnu, 10.0 * np.log10(signal_power / ((prnu_gain_sd * (volts / conv_gain)) ** 2)))
+    assert np.allclose(pixel_udata["snr"], pixel_snr(sensor)[0])
+    assert np.allclose(pixel_udata["volts"], pixel_snr(sensor)[1])
+    assert np.allclose(sensor_udata["snr"], sensor_snr(sensor)[0])
+    assert np.allclose(sensor_udata["volts"], sensor_snr(sensor)[1])

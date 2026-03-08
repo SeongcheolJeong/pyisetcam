@@ -367,6 +367,75 @@ def sensor_create_ideal(
     raise UnsupportedOptionError("sensorCreateIdeal", ideal_type)
 
 
+def _snr_voltage_levels(pixel: dict[str, Any], volts: Any | None) -> np.ndarray:
+    if volts is None:
+        return np.logspace(-4.0, 0.0, 50, dtype=float) * max(float(pixel["voltage_swing"]), 1e-12)
+    return np.asarray(volts, dtype=float)
+
+
+def _snr_db(signal_power: np.ndarray, noise_power: np.ndarray) -> np.ndarray:
+    safe_noise = np.maximum(np.asarray(noise_power, dtype=float), 1e-30)
+    return 10.0 * np.log10(np.asarray(signal_power, dtype=float) / safe_noise)
+
+
+def pixel_snr(sensor: Sensor, volts: Any | None = None) -> tuple[np.ndarray, np.ndarray, np.ndarray, float | np.ndarray]:
+    """Compute MATLAB-style pixel SNR curves in dB over voltage levels."""
+
+    pixel = sensor.fields["pixel"]
+    voltage_levels = _snr_voltage_levels(pixel, volts)
+    conversion_gain = max(float(pixel["conversion_gain_v_per_electron"]), 1e-12)
+    read_sd = float(pixel["read_noise_v"]) / conversion_gain
+
+    electron_mean = np.maximum(np.asarray(voltage_levels, dtype=float) / conversion_gain, 0.0)
+    shot_sd = np.sqrt(electron_mean)
+    signal_power = np.square(np.asarray(voltage_levels, dtype=float) / conversion_gain)
+    snr = _snr_db(signal_power, np.square(read_sd) + np.square(shot_sd))
+    snr_shot = _snr_db(signal_power, np.square(shot_sd))
+    snr_read: float | np.ndarray
+    if np.isclose(read_sd, 0.0):
+        snr_read = float(np.inf)
+    else:
+        snr_read = _snr_db(signal_power, np.square(read_sd))
+    return snr, np.asarray(voltage_levels, dtype=float), snr_shot, snr_read
+
+
+def sensor_snr(
+    sensor: Sensor,
+    volts: Any | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, float | np.ndarray, float | np.ndarray, float | np.ndarray]:
+    """Compute MATLAB-style sensor SNR curves in dB over voltage levels."""
+
+    pixel = sensor.fields["pixel"]
+    voltage_levels = _snr_voltage_levels(pixel, volts)
+    conversion_gain = max(float(pixel["conversion_gain_v_per_electron"]), 1e-12)
+    read_sd = float(pixel["read_noise_v"]) / conversion_gain
+    dsnu_sd = float(pixel["dsnu_sigma_v"]) / conversion_gain
+    prnu_gain_sd = float(pixel["prnu_sigma"])
+
+    electron_mean = np.maximum(np.asarray(voltage_levels, dtype=float) / conversion_gain, 0.0)
+    shot_sd = np.sqrt(electron_mean)
+    prnu_sd = prnu_gain_sd * (np.asarray(voltage_levels, dtype=float) / conversion_gain)
+    signal_power = np.square(np.asarray(voltage_levels, dtype=float) / conversion_gain)
+    noise_power = np.square(shot_sd) + np.square(read_sd) + np.square(dsnu_sd) + np.square(prnu_sd)
+
+    snr = _snr_db(signal_power, noise_power)
+    snr_shot = _snr_db(signal_power, np.square(shot_sd))
+    if np.isclose(read_sd, 0.0):
+        snr_read: float | np.ndarray = float(np.inf)
+    else:
+        snr_read = _snr_db(signal_power, np.square(read_sd))
+    if np.isclose(dsnu_sd, 0.0):
+        snr_dsnu: float | np.ndarray = float(np.inf)
+    else:
+        snr_dsnu = _snr_db(signal_power, np.square(dsnu_sd))
+    if np.isclose(prnu_gain_sd, 0.0):
+        snr_prnu: float | np.ndarray = float(np.inf)
+    else:
+        snr_prnu = _snr_db(signal_power, np.square(prnu_sd))
+
+    return snr, np.asarray(voltage_levels, dtype=float), snr_shot, snr_read, snr_dsnu, snr_prnu
+
+
 def _sensor_line_profile(sensor: Sensor, line_key: str, rc: Any) -> dict[str, list[np.ndarray]] | None:
     from .roi import _sensor_signal_cube
 

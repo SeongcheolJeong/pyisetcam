@@ -121,6 +121,8 @@ from .scene import (
     scene_set,
 )
 from .sensor import (
+    pixel_snr,
+    sensor_snr,
     sensor_compute,
     sensor_create,
     sensor_create_ideal,
@@ -249,6 +251,8 @@ __all__ = [
     "peak_signal_to_noise_ratio",
     "root_mean_squared_error",
     "scene_plot",
+    "pixel_snr",
+    "sensor_snr",
     "sensor_plot",
     "session_add_and_select_object",
     "session_add_object",
@@ -335,12 +339,14 @@ __all__ = [
     "sensorCreate",
     "sensorCreateIdeal",
     "sensorGet",
+    "sensorSNR",
     "sensorSet",
     "sensorSetSizeToFOV",
     "sensor_compute",
     "sensor_create",
     "sensor_create_ideal",
     "sensor_get",
+    "pixelSNR",
     "sensor_set",
     "sensor_set_size_to_fov",
     "vcAddAndSelectObject",
@@ -444,6 +450,8 @@ sensorCreate = sensor_create
 sensorCreateIdeal = sensor_create_ideal
 sensorCompute = sensor_compute
 sensorGet = sensor_get
+sensorSNR = sensor_snr
+pixelSNR = pixel_snr
 sensorSet = sensor_set
 sensorSetSizeToFOV = sensor_set_size_to_fov
 
