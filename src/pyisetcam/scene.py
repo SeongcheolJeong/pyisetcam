@@ -285,6 +285,7 @@ def _uniform_scene(
     size: int,
     wave: np.ndarray,
     illuminant_energy: np.ndarray,
+    illuminant_comment: str | None = None,
     *,
     asset_store: AssetStore,
 ) -> Scene:
@@ -293,6 +294,8 @@ def _uniform_scene(
     scene.fields["illuminant_format"] = "spectral"
     scene.fields["illuminant_energy"] = illuminant_energy
     scene.fields["illuminant_photons"] = energy_to_quanta(illuminant_energy, wave)
+    if illuminant_comment is not None:
+        scene.fields["illuminant_comment"] = str(illuminant_comment)
     scene.fields["distance_m"] = DEFAULT_DISTANCE_M
     scene.fields["fov_deg"] = DEFAULT_FOV_DEG
     photons = np.broadcast_to(scene.fields["illuminant_photons"], (size, size, wave.size)).copy()
@@ -389,7 +392,14 @@ def _uniform_blackbody_scene(
     asset_store: AssetStore,
 ) -> Scene:
     illuminant_energy = np.asarray(blackbody(wave, float(temperature_k), kind="energy"), dtype=float).reshape(-1)
-    return _uniform_scene(f"Uniform BB {int(round(float(temperature_k)))}K", _scene_size_2d(size, default=32)[0], wave, illuminant_energy, asset_store=asset_store)
+    return _uniform_scene(
+        f"Uniform BB {int(round(float(temperature_k)))}K",
+        _scene_size_2d(size, default=32)[0],
+        wave,
+        illuminant_energy,
+        illuminant_comment=f"blackbody-{int(round(float(temperature_k)))}K",
+        asset_store=asset_store,
+    )
 
 
 def _uniform_monochromatic_scene(
@@ -399,7 +409,14 @@ def _uniform_monochromatic_scene(
     asset_store: AssetStore,
 ) -> Scene:
     wave = _wave_or_default(wavelength)
-    scene = _uniform_scene("Narrow Band", _scene_size_2d(size, default=128)[0], wave, np.ones(wave.size, dtype=float), asset_store=asset_store)
+    scene = _uniform_scene(
+        "Narrow Band",
+        _scene_size_2d(size, default=128)[0],
+        wave,
+        np.ones(wave.size, dtype=float),
+        illuminant_comment="equal-energy",
+        asset_store=asset_store,
+    )
     scene.name = "Narrow Band"
     return scene
 
@@ -578,12 +595,25 @@ def scene_create(
         size = int(args[0]) if len(args) > 0 else 32
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
         _, illuminant_energy = _load_d65(wave, store)
-        return track_session_object(session, _uniform_scene("Uniform D65", size, wave, illuminant_energy, asset_store=store))
+        return track_session_object(
+            session,
+            _uniform_scene("Uniform D65", size, wave, illuminant_energy, illuminant_comment="D65.mat", asset_store=store),
+        )
 
     if name in {"uniformee", "uniformequalenergy"}:
         size = int(args[0]) if len(args) > 0 else 32
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
-        return track_session_object(session, _uniform_scene("Uniform EE", size, wave, np.ones(wave.size, dtype=float), asset_store=store))
+        return track_session_object(
+            session,
+            _uniform_scene(
+                "Uniform EE",
+                size,
+                wave,
+                np.ones(wave.size, dtype=float),
+                illuminant_comment="equal-energy",
+                asset_store=store,
+            ),
+        )
 
     if name in {"uniformbb", "uniformblackbody"}:
         size = args[0] if len(args) > 0 else 32
@@ -819,6 +849,14 @@ def _scene_line_profile(
     line_index = _line_index(line_arg, orientation)
     if data_type == "photons":
         data = np.asarray(scene.data["photons"], dtype=float)
+    elif data_type == "illuminant_photons":
+        illuminant = np.asarray(scene_get(scene, "illuminant photons", asset_store=asset_store), dtype=float).reshape(1, 1, -1)
+        rows, cols = scene_get(scene, "size")
+        data = np.broadcast_to(illuminant, (rows, cols, illuminant.shape[2])).copy()
+    elif data_type == "illuminant_energy":
+        illuminant = np.asarray(scene_get(scene, "illuminant energy", asset_store=asset_store), dtype=float).reshape(1, 1, -1)
+        rows, cols = scene_get(scene, "size")
+        data = np.broadcast_to(illuminant, (rows, cols, illuminant.shape[2])).copy()
     elif data_type == "luminance":
         data = np.asarray(scene_get(scene, "luminance", asset_store=asset_store), dtype=float)
     else:
@@ -957,10 +995,52 @@ def scene_get(scene: Scene, parameter: str, *args: Any, asset_store: AssetStore 
         return np.stack((xx, yy), axis=2)
     if key == "illuminantformat":
         return scene.fields.get("illuminant_format", "spectral")
+    if key == "illuminantcomment":
+        return scene.fields.get("illuminant_comment")
     if key == "illuminantphotons":
         return np.asarray(scene.fields["illuminant_photons"], dtype=float)
     if key == "illuminantenergy":
         return np.asarray(scene.fields["illuminant_energy"], dtype=float)
+    if key in {"roiilluminantphotons", "illuminantphotonsroi"}:
+        if not args:
+            raise ValueError("ROI required for sceneGet(..., 'roi illuminant photons').")
+        from .roi import vc_get_roi_data
+
+        return vc_get_roi_data(scene, args[0], "illuminant photons")
+    if key in {"roimeanilluminantphotons", "illuminantphotonsroimean"}:
+        if not args:
+            raise ValueError("ROI required for sceneGet(..., 'roi mean illuminant photons').")
+        return np.mean(np.asarray(scene_get(scene, "roi illuminant photons", args[0], asset_store=asset_store), dtype=float), axis=0).reshape(-1)
+    if key in {"roiilluminantenergy", "illuminantenergyroi"}:
+        if not args:
+            raise ValueError("ROI required for sceneGet(..., 'roi illuminant energy').")
+        from .roi import vc_get_roi_data
+
+        return vc_get_roi_data(scene, args[0], "illuminant energy")
+    if key in {"roimeanilluminantenergy", "illuminantenergyroimean"}:
+        if not args:
+            raise ValueError("ROI required for sceneGet(..., 'roi mean illuminant energy').")
+        return np.mean(np.asarray(scene_get(scene, "roi illuminant energy", args[0], asset_store=asset_store), dtype=float), axis=0).reshape(-1)
+    if key in {"illuminanthlinephotons", "hlineilluminantphotons"}:
+        if not args:
+            raise ValueError("Line location required for sceneGet(..., 'illuminant hline photons').")
+        unit = args[1] if len(args) >= 2 else "mm"
+        return _scene_line_profile(scene, "illuminant_photons", "h", args[0], unit=unit, asset_store=asset_store)
+    if key in {"illuminantvlinephotons", "vlineilluminantphotons"}:
+        if not args:
+            raise ValueError("Line location required for sceneGet(..., 'illuminant vline photons').")
+        unit = args[1] if len(args) >= 2 else "mm"
+        return _scene_line_profile(scene, "illuminant_photons", "v", args[0], unit=unit, asset_store=asset_store)
+    if key in {"illuminanthlineenergy", "hlineilluminantenergy"}:
+        if not args:
+            raise ValueError("Line location required for sceneGet(..., 'illuminant hline energy').")
+        unit = args[1] if len(args) >= 2 else "mm"
+        return _scene_line_profile(scene, "illuminant_energy", "h", args[0], unit=unit, asset_store=asset_store)
+    if key in {"illuminantvlineenergy", "vlineilluminantenergy"}:
+        if not args:
+            raise ValueError("Line location required for sceneGet(..., 'illuminant vline energy').")
+        unit = args[1] if len(args) >= 2 else "mm"
+        return _scene_line_profile(scene, "illuminant_energy", "v", args[0], unit=unit, asset_store=asset_store)
     if key in {"radiancehline", "hlineradiance"}:
         if not args:
             raise ValueError("Line location required for sceneGet(..., 'radiance hline').")

@@ -26,6 +26,7 @@
 - That same sensor plotting surface now also includes `sensorGet(..., 'chromaticity')` and `sensorGet(..., 'roi chromaticity mean')`, using the headless demosaic path to estimate per-pixel sensor chromaticity in vector or matrix form.
 - The adjacent scene/OI/IP ROI plotting surface now includes matching chromaticity and summary getters too: `sceneGet(..., 'chromaticity'/'roi chromaticity mean')`, `sceneGet(..., 'roi mean luminance')`, `oiGet(..., 'chromaticity'/'roi chromaticity mean')`, `oiGet(..., 'roi illuminance'/'roi mean illuminance')`, and `ipGet(..., 'chromaticity'/'roi chromaticity mean')`.
 - The next headless plotting layer is now covered too through explicit scene/OI line-profile getters: `sceneGet(..., 'radiance hline/vline')`, `sceneGet(..., 'luminance hline/vline')`, `sceneGet(..., 'spatial support linear')`, `oiGet(..., 'irradiance hline/vline')`, `oiGet(..., 'irradiance energy hline/vline')`, and `oiGet(..., 'illuminance hline/vline')`.
+- The remaining adjacent scene illuminant getter surface is now covered too: `sceneGet(..., 'illuminant comment')`, `sceneGet(..., 'roi illuminant photons/energy')`, `sceneGet(..., 'roi mean illuminant photons/energy')`, and `sceneGet(..., 'illuminant hline/vline photons/energy')`.
 
 ## Summary
 - Build a new Python library, `pyisetcam`, that ports the numerical `scene -> optical image -> sensor -> image processor -> camera` pipeline from ISETCam and validates it against GNU Octave runs of the upstream MATLAB code.

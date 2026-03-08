@@ -311,6 +311,27 @@ def test_scene_get_line_profiles(asset_store) -> None:
     assert np.allclose(luminance_vline["data"], np.asarray(scene_get(scene, "luminance"), dtype=float)[:, 1])
 
 
+def test_scene_get_illuminant_roi_and_line_queries(asset_store) -> None:
+    scene = scene_create("uniform d65", 4, asset_store=asset_store)
+    roi = np.array([1, 1, 1, 1], dtype=int)
+
+    roi_illuminant_photons = scene_get(scene, "roi illuminant photons", roi)
+    roi_illuminant_energy = scene_get(scene, "roi illuminant energy", roi)
+    illuminant_hline_energy = scene_get(scene, "illuminant hline energy", np.array([2, 1], dtype=int))
+    support = scene_get(scene, "spatial support linear", "mm")
+    expected_photons = np.asarray(scene_get(scene, "illuminant photons"), dtype=float)
+    expected_energy = np.asarray(scene_get(scene, "illuminant energy"), dtype=float)
+
+    assert scene_get(scene, "illuminant comment") == "D65.mat"
+    assert np.allclose(roi_illuminant_photons, np.tile(expected_photons, (4, 1)))
+    assert np.allclose(roi_illuminant_energy, np.tile(expected_energy, (4, 1)))
+    assert np.allclose(scene_get(scene, "roi mean illuminant photons", roi), expected_photons)
+    assert np.allclose(scene_get(scene, "roi mean illuminant energy", roi), expected_energy)
+    assert np.allclose(illuminant_hline_energy["pos"], support["x"])
+    assert np.allclose(illuminant_hline_energy["wave"], np.asarray(scene_get(scene, "wave"), dtype=float))
+    assert np.allclose(illuminant_hline_energy["data"], np.tile(expected_energy.reshape(-1, 1), (1, support["x"].size)))
+
+
 def test_oi_get_roi_queries(asset_store) -> None:
     oi = oi_create(asset_store=asset_store)
     oi = oi_set(oi, "wave", np.array([500.0, 600.0], dtype=float))

@@ -290,6 +290,11 @@ The adjacent headless line-profile surface is now covered too:
 `sceneGet(..., 'spatial support linear')`, `oiGet(..., 'irradiance hline/vline')`,
 `oiGet(..., 'irradiance energy hline/vline')`, and
 `oiGet(..., 'illuminance hline/vline')`.
+The remaining scene illuminant getter surface around that plotting path is
+now exposed too: `sceneGet(..., 'illuminant comment')`,
+`sceneGet(..., 'roi illuminant photons/energy')`,
+`sceneGet(..., 'roi mean illuminant photons/energy')`, and
+`sceneGet(..., 'illuminant hline/vline photons/energy')`.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
