@@ -535,22 +535,37 @@ def _matlab_apostrophe_starts_string(text: str, index: int) -> bool:
     return text[previous] in "=([{,:;"
 
 
+def _matlab_line_starts_assignment(line: str) -> bool:
+    return re.match(r"^[A-Za-z_]\w*\s*=", line) is not None
+
+
 def _iter_matlab_assignments(text: str) -> list[str]:
     statements: list[str] = []
     current: list[str] = []
     bracket_depth = 0
     in_string = False
+    continuing_statement = False
 
     for raw_line in text.splitlines():
         line = _strip_matlab_comment(raw_line).rstrip()
         if not line:
             continue
+        if (
+            current
+            and not continuing_statement
+            and bracket_depth == 0
+            and not in_string
+            and _matlab_line_starts_assignment(line)
+        ):
+            statements.append("".join(current).strip())
+            current = []
         continued = line.endswith("...")
         if continued:
             line = line[:-3].rstrip()
         current.append(line)
         if continued:
             current.append(" ")
+            continuing_statement = True
             continue
 
         for index, char in enumerate(line):
@@ -571,6 +586,7 @@ def _iter_matlab_assignments(text: str) -> list[str]:
         if joined and bracket_depth == 0 and not in_string and joined.endswith(";"):
             statements.append(joined)
             current = []
+        continuing_statement = False
 
     tail = "".join(current).strip()
     if tail:

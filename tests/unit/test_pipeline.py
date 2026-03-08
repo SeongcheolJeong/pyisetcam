@@ -61,8 +61,12 @@ def _write_mock_zemax_bundle(
     lens_file: str = "CookeLens.ZMX",
     base_lens_file_name: str = "CookeLens",
     wave_assignment: str = "500:100:600",
+    base_lens_has_semicolon: bool = True,
 ):
     params_file = tmp_path / "ISETPARAMS.txt"
+    base_lens_line = f"baseLensFileName='{base_lens_file_name}'"
+    if base_lens_has_semicolon:
+        base_lens_line += ";"
     params_file.write_text(
         f"lensFile='{lens_file}';\n"
         "psfSize=2;\n"
@@ -71,7 +75,7 @@ def _write_mock_zemax_bundle(
         "imgHeightMax=1.0;\n"
         "objDist=250.0;\n"
         "mag=-0.1;\n"
-        f"baseLensFileName='{base_lens_file_name}';\n"
+        f"{base_lens_line}\n"
         "refWave=550.0;\n"
         "fov=15.0;\n"
         "efl=6.0;\n"
@@ -1282,6 +1286,19 @@ def test_rt_import_data_parses_transposed_row_vector_wave_syntax(tmp_path) -> No
     assert optics_file is None
     assert np.array_equal(imported_optics["raytrace"]["geometry"]["wavelength_nm"], np.array([500.0, 600.0]))
     assert imported_optics["raytrace"]["psf"]["function"].shape == (2, 2, 2, 2)
+
+
+def test_rt_import_data_parses_legacy_base_lens_line_without_semicolon(tmp_path) -> None:
+    params_file = _write_mock_zemax_bundle(
+        tmp_path,
+        base_lens_has_semicolon=False,
+    )
+
+    imported_optics, optics_file = rt_import_data(p_file_full=params_file)
+
+    assert optics_file is None
+    assert imported_optics["raytrace"]["lens_file"] == "CookeLens.ZMX"
+    assert imported_optics["raytrace"]["geometry"]["function"].shape == (2, 2)
 
 
 def test_rt_import_data_preserves_existing_optics_fields_and_effective_top_level_state(tmp_path) -> None:
