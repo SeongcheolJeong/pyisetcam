@@ -128,6 +128,30 @@ def _normalize_raytrace_optics(raw: dict[str, Any]) -> dict[str, Any]:
         normalized["raytrace"]["computation"] = {
             "psf_spacing_m": None if psf_spacing_m is None else float(np.asarray(psf_spacing_m).reshape(-1)[0]),
         }
+        effective_focal_length_m = _scalar(
+            normalized.get("focal_length_m", normalized["raytrace"].get("effective_focal_length_m")),
+            DEFAULT_FOCAL_LENGTH_M,
+        )
+        normalized["model"] = "raytrace"
+        normalized["name"] = str(normalized.get("name", normalized["raytrace"].get("name", "raytrace")))
+        normalized["f_number"] = _scalar(
+            normalized.get("f_number", normalized.get("fNumber", normalized["raytrace"].get("f_number"))),
+            4.0,
+        )
+        normalized["focal_length_m"] = effective_focal_length_m
+        normalized["nominal_focal_length_m"] = _scalar(
+            normalized.get("nominal_focal_length_m", normalized.get("focalLength", effective_focal_length_m)),
+            effective_focal_length_m,
+        )
+        normalized["compute_method"] = str(
+            normalized.get("compute_method", normalized.get("computeMethod", ""))
+        )
+        normalized["aberration_scale"] = float(
+            normalized.get("aberration_scale", normalized.get("aberrationScale", 0.0))
+        )
+        normalized["offaxis_method"] = str(
+            normalized.get("offaxis_method", normalized.get("offaxisMethod", normalized.get("offaxis", "skip")))
+        )
         return normalized
 
     raytrace = dict(raw.get("rayTrace", raw.get("raytrace", {})))
@@ -245,6 +269,16 @@ def _raytrace_struct_uses_normalized_keys(raytrace: dict[str, Any]) -> bool:
     return False
 
 
+def _merge_mapping(base: dict[str, Any], update: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(base)
+    for key, value in update.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _merge_mapping(dict(merged[key]), value)
+        else:
+            merged[key] = value
+    return merged
+
+
 def _normalize_optics_update(value: Any, current_optics: dict[str, Any]) -> dict[str, Any]:
     raw = dict(value)
     model = param_format(raw.get("model", current_optics.get("model", "")))
@@ -278,9 +312,12 @@ def _normalize_optics_update(value: Any, current_optics: dict[str, Any]) -> dict
         nested_raw_raytrace["fNumber"] = source["fNumber"]
 
     nested_raytrace = source.get("raytrace")
-    if isinstance(nested_raytrace, dict) and not _raytrace_struct_uses_normalized_keys(nested_raytrace):
-        source["rayTrace"] = dict(nested_raytrace)
-        source.pop("raytrace", None)
+    if isinstance(nested_raytrace, dict):
+        if _raytrace_struct_uses_normalized_keys(nested_raytrace):
+            source["raytrace"] = _merge_mapping(dict(current_optics.get("raytrace", {})), nested_raytrace)
+        else:
+            source["rayTrace"] = dict(nested_raytrace)
+            source.pop("raytrace", None)
 
     normalized = _normalize_raytrace_optics(source)
     normalized["compute_method"] = str(

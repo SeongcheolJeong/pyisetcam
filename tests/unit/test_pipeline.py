@@ -828,6 +828,29 @@ def test_oi_set_optics_accepts_normalized_nested_raytrace_scalar_fields(asset_st
     assert np.isclose(roundtrip["rayTrace"]["mag"], -0.42)
 
 
+def test_oi_set_optics_preserves_existing_raytrace_data_for_normalized_partial_update(asset_store) -> None:
+    oi = oi_create("ray trace", asset_store=asset_store)
+    original = oi_get(oi, "optics")
+    original_geometry = np.asarray(original["rayTrace"]["geometry"]["function"], dtype=float).copy()
+    original_psf_spacing = np.asarray(original["rayTrace"]["psf"]["sampleSpacing"], dtype=float).copy()
+
+    optics = oi_get(oi, "optics")
+    optics["raytrace"] = {
+        "lens_file": "CustomLens.zmx",
+        "computation": {"psf_spacing_m": 8e-6},
+    }
+    optics.pop("rayTrace", None)
+
+    oi = oi_set(oi, "optics", optics)
+
+    roundtrip = oi_get(oi, "optics")
+    assert oi_get(oi, "rtlensfile") == "CustomLens.zmx"
+    assert np.isclose(oi_get(oi, "rtcomputespacing"), 8e-6)
+    assert np.array_equal(roundtrip["rayTrace"]["geometry"]["function"], original_geometry)
+    assert np.allclose(roundtrip["rayTrace"]["psf"]["sampleSpacing"], original_psf_spacing)
+    assert np.isclose(roundtrip["rayTrace"]["referenceWavelength"], original["rayTrace"]["referenceWavelength"])
+
+
 def test_oi_compute_raytrace_rotates_psf_with_field_angle(asset_store) -> None:
     wave = np.array([550.0], dtype=float)
     scene = scene_create("uniform ee", 96, wave, asset_store=asset_store)
