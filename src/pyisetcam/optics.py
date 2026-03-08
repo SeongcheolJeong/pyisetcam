@@ -404,14 +404,10 @@ def _load_raytrace_optics(source: Any, *, asset_store: AssetStore) -> dict[str, 
 
     path = Path(source)
     if path.is_dir():
-        matches = sorted(
-            candidate
-            for candidate in path.iterdir()
-            if candidate.is_file() and candidate.suffix.lower() == ".txt" and "isetpar" in candidate.name.lower()
-        )
-        if not matches:
-            raise UnsupportedOptionError("oiCreate", f"ray trace optics {source}")
-        imported, _ = rt_import_data(p_file_full=matches[0])
+        try:
+            imported, _ = rt_import_data(p_file_full=path)
+        except ValueError as error:
+            raise UnsupportedOptionError("oiCreate", f"ray trace optics {source}") from error
         return imported
     if path.is_absolute() or path.exists():
         if path.suffix.lower() == ".txt":
@@ -604,6 +600,20 @@ def _raytrace_lens_basename(lens_file: str | Path) -> str:
     return stem or base
 
 
+def _resolve_isetparams_path(source: str | Path) -> Path:
+    path = Path(source)
+    if path.is_dir():
+        matches = sorted(
+            candidate
+            for candidate in path.iterdir()
+            if candidate.is_file() and candidate.suffix.lower() == ".txt" and "isetpar" in candidate.name.lower()
+        )
+        if not matches:
+            raise ValueError(f"Unable to locate an ISETPARAMS file in {path}")
+        return matches[0]
+    return path
+
+
 def rt_file_names(
     lens_file: str | Path,
     wave: np.ndarray | list[float] | tuple[float, ...],
@@ -666,6 +676,7 @@ def rt_import_data(
         raise UnsupportedOptionError("rtImportData", rt_program)
     if p_file_full is None:
         raise ValueError("p_file_full is required for rtImportData.")
+    p_file_full = _resolve_isetparams_path(p_file_full)
 
     params = _read_isetparams(p_file_full)
     required = (

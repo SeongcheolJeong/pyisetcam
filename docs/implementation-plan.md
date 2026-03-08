@@ -16,7 +16,7 @@
 - The shared MATLAB field-height lookup rule is now public as `ie_field_height_to_index` / `ieFieldHeight2Index`, and `rtChooseBlockSize` now uses it directly.
 - `rt_synthetic` / `rtSynthetic` is now exposed as a synthetic ray-trace optics generator to support controlled testing of the expanding ray-trace compute surface.
 - The initial Zemax text-import surface is now ported as `rt_file_names` / `rtFileNames`, `zemax_read_header` / `zemaxReadHeader`, `zemax_load` / `zemaxLoad`, and a limited `rt_import_data` / `rtImportData` path for standard ISETPARAMS + DI/RI/PSF bundles.
-- `oi_create('ray trace', ...)` now accepts that standard Zemax bundle directly as either an `ISETPARAMS.txt` file or a containing directory.
+- `rt_import_data(...)` and `oi_create('ray trace', ...)` now accept that standard Zemax bundle directly as either an `ISETPARAMS.txt` / `ISETPARMS.TXT` file or a containing directory.
 - The Zemax import path now also normalizes Windows-style `lensFile` / `baseLensFileName` strings when deriving DI/RI/PSF bundle filenames.
 - The Zemax parameter-file parser now accepts multiline MATLAB vector syntax too, including `...` continuations, bracketed row/column wavelength lists, transpose-style vectors such as `[500 600]'`, and legacy single-line assignments without trailing semicolons like the older Zemax macros emit for `baseLensFileName`.
 - `rt_import_data` now preserves existing optics-object name/transmittance/compute settings while updating the imported ray-trace top-level focal-length / f-number state to the effective values from the Zemax bundle, and it enforces the upstream `psfSize` evenness check from the parameter file before loading PSF data.
