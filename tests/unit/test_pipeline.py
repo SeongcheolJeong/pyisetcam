@@ -18,6 +18,8 @@ from pyisetcam import (
     oi_set,
     run_python_case,
     scene_create,
+    scene_get,
+    scene_set,
     sensor_compute,
     sensor_create,
     sensor_get,
@@ -31,6 +33,15 @@ def test_oi_compute_matches_scene_wave(asset_store) -> None:
     oi = oi_compute(oi_create(), scene, crop=True)
     assert oi.data["photons"].shape[:2] == scene.data["photons"].shape[:2]
     assert np.array_equal(oi.fields["wave"], scene.fields["wave"])
+
+
+def test_scene_get_depth_map_defaults_to_scene_distance(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    depth_map = scene_get(scene, "depth map")
+
+    assert depth_map.shape == scene_get(scene, "size")
+    assert np.allclose(depth_map, scene_get(scene, "distance"))
+    assert np.allclose(scene_get(scene, "depth range"), np.array([scene_get(scene, "distance"), scene_get(scene, "distance")]))
 
 
 def test_oi_compute_tracks_output_geometry(asset_store) -> None:
@@ -55,6 +66,25 @@ def test_oi_compute_crop_matches_matlab_crop_geometry(asset_store) -> None:
         oi_uncropped.fields["sample_spacing_m"] * expected_scale,
     )
     assert oi_cropped.data["photons"].shape[:2] == scene.data["photons"].shape[:2]
+
+
+def test_oi_compute_tracks_padded_and_cropped_depth_maps(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    rows, cols = scene_get(scene, "size")
+    depth_map = np.linspace(1.0, 1.4, rows * cols, dtype=float).reshape(rows, cols)
+    scene = scene_set(scene, "depth map", depth_map)
+
+    oi_uncropped = oi_compute(oi_create(), scene, crop=False)
+    uncropped_depth = oi_get(oi_uncropped, "depth map")
+    pad_rows, pad_cols = oi_uncropped.fields["padding_pixels"]
+
+    assert uncropped_depth.shape == oi_uncropped.data["photons"].shape[:2]
+    assert np.allclose(uncropped_depth[:pad_rows, :], 0.0)
+    assert np.allclose(uncropped_depth[:, :pad_cols], 0.0)
+    assert np.allclose(uncropped_depth[pad_rows:-pad_rows, pad_cols:-pad_cols], depth_map)
+
+    oi_cropped = oi_compute(oi_create(), scene, crop=True)
+    assert np.allclose(oi_get(oi_cropped, "depth map"), depth_map)
 
 
 def test_oi_get_reports_matlab_style_geometry_vectors(asset_store) -> None:
@@ -114,6 +144,21 @@ def test_oi_get_reports_spatial_and_frequency_support(asset_store) -> None:
     assert freq["fy"].shape == (rows,)
     assert fsupport.shape == (rows, cols, 2)
     assert np.isclose(oi_get(oi, "max frequency resolution", "mm"), max(freq["fx"].max(), freq["fy"].max()))
+
+
+def test_oi_get_image_distance_uses_depth_map_when_geometry_is_not_precomputed() -> None:
+    oi = oi_create()
+    oi = oi_set(oi, "photons", np.ones((4, 6, 3), dtype=float))
+    oi = oi_set(oi, "depth map", np.full((4, 6), 1.2, dtype=float))
+    oi.fields.pop("image_distance_m", None)
+    oi.fields.pop("width_m", None)
+    oi.fields.pop("height_m", None)
+    oi.fields.pop("sample_spacing_m", None)
+
+    focal_length = oi_get(oi, "focal length")
+    expected = 1.0 / ((1.0 / focal_length) - (1.0 / 1.2))
+
+    assert np.isclose(oi_get(oi, "image distance"), expected)
 
 
 def test_oi_compute_skip_model_avoids_blur(asset_store) -> None:

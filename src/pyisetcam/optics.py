@@ -9,6 +9,7 @@ import numpy as np
 from scipy.ndimage import map_coordinates
 
 from .exceptions import UnsupportedOptionError
+from .scene import scene_get
 from .types import OpticalImage, Scene
 from .utils import (
     DEFAULT_WAVE,
@@ -27,6 +28,17 @@ DEFAULT_WVF_REF_PUPIL_PLANE_SIZE_MM = 16.212
 DEFAULT_WVF_CALC_PUPIL_DIAMETER_MM = 3.0
 DEFAULT_CAMERA_WVF_CALC_PUPIL_DIAMETER_MM = 9.6569e-01
 DIFFRACTION_CUTOFF_GRID_SCALE = 1.001
+_SPATIAL_UNIT_SCALE = {
+    "meters": 1.0,
+    "meter": 1.0,
+    "m": 1.0,
+    "millimeters": 1e3,
+    "millimeter": 1e3,
+    "mm": 1e3,
+    "microns": 1e6,
+    "micron": 1e6,
+    "um": 1e6,
+}
 
 
 def wvf_create(
@@ -260,6 +272,14 @@ def _pad_scene(
     raise UnsupportedOptionError("oiCompute", pad_value)
 
 
+def _pad_depth_map(scene: Scene, pad_pixels: tuple[int, int]) -> np.ndarray:
+    depth_map = np.asarray(scene_get(scene, "depth map"), dtype=float)
+    pad_rows, pad_cols = int(pad_pixels[0]), int(pad_pixels[1])
+    if pad_rows <= 0 and pad_cols <= 0:
+        return depth_map.copy()
+    return np.pad(depth_map, ((pad_rows, pad_rows), (pad_cols, pad_cols)), mode="constant", constant_values=0.0)
+
+
 def _diffraction_otf(
     shape: tuple[int, int],
     sample_spacing_m: float,
@@ -388,6 +408,16 @@ def _oi_spatial_resample(oi: OpticalImage, sample_spacing_m: float, *, method: s
     resampled = oi.clone()
     original_fov = float(oi_get(oi, "fov"))
     resampled.data["photons"] = resampled_cube
+    depth_map = oi.fields.get("depth_map_m")
+    if depth_map is not None:
+        resampled.fields["depth_map_m"] = _resample_plane_on_support(
+            np.asarray(depth_map, dtype=float),
+            x_support,
+            y_support,
+            x_query,
+            y_query,
+            method="nearest",
+        )
     _sync_oi_geometry_fields(resampled)
     current_spacing = float(oi_get(resampled, "wspatialresolution"))
     if current_spacing > 0.0:
@@ -720,10 +750,12 @@ def oi_compute(
         blurred = apply_channelwise_gaussian(padded, sigmas, mode=blur_mode, cval=blur_cval)
 
     pad_rows, pad_cols = pad_pixels
+    depth_map = _pad_depth_map(compute_scene, pad_pixels)
     if crop and (pad_rows > 0 or pad_cols > 0):
         row_slice = slice(pad_rows, None if pad_rows == 0 else -pad_rows)
         col_slice = slice(pad_cols, None if pad_cols == 0 else -pad_cols)
         result = blurred[row_slice, col_slice, :]
+        depth_map = depth_map[row_slice, col_slice]
     else:
         result = blurred
 
@@ -752,6 +784,7 @@ def oi_compute(
     computed.fields["padding_pixels"] = pad_pixels
     computed.fields["sample_spacing_m"] = output_sample_spacing_m
     computed.fields["image_distance_m"] = image_distance_m
+    computed.fields["depth_map_m"] = depth_map
     computed.fields["width_m"] = output_width_m
     computed.fields["height_m"] = output_height_m
     computed.fields["fov_deg"] = output_fov_deg
@@ -771,9 +804,40 @@ def _oi_shape(oi: OpticalImage) -> tuple[int, int]:
     return int(oi.fields.get("rows", 0)), int(oi.fields.get("cols", 0))
 
 
+def _oi_depth_distance_m(oi: OpticalImage) -> float | None:
+    depth_map = oi.fields.get("depth_map_m")
+    if depth_map is None:
+        return None
+    depth = np.asarray(depth_map, dtype=float)
+    positive = depth[depth > 0.0]
+    if positive.size == 0:
+        return None
+    if depth.shape[0] < 20 or depth.shape[1] < 20:
+        return float(np.mean(positive))
+    center_half = 10
+    row_center = depth.shape[0] // 2
+    col_center = depth.shape[1] // 2
+    center = depth[
+        max(row_center - center_half, 0) : min(row_center + center_half, depth.shape[0]),
+        max(col_center - center_half, 0) : min(col_center + center_half, depth.shape[1]),
+    ]
+    center_positive = center[center > 0.0]
+    if center_positive.size > 0:
+        return float(np.mean(center_positive))
+    return float(np.mean(positive))
+
+
 def _oi_image_distance_m(oi: OpticalImage) -> float:
     if oi.fields.get("image_distance_m") is not None:
         return float(oi.fields["image_distance_m"])
+    scene_distance = _oi_depth_distance_m(oi)
+    focal_length = float(oi.fields["optics"]["focal_length_m"])
+    if scene_distance is not None:
+        if param_format(oi.fields["optics"].get("model", "")) == "skip":
+            return focal_length
+        if scene_distance <= focal_length:
+            return focal_length
+        return float(1.0 / max((1.0 / focal_length) - (1.0 / scene_distance), 1e-12))
     return float(oi.fields["optics"]["focal_length_m"])
 
 
@@ -889,10 +953,32 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         return oi.name
     if key == "metadata":
         return oi.metadata
+    if key == "data":
+        return oi.data
     if key == "wave":
         return np.asarray(oi.fields["wave"], dtype=float)
     if key == "photons":
         return np.asarray(oi.data["photons"], dtype=float)
+    if key == "depthmap":
+        depth_map = oi.fields.get("depth_map_m")
+        if depth_map is None:
+            rows, cols = _oi_shape(oi)
+            if rows <= 0 or cols <= 0:
+                depth_map = np.empty((0, 0), dtype=float)
+            else:
+                scene_distance = _oi_depth_distance_m(oi)
+                if scene_distance is None:
+                    scene_distance = 1.2
+                depth_map = np.full((rows, cols), float(scene_distance), dtype=float)
+        scale = _SPATIAL_UNIT_SCALE.get(param_format(args[0]), 1.0) if args else 1.0
+        return np.asarray(depth_map, dtype=float) * scale
+    if key == "depthrange":
+        depth_map = np.asarray(oi_get(oi, "depth map"), dtype=float)
+        positive = depth_map[depth_map > 0.0]
+        if positive.size == 0:
+            return np.empty(0, dtype=float)
+        scale = _SPATIAL_UNIT_SCALE.get(param_format(args[0]), 1.0) if args else 1.0
+        return np.array([positive.min(), positive.max()], dtype=float) * scale
     if key == "rows":
         return _oi_shape(oi)[0]
     if key == "cols":
@@ -1051,6 +1137,13 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any) -> OpticalImage:
     if key == "photons":
         oi.data["photons"] = np.asarray(value, dtype=float)
         _sync_oi_geometry_fields(oi)
+        return oi
+    if key == "depthmap":
+        depth_map = np.asarray(value, dtype=float)
+        rows, cols = _oi_shape(oi)
+        if rows > 0 and cols > 0 and depth_map.shape != (rows, cols):
+            raise ValueError("Depth map must match the optical image size.")
+        oi.fields["depth_map_m"] = depth_map
         return oi
     if key in {"wangular", "widthangular", "hfov", "horizontalfieldofview", "fov"}:
         oi.fields["fov_deg"] = float(value)

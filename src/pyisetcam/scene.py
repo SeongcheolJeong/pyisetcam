@@ -16,6 +16,17 @@ from .utils import DEFAULT_WAVE, blackbody, energy_to_quanta, param_format, quan
 DEFAULT_DISTANCE_M = 1.2
 DEFAULT_FOV_DEG = 10.0
 _MACBETH_GRID = (4, 6)
+_SPATIAL_UNIT_SCALE = {
+    "meters": 1.0,
+    "meter": 1.0,
+    "m": 1.0,
+    "millimeters": 1e3,
+    "millimeter": 1e3,
+    "mm": 1e3,
+    "microns": 1e6,
+    "micron": 1e6,
+    "um": 1e6,
+}
 
 
 def _store(asset_store: AssetStore | None) -> AssetStore:
@@ -31,6 +42,12 @@ def _wave_or_default(wave: Any | None) -> np.ndarray:
 def _invalidate_scene_caches(scene: Scene) -> None:
     scene.fields.pop("luminance", None)
     scene.fields.pop("mean_luminance", None)
+
+
+def _spatial_unit_scale(unit: Any) -> float:
+    if unit is None:
+        return 1.0
+    return _SPATIAL_UNIT_SCALE.get(param_format(unit), 1.0)
 
 
 def _update_scene_geometry(scene: Scene) -> Scene:
@@ -400,6 +417,8 @@ def scene_get(scene: Scene, parameter: str, *args: Any, asset_store: AssetStore 
         return np.asarray(scene.fields["wave"], dtype=float)
     if key == "photons":
         return np.asarray(scene.data["photons"], dtype=float)
+    if key == "data":
+        return scene.data
     if key == "rows":
         return int(scene.fields["rows"])
     if key == "cols":
@@ -408,6 +427,19 @@ def scene_get(scene: Scene, parameter: str, *args: Any, asset_store: AssetStore 
         return (int(scene.fields["rows"]), int(scene.fields["cols"]))
     if key in {"distance", "distancem"}:
         return float(scene.fields["distance_m"])
+    if key == "depthmap":
+        depth_map = scene.fields.get("depth_map_m")
+        if depth_map is None:
+            depth_map = np.full(scene_get(scene, "size"), float(scene.fields["distance_m"]), dtype=float)
+        scale = _spatial_unit_scale(args[0] if args else None)
+        return np.asarray(depth_map, dtype=float) * scale
+    if key == "depthrange":
+        depth_map = np.asarray(scene_get(scene, "depth map"), dtype=float)
+        positive = depth_map[depth_map > 0.0]
+        if positive.size == 0:
+            return np.empty(0, dtype=float)
+        scale = _spatial_unit_scale(args[0] if args else None)
+        return np.array([positive.min(), positive.max()], dtype=float) * scale
     if key in {"fov", "hfov", "fovhorizontal", "wangular"}:
         return float(scene.fields["fov_deg"])
     if key in {"vfov", "fovvertical"}:
@@ -449,6 +481,12 @@ def scene_set(scene: Scene, parameter: str, value: Any) -> Scene:
         scene.data["photons"] = np.asarray(value, dtype=float)
         _invalidate_scene_caches(scene)
         return _update_scene_geometry(scene)
+    if key == "depthmap":
+        depth_map = np.asarray(value, dtype=float)
+        if depth_map.shape != scene_get(scene, "size"):
+            raise ValueError("Scene depth map must match the scene size.")
+        scene.fields["depth_map_m"] = depth_map
+        return scene
     if key in {"distance", "distancem"}:
         scene.fields["distance_m"] = float(value)
         return _update_scene_geometry(scene)
