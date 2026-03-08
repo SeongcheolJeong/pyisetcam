@@ -11,6 +11,7 @@ from pyisetcam import (
     ieGetObject,
     ieGetSelectedObject,
     ieInitSession,
+    ieMainClose,
     ieReplaceObject,
     ieSessionGet,
     ieSessionSet,
@@ -52,11 +53,13 @@ from pyisetcam import (
     session_replace_object,
     session_set_objects,
     session_set_selected,
+    vcGetFigure,
     vcAddAndSelectObject,
     vcGetObject,
     vcGetObjectType,
     vcGetObjects,
     vcGetSelectedObject,
+    vcSelectFigure,
     vcDeleteSomeObjects,
     vcNewObjectName,
     vcNewObjectValue,
@@ -494,6 +497,66 @@ def test_ie_session_gui_handle_aliases_and_custom_lists() -> None:
     assert ieSessionGet(session, "metricshandles") == {"msg": "handles"}
     assert ieSessionGet(session, "oicomputelist") == ["customOTF", "myCompute"]
     assert ieSessionGet(session, "sensor gamma") == 0.35
+
+
+def test_vc_get_figure_and_vc_select_figure_follow_session_windows(asset_store) -> None:
+    session = ie_init_session()
+    scene = scene_create("uniform ee", 8, asset_store=asset_store)
+    oi = oi_create(asset_store=asset_store)
+    sensor = sensor_create(asset_store=asset_store)
+    ip = ip_create(sensor=sensor, asset_store=asset_store)
+
+    scene_app = {"sceneImage": "scene-axis", "figure1": "scene-figure"}
+    oi_app = {"oiImage": "oi-axis", "figure1": "oi-figure"}
+    sensor_app = {"imgMain": "sensor-axis", "figure1": "sensor-figure"}
+    ip_app = {"ipImage": "ip-axis", "figure1": "ip-figure"}
+
+    ieSessionSet(session, "scene window", scene_app)
+    ieSessionSet(session, "oi window", oi_app)
+    ieSessionSet(session, "sensor window", sensor_app)
+    ieSessionSet(session, "ip window", ip_app)
+    ieSessionSet(session, "graphwin figure", "graph-figure")
+
+    assert vcGetFigure(session, scene) == (scene_app, "scene-axis")
+    assert vcGetFigure(session, oi) == (oi_app, "oi-axis")
+    assert vcGetFigure(session, sensor) == (sensor_app, "sensor-axis")
+    assert vcGetFigure(session, ip) == (ip_app, "ip-axis")
+    assert vcSelectFigure(session, "scene") == "scene-figure"
+    assert vcSelectFigure(session, "oi") == "oi-figure"
+    assert vcSelectFigure(session, "sensor") == "sensor-figure"
+    assert vcSelectFigure(session, "vcimage") == "ip-figure"
+    assert vcSelectFigure(session, "graphwin") == "graph-figure"
+    assert vcSelectFigure(session, "display", True) is None
+
+
+def test_vc_select_figure_without_existing_window_raises_when_creation_needed() -> None:
+    session = ie_init_session()
+
+    try:
+        vcSelectFigure(session, "scene")
+    except NotImplementedError as error:
+        assert "vcSelectFigure scene window creation" in str(error)
+    else:
+        raise AssertionError("Expected NotImplementedError for missing scene window.")
+
+
+def test_ie_main_close_clears_window_slots() -> None:
+    session = ie_init_session()
+    ieSessionSet(session, "scene window", {"sceneImage": "scene-axis", "figure1": "scene-figure"})
+    ieSessionSet(session, "oi window", {"oiImage": "oi-axis", "figure1": "oi-figure"})
+    ieSessionSet(session, "sensor window", {"imgMain": "sensor-axis", "figure1": "sensor-figure"})
+    ieSessionSet(session, "ip window", {"ipImage": "ip-axis", "figure1": "ip-figure"})
+    ieSessionSet(session, "display window", {"displayImage": "display-axis", "figure1": "display-figure"})
+    ieSessionSet(session, "metrics window", "metrics-window", {"event": 1}, {"msg": "handles"})
+
+    ieMainClose(session)
+
+    assert ieSessionGet(session, "scene window") is None
+    assert ieSessionGet(session, "oi window") is None
+    assert ieSessionGet(session, "sensor window") is None
+    assert ieSessionGet(session, "ip window") is None
+    assert ieSessionGet(session, "display window") is None
+    assert ieSessionGet(session, "metrics window") is None
 
 def test_session_set_objects_and_new_object_value_follow_matlab_style(asset_store) -> None:
     session = session_create()

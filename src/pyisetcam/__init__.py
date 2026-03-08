@@ -65,6 +65,7 @@ from .session import (
     ie_get_object,
     ie_get_selected_object,
     ie_init_session,
+    ie_main_close,
     ie_replace_object,
     ie_session_get,
     ie_session_set,
@@ -92,6 +93,8 @@ from .session import (
     session_replace_object,
     session_set_objects,
     session_set_selected,
+    vc_get_figure,
+    vc_select_figure,
 )
 from .scene import (
     scene_adjust_illuminant,
@@ -154,6 +157,7 @@ __all__ = [
     "ieGetObject",
     "ieGetSelectedObject",
     "ieInitSession",
+    "ieMainClose",
     "ieReplaceObject",
     "ieSessionGet",
     "ieSessionSet",
@@ -165,6 +169,7 @@ __all__ = [
     "ie_get_object",
     "ie_get_selected_object",
     "ie_init_session",
+    "ie_main_close",
     "ie_replace_object",
     "ie_session_get",
     "ie_session_set",
@@ -304,10 +309,12 @@ __all__ = [
     "vcGetObjects",
     "vcGetSelectedObject",
     "vcGetSelectedObjectID",
+    "vcGetFigure",
     "vcNewObjectName",
     "vcNewObjectValue",
     "vcReplaceAndSelectObject",
     "vcReplaceObject",
+    "vcSelectFigure",
     "vcSetObjects",
     "vcSetSelectedObject",
     "wvf_create",
@@ -381,6 +388,7 @@ ieDeleteObject = ie_delete_object
 ieGetObject = ie_get_object
 ieGetSelectedObject = ie_get_selected_object
 ieInitSession = ie_init_session
+ieMainClose = ie_main_close
 ieReplaceObject = ie_replace_object
 ieSessionGet = ie_session_get
 ieSessionSet = ie_session_set
@@ -408,9 +416,11 @@ vcGetObjectNames = session_get_object_names
 vcGetObjects = session_get_objects
 vcGetSelectedObject = session_get_selected_pair
 vcGetSelectedObjectID = session_get_selected_id
+vcGetFigure = vc_get_figure
 vcNewObjectName = session_new_object_name
 vcNewObjectValue = session_new_object_value
 vcReplaceAndSelectObject = session_replace_and_select_object
 vcReplaceObject = session_replace_object
+vcSelectFigure = vc_select_figure
 vcSetObjects = session_set_objects
 vcSetSelectedObject = session_set_selected

@@ -652,6 +652,54 @@ def ie_app_get(
     return obj, _extract_app_axis(obj, "current_axes")
 
 
+def vc_get_figure(
+    session: SessionContext,
+    obj: BaseISETObject,
+    select: bool = True,
+) -> tuple[Any, Any]:
+    return ie_app_get(session, obj, select=select)
+
+
+def _window_figure_from_session(session: SessionContext, object_type: str) -> Any:
+    normalized = _session_type_name(object_type)
+    if normalized == "scene":
+        return _window_state_value(session, "scene_window", "figure")
+    if normalized == "oi":
+        return _window_state_value(session, "oi_window", "figure")
+    if normalized == "sensor":
+        return _window_state_value(session, "sensor_window", "figure")
+    if normalized == "ip":
+        return _window_state_value(session, "ip_window", "figure")
+    if normalized == "display":
+        return _window_state_value(session, "display_window", "figure")
+    raise KeyError(f"Unknown window type: {object_type}")
+
+
+def vc_select_figure(
+    session: SessionContext,
+    object_type: str,
+    no_new_win: bool = False,
+) -> Any:
+    normalized = param_format(object_type)
+    if normalized in {"graphwin", "graphwinfigure", "graphwindow"}:
+        figure_handle = ie_session_get(session, "graph win figure")
+        if figure_handle is None and not no_new_win:
+            raise NotImplementedError("vcSelectFigure graphwin window creation is not implemented.")
+        return figure_handle
+
+    figure_handle = _window_figure_from_session(session, normalized)
+    if figure_handle is None and not no_new_win:
+        raise NotImplementedError(f"vcSelectFigure {object_type} window creation is not implemented.")
+    return figure_handle
+
+
+def ie_main_close(session: SessionContext) -> SessionContext:
+    for window_name in ("scene window", "oi window", "sensor window", "ip window", "display window", "metrics window"):
+        ie_session_set(session, window_name, None)
+    session.gui = {"waitbar": int(bool(session.gui.get("waitbar", session.preferences.get("waitbar", 0))))}
+    return session
+
+
 def ie_get_object(
     session: SessionContext,
     object_type: str | BaseISETObject | dict[str, Any],
@@ -834,7 +882,10 @@ ieGetObject = ie_get_object
 ieGetSelectedObject = ie_get_selected_object
 ieAppGet = ie_app_get
 ieInitSession = ie_init_session
+ieMainClose = ie_main_close
 ieReplaceObject = ie_replace_object
 ieSessionGet = ie_session_get
 ieSessionSet = ie_session_set
 ieSelectObject = ie_select_object
+vcGetFigure = vc_get_figure
+vcSelectFigure = vc_select_figure

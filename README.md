@@ -239,7 +239,10 @@ image-size/GPU session flags. Window/figure aliases and
 app lookup path, together with the concrete GUI-side aliases that
 upstream still reads such as `scene image handle`,
 `sensorimagehandle`, `oiwindowHandles`, `vcimagehandles`,
-`metricshandles`, `oicomputelist`, and `sensor gamma`.
+`metricshandles`, `oicomputelist`, and `sensor gamma`. The
+session GUI layer now also exposes `vcGetFigure`, `vcSelectFigure`,
+and a minimal `ieMainClose` cleanup wrapper over the stored session
+windows.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
