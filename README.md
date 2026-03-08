@@ -227,7 +227,11 @@ queries through `vcNewObjectValue`, add-and-select helpers through
 `vcAddAndSelectObject`, name generation through `vcNewObjectName`,
 batch deletion through `vcDeleteSomeObjects`, nonpositive selected-slot
 clearing through `vcSetSelectedObject`, and type reporting through
-`vcGetObjectType`.
+`vcGetObjectType`. The session layer now also exposes the matching
+`ieAddObject` / `ieDeleteObject` / `ieGetObject` /
+`ieGetSelectedObject` / `ieReplaceObject` / `ieSelectObject`
+wrappers, including nested `optics`, `pixel`, and `ipdisplay`
+getter semantics.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

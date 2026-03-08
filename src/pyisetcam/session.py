@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from .types import BaseISETObject, Camera, Display, ImageProcessor, OpticalImage, Scene, Sensor, SessionContext
 from .utils import param_format
@@ -32,12 +32,26 @@ _SESSION_TYPE_ALIASES = {
     "cameras": "camera",
 }
 
+_IE_NESTED_OBJECT_TYPES = {
+    "optics": ("oi", "optics"),
+    "pixel": ("sensor", "pixel"),
+    "ipdisplay": ("ip", "display"),
+}
+
 
 def _session_type_name(value: str) -> str:
     normalized = param_format(value)
     if normalized not in _SESSION_TYPE_ALIASES:
         raise KeyError(f"Unsupported session object type: {value}")
     return _SESSION_TYPE_ALIASES[normalized]
+
+
+def _ie_object_type(value: str | BaseISETObject | dict[str, Any]) -> str:
+    if isinstance(value, BaseISETObject):
+        return param_format(value.type)
+    if isinstance(value, dict) and "type" in value:
+        return param_format(str(value["type"]))
+    return param_format(str(value))
 
 
 def _object_session_type(obj: BaseISETObject) -> str:
@@ -283,6 +297,18 @@ def session_add_and_select_object(
     return session_add_object(session, obj, select=True)
 
 
+def ie_add_object(session: SessionContext, obj: BaseISETObject) -> int | tuple[int, int, int]:
+    if isinstance(obj, Camera):
+        camera = track_camera_session_state(session, obj, select=True)
+        oi_id = session_object_id(camera.fields["oi"])
+        sensor_id = session_object_id(camera.fields["sensor"])
+        ip_id = session_object_id(camera.fields["ip"])
+        if oi_id is None or sensor_id is None or ip_id is None:
+            raise RuntimeError("Failed to assign session ids to camera pipeline objects.")
+        return oi_id, sensor_id, ip_id
+    return session_add_and_select_object(session, obj)
+
+
 def session_new_object_value(
     session: SessionContext,
     object_type: str,
@@ -307,6 +333,66 @@ def session_get_object_type(obj: BaseISETObject) -> str:
 def session_new_object_name(session: SessionContext, object_type: str) -> str:
     normalized_type = _session_type_name(object_type)
     return f"{normalized_type}{session_count_objects(session, normalized_type) + 1}"
+
+
+def ie_get_object(
+    session: SessionContext,
+    object_type: str | BaseISETObject | dict[str, Any],
+    object_id: int | None = None,
+    *,
+    with_id: bool = False,
+) -> Any:
+    requested_type = _ie_object_type(object_type)
+    nested = _IE_NESTED_OBJECT_TYPES.get(requested_type)
+    if nested is not None:
+        parent_type, field_name = nested
+        if object_id is None:
+            object_id = session_get_selected_id(session, parent_type)
+        parent = session_get_object(session, parent_type, object_id)
+        value = None if parent is None else parent.fields.get(field_name)
+        return (value, object_id) if with_id else value
+
+    obj = session_get_object(session, requested_type, object_id)
+    if object_id is None:
+        object_id = session_get_selected_id(session, requested_type)
+    return (obj, object_id) if with_id else obj
+
+
+def ie_get_selected_object(
+    session: SessionContext,
+    object_type: str | BaseISETObject | dict[str, Any],
+    *,
+    with_object: bool = False,
+) -> int | None | tuple[int | None, Any]:
+    requested_type = _ie_object_type(object_type)
+    object_id = session_get_selected_id(session, requested_type)
+    if not with_object:
+        return object_id
+    return object_id, ie_get_object(session, requested_type, object_id)
+
+
+def ie_select_object(
+    session: SessionContext,
+    object_type: str | BaseISETObject | dict[str, Any],
+    value: int | BaseISETObject | None,
+) -> None:
+    session_set_selected(session, _ie_object_type(object_type), value)
+
+
+def ie_delete_object(
+    session: SessionContext,
+    object_type: str | BaseISETObject | dict[str, Any],
+    object_id: int | None = None,
+) -> int:
+    return session_delete_object(session, _ie_object_type(object_type), object_id)
+
+
+def ie_replace_object(
+    session: SessionContext,
+    obj: BaseISETObject,
+    object_id: int | None = None,
+) -> BaseISETObject:
+    return session_replace_object(session, obj, object_id, select=True)
 
 
 def session_replace_object(
@@ -424,3 +510,10 @@ vcReplaceAndSelectObject = session_replace_and_select_object
 vcReplaceObject = session_replace_object
 vcSetObjects = session_set_objects
 vcSetSelectedObject = session_set_selected
+
+ieAddObject = ie_add_object
+ieDeleteObject = ie_delete_object
+ieGetObject = ie_get_object
+ieGetSelectedObject = ie_get_selected_object
+ieReplaceObject = ie_replace_object
+ieSelectObject = ie_select_object

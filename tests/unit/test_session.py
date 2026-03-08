@@ -5,6 +5,18 @@ from pyisetcam import (
     camera_create,
     camera_set,
     display_create,
+    ieAddObject,
+    ieDeleteObject,
+    ieGetObject,
+    ieGetSelectedObject,
+    ieReplaceObject,
+    ieSelectObject,
+    ie_add_object,
+    ie_delete_object,
+    ie_get_object,
+    ie_get_selected_object,
+    ie_replace_object,
+    ie_select_object,
     ip_create,
     ip_set,
     oi_create,
@@ -260,6 +272,80 @@ def test_session_new_object_name_and_selection_clearing_follow_matlab_style(asse
     assert session_get_selected_id(session, "scene") == 2
 
     vcSetSelectedObject(session, "scene", -1)
+    assert session_get_selected(session, "scene") is None
+
+
+def test_ie_object_wrappers_follow_matlab_style_defaults(asset_store) -> None:
+    session = session_create()
+    scene = scene_create("uniform ee", 8, asset_store=asset_store)
+
+    new_id = ie_add_object(session, scene)
+
+    assert new_id == 1
+    assert ie_get_selected_object(session, "scene") == 1
+    assert ieGetSelectedObject(session, "scene", with_object=True) == (1, scene)
+    assert ie_get_object(session, "scene") is scene
+    assert ieGetObject(session, "scene", 1, with_id=True) == (scene, 1)
+
+    ie_select_object(session, "scene", 0)
+    assert session_get_selected(session, "scene") is None
+
+    ieSelectObject(session, "scene", 1)
+    assert session_get_selected(session, "scene") is scene
+
+
+def test_ie_add_object_camera_returns_pipeline_ids(asset_store) -> None:
+    session = session_create()
+    camera = camera_create(asset_store=asset_store)
+
+    pipeline_ids = ieAddObject(session, camera)
+
+    assert pipeline_ids == (1, 1, 1)
+    assert session_object_id(camera) == 1
+    assert session_get_selected(session, "camera") is camera
+    assert session_get_selected(session, "oi") is camera.fields["oi"]
+    assert session_get_selected(session, "sensor") is camera.fields["sensor"]
+    assert session_get_selected(session, "ip") is camera.fields["ip"]
+
+
+def test_ie_get_object_supports_nested_optics_pixel_and_ipdisplay(asset_store) -> None:
+    session = session_create()
+    oi = oi_create(asset_store=asset_store)
+    sensor = sensor_create(asset_store=asset_store)
+    ip = ip_create(sensor=sensor, asset_store=asset_store)
+
+    session_add_object(session, oi)
+    session_add_object(session, sensor)
+    session_add_object(session, ip)
+
+    assert ie_get_object(session, "optics") is oi.fields["optics"]
+    assert ie_get_object(session, "pixel") is sensor.fields["pixel"]
+    assert ie_get_object(session, "ipdisplay") is ip.fields["display"]
+    assert ieGetSelectedObject(session, "optics", with_object=True) == (1, oi.fields["optics"])
+    assert ieGetObject(session, "pixel", 1, with_id=True) == (sensor.fields["pixel"], 1)
+
+
+def test_ie_delete_and_replace_object_follow_session_slots(asset_store) -> None:
+    session = session_create()
+    first_scene = scene_create("uniform ee", 8, asset_store=asset_store)
+    second_scene = scene_create("uniform d65", 8, asset_store=asset_store)
+
+    ieAddObject(session, first_scene)
+    ieAddObject(session, second_scene)
+
+    replacement = scene_create("checkerboard", 4, 4, asset_store=asset_store)
+    replaced = ie_replace_object(session, replacement, 1)
+
+    assert replaced is replacement
+    assert session_get_object(session, "scene", 1) is replacement
+    assert session_get_selected(session, "scene") is replacement
+
+    remaining = ie_delete_object(session, "scene", 2)
+    assert remaining == 1
+    assert session_count_objects(session, "scene") == 1
+
+    remaining = ieDeleteObject(session, "scene")
+    assert remaining == 0
     assert session_get_selected(session, "scene") is None
 
 

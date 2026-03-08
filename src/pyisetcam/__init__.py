@@ -59,6 +59,12 @@ from .optics import (
 )
 from .parity import run_python_case, run_python_case_with_context
 from .session import (
+    ie_add_object,
+    ie_delete_object,
+    ie_get_object,
+    ie_get_selected_object,
+    ie_replace_object,
+    ie_select_object,
     session_add_and_select_object,
     session_add_object,
     session_count_objects,
@@ -137,8 +143,20 @@ __all__ = [
     "deltaEab",
     "delta_e_ab",
     "iePSNR",
+    "ieAddObject",
+    "ieDeleteObject",
     "ieFieldHeight2Index",
+    "ieGetObject",
+    "ieGetSelectedObject",
+    "ieReplaceObject",
+    "ieSelectObject",
+    "ie_add_object",
+    "ie_delete_object",
     "ie_field_height_to_index",
+    "ie_get_object",
+    "ie_get_selected_object",
+    "ie_replace_object",
+    "ie_select_object",
     "ieXYZ2LAB",
     "ieXYZFromEnergy",
     "ipCompute",
@@ -344,6 +362,13 @@ sensorSetSizeToFOV = sensor_set_size_to_fov
 
 metricsSPD = metrics_spd
 deltaEab = delta_e_ab
+
+ieAddObject = ie_add_object
+ieDeleteObject = ie_delete_object
+ieGetObject = ie_get_object
+ieGetSelectedObject = ie_get_selected_object
+ieReplaceObject = ie_replace_object
+ieSelectObject = ie_select_object
 
 ipCreate = ip_create
 ipCompute = ip_compute
