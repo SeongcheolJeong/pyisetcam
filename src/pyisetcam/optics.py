@@ -1329,6 +1329,13 @@ def _nearest_wave_index(wavelengths_nm: np.ndarray, wavelength_nm: float) -> int
     return int(np.argmin(np.abs(np.asarray(wavelengths_nm, dtype=float).reshape(-1) - float(wavelength_nm))))
 
 
+def _nearest_field_height_index(field_heights_m: np.ndarray, field_height_m: float) -> int:
+    heights = np.asarray(field_heights_m, dtype=float).reshape(-1)
+    if heights.size == 0:
+        raise ValueError("No field-height samples are available.")
+    return int(np.argmin(np.abs(heights - float(field_height_m))))
+
+
 def _raw_raytrace_field_height(table: dict[str, Any], unit: Any | None = None) -> np.ndarray:
     field_height_mm = np.asarray(table.get("field_height_mm", np.empty(0, dtype=float)), dtype=float).reshape(-1)
     return (field_height_mm / 1e3) * _spatial_unit_scale(unit)
@@ -1339,6 +1346,13 @@ def _raw_raytrace_psf_size(oi: OpticalImage) -> tuple[int, int]:
     if psf_function.ndim < 2:
         return (0, 0)
     return int(psf_function.shape[0]), int(psf_function.shape[1])
+
+
+def _raw_raytrace_psf_dimensions(oi: OpticalImage) -> tuple[int, ...]:
+    psf_function = np.asarray(_raw_raytrace_psf_data(oi).get("function", np.empty(0, dtype=float)), dtype=float)
+    if psf_function.ndim == 0:
+        return tuple()
+    return tuple(int(size) for size in psf_function.shape)
 
 
 def _raw_raytrace_psf_spacing(oi: OpticalImage, unit: Any | None = None) -> np.ndarray:
@@ -2127,13 +2141,8 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         if isinstance(psf_struct, dict):
             return np.asarray(psf_struct.get("target_y_mm", np.empty(0, dtype=float)), dtype=float)
         return np.empty(0, dtype=float)
-    if key in {"rtpsfsize"}:
-        psf_struct = oi.fields.get("psf_struct")
-        if isinstance(psf_struct, dict):
-            psf = np.asarray(psf_struct.get("psf", np.empty((0, 0, 0, 0, 0), dtype=float)))
-            if psf.ndim == 5 and psf.shape[3] > 0 and psf.shape[4] > 0:
-                return (int(psf.shape[3]), int(psf.shape[4]))
-        return (0, 0)
+    if key in {"rtpsfsize", "rtpsfdimensions"}:
+        return _raw_raytrace_psf_dimensions(oi)
     if key in {"rtobjectdistance", "rtobjdist", "rtrefobjdist", "rtreferenceobjectdistance"}:
         return float(oi.fields["optics"].get("raytrace", {}).get("object_distance_m", np.inf)) * _spatial_unit_scale(
             args[0] if args else None
@@ -2226,11 +2235,11 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
     raise KeyError(f"Unsupported oiGet parameter: {parameter}")
 
 
-def oi_set(oi: OpticalImage, parameter: str, value: Any) -> OpticalImage:
+def oi_set(oi: OpticalImage, parameter: str, value: Any, *args: Any) -> OpticalImage:
     key = param_format(parameter)
     prefix, remainder = split_prefixed_parameter(parameter, ("optics",))
     if prefix == "optics" and remainder:
-        return oi_set(oi, remainder, value)
+        return oi_set(oi, remainder, value, *args)
     if key == "name":
         oi.name = str(value)
         return oi
@@ -2397,7 +2406,21 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any) -> OpticalImage:
         _clear_precomputed_psf_state(oi)
         return oi
     if key in {"rtpsffunction", "rtpsfdata"}:
-        oi.fields["optics"].setdefault("raytrace", {}).setdefault("psf", {})["function"] = np.asarray(value, dtype=float)
+        psf = oi.fields["optics"].setdefault("raytrace", {}).setdefault("psf", {})
+        if args:
+            if len(args) < 2:
+                raise ValueError("rtpsfdata indexed updates require field height and wavelength.")
+            function = np.asarray(psf.get("function", np.empty(0, dtype=float)), dtype=float).copy()
+            if function.ndim != 4:
+                raise ValueError("rtpsfdata indexed updates require a 4-D raw PSF table.")
+            field_heights_m = _raw_raytrace_field_height(psf)
+            wavelengths_nm = np.asarray(psf.get("wavelength_nm", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+            field_index = _nearest_field_height_index(field_heights_m, float(args[0]))
+            wave_index = _nearest_wave_index(wavelengths_nm, float(args[1]))
+            function[:, :, field_index, wave_index] = np.asarray(value, dtype=float)
+            psf["function"] = function
+        else:
+            psf["function"] = np.asarray(value, dtype=float)
         _clear_precomputed_psf_state(oi)
         return oi
     if key in {"rtpsffieldheight"}:
@@ -2424,7 +2447,17 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any) -> OpticalImage:
         oi.fields["optics"].setdefault("raytrace", {})["geometry"] = _normalize_raytrace_table(value)
         return oi
     if key in {"rtgeomfunction", "rtgeometryfunction", "rtdistortionfunction", "rtgeomdistortion"}:
-        oi.fields["optics"].setdefault("raytrace", {}).setdefault("geometry", {})["function"] = np.asarray(value, dtype=float)
+        geometry = oi.fields["optics"].setdefault("raytrace", {}).setdefault("geometry", {})
+        if args:
+            function = np.asarray(geometry.get("function", np.empty(0, dtype=float)), dtype=float).copy()
+            if function.ndim != 2:
+                raise ValueError("rtgeomfunction indexed updates require a 2-D geometry table.")
+            wavelengths_nm = np.asarray(geometry.get("wavelength_nm", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+            wave_index = _nearest_wave_index(wavelengths_nm, float(args[0]))
+            function[:, wave_index] = np.asarray(value, dtype=float).reshape(-1)
+            geometry["function"] = function
+        else:
+            geometry["function"] = np.asarray(value, dtype=float)
         return oi
     if key in {"rtgeomwavelength", "rtgeometrywavelength"}:
         oi.fields["optics"].setdefault("raytrace", {}).setdefault("geometry", {})["wavelength_nm"] = np.asarray(value, dtype=float).reshape(-1)

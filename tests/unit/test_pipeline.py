@@ -266,6 +266,7 @@ def test_oi_create_raytrace_loads_upstream_optics(asset_store) -> None:
     assert np.allclose(oi_get(oi, "rtpsfsamplespacing"), np.array([2.5e-7, 2.5e-7]))
     assert np.allclose(oi_get(oi, "rtpsfspacing", "um"), np.array([0.25, 0.25]))
     assert np.array_equal(oi_get(oi, "rtpsfwavelength"), np.array([400.0, 475.0, 550.0, 625.0, 700.0]))
+    assert oi_get(oi, "rtpsfsize") == oi_get(oi, "rtpsf")["function"].shape
 
 
 def test_oi_create_raytrace_exposes_raw_psf_support_axes(asset_store) -> None:
@@ -444,6 +445,18 @@ def test_oi_set_raw_raytrace_psf_metadata_updates_optics_and_invalidates_cache(a
     assert np.array_equal(oi_get(oi, "rtpsfwavelength"), np.array([500.0, 600.0]))
 
 
+def test_oi_set_raw_raytrace_psf_data_supports_indexed_updates(asset_store) -> None:
+    oi = oi_create("ray trace", asset_store=asset_store)
+    other = np.asarray(oi_get(oi, "rtpsfdata", 0.0, 625.0), dtype=float)
+    replacement = np.full_like(np.asarray(oi_get(oi, "rtpsfdata", 0.0, 550.0), dtype=float), 7.0)
+
+    oi = oi_set(oi, "rtpsfdata", replacement, 0.0, 550.0)
+
+    assert np.allclose(oi_get(oi, "rtpsfdata", 0.0, 550.0), replacement)
+    assert np.allclose(oi_get(oi, "rtpsfdata", 0.0, 625.0), other)
+    assert oi_get(oi, "rtpsfsize") == oi_get(oi, "rtpsf")["function"].shape
+
+
 def test_oi_set_raw_raytrace_geometry_and_relillum_updates_tables(asset_store) -> None:
     oi = oi_create("ray trace", asset_store=asset_store)
 
@@ -475,6 +488,17 @@ def test_oi_set_raw_raytrace_geometry_and_relillum_updates_tables(asset_store) -
     assert np.allclose(oi_get(oi, "rtrifieldheight", "mm"), np.array([0.0, 0.25]))
     assert np.array_equal(oi_get(oi, "rtriwavelength"), np.array([500.0, 600.0]))
     assert np.allclose(oi_get(oi, "rtrifunction"), rel_illum_function)
+
+
+def test_oi_set_raw_raytrace_geometry_supports_wavelength_index_updates(asset_store) -> None:
+    oi = oi_create("ray trace", asset_store=asset_store)
+    baseline_475 = np.asarray(oi_get(oi, "rtgeomfunction", 475.0, "mm"), dtype=float)
+    replacement_550 = np.linspace(0.0, 2.0, baseline_475.size, dtype=float)
+
+    oi = oi_set(oi, "rtgeomfunction", replacement_550, 550.0)
+
+    assert np.allclose(oi_get(oi, "rtgeomfunction", 550.0, "mm"), replacement_550)
+    assert np.allclose(oi_get(oi, "rtgeomfunction", 475.0, "mm"), baseline_475)
 
 
 def test_oi_set_raw_raytrace_scalar_metadata_roundtrips(asset_store) -> None:
@@ -511,6 +535,7 @@ def test_oi_set_raw_raytrace_scalar_metadata_roundtrips(asset_store) -> None:
 
 def test_oi_get_set_optics_prefixed_raytrace_parameters(asset_store) -> None:
     oi = oi_create("ray trace", asset_store=asset_store)
+    geometry_update = np.linspace(0.0, 1.0, oi_get(oi, "rtgeomfieldheight").size, dtype=float)
 
     assert np.isclose(oi_get(oi, "optics rtfnumber"), oi_get(oi, "rtfnumber"))
     assert np.allclose(oi_get(oi, "optics rtpsfspacing", "um"), oi_get(oi, "rtpsfspacing", "um"))
@@ -519,10 +544,12 @@ def test_oi_get_set_optics_prefixed_raytrace_parameters(asset_store) -> None:
     oi = oi_set(oi, "optics rtrefwave", 530.0)
     oi = oi_set(oi, "optics rtpsfspacing", np.array([0.0004, 0.0006], dtype=float))
     oi = oi_set(oi, "optics rtcomputespacing", 3e-6)
+    oi = oi_set(oi, "optics rtgeomfunction", geometry_update, 400.0)
 
     assert np.isclose(oi_get(oi, "rtrefwave"), 530.0)
     assert np.allclose(oi_get(oi, "rtpsfspacing", "um"), np.array([0.4, 0.6]))
     assert np.isclose(oi_get(oi, "rtcomputespacing", "um"), 3.0)
+    assert np.allclose(oi_get(oi, "rtgeomfunction", 400.0, "mm"), geometry_update)
 
 
 def test_oi_set_whole_raytrace_struct_normalizes_and_invalidates_cache(asset_store) -> None:

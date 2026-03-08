@@ -115,7 +115,10 @@ through `oiGet/oiSet` as well, including object-distance aliases and the
 legacy `rtcomputespacing` field. MATLAB-style `oiGet/oiSet('optics ...')`
 delegation now routes through the same compatibility surface too, and
 whole-struct `optics` / `raytrace` replacement now normalizes MATLAB-style
-payloads while invalidating stale cached PSFs.
+payloads while invalidating stale cached PSFs. Raw ray-trace table fidelity
+now also includes MATLAB-style `rtpsfsize` reporting of the underlying 4-D
+PSF table and indexed `oiSet` updates for `rtpsfdata` and
+`rtgeomfunction`.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
