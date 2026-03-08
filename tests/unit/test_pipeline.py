@@ -207,7 +207,12 @@ def test_oi_create_wvf_matches_upstream_default_wavefront_metadata() -> None:
     assert np.isclose(wavefront["focal_length_m"], 0.003862755099228)
     assert np.isclose(wavefront["f_number"], 4.0)
     assert wavefront["lca_method"] == "none"
+    assert wavefront["compute_sce"] is False
     assert np.array_equal(wavefront["zcoeffs"], np.array([0.0]))
+    assert np.array_equal(wavefront["sce_params"]["wave"], wavefront["wave"])
+    assert np.allclose(wavefront["sce_params"]["rho"], 0.0)
+    assert np.isclose(wavefront["sce_params"]["xo_mm"], 0.0)
+    assert np.isclose(wavefront["sce_params"]["yo_mm"], 0.0)
 
 
 def test_oi_compute_wvf_uses_custom_aperture(asset_store) -> None:
@@ -250,6 +255,29 @@ def test_oi_compute_wvf_zcoeffs_change_wavefront_response(asset_store) -> None:
     dark_custom = float(custom_oi.data["photons"][row, dark_col, band])
 
     assert dark_custom > dark_default
+
+
+def test_oi_compute_wvf_sce_changes_wavefront_response(asset_store) -> None:
+    scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
+    default_oi = oi_compute(oi_create("wvf"), scene, crop=True)
+
+    custom_wvf = wvf_create(
+        wave=scene.fields["wave"],
+        focal_length_m=0.003862755099228,
+        f_number=4.0,
+        calc_pupil_diameter_mm=9.6569e-01,
+        compute_sce=True,
+        sce_params={
+            "wave": scene.fields["wave"],
+            "rho": np.full(scene.fields["wave"].shape, 200.0, dtype=float),
+            "xo_mm": 0.0,
+            "yo_mm": 0.0,
+        },
+    )
+    custom_oi = oi_compute(oi_create("wvf", custom_wvf), scene, crop=True)
+
+    assert custom_oi.data["photons"].shape == default_oi.data["photons"].shape
+    assert not np.allclose(custom_oi.data["photons"], default_oi.data["photons"])
 
 
 def test_sensor_compute_noiseless(asset_store) -> None:

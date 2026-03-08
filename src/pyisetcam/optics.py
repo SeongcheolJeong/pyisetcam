@@ -42,14 +42,17 @@ def wvf_create(
     lca_method: str = "none",
     flip_psf_upside_down: bool = False,
     rotate_psf_90_degs: bool = False,
+    compute_sce: bool = False,
+    sce_params: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     calc_pupil = float(calc_pupil_diameter_mm)
     focal_length = float(focal_length_m)
+    wave_values = np.asarray(DEFAULT_WAVE if wave is None else wave, dtype=float)
     if f_number is None:
         f_number = (focal_length * 1e3) / max(calc_pupil, 1e-12)
     return {
         "type": "wvf",
-        "wave": np.asarray(DEFAULT_WAVE if wave is None else wave, dtype=float),
+        "wave": wave_values,
         "focal_length_m": focal_length,
         "f_number": float(f_number),
         "aberration_scale": float(aberration_scale),
@@ -63,6 +66,8 @@ def wvf_create(
         "lca_method": str(lca_method),
         "flip_psf_upside_down": bool(flip_psf_upside_down),
         "rotate_psf_90_degs": bool(rotate_psf_90_degs),
+        "compute_sce": bool(compute_sce),
+        "sce_params": _normalize_sce_params(wave_values, sce_params),
     }
 
 
@@ -435,6 +440,33 @@ def _optics_transmittance_scale(optics: dict[str, Any], wave: np.ndarray) -> np.
     return np.interp(target_wave, source_wave, source_scale, left=1.0, right=1.0)
 
 
+def _normalize_sce_params(wave: np.ndarray, sce_params: dict[str, Any] | None = None) -> dict[str, Any]:
+    target_wave = np.asarray(wave, dtype=float).reshape(-1)
+    current = {} if sce_params is None else dict(sce_params)
+    wave_nm = np.asarray(current.get("wave", current.get("wavelengths", target_wave)), dtype=float).reshape(-1)
+    rho = np.asarray(current.get("rho", np.zeros(wave_nm.size, dtype=float)), dtype=float).reshape(-1)
+    if rho.size == 1 and wave_nm.size > 1:
+        rho = np.full(wave_nm.size, float(rho[0]), dtype=float)
+    if rho.size != wave_nm.size:
+        raise ValueError("SCE rho must match the SCE wavelength sampling.")
+    return {
+        "wave": wave_nm.copy(),
+        "rho": rho.copy(),
+        "xo_mm": float(current.get("xo_mm", current.get("xo", 0.0))),
+        "yo_mm": float(current.get("yo_mm", current.get("yo", 0.0))),
+    }
+
+
+def _sce_rho_for_wave(sce_params: dict[str, Any], wavelength_nm: float) -> float:
+    wave_nm = np.asarray(sce_params.get("wave", np.array([], dtype=float)), dtype=float).reshape(-1)
+    rho = np.asarray(sce_params.get("rho", np.array([], dtype=float)), dtype=float).reshape(-1)
+    if wave_nm.size == 0 or rho.size == 0:
+        return 0.0
+    if wave_nm.size == 1:
+        return float(rho[0])
+    return float(np.interp(float(wavelength_nm), wave_nm, rho, left=float(rho[0]), right=float(rho[-1])))
+
+
 def _osa_index_to_nm(index: int) -> tuple[int, int]:
     normalized_index = int(index)
     if normalized_index < 0:
@@ -542,6 +574,8 @@ def _wvf_psf_stack(
     lca_method = param_format(wavefront.get("lca_method", "none"))
     if lca_method not in {"none", ""}:
         raise UnsupportedOptionError("oiCompute", f"wvf lca method {wavefront.get('lca_method')}")
+    compute_sce = bool(wavefront.get("compute_sce", False))
+    sce_params = _normalize_sce_params(np.asarray(wave, dtype=float), wavefront.get("sce_params"))
     zcoeffs = np.asarray(wavefront.get("zcoeffs", np.array([0.0], dtype=float)), dtype=float).reshape(-1)
     focal_length_mm = float(optics["focal_length_m"]) * 1e3
     calc_pupil_mm = float(
@@ -567,6 +601,11 @@ def _wvf_psf_stack(
         theta = np.arctan2(ypos, xpos)
         calc_radius_index = norm_radius <= calc_radius
         aperture_mask = _wvf_aperture_mask(n_pixels, calc_radius_index, aperture=aperture)
+        if compute_sce:
+            rho = _sce_rho_for_wave(sce_params, float(wavelength_nm))
+            xo_mm = float(sce_params.get("xo_mm", 0.0))
+            yo_mm = float(sce_params.get("yo_mm", 0.0))
+            aperture_mask = aperture_mask * np.power(10.0, -rho * ((xpos - xo_mm) ** 2 + (ypos - yo_mm) ** 2))
         wavefront_aberrations_um = _zernike_surface_osa(zcoeffs, norm_radius, theta)
         pupil_phase = np.exp(-1j * 2.0 * np.pi * wavefront_aberrations_um / max(float(wavelength_nm) * 1e-3, 1e-12))
         pupil_phase[norm_radius > calc_radius] = 0.0
