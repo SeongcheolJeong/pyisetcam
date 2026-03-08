@@ -1470,6 +1470,20 @@ def test_rt_import_data_uses_existing_raytrace_name_as_top_level_fallback(tmp_pa
     assert imported_optics["raytrace"]["name"] == "Existing RT Name"
 
 
+def test_rt_import_data_preserves_existing_blocks_per_field_height(tmp_path) -> None:
+    params_file = _write_mock_zemax_bundle(tmp_path)
+    existing = {
+        "rayTrace": {
+            "blocksPerFieldHeight": 7,
+        },
+    }
+
+    imported_optics, optics_file = rt_import_data(existing, p_file_full=params_file)
+
+    assert optics_file is None
+    assert imported_optics["raytrace"]["blocks_per_field_height"] == 7
+
+
 def test_oi_create_raytrace_accepts_isetparams_file(tmp_path, asset_store) -> None:
     params_file = _write_mock_zemax_bundle(tmp_path)
 

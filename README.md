@@ -185,7 +185,9 @@ fields like `computeMethod`, `offaxis`, and `aberrationScale` through the
 import path. When importing into an existing optics object, a distinct
 existing ray-trace name is now preserved independently from the top-level
 optics name, and a raw `rayTrace.name` now seeds the top-level optics
-name when no explicit top-level name is present.
+name when no explicit top-level name is present. Existing
+`blocks_per_field_height` settings are now preserved across Zemax
+imports too.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

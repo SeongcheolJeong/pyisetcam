@@ -742,6 +742,10 @@ def rt_import_data(
     current_psf_spacing_m = current_computation.get("psf_spacing_m", current_computation.get("psfSpacing"))
     current_name = current.get("name", current_raytrace.get("name", base_name))
     current_raytrace_name = current_raytrace.get("name", current.get("name", base_name))
+    current_blocks_per_field_height = current_raytrace.get(
+        "blocks_per_field_height",
+        current_raytrace.get("blocksPerFieldHeight"),
+    )
     current_compute_method = current.get("compute_method", current.get("computeMethod", ""))
     current_aberration_scale = current.get("aberration_scale", current.get("aberrationScale"))
     current_offaxis_method = current.get("offaxis_method", current.get("offaxisMethod", current.get("offaxis")))
@@ -807,6 +811,8 @@ def rt_import_data(
         normalized.get("aberration_scale", 0.0) if current_aberration_scale is None else current_aberration_scale
     )
     normalized["offaxis_method"] = str(current_offaxis_method or normalized.get("offaxis_method", "skip"))
+    if current_blocks_per_field_height is not None:
+        normalized["raytrace"]["blocks_per_field_height"] = int(current_blocks_per_field_height)
     if "transmittance" in current:
         normalized["transmittance"] = dict(current["transmittance"])
     return normalized, None
