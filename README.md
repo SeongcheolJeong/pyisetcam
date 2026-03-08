@@ -133,11 +133,13 @@ also includes `rt_sample_heights` / `rtSampleHeights`, `rt_psf_grid` /
 `rtPSFGrid`, and `rt_angle_lut` / `rtAngleLUT`. The staged ray-trace
 pipeline is now partially exposed as well through `rt_geometry` /
 `rtGeometry`, `rt_precompute_psf` / `rtPrecomputePSF`, and
-`rt_precompute_psf_apply` / `rtPrecomputePSFApply`. The MATLAB-style
-top-level wrapper `optics_ray_trace` / `opticsRayTrace` is now exposed as
-the staged end-to-end ray-trace entry point as well, including cached OI
-illuminance bookkeeping. The supporting OI helpers `oi_calculate_illuminance`
-/ `oiCalculateIlluminance` and `oi_diffuser` / `oiDiffuser` are now public
+`rt_precompute_psf_apply` / `rtPrecomputePSFApply`. The legacy
+`rt_psf_apply` / `rtPSFApply` name is now exposed too and routes through
+that validated cached-PSF path. The MATLAB-style top-level wrapper
+`optics_ray_trace` / `opticsRayTrace` is now exposed as the staged
+end-to-end ray-trace entry point as well, including cached OI illuminance
+bookkeeping. The supporting OI helpers `oi_calculate_illuminance` /
+`oiCalculateIlluminance` and `oi_diffuser` / `oiDiffuser` are now public
 too, and `opticsRayTrace` routes its blur/illuminance path through them.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported

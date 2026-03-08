@@ -1398,6 +1398,13 @@ def rt_precompute_psf_apply(
     return computed
 
 
+def rt_psf_apply(
+    oi: OpticalImage,
+    angle_step_deg: float | None = None,
+) -> OpticalImage:
+    return rt_precompute_psf_apply(oi, angle_step_deg=angle_step_deg)
+
+
 def _oi_illuminance(oi: OpticalImage) -> np.ndarray:
     photons = np.asarray(oi.data.get("photons", np.empty((0, 0, 0), dtype=float)), dtype=float)
     wave = np.asarray(oi.fields.get("wave", np.empty(0, dtype=float)), dtype=float).reshape(-1)

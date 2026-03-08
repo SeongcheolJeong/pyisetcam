@@ -36,6 +36,7 @@ from .optics import (
     rt_angle_lut,
     rt_di_interp,
     rt_geometry,
+    rt_psf_apply,
     rt_psf_grid,
     rt_psf_interp,
     rt_precompute_psf,
@@ -135,12 +136,14 @@ __all__ = [
     "rtGeometry",
     "rtRIInterp",
     "rtPSFGrid",
+    "rtPSFApply",
     "rtPrecomputePSF",
     "rtPrecomputePSFApply",
     "rt_di_interp",
     "rt_angle_lut",
     "rt_geometry",
     "rt_psf_grid",
+    "rt_psf_apply",
     "rtPSFInterp",
     "rt_psf_interp",
     "rt_precompute_psf",
@@ -209,6 +212,7 @@ opticsRayTrace = optics_ray_trace
 rtAngleLUT = rt_angle_lut
 rtDIInterp = rt_di_interp
 rtGeometry = rt_geometry
+rtPSFApply = rt_psf_apply
 rtPSFGrid = rt_psf_grid
 rtPSFInterp = rt_psf_interp
 rtPrecomputePSF = rt_precompute_psf
