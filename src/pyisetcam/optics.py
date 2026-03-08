@@ -179,6 +179,114 @@ def _normalize_raytrace_optics(raw: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _raytrace_struct_uses_normalized_keys(raytrace: dict[str, Any]) -> bool:
+    if any(
+        key in raytrace
+        for key in (
+            "lens_file",
+            "reference_wavelength_nm",
+            "object_distance_m",
+            "effective_focal_length_m",
+            "effective_f_number",
+            "max_fov_deg",
+            "relative_illumination",
+        )
+    ):
+        return True
+    psf = raytrace.get("psf")
+    if isinstance(psf, dict) and any(key in psf for key in ("field_height_mm", "wavelength_nm", "sample_spacing_mm")):
+        return True
+    geometry = raytrace.get("geometry")
+    if isinstance(geometry, dict) and any(key in geometry for key in ("field_height_mm", "wavelength_nm")):
+        return True
+    relative_illumination = raytrace.get("relative_illumination")
+    if isinstance(relative_illumination, dict) and any(
+        key in relative_illumination for key in ("field_height_mm", "wavelength_nm")
+    ):
+        return True
+    computation = raytrace.get("computation")
+    if isinstance(computation, dict) and "psf_spacing_m" in computation:
+        return True
+    return False
+
+
+def _normalize_optics_update(value: Any, current_optics: dict[str, Any]) -> dict[str, Any]:
+    raw = dict(value)
+    model = param_format(raw.get("model", current_optics.get("model", "")))
+    is_raytrace = (
+        model == "raytrace"
+        or "rayTrace" in raw
+        or ("raytrace" in raw and isinstance(raw["raytrace"], dict))
+    )
+    if not is_raytrace:
+        return raw
+
+    source = dict(raw)
+    source.setdefault("model", "raytrace")
+    source.setdefault("name", current_optics.get("name", current_optics.get("raytrace", {}).get("name", "raytrace")))
+    if "fNumber" not in source and "f_number" not in source:
+        source["fNumber"] = current_optics.get("f_number", 4.0)
+    if (
+        "focalLength" not in source
+        and "nominal_focal_length_m" not in source
+        and "focal_length_m" not in source
+    ):
+        source["focalLength"] = current_optics.get(
+            "nominal_focal_length_m",
+            current_optics.get("focal_length_m", DEFAULT_FOCAL_LENGTH_M),
+        )
+    if "transmittance" not in source and "transmittance" in current_optics:
+        source["transmittance"] = dict(current_optics["transmittance"])
+
+    nested_raytrace = source.get("raytrace")
+    if isinstance(nested_raytrace, dict) and not _raytrace_struct_uses_normalized_keys(nested_raytrace):
+        source["rayTrace"] = dict(nested_raytrace)
+        source.pop("raytrace", None)
+
+    normalized = _normalize_raytrace_optics(source)
+    normalized["compute_method"] = str(
+        raw.get("compute_method", raw.get("computeMethod", current_optics.get("compute_method", normalized.get("compute_method", ""))))
+    )
+    normalized["aberration_scale"] = float(
+        raw.get(
+            "aberration_scale",
+            raw.get("aberrationScale", current_optics.get("aberration_scale", normalized.get("aberration_scale", 0.0))),
+        )
+    )
+    normalized["offaxis_method"] = str(
+        raw.get(
+            "offaxis_method",
+            raw.get("offaxisMethod", current_optics.get("offaxis_method", normalized.get("offaxis_method", "skip"))),
+        )
+    )
+    return normalized
+
+
+def _normalize_raytrace_update(value: Any, current_optics: dict[str, Any]) -> dict[str, Any]:
+    raw = dict(value)
+    if "raytrace" in raw or "rayTrace" in raw or "model" in raw:
+        return _normalize_optics_update(raw, current_optics)
+
+    source: dict[str, Any] = {
+        "model": "raytrace",
+        "name": current_optics.get("name", current_optics.get("raytrace", {}).get("name", "raytrace")),
+        "fNumber": current_optics.get("f_number", 4.0),
+        "focalLength": current_optics.get(
+            "nominal_focal_length_m",
+            current_optics.get("focal_length_m", DEFAULT_FOCAL_LENGTH_M),
+        ),
+        "transmittance": dict(current_optics.get("transmittance", {})),
+        "compute_method": current_optics.get("compute_method", ""),
+        "aberration_scale": current_optics.get("aberration_scale", 0.0),
+        "offaxis_method": current_optics.get("offaxis_method", "skip"),
+    }
+    if _raytrace_struct_uses_normalized_keys(raw):
+        source["raytrace"] = raw
+    else:
+        source["rayTrace"] = raw
+    return _normalize_optics_update(source, current_optics)
+
+
 def _load_raytrace_optics(source: Any, *, asset_store: AssetStore) -> dict[str, Any]:
     if source is None:
         raw = asset_store.load_mat("data/optics/rtZemaxExample.mat")["optics"]
@@ -1186,6 +1294,14 @@ def _sync_psf_metadata_fields(oi: OpticalImage) -> None:
         oi.fields["psf_optics_name"] = str(optics_name)
 
 
+def _clear_precomputed_psf_state(oi: OpticalImage) -> None:
+    oi.fields["psf_struct"] = None
+    oi.fields["psf_sample_angles_deg"] = None
+    oi.fields["psf_image_heights_m"] = None
+    oi.fields["psf_wavelength_nm"] = None
+    oi.fields["psf_optics_name"] = None
+
+
 def _spatial_unit_scale(unit: Any | None) -> float:
     if unit is None:
         return 1.0
@@ -2144,8 +2260,9 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any) -> OpticalImage:
         _sync_oi_geometry_fields(oi)
         return oi
     if key == "optics":
-        oi.fields["optics"] = dict(value)
+        oi.fields["optics"] = _normalize_optics_update(value, dict(oi.fields.get("optics", {})))
         oi.fields["compute_method"] = oi.fields["optics"].get("compute_method", oi.fields.get("compute_method"))
+        _clear_precomputed_psf_state(oi)
         _sync_oi_geometry_fields(oi)
         return oi
     if key in {"focallength", "opticsfocallength"}:
@@ -2273,23 +2390,23 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any) -> OpticalImage:
         return oi
     if key in {"rtpsfwavelength"}:
         oi.fields["optics"].setdefault("raytrace", {}).setdefault("psf", {})["wavelength_nm"] = np.asarray(value, dtype=float).reshape(-1)
-        oi.fields["psf_struct"] = None
+        _clear_precomputed_psf_state(oi)
         return oi
     if key in {"rtpsf"}:
         oi.fields["optics"].setdefault("raytrace", {})["psf"] = _normalize_raytrace_psf(value)
-        oi.fields["psf_struct"] = None
+        _clear_precomputed_psf_state(oi)
         return oi
     if key in {"rtpsffunction", "rtpsfdata"}:
         oi.fields["optics"].setdefault("raytrace", {}).setdefault("psf", {})["function"] = np.asarray(value, dtype=float)
-        oi.fields["psf_struct"] = None
+        _clear_precomputed_psf_state(oi)
         return oi
     if key in {"rtpsffieldheight"}:
         oi.fields["optics"].setdefault("raytrace", {}).setdefault("psf", {})["field_height_mm"] = np.asarray(value, dtype=float).reshape(-1)
-        oi.fields["psf_struct"] = None
+        _clear_precomputed_psf_state(oi)
         return oi
     if key in {"rtpsfsamplespacing", "rtpsfspacing"}:
         oi.fields["optics"].setdefault("raytrace", {}).setdefault("psf", {})["sample_spacing_mm"] = np.asarray(value, dtype=float).reshape(-1)
-        oi.fields["psf_struct"] = None
+        _clear_precomputed_psf_state(oi)
         return oi
     if key in {"rtrelillum"}:
         oi.fields["optics"].setdefault("raytrace", {})["relative_illumination"] = _normalize_raytrace_table(value)
@@ -2316,7 +2433,9 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any) -> OpticalImage:
         oi.fields["optics"].setdefault("raytrace", {}).setdefault("geometry", {})["field_height_mm"] = np.asarray(value, dtype=float).reshape(-1)
         return oi
     if key in {"opticsraytrace", "raytrace", "rt"}:
-        oi.fields["optics"]["raytrace"] = dict(value)
-        oi.fields["optics"]["model"] = "raytrace"
+        oi.fields["optics"] = _normalize_raytrace_update(value, dict(oi.fields.get("optics", {})))
+        oi.fields["compute_method"] = oi.fields["optics"].get("compute_method", oi.fields.get("compute_method"))
+        _clear_precomputed_psf_state(oi)
+        _sync_oi_geometry_fields(oi)
         return oi
     raise KeyError(f"Unsupported oiSet parameter: {parameter}")

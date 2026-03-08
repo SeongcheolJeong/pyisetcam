@@ -437,6 +437,8 @@ def test_oi_set_raw_raytrace_psf_metadata_updates_optics_and_invalidates_cache(a
     oi = oi_set(oi, "rtpsfwavelength", np.array([500.0, 600.0], dtype=float))
 
     assert oi_get(oi, "psf struct") is None
+    assert oi_get(oi, "psf image heights").size == 0
+    assert oi_get(oi, "psf wavelength").size == 0
     assert np.allclose(oi_get(oi, "rtpsfspacing", "um"), np.array([0.5, 0.75]))
     assert np.allclose(oi_get(oi, "rtpsffieldheight", "mm"), np.array([0.0, 0.5, 1.0]))
     assert np.array_equal(oi_get(oi, "rtpsfwavelength"), np.array([500.0, 600.0]))
@@ -521,6 +523,96 @@ def test_oi_get_set_optics_prefixed_raytrace_parameters(asset_store) -> None:
     assert np.isclose(oi_get(oi, "rtrefwave"), 530.0)
     assert np.allclose(oi_get(oi, "rtpsfspacing", "um"), np.array([0.4, 0.6]))
     assert np.isclose(oi_get(oi, "rtcomputespacing", "um"), 3.0)
+
+
+def test_oi_set_whole_raytrace_struct_normalizes_and_invalidates_cache(asset_store) -> None:
+    scene = scene_create("uniform ee", 32, np.array([550.0], dtype=float), asset_store=asset_store)
+    oi = oi_compute(oi_create("ray trace", asset_store=asset_store), scene, crop=True)
+
+    raytrace = {
+        "name": "Whole RT",
+        "program": "Code V",
+        "lensFile": "whole_rt.seq",
+        "effectiveFNumber": 2.8,
+        "fNumber": 3.1,
+        "referenceWavelength": 600.0,
+        "objectDistance": 1500.0,
+        "mag": -0.2,
+        "effectiveFocalLength": 5.0,
+        "maxfov": 12.0,
+        "geometry": {
+            "fieldHeight": np.array([0.0, 0.5], dtype=float),
+            "wavelength": np.array([500.0, 600.0], dtype=float),
+            "function": np.array([[0.0, 1.0], [2.0, 3.0]], dtype=float),
+        },
+        "relIllum": {
+            "fieldHeight": np.array([0.0, 0.25], dtype=float),
+            "wavelength": np.array([500.0, 600.0], dtype=float),
+            "function": np.array([[1.0, 0.9], [0.8, 0.7]], dtype=float),
+        },
+        "psf": {
+            "fieldHeight": np.array([0.0, 0.5], dtype=float),
+            "wavelength": np.array([500.0, 600.0], dtype=float),
+            "sampleSpacing": np.array([0.0004, 0.0006], dtype=float),
+            "function": np.ones((3, 3, 2, 2), dtype=float),
+        },
+        "computation": {"psfSpacing": 4e-6},
+    }
+
+    oi = oi_set(oi, "raytrace", raytrace)
+
+    assert oi_get(oi, "psf struct") is None
+    assert oi_get(oi, "psf image heights").size == 0
+    assert oi_get(oi, "rtname") == "Whole RT"
+    assert oi_get(oi, "rtopticsprogram") == "Code V"
+    assert oi_get(oi, "rtlensfile") == "whole_rt.seq"
+    assert np.isclose(oi_get(oi, "rteffectivefnumber"), 2.8)
+    assert np.isclose(oi_get(oi, "rtfnumber"), 3.1)
+    assert np.isclose(oi_get(oi, "rtrefwave"), 600.0)
+    assert np.isclose(oi_get(oi, "rtobjdist"), 1.5)
+    assert np.isclose(oi_get(oi, "rtefl"), 0.005)
+    assert np.allclose(oi_get(oi, "rtrifieldheight", "mm"), np.array([0.0, 0.25]))
+    assert np.allclose(oi_get(oi, "rtpsfspacing", "um"), np.array([0.4, 0.6]))
+    assert np.isclose(oi_get(oi, "rtcomputespacing", "um"), 4.0)
+
+
+def test_oi_set_whole_optics_struct_normalizes_raytrace_payload(asset_store) -> None:
+    scene = scene_create("uniform ee", 32, np.array([550.0], dtype=float), asset_store=asset_store)
+    oi = oi_compute(oi_create("ray trace", asset_store=asset_store), scene, crop=True)
+
+    optics = {
+        "name": "Whole Optics",
+        "fNumber": 2.9,
+        "focalLength": 0.006,
+        "transmittance": {
+            "wave": np.array([500.0, 600.0], dtype=float),
+            "scale": np.array([0.8, 0.9], dtype=float),
+        },
+        "rayTrace": {
+            "name": "Whole Optics RT",
+            "fNumber": 2.9,
+            "effectiveFNumber": 2.6,
+            "effectiveFocalLength": 6.0,
+            "referenceWavelength": 550.0,
+            "psf": {
+                "fieldHeight": np.array([0.0], dtype=float),
+                "wavelength": np.array([550.0], dtype=float),
+                "sampleSpacing": np.array([0.0007, 0.0007], dtype=float),
+                "function": np.ones((3, 3, 1, 1), dtype=float),
+            },
+        },
+    }
+
+    oi = oi_set(oi, "optics", optics)
+
+    assert oi_get(oi, "model") == "raytrace"
+    assert oi_get(oi, "psf struct") is None
+    assert oi_get(oi, "raytrace optics name") == "Whole Optics RT"
+    assert np.isclose(oi_get(oi, "fnumber"), 2.9)
+    assert np.isclose(oi_get(oi, "focal length"), 0.006)
+    assert np.array_equal(oi_get(oi, "transmittance wave"), np.array([500.0, 600.0]))
+    assert np.allclose(oi_get(oi, "transmittance"), np.array([0.85]))
+    assert np.allclose(oi_get(oi, "rtpsfspacing", "um"), np.array([0.7, 0.7]))
 
 
 def test_oi_compute_raytrace_rotates_psf_with_field_angle(asset_store) -> None:

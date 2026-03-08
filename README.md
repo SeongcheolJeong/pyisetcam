@@ -113,7 +113,9 @@ ray-trace metadata, unit-aware field-height getters, and MATLAB-style raw
 table/function accessors. Raw scalar ray-trace metadata now round-trips
 through `oiGet/oiSet` as well, including object-distance aliases and the
 legacy `rtcomputespacing` field. MATLAB-style `oiGet/oiSet('optics ...')`
-delegation now routes through the same compatibility surface too.
+delegation now routes through the same compatibility surface too, and
+whole-struct `optics` / `raytrace` replacement now normalizes MATLAB-style
+payloads while invalidating stale cached PSFs.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
