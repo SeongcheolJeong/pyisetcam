@@ -482,6 +482,16 @@ def _read_isetparams(path: str | Path) -> dict[str, Any]:
     return params
 
 
+def _raytrace_lens_basename(lens_file: str | Path) -> str:
+    text = str(lens_file).strip()
+    if not text:
+        return ""
+    normalized = text.replace("\\", "/").rstrip("/")
+    base = normalized.rsplit("/", 1)[-1]
+    stem = Path(base).stem
+    return stem or base
+
+
 def rt_file_names(
     lens_file: str | Path,
     wave: np.ndarray | list[float] | tuple[float, ...],
@@ -489,7 +499,7 @@ def rt_file_names(
     *,
     directory: str | Path | None = None,
 ) -> tuple[str, str, np.ndarray, str]:
-    base = Path(str(lens_file)).stem or str(lens_file)
+    base = _raytrace_lens_basename(lens_file)
     prefix = Path(directory) if directory is not None else None
 
     def _resolve(name: str) -> str:
@@ -567,7 +577,7 @@ def rt_import_data(
     n_height = int(round(float(params["imgHeightNum"])))
     img_height = np.linspace(0.0, float(params["imgHeightMax"]), n_height, dtype=float)
     directory = Path(p_file_full).resolve().parent
-    base_name = str(params.get("baseLensFileName", Path(str(params["lensFile"])).stem))
+    base_name = _raytrace_lens_basename(params.get("baseLensFileName", params["lensFile"]))
     di_name, ri_name, psf_name_list, _ = rt_file_names(base_name, wave, img_height, directory=directory)
 
     geometry_values = np.fromstring(Path(di_name).read_text(encoding="latin1", errors="ignore"), sep=" ", dtype=float)

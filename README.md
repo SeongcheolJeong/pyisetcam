@@ -160,7 +160,8 @@ The initial Zemax text-import surface is now ported too through
 `rtImportData` path for standard ISETPARAMS + DI/RI/PSF bundles. That
 bundle format is now accepted directly by `oi_create('ray trace', ...)`
 too, either as the `ISETPARAMS.txt` file itself or as a containing
-directory.
+directory, and the importer now normalizes Windows-style `lensFile` /
+`baseLensFileName` paths the way the upstream MATLAB path does.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

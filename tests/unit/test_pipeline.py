@@ -55,17 +55,22 @@ from pyisetcam import (
 )
 
 
-def _write_mock_zemax_bundle(tmp_path):
+def _write_mock_zemax_bundle(
+    tmp_path,
+    *,
+    lens_file: str = "CookeLens.ZMX",
+    base_lens_file_name: str = "CookeLens",
+):
     params_file = tmp_path / "ISETPARAMS.txt"
     params_file.write_text(
-        "lensFile='CookeLens.ZMX';\n"
+        f"lensFile='{lens_file}';\n"
         "psfSize=2;\n"
         "wave=500:100:600;\n"
         "imgHeightNum=2;\n"
         "imgHeightMax=1.0;\n"
         "objDist=250.0;\n"
         "mag=-0.1;\n"
-        "baseLensFileName='CookeLens';\n"
+        f"baseLensFileName='{base_lens_file_name}';\n"
         "refWave=550.0;\n"
         "fov=15.0;\n"
         "efl=6.0;\n"
@@ -1174,6 +1179,20 @@ def test_rt_file_names_matches_zemax_naming(tmp_path) -> None:
     assert str(psf_name_list[1, 1]).endswith("CookeLens_2D_PSF_Fld2_Wave2.dat")
 
 
+def test_rt_file_names_normalizes_windows_style_lens_paths(tmp_path) -> None:
+    di_name, ri_name, psf_name_list, cra_name = rt_file_names(
+        r"C:\PROGRAM FILES\ZEMAX\LENSES\CookeLens.ZMX",
+        np.array([500.0], dtype=float),
+        np.array([0.0, 1.0], dtype=float),
+        directory=tmp_path,
+    )
+
+    assert di_name.endswith("CookeLens_DI_.dat")
+    assert ri_name.endswith("CookeLens_RI_.dat")
+    assert cra_name.endswith("CookeLens_CRA_.dat")
+    assert str(psf_name_list[1, 0]).endswith("CookeLens_2D_PSF_Fld2_Wave1.dat")
+
+
 def test_zemax_read_header_and_load_parse_text_output(tmp_path) -> None:
     psf_file = tmp_path / "Test_2D_PSF_Fld1_Wave1.dat"
     psf_file.write_text(
@@ -1208,6 +1227,21 @@ def test_rt_import_data_builds_usable_raytrace_optics(tmp_path, asset_store) -> 
     assert imported_optics["raytrace"]["psf"]["function"].shape == (2, 2, 2, 2)
     assert np.allclose(imported_optics["raytrace"]["psf"]["sample_spacing_mm"], np.array([0.0005, 0.0005]))
     assert stage.data["photons"].shape == scene.data["photons"].shape
+
+
+def test_rt_import_data_normalizes_windows_style_base_lens_paths(tmp_path) -> None:
+    params_file = _write_mock_zemax_bundle(
+        tmp_path,
+        lens_file=r"C:\PROGRAM FILES\ZEMAX\LENSES\CookeLens.ZMX",
+        base_lens_file_name=r"C:\PROGRAM FILES\ZEMAX\LENSES\CookeLens",
+    )
+
+    imported_optics, optics_file = rt_import_data(p_file_full=params_file)
+
+    assert optics_file is None
+    assert imported_optics["raytrace"]["lens_file"] == r"C:\PROGRAM FILES\ZEMAX\LENSES\CookeLens.ZMX"
+    assert imported_optics["raytrace"]["geometry"]["function"].shape == (2, 2)
+    assert imported_optics["raytrace"]["psf"]["function"].shape == (2, 2, 2, 2)
 
 
 def test_oi_create_raytrace_accepts_isetparams_file(tmp_path, asset_store) -> None:
