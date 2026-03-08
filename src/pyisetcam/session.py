@@ -182,9 +182,70 @@ def session_list_objects(
     return dict(session.objects.get(normalized_type, {}))
 
 
+def session_count_objects(session: SessionContext, object_type: str) -> int:
+    return len(session_list_objects(session, object_type))
+
+
+def session_get_object_names(
+    session: SessionContext,
+    object_type: str = "scene",
+    make_unique: bool = False,
+) -> list[str]:
+    objects = session_list_objects(session, object_type)
+    names = [str(obj.name) for _, obj in sorted(objects.items())]
+    if make_unique:
+        return [f"{index + 1}-{name}" for index, name in enumerate(names)]
+    return names
+
+
+def session_replace_object(
+    session: SessionContext,
+    obj: _T,
+    object_id: int | None = None,
+    *,
+    select: bool = True,
+) -> _T:
+    object_type = _object_session_type(obj)
+    bucket = session.objects.setdefault(object_type, {})
+    if object_id is None:
+        existing_id = session_object_id(obj)
+        if existing_id is not None and existing_id in bucket:
+            object_id = existing_id
+        else:
+            selected_id = session_get_selected_id(session, object_type)
+            object_id = 1 if selected_id is None else selected_id
+    object_id = int(object_id)
+
+    if isinstance(obj, Camera):
+        obj = track_camera_session_state(session, obj, select=select)
+    elif isinstance(obj, ImageProcessor):
+        obj = track_ip_session_state(session, obj, select=select)
+
+    bucket[object_id] = obj
+    obj.metadata["session_type"] = object_type
+    obj.metadata["session_id"] = object_id
+    session.next_ids[object_type] = max(int(session.next_ids.get(object_type, 1)), object_id + 1)
+    if select:
+        session.selected[object_type] = object_id
+    return obj
+
+
+def session_replace_and_select_object(
+    session: SessionContext,
+    obj: _T,
+    object_id: int | None = None,
+) -> _T:
+    return session_replace_object(session, obj, object_id, select=True)
+
+
 # MATLAB-style aliases.
 vcAddObject = session_add_object
+vcCountObjects = session_count_objects
+vcGetObjectNames = session_get_object_names
 vcGetObject = session_get_object
+vcGetObjects = session_list_objects
 vcGetSelectedObject = session_get_selected
 vcGetSelectedObjectID = session_get_selected_id
+vcReplaceAndSelectObject = session_replace_and_select_object
+vcReplaceObject = session_replace_object
 vcSetSelectedObject = session_set_selected

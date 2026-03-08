@@ -216,7 +216,10 @@ MATLAB-style helpers for registering and retrieving the current
 scene/OI/sensor/IP/camera objects without changing the explicit-object
 default workflow. Session-aware `camera_set(...)` and `ip_set(...)`
 replacement flows now keep that registry coherent when camera, sensor,
-OI, IP, or display objects are swapped out after creation.
+OI, IP, or display objects are swapped out after creation, and the
+session layer now also exposes MATLAB-style generic replacement and
+listing helpers such as `vcReplaceObject`, `vcReplaceAndSelectObject`,
+`vcGetObjects`, `vcGetObjectNames`, and `vcCountObjects`.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

@@ -60,12 +60,16 @@ from .optics import (
 from .parity import run_python_case, run_python_case_with_context
 from .session import (
     session_add_object,
+    session_count_objects,
     session_create,
     session_get_object,
+    session_get_object_names,
     session_get_selected,
     session_get_selected_id,
     session_list_objects,
     session_object_id,
+    session_replace_and_select_object,
+    session_replace_object,
     session_set_selected,
 )
 from .scene import (
@@ -157,12 +161,16 @@ __all__ = [
     "peak_signal_to_noise_ratio",
     "root_mean_squared_error",
     "session_add_object",
+    "session_count_objects",
     "session_create",
     "session_get_object",
+    "session_get_object_names",
     "session_get_selected",
     "session_get_selected_id",
     "session_list_objects",
     "session_object_id",
+    "session_replace_and_select_object",
+    "session_replace_object",
     "session_set_selected",
     "rtDIInterp",
     "rtAngleLUT",
@@ -233,9 +241,14 @@ __all__ = [
     "sensor_set",
     "sensor_set_size_to_fov",
     "vcAddObject",
+    "vcCountObjects",
     "vcGetObject",
+    "vcGetObjectNames",
+    "vcGetObjects",
     "vcGetSelectedObject",
     "vcGetSelectedObjectID",
+    "vcReplaceAndSelectObject",
+    "vcReplaceObject",
     "vcSetSelectedObject",
     "wvf_create",
     "xyz_from_energy",
@@ -313,7 +326,12 @@ cameraGet = camera_get
 cameraSet = camera_set
 
 vcAddObject = session_add_object
+vcCountObjects = session_count_objects
 vcGetObject = session_get_object
+vcGetObjectNames = session_get_object_names
+vcGetObjects = session_list_objects
 vcGetSelectedObject = session_get_selected
 vcGetSelectedObjectID = session_get_selected_id
+vcReplaceAndSelectObject = session_replace_and_select_object
+vcReplaceObject = session_replace_object
 vcSetSelectedObject = session_set_selected

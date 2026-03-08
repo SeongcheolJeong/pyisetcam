@@ -11,11 +11,15 @@ from pyisetcam import (
     scene_create,
     sensor_create,
     session_add_object,
+    session_count_objects,
     session_create,
     session_get_object,
+    session_get_object_names,
     session_get_selected,
     session_get_selected_id,
     session_object_id,
+    session_replace_and_select_object,
+    session_replace_object,
     session_set_selected,
 )
 
@@ -114,3 +118,36 @@ def test_camera_set_tracks_replaced_session_subobjects(asset_store) -> None:
     assert camera.fields["oi"] is replacement_oi
     assert camera.fields["sensor"] is replacement_sensor
     assert camera.fields["ip"] is replacement_ip
+
+
+def test_session_replace_object_preserves_slot_and_updates_names(asset_store) -> None:
+    session = session_create()
+    first_scene = scene_create("uniform ee", 8, asset_store=asset_store, session=session)
+    second_scene = scene_create("uniform d65", 8, asset_store=asset_store, session=session)
+    first_id = session_object_id(first_scene)
+
+    replacement = scene_create("checkerboard", 4, 4, asset_store=asset_store)
+    replaced = session_replace_object(session, replacement, first_id, select=False)
+
+    assert session_object_id(replaced) == first_id
+    assert session_get_object(session, "scene", first_id) is replaced
+    assert session_get_selected(session, "scene") is second_scene
+    assert session_count_objects(session, "scene") == 2
+    assert session_get_object_names(session, "scene") == [replaced.name, second_scene.name]
+    assert session_get_object_names(session, "scene", make_unique=True) == [f"1-{replaced.name}", f"2-{second_scene.name}"]
+
+
+def test_session_replace_and_select_camera_tracks_subobjects(asset_store) -> None:
+    session = session_create()
+    original = camera_create(asset_store=asset_store, session=session)
+    replacement = camera_create("mt9v024", "rgbw", asset_store=asset_store)
+    slot_id = session_object_id(original)
+
+    replaced = session_replace_and_select_object(session, replacement, slot_id)
+
+    assert session_object_id(replaced) == slot_id
+    assert session_get_selected(session, "camera") is replaced
+    assert session_get_selected(session, "oi") is replaced.fields["oi"]
+    assert session_get_selected(session, "sensor") is replaced.fields["sensor"]
+    assert session_get_selected(session, "ip") is replaced.fields["ip"]
+    assert session_get_selected(session, "display") is replaced.fields["ip"].fields["display"]
