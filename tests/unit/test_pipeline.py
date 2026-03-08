@@ -10,6 +10,7 @@ from pyisetcam import (
     camera_create,
     camera_get,
     camera_set,
+    ie_field_height_to_index,
     ip_get,
     ip_set,
     ip_compute,
@@ -64,6 +65,15 @@ def test_scene_get_depth_map_defaults_to_scene_distance(asset_store) -> None:
     assert depth_map.shape == scene_get(scene, "size")
     assert np.allclose(depth_map, scene_get(scene, "distance"))
     assert np.allclose(scene_get(scene, "depth range"), np.array([scene_get(scene, "distance"), scene_get(scene, "distance")]))
+
+
+def test_ie_field_height_to_index_matches_matlab_rules() -> None:
+    heights = np.array([0.0, 0.5, 1.0, 2.0], dtype=float)
+
+    assert ie_field_height_to_index(heights, 0.6) == 2
+    assert ie_field_height_to_index(heights, 0.9) == 3
+    assert ie_field_height_to_index(heights, 0.1, bounding=True) == (1, 2)
+    assert ie_field_height_to_index(heights, 0.9, bounding=True) == (2, 3)
 
 
 def test_oi_compute_tracks_output_geometry(asset_store) -> None:
@@ -981,6 +991,17 @@ def test_rt_choose_block_size_matches_upstream_formula(asset_store) -> None:
     assert n_blocks == expected_n_blocks
     assert np.array_equal(block_samples, expected_block_samples)
     assert np.array_equal(irrad_padding, expected_padding)
+
+
+def test_rt_choose_block_size_uses_public_field_height_indexing(asset_store) -> None:
+    scene = scene_create("uniform ee", 32, np.array([550.0], dtype=float), asset_store=asset_store)
+    oi = rt_geometry(oi_create("ray trace", asset_store=asset_store), scene)
+    field_heights = np.asarray(oi_get(oi, "rtgeometryfieldheight", "mm"), dtype=float)
+    diagonal_mm = float(oi_get(oi, "diagonal")) * 1e3 / 2.0
+
+    n_blocks, _, _ = rt_choose_block_size(scene, oi)
+
+    assert n_blocks == 4 * int(ie_field_height_to_index(field_heights, diagonal_mm)) + 1
 
 
 def test_rt_otf_returns_padded_filtered_cube(asset_store) -> None:

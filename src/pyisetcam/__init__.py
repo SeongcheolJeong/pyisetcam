@@ -26,6 +26,7 @@ from .metrics import (
     xyz_to_lab,
 )
 from .optics import (
+    ie_field_height_to_index,
     optics_ray_trace,
     oi_calculate_illuminance,
     oi_diffuser,
@@ -106,6 +107,8 @@ __all__ = [
     "deltaEab",
     "delta_e_ab",
     "iePSNR",
+    "ieFieldHeight2Index",
+    "ie_field_height_to_index",
     "ieXYZ2LAB",
     "ieXYZFromEnergy",
     "ipCompute",
@@ -230,6 +233,7 @@ oiSet = oi_set
 oiCalculateIlluminance = oi_calculate_illuminance
 oiDiffuser = oi_diffuser
 opticsRayTrace = optics_ray_trace
+ieFieldHeight2Index = ie_field_height_to_index
 rtAngleLUT = rt_angle_lut
 rtBlockCenter = rt_block_center
 rtChooseBlockSize = rt_choose_block_size

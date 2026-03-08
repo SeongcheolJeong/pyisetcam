@@ -13,6 +13,7 @@
 - The initial `rtOTF` helper groundwork is now public as well through `rtBlockCenter`, `rtExtractBlock`, `rtInsertBlock`, and `rtChooseBlockSize`.
 - An initial public `rt_otf` / `rtOTF` block-wise ray-trace path is now exposed too, along with MATLAB-style `rtBlocksPerFieldHeight` control.
 - The `rtOTF` filtered-block support helper is now public as `rt_filtered_block_support` / `rtFilteredBlockSupport`.
+- The shared MATLAB field-height lookup rule is now public as `ie_field_height_to_index` / `ieFieldHeight2Index`, and `rtChooseBlockSize` now uses it directly.
 - `rt_synthetic` / `rtSynthetic` is now exposed as a synthetic ray-trace optics generator to support controlled testing of the expanding ray-trace compute surface.
 
 ## Summary

@@ -1225,6 +1225,21 @@ def _raytrace_field_height_index_pair(field_height_list: np.ndarray, height: flo
     return idx1, idx2
 
 
+def ie_field_height_to_index(
+    field_height_list: np.ndarray,
+    height: float,
+    *,
+    bounding: bool = False,
+) -> int | tuple[int, int]:
+    heights = np.asarray(field_height_list, dtype=float).reshape(-1)
+    if heights.size == 0:
+        raise ValueError("No field-height samples are available.")
+    if not bounding:
+        return int(np.argmin(np.abs(heights - float(height)))) + 1
+    idx1, idx2 = _raytrace_field_height_index_pair(heights, float(height))
+    return idx1 + 1, idx2 + 1
+
+
 def _coerce_optics_for_raytrace(value: OpticalImage | dict[str, Any]) -> dict[str, Any]:
     if isinstance(value, OpticalImage):
         optics = dict(value.fields.get("optics", {}))
@@ -1406,7 +1421,7 @@ def rt_choose_block_size(
     field_heights = np.asarray(current_optics.get("raytrace", {}).get("geometry", {}).get("field_height_mm", np.empty(0)), dtype=float)
     if field_heights.size == 0:
         raise ValueError("Ray-trace geometry field heights are required.")
-    n_heights = int(np.argmin(np.abs(field_heights - diagonal_mm))) + 1
+    n_heights = int(ie_field_height_to_index(field_heights, diagonal_mm))
     n_blocks = int(steps_fh) * n_heights + 1
 
     row_samples = max(1, int(2 ** np.ceil(np.log2(max(rows / max(n_blocks, 1), 1.0)))))

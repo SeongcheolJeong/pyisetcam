@@ -151,6 +151,9 @@ The underlying filtered-block support helper is now public too as
 `rt_filtered_block_support` / `rtFilteredBlockSupport`.
 `rt_synthetic` / `rtSynthetic` is now available as a synthetic ray-trace
 optics generator for testing and controlled local experiments.
+The shared MATLAB field-height lookup rule is now exposed too as
+`ie_field_height_to_index` / `ieFieldHeight2Index`, and the ray-trace
+block-size logic now uses that public helper directly.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
