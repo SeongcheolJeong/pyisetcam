@@ -28,7 +28,9 @@ from pyisetcam import (
     rt_di_interp,
     rt_extract_block,
     rt_filtered_block_support,
+    rt_file_names,
     rt_geometry,
+    rt_import_data,
     rt_insert_block,
     rt_otf,
     rt_psf_apply,
@@ -48,6 +50,8 @@ from pyisetcam import (
     sensor_get,
     sensor_set,
     wvf_create,
+    zemax_load,
+    zemax_read_header,
 )
 
 
@@ -1116,6 +1120,90 @@ def test_rt_otf_runs_with_rt_synthetic_optics(asset_store) -> None:
     assert result.ndim == 3
     assert result.shape[2] == 1
     assert np.sum(result) > 0.0
+
+
+def test_rt_file_names_matches_zemax_naming(tmp_path) -> None:
+    di_name, ri_name, psf_name_list, cra_name = rt_file_names(
+        "CookeLens.ZMX",
+        np.array([500.0, 600.0], dtype=float),
+        np.array([0.0, 1.0], dtype=float),
+        directory=tmp_path,
+    )
+
+    assert di_name.endswith("CookeLens_DI_.dat")
+    assert ri_name.endswith("CookeLens_RI_.dat")
+    assert cra_name.endswith("CookeLens_CRA_.dat")
+    assert psf_name_list.shape == (2, 2)
+    assert str(psf_name_list[1, 1]).endswith("CookeLens_2D_PSF_Fld2_Wave2.dat")
+
+
+def test_zemax_read_header_and_load_parse_text_output(tmp_path) -> None:
+    psf_file = tmp_path / "Test_2D_PSF_Fld1_Wave1.dat"
+    psf_file.write_text(
+        "spacing is 0.5000 microns\n"
+        "area is 1.0000 microns\n"
+        "normalized.\n"
+        "1 2 3 4\n",
+        encoding="latin1",
+    )
+
+    spacing_um, area_um = zemax_read_header(psf_file)
+    kernel = zemax_load(psf_file, 2)
+
+    assert np.isclose(spacing_um, 0.5)
+    assert np.isclose(area_um, 1.0)
+    assert np.array_equal(kernel, np.array([[2.0, 4.0], [1.0, 3.0]], dtype=float))
+
+
+def test_rt_import_data_builds_usable_raytrace_optics(tmp_path, asset_store) -> None:
+    params_file = tmp_path / "ISETPARMS.txt"
+    params_file.write_text(
+        "lensFile='CookeLens.ZMX';\n"
+        "psfSize=2;\n"
+        "wave=500:100:600;\n"
+        "imgHeightNum=2;\n"
+        "imgHeightMax=1.0;\n"
+        "objDist=250.0;\n"
+        "mag=-0.1;\n"
+        "baseLensFileName='CookeLens';\n"
+        "refWave=550.0;\n"
+        "fov=15.0;\n"
+        "efl=6.0;\n"
+        "fnumber_eff=1.8;\n"
+        "fnumber=2.0;\n",
+        encoding="latin1",
+    )
+
+    (tmp_path / "CookeLens_DI_.dat").write_text("0.0 0.05 0.2 0.3\n", encoding="latin1")
+    (tmp_path / "CookeLens_RI_.dat").write_text("1.0 0.9 0.8 0.7\n", encoding="latin1")
+    kernels = {
+        "CookeLens_2D_PSF_Fld1_Wave1.dat": "1 0 0 0\n",
+        "CookeLens_2D_PSF_Fld1_Wave2.dat": "0 1 0 0\n",
+        "CookeLens_2D_PSF_Fld2_Wave1.dat": "0 0 1 0\n",
+        "CookeLens_2D_PSF_Fld2_Wave2.dat": "0 0 0 1\n",
+    }
+    for name, data in kernels.items():
+        (tmp_path / name).write_text(
+            "spacing is 0.5000 microns\n"
+            "area is 1.0000 microns\n"
+            "normalized.\n"
+            f"{data}",
+            encoding="latin1",
+        )
+
+    imported_optics, optics_file = rt_import_data(p_file_full=params_file)
+    oi = oi_create("ray trace", imported_optics, asset_store=asset_store)
+    scene = scene_create("uniform ee", 16, np.array([500.0, 600.0], dtype=float), asset_store=asset_store)
+    stage = rt_geometry(oi, scene)
+
+    assert optics_file is None
+    assert imported_optics["model"] == "raytrace"
+    assert imported_optics["raytrace"]["program"] == "zemax"
+    assert imported_optics["raytrace"]["geometry"]["function"].shape == (2, 2)
+    assert imported_optics["raytrace"]["relative_illumination"]["function"].shape == (2, 2)
+    assert imported_optics["raytrace"]["psf"]["function"].shape == (2, 2, 2, 2)
+    assert np.allclose(imported_optics["raytrace"]["psf"]["sample_spacing_mm"], np.array([0.0005, 0.0005]))
+    assert stage.data["photons"].shape == scene.data["photons"].shape
 
 
 def test_rt_psf_grid_matches_oi_sample_spacing(asset_store) -> None:

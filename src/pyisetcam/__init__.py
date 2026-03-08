@@ -42,7 +42,9 @@ from .optics import (
     rt_filtered_block_support,
     rt_geometry,
     rt_insert_block,
+    rt_import_data,
     rt_otf,
+    rt_file_names,
     rt_psf_apply,
     rt_psf_grid,
     rt_psf_interp,
@@ -52,6 +54,8 @@ from .optics import (
     rt_sample_heights,
     rt_synthetic,
     wvf_create,
+    zemax_load,
+    zemax_read_header,
 )
 from .parity import run_python_case, run_python_case_with_context
 from .scene import (
@@ -148,9 +152,11 @@ __all__ = [
     "rtExtractBlock",
     "rtFilteredBlockSupport",
     "rtGeometry",
+    "rtImportData",
     "rtInsertBlock",
     "rtOTF",
     "rtRIInterp",
+    "rtFileNames",
     "rtPSFGrid",
     "rtPSFApply",
     "rtPrecomputePSF",
@@ -162,8 +168,10 @@ __all__ = [
     "rt_extract_block",
     "rt_filtered_block_support",
     "rt_geometry",
+    "rt_import_data",
     "rt_insert_block",
     "rt_otf",
+    "rt_file_names",
     "rt_psf_grid",
     "rt_psf_apply",
     "rtPSFInterp",
@@ -208,6 +216,10 @@ __all__ = [
     "wvf_create",
     "xyz_from_energy",
     "xyz_to_lab",
+    "zemaxLoad",
+    "zemaxReadHeader",
+    "zemax_load",
+    "zemax_read_header",
 ]
 
 __version__ = "0.1.0"
@@ -241,9 +253,11 @@ rtDIInterp = rt_di_interp
 rtExtractBlock = rt_extract_block
 rtFilteredBlockSupport = rt_filtered_block_support
 rtGeometry = rt_geometry
+rtImportData = rt_import_data
 rtInsertBlock = rt_insert_block
 rtOTF = rt_otf
 rtPSFApply = rt_psf_apply
+rtFileNames = rt_file_names
 rtPSFGrid = rt_psf_grid
 rtPSFInterp = rt_psf_interp
 rtPrecomputePSF = rt_precompute_psf
@@ -251,6 +265,8 @@ rtPrecomputePSFApply = rt_precompute_psf_apply
 rtRIInterp = rt_ri_interp
 rtSampleHeights = rt_sample_heights
 rtSynthetic = rt_synthetic
+zemaxLoad = zemax_load
+zemaxReadHeader = zemax_read_header
 
 sensorCreate = sensor_create
 sensorCreateIdeal = sensor_create_ideal

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from math import factorial
 from pathlib import Path
+import re
 from typing import Any
 
 import numpy as np
@@ -411,6 +412,221 @@ def _load_raytrace_optics(source: Any, *, asset_store: AssetStore) -> dict[str, 
         except Exception:
             continue
     raise UnsupportedOptionError("oiCreate", f"ray trace optics {source}")
+
+
+def _parse_matlab_range(text: str) -> np.ndarray:
+    parts = [part.strip() for part in text.split(":")]
+    if len(parts) == 2:
+        start = float(parts[0])
+        step = 1.0
+        stop = float(parts[1])
+    elif len(parts) == 3:
+        start = float(parts[0])
+        step = float(parts[1])
+        stop = float(parts[2])
+    else:
+        raise ValueError(f"Unsupported MATLAB range syntax: {text}")
+    if np.isclose(step, 0.0):
+        raise ValueError("MATLAB range step must be non-zero.")
+    limit = stop + (0.5 * step)
+    return np.arange(start, limit, step, dtype=float)
+
+
+def _parse_matlab_value(text: str) -> Any:
+    value = text.strip().rstrip(";").strip()
+    if not value:
+        return None
+    if value.startswith("'") and value.endswith("'"):
+        return value[1:-1]
+    if value.startswith("[") and value.endswith("]"):
+        body = value[1:-1].strip()
+        if ":" in body and "," not in body and ";" not in body:
+            return _parse_matlab_range(body)
+        array = np.fromstring(body.replace(",", " "), sep=" ", dtype=float)
+        if array.size == 1:
+            return float(array[0])
+        return array
+    if ":" in value and all(ch not in value for ch in "[]'"):
+        return _parse_matlab_range(value)
+    try:
+        return float(value)
+    except ValueError:
+        return value
+
+
+def _read_isetparams(path: str | Path) -> dict[str, Any]:
+    ascii_text = Path(path).read_bytes().decode("latin1", errors="ignore")
+    ascii_text = "".join(ch for ch in ascii_text if 0 < ord(ch) < 128)
+    params: dict[str, Any] = {}
+    for line in ascii_text.splitlines():
+        body = line.split("%", 1)[0].strip()
+        if not body:
+            continue
+        match = re.match(r"([A-Za-z_]\w*)\s*=\s*(.+?)\s*;?$", body)
+        if match is None:
+            continue
+        params[match.group(1)] = _parse_matlab_value(match.group(2))
+    return params
+
+
+def rt_file_names(
+    lens_file: str | Path,
+    wave: np.ndarray | list[float] | tuple[float, ...],
+    img_height: np.ndarray | list[float] | tuple[float, ...],
+    *,
+    directory: str | Path | None = None,
+) -> tuple[str, str, np.ndarray, str]:
+    base = Path(str(lens_file)).stem or str(lens_file)
+    prefix = Path(directory) if directory is not None else None
+
+    def _resolve(name: str) -> str:
+        return str((prefix / name) if prefix is not None else name)
+
+    wave_samples = np.asarray(wave, dtype=float).reshape(-1)
+    height_samples = np.asarray(img_height, dtype=float).reshape(-1)
+    di_name = _resolve(f"{base}_DI_.dat")
+    ri_name = _resolve(f"{base}_RI_.dat")
+    cra_name = _resolve(f"{base}_CRA_.dat")
+    psf_name_list = np.empty((height_samples.size, wave_samples.size), dtype=object)
+    for height_index in range(height_samples.size):
+        for wave_index in range(wave_samples.size):
+            psf_name_list[height_index, wave_index] = _resolve(
+                f"{base}_2D_PSF_Fld{height_index + 1:d}_Wave{wave_index + 1:d}.dat"
+            )
+    return di_name, ri_name, psf_name_list, cra_name
+
+
+def zemax_read_header(fname: str | Path) -> tuple[float, float]:
+    text = Path(fname).read_bytes().decode("latin1", errors="ignore")
+    ascii_text = "".join(ch for ch in text if 0 < ord(ch) < 128)
+    spacing_match = re.search(r"spacing is\s+([-+0-9.eE]+)", ascii_text)
+    area_match = re.search(r"area is\s+([-+0-9.eE]+)", ascii_text)
+    if spacing_match is None or area_match is None:
+        raise ValueError(f"Unable to parse Zemax header in {fname}")
+    return float(spacing_match.group(1)), float(area_match.group(1))
+
+
+def zemax_load(f_name: str | Path, psf_size: int) -> np.ndarray:
+    text = Path(f_name).read_bytes().decode("latin1", errors="ignore")
+    ascii_text = "".join(ch for ch in text if 0 < ord(ch) < 128)
+    marker = "normalized."
+    start = ascii_text.lower().find(marker)
+    if start < 0:
+        raise ValueError(f"Unable to locate normalized PSF data in {f_name}")
+    data_text = ascii_text[start + len(marker) :]
+    values = np.fromstring(data_text, sep=" ", dtype=float)
+    expected = int(psf_size) * int(psf_size)
+    if values.size < expected:
+        raise ValueError(f"Expected {expected} PSF values in {f_name}, found {values.size}")
+    data = values[:expected].reshape(int(psf_size), int(psf_size))
+    return np.rot90(data)
+
+
+def rt_import_data(
+    optics: OpticalImage | dict[str, Any] | None = None,
+    rt_program: str = "zemax",
+    p_file_full: str | Path | None = None,
+) -> tuple[dict[str, Any], None]:
+    if param_format(rt_program) != "zemax":
+        raise UnsupportedOptionError("rtImportData", rt_program)
+    if p_file_full is None:
+        raise ValueError("p_file_full is required for rtImportData.")
+
+    params = _read_isetparams(p_file_full)
+    required = (
+        "lensFile",
+        "wave",
+        "imgHeightNum",
+        "imgHeightMax",
+        "objDist",
+        "mag",
+        "refWave",
+        "fov",
+        "efl",
+        "fnumber_eff",
+        "fnumber",
+    )
+    missing = [key for key in required if key not in params]
+    if missing:
+        raise ValueError(f"Missing Zemax parameter(s): {', '.join(missing)}")
+
+    wave = np.asarray(params["wave"], dtype=float).reshape(-1)
+    n_height = int(round(float(params["imgHeightNum"])))
+    img_height = np.linspace(0.0, float(params["imgHeightMax"]), n_height, dtype=float)
+    directory = Path(p_file_full).resolve().parent
+    base_name = str(params.get("baseLensFileName", Path(str(params["lensFile"])).stem))
+    di_name, ri_name, psf_name_list, _ = rt_file_names(base_name, wave, img_height, directory=directory)
+
+    geometry_values = np.fromstring(Path(di_name).read_text(encoding="latin1", errors="ignore"), sep=" ", dtype=float)
+    rel_illum_values = np.fromstring(Path(ri_name).read_text(encoding="latin1", errors="ignore"), sep=" ", dtype=float)
+    expected_table = n_height * wave.size
+    if geometry_values.size != expected_table:
+        raise ValueError(f"Expected {expected_table} geometry values in {di_name}, found {geometry_values.size}")
+    if rel_illum_values.size != expected_table:
+        raise ValueError(f"Expected {expected_table} relative-illumination values in {ri_name}, found {rel_illum_values.size}")
+
+    psf_spacing_um, psf_area_um = zemax_read_header(psf_name_list[0, 0])
+    psf_size = int(round(psf_area_um / max(psf_spacing_um, 1e-12)))
+    if not np.isclose(psf_size * psf_spacing_um, psf_area_um):
+        raise ValueError("Zemax PSF header spacing and area imply a non-integer PSF size.")
+
+    psf_function = np.zeros((psf_size, psf_size, n_height, wave.size), dtype=float)
+    for height_index in range(n_height):
+        for wave_index in range(wave.size):
+            file_name = psf_name_list[height_index, wave_index]
+            spacing_um, area_um = zemax_read_header(file_name)
+            if not (np.isclose(spacing_um, psf_spacing_um) and np.isclose(area_um, psf_area_um)):
+                raise ValueError(f"Inconsistent PSF header in {file_name}")
+            kernel = zemax_load(file_name, psf_size)
+            kernel_sum = float(np.sum(kernel))
+            if kernel_sum > 0.0 and not np.isclose(kernel_sum, 1.0):
+                kernel = kernel / kernel_sum
+            psf_function[:, :, height_index, wave_index] = kernel
+
+    current: dict[str, Any] = {}
+    if optics is not None:
+        current = dict(optics.fields.get("optics", {})) if isinstance(optics, OpticalImage) else dict(optics)
+
+    raw_optics = {
+        "name": str(current.get("name", base_name)),
+        "model": "raytrace",
+        "transmittance": current.get(
+            "transmittance",
+            {
+                "wave": wave.copy(),
+                "scale": np.ones(wave.size, dtype=float),
+            },
+        ),
+        "rayTrace": {
+            "program": "zemax",
+            "lensFile": str(params["lensFile"]),
+            "referenceWavelength": float(params["refWave"]),
+            "objectDistance": float(params["objDist"]),
+            "mag": -abs(float(params["mag"])),
+            "fNumber": float(params["fnumber"]),
+            "effectiveFocalLength": float(params["efl"]),
+            "effectiveFNumber": float(params["fnumber_eff"]),
+            "maxfov": float(params["fov"]) * 2.0,
+            "name": str(current.get("name", base_name)),
+            "geometry": {
+                "function": geometry_values.reshape(wave.size, n_height).T,
+                "fieldHeight": img_height.copy(),
+                "wavelength": wave.copy(),
+            },
+            "relIllum": {
+                "function": rel_illum_values.reshape(wave.size, n_height).T,
+                "fieldHeight": img_height.copy(),
+                "wavelength": wave.copy(),
+            },
+            "psf": {
+                "function": psf_function,
+                "fieldHeight": img_height.copy(),
+                "sampleSpacing": np.array([psf_spacing_um, psf_spacing_um], dtype=float) / 1e3,
+                "wavelength": wave.copy(),
+            },
+        },
+    }
+    return _normalize_raytrace_optics(raw_optics), None
 
 
 def _synthetic_raytrace_general(raw: dict[str, Any] | None) -> dict[str, Any]:
