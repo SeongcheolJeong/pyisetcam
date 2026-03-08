@@ -48,6 +48,7 @@ from .optics import (
     rt_precompute_psf_apply,
     rt_ri_interp,
     rt_sample_heights,
+    rt_synthetic,
     wvf_create,
 )
 from .parity import run_python_case, run_python_case_with_context
@@ -166,6 +167,8 @@ __all__ = [
     "rtSampleHeights",
     "rt_ri_interp",
     "rt_sample_heights",
+    "rtSynthetic",
+    "rt_synthetic",
     "run_python_case",
     "run_python_case_with_context",
     "sceneAdjustIlluminant",
@@ -239,6 +242,7 @@ rtPrecomputePSF = rt_precompute_psf
 rtPrecomputePSFApply = rt_precompute_psf_apply
 rtRIInterp = rt_ri_interp
 rtSampleHeights = rt_sample_heights
+rtSynthetic = rt_synthetic
 
 sensorCreate = sensor_create
 sensorCreateIdeal = sensor_create_ideal

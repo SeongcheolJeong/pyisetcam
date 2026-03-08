@@ -413,6 +413,118 @@ def _load_raytrace_optics(source: Any, *, asset_store: AssetStore) -> dict[str, 
     raise UnsupportedOptionError("oiCreate", f"ray trace optics {source}")
 
 
+def _synthetic_raytrace_general(raw: dict[str, Any] | None) -> dict[str, Any]:
+    source = {} if raw is None else dict(raw)
+    normalized_keys = {
+        "program": "program",
+        "lens_file": "lensFile",
+        "reference_wavelength_nm": "referenceWavelength",
+        "object_distance_m": "objectDistance",
+        "magnification": "mag",
+        "f_number": "fNumber",
+        "effective_focal_length_m": "effectiveFocalLength",
+        "effective_f_number": "effectiveFNumber",
+        "max_fov_deg": "maxfov",
+        "name": "name",
+    }
+    converted = dict(source)
+    for old_key, new_key in normalized_keys.items():
+        if old_key in converted and new_key not in converted:
+            value = converted.pop(old_key)
+            if old_key in {"object_distance_m", "effective_focal_length_m"}:
+                value = float(value) * 1e3
+            converted[new_key] = value
+
+    general = {
+        "program": "Zemax",
+        "lensFile": "Synthetic Gaussian",
+        "referenceWavelength": 500.0,
+        "objectDistance": 10.0,
+        "mag": 0.10,
+        "fNumber": 4.8,
+        "effectiveFocalLength": 3.0,
+        "effectiveFNumber": 4.2,
+        "maxfov": 30.0,
+        "name": "Synthetic Gaussian",
+    }
+    general.update(converted)
+    return general
+
+
+def _synthetic_binormal(x_spread: float, y_spread: float, samples: int = 128) -> np.ndarray:
+    x_kernel = _gaussian_kernel_1d(int(samples), float(x_spread))
+    y_kernel = _gaussian_kernel_1d(int(samples), float(y_spread))
+    kernel = y_kernel[:, None] * x_kernel[None, :]
+    kernel_sum = float(np.sum(kernel))
+    if kernel_sum > 0.0:
+        kernel = kernel / kernel_sum
+    return kernel
+
+
+def rt_synthetic(
+    oi: OpticalImage | None = None,
+    ray_trace: dict[str, Any] | None = None,
+    spread_limits: tuple[float, float] = (1.0, 4.0),
+    xy_ratio: float = 1.0,
+) -> dict[str, Any]:
+    if len(spread_limits) != 2:
+        raise ValueError("spread_limits must contain [min_spread, max_spread].")
+    del oi
+    current_wave = np.array([450.0, 550.0, 650.0], dtype=float)
+
+    general = _synthetic_raytrace_general(ray_trace)
+    field_height_mm = np.arange(0.0, 1.000001, 0.05, dtype=float)
+
+    d = field_height_mm[1] * (field_height_mm / field_height_mm[1]) ** 0.85
+    geometry = {
+        "function": np.repeat(d[:, None], current_wave.size, axis=1),
+        "fieldHeight": field_height_mm.copy(),
+        "wavelength": current_wave.copy(),
+    }
+    rel_illum = {
+        "function": np.repeat((1.0 - (field_height_mm / (10.0 * field_height_mm[-1])) ** 0.85)[:, None], current_wave.size, axis=1),
+        "fieldHeight": field_height_mm.copy(),
+        "wavelength": current_wave.copy(),
+    }
+
+    samples = 128
+    spread = float(spread_limits[1]) - float(spread_limits[0])
+    norm_fh = field_height_mm / max(field_height_mm[-1], 1e-12)
+    x_spread = 4.0 * (float(spread_limits[0]) + norm_fh * spread)
+    y_spread = float(xy_ratio) * (x_spread * (1.0 + norm_fh))
+
+    psf_function = np.zeros((samples, samples, field_height_mm.size, current_wave.size), dtype=float)
+    for height_index in range(field_height_mm.size):
+        kernel = _synthetic_binormal(float(x_spread[height_index]), float(y_spread[height_index]), samples=samples)
+        for wave_index in range(current_wave.size):
+            psf_function[:, :, height_index, wave_index] = kernel
+
+    raw_optics = {
+        "name": str(general.get("name", "Synthetic Gaussian")),
+        "model": "raytrace",
+        "transmittance": {
+            "wave": current_wave.copy(),
+            "scale": np.ones(current_wave.size, dtype=float),
+        },
+        "rayTrace": {
+            **general,
+            "geometry": geometry,
+            "relIllum": rel_illum,
+            "psf": {
+                "function": psf_function,
+                "fieldHeight": field_height_mm.copy(),
+                "sampleSpacing": np.array([2.5e-4, 2.5e-4], dtype=float),
+                "wavelength": current_wave.copy(),
+            },
+        },
+    }
+    normalized = _normalize_raytrace_optics(raw_optics)
+    normalized["raytrace"]["blocks_per_field_height"] = int(
+        normalized["raytrace"].get("blocks_per_field_height", 4)
+    )
+    return normalized
+
+
 def wvf_create(
     *,
     wave: np.ndarray | None = None,

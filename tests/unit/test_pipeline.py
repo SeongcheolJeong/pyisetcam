@@ -36,6 +36,7 @@ from pyisetcam import (
     rt_precompute_psf_apply,
     rt_ri_interp,
     rt_sample_heights,
+    rt_synthetic,
     run_python_case,
     scene_create,
     scene_get,
@@ -1015,6 +1016,47 @@ def test_rt_otf_uses_rt_blocks_per_field_height_setting(asset_store) -> None:
 
     assert oi_get(stage, "rt blocks per field height") == 6
     assert result.shape == expected_shape
+
+
+def test_rt_synthetic_builds_normalized_raytrace_optics(asset_store) -> None:
+    oi = oi_create("ray trace", asset_store=asset_store)
+
+    optics = rt_synthetic(oi, spread_limits=(3.0, 5.0), xy_ratio=0.3)
+
+    assert optics["model"] == "raytrace"
+    assert optics["name"] == "Synthetic Gaussian"
+    assert np.array_equal(optics["transmittance"]["wave"], np.array([450.0, 550.0, 650.0]))
+    assert optics["raytrace"]["program"] == "Zemax"
+    assert optics["raytrace"]["lens_file"] == "Synthetic Gaussian"
+    assert optics["raytrace"]["psf"]["function"].shape[0:2] == (128, 128)
+    assert optics["raytrace"]["psf"]["function"].shape[2] == 21
+    assert optics["raytrace"]["psf"]["function"].shape[3] == 3
+    assert np.allclose(np.sum(optics["raytrace"]["psf"]["function"][:, :, 0, 0]), 1.0)
+
+
+def test_oi_compute_accepts_rt_synthetic_optics(asset_store) -> None:
+    scene = scene_create("uniform ee", 32, np.array([550.0], dtype=float), asset_store=asset_store)
+    oi = oi_create("ray trace", asset_store=asset_store)
+    oi = oi_set(oi, "optics", rt_synthetic(oi, spread_limits=(2.0, 3.0), xy_ratio=0.5))
+
+    result = oi_compute(oi, scene, crop=True)
+
+    assert result.data["photons"].shape[:2] == scene.data["photons"].shape[:2]
+    assert oi_get(result, "raytrace optics name") == "Synthetic Gaussian"
+    assert oi_get(result, "sampledRTpsf") is not None
+
+
+def test_rt_otf_runs_with_rt_synthetic_optics(asset_store) -> None:
+    scene = scene_create("uniform ee", 32, np.array([550.0], dtype=float), asset_store=asset_store)
+    oi = oi_create("ray trace", asset_store=asset_store)
+    oi = oi_set(oi, "optics", rt_synthetic(oi, spread_limits=(2.0, 4.0), xy_ratio=0.25))
+    stage = rt_geometry(oi, scene)
+
+    result = rt_otf(scene, stage)
+
+    assert result.ndim == 3
+    assert result.shape[2] == 1
+    assert np.sum(result) > 0.0
 
 
 def test_rt_psf_grid_matches_oi_sample_spacing(asset_store) -> None:
