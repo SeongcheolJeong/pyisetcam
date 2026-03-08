@@ -194,7 +194,8 @@ Normalized ray-trace key detection now also recognizes
 `f_number` and `magnification`, keeping raw/normalized struct handling
 aligned for those cases too. Partial normalized nested `raytrace`
 updates now also merge into the current ray-trace state instead of
-dropping existing geometry / PSF tables.
+dropping existing geometry / PSF tables, and the same preservation now
+applies to partial MATLAB-style nested `rayTrace` updates.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

@@ -308,8 +308,11 @@ def _normalize_optics_update(value: Any, current_optics: dict[str, Any]) -> dict
         source["transmittance"] = dict(current_optics["transmittance"])
 
     nested_raw_raytrace = source.get("rayTrace")
-    if isinstance(nested_raw_raytrace, dict) and "fNumber" in source:
-        nested_raw_raytrace["fNumber"] = source["fNumber"]
+    if isinstance(nested_raw_raytrace, dict):
+        merged_raw_raytrace = _merge_mapping(_export_raytrace(current_optics.get("raytrace", {})), nested_raw_raytrace)
+        if "fNumber" in source:
+            merged_raw_raytrace["fNumber"] = source["fNumber"]
+        source["rayTrace"] = merged_raw_raytrace
 
     nested_raytrace = source.get("raytrace")
     if isinstance(nested_raytrace, dict):
