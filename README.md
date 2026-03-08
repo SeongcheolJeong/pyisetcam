@@ -63,6 +63,10 @@ tool at a working `octave-cli` binary:
 PYISETCAM_OCTAVE_BIN=/abs/path/to/octave-cli-10.3.0 python tools/regenerate_parity_baselines.py
 ```
 
+For conda-style Octave installs, the runner now auto-populates
+`OCTAVE_HOME`, `OCTAVE_EXEC_HOME`, and `OCTAVE_IMAGE_PATH` from the chosen
+binary so baseline export works even when the raw CLI crashes at startup.
+
 ## Layout
 
 - `src/pyisetcam/`: package source

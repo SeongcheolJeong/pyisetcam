@@ -23,4 +23,4 @@ Note:
 
 - `camera_default_pipeline` now runs as a deterministic noiseless parity case in both the Python runner and the Octave exporter. Regenerate that baseline after Octave execution is repaired, because older baseline files captured an uncontrolled sensor-noise realization.
 - Use `python tools/regenerate_parity_baselines.py` to export fresh `.mat` baselines from Octave.
-- If the env-level `octave` wrapper is broken, set `PYISETCAM_OCTAVE_BIN` to a working `octave-cli-*` executable and rerun the export tool.
+- If the env-level `octave` wrapper is broken, set `PYISETCAM_OCTAVE_BIN` to a working `octave-cli-*` executable and rerun the export tool. The runner now also seeds `OCTAVE_HOME`, `OCTAVE_EXEC_HOME`, and `OCTAVE_IMAGE_PATH` automatically for conda-style installs.

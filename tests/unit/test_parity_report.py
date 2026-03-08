@@ -70,7 +70,7 @@ def test_case_diagnostics_recompute_sensor_from_reference_oi(asset_store) -> Non
     assert diagnostics["reference_recompute"]["integration_time"]["pass"]
 
 
-def test_case_diagnostics_show_camera_reference_recompute_gap(asset_store) -> None:
+def test_case_diagnostics_show_camera_reference_recompute_match(asset_store) -> None:
     parity_report = _load_parity_report_module()
 
     reference = parity_report._load_reference("camera_default_pipeline")
@@ -86,5 +86,5 @@ def test_case_diagnostics_show_camera_reference_recompute_gap(asset_store) -> No
     comparison = diagnostics["reference_recompute"]["sensor_volts_from_reference_oi"]
 
     assert diagnostics["context"]["oi_size"] == [80, 120, 31]
-    assert not comparison["pass"]
-    assert comparison["mean_rel"] > 1e-2
+    assert comparison["pass"]
+    assert comparison["mean_rel"] < 1e-6

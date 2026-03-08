@@ -13,6 +13,7 @@ from .exceptions import OctaveExecutionError
 
 OCTAVE_BIN_ENV = "PYISETCAM_OCTAVE_BIN"
 _CRASH_TIMESTAMP = re.compile(r"-(\d{4}-\d{2}-\d{2}-\d{6}(?:\.\d{3})?)\.ips$")
+_VERSIONED_OCTAVE = re.compile(r"octave(?:-cli)?-(\d+\.\d+\.\d+)$")
 
 
 def _dedupe_paths(paths: Iterable[Path]) -> list[Path]:
@@ -46,6 +47,48 @@ def _find_versioned_octave_cli(directory: Path) -> list[Path]:
         return []
     matches = sorted(directory.glob("octave-cli-*"), reverse=True)
     return [path for path in matches if path.is_file() and os.access(path, os.X_OK)]
+
+
+def _octave_version(binary: Path) -> str | None:
+    match = _VERSIONED_OCTAVE.search(binary.name)
+    return match.group(1) if match is not None else None
+
+
+def _octave_runtime_root(binary: Path) -> Path | None:
+    resolved = binary.resolve()
+    for candidate in (resolved.parent.parent, resolved.parent, *resolved.parents):
+        share_root = candidate / "share" / "octave"
+        if share_root.exists():
+            return candidate
+    return None
+
+
+def octave_startup_env(binary: Path) -> dict[str, str]:
+    """Return startup environment overrides for conda-style Octave installs."""
+
+    runtime_root = _octave_runtime_root(binary)
+    if runtime_root is None:
+        return {}
+
+    startup_env: dict[str, str] = {
+        "OCTAVE_HOME": str(runtime_root),
+        "OCTAVE_EXEC_HOME": str(runtime_root),
+    }
+
+    share_root = runtime_root / "share" / "octave"
+    version = _octave_version(binary)
+    candidate_versions: list[str] = []
+    if version is not None:
+        candidate_versions.append(version)
+    candidate_versions.extend(sorted(path.name for path in share_root.iterdir() if path.is_dir()))
+
+    for candidate_version in candidate_versions:
+        image_path = share_root / candidate_version / "m" / "image"
+        if image_path.exists():
+            startup_env["OCTAVE_IMAGE_PATH"] = str(image_path)
+            break
+
+    return startup_env
 
 
 def find_octave_binary(
@@ -121,6 +164,7 @@ def run_octave(
     binary = find_octave_binary(preferred=octave_bin, search_paths=search_paths)
     command = [str(binary), *arguments]
     effective_env = os.environ.copy()
+    effective_env.update({key: value for key, value in octave_startup_env(binary).items() if value})
     if env:
         effective_env.update(env)
 
