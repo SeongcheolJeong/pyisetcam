@@ -253,6 +253,7 @@ def test_oi_transmittance_scales_and_interpolates(asset_store) -> None:
 
 def test_oi_create_raytrace_loads_upstream_optics(asset_store) -> None:
     oi = oi_create("ray trace", asset_store=asset_store)
+    raytrace = oi_get(oi, "raytrace")
 
     assert oi_get(oi, "model") == "raytrace"
     assert oi_get(oi, "compute method") == ""
@@ -261,12 +262,16 @@ def test_oi_create_raytrace_loads_upstream_optics(asset_store) -> None:
     assert np.isclose(oi_get(oi, "rt object distance"), 2.0)
     assert np.isclose(oi_get(oi, "rtfov"), 38.72116733777534)
     assert oi_get(oi, "raytrace optics name") == "Asphere 2mm"
+    assert raytrace["lensFile"].endswith(".ZMX")
+    assert np.isclose(raytrace["objectDistance"], 2000.0)
     assert oi_get(oi, "rtpsffieldheight").shape == (21,)
-    assert np.allclose(oi_get(oi, "rtpsffieldheight", "mm"), oi_get(oi, "raytrace")["psf"]["field_height_mm"])
+    assert np.allclose(oi_get(oi, "rtpsffieldheight", "mm"), raytrace["psf"]["fieldHeight"])
     assert np.allclose(oi_get(oi, "rtpsfsamplespacing"), np.array([2.5e-7, 2.5e-7]))
     assert np.allclose(oi_get(oi, "rtpsfspacing", "um"), np.array([0.25, 0.25]))
     assert np.array_equal(oi_get(oi, "rtpsfwavelength"), np.array([400.0, 475.0, 550.0, 625.0, 700.0]))
     assert oi_get(oi, "rtpsfsize") == oi_get(oi, "rtpsf")["function"].shape
+    assert "fieldHeight" in oi_get(oi, "rtpsf")
+    assert "sampleSpacing" in oi_get(oi, "rtpsf")
 
 
 def test_oi_create_raytrace_exposes_raw_psf_support_axes(asset_store) -> None:
@@ -305,11 +310,11 @@ def test_oi_create_raytrace_exposes_raw_geometry_and_relillum_tables(asset_store
     assert np.isclose(oi_get(oi, "rtmaxfov"), oi_get(oi, "rtfov"))
     assert geometry["function"].shape == (21, 5)
     assert rel_illum["function"].shape == (21, 5)
-    assert np.allclose(oi_get(oi, "rtrifieldheight", "mm"), rel_illum["field_height_mm"])
-    assert np.allclose(oi_get(oi, "rtgeomfieldheight", "mm"), geometry["field_height_mm"])
-    assert np.isclose(oi_get(oi, "rtgeommaxfieldheight", "mm"), np.max(geometry["field_height_mm"]))
-    assert np.array_equal(oi_get(oi, "rtriwavelength"), rel_illum["wavelength_nm"])
-    assert np.array_equal(oi_get(oi, "rtgeomwavelength"), geometry["wavelength_nm"])
+    assert np.allclose(oi_get(oi, "rtrifieldheight", "mm"), rel_illum["fieldHeight"])
+    assert np.allclose(oi_get(oi, "rtgeomfieldheight", "mm"), geometry["fieldHeight"])
+    assert np.isclose(oi_get(oi, "rtgeommaxfieldheight", "mm"), np.max(geometry["fieldHeight"]))
+    assert np.array_equal(oi_get(oi, "rtriwavelength"), rel_illum["wavelength"])
+    assert np.array_equal(oi_get(oi, "rtgeomwavelength"), geometry["wavelength"])
     assert np.allclose(oi_get(oi, "rtgeomfunction"), geometry["function"])
     assert np.allclose(oi_get(oi, "rtgeomfunction", 550.0, "mm"), geometry["function"][:, 2])
     assert np.allclose(oi_get(oi, "rtgeomfunction", 550.0), geometry["function"][:, 2] / 1e3)

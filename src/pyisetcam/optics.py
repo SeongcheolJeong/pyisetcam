@@ -287,6 +287,44 @@ def _normalize_raytrace_update(value: Any, current_optics: dict[str, Any]) -> di
     return _normalize_optics_update(source, current_optics)
 
 
+def _export_raytrace_table(table: dict[str, Any], *, include_sample_spacing: bool = False) -> dict[str, Any]:
+    current = dict(table)
+    exported: dict[str, Any] = {
+        "fieldHeight": np.asarray(current.get("field_height_mm", np.empty(0, dtype=float)), dtype=float).reshape(-1).copy(),
+        "wavelength": np.asarray(current.get("wavelength_nm", np.empty(0, dtype=float)), dtype=float).reshape(-1).copy(),
+        "function": np.asarray(current.get("function", np.empty(0, dtype=float)), dtype=float).copy(),
+    }
+    if include_sample_spacing:
+        exported["sampleSpacing"] = np.asarray(
+            current.get("sample_spacing_mm", np.empty(0, dtype=float)),
+            dtype=float,
+        ).reshape(-1).copy()
+    return exported
+
+
+def _export_raytrace(raytrace: dict[str, Any]) -> dict[str, Any]:
+    current = dict(raytrace)
+    exported: dict[str, Any] = {
+        "name": str(current.get("name", "")),
+        "program": str(current.get("program", "")),
+        "lensFile": str(current.get("lens_file", "")),
+        "referenceWavelength": float(current.get("reference_wavelength_nm", DEFAULT_WVF_MEASURED_WAVELENGTH_NM)),
+        "objectDistance": float(current.get("object_distance_m", np.inf)) * 1e3,
+        "mag": float(current.get("magnification", 0.0)),
+        "fNumber": float(current.get("f_number", np.nan)),
+        "effectiveFocalLength": float(current.get("effective_focal_length_m", np.nan)) * 1e3,
+        "effectiveFNumber": float(current.get("effective_f_number", np.nan)),
+        "fov": float(current.get("max_fov_deg", np.inf)),
+        "geometry": _export_raytrace_table(current.get("geometry", {})),
+        "relIllum": _export_raytrace_table(current.get("relative_illumination", {})),
+        "psf": _export_raytrace_table(current.get("psf", {}), include_sample_spacing=True),
+    }
+    computation = dict(current.get("computation", {}))
+    if "psf_spacing_m" in computation:
+        exported["computation"] = {"psfSpacing": computation.get("psf_spacing_m")}
+    return exported
+
+
 def _load_raytrace_optics(source: Any, *, asset_store: AssetStore) -> dict[str, Any]:
     if source is None:
         raw = asset_store.load_mat("data/optics/rtZemaxExample.mat")["optics"]
@@ -2061,7 +2099,7 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
     if key in {"opticswvf"}:
         return oi.fields["optics"].get("wavefront")
     if key in {"opticsraytrace", "raytrace", "rt"}:
-        return oi.fields["optics"].get("raytrace")
+        return _export_raytrace(oi.fields["optics"].get("raytrace", {}))
     if key in {"rtname"}:
         return oi.fields["optics"].get("raytrace", {}).get("name", oi.fields["optics"].get("name"))
     if key in {"opticsprogram", "rtopticsprogram"}:
@@ -2155,7 +2193,7 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
             return None
         return float(psf_spacing_m) * _spatial_unit_scale(args[0] if args else None)
     if key in {"rtpsf"}:
-        return _raw_raytrace_table(oi, "psf")
+        return _export_raytrace_table(_raw_raytrace_table(oi, "psf"), include_sample_spacing=True)
     if key in {"rtpsffunction", "rtpsfdata"}:
         field_height_m = float(args[0]) if len(args) >= 1 else None
         wavelength_nm = float(args[1]) if len(args) >= 2 else None
@@ -2189,7 +2227,7 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         fx, fy = _raw_raytrace_frequency_axes(oi, args[0] if args else "mm")
         return {"fx": fx, "fy": fy}
     if key in {"rtrelillum"}:
-        return _raw_raytrace_table(oi, "relative_illumination")
+        return _export_raytrace_table(_raw_raytrace_table(oi, "relative_illumination"))
     if key in {"rtrifunction", "rtrelativeilluminationfunction", "rtrelillumfunction"}:
         return np.asarray(_raw_raytrace_table(oi, "relative_illumination").get("function", np.empty(0, dtype=float)), dtype=float)
     if key in {"rtriwavelength", "rtrelativeilluminationwavelength"}:
@@ -2197,7 +2235,7 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
     if key in {"rtrifieldheight", "rtrelativeilluminationfieldheight"}:
         return _raw_raytrace_field_height(_raw_raytrace_table(oi, "relative_illumination"), args[0] if args else None)
     if key in {"rtgeometry"}:
-        return _raw_raytrace_table(oi, "geometry")
+        return _export_raytrace_table(_raw_raytrace_table(oi, "geometry"))
     if key in {"rtgeomfunction", "rtgeometryfunction", "rtdistortionfunction", "rtgeomdistortion"}:
         wavelength_nm = None
         unit = None
