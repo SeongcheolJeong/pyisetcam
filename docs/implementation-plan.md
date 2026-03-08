@@ -18,7 +18,7 @@
 - The initial Zemax text-import surface is now ported as `rt_file_names` / `rtFileNames`, `zemax_read_header` / `zemaxReadHeader`, `zemax_load` / `zemaxLoad`, and a limited `rt_import_data` / `rtImportData` path for standard ISETPARAMS + DI/RI/PSF bundles.
 - `oi_create('ray trace', ...)` now accepts that standard Zemax bundle directly as either an `ISETPARAMS.txt` file or a containing directory.
 - The Zemax import path now also normalizes Windows-style `lensFile` / `baseLensFileName` strings when deriving DI/RI/PSF bundle filenames.
-- The Zemax parameter-file parser now accepts multiline MATLAB vector syntax too, including `...` continuations and bracketed row/column wavelength lists.
+- The Zemax parameter-file parser now accepts multiline MATLAB vector syntax too, including `...` continuations, bracketed row/column wavelength lists, and transpose-style vectors such as `[500 600]'`.
 - `rt_import_data` now preserves existing optics-object name/transmittance/compute settings while updating the imported ray-trace top-level focal-length / f-number state to the effective values from the Zemax bundle.
 
 ## Summary

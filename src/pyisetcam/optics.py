@@ -451,24 +451,36 @@ def _parse_matlab_range(text: str) -> np.ndarray:
     return np.arange(start, limit, step, dtype=float)
 
 
+def _parse_matlab_numeric_sequence(body: str) -> Any:
+    stripped = body.strip()
+    if ":" in stripped and "," not in stripped and ";" not in stripped:
+        return _parse_matlab_range(stripped)
+    array = np.fromstring(
+        stripped.replace(",", " ").replace(";", " ").replace("\n", " ").replace("\t", " "),
+        sep=" ",
+        dtype=float,
+    )
+    if array.size == 1:
+        return float(array[0])
+    return array
+
+
 def _parse_matlab_value(text: str) -> Any:
     value = text.strip().rstrip(";").strip()
     if not value:
         return None
     if value.startswith("'") and value.endswith("'"):
         return value[1:-1]
+    if value.endswith("'") and not value.startswith("'"):
+        transposed = value[:-1].strip()
+        if (transposed.startswith("[") and transposed.endswith("]")) or (
+            transposed.startswith("(") and transposed.endswith(")")
+        ):
+            return _parse_matlab_numeric_sequence(transposed[1:-1])
     if value.startswith("[") and value.endswith("]"):
-        body = value[1:-1].strip()
-        if ":" in body and "," not in body and ";" not in body:
-            return _parse_matlab_range(body)
-        array = np.fromstring(
-            body.replace(",", " ").replace(";", " ").replace("\n", " ").replace("\t", " "),
-            sep=" ",
-            dtype=float,
-        )
-        if array.size == 1:
-            return float(array[0])
-        return array
+        return _parse_matlab_numeric_sequence(value[1:-1])
+    if value.startswith("(") and value.endswith(")"):
+        return _parse_matlab_numeric_sequence(value[1:-1])
     if ":" in value and all(ch not in value for ch in "[]'"):
         return _parse_matlab_range(value)
     try:
@@ -501,7 +513,10 @@ def _strip_matlab_comment(line: str) -> str:
                 result.append("'")
                 index += 2
                 continue
-            in_string = not in_string
+            if in_string:
+                in_string = False
+            elif _matlab_apostrophe_starts_string(line, index):
+                in_string = True
             index += 1
             continue
         if char == "%" and not in_string:
@@ -509,6 +524,15 @@ def _strip_matlab_comment(line: str) -> str:
         result.append(char)
         index += 1
     return "".join(result)
+
+
+def _matlab_apostrophe_starts_string(text: str, index: int) -> bool:
+    previous = index - 1
+    while previous >= 0 and text[previous].isspace():
+        previous -= 1
+    if previous < 0:
+        return True
+    return text[previous] in "=([{,:;"
 
 
 def _iter_matlab_assignments(text: str) -> list[str]:
@@ -529,9 +553,14 @@ def _iter_matlab_assignments(text: str) -> list[str]:
             current.append(" ")
             continue
 
-        for char in line:
+        for index, char in enumerate(line):
             if char == "'":
-                in_string = not in_string
+                if in_string and index + 1 < len(line) and line[index + 1] == "'":
+                    continue
+                if in_string:
+                    in_string = False
+                elif _matlab_apostrophe_starts_string(line, index):
+                    in_string = True
             elif not in_string:
                 if char == "[":
                     bracket_depth += 1

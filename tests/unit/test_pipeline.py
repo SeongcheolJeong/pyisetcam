@@ -1271,6 +1271,19 @@ def test_rt_import_data_parses_column_vector_wave_syntax(tmp_path) -> None:
     assert imported_optics["raytrace"]["psf"]["function"].shape == (2, 2, 2, 2)
 
 
+def test_rt_import_data_parses_transposed_row_vector_wave_syntax(tmp_path) -> None:
+    params_file = _write_mock_zemax_bundle(
+        tmp_path,
+        wave_assignment="[500 600]'",
+    )
+
+    imported_optics, optics_file = rt_import_data(p_file_full=params_file)
+
+    assert optics_file is None
+    assert np.array_equal(imported_optics["raytrace"]["geometry"]["wavelength_nm"], np.array([500.0, 600.0]))
+    assert imported_optics["raytrace"]["psf"]["function"].shape == (2, 2, 2, 2)
+
+
 def test_rt_import_data_preserves_existing_optics_fields_and_effective_top_level_state(tmp_path) -> None:
     params_file = _write_mock_zemax_bundle(tmp_path)
     existing = {
