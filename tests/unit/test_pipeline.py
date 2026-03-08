@@ -64,27 +64,32 @@ def _write_mock_zemax_bundle(
     base_lens_has_semicolon: bool = True,
     psf_size_assignment: int = 2,
     params_file_name: str = "ISETPARAMS.txt",
-    psf_spacing_assignment_mm: float = 0.00025,
+    psf_spacing_assignment_mm: float | None = 0.00025,
 ):
     params_file = tmp_path / params_file_name
     base_lens_line = f"baseLensFileName='{base_lens_file_name}'"
     if base_lens_has_semicolon:
         base_lens_line += ";"
+    psf_spacing_line = "" if psf_spacing_assignment_mm is None else f"psfSpacing={psf_spacing_assignment_mm:.7f};\n"
     params_file.write_text(
-        f"lensFile='{lens_file}';\n"
-        f"psfSize={psf_size_assignment};\n"
-        f"psfSpacing={psf_spacing_assignment_mm:.7f};\n"
-        f"wave={wave_assignment};\n"
-        "imgHeightNum=2;\n"
-        "imgHeightMax=1.0;\n"
-        "objDist=250.0;\n"
-        "mag=-0.1;\n"
-        f"{base_lens_line}\n"
-        "refWave=550.0;\n"
-        "fov=15.0;\n"
-        "efl=6.0;\n"
-        "fnumber_eff=1.8;\n"
-        "fnumber=2.0;\n",
+        "".join(
+            [
+                f"lensFile='{lens_file}';\n",
+                f"psfSize={psf_size_assignment};\n",
+                psf_spacing_line,
+                f"wave={wave_assignment};\n",
+                "imgHeightNum=2;\n",
+                "imgHeightMax=1.0;\n",
+                "objDist=250.0;\n",
+                "mag=-0.1;\n",
+                f"{base_lens_line}\n",
+                "refWave=550.0;\n",
+                "fov=15.0;\n",
+                "efl=6.0;\n",
+                "fnumber_eff=1.8;\n",
+                "fnumber=2.0;\n",
+            ]
+        ),
         encoding="latin1",
     )
     (tmp_path / "CookeLens_DI_.dat").write_text("0.0 0.05 0.2 0.3\n", encoding="latin1")
@@ -1367,6 +1372,26 @@ def test_rt_import_data_preserves_existing_optics_fields_and_effective_top_level
     assert np.isclose(imported_optics["f_number"], 1.8)
     assert np.isclose(imported_optics["raytrace"]["f_number"], 2.0)
     assert np.isclose(imported_optics["raytrace"]["effective_f_number"], 1.8)
+
+
+def test_rt_import_data_preserves_existing_compute_spacing_when_bundle_omits_it(tmp_path) -> None:
+    params_file = _write_mock_zemax_bundle(
+        tmp_path,
+        psf_spacing_assignment_mm=None,
+    )
+    existing = {
+        "name": "Existing Optics",
+        "raytrace": {
+            "computation": {
+                "psf_spacing_m": 7.5e-6,
+            },
+        },
+    }
+
+    imported_optics, optics_file = rt_import_data(existing, p_file_full=params_file)
+
+    assert optics_file is None
+    assert np.isclose(imported_optics["raytrace"]["computation"]["psf_spacing_m"], 7.5e-6)
 
 
 def test_oi_create_raytrace_accepts_isetparams_file(tmp_path, asset_store) -> None:

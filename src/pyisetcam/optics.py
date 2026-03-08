@@ -736,6 +736,9 @@ def rt_import_data(
     current: dict[str, Any] = {}
     if optics is not None:
         current = dict(optics.fields.get("optics", {})) if isinstance(optics, OpticalImage) else dict(optics)
+    current_raytrace = dict(current.get("raytrace", current.get("rayTrace", {})))
+    current_computation = dict(current_raytrace.get("computation", {}))
+    current_psf_spacing_m = current_computation.get("psf_spacing_m", current_computation.get("psfSpacing"))
     effective_focal_length_m = float(params["efl"]) / 1e3
     effective_f_number = float(params["fnumber_eff"])
 
@@ -777,9 +780,15 @@ def rt_import_data(
                 "wavelength": wave.copy(),
             },
             "computation": {
-                "psfSpacing": None
-                if params.get("psfSpacing") is None
-                else float(np.asarray(params["psfSpacing"]).reshape(-1)[0]) / 1e3,
+                "psfSpacing": (
+                    float(np.asarray(params["psfSpacing"]).reshape(-1)[0]) / 1e3
+                    if params.get("psfSpacing") is not None
+                    else (
+                        None
+                        if current_psf_spacing_m is None
+                        else float(np.asarray(current_psf_spacing_m).reshape(-1)[0])
+                    )
+                ),
             },
         },
     }
