@@ -120,7 +120,10 @@ now also includes MATLAB-style `rtpsfsize` reporting of the underlying 4-D
 PSF table, indexed `oiSet` updates for `rtpsfdata` and `rtgeomfunction`,
 MATLAB-style raw struct export for `raytrace`, `rtpsf`, `rtgeometry`, and
 `rtrelillum`, and MATLAB-style whole-optics export via `oiGet('optics')`
-that round-trips through `oiSet('optics', ...)`.
+that round-trips through `oiSet('optics', ...)`. The precomputed ray-trace
+cache now also exports as MATLAB-style `psfStruct` / `sampledRTpsf`, and
+plain `rtpsfsize` now tracks the precomputed PSF kernel size separately
+from raw `optics rtpsfsize`.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

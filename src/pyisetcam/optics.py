@@ -359,6 +359,32 @@ def _export_optics(optics: dict[str, Any]) -> dict[str, Any]:
     return exported
 
 
+def _export_psf_cell_array(psf_stack: np.ndarray) -> np.ndarray:
+    stack = np.asarray(psf_stack, dtype=float)
+    if stack.ndim != 5:
+        return np.empty((0, 0, 0), dtype=object)
+    exported = np.empty(stack.shape[:3], dtype=object)
+    for index in np.ndindex(exported.shape):
+        exported[index] = np.asarray(stack[index], dtype=float).copy()
+    return exported
+
+
+def _export_psf_struct(psf_struct: dict[str, Any]) -> dict[str, Any]:
+    current = dict(psf_struct)
+    exported: dict[str, Any] = {}
+    if "psf" in current:
+        exported["psf"] = _export_psf_cell_array(np.asarray(current.get("psf"), dtype=float))
+    if "sample_angles_deg" in current:
+        exported["sampAngles"] = np.asarray(current.get("sample_angles_deg", np.empty(0, dtype=float)), dtype=float).reshape(-1).copy()
+    if "img_height_mm" in current:
+        exported["imgHeight"] = np.asarray(current.get("img_height_mm", np.empty(0, dtype=float)), dtype=float).reshape(-1).copy() / 1e3
+    if "wavelength_nm" in current:
+        exported["wavelength"] = np.asarray(current.get("wavelength_nm", np.empty(0, dtype=float)), dtype=float).reshape(-1).copy()
+    if "optics_name" in current:
+        exported["opticsName"] = str(current.get("optics_name", ""))
+    return exported
+
+
 def _load_raytrace_optics(source: Any, *, asset_store: AssetStore) -> dict[str, Any]:
     if source is None:
         raw = asset_store.load_mat("data/optics/rtZemaxExample.mat")["optics"]
@@ -1970,6 +1996,8 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
     key = param_format(parameter)
     prefix, remainder = split_prefixed_parameter(parameter, ("optics",))
     if prefix == "optics" and remainder:
+        if remainder in {"rtpsfsize", "rtpsfdimensions"}:
+            return _raw_raytrace_psf_dimensions(oi)
         return oi_get(oi, remainder, *args)
     if key == "type":
         return oi.type
@@ -2160,11 +2188,14 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         raytrace = oi.fields["optics"].get("raytrace", {})
         return raytrace.get("name", oi.fields["optics"].get("name"))
     if key in {"psfstruct", "shiftvariantstructure"}:
-        return oi.fields.get("psf_struct")
+        psf_struct = oi.fields.get("psf_struct")
+        if isinstance(psf_struct, dict):
+            return _export_psf_struct(psf_struct)
+        return None
     if key in {"svpsf", "sampledrtpsf", "shiftvariantpsf"}:
         psf_struct = oi.fields.get("psf_struct")
         if isinstance(psf_struct, dict):
-            return psf_struct.get("psf")
+            return _export_psf_cell_array(np.asarray(psf_struct.get("psf", np.empty((0, 0, 0, 0, 0), dtype=float)), dtype=float))
         return None
     if key in {"psfsampleangles"}:
         psf_struct = oi.fields.get("psf_struct")
@@ -2214,7 +2245,12 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
             return np.asarray(psf_struct.get("target_y_mm", np.empty(0, dtype=float)), dtype=float)
         return np.empty(0, dtype=float)
     if key in {"rtpsfsize", "rtpsfdimensions"}:
-        return _raw_raytrace_psf_dimensions(oi)
+        psf_struct = oi.fields.get("psf_struct")
+        if isinstance(psf_struct, dict):
+            psf = np.asarray(psf_struct.get("psf", np.empty((0, 0, 0, 0, 0), dtype=float)), dtype=float)
+            if psf.ndim == 5 and psf.shape[3] > 0 and psf.shape[4] > 0:
+                return (int(psf.shape[3]), int(psf.shape[4]))
+        return (0, 0)
     if key in {"rtobjectdistance", "rtobjdist", "rtrefobjdist", "rtreferenceobjectdistance"}:
         return float(oi.fields["optics"].get("raytrace", {}).get("object_distance_m", np.inf)) * _spatial_unit_scale(
             args[0] if args else None

@@ -274,7 +274,8 @@ def test_oi_create_raytrace_loads_upstream_optics(asset_store) -> None:
     assert np.allclose(oi_get(oi, "rtpsfsamplespacing"), np.array([2.5e-7, 2.5e-7]))
     assert np.allclose(oi_get(oi, "rtpsfspacing", "um"), np.array([0.25, 0.25]))
     assert np.array_equal(oi_get(oi, "rtpsfwavelength"), np.array([400.0, 475.0, 550.0, 625.0, 700.0]))
-    assert oi_get(oi, "rtpsfsize") == oi_get(oi, "rtpsf")["function"].shape
+    assert oi_get(oi, "optics rtpsfsize") == oi_get(oi, "rtpsf")["function"].shape
+    assert oi_get(oi, "rtpsfsize") == (0, 0)
     assert "fieldHeight" in oi_get(oi, "rtpsf")
     assert "sampleSpacing" in oi_get(oi, "rtpsf")
 
@@ -355,10 +356,15 @@ def test_oi_compute_raytrace_builds_precomputed_psf_structure(asset_store) -> No
 
     assert np.isclose(oi_get(result, "psf angle step"), 30.0)
     assert isinstance(psf_struct, dict)
+    assert "sampAngles" in psf_struct
+    assert "imgHeight" in psf_struct
+    assert "wavelength" in psf_struct
     assert sampled is not None
-    assert sampled.ndim == 5
+    assert sampled.dtype == object
+    assert sampled.ndim == 3
     assert np.array_equal(oi_get(result, "psfwavelength"), np.array([550.0]))
-    assert oi_get(result, "rtpsfsize")[0] >= 3
+    assert oi_get(result, "rtpsfsize") == sampled[0, 0, 0].shape
+    assert oi_get(result, "optics rtpsfsize") == oi_get(result, "rtpsf")["function"].shape
     assert oi_get(result, "raytrace optics name") == "Asphere 2mm"
 
 
@@ -414,8 +420,12 @@ def test_oi_set_psfstruct_normalizes_matlab_style_metadata(asset_store) -> None:
 
     oi = oi_set(oi, "shift variant structure", psf_struct)
 
+    exported = oi_get(oi, "psf struct")
     sampled = oi_get(oi, "sampledRTpsf")
-    assert sampled.shape == (2, 2, 1, 3, 3)
+    assert exported["psf"].shape == (2, 2, 1)
+    assert sampled.shape == (2, 2, 1)
+    assert sampled.dtype == object
+    assert sampled[1, 1, 0].shape == (3, 3)
     assert np.array_equal(oi_get(oi, "psf sample angles"), np.array([0.0, 180.0]))
     assert np.isclose(oi_get(oi, "psf angle step"), 180.0)
     assert np.array_equal(oi_get(oi, "psf image heights"), np.array([0.0, 1.5]))
@@ -464,7 +474,7 @@ def test_oi_set_raw_raytrace_psf_data_supports_indexed_updates(asset_store) -> N
 
     assert np.allclose(oi_get(oi, "rtpsfdata", 0.0, 550.0), replacement)
     assert np.allclose(oi_get(oi, "rtpsfdata", 0.0, 625.0), other)
-    assert oi_get(oi, "rtpsfsize") == oi_get(oi, "rtpsf")["function"].shape
+    assert oi_get(oi, "optics rtpsfsize") == oi_get(oi, "rtpsf")["function"].shape
 
 
 def test_oi_set_raw_raytrace_geometry_and_relillum_updates_tables(asset_store) -> None:
