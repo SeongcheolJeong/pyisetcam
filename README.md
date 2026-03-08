@@ -267,6 +267,10 @@ state plus `sensorGet(..., 'roi volts/electrons/dv')`,
 `sensorGet(..., 'roi volts mean')`, `sensorGet(..., 'roi electrons mean')`,
 and `ipGet(..., 'roidata'/'roixyz')`, backed by headless
 `imageDataXYZ`.
+Scene and OI ROI getters are now covered too through
+`sceneGet(..., 'roi photons/energy/luminance/reflectance')`,
+`sceneGet(..., 'roi mean photons/energy/reflectance')`, and
+`oiGet(..., 'roi photons/energy')` plus their ROI-mean variants.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

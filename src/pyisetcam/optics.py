@@ -3431,6 +3431,26 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         return np.asarray(oi.fields["wave"], dtype=float)
     if key == "photons":
         return np.asarray(oi.data["photons"], dtype=float)
+    if key == "roiphotons":
+        if not args:
+            raise ValueError("ROI required for oiGet(..., 'roi photons').")
+        from .roi import vc_get_roi_data
+
+        return vc_get_roi_data(oi, args[0], "photons")
+    if key == "roimeanphotons":
+        if not args:
+            raise ValueError("ROI required for oiGet(..., 'roi mean photons').")
+        return np.mean(np.asarray(oi_get(oi, "roi photons", args[0]), dtype=float), axis=0).reshape(-1)
+    if key == "roienergy":
+        if not args:
+            raise ValueError("ROI required for oiGet(..., 'roi energy').")
+        from .roi import vc_get_roi_data
+
+        return vc_get_roi_data(oi, args[0], "energy")
+    if key == "roimeanenergy":
+        if not args:
+            raise ValueError("ROI required for oiGet(..., 'roi mean energy').")
+        return np.mean(np.asarray(oi_get(oi, "roi energy", args[0]), dtype=float), axis=0).reshape(-1)
     if key == "illuminance":
         stored = oi.fields.get("illuminance")
         if stored is not None:

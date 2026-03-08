@@ -12,6 +12,7 @@ from pyisetcam import (
     ip_get,
     ip_set,
     oi_create,
+    oi_get,
     oi_set,
     scene_create,
     scene_get,
@@ -187,3 +188,41 @@ def test_ip_get_roi_data_and_xyz(asset_store) -> None:
     assert np.allclose(roi_data, np.array([[0.1, 0.2, 0.3], [1.0, 1.1, 1.2]], dtype=float))
     assert np.allclose(roi_xyz, expected_roi_xyz)
     assert np.allclose(full_xyz, expected_full_xyz)
+
+
+def test_scene_get_roi_queries(asset_store) -> None:
+    scene = scene_create("uniform ee", 4, asset_store=asset_store)
+    roi = np.array([1, 1, 1, 1], dtype=int)
+
+    roi_photons = scene_get(scene, "roi photons", roi)
+    roi_energy = scene_get(scene, "roi energy", roi)
+    roi_reflectance = scene_get(scene, "roi reflectance", roi)
+    roi_luminance = scene_get(scene, "roi luminance", roi)
+
+    assert roi_photons.shape[0] == 4
+    assert np.allclose(scene_get(scene, "roi mean photons", roi), np.mean(roi_photons, axis=0))
+    assert np.allclose(scene_get(scene, "roi mean energy", roi), np.mean(roi_energy, axis=0))
+    assert np.allclose(scene_get(scene, "roi mean reflectance", roi), np.mean(roi_reflectance, axis=0))
+    assert roi_luminance.shape == (4, 1)
+    assert np.allclose(roi_reflectance, np.ones_like(roi_reflectance))
+
+
+def test_oi_get_roi_queries(asset_store) -> None:
+    oi = oi_create(asset_store=asset_store)
+    oi = oi_set(oi, "wave", np.array([500.0, 600.0], dtype=float))
+    photons = np.array(
+        [
+            [[1.0, 10.0], [2.0, 20.0]],
+            [[3.0, 30.0], [4.0, 40.0]],
+        ],
+        dtype=float,
+    )
+    oi = oi_set(oi, "photons", photons)
+    roi = np.array([1, 1, 1, 1], dtype=int)
+
+    roi_photons = oi_get(oi, "roi photons", roi)
+    roi_energy = oi_get(oi, "roi energy", roi)
+
+    assert np.allclose(roi_photons, photons.reshape(-1, 2))
+    assert np.allclose(oi_get(oi, "roi mean photons", roi), np.mean(roi_photons, axis=0))
+    assert np.allclose(oi_get(oi, "roi mean energy", roi), np.mean(roi_energy, axis=0))

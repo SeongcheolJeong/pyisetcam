@@ -885,6 +885,42 @@ def scene_get(scene: Scene, parameter: str, *args: Any, asset_store: AssetStore 
         return np.asarray(scene.fields["illuminant_photons"], dtype=float)
     if key == "illuminantenergy":
         return np.asarray(scene.fields["illuminant_energy"], dtype=float)
+    if key in {"roiphotons", "roiphotonsspd"}:
+        if not args:
+            raise ValueError("ROI required for sceneGet(..., 'roi photons').")
+        from .roi import vc_get_roi_data
+
+        return vc_get_roi_data(scene, args[0], "photons")
+    if key == "roienergy":
+        if not args:
+            raise ValueError("ROI required for sceneGet(..., 'roi energy').")
+        from .roi import vc_get_roi_data
+
+        return vc_get_roi_data(scene, args[0], "energy")
+    if key == "roimeanenergy":
+        if not args:
+            raise ValueError("ROI required for sceneGet(..., 'roi mean energy').")
+        return np.mean(np.asarray(scene_get(scene, "roi energy", args[0]), dtype=float), axis=0).reshape(-1)
+    if key == "roimeanphotons":
+        if not args:
+            raise ValueError("ROI required for sceneGet(..., 'roi mean photons').")
+        return np.mean(np.asarray(scene_get(scene, "roi photons", args[0]), dtype=float), axis=0).reshape(-1)
+    if key == "roireflectance":
+        if not args:
+            raise ValueError("ROI required for sceneGet(..., 'roi reflectance').")
+        from .roi import vc_get_roi_data
+
+        return vc_get_roi_data(scene, args[0], "reflectance")
+    if key == "roimeanreflectance":
+        if not args:
+            raise ValueError("ROI required for sceneGet(..., 'roi mean reflectance').")
+        return np.mean(np.asarray(scene_get(scene, "roi reflectance", args[0]), dtype=float), axis=0).reshape(-1)
+    if key == "roiluminance":
+        if not args:
+            raise ValueError("ROI required for sceneGet(..., 'roi luminance').")
+        from .roi import vc_get_roi_data
+
+        return vc_get_roi_data(scene, args[0], "luminance")
     if key == "luminance":
         if "luminance" not in scene.fields:
             scene_calculate_luminance(scene, asset_store=asset_store)
