@@ -190,6 +190,9 @@ def session_set_selected(
         session_add_object(session, value, select=True)
         return
     object_id = int(value)
+    if object_id <= 0:
+        session.selected[normalized_type] = None
+        return
     if object_id not in session.objects.get(normalized_type, {}):
         raise KeyError(f"Session object id {object_id} is not registered for type {normalized_type}.")
     session.selected[normalized_type] = object_id
@@ -254,6 +257,32 @@ def session_set_objects(
     return ordered_objects
 
 
+def session_add_and_select_object(
+    session: SessionContext,
+    object_type: str | BaseISETObject,
+    obj: BaseISETObject | None = None,
+) -> int:
+    if isinstance(object_type, BaseISETObject):
+        obj = object_type
+        object_type = _object_session_type(obj)
+    if obj is None:
+        raise ValueError("An object must be provided.")
+
+    if isinstance(obj, Camera):
+        camera = track_camera_session_state(session, obj, select=True)
+        object_id = session_object_id(camera)
+        if object_id is None:
+            raise RuntimeError("Failed to assign a session id to camera.")
+        return object_id
+    if isinstance(obj, ImageProcessor):
+        ip = track_ip_session_state(session, obj, select=True)
+        object_id = session_object_id(ip)
+        if object_id is None:
+            raise RuntimeError("Failed to assign a session id to image processor.")
+        return object_id
+    return session_add_object(session, obj, select=True)
+
+
 def session_new_object_value(
     session: SessionContext,
     object_type: str,
@@ -273,6 +302,11 @@ def session_get_object_type(obj: BaseISETObject) -> str:
     if object_type is None:
         raise ValueError("Object does not have a type field.")
     return str(object_type)
+
+
+def session_new_object_name(session: SessionContext, object_type: str) -> str:
+    normalized_type = _session_type_name(object_type)
+    return f"{normalized_type}{session_count_objects(session, normalized_type) + 1}"
 
 
 def session_replace_object(
@@ -356,10 +390,27 @@ def session_delete_object(
     return len(bucket)
 
 
+def session_delete_some_objects(
+    session: SessionContext,
+    object_type: str,
+    delete_list: list[int] | tuple[int, ...] | None = None,
+) -> int:
+    normalized_type = _session_type_name(object_type)
+    if not delete_list:
+        return session_count_objects(session, normalized_type)
+
+    remaining = session_count_objects(session, normalized_type)
+    for object_id in sorted({int(value) for value in delete_list}, reverse=True):
+        remaining = session_delete_object(session, normalized_type, object_id)
+    return remaining
+
+
 # MATLAB-style aliases.
+vcAddAndSelectObject = session_add_and_select_object
 vcAddObject = session_add_object
 vcCountObjects = session_count_objects
 vcDeleteObject = session_delete_object
+vcDeleteSomeObjects = session_delete_some_objects
 vcDeleteSelectedObject = session_delete_selected_object
 vcGetObjectType = session_get_object_type
 vcGetObjectNames = session_get_object_names
@@ -368,6 +419,7 @@ vcGetObjects = session_get_objects
 vcGetSelectedObject = session_get_selected_pair
 vcGetSelectedObjectID = session_get_selected_id
 vcNewObjectValue = session_new_object_value
+vcNewObjectName = session_new_object_name
 vcReplaceAndSelectObject = session_replace_and_select_object
 vcReplaceObject = session_replace_object
 vcSetObjects = session_set_objects

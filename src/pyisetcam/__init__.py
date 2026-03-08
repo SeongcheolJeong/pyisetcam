@@ -59,10 +59,12 @@ from .optics import (
 )
 from .parity import run_python_case, run_python_case_with_context
 from .session import (
+    session_add_and_select_object,
     session_add_object,
     session_count_objects,
     session_create,
     session_delete_object,
+    session_delete_some_objects,
     session_delete_selected_object,
     session_get_object,
     session_get_object_type,
@@ -73,6 +75,7 @@ from .session import (
     session_get_selected_pair,
     session_get_selected_id,
     session_list_objects,
+    session_new_object_name,
     session_new_object_value,
     session_object_id,
     session_replace_and_select_object,
@@ -168,10 +171,12 @@ __all__ = [
     "param_format",
     "peak_signal_to_noise_ratio",
     "root_mean_squared_error",
+    "session_add_and_select_object",
     "session_add_object",
     "session_count_objects",
     "session_create",
     "session_delete_object",
+    "session_delete_some_objects",
     "session_delete_selected_object",
     "session_get_object",
     "session_get_object_type",
@@ -182,6 +187,7 @@ __all__ = [
     "session_get_selected_pair",
     "session_get_selected_id",
     "session_list_objects",
+    "session_new_object_name",
     "session_new_object_value",
     "session_object_id",
     "session_replace_and_select_object",
@@ -256,9 +262,11 @@ __all__ = [
     "sensor_get",
     "sensor_set",
     "sensor_set_size_to_fov",
+    "vcAddAndSelectObject",
     "vcAddObject",
     "vcCountObjects",
     "vcDeleteObject",
+    "vcDeleteSomeObjects",
     "vcDeleteSelectedObject",
     "vcGetObject",
     "vcGetObjectType",
@@ -266,6 +274,7 @@ __all__ = [
     "vcGetObjects",
     "vcGetSelectedObject",
     "vcGetSelectedObjectID",
+    "vcNewObjectName",
     "vcNewObjectValue",
     "vcReplaceAndSelectObject",
     "vcReplaceObject",
@@ -346,9 +355,11 @@ cameraCompute = camera_compute
 cameraGet = camera_get
 cameraSet = camera_set
 
+vcAddAndSelectObject = session_add_and_select_object
 vcAddObject = session_add_object
 vcCountObjects = session_count_objects
 vcDeleteObject = session_delete_object
+vcDeleteSomeObjects = session_delete_some_objects
 vcDeleteSelectedObject = session_delete_selected_object
 vcGetObject = session_get_object_with_id
 vcGetObjectType = session_get_object_type
@@ -356,6 +367,7 @@ vcGetObjectNames = session_get_object_names
 vcGetObjects = session_get_objects
 vcGetSelectedObject = session_get_selected_pair
 vcGetSelectedObjectID = session_get_selected_id
+vcNewObjectName = session_new_object_name
 vcNewObjectValue = session_new_object_value
 vcReplaceAndSelectObject = session_replace_and_select_object
 vcReplaceObject = session_replace_object

@@ -10,10 +10,12 @@ from pyisetcam import (
     oi_create,
     scene_create,
     sensor_create,
+    session_add_and_select_object,
     session_add_object,
     session_count_objects,
     session_create,
     session_delete_object,
+    session_delete_some_objects,
     session_delete_selected_object,
     session_get_object,
     session_get_object_type,
@@ -23,18 +25,23 @@ from pyisetcam import (
     session_get_selected,
     session_get_selected_pair,
     session_get_selected_id,
+    session_new_object_name,
     session_new_object_value,
     session_object_id,
     session_replace_and_select_object,
     session_replace_object,
     session_set_objects,
     session_set_selected,
+    vcAddAndSelectObject,
     vcGetObject,
     vcGetObjectType,
     vcGetObjects,
     vcGetSelectedObject,
+    vcDeleteSomeObjects,
+    vcNewObjectName,
     vcNewObjectValue,
     vcSetObjects,
+    vcSetSelectedObject,
 )
 
 
@@ -195,6 +202,65 @@ def test_session_alias_types_and_delete_renumbering(asset_store) -> None:
 
     assert remaining == 1
     assert session_get_selected_pair(session, "scene") == (1, scene_three)
+
+
+def test_session_add_and_select_tracks_camera_and_aliases(asset_store) -> None:
+    session = session_create()
+    first_scene = scene_create("uniform ee", 8, asset_store=asset_store)
+    camera = camera_create(asset_store=asset_store)
+
+    first_id = session_add_and_select_object(session, "scene", first_scene)
+    camera_id = vcAddAndSelectObject(session, camera)
+
+    assert first_id == 1
+    assert camera_id == 1
+    assert session_get_selected(session, "scene") is first_scene
+    assert session_get_selected(session, "camera") is camera
+    assert session_get_selected(session, "oi") is camera.fields["oi"]
+    assert session_get_selected(session, "sensor") is camera.fields["sensor"]
+    assert session_get_selected(session, "ip") is camera.fields["ip"]
+    assert session_get_selected(session, "display") is camera.fields["ip"].fields["display"]
+
+
+def test_session_delete_some_objects_sorts_and_deduplicates(asset_store) -> None:
+    session = session_create()
+    scene_one = scene_create("uniform ee", 8, asset_store=asset_store, session=session)
+    scene_two = scene_create("uniform d65", 8, asset_store=asset_store, session=session)
+    scene_three = scene_create("checkerboard", 4, 4, asset_store=asset_store, session=session)
+    scene_four = scene_create("slanted bar", 16, asset_store=asset_store, session=session)
+
+    remaining = session_delete_some_objects(session, "scene", [2, 4, 2])
+
+    assert remaining == 2
+    assert session_get_object(session, "scene", 1) is scene_one
+    assert session_get_object(session, "scene", 2) is scene_three
+    assert session_object_id(scene_three) == 2
+    assert session_get_selected_pair(session, "scene") == (1, scene_one)
+
+    remaining = vcDeleteSomeObjects(session, "scene", [1])
+
+    assert remaining == 1
+    assert session_get_selected_pair(session, "scene") == (1, scene_three)
+    assert scene_two is not scene_three
+    assert scene_four is not scene_three
+
+
+def test_session_new_object_name_and_selection_clearing_follow_matlab_style(asset_store) -> None:
+    session = session_create()
+    scene_create("uniform ee", 8, asset_store=asset_store, session=session)
+    scene_create("uniform d65", 8, asset_store=asset_store, session=session)
+
+    assert session_new_object_name(session, "scene") == "scene3"
+    assert vcNewObjectName(session, "imgproc") == "ip1"
+
+    session_set_selected(session, "scene", 0)
+    assert session_get_selected(session, "scene") is None
+
+    vcSetSelectedObject(session, "scene", 2)
+    assert session_get_selected_id(session, "scene") == 2
+
+    vcSetSelectedObject(session, "scene", -1)
+    assert session_get_selected(session, "scene") is None
 
 
 def test_session_set_objects_and_new_object_value_follow_matlab_style(asset_store) -> None:

@@ -223,7 +223,10 @@ listing helpers such as `vcReplaceObject`, `vcReplaceAndSelectObject`,
 MATLAB-style pair-return wrappers for `vcGetSelectedObject` /
 `vcGetObject`, delete helpers that renumber session slots the MATLAB
 way, bulk object-list replacement through `vcSetObjects`, slot-allocation
-queries through `vcNewObjectValue`, and type reporting through
+queries through `vcNewObjectValue`, add-and-select helpers through
+`vcAddAndSelectObject`, name generation through `vcNewObjectName`,
+batch deletion through `vcDeleteSomeObjects`, nonpositive selected-slot
+clearing through `vcSetSelectedObject`, and type reporting through
 `vcGetObjectType`.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
