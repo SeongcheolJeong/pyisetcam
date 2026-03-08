@@ -961,6 +961,22 @@ def test_oi_set_optics_raw_top_level_offaxis_roundtrips(asset_store) -> None:
     assert roundtrip["offaxis"] == "skip"
 
 
+def test_oi_set_optics_transmittance_wave_preserves_scale_via_interpolation(asset_store) -> None:
+    oi = oi_create("ray trace", asset_store=asset_store)
+    optics = oi_get(oi, "optics")
+    optics["transmittance"]["wave"] = np.array([450.0, 550.0, 650.0], dtype=float)
+    optics["transmittance"]["scale"] = np.array([0.2, 0.5, 0.8], dtype=float)
+    oi = oi_set(oi, "optics", optics)
+
+    optics = oi_get(oi, "optics")
+    optics["transmittance"]["wave"] = np.array([475.0, 625.0], dtype=float)
+    oi = oi_set(oi, "optics", optics)
+
+    roundtrip = oi_get(oi, "optics")
+    assert np.array_equal(roundtrip["transmittance"]["wave"], np.array([475.0, 625.0]))
+    assert np.allclose(roundtrip["transmittance"]["scale"], np.array([0.275, 0.725]))
+
+
 def test_oi_compute_raytrace_rotates_psf_with_field_angle(asset_store) -> None:
     wave = np.array([550.0], dtype=float)
     scene = scene_create("uniform ee", 96, wave, asset_store=asset_store)

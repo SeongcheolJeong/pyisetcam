@@ -285,6 +285,33 @@ def _merge_mapping(base: dict[str, Any], update: dict[str, Any]) -> dict[str, An
     return merged
 
 
+def _normalize_transmittance_update(source: dict[str, Any], current: dict[str, Any] | None) -> dict[str, Any]:
+    current_transmittance = dict(current or {})
+    current_wave = np.asarray(current_transmittance.get("wave", DEFAULT_WAVE.copy()), dtype=float).reshape(-1)
+    current_scale = np.asarray(
+        current_transmittance.get("scale", np.ones(current_wave.size, dtype=float)),
+        dtype=float,
+    ).reshape(-1)
+    if current_scale.size == 1 and current_wave.size > 1:
+        current_scale = np.full(current_wave.size, float(current_scale[0]), dtype=float)
+    elif current_scale.size != current_wave.size:
+        current_scale = np.ones(current_wave.size, dtype=float)
+
+    wave = np.asarray(source.get("wave", current_wave), dtype=float).reshape(-1)
+    scale = np.asarray(source.get("scale", current_scale), dtype=float).reshape(-1)
+    if scale.size == 1 and wave.size > 1:
+        scale = np.full(wave.size, float(scale[0]), dtype=float)
+    elif scale.size != wave.size:
+        if current_wave.size > 0 and current_scale.size == current_wave.size:
+            scale = np.interp(wave, current_wave, current_scale)
+        else:
+            scale = np.ones(wave.size, dtype=float)
+    return {
+        "wave": wave.copy(),
+        "scale": scale.copy(),
+    }
+
+
 def _normalize_optics_update(value: Any, current_optics: dict[str, Any]) -> dict[str, Any]:
     raw = dict(value)
     model = param_format(raw.get("model", current_optics.get("model", "")))
@@ -312,6 +339,11 @@ def _normalize_optics_update(value: Any, current_optics: dict[str, Any]) -> dict
         )
     if "transmittance" not in source and "transmittance" in current_optics:
         source["transmittance"] = dict(current_optics["transmittance"])
+    elif isinstance(source.get("transmittance"), dict):
+        source["transmittance"] = _normalize_transmittance_update(
+            dict(source["transmittance"]),
+            dict(current_optics.get("transmittance", {})),
+        )
 
     nested_raw_raytrace = source.get("rayTrace")
     if isinstance(nested_raw_raytrace, dict):
