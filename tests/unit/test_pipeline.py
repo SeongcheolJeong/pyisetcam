@@ -18,9 +18,12 @@ from pyisetcam import (
     oi_create,
     oi_get,
     oi_set,
+    rt_angle_lut,
     rt_di_interp,
+    rt_psf_grid,
     rt_psf_interp,
     rt_ri_interp,
+    rt_sample_heights,
     run_python_case,
     scene_create,
     scene_get,
@@ -894,6 +897,45 @@ def test_oi_compute_raytrace_uses_raw_curve_helpers(asset_store, monkeypatch) ->
     assert result.data["photons"].shape[:2] == scene.data["photons"].shape[:2]
     assert di_calls == [550.0]
     assert ri_calls == [550.0]
+
+
+def test_rt_sample_heights_matches_matlab_truncation_rule() -> None:
+    all_heights = np.array([0.0, 0.5, 1.0, 2.0], dtype=float)
+    data_height = np.array([[0.1, 0.9], [1.4, 1.6]], dtype=float)
+
+    img_height, max_data_height = rt_sample_heights(all_heights, data_height)
+
+    assert np.array_equal(img_height, np.array([0.0, 0.5, 1.0, 2.0]))
+    assert np.isclose(max_data_height, 1.6)
+
+
+def test_rt_psf_grid_matches_oi_sample_spacing(asset_store) -> None:
+    scene = scene_create("uniform ee", 32, np.array([550.0], dtype=float), asset_store=asset_store)
+    oi = oi_compute(oi_create("ray trace", asset_store=asset_store), scene, crop=True)
+
+    x_grid, y_grid, sample_spacing = rt_psf_grid(oi, "m")
+
+    assert x_grid.shape == y_grid.shape
+    assert x_grid.ndim == 2
+    assert sample_spacing.shape == (2,)
+    assert np.isclose(np.diff(x_grid[0])[0], sample_spacing[0])
+    assert np.isclose(np.diff(y_grid[:, 0])[0], sample_spacing[1])
+    assert np.any(np.isclose(x_grid, 0.0))
+    assert np.any(np.isclose(y_grid, 0.0))
+
+
+def test_rt_angle_lut_returns_matlab_style_indices(asset_store) -> None:
+    scene = scene_create("uniform ee", 32, np.array([550.0], dtype=float), asset_store=asset_store)
+    oi = oi_set(oi_create("ray trace", asset_store=asset_store), "psf angle step", 45.0)
+    oi = oi_compute(oi, scene, crop=True)
+
+    angle_lut = rt_angle_lut(oi)
+
+    assert angle_lut.shape == (360, 2)
+    assert np.all(angle_lut[:, 0] >= 1)
+    assert np.all(angle_lut[:, 0] <= len(oi_get(oi, "psf sample angles")) - 1)
+    assert np.all(angle_lut[:, 1] >= 0.0)
+    assert np.all(angle_lut[:, 1] <= 1.0)
 
 
 def test_wvf_path_preserves_more_checkerboard_contrast_than_diffraction(asset_store) -> None:

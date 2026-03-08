@@ -25,7 +25,19 @@ from .metrics import (
     xyz_from_energy,
     xyz_to_lab,
 )
-from .optics import oi_compute, oi_create, oi_get, oi_set, rt_di_interp, rt_psf_interp, rt_ri_interp, wvf_create
+from .optics import (
+    oi_compute,
+    oi_create,
+    oi_get,
+    oi_set,
+    rt_angle_lut,
+    rt_di_interp,
+    rt_psf_grid,
+    rt_psf_interp,
+    rt_ri_interp,
+    rt_sample_heights,
+    wvf_create,
+)
 from .parity import run_python_case, run_python_case_with_context
 from .scene import (
     scene_adjust_illuminant,
@@ -107,11 +119,17 @@ __all__ = [
     "peak_signal_to_noise_ratio",
     "root_mean_squared_error",
     "rtDIInterp",
+    "rtAngleLUT",
     "rtRIInterp",
+    "rtPSFGrid",
     "rt_di_interp",
+    "rt_angle_lut",
+    "rt_psf_grid",
     "rtPSFInterp",
     "rt_psf_interp",
+    "rtSampleHeights",
     "rt_ri_interp",
+    "rt_sample_heights",
     "run_python_case",
     "run_python_case_with_context",
     "sceneAdjustIlluminant",
@@ -167,9 +185,12 @@ oiCreate = oi_create
 oiCompute = oi_compute
 oiGet = oi_get
 oiSet = oi_set
+rtAngleLUT = rt_angle_lut
 rtDIInterp = rt_di_interp
+rtPSFGrid = rt_psf_grid
 rtPSFInterp = rt_psf_interp
 rtRIInterp = rt_ri_interp
+rtSampleHeights = rt_sample_heights
 
 sensorCreate = sensor_create
 sensorCreateIdeal = sensor_create_ideal

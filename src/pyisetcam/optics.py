@@ -1198,6 +1198,60 @@ def rt_ri_interp(
     return _raytrace_curve(dict(optics.get("raytrace", {}).get("relative_illumination", {})), float(wavelength_nm))
 
 
+def rt_sample_heights(all_heights: np.ndarray, data_height: np.ndarray) -> tuple[np.ndarray, float]:
+    img_height = _raytrace_sample_heights(np.asarray(all_heights, dtype=float), np.asarray(data_height, dtype=float))
+    max_data_height = float(np.max(np.asarray(data_height, dtype=float))) if np.asarray(data_height).size > 0 else 0.0
+    return img_height, max_data_height
+
+
+def rt_psf_grid(
+    oi: OpticalImage,
+    units: str = "m",
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    scale = _spatial_unit_scale(units)
+    sample_spacing = np.asarray(
+        [
+            float(oi_get(oi, "wspatialresolution", units)),
+            float(oi_get(oi, "hspatialresolution", units)),
+        ],
+        dtype=float,
+    )
+    optics = _coerce_optics_for_raytrace(oi)
+    psf_data = dict(optics.get("raytrace", {}).get("psf", {}))
+    source_x_mm, source_y_mm = _raytrace_psf_support_axes(psf_data)
+    source_x = np.asarray(source_x_mm, dtype=float) / 1e3 * scale
+    source_y = np.asarray(source_y_mm, dtype=float) / 1e3 * scale
+
+    if source_x.size == 0 or source_y.size == 0:
+        empty = np.empty((0, 0), dtype=float)
+        return empty, empty, sample_spacing
+
+    x_positive = np.arange(0.0, float(source_x[-1]) + float(sample_spacing[0]) * 0.5, float(sample_spacing[0]))
+    x_negative = -np.flip(np.arange(0.0, abs(float(source_x[0])) + float(sample_spacing[0]) * 0.5, float(sample_spacing[0])))
+    y_positive = np.arange(0.0, float(source_y[-1]) + float(sample_spacing[1]) * 0.5, float(sample_spacing[1]))
+    y_negative = -np.flip(np.arange(0.0, abs(float(source_y[0])) + float(sample_spacing[1]) * 0.5, float(sample_spacing[1])))
+    x_grid = np.concatenate((x_negative[:-1], x_positive))
+    y_grid = np.concatenate((y_negative[:-1], y_positive))
+    xx, yy = np.meshgrid(x_grid, y_grid)
+    return xx, yy, sample_spacing
+
+
+def rt_angle_lut(psf_struct: dict[str, Any] | OpticalImage) -> np.ndarray:
+    if isinstance(psf_struct, OpticalImage):
+        current = oi_get(psf_struct, "psf struct")
+        if current is None:
+            raise ValueError("Precomputed ray-trace psfStruct is required.")
+        psf_struct = current
+    normalized = _normalize_psf_struct(psf_struct)
+    if not isinstance(normalized, dict):
+        raise ValueError("Precomputed ray-trace psfStruct is required.")
+    sample_angles = np.asarray(normalized.get("sample_angles_deg", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    if sample_angles.size < 2:
+        raise ValueError("Precomputed ray-trace psfStruct must include sample angles.")
+    lower_index, weight = _raytrace_angle_lut(sample_angles)
+    return np.column_stack((lower_index + 1, weight))
+
+
 def _raytrace_geometry(cube: np.ndarray, wave: np.ndarray, optics: dict[str, Any], scene: Scene) -> np.ndarray:
     raytrace = dict(optics.get("raytrace", {}))
     max_fov = float(raytrace.get("max_fov_deg", np.inf))
