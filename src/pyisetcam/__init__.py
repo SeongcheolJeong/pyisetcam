@@ -38,6 +38,7 @@ from .optics import (
     rt_choose_block_size,
     rt_di_interp,
     rt_extract_block,
+    rt_filtered_block_support,
     rt_geometry,
     rt_insert_block,
     rt_otf,
@@ -142,6 +143,7 @@ __all__ = [
     "rtBlockCenter",
     "rtChooseBlockSize",
     "rtExtractBlock",
+    "rtFilteredBlockSupport",
     "rtGeometry",
     "rtInsertBlock",
     "rtOTF",
@@ -155,6 +157,7 @@ __all__ = [
     "rt_block_center",
     "rt_choose_block_size",
     "rt_extract_block",
+    "rt_filtered_block_support",
     "rt_geometry",
     "rt_insert_block",
     "rt_otf",
@@ -232,6 +235,7 @@ rtBlockCenter = rt_block_center
 rtChooseBlockSize = rt_choose_block_size
 rtDIInterp = rt_di_interp
 rtExtractBlock = rt_extract_block
+rtFilteredBlockSupport = rt_filtered_block_support
 rtGeometry = rt_geometry
 rtInsertBlock = rt_insert_block
 rtOTF = rt_otf

@@ -1416,7 +1416,7 @@ def rt_choose_block_size(
     return n_blocks, block_samples, irrad_padding
 
 
-def _rt_filtered_block_support(
+def rt_filtered_block_support(
     oi: OpticalImage,
     block_samples: np.ndarray,
     block_padding: np.ndarray,
@@ -1463,7 +1463,7 @@ def rt_otf(
     col_o = int(col_p + 2 * block_padding[1])
     output = np.zeros((row_o, col_o, wave.size), dtype=float)
 
-    block_x_mm, block_y_mm, mm_row, mm_col = _rt_filtered_block_support(oi, block_samples, block_padding)
+    block_x_mm, block_y_mm, mm_row, mm_col = rt_filtered_block_support(oi, block_samples, block_padding)
     block_x_grid_mm, block_y_grid_mm = np.meshgrid(block_x_mm, block_y_mm)
     image_center = np.array([np.floor(row_p / 2.0) + 1.0, np.floor(col_p / 2.0) + 1.0], dtype=float)
 

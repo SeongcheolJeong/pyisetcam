@@ -147,6 +147,8 @@ for `rt_block_center` / `rtBlockCenter`, `rt_extract_block` /
 `rt_choose_block_size` / `rtChooseBlockSize`. An initial public
 `rt_otf` / `rtOTF` wrapper is now available as the block-wise ray-trace
 OTF path, together with MATLAB-style `rtBlocksPerFieldHeight` control.
+The underlying filtered-block support helper is now public too as
+`rt_filtered_block_support` / `rtFilteredBlockSupport`.
 `rt_synthetic` / `rtSynthetic` is now available as a synthetic ray-trace
 optics generator for testing and controlled local experiments.
 Multispectral / EXR / reflective-display cases and the rest of the vendor

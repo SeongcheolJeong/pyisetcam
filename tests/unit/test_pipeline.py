@@ -26,6 +26,7 @@ from pyisetcam import (
     rt_choose_block_size,
     rt_di_interp,
     rt_extract_block,
+    rt_filtered_block_support,
     rt_geometry,
     rt_insert_block,
     rt_otf,
@@ -1016,6 +1017,43 @@ def test_rt_otf_uses_rt_blocks_per_field_height_setting(asset_store) -> None:
 
     assert oi_get(stage, "rt blocks per field height") == 6
     assert result.shape == expected_shape
+
+
+def test_rt_filtered_block_support_matches_block_layout(asset_store) -> None:
+    scene = scene_create("uniform ee", 32, np.array([550.0], dtype=float), asset_store=asset_store)
+    stage = rt_geometry(oi_create("ray trace", asset_store=asset_store), scene)
+    _, block_samples, _ = rt_choose_block_size(scene, stage)
+    block_padding = block_samples // 2
+
+    block_x, block_y, mm_row, mm_col = rt_filtered_block_support(stage, block_samples, block_padding)
+
+    assert block_x.ndim == 1
+    assert block_y.ndim == 1
+    assert block_x.size == int(block_samples[1] + 2 * block_padding[1])
+    assert block_y.size == int(block_samples[0] + 2 * block_padding[0])
+    assert np.isclose(np.diff(block_x)[0], mm_col)
+    assert np.isclose(np.diff(block_y)[0], mm_row)
+    assert np.any(np.isclose(block_x, 0.0))
+    assert np.any(np.isclose(block_y, 0.0))
+
+
+def test_rt_otf_filtered_block_support_matches_public_helper(asset_store) -> None:
+    scene = scene_create("uniform ee", 32, np.array([550.0], dtype=float), asset_store=asset_store)
+    stage = rt_geometry(oi_create("ray trace", asset_store=asset_store), scene)
+    _, block_samples, _ = rt_choose_block_size(scene, stage)
+    block_padding = block_samples // 2
+
+    block_x, block_y, mm_row, mm_col = rt_filtered_block_support(stage, block_samples, block_padding)
+    result = rt_otf(scene, stage)
+
+    expected_rows = int(block_samples[0] + 2 * block_padding[0])
+    expected_cols = int(block_samples[1] + 2 * block_padding[1])
+    assert block_y.size == expected_rows
+    assert block_x.size == expected_cols
+    assert mm_row > 0.0
+    assert mm_col > 0.0
+    assert result.shape[0] >= expected_rows
+    assert result.shape[1] >= expected_cols
 
 
 def test_rt_synthetic_builds_normalized_raytrace_optics(asset_store) -> None:
