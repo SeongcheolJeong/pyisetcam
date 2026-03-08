@@ -774,19 +774,26 @@ def _interp2_linear_constant_zero(
     )
 
 
+def _sensor_qe_on_wave(sensor: Sensor, target_wave: np.ndarray, *, dtype: Any = float) -> np.ndarray:
+    target_wave = np.asarray(target_wave, dtype=float).reshape(-1)
+    sensor_wave = np.asarray(sensor.fields["wave"], dtype=float).reshape(-1)
+    spectral_qe = np.asarray(sensor.fields["filter_spectra"], dtype=dtype)
+    if spectral_qe.ndim == 1:
+        spectral_qe = spectral_qe.reshape(-1, 1)
+    if np.array_equal(target_wave, sensor_wave):
+        return spectral_qe
+    if sensor_wave.size <= 1:
+        raise ValueError("Sensor and optical image wavelength samplings do not match.")
+    interpolated = np.empty((target_wave.size, spectral_qe.shape[1]), dtype=spectral_qe.dtype)
+    for index in range(spectral_qe.shape[1]):
+        interpolated[:, index] = np.interp(target_wave, sensor_wave, spectral_qe[:, index], left=0.0, right=0.0)
+    return interpolated
+
+
 def _signal_current_density(oi: OpticalImage, sensor: Sensor) -> np.ndarray:
     irradiance = np.asarray(oi.data["photons"], dtype=np.float32)
     wave = np.asarray(oi.fields["wave"], dtype=float)
-    sensor_wave = np.asarray(sensor.fields["wave"], dtype=float)
-    spectral_qe = np.asarray(sensor.fields["filter_spectra"], dtype=np.float32)
-    if not np.array_equal(wave, sensor_wave):
-        if sensor_wave.size > 1:
-            interpolated = np.empty((wave.size, spectral_qe.shape[1]), dtype=np.float32)
-            for index in range(spectral_qe.shape[1]):
-                interpolated[:, index] = np.interp(wave, sensor_wave, spectral_qe[:, index], left=0.0, right=0.0)
-            spectral_qe = interpolated
-        else:
-            raise ValueError("Sensor and optical image wavelength samplings do not match.")
+    spectral_qe = _sensor_qe_on_wave(sensor, wave, dtype=np.float32)
     bin_width = np.float32(np.mean(np.diff(wave)) if wave.size > 1 else 1.0)
     weighted_qe = spectral_qe * bin_width
     return np.tensordot(irradiance, weighted_qe, axes=([2], [0])).astype(np.float32) * np.float32(_ELEMENTARY_CHARGE_C)
@@ -878,7 +885,7 @@ def _regrid_electron_rate_density(
 
 def _auto_exposure_default(sensor: Sensor, oi: OpticalImage) -> float:
     cube = np.asarray(oi.data["photons"], dtype=float)
-    wave = np.asarray(sensor.fields["wave"], dtype=float)
+    wave = np.asarray(oi.fields["wave"], dtype=float)
     voltage_swing = float(sensor.fields["pixel"]["voltage_swing"])
 
     illuminance = luminance_from_photons(cube, wave, asset_store=AssetStore.default())
@@ -934,21 +941,17 @@ def sensor_compute(sensor: Sensor, oi: OpticalImage, show_bar: bool | None = Non
     computed = sensor.clone()
     cube = np.asarray(oi.data["photons"], dtype=float)
     rows, cols = computed.fields["size"]
-    wave = np.asarray(computed.fields["wave"], dtype=float)
-    filter_spectra = np.asarray(computed.fields["filter_spectra"], dtype=float)
+    wave = np.asarray(oi.fields["wave"], dtype=float)
     pattern = np.asarray(computed.fields["pattern"], dtype=int)
     pixel = computed.fields["pixel"]
     delta_nm = np.mean(np.diff(wave)) if wave.size > 1 else 1.0
     pixel_area = float(np.prod(np.asarray(pixel["size_m"], dtype=float)) * pixel["fill_factor"])
     conversion_gain = float(pixel["conversion_gain_v_per_electron"])
-    electron_rate_density = np.tensordot(cube * delta_nm, filter_spectra, axes=([2], [0]))
-    electron_rate = _regrid_electron_rate_density(electron_rate_density, oi, computed) * pixel_area
 
     if computed.fields["auto_exposure"] or computed.fields["integration_time"] <= 0.0:
         computed.fields["integration_time"] = _auto_exposure_default(computed, oi)
 
     integration_time = float(computed.fields["integration_time"])
-    electrons = electron_rate * integration_time
     rng = np.random.default_rng(seed)
     noise_flag = int(computed.fields["noise_flag"])
 
@@ -958,6 +961,10 @@ def sensor_compute(sensor: Sensor, oi: OpticalImage, show_bar: bool | None = Non
         volts = signal_current * (integration_time * conversion_gain / _ELEMENTARY_CHARGE_C)
         computed.data["channel_volts"] = None
     else:
+        filter_spectra = _sensor_qe_on_wave(computed, wave)
+        electron_rate_density = np.tensordot(cube * delta_nm, filter_spectra, axes=([2], [0]))
+        electron_rate = _regrid_electron_rate_density(electron_rate_density, oi, computed) * pixel_area
+        electrons = electron_rate * integration_time
         volts_full = electrons * conversion_gain
         computed.data["channel_volts"] = volts_full.copy()
         volts = volts_full.copy()

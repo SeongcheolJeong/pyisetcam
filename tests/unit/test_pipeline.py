@@ -2096,6 +2096,18 @@ def test_sensor_compute_supports_rgbw_and_rccc_presets(asset_store) -> None:
     assert np.all(rccc_result.data["volts"] >= 0.0)
 
 
+def test_sensor_compute_supports_vendor_rgbw_qe_sampling(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    oi = oi_compute(oi_create(), scene, crop=True)
+    sensor = sensor_set(sensor_create("mt9v024", "rgbw", asset_store=asset_store), "noise flag", 0)
+    sensor = sensor_set(sensor, "integration time", 0.01)
+
+    result = sensor_compute(sensor, oi, seed=0)
+
+    assert result.data["volts"].shape == sensor.fields["size"]
+    assert np.all(result.data["volts"] >= 0.0)
+
+
 def test_sensor_set_size_respects_cfa_block_and_clears_cached_data(asset_store) -> None:
     sensor = sensor_create(asset_store=asset_store)
     sensor = sensor_set(sensor, "volts", np.ones((7, 9), dtype=float))
@@ -2312,6 +2324,15 @@ def test_camera_create_supports_vendor_sensor_variants(asset_store) -> None:
     assert camera_get(mt9v024_rgbw, "sensor filter color letters") == "rgbw"
     assert ar0132at_rccc.fields["sensor"].name == "AR0132AT-RCCC"
     assert camera_get(ar0132at_rccc, "sensor filter color letters") == "rw"
+
+
+def test_camera_compute_supports_vendor_sensor_variants(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    mt9v024_rgbw = camera_compute(camera_create("mt9v024", "rgbw", asset_store=asset_store), scene, asset_store=asset_store)
+    ar0132at_rccc = camera_compute(camera_create("ar0132at", "rccc", asset_store=asset_store), scene, asset_store=asset_store)
+
+    assert mt9v024_rgbw.fields["ip"].data["result"].shape[:2] == mt9v024_rgbw.fields["sensor"].fields["size"]
+    assert ar0132at_rccc.fields["ip"].data["result"].shape[:2] == ar0132at_rccc.fields["sensor"].fields["size"]
 
 
 def test_run_python_case_with_context_returns_pipeline_objects(asset_store) -> None:
