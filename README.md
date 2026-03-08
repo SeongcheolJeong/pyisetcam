@@ -253,6 +253,9 @@ ported too for object-type inference from parameter strings.
 Headless `.mat` object persistence is now available through
 `vcSaveObject`, `vcExportObject`, and `vcLoadObject` when explicit file
 paths are provided.
+`iePTable` is now ported in a headless form too, returning structured
+parameter-table rows for the core object types without depending on a GUI
+table widget.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

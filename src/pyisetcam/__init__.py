@@ -59,6 +59,7 @@ from .optics import (
     zemax_read_header,
 )
 from .parity import run_python_case, run_python_case_with_context
+from .ptable import IEPTable, ie_p_table
 from .session import (
     ie_app_get,
     ie_add_object,
@@ -133,6 +134,7 @@ __all__ = [
     "DEFAULT_UPSTREAM_TARBALL_SHA256",
     "DEFAULT_WAVE",
     "Display",
+    "IEPTable",
     "ImageProcessor",
     "OpticalImage",
     "Scene",
@@ -166,6 +168,7 @@ __all__ = [
     "ieFieldHeight2Index",
     "ieFindObjectByName",
     "ieParameterOtype",
+    "iePTable",
     "ieGetObject",
     "ieGetSelectedObject",
     "ieInitSession",
@@ -183,6 +186,7 @@ __all__ = [
     "ie_equivalent_objtype",
     "ie_find_object_by_name",
     "ie_parameter_otype",
+    "ie_p_table",
     "ie_field_height_to_index",
     "ie_get_object",
     "ie_get_selected_object",
@@ -420,6 +424,7 @@ ieDeleteObject = ie_delete_object
 ieEquivalentObjtype = ie_equivalent_objtype
 ieFindObjectByName = ie_find_object_by_name
 ieParameterOtype = ie_parameter_otype
+iePTable = ie_p_table
 ieGetObject = ie_get_object
 ieGetSelectedObject = ie_get_selected_object
 ieInitSession = ie_init_session
