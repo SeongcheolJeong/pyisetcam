@@ -7,6 +7,7 @@ from typing import Any
 
 import imageio.v3 as iio
 import numpy as np
+from scipy.signal import convolve2d
 
 from .assets import AssetStore
 from .color import luminance_from_photons
@@ -207,6 +208,47 @@ def _scale_energy_to_luminance(
     return np.asarray(energy, dtype=float) * (float(luminance_cd_m2) / current)
 
 
+def _scene_size_2d(size: Any, *, default: int) -> tuple[int, int]:
+    if size is None:
+        return (int(default), int(default))
+    if np.isscalar(size):
+        side = int(size)
+        return (side, side)
+    values = np.asarray(size, dtype=int).reshape(-1)
+    if values.size == 1:
+        side = int(values[0])
+        return (side, side)
+    return (int(values[0]), int(values[1]))
+
+
+def _matlab_round_scalar(value: float) -> int:
+    return int(np.floor(float(value) + 0.5))
+
+
+def _spectral_illuminant(
+    spectral_type: str,
+    wave: np.ndarray,
+    *,
+    asset_store: AssetStore,
+    blackbody_temperature_k: float | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    spectral_key = param_format(spectral_type)
+    if spectral_key == "d65":
+        _, illuminant_energy = _load_d65(wave, asset_store)
+        return illuminant_energy, energy_to_quanta(illuminant_energy, wave)
+    if spectral_key in {"ee", "equalenergy"}:
+        illuminant_energy = np.ones(wave.size, dtype=float)
+        return illuminant_energy, energy_to_quanta(illuminant_energy, wave)
+    if spectral_key in {"ep", "equalphoton", "equalphotons"}:
+        illuminant_photons = np.ones(wave.size, dtype=float)
+        return quanta_to_energy(illuminant_photons, wave), illuminant_photons
+    if spectral_key in {"bb", "blackbody"}:
+        temperature_k = 5000.0 if blackbody_temperature_k is None else float(blackbody_temperature_k)
+        illuminant_energy = np.asarray(blackbody(wave, temperature_k, kind="energy"), dtype=float).reshape(-1)
+        return illuminant_energy, energy_to_quanta(illuminant_energy, wave)
+    raise UnsupportedOptionError("sceneCreate", f"spectralType={spectral_type}")
+
+
 def _create_macbeth_scene(
     patch_size: int,
     wave: np.ndarray,
@@ -337,6 +379,174 @@ def _slanted_bar_scene(
     return scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
 
 
+def _uniform_blackbody_scene(
+    size: Any,
+    temperature_k: float,
+    wave: np.ndarray,
+    *,
+    asset_store: AssetStore,
+) -> Scene:
+    illuminant_energy = np.asarray(blackbody(wave, float(temperature_k), kind="energy"), dtype=float).reshape(-1)
+    return _uniform_scene(f"Uniform BB {int(round(float(temperature_k)))}K", _scene_size_2d(size, default=32)[0], wave, illuminant_energy, asset_store=asset_store)
+
+
+def _uniform_monochromatic_scene(
+    size: Any,
+    wavelength: Any,
+    *,
+    asset_store: AssetStore,
+) -> Scene:
+    wave = _wave_or_default(wavelength)
+    scene = _uniform_scene("Narrow Band", _scene_size_2d(size, default=128)[0], wave, np.ones(wave.size, dtype=float), asset_store=asset_store)
+    scene.name = "Narrow Band"
+    return scene
+
+
+def _line_scene(
+    spectral_type: str,
+    size: Any,
+    offset: int,
+    wave: np.ndarray,
+    *,
+    asset_store: AssetStore,
+) -> Scene:
+    rows, cols = _scene_size_2d(size, default=64)
+    illuminant_energy, illuminant_photons = _spectral_illuminant(spectral_type, wave, asset_store=asset_store)
+    line_pos = _matlab_round_scalar(cols / 2.0) - 1 + int(offset)
+    line_pos = min(max(line_pos, 0), cols - 1)
+    photons = np.full((rows, cols, wave.size), 1e-4, dtype=float)
+    photons[:, line_pos, :] = 1.0
+    photons = photons * illuminant_photons.reshape(1, 1, -1)
+
+    scene = Scene(name=f"line-{param_format(spectral_type)}")
+    scene.fields["wave"] = wave
+    scene.fields["illuminant_format"] = "spectral"
+    scene.fields["illuminant_energy"] = illuminant_energy
+    scene.fields["illuminant_photons"] = illuminant_photons
+    scene.fields["distance_m"] = DEFAULT_DISTANCE_M
+    scene.fields["fov_deg"] = DEFAULT_FOV_DEG
+    scene.data["photons"] = photons
+    _update_scene_geometry(scene)
+    return scene
+
+
+def _bar_scene(size: Any, width: int, wave: np.ndarray, *, asset_store: AssetStore) -> Scene:
+    rows, cols = _scene_size_2d(size, default=64)
+    bar_width = max(int(width), 1)
+    start = _matlab_round_scalar((cols - bar_width) / 2.0)
+    stop = min(start + bar_width, cols)
+    illuminant_energy, illuminant_photons = _spectral_illuminant("ep", wave, asset_store=asset_store)
+    photons = np.full((rows, cols, wave.size), 1e-8, dtype=float)
+    photons[:, start:stop, :] = 1.0
+    photons = photons * illuminant_photons.reshape(1, 1, -1)
+
+    scene = Scene(name=f"bar-{bar_width}")
+    scene.fields["wave"] = wave
+    scene.fields["illuminant_format"] = "spectral"
+    scene.fields["illuminant_energy"] = illuminant_energy
+    scene.fields["illuminant_photons"] = illuminant_photons
+    scene.fields["distance_m"] = DEFAULT_DISTANCE_M
+    scene.fields["fov_deg"] = DEFAULT_FOV_DEG
+    scene.data["photons"] = photons
+    _update_scene_geometry(scene)
+    return scene
+
+
+def _point_array_scene(
+    size: Any,
+    spacing: int,
+    spectral_type: str,
+    point_size: int,
+    wave: np.ndarray,
+    *,
+    asset_store: AssetStore,
+) -> Scene:
+    rows, cols = _scene_size_2d(size, default=128)
+    spacing_px = max(int(spacing), 1)
+    pattern = np.zeros((rows, cols), dtype=float)
+    x_positions = np.arange(max(_matlab_round_scalar(spacing_px / 2.0) - 1, 0), cols, spacing_px, dtype=int)
+    y_positions = np.arange(max(_matlab_round_scalar(spacing_px / 2.0) - 1, 0), rows, spacing_px, dtype=int)
+    pattern[np.ix_(y_positions, x_positions)] = 1.0
+    if int(point_size) > 1:
+        kernel = np.ones((int(point_size), int(point_size)), dtype=float)
+        pattern = convolve2d(pattern, kernel, mode="same", boundary="fill")
+
+    illuminant_energy, illuminant_photons = _spectral_illuminant(spectral_type, wave, asset_store=asset_store)
+    photons = pattern[:, :, None] * illuminant_photons.reshape(1, 1, -1)
+    scene = Scene(name="pointarray")
+    scene.fields["wave"] = wave
+    scene.fields["illuminant_format"] = "spectral"
+    scene.fields["illuminant_energy"] = illuminant_energy
+    scene.fields["illuminant_photons"] = illuminant_photons
+    scene.fields["distance_m"] = DEFAULT_DISTANCE_M
+    scene.fields["fov_deg"] = 40.0
+    scene.data["photons"] = photons
+    _update_scene_geometry(scene)
+    return scene
+
+
+def _grid_lines_scene(
+    size: Any,
+    spacing: int,
+    spectral_type: str,
+    thickness: int,
+    wave: np.ndarray,
+    *,
+    asset_store: AssetStore,
+) -> Scene:
+    rows, cols = _scene_size_2d(size, default=128)
+    spacing_px = max(int(spacing), 1)
+    line_thickness = max(int(thickness), 1)
+    pattern = np.zeros((rows, cols), dtype=float)
+    row_start = max(_matlab_round_scalar(spacing_px / 2.0) - 1, 0)
+    col_start = max(_matlab_round_scalar(spacing_px / 2.0) - 1, 0)
+    for delta in range(line_thickness):
+        row_positions = np.arange(row_start + delta, rows, spacing_px, dtype=int)
+        col_positions = np.arange(col_start + delta, cols, spacing_px, dtype=int)
+        pattern[row_positions, :] = 1.0
+        pattern[:, col_positions] = 1.0
+    pattern[pattern == 0.0] = 1e-5
+
+    illuminant_energy, illuminant_photons = _spectral_illuminant(spectral_type, wave, asset_store=asset_store)
+    photons = pattern[:, :, None] * illuminant_photons.reshape(1, 1, -1)
+    scene = Scene(name="gridlines")
+    scene.fields["wave"] = wave
+    scene.fields["illuminant_format"] = "spectral"
+    scene.fields["illuminant_energy"] = illuminant_energy
+    scene.fields["illuminant_photons"] = illuminant_photons
+    scene.fields["distance_m"] = DEFAULT_DISTANCE_M
+    scene.fields["fov_deg"] = 40.0
+    scene.data["photons"] = photons
+    _update_scene_geometry(scene)
+    return scene
+
+
+def _white_noise_scene(
+    size: Any,
+    contrast: float,
+    wave: np.ndarray,
+    *,
+    asset_store: AssetStore,
+) -> Scene:
+    rows, cols = _scene_size_2d(size, default=128)
+    sigma = float(contrast) / 100.0 if float(contrast) > 1.0 else float(contrast)
+    rng = np.random.default_rng(0)
+    pattern = np.maximum(0.0, rng.normal(loc=1.0, scale=sigma, size=(rows, cols)))
+    illuminant_energy = _scale_energy_to_luminance(_load_d65(wave, asset_store)[1], wave, asset_store=asset_store)
+    illuminant_photons = energy_to_quanta(illuminant_energy, wave)
+    photons = pattern[:, :, None] * illuminant_photons.reshape(1, 1, -1)
+    scene = Scene(name="white noise")
+    scene.fields["wave"] = wave
+    scene.fields["illuminant_format"] = "spectral"
+    scene.fields["illuminant_energy"] = illuminant_energy
+    scene.fields["illuminant_photons"] = illuminant_photons
+    scene.fields["distance_m"] = DEFAULT_DISTANCE_M
+    scene.fields["fov_deg"] = 1.0
+    scene.data["photons"] = photons
+    _update_scene_geometry(scene)
+    return scene
+
+
 def scene_create(scene_name: str = "default", *args: Any, asset_store: AssetStore | None = None) -> Scene:
     """Create a supported milestone-one scene."""
 
@@ -364,6 +574,62 @@ def scene_create(scene_name: str = "default", *args: Any, asset_store: AssetStor
         size = int(args[0]) if len(args) > 0 else 32
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
         return _uniform_scene("Uniform EE", size, wave, np.ones(wave.size, dtype=float), asset_store=store)
+
+    if name in {"uniformbb", "uniformblackbody"}:
+        size = args[0] if len(args) > 0 else 32
+        temperature_k = float(args[1]) if len(args) > 1 else 5000.0
+        wave = _wave_or_default(args[2] if len(args) > 2 else None)
+        return _uniform_blackbody_scene(size, temperature_k, wave, asset_store=store)
+
+    if name in {"uniformmonochromatic", "narrowband"}:
+        wavelength = args[0] if len(args) > 0 else 500.0
+        size = args[1] if len(args) > 1 else 128
+        return _uniform_monochromatic_scene(size, wavelength, asset_store=store)
+
+    if name in {"line", "lined65", "impulse1dd65"}:
+        size = args[0] if len(args) > 0 else 64
+        wave = _wave_or_default(args[1] if len(args) > 1 else None)
+        return _line_scene("d65", size, 0, wave, asset_store=store)
+
+    if name in {"lineee", "impulse1dee"}:
+        size = args[0] if len(args) > 0 else 64
+        offset = int(args[1]) if len(args) > 1 else 0
+        wave = _wave_or_default(args[2] if len(args) > 2 else None)
+        return _line_scene("ee", size, offset, wave, asset_store=store)
+
+    if name in {"lineequalphoton", "lineep"}:
+        size = args[0] if len(args) > 0 else 64
+        offset = int(args[1]) if len(args) > 1 else 0
+        wave = _wave_or_default(args[2] if len(args) > 2 else None)
+        return _line_scene("ep", size, offset, wave, asset_store=store)
+
+    if name == "bar":
+        size = args[0] if len(args) > 0 else 64
+        width = int(args[1]) if len(args) > 1 else 3
+        wave = _wave_or_default(args[2] if len(args) > 2 else None)
+        return _bar_scene(size, width, wave, asset_store=store)
+
+    if name in {"whitenoise", "noise"}:
+        size = args[0] if len(args) > 0 else 128
+        contrast = float(args[1]) if len(args) > 1 else 20.0
+        wave = _wave_or_default(args[2] if len(args) > 2 else None)
+        return _white_noise_scene(size, contrast, wave, asset_store=store)
+
+    if name in {"pointarray", "manypoints", "point array".replace(" ", "")}:
+        size = args[0] if len(args) > 0 else 128
+        spacing = int(args[1]) if len(args) > 1 else 16
+        spectral_type = str(args[2]) if len(args) > 2 else "ep"
+        point_size = int(args[3]) if len(args) > 3 else 1
+        wave = _wave_or_default(args[4] if len(args) > 4 else None)
+        return _point_array_scene(size, spacing, spectral_type, point_size, wave, asset_store=store)
+
+    if name in {"gridlines", "distortiongrid", "grid lines".replace(" ", "")}:
+        size = args[0] if len(args) > 0 else 128
+        spacing = int(args[1]) if len(args) > 1 else 16
+        spectral_type = str(args[2]) if len(args) > 2 else "ep"
+        thickness = int(args[3]) if len(args) > 3 else 1
+        wave = _wave_or_default(args[4] if len(args) > 4 else None)
+        return _grid_lines_scene(size, spacing, spectral_type, thickness, wave, asset_store=store)
 
     if name == "checkerboard":
         pixels_per_check = int(args[0]) if len(args) > 0 else 16

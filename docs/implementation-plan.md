@@ -2,7 +2,9 @@
 
 ## Current Status
 - Milestone one is complete in the repository: the curated Octave parity suite is green and the handoff docs/examples are in place.
-- Current execution focus has moved to the first post-milestone expansion item: broader scene ingestion, starting with `scene_from_file` / `sceneFromFile` for RGB and monochrome image inputs.
+- Current execution focus has moved to the first post-milestone expansion item: broader scene ingestion and scene generation.
+- `scene_from_file` / `sceneFromFile` is implemented for RGB and monochrome emissive-display inputs.
+- Additional MATLAB-style scene patterns are now implemented: `uniform bb`, `uniform monochromatic`, `line ee`, `line ep`, `bar`, `point array`, `grid lines`, and `white noise`.
 
 ## Summary
 - Build a new Python library, `pyisetcam`, that ports the numerical `scene -> optical image -> sensor -> image processor -> camera` pipeline from ISETCam and validates it against GNU Octave runs of the upstream MATLAB code.
