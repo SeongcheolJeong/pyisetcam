@@ -127,6 +127,8 @@ _PARAMETER_OTYPE_UNIQUE = {
         "dvorvoltsroielectrons",
         "roivoltsmean",
         "roielectronsmean",
+        "chromaticity",
+        "roichromaticitymean",
         "hlinevolts",
         "hlineelectrons",
         "vlinevolts",

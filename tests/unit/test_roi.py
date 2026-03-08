@@ -206,6 +206,34 @@ def test_sensor_get_line_profiles(asset_store) -> None:
     assert np.allclose(vline_electrons["pos"][2], np.array([support["y"][1]], dtype=float))
 
 
+def test_sensor_get_chromaticity_and_roi_mean(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(
+        sensor,
+        "volts",
+        np.array(
+            [
+                [2.0, 4.0, 2.0, 4.0],
+                [6.0, 2.0, 6.0, 2.0],
+                [2.0, 4.0, 2.0, 4.0],
+                [6.0, 2.0, 6.0, 2.0],
+            ],
+            dtype=float,
+        ),
+    )
+
+    chromaticity_vec = sensor_get(sensor, "chromaticity")
+    chromaticity_matrix = sensor_get(sensor, "chromaticity", np.array([1, 1, 3, 3], dtype=int), "matrix")
+    roi_chromaticity_mean = sensor_get(sensor, "roi chromaticity mean", np.array([1, 1, 3, 3], dtype=int))
+
+    expected_xy = np.array([4.0 / 12.0, 2.0 / 12.0], dtype=float)
+    assert chromaticity_vec.shape == (16, 2)
+    assert np.allclose(chromaticity_vec, np.tile(expected_xy, (16, 1)))
+    assert chromaticity_matrix.shape == (4, 4, 2)
+    assert np.allclose(chromaticity_matrix, np.broadcast_to(expected_xy.reshape(1, 1, 2), (4, 4, 2)))
+    assert np.allclose(roi_chromaticity_mean, expected_xy)
+
+
 def test_ip_get_roi_data_and_xyz(asset_store) -> None:
     ip = ip_create(display="default", asset_store=asset_store)
     result = np.array(

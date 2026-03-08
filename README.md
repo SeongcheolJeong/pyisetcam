@@ -276,6 +276,10 @@ The adjacent sensor compatibility surface now covers direct
 queries through `sensorGet(..., 'hline volts/electrons')` and
 `sensorGet(..., 'vline volts/electrons')`, returning per-filter `data`,
 `pos`, and `pixPos` vectors.
+Sensor ROI/plot compatibility now also includes
+`sensorGet(..., 'chromaticity')` and
+`sensorGet(..., 'roi chromaticity mean')`, backed by the existing
+headless demosaic path.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

@@ -399,6 +399,78 @@ def _sensor_line_profile(sensor: Sensor, line_key: str, rc: Any) -> dict[str, li
     return {"data": data, "pos": positions, "pixPos": [values.copy() for values in positions]}
 
 
+def _sensor_rect_for_chromaticity(rect_or_locs: Any) -> np.ndarray | None:
+    if rect_or_locs is None:
+        return None
+    rect_array = np.asarray(rect_or_locs)
+    if rect_array.size == 0:
+        return None
+    if rect_array.ndim == 1 and rect_array.size == 4:
+        rect = np.rint(rect_array.astype(float)).astype(int)
+    else:
+        from .roi import ie_locs2_rect
+
+        rect = ie_locs2_rect(rect_array)
+    rect = rect.reshape(-1).astype(int)
+    if rect.size != 4:
+        raise ValueError("Chromaticity ROI must be [col, row, width, height] or Nx2 locations.")
+    even = (rect % 2) == 0
+    rect[even] -= 1
+    rect[:2] = np.maximum(rect[:2], 1)
+    rect[2:] = np.maximum(rect[2:], 0)
+    return rect
+
+
+def _sensor_crop_rect(data: np.ndarray | None, rect: np.ndarray | None) -> np.ndarray | None:
+    if data is None or rect is None:
+        return None if data is None else np.asarray(data).copy()
+    array = np.asarray(data)
+    row_start = max(int(rect[1]) - 1, 0)
+    col_start = max(int(rect[0]) - 1, 0)
+    row_end = min(int(rect[1] + rect[3]), array.shape[0])
+    col_end = min(int(rect[0] + rect[2]), array.shape[1])
+    return np.asarray(array[row_start:row_end, col_start:col_end, ...], dtype=float).copy()
+
+
+def _sensor_chromaticity(sensor: Sensor, rect_or_locs: Any = None, mode: str = "vec") -> np.ndarray | None:
+    from .ip import _sensor_space
+
+    volts = sensor.data.get("volts")
+    if volts is None:
+        return None
+
+    rect = _sensor_rect_for_chromaticity(rect_or_locs)
+    cropped = sensor.clone()
+    cropped_volts = _sensor_crop_rect(volts, rect)
+    if cropped_volts is None:
+        return None
+    cropped.data["volts"] = cropped_volts
+    cropped_dv = _sensor_crop_rect(sensor.data.get("dv"), rect)
+    if cropped_dv is not None:
+        cropped.data["dv"] = cropped_dv
+    elif "dv" in cropped.data:
+        cropped.data.pop("dv", None)
+    cropped.fields["size"] = tuple(int(value) for value in cropped_volts.shape[:2])
+
+    sensor_space = np.asarray(_sensor_space(cropped), dtype=float)
+    if sensor_space.ndim == 2:
+        sensor_space = sensor_space[:, :, np.newaxis]
+    nchannels = int(sensor_space.shape[2])
+    output_shape = sensor_space.shape[:2] + (max(nchannels - 1, 0),)
+    denominator = np.sum(sensor_space, axis=2, keepdims=True)
+    chromaticity = np.divide(
+        sensor_space[:, :, : max(nchannels - 1, 0)],
+        denominator,
+        out=np.full(output_shape, np.nan, dtype=float),
+        where=denominator > 0.0,
+    )
+
+    normalized_mode = param_format(mode)
+    if normalized_mode == "matrix":
+        return chromaticity
+    return chromaticity.reshape(-1, output_shape[2])
+
+
 def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
     key = param_format(parameter)
     if key == "type":
@@ -544,6 +616,17 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         from .roi import vc_get_roi_data
 
         return vc_get_roi_data(sensor, roi_locs, "electrons")
+    if key == "chromaticity":
+        rect = args[0] if args else None
+        mode = args[1] if len(args) >= 2 else "vec"
+        return _sensor_chromaticity(sensor, rect, str(mode))
+    if key == "roichromaticitymean":
+        if not args:
+            return None
+        chromaticity = sensor_get(sensor, "chromaticity", args[0], "vec")
+        if chromaticity is None:
+            return None
+        return np.nanmean(np.asarray(chromaticity, dtype=float), axis=0)
     if key in {"roidv", "roidigitalcount"}:
         roi_locs = sensor_get(sensor, "roi locs")
         if roi_locs is None:
