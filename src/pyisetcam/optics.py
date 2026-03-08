@@ -2332,6 +2332,51 @@ def _oi_roi_xyz(oi: OpticalImage, roi_locs: Any | None = None, *, asset_store: A
     return xyz_from_energy(energy, wave, asset_store=store)
 
 
+def _oi_line_index(line_arg: Any, orientation: str) -> int:
+    values = np.asarray(line_arg, dtype=float).reshape(-1)
+    if values.size == 0:
+        raise ValueError("Line location must be a scalar or [col, row] locator.")
+    if values.size == 1:
+        return int(np.rint(values[0]))
+    return int(np.rint(values[1 if orientation == "h" else 0]))
+
+
+def _oi_line_profile(
+    oi: OpticalImage,
+    data_type: str,
+    orientation: str,
+    line_arg: Any,
+    *,
+    unit: Any | None = "um",
+) -> dict[str, np.ndarray]:
+    wave = np.asarray(oi.fields.get("wave", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    support = oi_get(oi, "spatial support linear", unit)
+    line_index = _oi_line_index(line_arg, orientation)
+    if data_type == "photons":
+        data = np.asarray(oi.data.get("photons", np.empty((0, 0, 0), dtype=float)), dtype=float)
+    elif data_type == "energy":
+        data = quanta_to_energy(np.asarray(oi.data.get("photons", np.empty((0, 0, 0), dtype=float)), dtype=float), wave)
+    elif data_type == "illuminance":
+        data = np.asarray(oi_get(oi, "illuminance"), dtype=float)
+    else:
+        raise KeyError(f"Unsupported oi line profile data type: {data_type}")
+
+    if orientation == "h":
+        if line_index < 1 or line_index > data.shape[0]:
+            raise IndexError("Horizontal optical-image line index is out of range.")
+        pos = np.asarray(support["x"], dtype=float)
+        line = np.asarray(data[line_index - 1, ...], dtype=float)
+    else:
+        if line_index < 1 or line_index > data.shape[1]:
+            raise IndexError("Vertical optical-image line index is out of range.")
+        pos = np.asarray(support["y"], dtype=float)
+        line = np.asarray(data[:, line_index - 1, ...], dtype=float)
+
+    if line.ndim == 1:
+        return {"pos": pos.copy(), "data": line.copy(), "unit": str(unit or "m")}
+    return {"pos": pos.copy(), "wave": wave.copy(), "data": line.T.copy(), "unit": str(unit or "m")}
+
+
 def _gaussian_kernel_1d(size: int, sigma_pixels: float) -> np.ndarray:
     if size <= 1 or sigma_pixels <= 0.0:
         return np.ones((1,), dtype=float)
@@ -3446,6 +3491,36 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         return np.asarray(oi.fields["wave"], dtype=float)
     if key == "photons":
         return np.asarray(oi.data["photons"], dtype=float)
+    if key in {"irradiancehline", "hline", "hlineirradiance"}:
+        if not args:
+            raise ValueError("Line location required for oiGet(..., 'irradiance hline').")
+        unit = args[1] if len(args) >= 2 else "um"
+        return _oi_line_profile(oi, "photons", "h", args[0], unit=unit)
+    if key in {"irradiancevline", "vline", "vlineirradiance"}:
+        if not args:
+            raise ValueError("Line location required for oiGet(..., 'irradiance vline').")
+        unit = args[1] if len(args) >= 2 else "um"
+        return _oi_line_profile(oi, "photons", "v", args[0], unit=unit)
+    if key in {"irradianceenergyhline", "hlineenergy", "hlineirradianceenergy"}:
+        if not args:
+            raise ValueError("Line location required for oiGet(..., 'irradiance energy hline').")
+        unit = args[1] if len(args) >= 2 else "um"
+        return _oi_line_profile(oi, "energy", "h", args[0], unit=unit)
+    if key in {"irradianceenergyvline", "vlineenergy", "vlineirradianceenergy"}:
+        if not args:
+            raise ValueError("Line location required for oiGet(..., 'irradiance energy vline').")
+        unit = args[1] if len(args) >= 2 else "um"
+        return _oi_line_profile(oi, "energy", "v", args[0], unit=unit)
+    if key in {"illuminancehline", "horizontallineilluminance", "hlineilluminance"}:
+        if not args:
+            raise ValueError("Line location required for oiGet(..., 'illuminance hline').")
+        unit = args[1] if len(args) >= 2 else "um"
+        return _oi_line_profile(oi, "illuminance", "h", args[0], unit=unit)
+    if key in {"illuminancevline", "vlineilluminance"}:
+        if not args:
+            raise ValueError("Line location required for oiGet(..., 'illuminance vline').")
+        unit = args[1] if len(args) >= 2 else "um"
+        return _oi_line_profile(oi, "illuminance", "v", args[0], unit=unit)
     if key == "roiphotons":
         if not args:
             raise ValueError("ROI required for oiGet(..., 'roi photons').")

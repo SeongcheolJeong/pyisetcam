@@ -17,6 +17,7 @@ from pyisetcam import (
     oi_set,
     scene_create,
     scene_get,
+    scene_set,
     sensor_create,
     sensor_get,
     sensor_set,
@@ -283,6 +284,33 @@ def test_scene_get_roi_queries(asset_store) -> None:
     assert np.allclose(roi_reflectance, np.ones_like(roi_reflectance))
 
 
+def test_scene_get_line_profiles(asset_store) -> None:
+    scene = scene_create("uniform ee", 4, asset_store=asset_store)
+    scene = scene_set(scene, "wave", np.array([500.0, 600.0], dtype=float))
+    scene = scene_set(
+        scene,
+        "photons",
+        np.array(
+            [
+                [[1.0, 10.0], [2.0, 20.0], [3.0, 30.0]],
+                [[4.0, 40.0], [5.0, 50.0], [6.0, 60.0]],
+            ],
+            dtype=float,
+        ),
+    )
+
+    radiance_hline = scene_get(scene, "radiance hline", np.array([2, 1], dtype=int))
+    luminance_vline = scene_get(scene, "luminance vline", np.array([2, 1], dtype=int))
+    support = scene_get(scene, "spatial support linear", "mm")
+
+    assert np.allclose(radiance_hline["wave"], np.array([500.0, 600.0], dtype=float))
+    assert np.allclose(radiance_hline["pos"], support["x"])
+    assert np.allclose(radiance_hline["data"], np.array([[1.0, 2.0, 3.0], [10.0, 20.0, 30.0]], dtype=float))
+    assert radiance_hline["unit"] == "mm"
+    assert np.allclose(luminance_vline["pos"], support["y"])
+    assert np.allclose(luminance_vline["data"], np.asarray(scene_get(scene, "luminance"), dtype=float)[:, 1])
+
+
 def test_oi_get_roi_queries(asset_store) -> None:
     oi = oi_create(asset_store=asset_store)
     oi = oi_set(oi, "wave", np.array([500.0, 600.0], dtype=float))
@@ -309,6 +337,30 @@ def test_oi_get_roi_queries(asset_store) -> None:
     assert np.isclose(oi_get(oi, "roi mean illuminance", roi), float(np.mean(roi_illuminance)))
     assert np.allclose(roi_chromaticity, expected_oi_xy)
     assert np.allclose(oi_get(oi, "roi chromaticity mean", roi), np.mean(expected_oi_xy, axis=0))
+
+
+def test_oi_get_line_profiles(asset_store) -> None:
+    oi = oi_create(asset_store=asset_store)
+    oi = oi_set(oi, "wave", np.array([500.0, 600.0], dtype=float))
+    photons = np.array(
+        [
+            [[1.0, 10.0], [2.0, 20.0], [3.0, 30.0]],
+            [[4.0, 40.0], [5.0, 50.0], [6.0, 60.0]],
+        ],
+        dtype=float,
+    )
+    oi = oi_set(oi, "photons", photons)
+
+    irradiance_hline = oi_get(oi, "irradiance hline", np.array([1, 1], dtype=int))
+    illuminance_vline = oi_get(oi, "illuminance vline", np.array([2, 1], dtype=int))
+    support = oi_get(oi, "spatial support linear", "um")
+
+    assert np.allclose(irradiance_hline["wave"], np.array([500.0, 600.0], dtype=float))
+    assert np.allclose(irradiance_hline["pos"], support["x"])
+    assert np.allclose(irradiance_hline["data"], np.array([[1.0, 2.0, 3.0], [10.0, 20.0, 30.0]], dtype=float))
+    assert irradiance_hline["unit"] == "um"
+    assert np.allclose(illuminance_vline["pos"], support["y"])
+    assert np.allclose(illuminance_vline["data"], np.asarray(oi_get(oi, "illuminance"), dtype=float)[:, 1])
 
 
 def test_ip_get_chromaticity_queries(asset_store) -> None:

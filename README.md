@@ -285,6 +285,11 @@ summary getters too: `sceneGet(..., 'chromaticity'/'roi chromaticity mean')`,
 `sceneGet(..., 'roi mean luminance')`, `oiGet(..., 'chromaticity'/'roi chromaticity mean')`,
 `oiGet(..., 'roi illuminance'/'roi mean illuminance')`, and
 `ipGet(..., 'chromaticity'/'roi chromaticity mean')`.
+The adjacent headless line-profile surface is now covered too:
+`sceneGet(..., 'radiance hline/vline')`, `sceneGet(..., 'luminance hline/vline')`,
+`sceneGet(..., 'spatial support linear')`, `oiGet(..., 'irradiance hline/vline')`,
+`oiGet(..., 'irradiance energy hline/vline')`, and
+`oiGet(..., 'illuminance hline/vline')`.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

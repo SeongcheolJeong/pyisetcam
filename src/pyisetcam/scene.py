@@ -782,6 +782,64 @@ def _scene_roi_xyz(scene: Scene, roi_locs: Any | None = None, *, asset_store: As
     return xyz_from_energy(energy, wave, asset_store=store)
 
 
+def _scene_spatial_support_linear(scene: Scene, unit: Any | None = None) -> dict[str, np.ndarray]:
+    rows, cols = scene_get(scene, "size")
+    if rows <= 0 or cols <= 0:
+        return {"x": np.empty(0, dtype=float), "y": np.empty(0, dtype=float)}
+    width_m = float(scene.fields["width_m"])
+    height_m = float(scene.fields["height_m"])
+    dx = width_m / cols
+    dy = height_m / rows
+    x = ((np.arange(cols, dtype=float) + 0.5) - (cols / 2.0)) * dx
+    y = ((np.arange(rows, dtype=float) + 0.5) - (rows / 2.0)) * dy
+    scale = _spatial_unit_scale(unit)
+    return {"x": x * scale, "y": y * scale}
+
+
+def _line_index(line_arg: Any, orientation: str) -> int:
+    values = np.asarray(line_arg, dtype=float).reshape(-1)
+    if values.size == 0:
+        raise ValueError("Line location must be a scalar or [col, row] locator.")
+    if values.size == 1:
+        return int(np.rint(values[0]))
+    return int(np.rint(values[1 if orientation == "h" else 0]))
+
+
+def _scene_line_profile(
+    scene: Scene,
+    data_type: str,
+    orientation: str,
+    line_arg: Any,
+    *,
+    unit: Any | None = "mm",
+    asset_store: AssetStore | None = None,
+) -> dict[str, np.ndarray]:
+    wave = np.asarray(scene.fields["wave"], dtype=float)
+    support = _scene_spatial_support_linear(scene, unit)
+    line_index = _line_index(line_arg, orientation)
+    if data_type == "photons":
+        data = np.asarray(scene.data["photons"], dtype=float)
+    elif data_type == "luminance":
+        data = np.asarray(scene_get(scene, "luminance", asset_store=asset_store), dtype=float)
+    else:
+        raise KeyError(f"Unsupported scene line profile data type: {data_type}")
+
+    if orientation == "h":
+        if line_index < 1 or line_index > data.shape[0]:
+            raise IndexError("Horizontal scene line index is out of range.")
+        pos = np.asarray(support["x"], dtype=float)
+        line = np.asarray(data[line_index - 1, ...], dtype=float)
+    else:
+        if line_index < 1 or line_index > data.shape[1]:
+            raise IndexError("Vertical scene line index is out of range.")
+        pos = np.asarray(support["y"], dtype=float)
+        line = np.asarray(data[:, line_index - 1, ...], dtype=float)
+
+    if line.ndim == 1:
+        return {"pos": pos.copy(), "data": line.copy(), "unit": str(unit or "m")}
+    return {"pos": pos.copy(), "wave": wave.copy(), "data": line.T.copy(), "unit": str(unit or "m")}
+
+
 def _resolve_illuminant_input(
     ill_energy: Any,
     wave: np.ndarray,
@@ -891,12 +949,38 @@ def scene_get(scene: Scene, parameter: str, *args: Any, asset_store: AssetStore 
         return float(scene.fields["width_m"])
     if key == "height":
         return float(scene.fields["height_m"])
+    if key == "spatialsupportlinear":
+        return _scene_spatial_support_linear(scene, args[0] if args else None)
+    if key == "spatialsupport":
+        support = _scene_spatial_support_linear(scene, args[0] if args else None)
+        xx, yy = np.meshgrid(support["x"], support["y"])
+        return np.stack((xx, yy), axis=2)
     if key == "illuminantformat":
         return scene.fields.get("illuminant_format", "spectral")
     if key == "illuminantphotons":
         return np.asarray(scene.fields["illuminant_photons"], dtype=float)
     if key == "illuminantenergy":
         return np.asarray(scene.fields["illuminant_energy"], dtype=float)
+    if key in {"radiancehline", "hlineradiance"}:
+        if not args:
+            raise ValueError("Line location required for sceneGet(..., 'radiance hline').")
+        unit = args[1] if len(args) >= 2 else "mm"
+        return _scene_line_profile(scene, "photons", "h", args[0], unit=unit, asset_store=asset_store)
+    if key in {"radiancevline", "vlineradiance"}:
+        if not args:
+            raise ValueError("Line location required for sceneGet(..., 'radiance vline').")
+        unit = args[1] if len(args) >= 2 else "mm"
+        return _scene_line_profile(scene, "photons", "v", args[0], unit=unit, asset_store=asset_store)
+    if key in {"luminancehline", "hlineluminance"}:
+        if not args:
+            raise ValueError("Line location required for sceneGet(..., 'luminance hline').")
+        unit = args[1] if len(args) >= 2 else "mm"
+        return _scene_line_profile(scene, "luminance", "h", args[0], unit=unit, asset_store=asset_store)
+    if key in {"luminancevline", "vlineluminance"}:
+        if not args:
+            raise ValueError("Line location required for sceneGet(..., 'luminance vline').")
+        unit = args[1] if len(args) >= 2 else "mm"
+        return _scene_line_profile(scene, "luminance", "v", args[0], unit=unit, asset_store=asset_store)
     if key in {"roiphotons", "roiphotonsspd"}:
         if not args:
             raise ValueError("ROI required for sceneGet(..., 'roi photons').")
