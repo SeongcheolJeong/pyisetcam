@@ -236,7 +236,10 @@ getter semantics, plus a minimal `ieInitSession` /
 preferences, GUI slots, selected-object queries, and
 image-size/GPU session flags. Window/figure aliases and
 `ieAppGet` are now supported too for the scene/OI/sensor/IP/display
-app lookup path.
+app lookup path, together with the concrete GUI-side aliases that
+upstream still reads such as `scene image handle`,
+`sensorimagehandle`, `oiwindowHandles`, `vcimagehandles`,
+`metricshandles`, `oicomputelist`, and `sensor gamma`.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

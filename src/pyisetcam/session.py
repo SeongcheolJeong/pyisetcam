@@ -400,6 +400,27 @@ _APP_AXIS_FIELDS = {
     "display": ("display_window", "displayImage"),
 }
 
+_WINDOW_STATE_PARAM_MAP = {
+    "scenewindowhandle": ("scene_window", "figure"),
+    "scenewindow": ("scene_window", "app"),
+    "scenewindowhandle": ("scene_window", "figure"),
+    "sceneimagehandle": ("scene_window", "axis"),
+    "oiwindowhandles": ("oi_window", "handles"),
+    "oiguidata": ("oi_window", "handles"),
+    "sensorwindowhandles": ("sensor_window", "handles"),
+    "sensorguidata": ("sensor_window", "handles"),
+    "sensorimagehandle": ("sensor_window", "axis"),
+    "vcimagehandles": ("ip_window", "handles"),
+    "metricshandles": ("metrics_window", "handles"),
+    "oicomputelist": ("custom", "oi_compute_list"),
+    "sensorgamma": ("render_state", "sensor_gamma"),
+    "scenegamma": ("render_state", "scene_gamma"),
+    "oigamma": ("render_state", "oi_gamma"),
+    "ipgamma": ("render_state", "ip_gamma"),
+    "scenedisplayflag": ("render_state", "scene_display_flag"),
+    "oidisplayflag": ("render_state", "oi_display_flag"),
+}
+
 
 def _session_window_key(parameter: str) -> str | None:
     return _WINDOW_KEY_ALIASES.get(param_format(parameter))
@@ -419,6 +440,38 @@ def _extract_app_axis(app: Any, axis_name: str) -> Any:
     if hasattr(app, "CurrentAxes"):
         return getattr(app, "CurrentAxes")
     return None
+
+
+def _extract_app_figure(app: Any) -> Any:
+    if app is None:
+        return None
+    if isinstance(app, dict):
+        return app.get("figure1", app.get("hObject", app))
+    if hasattr(app, "figure1"):
+        return getattr(app, "figure1")
+    if hasattr(app, "hObject"):
+        return getattr(app, "hObject")
+    return app
+
+
+def _window_state_value(session: SessionContext, window_key: str, value_kind: str) -> Any:
+    state = session.gui.get(window_key)
+    if not isinstance(state, dict):
+        return state
+    if value_kind == "app":
+        return state.get("app", state.get("hObject"))
+    if value_kind == "figure":
+        return state.get("hObject", _extract_app_figure(state.get("app")))
+    if value_kind == "axis":
+        app = state.get("app", state.get("hObject"))
+        for obj_type, (candidate_window, axis_name) in _APP_AXIS_FIELDS.items():
+            if candidate_window == window_key:
+                del obj_type
+                return _extract_app_axis(app, axis_name)
+        return _extract_app_axis(app, "current_axes")
+    if value_kind == "handles":
+        return state.get("handles", state.get("app", state.get("hObject")))
+    return state.get(value_kind)
 
 
 def ie_session_get(session: SessionContext, parameter: str, *args: Any) -> Any:
@@ -444,10 +497,16 @@ def ie_session_get(session: SessionContext, parameter: str, *args: Any) -> Any:
 
     window_key = _session_window_key(parameter)
     if window_key is not None:
-        window_state = session.gui.get(window_key)
-        if isinstance(window_state, dict):
-            return window_state.get("app", window_state.get("hObject"))
-        return window_state
+        return _window_state_value(session, window_key, "app")
+
+    window_state_alias = _WINDOW_STATE_PARAM_MAP.get(key)
+    if window_state_alias is not None:
+        store_name, store_key = window_state_alias
+        if store_name == "custom":
+            return list(session.custom.get(store_key, []))
+        if store_name == "render_state":
+            return session.render_state.get(store_key)
+        return _window_state_value(session, store_name, store_key)
 
     if key in {"graphwindow", "graphwinfigure"}:
         return session.graphwin.get("hObject")
@@ -514,15 +573,36 @@ def ie_session_set(session: SessionContext, parameter: str, value: Any, *args: A
 
     window_key = _session_window_key(parameter)
     if window_key is not None:
-        if window_key == "metrics_window":
-            session.gui[window_key] = {
-                "app": value,
-                "hObject": value,
-                "eventdata": args[0] if len(args) >= 1 else None,
-                "handles": args[1] if len(args) >= 2 else None,
-            }
+        existing = session.gui.get(window_key, {})
+        state = dict(existing) if isinstance(existing, dict) else {}
+        state["app"] = value
+        if value is None:
+            state["hObject"] = None
+        elif len(args) >= 2:
+            state["hObject"] = value
         else:
-            session.gui[window_key] = {"app": value}
+            state["hObject"] = _extract_app_figure(value)
+        if len(args) >= 1:
+            state["eventdata"] = args[0]
+        if len(args) >= 2:
+            state["handles"] = args[1]
+        elif "handles" not in state and isinstance(value, dict):
+            state["handles"] = value.get("handles")
+        session.gui[window_key] = state
+        return session
+
+    window_state_alias = _WINDOW_STATE_PARAM_MAP.get(key)
+    if window_state_alias is not None:
+        store_name, store_key = window_state_alias
+        if store_name == "custom":
+            session.custom[store_key] = list(value)
+            return session
+        if store_name == "render_state":
+            session.render_state[store_key] = value
+            return session
+        state = dict(session.gui.get(store_name, {})) if isinstance(session.gui.get(store_name), dict) else {}
+        state[store_key] = value
+        session.gui[store_name] = state
         return session
 
     if key in {"graphwindow", "graphwinfigure"}:

@@ -32,6 +32,17 @@ def _default_session_gui() -> dict[str, Any]:
     return {"waitbar": 0}
 
 
+def _default_session_render_state() -> dict[str, Any]:
+    return {
+        "scene_gamma": 1.0,
+        "scene_display_flag": 1,
+        "oi_gamma": 1.0,
+        "oi_display_flag": 1,
+        "sensor_gamma": 1.0,
+        "ip_gamma": 1.0,
+    }
+
+
 @dataclass
 class BaseISETObject:
     """Common mutable storage for MATLAB-like extensibility."""
@@ -95,6 +106,8 @@ class SessionContext:
     next_ids: dict[str, int] = field(default_factory=dict)
     preferences: dict[str, Any] = field(default_factory=_default_session_preferences)
     gui: dict[str, Any] = field(default_factory=_default_session_gui)
+    custom: dict[str, Any] = field(default_factory=dict)
+    render_state: dict[str, Any] = field(default_factory=_default_session_render_state)
     graphwin: dict[str, Any] = field(default_factory=dict)
     gpu_compute: bool = False
     image_size_threshold: float = 1e6

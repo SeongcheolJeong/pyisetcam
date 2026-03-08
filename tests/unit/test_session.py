@@ -454,6 +454,9 @@ def test_ie_session_window_aliases_and_ie_app_get(asset_store) -> None:
     assert ieSessionGet(session, "isa window") is sensor_app
     assert ieSessionGet(session, "vcimage figure") is ip_app
     assert ieSessionGet(session, "display window") is display_app
+    assert ieSessionGet(session, "scene window handle") == "scene-figure"
+    assert ieSessionGet(session, "scene image handle") == "scene-axis"
+    assert ieSessionGet(session, "sensorimagehandle") == "sensor-axis"
 
     assert ie_app_get(session, scene) == (scene_app, "scene-axis")
     assert ieAppGet(session, "oi") == (oi_app, "oi-axis")
@@ -467,6 +470,30 @@ def test_ie_app_get_accepts_direct_app_like_objects() -> None:
     app = {"current_axes": "free-axis"}
 
     assert ie_app_get(session, app) == (app, "free-axis")
+
+
+def test_ie_session_gui_handle_aliases_and_custom_lists() -> None:
+    session = ie_init_session()
+
+    oi_state = {"oiImage": "oi-axis", "figure1": "oi-figure"}
+    sensor_state = {"imgMain": "sensor-axis", "figure1": "sensor-figure"}
+    ip_state = {"ipImage": "ip-axis", "figure1": "ip-figure"}
+
+    ieSessionSet(session, "oi window", "oi-window-h", {"event": 1}, oi_state)
+    ieSessionSet(session, "sensor window", "sensor-window-h", {"event": 2}, sensor_state)
+    ieSessionSet(session, "ip window", "ip-window-h", {"event": 3}, ip_state)
+    ieSessionSet(session, "metrics window", "metrics-window-h", {"event": 4}, {"msg": "handles"})
+    ieSessionSet(session, "oicomputelist", ["customOTF", "myCompute"])
+    ieSessionSet(session, "sensor gamma", 0.35)
+
+    assert ieSessionGet(session, "oiwindowHandles") == oi_state
+    assert ieSessionGet(session, "oi guidata") == oi_state
+    assert ieSessionGet(session, "sensorWindowHandles") == sensor_state
+    assert ieSessionGet(session, "sensor guidata") == sensor_state
+    assert ieSessionGet(session, "vcimagehandles") == ip_state
+    assert ieSessionGet(session, "metricshandles") == {"msg": "handles"}
+    assert ieSessionGet(session, "oicomputelist") == ["customOTF", "myCompute"]
+    assert ieSessionGet(session, "sensor gamma") == 0.35
 
 def test_session_set_objects_and_new_object_value_follow_matlab_style(asset_store) -> None:
     session = session_create()
