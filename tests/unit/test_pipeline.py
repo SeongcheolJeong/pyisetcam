@@ -143,6 +143,40 @@ def test_oi_compute_border_padding_matches_corner_photons(asset_store) -> None:
     assert np.allclose(oi.data["photons"][-1, -1, :], corner)
 
 
+def test_oi_compute_pixel_size_matches_requested_spacing(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    oi = oi_compute(oi_create(), scene, crop=True, pixel_size=2e-6)
+
+    assert np.isclose(oi_get(oi, "sample size"), 2e-6)
+    assert np.isclose(oi_get(oi, "distance per sample")[1], 2e-6)
+    assert np.isclose(oi.fields["requested_pixel_size_m"], 2e-6)
+
+
+def test_oi_transmittance_scales_and_interpolates(asset_store) -> None:
+    wave = np.array([400.0, 550.0, 700.0], dtype=float)
+    scene = scene_create("uniform ee", 8, wave, asset_store=asset_store)
+
+    baseline_oi = oi_create()
+    baseline_oi.fields["optics"]["model"] = "skip"
+    baseline_oi.fields["optics"]["offaxis_method"] = "skip"
+    baseline = oi_compute(baseline_oi, scene, crop=True)
+
+    scaled_oi = oi_create()
+    scaled_oi.fields["optics"]["model"] = "skip"
+    scaled_oi.fields["optics"]["offaxis_method"] = "skip"
+    scaled_oi = oi_set(scaled_oi, "transmittance wave", wave)
+    scaled_oi = oi_set(scaled_oi, "transmittance scale", np.array([0.5, 1.0, 0.25], dtype=float))
+    scaled = oi_compute(scaled_oi, scene, crop=True)
+
+    center = (scaled.data["photons"].shape[0] // 2, scaled.data["photons"].shape[1] // 2)
+    ratio = scaled.data["photons"][center[0], center[1], :] / baseline.data["photons"][center[0], center[1], :]
+
+    assert np.allclose(ratio, np.array([0.5, 1.0, 0.25], dtype=float))
+    assert np.allclose(oi_get(scaled_oi, "transmittance", np.array([475.0, 625.0], dtype=float)), np.array([0.75, 0.625]))
+    assert np.array_equal(oi_get(scaled_oi, "transmittance wave"), wave)
+    assert oi_get(scaled_oi, "transmittance nwave") == 3
+
+
 def test_wvf_path_preserves_more_checkerboard_contrast_than_diffraction(asset_store) -> None:
     scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
     oi_wvf = oi_compute(oi_create("wvf"), scene, crop=True)

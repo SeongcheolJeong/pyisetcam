@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
-from scipy.ndimage import map_coordinates, zoom
+from scipy.ndimage import map_coordinates
 
 from .exceptions import UnsupportedOptionError
 from .types import OpticalImage, Scene
@@ -114,8 +114,16 @@ def oi_create(oi_type: str = "diffraction limited", *args: Any) -> OpticalImage:
     else:
         raise UnsupportedOptionError("oiCreate", oi_type)
 
+    wave = np.asarray(args[1], dtype=float) if len(args) > 1 else DEFAULT_WAVE.copy()
+    optics.setdefault(
+        "transmittance",
+        {
+            "wave": np.asarray(wave, dtype=float).reshape(-1).copy(),
+            "scale": np.ones(np.asarray(wave, dtype=float).size, dtype=float),
+        },
+    )
     oi.fields["optics"] = optics
-    oi.fields["wave"] = np.asarray(args[1], dtype=float) if len(args) > 1 else DEFAULT_WAVE.copy()
+    oi.fields["wave"] = wave
     oi.fields["compute_method"] = optics["compute_method"]
     oi.fields["diffuser_method"] = "skip"
     oi.fields["diffuser_blur_m"] = 2e-6
@@ -159,10 +167,15 @@ def _oi_geometry(optics: dict[str, Any], scene: Scene) -> tuple[float, float, fl
 
 
 def _radiance_to_irradiance(scene_cube: np.ndarray, optics: dict[str, Any], scene: Scene) -> np.ndarray:
+    wave = np.asarray(scene.fields["wave"], dtype=float)
+    transmittance = _optics_transmittance_scale(optics, wave)
     f_number = float(optics["f_number"])
     magnification = _magnification(optics, scene)
     scale = np.pi / (1.0 + 4.0 * (f_number**2) * ((1.0 + abs(magnification)) ** 2))
-    return np.asarray(scene_cube, dtype=float) * scale
+    irradiance = np.asarray(scene_cube, dtype=float)
+    if np.any(transmittance != 1.0):
+        irradiance = irradiance * transmittance.reshape(1, 1, -1)
+    return irradiance * scale
 
 
 def _cos4th_factor(rows: int, cols: int, optics: dict[str, Any], scene: Scene) -> np.ndarray:
@@ -300,6 +313,74 @@ def _resize_nearest(image: np.ndarray, output_shape: tuple[int, int]) -> np.ndar
     return _resize_image(image, output_shape, method="nearest")
 
 
+def _support_resample_positions(start: float, stop: float, step: float) -> np.ndarray:
+    if step <= 0.0:
+        raise ValueError("Resample step must be positive.")
+    if stop <= start:
+        return np.array([float(start)], dtype=float)
+    count = int(np.floor((stop - start) / step + 1e-12)) + 1
+    return float(start) + float(step) * np.arange(max(count, 1), dtype=float)
+
+
+def _resample_plane_on_support(
+    plane: np.ndarray,
+    x_support: np.ndarray,
+    y_support: np.ndarray,
+    x_query: np.ndarray,
+    y_query: np.ndarray,
+    *,
+    method: str,
+) -> np.ndarray:
+    if x_support.size <= 1:
+        col_coords = np.zeros_like(x_query, dtype=float)
+    else:
+        col_coords = (np.asarray(x_query, dtype=float) - float(x_support[0])) / float(x_support[1] - x_support[0])
+    if y_support.size <= 1:
+        row_coords = np.zeros_like(y_query, dtype=float)
+    else:
+        row_coords = (np.asarray(y_query, dtype=float) - float(y_support[0])) / float(y_support[1] - y_support[0])
+    row_grid, col_grid = np.meshgrid(row_coords, col_coords, indexing="ij")
+    if method == "linear":
+        order = 1
+    elif method == "nearest":
+        order = 0
+    else:
+        raise ValueError(f"Unsupported resample method: {method}")
+    return map_coordinates(plane, [row_grid, col_grid], order=order, mode="nearest", prefilter=False)
+
+
+def _oi_spatial_resample(oi: OpticalImage, sample_spacing_m: float, *, method: str = "linear") -> OpticalImage:
+    photons = np.asarray(oi.data.get("photons", np.empty((0, 0, 0))), dtype=float)
+    if photons.size == 0:
+        return oi.clone()
+
+    support = oi_get(oi, "spatial support linear", "m")
+    x_support = np.asarray(support["x"], dtype=float)
+    y_support = np.asarray(support["y"], dtype=float)
+    x_query = _support_resample_positions(float(x_support[0]), float(x_support[-1]), float(sample_spacing_m))
+    y_query = _support_resample_positions(float(y_support[0]), float(y_support[-1]), float(sample_spacing_m))
+
+    resampled_cube = np.empty((y_query.size, x_query.size, photons.shape[2]), dtype=float)
+    for band_index in range(photons.shape[2]):
+        resampled_cube[:, :, band_index] = _resample_plane_on_support(
+            photons[:, :, band_index],
+            x_support,
+            y_support,
+            x_query,
+            y_query,
+            method=method,
+        )
+
+    resampled = oi.clone()
+    original_fov = float(oi_get(oi, "fov"))
+    resampled.data["photons"] = resampled_cube
+    _sync_oi_geometry_fields(resampled)
+    current_spacing = float(oi_get(resampled, "wspatialresolution"))
+    if current_spacing > 0.0:
+        resampled = oi_set(resampled, "fov", original_fov * float(sample_spacing_m) / current_spacing)
+    return resampled
+
+
 def _image_bounding_box(mask: np.ndarray) -> tuple[float, float, float, float]:
     rows, cols = np.nonzero(mask)
     if rows.size == 0 or cols.size == 0:
@@ -313,6 +394,36 @@ def _image_bounding_box(mask: np.ndarray) -> tuple[float, float, float, float]:
     center_y = (min_row + max_row) / 2.0
     max_diff = max(abs(max_row - center_y), abs(max_col - center_x))
     return (center_x - max_diff, center_y - max_diff, 2.0 * max_diff, 2.0 * max_diff)
+
+
+def _ensure_optics_transmittance(optics: dict[str, Any], wave: np.ndarray | None = None) -> dict[str, np.ndarray]:
+    current = optics.get("transmittance")
+    if isinstance(current, dict) and "wave" in current and "scale" in current:
+        wave_values = np.asarray(current["wave"], dtype=float).reshape(-1)
+        scale_values = np.asarray(current["scale"], dtype=float).reshape(-1)
+        if wave_values.size == scale_values.size and wave_values.size > 0:
+            current["wave"] = wave_values
+            current["scale"] = scale_values
+            return current
+
+    base_wave = np.asarray(DEFAULT_WAVE if wave is None else wave, dtype=float).reshape(-1)
+    optics["transmittance"] = {
+        "wave": base_wave.copy(),
+        "scale": np.ones(base_wave.size, dtype=float),
+    }
+    return optics["transmittance"]
+
+
+def _optics_transmittance_scale(optics: dict[str, Any], wave: np.ndarray) -> np.ndarray:
+    transmittance = _ensure_optics_transmittance(optics, wave=np.asarray(wave, dtype=float).reshape(-1))
+    source_wave = np.asarray(transmittance["wave"], dtype=float).reshape(-1)
+    source_scale = np.asarray(transmittance["scale"], dtype=float).reshape(-1)
+    target_wave = np.asarray(wave, dtype=float).reshape(-1)
+    if source_wave.size == 0 or source_scale.size == 0:
+        return np.ones(target_wave.size, dtype=float)
+    if source_wave.size == target_wave.size and np.array_equal(source_wave, target_wave):
+        return source_scale.copy()
+    return np.interp(target_wave, source_wave, source_scale, left=1.0, right=1.0)
 
 
 def _wvf_aperture_mask(
@@ -429,13 +540,22 @@ def oi_compute(
 
     del args
     optics = dict(oi.fields["optics"])
-    scene_photons = np.asarray(scene.data["photons"], dtype=float)
-    wave = np.asarray(scene.fields["wave"], dtype=float)
-    image_distance_m, width_m, height_m = _oi_geometry(optics, scene)
+    compute_scene = scene
+    if pixel_size is not None:
+        from .scene import scene_set
+
+        compute_scene = scene.clone()
+        scene_cols = int(compute_scene.fields["cols"])
+        focal_length_m = float(optics["focal_length_m"])
+        w_angular = float(np.rad2deg(2.0 * np.arctan((float(pixel_size) * scene_cols / 2.0) / focal_length_m)))
+        compute_scene = scene_set(compute_scene, "wAngular", w_angular)
+    scene_photons = np.asarray(compute_scene.data["photons"], dtype=float)
+    wave = np.asarray(compute_scene.fields["wave"], dtype=float)
+    image_distance_m, width_m, height_m = _oi_geometry(optics, compute_scene)
     sample_spacing_m = width_m / max(scene_photons.shape[1], 1)
-    photons = _radiance_to_irradiance(scene_photons, optics, scene)
+    photons = _radiance_to_irradiance(scene_photons, optics, compute_scene)
     if param_format(optics.get("offaxis_method", "cos4th")) == "cos4th":
-        photons = photons * _cos4th_factor(photons.shape[0], photons.shape[1], optics, scene)[:, :, None]
+        photons = photons * _cos4th_factor(photons.shape[0], photons.shape[1], optics, compute_scene)[:, :, None]
     extra_blur = float(optics.get("aberration_scale", 0.0))
 
     pad_pixels = (
@@ -445,7 +565,7 @@ def oi_compute(
     padded, blur_mode, blur_cval = _pad_scene(photons, pad_pixels, pad_value)
     model = param_format(optics.get("model", ""))
     if model == "diffractionlimited":
-        otf = _diffraction_otf(padded.shape[:2], sample_spacing_m, wave, optics, scene)
+        otf = _diffraction_otf(padded.shape[:2], sample_spacing_m, wave, optics, compute_scene)
         blurred = _apply_otf(padded, otf)
     elif model == "skip":
         blurred = padded
@@ -498,18 +618,8 @@ def oi_compute(
         output_height_m = float(result.shape[0] * output_sample_spacing_m)
         output_vfov_deg = float(np.rad2deg(2.0 * np.arctan2(output_height_m / 2.0, image_distance_m)))
 
-    if pixel_size is not None:
-        current_spacing = output_sample_spacing_m
-        factor = current_spacing / float(pixel_size)
-        result = zoom(result, (factor, factor, 1.0), order=1)
-        output_sample_spacing_m = float(pixel_size)
-        output_width_m = float(result.shape[1] * output_sample_spacing_m)
-        output_height_m = float(result.shape[0] * output_sample_spacing_m)
-        output_fov_deg = float(np.rad2deg(2.0 * np.arctan2(output_width_m / 2.0, image_distance_m)))
-        output_vfov_deg = float(np.rad2deg(2.0 * np.arctan2(output_height_m / 2.0, image_distance_m)))
-
     computed = oi.clone()
-    computed.name = scene.name
+    computed.name = compute_scene.name
     computed.fields["wave"] = wave
     computed.fields["compute_method"] = optics.get("compute_method", computed.fields.get("compute_method", "opticsotf"))
     computed.fields["pad_value"] = pad_value
@@ -522,6 +632,10 @@ def oi_compute(
     computed.fields["fov_deg"] = output_fov_deg
     computed.fields["vfov_deg"] = output_vfov_deg
     computed.data["photons"] = result
+    if pixel_size is not None:
+        computed = _oi_spatial_resample(computed, float(pixel_size), method="linear")
+        computed.fields["sample_spacing_m"] = float(pixel_size)
+        computed.fields["requested_pixel_size_m"] = float(pixel_size)
     return computed
 
 
@@ -783,6 +897,15 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         return oi.fields["optics"].get("offaxis_method", "cos4th")
     if key in {"opticswvf"}:
         return oi.fields["optics"].get("wavefront")
+    if key in {"transmittance", "transmittancescale", "lenstransmittance", "opticstransmittance", "opticstransmittancescale"}:
+        target_wave = np.asarray(args[0], dtype=float).reshape(-1) if args else np.asarray(oi.fields["wave"], dtype=float)
+        return _optics_transmittance_scale(oi.fields["optics"], target_wave)
+    if key in {"transmittancewave", "opticstransmittancewave"}:
+        transmittance = _ensure_optics_transmittance(oi.fields["optics"], wave=np.asarray(oi.fields["wave"], dtype=float))
+        return np.asarray(transmittance["wave"], dtype=float).copy()
+    if key in {"transmittancenwave", "opticstransmittancenwave"}:
+        transmittance = _ensure_optics_transmittance(oi.fields["optics"], wave=np.asarray(oi.fields["wave"], dtype=float))
+        return int(np.asarray(transmittance["wave"], dtype=float).size)
     if key in {"crop"}:
         return bool(oi.fields.get("crop", False))
     if key in {"padvalue"}:
@@ -831,6 +954,23 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any) -> OpticalImage:
         return oi
     if key in {"opticsmodel", "model"}:
         oi.fields["optics"]["model"] = str(value)
+        return oi
+    if key in {"transmittance", "transmittancescale", "opticstransmittance", "opticstransmittancescale"}:
+        transmittance = _ensure_optics_transmittance(oi.fields["optics"], wave=np.asarray(oi.fields["wave"], dtype=float))
+        scale = np.asarray(value, dtype=float).reshape(-1)
+        if scale.size != np.asarray(transmittance["wave"], dtype=float).size:
+            raise ValueError("Transmittance must match wave dimension.")
+        if np.any((scale < 0.0) | (scale > 1.0)):
+            raise ValueError("Transmittance should be in [0, 1].")
+        transmittance["scale"] = scale
+        return oi
+    if key in {"transmittancewave", "opticstransmittancewave"}:
+        transmittance = _ensure_optics_transmittance(oi.fields["optics"], wave=np.asarray(oi.fields["wave"], dtype=float))
+        old_wave = np.asarray(transmittance["wave"], dtype=float).reshape(-1)
+        old_scale = np.asarray(transmittance["scale"], dtype=float).reshape(-1)
+        new_wave = np.asarray(value, dtype=float).reshape(-1)
+        transmittance["wave"] = new_wave
+        transmittance["scale"] = np.interp(new_wave, old_wave, old_scale)
         return oi
     if key in {"computemethod"}:
         oi.fields["compute_method"] = str(value)
