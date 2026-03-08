@@ -47,6 +47,15 @@ Generate the current machine-readable parity summary:
 python tools/parity_report.py
 ```
 
+Run the initial metrics helpers:
+
+```python
+from pyisetcam import comparison_metrics, metrics_spd
+
+value, params = metrics_spd(spd1, spd2, metric="cielab", wave=wave, return_params=True)
+summary = comparison_metrics(reference_image, rendered_image, data_range=1.0)
+```
+
 The report includes max-error locations plus edge/interior and 2x2 phase
 diagnostics for array outputs, plus case-specific context and
 reference-recompute checks for remaining sensor/camera gaps.
@@ -88,6 +97,8 @@ preset growth. `scene_from_file` / `sceneFromFile` supports RGB and
 monochrome inputs backed by emissive display calibration, the classic test
 scene catalog has been expanded, and `sensor_create` now includes generic
 `rgbw` / `rccc` presets plus upstream-backed `mt9v024` and `ar0132at`
-RGBW/RCCC variants. Multispectral / EXR / reflective-display cases and the
-rest of the vendor sensor catalog remain explicitly out of scope until they
-are ported deliberately.
+RGBW/RCCC variants. The first metrics/validation slice is also in place:
+`metrics_spd`, CIELAB helpers, and generic MAE/RMSE/PSNR utilities.
+Multispectral / EXR / reflective-display cases and the rest of the vendor
+sensor catalog remain explicitly out of scope until they are ported
+deliberately.

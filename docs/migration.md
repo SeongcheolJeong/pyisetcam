@@ -19,6 +19,8 @@ This milestone keeps MATLAB semantics close to the source while exposing Pythoni
 | `ipCompute` | `ip_compute` |
 | `cameraCreate` | `camera_create` |
 | `cameraCompute` | `camera_compute` |
+| `metricsSPD` | `metrics_spd` |
+| `iePSNR` | `peak_signal_to_noise_ratio` |
 
 ## Object Model
 

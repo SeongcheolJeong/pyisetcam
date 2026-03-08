@@ -9,6 +9,22 @@ from .assets import (
 from .camera import camera_compute, camera_create, camera_get, camera_set
 from .display import display_create, display_get, display_set
 from .ip import ip_compute, ip_create, ip_get, ip_set
+from .metrics import (
+    comparison_metrics,
+    correlated_color_temperature,
+    delta_e_ab,
+    iePSNR,
+    ieXYZ2LAB,
+    ieXYZFromEnergy,
+    mean_absolute_error,
+    mean_relative_error,
+    metrics_spd,
+    mired_difference,
+    peak_signal_to_noise_ratio,
+    root_mean_squared_error,
+    xyz_from_energy,
+    xyz_to_lab,
+)
 from .optics import oi_compute, oi_create, oi_get, oi_set, wvf_create
 from .parity import run_python_case, run_python_case_with_context
 from .scene import (
@@ -59,6 +75,13 @@ __all__ = [
     "display_get",
     "display_set",
     "ensure_upstream_snapshot",
+    "comparison_metrics",
+    "correlated_color_temperature",
+    "deltaEab",
+    "delta_e_ab",
+    "iePSNR",
+    "ieXYZ2LAB",
+    "ieXYZFromEnergy",
     "ipCompute",
     "ipCreate",
     "ipGet",
@@ -67,6 +90,11 @@ __all__ = [
     "ip_create",
     "ip_get",
     "ip_set",
+    "mean_absolute_error",
+    "mean_relative_error",
+    "metricsSPD",
+    "metrics_spd",
+    "mired_difference",
     "oiCompute",
     "oiCreate",
     "oiGet",
@@ -76,6 +104,8 @@ __all__ = [
     "oi_get",
     "oi_set",
     "param_format",
+    "peak_signal_to_noise_ratio",
+    "root_mean_squared_error",
     "run_python_case",
     "run_python_case_with_context",
     "sceneAdjustIlluminant",
@@ -107,6 +137,8 @@ __all__ = [
     "sensor_set",
     "sensor_set_size_to_fov",
     "wvf_create",
+    "xyz_from_energy",
+    "xyz_to_lab",
 ]
 
 __version__ = "0.1.0"
@@ -136,6 +168,9 @@ sensorCompute = sensor_compute
 sensorGet = sensor_get
 sensorSet = sensor_set
 sensorSetSizeToFOV = sensor_set_size_to_fov
+
+metricsSPD = metrics_spd
+deltaEab = delta_e_ab
 
 ipCreate = ip_create
 ipCompute = ip_compute
