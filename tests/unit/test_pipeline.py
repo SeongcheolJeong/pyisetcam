@@ -62,6 +62,7 @@ def _write_mock_zemax_bundle(
     base_lens_file_name: str = "CookeLens",
     wave_assignment: str = "500:100:600",
     base_lens_has_semicolon: bool = True,
+    psf_size_assignment: int = 2,
 ):
     params_file = tmp_path / "ISETPARAMS.txt"
     base_lens_line = f"baseLensFileName='{base_lens_file_name}'"
@@ -69,7 +70,7 @@ def _write_mock_zemax_bundle(
         base_lens_line += ";"
     params_file.write_text(
         f"lensFile='{lens_file}';\n"
-        "psfSize=2;\n"
+        f"psfSize={psf_size_assignment};\n"
         f"wave={wave_assignment};\n"
         "imgHeightNum=2;\n"
         "imgHeightMax=1.0;\n"
@@ -1299,6 +1300,16 @@ def test_rt_import_data_parses_legacy_base_lens_line_without_semicolon(tmp_path)
     assert optics_file is None
     assert imported_optics["raytrace"]["lens_file"] == "CookeLens.ZMX"
     assert imported_optics["raytrace"]["geometry"]["function"].shape == (2, 2)
+
+
+def test_rt_import_data_rejects_odd_psf_size_from_isetparams(tmp_path) -> None:
+    params_file = _write_mock_zemax_bundle(
+        tmp_path,
+        psf_size_assignment=3,
+    )
+
+    with pytest.raises(ValueError, match="PSF size must be even"):
+        rt_import_data(p_file_full=params_file)
 
 
 def test_rt_import_data_preserves_existing_optics_fields_and_effective_top_level_state(tmp_path) -> None:

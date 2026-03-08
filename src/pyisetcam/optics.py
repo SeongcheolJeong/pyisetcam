@@ -684,6 +684,10 @@ def rt_import_data(
     missing = [key for key in required if key not in params]
     if missing:
         raise ValueError(f"Missing Zemax parameter(s): {', '.join(missing)}")
+    if "psfSize" in params:
+        parameter_psf_size = int(round(float(params["psfSize"])))
+        if parameter_psf_size % 2:
+            raise ValueError("PSF size must be even.")
 
     wave = np.asarray(params["wave"], dtype=float).reshape(-1)
     n_height = int(round(float(params["imgHeightNum"])))
