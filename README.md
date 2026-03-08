@@ -271,6 +271,11 @@ Scene and OI ROI getters are now covered too through
 `sceneGet(..., 'roi photons/energy/luminance/reflectance')`,
 `sceneGet(..., 'roi mean photons/energy/reflectance')`, and
 `oiGet(..., 'roi photons/energy')` plus their ROI-mean variants.
+The adjacent sensor compatibility surface now covers direct
+`sensorGet(..., 'electrons')` as well as MATLAB-style line-profile
+queries through `sensorGet(..., 'hline volts/electrons')` and
+`sensorGet(..., 'vline volts/electrons')`, returning per-filter `data`,
+`pos`, and `pixPos` vectors.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

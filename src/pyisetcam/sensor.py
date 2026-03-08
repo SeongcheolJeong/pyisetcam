@@ -143,6 +143,18 @@ def _sensor_clear_data(sensor: Sensor) -> None:
     sensor.data.clear()
 
 
+def _sensor_electrons(sensor: Sensor) -> np.ndarray | None:
+    volts = sensor.data.get("volts")
+    if volts is None:
+        return None
+    analog_gain = float(sensor.fields["analog_gain"])
+    analog_offset = float(sensor.fields["analog_offset"])
+    conversion_gain = float(sensor.fields["pixel"]["conversion_gain_v_per_electron"])
+    return np.clip((np.asarray(volts, dtype=float) * analog_gain) - analog_offset, 0.0, None) / max(
+        conversion_gain, 1e-12
+    )
+
+
 def _filter_bundle(
     filter_name: str | list[str] | tuple[str, ...],
     wave: np.ndarray,
@@ -355,6 +367,38 @@ def sensor_create_ideal(
     raise UnsupportedOptionError("sensorCreateIdeal", ideal_type)
 
 
+def _sensor_line_profile(sensor: Sensor, line_key: str, rc: Any) -> dict[str, list[np.ndarray]] | None:
+    from .roi import _sensor_signal_cube
+
+    normalized = param_format(line_key)
+    if normalized not in {"hlinevolts", "hlineelectrons", "vlinevolts", "vlineelectrons"}:
+        raise KeyError(f"Unsupported sensor line profile parameter: {line_key}")
+    data_type = "electrons" if "electrons" in normalized else "volts"
+    cube = _sensor_signal_cube(sensor, data_type)
+    support = sensor_get(sensor, "spatial support")
+    nfilters = int(sensor_get(sensor, "nfilters"))
+    line_index = int(np.rint(float(rc)))
+    if normalized.startswith("h"):
+        if line_index < 1 or line_index > cube.shape[0]:
+            raise IndexError("Horizontal sensor line index is out of range.")
+        position = np.asarray(support["x"], dtype=float)
+        oriented = cube[line_index - 1, :, :]
+    else:
+        if line_index < 1 or line_index > cube.shape[1]:
+            raise IndexError("Vertical sensor line index is out of range.")
+        position = np.asarray(support["y"], dtype=float)
+        oriented = cube[:, line_index - 1, :]
+
+    data: list[np.ndarray] = []
+    positions: list[np.ndarray] = []
+    for filter_index in range(nfilters):
+        channel = np.asarray(oriented[:, filter_index], dtype=float)
+        valid = ~np.isnan(channel)
+        data.append(channel[valid].copy())
+        positions.append(position[valid].copy())
+    return {"data": data, "pos": positions, "pixPos": [values.copy() for values in positions]}
+
+
 def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
     key = param_format(parameter)
     if key == "type":
@@ -373,7 +417,7 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return np.asarray(sensor.fields["filter_spectra"], dtype=float)
     if key in {"filternames", "filtername"}:
         return list(sensor.fields["filter_names"])
-    if key == "nfilters":
+    if key in {"nfilters", "nfilter", "ncolors", "ncolor", "nsensors", "nsensor"}:
         return int(np.asarray(sensor.fields["filter_spectra"]).shape[1])
     if key == "size":
         return _sensor_rows_cols(sensor)
@@ -476,10 +520,16 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return ie_locs2_rect(roi_array)
     if key == "volts":
         return sensor.data.get("volts")
+    if key == "electrons":
+        return _sensor_electrons(sensor)
     if key == "dv":
         return sensor.data.get("dv")
     if key == "dvorvolts":
         return sensor.data.get("dv", sensor.data.get("volts"))
+    if key in {"hlinevolts", "hlineelectrons", "vlinevolts", "vlineelectrons"}:
+        if not args:
+            raise ValueError("Specify row or col.")
+        return _sensor_line_profile(sensor, key, args[0])
     if key in {"roivolts", "roidata", "roidatav", "roidatavolts"}:
         roi_locs = sensor_get(sensor, "roi locs")
         if roi_locs is None:

@@ -164,6 +164,48 @@ def test_sensor_get_roi_queries_and_means(asset_store) -> None:
     assert np.allclose(roi_electrons_mean, np.array([6.0, 8.0, 10.0], dtype=float))
 
 
+def test_sensor_get_electrons_direct_getter(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor.fields["pixel"]["conversion_gain_v_per_electron"] = 0.25
+    sensor = sensor_set(sensor, "analog gain", 2.0)
+    sensor = sensor_set(sensor, "analog offset", 1.0)
+    sensor = sensor_set(sensor, "volts", np.array([[0.5, 1.0], [1.5, 2.0]], dtype=float))
+
+    electrons = sensor_get(sensor, "electrons")
+
+    assert np.allclose(electrons, np.array([[0.0, 4.0], [8.0, 12.0]], dtype=float))
+
+
+def test_sensor_get_line_profiles(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor.fields["pixel"]["conversion_gain_v_per_electron"] = 0.5
+    sensor = sensor_set(sensor, "analog gain", 2.0)
+    sensor = sensor_set(sensor, "analog offset", 1.0)
+    sensor = sensor_set(sensor, "volts", np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float))
+
+    hline_volts = sensor_get(sensor, "hline volts", 1)
+    vline_electrons = sensor_get(sensor, "vline electrons", 1)
+    support = sensor_get(sensor, "spatial support")
+
+    assert set(hline_volts) == {"data", "pos", "pixPos"}
+    assert np.allclose(hline_volts["data"][0], np.array([2.0], dtype=float))
+    assert np.allclose(hline_volts["data"][1], np.array([1.0], dtype=float))
+    assert hline_volts["data"][2].size == 0
+    assert np.allclose(hline_volts["pos"][0], np.array([support["x"][1]], dtype=float))
+    assert np.allclose(hline_volts["pos"][1], np.array([support["x"][0]], dtype=float))
+    assert hline_volts["pos"][2].size == 0
+    assert np.allclose(hline_volts["pixPos"][0], hline_volts["pos"][0])
+    assert np.allclose(hline_volts["pixPos"][1], hline_volts["pos"][1])
+    assert hline_volts["pixPos"][2].size == 0
+
+    assert vline_electrons["data"][0].size == 0
+    assert np.allclose(vline_electrons["data"][1], np.array([2.0], dtype=float))
+    assert np.allclose(vline_electrons["data"][2], np.array([10.0], dtype=float))
+    assert vline_electrons["pos"][0].size == 0
+    assert np.allclose(vline_electrons["pos"][1], np.array([support["y"][0]], dtype=float))
+    assert np.allclose(vline_electrons["pos"][2], np.array([support["y"][1]], dtype=float))
+
+
 def test_ip_get_roi_data_and_xyz(asset_store) -> None:
     ip = ip_create(display="default", asset_store=asset_store)
     result = np.array(

@@ -171,15 +171,9 @@ def _sensor_signal_cube(sensor: Sensor, data_type: str | None) -> np.ndarray:
     elif key in {"dv", "digitalvalues"}:
         data = sensor_get(sensor, "dv")
     elif key == "electrons":
-        volts = sensor_get(sensor, "volts")
-        if volts is None:
+        data = sensor_get(sensor, "electrons")
+        if data is None:
             raise ValueError("Sensor has no computed volts for ROI extraction.")
-        analog_gain = float(sensor_get(sensor, "analog gain"))
-        analog_offset = float(sensor_get(sensor, "analog offset"))
-        conversion_gain = float(sensor.fields["pixel"]["conversion_gain_v_per_electron"])
-        data = np.clip((np.asarray(volts, dtype=float) * analog_gain) - analog_offset, 0.0, None) / max(
-            conversion_gain, 1e-12
-        )
     else:
         raise UnsupportedOptionError("vcGetROIData", f"sensor/{data_type}")
 
