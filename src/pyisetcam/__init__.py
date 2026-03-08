@@ -66,6 +66,7 @@ from .session import (
     ie_get_selected_object,
     ie_init_session,
     ie_main_close,
+    ie_refresh_window,
     ie_replace_object,
     ie_session_get,
     ie_session_set,
@@ -95,7 +96,9 @@ from .session import (
     session_replace_object,
     session_set_objects,
     session_set_selected,
+    vc_equivalent_objtype,
     vc_get_figure,
+    vc_set_figure_handles,
     vc_select_figure,
 )
 from .scene import (
@@ -160,6 +163,7 @@ __all__ = [
     "ieGetSelectedObject",
     "ieInitSession",
     "ieMainClose",
+    "ieRefreshWindow",
     "ieReplaceObject",
     "ieSessionGet",
     "ieSessionSet",
@@ -174,6 +178,7 @@ __all__ = [
     "ie_get_selected_object",
     "ie_init_session",
     "ie_main_close",
+    "ie_refresh_window",
     "ie_replace_object",
     "ie_session_get",
     "ie_session_set",
@@ -235,6 +240,7 @@ __all__ = [
     "session_replace_object",
     "session_set_objects",
     "session_set_selected",
+    "vc_equivalent_objtype",
     "rtDIInterp",
     "rtAngleLUT",
     "rtBlockCenter",
@@ -309,6 +315,7 @@ __all__ = [
     "vcDeleteObject",
     "vcDeleteSomeObjects",
     "vcDeleteSelectedObject",
+    "vcEquivalentObjtype",
     "vcGetObject",
     "vcGetObjectType",
     "vcGetObjectNames",
@@ -316,6 +323,7 @@ __all__ = [
     "vcGetSelectedObject",
     "vcGetSelectedObjectID",
     "vcGetFigure",
+    "vcSetFigureHandles",
     "vcNewObjectName",
     "vcNewObjectValue",
     "vcReplaceAndSelectObject",
@@ -323,6 +331,7 @@ __all__ = [
     "vcSelectFigure",
     "vcSetObjects",
     "vcSetSelectedObject",
+    "vc_set_figure_handles",
     "wvf_create",
     "xyz_from_energy",
     "xyz_to_lab",
@@ -395,6 +404,7 @@ ieGetObject = ie_get_object
 ieGetSelectedObject = ie_get_selected_object
 ieInitSession = ie_init_session
 ieMainClose = ie_main_close
+ieRefreshWindow = ie_refresh_window
 ieReplaceObject = ie_replace_object
 ieSessionGet = ie_session_get
 ieSessionSet = ie_session_set
@@ -418,6 +428,7 @@ vcCountObjects = session_count_objects
 vcDeleteObject = session_delete_object
 vcDeleteSomeObjects = session_delete_some_objects
 vcDeleteSelectedObject = session_delete_selected_object
+vcEquivalentObjtype = vc_equivalent_objtype
 vcGetObject = session_get_object_with_id
 vcGetObjectType = session_get_object_type
 vcGetObjectNames = session_get_object_names
@@ -430,5 +441,6 @@ vcNewObjectValue = session_new_object_value
 vcReplaceAndSelectObject = session_replace_and_select_object
 vcReplaceObject = session_replace_object
 vcSelectFigure = vc_select_figure
+vcSetFigureHandles = vc_set_figure_handles
 vcSetObjects = session_set_objects
 vcSetSelectedObject = session_set_selected

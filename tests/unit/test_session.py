@@ -14,6 +14,7 @@ from pyisetcam import (
     ieGetSelectedObject,
     ieInitSession,
     ieMainClose,
+    ieRefreshWindow,
     ieReplaceObject,
     ieSessionGet,
     ieSessionSet,
@@ -26,6 +27,7 @@ from pyisetcam import (
     ie_get_object,
     ie_get_selected_object,
     ie_init_session,
+    ie_refresh_window,
     ie_replace_object,
     ie_session_get,
     ie_session_set,
@@ -67,10 +69,14 @@ from pyisetcam import (
     vcGetSelectedObject,
     vcSelectFigure,
     vcDeleteSomeObjects,
+    vcEquivalentObjtype,
     vcNewObjectName,
     vcNewObjectValue,
+    vcSetFigureHandles,
     vcSetObjects,
     vcSetSelectedObject,
+    vc_equivalent_objtype,
+    vc_set_figure_handles,
 )
 
 
@@ -513,6 +519,54 @@ def test_ie_windows_set_restores_positions_and_states() -> None:
 
     assert [figure.Position for figure in figures] == pref_positions
     assert [figure.WindowState for figure in figures] == pref_states
+
+
+def test_vc_equivalent_objtype_maps_aliases_and_objects(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+
+    assert vc_equivalent_objtype("oi") == "OPTICALIMAGE"
+    assert vcEquivalentObjtype("sensor") == "ISA"
+    assert vc_equivalent_objtype("ipdisplay") == "VCIMAGE"
+    assert vc_equivalent_objtype("camera") == "CAMERA"
+    assert vc_equivalent_objtype(sensor) == "ISA"
+    assert vc_equivalent_objtype({"type": "vcimage"}) == "VCIMAGE"
+
+
+def test_vc_set_figure_handles_updates_session_slots() -> None:
+    session = ie_init_session()
+    sensor_handles = {"imgMain": "sensor-axis"}
+    sensor_event = {"event": 1}
+    image_explore_app = SimpleNamespace(UIFigure="image-explorer-figure")
+
+    vc_set_figure_handles(session, "scene", "scene-app")
+    vcSetFigureHandles(session, "sensor", "sensor-window", sensor_event, sensor_handles)
+    vcSetFigureHandles(session, "imageexplorer", image_explore_app)
+
+    assert ieSessionGet(session, "scene window") == "scene-app"
+    assert ieSessionGet(session, "sensor window") == "sensor-window"
+    assert ieSessionGet(session, "sensorWindowHandles") == sensor_handles
+    assert ieSessionGet(session, "image explore window") is image_explore_app
+
+
+def test_ie_refresh_window_calls_stored_app_refresh() -> None:
+    session = ie_init_session()
+
+    class RefreshableApp:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def refresh(self) -> None:
+            self.calls += 1
+
+    app = RefreshableApp()
+    ieSessionSet(session, "scene window", app)
+
+    returned = ie_refresh_window(session, "scene")
+
+    assert returned is app
+    assert app.calls == 1
+    assert ieRefreshWindow(session, "scene") is app
+    assert app.calls == 2
 
 
 def test_ie_session_window_aliases_and_ie_app_get(asset_store) -> None:

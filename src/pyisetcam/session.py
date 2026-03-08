@@ -40,6 +40,21 @@ _IE_NESTED_OBJECT_TYPES = {
     "ipdisplay": ("ip", "display"),
 }
 
+_VC_EQUIVALENT_OBJTYPE_MAP = {
+    "scene": "SCENE",
+    "oi": "OPTICALIMAGE",
+    "opticalimage": "OPTICALIMAGE",
+    "sensor": "ISA",
+    "isa": "ISA",
+    "imgproc": "VCIMAGE",
+    "ip": "VCIMAGE",
+    "vci": "VCIMAGE",
+    "vcimage": "VCIMAGE",
+    "ipdisplay": "VCIMAGE",
+    "display": "DISPLAY",
+    "camera": "CAMERA",
+}
+
 
 def _session_type_name(value: str) -> str:
     normalized = param_format(value)
@@ -54,6 +69,19 @@ def _ie_object_type(value: str | BaseISETObject | dict[str, Any]) -> str:
     if isinstance(value, dict) and "type" in value:
         return param_format(str(value["type"]))
     return param_format(str(value))
+
+
+def vc_equivalent_objtype(this_obj: str | BaseISETObject | dict[str, Any] | Any) -> str:
+    if isinstance(this_obj, BaseISETObject):
+        key = param_format(this_obj.type)
+        return _VC_EQUIVALENT_OBJTYPE_MAP.get(key, key.upper())
+    if isinstance(this_obj, dict) and "type" in this_obj:
+        key = param_format(str(this_obj["type"]))
+        return _VC_EQUIVALENT_OBJTYPE_MAP.get(key, key.upper())
+    if isinstance(this_obj, str):
+        key = param_format(this_obj)
+        return _VC_EQUIVALENT_OBJTYPE_MAP.get(key, key.upper())
+    return type(this_obj).__name__
 
 
 def _object_session_type(obj: BaseISETObject) -> str:
@@ -719,6 +747,33 @@ def vc_get_figure(
     return ie_app_get(session, obj, select=select)
 
 
+def vc_set_figure_handles(
+    session: SessionContext,
+    fig_type: str,
+    app: Any,
+    eventdata: Any | None = None,
+    handles: Any | None = None,
+) -> SessionContext:
+    key = param_format(fig_type)
+    if key == "main":
+        return ie_session_set(session, "mainwindow", app, eventdata, handles)
+    if key == "scene":
+        return ie_session_set(session, "scenewindow", app)
+    if key in {"oi", "opticalimage"}:
+        return ie_session_set(session, "oiwindow", app, eventdata, handles)
+    if key in {"isa", "sensor"}:
+        return ie_session_set(session, "sensorwindow", app, eventdata, handles)
+    if key in {"vcimage", "ip", "imgproc"}:
+        return ie_session_set(session, "vcimagewindow", app, eventdata, handles)
+    if key == "metrics":
+        return ie_session_set(session, "metricswindow", app, eventdata, handles)
+    if key == "camdesign":
+        return ie_session_set(session, "camdesignwindow", app)
+    if key in {"imageexplorer", "imageexplore"}:
+        return ie_session_set(session, "imageexplorewindow", app)
+    raise ValueError(f"Unknown figure type: {fig_type}")
+
+
 def _window_figure_from_session(session: SessionContext, object_type: str) -> Any:
     normalized = _session_type_name(object_type)
     if normalized == "scene":
@@ -750,6 +805,32 @@ def vc_select_figure(
     if figure_handle is None and not no_new_win:
         raise NotImplementedError(f"vcSelectFigure {object_type} window creation is not implemented.")
     return figure_handle
+
+
+def ie_refresh_window(
+    session: SessionContext,
+    obj_type: str | BaseISETObject | dict[str, Any],
+) -> Any:
+    canonical = vc_equivalent_objtype(obj_type)
+    if canonical == "SCENE":
+        app = ie_session_get(session, "scene window")
+    elif canonical == "OPTICALIMAGE":
+        app = ie_session_get(session, "oi window")
+    elif canonical == "ISA":
+        app = ie_session_get(session, "sensor window")
+    elif canonical == "VCIMAGE":
+        app = ie_session_get(session, "ip window")
+    else:
+        raise ValueError(f"Unknown object type for ieRefreshWindow: {obj_type}")
+
+    if app is None:
+        raise ValueError(f"Undefined {canonical.lower()} app.")
+
+    refresh = app.get("refresh") if isinstance(app, dict) else getattr(app, "refresh", None)
+    if not callable(refresh):
+        raise AttributeError(f"Stored {canonical.lower()} app does not define refresh().")
+    refresh()
+    return app
 
 
 def ie_main_close(session: SessionContext) -> SessionContext:
@@ -994,10 +1075,13 @@ ieAppGet = ie_app_get
 ieInitSession = ie_init_session
 ieMainClose = ie_main_close
 ieReplaceObject = ie_replace_object
+ieRefreshWindow = ie_refresh_window
 ieSessionGet = ie_session_get
 ieSessionSet = ie_session_set
 ieWindowsGet = ie_windows_get
 ieWindowsSet = ie_windows_set
 ieSelectObject = ie_select_object
+vcEquivalentObjtype = vc_equivalent_objtype
 vcGetFigure = vc_get_figure
+vcSetFigureHandles = vc_set_figure_handles
 vcSelectFigure = vc_select_figure
