@@ -302,7 +302,9 @@ tests and scripts.
 That same headless wrapper layer now also includes `plotSensor` for
 volts/electrons/dv line plots and ROI histograms, and `ipPlot` for RGB
 line data, chromaticity, ROI RGB summaries (`rgbhistogram` / `rgb3d`),
-and luminance summaries.
+luminance summaries, and ROI `cielab` / `cieluv` payloads. The shared
+metrics layer now exposes `xyz_to_luv` / `xyz2luv` alongside the existing
+XYZ, LAB, and chromaticity helpers.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

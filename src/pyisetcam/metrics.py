@@ -70,6 +70,28 @@ def xyz_to_lab(xyz: Any, white_point: Any) -> NDArray[np.float64]:
     return lab
 
 
+def xyz_to_luv(xyz: Any, white_point: Any) -> NDArray[np.float64]:
+    """Convert XYZ tristimulus values to CIELUV."""
+
+    xyz_array = np.asarray(xyz, dtype=float)
+    white = np.asarray(white_point, dtype=float)
+    if xyz_array.shape[-1] != 3:
+        raise ValueError("xyz must have a trailing dimension of size 3.")
+    if white.shape[-1] != 3:
+        raise ValueError("white_point must have a trailing dimension of size 3.")
+    y_ratio = xyz_array[..., 1] / np.maximum(white[..., 1], 1e-12)
+    delta = 6.0 / 29.0
+    threshold = delta**3
+    lstar = np.where(y_ratio > threshold, (116.0 * np.cbrt(y_ratio)) - 16.0, (903.3 * y_ratio))
+    uv = xyz_to_uv(xyz_array)
+    uv_white = xyz_to_uv(white)
+    luv = np.empty_like(xyz_array, dtype=float)
+    luv[..., 0] = lstar
+    luv[..., 1] = 13.0 * lstar * (uv[..., 0] - uv_white[..., 0])
+    luv[..., 2] = 13.0 * lstar * (uv[..., 1] - uv_white[..., 1])
+    return luv
+
+
 def chromaticity_xy(xyz: Any) -> NDArray[np.float64]:
     xyz_array = np.asarray(xyz, dtype=float)
     denominator = np.maximum(np.sum(xyz_array, axis=-1, keepdims=True), 1e-12)
@@ -251,6 +273,7 @@ def example_spd_pair(*, wave: Any | None = None) -> tuple[NDArray[np.float64], N
 # MATLAB-style aliases.
 ieXYZFromEnergy = xyz_from_energy
 ieXYZ2LAB = xyz_to_lab
+xyz2luv = xyz_to_luv
 deltaEab = delta_e_ab
 iePSNR = peak_signal_to_noise_ratio
 metricsSPD = metrics_spd

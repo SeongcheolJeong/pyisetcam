@@ -26,6 +26,7 @@ from .metrics import (
     root_mean_squared_error,
     xyz_from_energy,
     xyz_to_lab,
+    xyz_to_luv,
 )
 from .optics import (
     ie_field_height_to_index,
@@ -381,6 +382,8 @@ __all__ = [
     "oiPlot",
     "xyz_from_energy",
     "xyz_to_lab",
+    "xyz_to_luv",
+    "xyz2luv",
     "zemaxLoad",
     "zemaxReadHeader",
     "zemax_load",
@@ -446,6 +449,7 @@ sensorSetSizeToFOV = sensor_set_size_to_fov
 
 metricsSPD = metrics_spd
 deltaEab = delta_e_ab
+xyz2luv = xyz_to_luv
 
 ieAddObject = ie_add_object
 ieAppGet = ie_app_get

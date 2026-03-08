@@ -13,6 +13,7 @@ from pyisetcam import (
     peak_signal_to_noise_ratio,
     xyz_from_energy,
     xyz_to_lab,
+    xyz_to_luv,
 )
 
 
@@ -21,6 +22,13 @@ def test_xyz_to_lab_maps_white_point_to_neutral() -> None:
     lab = xyz_to_lab(white, white)
 
     assert np.allclose(lab, np.array([100.0, 0.0, 0.0]), atol=1e-6)
+
+
+def test_xyz_to_luv_maps_white_point_to_neutral() -> None:
+    white = np.array([95.047, 100.0, 108.883], dtype=float)
+    luv = xyz_to_luv(white, white)
+
+    assert np.allclose(luv, np.array([100.0, 0.0, 0.0]), atol=1e-6)
 
 
 def test_delta_e_ab_is_zero_for_identical_xyz() -> None:

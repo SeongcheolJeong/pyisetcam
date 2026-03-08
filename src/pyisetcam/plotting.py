@@ -8,6 +8,7 @@ import numpy as np
 
 from .exceptions import UnsupportedOptionError
 from .ip import ip_get
+from .metrics import xyz_to_lab, xyz_to_luv
 from .optics import oi_get
 from .scene import scene_get
 from .sensor import sensor_get
@@ -129,6 +130,13 @@ def _ip_plot_color_data(ip: ImageProcessor, roi_locs: Any) -> tuple[np.ndarray, 
     rgb = np.asarray(vc_get_roi_data(ip, roi, "result"), dtype=float)
     xyz = np.asarray(ip_get(ip, "roixyz", roi), dtype=float)
     return rgb, xyz
+
+
+def _ip_plot_white_point(ip: ImageProcessor, roi_xyz: np.ndarray) -> np.ndarray:
+    white_point = ip_get(ip, "data white point")
+    if white_point is not None:
+        return np.asarray(white_point, dtype=float).reshape(3)
+    return np.mean(np.asarray(roi_xyz, dtype=float), axis=0).reshape(3)
 
 
 def scene_plot(
@@ -318,6 +326,26 @@ def ip_plot(
         payload["luminance"] = luminance.copy()
         payload["meanL"] = float(np.mean(luminance))
         payload["stdLum"] = float(np.std(luminance))
+        return payload, None
+    if key == "cielab":
+        roi = _roi_required("ipPlot", p_type, roi_locs)
+        _, xyz = _ip_plot_color_data(ip, roi)
+        white_point = _ip_plot_white_point(ip, xyz)
+        lab = np.asarray(xyz_to_lab(xyz, white_point), dtype=float)
+        payload = _roi_payload(roi)
+        payload["LAB"] = lab.copy()
+        payload["whitePoint"] = np.asarray(white_point, dtype=float).copy()
+        payload["meanLAB"] = np.mean(lab, axis=0).reshape(-1)
+        return payload, None
+    if key == "cieluv":
+        roi = _roi_required("ipPlot", p_type, roi_locs)
+        _, xyz = _ip_plot_color_data(ip, roi)
+        white_point = _ip_plot_white_point(ip, xyz)
+        luv = np.asarray(xyz_to_luv(xyz, white_point), dtype=float)
+        payload = _roi_payload(roi)
+        payload["LUV"] = luv.copy()
+        payload["whitePoint"] = np.asarray(white_point, dtype=float).copy()
+        payload["meanLUV"] = np.mean(luv, axis=0).reshape(-1)
         return payload, None
     raise UnsupportedOptionError("ipPlot", p_type)
 

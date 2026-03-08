@@ -20,6 +20,8 @@ from pyisetcam import (
     sensor_get,
     sensor_set,
     vc_get_roi_data,
+    xyz_to_lab,
+    xyz_to_luv,
 )
 
 
@@ -274,3 +276,43 @@ def test_ip_plot_rgb_histogram_rgb3d_and_luminance(asset_store) -> None:
     assert np.allclose(luminance_udata["luminance"], expected_luminance)
     assert np.isclose(luminance_udata["meanL"], float(np.mean(expected_luminance)))
     assert np.isclose(luminance_udata["stdLum"], float(np.std(expected_luminance)))
+
+
+def test_ip_plot_cielab_and_cieluv(asset_store) -> None:
+    ip = ip_create(asset_store=asset_store)
+    result = np.array(
+        [
+            [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]],
+            [[0.6, 0.5, 0.4], [0.3, 0.2, 0.1]],
+        ],
+        dtype=float,
+    )
+    xyz = np.array(
+        [
+            [[1.0, 10.0, 2.0], [2.0, 20.0, 3.0]],
+            [[4.0, 40.0, 5.0], [5.0, 50.0, 6.0]],
+        ],
+        dtype=float,
+    )
+    white_point = np.array([95.047, 100.0, 108.883], dtype=float)
+    ip = ip_set(ip, "result", result)
+    ip.data["xyz"] = xyz
+    ip = ip_set(ip, "data white point", white_point)
+    roi = np.array([1, 1, 1, 1], dtype=int)
+
+    lab_udata, lab_handle = ipPlot(ip, "cielab", roi)
+    luv_udata, luv_handle = ipPlot(ip, "cieluv", roi)
+
+    expected_xyz = np.asarray(ip_get(ip, "roixyz", roi), dtype=float)
+    expected_lab = np.asarray(xyz_to_lab(expected_xyz, white_point), dtype=float)
+    expected_luv = np.asarray(xyz_to_luv(expected_xyz, white_point), dtype=float)
+
+    assert lab_handle is None
+    assert luv_handle is None
+    assert np.array_equal(lab_udata["rect"], roi)
+    assert np.allclose(lab_udata["whitePoint"], white_point)
+    assert np.allclose(lab_udata["LAB"], expected_lab)
+    assert np.allclose(lab_udata["meanLAB"], np.mean(expected_lab, axis=0))
+    assert np.allclose(luv_udata["whitePoint"], white_point)
+    assert np.allclose(luv_udata["LUV"], expected_luv)
+    assert np.allclose(luv_udata["meanLUV"], np.mean(expected_luv, axis=0))
