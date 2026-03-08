@@ -6,6 +6,7 @@ from typing import Any
 
 import numpy as np
 
+from .color import xyz_color_matching
 from .exceptions import UnsupportedOptionError
 from .ip import ip_get
 from .metrics import xyz_to_lab, xyz_to_luv
@@ -13,7 +14,7 @@ from .optics import oi_get
 from .scene import scene_get
 from .sensor import pixel_snr, sensor_get, sensor_snr
 from .types import ImageProcessor, OpticalImage, Scene, Sensor
-from .utils import param_format
+from .utils import linear_to_srgb, param_format, tile_pattern, xyz_to_linear_srgb
 
 
 def _roi_required(function_name: str, plot_type: str, roi_locs: Any | None) -> Any:
@@ -94,6 +95,98 @@ def _sensor_plot_spectra(sensor: Sensor, data_type: str) -> dict[str, Any]:
         "filterNames": names,
         "dataType": key,
         "yLabel": y_label,
+    }
+
+
+def _cfa_scale_factor(rows: int) -> int:
+    if rows < 2:
+        return 32
+    if rows < 8:
+        return 8
+    return 1
+
+
+def _sensor_pattern_letters(sensor: Sensor, pattern: np.ndarray) -> np.ndarray:
+    letters = np.array(list(sensor_get(sensor, "filter color letters")), dtype="<U16")
+    if letters.size == 0:
+        return np.empty(np.asarray(pattern, dtype=int).shape, dtype="<U16")
+    pattern_array = np.asarray(pattern, dtype=int)
+    return letters[np.clip(pattern_array - 1, 0, letters.size - 1)]
+
+
+def _sensor_filter_display_colors(sensor: Sensor) -> np.ndarray:
+    letters = list(sensor_get(sensor, "filter color letters"))
+    filter_spectra = np.asarray(sensor_get(sensor, "spectral qe"), dtype=float)
+    colors = np.zeros((filter_spectra.shape[1], 3), dtype=float)
+    standard = {
+        "r": np.array([1.0, 0.0, 0.0], dtype=float),
+        "g": np.array([0.0, 1.0, 0.0], dtype=float),
+        "b": np.array([0.0, 0.0, 1.0], dtype=float),
+        "c": np.array([0.0, 1.0, 1.0], dtype=float),
+        "m": np.array([1.0, 0.0, 1.0], dtype=float),
+        "y": np.array([1.0, 1.0, 0.0], dtype=float),
+        "w": np.array([1.0, 1.0, 1.0], dtype=float),
+        "k": np.array([0.0, 0.0, 0.0], dtype=float),
+    }
+
+    fallback_indices: list[int] = []
+    for index in range(colors.shape[0]):
+        letter = letters[index].lower() if index < len(letters) and letters[index] else ""
+        mapped = standard.get(letter)
+        if mapped is not None:
+            colors[index] = mapped
+        else:
+            fallback_indices.append(index)
+
+    if fallback_indices:
+        wave = np.asarray(sensor_get(sensor, "wave"), dtype=float)
+        xyz = np.asarray(
+            filter_spectra[:, fallback_indices].T @ xyz_color_matching(wave, quanta=True),
+            dtype=float,
+        )
+        linear_rgb = np.clip(xyz_to_linear_srgb(xyz), 0.0, None)
+        row_max = np.max(linear_rgb, axis=1, keepdims=True)
+        normalized = np.divide(
+            linear_rgb,
+            np.maximum(row_max, 1e-12),
+            out=np.zeros_like(linear_rgb),
+            where=row_max > 1e-12,
+        )
+        low_energy = np.ravel(row_max <= 1e-12)
+        if np.any(low_energy):
+            normalized[low_energy] = 1.0
+        colors[fallback_indices] = linear_to_srgb(normalized)
+
+    return np.clip(colors, 0.0, 1.0)
+
+
+def _sensor_plot_cfa(sensor: Sensor, *, full_array: bool) -> dict[str, Any]:
+    unit_pattern = np.asarray(sensor_get(sensor, "pattern"), dtype=int)
+    if full_array:
+        rows, cols = sensor_get(sensor, "size")
+        pattern = tile_pattern(unit_pattern, int(rows), int(cols))
+        mode = "full"
+    else:
+        pattern = unit_pattern.copy()
+        mode = "block"
+    filter_colors = _sensor_filter_display_colors(sensor)
+    small_img = filter_colors[np.clip(pattern - 1, 0, filter_colors.shape[0] - 1)]
+    scale = _cfa_scale_factor(int(small_img.shape[0]))
+    if scale > 1:
+        img = np.repeat(np.repeat(small_img, scale, axis=0), scale, axis=1)
+    else:
+        img = small_img.copy()
+    return {
+        "img": img.copy(),
+        "imgSmall": small_img.copy(),
+        "pattern": pattern.copy(),
+        "unitPattern": unit_pattern.copy(),
+        "patternColors": _sensor_pattern_letters(sensor, pattern),
+        "unitPatternColors": _sensor_pattern_letters(sensor, unit_pattern),
+        "filterNames": list(sensor_get(sensor, "filter color letters cell")),
+        "filterColors": filter_colors.copy(),
+        "scale": scale,
+        "mode": mode,
     }
 
 
@@ -283,6 +376,10 @@ def sensor_plot(
     if key in {"electronshline", "hlineelectrons", "electronsvline", "vlineelectrons", "voltshline", "hlinevolts", "voltsvline", "vlinevolts", "dvhline", "hlinedv", "dvvline", "vlinedv"}:
         xy = _roi_required("plotSensor", p_type, roi_locs)
         return _sensor_plot_line_data(sensor, key, xy), None
+    if key in {"cfa", "cfablock"}:
+        return _sensor_plot_cfa(sensor, full_array=False), None
+    if key == "cfafull":
+        return _sensor_plot_cfa(sensor, full_array=True), None
     if key == "pixelsnr":
         snr, volts, snr_shot, snr_read = pixel_snr(sensor)
         return {"volts": volts, "snr": snr, "snrShot": snr_shot, "snrRead": snr_read}, None

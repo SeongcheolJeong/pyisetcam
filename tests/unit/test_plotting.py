@@ -383,3 +383,42 @@ def test_plot_sensor_spectral_wrappers(asset_store) -> None:
     assert np.allclose(qe_udata["y"], expected_qe)
     assert qe_udata["filterNames"] == expected_names
     assert qe_udata["yLabel"] == "Quantum efficiency"
+
+
+def test_plot_sensor_cfa_wrappers(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 4)
+    sensor = sensor_set(sensor, "cols", 4)
+
+    block_udata, block_handle = plotSensor(sensor, "cfa")
+    full_udata, full_handle = plotSensor(sensor, "cfafull")
+
+    expected_unit_pattern = np.asarray(sensor_get(sensor, "pattern"), dtype=int)
+    expected_pattern_colors = np.asarray(sensor_get(sensor, "pattern colors"))
+
+    assert block_handle is None
+    assert full_handle is None
+    assert block_udata["mode"] == "block"
+    assert full_udata["mode"] == "full"
+    assert block_udata["scale"] == 8
+    assert full_udata["scale"] == 8
+    assert np.array_equal(block_udata["unitPattern"], expected_unit_pattern)
+    assert np.array_equal(block_udata["pattern"], expected_unit_pattern)
+    assert np.array_equal(block_udata["patternColors"], expected_pattern_colors)
+    assert np.array_equal(block_udata["unitPatternColors"], expected_pattern_colors)
+    assert block_udata["filterNames"] == ["r", "g", "b"]
+    assert block_udata["imgSmall"].shape == (2, 2, 3)
+    assert block_udata["img"].shape == (16, 16, 3)
+    assert np.allclose(block_udata["imgSmall"][0, 0], np.array([0.0, 1.0, 0.0], dtype=float))
+    assert np.allclose(block_udata["imgSmall"][0, 1], np.array([1.0, 0.0, 0.0], dtype=float))
+    assert np.allclose(block_udata["imgSmall"][1, 0], np.array([0.0, 0.0, 1.0], dtype=float))
+    assert np.allclose(block_udata["imgSmall"][1, 1], np.array([0.0, 1.0, 0.0], dtype=float))
+
+    assert np.array_equal(full_udata["unitPattern"], expected_unit_pattern)
+    assert full_udata["imgSmall"].shape == (4, 4, 3)
+    assert full_udata["img"].shape == (32, 32, 3)
+    assert np.array_equal(full_udata["patternColors"][:2, :2], expected_pattern_colors)
+    assert np.array_equal(full_udata["patternColors"][2:, 2:], expected_pattern_colors)
+    assert np.allclose(full_udata["imgSmall"][0, 0], np.array([0.0, 1.0, 0.0], dtype=float))
+    assert np.allclose(full_udata["imgSmall"][0, 1], np.array([1.0, 0.0, 0.0], dtype=float))
+    assert np.allclose(full_udata["imgSmall"][1, 0], np.array([0.0, 0.0, 1.0], dtype=float))

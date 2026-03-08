@@ -309,7 +309,9 @@ XYZ, LAB, and chromaticity helpers, and the sensor layer now exposes
 headless `plotSensor('pixel snr'/'sensor snr')` payloads. The current
 headless `plotSensor` subset also includes spectral wrappers for
 `'color filters'` and `'sensor spectral qe'` on top of the stored sensor
-spectral bundle.
+spectral bundle, plus headless CFA views for `'cfa'` / `'cfa block'` and
+`'cfa full'` with MATLAB-style unit-block/full-array tiling and default
+display scaling.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
