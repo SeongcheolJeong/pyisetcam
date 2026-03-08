@@ -507,6 +507,22 @@ def test_oi_set_raw_raytrace_scalar_metadata_roundtrips(asset_store) -> None:
     assert np.isclose(oi_get(oi, "rtcomputespacing", "um"), 2.0)
 
 
+def test_oi_get_set_optics_prefixed_raytrace_parameters(asset_store) -> None:
+    oi = oi_create("ray trace", asset_store=asset_store)
+
+    assert np.isclose(oi_get(oi, "optics rtfnumber"), oi_get(oi, "rtfnumber"))
+    assert np.allclose(oi_get(oi, "optics rtpsfspacing", "um"), oi_get(oi, "rtpsfspacing", "um"))
+    assert np.allclose(oi_get(oi, "optics rtgeomfieldheight", "mm"), oi_get(oi, "rtgeomfieldheight", "mm"))
+
+    oi = oi_set(oi, "optics rtrefwave", 530.0)
+    oi = oi_set(oi, "optics rtpsfspacing", np.array([0.0004, 0.0006], dtype=float))
+    oi = oi_set(oi, "optics rtcomputespacing", 3e-6)
+
+    assert np.isclose(oi_get(oi, "rtrefwave"), 530.0)
+    assert np.allclose(oi_get(oi, "rtpsfspacing", "um"), np.array([0.4, 0.6]))
+    assert np.isclose(oi_get(oi, "rtcomputespacing", "um"), 3.0)
+
+
 def test_oi_compute_raytrace_rotates_psf_with_field_angle(asset_store) -> None:
     wave = np.array([550.0], dtype=float)
     scene = scene_create("uniform ee", 96, wave, asset_store=asset_store)

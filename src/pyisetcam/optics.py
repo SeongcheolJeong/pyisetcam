@@ -20,6 +20,7 @@ from .utils import (
     apply_channelwise_gaussian,
     gaussian_sigma_pixels,
     param_format,
+    split_prefixed_parameter,
     unit_frequency_list,
 )
 
@@ -1765,6 +1766,9 @@ def _sync_oi_geometry_fields(oi: OpticalImage) -> None:
 
 def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
     key = param_format(parameter)
+    prefix, remainder = split_prefixed_parameter(parameter, ("optics",))
+    if prefix == "optics" and remainder:
+        return oi_get(oi, remainder, *args)
     if key == "type":
         return oi.type
     if key == "name":
@@ -2108,6 +2112,9 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
 
 def oi_set(oi: OpticalImage, parameter: str, value: Any) -> OpticalImage:
     key = param_format(parameter)
+    prefix, remainder = split_prefixed_parameter(parameter, ("optics",))
+    if prefix == "optics" and remainder:
+        return oi_set(oi, remainder, value)
     if key == "name":
         oi.name = str(value)
         return oi
