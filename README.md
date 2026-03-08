@@ -210,6 +210,11 @@ Whole-optics edits that change only `transmittance.wave` now preserve the
 existing scale by interpolation instead of resetting it, and explicit
 whole-optics `transmittance.scale` edits now reject wrong-length vectors
 the same way the dedicated setter does.
+An initial optional `SessionContext` compatibility layer is now in place
+too, including session-aware core create/compute entry points and
+MATLAB-style helpers for registering and retrieving the current
+scene/OI/sensor/IP/camera objects without changing the explicit-object
+default workflow.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

@@ -58,6 +58,16 @@ from .optics import (
     zemax_read_header,
 )
 from .parity import run_python_case, run_python_case_with_context
+from .session import (
+    session_add_object,
+    session_create,
+    session_get_object,
+    session_get_selected,
+    session_get_selected_id,
+    session_list_objects,
+    session_object_id,
+    session_set_selected,
+)
 from .scene import (
     scene_adjust_illuminant,
     scene_adjust_luminance,
@@ -76,7 +86,7 @@ from .sensor import (
     sensor_set,
     sensor_set_size_to_fov,
 )
-from .types import Camera, Display, ImageProcessor, OpticalImage, Scene, Sensor
+from .types import Camera, Display, ImageProcessor, OpticalImage, Scene, Sensor, SessionContext
 from .utils import DEFAULT_WAVE, blackbody, param_format
 
 __all__ = [
@@ -90,6 +100,7 @@ __all__ = [
     "OpticalImage",
     "Scene",
     "Sensor",
+    "SessionContext",
     "blackbody",
     "cameraCompute",
     "cameraCreate",
@@ -145,6 +156,14 @@ __all__ = [
     "param_format",
     "peak_signal_to_noise_ratio",
     "root_mean_squared_error",
+    "session_add_object",
+    "session_create",
+    "session_get_object",
+    "session_get_selected",
+    "session_get_selected_id",
+    "session_list_objects",
+    "session_object_id",
+    "session_set_selected",
     "rtDIInterp",
     "rtAngleLUT",
     "rtBlockCenter",
@@ -213,6 +232,11 @@ __all__ = [
     "sensor_get",
     "sensor_set",
     "sensor_set_size_to_fov",
+    "vcAddObject",
+    "vcGetObject",
+    "vcGetSelectedObject",
+    "vcGetSelectedObjectID",
+    "vcSetSelectedObject",
     "wvf_create",
     "xyz_from_energy",
     "xyz_to_lab",
@@ -287,3 +311,9 @@ cameraCreate = camera_create
 cameraCompute = camera_compute
 cameraGet = camera_get
 cameraSet = camera_set
+
+vcAddObject = session_add_object
+vcGetObject = session_get_object
+vcGetSelectedObject = session_get_selected
+vcGetSelectedObjectID = session_get_selected_id
+vcSetSelectedObject = session_set_selected

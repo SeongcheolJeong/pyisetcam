@@ -8,7 +8,8 @@ import numpy as np
 
 from .assets import AssetStore
 from .exceptions import UnsupportedOptionError
-from .types import Display
+from .session import track_session_object
+from .types import Display, SessionContext
 from .utils import interp_spectra, invert_gamma_table, param_format
 
 
@@ -103,6 +104,7 @@ def display_create(
     *args: Any,
     asset_store: AssetStore | None = None,
     wave: np.ndarray | None = None,
+    session: SessionContext | None = None,
 ) -> Display:
     """Create a supported display."""
 
@@ -135,7 +137,7 @@ def display_create(
         )
         display.fields["wave"] = target_wave
     display.fields.setdefault("image", None)
-    return display
+    return track_session_object(session, display)
 
 
 def display_get(display: Display, parameter: str, *args: Any) -> Any:

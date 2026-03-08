@@ -16,7 +16,8 @@ from .assets import AssetStore
 from .color import luminance_from_photons
 from .exceptions import UnsupportedOptionError
 from .scene import scene_get
-from .types import OpticalImage, Scene
+from .session import track_session_object
+from .types import OpticalImage, Scene, SessionContext
 from .utils import (
     DEFAULT_WAVE,
     apply_channelwise_gaussian,
@@ -1126,6 +1127,7 @@ def oi_create(
     oi_type: str = "diffraction limited",
     *args: Any,
     asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
 ) -> OpticalImage:
     """Create a supported optical image object."""
 
@@ -1208,7 +1210,7 @@ def oi_create(
     oi.fields["psf_struct"] = None
     oi.fields["sample_spacing_m"] = None
     oi.data["photons"] = np.empty((0, 0, 0), dtype=float)
-    return oi
+    return track_session_object(session, oi)
 
 
 def _scene_sample_spacing(scene: Scene) -> float:
@@ -3096,6 +3098,7 @@ def oi_compute(
     crop: bool = False,
     pixel_size: float | None = None,
     aperture: np.ndarray | None = None,
+    session: SessionContext | None = None,
 ) -> OpticalImage:
     """Compute a supported optical image from a scene."""
 
@@ -3258,7 +3261,7 @@ def oi_compute(
         computed = _oi_spatial_resample(computed, float(pixel_size), method="linear")
         computed.fields["sample_spacing_m"] = float(pixel_size)
         computed.fields["requested_pixel_size_m"] = float(pixel_size)
-    return computed
+    return track_session_object(session, computed)
 
 
 def _oi_shape(oi: OpticalImage) -> tuple[int, int]:

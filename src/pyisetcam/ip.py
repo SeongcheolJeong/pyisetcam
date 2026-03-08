@@ -11,8 +11,9 @@ from .assets import AssetStore
 from .color import internal_to_display_matrix, sensor_to_target_matrix, xyz_color_matching
 from .display import Display, display_create, display_get, display_set
 from .exceptions import UnsupportedOptionError
+from .session import track_session_object
 from .sensor import sensor_get
-from .types import ImageProcessor, Sensor
+from .types import ImageProcessor, Sensor, SessionContext
 from .utils import invert_gamma_table, linear_to_srgb, param_format, split_prefixed_parameter, tile_pattern
 
 
@@ -75,6 +76,7 @@ def ip_create(
     l3: Any | None = None,
     *,
     asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
 ) -> ImageProcessor:
     """Create an image processor."""
 
@@ -87,11 +89,11 @@ def ip_create(
         ip.fields["wave"] = np.arange(400.0, 701.0, 10.0, dtype=float)
     ip.fields["spectrum"] = {"wave": np.asarray(ip.fields["wave"], dtype=float).copy()}
     if display is None:
-        ip.fields["display"] = display_create("lcdExample.mat", wave=ip.fields["wave"], asset_store=store)
+        ip.fields["display"] = display_create("lcdExample.mat", wave=ip.fields["wave"], asset_store=store, session=session)
     elif isinstance(display, str):
-        ip.fields["display"] = display_create(display, wave=ip.fields["wave"], asset_store=store)
+        ip.fields["display"] = display_create(display, wave=ip.fields["wave"], asset_store=store, session=session)
     else:
-        ip.fields["display"] = display
+        ip.fields["display"] = track_session_object(session, display)
     ip.fields.update(
         {
             "transform_method": "adaptive",
@@ -108,7 +110,7 @@ def ip_create(
     ip.data["input"] = None if sensor is None else sensor.data.get("dv", sensor.data.get("volts"))
     ip.fields["datamax"] = None if sensor is None else float(sensor.fields["pixel"]["voltage_swing"])
     ip.data["transforms"] = [None, None, None]
-    return _ensure_ip_state(ip)
+    return track_session_object(session, _ensure_ip_state(ip))
 
 
 def _ie_bilinear(planes: np.ndarray, cfa_pattern: np.ndarray) -> np.ndarray:
@@ -233,6 +235,7 @@ def ip_compute(
     wgt_blur: float = 2.0,
     network_demosaic: str | None = None,
     asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
 ) -> ImageProcessor:
     """Compute the default image processing pipeline."""
 
@@ -268,7 +271,7 @@ def ip_compute(
     computed.data["display_rgb"] = display_rgb
     computed.data["srgb"] = srgb
     computed.data["result"] = display_linear
-    return computed
+    return track_session_object(session, computed)
 
 
 def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:

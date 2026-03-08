@@ -10,9 +10,10 @@ from .assets import AssetStore
 from .exceptions import UnsupportedOptionError
 from .ip import ip_compute, ip_create, ip_get, ip_set
 from .optics import oi_compute, oi_create, oi_get, oi_set
+from .session import track_session_object
 from .scene import Scene
 from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_get, sensor_set, sensor_set_size_to_fov
-from .types import Camera, OpticalImage, Sensor
+from .types import Camera, OpticalImage, Sensor, SessionContext
 from .utils import param_format, split_prefixed_parameter
 
 
@@ -75,7 +76,12 @@ def _pixel_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
     raise KeyError(f"Unsupported camera pixel parameter: {parameter}")
 
 
-def camera_create(camera_type: str = "default", *args: Any, asset_store: AssetStore | None = None) -> Camera:
+def camera_create(
+    camera_type: str = "default",
+    *args: Any,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> Camera:
     """Create a supported camera."""
 
     store = _store(asset_store)
@@ -83,28 +89,28 @@ def camera_create(camera_type: str = "default", *args: Any, asset_store: AssetSt
     camera = Camera(name=str(camera_type))
 
     if normalized in {"default"}:
-        oi = oi_create()
-        sensor = sensor_create(asset_store=store)
+        oi = oi_create(session=session)
+        sensor = sensor_create(asset_store=store, session=session)
     elif normalized in {"ideal"}:
-        oi = oi_create()
-        sensor = sensor_create_ideal("xyz", asset_store=store)
+        oi = oi_create(session=session)
+        sensor = sensor_create_ideal("xyz", asset_store=store, session=session)
     elif normalized in {"monochrome"}:
-        oi = oi_create()
-        sensor = sensor_create("monochrome", asset_store=store)
+        oi = oi_create(session=session)
+        sensor = sensor_create("monochrome", asset_store=store, session=session)
     elif normalized in {"idealmonochrome"}:
-        oi = oi_create()
-        sensor = sensor_create_ideal("monochrome", asset_store=store)
+        oi = oi_create(session=session)
+        sensor = sensor_create_ideal("monochrome", asset_store=store, session=session)
     else:
         try:
-            oi = oi_create()
-            sensor = sensor_create(camera_type, *args, asset_store=store)
+            oi = oi_create(session=session)
+            sensor = sensor_create(camera_type, *args, asset_store=store, session=session)
         except UnsupportedOptionError as exc:
             raise UnsupportedOptionError("cameraCreate", camera_type) from exc
 
     camera.fields["oi"] = oi
     camera.fields["sensor"] = sensor
-    camera.fields["ip"] = ip_create(sensor=sensor, asset_store=store)
-    return camera
+    camera.fields["ip"] = ip_create(sensor=sensor, asset_store=store, session=session)
+    return track_session_object(session, camera)
 
 
 def camera_get(camera: Camera, parameter: str, *args: Any) -> Any:
@@ -222,6 +228,7 @@ def camera_compute(
     sensor_resize: bool = True,
     *,
     asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
 ) -> Camera:
     """Run the supported camera pipeline."""
 
@@ -254,14 +261,14 @@ def camera_compute(
                 or abs((scene_vfov - sensor_vfov) / max(scene_vfov, 1e-12)) > 0.01
             ):
                 sensor = sensor_set_size_to_fov(sensor.clone(), (scene_hfov, scene_vfov), oi)
-        oi = oi_compute(oi, scene)
-        sensor = sensor_compute(sensor, oi)
-        ip = ip_compute(ip, sensor, asset_store=store)
+        oi = oi_compute(oi, scene, session=session)
+        sensor = sensor_compute(sensor, oi, session=session)
+        ip = ip_compute(ip, sensor, asset_store=store, session=session)
     elif start_type == "oi":
-        sensor = sensor_compute(sensor, oi)
-        ip = ip_compute(ip, sensor, asset_store=store)
+        sensor = sensor_compute(sensor, oi, session=session)
+        ip = ip_compute(ip, sensor, asset_store=store, session=session)
     elif start_type == "sensor":
-        ip = ip_compute(ip, sensor, asset_store=store)
+        ip = ip_compute(ip, sensor, asset_store=store, session=session)
     else:
         raise UnsupportedOptionError("cameraCompute", str(p_type))
 
@@ -269,4 +276,4 @@ def camera_compute(
     camera.fields["sensor"] = sensor
     camera.fields["ip"] = ip
     camera.data["result"] = ip.data.get("result")
-    return camera
+    return track_session_object(session, camera)

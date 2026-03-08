@@ -12,7 +12,8 @@ from scipy.signal import convolve2d
 from .assets import AssetStore
 from .color import luminance_from_photons
 from .exceptions import UnsupportedOptionError
-from .types import Scene
+from .session import track_session_object
+from .types import Scene, SessionContext
 from .utils import DEFAULT_WAVE, blackbody, energy_to_quanta, param_format, quanta_to_energy
 
 DEFAULT_DISTANCE_M = 1.2
@@ -547,7 +548,12 @@ def _white_noise_scene(
     return scene
 
 
-def scene_create(scene_name: str = "default", *args: Any, asset_store: AssetStore | None = None) -> Scene:
+def scene_create(
+    scene_name: str = "default",
+    *args: Any,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> Scene:
     """Create a supported milestone-one scene."""
 
     store = _store(asset_store)
@@ -558,62 +564,65 @@ def scene_create(scene_name: str = "default", *args: Any, asset_store: AssetStor
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
         surface_file = str(args[2]) if len(args) > 2 else "macbethChart.mat"
         black_border = bool(args[3]) if len(args) > 3 else False
-        return _create_macbeth_scene(patch_size, wave, surface_file, black_border, asset_store=store)
+        return track_session_object(
+            session,
+            _create_macbeth_scene(patch_size, wave, surface_file, black_border, asset_store=store),
+        )
 
     if name == "empty":
         scene = _create_macbeth_scene(16, _wave_or_default(None), "macbethChart.mat", False, asset_store=store)
-        return scene_clear_data(scene)
+        return track_session_object(session, scene_clear_data(scene))
 
     if name in {"uniformd65", "uniform d65".replace(" ", "")}:
         size = int(args[0]) if len(args) > 0 else 32
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
         _, illuminant_energy = _load_d65(wave, store)
-        return _uniform_scene("Uniform D65", size, wave, illuminant_energy, asset_store=store)
+        return track_session_object(session, _uniform_scene("Uniform D65", size, wave, illuminant_energy, asset_store=store))
 
     if name in {"uniformee", "uniformequalenergy"}:
         size = int(args[0]) if len(args) > 0 else 32
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
-        return _uniform_scene("Uniform EE", size, wave, np.ones(wave.size, dtype=float), asset_store=store)
+        return track_session_object(session, _uniform_scene("Uniform EE", size, wave, np.ones(wave.size, dtype=float), asset_store=store))
 
     if name in {"uniformbb", "uniformblackbody"}:
         size = args[0] if len(args) > 0 else 32
         temperature_k = float(args[1]) if len(args) > 1 else 5000.0
         wave = _wave_or_default(args[2] if len(args) > 2 else None)
-        return _uniform_blackbody_scene(size, temperature_k, wave, asset_store=store)
+        return track_session_object(session, _uniform_blackbody_scene(size, temperature_k, wave, asset_store=store))
 
     if name in {"uniformmonochromatic", "narrowband"}:
         wavelength = args[0] if len(args) > 0 else 500.0
         size = args[1] if len(args) > 1 else 128
-        return _uniform_monochromatic_scene(size, wavelength, asset_store=store)
+        return track_session_object(session, _uniform_monochromatic_scene(size, wavelength, asset_store=store))
 
     if name in {"line", "lined65", "impulse1dd65"}:
         size = args[0] if len(args) > 0 else 64
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
-        return _line_scene("d65", size, 0, wave, asset_store=store)
+        return track_session_object(session, _line_scene("d65", size, 0, wave, asset_store=store))
 
     if name in {"lineee", "impulse1dee"}:
         size = args[0] if len(args) > 0 else 64
         offset = int(args[1]) if len(args) > 1 else 0
         wave = _wave_or_default(args[2] if len(args) > 2 else None)
-        return _line_scene("ee", size, offset, wave, asset_store=store)
+        return track_session_object(session, _line_scene("ee", size, offset, wave, asset_store=store))
 
     if name in {"lineequalphoton", "lineep"}:
         size = args[0] if len(args) > 0 else 64
         offset = int(args[1]) if len(args) > 1 else 0
         wave = _wave_or_default(args[2] if len(args) > 2 else None)
-        return _line_scene("ep", size, offset, wave, asset_store=store)
+        return track_session_object(session, _line_scene("ep", size, offset, wave, asset_store=store))
 
     if name == "bar":
         size = args[0] if len(args) > 0 else 64
         width = int(args[1]) if len(args) > 1 else 3
         wave = _wave_or_default(args[2] if len(args) > 2 else None)
-        return _bar_scene(size, width, wave, asset_store=store)
+        return track_session_object(session, _bar_scene(size, width, wave, asset_store=store))
 
     if name in {"whitenoise", "noise"}:
         size = args[0] if len(args) > 0 else 128
         contrast = float(args[1]) if len(args) > 1 else 20.0
         wave = _wave_or_default(args[2] if len(args) > 2 else None)
-        return _white_noise_scene(size, contrast, wave, asset_store=store)
+        return track_session_object(session, _white_noise_scene(size, contrast, wave, asset_store=store))
 
     if name in {"pointarray", "manypoints", "point array".replace(" ", "")}:
         size = args[0] if len(args) > 0 else 128
@@ -621,7 +630,10 @@ def scene_create(scene_name: str = "default", *args: Any, asset_store: AssetStor
         spectral_type = str(args[2]) if len(args) > 2 else "ep"
         point_size = int(args[3]) if len(args) > 3 else 1
         wave = _wave_or_default(args[4] if len(args) > 4 else None)
-        return _point_array_scene(size, spacing, spectral_type, point_size, wave, asset_store=store)
+        return track_session_object(
+            session,
+            _point_array_scene(size, spacing, spectral_type, point_size, wave, asset_store=store),
+        )
 
     if name in {"gridlines", "distortiongrid", "grid lines".replace(" ", "")}:
         size = args[0] if len(args) > 0 else 128
@@ -629,7 +641,10 @@ def scene_create(scene_name: str = "default", *args: Any, asset_store: AssetStor
         spectral_type = str(args[2]) if len(args) > 2 else "ep"
         thickness = int(args[3]) if len(args) > 3 else 1
         wave = _wave_or_default(args[4] if len(args) > 4 else None)
-        return _grid_lines_scene(size, spacing, spectral_type, thickness, wave, asset_store=store)
+        return track_session_object(
+            session,
+            _grid_lines_scene(size, spacing, spectral_type, thickness, wave, asset_store=store),
+        )
 
     if name == "checkerboard":
         pixels_per_check = int(args[0]) if len(args) > 0 else 16
@@ -637,12 +652,15 @@ def scene_create(scene_name: str = "default", *args: Any, asset_store: AssetStor
         spectral_type = str(args[2]) if len(args) > 2 and isinstance(args[2], str) else "ep"
         wave_arg = args[3] if len(args) > 3 else (args[2] if len(args) > 2 and not isinstance(args[2], str) else None)
         wave = _wave_or_default(wave_arg)
-        return _checkerboard_scene(
-            pixels_per_check,
-            number_of_checks,
-            wave,
-            spectral_type,
-            asset_store=store,
+        return track_session_object(
+            session,
+            _checkerboard_scene(
+                pixels_per_check,
+                number_of_checks,
+                wave,
+                spectral_type,
+                asset_store=store,
+            ),
         )
 
     if name in {"slantedbar", "slanted bar".replace(" ", "")}:
@@ -651,7 +669,10 @@ def scene_create(scene_name: str = "default", *args: Any, asset_store: AssetStor
         fov_deg = float(args[2]) if len(args) > 2 else 2.0
         wave = _wave_or_default(args[3] if len(args) > 3 else None)
         dark_level = float(args[4]) if len(args) > 4 else 0.0
-        return _slanted_bar_scene(image_size, edge_slope, wave, fov_deg, dark_level, asset_store=store)
+        return track_session_object(
+            session,
+            _slanted_bar_scene(image_size, edge_slope, wave, fov_deg, dark_level, asset_store=store),
+        )
 
     raise UnsupportedOptionError("sceneCreate", scene_name)
 
@@ -666,6 +687,7 @@ def scene_from_file(
     scale_reflectance: bool = True,
     *,
     asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
 ) -> Scene:
     """Create a scene from RGB or monochrome image data and a display model."""
 
@@ -717,7 +739,7 @@ def scene_from_file(
 
     if mean_luminance is not None:
         scene = scene_adjust_luminance(scene, float(mean_luminance), asset_store=store)
-    return scene
+    return track_session_object(session, scene)
 
 
 def scene_calculate_luminance(scene: Scene, *, asset_store: AssetStore | None = None) -> np.ndarray:

@@ -56,3 +56,12 @@ class Camera(BaseISETObject):
     name: str = "camera"
     type: str = "camera"
 
+
+@dataclass
+class SessionContext:
+    """Optional vcSESSION-style object registry for compatibility workflows."""
+
+    name: str = "vcSESSION"
+    objects: dict[str, dict[int, BaseISETObject]] = field(default_factory=dict)
+    selected: dict[str, int | None] = field(default_factory=dict)
+    next_ids: dict[str, int] = field(default_factory=dict)

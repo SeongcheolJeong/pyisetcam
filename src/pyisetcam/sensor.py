@@ -14,7 +14,8 @@ from .color import luminance_from_photons
 from .exceptions import UnsupportedOptionError
 from .optics import DEFAULT_FOCAL_LENGTH_M
 from .optics import oi_get
-from .types import OpticalImage, Scene, Sensor
+from .session import track_session_object
+from .types import OpticalImage, Scene, Sensor, SessionContext
 from .utils import DEFAULT_WAVE, ensure_multiple, param_format, tile_pattern
 
 _DEFAULT_PIXEL = {
@@ -249,6 +250,7 @@ def sensor_create(
     pixel: dict[str, Any] | None = None,
     *args: Any,
     asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
 ) -> Sensor:
     """Create a supported sensor."""
 
@@ -265,40 +267,40 @@ def sensor_create(
         sensor = _sensor_base("bayer-grbg", wave, size, pixel_dict)
         sensor.fields["pattern"] = np.array([[2, 1], [3, 2]], dtype=int)
         sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle("RGB", wave, asset_store=store)
-        return sensor
+        return track_session_object(session, sensor)
 
     if normalized in {"bayerrggb", "bayer-rggb"}:
         sensor = _sensor_base("bayer-rggb", wave, size, pixel_dict)
         sensor.fields["pattern"] = np.array([[1, 2], [2, 3]], dtype=int)
         sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle("RGB", wave, asset_store=store)
-        return sensor
+        return track_session_object(session, sensor)
 
     if normalized == "monochrome":
         sensor = _sensor_base("monochrome", wave, size, pixel_dict)
         sensor.fields["pattern"] = np.array([[1]], dtype=int)
         sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle("monochrome", wave, asset_store=store)
-        return sensor
+        return track_session_object(session, sensor)
 
     if normalized in {"rgbw", "interleaved"}:
         sensor = _sensor_base("rgbw", wave, size, pixel_dict)
         sensor.fields["pattern"] = np.array([[1, 2], [3, 4]], dtype=int)
         sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle("interleavedrgbw", wave, asset_store=store)
-        return sensor
+        return track_session_object(session, sensor)
 
     if normalized == "rccc":
         sensor = _sensor_base("rccc", wave, size, pixel_dict)
         sensor.fields["pattern"] = np.array([[2, 2], [2, 1]], dtype=int)
         sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle(["r", "w"], wave, asset_store=store)
-        return sensor
+        return track_session_object(session, sensor)
 
     if normalized == "mt9v024":
-        return _sensor_vendor_mt9v024(_sensor_variant_name(args, "rgb"), asset_store=store)
+        return track_session_object(session, _sensor_vendor_mt9v024(_sensor_variant_name(args, "rgb"), asset_store=store))
 
     if normalized == "ar0132at":
-        return _sensor_vendor_ar0132at(_sensor_variant_name(args, "rgb"), asset_store=store)
+        return track_session_object(session, _sensor_vendor_ar0132at(_sensor_variant_name(args, "rgb"), asset_store=store))
 
     if normalized == "ideal":
-        return sensor_create_ideal("xyz", None, asset_store=store)
+        return sensor_create_ideal("xyz", None, asset_store=store, session=session)
 
     raise UnsupportedOptionError("sensorCreate", sensor_type)
 
@@ -309,6 +311,7 @@ def sensor_create_ideal(
     pixel_size_m: float | None = None,
     *,
     asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
 ) -> Sensor:
     """Create an ideal milestone-one sensor."""
 
@@ -329,7 +332,7 @@ def sensor_create_ideal(
         sensor.fields["pixel"]["dark_voltage_v_per_sec"] = 0.0
         sensor.fields["pixel"]["read_noise_v"] = 0.0
         sensor.fields["pixel"]["voltage_swing"] = 1e6
-        return sensor
+        return track_session_object(session, sensor)
 
     if normalized in {"xyz", "matchxyz"}:
         sensor = _sensor_base("ideal-xyz", np.asarray(wave, dtype=float), size, pixel)
@@ -340,14 +343,14 @@ def sensor_create_ideal(
         sensor.fields["pixel"]["dark_voltage_v_per_sec"] = 0.0
         sensor.fields["pixel"]["read_noise_v"] = 0.0
         sensor.fields["pixel"]["voltage_swing"] = 1e6
-        return sensor
+        return track_session_object(session, sensor)
 
     if normalized == "match" and sensor_example is not None:
         sensor = sensor_example.clone()
         sensor.name = f"ideal-{sensor_example.name}"
         sensor.fields["pixel"] = pixel
         sensor.fields["noise_flag"] = 0
-        return sensor
+        return track_session_object(session, sensor)
 
     raise UnsupportedOptionError("sensorCreateIdeal", ideal_type)
 
@@ -934,7 +937,14 @@ def _auto_exposure_default(sensor: Sensor, oi: OpticalImage) -> float:
     return (0.95 * voltage_swing) / max(max_signal_voltage, 1e-12)
 
 
-def sensor_compute(sensor: Sensor, oi: OpticalImage, show_bar: bool | None = None, *, seed: int = 0) -> Sensor:
+def sensor_compute(
+    sensor: Sensor,
+    oi: OpticalImage,
+    show_bar: bool | None = None,
+    *,
+    seed: int = 0,
+    session: SessionContext | None = None,
+) -> Sensor:
     """Compute sensor response from an optical image."""
 
     del show_bar
@@ -1004,4 +1014,4 @@ def sensor_compute(sensor: Sensor, oi: OpticalImage, show_bar: bool | None = Non
             computed.data["volts"] / float(pixel["voltage_swing"]) * max_digital
         ).astype(np.int32)
 
-    return computed
+    return track_session_object(session, computed)
