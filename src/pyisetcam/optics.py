@@ -21,6 +21,8 @@ from .utils import (
     apply_channelwise_gaussian,
     gaussian_sigma_pixels,
     param_format,
+    quanta_to_energy,
+    spectral_step,
     split_prefixed_parameter,
     unit_frequency_list,
 )
@@ -1406,6 +1408,94 @@ def _oi_illuminance(oi: OpticalImage) -> np.ndarray:
     return luminance_from_photons(photons, wave, asset_store=AssetStore.default())
 
 
+def oi_calculate_illuminance(oi: OpticalImage) -> tuple[np.ndarray, float, float]:
+    illuminance = _oi_illuminance(oi)
+    mean_illuminance = 0.0 if illuminance.size == 0 else float(np.mean(illuminance))
+
+    mean_comp_illuminance = 0.0
+    photons = np.asarray(oi.data.get("photons", np.empty((0, 0, 0), dtype=float)), dtype=float)
+    wave = np.asarray(oi.fields.get("wave", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    if photons.ndim == 3 and photons.size > 0 and wave.size > 0 and np.any(wave > 750.0):
+        energy = quanta_to_energy(photons, wave)
+        comp_illuminance = 683.0 * spectral_step(wave) * np.sum(energy, axis=2)
+        mean_comp_illuminance = float(np.mean(comp_illuminance))
+
+    oi.fields["illuminance"] = illuminance
+    oi.fields["mean_illuminance"] = mean_illuminance
+    oi.fields["mean_comp_illuminance"] = mean_comp_illuminance
+    return illuminance, mean_illuminance, mean_comp_illuminance
+
+
+def _gaussian_kernel_1d(size: int, sigma_pixels: float) -> np.ndarray:
+    if size <= 1 or sigma_pixels <= 0.0:
+        return np.ones((1,), dtype=float)
+    center = (size - 1) / 2.0
+    coords = np.arange(size, dtype=float) - center
+    kernel = np.exp(-0.5 * (coords / max(sigma_pixels, 1e-12)) ** 2)
+    kernel_sum = float(np.sum(kernel))
+    if kernel_sum <= 0.0:
+        return np.ones((1,), dtype=float)
+    return kernel / kernel_sum
+
+
+def _diffuser_kernel_shape(sigma_pixels: float, limit: int) -> int:
+    if sigma_pixels <= 0.0:
+        return 1
+    size = int(np.ceil(8.0 * sigma_pixels))
+    if limit > 0 and size >= limit:
+        size = int(limit)
+    if size <= 0:
+        size = 1
+    if size % 2 == 0:
+        size += 1
+    return size
+
+
+def oi_diffuser(
+    oi: OpticalImage,
+    sd_um: float | np.ndarray | list[float] | tuple[float, ...] | None = None,
+) -> tuple[OpticalImage, float | np.ndarray, np.ndarray]:
+    w_spatial_res_um = float(oi_get(oi, "wspatialresolution")) * _spatial_unit_scale("um")
+    if sd_um is None:
+        sd_array = np.array([w_spatial_res_um * (1.4427 / 2.0)], dtype=float)
+    else:
+        sd_array = np.asarray(sd_um, dtype=float).reshape(-1)
+    if sd_array.size == 0 or sd_array.size > 2:
+        raise ValueError("oiDiffuser expects a scalar or a 2-element blur standard deviation in microns.")
+
+    sigma_pixels = sd_array / max(w_spatial_res_um, 1e-12)
+    rows, cols = _oi_shape(oi)
+    if sigma_pixels.size == 1:
+        size = _diffuser_kernel_shape(float(sigma_pixels[0]), rows)
+        kernel_1d = _gaussian_kernel_1d(size, float(sigma_pixels[0]))
+        blur_filter = np.outer(kernel_1d, kernel_1d)
+    else:
+        row_size = _diffuser_kernel_shape(float(sigma_pixels[0]), rows)
+        col_size = _diffuser_kernel_shape(float(sigma_pixels[1]), cols)
+        row_kernel = _gaussian_kernel_1d(row_size, float(sigma_pixels[0]))
+        col_kernel = _gaussian_kernel_1d(col_size, float(sigma_pixels[1]))
+        blur_filter = row_kernel[:, None] * col_kernel[None, :]
+    blur_sum = float(np.sum(blur_filter))
+    if blur_sum > 0.0:
+        blur_filter = blur_filter / blur_sum
+
+    photons = np.asarray(oi.data.get("photons", np.empty((0, 0, 0), dtype=float)), dtype=float)
+    if photons.ndim != 3 or photons.size == 0:
+        oi.fields["illuminance"] = np.empty(photons.shape[:2], dtype=float) if photons.ndim >= 2 else np.empty((0, 0), dtype=float)
+        oi.fields["mean_illuminance"] = 0.0
+        oi.fields["mean_comp_illuminance"] = 0.0
+        returned_sd: np.ndarray | float = float(sd_array[0]) if sd_array.size == 1 else sd_array.copy()
+        return oi, returned_sd, blur_filter
+
+    filtered = np.empty_like(photons, dtype=float)
+    for wave_index in range(photons.shape[2]):
+        filtered[:, :, wave_index] = fftconvolve(photons[:, :, wave_index], blur_filter, mode="same")
+    oi.data["photons"] = filtered
+    oi_calculate_illuminance(oi)
+    returned_sd = float(sd_array[0]) if sd_array.size == 1 else sd_array.copy()
+    return oi, returned_sd, blur_filter
+
+
 def optics_ray_trace(
     scene: Scene,
     oi: OpticalImage,
@@ -1429,23 +1519,14 @@ def optics_ray_trace(
     diffuser_method = param_format(computed.fields.get("diffuser_method", "skip"))
     if diffuser_method == "blur":
         blur_m = float(computed.fields.get("diffuser_blur_m", 0.0))
-        sample_spacing_m = _oi_sample_size_m(computed)
-        if blur_m > 0.0 and sample_spacing_m is not None:
-            sigma_pixels = blur_m / max(sample_spacing_m, 1e-12)
-            computed.data["photons"] = apply_channelwise_gaussian(
-                np.asarray(computed.data["photons"], dtype=float),
-                np.full(np.asarray(computed.fields["wave"], dtype=float).shape, sigma_pixels, dtype=float),
-                mode="constant",
-                cval=0.0,
-            )
+        if blur_m > 0.0:
+            computed, _, _ = oi_diffuser(computed, blur_m * 1e6)
     elif diffuser_method == "birefringent":
         raise UnsupportedOptionError("opticsRayTrace", "birefringent")
     elif diffuser_method != "skip":
         raise UnsupportedOptionError("opticsRayTrace", computed.fields.get("diffuser_method", diffuser_method))
 
-    illuminance = _oi_illuminance(computed)
-    computed.fields["illuminance"] = illuminance
-    computed.fields["mean_illuminance"] = 0.0 if illuminance.size == 0 else float(np.mean(illuminance))
+    oi_calculate_illuminance(computed)
     return computed
 
 
@@ -2469,6 +2550,8 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
             return float(stored)
         illuminance = np.asarray(oi_get(oi, "illuminance"), dtype=float)
         return 0.0 if illuminance.size == 0 else float(np.mean(illuminance))
+    if key == "meancompilluminance":
+        return float(oi.fields.get("mean_comp_illuminance", 0.0))
     if key == "depthmap":
         depth_map = oi.fields.get("depth_map_m")
         if depth_map is None:
@@ -2821,6 +2904,9 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any, *args: Any) -> OpticalI
         return oi
     if key == "meanilluminance":
         oi.fields["mean_illuminance"] = float(value)
+        return oi
+    if key == "meancompilluminance":
+        oi.fields["mean_comp_illuminance"] = float(value)
         return oi
     if key == "depthmap":
         depth_map = np.asarray(value, dtype=float)

@@ -15,6 +15,8 @@ from pyisetcam import (
     ip_compute,
     ip_create,
     optics_ray_trace,
+    oi_calculate_illuminance,
+    oi_diffuser,
     oi_compute,
     oi_create,
     oi_get,
@@ -1002,6 +1004,49 @@ def test_optics_ray_trace_uses_explicit_angle_step(asset_store) -> None:
 
     assert np.isclose(oi_get(result, "psf angle step"), 30.0)
     assert np.array_equal(oi_get(result, "psf sample angles"), np.arange(0.0, 361.0, 30.0))
+
+
+def test_oi_calculate_illuminance_updates_cached_fields(asset_store) -> None:
+    scene = scene_create("uniform ee", 32, np.array([550.0], dtype=float), asset_store=asset_store)
+    oi = oi_compute(oi_create(), scene, crop=True)
+
+    illuminance, mean_illuminance, mean_comp_illuminance = oi_calculate_illuminance(oi)
+
+    assert np.allclose(illuminance, oi_get(oi, "illuminance"))
+    assert np.isclose(mean_illuminance, oi_get(oi, "mean illuminance"))
+    assert np.isclose(mean_comp_illuminance, oi_get(oi, "mean comp illuminance"))
+    assert np.isclose(mean_comp_illuminance, 0.0)
+
+
+def test_oi_diffuser_blurs_photons_and_returns_kernel(asset_store) -> None:
+    scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
+    oi = oi_compute(oi_create(), scene, crop=True)
+    baseline = np.asarray(oi.data["photons"], dtype=float).copy()
+
+    oi, sd, blur_filter = oi_diffuser(oi, 2.0)
+
+    assert np.isclose(float(sd), 2.0)
+    assert blur_filter.ndim == 2
+    assert np.isclose(np.sum(blur_filter), 1.0)
+    assert oi.data["photons"].shape == baseline.shape
+    assert not np.allclose(oi.data["photons"], baseline)
+    assert np.allclose(oi.fields["illuminance"], oi_get(oi, "illuminance"))
+
+
+def test_optics_ray_trace_blur_matches_public_oi_diffuser(asset_store) -> None:
+    scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
+    blur_m = 2e-6
+
+    manual = rt_precompute_psf_apply(rt_geometry(oi_create("ray trace", asset_store=asset_store), scene))
+    manual, _, _ = oi_diffuser(manual, blur_m * 1e6)
+
+    raytrace_oi = oi_set(oi_create("ray trace", asset_store=asset_store), "diffuser method", "blur")
+    raytrace_oi = oi_set(raytrace_oi, "diffuser blur", blur_m)
+    wrapped = optics_ray_trace(scene, raytrace_oi)
+
+    assert wrapped.data["photons"].shape == manual.data["photons"].shape
+    assert np.allclose(wrapped.data["photons"], manual.data["photons"])
+    assert np.allclose(oi_get(wrapped, "illuminance"), oi_get(manual, "illuminance"))
 
 
 def test_wvf_path_preserves_more_checkerboard_contrast_than_diffraction(asset_store) -> None:

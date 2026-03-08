@@ -27,6 +27,8 @@ from .metrics import (
 )
 from .optics import (
     optics_ray_trace,
+    oi_calculate_illuminance,
+    oi_diffuser,
     oi_compute,
     oi_create,
     oi_get,
@@ -113,10 +115,14 @@ __all__ = [
     "mired_difference",
     "opticsRayTrace",
     "optics_ray_trace",
+    "oiCalculateIlluminance",
+    "oiDiffuser",
     "oiCompute",
     "oiCreate",
     "oiGet",
     "oiSet",
+    "oi_calculate_illuminance",
+    "oi_diffuser",
     "oi_compute",
     "oi_create",
     "oi_get",
@@ -197,6 +203,8 @@ oiCreate = oi_create
 oiCompute = oi_compute
 oiGet = oi_get
 oiSet = oi_set
+oiCalculateIlluminance = oi_calculate_illuminance
+oiDiffuser = oi_diffuser
 opticsRayTrace = optics_ray_trace
 rtAngleLUT = rt_angle_lut
 rtDIInterp = rt_di_interp
