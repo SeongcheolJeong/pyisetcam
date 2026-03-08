@@ -18,6 +18,7 @@ from pyisetcam import (
     oi_create,
     oi_get,
     oi_set,
+    rt_psf_interp,
     run_python_case,
     scene_create,
     scene_get,
@@ -729,6 +730,114 @@ def test_oi_compute_raytrace_rotates_psf_with_field_angle(asset_store) -> None:
     rotated_error = min(float(np.mean((top_patch - np.rot90(right_patch, k)) ** 2)) for k in (1, 3))
 
     assert rotated_error < plain_error
+
+
+def test_rt_psf_interp_matches_raw_psf_without_resampling() -> None:
+    oi = oi_create("ray trace")
+    kernel = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [0.0, 1.0, 2.0],
+            [0.0, 3.0, 4.0],
+        ],
+        dtype=float,
+    )
+    oi = oi_set(
+        oi,
+        "rtpsf",
+        {
+            "fieldHeight": np.array([0.0, 1.0], dtype=float),
+            "wavelength": np.array([550.0], dtype=float),
+            "sampleSpacing": np.array([0.1, 0.1], dtype=float),
+            "function": np.stack((kernel, np.zeros_like(kernel)), axis=2)[:, :, :, None],
+        },
+    )
+    oi = oi_set(
+        oi,
+        "rtgeometry",
+        {
+            "fieldHeight": np.array([0.0, 1.0], dtype=float),
+            "wavelength": np.array([550.0], dtype=float),
+            "function": np.array([[0.0], [1.0]], dtype=float),
+        },
+    )
+
+    interp = rt_psf_interp(oi, field_height_m=0.0, wavelength_nm=550.0)
+
+    assert np.allclose(interp, kernel)
+
+
+def test_rt_psf_interp_interpolates_field_height_and_rotates() -> None:
+    oi = oi_create("ray trace")
+    psf_stack = np.zeros((5, 5, 2, 1), dtype=float)
+    psf_stack[1, 2, 0, 0] = 1.0
+    psf_stack[2, 3, 1, 0] = 1.0
+    oi = oi_set(
+        oi,
+        "rtpsf",
+        {
+            "fieldHeight": np.array([0.0, 1.0], dtype=float),
+            "wavelength": np.array([550.0], dtype=float),
+            "sampleSpacing": np.array([0.1, 0.1], dtype=float),
+            "function": psf_stack,
+        },
+    )
+    oi = oi_set(
+        oi,
+        "rtgeometry",
+        {
+            "fieldHeight": np.array([0.0, 1.0], dtype=float),
+            "wavelength": np.array([550.0], dtype=float),
+            "function": np.array([[0.0], [1.0]], dtype=float),
+        },
+    )
+
+    interp = rt_psf_interp(oi, field_height_m=0.5e-3, wavelength_nm=550.0)
+    rotated = rt_psf_interp(oi, field_height_m=0.5e-3, field_angle_deg=90.0, wavelength_nm=550.0)
+
+    expected = 0.5 * psf_stack[:, :, 0, 0] + 0.5 * psf_stack[:, :, 1, 0]
+    assert np.allclose(interp, expected)
+    assert np.allclose(rotated, np.rot90(expected))
+
+
+def test_rt_psf_interp_resamples_to_requested_grid() -> None:
+    oi = oi_create("ray trace")
+    kernel = np.array(
+        [
+            [0.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 2.0, 0.0],
+            [0.0, 3.0, 4.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0],
+        ],
+        dtype=float,
+    )
+    oi = oi_set(
+        oi,
+        "rtpsf",
+        {
+            "fieldHeight": np.array([0.0], dtype=float),
+            "wavelength": np.array([550.0], dtype=float),
+            "sampleSpacing": np.array([0.1, 0.1], dtype=float),
+            "function": kernel[:, :, None, None],
+        },
+    )
+    oi = oi_set(
+        oi,
+        "rtgeometry",
+        {
+            "fieldHeight": np.array([0.0, 1.0], dtype=float),
+            "wavelength": np.array([550.0], dtype=float),
+            "function": np.array([[0.0], [1.0]], dtype=float),
+        },
+    )
+
+    grid = np.array([0.0, 1.0e-4], dtype=float)
+    x_grid, y_grid = np.meshgrid(grid, grid)
+    resampled = rt_psf_interp(oi.fields["optics"], field_height_m=0.0, wavelength_nm=550.0, x_grid_m=x_grid, y_grid_m=y_grid)
+
+    assert resampled.shape == x_grid.shape
+    assert np.isclose(resampled[0, 0], kernel[1, 1])
+    assert np.isclose(resampled[1, 1], kernel[2, 2])
 
 
 def test_wvf_path_preserves_more_checkerboard_contrast_than_diffraction(asset_store) -> None:

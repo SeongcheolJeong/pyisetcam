@@ -25,7 +25,7 @@ from .metrics import (
     xyz_from_energy,
     xyz_to_lab,
 )
-from .optics import oi_compute, oi_create, oi_get, oi_set, wvf_create
+from .optics import oi_compute, oi_create, oi_get, oi_set, rt_psf_interp, wvf_create
 from .parity import run_python_case, run_python_case_with_context
 from .scene import (
     scene_adjust_illuminant,
@@ -106,6 +106,8 @@ __all__ = [
     "param_format",
     "peak_signal_to_noise_ratio",
     "root_mean_squared_error",
+    "rtPSFInterp",
+    "rt_psf_interp",
     "run_python_case",
     "run_python_case_with_context",
     "sceneAdjustIlluminant",
@@ -161,6 +163,7 @@ oiCreate = oi_create
 oiCompute = oi_compute
 oiGet = oi_get
 oiSet = oi_set
+rtPSFInterp = rt_psf_interp
 
 sensorCreate = sensor_create
 sensorCreateIdeal = sensor_create_ideal

@@ -1097,6 +1097,91 @@ def _raytrace_curve(table: dict[str, Any], wavelength_nm: float) -> np.ndarray:
     return np.asarray(values[:, wave_index], dtype=float).reshape(-1)
 
 
+def _raytrace_field_height_index_pair(field_height_list: np.ndarray, height: float) -> tuple[int, int]:
+    heights = np.asarray(field_height_list, dtype=float).reshape(-1)
+    if heights.size == 0:
+        raise ValueError("No field-height samples are available.")
+    idx1 = int(np.argmin(np.abs(heights - float(height))))
+    if heights[idx1] > float(height):
+        idx2 = max(0, idx1 - 1)
+        idx1, idx2 = idx2, idx1
+    else:
+        idx2 = min(heights.size - 1, idx1 + 1)
+    return idx1, idx2
+
+
+def _coerce_optics_for_raytrace(value: OpticalImage | dict[str, Any]) -> dict[str, Any]:
+    if isinstance(value, OpticalImage):
+        optics = dict(value.fields.get("optics", {}))
+    else:
+        optics = dict(value)
+    if param_format(optics.get("model", "")) == "raytrace" and isinstance(optics.get("raytrace"), dict):
+        return optics
+    if "raytrace" in optics or "rayTrace" in optics:
+        normalized = _normalize_raytrace_optics(optics)
+        if isinstance(normalized.get("raytrace"), dict):
+            return normalized
+    raise ValueError("Ray-trace optics data are required.")
+
+
+def rt_psf_interp(
+    optics_or_oi: OpticalImage | dict[str, Any],
+    field_height_m: float = 0.0,
+    field_angle_deg: float = 0.0,
+    wavelength_nm: float = 550.0,
+    x_grid_m: np.ndarray | None = None,
+    y_grid_m: np.ndarray | None = None,
+) -> np.ndarray:
+    optics = _coerce_optics_for_raytrace(optics_or_oi)
+    geometry = dict(optics.get("raytrace", {}).get("geometry", {}))
+    distorted_height_m = _raytrace_curve(geometry, float(wavelength_nm)) / 1e3
+    if distorted_height_m.size == 0:
+        return np.empty((0, 0), dtype=float)
+
+    idx1, idx2 = _raytrace_field_height_index_pair(distorted_height_m, float(field_height_m))
+    psf1 = np.asarray(
+        _raw_raytrace_psf_function_from_optics(optics, float(distorted_height_m[idx1]), float(wavelength_nm)),
+        dtype=float,
+    )
+    psf2 = np.asarray(
+        _raw_raytrace_psf_function_from_optics(optics, float(distorted_height_m[idx2]), float(wavelength_nm)),
+        dtype=float,
+    )
+    if psf1.size == 0:
+        return np.empty((0, 0), dtype=float)
+
+    denom = float(distorted_height_m[idx2] - distorted_height_m[idx1])
+    if abs(denom) > 0.0:
+        height_weight = (float(field_height_m) - float(distorted_height_m[idx1])) / denom
+        psf = (1.0 - height_weight) * psf1 + height_weight * psf2
+    else:
+        psf = psf1
+
+    if not np.isclose(float(field_angle_deg), 0.0):
+        psf = rotate(psf, float(field_angle_deg), reshape=False, order=1, mode="constant", cval=0.0, prefilter=False)
+
+    if x_grid_m is None or y_grid_m is None:
+        return np.asarray(psf, dtype=float)
+
+    x_grid = np.asarray(x_grid_m, dtype=float)
+    y_grid = np.asarray(y_grid_m, dtype=float)
+    if x_grid.shape != y_grid.shape:
+        raise ValueError("x_grid_m and y_grid_m must have matching shapes.")
+
+    source_x_mm, source_y_mm = _raytrace_psf_support_axes(optics.get("raytrace", {}).get("psf", {}))
+    source_x_m = np.asarray(source_x_mm, dtype=float) / 1e3
+    source_y_m = np.asarray(source_y_mm, dtype=float) / 1e3
+    if source_x_m.size <= 1:
+        col_coords = np.zeros_like(x_grid, dtype=float)
+    else:
+        col_coords = (x_grid - float(source_x_m[0])) / float(source_x_m[1] - source_x_m[0])
+    if source_y_m.size <= 1:
+        row_coords = np.zeros_like(y_grid, dtype=float)
+    else:
+        row_coords = (y_grid - float(source_y_m[0])) / float(source_y_m[1] - source_y_m[0])
+    return map_coordinates(psf, [row_coords, col_coords], order=1, mode="constant", cval=0.0, prefilter=False)
+
+
 def _raytrace_geometry(cube: np.ndarray, wave: np.ndarray, optics: dict[str, Any], scene: Scene) -> np.ndarray:
     raytrace = dict(optics.get("raytrace", {}))
     max_fov = float(raytrace.get("max_fov_deg", np.inf))
@@ -1558,6 +1643,14 @@ def _raw_raytrace_frequency_axes(oi: OpticalImage, unit: Any | None = None) -> t
 
 def _raw_raytrace_psf_function(oi: OpticalImage, field_height_m: float | None = None, wavelength_nm: float | None = None) -> np.ndarray:
     table = _raw_raytrace_table(oi, "psf")
+    return _raw_raytrace_psf_function_from_table(table, field_height_m, wavelength_nm)
+
+
+def _raw_raytrace_psf_function_from_table(
+    table: dict[str, Any],
+    field_height_m: float | None = None,
+    wavelength_nm: float | None = None,
+) -> np.ndarray:
     function = np.asarray(table.get("function", np.empty(0, dtype=float)), dtype=float)
     if function.size == 0 or field_height_m is None or wavelength_nm is None:
         return function
@@ -1568,6 +1661,15 @@ def _raw_raytrace_psf_function(oi: OpticalImage, field_height_m: float | None = 
     field_index = int(np.argmin(np.abs(field_heights_m - float(field_height_m))))
     wave_index = _nearest_wave_index(wavelengths_nm, float(wavelength_nm))
     return function[:, :, field_index, wave_index]
+
+
+def _raw_raytrace_psf_function_from_optics(
+    optics: dict[str, Any],
+    field_height_m: float | None = None,
+    wavelength_nm: float | None = None,
+) -> np.ndarray:
+    table = dict(optics.get("raytrace", {}).get("psf", {}))
+    return _raw_raytrace_psf_function_from_table(table, field_height_m, wavelength_nm)
 
 
 def _raw_raytrace_geometry_function(

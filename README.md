@@ -123,7 +123,9 @@ MATLAB-style raw struct export for `raytrace`, `rtpsf`, `rtgeometry`, and
 that round-trips through `oiSet('optics', ...)`. The precomputed ray-trace
 cache now also exports as MATLAB-style `psfStruct` / `sampledRTpsf`, and
 plain `rtpsfsize` now tracks the precomputed PSF kernel size separately
-from raw `optics rtpsfsize`.
+from raw `optics rtpsfsize`. The upstream `rtPSFInterp` helper is also
+ported now as `rt_psf_interp` / `rtPSFInterp` for direct interpolation of
+raw ray-trace PSFs by field height, angle, and wavelength.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
