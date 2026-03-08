@@ -1263,17 +1263,29 @@ def _raytrace_psf_struct_matches(
 ) -> bool:
     if not isinstance(psf_struct, dict):
         return False
-    if tuple(psf_struct.get("cube_shape", ())) != (rows, cols):
+    kernel_shape = _raytrace_psf_kernel_shape(psf_struct)
+    if kernel_shape == (0, 0):
         return False
-    if not np.isclose(float(psf_struct.get("sample_spacing_m", -1.0)), float(sample_spacing_m)):
+    expected_kernel_shape = _raytrace_expected_kernel_shape(optics, sample_spacing_m)
+    if expected_kernel_shape != (0, 0) and kernel_shape != expected_kernel_shape:
         return False
-    if not np.array_equal(np.asarray(psf_struct.get("wavelength_nm", np.empty(0))), np.asarray(wave, dtype=float)):
+    stored_shape = tuple(psf_struct.get("cube_shape", ()))
+    if stored_shape and stored_shape != (rows, cols):
+        return False
+    stored_spacing = psf_struct.get("sample_spacing_m")
+    if stored_spacing is not None and not np.isclose(float(stored_spacing), float(sample_spacing_m)):
+        return False
+    wavelengths = np.asarray(psf_struct.get("wavelength_nm", np.empty(0)), dtype=float).reshape(-1)
+    if wavelengths.size > 0 and not np.array_equal(wavelengths, np.asarray(wave, dtype=float).reshape(-1)):
         return False
     current_angles = np.asarray(psf_struct.get("sample_angles_deg", np.empty(0)), dtype=float).reshape(-1)
     if not np.array_equal(current_angles, np.asarray(sample_angles_deg, dtype=float).reshape(-1)):
         return False
     raytrace = optics.get("raytrace", {})
-    return str(psf_struct.get("optics_name", "")) == str(raytrace.get("name", optics.get("name", "")))
+    optics_name = str(psf_struct.get("optics_name", ""))
+    if optics_name and optics_name != str(raytrace.get("name", optics.get("name", ""))):
+        return False
+    return True
 
 
 def _raytrace_default_sample_angles(angle_step_deg: float) -> np.ndarray:
@@ -1360,9 +1372,11 @@ def _normalize_psf_struct(value: Any) -> dict[str, Any] | None:
         normalized["sample_angles_deg"] = _coerce_psf_sample_angles(sample_angles)
         if normalized["sample_angles_deg"].size >= 2:
             normalized["angle_step_deg"] = float(normalized["sample_angles_deg"][1] - normalized["sample_angles_deg"][0])
-    img_height = current.get("img_height_mm", current.get("imgHeight"))
-    if img_height is not None:
-        normalized["img_height_mm"] = np.asarray(img_height, dtype=float).reshape(-1)
+    if "img_height_mm" in current:
+        normalized["img_height_mm"] = np.asarray(current.get("img_height_mm"), dtype=float).reshape(-1)
+    elif "imgHeight" in current:
+        # MATLAB stores psfStruct.imgHeight in meters.
+        normalized["img_height_mm"] = np.asarray(current.get("imgHeight"), dtype=float).reshape(-1) * 1e3
     wavelength = current.get("wavelength_nm", current.get("wavelength"))
     if wavelength is not None:
         normalized["wavelength_nm"] = np.asarray(wavelength, dtype=float).reshape(-1)
@@ -1370,6 +1384,62 @@ def _normalize_psf_struct(value: Any) -> dict[str, Any] | None:
     if optics_name is not None:
         normalized["optics_name"] = str(optics_name)
     return normalized
+
+
+def _raytrace_psf_kernel_shape(psf_struct: dict[str, Any] | None) -> tuple[int, int]:
+    if not isinstance(psf_struct, dict):
+        return (0, 0)
+    psf = np.asarray(psf_struct.get("psf", np.empty((0, 0, 0, 0, 0), dtype=float)), dtype=float)
+    if psf.ndim != 5 or psf.shape[3] <= 0 or psf.shape[4] <= 0:
+        return (0, 0)
+    return int(psf.shape[3]), int(psf.shape[4])
+
+
+def _raytrace_expected_kernel_shape(optics: dict[str, Any], sample_spacing_m: float) -> tuple[int, int]:
+    psf_data = dict(optics.get("raytrace", {}).get("psf", {}))
+    source_x_mm, source_y_mm = _raytrace_psf_support_axes(psf_data)
+    if source_x_mm.size == 0 or source_y_mm.size == 0:
+        return (0, 0)
+    target_x_mm, target_y_mm = _raytrace_psf_grid(float(sample_spacing_m) * 1e3, psf_data)
+    return int(target_y_mm.size), int(target_x_mm.size)
+
+
+def _raytrace_finalize_psf_struct(
+    psf_struct: dict[str, Any] | None,
+    optics: dict[str, Any],
+    wave: np.ndarray,
+    rows: int,
+    cols: int,
+    sample_spacing_m: float,
+    sample_angles_deg: np.ndarray,
+) -> dict[str, Any] | None:
+    finalized = _normalize_psf_struct(psf_struct)
+    if not isinstance(finalized, dict):
+        return None
+
+    sample_angles = np.asarray(finalized.get("sample_angles_deg", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    if sample_angles.size == 0:
+        sample_angles = np.asarray(sample_angles_deg, dtype=float).reshape(-1).copy()
+        if sample_angles.size > 0:
+            finalized["sample_angles_deg"] = sample_angles
+    if sample_angles.size >= 2:
+        finalized["angle_step_deg"] = float(sample_angles[1] - sample_angles[0])
+        if "angle_lut_index" not in finalized or "angle_lut_weight" not in finalized:
+            lower_index, angle_weight = _raytrace_angle_lut(sample_angles)
+            finalized["angle_lut_index"] = lower_index
+            finalized["angle_lut_weight"] = angle_weight
+
+    wavelengths = np.asarray(finalized.get("wavelength_nm", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    if wavelengths.size == 0:
+        finalized["wavelength_nm"] = np.asarray(wave, dtype=float).reshape(-1).copy()
+
+    optics_name = str(optics.get("raytrace", {}).get("name", optics.get("name", "raytrace")))
+    if not str(finalized.get("optics_name", "")):
+        finalized["optics_name"] = optics_name
+
+    finalized["cube_shape"] = (int(rows), int(cols))
+    finalized["sample_spacing_m"] = float(sample_spacing_m)
+    return finalized
 
 
 def _sync_psf_metadata_fields(oi: OpticalImage) -> None:
@@ -1727,7 +1797,15 @@ def oi_compute(
             angle_step_deg,
             oi.fields.get("psf_sample_angles_deg"),
         )
-        current_psf_struct = oi.fields.get("psf_struct")
+        current_psf_struct = _raytrace_finalize_psf_struct(
+            oi.fields.get("psf_struct"),
+            optics,
+            wave,
+            scene_photons.shape[0],
+            scene_photons.shape[1],
+            sample_spacing_m,
+            sample_angles_deg,
+        )
         if _raytrace_psf_struct_matches(
             current_psf_struct,
             optics,
@@ -2215,11 +2293,11 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
     if key in {"psfimageheights"}:
         psf_struct = oi.fields.get("psf_struct")
         if isinstance(psf_struct, dict):
-            scale = _SPATIAL_UNIT_SCALE.get(param_format(args[0]) if args else "mm", 1.0)
+            scale = _SPATIAL_UNIT_SCALE.get(param_format(args[0]) if args else "m", 1.0)
             return np.asarray(psf_struct.get("img_height_mm", np.empty(0, dtype=float)), dtype=float) / 1e3 * scale
         stored = oi.fields.get("psf_image_heights_m")
         if stored is not None:
-            scale = _SPATIAL_UNIT_SCALE.get(param_format(args[0]) if args else "mm", 1.0)
+            scale = _SPATIAL_UNIT_SCALE.get(param_format(args[0]) if args else "m", 1.0)
             return np.asarray(stored, dtype=float).reshape(-1) * scale
         return np.empty(0, dtype=float)
     if key in {"psfwavelength"}:
@@ -2456,9 +2534,10 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any, *args: Any) -> OpticalI
         _sync_psf_metadata_fields(oi)
         return oi
     if key in {"psfimageheights"}:
-        oi.fields["psf_image_heights_m"] = np.asarray(value, dtype=float).reshape(-1) / 1e3
+        heights_m = np.asarray(value, dtype=float).reshape(-1)
+        oi.fields["psf_image_heights_m"] = heights_m.copy()
         current = dict(oi.fields.get("psf_struct") or {})
-        current["img_height_mm"] = np.asarray(value, dtype=float).reshape(-1)
+        current["img_height_mm"] = heights_m * 1e3
         oi.fields["psf_struct"] = current
         _sync_psf_metadata_fields(oi)
         return oi

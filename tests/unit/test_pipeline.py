@@ -400,7 +400,7 @@ def test_oi_get_set_raytrace_sample_angles_matches_matlab_surface(asset_store) -
 
     assert np.array_equal(oi_get(result, "psf sample angles"), sample_angles)
     assert np.isclose(oi_get(result, "psf angle step"), 45.0)
-    assert np.allclose(oi_get(result, "psf image heights", "m"), oi_get(result, "psf image heights") / 1e3)
+    assert np.allclose(oi_get(result, "psf image heights", "mm"), oi_get(result, "psf image heights") * 1e3)
 
 
 def test_oi_set_psfstruct_normalizes_matlab_style_metadata(asset_store) -> None:
@@ -413,7 +413,7 @@ def test_oi_set_psfstruct_normalizes_matlab_style_metadata(asset_store) -> None:
     psf_struct = {
         "psf": psf_cells,
         "sampAngles": np.array([0.0, 180.0], dtype=float),
-        "imgHeight": np.array([0.0, 1.5], dtype=float),
+        "imgHeight": np.array([0.0, 1.5e-3], dtype=float),
         "wavelength": np.array([550.0], dtype=float),
         "opticsName": "Synthetic RT",
     }
@@ -428,23 +428,50 @@ def test_oi_set_psfstruct_normalizes_matlab_style_metadata(asset_store) -> None:
     assert sampled[1, 1, 0].shape == (3, 3)
     assert np.array_equal(oi_get(oi, "psf sample angles"), np.array([0.0, 180.0]))
     assert np.isclose(oi_get(oi, "psf angle step"), 180.0)
-    assert np.array_equal(oi_get(oi, "psf image heights"), np.array([0.0, 1.5]))
-    assert np.allclose(oi_get(oi, "psf image heights", "m"), np.array([0.0, 0.0015]))
+    assert np.array_equal(oi_get(oi, "psf image heights"), np.array([0.0, 1.5e-3]))
+    assert np.allclose(oi_get(oi, "psf image heights", "mm"), np.array([0.0, 1.5]))
     assert np.array_equal(oi_get(oi, "psf wavelength"), np.array([550.0]))
     assert oi_get(oi, "raytrace optics name") == "Synthetic RT"
 
 
 def test_oi_get_set_raytrace_psf_metadata_before_compute(asset_store) -> None:
     oi = oi_create("ray trace", asset_store=asset_store)
-    oi = oi_set(oi, "psf image heights", np.array([0.0, 1.0, 2.0], dtype=float))
+    oi = oi_set(oi, "psf image heights", np.array([0.0, 1.0e-3, 2.0e-3], dtype=float))
     oi = oi_set(oi, "psf wavelength", np.array([450.0, 550.0], dtype=float))
     oi = oi_set(oi, "raytrace optics name", "Manual RT")
 
-    assert np.array_equal(oi_get(oi, "psf image heights"), np.array([0.0, 1.0, 2.0]))
+    assert np.array_equal(oi_get(oi, "psf image heights"), np.array([0.0, 1.0e-3, 2.0e-3]))
+    assert np.allclose(oi_get(oi, "psf image heights", "mm"), np.array([0.0, 1.0, 2.0]))
     assert oi_get(oi, "psf image heights n") == 3
     assert np.array_equal(oi_get(oi, "psf wavelength"), np.array([450.0, 550.0]))
     assert oi_get(oi, "psf wavelength n") == 2
     assert oi_get(oi, "raytrace optics name") == "Manual RT"
+
+
+def test_oi_compute_reuses_matlab_style_psf_struct(asset_store) -> None:
+    scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
+    baseline = oi_compute(oi_create("ray trace", asset_store=asset_store), scene, crop=True)
+    exported = dict(oi_get(baseline, "psf struct"))
+    original_cells = np.asarray(exported["psf"], dtype=object)
+
+    delta_cells = np.empty(original_cells.shape, dtype=object)
+    for index in np.ndindex(delta_cells.shape):
+        kernel = np.zeros_like(np.asarray(original_cells[index], dtype=float))
+        kernel[kernel.shape[0] // 2, kernel.shape[1] // 2] = 1.0
+        delta_cells[index] = kernel
+
+    exported["psf"] = delta_cells
+    oi = oi_set(oi_create("ray trace", asset_store=asset_store), "psf struct", exported)
+
+    assert np.allclose(oi_get(oi, "psf image heights"), np.asarray(exported["imgHeight"], dtype=float))
+    assert np.allclose(oi_get(oi, "psf image heights", "mm"), np.asarray(exported["imgHeight"], dtype=float) * 1e3)
+
+    result = oi_compute(oi, scene, crop=True)
+    sampled = oi_get(result, "sampledRTpsf")
+
+    assert np.allclose(np.asarray(sampled[0, 0, 0], dtype=float), np.asarray(delta_cells[0, 0, 0], dtype=float))
+    assert np.allclose(oi_get(result, "psf image heights"), np.asarray(exported["imgHeight"], dtype=float))
+    assert not np.allclose(result.data["photons"], baseline.data["photons"])
 
 
 def test_oi_set_raw_raytrace_psf_metadata_updates_optics_and_invalidates_cache(asset_store) -> None:
