@@ -23,6 +23,13 @@ def _case_definitions() -> list[dict[str, Any]]:
     return json.loads(CASES_PATH.read_text())["cases"]
 
 
+def _field_rules(case: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    raw_rules = case.get("field_overrides", {})
+    if not isinstance(raw_rules, dict):
+        return {}
+    return {str(key): value for key, value in raw_rules.items() if isinstance(value, dict)}
+
+
 def _normalize(value: Any) -> Any:
     if isinstance(value, dict):
         return {key: _normalize(item) for key, item in value.items()}
@@ -33,7 +40,15 @@ def _normalize(value: Any) -> Any:
     return value
 
 
-def _compare(reference: Any, actual: Any, *, rtol: float, atol: float) -> None:
+def _compare(
+    reference: Any,
+    actual: Any,
+    *,
+    rtol: float,
+    atol: float,
+    field_rules: dict[str, dict[str, Any]] | None = None,
+    path: tuple[str, ...] = (),
+) -> None:
     reference = _normalize(reference)
     actual = _normalize(actual)
     if isinstance(reference, dict):
@@ -42,7 +57,14 @@ def _compare(reference: Any, actual: Any, *, rtol: float, atol: float) -> None:
                 continue
             if key not in actual:
                 raise AssertionError(f"Missing key '{key}' in actual output.")
-            _compare(reference[key], actual[key], rtol=rtol, atol=atol)
+            _compare(
+                reference[key],
+                actual[key],
+                rtol=rtol,
+                atol=atol,
+                field_rules=field_rules,
+                path=(*path, key),
+            )
         return
     if isinstance(reference, (str, bytes)) or isinstance(actual, (str, bytes)):
         assert actual == reference
@@ -53,6 +75,11 @@ def _compare(reference: Any, actual: Any, *, rtol: float, atol: float) -> None:
     reference_array = np.asarray(reference, dtype=float)
     actual_array = np.asarray(actual, dtype=float)
     assert reference_array.shape == actual_array.shape
+    rule = field_rules.get(path[0]) if field_rules and path else None
+    if rule and rule.get("mode") == "mean_rel":
+        relative = np.abs(actual_array - reference_array) / np.maximum(np.abs(reference_array), 1e-12)
+        assert float(np.mean(relative)) <= float(rule["max_mean_rel"])
+        return
     assert np.allclose(actual_array, reference_array, rtol=rtol, atol=atol)
 
 
@@ -63,4 +90,10 @@ def test_parity_case(case, asset_store) -> None:
         pytest.skip(f"Missing baseline: {baseline_path}")
     reference = {key: value for key, value in loadmat(baseline_path, squeeze_me=True, struct_as_record=False).items() if not key.startswith("__")}
     actual = run_python_case(case["name"], asset_store=asset_store)
-    _compare(reference, actual, rtol=float(case["rtol"]), atol=float(case["atol"]))
+    _compare(
+        reference,
+        actual,
+        rtol=float(case["rtol"]),
+        atol=float(case["atol"]),
+        field_rules=_field_rules(case),
+    )

@@ -18,9 +18,12 @@ Current repository contents:
 - `diagnostics.reference_recompute` for cases where the report can rerun a
   downstream stage from stored reference inputs to separate an upstream port
   miss from a stale or internally inconsistent baseline
+- `field_overrides` when a curated case uses a documented non-default
+  comparator for a specific top-level field
 
 Note:
 
 - `camera_default_pipeline` now runs as a deterministic noiseless parity case in both the Python runner and the Octave exporter. Regenerate that baseline after Octave execution is repaired, because older baseline files captured an uncontrolled sensor-noise realization.
+- `oi_wvf_small_scene` now exports `pre_psf_photons` and `psf_stack` as strict stagewise references. Its final `photons` field is evaluated with a relaxed `mean_rel` threshold because Octave reduces that delta-PSF convolution to a single-precision FFT artifact that is not stable across backends even when the staged optics state matches exactly.
 - Use `python tools/regenerate_parity_baselines.py` to export fresh `.mat` baselines from Octave.
 - If the env-level `octave` wrapper is broken, set `PYISETCAM_OCTAVE_BIN` to a working `octave-cli-*` executable and rerun the export tool. The runner now also seeds `OCTAVE_HOME`, `OCTAVE_EXEC_HOME`, and `OCTAVE_IMAGE_PATH` automatically for conda-style installs.

@@ -51,6 +51,26 @@ def test_array_metrics_reports_2x2_phase_breakdown() -> None:
     assert np.isclose(metrics["phase_2x2_mean_rel"]["r1c1"], 0.0)
 
 
+def test_compare_supports_mean_rel_field_override() -> None:
+    parity_report = _load_parity_report_module()
+
+    reference = {"photons": np.ones((2, 2), dtype=float)}
+    actual = {"photons": np.full((2, 2), 1.02, dtype=float)}
+
+    comparison = parity_report._compare(
+        reference,
+        actual,
+        rtol=1e-4,
+        atol=1e-6,
+        field_rules={"photons": {"mode": "mean_rel", "max_mean_rel": 0.03}},
+    )
+
+    photons = comparison["fields"]["photons"]
+    assert photons["comparison_mode"] == "mean_rel"
+    assert photons["pass"]
+    assert np.isclose(photons["mean_rel"], 0.02)
+
+
 def test_case_diagnostics_recompute_sensor_from_reference_oi(asset_store) -> None:
     parity_report = _load_parity_report_module()
 

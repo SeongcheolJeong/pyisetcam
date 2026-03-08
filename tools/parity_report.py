@@ -29,6 +29,13 @@ def _case_definitions() -> list[dict[str, Any]]:
     return json.loads(CASES_PATH.read_text())["cases"]
 
 
+def _field_rules(case: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    raw_rules = case.get("field_overrides", {})
+    if not isinstance(raw_rules, dict):
+        return {}
+    return {str(key): value for key, value in raw_rules.items() if isinstance(value, dict)}
+
+
 def _load_reference(case_name: str) -> dict[str, Any]:
     baseline_path = BASELINES_DIR / f"{case_name}.mat"
     return {
@@ -107,7 +114,15 @@ def _array_metrics(reference: Any, actual: Any) -> dict[str, Any]:
     return metrics
 
 
-def _compare(reference: Any, actual: Any, *, rtol: float, atol: float) -> dict[str, Any]:
+def _compare(
+    reference: Any,
+    actual: Any,
+    *,
+    rtol: float,
+    atol: float,
+    field_rules: dict[str, dict[str, Any]] | None = None,
+    path: tuple[str, ...] = (),
+) -> dict[str, Any]:
     normalized_reference = _normalize(reference)
     normalized_actual = _normalize(actual)
 
@@ -124,6 +139,8 @@ def _compare(reference: Any, actual: Any, *, rtol: float, atol: float) -> dict[s
                 normalized_actual[key],
                 rtol=rtol,
                 atol=atol,
+                field_rules=field_rules,
+                path=(*path, key),
             )
             fields[key] = field_report
             overall = overall and bool(field_report["pass"])
@@ -151,6 +168,16 @@ def _compare(reference: Any, actual: Any, *, rtol: float, atol: float) -> dict[s
         }
 
     metrics = _array_metrics(normalized_reference, normalized_actual)
+    rule = field_rules.get(path[0]) if field_rules and path else None
+    if rule and rule.get("mode") == "mean_rel":
+        threshold = float(rule["max_mean_rel"])
+        return {
+            "pass": bool(metrics["mean_rel"] <= threshold),
+            "comparison_mode": "mean_rel",
+            "max_mean_rel": threshold,
+            **metrics,
+        }
+
     passed = bool(
         np.allclose(
             np.asarray(normalized_actual, dtype=float),
@@ -261,6 +288,7 @@ def build_report(*, asset_store: AssetStore | None = None) -> dict[str, Any]:
 
     for case in cases:
         case_name = str(case["name"])
+        field_rules = _field_rules(case)
         baseline_path = BASELINES_DIR / f"{case_name}.mat"
         if not baseline_path.exists():
             skipped += 1
@@ -280,6 +308,7 @@ def build_report(*, asset_store: AssetStore | None = None) -> dict[str, Any]:
             case_result.payload,
             rtol=float(case["rtol"]),
             atol=float(case["atol"]),
+            field_rules=field_rules,
         )
         diagnostics = _case_diagnostics(
             case_name,
@@ -300,6 +329,8 @@ def build_report(*, asset_store: AssetStore | None = None) -> dict[str, Any]:
             "atol": float(case["atol"]),
             "comparison": comparison,
         }
+        if field_rules:
+            result["field_overrides"] = field_rules
         if diagnostics:
             result["diagnostics"] = diagnostics
         results.append(result)

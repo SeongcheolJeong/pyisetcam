@@ -49,6 +49,10 @@ python tools/parity_report.py
 The report includes max-error locations plus edge/interior and 2x2 phase
 diagnostics for array outputs, plus case-specific context and
 reference-recompute checks for remaining sensor/camera gaps.
+For the curated WVF case, the harness also records strict pre-PSF / PSF
+stage parity and treats the final Octave delta-PSF convolution as a
+documented relaxed `mean_rel` diagnostic, because that path collapses to a
+single-precision FFT artifact in Octave.
 
 Regenerate Octave baselines for the curated parity cases:
 

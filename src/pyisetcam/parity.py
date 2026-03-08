@@ -11,7 +11,15 @@ from .assets import AssetStore
 from .camera import camera_compute, camera_create
 from .display import display_create
 from .ip import ip_compute, ip_create
-from .optics import oi_compute, oi_create
+from .optics import (
+    _cos4th_factor,
+    _oi_geometry,
+    _pad_scene,
+    _radiance_to_irradiance,
+    _wvf_psf_stack,
+    oi_compute,
+    oi_create,
+)
 from .scene import scene_adjust_illuminant, scene_create, scene_get
 from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_set
 from .utils import blackbody
@@ -94,9 +102,35 @@ def run_python_case_with_context(
 
     if case_name == "oi_wvf_small_scene":
         scene = scene_create("checkerboard", 8, 4, asset_store=store)
-        oi = oi_compute(oi_create("wvf"), scene, crop=True)
+        oi_seed = oi_create("wvf")
+        optics = dict(oi_seed.fields["optics"])
+        scene_photons = np.asarray(scene.data["photons"], dtype=float)
+        wave = np.asarray(scene.fields["wave"], dtype=float)
+        _, width_m, _ = _oi_geometry(optics, scene)
+        sample_spacing_m = width_m / max(scene_photons.shape[1], 1)
+        pre_psf_photons = _radiance_to_irradiance(scene_photons, optics, scene)
+        if str(optics.get("offaxis_method", "")).replace(" ", "").lower() == "cos4th":
+            pre_psf_photons = pre_psf_photons * _cos4th_factor(
+                pre_psf_photons.shape[0],
+                pre_psf_photons.shape[1],
+                optics,
+                scene,
+            )[:, :, None]
+        pad_pixels = (
+            int(np.round(scene_photons.shape[0] / 8.0)),
+            int(np.round(scene_photons.shape[1] / 8.0)),
+        )
+        pre_psf_photons, _, _ = _pad_scene(pre_psf_photons, pad_pixels, "zero")
+        psf_stack = _wvf_psf_stack(pre_psf_photons.shape[:2], sample_spacing_m, wave, optics)
+        oi = oi_compute(oi_seed, scene, crop=True)
         return ParityCaseResult(
-            payload={"case_name": case_name, "wave": oi.fields["wave"], "photons": oi.data["photons"]},
+            payload={
+                "case_name": case_name,
+                "wave": oi.fields["wave"],
+                "pre_psf_photons": pre_psf_photons,
+                "psf_stack": psf_stack,
+                "photons": oi.data["photons"],
+            },
             context={"scene": scene, "oi": oi},
         )
 
