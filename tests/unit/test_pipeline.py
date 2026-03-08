@@ -312,6 +312,47 @@ def test_sensor_get_set_supports_n_samples_per_pixel(asset_store) -> None:
     assert sensor_get(sensor, "n samples per pixel") == 3
 
 
+def test_sensor_get_reports_matlab_style_geometry_and_cfa_metadata(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    pixel_size = np.asarray(sensor.fields["pixel"]["size_m"], dtype=float)
+    rows, cols = sensor.fields["size"]
+
+    support = sensor_get(sensor, "spatial support", "um")
+    pattern_colors = sensor_get(sensor, "pattern colors")
+
+    assert np.isclose(sensor_get(sensor, "height"), rows * pixel_size[0])
+    assert np.isclose(sensor_get(sensor, "width", "mm"), cols * pixel_size[1] * 1e3)
+    assert np.allclose(sensor_get(sensor, "dimension", "um"), np.array([rows * pixel_size[0], cols * pixel_size[1]]) * 1e6)
+    assert np.isclose(sensor_get(sensor, "deltax", "um"), pixel_size[1] * 1e6)
+    assert np.isclose(sensor_get(sensor, "deltay"), pixel_size[0])
+    assert support["x"].shape == (cols,)
+    assert support["y"].shape == (rows,)
+    assert np.isclose(support["x"][0], -support["x"][-1])
+    assert np.isclose(support["y"][0], -support["y"][-1])
+    assert sensor_get(sensor, "unit block rows") == 2
+    assert sensor_get(sensor, "unit block cols") == 2
+    assert sensor_get(sensor, "cfa size") == (2, 2)
+    assert sensor_get(sensor, "filter color letters") == "rgb"
+    assert pattern_colors.shape == (2, 2)
+    assert np.array_equal(pattern_colors, np.array([["g", "r"], ["b", "g"]], dtype="<U1"))
+
+
+def test_sensor_set_size_respects_cfa_block_and_clears_cached_data(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "volts", np.ones((7, 9), dtype=float))
+
+    assert sensor_get(sensor, "size") == (7, 9)
+
+    sensor = sensor_set(sensor, "size", (73, 89))
+    assert sensor_get(sensor, "size") == (72, 88)
+    assert sensor.data == {}
+
+    sensor = sensor_set(sensor, "rows", 75)
+    sensor = sensor_set(sensor, "cols", 91)
+    assert sensor_get(sensor, "rows") == 74
+    assert sensor_get(sensor, "cols") == 90
+
+
 def test_sensor_set_etendue_scales_noiseless_response(asset_store) -> None:
     scene = scene_create(asset_store=asset_store)
     oi = oi_compute(oi_create(), scene, crop=True)

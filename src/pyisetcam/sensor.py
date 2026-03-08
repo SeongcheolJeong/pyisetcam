@@ -28,6 +28,17 @@ _DEFAULT_PIXEL = {
     "prnu_sigma": 0.0,
 }
 _ELEMENTARY_CHARGE_C = 1.602177e-19
+_SPATIAL_UNIT_SCALE = {
+    "meters": 1.0,
+    "meter": 1.0,
+    "m": 1.0,
+    "millimeters": 1e3,
+    "millimeter": 1e3,
+    "mm": 1e3,
+    "microns": 1e6,
+    "micron": 1e6,
+    "um": 1e6,
+}
 
 
 def _store(asset_store: AssetStore | None) -> AssetStore:
@@ -68,6 +79,67 @@ def _sensor_base(
         }
     )
     return sensor
+
+
+def _spatial_unit_scale(unit: Any) -> float:
+    if unit is None:
+        return 1.0
+    return _SPATIAL_UNIT_SCALE.get(param_format(unit), 1.0)
+
+
+def _pixel_size_m(pixel: dict[str, Any]) -> np.ndarray:
+    size = np.asarray(pixel.get("size_m", np.array([0.0, 0.0], dtype=float)), dtype=float).reshape(-1)
+    if size.size == 1:
+        size = np.repeat(size, 2)
+    if size.size < 2:
+        raise ValueError("pixel size must have at least two elements.")
+    return size[:2]
+
+
+def _pixel_gaps_m(pixel: dict[str, Any]) -> np.ndarray:
+    row_gap = pixel.get("height_gap_m", pixel.get("heightGapM", pixel.get("heightgap", pixel.get("height_gap", pixel.get("heightGap", 0.0)))))
+    col_gap = pixel.get("width_gap_m", pixel.get("widthGapM", pixel.get("widthgap", pixel.get("width_gap", pixel.get("widthGap", 0.0)))))
+    return np.array([float(row_gap), float(col_gap)], dtype=float)
+
+
+def _sensor_spatial_resolution_m(sensor: Sensor) -> np.ndarray:
+    pixel = sensor.fields["pixel"]
+    return _pixel_size_m(pixel) + _pixel_gaps_m(pixel)
+
+
+def _sensor_rows_cols(sensor: Sensor) -> tuple[int, int]:
+    volts = sensor.data.get("volts")
+    if volts is not None:
+        shape = np.asarray(volts).shape
+        if len(shape) >= 2:
+            return int(shape[0]), int(shape[1])
+    dv = sensor.data.get("dv")
+    if dv is not None:
+        shape = np.asarray(dv).shape
+        if len(shape) >= 2:
+            return int(shape[0]), int(shape[1])
+    return int(sensor.fields["size"][0]), int(sensor.fields["size"][1])
+
+
+def _sensor_unit_block(sensor: Sensor) -> tuple[int, int]:
+    pattern = np.asarray(sensor.fields["pattern"], dtype=int)
+    return int(pattern.shape[0]), int(pattern.shape[1])
+
+
+def _sensor_filter_color_letters(sensor: Sensor) -> str:
+    names = sensor.fields.get("filter_names", [])
+    return "".join(str(name)[0].lower() if str(name) else "k" for name in names)
+
+
+def _sensor_aligned_dimension(value: Any, block_size: int) -> int:
+    dimension = int(np.floor(float(value)))
+    if block_size <= 1:
+        return dimension
+    return int(np.floor(dimension / block_size) * block_size)
+
+
+def _sensor_clear_data(sensor: Sensor) -> None:
+    sensor.data.clear()
 
 
 def _filter_bundle(
@@ -188,15 +260,59 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
     if key == "nfilters":
         return int(np.asarray(sensor.fields["filter_spectra"]).shape[1])
     if key == "size":
-        return tuple(sensor.fields["size"])
-    if key == "rows":
-        return int(sensor.fields["size"][0])
-    if key == "cols":
-        return int(sensor.fields["size"][1])
+        return _sensor_rows_cols(sensor)
+    if key in {"rows", "row"}:
+        return _sensor_rows_cols(sensor)[0]
+    if key in {"cols", "col"}:
+        return _sensor_rows_cols(sensor)[1]
+    if key in {"height", "arrayheight"}:
+        height = float(sensor_get(sensor, "rows")) * float(sensor_get(sensor, "deltay"))
+        return height * _spatial_unit_scale(args[0] if args else None)
+    if key in {"width", "arraywidth"}:
+        width = float(sensor_get(sensor, "cols")) * float(sensor_get(sensor, "deltax"))
+        return width * _spatial_unit_scale(args[0] if args else None)
+    if key == "dimension":
+        dimension = np.array([sensor_get(sensor, "height"), sensor_get(sensor, "width")], dtype=float)
+        return dimension * _spatial_unit_scale(args[0] if args else None)
     if key in {"pixelfields", "pixel"}:
         return sensor.fields["pixel"]
     if key in {"pixelsize", "pixelsizesamefillfactor"}:
         return np.asarray(sensor.fields["pixel"]["size_m"], dtype=float)
+    if key in {"wspatialresolution", "wres", "deltax", "widthspatialresolution"}:
+        return float(_sensor_spatial_resolution_m(sensor)[1]) * _spatial_unit_scale(args[0] if args else None)
+    if key in {"hspatialresolution", "hres", "deltay", "heightspatialresolultion"}:
+        return float(_sensor_spatial_resolution_m(sensor)[0]) * _spatial_unit_scale(args[0] if args else None)
+    if key in {"spatialsupport", "xyvaluesinmeters"}:
+        rows, cols = _sensor_rows_cols(sensor)
+        deltay = float(sensor_get(sensor, "deltay"))
+        deltax = float(sensor_get(sensor, "deltax"))
+        support = {
+            "y": _sample_centers(rows, deltay),
+            "x": _sample_centers(cols, deltax),
+        }
+        scale = _spatial_unit_scale(args[0] if args else None)
+        if not np.isclose(scale, 1.0):
+            support = {axis: values * scale for axis, values in support.items()}
+        return support
+    if key == "filtercolorletters":
+        return _sensor_filter_color_letters(sensor)
+    if key == "filtercolorletterscell":
+        return list(_sensor_filter_color_letters(sensor))
+    if key == "unitblockrows":
+        return _sensor_unit_block(sensor)[0]
+    if key == "unitblockcols":
+        return _sensor_unit_block(sensor)[1]
+    if key in {"cfasize", "unitblocksize"}:
+        return _sensor_unit_block(sensor)
+    if key in {"patterncolors", "pcolors", "blockcolors"}:
+        letters = np.array(list(_sensor_filter_color_letters(sensor)), dtype="<U1")
+        if letters.size == 0:
+            return np.empty(np.asarray(sensor.fields["pattern"], dtype=int).shape, dtype="<U1")
+        known = np.array(list("rgbcmykw"), dtype="<U1")
+        unknown = ~np.isin(letters, known)
+        letters[unknown] = "k"
+        pattern = np.asarray(sensor.fields["pattern"], dtype=int)
+        return letters[np.clip(pattern - 1, 0, letters.size - 1)]
     if key in {"integrationtime", "exptime"}:
         return float(sensor.fields["integration_time"])
     if key == "autoexposure":
@@ -243,15 +359,13 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         scene_or_distance = args[0] if args else None
         oi = args[1] if len(args) >= 2 else args[0] if args and isinstance(args[0], OpticalImage) else None
         focal_length = _sensor_image_distance_m(scene_or_distance, oi)
-        pixel_size = np.asarray(sensor.fields["pixel"]["size_m"], dtype=float)
-        width = sensor.fields["size"][1] * pixel_size[1]
+        width = float(sensor_get(sensor, "width"))
         return float(np.rad2deg(2.0 * np.arctan2(width / 2.0, focal_length)))
     if key in {"fovvertical", "vfov"}:
         scene_or_distance = args[0] if args else None
         oi = args[1] if len(args) >= 2 else args[0] if args and isinstance(args[0], OpticalImage) else None
         focal_length = _sensor_image_distance_m(scene_or_distance, oi)
-        pixel_size = np.asarray(sensor.fields["pixel"]["size_m"], dtype=float)
-        height = sensor.fields["size"][0] * pixel_size[0]
+        height = float(sensor_get(sensor, "height"))
         return float(np.rad2deg(2.0 * np.arctan2(height / 2.0, focal_length)))
     raise KeyError(f"Unsupported sensorGet parameter: {parameter}")
 
@@ -265,8 +379,22 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         sensor.fields["wave"] = np.asarray(value, dtype=float).reshape(-1)
         return sensor
     if key == "size":
-        sensor.fields["size"] = (int(value[0]), int(value[1]))
+        sensor = sensor_set(sensor, "rows", value[0])
+        sensor = sensor_set(sensor, "cols", value[1])
+        return sensor
+    if key in {"rows", "row"}:
+        block_rows, _ = _sensor_unit_block(sensor)
+        rows = _sensor_aligned_dimension(value, block_rows)
+        sensor.fields["size"] = (rows, int(sensor.fields["size"][1]))
         sensor.fields["etendue"] = None
+        _sensor_clear_data(sensor)
+        return sensor
+    if key in {"cols", "col"}:
+        _, block_cols = _sensor_unit_block(sensor)
+        cols = _sensor_aligned_dimension(value, block_cols)
+        sensor.fields["size"] = (int(sensor.fields["size"][0]), cols)
+        sensor.fields["etendue"] = None
+        _sensor_clear_data(sensor)
         return sensor
     if key == "pattern":
         sensor.fields["pattern"] = np.asarray(value, dtype=int)
@@ -283,6 +411,7 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
             size_value = np.repeat(size_value, 2)
         sensor.fields["pixel"]["size_m"] = size_value
         sensor.fields["etendue"] = None
+        _sensor_clear_data(sensor)
         return sensor
     if key in {"integrationtime", "exptime"}:
         sensor.fields["integration_time"] = float(value)
@@ -320,13 +449,17 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         sensor.fields["quantization"] = str(value)
         return sensor
     if key == "volts":
-        sensor.data["volts"] = np.asarray(value, dtype=float)
+        volts = np.asarray(value, dtype=float)
+        sensor.data["volts"] = volts
+        if param_format(sensor.fields.get("quantization", "analog")) == "analog":
+            sensor.data.pop("dv", None)
+        if volts.ndim >= 2:
+            sensor.fields["size"] = (int(volts.shape[0]), int(volts.shape[1]))
         return sensor
     raise KeyError(f"Unsupported sensorSet parameter: {parameter}")
 
 
 def sensor_set_size_to_fov(sensor: Sensor, fov: float | tuple[float, float], oi: OpticalImage) -> Sensor:
-    pixel_size = np.asarray(sensor.fields["pixel"]["size_m"], dtype=float)
     pattern = np.asarray(sensor.fields["pattern"], dtype=int)
     pattern_rows, pattern_cols = pattern.shape
     focal_length = float(oi_get(oi, "focal length"))
@@ -335,19 +468,19 @@ def sensor_set_size_to_fov(sensor: Sensor, fov: float | tuple[float, float], oi:
         vfov = float(fov[1] if len(fov) > 1 else fov[0])
         width = 2.0 * focal_length * np.tan(np.deg2rad(hfov) / 2.0)
         height = 2.0 * focal_length * np.tan(np.deg2rad(vfov) / 2.0)
-        cols = max(2, int(round(width / pixel_size[1])))
-        rows = max(2, int(round(height / pixel_size[0])))
+        cols = max(pattern_cols, int(round(width / float(sensor_get(sensor, "deltax")))))
+        rows = max(pattern_rows, int(round(height / float(sensor_get(sensor, "deltay")))))
     else:
         hfov = float(fov)
         width = 2.0 * focal_length * np.tan(np.deg2rad(hfov) / 2.0)
-        current_width = sensor.fields["size"][1] * pixel_size[1]
+        current_width = float(sensor_get(sensor, "width"))
         scale = width / max(current_width, 1e-12)
-        rows = max(2, int(round(sensor.fields["size"][0] * scale)))
-        cols = max(2, int(round(sensor.fields["size"][1] * scale)))
+        rows = max(pattern_rows, int(round(sensor_get(sensor, "rows") * scale)))
+        cols = max(pattern_cols, int(round(sensor_get(sensor, "cols") * scale)))
     cols = ensure_multiple(cols, pattern_cols)
     rows = ensure_multiple(rows, pattern_rows)
-    sensor.fields["size"] = (rows, cols)
-    sensor.fields["etendue"] = None
+    sensor = sensor_set(sensor, "rows", rows)
+    sensor = sensor_set(sensor, "cols", cols)
     return sensor
 
 
