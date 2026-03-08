@@ -251,6 +251,39 @@ def test_oi_transmittance_scales_and_interpolates(asset_store) -> None:
     assert oi_get(scaled_oi, "transmittance nwave") == 3
 
 
+def test_oi_create_raytrace_loads_upstream_optics(asset_store) -> None:
+    oi = oi_create("ray trace", asset_store=asset_store)
+
+    assert oi_get(oi, "model") == "raytrace"
+    assert oi_get(oi, "compute method") == ""
+    assert np.isclose(oi_get(oi, "focal length"), 0.001999989, rtol=1e-6, atol=1e-9)
+    assert np.isclose(oi_get(oi, "fnumber"), 4.999973)
+    assert np.isclose(oi_get(oi, "rt object distance"), 2.0)
+    assert np.isclose(oi_get(oi, "rtfov"), 38.72116733777534)
+    assert oi_get(oi, "raytrace optics name") == "Asphere 2mm"
+    assert oi_get(oi, "rtpsffieldheight").shape == (21,)
+    assert np.array_equal(oi_get(oi, "rtpsfwavelength"), np.array([400.0, 475.0, 550.0, 625.0, 700.0]))
+
+
+def test_oi_compute_raytrace_applies_lens_shading_and_blur(asset_store) -> None:
+    scene = scene_create("uniform ee", 32, asset_store=asset_store)
+    raytrace = oi_compute(oi_create("ray trace", asset_store=asset_store), scene, crop=True)
+
+    skip = oi_create()
+    skip.fields["optics"]["model"] = "skip"
+    skip.fields["optics"]["offaxis_method"] = "skip"
+    baseline = oi_compute(skip, scene, crop=True)
+
+    band = raytrace.data["photons"].shape[2] // 2
+    center = float(raytrace.data["photons"][raytrace.data["photons"].shape[0] // 2, raytrace.data["photons"].shape[1] // 2, band])
+    corner = float(raytrace.data["photons"][0, 0, band])
+
+    assert raytrace.data["photons"].shape[:2] == scene.data["photons"].shape[:2]
+    assert np.allclose(oi_get(raytrace, "depth map"), 2.0)
+    assert center > corner
+    assert not np.allclose(raytrace.data["photons"], baseline.data["photons"])
+
+
 def test_wvf_path_preserves_more_checkerboard_contrast_than_diffraction(asset_store) -> None:
     scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
     oi_wvf = oi_compute(oi_create("wvf"), scene, crop=True)

@@ -2,12 +2,12 @@
 
 ## Current Status
 - Milestone one is complete in the repository: the curated Octave parity suite is green and the handoff docs/examples are in place.
-- Current execution focus has moved into post-milestone expansion on broader scene support and sensor presets.
-- Initial metrics and validation utilities are now in progress.
+- Current execution focus has moved into post-milestone expansion on broader scene support, sensor presets, metrics, and ray-trace optics.
 - `scene_from_file` / `sceneFromFile` is implemented for RGB and monochrome emissive-display inputs.
 - Additional MATLAB-style scene patterns are now implemented: `uniform bb`, `uniform monochromatic`, `line ee`, `line ep`, `bar`, `point array`, `grid lines`, and `white noise`.
 - Sensor preset expansion now includes generic `rgbw` / `rccc` creation and upstream-backed `mt9v024` / `ar0132at` RGBW and RCCC model variants.
 - Metrics expansion now includes initial `metricsSPD`-style spectral comparison plus generic MAE/RMSE/PSNR helpers.
+- Initial ray-trace optics support is now in place: `oi_create('ray trace')` loads upstream ray-trace optics assets, and `oi_compute` applies geometric distortion, relative illumination, and a radially interpolated PSF approximation from the pinned MATLAB data.
 
 ## Summary
 - Build a new Python library, `pyisetcam`, that ports the numerical `scene -> optical image -> sensor -> image processor -> camera` pipeline from ISETCam and validates it against GNU Octave runs of the upstream MATLAB code.
@@ -80,5 +80,5 @@
 - Add more scene patterns and `sceneFromFile`.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.
-- Add ray-trace optics support.
+- Expand ray-trace optics support from the initial upstream-backed geometry / radial-PSF slice to fuller MATLAB fidelity.
 - Introduce an optional `SessionContext` compatibility layer and only then consider GUI replacement.

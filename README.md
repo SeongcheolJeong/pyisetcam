@@ -99,6 +99,10 @@ scene catalog has been expanded, and `sensor_create` now includes generic
 `rgbw` / `rccc` presets plus upstream-backed `mt9v024` and `ar0132at`
 RGBW/RCCC variants. The first metrics/validation slice is also in place:
 `metrics_spd`, CIELAB helpers, and generic MAE/RMSE/PSNR utilities.
-Multispectral / EXR / reflective-display cases and the rest of the vendor
-sensor catalog remain explicitly out of scope until they are ported
-deliberately.
+Initial ray-trace optics support is also in place: `oi_create('ray trace')`
+loads the pinned upstream Zemax-derived optics asset, and `oi_compute`
+applies upstream-backed geometric distortion, relative illumination, and a
+radially interpolated PSF approximation. Multispectral / EXR /
+reflective-display cases, full angle-dependent ray-trace PSF interpolation,
+and the rest of the vendor sensor catalog remain explicitly out of scope
+until they are ported deliberately.

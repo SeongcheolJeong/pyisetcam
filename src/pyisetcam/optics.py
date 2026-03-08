@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 from math import factorial
+from pathlib import Path
 from typing import Any
 
 import numpy as np
+from scipy.io import loadmat
 from scipy.ndimage import map_coordinates
+from scipy.signal import fftconvolve
 
+from .assets import AssetStore
 from .exceptions import UnsupportedOptionError
 from .scene import scene_get
 from .types import OpticalImage, Scene
@@ -38,6 +42,154 @@ _SPATIAL_UNIT_SCALE = {
     "micron": 1e6,
     "um": 1e6,
 }
+
+
+def _store(asset_store: AssetStore | None) -> AssetStore:
+    return asset_store or AssetStore.default()
+
+
+def _mat_to_native(value: Any) -> Any:
+    if isinstance(value, bytes):
+        return value.decode("utf-8")
+    if hasattr(value, "_fieldnames"):
+        return {str(name): _mat_to_native(getattr(value, name)) for name in getattr(value, "_fieldnames", [])}
+    if isinstance(value, np.ndarray):
+        if value.dtype == object:
+            if value.ndim == 0:
+                return _mat_to_native(value.item())
+            flattened = [_mat_to_native(item) for item in value.reshape(-1)]
+            return np.asarray(flattened, dtype=object).reshape(value.shape)
+        return np.asarray(value)
+    return value
+
+
+def _scalar(value: Any, default: float) -> float:
+    if value is None:
+        return float(default)
+    array = np.asarray(value)
+    if array.size == 0:
+        return float(default)
+    return float(array.reshape(-1)[0])
+
+
+def _normalize_raytrace_table(raw: dict[str, Any] | None) -> dict[str, Any]:
+    current = {} if raw is None else dict(raw)
+    return {
+        "field_height_mm": np.asarray(
+            current.get("field_height_mm", current.get("fieldHeight", np.empty(0, dtype=float))),
+            dtype=float,
+        ).reshape(-1),
+        "wavelength_nm": np.asarray(
+            current.get("wavelength_nm", current.get("wavelength", np.empty(0, dtype=float))),
+            dtype=float,
+        ).reshape(-1),
+        "function": np.asarray(current.get("function", np.empty(0, dtype=float)), dtype=float),
+    }
+
+
+def _normalize_raytrace_psf(raw: dict[str, Any] | None) -> dict[str, Any]:
+    current = _normalize_raytrace_table(raw)
+    source = {} if raw is None else dict(raw)
+    current["sample_spacing_mm"] = np.asarray(
+        source.get("sample_spacing_mm", source.get("sampleSpacing", np.array([0.0, 0.0], dtype=float))),
+        dtype=float,
+    ).reshape(-1)
+    return current
+
+
+def _normalize_raytrace_optics(raw: dict[str, Any]) -> dict[str, Any]:
+    if "raytrace" in raw and "geometry" in raw["raytrace"]:
+        normalized = dict(raw)
+        transmittance = dict(normalized.get("transmittance", {}))
+        wave = np.asarray(transmittance.get("wave", DEFAULT_WAVE.copy()), dtype=float).reshape(-1)
+        scale = np.asarray(transmittance.get("scale", np.ones(wave.size, dtype=float)), dtype=float).reshape(-1)
+        if scale.size == 1 and wave.size > 1:
+            scale = np.full(wave.size, float(scale[0]), dtype=float)
+        if scale.size != wave.size:
+            scale = np.ones(wave.size, dtype=float)
+        normalized["transmittance"] = {
+            "wave": wave.copy(),
+            "scale": scale.copy(),
+        }
+        normalized["raytrace"] = dict(normalized["raytrace"])
+        normalized["raytrace"]["geometry"] = _normalize_raytrace_table(normalized["raytrace"].get("geometry"))
+        normalized["raytrace"]["relative_illumination"] = _normalize_raytrace_table(
+            normalized["raytrace"].get("relative_illumination")
+        )
+        normalized["raytrace"]["psf"] = _normalize_raytrace_psf(normalized["raytrace"].get("psf"))
+        return normalized
+
+    raytrace = dict(raw.get("rayTrace", raw.get("raytrace", {})))
+    transmittance = dict(raw.get("transmittance", {}))
+    transmittance_wave = np.asarray(transmittance.get("wave", DEFAULT_WAVE.copy()), dtype=float).reshape(-1)
+    transmittance_scale = np.asarray(
+        transmittance.get("scale", np.ones(transmittance_wave.size, dtype=float)),
+        dtype=float,
+    ).reshape(-1)
+    if transmittance_scale.size == 1 and transmittance_wave.size > 1:
+        transmittance_scale = np.full(transmittance_wave.size, float(transmittance_scale[0]), dtype=float)
+    if transmittance_scale.size != transmittance_wave.size:
+        transmittance_scale = np.ones(transmittance_wave.size, dtype=float)
+
+    effective_focal_length_m = _scalar(raytrace.get("effectiveFocalLength"), DEFAULT_FOCAL_LENGTH_M * 1e3) / 1e3
+    nominal_f_number = _scalar(raytrace.get("fNumber", raw.get("fNumber")), 4.0)
+    return {
+        "model": "raytrace",
+        "name": str(raw.get("name", raytrace.get("name", "raytrace"))),
+        "f_number": nominal_f_number,
+        "focal_length_m": effective_focal_length_m,
+        "nominal_focal_length_m": _scalar(raw.get("focalLength"), DEFAULT_FOCAL_LENGTH_M),
+        "compute_method": "",
+        "aberration_scale": 0.0,
+        "offaxis_method": "skip",
+        "transmittance": {
+            "wave": transmittance_wave.copy(),
+            "scale": transmittance_scale.copy(),
+        },
+        "raytrace": {
+            "program": str(raytrace.get("program", "")),
+            "lens_file": str(raytrace.get("lensFile", "")),
+            "reference_wavelength_nm": _scalar(
+                raytrace.get("referenceWavelength"),
+                DEFAULT_WVF_MEASURED_WAVELENGTH_NM,
+            ),
+            "object_distance_m": _scalar(raytrace.get("objectDistance"), np.inf) / 1e3,
+            "magnification": _scalar(raytrace.get("mag"), 0.0),
+            "f_number": nominal_f_number,
+            "effective_focal_length_m": effective_focal_length_m,
+            "effective_f_number": _scalar(raytrace.get("effectiveFNumber"), nominal_f_number),
+            "max_fov_deg": _scalar(raytrace.get("maxfov", raytrace.get("fov")), np.inf),
+            "geometry": _normalize_raytrace_table(raytrace.get("geometry")),
+            "relative_illumination": _normalize_raytrace_table(raytrace.get("relIllum", raytrace.get("relative_illumination"))),
+            "psf": _normalize_raytrace_psf(raytrace.get("psf")),
+            "name": str(raytrace.get("name", raw.get("name", "raytrace"))),
+        },
+    }
+
+
+def _load_raytrace_optics(source: Any, *, asset_store: AssetStore) -> dict[str, Any]:
+    if source is None:
+        raw = asset_store.load_mat("data/optics/rtZemaxExample.mat")["optics"]
+        return _normalize_raytrace_optics(_mat_to_native(raw))
+    if isinstance(source, dict):
+        return _normalize_raytrace_optics(source)
+
+    path = Path(source)
+    if path.is_absolute() or path.exists():
+        raw = loadmat(path, squeeze_me=True, struct_as_record=False)["optics"]
+        return _normalize_raytrace_optics(_mat_to_native(raw))
+
+    candidates = [Path(str(source))]
+    if not str(source).lower().endswith(".mat"):
+        candidates.append(Path("data/optics") / f"{source}.mat")
+    candidates.append(Path("data/optics") / str(source))
+    for candidate in candidates:
+        try:
+            raw = asset_store.load_mat(candidate)["optics"]
+            return _normalize_raytrace_optics(_mat_to_native(raw))
+        except Exception:
+            continue
+    raise UnsupportedOptionError("oiCreate", f"ray trace optics {source}")
 
 
 def wvf_create(
@@ -82,7 +234,11 @@ def wvf_create(
     }
 
 
-def oi_create(oi_type: str = "diffraction limited", *args: Any) -> OpticalImage:
+def oi_create(
+    oi_type: str = "diffraction limited",
+    *args: Any,
+    asset_store: AssetStore | None = None,
+) -> OpticalImage:
     """Create a supported optical image object."""
 
     normalized = param_format(oi_type)
@@ -118,6 +274,9 @@ def oi_create(oi_type: str = "diffraction limited", *args: Any) -> OpticalImage:
             "wavefront": wavefront,
             "offaxis_method": "cos4th",
         }
+    elif normalized == "raytrace":
+        source = args[0] if args else None
+        optics = _load_raytrace_optics(source, asset_store=_store(asset_store))
     elif normalized == "pinhole":
         optics = {
             "model": "skip",
@@ -139,7 +298,8 @@ def oi_create(oi_type: str = "diffraction limited", *args: Any) -> OpticalImage:
     else:
         raise UnsupportedOptionError("oiCreate", oi_type)
 
-    wave = np.asarray(args[1], dtype=float) if len(args) > 1 else DEFAULT_WAVE.copy()
+    wave_index = 1 if normalized in {"wvf", "shiftinvariant", "raytrace"} else 0
+    wave = np.asarray(args[wave_index], dtype=float) if len(args) > wave_index else DEFAULT_WAVE.copy()
     optics.setdefault(
         "transmittance",
         {
@@ -165,8 +325,12 @@ def _scene_sample_spacing(scene: Scene) -> float:
 
 def _image_distance_m(optics: dict[str, Any], scene: Scene) -> float:
     focal_length = float(optics["focal_length_m"])
-    if param_format(optics.get("model", "")) == "skip":
+    model = param_format(optics.get("model", ""))
+    if model == "skip":
         return focal_length
+    if model == "raytrace":
+        raytrace = optics.get("raytrace", {})
+        return float(raytrace.get("effective_focal_length_m", focal_length))
     scene_distance = float(scene.fields.get("distance_m", np.inf))
     if not np.isfinite(scene_distance) or scene_distance <= focal_length:
         return focal_length
@@ -174,8 +338,11 @@ def _image_distance_m(optics: dict[str, Any], scene: Scene) -> float:
 
 
 def _magnification(optics: dict[str, Any], scene: Scene) -> float:
-    if param_format(optics.get("model", "")) == "skip":
+    model = param_format(optics.get("model", ""))
+    if model == "skip":
         return -1.0
+    if model == "raytrace":
+        return float(optics.get("raytrace", {}).get("magnification", 0.0))
     scene_distance = float(scene.fields.get("distance_m", np.inf))
     if not np.isfinite(scene_distance) or scene_distance <= 0.0:
         return 0.0
@@ -194,8 +361,13 @@ def _oi_geometry(optics: dict[str, Any], scene: Scene) -> tuple[float, float, fl
 def _radiance_to_irradiance(scene_cube: np.ndarray, optics: dict[str, Any], scene: Scene) -> np.ndarray:
     wave = np.asarray(scene.fields["wave"], dtype=float)
     transmittance = _optics_transmittance_scale(optics, wave)
-    f_number = float(optics["f_number"])
-    magnification = _magnification(optics, scene)
+    raytrace = optics.get("raytrace", {})
+    if param_format(optics.get("model", "")) == "raytrace":
+        f_number = float(raytrace.get("effective_f_number", optics["f_number"]))
+        magnification = float(raytrace.get("magnification", 0.0))
+    else:
+        f_number = float(optics["f_number"])
+        magnification = _magnification(optics, scene)
     scale = np.pi / (1.0 + 4.0 * (f_number**2) * ((1.0 + abs(magnification)) ** 2))
     irradiance = np.asarray(scene_cube, dtype=float)
     if np.any(transmittance != 1.0):
@@ -683,6 +855,194 @@ def _apply_psf(cube: np.ndarray, psf_stack: np.ndarray) -> np.ndarray:
     return result
 
 
+def _scene_diagonal_fov_deg(scene: Scene) -> float:
+    hfov = float(scene.fields.get("fov_deg", 10.0))
+    vfov = float(scene.fields.get("vfov_deg", hfov))
+    tangent = np.sqrt(np.tan(np.deg2rad(hfov) / 2.0) ** 2 + np.tan(np.deg2rad(vfov) / 2.0) ** 2)
+    return float(np.rad2deg(2.0 * np.arctan(tangent)))
+
+
+def _raytrace_curve(table: dict[str, Any], wavelength_nm: float) -> np.ndarray:
+    values = np.asarray(table.get("function", np.empty(0, dtype=float)), dtype=float)
+    if values.size == 0:
+        return np.empty(0, dtype=float)
+    wavelengths = np.asarray(table.get("wavelength_nm", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    if values.ndim == 1 or wavelengths.size <= 1:
+        return np.asarray(values, dtype=float).reshape(-1)
+    wave_index = int(np.argmin(np.abs(wavelengths - float(wavelength_nm))))
+    return np.asarray(values[:, wave_index], dtype=float).reshape(-1)
+
+
+def _raytrace_geometry(cube: np.ndarray, wave: np.ndarray, optics: dict[str, Any], scene: Scene) -> np.ndarray:
+    raytrace = dict(optics.get("raytrace", {}))
+    max_fov = float(raytrace.get("max_fov_deg", np.inf))
+    if np.isfinite(max_fov) and (_scene_diagonal_fov_deg(scene) > max_fov + 1e-9):
+        raise ValueError("Scene field of view exceeds the loaded ray-trace analysis.")
+
+    rows, cols = cube.shape[:2]
+    width_mm = _oi_geometry(optics, scene)[1] * 1e3
+    dx_mm = width_mm / max(cols, 1)
+    zeropad = 16
+    padded_rows = rows + 2 * zeropad
+    padded_cols = cols + 2 * zeropad
+    row_center = (padded_rows + 1.0) / 2.0
+    col_center = (padded_cols + 1.0) / 2.0
+
+    r = (np.arange(padded_rows, dtype=float) + 1.0) - row_center
+    c = (np.arange(padded_cols, dtype=float) + 1.0) - col_center
+    cc, rr = np.meshgrid(c, r)
+    pixdist_units = np.sqrt(cc**2 + rr**2) * dx_mm
+    pixang = np.arctan2(cc, rr)
+
+    field_heights = np.asarray(raytrace.get("geometry", {}).get("field_height_mm", np.empty(0, dtype=float)), dtype=float)
+    if field_heights.size < 2:
+        return np.asarray(cube, dtype=float).copy()
+
+    degree = min(8, max(field_heights.size - 2, 0))
+    result = np.empty_like(cube, dtype=float)
+    for band_index, wavelength_nm in enumerate(np.asarray(wave, dtype=float).reshape(-1)):
+        distorted_height = _raytrace_curve(raytrace["geometry"], float(wavelength_nm))
+        relative_illumination = _raytrace_curve(raytrace["relative_illumination"], float(wavelength_nm))
+        if distorted_height.size != field_heights.size or relative_illumination.size != field_heights.size:
+            result[:, :, band_index] = cube[:, :, band_index]
+            continue
+
+        distortion_poly = np.polyfit(distorted_height, field_heights, degree)
+        ri_degree = min(2, max(distorted_height.size - 1, 0))
+        illumination_poly = np.polyfit(distorted_height, relative_illumination, ri_degree)
+
+        ideal_height = np.polyval(distortion_poly, pixdist_units)
+        rel_illum = np.clip(np.polyval(illumination_poly, pixdist_units), 0.0, None)
+        pad_r = np.clip(row_center + ideal_height * np.cos(pixang) / max(dx_mm, 1e-12), 1.0, float(padded_rows)) - 1.0
+        pad_c = np.clip(col_center + ideal_height * np.sin(pixang) / max(dx_mm, 1e-12), 1.0, float(padded_cols)) - 1.0
+
+        padded = np.pad(np.asarray(cube[:, :, band_index], dtype=float), ((zeropad, zeropad), (zeropad, zeropad)))
+        distorted = map_coordinates(padded, [pad_r, pad_c], order=1, mode="nearest", prefilter=False)
+        result[:, :, band_index] = distorted[zeropad:-zeropad, zeropad:-zeropad] * rel_illum[zeropad:-zeropad, zeropad:-zeropad]
+
+    return result
+
+
+def _raytrace_field_weights(radial_height_mm: np.ndarray, field_heights_mm: np.ndarray) -> np.ndarray:
+    field_heights = np.asarray(field_heights_mm, dtype=float).reshape(-1)
+    flat_radius = np.asarray(radial_height_mm, dtype=float).reshape(-1)
+    weights = np.zeros((field_heights.size, flat_radius.size), dtype=float)
+    if field_heights.size == 0:
+        return weights.reshape((0, *np.asarray(radial_height_mm).shape))
+    if field_heights.size == 1:
+        weights[0, :] = 1.0
+        return weights.reshape((1, *np.asarray(radial_height_mm).shape))
+
+    below = flat_radius <= field_heights[0]
+    above = flat_radius >= field_heights[-1]
+    weights[0, below] = 1.0
+    weights[-1, above] = 1.0
+
+    middle = ~(below | above)
+    middle_indices = np.nonzero(middle)[0]
+    if middle_indices.size > 0:
+        upper = np.searchsorted(field_heights, flat_radius[middle], side="right")
+        lower = upper - 1
+        height_delta = np.maximum(field_heights[upper] - field_heights[lower], 1e-12)
+        blend = (flat_radius[middle] - field_heights[lower]) / height_delta
+        weights[lower, middle_indices] = 1.0 - blend
+        weights[upper, middle_indices] = blend
+    return weights.reshape((field_heights.size, *np.asarray(radial_height_mm).shape))
+
+
+def _raytrace_resample_psf(
+    psf: np.ndarray,
+    source_spacing_mm: np.ndarray,
+    target_spacing_mm: np.ndarray,
+) -> np.ndarray:
+    source_spacing = np.asarray(source_spacing_mm, dtype=float).reshape(-1)
+    target_spacing = np.asarray(target_spacing_mm, dtype=float).reshape(-1)
+    if source_spacing.size == 1:
+        source_spacing = np.repeat(source_spacing, 2)
+    if target_spacing.size == 1:
+        target_spacing = np.repeat(target_spacing, 2)
+
+    kernel = np.asarray(psf, dtype=float)
+    if kernel.size == 0:
+        kernel = np.zeros((1, 1), dtype=float)
+        kernel[0, 0] = 1.0
+        return kernel
+
+    if not np.allclose(source_spacing[:2], target_spacing[:2]):
+        row_extent = source_spacing[0] * max(kernel.shape[0] - 1, 0)
+        col_extent = source_spacing[1] * max(kernel.shape[1] - 1, 0)
+        rows = max(int(round(row_extent / max(target_spacing[0], 1e-12))) + 1, 1)
+        cols = max(int(round(col_extent / max(target_spacing[1], 1e-12))) + 1, 1)
+        if rows % 2 == 0:
+            rows += 1
+        if cols % 2 == 0:
+            cols += 1
+        kernel = _resize_image(kernel, (rows, cols), method="linear")
+
+    kernel = np.clip(kernel, 0.0, None)
+    total = float(np.sum(kernel))
+    if total <= 0.0:
+        kernel = np.zeros_like(kernel, dtype=float)
+        kernel[kernel.shape[0] // 2, kernel.shape[1] // 2] = 1.0
+        return kernel
+    return kernel / total
+
+
+def _raytrace_apply_psf(cube: np.ndarray, wave: np.ndarray, optics: dict[str, Any], sample_spacing_m: float) -> np.ndarray:
+    raytrace = dict(optics.get("raytrace", {}))
+    psf_data = dict(raytrace.get("psf", {}))
+    psf_function = np.asarray(psf_data.get("function", np.empty(0, dtype=float)), dtype=float)
+    field_heights = np.asarray(psf_data.get("field_height_mm", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    if psf_function.size == 0 or field_heights.size == 0:
+        return np.asarray(cube, dtype=float).copy()
+
+    rows, cols = cube.shape[:2]
+    sample_spacing_mm = float(sample_spacing_m) * 1e3
+    x = np.linspace(
+        -(cols * sample_spacing_mm) / 2.0 + sample_spacing_mm / 2.0,
+        (cols * sample_spacing_mm) / 2.0 - sample_spacing_mm / 2.0,
+        cols,
+    )
+    y = np.linspace(
+        -(rows * sample_spacing_mm) / 2.0 + sample_spacing_mm / 2.0,
+        (rows * sample_spacing_mm) / 2.0 - sample_spacing_mm / 2.0,
+        rows,
+    )
+    xx, yy = np.meshgrid(x, y)
+    radial_height_mm = np.sqrt(xx**2 + yy**2)
+    field_weights = _raytrace_field_weights(radial_height_mm, field_heights)
+
+    source_spacing = np.asarray(psf_data.get("sample_spacing_mm", np.array([sample_spacing_mm, sample_spacing_mm])), dtype=float)
+    target_spacing = np.array([sample_spacing_mm, sample_spacing_mm], dtype=float)
+    psf_wavelengths = np.asarray(psf_data.get("wavelength_nm", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    result = np.empty_like(cube, dtype=float)
+
+    for band_index, wavelength_nm in enumerate(np.asarray(wave, dtype=float).reshape(-1)):
+        if psf_function.ndim == 4 and psf_wavelengths.size > 0:
+            wave_index = int(np.argmin(np.abs(psf_wavelengths - float(wavelength_nm))))
+            band_psfs = np.asarray(psf_function[:, :, :, wave_index], dtype=float)
+        elif psf_function.ndim == 3:
+            band_psfs = np.asarray(psf_function, dtype=float)
+        else:
+            band_psfs = np.asarray(psf_function[:, :, None], dtype=float)
+
+        plane = np.asarray(cube[:, :, band_index], dtype=float)
+        plane_result = np.zeros((rows, cols), dtype=float)
+        for field_index in range(field_heights.size):
+            weight = np.asarray(field_weights[field_index], dtype=float)
+            if float(np.max(weight)) <= 0.0:
+                continue
+            kernel = _raytrace_resample_psf(
+                band_psfs[:, :, min(field_index, band_psfs.shape[2] - 1)],
+                source_spacing,
+                target_spacing,
+            )
+            plane_result = plane_result + fftconvolve(plane * weight, kernel, mode="same")
+        result[:, :, band_index] = plane_result
+
+    return result
+
+
 def oi_compute(
     oi: OpticalImage,
     scene: Scene,
@@ -705,6 +1065,11 @@ def oi_compute(
         focal_length_m = float(optics["focal_length_m"])
         w_angular = float(np.rad2deg(2.0 * np.arctan((float(pixel_size) * scene_cols / 2.0) / focal_length_m)))
         compute_scene = scene_set(compute_scene, "wAngular", w_angular)
+    if param_format(optics.get("model", "")) == "raytrace":
+        object_distance = float(optics.get("raytrace", {}).get("object_distance_m", compute_scene.fields.get("distance_m", np.inf)))
+        if not np.isclose(float(compute_scene.fields.get("distance_m", np.inf)), object_distance):
+            compute_scene = compute_scene.clone()
+            compute_scene.fields["distance_m"] = object_distance
     scene_photons = np.asarray(compute_scene.data["photons"], dtype=float)
     wave = np.asarray(compute_scene.fields["wave"], dtype=float)
     image_distance_m, width_m, height_m = _oi_geometry(optics, compute_scene)
@@ -718,47 +1083,52 @@ def oi_compute(
         int(np.round(scene_photons.shape[0] / 8.0)),
         int(np.round(scene_photons.shape[1] / 8.0)),
     )
-    padded, blur_mode, blur_cval = _pad_scene(photons, pad_pixels, pad_value)
     model = param_format(optics.get("model", ""))
-    if model == "diffractionlimited":
-        otf = _diffraction_otf(padded.shape[:2], sample_spacing_m, wave, optics, compute_scene)
-        blurred = _apply_otf(padded, otf)
-    elif model == "skip":
-        blurred = padded
-    elif model == "shiftinvariant":
-        psf_stack = _wvf_psf_stack(padded.shape[:2], sample_spacing_m, wave, optics, aperture=aperture)
-        blurred = _apply_psf(padded, psf_stack)
-        if extra_blur > 0.0:
-            blurred = apply_channelwise_gaussian(
-                blurred,
-                np.full(wave.shape, extra_blur, dtype=float),
-                mode=blur_mode,
-                cval=blur_cval,
-            )
+    if model == "raytrace":
+        depth_map = np.asarray(scene_get(compute_scene, "depth map"), dtype=float)
+        result = _raytrace_apply_psf(_raytrace_geometry(photons, wave, optics, compute_scene), wave, optics, sample_spacing_m)
+        pad_pixels = (0, 0)
     else:
-        sigmas = np.array(
-            [
-                gaussian_sigma_pixels(
-                    float(optics["f_number"]),
-                    float(wavelength),
-                    sample_spacing_m,
-                    extra_blur_pixels=extra_blur,
+        padded, blur_mode, blur_cval = _pad_scene(photons, pad_pixels, pad_value)
+        if model == "diffractionlimited":
+            otf = _diffraction_otf(padded.shape[:2], sample_spacing_m, wave, optics, compute_scene)
+            blurred = _apply_otf(padded, otf)
+        elif model == "skip":
+            blurred = padded
+        elif model == "shiftinvariant":
+            psf_stack = _wvf_psf_stack(padded.shape[:2], sample_spacing_m, wave, optics, aperture=aperture)
+            blurred = _apply_psf(padded, psf_stack)
+            if extra_blur > 0.0:
+                blurred = apply_channelwise_gaussian(
+                    blurred,
+                    np.full(wave.shape, extra_blur, dtype=float),
+                    mode=blur_mode,
+                    cval=blur_cval,
                 )
-                for wavelength in wave
-            ],
-            dtype=float,
-        )
-        blurred = apply_channelwise_gaussian(padded, sigmas, mode=blur_mode, cval=blur_cval)
+        else:
+            sigmas = np.array(
+                [
+                    gaussian_sigma_pixels(
+                        float(optics["f_number"]),
+                        float(wavelength),
+                        sample_spacing_m,
+                        extra_blur_pixels=extra_blur,
+                    )
+                    for wavelength in wave
+                ],
+                dtype=float,
+            )
+            blurred = apply_channelwise_gaussian(padded, sigmas, mode=blur_mode, cval=blur_cval)
 
-    pad_rows, pad_cols = pad_pixels
-    depth_map = _pad_depth_map(compute_scene, pad_pixels)
-    if crop and (pad_rows > 0 or pad_cols > 0):
-        row_slice = slice(pad_rows, None if pad_rows == 0 else -pad_rows)
-        col_slice = slice(pad_cols, None if pad_cols == 0 else -pad_cols)
-        result = blurred[row_slice, col_slice, :]
-        depth_map = depth_map[row_slice, col_slice]
-    else:
-        result = blurred
+        pad_rows, pad_cols = pad_pixels
+        depth_map = _pad_depth_map(compute_scene, pad_pixels)
+        if crop and (pad_rows > 0 or pad_cols > 0):
+            row_slice = slice(pad_rows, None if pad_rows == 0 else -pad_rows)
+            col_slice = slice(pad_cols, None if pad_cols == 0 else -pad_cols)
+            result = blurred[row_slice, col_slice, :]
+            depth_map = depth_map[row_slice, col_slice]
+        else:
+            result = blurred
 
     output_sample_spacing_m = float(sample_spacing_m)
     output_width_m = float(result.shape[1] * output_sample_spacing_m)
@@ -1109,6 +1479,24 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         return oi.fields["optics"].get("offaxis_method", "cos4th")
     if key in {"opticswvf"}:
         return oi.fields["optics"].get("wavefront")
+    if key in {"opticsraytrace", "raytrace", "rt"}:
+        return oi.fields["optics"].get("raytrace")
+    if key in {"raytraceopticsname", "psfopticsname"}:
+        raytrace = oi.fields["optics"].get("raytrace", {})
+        return raytrace.get("name", oi.fields["optics"].get("name"))
+    if key in {"rtobjectdistance", "rtobjdist", "rtreferenceobjectdistance"}:
+        return float(oi.fields["optics"].get("raytrace", {}).get("object_distance_m", np.inf))
+    if key in {"rtfov"}:
+        return float(oi.fields["optics"].get("raytrace", {}).get("max_fov_deg", np.inf))
+    if key in {"rtpsffieldheight"}:
+        return np.asarray(oi.fields["optics"].get("raytrace", {}).get("psf", {}).get("field_height_mm", np.empty(0)), dtype=float)
+    if key in {"rtpsfwavelength"}:
+        return np.asarray(oi.fields["optics"].get("raytrace", {}).get("psf", {}).get("wavelength_nm", np.empty(0)), dtype=float)
+    if key in {"rtpsfsamplespacing"}:
+        return np.asarray(
+            oi.fields["optics"].get("raytrace", {}).get("psf", {}).get("sample_spacing_mm", np.empty(0)),
+            dtype=float,
+        )
     if key in {"transmittance", "transmittancescale", "lenstransmittance", "opticstransmittance", "opticstransmittancescale"}:
         target_wave = np.asarray(args[0], dtype=float).reshape(-1) if args else np.asarray(oi.fields["wave"], dtype=float)
         return _optics_transmittance_scale(oi.fields["optics"], target_wave)
@@ -1206,5 +1594,9 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any) -> OpticalImage:
         return oi
     if key == "opticswvf":
         oi.fields["optics"]["wavefront"] = dict(value)
+        return oi
+    if key in {"opticsraytrace", "raytrace", "rt"}:
+        oi.fields["optics"]["raytrace"] = dict(value)
+        oi.fields["optics"]["model"] = "raytrace"
         return oi
     raise KeyError(f"Unsupported oiSet parameter: {parameter}")
