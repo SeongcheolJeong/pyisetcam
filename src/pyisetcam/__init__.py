@@ -9,7 +9,7 @@ from .assets import (
 from .camera import camera_compute, camera_create, camera_get, camera_set
 from .display import display_create, display_get, display_set
 from .fileio import vc_export_object, vc_load_object, vc_save_object
-from .ip import ip_compute, ip_create, ip_get, ip_set
+from .ip import image_data_xyz, ip_compute, ip_create, ip_get, ip_set
 from .metrics import (
     comparison_metrics,
     correlated_color_temperature,
@@ -174,6 +174,8 @@ __all__ = [
     "ieGetObject",
     "ieGetSelectedObject",
     "ieInitSession",
+    "imageDataXYZ",
+    "image_data_xyz",
     "ieMainClose",
     "ieRefreshWindow",
     "ieRect2Locs",
@@ -457,6 +459,7 @@ ipCreate = ip_create
 ipCompute = ip_compute
 ipGet = ip_get
 ipSet = ip_set
+imageDataXYZ = image_data_xyz
 
 cameraCreate = camera_create
 cameraCompute = camera_compute

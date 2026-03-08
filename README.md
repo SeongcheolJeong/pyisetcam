@@ -262,6 +262,11 @@ bounds, XW-style row output, and NaN-filled sensor mosaic planes.
 The adjacent headless ROI conversion helpers are now public too:
 `ieRect2Locs`, `vcRect2Locs`, `ieRoi2Locs`, `ieLocs2Rect`, and
 `ieRect2Vertices`.
+The ROI-driven getter surface is now partially ported too: sensor ROI
+state plus `sensorGet(..., 'roi volts/electrons/dv')`,
+`sensorGet(..., 'roi volts mean')`, `sensorGet(..., 'roi electrons mean')`,
+and `ipGet(..., 'roidata'/'roixyz')`, backed by headless
+`imageDataXYZ`.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

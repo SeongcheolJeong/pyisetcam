@@ -454,12 +454,63 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return sensor.fields["quantization"]
     if key in {"pixelvoltageswing", "voltageswing"}:
         return float(sensor.fields["pixel"]["voltage_swing"])
+    if key in {"roi", "roilocs"}:
+        roi = sensor.fields.get("roi")
+        if roi is None:
+            return None
+        roi_array = np.asarray(roi, dtype=int)
+        if key == "roilocs" and roi_array.ndim == 1 and roi_array.size == 4:
+            from .roi import ie_rect2_locs
+
+            return ie_rect2_locs(roi_array)
+        return roi_array.copy()
+    if key == "roirect":
+        roi = sensor.fields.get("roi")
+        if roi is None:
+            return None
+        roi_array = np.asarray(roi, dtype=int)
+        if roi_array.ndim == 1 and roi_array.size == 4:
+            return roi_array.copy()
+        from .roi import ie_locs2_rect
+
+        return ie_locs2_rect(roi_array)
     if key == "volts":
         return sensor.data.get("volts")
     if key == "dv":
         return sensor.data.get("dv")
     if key == "dvorvolts":
         return sensor.data.get("dv", sensor.data.get("volts"))
+    if key in {"roivolts", "roidata", "roidatav", "roidatavolts"}:
+        roi_locs = sensor_get(sensor, "roi locs")
+        if roi_locs is None:
+            return None
+        from .roi import vc_get_roi_data
+
+        return vc_get_roi_data(sensor, roi_locs, "volts")
+    if key in {"roielectrons", "roidatae", "roidataelectrons"}:
+        roi_locs = sensor_get(sensor, "roi locs")
+        if roi_locs is None:
+            return None
+        from .roi import vc_get_roi_data
+
+        return vc_get_roi_data(sensor, roi_locs, "electrons")
+    if key in {"roidv", "roidigitalcount"}:
+        roi_locs = sensor_get(sensor, "roi locs")
+        if roi_locs is None:
+            return None
+        from .roi import vc_get_roi_data
+
+        return vc_get_roi_data(sensor, roi_locs, "dv")
+    if key == "roivoltsmean":
+        roi_data = sensor_get(sensor, "roi volts")
+        if roi_data is None:
+            return None
+        return np.nanmean(np.asarray(roi_data, dtype=float), axis=0)
+    if key == "roielectronsmean":
+        roi_data = sensor_get(sensor, "roi electrons")
+        if roi_data is None:
+            return None
+        return np.nanmean(np.asarray(roi_data, dtype=float), axis=0)
     if key in {"responseratio", "volts2maxratio"}:
         volts = sensor.data.get("volts")
         if volts is not None:
@@ -520,6 +571,21 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         return sensor
     if key in {"filternames", "filtername"}:
         sensor.fields["filter_names"] = list(value)
+        return sensor
+    if key in {"roi", "roilocs"}:
+        roi = np.asarray(value, dtype=float)
+        if roi.ndim == 1 and roi.size == 4:
+            sensor.fields["roi"] = np.rint(roi).astype(int)
+            return sensor
+        if roi.ndim == 2 and roi.shape[1] == 2:
+            sensor.fields["roi"] = np.rint(roi).astype(int)
+            return sensor
+        raise ValueError("sensor ROI must be a rect or an Nx2 location array.")
+    if key == "roirect":
+        rect = np.rint(np.asarray(value, dtype=float).reshape(-1)).astype(int)
+        if rect.size != 4:
+            raise ValueError("sensor ROI rect must contain [col, row, width, height].")
+        sensor.fields["roi"] = rect
         return sensor
     if key in {"pixelsizesamefillfactor", "pixelsize"}:
         size_value = np.asarray(value, dtype=float)

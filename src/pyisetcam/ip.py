@@ -11,6 +11,7 @@ from .assets import AssetStore
 from .color import internal_to_display_matrix, sensor_to_target_matrix, xyz_color_matching
 from .display import Display, display_create, display_get, display_set
 from .exceptions import UnsupportedOptionError
+from .metrics import xyz_from_energy
 from .session import track_ip_session_state, track_session_object
 from .sensor import sensor_get
 from .types import ImageProcessor, Sensor, SessionContext
@@ -274,6 +275,40 @@ def ip_compute(
     return track_ip_session_state(session, computed)
 
 
+def image_data_xyz(
+    ip: ImageProcessor,
+    roi_locs: Any | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> np.ndarray | None:
+    """Convert display-linear image-processor data to XYZ."""
+
+    ip = _ensure_ip_state(ip)
+    if roi_locs is None:
+        data = ip_get(ip, "result")
+    else:
+        from .roi import vc_get_roi_data
+
+        data = vc_get_roi_data(ip, roi_locs, "result")
+    if data is None:
+        return None
+
+    rgb = np.asarray(data, dtype=float)
+    rgb_flag = rgb.ndim != 2
+    if rgb_flag:
+        rows, cols = rgb.shape[:2]
+        rgb = rgb.reshape(-1, rgb.shape[2])
+
+    spd = np.asarray(display_get(ip.fields["display"], "rgb spd"), dtype=float)
+    wave = np.asarray(display_get(ip.fields["display"], "wave"), dtype=float)
+    energy = rgb @ spd.T
+    xyz = xyz_from_energy(energy, wave, asset_store=_store(asset_store))
+
+    if rgb_flag:
+        xyz = xyz.reshape(rows, cols, 3)
+    return xyz
+
+
 def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
     ip = _ensure_ip_state(ip)
     key = param_format(parameter)
@@ -362,6 +397,14 @@ def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
         return bool(ip.fields["render"].get("scale", True))
     if key in {"data", "datastructure"}:
         return ip.data
+    if key in {"roidata", "dataroi", "roiresult"}:
+        if not args:
+            return None
+        from .roi import vc_get_roi_data
+
+        return vc_get_roi_data(ip, args[0], "result")
+    if key in {"roixyz", "xyzroi"}:
+        return image_data_xyz(ip, args[0] if args else None)
     if key in {"input", "sensorinput", "sensormosaic"}:
         return ip.data.get("input")
     if key in {"sensorspace", "sensorchannels"}:
@@ -535,3 +578,6 @@ def ip_set(
         ip = ip_set(ip, "ics2display transform", _identity_transform(), session=session)
         return track_ip_session_state(session, ip)
     raise KeyError(f"Unsupported ipSet parameter: {parameter}")
+
+
+imageDataXYZ = image_data_xyz

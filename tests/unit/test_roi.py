@@ -7,17 +7,22 @@ from pyisetcam import (
     ieRect2Locs,
     ieRect2Vertices,
     ieRoi2Locs,
+    imageDataXYZ,
     ip_create,
+    ip_get,
     ip_set,
     oi_create,
     oi_set,
     scene_create,
     scene_get,
     sensor_create,
+    sensor_get,
     sensor_set,
     vcGetROIData,
     vcRect2Locs,
+    xyz_from_energy,
 )
+from pyisetcam.display import display_get
 
 
 def test_roi_rect_location_helpers_round_trip() -> None:
@@ -110,3 +115,75 @@ def test_vc_get_roi_data_ip_result_and_input(asset_store) -> None:
     assert np.allclose(result_roi[0], np.array([1.0, 1.1, 1.2], dtype=float))
     assert input_roi.shape == (1, 1)
     assert np.allclose(input_roi[:, 0], np.array([3.0], dtype=float))
+
+
+def test_sensor_get_roi_queries_and_means(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor.fields["pixel"]["conversion_gain_v_per_electron"] = 0.5
+    sensor = sensor_set(sensor, "analog gain", 2.0)
+    sensor = sensor_set(sensor, "analog offset", 1.0)
+    sensor = sensor_set(sensor, "volts", np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float))
+    sensor = sensor_set(sensor, "roi rect", np.array([1, 1, 1, 1], dtype=int))
+
+    roi_locs = sensor_get(sensor, "roi locs")
+    roi_volts = sensor_get(sensor, "roi volts")
+    roi_electrons = sensor_get(sensor, "roi electrons")
+    roi_volts_mean = sensor_get(sensor, "roi volts mean")
+    roi_electrons_mean = sensor_get(sensor, "roi electrons mean")
+
+    assert np.array_equal(roi_locs, np.array([[1, 1], [1, 2], [2, 1], [2, 2]], dtype=int))
+    assert np.array_equal(sensor_get(sensor, "roi rect"), np.array([1, 1, 1, 1], dtype=int))
+    assert np.allclose(
+        roi_volts,
+        np.array(
+            [
+                [np.nan, 1.0, np.nan],
+                [2.0, np.nan, np.nan],
+                [np.nan, np.nan, 3.0],
+                [np.nan, 4.0, np.nan],
+            ],
+            dtype=float,
+        ),
+        equal_nan=True,
+    )
+    assert np.allclose(
+        roi_electrons,
+        np.array(
+            [
+                [np.nan, 2.0, np.nan],
+                [6.0, np.nan, np.nan],
+                [np.nan, np.nan, 10.0],
+                [np.nan, 14.0, np.nan],
+            ],
+            dtype=float,
+        ),
+        equal_nan=True,
+    )
+    assert np.allclose(roi_volts_mean, np.array([2.0, 2.5, 3.0], dtype=float))
+    assert np.allclose(roi_electrons_mean, np.array([6.0, 8.0, 10.0], dtype=float))
+
+
+def test_ip_get_roi_data_and_xyz(asset_store) -> None:
+    ip = ip_create(display="default", asset_store=asset_store)
+    result = np.array(
+        [
+            [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]],
+            [[0.7, 0.8, 0.9], [1.0, 1.1, 1.2]],
+        ],
+        dtype=float,
+    )
+    ip = ip_set(ip, "result", result)
+
+    roi_locs = np.array([[1, 1], [2, 2]], dtype=int)
+    roi_data = ip_get(ip, "roi data", roi_locs)
+    roi_xyz = ip_get(ip, "roi xyz", roi_locs)
+    full_xyz = imageDataXYZ(ip)
+
+    spd = np.asarray(display_get(ip.fields["display"], "rgb spd"), dtype=float)
+    wave = np.asarray(display_get(ip.fields["display"], "wave"), dtype=float)
+    expected_roi_xyz = xyz_from_energy(roi_data @ spd.T, wave, asset_store=asset_store)
+    expected_full_xyz = xyz_from_energy(result.reshape(-1, 3) @ spd.T, wave, asset_store=asset_store).reshape(2, 2, 3)
+
+    assert np.allclose(roi_data, np.array([[0.1, 0.2, 0.3], [1.0, 1.1, 1.2]], dtype=float))
+    assert np.allclose(roi_xyz, expected_roi_xyz)
+    assert np.allclose(full_xyz, expected_full_xyz)
