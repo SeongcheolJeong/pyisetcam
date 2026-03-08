@@ -21,6 +21,18 @@ def _roi_required(function_name: str, plot_type: str, roi_locs: Any | None) -> A
     return roi_locs
 
 
+def _roi_payload(roi_locs: Any) -> dict[str, Any]:
+    from .roi import ie_locs2_rect
+
+    roi = np.asarray(roi_locs, dtype=int)
+    payload: dict[str, Any] = {"roiLocs": roi.copy()}
+    if roi.ndim == 1 and roi.size == 4:
+        payload["rect"] = roi.copy()
+    elif roi.ndim == 2 and roi.shape[1] == 2:
+        payload["rect"] = ie_locs2_rect(roi)
+    return payload
+
+
 def _line_index(function_name: str, plot_type: str, xy: Any | None, orientation: str) -> tuple[int, np.ndarray]:
     if xy is None:
         raise ValueError(f"Line selector required for {function_name}(..., '{plot_type}').")
@@ -49,6 +61,17 @@ def _sensor_plot_line_data(sensor: Sensor, line_key: str, xy: Any) -> dict[str, 
         "pos": [1e6 * np.asarray(values, dtype=float).copy() for values in profile["pos"]],
         "pixPos": [1e6 * np.asarray(values, dtype=float).copy() for values in profile["pixPos"]],
     }
+
+
+def _sensor_plot_histogram(sensor: Sensor, data_type: str, roi_locs: Any) -> dict[str, Any]:
+    from .roi import vc_get_roi_data
+
+    roi = np.asarray(roi_locs, dtype=int)
+    data = np.asarray(vc_get_roi_data(sensor, roi, data_type), dtype=float)
+    payload = _roi_payload(roi)
+    payload["data"] = data
+    payload["unitType"] = data_type
+    return payload
 
 
 def _ip_line_data(ip: ImageProcessor, orientation: str, xy: Any) -> dict[str, Any]:
@@ -97,6 +120,15 @@ def _ip_luminance_line_data(ip: ImageProcessor, orientation: str, xy: Any) -> di
         "pos": np.arange(1, line.shape[0] + 1, dtype=float),
         "data": line.copy(),
     }
+
+
+def _ip_plot_color_data(ip: ImageProcessor, roi_locs: Any) -> tuple[np.ndarray, np.ndarray]:
+    from .roi import vc_get_roi_data
+
+    roi = np.asarray(roi_locs, dtype=int)
+    rgb = np.asarray(vc_get_roi_data(ip, roi, "result"), dtype=float)
+    xyz = np.asarray(ip_get(ip, "roixyz", roi), dtype=float)
+    return rgb, xyz
 
 
 def scene_plot(
@@ -221,6 +253,15 @@ def sensor_plot(
     if key in {"electronshline", "hlineelectrons", "electronsvline", "vlineelectrons", "voltshline", "hlinevolts", "voltsvline", "vlinevolts", "dvhline", "hlinedv", "dvvline", "vlinedv"}:
         xy = _roi_required("plotSensor", p_type, roi_locs)
         return _sensor_plot_line_data(sensor, key, xy), None
+    if key in {"voltshistogram", "voltshist"}:
+        roi = _roi_required("plotSensor", p_type, roi_locs)
+        return _sensor_plot_histogram(sensor, "volts", roi), None
+    if key in {"electronshistogram", "electronshist"}:
+        roi = _roi_required("plotSensor", p_type, roi_locs)
+        return _sensor_plot_histogram(sensor, "electrons", roi), None
+    if key in {"dvhistogram", "dvhist", "digitalcountshistogram", "digitalcountshist"}:
+        roi = _roi_required("plotSensor", p_type, roi_locs)
+        return _sensor_plot_histogram(sensor, "dv", roi), None
     raise UnsupportedOptionError("plotSensor", p_type)
 
 
@@ -250,7 +291,34 @@ def ip_plot(
     if key == "chromaticity":
         roi = _roi_required("ipPlot", p_type, roi_locs)
         data = np.asarray(ip_get(ip, "chromaticity", roi), dtype=float)
-        return {"x": data[:, 0].copy(), "y": data[:, 1].copy(), "roiLocs": np.asarray(roi, dtype=int).copy()}, None
+        xyz = np.asarray(ip_get(ip, "roixyz", roi), dtype=float)
+        payload = _roi_payload(roi)
+        payload["x"] = data[:, 0].copy()
+        payload["y"] = data[:, 1].copy()
+        payload["XYZ"] = xyz.copy()
+        return payload, None
+    if key in {"rgbhistogram", "rgb"}:
+        roi = _roi_required("ipPlot", p_type, roi_locs)
+        rgb, _ = _ip_plot_color_data(ip, roi)
+        payload = _roi_payload(roi)
+        payload["RGB"] = rgb.copy()
+        payload["meanRGB"] = np.mean(rgb, axis=0).reshape(-1)
+        return payload, None
+    if key == "rgb3d":
+        roi = _roi_required("ipPlot", p_type, roi_locs)
+        rgb, _ = _ip_plot_color_data(ip, roi)
+        payload = _roi_payload(roi)
+        payload["RGB"] = rgb.copy()
+        return payload, None
+    if key == "luminance":
+        roi = _roi_required("ipPlot", p_type, roi_locs)
+        _, xyz = _ip_plot_color_data(ip, roi)
+        luminance = np.asarray(xyz[:, 1], dtype=float).reshape(-1)
+        payload = _roi_payload(roi)
+        payload["luminance"] = luminance.copy()
+        payload["meanL"] = float(np.mean(luminance))
+        payload["stdLum"] = float(np.std(luminance))
+        return payload, None
     raise UnsupportedOptionError("ipPlot", p_type)
 
 

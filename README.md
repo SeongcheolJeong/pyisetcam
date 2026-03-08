@@ -300,8 +300,9 @@ getters too. The supported subset returns MATLAB-style `uData` payloads
 and `None` instead of opening figures, which makes the plot APIs usable in
 tests and scripts.
 That same headless wrapper layer now also includes `plotSensor` for
-volts/electrons/dv line plots and `ipPlot` for RGB line, chromaticity,
-and luminance line data.
+volts/electrons/dv line plots and ROI histograms, and `ipPlot` for RGB
+line data, chromaticity, ROI RGB summaries (`rgbhistogram` / `rgb3d`),
+and luminance summaries.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
