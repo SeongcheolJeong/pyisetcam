@@ -60,6 +60,7 @@ from .optics import (
 )
 from .parity import run_python_case, run_python_case_with_context
 from .ptable import IEPTable, ie_p_table
+from .roi import vc_get_roi_data
 from .session import (
     ie_app_get,
     ie_add_object,
@@ -333,6 +334,7 @@ __all__ = [
     "vcEquivalentObjtype",
     "vcExportObject",
     "vcGetObject",
+    "vcGetROIData",
     "vcGetObjectType",
     "vcGetObjectNames",
     "vcGetObjects",
@@ -350,6 +352,7 @@ __all__ = [
     "vcSetObjects",
     "vcSetSelectedObject",
     "vc_export_object",
+    "vc_get_roi_data",
     "vc_load_object",
     "vc_save_object",
     "vc_set_figure_handles",
@@ -456,6 +459,7 @@ vcDeleteSelectedObject = session_delete_selected_object
 vcEquivalentObjtype = vc_equivalent_objtype
 vcExportObject = vc_export_object
 vcGetObject = session_get_object_with_id
+vcGetROIData = vc_get_roi_data
 vcGetObjectType = session_get_object_type
 vcGetObjectNames = session_get_object_names
 vcGetObjects = session_get_objects
