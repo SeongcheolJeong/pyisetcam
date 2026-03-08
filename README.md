@@ -259,6 +259,9 @@ table widget.
 `vcGetROIData` is now ported in a headless form too for scene/OI/sensor/IP
 objects, including MATLAB-style rect-to-location conversion, clipped ROI
 bounds, XW-style row output, and NaN-filled sensor mosaic planes.
+The adjacent headless ROI conversion helpers are now public too:
+`ieRect2Locs`, `vcRect2Locs`, `ieRoi2Locs`, `ieLocs2Rect`, and
+`ieRect2Vertices`.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

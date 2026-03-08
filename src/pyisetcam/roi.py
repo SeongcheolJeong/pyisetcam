@@ -26,6 +26,59 @@ def _rect_to_locs(rect: Any) -> np.ndarray:
     return np.column_stack((rows.reshape(-1), cols.reshape(-1)))
 
 
+def ie_rect2_locs(rect: Any) -> np.ndarray:
+    """Convert an ISET rect `[col, row, width, height]` to ROI locations."""
+
+    return _rect_to_locs(rect)
+
+
+def vc_rect2_locs(rect: Any) -> np.ndarray:
+    """Obsolete MATLAB alias for `ieRect2Locs`."""
+
+    return ie_rect2_locs(rect)
+
+
+def ie_roi2_locs(rect: Any) -> np.ndarray:
+    """Deprecated MATLAB alias for `ieRect2Locs`."""
+
+    return ie_rect2_locs(rect)
+
+
+def ie_locs2_rect(roi_locs: Any) -> np.ndarray:
+    """Convert ROI locations to `[colMin, rowMin, width, height]` rect form."""
+
+    locs = np.asarray(roi_locs, dtype=float)
+    if locs.ndim != 2 or locs.shape[1] != 2:
+        raise ValueError("Expecting roiLocs as Nx2.")
+    rounded = np.rint(locs).astype(int)
+    rect = np.zeros(4, dtype=int)
+    rect[0] = int(np.min(rounded[:, 1]))
+    rect[1] = int(np.min(rounded[:, 0]))
+    rect[2] = int(np.max(rounded[:, 1]) - rect[0])
+    rect[3] = int(np.max(rounded[:, 0]) - rect[1])
+    return rect
+
+
+def ie_rect2_vertices(rect: Any, close_flag: bool = False) -> tuple[np.ndarray, np.ndarray]:
+    """Convert an ISET rect to x/y vertex vectors."""
+
+    rect_array = np.rint(np.asarray(rect, dtype=float).reshape(-1)).astype(int)
+    if rect_array.size != 4:
+        raise ValueError("ROI rect must contain [col, row, width, height].")
+    xv = np.array(
+        [rect_array[0], rect_array[0], rect_array[0] + rect_array[2], rect_array[0] + rect_array[2]],
+        dtype=int,
+    )
+    yv = np.array(
+        [rect_array[1], rect_array[1] + rect_array[3], rect_array[1] + rect_array[3], rect_array[1]],
+        dtype=int,
+    )
+    if close_flag:
+        xv = np.concatenate([xv, xv[:1]])
+        yv = np.concatenate([yv, yv[:1]])
+    return xv, yv
+
+
 def _normalize_roi_locs(roi_locs: Any) -> np.ndarray:
     locs = np.asarray(roi_locs, dtype=float)
     if locs.ndim == 1:
@@ -190,4 +243,9 @@ def vc_get_roi_data(
     raise UnsupportedOptionError("vcGetROIData", getattr(obj, "type", type(obj).__name__))
 
 
+ieRect2Locs = ie_rect2_locs
+vcRect2Locs = vc_rect2_locs
+ieRoi2Locs = ie_roi2_locs
+ieLocs2Rect = ie_locs2_rect
+ieRect2Vertices = ie_rect2_vertices
 vcGetROIData = vc_get_roi_data

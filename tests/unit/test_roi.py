@@ -2,7 +2,41 @@ from __future__ import annotations
 
 import numpy as np
 
-from pyisetcam import ip_create, ip_set, oi_create, oi_set, scene_create, scene_get, sensor_create, sensor_set, vcGetROIData
+from pyisetcam import (
+    ieLocs2Rect,
+    ieRect2Locs,
+    ieRect2Vertices,
+    ieRoi2Locs,
+    ip_create,
+    ip_set,
+    oi_create,
+    oi_set,
+    scene_create,
+    scene_get,
+    sensor_create,
+    sensor_set,
+    vcGetROIData,
+    vcRect2Locs,
+)
+
+
+def test_roi_rect_location_helpers_round_trip() -> None:
+    rect = np.array([4, 2, 5, 7], dtype=int)
+
+    roi_locs = ieRect2Locs(rect)
+
+    assert np.array_equal(roi_locs[0], np.array([2, 4], dtype=int))
+    assert np.array_equal(roi_locs[-1], np.array([9, 9], dtype=int))
+    assert np.array_equal(vcRect2Locs(rect), roi_locs)
+    assert np.array_equal(ieRoi2Locs(rect), roi_locs)
+    assert np.array_equal(ieLocs2Rect(roi_locs), rect)
+
+
+def test_ie_rect2_vertices_supports_closed_polygon() -> None:
+    xv, yv = ieRect2Vertices([3, 5, 2, 4], close_flag=True)
+
+    assert np.array_equal(xv, np.array([3, 3, 5, 5, 3], dtype=int))
+    assert np.array_equal(yv, np.array([5, 9, 9, 5, 5], dtype=int))
 
 
 def test_vc_get_roi_data_scene_rect_returns_xw_illuminant_energy(asset_store) -> None:

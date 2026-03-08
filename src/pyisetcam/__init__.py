@@ -60,7 +60,7 @@ from .optics import (
 )
 from .parity import run_python_case, run_python_case_with_context
 from .ptable import IEPTable, ie_p_table
-from .roi import vc_get_roi_data
+from .roi import ie_locs2_rect, ie_rect2_locs, ie_rect2_vertices, ie_roi2_locs, vc_get_roi_data, vc_rect2_locs
 from .session import (
     ie_app_get,
     ie_add_object,
@@ -168,6 +168,7 @@ __all__ = [
     "ieEquivalentObjtype",
     "ieFieldHeight2Index",
     "ieFindObjectByName",
+    "ieLocs2Rect",
     "ieParameterOtype",
     "iePTable",
     "ieGetObject",
@@ -175,6 +176,9 @@ __all__ = [
     "ieInitSession",
     "ieMainClose",
     "ieRefreshWindow",
+    "ieRect2Locs",
+    "ieRect2Vertices",
+    "ieRoi2Locs",
     "ieReplaceObject",
     "ieSessionGet",
     "ieSessionSet",
@@ -186,6 +190,7 @@ __all__ = [
     "ie_delete_object",
     "ie_equivalent_objtype",
     "ie_find_object_by_name",
+    "ie_locs2_rect",
     "ie_parameter_otype",
     "ie_p_table",
     "ie_field_height_to_index",
@@ -194,6 +199,9 @@ __all__ = [
     "ie_init_session",
     "ie_main_close",
     "ie_refresh_window",
+    "ie_rect2_locs",
+    "ie_rect2_vertices",
+    "ie_roi2_locs",
     "ie_replace_object",
     "ie_session_get",
     "ie_session_set",
@@ -354,6 +362,7 @@ __all__ = [
     "vc_export_object",
     "vc_get_roi_data",
     "vc_load_object",
+    "vc_rect2_locs",
     "vc_save_object",
     "vc_set_figure_handles",
     "wvf_create",
@@ -426,6 +435,7 @@ ieAppGet = ie_app_get
 ieDeleteObject = ie_delete_object
 ieEquivalentObjtype = ie_equivalent_objtype
 ieFindObjectByName = ie_find_object_by_name
+ieLocs2Rect = ie_locs2_rect
 ieParameterOtype = ie_parameter_otype
 iePTable = ie_p_table
 ieGetObject = ie_get_object
@@ -433,6 +443,9 @@ ieGetSelectedObject = ie_get_selected_object
 ieInitSession = ie_init_session
 ieMainClose = ie_main_close
 ieRefreshWindow = ie_refresh_window
+ieRect2Locs = ie_rect2_locs
+ieRect2Vertices = ie_rect2_vertices
+ieRoi2Locs = ie_roi2_locs
 ieReplaceObject = ie_replace_object
 ieSessionGet = ie_session_get
 ieSessionSet = ie_session_set
@@ -468,6 +481,7 @@ vcGetSelectedObjectID = session_get_selected_id
 vcGetFigure = vc_get_figure
 vcNewObjectName = session_new_object_name
 vcNewObjectValue = session_new_object_value
+vcRect2Locs = vc_rect2_locs
 vcReplaceAndSelectObject = session_replace_and_select_object
 vcReplaceObject = session_replace_object
 vcLoadObject = vc_load_object
