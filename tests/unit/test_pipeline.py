@@ -20,8 +20,11 @@ from pyisetcam import (
     oi_set,
     rt_angle_lut,
     rt_di_interp,
+    rt_geometry,
     rt_psf_grid,
     rt_psf_interp,
+    rt_precompute_psf,
+    rt_precompute_psf_apply,
     rt_ri_interp,
     rt_sample_heights,
     run_python_case,
@@ -936,6 +939,46 @@ def test_rt_angle_lut_returns_matlab_style_indices(asset_store) -> None:
     assert np.all(angle_lut[:, 0] <= len(oi_get(oi, "psf sample angles")) - 1)
     assert np.all(angle_lut[:, 1] >= 0.0)
     assert np.all(angle_lut[:, 1] <= 1.0)
+
+
+def test_rt_geometry_returns_uncropped_raytrace_stage(asset_store) -> None:
+    scene = scene_create("uniform ee", 32, np.array([550.0], dtype=float), asset_store=asset_store)
+    stage = rt_geometry(oi_create("ray trace", asset_store=asset_store), scene)
+
+    assert stage.data["photons"].shape == scene.data["photons"].shape
+    assert np.allclose(oi_get(stage, "depth map"), 2.0)
+    assert oi_get(stage, "padding pixels") == (0, 0)
+    assert np.allclose(
+        oi_get(stage, "samplespacing"),
+        np.array([oi_get(stage, "hspatialresolution"), oi_get(stage, "wspatialresolution")], dtype=float),
+    )
+
+
+def test_rt_precompute_psf_returns_matlab_style_struct(asset_store) -> None:
+    scene = scene_create("uniform ee", 32, np.array([550.0], dtype=float), asset_store=asset_store)
+    stage = rt_geometry(oi_set(oi_create("ray trace", asset_store=asset_store), "psf angle step", 30.0), scene)
+    psf_struct = rt_precompute_psf(stage)
+
+    assert isinstance(psf_struct, dict)
+    assert "psf" in psf_struct
+    assert "sampAngles" in psf_struct
+    assert "imgHeight" in psf_struct
+    assert "wavelength" in psf_struct
+    assert np.asarray(psf_struct["psf"], dtype=object).dtype == object
+    assert np.array_equal(psf_struct["wavelength"], np.array([550.0]))
+
+
+def test_rt_precompute_psf_apply_matches_oi_compute_uncropped(asset_store) -> None:
+    scene = scene_create("uniform ee", 32, np.array([550.0], dtype=float), asset_store=asset_store)
+    baseline = oi_compute(oi_create("ray trace", asset_store=asset_store), scene, crop=False)
+    stage = rt_geometry(oi_create("ray trace", asset_store=asset_store), scene)
+    stage = oi_set(stage, "psf struct", rt_precompute_psf(stage))
+    applied = rt_precompute_psf_apply(stage)
+
+    assert applied.data["photons"].shape == baseline.data["photons"].shape
+    assert applied.fields["padding_pixels"] == baseline.fields["padding_pixels"]
+    assert np.allclose(applied.data["photons"], baseline.data["photons"])
+    assert np.allclose(oi_get(applied, "depth map"), oi_get(baseline, "depth map"))
 
 
 def test_wvf_path_preserves_more_checkerboard_contrast_than_diffraction(asset_store) -> None:

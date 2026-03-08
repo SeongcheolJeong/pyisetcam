@@ -32,8 +32,11 @@ from .optics import (
     oi_set,
     rt_angle_lut,
     rt_di_interp,
+    rt_geometry,
     rt_psf_grid,
     rt_psf_interp,
+    rt_precompute_psf,
+    rt_precompute_psf_apply,
     rt_ri_interp,
     rt_sample_heights,
     wvf_create,
@@ -120,13 +123,19 @@ __all__ = [
     "root_mean_squared_error",
     "rtDIInterp",
     "rtAngleLUT",
+    "rtGeometry",
     "rtRIInterp",
     "rtPSFGrid",
+    "rtPrecomputePSF",
+    "rtPrecomputePSFApply",
     "rt_di_interp",
     "rt_angle_lut",
+    "rt_geometry",
     "rt_psf_grid",
     "rtPSFInterp",
     "rt_psf_interp",
+    "rt_precompute_psf",
+    "rt_precompute_psf_apply",
     "rtSampleHeights",
     "rt_ri_interp",
     "rt_sample_heights",
@@ -187,8 +196,11 @@ oiGet = oi_get
 oiSet = oi_set
 rtAngleLUT = rt_angle_lut
 rtDIInterp = rt_di_interp
+rtGeometry = rt_geometry
 rtPSFGrid = rt_psf_grid
 rtPSFInterp = rt_psf_interp
+rtPrecomputePSF = rt_precompute_psf
+rtPrecomputePSFApply = rt_precompute_psf_apply
 rtRIInterp = rt_ri_interp
 rtSampleHeights = rt_sample_heights
 

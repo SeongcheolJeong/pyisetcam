@@ -130,7 +130,10 @@ raw ray-trace PSFs by field height, angle, and wavelength. The upstream
 `rtDIInterp` and `rt_ri_interp` / `rtRIInterp`, and the ray-trace geometry
 path now routes through those helper ports. The MATLAB helper surface now
 also includes `rt_sample_heights` / `rtSampleHeights`, `rt_psf_grid` /
-`rtPSFGrid`, and `rt_angle_lut` / `rtAngleLUT`.
+`rtPSFGrid`, and `rt_angle_lut` / `rtAngleLUT`. The staged ray-trace
+pipeline is now partially exposed as well through `rt_geometry` /
+`rtGeometry`, `rt_precompute_psf` / `rtPrecomputePSF`, and
+`rt_precompute_psf_apply` / `rtPrecomputePSFApply`.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

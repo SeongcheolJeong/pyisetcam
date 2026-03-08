@@ -1252,6 +1252,149 @@ def rt_angle_lut(psf_struct: dict[str, Any] | OpticalImage) -> np.ndarray:
     return np.column_stack((lower_index + 1, weight))
 
 
+def _prepare_raytrace_scene(oi: OpticalImage, scene: Scene) -> tuple[dict[str, Any], Scene]:
+    optics = _coerce_optics_for_raytrace(oi)
+    object_distance = float(optics.get("raytrace", {}).get("object_distance_m", scene.fields.get("distance_m", np.inf)))
+    if np.isclose(float(scene.fields.get("distance_m", np.inf)), object_distance):
+        return optics, scene
+    compute_scene = scene.clone()
+    compute_scene.fields["distance_m"] = object_distance
+    return optics, compute_scene
+
+
+def rt_geometry(
+    oi: OpticalImage,
+    scene: Scene,
+    p_num: int = 8,
+) -> OpticalImage:
+    optics, compute_scene = _prepare_raytrace_scene(oi, scene)
+    scene_photons = np.asarray(compute_scene.data["photons"], dtype=float)
+    wave = np.asarray(compute_scene.fields["wave"], dtype=float)
+    image_distance_m, width_m, height_m = _oi_geometry(optics, compute_scene)
+    sample_spacing_m = width_m / max(scene_photons.shape[1], 1)
+    photons = _radiance_to_irradiance(scene_photons, optics, compute_scene)
+    result = _raytrace_geometry(photons, wave, optics, compute_scene)
+
+    computed = oi.clone()
+    computed.name = compute_scene.name
+    computed.fields["wave"] = wave
+    computed.fields["compute_method"] = optics.get("compute_method", computed.fields.get("compute_method", ""))
+    computed.fields["padding_pixels"] = (0, 0)
+    computed.fields["sample_spacing_m"] = float(sample_spacing_m)
+    computed.fields["image_distance_m"] = float(image_distance_m)
+    computed.fields["depth_map_m"] = np.asarray(scene_get(compute_scene, "depth map"), dtype=float).copy()
+    computed.fields["width_m"] = float(width_m)
+    computed.fields["height_m"] = float(height_m)
+    computed.fields["fov_deg"] = float(compute_scene.fields.get("fov_deg", 10.0))
+    computed.fields["vfov_deg"] = float(compute_scene.fields.get("vfov_deg", computed.fields["fov_deg"]))
+    computed.data["photons"] = result
+    return computed
+
+
+def rt_precompute_psf(
+    oi: OpticalImage,
+    angle_step_deg: float | None = None,
+) -> dict[str, Any]:
+    optics = _coerce_optics_for_raytrace(oi)
+    photons = np.asarray(oi.data.get("photons", np.empty((0, 0, 0), dtype=float)), dtype=float)
+    if photons.ndim != 3 or photons.size == 0:
+        raise ValueError("Ray-trace precompute requires an optical image with photons.")
+    sample_spacing_m = _oi_sample_size_m(oi)
+    if sample_spacing_m is None:
+        raise ValueError("Ray-trace precompute requires optical image sample spacing.")
+    wave = np.asarray(oi.fields.get("wave", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    if wave.size == 0:
+        raise ValueError("Ray-trace precompute requires optical image wavelengths.")
+    if angle_step_deg is None:
+        angle_step_deg = float(oi.fields.get("psf_angle_step_deg", DEFAULT_RAYTRACE_ANGLE_STEP_DEG))
+    sample_angles_deg = _raytrace_requested_sample_angles(float(angle_step_deg), oi.fields.get("psf_sample_angles_deg"))
+    psf_struct = _raytrace_precompute_psf(
+        optics,
+        wave,
+        int(photons.shape[0]),
+        int(photons.shape[1]),
+        float(sample_spacing_m),
+        sample_angles_deg=sample_angles_deg,
+    )
+    return _export_psf_struct(psf_struct)
+
+
+def rt_precompute_psf_apply(
+    oi: OpticalImage,
+    angle_step_deg: float | None = None,
+) -> OpticalImage:
+    optics = _coerce_optics_for_raytrace(oi)
+    photons = np.asarray(oi.data.get("photons", np.empty((0, 0, 0), dtype=float)), dtype=float)
+    if photons.ndim != 3 or photons.size == 0:
+        raise ValueError("Ray-trace PSF application requires an optical image with photons.")
+    sample_spacing_m = _oi_sample_size_m(oi)
+    if sample_spacing_m is None:
+        raise ValueError("Ray-trace PSF application requires optical image sample spacing.")
+    wave = np.asarray(oi.fields.get("wave", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    if wave.size == 0:
+        raise ValueError("Ray-trace PSF application requires optical image wavelengths.")
+    if angle_step_deg is None:
+        angle_step_deg = float(oi.fields.get("psf_angle_step_deg", DEFAULT_RAYTRACE_ANGLE_STEP_DEG))
+    sample_angles_deg = _raytrace_requested_sample_angles(float(angle_step_deg), oi.fields.get("psf_sample_angles_deg"))
+    psf_struct = _raytrace_finalize_psf_struct(
+        oi.fields.get("psf_struct"),
+        optics,
+        wave,
+        int(photons.shape[0]),
+        int(photons.shape[1]),
+        float(sample_spacing_m),
+        sample_angles_deg,
+    )
+    if not _raytrace_psf_struct_matches(
+        psf_struct,
+        optics,
+        wave,
+        int(photons.shape[0]),
+        int(photons.shape[1]),
+        float(sample_spacing_m),
+        sample_angles_deg,
+    ):
+        psf_struct = _raytrace_precompute_psf(
+            optics,
+            wave,
+            int(photons.shape[0]),
+            int(photons.shape[1]),
+            float(sample_spacing_m),
+            sample_angles_deg=sample_angles_deg,
+        )
+    assert psf_struct is not None
+
+    pad_pixels = _raytrace_padding_pixels(psf_struct)
+    result = _raytrace_apply_psf(photons, psf_struct, float(sample_spacing_m), pad_pixels=pad_pixels)
+    image_distance_m = _oi_image_distance_m(oi)
+    output_width_m = float(result.shape[1] * float(sample_spacing_m))
+    output_height_m = float(result.shape[0] * float(sample_spacing_m))
+    output_fov_deg = float(np.rad2deg(2.0 * np.arctan2(output_width_m / 2.0, image_distance_m)))
+    output_vfov_deg = float(np.rad2deg(2.0 * np.arctan2(output_height_m / 2.0, image_distance_m)))
+
+    computed = oi.clone()
+    computed.fields["padding_pixels"] = pad_pixels
+    computed.fields["sample_spacing_m"] = float(sample_spacing_m)
+    computed.fields["image_distance_m"] = float(image_distance_m)
+    computed.fields["width_m"] = output_width_m
+    computed.fields["height_m"] = output_height_m
+    computed.fields["fov_deg"] = output_fov_deg
+    computed.fields["vfov_deg"] = output_vfov_deg
+    computed.fields["psf_angle_step_deg"] = float(angle_step_deg)
+    computed.fields["psf_struct"] = psf_struct
+    depth_map = oi.fields.get("depth_map_m")
+    if depth_map is not None:
+        computed.fields["depth_map_m"] = np.pad(
+            np.asarray(depth_map, dtype=float),
+            ((pad_pixels[0], pad_pixels[0]), (pad_pixels[1], pad_pixels[1])),
+            mode="constant",
+            constant_values=0.0,
+        )
+    _sync_psf_metadata_fields(computed)
+    computed.data["photons"] = result
+    return computed
+
+
 def _raytrace_geometry(cube: np.ndarray, wave: np.ndarray, optics: dict[str, Any], scene: Scene) -> np.ndarray:
     raytrace = dict(optics.get("raytrace", {}))
     max_fov = float(raytrace.get("max_fov_deg", np.inf))
