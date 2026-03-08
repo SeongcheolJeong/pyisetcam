@@ -405,9 +405,10 @@ def _load_raytrace_optics(source: Any, *, asset_store: AssetStore) -> dict[str, 
     path = Path(source)
     if path.is_dir():
         try:
-            imported, _ = rt_import_data(p_file_full=path)
+            params_path = _resolve_isetparams_path(path)
         except ValueError as error:
             raise UnsupportedOptionError("oiCreate", f"ray trace optics {source}") from error
+        imported, _ = rt_import_data(p_file_full=params_path)
         return imported
     if path.is_absolute() or path.exists():
         if path.suffix.lower() == ".txt":

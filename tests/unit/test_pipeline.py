@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 import pyisetcam.optics as optics_module
 
+from pyisetcam.exceptions import UnsupportedOptionError
 from pyisetcam.parity import run_python_case_with_context
 from pyisetcam import (
     camera_compute,
@@ -1437,6 +1438,18 @@ def test_oi_create_raytrace_accepts_legacy_isetparms_directory(tmp_path, asset_s
 
     assert oi.fields["optics"]["model"] == "raytrace"
     assert oi_get(oi, "raytraceopticsname") == "CookeLens"
+
+
+def test_oi_create_raytrace_directory_without_bundle_stays_unsupported(tmp_path, asset_store) -> None:
+    with pytest.raises(UnsupportedOptionError, match="ray trace optics"):
+        oi_create("ray trace", tmp_path, asset_store=asset_store)
+
+
+def test_oi_create_raytrace_directory_surfaces_malformed_bundle_errors(tmp_path, asset_store) -> None:
+    (tmp_path / "ISETPARAMS.txt").write_text("lensFile='CookeLens.ZMX';\n", encoding="latin1")
+
+    with pytest.raises(ValueError, match="Missing Zemax parameter"):
+        oi_create("ray trace", tmp_path, asset_store=asset_store)
 
 
 def test_rt_psf_grid_matches_oi_sample_spacing(asset_store) -> None:

@@ -177,7 +177,9 @@ bundles now also carry `psfSpacing` through to the ray-trace computation
 metadata, so `rtcomputespacing` is populated on imported optics, and an
 existing computation spacing is preserved when a bundle omits that field.
 Imported ray-trace optics now also retain the requested `rtProgram`
-label instead of forcing the lower-case default.
+label instead of forcing the lower-case default. Directory-based bundle
+loading now also preserves real import failures for malformed Zemax
+bundles instead of collapsing them into an unsupported-option error.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
