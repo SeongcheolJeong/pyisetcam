@@ -125,7 +125,10 @@ cache now also exports as MATLAB-style `psfStruct` / `sampledRTpsf`, and
 plain `rtpsfsize` now tracks the precomputed PSF kernel size separately
 from raw `optics rtpsfsize`. The upstream `rtPSFInterp` helper is also
 ported now as `rt_psf_interp` / `rtPSFInterp` for direct interpolation of
-raw ray-trace PSFs by field height, angle, and wavelength.
+raw ray-trace PSFs by field height, angle, and wavelength. The upstream
+`rtDIInterp` / `rtRIInterp` helpers are also ported as `rt_di_interp` /
+`rtDIInterp` and `rt_ri_interp` / `rtRIInterp`, and the ray-trace geometry
+path now routes through those helper ports.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

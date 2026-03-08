@@ -1182,6 +1182,22 @@ def rt_psf_interp(
     return map_coordinates(psf, [row_coords, col_coords], order=1, mode="constant", cval=0.0, prefilter=False)
 
 
+def rt_di_interp(
+    optics_or_oi: OpticalImage | dict[str, Any],
+    wavelength_nm: float,
+) -> np.ndarray:
+    optics = _coerce_optics_for_raytrace(optics_or_oi)
+    return _raytrace_curve(dict(optics.get("raytrace", {}).get("geometry", {})), float(wavelength_nm))
+
+
+def rt_ri_interp(
+    optics_or_oi: OpticalImage | dict[str, Any],
+    wavelength_nm: float,
+) -> np.ndarray:
+    optics = _coerce_optics_for_raytrace(optics_or_oi)
+    return _raytrace_curve(dict(optics.get("raytrace", {}).get("relative_illumination", {})), float(wavelength_nm))
+
+
 def _raytrace_geometry(cube: np.ndarray, wave: np.ndarray, optics: dict[str, Any], scene: Scene) -> np.ndarray:
     raytrace = dict(optics.get("raytrace", {}))
     max_fov = float(raytrace.get("max_fov_deg", np.inf))
@@ -1210,8 +1226,8 @@ def _raytrace_geometry(cube: np.ndarray, wave: np.ndarray, optics: dict[str, Any
     degree = min(8, max(field_heights.size - 2, 0))
     result = np.empty_like(cube, dtype=float)
     for band_index, wavelength_nm in enumerate(np.asarray(wave, dtype=float).reshape(-1)):
-        distorted_height = _raytrace_curve(raytrace["geometry"], float(wavelength_nm))
-        relative_illumination = _raytrace_curve(raytrace["relative_illumination"], float(wavelength_nm))
+        distorted_height = rt_di_interp(optics, float(wavelength_nm))
+        relative_illumination = rt_ri_interp(optics, float(wavelength_nm))
         if distorted_height.size != field_heights.size or relative_illumination.size != field_heights.size:
             result[:, :, band_index] = cube[:, :, band_index]
             continue

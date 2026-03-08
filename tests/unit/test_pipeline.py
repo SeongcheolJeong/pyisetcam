@@ -18,7 +18,9 @@ from pyisetcam import (
     oi_create,
     oi_get,
     oi_set,
+    rt_di_interp,
     rt_psf_interp,
+    rt_ri_interp,
     run_python_case,
     scene_create,
     scene_get,
@@ -838,6 +840,60 @@ def test_rt_psf_interp_resamples_to_requested_grid() -> None:
     assert resampled.shape == x_grid.shape
     assert np.isclose(resampled[0, 0], kernel[1, 1])
     assert np.isclose(resampled[1, 1], kernel[2, 2])
+
+
+def test_rt_di_interp_and_rt_ri_interp_use_nearest_wavelength() -> None:
+    oi = oi_create("ray trace")
+    oi = oi_set(
+        oi,
+        "rtgeometry",
+        {
+            "fieldHeight": np.array([0.0, 1.0], dtype=float),
+            "wavelength": np.array([500.0, 600.0], dtype=float),
+            "function": np.array([[1.0, 10.0], [2.0, 20.0]], dtype=float),
+        },
+    )
+    oi = oi_set(
+        oi,
+        "rtrelillum",
+        {
+            "fieldHeight": np.array([0.0, 1.0], dtype=float),
+            "wavelength": np.array([500.0, 600.0], dtype=float),
+            "function": np.array([[0.5, 0.9], [0.25, 0.8]], dtype=float),
+        },
+    )
+
+    assert np.array_equal(rt_di_interp(oi, 540.0), np.array([1.0, 2.0]))
+    assert np.array_equal(rt_di_interp(oi.fields["optics"], 580.0), np.array([10.0, 20.0]))
+    assert np.array_equal(rt_ri_interp(oi, 520.0), np.array([0.5, 0.25]))
+    assert np.array_equal(rt_ri_interp(oi.fields["optics"], 590.0), np.array([0.9, 0.8]))
+
+
+def test_oi_compute_raytrace_uses_raw_curve_helpers(asset_store, monkeypatch) -> None:
+    scene = scene_create("uniform ee", 32, np.array([550.0], dtype=float), asset_store=asset_store)
+    oi = oi_create("ray trace", asset_store=asset_store)
+
+    di_calls: list[float] = []
+    ri_calls: list[float] = []
+    original_di = optics_module.rt_di_interp
+    original_ri = optics_module.rt_ri_interp
+
+    def record_di(optics: object, wavelength_nm: float) -> np.ndarray:
+        di_calls.append(float(wavelength_nm))
+        return original_di(optics, wavelength_nm)
+
+    def record_ri(optics: object, wavelength_nm: float) -> np.ndarray:
+        ri_calls.append(float(wavelength_nm))
+        return original_ri(optics, wavelength_nm)
+
+    monkeypatch.setattr(optics_module, "rt_di_interp", record_di)
+    monkeypatch.setattr(optics_module, "rt_ri_interp", record_ri)
+
+    result = oi_compute(oi, scene, crop=True)
+
+    assert result.data["photons"].shape[:2] == scene.data["photons"].shape[:2]
+    assert di_calls == [550.0]
+    assert ri_calls == [550.0]
 
 
 def test_wvf_path_preserves_more_checkerboard_contrast_than_diffraction(asset_store) -> None:
