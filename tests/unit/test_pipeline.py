@@ -60,12 +60,13 @@ def _write_mock_zemax_bundle(
     *,
     lens_file: str = "CookeLens.ZMX",
     base_lens_file_name: str = "CookeLens",
+    wave_assignment: str = "500:100:600",
 ):
     params_file = tmp_path / "ISETPARAMS.txt"
     params_file.write_text(
         f"lensFile='{lens_file}';\n"
         "psfSize=2;\n"
-        "wave=500:100:600;\n"
+        f"wave={wave_assignment};\n"
         "imgHeightNum=2;\n"
         "imgHeightMax=1.0;\n"
         "objDist=250.0;\n"
@@ -1241,6 +1242,32 @@ def test_rt_import_data_normalizes_windows_style_base_lens_paths(tmp_path) -> No
     assert optics_file is None
     assert imported_optics["raytrace"]["lens_file"] == r"C:\PROGRAM FILES\ZEMAX\LENSES\CookeLens.ZMX"
     assert imported_optics["raytrace"]["geometry"]["function"].shape == (2, 2)
+    assert imported_optics["raytrace"]["psf"]["function"].shape == (2, 2, 2, 2)
+
+
+def test_rt_import_data_parses_multiline_wave_vector_with_continuation(tmp_path) -> None:
+    params_file = _write_mock_zemax_bundle(
+        tmp_path,
+        wave_assignment="[500 ...\n 600]",
+    )
+
+    imported_optics, optics_file = rt_import_data(p_file_full=params_file)
+
+    assert optics_file is None
+    assert np.array_equal(imported_optics["raytrace"]["geometry"]["wavelength_nm"], np.array([500.0, 600.0]))
+    assert np.array_equal(imported_optics["raytrace"]["psf"]["wavelength_nm"], np.array([500.0, 600.0]))
+
+
+def test_rt_import_data_parses_column_vector_wave_syntax(tmp_path) -> None:
+    params_file = _write_mock_zemax_bundle(
+        tmp_path,
+        wave_assignment="[500; 600]",
+    )
+
+    imported_optics, optics_file = rt_import_data(p_file_full=params_file)
+
+    assert optics_file is None
+    assert np.array_equal(imported_optics["raytrace"]["relative_illumination"]["wavelength_nm"], np.array([500.0, 600.0]))
     assert imported_optics["raytrace"]["psf"]["function"].shape == (2, 2, 2, 2)
 
 

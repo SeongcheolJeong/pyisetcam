@@ -161,7 +161,9 @@ The initial Zemax text-import surface is now ported too through
 bundle format is now accepted directly by `oi_create('ray trace', ...)`
 too, either as the `ISETPARAMS.txt` file itself or as a containing
 directory, and the importer now normalizes Windows-style `lensFile` /
-`baseLensFileName` paths the way the upstream MATLAB path does.
+`baseLensFileName` paths the way the upstream MATLAB path does. The
+parameter parser now also accepts multiline MATLAB vector syntax,
+including `...` continuations and bracketed row/column wavelength lists.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

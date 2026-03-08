@@ -455,7 +455,11 @@ def _parse_matlab_value(text: str) -> Any:
         body = value[1:-1].strip()
         if ":" in body and "," not in body and ";" not in body:
             return _parse_matlab_range(body)
-        array = np.fromstring(body.replace(",", " "), sep=" ", dtype=float)
+        array = np.fromstring(
+            body.replace(",", " ").replace(";", " ").replace("\n", " ").replace("\t", " "),
+            sep=" ",
+            dtype=float,
+        )
         if array.size == 1:
             return float(array[0])
         return array
@@ -471,15 +475,72 @@ def _read_isetparams(path: str | Path) -> dict[str, Any]:
     ascii_text = Path(path).read_bytes().decode("latin1", errors="ignore")
     ascii_text = "".join(ch for ch in ascii_text if 0 < ord(ch) < 128)
     params: dict[str, Any] = {}
-    for line in ascii_text.splitlines():
-        body = line.split("%", 1)[0].strip()
-        if not body:
-            continue
-        match = re.match(r"([A-Za-z_]\w*)\s*=\s*(.+?)\s*;?$", body)
+    for statement in _iter_matlab_assignments(ascii_text):
+        match = re.match(r"([A-Za-z_]\w*)\s*=\s*(.+?)\s*;?$", statement, flags=re.S)
         if match is None:
             continue
         params[match.group(1)] = _parse_matlab_value(match.group(2))
     return params
+
+
+def _strip_matlab_comment(line: str) -> str:
+    in_string = False
+    result: list[str] = []
+    index = 0
+    while index < len(line):
+        char = line[index]
+        if char == "'":
+            result.append(char)
+            if in_string and index + 1 < len(line) and line[index + 1] == "'":
+                result.append("'")
+                index += 2
+                continue
+            in_string = not in_string
+            index += 1
+            continue
+        if char == "%" and not in_string:
+            break
+        result.append(char)
+        index += 1
+    return "".join(result)
+
+
+def _iter_matlab_assignments(text: str) -> list[str]:
+    statements: list[str] = []
+    current: list[str] = []
+    bracket_depth = 0
+    in_string = False
+
+    for raw_line in text.splitlines():
+        line = _strip_matlab_comment(raw_line).rstrip()
+        if not line:
+            continue
+        continued = line.endswith("...")
+        if continued:
+            line = line[:-3].rstrip()
+        current.append(line)
+        if continued:
+            current.append(" ")
+            continue
+
+        for char in line:
+            if char == "'":
+                in_string = not in_string
+            elif not in_string:
+                if char == "[":
+                    bracket_depth += 1
+                elif char == "]":
+                    bracket_depth = max(0, bracket_depth - 1)
+
+        joined = "".join(current).strip()
+        if joined and bracket_depth == 0 and not in_string and joined.endswith(";"):
+            statements.append(joined)
+            current = []
+
+    tail = "".join(current).strip()
+    if tail:
+        statements.append(tail)
+    return statements
 
 
 def _raytrace_lens_basename(lens_file: str | Path) -> str:
