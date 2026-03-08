@@ -1207,6 +1207,103 @@ def rt_sample_heights(all_heights: np.ndarray, data_height: np.ndarray) -> tuple
     return img_height, max_data_height
 
 
+def rt_block_center(r_block: int, c_block: int, block_samples: np.ndarray) -> np.ndarray:
+    samples = np.asarray(block_samples, dtype=float).reshape(-1)
+    if samples.size != 2:
+        raise ValueError("block_samples must contain row and column counts.")
+    return np.array(
+        [
+            samples[0] * (float(r_block) - 0.5),
+            samples[1] * (float(c_block) - 0.5),
+        ],
+        dtype=float,
+    )
+
+
+def rt_extract_block(
+    irrad_pad: np.ndarray,
+    block_samples: np.ndarray,
+    r_block: int,
+    c_block: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    data = np.asarray(irrad_pad, dtype=float)
+    samples = np.asarray(block_samples, dtype=int).reshape(-1)
+    if data.ndim != 2:
+        raise ValueError("rtExtractBlock expects a 2D irradiance plane.")
+    if samples.size != 2:
+        raise ValueError("block_samples must contain row and column counts.")
+
+    r_start = (int(r_block) - 1) * int(samples[0])
+    c_start = (int(c_block) - 1) * int(samples[1])
+    r_end = int(r_block) * int(samples[0])
+    c_end = int(c_block) * int(samples[1])
+    if r_end > data.shape[0] or c_end > data.shape[1]:
+        raise ValueError("Block outside of data range")
+
+    r_list = np.arange(r_start + 1, r_end + 1, dtype=int)
+    c_list = np.arange(c_start + 1, c_end + 1, dtype=int)
+    block_data = data[r_start:r_end, c_start:c_end]
+    return block_data, r_list, c_list
+
+
+def rt_insert_block(
+    img: np.ndarray,
+    filtered_data: np.ndarray,
+    block_samples: np.ndarray,
+    block_padding: np.ndarray,
+    r_block: int,
+    c_block: int,
+) -> np.ndarray:
+    del block_padding
+    image = np.asarray(img, dtype=float).copy()
+    data = np.asarray(filtered_data, dtype=float)
+    samples = np.asarray(block_samples, dtype=int).reshape(-1)
+    if image.ndim != 2 or data.ndim != 2:
+        raise ValueError("rtInsertBlock expects 2D image data.")
+    if samples.size != 2:
+        raise ValueError("block_samples must contain row and column counts.")
+
+    if int(r_block) == 1:
+        r_start = 0
+    else:
+        r_start = (int(r_block) - 1) * int(samples[0])
+    if int(c_block) == 1:
+        c_start = 0
+    else:
+        c_start = (int(c_block) - 1) * int(samples[1])
+
+    r_end = r_start + data.shape[0]
+    c_end = c_start + data.shape[1]
+    if r_end > image.shape[0] or c_end > image.shape[1]:
+        raise ValueError("Filtered block outside of image range")
+    image[r_start:r_end, c_start:c_end] = image[r_start:r_end, c_start:c_end] + data
+    return image
+
+
+def rt_choose_block_size(
+    scene: Scene,
+    oi: OpticalImage,
+    optics: OpticalImage | dict[str, Any] | None = None,
+    steps_fh: int = 4,
+) -> tuple[int, np.ndarray, np.ndarray]:
+    current_optics = _coerce_optics_for_raytrace(oi if optics is None else optics)
+    rows = int(scene.fields.get("rows", np.asarray(scene.data.get("photons", np.empty((0, 0, 0)))).shape[0]))
+    cols = int(scene.fields.get("cols", np.asarray(scene.data.get("photons", np.empty((0, 0, 0)))).shape[1]))
+
+    diagonal_mm = (float(oi_get(oi, "diagonal")) * 1e3) / 2.0
+    field_heights = np.asarray(current_optics.get("raytrace", {}).get("geometry", {}).get("field_height_mm", np.empty(0)), dtype=float)
+    if field_heights.size == 0:
+        raise ValueError("Ray-trace geometry field heights are required.")
+    n_heights = int(np.argmin(np.abs(field_heights - diagonal_mm))) + 1
+    n_blocks = int(steps_fh) * n_heights + 1
+
+    row_samples = max(1, int(2 ** np.ceil(np.log2(max(rows / max(n_blocks, 1), 1.0)))))
+    col_samples = max(1, int(2 ** np.ceil(np.log2(max(cols / max(n_blocks, 1), 1.0)))))
+    block_samples = np.array([row_samples, col_samples], dtype=int)
+    irrad_padding = np.ceil((np.array([n_blocks * row_samples - rows, n_blocks * col_samples - cols], dtype=float)) / 2.0).astype(int)
+    return n_blocks, block_samples, irrad_padding
+
+
 def rt_psf_grid(
     oi: OpticalImage,
     units: str = "m",

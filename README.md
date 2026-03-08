@@ -141,6 +141,10 @@ end-to-end ray-trace entry point as well, including cached OI illuminance
 bookkeeping. The supporting OI helpers `oi_calculate_illuminance` /
 `oiCalculateIlluminance` and `oi_diffuser` / `oiDiffuser` are now public
 too, and `opticsRayTrace` routes its blur/illuminance path through them.
+The `rtOTF` groundwork is also starting to land through public helper ports
+for `rt_block_center` / `rtBlockCenter`, `rt_extract_block` /
+`rtExtractBlock`, `rt_insert_block` / `rtInsertBlock`, and
+`rt_choose_block_size` / `rtChooseBlockSize`.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

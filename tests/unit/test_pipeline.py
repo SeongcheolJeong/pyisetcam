@@ -22,8 +22,12 @@ from pyisetcam import (
     oi_get,
     oi_set,
     rt_angle_lut,
+    rt_block_center,
+    rt_choose_block_size,
     rt_di_interp,
+    rt_extract_block,
     rt_geometry,
+    rt_insert_block,
     rt_psf_apply,
     rt_psf_grid,
     rt_psf_interp,
@@ -914,6 +918,66 @@ def test_rt_sample_heights_matches_matlab_truncation_rule() -> None:
 
     assert np.array_equal(img_height, np.array([0.0, 0.5, 1.0, 2.0]))
     assert np.isclose(max_data_height, 1.6)
+
+
+def test_rt_block_center_matches_matlab_formula() -> None:
+    center = rt_block_center(2, 3, np.array([8, 16], dtype=int))
+
+    assert np.allclose(center, np.array([12.0, 40.0]))
+
+
+def test_rt_extract_block_returns_matlab_style_indices() -> None:
+    plane = np.arange(1, 1 + 6 * 8, dtype=float).reshape(6, 8)
+
+    block, r_list, c_list = rt_extract_block(plane, np.array([2, 3], dtype=int), 2, 2)
+
+    assert np.array_equal(r_list, np.array([3, 4]))
+    assert np.array_equal(c_list, np.array([4, 5, 6]))
+    assert np.array_equal(block, plane[2:4, 3:6])
+
+
+def test_rt_insert_block_adds_filtered_data_at_matlab_block_origin() -> None:
+    img = np.zeros((8, 10), dtype=float)
+    filtered = np.ones((4, 5), dtype=float)
+
+    inserted = rt_insert_block(img, filtered, np.array([2, 3], dtype=int), np.array([1, 1], dtype=int), 2, 2)
+
+    expected = np.zeros_like(img)
+    expected[2:6, 3:8] = 1.0
+    assert np.array_equal(inserted, expected)
+
+
+def test_rt_choose_block_size_matches_upstream_formula(asset_store) -> None:
+    scene = scene_create("uniform ee", 32, np.array([550.0], dtype=float), asset_store=asset_store)
+    oi = rt_geometry(oi_create("ray trace", asset_store=asset_store), scene)
+
+    n_blocks, block_samples, irrad_padding = rt_choose_block_size(scene, oi)
+
+    field_heights = np.asarray(oi_get(oi, "rtgeometryfieldheight", "mm"), dtype=float)
+    diagonal_mm = float(oi_get(oi, "diagonal")) * 1e3 / 2.0
+    n_heights = int(np.argmin(np.abs(field_heights - diagonal_mm))) + 1
+    expected_n_blocks = 4 * n_heights + 1
+    expected_block_samples = np.array(
+        [
+            max(1, int(2 ** np.ceil(np.log2(max(scene_get(scene, "rows") / expected_n_blocks, 1.0))))),
+            max(1, int(2 ** np.ceil(np.log2(max(scene_get(scene, "cols") / expected_n_blocks, 1.0))))),
+        ],
+        dtype=int,
+    )
+    expected_padding = np.ceil(
+        (np.array(
+            [
+                expected_n_blocks * expected_block_samples[0] - scene_get(scene, "rows"),
+                expected_n_blocks * expected_block_samples[1] - scene_get(scene, "cols"),
+            ],
+            dtype=float,
+        ))
+        / 2.0
+    ).astype(int)
+
+    assert n_blocks == expected_n_blocks
+    assert np.array_equal(block_samples, expected_block_samples)
+    assert np.array_equal(irrad_padding, expected_padding)
 
 
 def test_rt_psf_grid_matches_oi_sample_spacing(asset_store) -> None:

@@ -34,8 +34,12 @@ from .optics import (
     oi_get,
     oi_set,
     rt_angle_lut,
+    rt_block_center,
+    rt_choose_block_size,
     rt_di_interp,
+    rt_extract_block,
     rt_geometry,
+    rt_insert_block,
     rt_psf_apply,
     rt_psf_grid,
     rt_psf_interp,
@@ -133,7 +137,11 @@ __all__ = [
     "root_mean_squared_error",
     "rtDIInterp",
     "rtAngleLUT",
+    "rtBlockCenter",
+    "rtChooseBlockSize",
+    "rtExtractBlock",
     "rtGeometry",
+    "rtInsertBlock",
     "rtRIInterp",
     "rtPSFGrid",
     "rtPSFApply",
@@ -141,7 +149,11 @@ __all__ = [
     "rtPrecomputePSFApply",
     "rt_di_interp",
     "rt_angle_lut",
+    "rt_block_center",
+    "rt_choose_block_size",
+    "rt_extract_block",
     "rt_geometry",
+    "rt_insert_block",
     "rt_psf_grid",
     "rt_psf_apply",
     "rtPSFInterp",
@@ -210,8 +222,12 @@ oiCalculateIlluminance = oi_calculate_illuminance
 oiDiffuser = oi_diffuser
 opticsRayTrace = optics_ray_trace
 rtAngleLUT = rt_angle_lut
+rtBlockCenter = rt_block_center
+rtChooseBlockSize = rt_choose_block_size
 rtDIInterp = rt_di_interp
+rtExtractBlock = rt_extract_block
 rtGeometry = rt_geometry
+rtInsertBlock = rt_insert_block
 rtPSFApply = rt_psf_apply
 rtPSFGrid = rt_psf_grid
 rtPSFInterp = rt_psf_interp
