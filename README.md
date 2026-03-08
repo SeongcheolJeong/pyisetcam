@@ -110,7 +110,9 @@ optics-name accessors, plus unit-aware raw ray-trace PSF spacing / field
 height getters and derived support / frequency axes. Raw ray-trace geometry
 and relative-illumination tables are also exposed now, including scalar
 ray-trace metadata, unit-aware field-height getters, and MATLAB-style raw
-table/function accessors.
+table/function accessors. Raw scalar ray-trace metadata now round-trips
+through `oiGet/oiSet` as well, including object-distance aliases and the
+legacy `rtcomputespacing` field.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

@@ -300,6 +300,8 @@ def test_oi_create_raytrace_exposes_raw_geometry_and_relillum_tables(asset_store
     assert np.isclose(oi_get(oi, "rtfnumber"), 4.999973)
     assert np.isclose(oi_get(oi, "rtmagnification"), -0.001)
     assert np.isclose(oi_get(oi, "rtrefwave"), 450.0)
+    assert np.isclose(oi_get(oi, "rtobjdist", "mm"), 2000.0)
+    assert np.isclose(oi_get(oi, "rtmaxfov"), oi_get(oi, "rtfov"))
     assert geometry["function"].shape == (21, 5)
     assert rel_illum["function"].shape == (21, 5)
     assert np.allclose(oi_get(oi, "rtrifieldheight", "mm"), rel_illum["field_height_mm"])
@@ -471,6 +473,38 @@ def test_oi_set_raw_raytrace_geometry_and_relillum_updates_tables(asset_store) -
     assert np.allclose(oi_get(oi, "rtrifieldheight", "mm"), np.array([0.0, 0.25]))
     assert np.array_equal(oi_get(oi, "rtriwavelength"), np.array([500.0, 600.0]))
     assert np.allclose(oi_get(oi, "rtrifunction"), rel_illum_function)
+
+
+def test_oi_set_raw_raytrace_scalar_metadata_roundtrips(asset_store) -> None:
+    oi = oi_create("ray trace", asset_store=asset_store)
+    oi = oi_set(oi, "rtname", "Custom RT")
+    oi = oi_set(oi, "rtopticsprogram", "Code V")
+    oi = oi_set(oi, "rtlensfile", "custom.seq")
+    oi = oi_set(oi, "rtefff#", 3.2)
+    oi = oi_set(oi, "rtfnumber", 3.5)
+    oi = oi_set(oi, "rtmag", -0.25)
+    oi = oi_set(oi, "rtrefwave", 520.0)
+    oi = oi_set(oi, "rtrefobjdist", 1.5)
+    oi = oi_set(oi, "rtmaxfov", 25.0)
+    oi = oi_set(oi, "rtefl", 0.004)
+    oi = oi_set(oi, "rtcomputespacing", 2e-6)
+
+    assert oi_get(oi, "rtname") == "Custom RT"
+    assert oi_get(oi, "raytrace optics name") == "Custom RT"
+    assert oi_get(oi, "rtopticsprogram") == "Code V"
+    assert oi_get(oi, "rtlensfile") == "custom.seq"
+    assert np.isclose(oi_get(oi, "rteffectivefnumber"), 3.2)
+    assert np.isclose(oi_get(oi, "rtfnumber"), 3.5)
+    assert np.isclose(oi_get(oi, "fnumber"), 3.5)
+    assert np.isclose(oi_get(oi, "rtmagnification"), -0.25)
+    assert np.isclose(oi_get(oi, "rtrefwave"), 520.0)
+    assert np.isclose(oi_get(oi, "rtobjdist"), 1.5)
+    assert np.isclose(oi_get(oi, "rtobjdist", "mm"), 1500.0)
+    assert np.isclose(oi_get(oi, "rtfov"), 25.0)
+    assert np.isclose(oi_get(oi, "rtefl"), 0.004)
+    assert np.isclose(oi_get(oi, "focal length"), 0.004)
+    assert np.isclose(oi_get(oi, "rtcomputespacing"), 2e-6)
+    assert np.isclose(oi_get(oi, "rtcomputespacing", "um"), 2.0)
 
 
 def test_oi_compute_raytrace_rotates_psf_with_field_angle(asset_store) -> None:

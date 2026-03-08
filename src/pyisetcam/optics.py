@@ -118,6 +118,11 @@ def _normalize_raytrace_optics(raw: dict[str, Any]) -> dict[str, Any]:
             normalized["raytrace"].get("relative_illumination")
         )
         normalized["raytrace"]["psf"] = _normalize_raytrace_psf(normalized["raytrace"].get("psf"))
+        computation = dict(normalized["raytrace"].get("computation", {}))
+        psf_spacing_m = computation.get("psf_spacing_m", computation.get("psfSpacing"))
+        normalized["raytrace"]["computation"] = {
+            "psf_spacing_m": None if psf_spacing_m is None else float(np.asarray(psf_spacing_m).reshape(-1)[0]),
+        }
         return normalized
 
     raytrace = dict(raw.get("rayTrace", raw.get("raytrace", {})))
@@ -163,6 +168,11 @@ def _normalize_raytrace_optics(raw: dict[str, Any]) -> dict[str, Any]:
             "geometry": _normalize_raytrace_table(raytrace.get("geometry")),
             "relative_illumination": _normalize_raytrace_table(raytrace.get("relIllum", raytrace.get("relative_illumination"))),
             "psf": _normalize_raytrace_psf(raytrace.get("psf")),
+            "computation": {
+                "psf_spacing_m": None
+                if raytrace.get("computation", {}).get("psfSpacing") is None
+                else float(np.asarray(raytrace.get("computation", {}).get("psfSpacing")).reshape(-1)[0]),
+            },
             "name": str(raytrace.get("name", raw.get("name", "raytrace"))),
         },
     }
@@ -2004,10 +2014,17 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
             if psf.ndim == 5 and psf.shape[3] > 0 and psf.shape[4] > 0:
                 return (int(psf.shape[3]), int(psf.shape[4]))
         return (0, 0)
-    if key in {"rtobjectdistance", "rtobjdist", "rtreferenceobjectdistance"}:
-        return float(oi.fields["optics"].get("raytrace", {}).get("object_distance_m", np.inf))
-    if key in {"rtfov"}:
+    if key in {"rtobjectdistance", "rtobjdist", "rtrefobjdist", "rtreferenceobjectdistance"}:
+        return float(oi.fields["optics"].get("raytrace", {}).get("object_distance_m", np.inf)) * _spatial_unit_scale(
+            args[0] if args else None
+        )
+    if key in {"rtfieldofview", "rtfov", "rthorizontalfov", "rtmaximumfieldofview", "rtmaxfov"}:
         return float(oi.fields["optics"].get("raytrace", {}).get("max_fov_deg", np.inf))
+    if key in {"rtcomputespacing"}:
+        psf_spacing_m = oi.fields["optics"].get("raytrace", {}).get("computation", {}).get("psf_spacing_m")
+        if psf_spacing_m is None:
+            return None
+        return float(psf_spacing_m) * _spatial_unit_scale(args[0] if args else None)
     if key in {"rtpsf"}:
         return _raw_raytrace_table(oi, "psf")
     if key in {"rtpsffunction", "rtpsfdata"}:
@@ -2210,6 +2227,42 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any) -> OpticalImage:
         current["wavelength_nm"] = np.asarray(value, dtype=float).reshape(-1)
         oi.fields["psf_struct"] = current
         _sync_psf_metadata_fields(oi)
+        return oi
+    if key in {"rtname"}:
+        oi.fields["optics"].setdefault("raytrace", {})["name"] = str(value)
+        oi.fields["optics"]["name"] = str(value)
+        return oi
+    if key in {"opticsprogram", "rtopticsprogram"}:
+        oi.fields["optics"].setdefault("raytrace", {})["program"] = str(value)
+        return oi
+    if key in {"lensfile", "rtlensfile"}:
+        oi.fields["optics"].setdefault("raytrace", {})["lens_file"] = str(value)
+        return oi
+    if key in {"rteffectivefnumber", "rtefff#"}:
+        oi.fields["optics"].setdefault("raytrace", {})["effective_f_number"] = float(value)
+        return oi
+    if key in {"rtfnumber"}:
+        oi.fields["optics"].setdefault("raytrace", {})["f_number"] = float(value)
+        oi.fields["optics"]["f_number"] = float(value)
+        return oi
+    if key in {"rtmagnification", "rtmag"}:
+        oi.fields["optics"].setdefault("raytrace", {})["magnification"] = float(value)
+        return oi
+    if key in {"rtreferencewavelength", "rtrefwave"}:
+        oi.fields["optics"].setdefault("raytrace", {})["reference_wavelength_nm"] = float(value)
+        return oi
+    if key in {"rtobjectdistance", "rtobjdist", "rtrefobjdist", "rtreferenceobjectdistance"}:
+        oi.fields["optics"].setdefault("raytrace", {})["object_distance_m"] = float(value)
+        return oi
+    if key in {"rtfieldofview", "rtfov", "rthorizontalfov", "rtmaximumfieldofview", "rtmaxfov"}:
+        oi.fields["optics"].setdefault("raytrace", {})["max_fov_deg"] = float(value)
+        return oi
+    if key in {"rteffectivefocallength", "rtefl", "rteffectivefl"}:
+        oi.fields["optics"].setdefault("raytrace", {})["effective_focal_length_m"] = float(value)
+        oi.fields["optics"]["focal_length_m"] = float(value)
+        return oi
+    if key in {"rtcomputespacing"}:
+        oi.fields["optics"].setdefault("raytrace", {}).setdefault("computation", {})["psf_spacing_m"] = float(value)
         return oi
     if key in {"rtpsfwavelength"}:
         oi.fields["optics"].setdefault("raytrace", {}).setdefault("psf", {})["wavelength_nm"] = np.asarray(value, dtype=float).reshape(-1)
