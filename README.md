@@ -180,6 +180,9 @@ Imported ray-trace optics now also retain the requested `rtProgram`
 label instead of forcing the lower-case default. Directory-based bundle
 loading now also preserves real import failures for malformed Zemax
 bundles instead of collapsing them into an unsupported-option error.
+Raw MATLAB-style optics structs now also preserve top-level control
+fields like `computeMethod`, `offaxis`, and `aberrationScale` through the
+import path.
 When importing into an existing optics object, a distinct existing
 ray-trace name is now preserved independently from the top-level optics
 name.

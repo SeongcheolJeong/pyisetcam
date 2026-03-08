@@ -1420,6 +1420,41 @@ def test_rt_import_data_preserves_existing_raytrace_name_independently(tmp_path)
     assert imported_optics["raytrace"]["name"] == "Existing RT Name"
 
 
+def test_rt_import_data_preserves_raw_matlab_style_optics_fields(tmp_path) -> None:
+    params_file = _write_mock_zemax_bundle(
+        tmp_path,
+        psf_spacing_assignment_mm=None,
+    )
+    existing = {
+        "name": "Existing Optics",
+        "computeMethod": "customrt",
+        "aberrationScale": 0.5,
+        "offaxis": "cos4th",
+        "transmittance": {
+            "wave": np.array([500.0, 600.0], dtype=float),
+            "scale": np.array([0.6, 0.7], dtype=float),
+        },
+        "rayTrace": {
+            "name": "Existing RT Name",
+            "computation": {
+                "psfSpacing": 9e-6,
+            },
+        },
+    }
+
+    imported_optics, optics_file = rt_import_data(existing, p_file_full=params_file)
+
+    assert optics_file is None
+    assert imported_optics["name"] == "Existing Optics"
+    assert imported_optics["compute_method"] == "customrt"
+    assert np.isclose(imported_optics["aberration_scale"], 0.5)
+    assert imported_optics["offaxis_method"] == "cos4th"
+    assert np.array_equal(imported_optics["transmittance"]["wave"], np.array([500.0, 600.0]))
+    assert np.array_equal(imported_optics["transmittance"]["scale"], np.array([0.6, 0.7]))
+    assert imported_optics["raytrace"]["name"] == "Existing RT Name"
+    assert np.isclose(imported_optics["raytrace"]["computation"]["psf_spacing_m"], 9e-6)
+
+
 def test_oi_create_raytrace_accepts_isetparams_file(tmp_path, asset_store) -> None:
     params_file = _write_mock_zemax_bundle(tmp_path)
 

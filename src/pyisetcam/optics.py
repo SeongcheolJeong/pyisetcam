@@ -741,6 +741,9 @@ def rt_import_data(
     current_computation = dict(current_raytrace.get("computation", {}))
     current_psf_spacing_m = current_computation.get("psf_spacing_m", current_computation.get("psfSpacing"))
     current_raytrace_name = current_raytrace.get("name", current.get("name", base_name))
+    current_compute_method = current.get("compute_method", current.get("computeMethod", ""))
+    current_aberration_scale = current.get("aberration_scale", current.get("aberrationScale"))
+    current_offaxis_method = current.get("offaxis_method", current.get("offaxisMethod", current.get("offaxis")))
     effective_focal_length_m = float(params["efl"]) / 1e3
     effective_f_number = float(params["fnumber_eff"])
 
@@ -798,9 +801,11 @@ def rt_import_data(
     normalized["name"] = str(current.get("name", normalized.get("name", base_name)))
     normalized["focal_length_m"] = effective_focal_length_m
     normalized["f_number"] = effective_f_number
-    normalized["compute_method"] = str(current.get("compute_method", normalized.get("compute_method", "")))
-    normalized["aberration_scale"] = float(current.get("aberration_scale", normalized.get("aberration_scale", 0.0)))
-    normalized["offaxis_method"] = str(current.get("offaxis_method", normalized.get("offaxis_method", "skip")))
+    normalized["compute_method"] = str(current_compute_method or normalized.get("compute_method", ""))
+    normalized["aberration_scale"] = float(
+        normalized.get("aberration_scale", 0.0) if current_aberration_scale is None else current_aberration_scale
+    )
+    normalized["offaxis_method"] = str(current_offaxis_method or normalized.get("offaxis_method", "skip"))
     if "transmittance" in current:
         normalized["transmittance"] = dict(current["transmittance"])
     return normalized, None
