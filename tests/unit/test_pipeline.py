@@ -336,6 +336,46 @@ def test_oi_get_set_raytrace_sample_angles_matches_matlab_surface(asset_store) -
     assert np.allclose(oi_get(result, "psf image heights", "m"), oi_get(result, "psf image heights") / 1e3)
 
 
+def test_oi_set_psfstruct_normalizes_matlab_style_metadata(asset_store) -> None:
+    oi = oi_create("ray trace", asset_store=asset_store)
+    psf_cells = np.empty((2, 2, 1), dtype=object)
+    psf_cells[0, 0, 0] = np.ones((3, 3), dtype=float)
+    psf_cells[0, 1, 0] = np.full((3, 3), 2.0, dtype=float)
+    psf_cells[1, 0, 0] = np.full((3, 3), 3.0, dtype=float)
+    psf_cells[1, 1, 0] = np.full((3, 3), 4.0, dtype=float)
+    psf_struct = {
+        "psf": psf_cells,
+        "sampAngles": np.array([0.0, 180.0], dtype=float),
+        "imgHeight": np.array([0.0, 1.5], dtype=float),
+        "wavelength": np.array([550.0], dtype=float),
+        "opticsName": "Synthetic RT",
+    }
+
+    oi = oi_set(oi, "shift variant structure", psf_struct)
+
+    sampled = oi_get(oi, "sampledRTpsf")
+    assert sampled.shape == (2, 2, 1, 3, 3)
+    assert np.array_equal(oi_get(oi, "psf sample angles"), np.array([0.0, 180.0]))
+    assert np.isclose(oi_get(oi, "psf angle step"), 180.0)
+    assert np.array_equal(oi_get(oi, "psf image heights"), np.array([0.0, 1.5]))
+    assert np.allclose(oi_get(oi, "psf image heights", "m"), np.array([0.0, 0.0015]))
+    assert np.array_equal(oi_get(oi, "psf wavelength"), np.array([550.0]))
+    assert oi_get(oi, "raytrace optics name") == "Synthetic RT"
+
+
+def test_oi_get_set_raytrace_psf_metadata_before_compute(asset_store) -> None:
+    oi = oi_create("ray trace", asset_store=asset_store)
+    oi = oi_set(oi, "psf image heights", np.array([0.0, 1.0, 2.0], dtype=float))
+    oi = oi_set(oi, "psf wavelength", np.array([450.0, 550.0], dtype=float))
+    oi = oi_set(oi, "raytrace optics name", "Manual RT")
+
+    assert np.array_equal(oi_get(oi, "psf image heights"), np.array([0.0, 1.0, 2.0]))
+    assert oi_get(oi, "psf image heights n") == 3
+    assert np.array_equal(oi_get(oi, "psf wavelength"), np.array([450.0, 550.0]))
+    assert oi_get(oi, "psf wavelength n") == 2
+    assert oi_get(oi, "raytrace optics name") == "Manual RT"
+
+
 def test_oi_compute_raytrace_rotates_psf_with_field_angle(asset_store) -> None:
     wave = np.array([550.0], dtype=float)
     scene = scene_create("uniform ee", 96, wave, asset_store=asset_store)

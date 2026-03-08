@@ -104,7 +104,9 @@ loads the pinned upstream Zemax-derived optics asset, and `oi_compute`
 applies upstream-backed geometric distortion, relative illumination, and
 angle-aware precomputed ray-trace PSFs with cached reuse on repeated
 computes, plus MATLAB-style uncropped padding/output bookkeeping and
-`oiGet/oiSet` support for ray-trace PSF sample-angle metadata.
+`oiGet/oiSet` support for ray-trace PSF metadata, including MATLAB-style
+`psf struct` normalization, sample angles, image heights, wavelengths, and
+optics-name accessors.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

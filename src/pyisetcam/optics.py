@@ -314,6 +314,10 @@ def oi_create(
     oi.fields["diffuser_method"] = "skip"
     oi.fields["diffuser_blur_m"] = 2e-6
     oi.fields["psf_angle_step_deg"] = DEFAULT_RAYTRACE_ANGLE_STEP_DEG
+    oi.fields["psf_sample_angles_deg"] = None
+    oi.fields["psf_image_heights_m"] = None
+    oi.fields["psf_wavelength_nm"] = None
+    oi.fields["psf_optics_name"] = None
     oi.fields["psf_struct"] = None
     oi.fields["sample_spacing_m"] = None
     oi.data["photons"] = np.empty((0, 0, 0), dtype=float)
@@ -1083,6 +1087,94 @@ def _raytrace_requested_sample_angles(
     return sample_angles
 
 
+def _coerce_psf_stack(value: Any) -> np.ndarray:
+    psf = np.asarray(value)
+    if psf.dtype != object:
+        numeric = np.asarray(value, dtype=float)
+        if numeric.ndim != 5:
+            raise ValueError("PSF stack must be a 5D array or a 3D object array of 2D kernels.")
+        return numeric
+
+    if psf.ndim != 3:
+        raise ValueError("MATLAB-style PSF cell arrays must be a 3D object array of 2D kernels.")
+
+    first_kernel: np.ndarray | None = None
+    for index in np.ndindex(psf.shape):
+        candidate = np.asarray(psf[index], dtype=float)
+        if candidate.size == 0:
+            continue
+        if candidate.ndim != 2:
+            raise ValueError("Each PSF kernel must be 2D.")
+        first_kernel = candidate
+        break
+    if first_kernel is None:
+        return np.empty(psf.shape + (0, 0), dtype=float)
+
+    stack = np.empty(psf.shape + first_kernel.shape, dtype=float)
+    for index in np.ndindex(psf.shape):
+        kernel = np.asarray(psf[index], dtype=float)
+        if kernel.shape != first_kernel.shape:
+            raise ValueError("All PSF kernels must share the same shape.")
+        stack[index] = kernel
+    return stack
+
+
+def _coerce_psf_sample_angles(value: Any) -> np.ndarray:
+    sample_angles = np.asarray(value, dtype=float).reshape(-1)
+    if sample_angles.size < 2:
+        raise ValueError("PSF sample angles must contain at least two entries.")
+    diffs = np.diff(sample_angles)
+    if np.any(diffs <= 0.0):
+        raise ValueError("PSF sample angles must be strictly increasing.")
+    if not np.allclose(diffs, diffs[0]):
+        raise ValueError("PSF sample angles must be uniformly spaced.")
+    return sample_angles
+
+
+def _normalize_psf_struct(value: Any) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    current = dict(value)
+    normalized = dict(current)
+    if "psf" in current:
+        normalized["psf"] = _coerce_psf_stack(current["psf"])
+    sample_angles = current.get("sample_angles_deg", current.get("sampleAngles", current.get("sampAngles")))
+    if sample_angles is not None:
+        normalized["sample_angles_deg"] = _coerce_psf_sample_angles(sample_angles)
+        if normalized["sample_angles_deg"].size >= 2:
+            normalized["angle_step_deg"] = float(normalized["sample_angles_deg"][1] - normalized["sample_angles_deg"][0])
+    img_height = current.get("img_height_mm", current.get("imgHeight"))
+    if img_height is not None:
+        normalized["img_height_mm"] = np.asarray(img_height, dtype=float).reshape(-1)
+    wavelength = current.get("wavelength_nm", current.get("wavelength"))
+    if wavelength is not None:
+        normalized["wavelength_nm"] = np.asarray(wavelength, dtype=float).reshape(-1)
+    optics_name = current.get("optics_name", current.get("opticsName"))
+    if optics_name is not None:
+        normalized["optics_name"] = str(optics_name)
+    return normalized
+
+
+def _sync_psf_metadata_fields(oi: OpticalImage) -> None:
+    psf_struct = oi.fields.get("psf_struct")
+    if not isinstance(psf_struct, dict):
+        return
+    sample_angles = np.asarray(psf_struct.get("sample_angles_deg", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    if sample_angles.size > 0:
+        oi.fields["psf_sample_angles_deg"] = sample_angles.copy()
+        if sample_angles.size >= 2:
+            oi.fields["psf_angle_step_deg"] = float(sample_angles[1] - sample_angles[0])
+    img_height_mm = np.asarray(psf_struct.get("img_height_mm", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    if img_height_mm.size > 0:
+        oi.fields["psf_image_heights_m"] = img_height_mm / 1e3
+    wavelength_nm = np.asarray(psf_struct.get("wavelength_nm", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    if wavelength_nm.size > 0:
+        oi.fields["psf_wavelength_nm"] = wavelength_nm.copy()
+    optics_name = psf_struct.get("optics_name")
+    if optics_name is not None:
+        oi.fields["psf_optics_name"] = str(optics_name)
+
+
 def _raytrace_padding_pixels(psf_struct: dict[str, Any] | None) -> tuple[int, int]:
     if not isinstance(psf_struct, dict):
         return (0, 0)
@@ -1399,11 +1491,8 @@ def oi_compute(
     computed.fields["vfov_deg"] = output_vfov_deg
     if model == "raytrace":
         computed.fields["psf_angle_step_deg"] = float(oi.fields.get("psf_angle_step_deg", DEFAULT_RAYTRACE_ANGLE_STEP_DEG))
-        computed.fields["psf_sample_angles_deg"] = np.asarray(
-            oi.fields.get("psf_sample_angles_deg", oi_get(computed, "psf sample angles")),
-            dtype=float,
-        )
         computed.fields["psf_struct"] = psf_struct
+        _sync_psf_metadata_fields(computed)
     computed.data["photons"] = result
     if pixel_size is not None:
         computed = _oi_spatial_resample(computed, float(pixel_size), method="linear")
@@ -1729,9 +1818,12 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         psf_struct = oi.fields.get("psf_struct")
         if isinstance(psf_struct, dict) and "optics_name" in psf_struct:
             return psf_struct["optics_name"]
+        stored = oi.fields.get("psf_optics_name")
+        if stored is not None:
+            return str(stored)
         raytrace = oi.fields["optics"].get("raytrace", {})
         return raytrace.get("name", oi.fields["optics"].get("name"))
-    if key in {"psfstruct"}:
+    if key in {"psfstruct", "shiftvariantstructure"}:
         return oi.fields.get("psf_struct")
     if key in {"svpsf", "sampledrtpsf", "shiftvariantpsf"}:
         psf_struct = oi.fields.get("psf_struct")
@@ -1758,11 +1850,32 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         if isinstance(psf_struct, dict):
             scale = _SPATIAL_UNIT_SCALE.get(param_format(args[0]) if args else "mm", 1.0)
             return np.asarray(psf_struct.get("img_height_mm", np.empty(0, dtype=float)), dtype=float) / 1e3 * scale
+        stored = oi.fields.get("psf_image_heights_m")
+        if stored is not None:
+            scale = _SPATIAL_UNIT_SCALE.get(param_format(args[0]) if args else "mm", 1.0)
+            return np.asarray(stored, dtype=float).reshape(-1) * scale
         return np.empty(0, dtype=float)
     if key in {"psfwavelength"}:
         psf_struct = oi.fields.get("psf_struct")
         if isinstance(psf_struct, dict):
             return np.asarray(psf_struct.get("wavelength_nm", np.empty(0, dtype=float)), dtype=float)
+        stored = oi.fields.get("psf_wavelength_nm")
+        if stored is not None:
+            return np.asarray(stored, dtype=float).reshape(-1)
+        return np.empty(0, dtype=float)
+    if key in {"psfimageheightsn", "psfimageheightcount"}:
+        return int(np.asarray(oi_get(oi, "psf image heights"), dtype=float).size)
+    if key in {"psfwavelengthn", "psfwn"}:
+        return int(np.asarray(oi_get(oi, "psf wavelength"), dtype=float).size)
+    if key in {"psfspatialsupportx"}:
+        psf_struct = oi.fields.get("psf_struct")
+        if isinstance(psf_struct, dict):
+            return np.asarray(psf_struct.get("target_x_mm", np.empty(0, dtype=float)), dtype=float)
+        return np.empty(0, dtype=float)
+    if key in {"psfspatialsupporty"}:
+        psf_struct = oi.fields.get("psf_struct")
+        if isinstance(psf_struct, dict):
+            return np.asarray(psf_struct.get("target_y_mm", np.empty(0, dtype=float)), dtype=float)
         return np.empty(0, dtype=float)
     if key in {"rtpsfsize"}:
         psf_struct = oi.fields.get("psf_struct")
@@ -1882,13 +1995,15 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any) -> OpticalImage:
     if key == "opticswvf":
         oi.fields["optics"]["wavefront"] = dict(value)
         return oi
-    if key in {"psfstruct"}:
-        oi.fields["psf_struct"] = dict(value) if value is not None else None
+    if key in {"psfstruct", "shiftvariantstructure"}:
+        oi.fields["psf_struct"] = _normalize_psf_struct(value)
+        _sync_psf_metadata_fields(oi)
         return oi
     if key in {"svpsf", "sampledrtpsf", "shiftvariantpsf"}:
         current = dict(oi.fields.get("psf_struct") or {})
-        current["psf"] = np.asarray(value, dtype=float)
+        current["psf"] = _coerce_psf_stack(value)
         oi.fields["psf_struct"] = current
+        _sync_psf_metadata_fields(oi)
         return oi
     if key in {"psfanglestep"}:
         oi.fields["psf_angle_step_deg"] = float(value)
@@ -1902,9 +2017,25 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any) -> OpticalImage:
         oi.fields["psf_struct"] = None
         return oi
     if key in {"psfopticsname", "raytraceopticsname"}:
+        oi.fields["psf_optics_name"] = str(value)
         current = dict(oi.fields.get("psf_struct") or {})
         current["optics_name"] = str(value)
         oi.fields["psf_struct"] = current
+        _sync_psf_metadata_fields(oi)
+        return oi
+    if key in {"psfimageheights"}:
+        oi.fields["psf_image_heights_m"] = np.asarray(value, dtype=float).reshape(-1) / 1e3
+        current = dict(oi.fields.get("psf_struct") or {})
+        current["img_height_mm"] = np.asarray(value, dtype=float).reshape(-1)
+        oi.fields["psf_struct"] = current
+        _sync_psf_metadata_fields(oi)
+        return oi
+    if key in {"psfwavelength"}:
+        oi.fields["psf_wavelength_nm"] = np.asarray(value, dtype=float).reshape(-1)
+        current = dict(oi.fields.get("psf_struct") or {})
+        current["wavelength_nm"] = np.asarray(value, dtype=float).reshape(-1)
+        oi.fields["psf_struct"] = current
+        _sync_psf_metadata_fields(oi)
         return oi
     if key in {"opticsraytrace", "raytrace", "rt"}:
         oi.fields["optics"]["raytrace"] = dict(value)
