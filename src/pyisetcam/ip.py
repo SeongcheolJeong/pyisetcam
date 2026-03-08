@@ -11,7 +11,7 @@ from .assets import AssetStore
 from .color import internal_to_display_matrix, sensor_to_target_matrix, xyz_color_matching
 from .display import Display, display_create, display_get, display_set
 from .exceptions import UnsupportedOptionError
-from .metrics import xyz_from_energy
+from .metrics import chromaticity_xy, xyz_from_energy
 from .session import track_ip_session_state, track_session_object
 from .sensor import sensor_get
 from .types import ImageProcessor, Sensor, SessionContext
@@ -405,6 +405,14 @@ def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
         return vc_get_roi_data(ip, args[0], "result")
     if key in {"roixyz", "xyzroi"}:
         return image_data_xyz(ip, args[0] if args else None)
+    if key in {"chromaticity", "roichromaticity"}:
+        xyz = image_data_xyz(ip, args[0] if args else None)
+        return None if xyz is None else chromaticity_xy(np.asarray(xyz, dtype=float))
+    if key in {"roichromaticitymean", "roimeanchromaticity"}:
+        if not args:
+            raise ValueError("ROI required for ipGet(..., 'roi chromaticity mean').")
+        chromaticity = ip_get(ip, "chromaticity", args[0])
+        return None if chromaticity is None else np.mean(np.asarray(chromaticity, dtype=float), axis=0).reshape(-1)
     if key in {"input", "sensorinput", "sensormosaic"}:
         return ip.data.get("input")
     if key in {"sensorspace", "sensorchannels"}:

@@ -157,6 +157,8 @@ def _oi_roi_data(oi: OpticalImage, roi_locs: np.ndarray, data_type: str | None) 
         data = photons
     elif key == "energy":
         data = quanta_to_energy(photons, np.asarray(oi_get(oi, "wave"), dtype=float))
+    elif key == "illuminance":
+        data = np.asarray(oi_get(oi, "illuminance"), dtype=float)
     else:
         raise UnsupportedOptionError("vcGetROIData", f"oi/{data_type}")
 
@@ -209,6 +211,8 @@ def _ip_roi_data(ip: ImageProcessor, roi_locs: np.ndarray, data_type: str | None
         data = ip_get(ip, "result")
     elif key == "input":
         data = ip_get(ip, "input")
+    elif key == "xyz":
+        data = image_data_xyz(ip)
     else:
         raise UnsupportedOptionError("vcGetROIData", f"ip/{data_type}")
     if data is None:

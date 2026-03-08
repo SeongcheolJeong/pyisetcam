@@ -11,6 +11,7 @@ from .display import display_create, display_get, display_set
 from .fileio import vc_export_object, vc_load_object, vc_save_object
 from .ip import image_data_xyz, ip_compute, ip_create, ip_get, ip_set
 from .metrics import (
+    chromaticity_xy,
     comparison_metrics,
     correlated_color_temperature,
     delta_e_ab,
@@ -368,6 +369,7 @@ __all__ = [
     "vc_save_object",
     "vc_set_figure_handles",
     "wvf_create",
+    "chromaticity_xy",
     "xyz_from_energy",
     "xyz_to_lab",
     "zemaxLoad",

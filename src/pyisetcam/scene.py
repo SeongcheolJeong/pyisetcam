@@ -12,6 +12,7 @@ from scipy.signal import convolve2d
 from .assets import AssetStore
 from .color import luminance_from_photons
 from .exceptions import UnsupportedOptionError
+from .metrics import chromaticity_xy, xyz_from_energy
 from .session import track_session_object
 from .types import Scene, SessionContext
 from .utils import DEFAULT_WAVE, blackbody, energy_to_quanta, param_format, quanta_to_energy
@@ -770,6 +771,17 @@ def scene_adjust_luminance(
     return scene
 
 
+def _scene_roi_xyz(scene: Scene, roi_locs: Any | None = None, *, asset_store: AssetStore | None = None) -> np.ndarray:
+    store = _store(asset_store)
+    wave = np.asarray(scene.fields["wave"], dtype=float)
+    if roi_locs is None:
+        photons = np.asarray(scene.data["photons"], dtype=float).reshape(-1, wave.size)
+    else:
+        photons = np.asarray(scene_get(scene, "roi photons", roi_locs, asset_store=store), dtype=float)
+    energy = quanta_to_energy(photons, wave)
+    return xyz_from_energy(energy, wave, asset_store=store)
+
+
 def _resolve_illuminant_input(
     ill_energy: Any,
     wave: np.ndarray,
@@ -921,6 +933,20 @@ def scene_get(scene: Scene, parameter: str, *args: Any, asset_store: AssetStore 
         from .roi import vc_get_roi_data
 
         return vc_get_roi_data(scene, args[0], "luminance")
+    if key == "roimeanluminance":
+        if not args:
+            raise ValueError("ROI required for sceneGet(..., 'roi mean luminance').")
+        return float(np.mean(np.asarray(scene_get(scene, "roi luminance", args[0], asset_store=asset_store), dtype=float)))
+    if key in {"chromaticity", "roichromaticity"}:
+        roi_locs = args[0] if args else None
+        return chromaticity_xy(_scene_roi_xyz(scene, roi_locs, asset_store=asset_store))
+    if key in {"roichromaticitymean", "roimeanchromaticity"}:
+        if not args:
+            raise ValueError("ROI required for sceneGet(..., 'roi chromaticity mean').")
+        return np.mean(
+            np.asarray(scene_get(scene, "chromaticity", args[0], asset_store=asset_store), dtype=float),
+            axis=0,
+        ).reshape(-1)
     if key == "luminance":
         if "luminance" not in scene.fields:
             scene_calculate_luminance(scene, asset_store=asset_store)

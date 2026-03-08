@@ -280,6 +280,11 @@ Sensor ROI/plot compatibility now also includes
 `sensorGet(..., 'chromaticity')` and
 `sensorGet(..., 'roi chromaticity mean')`, backed by the existing
 headless demosaic path.
+Scene/OI/IP ROI plotting helpers now expose the matching chromaticity and
+summary getters too: `sceneGet(..., 'chromaticity'/'roi chromaticity mean')`,
+`sceneGet(..., 'roi mean luminance')`, `oiGet(..., 'chromaticity'/'roi chromaticity mean')`,
+`oiGet(..., 'roi illuminance'/'roi mean illuminance')`, and
+`ipGet(..., 'chromaticity'/'roi chromaticity mean')`.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 from pyisetcam import (
+    chromaticity_xy,
     ieLocs2Rect,
     ieRect2Locs,
     ieRect2Vertices,
@@ -268,12 +269,17 @@ def test_scene_get_roi_queries(asset_store) -> None:
     roi_energy = scene_get(scene, "roi energy", roi)
     roi_reflectance = scene_get(scene, "roi reflectance", roi)
     roi_luminance = scene_get(scene, "roi luminance", roi)
+    roi_chromaticity = scene_get(scene, "chromaticity", roi)
+    expected_scene_xy = chromaticity_xy(xyz_from_energy(roi_energy, np.asarray(scene_get(scene, "wave"), dtype=float), asset_store=asset_store))
 
     assert roi_photons.shape[0] == 4
     assert np.allclose(scene_get(scene, "roi mean photons", roi), np.mean(roi_photons, axis=0))
     assert np.allclose(scene_get(scene, "roi mean energy", roi), np.mean(roi_energy, axis=0))
     assert np.allclose(scene_get(scene, "roi mean reflectance", roi), np.mean(roi_reflectance, axis=0))
     assert roi_luminance.shape == (4, 1)
+    assert np.isclose(scene_get(scene, "roi mean luminance", roi), float(np.mean(roi_luminance)))
+    assert np.allclose(roi_chromaticity, expected_scene_xy)
+    assert np.allclose(scene_get(scene, "roi chromaticity mean", roi), np.mean(expected_scene_xy, axis=0))
     assert np.allclose(roi_reflectance, np.ones_like(roi_reflectance))
 
 
@@ -292,7 +298,33 @@ def test_oi_get_roi_queries(asset_store) -> None:
 
     roi_photons = oi_get(oi, "roi photons", roi)
     roi_energy = oi_get(oi, "roi energy", roi)
+    roi_illuminance = oi_get(oi, "roi illuminance", roi)
+    roi_chromaticity = oi_get(oi, "chromaticity", roi)
+    expected_oi_xy = chromaticity_xy(xyz_from_energy(roi_energy, np.asarray(oi_get(oi, "wave"), dtype=float), asset_store=asset_store))
 
     assert np.allclose(roi_photons, photons.reshape(-1, 2))
     assert np.allclose(oi_get(oi, "roi mean photons", roi), np.mean(roi_photons, axis=0))
     assert np.allclose(oi_get(oi, "roi mean energy", roi), np.mean(roi_energy, axis=0))
+    assert np.allclose(roi_illuminance[:, 0], oi_get(oi, "illuminance").reshape(-1))
+    assert np.isclose(oi_get(oi, "roi mean illuminance", roi), float(np.mean(roi_illuminance)))
+    assert np.allclose(roi_chromaticity, expected_oi_xy)
+    assert np.allclose(oi_get(oi, "roi chromaticity mean", roi), np.mean(expected_oi_xy, axis=0))
+
+
+def test_ip_get_chromaticity_queries(asset_store) -> None:
+    ip = ip_create(display="default", asset_store=asset_store)
+    result = np.array(
+        [
+            [[0.2, 0.3, 0.4], [0.4, 0.5, 0.6]],
+            [[0.6, 0.7, 0.8], [0.8, 0.9, 1.0]],
+        ],
+        dtype=float,
+    )
+    ip = ip_set(ip, "result", result)
+    roi_locs = np.array([[1, 1], [2, 2]], dtype=int)
+
+    chromaticity = ip_get(ip, "chromaticity", roi_locs)
+    expected_xy = chromaticity_xy(imageDataXYZ(ip, roi_locs))
+
+    assert np.allclose(chromaticity, expected_xy)
+    assert np.allclose(ip_get(ip, "roi chromaticity mean", roi_locs), np.mean(expected_xy, axis=0))

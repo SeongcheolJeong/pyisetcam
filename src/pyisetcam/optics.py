@@ -15,6 +15,7 @@ from scipy.signal import fftconvolve
 from .assets import AssetStore
 from .color import luminance_from_photons
 from .exceptions import UnsupportedOptionError
+from .metrics import chromaticity_xy, xyz_from_energy
 from .scene import scene_get
 from .session import track_session_object
 from .types import OpticalImage, Scene, SessionContext
@@ -2317,6 +2318,20 @@ def oi_calculate_illuminance(oi: OpticalImage) -> tuple[np.ndarray, float, float
     return illuminance, mean_illuminance, mean_comp_illuminance
 
 
+def _oi_roi_xyz(oi: OpticalImage, roi_locs: Any | None = None, *, asset_store: AssetStore | None = None) -> np.ndarray:
+    store = _store(asset_store)
+    wave = np.asarray(oi.fields.get("wave", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    if roi_locs is None:
+        photons = np.asarray(oi.data.get("photons", np.empty((0, 0, 0), dtype=float)), dtype=float)
+        if photons.ndim != 3 or wave.size == 0:
+            return np.empty((0, 3), dtype=float)
+        photons = photons.reshape(-1, wave.size)
+    else:
+        photons = np.asarray(oi_get(oi, "roi photons", roi_locs), dtype=float)
+    energy = quanta_to_energy(photons, wave)
+    return xyz_from_energy(energy, wave, asset_store=store)
+
+
 def _gaussian_kernel_1d(size: int, sigma_pixels: float) -> np.ndarray:
     if size <= 1 or sigma_pixels <= 0.0:
         return np.ones((1,), dtype=float)
@@ -3451,6 +3466,23 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         if not args:
             raise ValueError("ROI required for oiGet(..., 'roi mean energy').")
         return np.mean(np.asarray(oi_get(oi, "roi energy", args[0]), dtype=float), axis=0).reshape(-1)
+    if key == "roiilluminance":
+        if not args:
+            raise ValueError("ROI required for oiGet(..., 'roi illuminance').")
+        from .roi import vc_get_roi_data
+
+        return vc_get_roi_data(oi, args[0], "illuminance")
+    if key == "roimeanilluminance":
+        if not args:
+            raise ValueError("ROI required for oiGet(..., 'roi mean illuminance').")
+        return float(np.mean(np.asarray(oi_get(oi, "roi illuminance", args[0]), dtype=float)))
+    if key in {"chromaticity", "roichromaticity"}:
+        roi_locs = args[0] if args else None
+        return chromaticity_xy(_oi_roi_xyz(oi, roi_locs))
+    if key in {"roichromaticitymean", "roimeanchromaticity"}:
+        if not args:
+            raise ValueError("ROI required for oiGet(..., 'roi chromaticity mean').")
+        return np.mean(np.asarray(oi_get(oi, "chromaticity", args[0]), dtype=float), axis=0).reshape(-1)
     if key == "illuminance":
         stored = oi.fields.get("illuminance")
         if stored is not None:
