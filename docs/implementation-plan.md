@@ -16,6 +16,7 @@
 - The shared MATLAB field-height lookup rule is now public as `ie_field_height_to_index` / `ieFieldHeight2Index`, and `rtChooseBlockSize` now uses it directly.
 - `rt_synthetic` / `rtSynthetic` is now exposed as a synthetic ray-trace optics generator to support controlled testing of the expanding ray-trace compute surface.
 - The initial Zemax text-import surface is now ported as `rt_file_names` / `rtFileNames`, `zemax_read_header` / `zemaxReadHeader`, `zemax_load` / `zemaxLoad`, and a limited `rt_import_data` / `rtImportData` path for standard ISETPARAMS + DI/RI/PSF bundles.
+- `oi_create('ray trace', ...)` now accepts that standard Zemax bundle directly as either an `ISETPARAMS.txt` file or a containing directory.
 
 ## Summary
 - Build a new Python library, `pyisetcam`, that ports the numerical `scene -> optical image -> sensor -> image processor -> camera` pipeline from ISETCam and validates it against GNU Octave runs of the upstream MATLAB code.

@@ -157,7 +157,10 @@ block-size logic now uses that public helper directly.
 The initial Zemax text-import surface is now ported too through
 `rt_file_names` / `rtFileNames`, `zemax_read_header` / `zemaxReadHeader`,
 `zemax_load` / `zemaxLoad`, and a limited `rt_import_data` /
-`rtImportData` path for standard ISETPARAMS + DI/RI/PSF bundles.
+`rtImportData` path for standard ISETPARAMS + DI/RI/PSF bundles. That
+bundle format is now accepted directly by `oi_create('ray trace', ...)`
+too, either as the `ISETPARAMS.txt` file itself or as a containing
+directory.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

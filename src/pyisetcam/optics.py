@@ -397,7 +397,20 @@ def _load_raytrace_optics(source: Any, *, asset_store: AssetStore) -> dict[str, 
         return _normalize_raytrace_optics(source)
 
     path = Path(source)
+    if path.is_dir():
+        matches = sorted(
+            candidate
+            for candidate in path.iterdir()
+            if candidate.is_file() and candidate.suffix.lower() == ".txt" and "isetpar" in candidate.name.lower()
+        )
+        if not matches:
+            raise UnsupportedOptionError("oiCreate", f"ray trace optics {source}")
+        imported, _ = rt_import_data(p_file_full=matches[0])
+        return imported
     if path.is_absolute() or path.exists():
+        if path.suffix.lower() == ".txt":
+            imported, _ = rt_import_data(p_file_full=path)
+            return imported
         raw = loadmat(path, squeeze_me=True, struct_as_record=False)["optics"]
         return _normalize_raytrace_optics(_mat_to_native(raw))
 
