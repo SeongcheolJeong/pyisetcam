@@ -753,7 +753,7 @@ def rt_import_data(
             },
         ),
         "rayTrace": {
-            "program": "zemax",
+            "program": str(rt_program),
             "lensFile": str(params["lensFile"]),
             "referenceWavelength": float(params["refWave"]),
             "objectDistance": float(params["objDist"]),

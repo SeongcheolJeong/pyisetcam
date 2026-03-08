@@ -1244,6 +1244,15 @@ def test_rt_import_data_builds_usable_raytrace_optics(tmp_path, asset_store) -> 
     assert stage.data["photons"].shape == scene.data["photons"].shape
 
 
+def test_rt_import_data_preserves_requested_program_label(tmp_path) -> None:
+    params_file = _write_mock_zemax_bundle(tmp_path)
+
+    imported_optics, optics_file = rt_import_data(p_file_full=params_file, rt_program="ZeMaX")
+
+    assert optics_file is None
+    assert imported_optics["raytrace"]["program"] == "ZeMaX"
+
+
 def test_rt_import_data_normalizes_windows_style_base_lens_paths(tmp_path) -> None:
     params_file = _write_mock_zemax_bundle(
         tmp_path,
