@@ -180,6 +180,9 @@ Imported ray-trace optics now also retain the requested `rtProgram`
 label instead of forcing the lower-case default. Directory-based bundle
 loading now also preserves real import failures for malformed Zemax
 bundles instead of collapsing them into an unsupported-option error.
+When importing into an existing optics object, a distinct existing
+ray-trace name is now preserved independently from the top-level optics
+name.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

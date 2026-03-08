@@ -740,6 +740,7 @@ def rt_import_data(
     current_raytrace = dict(current.get("raytrace", current.get("rayTrace", {})))
     current_computation = dict(current_raytrace.get("computation", {}))
     current_psf_spacing_m = current_computation.get("psf_spacing_m", current_computation.get("psfSpacing"))
+    current_raytrace_name = current_raytrace.get("name", current.get("name", base_name))
     effective_focal_length_m = float(params["efl"]) / 1e3
     effective_f_number = float(params["fnumber_eff"])
 
@@ -763,7 +764,7 @@ def rt_import_data(
             "effectiveFocalLength": float(params["efl"]),
             "effectiveFNumber": float(params["fnumber_eff"]),
             "maxfov": float(params["fov"]) * 2.0,
-            "name": str(current.get("name", base_name)),
+            "name": str(current_raytrace_name),
             "geometry": {
                 "function": geometry_values.reshape(wave.size, n_height).T,
                 "fieldHeight": img_height.copy(),
