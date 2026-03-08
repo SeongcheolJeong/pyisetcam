@@ -6,6 +6,7 @@ from typing import Any
 
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
+from scipy.ndimage import map_coordinates
 from scipy.signal import convolve2d
 
 from .assets import AssetStore
@@ -26,6 +27,7 @@ _DEFAULT_PIXEL = {
     "dsnu_sigma_v": 0.0,
     "prnu_sigma": 0.0,
 }
+_ELEMENTARY_CHARGE_C = 1.602177e-19
 
 
 def _store(asset_store: AssetStore | None) -> AssetStore:
@@ -60,6 +62,7 @@ def _sensor_base(
             "integration_time": 0.0,
             "quantization": "analog",
             "mosaic": True,
+            "n_samples_per_pixel": 1,
         }
     )
     return sensor
@@ -204,6 +207,8 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return int(sensor.fields["noise_flag"])
     if key == "nbits":
         return int(sensor.fields["nbits"])
+    if key in {"nsamplesperpixel", "spatialsamplesperpixel"}:
+        return int(sensor.fields.get("n_samples_per_pixel", 1))
     if key in {"quantization", "quantizationmethod"}:
         return sensor.fields["quantization"]
     if key in {"pixelvoltageswing", "voltageswing"}:
@@ -286,6 +291,9 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         return sensor
     if key == "noiseflag":
         sensor.fields["noise_flag"] = int(value)
+        return sensor
+    if key in {"nsamplesperpixel", "spatialsamplesperpixel"}:
+        sensor.fields["n_samples_per_pixel"] = int(value)
         return sensor
     if key in {"quantization", "quantizationmethod"}:
         sensor.fields["quantization"] = str(value)
@@ -392,6 +400,11 @@ def _sample_centers(count: int, spacing_m: float) -> np.ndarray:
     return ((np.arange(count, dtype=float) + 0.5) - (count / 2.0)) * float(spacing_m)
 
 
+def _sample2space(samples: np.ndarray, spacing_m: float) -> np.ndarray:
+    samples = np.asarray(samples, dtype=float)
+    return (samples - np.mean(samples)) * float(spacing_m)
+
+
 def _gaussian_kernel(shape: tuple[int, int], sigma: float) -> np.ndarray:
     rows, cols = int(shape[0]), int(shape[1])
     if rows <= 1 and cols <= 1:
@@ -404,6 +417,142 @@ def _gaussian_kernel(shape: tuple[int, int], sigma: float) -> np.ndarray:
     if kernel_sum <= 0.0:
         return np.ones((1, 1), dtype=float)
     return kernel / kernel_sum
+
+
+def _pixel_pd_size_m(pixel: dict[str, Any]) -> np.ndarray:
+    pixel_size = np.asarray(pixel["size_m"], dtype=float)
+    fill_factor = float(pixel["fill_factor"])
+    if fill_factor <= 0.0:
+        return np.zeros(2, dtype=float)
+    return np.sqrt(fill_factor) * pixel_size
+
+
+def _sensor_pd_array(sensor: Sensor, spacing: float) -> np.ndarray:
+    if spacing <= 0.0 or spacing > 1.0:
+        raise ValueError("spacing must be within (0, 1].")
+    pixel = sensor.fields["pixel"]
+    pixel_size = np.asarray(pixel["size_m"], dtype=float)
+    pd_size = _pixel_pd_size_m(pixel)
+    pd_position = (pixel_size - pd_size) / 2.0
+
+    normalized_pd_min = pd_position / (spacing * pixel_size)
+    normalized_pd_max = (pd_size + pd_position) / (spacing * pixel_size)
+    grid_positions = np.arange(0.0, 1.0 + spacing, spacing) / spacing
+    n_squares = max(len(grid_positions) - 1, 1)
+    in_pd_rows = np.zeros(n_squares, dtype=float)
+    in_pd_cols = np.zeros(n_squares, dtype=float)
+    for index in range(n_squares):
+        lower = max(grid_positions[index], normalized_pd_min[0])
+        upper = min(grid_positions[index + 1], normalized_pd_max[0])
+        in_pd_rows[index] = max(0.0, upper - lower)
+
+        lower = max(grid_positions[index], normalized_pd_min[1])
+        upper = min(grid_positions[index + 1], normalized_pd_max[1])
+        in_pd_cols[index] = max(0.0, upper - lower)
+    return np.outer(in_pd_rows, in_pd_cols)
+
+
+def _interpolated_cfa(sensor: Sensor, spacing: float, row_count: int, col_count: int) -> np.ndarray:
+    pattern = tile_pattern(np.asarray(sensor.fields["pattern"], dtype=int), sensor.fields["size"][0], sensor.fields["size"][1])
+    if np.isclose(spacing, 1.0):
+        return pattern
+    row_coords = np.floor(spacing * np.arange(row_count, dtype=float)).astype(int)
+    col_coords = np.floor(spacing * np.arange(col_count, dtype=float)).astype(int)
+    row_coords = np.clip(row_coords, 0, pattern.shape[0] - 1)
+    col_coords = np.clip(col_coords, 0, pattern.shape[1] - 1)
+    return pattern[row_coords[:, None], col_coords[None, :]]
+
+
+def _interp2_linear_constant_zero(
+    plane: np.ndarray,
+    source_rows: np.ndarray,
+    source_cols: np.ndarray,
+    target_rows: np.ndarray,
+    target_cols: np.ndarray,
+) -> np.ndarray:
+    if source_cols.size <= 1:
+        col_coords = np.zeros_like(target_cols, dtype=float)
+    else:
+        col_coords = (np.asarray(target_cols, dtype=float) - float(source_cols[0])) / float(source_cols[1] - source_cols[0])
+    if source_rows.size <= 1:
+        row_coords = np.zeros_like(target_rows, dtype=float)
+    else:
+        row_coords = (np.asarray(target_rows, dtype=float) - float(source_rows[0])) / float(source_rows[1] - source_rows[0])
+    row_grid, col_grid = np.meshgrid(row_coords, col_coords, indexing="ij")
+    return map_coordinates(
+        np.asarray(plane, dtype=float),
+        [row_grid, col_grid],
+        order=1,
+        mode="constant",
+        cval=0.0,
+        prefilter=False,
+    )
+
+
+def _signal_current_density(oi: OpticalImage, sensor: Sensor) -> np.ndarray:
+    irradiance = np.asarray(oi.data["photons"], dtype=np.float32)
+    wave = np.asarray(oi.fields["wave"], dtype=float)
+    sensor_wave = np.asarray(sensor.fields["wave"], dtype=float)
+    spectral_qe = np.asarray(sensor.fields["filter_spectra"], dtype=np.float32)
+    if not np.array_equal(wave, sensor_wave):
+        if sensor_wave.size > 1:
+            interpolated = np.empty((wave.size, spectral_qe.shape[1]), dtype=np.float32)
+            for index in range(spectral_qe.shape[1]):
+                interpolated[:, index] = np.interp(wave, sensor_wave, spectral_qe[:, index], left=0.0, right=0.0)
+            spectral_qe = interpolated
+        else:
+            raise ValueError("Sensor and optical image wavelength samplings do not match.")
+    bin_width = np.float32(np.mean(np.diff(wave)) if wave.size > 1 else 1.0)
+    weighted_qe = spectral_qe * bin_width
+    return np.tensordot(irradiance, weighted_qe, axes=([2], [0])).astype(np.float32) * np.float32(_ELEMENTARY_CHARGE_C)
+
+
+def _spatial_integrate_current_density(scdi: np.ndarray, oi: OpticalImage, sensor: Sensor) -> np.ndarray:
+    n_samples_per_pixel = int(sensor.fields.get("n_samples_per_pixel", 1))
+    if n_samples_per_pixel <= 0:
+        raise ValueError("n_samples_per_pixel must be positive.")
+    spacing = 1.0 / float(n_samples_per_pixel)
+    if n_samples_per_pixel % 2 == 0:
+        raise NotImplementedError("sensorCompute only supports odd nSamplesPerPixel values.")
+
+    oi_rows, oi_cols = scdi.shape[:2]
+    sensor_rows, sensor_cols = sensor.fields["size"]
+    oi_height_spacing = float(oi_get(oi, "hspatialresolution"))
+    oi_width_spacing = float(oi_get(oi, "wspatialresolution"))
+    sensor_height_spacing = float(np.asarray(sensor.fields["pixel"]["size_m"], dtype=float)[0])
+    sensor_width_spacing = float(np.asarray(sensor.fields["pixel"]["size_m"], dtype=float)[1])
+
+    source_rows = _sample2space(np.arange(oi_rows, dtype=float), oi_height_spacing)
+    source_cols = _sample2space(np.arange(oi_cols, dtype=float), oi_width_spacing)
+    target_row_samples = np.arange(0.0, sensor_rows, spacing, dtype=float) + (spacing / 2.0)
+    target_col_samples = np.arange(0.0, sensor_cols, spacing, dtype=float) + (spacing / 2.0)
+    target_rows = _sample2space(target_row_samples, sensor_height_spacing)
+    target_cols = _sample2space(target_col_samples, sensor_width_spacing)
+
+    interpolated_cfa = _interpolated_cfa(sensor, spacing, target_rows.size, target_cols.size)
+
+    height_samples_per_pixel = max(1, int(np.ceil(sensor_height_spacing / max(oi_height_spacing, 1e-12))))
+    width_samples_per_pixel = max(1, int(np.ceil(sensor_width_spacing / max(oi_width_spacing, 1e-12))))
+    kernel = _gaussian_kernel((height_samples_per_pixel, width_samples_per_pixel), height_samples_per_pixel / 4.0)
+
+    flat_scdi = np.zeros((target_rows.size, target_cols.size), dtype=float)
+    for channel_index in range(scdi.shape[2]):
+        plane = convolve2d(np.asarray(scdi[:, :, channel_index], dtype=float), kernel, mode="same")
+        sampled = _interp2_linear_constant_zero(plane, source_rows, source_cols, target_rows, target_cols)
+        mask = interpolated_cfa == (channel_index + 1)
+        flat_scdi = flat_scdi + (mask * sampled)
+
+    pixel_area = float(np.prod(np.asarray(sensor.fields["pixel"]["size_m"], dtype=float)))
+    if n_samples_per_pixel == 1:
+        return flat_scdi * float(sensor.fields["pixel"]["fill_factor"]) * pixel_area
+
+    pd_array = _sensor_pd_array(sensor, spacing)
+    photo_detector_array = np.tile(pd_array, sensor.fields["size"])
+    signal_current_large = flat_scdi * photo_detector_array
+    filt = pixel_area * (np.ones((n_samples_per_pixel, n_samples_per_pixel), dtype=float) / float(n_samples_per_pixel**2))
+    blurred = convolve2d(signal_current_large, filt, mode="same")
+    start = n_samples_per_pixel // 2
+    return blurred[start::n_samples_per_pixel, start::n_samples_per_pixel]
 
 
 def _regrid_electron_rate_density(
@@ -518,16 +667,14 @@ def sensor_compute(sensor: Sensor, oi: OpticalImage, show_bar: bool | None = Non
     rng = np.random.default_rng(seed)
     noise_flag = int(computed.fields["noise_flag"])
 
-    volts_full = electrons * conversion_gain
-    computed.data["channel_volts"] = volts_full.copy()
-
     if computed.fields["mosaic"]:
-        tiled_pattern = tile_pattern(pattern, rows, cols)
-        volts = np.zeros((rows, cols), dtype=float)
-        for channel_index in range(volts_full.shape[2]):
-            mask = tiled_pattern == (channel_index + 1)
-            volts[mask] = volts_full[:, :, channel_index][mask]
+        current_density = _signal_current_density(oi, computed)
+        signal_current = _spatial_integrate_current_density(current_density, oi, computed)
+        volts = signal_current * (integration_time * conversion_gain / _ELEMENTARY_CHARGE_C)
+        computed.data["channel_volts"] = None
     else:
+        volts_full = electrons * conversion_gain
+        computed.data["channel_volts"] = volts_full.copy()
         volts = volts_full.copy()
 
     if noise_flag in {1, 2, -2}:

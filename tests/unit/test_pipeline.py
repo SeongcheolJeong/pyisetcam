@@ -267,6 +267,13 @@ def test_sensor_set_integration_time_disables_auto_exposure(asset_store) -> None
     assert np.isclose(sensor.fields["integration_time"], 0.125)
 
 
+def test_sensor_get_set_supports_n_samples_per_pixel(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "n samples per pixel", 3)
+
+    assert sensor_get(sensor, "n samples per pixel") == 3
+
+
 def test_sensor_get_fov_uses_scene_distance_when_provided(asset_store) -> None:
     sensor = sensor_create(asset_store=asset_store)
     oi = oi_create()
@@ -310,6 +317,23 @@ def test_sensor_noise_flag_minus_two_keeps_zero_signal_zero(asset_store) -> None
 
     noisy = sensor_compute(sensor, oi, seed=0)
     assert np.allclose(noisy.data["volts"], 0.0)
+
+
+def test_sensor_compute_supersampling_changes_bayer_response(asset_store) -> None:
+    scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
+    oi = oi_compute(oi_create(), scene, crop=True)
+
+    default_sensor = sensor_create(asset_store=asset_store)
+    default_sensor = sensor_set(default_sensor, "integration time", 1.0)
+    default_sensor = sensor_set(default_sensor, "noise flag", 0)
+
+    supersampled_sensor = sensor_set(default_sensor.clone(), "n samples per pixel", 3)
+
+    default_result = sensor_compute(default_sensor, oi, seed=0)
+    supersampled_result = sensor_compute(supersampled_sensor, oi, seed=0)
+
+    assert default_result.data["volts"].shape == supersampled_result.data["volts"].shape
+    assert not np.allclose(default_result.data["volts"], supersampled_result.data["volts"])
 
 
 def test_ip_compute_default_pipeline(asset_store) -> None:
