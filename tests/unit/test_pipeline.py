@@ -262,7 +262,29 @@ def test_oi_create_raytrace_loads_upstream_optics(asset_store) -> None:
     assert np.isclose(oi_get(oi, "rtfov"), 38.72116733777534)
     assert oi_get(oi, "raytrace optics name") == "Asphere 2mm"
     assert oi_get(oi, "rtpsffieldheight").shape == (21,)
+    assert np.allclose(oi_get(oi, "rtpsffieldheight", "mm"), oi_get(oi, "raytrace")["psf"]["field_height_mm"])
+    assert np.allclose(oi_get(oi, "rtpsfsamplespacing"), np.array([2.5e-7, 2.5e-7]))
+    assert np.allclose(oi_get(oi, "rtpsfspacing", "um"), np.array([0.25, 0.25]))
     assert np.array_equal(oi_get(oi, "rtpsfwavelength"), np.array([400.0, 475.0, 550.0, 625.0, 700.0]))
+
+
+def test_oi_create_raytrace_exposes_raw_psf_support_axes(asset_store) -> None:
+    oi = oi_create("ray trace", asset_store=asset_store)
+
+    support_x = np.asarray(oi_get(oi, "rtpsfsupportx", "um"), dtype=float)
+    support_y = np.asarray(oi_get(oi, "rtpsfsupporty", "um"), dtype=float).reshape(-1)
+    freq_x = np.asarray(oi_get(oi, "rtfreqsupportx", "mm"), dtype=float)
+    freq_y = np.asarray(oi_get(oi, "rtfreqsupporty", "mm"), dtype=float).reshape(-1)
+    spacing_mm = np.asarray(oi_get(oi, "rtpsfspacing", "mm"), dtype=float)
+
+    assert support_x.shape == (128,)
+    assert support_y.shape == (128,)
+    assert np.isclose(support_x[63], 0.0)
+    assert np.isclose(support_y[63], 0.0)
+    assert np.isclose(support_x[0], -63.0 * 0.25)
+    assert np.isclose(support_x[-1], 64.0 * 0.25)
+    assert np.isclose(freq_x[1] - freq_x[0], 1.0 / (128.0 * spacing_mm[1]))
+    assert np.isclose(freq_y[1] - freq_y[0], 1.0 / (128.0 * spacing_mm[0]))
 
 
 def test_oi_compute_raytrace_applies_lens_shading_and_blur(asset_store) -> None:
@@ -374,6 +396,22 @@ def test_oi_get_set_raytrace_psf_metadata_before_compute(asset_store) -> None:
     assert np.array_equal(oi_get(oi, "psf wavelength"), np.array([450.0, 550.0]))
     assert oi_get(oi, "psf wavelength n") == 2
     assert oi_get(oi, "raytrace optics name") == "Manual RT"
+
+
+def test_oi_set_raw_raytrace_psf_metadata_updates_optics_and_invalidates_cache(asset_store) -> None:
+    scene = scene_create("uniform ee", 32, np.array([550.0], dtype=float), asset_store=asset_store)
+    oi = oi_compute(oi_create("ray trace", asset_store=asset_store), scene, crop=True)
+
+    assert oi_get(oi, "psf struct") is not None
+
+    oi = oi_set(oi, "rtpsfspacing", np.array([0.0005, 0.00075], dtype=float))
+    oi = oi_set(oi, "rtpsffieldheight", np.array([0.0, 0.5, 1.0], dtype=float))
+    oi = oi_set(oi, "rtpsfwavelength", np.array([500.0, 600.0], dtype=float))
+
+    assert oi_get(oi, "psf struct") is None
+    assert np.allclose(oi_get(oi, "rtpsfspacing", "um"), np.array([0.5, 0.75]))
+    assert np.allclose(oi_get(oi, "rtpsffieldheight", "mm"), np.array([0.0, 0.5, 1.0]))
+    assert np.array_equal(oi_get(oi, "rtpsfwavelength"), np.array([500.0, 600.0]))
 
 
 def test_oi_compute_raytrace_rotates_psf_with_field_angle(asset_store) -> None:

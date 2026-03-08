@@ -1175,6 +1175,56 @@ def _sync_psf_metadata_fields(oi: OpticalImage) -> None:
         oi.fields["psf_optics_name"] = str(optics_name)
 
 
+def _spatial_unit_scale(unit: Any | None) -> float:
+    if unit is None:
+        return 1.0
+    return _SPATIAL_UNIT_SCALE.get(param_format(unit), 1.0)
+
+
+def _raw_raytrace_psf_data(oi: OpticalImage) -> dict[str, Any]:
+    return dict(oi.fields["optics"].get("raytrace", {}).get("psf", {}))
+
+
+def _raw_raytrace_psf_size(oi: OpticalImage) -> tuple[int, int]:
+    psf_function = np.asarray(_raw_raytrace_psf_data(oi).get("function", np.empty(0, dtype=float)), dtype=float)
+    if psf_function.ndim < 2:
+        return (0, 0)
+    return int(psf_function.shape[0]), int(psf_function.shape[1])
+
+
+def _raw_raytrace_psf_spacing(oi: OpticalImage, unit: Any | None = None) -> np.ndarray:
+    spacing_mm = np.asarray(_raw_raytrace_psf_data(oi).get("sample_spacing_mm", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    if spacing_mm.size == 0:
+        return np.empty(0, dtype=float)
+    return (spacing_mm / 1e3) * _spatial_unit_scale(unit)
+
+
+def _raw_raytrace_support_axis(length: int, spacing: float) -> np.ndarray:
+    if length <= 0:
+        return np.empty(0, dtype=float)
+    return np.arange((-length / 2.0) + 1.0, (length / 2.0) + 1.0, dtype=float) * float(spacing)
+
+
+def _raw_raytrace_psf_support_axes(oi: OpticalImage, unit: Any | None = None) -> tuple[np.ndarray, np.ndarray]:
+    rows, cols = _raw_raytrace_psf_size(oi)
+    spacing = _raw_raytrace_psf_spacing(oi, unit)
+    if spacing.size < 2:
+        return np.empty(0, dtype=float), np.empty(0, dtype=float)
+    y_support = _raw_raytrace_support_axis(rows, float(spacing[0]))
+    x_support = _raw_raytrace_support_axis(cols, float(spacing[1]))
+    return x_support, y_support
+
+
+def _raw_raytrace_frequency_axes(oi: OpticalImage, unit: Any | None = None) -> tuple[np.ndarray, np.ndarray]:
+    rows, cols = _raw_raytrace_psf_size(oi)
+    spacing = _raw_raytrace_psf_spacing(oi, unit)
+    if rows <= 0 or cols <= 0 or spacing.size < 2:
+        return np.empty(0, dtype=float), np.empty(0, dtype=float)
+    fy = _raw_raytrace_support_axis(rows, 1.0 / max(rows * float(spacing[0]), 1e-12))
+    fx = _raw_raytrace_support_axis(cols, 1.0 / max(cols * float(spacing[1]), 1e-12))
+    return fx, fy
+
+
 def _raytrace_padding_pixels(psf_struct: dict[str, Any] | None) -> tuple[int, int]:
     if not isinstance(psf_struct, dict):
         return (0, 0)
@@ -1889,14 +1939,33 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
     if key in {"rtfov"}:
         return float(oi.fields["optics"].get("raytrace", {}).get("max_fov_deg", np.inf))
     if key in {"rtpsffieldheight"}:
-        return np.asarray(oi.fields["optics"].get("raytrace", {}).get("psf", {}).get("field_height_mm", np.empty(0)), dtype=float)
+        field_height_mm = np.asarray(_raw_raytrace_psf_data(oi).get("field_height_mm", np.empty(0, dtype=float)), dtype=float)
+        return (field_height_mm / 1e3) * _spatial_unit_scale(args[0] if args else None)
     if key in {"rtpsfwavelength"}:
-        return np.asarray(oi.fields["optics"].get("raytrace", {}).get("psf", {}).get("wavelength_nm", np.empty(0)), dtype=float)
-    if key in {"rtpsfsamplespacing"}:
-        return np.asarray(
-            oi.fields["optics"].get("raytrace", {}).get("psf", {}).get("sample_spacing_mm", np.empty(0)),
-            dtype=float,
-        )
+        return np.asarray(_raw_raytrace_psf_data(oi).get("wavelength_nm", np.empty(0, dtype=float)), dtype=float)
+    if key in {"rtpsfsamplespacing", "rtpsfspacing"}:
+        return _raw_raytrace_psf_spacing(oi, args[0] if args else None)
+    if key in {"rtsupport", "rtpsfsupport"}:
+        x_support, y_support = _raw_raytrace_psf_support_axes(oi, args[0] if args else None)
+        if x_support.size == 0 or y_support.size == 0:
+            return np.empty((0, 0, 2), dtype=float)
+        xx, yy = np.meshgrid(x_support, y_support)
+        return np.stack((xx, yy), axis=2)
+    if key in {"rtpsfsupportrow", "rtpsfsupporty"}:
+        _, y_support = _raw_raytrace_psf_support_axes(oi, args[0] if args else None)
+        return y_support.reshape(-1, 1)
+    if key in {"rtpsfsupportcol", "rtpsfsupportx"}:
+        x_support, _ = _raw_raytrace_psf_support_axes(oi, args[0] if args else None)
+        return x_support.reshape(-1)
+    if key in {"rtfreqsupportcol", "rtfreqsupportx"}:
+        fx, _ = _raw_raytrace_frequency_axes(oi, args[0] if args else None)
+        return fx.reshape(-1)
+    if key in {"rtfreqsupportrow", "rtfreqsupporty"}:
+        _, fy = _raw_raytrace_frequency_axes(oi, args[0] if args else None)
+        return fy.reshape(-1, 1)
+    if key in {"rtfreqsupport"}:
+        fx, fy = _raw_raytrace_frequency_axes(oi, args[0] if args else "mm")
+        return {"fx": fx, "fy": fy}
     if key in {"transmittance", "transmittancescale", "lenstransmittance", "opticstransmittance", "opticstransmittancescale"}:
         target_wave = np.asarray(args[0], dtype=float).reshape(-1) if args else np.asarray(oi.fields["wave"], dtype=float)
         return _optics_transmittance_scale(oi.fields["optics"], target_wave)
@@ -2036,6 +2105,18 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any) -> OpticalImage:
         current["wavelength_nm"] = np.asarray(value, dtype=float).reshape(-1)
         oi.fields["psf_struct"] = current
         _sync_psf_metadata_fields(oi)
+        return oi
+    if key in {"rtpsfwavelength"}:
+        oi.fields["optics"].setdefault("raytrace", {}).setdefault("psf", {})["wavelength_nm"] = np.asarray(value, dtype=float).reshape(-1)
+        oi.fields["psf_struct"] = None
+        return oi
+    if key in {"rtpsffieldheight"}:
+        oi.fields["optics"].setdefault("raytrace", {}).setdefault("psf", {})["field_height_mm"] = np.asarray(value, dtype=float).reshape(-1)
+        oi.fields["psf_struct"] = None
+        return oi
+    if key in {"rtpsfsamplespacing", "rtpsfspacing"}:
+        oi.fields["optics"].setdefault("raytrace", {}).setdefault("psf", {})["sample_spacing_mm"] = np.asarray(value, dtype=float).reshape(-1)
+        oi.fields["psf_struct"] = None
         return oi
     if key in {"opticsraytrace", "raytrace", "rt"}:
         oi.fields["optics"]["raytrace"] = dict(value)
