@@ -97,6 +97,40 @@ def track_session_object(session: SessionContext | None, obj: _T, *, select: boo
     return obj
 
 
+def track_ip_session_state(
+    session: SessionContext | None,
+    ip: ImageProcessor,
+    *,
+    select: bool = True,
+) -> ImageProcessor:
+    if session is None:
+        return ip
+    display = ip.fields.get("display")
+    if isinstance(display, Display):
+        ip.fields["display"] = track_session_object(session, display, select=select)
+    return track_session_object(session, ip, select=select)
+
+
+def track_camera_session_state(
+    session: SessionContext | None,
+    camera: Camera,
+    *,
+    select: bool = True,
+) -> Camera:
+    if session is None:
+        return camera
+    oi = camera.fields.get("oi")
+    if isinstance(oi, OpticalImage):
+        camera.fields["oi"] = track_session_object(session, oi, select=select)
+    sensor = camera.fields.get("sensor")
+    if isinstance(sensor, Sensor):
+        camera.fields["sensor"] = track_session_object(session, sensor, select=select)
+    ip = camera.fields.get("ip")
+    if isinstance(ip, ImageProcessor):
+        camera.fields["ip"] = track_ip_session_state(session, ip, select=select)
+    return track_session_object(session, camera, select=select)
+
+
 def session_get_object(
     session: SessionContext,
     object_type: str,

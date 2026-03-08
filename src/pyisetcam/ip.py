@@ -11,7 +11,7 @@ from .assets import AssetStore
 from .color import internal_to_display_matrix, sensor_to_target_matrix, xyz_color_matching
 from .display import Display, display_create, display_get, display_set
 from .exceptions import UnsupportedOptionError
-from .session import track_session_object
+from .session import track_ip_session_state, track_session_object
 from .sensor import sensor_get
 from .types import ImageProcessor, Sensor, SessionContext
 from .utils import invert_gamma_table, linear_to_srgb, param_format, split_prefixed_parameter, tile_pattern
@@ -110,7 +110,7 @@ def ip_create(
     ip.data["input"] = None if sensor is None else sensor.data.get("dv", sensor.data.get("volts"))
     ip.fields["datamax"] = None if sensor is None else float(sensor.fields["pixel"]["voltage_swing"])
     ip.data["transforms"] = [None, None, None]
-    return track_session_object(session, _ensure_ip_state(ip))
+    return track_ip_session_state(session, _ensure_ip_state(ip))
 
 
 def _ie_bilinear(planes: np.ndarray, cfa_pattern: np.ndarray) -> np.ndarray:
@@ -271,7 +271,7 @@ def ip_compute(
     computed.data["display_rgb"] = display_rgb
     computed.data["srgb"] = srgb
     computed.data["result"] = display_linear
-    return track_session_object(session, computed)
+    return track_ip_session_state(session, computed)
 
 
 def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
@@ -388,107 +388,113 @@ def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
     raise KeyError(f"Unsupported ipGet parameter: {parameter}")
 
 
-def ip_set(ip: ImageProcessor, parameter: str, value: Any, *args: Any) -> ImageProcessor:
+def ip_set(
+    ip: ImageProcessor,
+    parameter: str,
+    value: Any,
+    *args: Any,
+    session: SessionContext | None = None,
+) -> ImageProcessor:
     ip = _ensure_ip_state(ip)
     key = param_format(parameter)
     if key == "displayviewingdistance":
         ip.fields["display"] = display_set(ip.fields["display"], "viewing distance", value)
-        return ip
+        return track_ip_session_state(session, ip)
     if key == "displaydpi":
         ip.fields["display"] = display_set(ip.fields["display"], "dpi", value)
-        return ip
+        return track_ip_session_state(session, ip)
 
     prefix, remainder = split_prefixed_parameter(parameter, ("display", "l3"))
     if prefix == "display":
         if not remainder:
-            ip.fields["display"] = value
+            ip.fields["display"] = track_session_object(session, value)
         else:
             ip.fields["display"] = display_set(ip.fields["display"], remainder, value, *args)
-        return _ensure_ip_state(ip)
+        return track_ip_session_state(session, _ensure_ip_state(ip))
     if prefix == "l3":
         ip.fields["l3"] = value
-        return ip
+        return track_ip_session_state(session, ip)
 
     if key == "type":
         ip.type = str(value)
-        return ip
+        return track_ip_session_state(session, ip)
     if key == "name":
         ip.name = str(value)
-        return ip
+        return track_ip_session_state(session, ip)
     if key in {"spectrum"}:
         ip.fields["spectrum"] = dict(value)
         if "wave" in ip.fields["spectrum"]:
             ip.fields["wave"] = np.asarray(ip.fields["spectrum"]["wave"], dtype=float).reshape(-1)
-        return _ensure_ip_state(ip)
+        return track_ip_session_state(session, _ensure_ip_state(ip))
     if key in {"wave", "wavelength"}:
         ip.fields["wave"] = np.asarray(value, dtype=float).reshape(-1)
-        return _ensure_ip_state(ip)
+        return track_ip_session_state(session, _ensure_ip_state(ip))
     if key in {"internalcs", "internalcolorspace"}:
         ip.fields["internal_cs"] = str(value)
-        return ip
+        return track_ip_session_state(session, ip)
     if key in {"ics2display", "ics2displaytransform", "internalcs2displayspace"}:
         ip.data["transforms"][2] = np.asarray(value, dtype=float)
-        return ip
+        return track_ip_session_state(session, ip)
     if key in {"demosaicstructure", "demosaic"}:
         ip.fields["demosaic"] = dict(value)
         ip.fields["demosaic_method"] = str(ip.fields["demosaic"].get("method", "none"))
-        return ip
+        return track_ip_session_state(session, ip)
     if key == "demosaicmethod":
         method = "none" if value in {None, ""} else str(value).lower()
         ip.fields["demosaic_method"] = method
         ip.fields["demosaic"]["method"] = method
-        return ip
+        return track_ip_session_state(session, ip)
     if key in {"sensorconversion", "conversionsensor"}:
         ip.fields["sensor_correction"] = dict(value)
         ip.fields["conversion_method_sensor"] = str(ip.fields["sensor_correction"].get("method", "none"))
-        return ip
+        return track_ip_session_state(session, ip)
     if key in {"sensorconversionmethod", "conversionmethodsensor"}:
         method = "none" if value in {None, ""} else str(value)
         ip.fields["conversion_method_sensor"] = method
         ip.fields["sensor_correction"]["method"] = method
-        return ip
+        return track_ip_session_state(session, ip)
     if key in {"sensorconversionmatrix", "conversiontransformsensor", "conversionmatrixsensor"}:
         ip.data["transforms"][0] = np.asarray(value, dtype=float)
-        return ip
+        return track_ip_session_state(session, ip)
     if key in {"illuminantcorrection", "correctionilluminant"}:
         ip.fields["illuminant_correction"] = dict(value)
         ip.fields["illuminant_correction_method"] = str(ip.fields["illuminant_correction"].get("method", "none"))
-        return ip
+        return track_ip_session_state(session, ip)
     if key in {"illuminantcorrectionmethod", "correctionmethodilluminant"}:
         method = "none" if value in {None, ""} else str(value).lower()
         ip.fields["illuminant_correction_method"] = method
         ip.fields["illuminant_correction"]["method"] = method
-        return ip
+        return track_ip_session_state(session, ip)
     if key in {"correctionmatrixilluminant", "illuminantcorrectionmatrix", "correctiontransformilluminant", "illuminantcorrectiontransform"}:
         ip.data["transforms"][1] = np.asarray(value, dtype=float)
-        return ip
+        return track_ip_session_state(session, ip)
     if key in {"display", "displaystructure"}:
-        ip.fields["display"] = value
-        return _ensure_ip_state(ip)
+        ip.fields["display"] = track_session_object(session, value)
+        return track_ip_session_state(session, _ensure_ip_state(ip))
     if key in {"data", "datastructure"}:
         ip.data = dict(value)
-        return _ensure_ip_state(ip)
+        return track_ip_session_state(session, _ensure_ip_state(ip))
     if key in {"input", "sensorinput"}:
         ip.data["input"] = np.asarray(value, dtype=float)
-        return ip
+        return track_ip_session_state(session, ip)
     if key in {"result", "displaylinearrgb"}:
         ip.data["result"] = np.asarray(value, dtype=float)
-        return ip
+        return track_ip_session_state(session, ip)
     if key in {"datawhitepoint", "datawp"}:
         ip.data["wp"] = np.asarray(value, dtype=float)
-        return ip
+        return track_ip_session_state(session, ip)
     if key == "sensorspace":
         ip.data["sensorspace"] = np.asarray(value, dtype=float)
-        return ip
+        return track_ip_session_state(session, ip)
     if key == "quantization":
         ip.data["quantization"] = value
-        return ip
+        return track_ip_session_state(session, ip)
     if key in {"nbits", "quantizationnbits"}:
         ip.data.setdefault("quantization", {})
         if not isinstance(ip.data["quantization"], dict):
             ip.data["quantization"] = {"method": ip.data["quantization"]}
         ip.data["quantization"]["bits"] = int(value)
-        return ip
+        return track_ip_session_state(session, ip)
     if key == "transforms":
         if args:
             index = int(args[0]) - 1
@@ -498,34 +504,34 @@ def ip_set(ip: ImageProcessor, parameter: str, value: Any, *args: Any) -> ImageP
             while len(transforms) < 3:
                 transforms.append(None)
             ip.data["transforms"] = transforms[:3]
-        return ip
+        return track_ip_session_state(session, ip)
     if key == "transformmethod":
         ip.fields["transform_method"] = str(value).lower()
-        return ip
+        return track_ip_session_state(session, ip)
     if key in {"datamax", "rgbmax", "sensormax", "maximumsensorvalue", "maximumsensorvoltageswing"}:
         ip.fields["datamax"] = float(value)
-        return ip
+        return track_ip_session_state(session, ip)
     if key in {"render", "renderstructure"}:
         ip.fields["render"] = dict(value)
         ip.fields["render"].setdefault("renderflag", 1)
         ip.fields["render"].setdefault("scale", True)
-        return ip
+        return track_ip_session_state(session, ip)
     if key in {"renderflag", "displaymode"}:
         normalized = param_format(value)
         mapping = {"rgb": 1, "hdr": 2, "gray": 3}
         ip.fields["render"]["renderflag"] = mapping.get(normalized, int(value) if isinstance(value, (int, np.integer)) else 1)
-        return ip
+        return track_ip_session_state(session, ip)
     if key in {"renderscale", "scaledisplay", "scaledisplayoutput"}:
         ip.fields["render"]["scale"] = bool(value)
-        return ip
+        return track_ip_session_state(session, ip)
     if key in {"gammadisplay", "rendergamma", "gamma"}:
         ip.fields["render"]["gamma"] = value
-        return ip
+        return track_ip_session_state(session, ip)
     if key == "renderdemosaiconly" and bool(value):
-        ip = ip_set(ip, "internal cs", "Sensor")
-        ip = ip_set(ip, "conversion method sensor", "None")
-        ip = ip_set(ip, "correction method illuminant", "None")
-        ip = ip_set(ip, "transform method", "current")
-        ip = ip_set(ip, "ics2display transform", _identity_transform())
-        return ip
+        ip = ip_set(ip, "internal cs", "Sensor", session=session)
+        ip = ip_set(ip, "conversion method sensor", "None", session=session)
+        ip = ip_set(ip, "correction method illuminant", "None", session=session)
+        ip = ip_set(ip, "transform method", "current", session=session)
+        ip = ip_set(ip, "ics2display transform", _identity_transform(), session=session)
+        return track_ip_session_state(session, ip)
     raise KeyError(f"Unsupported ipSet parameter: {parameter}")

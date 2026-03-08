@@ -10,7 +10,7 @@ from .assets import AssetStore
 from .exceptions import UnsupportedOptionError
 from .ip import ip_compute, ip_create, ip_get, ip_set
 from .optics import oi_compute, oi_create, oi_get, oi_set
-from .session import track_session_object
+from .session import track_camera_session_state, track_session_object
 from .scene import Scene
 from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_get, sensor_set, sensor_set_size_to_fov
 from .types import Camera, OpticalImage, Sensor, SessionContext
@@ -110,7 +110,7 @@ def camera_create(
     camera.fields["oi"] = oi
     camera.fields["sensor"] = sensor
     camera.fields["ip"] = ip_create(sensor=sensor, asset_store=store, session=session)
-    return track_session_object(session, camera)
+    return track_camera_session_state(session, camera)
 
 
 def camera_get(camera: Camera, parameter: str, *args: Any) -> Any:
@@ -159,65 +159,71 @@ def camera_get(camera: Camera, parameter: str, *args: Any) -> Any:
     raise KeyError(f"Unsupported cameraGet parameter: {parameter}")
 
 
-def camera_set(camera: Camera, parameter: str, value: Any, *args: Any) -> Camera:
+def camera_set(
+    camera: Camera,
+    parameter: str,
+    value: Any,
+    *args: Any,
+    session: SessionContext | None = None,
+) -> Camera:
     prefix, remainder = split_prefixed_parameter(parameter, ("oi", "optics", "sensor", "pixel", "ip", "vci", "l3"))
     if prefix == "oi":
         if not remainder:
-            camera.fields["oi"] = value
+            camera.fields["oi"] = track_session_object(session, value)
         else:
             camera.fields["oi"] = oi_set(camera.fields["oi"], remainder, value)
-        return camera
+        return track_camera_session_state(session, camera)
     if prefix == "optics":
         if not remainder:
             camera.fields["oi"] = oi_set(camera.fields["oi"], "optics", value)
         else:
             optics_param = "optics wvf" if remainder == "wvf" else f"optics {remainder}"
             camera.fields["oi"] = oi_set(camera.fields["oi"], optics_param, value)
-        return camera
+        return track_camera_session_state(session, camera)
     if prefix == "sensor":
         if not remainder:
-            camera.fields["sensor"] = value
+            camera.fields["sensor"] = track_session_object(session, value)
         else:
             camera.fields["sensor"] = sensor_set(camera.fields["sensor"], remainder, value)
-        return camera
+        return track_camera_session_state(session, camera)
     if prefix == "pixel":
         if not remainder:
             camera.fields["sensor"].fields["pixel"] = dict(value)
         else:
             camera.fields["sensor"] = _pixel_set(camera.fields["sensor"], remainder, value)
-        return camera
+        return track_camera_session_state(session, camera)
     if prefix in {"ip", "vci"}:
         if not remainder:
             camera.fields["ip"] = value
         else:
-            camera.fields["ip"] = ip_set(camera.fields["ip"], remainder, value, *args)
-        return camera
+            camera.fields["ip"] = ip_set(camera.fields["ip"], remainder, value, *args, session=session)
+        return track_camera_session_state(session, camera)
     if prefix == "l3":
-        camera.fields["ip"] = ip_set(camera.fields["ip"], "l3", value)
-        return camera
+        camera.fields["ip"] = ip_set(camera.fields["ip"], "l3", value, session=session)
+        return track_camera_session_state(session, camera)
 
     key = param_format(parameter)
     if key == "name":
         camera.name = str(value)
-        return camera
+        return track_camera_session_state(session, camera)
     if key == "type":
         camera.type = str(value)
-        return camera
+        return track_camera_session_state(session, camera)
     if key == "oi":
-        camera.fields["oi"] = value
-        return camera
+        camera.fields["oi"] = track_session_object(session, value)
+        return track_camera_session_state(session, camera)
     if key == "sensor":
-        camera.fields["sensor"] = value
-        return camera
+        camera.fields["sensor"] = track_session_object(session, value)
+        return track_camera_session_state(session, camera)
     if key in {"ip", "vci"}:
         camera.fields["ip"] = value
-        return camera
+        return track_camera_session_state(session, camera)
     if key == "l3sensorsize":
         camera.fields["sensor"] = sensor_set(camera.fields["sensor"], "size", value)
-        return camera
+        return track_camera_session_state(session, camera)
     if key == "l3sensorfov":
         camera.fields["sensor"] = sensor_set_size_to_fov(camera.fields["sensor"], value, camera.fields["oi"])
-        return camera
+        return track_camera_session_state(session, camera)
     raise KeyError(f"Unsupported cameraSet parameter: {parameter}")
 
 
@@ -276,4 +282,4 @@ def camera_compute(
     camera.fields["sensor"] = sensor
     camera.fields["ip"] = ip
     camera.data["result"] = ip.data.get("result")
-    return track_session_object(session, camera)
+    return track_camera_session_state(session, camera)

@@ -214,7 +214,9 @@ An initial optional `SessionContext` compatibility layer is now in place
 too, including session-aware core create/compute entry points and
 MATLAB-style helpers for registering and retrieving the current
 scene/OI/sensor/IP/camera objects without changing the explicit-object
-default workflow.
+default workflow. Session-aware `camera_set(...)` and `ip_set(...)`
+replacement flows now keep that registry coherent when camera, sensor,
+OI, IP, or display objects are swapped out after creation.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
