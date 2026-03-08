@@ -6,6 +6,7 @@ from pyisetcam import (
     camera_set,
     display_create,
     ieAddObject,
+    ieAppGet,
     ieDeleteObject,
     ieGetObject,
     ieGetSelectedObject,
@@ -15,6 +16,7 @@ from pyisetcam import (
     ieSessionSet,
     ieSelectObject,
     ie_add_object,
+    ie_app_get,
     ie_delete_object,
     ie_get_object,
     ie_get_selected_object,
@@ -417,6 +419,54 @@ def test_ie_session_set_and_get_metadata_preferences_and_gui(asset_store) -> Non
     assert ieSessionGet(session, "selected", "scene") == 1
     assert ieSessionGet(session, "nobjects", "scene") == 1
     assert ieSessionGet(session, "names", "scene") == [scene.name]
+
+
+def test_ie_session_window_aliases_and_ie_app_get(asset_store) -> None:
+    session = ie_init_session()
+    scene = scene_create("uniform ee", 8, asset_store=asset_store)
+    oi = oi_create(asset_store=asset_store)
+    sensor = sensor_create(asset_store=asset_store)
+    ip = ip_create(sensor=sensor, asset_store=asset_store)
+    display = display_create("default")
+
+    scene_app = {"sceneImage": "scene-axis", "figure1": "scene-figure"}
+    oi_app = {"oiImage": "oi-axis", "figure1": "oi-figure"}
+    sensor_app = {"imgMain": "sensor-axis", "figure1": "sensor-figure"}
+    ip_app = {"ipImage": "ip-axis", "figure1": "ip-figure"}
+    display_app = {"displayImage": "display-axis", "figure1": "display-figure"}
+
+    ieAddObject(session, scene)
+    session_add_object(session, oi)
+    session_add_object(session, sensor)
+    session_add_object(session, ip)
+    session_add_object(session, display)
+
+    ieSessionSet(session, "scene window", scene_app)
+    ieSessionSet(session, "oi window", oi_app)
+    ieSessionSet(session, "sensor window", sensor_app)
+    ieSessionSet(session, "ip window", ip_app)
+    ieSessionSet(session, "display window", display_app)
+
+    assert ieSessionGet(session, "scene figure") is scene_app
+    assert ieSessionGet(session, "scene image figures") is scene_app
+    assert ieSessionGet(session, "oi figure") is oi_app
+    assert ieSessionGet(session, "optical image figures") is oi_app
+    assert ieSessionGet(session, "isa window") is sensor_app
+    assert ieSessionGet(session, "vcimage figure") is ip_app
+    assert ieSessionGet(session, "display window") is display_app
+
+    assert ie_app_get(session, scene) == (scene_app, "scene-axis")
+    assert ieAppGet(session, "oi") == (oi_app, "oi-axis")
+    assert ieAppGet(session, "sensor") == (sensor_app, "sensor-axis")
+    assert ieAppGet(session, "ip") == (ip_app, "ip-axis")
+    assert ieAppGet(session, "display") == (display_app, "display-axis")
+
+
+def test_ie_app_get_accepts_direct_app_like_objects() -> None:
+    session = ie_init_session()
+    app = {"current_axes": "free-axis"}
+
+    assert ie_app_get(session, app) == (app, "free-axis")
 
 def test_session_set_objects_and_new_object_value_follow_matlab_style(asset_store) -> None:
     session = session_create()

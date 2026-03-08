@@ -234,7 +234,9 @@ wrappers, including nested `optics`, `pixel`, and `ipdisplay`
 getter semantics, plus a minimal `ieInitSession` /
 `ieSessionGet` / `ieSessionSet` port for session metadata,
 preferences, GUI slots, selected-object queries, and
-image-size/GPU session flags.
+image-size/GPU session flags. Window/figure aliases and
+`ieAppGet` are now supported too for the scene/OI/sensor/IP/display
+app lookup path.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

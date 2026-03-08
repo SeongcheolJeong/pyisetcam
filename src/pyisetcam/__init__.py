@@ -59,6 +59,7 @@ from .optics import (
 )
 from .parity import run_python_case, run_python_case_with_context
 from .session import (
+    ie_app_get,
     ie_add_object,
     ie_delete_object,
     ie_get_object,
@@ -147,6 +148,7 @@ __all__ = [
     "delta_e_ab",
     "iePSNR",
     "ieAddObject",
+    "ieAppGet",
     "ieDeleteObject",
     "ieFieldHeight2Index",
     "ieGetObject",
@@ -157,6 +159,7 @@ __all__ = [
     "ieSessionSet",
     "ieSelectObject",
     "ie_add_object",
+    "ie_app_get",
     "ie_delete_object",
     "ie_field_height_to_index",
     "ie_get_object",
@@ -373,6 +376,7 @@ metricsSPD = metrics_spd
 deltaEab = delta_e_ab
 
 ieAddObject = ie_add_object
+ieAppGet = ie_app_get
 ieDeleteObject = ie_delete_object
 ieGetObject = ie_get_object
 ieGetSelectedObject = ie_get_selected_object

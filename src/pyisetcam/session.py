@@ -357,21 +357,68 @@ def _normalize_on_off(value: Any) -> Any:
     return value
 
 
+_WINDOW_KEY_ALIASES = {
+    "mainwindow": "main_window",
+    "mainfigure": "main_window",
+    "mainfigures": "main_window",
+    "scenewindow": "scene_window",
+    "scenefigure": "scene_window",
+    "sceneimagefigure": "scene_window",
+    "sceneimagefigures": "scene_window",
+    "oiwindow": "oi_window",
+    "oifigure": "oi_window",
+    "oifigures": "oi_window",
+    "opticalimagefigure": "oi_window",
+    "opticalimagefigures": "oi_window",
+    "sensorwindow": "sensor_window",
+    "sensorfigure": "sensor_window",
+    "sensorfigures": "sensor_window",
+    "isafigure": "sensor_window",
+    "isafigures": "sensor_window",
+    "isawindow": "sensor_window",
+    "ipwindow": "ip_window",
+    "ipfigure": "ip_window",
+    "vcimagewindow": "ip_window",
+    "vcimagefigure": "ip_window",
+    "vcimagefigures": "ip_window",
+    "displaywindow": "display_window",
+    "metricswindow": "metrics_window",
+    "metricsfigure": "metrics_window",
+    "metricsfigures": "metrics_window",
+    "camdesignwindow": "camdesign_window",
+    "imageexplorewindow": "imageexplore_window",
+}
+
+_APP_AXIS_FIELDS = {
+    "scene": ("scene_window", "sceneImage"),
+    "oi": ("oi_window", "oiImage"),
+    "opticalimage": ("oi_window", "oiImage"),
+    "sensor": ("sensor_window", "imgMain"),
+    "isa": ("sensor_window", "imgMain"),
+    "ip": ("ip_window", "ipImage"),
+    "vcimage": ("ip_window", "ipImage"),
+    "display": ("display_window", "displayImage"),
+}
+
+
 def _session_window_key(parameter: str) -> str | None:
-    key = param_format(parameter)
-    mapping = {
-        "mainwindow": "main_window",
-        "scenewindow": "scene_window",
-        "oiwindow": "oi_window",
-        "sensorwindow": "sensor_window",
-        "ipwindow": "ip_window",
-        "vcimagewindow": "ip_window",
-        "displaywindow": "display_window",
-        "metricswindow": "metrics_window",
-        "camdesignwindow": "camdesign_window",
-        "imageexplorewindow": "imageexplore_window",
-    }
-    return mapping.get(key)
+    return _WINDOW_KEY_ALIASES.get(param_format(parameter))
+
+
+def _extract_app_axis(app: Any, axis_name: str) -> Any:
+    if app is None:
+        return None
+    if isinstance(app, dict):
+        if axis_name in app:
+            return app[axis_name]
+        return app.get("current_axes")
+    if hasattr(app, axis_name):
+        return getattr(app, axis_name)
+    if hasattr(app, "current_axes"):
+        return getattr(app, "current_axes")
+    if hasattr(app, "CurrentAxes"):
+        return getattr(app, "CurrentAxes")
+    return None
 
 
 def ie_session_get(session: SessionContext, parameter: str, *args: Any) -> Any:
@@ -498,6 +545,31 @@ def ie_session_set(session: SessionContext, parameter: str, value: Any, *args: A
         session.image_size_threshold = float(value)
         return session
     raise KeyError(f"Unknown ieSessionSet parameter: {parameter}")
+
+
+def ie_app_get(
+    session: SessionContext,
+    obj: str | BaseISETObject | dict[str, Any] | Any,
+    *,
+    select: bool = True,
+) -> tuple[Any, Any]:
+    del select
+    if isinstance(obj, (str, BaseISETObject)) or (isinstance(obj, dict) and "type" in obj):
+        obj_type = _ie_object_type(obj)
+        window_info = _APP_AXIS_FIELDS.get(obj_type)
+        if window_info is None:
+            raise ValueError(f"Unknown object type for ieAppGet: {obj_type}")
+        window_key, axis_name = window_info
+        app_state = session.gui.get(window_key)
+        app = app_state.get("app") if isinstance(app_state, dict) else app_state
+        if app is None:
+            raise ValueError(f"Undefined {obj_type} app.")
+        return app, _extract_app_axis(app, axis_name)
+
+    if isinstance(obj, dict):
+        return obj, obj.get("current_axes")
+
+    return obj, _extract_app_axis(obj, "current_axes")
 
 
 def ie_get_object(
@@ -680,6 +752,7 @@ ieAddObject = ie_add_object
 ieDeleteObject = ie_delete_object
 ieGetObject = ie_get_object
 ieGetSelectedObject = ie_get_selected_object
+ieAppGet = ie_app_get
 ieInitSession = ie_init_session
 ieReplaceObject = ie_replace_object
 ieSessionGet = ie_session_get
