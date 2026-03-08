@@ -13,14 +13,20 @@ from pyisetcam import (
     session_add_object,
     session_count_objects,
     session_create,
+    session_delete_object,
+    session_delete_selected_object,
     session_get_object,
+    session_get_object_with_id,
     session_get_object_names,
     session_get_selected,
+    session_get_selected_pair,
     session_get_selected_id,
     session_object_id,
     session_replace_and_select_object,
     session_replace_object,
     session_set_selected,
+    vcGetObject,
+    vcGetSelectedObject,
 )
 
 
@@ -41,6 +47,10 @@ def test_session_add_get_and_select_round_trip(asset_store) -> None:
 
     session_set_selected(session, "scene", second_id)
     assert session_get_selected(session, "scene") is second_scene
+    assert session_get_selected_pair(session, "scene") == (second_id, second_scene)
+    assert session_get_object_with_id(session, "scene", second_id) == (second_scene, second_id)
+    assert vcGetSelectedObject(session, "scene") == (second_id, second_scene)
+    assert vcGetObject(session, "scene", second_id) == (second_scene, second_id)
 
 
 def test_camera_create_registers_session_subobjects(asset_store) -> None:
@@ -151,3 +161,29 @@ def test_session_replace_and_select_camera_tracks_subobjects(asset_store) -> Non
     assert session_get_selected(session, "sensor") is replaced.fields["sensor"]
     assert session_get_selected(session, "ip") is replaced.fields["ip"]
     assert session_get_selected(session, "display") is replaced.fields["ip"].fields["display"]
+
+
+def test_session_alias_types_and_delete_renumbering(asset_store) -> None:
+    session = session_create()
+    scene_one = scene_create("uniform ee", 8, asset_store=asset_store, session=session)
+    scene_two = scene_create("uniform d65", 8, asset_store=asset_store, session=session)
+    scene_three = scene_create("checkerboard", 4, 4, asset_store=asset_store, session=session)
+    sensor = sensor_create(asset_store=asset_store, session=session)
+    ip = ip_create(sensor=sensor, asset_store=asset_store, session=session)
+
+    assert session_get_selected(session, "isa") is sensor
+    assert session_get_selected(session, "imgproc") is ip
+
+    remaining = session_delete_object(session, "scene", 2)
+
+    assert remaining == 2
+    assert session_count_objects(session, "scene") == 2
+    assert session_get_object(session, "scene", 1) is scene_one
+    assert session_get_object(session, "scene", 2) is scene_three
+    assert session_object_id(scene_three) == 2
+    assert session_get_selected_pair(session, "scene") == (1, scene_one)
+
+    remaining = session_delete_selected_object(session, "scene")
+
+    assert remaining == 1
+    assert session_get_selected_pair(session, "scene") == (1, scene_three)

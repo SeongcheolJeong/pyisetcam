@@ -219,7 +219,10 @@ replacement flows now keep that registry coherent when camera, sensor,
 OI, IP, or display objects are swapped out after creation, and the
 session layer now also exposes MATLAB-style generic replacement and
 listing helpers such as `vcReplaceObject`, `vcReplaceAndSelectObject`,
-`vcGetObjects`, `vcGetObjectNames`, and `vcCountObjects`.
+`vcGetObjects`, `vcGetObjectNames`, and `vcCountObjects`, plus
+MATLAB-style pair-return wrappers for `vcGetSelectedObject` /
+`vcGetObject` and delete helpers that renumber session slots the MATLAB
+way.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

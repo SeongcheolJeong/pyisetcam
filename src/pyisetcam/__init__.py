@@ -62,9 +62,13 @@ from .session import (
     session_add_object,
     session_count_objects,
     session_create,
+    session_delete_object,
+    session_delete_selected_object,
     session_get_object,
+    session_get_object_with_id,
     session_get_object_names,
     session_get_selected,
+    session_get_selected_pair,
     session_get_selected_id,
     session_list_objects,
     session_object_id,
@@ -163,9 +167,13 @@ __all__ = [
     "session_add_object",
     "session_count_objects",
     "session_create",
+    "session_delete_object",
+    "session_delete_selected_object",
     "session_get_object",
+    "session_get_object_with_id",
     "session_get_object_names",
     "session_get_selected",
+    "session_get_selected_pair",
     "session_get_selected_id",
     "session_list_objects",
     "session_object_id",
@@ -242,6 +250,8 @@ __all__ = [
     "sensor_set_size_to_fov",
     "vcAddObject",
     "vcCountObjects",
+    "vcDeleteObject",
+    "vcDeleteSelectedObject",
     "vcGetObject",
     "vcGetObjectNames",
     "vcGetObjects",
@@ -327,10 +337,12 @@ cameraSet = camera_set
 
 vcAddObject = session_add_object
 vcCountObjects = session_count_objects
-vcGetObject = session_get_object
+vcDeleteObject = session_delete_object
+vcDeleteSelectedObject = session_delete_selected_object
+vcGetObject = session_get_object_with_id
 vcGetObjectNames = session_get_object_names
 vcGetObjects = session_list_objects
-vcGetSelectedObject = session_get_selected
+vcGetSelectedObject = session_get_selected_pair
 vcGetSelectedObjectID = session_get_selected_id
 vcReplaceAndSelectObject = session_replace_and_select_object
 vcReplaceObject = session_replace_object

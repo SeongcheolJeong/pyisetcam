@@ -15,11 +15,16 @@ _SESSION_TYPE_ALIASES = {
     "oi": "oi",
     "opticalimage": "oi",
     "opticalimages": "oi",
+    "optics": "oi",
     "sensor": "sensor",
     "sensors": "sensor",
+    "isa": "sensor",
+    "pixel": "sensor",
     "display": "display",
     "displays": "display",
     "ip": "ip",
+    "imgproc": "ip",
+    "ipdisplay": "ip",
     "vcimage": "ip",
     "vci": "ip",
     "imageprocessor": "ip",
@@ -148,6 +153,24 @@ def session_get_selected(session: SessionContext, object_type: str) -> BaseISETO
     return session_get_object(session, object_type)
 
 
+def session_get_selected_pair(
+    session: SessionContext,
+    object_type: str,
+) -> tuple[int | None, BaseISETObject | None]:
+    object_id = session_get_selected_id(session, object_type)
+    return object_id, session_get_object(session, object_type, object_id)
+
+
+def session_get_object_with_id(
+    session: SessionContext,
+    object_type: str,
+    object_id: int | None = None,
+) -> tuple[BaseISETObject | None, int | None]:
+    if object_id is None:
+        object_id = session_get_selected_id(session, object_type)
+    return session_get_object(session, object_type, object_id), object_id
+
+
 def session_get_selected_id(session: SessionContext, object_type: str) -> int | None:
     normalized_type = _session_type_name(object_type)
     selected = session.selected.get(normalized_type)
@@ -238,13 +261,56 @@ def session_replace_and_select_object(
     return session_replace_object(session, obj, object_id, select=True)
 
 
+def _session_reindex_bucket(bucket: dict[int, BaseISETObject]) -> dict[int, BaseISETObject]:
+    reindexed: dict[int, BaseISETObject] = {}
+    for new_id, obj in enumerate((bucket[key] for key in sorted(bucket)), start=1):
+        obj.metadata["session_id"] = new_id
+        reindexed[new_id] = obj
+    return reindexed
+
+
+def session_delete_selected_object(session: SessionContext, object_type: str) -> int:
+    normalized_type = _session_type_name(object_type)
+    selected_id = session_get_selected_id(session, normalized_type)
+    if selected_id is None:
+        return 0
+    return session_delete_object(session, normalized_type, selected_id)
+
+
+def session_delete_object(
+    session: SessionContext,
+    object_type: str,
+    object_id: int | None = None,
+) -> int:
+    normalized_type = _session_type_name(object_type)
+    bucket = dict(session.objects.get(normalized_type, {}))
+    if object_id is None:
+        object_id = session_get_selected_id(session, normalized_type)
+    if object_id is None or int(object_id) not in bucket:
+        return len(bucket)
+
+    target_id = int(object_id)
+    del bucket[target_id]
+    if bucket:
+        bucket = _session_reindex_bucket(bucket)
+        session.objects[normalized_type] = bucket
+        session.selected[normalized_type] = max(1, target_id - 1)
+    else:
+        session.objects[normalized_type] = {}
+        session.selected[normalized_type] = None
+    session.next_ids[normalized_type] = len(bucket) + 1
+    return len(bucket)
+
+
 # MATLAB-style aliases.
 vcAddObject = session_add_object
 vcCountObjects = session_count_objects
+vcDeleteObject = session_delete_object
+vcDeleteSelectedObject = session_delete_selected_object
 vcGetObjectNames = session_get_object_names
-vcGetObject = session_get_object
+vcGetObject = session_get_object_with_id
 vcGetObjects = session_list_objects
-vcGetSelectedObject = session_get_selected
+vcGetSelectedObject = session_get_selected_pair
 vcGetSelectedObjectID = session_get_selected_id
 vcReplaceAndSelectObject = session_replace_and_select_object
 vcReplaceObject = session_replace_object
