@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from pyisetcam import (
     camera_compute,
@@ -220,6 +221,15 @@ def test_oi_compute_wvf_uses_custom_aperture(asset_store) -> None:
     assert not np.allclose(custom_oi.data["photons"], default_oi.data["photons"])
 
 
+def test_oi_compute_wvf_default_aperture_matches_full_open_aperture(asset_store) -> None:
+    scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
+    default_oi = oi_compute(oi_create("wvf"), scene, crop=True)
+    full_aperture = np.ones((9, 9), dtype=float)
+    explicit_oi = oi_compute(oi_create("wvf"), scene, crop=True, aperture=full_aperture)
+
+    assert np.allclose(explicit_oi.data["photons"], default_oi.data["photons"])
+
+
 def test_oi_compute_wvf_zcoeffs_change_wavefront_response(asset_store) -> None:
     scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
     default_oi = oi_compute(oi_create("wvf"), scene, crop=True)
@@ -272,6 +282,39 @@ def test_sensor_get_set_supports_n_samples_per_pixel(asset_store) -> None:
     sensor = sensor_set(sensor, "n samples per pixel", 3)
 
     assert sensor_get(sensor, "n samples per pixel") == 3
+
+
+def test_sensor_set_etendue_scales_noiseless_response(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    oi = oi_compute(oi_create(), scene, crop=True)
+
+    baseline_sensor = sensor_create(asset_store=asset_store)
+    baseline_sensor = sensor_set(baseline_sensor, "integration time", 0.01)
+    baseline_sensor = sensor_set(baseline_sensor, "noise flag", 0)
+
+    attenuated_sensor = sensor_set(
+        baseline_sensor.clone(),
+        "sensor etendue",
+        np.full(baseline_sensor.fields["size"], 0.5, dtype=float),
+    )
+
+    baseline = sensor_compute(baseline_sensor, oi, seed=0)
+    attenuated = sensor_compute(attenuated_sensor, oi, seed=0)
+
+    assert np.allclose(attenuated.data["volts"], baseline.data["volts"] * 0.5)
+    assert np.allclose(sensor_get(attenuated, "sensor etendue"), 0.5)
+
+
+def test_sensor_compute_rejects_unsupported_vignetting_modes(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    oi = oi_compute(oi_create(), scene, crop=True)
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "integration time", 1.0)
+    sensor = sensor_set(sensor, "noise flag", 0)
+    sensor = sensor_set(sensor, "vignetting", 1)
+
+    with pytest.raises(NotImplementedError):
+        sensor_compute(sensor, oi, seed=0)
 
 
 def test_sensor_get_fov_uses_scene_distance_when_provided(asset_store) -> None:

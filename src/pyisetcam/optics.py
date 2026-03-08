@@ -504,11 +504,11 @@ def _wvf_aperture_mask(
     aperture: np.ndarray | None = None,
 ) -> np.ndarray:
     if aperture is None:
-        current = np.ones((n_pixels, n_pixels), dtype=float)
-    else:
-        current = np.asarray(aperture, dtype=float)
-        if current.shape != (n_pixels, n_pixels):
-            current = _resize_image(current, (n_pixels, n_pixels), method="linear")
+        return calc_radius_index.astype(float)
+
+    current = np.asarray(aperture, dtype=float)
+    if current.shape != (n_pixels, n_pixels):
+        current = _resize_image(current, (n_pixels, n_pixels), method="linear")
 
     bounding_box = _image_bounding_box(calc_radius_index)
     target_shape = (
@@ -565,7 +565,7 @@ def _wvf_psf_stack(
         xpos, ypos = np.meshgrid(pupil_pos, -pupil_pos)
         norm_radius = np.sqrt(xpos**2 + ypos**2) / max(measured_pupil_mm / 2.0, 1e-12)
         theta = np.arctan2(ypos, xpos)
-        calc_radius_index = norm_radius < calc_radius
+        calc_radius_index = norm_radius <= calc_radius
         aperture_mask = _wvf_aperture_mask(n_pixels, calc_radius_index, aperture=aperture)
         wavefront_aberrations_um = _zernike_surface_osa(zcoeffs, norm_radius, theta)
         pupil_phase = np.exp(-1j * 2.0 * np.pi * wavefront_aberrations_um / max(float(wavelength_nm) * 1e-3, 1e-12))

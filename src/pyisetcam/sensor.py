@@ -63,6 +63,8 @@ def _sensor_base(
             "quantization": "analog",
             "mosaic": True,
             "n_samples_per_pixel": 1,
+            "vignetting": 0,
+            "etendue": None,
         }
     )
     return sensor
@@ -207,6 +209,13 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return int(sensor.fields["noise_flag"])
     if key == "nbits":
         return int(sensor.fields["nbits"])
+    if key in {"vignetting", "vignettingflag", "pixelvignetting"}:
+        return sensor.fields.get("vignetting", 0)
+    if key in {"etendue", "sensoretendue", "imagesensorarrayetendue"}:
+        stored = sensor.fields.get("etendue")
+        if stored is None:
+            return np.ones(sensor.fields["size"], dtype=float)
+        return np.asarray(stored, dtype=float).copy()
     if key in {"nsamplesperpixel", "spatialsamplesperpixel"}:
         return int(sensor.fields.get("n_samples_per_pixel", 1))
     if key in {"quantization", "quantizationmethod"}:
@@ -257,6 +266,7 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         return sensor
     if key == "size":
         sensor.fields["size"] = (int(value[0]), int(value[1]))
+        sensor.fields["etendue"] = None
         return sensor
     if key == "pattern":
         sensor.fields["pattern"] = np.asarray(value, dtype=int)
@@ -272,6 +282,7 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         if size_value.size == 1:
             size_value = np.repeat(size_value, 2)
         sensor.fields["pixel"]["size_m"] = size_value
+        sensor.fields["etendue"] = None
         return sensor
     if key in {"integrationtime", "exptime"}:
         sensor.fields["integration_time"] = float(value)
@@ -291,6 +302,16 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         return sensor
     if key == "noiseflag":
         sensor.fields["noise_flag"] = int(value)
+        return sensor
+    if key in {"vignetting", "vignettingflag", "pixelvignetting"}:
+        sensor.fields["vignetting"] = value
+        sensor.fields["etendue"] = None
+        return sensor
+    if key in {"etendue", "sensoretendue", "imagesensorarrayetendue"}:
+        etendue = np.asarray(value, dtype=float)
+        if etendue.shape != tuple(sensor.fields["size"]):
+            raise ValueError("sensor etendue must match the sensor size.")
+        sensor.fields["etendue"] = etendue
         return sensor
     if key in {"nsamplesperpixel", "spatialsamplesperpixel"}:
         sensor.fields["n_samples_per_pixel"] = int(value)
@@ -326,6 +347,7 @@ def sensor_set_size_to_fov(sensor: Sensor, fov: float | tuple[float, float], oi:
     cols = ensure_multiple(cols, pattern_cols)
     rows = ensure_multiple(rows, pattern_rows)
     sensor.fields["size"] = (rows, cols)
+    sensor.fields["etendue"] = None
     return sensor
 
 
@@ -417,6 +439,23 @@ def _gaussian_kernel(shape: tuple[int, int], sigma: float) -> np.ndarray:
     if kernel_sum <= 0.0:
         return np.ones((1, 1), dtype=float)
     return kernel / kernel_sum
+
+
+def _sensor_etendue(sensor: Sensor) -> np.ndarray:
+    stored = sensor.fields.get("etendue")
+    if stored is not None:
+        etendue = np.asarray(stored, dtype=float)
+        if etendue.shape == tuple(sensor.fields["size"]):
+            return etendue
+
+    vignetting = sensor.fields.get("vignetting", 0)
+    normalized = param_format(vignetting) if isinstance(vignetting, str) else vignetting
+    if normalized in {0, "skip", "", None}:
+        etendue = np.ones(sensor.fields["size"], dtype=float)
+        sensor.fields["etendue"] = etendue
+        return etendue
+
+    raise UnsupportedOptionError("sensorCompute", f"vignetting {vignetting}")
 
 
 def _pixel_pd_size_m(pixel: dict[str, Any]) -> np.ndarray:
@@ -676,6 +715,12 @@ def sensor_compute(sensor: Sensor, oi: OpticalImage, show_bar: bool | None = Non
         volts_full = electrons * conversion_gain
         computed.data["channel_volts"] = volts_full.copy()
         volts = volts_full.copy()
+
+    etendue = _sensor_etendue(computed)
+    if volts.ndim == 2:
+        volts = volts * etendue
+    else:
+        volts = volts * etendue[:, :, None]
 
     if noise_flag in {1, 2, -2}:
         if noise_flag == 2:
