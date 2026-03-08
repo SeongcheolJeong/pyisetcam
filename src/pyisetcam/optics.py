@@ -140,7 +140,10 @@ def _normalize_raytrace_optics(raw: dict[str, Any]) -> dict[str, Any]:
         )
         normalized["focal_length_m"] = effective_focal_length_m
         normalized["nominal_focal_length_m"] = _scalar(
-            normalized.get("nominal_focal_length_m", normalized.get("focalLength", effective_focal_length_m)),
+            normalized.get(
+                "nominal_focal_length_m",
+                normalized.get("nominalFocalLength", normalized.get("focalLength", effective_focal_length_m)),
+            ),
             effective_focal_length_m,
         )
         normalized["compute_method"] = str(
@@ -204,7 +207,7 @@ def _normalize_raytrace_optics(raw: dict[str, Any]) -> dict[str, Any]:
         "f_number": nominal_f_number,
         "focal_length_m": effective_focal_length_m,
         "nominal_focal_length_m": _scalar(
-            raw.get("nominal_focal_length_m", raw.get("focalLength")),
+            raw.get("nominal_focal_length_m", raw.get("nominalFocalLength", raw.get("focalLength"))),
             DEFAULT_FOCAL_LENGTH_M,
         ),
         "compute_method": "",
