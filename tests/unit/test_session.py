@@ -16,17 +16,25 @@ from pyisetcam import (
     session_delete_object,
     session_delete_selected_object,
     session_get_object,
+    session_get_object_type,
     session_get_object_with_id,
     session_get_object_names,
+    session_get_objects,
     session_get_selected,
     session_get_selected_pair,
     session_get_selected_id,
+    session_new_object_value,
     session_object_id,
     session_replace_and_select_object,
     session_replace_object,
+    session_set_objects,
     session_set_selected,
     vcGetObject,
+    vcGetObjectType,
+    vcGetObjects,
     vcGetSelectedObject,
+    vcNewObjectValue,
+    vcSetObjects,
 )
 
 
@@ -187,3 +195,44 @@ def test_session_alias_types_and_delete_renumbering(asset_store) -> None:
 
     assert remaining == 1
     assert session_get_selected_pair(session, "scene") == (1, scene_three)
+
+
+def test_session_set_objects_and_new_object_value_follow_matlab_style(asset_store) -> None:
+    session = session_create()
+    scene_one = scene_create("uniform ee", 8, asset_store=asset_store)
+    scene_two = scene_create("checkerboard", 4, 4, asset_store=asset_store)
+    sensor = sensor_create(asset_store=asset_store)
+    ip = ip_create(sensor=sensor, asset_store=asset_store)
+    camera = camera_create(asset_store=asset_store, session=session)
+
+    session_set_objects(session, "scene", [scene_one, scene_two])
+    session_add_object(session, sensor)
+    session_add_object(session, ip)
+
+    assert session_get_objects(session, "scene") == [scene_one, scene_two]
+    assert vcGetObjects(session, "scene") == [scene_one, scene_two]
+    assert session_object_id(scene_one) == 1
+    assert session_object_id(scene_two) == 2
+    assert session_new_object_value(session, "scene") == 3
+    assert vcNewObjectValue(session, "scene") == 3
+    assert session_new_object_value(session, "camera") == (2, 3, 3)
+    assert vcNewObjectValue(session, "camera") == (2, 3, 3)
+    assert session_object_id(camera) == 1
+    assert session_get_object_type(ip) == "vcimage"
+    assert vcGetObjectType(ip) == "vcimage"
+
+
+def test_vcsetobjects_reindexes_and_clears_invalid_selection(asset_store) -> None:
+    session = session_create()
+    first = scene_create("uniform ee", 8, asset_store=asset_store, session=session)
+    second = scene_create("uniform d65", 8, asset_store=asset_store, session=session)
+    replacement = scene_create("checkerboard", 4, 4, asset_store=asset_store)
+
+    session_set_selected(session, "scene", 2)
+    vcSetObjects(session, "scene", [replacement])
+
+    assert session_get_objects(session, "scene") == [replacement]
+    assert session_object_id(replacement) == 1
+    assert session_get_selected(session, "scene") is None
+    assert first is not replacement
+    assert second is not replacement

@@ -205,8 +205,13 @@ def session_list_objects(
     return dict(session.objects.get(normalized_type, {}))
 
 
+def session_get_objects(session: SessionContext, object_type: str) -> list[BaseISETObject]:
+    objects = session_list_objects(session, object_type)
+    return [obj for _, obj in sorted(objects.items())]
+
+
 def session_count_objects(session: SessionContext, object_type: str) -> int:
-    return len(session_list_objects(session, object_type))
+    return len(session_get_objects(session, object_type))
 
 
 def session_get_object_names(
@@ -214,11 +219,60 @@ def session_get_object_names(
     object_type: str = "scene",
     make_unique: bool = False,
 ) -> list[str]:
-    objects = session_list_objects(session, object_type)
-    names = [str(obj.name) for _, obj in sorted(objects.items())]
+    names = [str(obj.name) for obj in session_get_objects(session, object_type)]
     if make_unique:
         return [f"{index + 1}-{name}" for index, name in enumerate(names)]
     return names
+
+
+def session_set_objects(
+    session: SessionContext,
+    object_type: str,
+    objects: dict[int, BaseISETObject] | list[BaseISETObject] | tuple[BaseISETObject, ...],
+) -> list[BaseISETObject]:
+    normalized_type = _session_type_name(object_type)
+    if isinstance(objects, dict):
+        ordered_objects = [obj for _, obj in sorted(objects.items())]
+    else:
+        ordered_objects = list(objects)
+
+    new_bucket: dict[int, BaseISETObject] = {}
+    for object_id, obj in enumerate(ordered_objects, start=1):
+        if isinstance(obj, Camera):
+            obj = track_camera_session_state(session, obj, select=False)
+        elif isinstance(obj, ImageProcessor):
+            obj = track_ip_session_state(session, obj, select=False)
+        obj.metadata["session_type"] = normalized_type
+        obj.metadata["session_id"] = object_id
+        new_bucket[object_id] = obj
+
+    session.objects[normalized_type] = new_bucket
+    session.next_ids[normalized_type] = len(new_bucket) + 1
+    selected_id = session.selected.get(normalized_type)
+    if selected_id is not None and int(selected_id) not in new_bucket:
+        session.selected[normalized_type] = None
+    return ordered_objects
+
+
+def session_new_object_value(
+    session: SessionContext,
+    object_type: str,
+) -> int | tuple[int, int, int]:
+    normalized_type = _session_type_name(object_type)
+    if normalized_type == "camera":
+        return (
+            session_count_objects(session, "oi") + 1,
+            session_count_objects(session, "sensor") + 1,
+            session_count_objects(session, "ip") + 1,
+        )
+    return session_count_objects(session, normalized_type) + 1
+
+
+def session_get_object_type(obj: BaseISETObject) -> str:
+    object_type = getattr(obj, "type", None)
+    if object_type is None:
+        raise ValueError("Object does not have a type field.")
+    return str(object_type)
 
 
 def session_replace_object(
@@ -307,11 +361,14 @@ vcAddObject = session_add_object
 vcCountObjects = session_count_objects
 vcDeleteObject = session_delete_object
 vcDeleteSelectedObject = session_delete_selected_object
+vcGetObjectType = session_get_object_type
 vcGetObjectNames = session_get_object_names
 vcGetObject = session_get_object_with_id
-vcGetObjects = session_list_objects
+vcGetObjects = session_get_objects
 vcGetSelectedObject = session_get_selected_pair
 vcGetSelectedObjectID = session_get_selected_id
+vcNewObjectValue = session_new_object_value
 vcReplaceAndSelectObject = session_replace_and_select_object
 vcReplaceObject = session_replace_object
+vcSetObjects = session_set_objects
 vcSetSelectedObject = session_set_selected
