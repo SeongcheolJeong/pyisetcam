@@ -60,6 +60,7 @@ from .optics import (
     zemax_read_header,
 )
 from .parity import run_python_case, run_python_case_with_context
+from .plotting import oi_plot, scene_plot
 from .ptable import IEPTable, ie_p_table
 from .roi import ie_locs2_rect, ie_rect2_locs, ie_rect2_vertices, ie_roi2_locs, vc_get_roi_data, vc_rect2_locs
 from .session import (
@@ -239,10 +240,12 @@ __all__ = [
     "oi_compute",
     "oi_create",
     "oi_get",
+    "oi_plot",
     "oi_set",
     "param_format",
     "peak_signal_to_noise_ratio",
     "root_mean_squared_error",
+    "scene_plot",
     "session_add_and_select_object",
     "session_add_object",
     "session_count_objects",
@@ -370,6 +373,8 @@ __all__ = [
     "vc_set_figure_handles",
     "wvf_create",
     "chromaticity_xy",
+    "plotScene",
+    "oiPlot",
     "xyz_from_energy",
     "xyz_to_lab",
     "zemaxLoad",
@@ -400,6 +405,8 @@ oiGet = oi_get
 oiSet = oi_set
 oiCalculateIlluminance = oi_calculate_illuminance
 oiDiffuser = oi_diffuser
+oiPlot = oi_plot
+plotScene = scene_plot
 opticsRayTrace = optics_ray_trace
 ieFieldHeight2Index = ie_field_height_to_index
 rtAngleLUT = rt_angle_lut

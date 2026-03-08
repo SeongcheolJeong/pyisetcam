@@ -295,6 +295,10 @@ now exposed too: `sceneGet(..., 'illuminant comment')`,
 `sceneGet(..., 'roi illuminant photons/energy')`,
 `sceneGet(..., 'roi mean illuminant photons/energy')`, and
 `sceneGet(..., 'illuminant hline/vline photons/energy')`.
+Minimal headless `plotScene` / `oiPlot` wrappers now sit on top of those
+getters too. The supported subset returns MATLAB-style `uData` payloads
+and `None` instead of opening figures, which makes the plot APIs usable in
+tests and scripts.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
