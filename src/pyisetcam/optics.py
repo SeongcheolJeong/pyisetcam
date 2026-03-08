@@ -298,14 +298,24 @@ def _normalize_transmittance_update(source: dict[str, Any], current: dict[str, A
         current_scale = np.ones(current_wave.size, dtype=float)
 
     wave = np.asarray(source.get("wave", current_wave), dtype=float).reshape(-1)
-    scale = np.asarray(source.get("scale", current_scale), dtype=float).reshape(-1)
-    if scale.size == 1 and wave.size > 1:
-        scale = np.full(wave.size, float(scale[0]), dtype=float)
-    elif scale.size != wave.size:
-        if current_wave.size > 0 and current_scale.size == current_wave.size:
-            scale = np.interp(wave, current_wave, current_scale)
+    if "scale" in source:
+        source_scale = np.asarray(source["scale"], dtype=float).reshape(-1)
+        unchanged_exported_scale = (
+            source_scale.size == current_scale.size
+            and np.allclose(source_scale, current_scale)
+        )
+        if unchanged_exported_scale:
+            scale = np.interp(wave, current_wave, current_scale) if current_wave.size > 0 else np.ones(wave.size, dtype=float)
         else:
-            scale = np.ones(wave.size, dtype=float)
+            scale = source_scale
+            if scale.size != wave.size:
+                raise ValueError("Transmittance must match wave dimension.")
+            if np.any((scale < 0.0) | (scale > 1.0)):
+                raise ValueError("Transmittance should be in [0, 1].")
+    elif current_wave.size > 0 and current_scale.size == current_wave.size:
+        scale = np.interp(wave, current_wave, current_scale)
+    else:
+        scale = np.ones(wave.size, dtype=float)
     return {
         "wave": wave.copy(),
         "scale": scale.copy(),

@@ -204,7 +204,9 @@ honor normalized top-level aliases like `f_number`, `focal_length_m`,
 and `nominal_focal_length_m` in that same export-and-edit workflow, and
 raw exported `nominalFocalLength` and `offaxis` now round-trip too.
 Whole-optics edits that change only `transmittance.wave` now preserve the
-existing scale by interpolation instead of resetting it.
+existing scale by interpolation instead of resetting it, and explicit
+whole-optics `transmittance.scale` edits now reject wrong-length vectors
+the same way the dedicated setter does.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
