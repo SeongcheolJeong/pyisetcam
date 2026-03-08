@@ -1455,6 +1455,21 @@ def test_rt_import_data_preserves_raw_matlab_style_optics_fields(tmp_path) -> No
     assert np.isclose(imported_optics["raytrace"]["computation"]["psf_spacing_m"], 9e-6)
 
 
+def test_rt_import_data_uses_existing_raytrace_name_as_top_level_fallback(tmp_path) -> None:
+    params_file = _write_mock_zemax_bundle(tmp_path)
+    existing = {
+        "rayTrace": {
+            "name": "Existing RT Name",
+        },
+    }
+
+    imported_optics, optics_file = rt_import_data(existing, p_file_full=params_file)
+
+    assert optics_file is None
+    assert imported_optics["name"] == "Existing RT Name"
+    assert imported_optics["raytrace"]["name"] == "Existing RT Name"
+
+
 def test_oi_create_raytrace_accepts_isetparams_file(tmp_path, asset_store) -> None:
     params_file = _write_mock_zemax_bundle(tmp_path)
 

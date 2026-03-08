@@ -740,6 +740,7 @@ def rt_import_data(
     current_raytrace = dict(current.get("raytrace", current.get("rayTrace", {})))
     current_computation = dict(current_raytrace.get("computation", {}))
     current_psf_spacing_m = current_computation.get("psf_spacing_m", current_computation.get("psfSpacing"))
+    current_name = current.get("name", current_raytrace.get("name", base_name))
     current_raytrace_name = current_raytrace.get("name", current.get("name", base_name))
     current_compute_method = current.get("compute_method", current.get("computeMethod", ""))
     current_aberration_scale = current.get("aberration_scale", current.get("aberrationScale"))
@@ -748,7 +749,7 @@ def rt_import_data(
     effective_f_number = float(params["fnumber_eff"])
 
     raw_optics = {
-        "name": str(current.get("name", base_name)),
+        "name": str(current_name),
         "model": "raytrace",
         "transmittance": current.get(
             "transmittance",
@@ -798,7 +799,7 @@ def rt_import_data(
         },
     }
     normalized = _normalize_raytrace_optics(raw_optics)
-    normalized["name"] = str(current.get("name", normalized.get("name", base_name)))
+    normalized["name"] = str(current_name if current_name is not None else normalized.get("name", base_name))
     normalized["focal_length_m"] = effective_focal_length_m
     normalized["f_number"] = effective_f_number
     normalized["compute_method"] = str(current_compute_method or normalized.get("compute_method", ""))

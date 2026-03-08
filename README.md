@@ -182,10 +182,10 @@ loading now also preserves real import failures for malformed Zemax
 bundles instead of collapsing them into an unsupported-option error.
 Raw MATLAB-style optics structs now also preserve top-level control
 fields like `computeMethod`, `offaxis`, and `aberrationScale` through the
-import path.
-When importing into an existing optics object, a distinct existing
-ray-trace name is now preserved independently from the top-level optics
-name.
+import path. When importing into an existing optics object, a distinct
+existing ray-trace name is now preserved independently from the top-level
+optics name, and a raw `rayTrace.name` now seeds the top-level optics
+name when no explicit top-level name is present.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
