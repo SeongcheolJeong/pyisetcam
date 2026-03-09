@@ -2205,6 +2205,39 @@ def test_sensor_get_set_supports_exposure_plane_and_cds_surface(asset_store) -> 
     assert sensor_get(sensor, "integration time") == 0.0
 
 
+def test_sensor_get_set_supports_exposure_method_and_time_summaries(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+
+    sensor = sensor_set(sensor, "integration times", np.array([0.01, 0.02, 0.04], dtype=float))
+
+    assert np.array_equal(sensor_get(sensor, "exptimes"), np.array([0.01, 0.02, 0.04], dtype=float))
+    assert np.array_equal(sensor_get(sensor, "exposure times", "ms"), np.array([10.0, 20.0, 40.0], dtype=float))
+    assert np.array_equal(sensor_get(sensor, "unique exptimes"), np.array([0.01, 0.02, 0.04], dtype=float))
+    assert np.isclose(sensor_get(sensor, "central exposure"), 0.02)
+    assert sensor_get(sensor, "exposure method") == "bracketedExposure"
+
+    sensor = sensor_set(sensor, "exposure method", "videoExposure")
+
+    assert sensor_get(sensor, "expmethod") == "videoExposure"
+
+    sensor = sensor_set(sensor, "integration time", np.array([[0.01, 0.02], [0.03, 0.04]], dtype=float))
+    sensor = sensor_set(sensor, "autoexp", "on")
+
+    assert sensor_get(sensor, "automatic exposure") is True
+    assert np.array_equal(sensor_get(sensor, "integration time"), np.zeros((2, 2), dtype=float))
+    assert sensor_get(sensor, "exposure method") == "videoExposure"
+
+
+def test_sensor_compute_rejects_multiple_integration_times(asset_store) -> None:
+    scene = scene_create("uniform d65")
+    oi = oi_compute(oi_create(), scene)
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "integration times", np.array([0.01, 0.02], dtype=float))
+
+    with pytest.raises(UnsupportedOptionError, match="sensorCompute"):
+        sensor_compute(sensor, oi)
+
+
 def test_sensor_set_cfa_round_trips_matlab_style_struct(asset_store) -> None:
     sensor = sensor_create("rgbw", asset_store=asset_store)
     cfa = sensor_get(sensor, "cfa")

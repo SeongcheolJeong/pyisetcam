@@ -346,7 +346,11 @@ in that upstream block now round-trip too through
 `sensorGet/Set('sensor compute'/'sensor compute method')`. The adjacent
 exposure-control surface now includes `sensorGet('n exposures')`,
 `sensorGet/Set('exposure plane')`, `sensorGet/Set('cds')`, and MATLAB-style
-`auto exposure` string handling for `'on'` / `'off'`.
+`auto exposure` string handling for `'on'` / `'off'`. The neighboring
+exposure-summary surface now also includes `sensorGet/Set('exposure method')`,
+array-capable `integration time` / `exptimes` storage, `unique exptimes`,
+and `central exposure`, with `sensorCompute` explicitly rejecting multi-
+exposure arrays until bracketed/CFA capture compute is ported.
 The same headless plotting surface now
 also covers `plotSensor('etendue')`, returning MATLAB-style support and
 relative-illumination payloads without opening a mesh plot window. Sensor

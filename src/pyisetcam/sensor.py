@@ -43,6 +43,27 @@ _SPATIAL_UNIT_SCALE = {
     "micron": 1e6,
     "um": 1e6,
 }
+_TIME_UNIT_SCALE = {
+    "s": 1.0,
+    "sec": 1.0,
+    "secs": 1.0,
+    "second": 1.0,
+    "seconds": 1.0,
+    "ms": 1e3,
+    "msec": 1e3,
+    "msecs": 1e3,
+    "millisecond": 1e3,
+    "milliseconds": 1e3,
+    "us": 1e6,
+    "usec": 1e6,
+    "usecs": 1e6,
+    "microsecond": 1e6,
+    "microseconds": 1e6,
+    "ns": 1e9,
+    "nsec": 1e9,
+    "nanosecond": 1e9,
+    "nanoseconds": 1e9,
+}
 
 
 def _store(asset_store: AssetStore | None) -> AssetStore:
@@ -94,6 +115,12 @@ def _spatial_unit_scale(unit: Any) -> float:
     if unit is None:
         return 1.0
     return _SPATIAL_UNIT_SCALE.get(param_format(unit), 1.0)
+
+
+def _time_unit_scale(unit: Any) -> float:
+    if unit is None:
+        return 1.0
+    return _TIME_UNIT_SCALE.get(param_format(unit), 1.0)
 
 
 def _pixel_size_m(pixel: dict[str, Any]) -> np.ndarray:
@@ -164,6 +191,14 @@ def _sensor_chart_parameters(sensor: Sensor) -> dict[str, Any]:
         if key in chart and chart[key] is not None:
             chart[key] = np.asarray(chart[key]).copy()
     return chart
+
+
+def _sensor_integration_time_value(sensor: Sensor, unit: Any = None) -> Any:
+    integration_time = sensor.fields.get("integration_time", 0.0)
+    scale = _time_unit_scale(unit)
+    if np.isscalar(integration_time):
+        return float(integration_time) * scale
+    return np.asarray(integration_time, dtype=float).copy() * scale
 
 
 def _sensor_microlens(sensor: Sensor) -> dict[str, Any] | None:
@@ -1047,8 +1082,36 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         letters[unknown] = "k"
         pattern = np.asarray(sensor.fields["pattern"], dtype=int)
         return letters[np.clip(pattern - 1, 0, letters.size - 1)]
-    if key in {"integrationtime", "exptime"}:
-        return float(sensor.fields["integration_time"])
+    if key in {
+        "integrationtime",
+        "integrationtimes",
+        "exptime",
+        "exptimes",
+        "exposuretimes",
+        "exposuretime",
+        "expduration",
+        "exposureduration",
+        "exposuredurations",
+    }:
+        return _sensor_integration_time_value(sensor, args[0] if args else None)
+    if key in {"uniqueintegrationtimes", "uniqueexptime", "uniqueexptimes"}:
+        return np.unique(np.asarray(sensor.fields.get("integration_time", 0.0), dtype=float).reshape(-1))
+    if key in {"centralexposure", "geometricmeanexposuretime"}:
+        exposure_times = np.asarray(sensor.fields.get("integration_time", 0.0), dtype=float).reshape(-1)
+        return float(np.prod(exposure_times) ** (1.0 / max(len(exposure_times), 1)))
+    if key in {"exposuremethod", "expmethod"}:
+        stored = sensor.fields.get("exposure_method")
+        if stored is not None:
+            return _copy_metadata_value(stored)
+        exposure_times = np.asarray(sensor.fields.get("integration_time", 0.0), dtype=float)
+        pattern = np.asarray(sensor.fields["pattern"], dtype=int)
+        if exposure_times.size <= 1:
+            return "singleExposure"
+        if exposure_times.ndim == 1:
+            return "bracketedExposure"
+        if exposure_times.shape == pattern.shape:
+            return "cfaExposure"
+        return None
     if key == "nexposures":
         return int(np.asarray(sensor.fields.get("integration_time")).size)
     if key == "exposureplane":
@@ -1061,7 +1124,7 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return float(_sensor_render_state(sensor)["gamma"])
     if key in {"maxbright", "scalemax", "scaleintensity"}:
         return bool(_sensor_render_state(sensor)["scale"])
-    if key == "autoexposure":
+    if key in {"autoexp", "autoexposure", "automaticexposure"}:
         return bool(sensor.fields["auto_exposure"])
     if key == "analoggain":
         return float(sensor.fields["analog_gain"])
@@ -1377,12 +1440,29 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         sensor.fields["etendue"] = None
         _sensor_clear_data(sensor)
         return sensor
-    if key in {"integrationtime", "exptime"}:
-        sensor.fields["integration_time"] = float(value)
+    if key in {
+        "integrationtime",
+        "integrationtimes",
+        "exptime",
+        "exptimes",
+        "exposuretimes",
+        "exposuretime",
+        "expduration",
+        "exposureduration",
+        "exposuredurations",
+    }:
+        integration_time = np.asarray(value, dtype=float)
+        if integration_time.ndim == 0:
+            sensor.fields["integration_time"] = float(integration_time)
+        else:
+            sensor.fields["integration_time"] = integration_time.copy()
         sensor.fields["auto_exposure"] = False
         return sensor
     if key == "exposureplane":
         sensor.fields["exposure_plane"] = int(np.rint(float(value)))
+        return sensor
+    if key in {"exposuremethod", "expmethod"}:
+        sensor.fields["exposure_method"] = _copy_metadata_value(value)
         return sensor
     if key in {"cds", "correlateddoublesampling"}:
         sensor.fields["cds"] = bool(value)
@@ -1412,14 +1492,19 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
     if key in {"maxbright", "scalemax", "scaleintensity"}:
         _sensor_render_state(sensor)["scale"] = bool(value)
         return sensor
-    if key == "autoexposure":
+    if key in {"autoexp", "autoexposure", "automaticexposure"}:
         if isinstance(value, str):
             enabled = param_format(value) == "on"
         else:
             enabled = bool(value)
         sensor.fields["auto_exposure"] = enabled
         if enabled:
-            sensor.fields["integration_time"] = 0.0
+            integration_time = np.asarray(sensor.fields.get("integration_time", 0.0))
+            pattern = np.asarray(sensor.fields["pattern"], dtype=int)
+            if integration_time.ndim > 0 and integration_time.shape == pattern.shape:
+                sensor.fields["integration_time"] = np.zeros(pattern.shape, dtype=float)
+            else:
+                sensor.fields["integration_time"] = 0.0
         return sensor
     if key == "analoggain":
         sensor.fields["analog_gain"] = float(value)
@@ -1872,7 +1957,11 @@ def sensor_compute(
     pixel_area = float(np.prod(np.asarray(pixel["size_m"], dtype=float)) * pixel["fill_factor"])
     conversion_gain = float(pixel["conversion_gain_v_per_electron"])
 
-    if computed.fields["auto_exposure"] or computed.fields["integration_time"] <= 0.0:
+    integration_time_array = np.asarray(computed.fields["integration_time"], dtype=float)
+    if integration_time_array.size != 1:
+        raise UnsupportedOptionError("sensorCompute", "multiple integration times")
+
+    if computed.fields["auto_exposure"] or float(integration_time_array.reshape(-1)[0]) <= 0.0:
         computed.fields["integration_time"] = _auto_exposure_default(computed, oi)
 
     integration_time = float(computed.fields["integration_time"])
