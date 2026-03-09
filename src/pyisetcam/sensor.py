@@ -1146,7 +1146,15 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return None if stored is None else np.asarray(stored, dtype=float).copy()
     if key == "nbits":
         return int(sensor.fields["nbits"])
-    if key in {"vignetting", "vignettingflag", "pixelvignetting"}:
+    if key in {
+        "vignetting",
+        "vignettingflag",
+        "pixelvignetting",
+        "sensorvignetting",
+        "bareetendue",
+        "sensorbareetendue",
+        "nomicrolensetendue",
+    }:
         return sensor.fields.get("vignetting", 0)
     if key == "vignettingname":
         vignetting = sensor.fields.get("vignetting", 0)
@@ -1179,7 +1187,7 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         if stored is None:
             return np.ones(sensor.fields["size"], dtype=float)
         return np.asarray(stored, dtype=float).copy()
-    if key in {"nsamplesperpixel", "spatialsamplesperpixel"}:
+    if key in {"ngridsamples", "pixelsamples", "nsamplesperpixel", "npixelsamplesforcomputing", "spatialsamplesperpixel"}:
         return int(sensor.fields.get("n_samples_per_pixel", 1))
     if key in {"quantization", "quantizationmethod"}:
         return sensor.fields["quantization"]
@@ -1535,7 +1543,15 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
             raise ValueError("PRNU image must match the sensor size.")
         sensor.fields["gain_fpn_image"] = image
         return sensor
-    if key in {"vignetting", "vignettingflag", "pixelvignetting"}:
+    if key in {
+        "vignetting",
+        "vignettingflag",
+        "pixelvignetting",
+        "sensorvignetting",
+        "bareetendue",
+        "sensorbareetendue",
+        "nomicrolensetendue",
+    }:
         sensor.fields["vignetting"] = value
         sensor.fields["etendue"] = None
         return sensor
@@ -1551,7 +1567,7 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
             raise ValueError("sensor etendue must match the sensor size.")
         sensor.fields["etendue"] = etendue
         return sensor
-    if key in {"nsamplesperpixel", "spatialsamplesperpixel"}:
+    if key in {"ngridsamples", "pixelsamples", "nsamplesperpixel", "npixelsamplesforcomputing", "spatialsamplesperpixel"}:
         sensor.fields["n_samples_per_pixel"] = int(value)
         return sensor
     if key in {"quantization", "quantizationmethod"}:

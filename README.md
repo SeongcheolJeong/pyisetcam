@@ -350,7 +350,10 @@ exposure-control surface now includes `sensorGet('n exposures')`,
 exposure-summary surface now also includes `sensorGet/Set('exposure method')`,
 array-capable `integration time` / `exptimes` storage, `unique exptimes`,
 and `central exposure`, with `sensorCompute` explicitly rejecting multi-
-exposure arrays until bracketed/CFA capture compute is ported.
+exposure arrays until bracketed/CFA capture compute is ported. The nearby
+sampling and vignetting aliases now also round-trip through
+`sensorGet/Set('pixel samples'/'n pixel samples for computing')` and
+`sensorGet/Set('sensor vignetting'/'sensor bare etendue'/'no microlens etendue')`.
 The same headless plotting surface now
 also covers `plotSensor('etendue')`, returning MATLAB-style support and
 relative-illumination payloads without opening a mesh plot window. Sensor

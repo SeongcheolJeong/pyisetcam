@@ -2238,6 +2238,22 @@ def test_sensor_compute_rejects_multiple_integration_times(asset_store) -> None:
         sensor_compute(sensor, oi)
 
 
+def test_sensor_get_set_supports_sampling_and_vignetting_aliases(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+
+    assert sensor_get(sensor, "pixel samples") == 1
+    assert sensor_get(sensor, "sensor bare etendue") == 0
+
+    sensor = sensor_set(sensor, "n pixel samples for computing", 3)
+    sensor = sensor_set(sensor, "sensor vignetting", "bare")
+
+    assert sensor_get(sensor, "ngrid samples") == 3
+    assert sensor_get(sensor, "nsamples per pixel") == 3
+    assert sensor_get(sensor, "vignetting flag") == "bare"
+    assert sensor_get(sensor, "bare etendue") == "bare"
+    assert sensor_get(sensor, "no microlens etendue") == "bare"
+
+
 def test_sensor_set_cfa_round_trips_matlab_style_struct(asset_store) -> None:
     sensor = sensor_create("rgbw", asset_store=asset_store)
     cfa = sensor_get(sensor, "cfa")
