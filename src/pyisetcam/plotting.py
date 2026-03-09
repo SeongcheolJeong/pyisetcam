@@ -65,6 +65,14 @@ def _sensor_plot_line_data(sensor: Sensor, line_key: str, xy: Any) -> dict[str, 
     profile = sensor_get(sensor, f"{orientation}line {data_type}", line_index)
     if profile is None:
         raise ValueError(f"Sensor has no {data_type} data for {line_key}.")
+    pix_color = np.array(
+        [
+            color_index
+            for color_index, values in enumerate(profile["data"], start=1)
+            if np.asarray(values, dtype=float).size > 0
+        ],
+        dtype=int,
+    )
     return {
         "xy": xy_array,
         "ori": orientation,
@@ -72,6 +80,11 @@ def _sensor_plot_line_data(sensor: Sensor, line_key: str, xy: Any) -> dict[str, 
         "data": [np.asarray(values, dtype=float).copy() for values in profile["data"]],
         "pos": [1e6 * np.asarray(values, dtype=float).copy() for values in profile["pos"]],
         "pixPos": [1e6 * np.asarray(values, dtype=float).copy() for values in profile["pixPos"]],
+        "pixColor": pix_color,
+        "filterPlotColors": sensor_get(sensor, "filter plot colors"),
+        "xLabel": "Position (um)",
+        "yLabel": "digital value" if data_type == "dv" else data_type,
+        "titleString": f"{'Horizontal' if orientation == 'h' else 'Vertical'} line {line_index}",
     }
 
 
@@ -411,6 +424,7 @@ def _sensor_fft_payload(sensor: Sensor, orientation: str, data_type: str, xy: An
         "peakContrast": peak_contrast,
         "titleString": title_string,
         "xLabel": x_label,
+        "yLabel": "Abs(fft(data))",
     }
 
 
@@ -752,9 +766,11 @@ def sensor_plot_fft(
     ori: str = "h",
     data_type: str = "volts",
     xy: Any | None = None,
+    *args: Any,
 ) -> tuple[dict[str, Any], None]:
     """Return MATLAB-style `plotSensorFFT` user-data without opening a figure."""
 
+    sensor = _sensor_plot_select_capture(sensor, _plot_option(args, "capture", 1))
     orientation_key = param_format(ori)
     if orientation_key in {"h", "horizontal"}:
         orientation = "h"

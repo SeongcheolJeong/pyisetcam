@@ -153,12 +153,24 @@ def test_plot_sensor_line_data(asset_store) -> None:
     assert np.array_equal(volts_udata["xy"], np.array([1, 2], dtype=int))
     assert volts_udata["ori"] == "h"
     assert volts_udata["dataType"] == "volts"
+    assert np.array_equal(volts_udata["pixColor"], np.array([1], dtype=int))
+    assert volts_udata["filterPlotColors"] == sensor_get(sensor, "filter plot colors")
+    assert volts_udata["xLabel"] == "Position (um)"
+    assert volts_udata["yLabel"] == "volts"
+    assert volts_udata["titleString"] == "Horizontal line 2"
     assert np.allclose(volts_udata["data"][0], np.asarray(expected_volts["data"][0], dtype=float))
     assert np.allclose(volts_udata["pos"][0], 1e6 * np.asarray(expected_volts["pos"][0], dtype=float))
+    assert np.array_equal(electrons_udata["pixColor"], np.array([1], dtype=int))
+    assert electrons_udata["yLabel"] == "electrons"
+    assert electrons_udata["titleString"] == "Horizontal line 2"
     assert np.allclose(electrons_udata["data"][0], np.asarray(expected_electrons["data"][0], dtype=float))
     assert np.allclose(electrons_udata["pixPos"][0], 1e6 * np.asarray(expected_electrons["pixPos"][0], dtype=float))
     assert dv_udata["ori"] == "v"
     assert dv_udata["dataType"] == "dv"
+    assert np.array_equal(dv_udata["pixColor"], np.array([1], dtype=int))
+    assert dv_udata["xLabel"] == "Position (um)"
+    assert dv_udata["yLabel"] == "digital value"
+    assert dv_udata["titleString"] == "Vertical line 2"
     assert np.allclose(dv_udata["data"][0], np.asarray(expected_dv["data"][0], dtype=float))
 
 
@@ -831,6 +843,7 @@ def test_plot_sensor_fft_wrapper(asset_store) -> None:
     assert volts_udata["dataType"] == "volts"
     assert volts_udata["titleString"] == "ISET:  Horizontal fft 2"
     assert volts_udata["xLabel"] == "Cycles/deg (col)"
+    assert volts_udata["yLabel"] == "Abs(fft(data))"
     assert np.allclose(volts_udata["cpd"], expected_h_cpd)
     assert np.allclose(volts_udata["amp"], expected_h_amp)
     assert np.allclose(volts_udata["ampPlot"], expected_h_amp[: expected_h_cpd.size])
@@ -842,9 +855,40 @@ def test_plot_sensor_fft_wrapper(asset_store) -> None:
     assert dv_udata["dataType"] == "dv"
     assert dv_udata["titleString"] == "ISET:  Vertical fft 3"
     assert dv_udata["xLabel"] == "Cycles/deg (row)"
+    assert dv_udata["yLabel"] == "Abs(fft(data))"
     assert np.allclose(dv_udata["cpd"], expected_v_cpd)
     assert np.allclose(dv_udata["amp"], expected_v_amp)
     assert np.allclose(dv_udata["ampPlot"], expected_v_amp[: expected_v_cpd.size])
+
+
+def test_plot_sensor_fft_capture_selection(asset_store) -> None:
+    sensor = sensor_create("monochrome", asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 2)
+    sensor = sensor_set(sensor, "cols", 4)
+    volts = np.array(
+        [
+            [[0.1, 1.1], [0.2, 1.2], [0.3, 1.3], [0.4, 1.4]],
+            [[0.4, 1.4], [0.3, 1.3], [0.2, 1.2], [0.1, 1.1]],
+        ],
+        dtype=float,
+    )
+    sensor = sensor_set(sensor, "volts", volts)
+
+    udata, handle = plotSensorFFT(sensor, "h", "volts", np.array([2, 1], dtype=int), "capture", 2)
+
+    line = volts[0, :, 1]
+    fov = float(sensor_get(sensor, "fov"))
+    expected_cpd = np.arange(0, round((line.size - 1) / 2) + 1, dtype=float) / fov
+    expected_amp = np.abs(np.fft.fft(line - np.mean(line))) / expected_cpd.size
+
+    assert handle is None
+    assert np.array_equal(udata["xy"], np.array([2, 1], dtype=int))
+    assert udata["titleString"] == "ISET:  Horizontal fft 1"
+    assert udata["yLabel"] == "Abs(fft(data))"
+    assert np.allclose(udata["cpd"], expected_cpd)
+    assert np.allclose(udata["amp"], expected_amp)
+    assert np.allclose(udata["ampPlot"], expected_amp[: expected_cpd.size])
+    assert np.isclose(udata["mean"], float(np.mean(line)))
 
 
 def test_plot_sensor_fft_rejects_color_sensors(asset_store) -> None:
@@ -855,3 +899,13 @@ def test_plot_sensor_fft_rejects_color_sensors(asset_store) -> None:
 
     with pytest.raises(UnsupportedOptionError):
         plotSensorFFT(sensor, "h", "volts", np.array([1, 1], dtype=int))
+
+
+def test_plot_sensor_fft_rejects_invalid_capture(asset_store) -> None:
+    sensor = sensor_create("monochrome", asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 2)
+    sensor = sensor_set(sensor, "cols", 2)
+    sensor = sensor_set(sensor, "volts", np.ones((2, 2, 2), dtype=float))
+
+    with pytest.raises(IndexError):
+        plotSensorFFT(sensor, "h", "volts", np.array([1, 1], dtype=int), "capture", 3)

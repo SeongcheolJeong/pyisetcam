@@ -332,6 +332,9 @@ Line-profile plots also now support MATLAB-style adjacent-line aggregation
 through `plotSensor(..., 'two lines', True)` on the supported sensor
 horizontal/vertical line cases, and headless `plotSensor(...)` now also
 accepts MATLAB-style `capture` selection for multi-capture sensor stacks.
+The adjacent line/FFT metadata is tighter too: single-line sensor plots now
+return plot labels and filter-color metadata, and `plotSensorFFT(...)` now
+accepts the same capture selection path for multi-capture stacks.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
