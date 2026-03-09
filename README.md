@@ -396,6 +396,8 @@ The neighboring long-form pixel alias surface now also covers
 QE aliases such as `pixel quantum efficiency`,
 `photodetector quantum efficiency`, and
 `photodetector spectral quantum efficiency`.
+The same pixel geometry alias layer now also covers the MATLAB gap-spacing
+names `width between pixels` and `height between pixels`.
 The adjacent setter semantics now also match MATLAB for
 `pixel size same fill factor` / `pixel size constant fill factor`, scaling the
 photodetector geometry with the pixel size instead of treating that alias like

@@ -81,6 +81,8 @@ def test_ie_parameter_otype_handles_direct_prefix_and_unique_params() -> None:
     assert ie_parameter_otype("read noise std volts") == ("pixel", "readnoisestdvolts")
     assert ie_parameter_otype("read noise millivolts") == ("pixel", "readnoisemillivolts")
     assert ie_parameter_otype("width gap") == ("pixel", "widthgap")
+    assert ie_parameter_otype("width between pixels") == ("pixel", "widthbetweenpixels")
+    assert ie_parameter_otype("height between pixels") == ("pixel", "heightbetweenpixels")
     assert ie_parameter_otype("pd width") == ("pixel", "pdwidth")
     assert ie_parameter_otype("pd dimension") == ("pixel", "pddimension")
     assert ie_parameter_otype("layer thicknesses") == ("pixel", "layerthicknesses")

@@ -421,9 +421,9 @@ def _sensor_pixel_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return float(pixel_size[1]) * spatial_scale
     if key in {"height", "pixelheight", "pixelheightmeters"}:
         return float(pixel_size[0]) * spatial_scale
-    if key in {"pixelwidthgap", "widthgap"}:
+    if key in {"pixelwidthgap", "widthgap", "widthbetweenpixels"}:
         return float(pixel_gaps[1]) * spatial_scale
-    if key in {"pixelheightgap", "heightgap"}:
+    if key in {"pixelheightgap", "heightgap", "heightbetweenpixels"}:
         return float(pixel_gaps[0]) * spatial_scale
     if key in {"wspatialresolution", "deltax"}:
         return float(pixel_spacing[1]) * spatial_scale
@@ -542,12 +542,12 @@ def _sensor_pixel_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         sensor.fields["etendue"] = None
         _sensor_clear_data(sensor)
         return sensor
-    if key in {"pixelwidthgap", "widthgap"}:
+    if key in {"pixelwidthgap", "widthgap", "widthbetweenpixels"}:
         pixel["width_gap_m"] = float(value)
         sensor.fields["etendue"] = None
         _sensor_clear_data(sensor)
         return sensor
-    if key in {"pixelheightgap", "heightgap"}:
+    if key in {"pixelheightgap", "heightgap", "heightbetweenpixels"}:
         pixel["height_gap_m"] = float(value)
         sensor.fields["etendue"] = None
         _sensor_clear_data(sensor)
