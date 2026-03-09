@@ -2142,6 +2142,31 @@ def test_sensor_get_set_supports_legacy_scene_and_lens_metadata_aliases(asset_st
     assert sensor_get(sensor, "metadata lensname") == "lens-c"
 
 
+def test_sensor_get_set_supports_microlens_storage_surface(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    microlens = {
+        "name": "default",
+        "type": "microlens",
+        "offset": np.array([0.0, 1.0], dtype=float),
+        "wavelength": 500.0,
+    }
+    ml_offset = np.array([[1.0, -1.0], [0.5, -0.5]], dtype=float)
+
+    sensor = sensor_set(sensor, "microlens", microlens)
+    sensor = sensor_set(sensor, "mloffset", ml_offset)
+
+    stored = sensor_get(sensor, "ml")
+
+    assert stored["name"] == "default"
+    assert stored["type"] == "microlens"
+    assert np.array_equal(stored["offset"], np.array([0.0, 1.0], dtype=float))
+    assert stored["wavelength"] == 500.0
+    assert np.array_equal(sensor_get(sensor, "microlens offset"), ml_offset)
+
+    stored["offset"][0] = 9.0
+    assert np.array_equal(sensor_get(sensor, "mlens")["offset"], np.array([0.0, 1.0], dtype=float))
+
+
 def test_sensor_set_cfa_round_trips_matlab_style_struct(asset_store) -> None:
     sensor = sensor_create("rgbw", asset_store=asset_store)
     cfa = sensor_get(sensor, "cfa")

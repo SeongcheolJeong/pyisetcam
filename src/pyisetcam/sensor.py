@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from typing import Any
 
 import numpy as np
@@ -165,6 +166,13 @@ def _sensor_chart_parameters(sensor: Sensor) -> dict[str, Any]:
     return chart
 
 
+def _sensor_microlens(sensor: Sensor) -> dict[str, Any] | None:
+    stored = sensor.fields.get("ml")
+    if stored is None:
+        return None
+    return copy.deepcopy(stored)
+
+
 def _sensor_movement(sensor: Sensor) -> dict[str, Any]:
     stored = sensor.fields.get("movement")
     if not isinstance(stored, dict):
@@ -201,6 +209,15 @@ def _spectrum_struct_from_value(value: Any) -> dict[str, Any]:
         spectrum["wave"] = wave
     spectrum["wave"] = np.asarray(spectrum["wave"], dtype=float).reshape(-1)
     return spectrum
+
+
+def _microlens_struct_from_value(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return copy.deepcopy(value)
+    microlens = {}
+    if hasattr(value, "__dict__"):
+        microlens.update(vars(value))
+    return copy.deepcopy(microlens)
 
 
 def _movement_struct_from_value(value: Any) -> dict[str, Any]:
@@ -1078,6 +1095,10 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         if int(vignetting) == 3:
             return "optimal"
         return str(vignetting)
+    if key in {"microlens", "ulens", "mlens", "ml"}:
+        return _sensor_microlens(sensor)
+    if key in {"microlensoffset", "mloffset", "microlensoffsetmicrons"}:
+        return _copy_metadata_value(sensor.fields.get("mlOffset"))
     if key in {"etendue", "sensoretendue", "imagesensorarrayetendue"}:
         stored = sensor.fields.get("etendue")
         if stored is None:
@@ -1405,6 +1426,12 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
     if key in {"vignetting", "vignettingflag", "pixelvignetting"}:
         sensor.fields["vignetting"] = value
         sensor.fields["etendue"] = None
+        return sensor
+    if key in {"microlens", "ulens", "mlens", "ml"}:
+        sensor.fields["ml"] = None if value is None else _microlens_struct_from_value(value)
+        return sensor
+    if key in {"microlensoffset", "mloffset", "microlensoffsetmicrons"}:
+        sensor.fields["mlOffset"] = _copy_metadata_value(value)
         return sensor
     if key in {"etendue", "sensoretendue", "imagesensorarrayetendue"}:
         etendue = np.asarray(value, dtype=float)

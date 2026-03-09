@@ -337,7 +337,10 @@ round-trip fields, along with the adjacent sensor movement surface through
 `sensorGet/Set('frames per position'/'exposure times per position')`. The
 neighboring legacy scene/lens aliases now round-trip too through
 `sensorGet/Set('scene_name')`, `sensorGet/Set('lens')`, and
-`sensorGet('metadata lensname'/'metadata lens')`.
+`sensorGet('metadata lensname'/'metadata lens')`. The adjacent raw
+microlens storage surface now round-trips as well through
+`sensorGet/Set('microlens'/'ml')` and
+`sensorGet/Set('microlens offset'/'mloffset')`.
 The same headless plotting surface now
 also covers `plotSensor('etendue')`, returning MATLAB-style support and
 relative-illumination payloads without opening a mesh plot window. Sensor
