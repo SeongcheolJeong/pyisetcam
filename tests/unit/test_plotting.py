@@ -491,3 +491,26 @@ def test_plot_sensor_channels_wrapper(asset_store) -> None:
     assert channels_udata["channelImages"][1][0, 0, 1] > 0.0
     assert np.allclose(channels_udata["channelImages"][2][1, 0, :2], np.array([0.0, 0.0], dtype=float))
     assert channels_udata["channelImages"][2][1, 0, 2] > 0.0
+
+
+def test_plot_sensor_etendue_wrapper(asset_store) -> None:
+    sensor = sensor_create("monochrome", asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 2)
+    sensor = sensor_set(sensor, "cols", 3)
+    etendue = np.array(
+        [
+            [1.0, 0.8, 0.6],
+            [0.9, 0.7, 0.5],
+        ],
+        dtype=float,
+    )
+    sensor = sensor_set(sensor, "sensor etendue", etendue)
+
+    udata, handle = plotSensor(sensor, "etendue")
+    expected_support = sensor_get(sensor, "spatial support", "um")
+
+    assert handle is None
+    assert udata["zLabel"] == "Relative illumination"
+    assert np.allclose(udata["sensorEtendue"], etendue)
+    assert np.allclose(udata["support"]["x"], expected_support["x"])
+    assert np.allclose(udata["support"]["y"], expected_support["y"])

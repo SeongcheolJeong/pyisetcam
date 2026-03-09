@@ -272,6 +272,14 @@ def _sensor_plot_channels(sensor: Sensor) -> dict[str, Any]:
     }
 
 
+def _sensor_plot_etendue(sensor: Sensor) -> dict[str, Any]:
+    return {
+        "support": sensor_get(sensor, "spatial support", "um"),
+        "sensorEtendue": np.asarray(sensor_get(sensor, "etendue"), dtype=float),
+        "zLabel": "Relative illumination",
+    }
+
+
 def _ip_line_data(ip: ImageProcessor, orientation: str, xy: Any) -> dict[str, Any]:
     line_index, xy_array = _line_index("ipPlot", f"{orientation}line", xy, orientation)
     data = ip_get(ip, "result")
@@ -458,6 +466,8 @@ def sensor_plot(
     if key in {"electronshline", "hlineelectrons", "electronsvline", "vlineelectrons", "voltshline", "hlinevolts", "voltsvline", "vlinevolts", "dvhline", "hlinedv", "dvvline", "vlinedv"}:
         xy = _roi_required("plotSensor", p_type, roi_locs)
         return _sensor_plot_line_data(sensor, key, xy), None
+    if key == "etendue":
+        return _sensor_plot_etendue(sensor), None
     if key == "channels":
         return _sensor_plot_channels(sensor), None
     if key == "truesize":

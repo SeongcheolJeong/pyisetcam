@@ -314,7 +314,9 @@ spectral bundle, plus headless CFA views for `'cfa'` / `'cfa block'` and
 display scaling. The adjacent headless sensor image-view slice is now in
 place too through `plotSensor('cfa image')`, `plotSensor('true size')`,
 and `plotSensor('channels')`, returning image and per-channel payloads
-instead of opening GUI windows.
+instead of opening GUI windows. The same headless plotting surface now
+also covers `plotSensor('etendue')`, returning MATLAB-style support and
+relative-illumination payloads without opening a mesh plot window.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
