@@ -2119,6 +2119,8 @@ def test_sensor_get_set_supports_pixel_passthrough_surface(asset_store) -> None:
     assert np.allclose(pixel_size, np.array([3.25e-6, 4.5e-6], dtype=float))
     assert np.isclose(sensor_get(sensor, "pixel width", "um"), 4.0)
     assert np.isclose(sensor_get(sensor, "pixel height", "um"), 3.0)
+    assert np.isclose(sensor_get(sensor, "pixel width meters"), 4.0e-6)
+    assert np.isclose(sensor_get(sensor, "pixel height meters"), 3.0e-6)
     assert np.isclose(sensor_get(sensor, "width gap", "um"), 0.5)
     assert np.isclose(sensor_get(sensor, "height gap", "um"), 0.25)
     assert np.isclose(sensor_get(sensor, "width between pixels", "um"), 0.5)
@@ -2129,6 +2131,7 @@ def test_sensor_get_set_supports_pixel_passthrough_surface(asset_store) -> None:
     assert np.allclose(sensor_get(sensor, "pd size", "um"), np.sqrt(0.5) * np.array([3.0, 4.0], dtype=float))
     assert np.allclose(sensor_get(sensor, "pd dimension", "um"), np.sqrt(0.5) * np.array([4.0, 3.0], dtype=float))
     assert np.isclose(sensor_get(sensor, "conversion gain"), 2.0e-4)
+    assert np.isclose(sensor_get(sensor, "conversion gain v per electron"), 2.0e-4)
     assert np.isclose(sensor_get(sensor, "volts per electron"), 2.0e-4)
     assert np.isclose(sensor_get(sensor, "voltage swing"), 1.5)
     assert np.isclose(sensor_get(sensor, "max voltage"), 1.5)
@@ -2153,6 +2156,9 @@ def test_sensor_get_set_supports_pixel_passthrough_surface(asset_store) -> None:
 
     sensor = sensor_set(sensor, "read noise millivolts", 7.0)
     assert np.isclose(sensor_get(sensor, "read noise volts"), 7.0e-3)
+
+    sensor = sensor_set(sensor, "conversion gain v per electron", 3.0e-4)
+    assert np.isclose(sensor_get(sensor, "conversion gain"), 3.0e-4)
 
     sensor = sensor_set(sensor, "pd width", 2.0e-6)
     sensor = sensor_set(sensor, "pd height", 1.5e-6)
@@ -2188,6 +2194,7 @@ def test_sensor_get_set_supports_pixel_optical_and_spectral_metadata(asset_store
     assert np.allclose(sensor_get(sensor, "layer thicknesses", "um"), np.array([1.0, 2.0, 0.5], dtype=float))
     assert np.isclose(sensor_get(sensor, "stack height", "um"), 3.5)
     assert np.isclose(sensor_get(sensor, "pixel depth", "um"), 3.5)
+    assert np.isclose(sensor_get(sensor, "pixel depth meters"), 3.5e-6)
     assert np.allclose(sensor_get(sensor, "refractive indices"), np.array([1.0, 1.5, 3.4], dtype=float))
     assert np.array_equal(sensor_get(sensor, "pixel wavelength"), np.array([450.0, 550.0, 650.0], dtype=float))
     assert sensor_get(sensor, "pixel bin width") == 100.0

@@ -402,6 +402,9 @@ The direct unprefixed sensor-routing path now also recognizes the remaining
 unique pixel setters such as `width and height`, `pd width and height`,
 `size same fill factor`, and `dark voltage per pixel per sec`, so those
 MATLAB-style calls no longer require an explicit `pixel` prefix.
+The same adjacent unit/electrical alias surface now also covers
+`pixel width meters`, `pixel height meters`, `pixel depth meters`, and the
+direct `conversion gain v per electron` form.
 The adjacent setter semantics now also match MATLAB for
 `pixel size same fill factor` / `pixel size constant fill factor`, scaling the
 photodetector geometry with the pixel size instead of treating that alias like

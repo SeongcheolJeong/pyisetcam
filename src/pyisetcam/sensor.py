@@ -417,9 +417,9 @@ def _sensor_pixel_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return str(pixel.get("name", ""))
     if key == "type":
         return str(pixel.get("type", "pixel"))
-    if key in {"width", "pixelwidth", "pixelwidthmeters"}:
+    if key in {"width", "pixelwidth", "pixelwidthmeters", "widthmeters"}:
         return float(pixel_size[1]) * spatial_scale
-    if key in {"height", "pixelheight", "pixelheightmeters"}:
+    if key in {"height", "pixelheight", "pixelheightmeters", "heightmeters"}:
         return float(pixel_size[0]) * spatial_scale
     if key in {"pixelwidthgap", "widthgap", "widthbetweenpixels"}:
         return float(pixel_gaps[1]) * spatial_scale
@@ -456,7 +456,7 @@ def _sensor_pixel_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return float(_pixel_pd_area_m2(sensor) * (spatial_scale**2))
     if key in {"layerthickness", "layerthicknesses"}:
         return np.asarray(pixel.get("layer_thickness_m", np.array([], dtype=float)), dtype=float).copy() * spatial_scale
-    if key in {"pixeldepth", "depth", "pixeldepthmeters", "stackheight"}:
+    if key in {"pixeldepth", "depth", "pixeldepthmeters", "depthmeters", "stackheight"}:
         layer_thickness = np.asarray(pixel.get("layer_thickness_m", np.array([], dtype=float)), dtype=float).reshape(-1)
         return float(np.sum(layer_thickness)) * spatial_scale
     if key in {"refractiveindex", "refractiveindices", "n"}:
@@ -486,7 +486,7 @@ def _sensor_pixel_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return _pixel_spectral_sr(sensor)
     if key in {"pixeldr", "pixeldynamicrange", "dr", "dynamicrange"}:
         return _pixel_dynamic_range(sensor, args[0] if args else None)
-    if key in {"conversiongain", "conversiongainvpelectron", "voltsperelectron"}:
+    if key in {"conversiongain", "conversiongainvpelectron", "conversiongainvperelectron", "voltsperelectron"}:
         return float(pixel["conversion_gain_v_per_electron"])
     if key in {"voltageswing", "vswing", "saturationvoltage", "maxvoltage"}:
         return float(pixel["voltage_swing"])
@@ -707,7 +707,7 @@ def _sensor_pixel_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         else:
             raise ValueError("pixel spectral QE must match the sensor wavelength sampling.")
         return sensor
-    if key in {"conversiongain", "conversiongainvpelectron", "voltsperelectron"}:
+    if key in {"conversiongain", "conversiongainvpelectron", "conversiongainvperelectron", "voltsperelectron"}:
         sensor.fields["pixel"]["conversion_gain_v_per_electron"] = float(value)
         return sensor
     if key in {"voltageswing", "vswing", "saturationvoltage", "maxvoltage"}:
