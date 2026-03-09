@@ -444,9 +444,9 @@ def _sensor_pixel_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
     if key in {"pdsize", "photodetectorsize"}:
         return pd_size * spatial_scale
     pd_position = _pixel_pd_position_from_pixel(pixel)
-    if key == "pdxpos":
+    if key in {"pdxpos", "photodetectorxposition"}:
         return float(pd_position[1]) * spatial_scale
-    if key == "pdypos":
+    if key in {"pdypos", "photodetectoryposition"}:
         return float(pd_position[0]) * spatial_scale
     if key == "pdposition":
         return np.array([pd_position[1], pd_position[0]], dtype=float) * spatial_scale
@@ -470,7 +470,17 @@ def _sensor_pixel_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return float(wave[1] - wave[0]) if wave.size > 1 else 1.0
     if key in {"nwave", "nwaves", "numberofwavelengthsamples"}:
         return int(np.asarray(sensor.fields["wave"], dtype=float).size)
-    if key in {"pdspectralqe", "spectralqe", "qe"}:
+    if key in {
+        "pdspectralqe",
+        "spectralqe",
+        "qe",
+        "pixelspectralqe",
+        "pixelqe",
+        "quantumefficiency",
+        "pixelquantumefficiency",
+        "photodetectorquantumefficiency",
+        "photodetectorspectralquantumefficiency",
+    }:
         return _sensor_pixel_qe(sensor)
     if key in {"pdspectralsr", "spectralsr", "sr"}:
         return _pixel_spectral_sr(sensor)
@@ -635,13 +645,13 @@ def _sensor_pixel_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         _sync_pixel_pd_state(sensor.fields["pixel"])
         sensor.fields["etendue"] = None
         return sensor
-    if key == "pdxpos":
+    if key in {"pdxpos", "photodetectorxposition"}:
         pd_position = _pixel_pd_position_from_pixel(sensor.fields["pixel"])
         sensor.fields["pixel"]["pd_position_m"] = np.array([pd_position[0], float(value)], dtype=float)
         _sync_pixel_pd_state(sensor.fields["pixel"])
         sensor.fields["etendue"] = None
         return sensor
-    if key == "pdypos":
+    if key in {"pdypos", "photodetectoryposition"}:
         pd_position = _pixel_pd_position_from_pixel(sensor.fields["pixel"])
         sensor.fields["pixel"]["pd_position_m"] = np.array([float(value), pd_position[1]], dtype=float)
         _sync_pixel_pd_state(sensor.fields["pixel"])
@@ -678,7 +688,17 @@ def _sensor_pixel_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         spectrum = _pixel_spectrum_struct(sensor)
         sensor.fields["pixel"]["spectrum"] = copy.deepcopy(spectrum)
         return sensor
-    if key in {"pdspectralqe", "spectralqe", "qe"}:
+    if key in {
+        "pdspectralqe",
+        "spectralqe",
+        "qe",
+        "pixelspectralqe",
+        "pixelqe",
+        "quantumefficiency",
+        "pixelquantumefficiency",
+        "photodetectorquantumefficiency",
+        "photodetectorspectralquantumefficiency",
+    }:
         qe = np.asarray(value, dtype=float).reshape(-1)
         if qe.size == 1:
             sensor.fields["pixel_qe"] = np.full(np.asarray(sensor.fields["wave"], dtype=float).size, float(qe[0]), dtype=float)

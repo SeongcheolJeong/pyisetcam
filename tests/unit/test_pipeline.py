@@ -2178,7 +2178,7 @@ def test_sensor_get_set_supports_pixel_optical_and_spectral_metadata(asset_store
     sensor = sensor_set(sensor, "pixel layer thicknesses", np.array([1.0e-6, 2.0e-6, 0.5e-6], dtype=float))
     sensor = sensor_set(sensor, "pixel refractive indices", np.array([1.0, 1.5, 3.4], dtype=float))
     sensor = sensor_set(sensor, "pixel spectrum", {"wave": np.array([450.0, 550.0, 650.0], dtype=float), "comment": "pixel spectrum"})
-    sensor = sensor_set(sensor, "pixel spectral qe", np.array([0.1, 0.2, 0.3], dtype=float))
+    sensor = sensor_set(sensor, "pixel quantum efficiency", np.array([0.1, 0.2, 0.3], dtype=float))
     sensor = sensor_set(sensor, "dark voltage", 2.0e-3)
     sensor = sensor_set(sensor, "read noise volts", 1.0e-3)
     sensor = sensor_set(sensor, "voltage swing", 1.2)
@@ -2191,6 +2191,9 @@ def test_sensor_get_set_supports_pixel_optical_and_spectral_metadata(asset_store
     assert sensor_get(sensor, "pixel bin width") == 100.0
     assert sensor_get(sensor, "pixel nwave") == 3
     assert sensor_get(sensor, "pixel spectrum")["comment"] == "pixel spectrum"
+    assert np.allclose(sensor_get(sensor, "pixel quantum efficiency"), np.array([0.1, 0.2, 0.3], dtype=float))
+    assert np.allclose(sensor_get(sensor, "photodetector quantum efficiency"), np.array([0.1, 0.2, 0.3], dtype=float))
+    assert np.allclose(sensor_get(sensor, "photodetector spectral quantum efficiency"), np.array([0.1, 0.2, 0.3], dtype=float))
 
     expected_pixel_dr = 20.0 * np.log10((1.2 - 2.0e-3 * 0.01) / np.sqrt((2.0e-3 * 0.01) + (1.0e-3**2)))
     assert np.isclose(sensor_get(sensor, "pixel dr"), expected_pixel_dr)
@@ -2212,6 +2215,12 @@ def test_sensor_get_set_supports_photodetector_position_passthrough(asset_store)
     assert np.allclose(sensor_get(sensor, "pd position", "um"), np.array([0.5, 0.75], dtype=float))
     assert np.isclose(sensor_get(sensor, "pd xpos", "um"), 0.5)
     assert np.isclose(sensor_get(sensor, "pd ypos", "um"), 0.75)
+
+    sensor = sensor_set(sensor, "photodetector x position", 0.25e-6)
+    sensor = sensor_set(sensor, "photodetector y position", 0.5e-6)
+
+    assert np.isclose(sensor_get(sensor, "photodetector x position", "um"), 0.25)
+    assert np.isclose(sensor_get(sensor, "photodetector y position", "um"), 0.5)
 
     sensor = sensor_set(sensor, "pd position", np.array([0.25e-6, 0.5e-6], dtype=float))
 

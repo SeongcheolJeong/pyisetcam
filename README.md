@@ -391,6 +391,11 @@ The adjacent MATLAB pair-setter surface now also matches upstream ordering
 for `pixel width and height` and `pixel pd width and height`, so those
 aliases accept `[width, height]` inputs without changing the existing local
 `pixel size` / `pd size` semantics.
+The neighboring long-form pixel alias surface now also covers
+`photodetector x position` / `photodetector y position` and the remaining
+QE aliases such as `pixel quantum efficiency`,
+`photodetector quantum efficiency`, and
+`photodetector spectral quantum efficiency`.
 The adjacent setter semantics now also match MATLAB for
 `pixel size same fill factor` / `pixel size constant fill factor`, scaling the
 photodetector geometry with the pixel size instead of treating that alias like
