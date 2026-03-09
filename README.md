@@ -335,6 +335,9 @@ accepts MATLAB-style `capture` selection for multi-capture sensor stacks.
 The adjacent line/FFT metadata is tighter too: single-line sensor plots now
 return plot labels and filter-color metadata, and `plotSensorFFT(...)` now
 accepts the same capture selection path for multi-capture stacks.
+The remaining histogram/chromaticity wrappers now return the matching
+headless plot labels too, including histogram axis labels/filter colors and
+the MATLAB-style `rg` chromaticity axis/title strings.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

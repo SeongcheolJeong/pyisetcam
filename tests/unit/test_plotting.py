@@ -251,6 +251,9 @@ def test_plot_sensor_chromaticity_wrapper(asset_store) -> None:
     assert np.array_equal(chroma_udata["rect"], roi)
     assert np.allclose(chroma_udata["rg"], expected_rg)
     assert np.allclose(chroma_udata["spectrumlocus"], expected_locus)
+    assert chroma_udata["xLabel"] == "r-chromaticity"
+    assert chroma_udata["yLabel"] == "g-chromaticity"
+    assert chroma_udata["titleString"] == "rg sensor chromaticity"
 
 
 def test_ip_plot_line_chromaticity_and_luminance(asset_store) -> None:
@@ -340,8 +343,15 @@ def test_plot_sensor_histogram_data(asset_store) -> None:
     assert dv_handle is None
     assert np.array_equal(volts_udata["rect"], roi)
     assert volts_udata["unitType"] == "volts"
+    assert volts_udata["filterPlotColors"] == "k"
+    assert volts_udata["xLabel"] == "Volts"
+    assert volts_udata["yLabel"] == "Count"
     assert np.allclose(volts_udata["data"], expected_volts)
+    assert electrons_udata["xLabel"] == "Electrons"
+    assert electrons_udata["yLabel"] == "Count"
     assert np.allclose(electrons_udata["data"], expected_electrons)
+    assert dv_udata["xLabel"] == "Digital value"
+    assert dv_udata["yLabel"] == "Count"
     assert np.allclose(dv_udata["data"], expected_dv)
 
 

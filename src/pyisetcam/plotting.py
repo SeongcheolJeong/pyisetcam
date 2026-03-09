@@ -142,6 +142,13 @@ def _sensor_plot_histogram(sensor: Sensor, data_type: str, roi_locs: Any) -> dic
     payload = _roi_payload(roi)
     payload["data"] = data
     payload["unitType"] = data_type
+    payload["filterPlotColors"] = sensor_get(sensor, "filter plot colors")
+    payload["xLabel"] = {
+        "volts": "Volts",
+        "electrons": "Electrons",
+        "dv": "Digital value",
+    }.get(param_format(data_type), str(data_type))
+    payload["yLabel"] = "Count"
     return payload
 
 
@@ -162,6 +169,9 @@ def _sensor_plot_chromaticity(sensor: Sensor, roi_locs: Any | None) -> dict[str,
     payload = _roi_payload(roi)
     payload["rg"] = rg.copy()
     payload["spectrumlocus"] = spectrum_locus.copy()
+    payload["xLabel"] = "r-chromaticity"
+    payload["yLabel"] = "g-chromaticity"
+    payload["titleString"] = "rg sensor chromaticity"
     return payload
 
 
