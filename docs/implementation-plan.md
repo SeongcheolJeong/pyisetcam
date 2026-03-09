@@ -46,6 +46,7 @@
 - The neighboring sampling/noise-control block now also has parser-level routing for `pixel samples`, `n pixel samples for computing`, `spatial samples per pixel`, and `response type`.
 - The adjacent movement block now also has parser-level routing for `eye movement`, `frames per position`, `exposure times per position`, and `etime per pos`.
 - The neighboring legacy human block now also has parser-level routing for `human`, `cone type`, `densities`, `xy`, and `rseed`.
+- That same legacy human block now also routes the location aliases `cone xy` and `cone locs`.
 - The adjacent chart block now also has parser-level routing for `chart parameters`, `corner points`, `chart corners`, `chart rects`, `chart rectangles`, `current rect`, and `chart current rect`.
 - The neighboring metadata block now also has focused parser/runtime coverage for `scene name`, `metadata scene name`, `metadata lens name`, `metadata lens`, `metadata optics name`, `metadata sensor name`, and `metadata crop`.
 - The neighboring vignetting alias block now also has parser-level support for `vignetting flag`, `pixel vignetting`, `sensor vignetting`, `sensor bare etendue`, `no microlens etendue`, and `vignetting name`.

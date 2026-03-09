@@ -336,6 +336,8 @@ _PARAMETER_OTYPE_UNIQUE = {
         "humanconetype",
         "densities",
         "humanconedensities",
+        "conexy",
+        "conelocs",
         "xy",
         "humanconelocs",
         "rseed",
