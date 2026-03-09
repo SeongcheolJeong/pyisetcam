@@ -2444,6 +2444,8 @@ def test_sensor_get_set_supports_legacy_scene_and_lens_metadata_aliases(asset_st
 
     sensor = sensor_set(sensor, "scene_name", "scene-b")
     sensor = sensor_set(sensor, "lens", "lens-b")
+    sensor = sensor_set(sensor, "metadata sensor name", "sensor-b")
+    sensor = sensor_set(sensor, "metadata crop", {"rect": [1, 2, 3, 4]})
 
     assert sensor_get(sensor, "scene_name") == "scene-b"
     assert sensor_get(sensor, "metadata scene name") == "scene-b"
@@ -2451,6 +2453,8 @@ def test_sensor_get_set_supports_legacy_scene_and_lens_metadata_aliases(asset_st
     assert sensor_get(sensor, "metadata lensname") == "lens-b"
     assert sensor_get(sensor, "metadata lens") == "lens-b"
     assert sensor_get(sensor, "metadata optics name") == "lens-b"
+    assert sensor_get(sensor, "metadata sensor name") == "sensor-b"
+    assert sensor_get(sensor, "metadata crop") == {"rect": [1, 2, 3, 4]}
 
     sensor = sensor_set(sensor, "metadata optics name", "lens-c")
 

@@ -418,6 +418,9 @@ MATLAB alias family around DSNU/PRNU and column FPN names such as
 `col gain`.
 That same FPN parser surface now also recognizes the setter-only
 `column fpn parameters` alias.
+The neighboring sensor metadata block now also has parser-level support
+for `scene_name`, `metadata scene name`, `lens`, `metadata lensname`,
+`metadata optics name`, `metadata sensor name`, and `metadata crop`.
 The neighboring pixel material alias surface now also supports direct
 sensor-level `refractive index` and `n` access without requiring the
 explicit `pixel` prefix.
