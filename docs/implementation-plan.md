@@ -45,6 +45,7 @@
 - The neighboring exposure block now also has parser-level routing for `integration time`, `exptimes`, `unique exptimes`, `central exposure`, `exposure method`, `n exposures`, `exposure plane`, `correlated double sampling`, `auto exposure`, and `automatic exposure`.
 - The neighboring sampling/noise-control block now also has parser-level routing for `pixel samples`, `n pixel samples for computing`, `spatial samples per pixel`, and `response type`.
 - The adjacent movement block now also has parser-level routing for `eye movement`, `frames per position`, `exposure times per position`, and `etime per pos`.
+- The same movement alias surface now also has focused parser/runtime coverage for `movement positions` plus the prefixed `sensor positions` and `sensor positions x/y` forms.
 - The neighboring legacy human block now also has parser-level routing for `human`, `cone type`, `densities`, `xy`, and `rseed`.
 - That same legacy human block now also routes the location aliases `cone xy` and `cone locs`.
 - The adjacent chart block now also has parser-level routing for `chart parameters`, `corner points`, `chart corners`, `chart rects`, `chart rectangles`, `current rect`, and `chart current rect`.

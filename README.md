@@ -436,6 +436,8 @@ and `response type`.
 The adjacent movement block now also has parser-level routing for
 `eye movement`, `frames per position`, `exposure times per position`,
 and `etime per pos`.
+The same movement alias surface now also has focused parser/runtime coverage for
+`movement positions` plus the prefixed `sensor positions` and `sensor positions x/y` forms.
 The neighboring legacy human block now also has parser-level routing for
 `human`, `cone type`, `densities`, `xy`, and `rseed`.
 That same block now also routes the legacy location aliases `cone xy` and

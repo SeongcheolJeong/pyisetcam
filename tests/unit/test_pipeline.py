@@ -2388,7 +2388,7 @@ def test_sensor_get_set_supports_movement_metadata_surface(asset_store) -> None:
     frames = np.array([2, 3], dtype=int)
 
     sensor = sensor_set(sensor, "eye movement", {"name": "shake", "enabled": True})
-    sensor = sensor_set(sensor, "sensor positions", positions)
+    sensor = sensor_set(sensor, "movement positions", positions)
     sensor = sensor_set(sensor, "exposure times per position", frames)
 
     movement = sensor_get(sensor, "sensor movement")
