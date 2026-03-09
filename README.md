@@ -348,7 +348,10 @@ state used by `zero level` / `zero`. The neighboring sensor data aliases
 now also include `sensorGet/Set('digital value')` and
 `sensorGet/Set('digital values')`, routed through the existing `dv`
 storage path, and `sensorGet('dv or volts'/'digital or volts')` now uses
-the same preferred-DV fallback behavior as upstream. The neighboring sensor model surface now also includes raw
+the same preferred-DV fallback behavior as upstream. The adjacent
+headless sensor data-view surface now also includes
+`sensorGet('volt images')`, returning per-filter plane stacks with
+`NaN`-filled empty locations like MATLAB `plane2rgb(...)`. The neighboring sensor model surface now also includes raw
 `sensorGet/Set('diffusion MTF')` storage for legacy compatibility. The
 neighboring legacy scene/lens aliases now round-trip too through
 `sensorGet/Set('scene_name')`, `sensorGet/Set('lens')`, and

@@ -6,6 +6,7 @@ import pyisetcam.optics as optics_module
 
 from pyisetcam.exceptions import UnsupportedOptionError
 from pyisetcam.parity import run_python_case_with_context
+from pyisetcam.utils import tile_pattern
 from pyisetcam import (
     camera_compute,
     camera_create,
@@ -2449,6 +2450,28 @@ def test_sensor_get_supports_dv_or_volts_aliases(asset_store) -> None:
     sensor = sensor_set(sensor, "dv", dv)
     assert np.array_equal(sensor_get(sensor, "dv or volts"), dv)
     assert np.array_equal(sensor_get(sensor, "digitalorvolts"), dv)
+
+
+def test_sensor_get_supports_volt_images(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 4)
+    sensor = sensor_set(sensor, "cols", 4)
+    volts = np.arange(1, 17, dtype=float).reshape(4, 4) / 16.0
+    sensor = sensor_set(sensor, "volts", volts)
+
+    plane_images = sensor_get(sensor, "volt images")
+
+    assert plane_images is not None
+    assert plane_images.shape == (4, 4, 3)
+    pattern = np.asarray(sensor_get(sensor, "pattern"), dtype=int)
+    tiled_pattern = tile_pattern(pattern, 4, 4)
+    assert np.isnan(plane_images[0, 0, 0])
+    assert np.isclose(plane_images[0, 1, 0], volts[0, 1])
+    assert np.isclose(plane_images[0, 0, 1], volts[0, 0])
+    assert np.isclose(plane_images[1, 0, 2], volts[1, 0])
+    assert np.array_equal(~np.isnan(plane_images[:, :, 0]), tiled_pattern == 1)
+    assert np.array_equal(~np.isnan(plane_images[:, :, 1]), tiled_pattern == 2)
+    assert np.array_equal(~np.isnan(plane_images[:, :, 2]), tiled_pattern == 3)
 
 
 def test_sensor_compute_uses_stored_noise_seed_when_seed_omitted(asset_store) -> None:

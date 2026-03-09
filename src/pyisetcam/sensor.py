@@ -270,6 +270,24 @@ def _sensor_dynamic_range(sensor: Sensor, integration_time: Any = None) -> Any:
     return dr
 
 
+def _sensor_plane_images(sensor: Sensor, data: np.ndarray | None, *, empty_value: float = np.nan) -> np.ndarray | None:
+    if data is None:
+        return None
+    array = np.asarray(data, dtype=float)
+    if array.ndim == 0:
+        array = array.reshape(1, 1)
+    elif array.ndim >= 3:
+        array = np.asarray(array[:, :, 0], dtype=float)
+    rows, cols = array.shape[:2]
+    pattern = tile_pattern(np.asarray(sensor_get(sensor, "pattern"), dtype=int), rows, cols)
+    n_planes = int(sensor_get(sensor, "nfilters"))
+    plane_stack = np.full((rows, cols, n_planes), float(empty_value), dtype=float)
+    for index in range(1, n_planes + 1):
+        mask = pattern == index
+        plane_stack[:, :, index - 1][mask] = array[mask]
+    return plane_stack
+
+
 def _copy_metadata_value(value: Any) -> Any:
     if isinstance(value, np.ndarray):
         return value.copy()
@@ -1348,6 +1366,8 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return ie_locs2_rect(roi_array)
     if key == "volts":
         return sensor.data.get("volts")
+    if key == "voltimages":
+        return _sensor_plane_images(sensor, sensor.data.get("volts"))
     if key == "electrons":
         return _sensor_electrons(sensor)
     if key in {"dv", "digitalvalue", "digitalvalues"}:
