@@ -444,6 +444,8 @@ That same block now also routes the legacy location aliases `cone xy` and
 `cone locs`.
 That same legacy human surface now also has focused parser/runtime coverage for
 the long-form aliases `human cone type` and `human cone locs`.
+The same test coverage now also exercises `human cone densities` and
+`human cone seed` directly on the runtime path.
 The adjacent chart block now also has parser-level routing for
 `chart parameters`, `corner points`, `chart corners`, `chart rects`,
 `chart rectangles`, `current rect`, and `chart current rect`.
