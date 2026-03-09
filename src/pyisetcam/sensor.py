@@ -654,6 +654,12 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return _sensor_filter_color_letters(sensor)
     if key == "filtercolorletterscell":
         return list(_sensor_filter_color_letters(sensor))
+    if key in {"filterplotcolor", "filterplotcolors"}:
+        colors = "".join(letter if letter in "rgbcmyk" else "k" for letter in _sensor_filter_color_letters(sensor))
+        if args:
+            index = int(np.rint(float(args[0]))) - 1
+            return colors[index]
+        return colors
     if key == "unitblockrows":
         return _sensor_unit_block(sensor)[0]
     if key == "unitblockcols":

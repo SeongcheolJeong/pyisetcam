@@ -47,6 +47,16 @@ def _line_index(function_name: str, plot_type: str, xy: Any | None, orientation:
     return index, xy_array.copy()
 
 
+def _plot_option(args: tuple[Any, ...], key: str, default: Any = None) -> Any:
+    if len(args) % 2 != 0:
+        raise ValueError("Optional plotting arguments must be key/value pairs.")
+    normalized_key = param_format(key)
+    for index in range(0, len(args), 2):
+        if param_format(args[index]) == normalized_key:
+            return args[index + 1]
+    return default
+
+
 def _sensor_plot_line_data(sensor: Sensor, line_key: str, xy: Any) -> dict[str, Any]:
     key = param_format(line_key)
     orientation = "h" if "hline" in key else "v"
@@ -62,6 +72,52 @@ def _sensor_plot_line_data(sensor: Sensor, line_key: str, xy: Any) -> dict[str, 
         "data": [np.asarray(values, dtype=float).copy() for values in profile["data"]],
         "pos": [1e6 * np.asarray(values, dtype=float).copy() for values in profile["pos"]],
         "pixPos": [1e6 * np.asarray(values, dtype=float).copy() for values in profile["pixPos"]],
+    }
+
+
+def _sensor_plot_two_lines(sensor: Sensor, line_key: str, xy: Any) -> dict[str, Any]:
+    key = param_format(line_key)
+    orientation = "h" if "hline" in key else "v"
+    data_type = "electrons" if "electrons" in key else "dv" if "dv" in key else "volts"
+    line_index, xy_array = _line_index("plotSensor", line_key, xy, orientation)
+    second_xy = xy_array.copy()
+    if second_xy.size == 1:
+        second_xy[0] = line_index + 1
+    elif orientation == "h":
+        second_xy[1] = line_index + 1
+    else:
+        second_xy[0] = line_index + 1
+
+    max_index = int(sensor_get(sensor, "rows" if orientation == "h" else "cols"))
+    if line_index >= max_index:
+        raise IndexError("Two-line sensor plot requires an adjacent line within the sensor bounds.")
+
+    first_line = _sensor_plot_line_data(sensor, line_key, xy_array)
+    second_line = _sensor_plot_line_data(sensor, line_key, second_xy)
+
+    pix_pos: list[np.ndarray] = []
+    pix_data: list[np.ndarray] = []
+    pix_color: list[int] = []
+    for line in (first_line, second_line):
+        for color_index, (positions, values) in enumerate(zip(line["pos"], line["data"]), start=1):
+            if np.asarray(values).size == 0:
+                continue
+            pix_pos.append(np.asarray(positions, dtype=float).copy())
+            pix_data.append(np.asarray(values, dtype=float).copy())
+            pix_color.append(color_index)
+
+    return {
+        "xy": xy_array.copy(),
+        "xy2": second_xy.copy(),
+        "ori": orientation,
+        "dataType": data_type,
+        "pixPos": pix_pos,
+        "pixData": pix_data,
+        "pixColor": np.asarray(pix_color, dtype=int),
+        "filterPlotColors": sensor_get(sensor, "filter plot colors"),
+        "xLabel": "Position (um)",
+        "yLabel": "digital value" if data_type == "dv" else data_type,
+        "titleString": f"{'Horizontal' if orientation == 'h' else 'Vertical'} line {line_index}",
     }
 
 
@@ -602,10 +658,12 @@ def sensor_plot(
 ) -> tuple[dict[str, Any], None]:
     """Return MATLAB-style `plotSensor` user-data without opening a figure."""
 
-    del args
+    two_lines = bool(_plot_option(args, "twolines", False))
     key = param_format(p_type)
     if key in {"electronshline", "hlineelectrons", "electronsvline", "vlineelectrons", "voltshline", "hlinevolts", "voltsvline", "vlinevolts", "dvhline", "hlinedv", "dvvline", "vlinedv"}:
         xy = _roi_required("plotSensor", p_type, roi_locs)
+        if two_lines:
+            return _sensor_plot_two_lines(sensor, key, xy), None
         return _sensor_plot_line_data(sensor, key, xy), None
     if key == "chromaticity":
         return _sensor_plot_chromaticity(sensor, roi_locs), None

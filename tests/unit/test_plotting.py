@@ -162,6 +162,56 @@ def test_plot_sensor_line_data(asset_store) -> None:
     assert np.allclose(dv_udata["data"][0], np.asarray(expected_dv["data"][0], dtype=float))
 
 
+def test_plot_sensor_two_lines_wrapper(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 2)
+    sensor = sensor_set(sensor, "cols", 2)
+    sensor = sensor_set(
+        sensor,
+        "volts",
+        np.array(
+            [
+                [1.0, 2.0],
+                [3.0, 4.0],
+            ],
+            dtype=float,
+        ),
+    )
+
+    udata, handle = plotSensor(sensor, "volts hline", np.array([1, 1], dtype=int), "two lines", True)
+
+    first_line = sensor_get(sensor, "hline volts", 1)
+    second_line = sensor_get(sensor, "hline volts", 2)
+    expected_pos: list[np.ndarray] = []
+    expected_data: list[np.ndarray] = []
+    expected_color: list[int] = []
+    for profile in (first_line, second_line):
+        for color_index, (positions, values) in enumerate(zip(profile["pos"], profile["data"]), start=1):
+            values_array = np.asarray(values, dtype=float)
+            if values_array.size == 0:
+                continue
+            expected_pos.append(1e6 * np.asarray(positions, dtype=float))
+            expected_data.append(values_array)
+            expected_color.append(color_index)
+
+    assert handle is None
+    assert np.array_equal(udata["xy"], np.array([1, 1], dtype=int))
+    assert np.array_equal(udata["xy2"], np.array([1, 2], dtype=int))
+    assert udata["ori"] == "h"
+    assert udata["dataType"] == "volts"
+    assert udata["filterPlotColors"] == "rgb"
+    assert udata["titleString"] == "Horizontal line 1"
+    assert udata["xLabel"] == "Position (um)"
+    assert udata["yLabel"] == "volts"
+    assert np.array_equal(udata["pixColor"], np.array(expected_color, dtype=int))
+    assert len(udata["pixPos"]) == len(expected_pos)
+    assert len(udata["pixData"]) == len(expected_data)
+    for actual, expected in zip(udata["pixPos"], expected_pos):
+        assert np.allclose(actual, expected)
+    for actual, expected in zip(udata["pixData"], expected_data):
+        assert np.allclose(actual, expected)
+
+
 def test_plot_sensor_chromaticity_wrapper(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
     sensor = sensor_set(
