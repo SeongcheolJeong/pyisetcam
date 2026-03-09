@@ -1139,6 +1139,9 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return _sensor_cfa_pattern(sensor).copy()
     if key == "cfaname":
         return _sensor_cfa_name(sensor)
+    if key == "diffusionmtf":
+        value = sensor.fields.get("diffusion_mtf")
+        return None if value is None else copy.deepcopy(value)
     if key in {"filterplotcolor", "filterplotcolors"}:
         colors = "".join(letter if letter in "rgbcmyk" else "k" for letter in _sensor_filter_color_letters(sensor))
         if args:
@@ -1624,6 +1627,9 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         return sensor
     if key in {"cds", "correlateddoublesampling"}:
         sensor.fields["cds"] = bool(value)
+        return sensor
+    if key == "diffusionmtf":
+        sensor.fields["diffusion_mtf"] = None if value is None else copy.deepcopy(value)
         return sensor
     if key in {"blacklevel", "zerolevel", "zero"}:
         sensor.fields["zero_level"] = float(value)

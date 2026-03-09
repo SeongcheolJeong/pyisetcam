@@ -187,6 +187,7 @@ _PARAMETER_OTYPE_UNIQUE = {
         "dr",
         "drdb20",
         "dynamicrange",
+        "diffusionmtf",
         "analoggain",
         "analogoffset",
         "sensordynamicrange",

@@ -347,7 +347,8 @@ neighboring noise-summary aliases now also include
 state used by `zero level` / `zero`. The neighboring sensor data aliases
 now also include `sensorGet/Set('digital value')` and
 `sensorGet/Set('digital values')`, routed through the existing `dv`
-storage path. The
+storage path. The neighboring sensor model surface now also includes raw
+`sensorGet/Set('diffusion MTF')` storage for legacy compatibility. The
 neighboring legacy scene/lens aliases now round-trip too through
 `sensorGet/Set('scene_name')`, `sensorGet/Set('lens')`, and
 `sensorGet('metadata lensname'/'metadata lens')`. The adjacent raw

@@ -2110,6 +2110,29 @@ def test_sensor_get_set_supports_chart_and_metadata_surface(asset_store) -> None
     assert np.array_equal(sensor_get(sensor, "chart corner points"), corner_points + 1.0)
 
 
+def test_sensor_get_set_supports_diffusion_mtf_storage(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    diffusion = {
+        "name": "Gaussian",
+        "otf": np.array([1.0, 0.8, 0.6], dtype=float),
+        "support": np.array([0.0, 0.5, 1.0], dtype=float),
+    }
+
+    sensor = sensor_set(sensor, "diffusion MTF", diffusion)
+
+    stored = sensor_get(sensor, "diffusionmtf")
+    assert stored is not None
+    assert stored["name"] == "Gaussian"
+    assert np.array_equal(stored["otf"], diffusion["otf"])
+    assert np.array_equal(stored["support"], diffusion["support"])
+
+    stored["otf"][0] = 9.0
+    assert np.array_equal(sensor_get(sensor, "diffusion mtf")["otf"], diffusion["otf"])
+
+    sensor = sensor_set(sensor, "diffusion MTF", None)
+    assert sensor_get(sensor, "diffusionmtf") is None
+
+
 def test_sensor_get_set_supports_movement_metadata_surface(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
     positions = np.array([[0.1, 0.2], [0.3, 0.4]], dtype=float)
