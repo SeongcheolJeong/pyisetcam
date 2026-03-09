@@ -971,6 +971,10 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return _pixel_spectral_sr(sensor)
     if key in {"ir", "infraredfilter", "irfilter", "otherfilter"}:
         return _sensor_ir_filter(sensor)
+    if key in {"consistency", "sensorconsistency"}:
+        return bool(sensor.fields.get("consistency", False))
+    if key in {"sensorcompute", "sensorcomputemethod"}:
+        return _copy_metadata_value(sensor.fields.get("sensor_compute_method"))
     if key in {"filternames", "filtername"}:
         return list(sensor.fields["filter_names"])
     if key in {"nfilters", "nfilter", "ncolors", "ncolor", "nsensors", "nsensor"}:
@@ -1335,6 +1339,12 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         return sensor
     if key in {"filternames", "filtername"}:
         sensor.fields["filter_names"] = list(value)
+        return sensor
+    if key in {"consistency", "sensorconsistency"}:
+        sensor.fields["consistency"] = bool(value)
+        return sensor
+    if key in {"sensorcompute", "sensorcomputemethod"}:
+        sensor.fields["sensor_compute_method"] = _copy_metadata_value(value)
         return sensor
     if key in {"roi", "roilocs"}:
         roi = np.asarray(value, dtype=float)

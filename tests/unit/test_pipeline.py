@@ -2167,6 +2167,21 @@ def test_sensor_get_set_supports_microlens_storage_surface(asset_store) -> None:
     assert np.array_equal(sensor_get(sensor, "mlens")["offset"], np.array([0.0, 1.0], dtype=float))
 
 
+def test_sensor_get_set_supports_consistency_and_compute_method_storage(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+
+    assert sensor_get(sensor, "consistency") is False
+    assert sensor_get(sensor, "sensor compute method") is None
+
+    sensor = sensor_set(sensor, "sensor consistency", True)
+    sensor = sensor_set(sensor, "sensor compute", {"name": "binning", "factor": 2})
+
+    assert sensor_get(sensor, "consistency") is True
+    assert sensor_get(sensor, "sensor consistency") is True
+    assert sensor_get(sensor, "sensor compute") == {"name": "binning", "factor": 2}
+    assert sensor_get(sensor, "sensor compute method") == {"name": "binning", "factor": 2}
+
+
 def test_sensor_set_cfa_round_trips_matlab_style_struct(asset_store) -> None:
     sensor = sensor_create("rgbw", asset_store=asset_store)
     cfa = sensor_get(sensor, "cfa")

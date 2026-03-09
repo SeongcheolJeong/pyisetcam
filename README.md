@@ -340,7 +340,10 @@ neighboring legacy scene/lens aliases now round-trip too through
 `sensorGet('metadata lensname'/'metadata lens')`. The adjacent raw
 microlens storage surface now round-trips as well through
 `sensorGet/Set('microlens'/'ml')` and
-`sensorGet/Set('microlens offset'/'mloffset')`.
+`sensorGet/Set('microlens offset'/'mloffset')`. The remaining scalar hooks
+in that upstream block now round-trip too through
+`sensorGet/Set('consistency'/'sensor consistency')` and
+`sensorGet/Set('sensor compute'/'sensor compute method')`.
 The same headless plotting surface now
 also covers `plotSensor('etendue')`, returning MATLAB-style support and
 relative-illumination payloads without opening a mesh plot window. Sensor
