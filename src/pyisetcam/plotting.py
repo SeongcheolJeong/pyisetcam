@@ -277,6 +277,10 @@ def _sensor_filter_display_colors(sensor: Sensor) -> np.ndarray:
     return np.clip(colors, 0.0, 1.0)
 
 
+def _sensor_name_string(sensor: Sensor) -> str:
+    return str(sensor_get(sensor, "name"))
+
+
 def _sensor_plot_cfa(sensor: Sensor, *, full_array: bool) -> dict[str, Any]:
     unit_pattern = np.asarray(sensor_get(sensor, "pattern"), dtype=int)
     if full_array:
@@ -304,6 +308,7 @@ def _sensor_plot_cfa(sensor: Sensor, *, full_array: bool) -> dict[str, Any]:
         "filterColors": filter_colors.copy(),
         "scale": scale,
         "mode": mode,
+        "nameString": _sensor_name_string(sensor),
     }
 
 
@@ -349,6 +354,7 @@ def _sensor_plot_true_size(sensor: Sensor) -> dict[str, Any]:
     return {
         "img": _sensor_render_image(sensor, data, data_type),
         "dataType": data_type,
+        "nameString": _sensor_name_string(sensor),
     }
 
 
@@ -357,6 +363,7 @@ def _sensor_plot_cfa_image(sensor: Sensor) -> dict[str, Any]:
     return {
         "img": _sensor_render_image(sensor, data, data_type),
         "dataType": data_type,
+        "nameString": _sensor_name_string(sensor),
     }
 
 
@@ -386,6 +393,7 @@ def _sensor_plot_channels(sensor: Sensor) -> dict[str, Any]:
         "pattern": pattern.copy(),
         "filterNames": list(sensor_get(sensor, "filter color letters cell")),
         "dataType": data_type,
+        "nameString": _sensor_name_string(sensor),
     }
 
 

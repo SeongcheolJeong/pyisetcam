@@ -627,11 +627,14 @@ def test_plot_sensor_cfa_wrappers(asset_store) -> None:
 
     expected_unit_pattern = np.asarray(sensor_get(sensor, "pattern"), dtype=int)
     expected_pattern_colors = np.asarray(sensor_get(sensor, "pattern colors"))
+    expected_name = str(sensor_get(sensor, "name"))
 
     assert block_handle is None
     assert full_handle is None
     assert block_udata["mode"] == "block"
     assert full_udata["mode"] == "full"
+    assert block_udata["nameString"] == expected_name
+    assert full_udata["nameString"] == expected_name
     assert block_udata["scale"] == 8
     assert full_udata["scale"] == 8
     assert np.array_equal(block_udata["unitPattern"], expected_unit_pattern)
@@ -674,11 +677,14 @@ def test_plot_sensor_true_size_and_cfa_image_wrappers(asset_store) -> None:
 
     true_udata, true_handle = plotSensor(sensor, "true size")
     cfa_image_udata, cfa_image_handle = plotSensor(sensor, "cfa image")
+    expected_name = str(sensor_get(sensor, "name"))
 
     assert true_handle is None
     assert cfa_image_handle is None
     assert true_udata["dataType"] == "volts"
     assert cfa_image_udata["dataType"] == "volts"
+    assert true_udata["nameString"] == expected_name
+    assert cfa_image_udata["nameString"] == expected_name
     assert true_udata["img"].shape == (2, 2, 3)
     assert cfa_image_udata["img"].shape == (2, 2, 3)
     assert np.allclose(true_udata["img"][0, 0], np.array([0.0, 0.0, 0.0], dtype=float))
@@ -699,9 +705,11 @@ def test_plot_sensor_channels_wrapper(asset_store) -> None:
     sensor = sensor_set(sensor, "volts", volts)
 
     channels_udata, channels_handle = plotSensor(sensor, "channels")
+    expected_name = str(sensor_get(sensor, "name"))
 
     assert channels_handle is None
     assert channels_udata["dataType"] == "volts"
+    assert channels_udata["nameString"] == expected_name
     assert channels_udata["filterNames"] == ["r", "g", "b"]
     assert len(channels_udata["channelData"]) == 3
     assert len(channels_udata["channelImages"]) == 3

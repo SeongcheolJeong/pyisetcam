@@ -314,7 +314,8 @@ spectral bundle, plus headless CFA views for `'cfa'` / `'cfa block'` and
 display scaling. The adjacent headless sensor image-view slice is now in
 place too through `plotSensor('cfa image')`, `plotSensor('true size')`,
 and `plotSensor('channels')`, returning image and per-channel payloads
-instead of opening GUI windows. The same headless plotting surface now
+with MATLAB-style sensor-name metadata instead of opening GUI windows.
+The same headless plotting surface now
 also covers `plotSensor('etendue')`, returning MATLAB-style support and
 relative-illumination payloads without opening a mesh plot window. Sensor
 spectral plotting now also includes `plotSensor('ir filter')`,
