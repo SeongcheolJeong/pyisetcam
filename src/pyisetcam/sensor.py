@@ -103,6 +103,7 @@ def _sensor_base(
             "auto_exposure": True,
             "integration_time": 0.0,
             "quantization": "analog",
+            "quantization_lut": None,
             "mosaic": True,
             "n_samples_per_pixel": 1,
             "vignetting": 0,
@@ -1299,8 +1300,17 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         v_max = float(np.max(volts_array))
         v_min = max(float(np.min(volts_array)), voltage_swing / float(2**12))
         return v_max / v_min
-    if key == "nbits":
+    if key in {"nbits", "bits"}:
         return int(sensor.fields["nbits"])
+    if key in {"lut", "quantizationlut", "quantizatonlut"}:
+        stored = sensor.fields.get("quantization_lut")
+        return None if stored is None else np.asarray(stored, dtype=float).copy()
+    if key == "quantizationstructure":
+        return {
+            "bits": int(sensor.fields["nbits"]),
+            "method": _copy_metadata_value(sensor.fields["quantization"]),
+            "lut": sensor_get(sensor, "lut"),
+        }
     if key in {
         "vignetting",
         "vignettingflag",
@@ -1344,7 +1354,9 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return np.asarray(stored, dtype=float).copy()
     if key in {"ngridsamples", "pixelsamples", "nsamplesperpixel", "npixelsamplesforcomputing", "spatialsamplesperpixel"}:
         return int(sensor.fields.get("n_samples_per_pixel", 1))
-    if key in {"quantization", "quantizationmethod"}:
+    if key == "quantization":
+        return sensor.fields["quantization"]
+    if key in {"qmethod", "quantizationmethod"}:
         return sensor.fields["quantization"]
     if key == "responsetype":
         return str(sensor.fields.get("response_type", "linear"))
@@ -1823,8 +1835,23 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
     if key in {"ngridsamples", "pixelsamples", "nsamplesperpixel", "npixelsamplesforcomputing", "spatialsamplesperpixel"}:
         sensor.fields["n_samples_per_pixel"] = int(value)
         return sensor
-    if key in {"quantization", "quantizationmethod"}:
+    if key in {"quantization", "qmethod", "quantizationmethod"}:
         sensor.fields["quantization"] = str(value)
+        return sensor
+    if key in {"nbits", "bits"}:
+        sensor.fields["nbits"] = int(value)
+        return sensor
+    if key in {"lut", "quantizationlut", "quantizatonlut"}:
+        sensor.fields["quantization_lut"] = None if value is None else np.asarray(value, dtype=float).copy()
+        return sensor
+    if key == "quantizationstructure":
+        payload = dict(value) if isinstance(value, dict) else dict(vars(value))
+        if "bits" in payload:
+            sensor.fields["nbits"] = int(payload["bits"])
+        if "method" in payload:
+            sensor.fields["quantization"] = str(payload["method"])
+        if "lut" in payload:
+            sensor.fields["quantization_lut"] = None if payload["lut"] is None else np.asarray(payload["lut"], dtype=float).copy()
         return sensor
     if key == "responsetype":
         normalized = str(param_format(value))

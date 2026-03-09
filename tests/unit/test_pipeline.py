@@ -2538,6 +2538,35 @@ def test_sensor_get_supports_electrons_per_area(asset_store) -> None:
     assert np.array_equal(sensor_get(sensor, "electrons per area", "um", 2), expected_um2[tiled_pattern == 2])
 
 
+def test_sensor_get_set_supports_quantization_alias_surface(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    lut = np.array([0.0, 1.0, 2.0], dtype=float)
+
+    sensor = sensor_set(sensor, "bits", 12)
+    sensor = sensor_set(sensor, "qmethod", "12 bit")
+    sensor = sensor_set(sensor, "lut", lut)
+
+    quantization = sensor_get(sensor, "quantization")
+    quantization_method = sensor_get(sensor, "qmethod")
+    quantization_struct = sensor_get(sensor, "quantization structure")
+
+    assert quantization == "12 bit"
+    assert quantization_method == "12 bit"
+    assert sensor_get(sensor, "bits") == 12
+    assert sensor_get(sensor, "nbits") == 12
+    assert np.array_equal(sensor_get(sensor, "lut"), lut)
+    assert np.array_equal(sensor_get(sensor, "quantization lut"), lut)
+    assert quantization_struct["bits"] == 12
+    assert quantization_struct["method"] == "12 bit"
+    assert np.array_equal(quantization_struct["lut"], lut)
+
+    sensor = sensor_set(sensor, "quantization structure", {"bits": 8, "method": "8 bit", "lut": np.array([0.0, 0.5], dtype=float)})
+
+    assert sensor_get(sensor, "bits") == 8
+    assert sensor_get(sensor, "quantization method") == "8 bit"
+    assert np.array_equal(sensor_get(sensor, "lut"), np.array([0.0, 0.5], dtype=float))
+
+
 def test_sensor_compute_uses_stored_noise_seed_when_seed_omitted(asset_store) -> None:
     scene = scene_create("uniform d65")
     oi = oi_compute(oi_create(), scene)
