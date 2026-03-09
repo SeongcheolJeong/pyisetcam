@@ -168,6 +168,7 @@ _PARAMETER_OTYPE_UNIQUE = {
         "sensoretendue",
         "microlens",
         "volts",
+        "digitalvalue",
         "digitalvalues",
         "electrons",
         "dvorvoltsroielectrons",

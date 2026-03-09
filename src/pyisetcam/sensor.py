@@ -498,7 +498,7 @@ def _sensor_rgb_source(sensor: Sensor, data_type: str) -> tuple[np.ndarray | Non
         else:
             resolved = "volts"
             source = sensor.data.get("volts")
-    elif key == "dv":
+    elif key in {"dv", "digitalvalue", "digitalvalues"}:
         source = sensor.data.get("dv")
     elif key == "electrons":
         source = _sensor_electrons(sensor)
@@ -521,7 +521,7 @@ def _sensor_display_scale(sensor: Sensor, data: np.ndarray, data_type: str, *, s
     if scale_max:
         return float(max(np.max(np.asarray(data, dtype=float)), 1e-12))
     key = param_format(data_type)
-    if key == "dv":
+    if key in {"dv", "digitalvalue", "digitalvalues"}:
         return float(max(sensor_get(sensor, "max digital value"), 1.0))
     return float(max(sensor_get(sensor, "max output"), 1e-12))
 
@@ -1347,7 +1347,7 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return sensor.data.get("volts")
     if key == "electrons":
         return _sensor_electrons(sensor)
-    if key == "dv":
+    if key in {"dv", "digitalvalue", "digitalvalues"}:
         return sensor.data.get("dv")
     if key in {"ncaptures", "ncapture"}:
         volts = sensor.data.get("volts")
@@ -1770,7 +1770,7 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         if volts.ndim >= 2:
             sensor.fields["size"] = (int(volts.shape[0]), int(volts.shape[1]))
         return sensor
-    if key in {"dv", "digitalvalues"}:
+    if key in {"dv", "digitalvalue", "digitalvalues"}:
         dv = np.asarray(value, dtype=float)
         sensor.data["dv"] = dv
         if dv.ndim >= 2:

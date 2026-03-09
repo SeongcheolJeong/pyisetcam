@@ -344,7 +344,10 @@ neighboring legacy MCC aliases now round-trip too through
 field, plus raw `sensorGet/Set('mcc rect handles')` storage. The
 neighboring noise-summary aliases now also include
 `sensorGet/Set('black level')`, mapped onto the same stored zero-level
-state used by `zero level` / `zero`. The
+state used by `zero level` / `zero`. The neighboring sensor data aliases
+now also include `sensorGet/Set('digital value')` and
+`sensorGet/Set('digital values')`, routed through the existing `dv`
+storage path. The
 neighboring legacy scene/lens aliases now round-trip too through
 `sensorGet/Set('scene_name')`, `sensorGet/Set('lens')`, and
 `sensorGet('metadata lensname'/'metadata lens')`. The adjacent raw

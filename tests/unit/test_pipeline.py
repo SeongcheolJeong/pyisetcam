@@ -2399,6 +2399,21 @@ def test_sensor_get_set_supports_black_level_alias(asset_store) -> None:
     assert sensor_get(sensor, "zerolevel") == 32.0
 
 
+def test_sensor_get_set_supports_digital_value_aliases(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    dv = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float)
+
+    sensor = sensor_set(sensor, "digital value", dv)
+
+    assert np.array_equal(sensor_get(sensor, "dv"), dv)
+    assert np.array_equal(sensor_get(sensor, "digital value"), dv)
+    assert np.array_equal(sensor_get(sensor, "digital values"), dv)
+
+    sensor = sensor_set(sensor, "digital values", dv + 1.0)
+
+    assert np.array_equal(sensor_get(sensor, "digitalvalue"), dv + 1.0)
+
+
 def test_sensor_compute_uses_stored_noise_seed_when_seed_omitted(asset_store) -> None:
     scene = scene_create("uniform d65")
     oi = oi_compute(oi_create(), scene)
