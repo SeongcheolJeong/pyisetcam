@@ -206,6 +206,7 @@ def test_ie_parameter_otype_handles_direct_prefix_and_unique_params() -> None:
     assert ie_parameter_otype("rseed") == ("sensor", "rseed")
     assert ie_parameter_otype("chart parameters") == ("sensor", "chartparameters")
     assert ie_parameter_otype("corner points") == ("sensor", "cornerpoints")
+    assert ie_parameter_otype("chart corner points") == ("sensor", "chartcornerpoints")
     assert ie_parameter_otype("chart corners") == ("sensor", "chartcorners")
     assert ie_parameter_otype("chart rects") == ("sensor", "chartrects")
     assert ie_parameter_otype("chart rectangles") == ("sensor", "chartrectangles")

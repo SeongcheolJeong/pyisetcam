@@ -449,6 +449,8 @@ The same test coverage now also exercises `human cone densities` and
 The adjacent chart block now also has parser-level routing for
 `chart parameters`, `corner points`, `chart corners`, `chart rects`,
 `chart rectangles`, `current rect`, and `chart current rect`.
+That same chart surface now also has focused parser/runtime coverage for the
+natural long-form setter alias `chart corner points`.
 The neighboring metadata block now also has focused parser/runtime coverage for
 `scene name`, `metadata scene name`, `metadata lens name`, `metadata lens`,
 `metadata optics name`, `metadata sensor name`, and `metadata crop`.

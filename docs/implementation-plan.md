@@ -51,6 +51,7 @@
 - That same legacy human surface now also has focused parser/runtime coverage for the long-form aliases `human cone type` and `human cone locs`.
 - The same legacy human runtime coverage now also exercises `human cone densities` and `human cone seed` directly.
 - The adjacent chart block now also has parser-level routing for `chart parameters`, `corner points`, `chart corners`, `chart rects`, `chart rectangles`, `current rect`, and `chart current rect`.
+- That same chart surface now also has focused parser/runtime coverage for the long-form setter alias `chart corner points`.
 - The neighboring metadata block now also has focused parser/runtime coverage for `scene name`, `metadata scene name`, `metadata lens name`, `metadata lens`, `metadata optics name`, `metadata sensor name`, and `metadata crop`.
 - The neighboring vignetting alias block now also has parser-level support for `vignetting flag`, `pixel vignetting`, `sensor vignetting`, `sensor bare etendue`, `no microlens etendue`, and `vignetting name`.
 - The same headless sensor plotting surface now also covers `plotSensor('etendue')`, returning MATLAB-style support and relative-illumination payloads without opening a mesh plot window.
