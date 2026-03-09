@@ -331,7 +331,10 @@ The adjacent raw chart/metadata block is now covered too through
 `sensorGet/Set('chart parameters')`, `sensorGet/Set('chart corner points')`,
 `sensorGet/Set('chart rectangles')`, `sensorGet/Set('current rect')`, and
 the nearby `metadata sensor/scene/optics name` plus `metadata crop`
-round-trip fields.
+round-trip fields, along with the adjacent sensor movement surface through
+`sensorGet/Set('sensor movement'/'eye movement')`,
+`sensorGet/Set('movement positions'/'sensor positions')`, and
+`sensorGet/Set('frames per position'/'exposure times per position')`.
 The same headless plotting surface now
 also covers `plotSensor('etendue')`, returning MATLAB-style support and
 relative-illumination payloads without opening a mesh plot window. Sensor

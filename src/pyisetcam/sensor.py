@@ -165,6 +165,18 @@ def _sensor_chart_parameters(sensor: Sensor) -> dict[str, Any]:
     return chart
 
 
+def _sensor_movement(sensor: Sensor) -> dict[str, Any]:
+    stored = sensor.fields.get("movement")
+    if not isinstance(stored, dict):
+        stored = {}
+        sensor.fields["movement"] = stored
+    movement = dict(stored)
+    for key, entry in movement.items():
+        if isinstance(entry, np.ndarray):
+            movement[key] = entry.copy()
+    return movement
+
+
 def _copy_metadata_value(value: Any) -> Any:
     if isinstance(value, np.ndarray):
         return value.copy()
@@ -189,6 +201,32 @@ def _spectrum_struct_from_value(value: Any) -> dict[str, Any]:
         spectrum["wave"] = wave
     spectrum["wave"] = np.asarray(spectrum["wave"], dtype=float).reshape(-1)
     return spectrum
+
+
+def _movement_struct_from_value(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        movement = dict(value)
+    else:
+        movement = {}
+        if hasattr(value, "__dict__"):
+            movement.update(vars(value))
+    for key, entry in list(movement.items()):
+        if isinstance(entry, np.ndarray):
+            movement[key] = entry.copy()
+    return movement
+
+
+def _movement_positions_from_value(value: Any) -> np.ndarray:
+    positions = np.asarray(value, dtype=float)
+    if positions.size == 0:
+        return positions.reshape(0, 2)
+    if positions.ndim == 1:
+        if positions.size != 2:
+            raise ValueError("sensor movement positions must be Nx2.")
+        return positions.reshape(1, 2)
+    if positions.ndim != 2 or positions.shape[1] != 2:
+        raise ValueError("sensor movement positions must be Nx2.")
+    return positions.copy()
 
 
 def _sensor_unit_block_config(sensor: Sensor) -> np.ndarray:
@@ -864,6 +902,21 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return sensor.type
     if key == "name":
         return sensor.name
+    if key in {"sensormovement", "eyemovement"}:
+        return _sensor_movement(sensor)
+    if key in {"movementpositions", "sensorpositions"}:
+        movement = sensor.fields.get("movement", {})
+        value = movement.get("pos")
+        return None if value is None else np.asarray(value, dtype=float).copy()
+    if key == "sensorpositionsx":
+        positions = sensor_get(sensor, "sensor positions")
+        return None if positions is None else np.asarray(positions, dtype=float)[:, 0].copy()
+    if key == "sensorpositionsy":
+        positions = sensor_get(sensor, "sensor positions")
+        return None if positions is None else np.asarray(positions, dtype=float)[:, 1].copy()
+    if key in {"framesperposition", "exposuretimesperposition", "etimeperpos"}:
+        movement = sensor.fields.get("movement", {})
+        return _copy_metadata_value(movement.get("framesPerPosition"))
     if key in {"wave", "wavelength", "wavelengthsamples"}:
         return np.asarray(sensor.fields["wave"], dtype=float)
     if key in {"chartparameters"}:
@@ -1172,6 +1225,19 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
     key = param_format(parameter)
     if key == "name":
         sensor.name = str(value)
+        return sensor
+    if key in {"sensormovement", "eyemovement"}:
+        sensor.fields["movement"] = _movement_struct_from_value(value)
+        return sensor
+    if key in {"movementpositions", "sensorpositions"}:
+        movement = _sensor_movement(sensor)
+        movement["pos"] = _movement_positions_from_value(value)
+        sensor.fields["movement"] = movement
+        return sensor
+    if key in {"framesperposition", "exposuretimesperposition", "etimeperpos"}:
+        movement = _sensor_movement(sensor)
+        movement["framesPerPosition"] = _copy_metadata_value(value)
+        sensor.fields["movement"] = movement
         return sensor
     if key in {"spectrum", "sensorspectrum"}:
         spectrum = _spectrum_struct_from_value(value)
