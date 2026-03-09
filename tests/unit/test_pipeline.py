@@ -2019,6 +2019,9 @@ def test_sensor_get_reports_matlab_style_geometry_and_cfa_metadata(asset_store) 
     rows, cols = sensor.fields["size"]
 
     support = sensor_get(sensor, "spatial support", "um")
+    cfa = sensor_get(sensor, "cfa")
+    pattern = sensor_get(sensor, "cfa pattern")
+    cfa_config = sensor_get(sensor, "unit block config")
     pattern_colors = sensor_get(sensor, "pattern colors")
 
     assert np.isclose(sensor_get(sensor, "height"), rows * pixel_size[0])
@@ -2033,9 +2036,31 @@ def test_sensor_get_reports_matlab_style_geometry_and_cfa_metadata(asset_store) 
     assert sensor_get(sensor, "unit block rows") == 2
     assert sensor_get(sensor, "unit block cols") == 2
     assert sensor_get(sensor, "cfa size") == (2, 2)
+    assert sensor_get(sensor, "cfa name") == "Bayer RGB"
     assert sensor_get(sensor, "filter color letters") == "rgb"
+    assert np.array_equal(pattern, np.array([[2, 1], [3, 2]], dtype=int))
+    assert np.array_equal(cfa["pattern"], pattern)
+    assert cfa["unitBlock"]["rows"] == 2
+    assert cfa["unitBlock"]["cols"] == 2
+    assert np.allclose(cfa["unitBlock"]["config"], cfa_config)
+    assert np.allclose(cfa_config, np.array([[0.0, 0.0], [pixel_size[1], 0.0], [0.0, pixel_size[0]], [pixel_size[1], pixel_size[0]]], dtype=float))
     assert pattern_colors.shape == (2, 2)
     assert np.array_equal(pattern_colors, np.array([["g", "r"], ["b", "g"]], dtype="<U1"))
+
+
+def test_sensor_set_cfa_round_trips_matlab_style_struct(asset_store) -> None:
+    sensor = sensor_create("rgbw", asset_store=asset_store)
+    cfa = sensor_get(sensor, "cfa")
+    replacement = {
+        "pattern": np.array([[4, 3], [2, 1]], dtype=int),
+        "unitBlock": cfa["unitBlock"],
+    }
+
+    sensor = sensor_set(sensor, "cfa", replacement)
+
+    assert np.array_equal(sensor_get(sensor, "pattern"), replacement["pattern"])
+    assert np.array_equal(sensor_get(sensor, "cfa")["pattern"], replacement["pattern"])
+    assert sensor_get(sensor, "cfa name") == "RGBW"
 
 
 def test_sensor_create_rgbw_and_rccc_presets_expose_multichannel_cfas(asset_store) -> None:

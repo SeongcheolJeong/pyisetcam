@@ -138,6 +138,61 @@ def _sensor_filter_color_letters(sensor: Sensor) -> str:
     return "".join(str(name)[0].lower() if str(name) else "k" for name in names)
 
 
+def _sensor_cfa_pattern(sensor: Sensor) -> np.ndarray:
+    return np.asarray(sensor.fields["pattern"], dtype=int)
+
+
+def _sensor_unit_block_config(sensor: Sensor) -> np.ndarray:
+    pixel = sensor.fields["pixel"]
+    pixel_size = _pixel_size_m(pixel)
+    pattern = _sensor_cfa_pattern(sensor)
+    x, y = np.meshgrid(
+        np.arange(pattern.shape[1], dtype=float) * pixel_size[1],
+        np.arange(pattern.shape[0], dtype=float) * pixel_size[0],
+    )
+    return np.column_stack([x.ravel(), y.ravel()])
+
+
+def _sensor_cfa_struct(sensor: Sensor) -> dict[str, Any]:
+    pattern = _sensor_cfa_pattern(sensor)
+    return {
+        "pattern": pattern.copy(),
+        "unitBlock": {
+            "rows": int(pattern.shape[0]),
+            "cols": int(pattern.shape[1]),
+            "config": _sensor_unit_block_config(sensor),
+        },
+    }
+
+
+def _sensor_cfa_name(sensor: Sensor) -> str:
+    pattern = _sensor_cfa_pattern(sensor)
+    filter_colors = "".join(sorted(_sensor_filter_color_letters(sensor)))
+    if pattern.size == 1:
+        return "Monochrome"
+    if pattern.shape != (2, 2):
+        return "Other"
+    if filter_colors == "bgr":
+        return "Bayer RGB"
+    if filter_colors == "cmy":
+        return "Bayer CMY"
+    if filter_colors == "bgrw":
+        return "RGBW"
+    return "Other"
+
+
+def _cfa_pattern_from_value(value: Any) -> np.ndarray:
+    if isinstance(value, dict):
+        if "pattern" in value:
+            return np.asarray(value["pattern"], dtype=int)
+        if "cfapattern" in value:
+            return np.asarray(value["cfapattern"], dtype=int)
+    pattern = getattr(value, "pattern", None)
+    if pattern is not None:
+        return np.asarray(pattern, dtype=int)
+    raise ValueError("CFA value must include a pattern.")
+
+
 def _sensor_filter_display_colors(sensor: Sensor) -> np.ndarray:
     letters = list(_sensor_filter_color_letters(sensor))
     filter_spectra = _sensor_combined_qe(sensor, dtype=float)
@@ -781,6 +836,12 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return _sensor_filter_color_letters(sensor)
     if key == "filtercolorletterscell":
         return list(_sensor_filter_color_letters(sensor))
+    if key in {"cfa", "colorfilterarray"}:
+        return _sensor_cfa_struct(sensor)
+    if key in {"cfapattern", "pattern"}:
+        return _sensor_cfa_pattern(sensor).copy()
+    if key == "cfaname":
+        return _sensor_cfa_name(sensor)
     if key in {"filterplotcolor", "filterplotcolors"}:
         colors = "".join(letter if letter in "rgbcmyk" else "k" for letter in _sensor_filter_color_letters(sensor))
         if args:
@@ -793,6 +854,8 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return _sensor_unit_block(sensor)[1]
     if key in {"cfasize", "unitblocksize"}:
         return _sensor_unit_block(sensor)
+    if key == "unitblockconfig":
+        return _sensor_unit_block_config(sensor)
     if key in {"patterncolors", "pcolors", "blockcolors"}:
         letters = np.array(list(_sensor_filter_color_letters(sensor)), dtype="<U1")
         if letters.size == 0:
@@ -1017,6 +1080,9 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         return sensor
     if key == "pattern":
         sensor.fields["pattern"] = np.asarray(value, dtype=int)
+        return sensor
+    if key in {"colorfilterarray", "cfa"}:
+        sensor.fields["pattern"] = _cfa_pattern_from_value(value)
         return sensor
     if key in {"filterspectra", "colorfilters"}:
         sensor.fields["filter_spectra"] = np.asarray(value, dtype=float)

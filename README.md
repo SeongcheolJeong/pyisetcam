@@ -320,6 +320,9 @@ The explicit sensor render surface now also includes `sensorGet/Set(...,
 upstream-style `max output` / `max digital value` scaling semantics, and
 headless true-size / CFA-image payloads report the gamma / scale-max
 settings they use.
+The adjacent raw CFA compatibility surface now also includes
+`sensorGet/Set('cfa')`, `sensorGet('cfa pattern')`, `sensorGet('cfa name')`,
+and `sensorGet('unit block config')` with MATLAB-style unit-block metadata.
 The same headless plotting surface now
 also covers `plotSensor('etendue')`, returning MATLAB-style support and
 relative-illumination payloads without opening a mesh plot window. Sensor
