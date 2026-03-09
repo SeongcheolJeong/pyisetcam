@@ -424,6 +424,8 @@ for `scene_name`, `metadata scene name`, `lens`, `metadata lensname`,
 The adjacent microlens block now also has parser-level support for
 `ml`, `mlens`, `ulens`, `microlens offset`, `mloffset`, and
 `microlens offset microns`.
+The adjacent consistency block now also has parser-level routing for
+`consistency`, `sensor consistency`, and `sensor compute`.
 The neighboring pixel material alias surface now also supports direct
 sensor-level `refractive index` and `n` access without requiring the
 explicit `pixel` prefix.

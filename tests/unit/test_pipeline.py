@@ -2536,8 +2536,8 @@ def test_sensor_get_set_supports_consistency_and_compute_method_storage(asset_st
     assert sensor_get(sensor, "consistency") is False
     assert sensor_get(sensor, "sensor compute method") is None
 
-    sensor = sensor_set(sensor, "sensor consistency", True)
-    sensor = sensor_set(sensor, "sensor compute", {"name": "binning", "factor": 2})
+    sensor = sensor_set(sensor, "consistency", True)
+    sensor = sensor_set(sensor, "sensor compute method", {"name": "binning", "factor": 2})
 
     assert sensor_get(sensor, "consistency") is True
     assert sensor_get(sensor, "sensor consistency") is True
