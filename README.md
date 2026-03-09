@@ -416,6 +416,8 @@ The same FPN block now also has parser-level support for the broader
 MATLAB alias family around DSNU/PRNU and column FPN names such as
 `sigma offset fpn`, `gain fpn`, `column fixed pattern noise`, and
 `col gain`.
+That same FPN parser surface now also recognizes the setter-only
+`column fpn parameters` alias.
 The neighboring pixel material alias surface now also supports direct
 sensor-level `refractive index` and `n` access without requiring the
 explicit `pixel` prefix.

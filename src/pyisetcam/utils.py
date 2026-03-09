@@ -248,6 +248,7 @@ _PARAMETER_OTYPE_UNIQUE = {
         "offsetfpnimage",
         "prnuimage",
         "gainfpnimage",
+        "columnfpnparameters",
         "columnfpn",
         "columnfixedpatternnoise",
         "colfpn",

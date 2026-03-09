@@ -64,6 +64,7 @@ def test_ie_parameter_otype_handles_direct_prefix_and_unique_params() -> None:
     assert ie_parameter_otype("fpn offset gain") == ("sensor", "fpnoffsetgain")
     assert ie_parameter_otype("offset fpn image") == ("sensor", "offsetfpnimage")
     assert ie_parameter_otype("gain fpn image") == ("sensor", "gainfpnimage")
+    assert ie_parameter_otype("column fpn parameters") == ("sensor", "columnfpnparameters")
     assert ie_parameter_otype("column fixed pattern noise") == ("sensor", "columnfixedpatternnoise")
     assert ie_parameter_otype("col fpn") == ("sensor", "colfpn")
     assert ie_parameter_otype("column fpn offset") == ("sensor", "columnfpnoffset")
