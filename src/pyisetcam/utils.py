@@ -174,6 +174,7 @@ _PARAMETER_OTYPE_UNIQUE = {
         "digitalvalues",
         "electrons",
         "electron",
+        "electronsperarea",
         "dvorvolts",
         "digitalorvolts",
         "dvorvoltsroielectrons",

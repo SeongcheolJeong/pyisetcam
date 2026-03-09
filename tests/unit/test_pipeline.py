@@ -2516,6 +2516,28 @@ def test_sensor_get_supports_channel_select_for_sensor_data(asset_store) -> None
     assert np.array_equal(sensor_get(sensor, "electron", 2), expected_electrons)
 
 
+def test_sensor_get_supports_electrons_per_area(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 4)
+    sensor = sensor_set(sensor, "cols", 4)
+    sensor = sensor_set(sensor, "ag", 2.0)
+    sensor = sensor_set(sensor, "ao", 0.1)
+    volts = np.arange(1, 17, dtype=float).reshape(4, 4) / 10.0
+    sensor = sensor_set(sensor, "volts", volts)
+
+    pd_area_m2 = float(sensor_get(sensor, "pixel pd area"))
+    electrons = np.asarray(sensor_get(sensor, "electrons"), dtype=float)
+    expected_m2 = electrons / pd_area_m2
+    expected_um2 = expected_m2 / 1e12
+    pattern = np.asarray(sensor_get(sensor, "pattern"), dtype=int)
+    tiled_pattern = tile_pattern(pattern, 4, 4)
+
+    assert np.isclose(sensor_get(sensor, "pixel pd area", "um"), pd_area_m2 * 1e12)
+    assert np.array_equal(sensor_get(sensor, "electrons per area"), expected_m2)
+    assert np.array_equal(sensor_get(sensor, "electrons per area", "um"), expected_um2)
+    assert np.array_equal(sensor_get(sensor, "electrons per area", "um", 2), expected_um2[tiled_pattern == 2])
+
+
 def test_sensor_compute_uses_stored_noise_seed_when_seed_omitted(asset_store) -> None:
     scene = scene_create("uniform d65")
     oi = oi_compute(oi_create(), scene)

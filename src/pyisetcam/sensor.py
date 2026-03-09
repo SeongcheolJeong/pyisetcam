@@ -299,6 +299,14 @@ def _sensor_color_data(sensor: Sensor, data: np.ndarray | None, which_sensor: An
     return channel[~np.isnan(channel)]
 
 
+def _pixel_pd_area_m2(sensor: Sensor) -> float:
+    pixel_size = np.asarray(sensor.fields["pixel"]["size_m"], dtype=float).reshape(-1)
+    if pixel_size.size == 1:
+        pixel_size = np.repeat(pixel_size, 2)
+    fill_factor = float(sensor.fields["pixel"].get("fill_factor", 1.0))
+    return float(np.prod(pixel_size[:2]) * fill_factor)
+
+
 def _copy_metadata_value(value: Any) -> Any:
     if isinstance(value, np.ndarray):
         return value.copy()
@@ -1242,6 +1250,11 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return float(sensor.fields["analog_gain"])
     if key in {"analogoffset", "ao"}:
         return float(sensor.fields["analog_offset"])
+    if key in {"pixelpdarea", "pdarea"}:
+        area = _pixel_pd_area_m2(sensor)
+        if args:
+            area *= _spatial_unit_scale(args[0]) ** 2
+        return float(area)
     if key in {"noiseflag", "shotnoiseflag"}:
         return int(sensor.fields["noise_flag"])
     if key in {"dr", "drdb20", "dynamicrange", "sensordynamicrange"}:
@@ -1387,6 +1400,17 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         if args and electrons is not None:
             return _sensor_color_data(sensor, electrons, args[0])
         return electrons
+    if key == "electronsperarea":
+        units = args[0] if args else "m"
+        channel = args[1] if len(args) > 1 else None
+        electrons = sensor_get(sensor, "electrons")
+        if electrons is None:
+            return None
+        values = np.asarray(electrons, dtype=float) / max(_pixel_pd_area_m2(sensor), 1e-30)
+        values = values / (_spatial_unit_scale(units) ** 2)
+        if channel is not None:
+            return _sensor_color_data(sensor, values, channel)
+        return values
     if key in {"dv", "digitalvalue", "digitalvalues"}:
         dv = sensor.data.get("dv")
         if args and dv is not None:
