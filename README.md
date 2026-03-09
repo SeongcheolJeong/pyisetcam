@@ -366,7 +366,12 @@ same neighboring quantization block now also includes `sensorGet/Set('bits')`,
 string-returning `sensorGet('quantization')` path used locally. The same
 adjacent raw color/filter block now also includes `sensorGet/Set('color')`
 plus the MATLAB cell-style aliases `filter names cell array`,
-`filter color names cell array`, and `filter names cell`. The neighboring sensor model surface now also includes raw
+`filter color names cell array`, and `filter names cell`. The same
+sensor-facing pixel passthrough now also routes supported pixel electrical
+and geometric names such as `fill factor`, `pd area`, `conversion gain`,
+`well capacity`, `dark current`, and `read noise volts` through the
+stored pixel model, including whole-`pixel` replacement via
+`sensorSet('pixel', ...)`. The neighboring sensor model surface now also includes raw
 `sensorGet/Set('diffusion MTF')` storage for legacy compatibility. The
 neighboring legacy scene/lens aliases now round-trip too through
 `sensorGet/Set('scene_name')`, `sensorGet/Set('lens')`, and

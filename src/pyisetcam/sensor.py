@@ -17,7 +17,7 @@ from .optics import DEFAULT_FOCAL_LENGTH_M
 from .optics import oi_get
 from .session import track_session_object
 from .types import OpticalImage, Scene, Sensor, SessionContext
-from .utils import DEFAULT_WAVE, ensure_multiple, linear_to_srgb, param_format, tile_pattern, xyz_to_linear_srgb
+from .utils import DEFAULT_WAVE, ensure_multiple, ie_parameter_otype, linear_to_srgb, param_format, tile_pattern, xyz_to_linear_srgb
 
 _DEFAULT_PIXEL = {
     "size_m": np.array([2.8e-6, 2.8e-6], dtype=float),
@@ -314,6 +314,105 @@ def _pixel_pd_area_m2(sensor: Sensor) -> float:
         pixel_size = np.repeat(pixel_size, 2)
     fill_factor = float(sensor.fields["pixel"].get("fill_factor", 1.0))
     return float(np.prod(pixel_size[:2]) * fill_factor)
+
+
+def _pixel_pd_size_m(sensor: Sensor) -> np.ndarray:
+    pixel_size = np.asarray(sensor.fields["pixel"]["size_m"], dtype=float).reshape(-1)
+    if pixel_size.size == 1:
+        pixel_size = np.repeat(pixel_size, 2)
+    return np.sqrt(float(sensor.fields["pixel"].get("fill_factor", 1.0))) * pixel_size[:2]
+
+
+def _sensor_pixel_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
+    key = param_format(parameter)
+    pixel = sensor.fields["pixel"]
+    spatial_scale = _spatial_unit_scale(args[0] if args else None)
+    if key in {"size", "pixelsize"}:
+        return np.asarray(pixel["size_m"], dtype=float).copy() * spatial_scale
+    if key == "fillfactor":
+        return float(pixel["fill_factor"])
+    if key == "pdsize":
+        return _pixel_pd_size_m(sensor) * spatial_scale
+    if key == "pdarea":
+        return float(_pixel_pd_area_m2(sensor) * (spatial_scale**2))
+    if key in {"pdspectralqe", "spectralqe", "qe"}:
+        return _sensor_pixel_qe(sensor)
+    if key in {"pdspectralsr", "spectralsr", "sr"}:
+        return _pixel_spectral_sr(sensor)
+    if key in {"conversiongain", "conversiongainvpelectron"}:
+        return float(pixel["conversion_gain_v_per_electron"])
+    if key in {"voltageswing", "vswing"}:
+        return float(pixel["voltage_swing"])
+    if key == "wellcapacity":
+        conversion_gain = max(float(pixel["conversion_gain_v_per_electron"]), 1e-30)
+        return float(pixel["voltage_swing"]) / conversion_gain
+    if key in {"darkvolt", "darkvoltage", "darkvolts", "darkvoltageperpixelpersec"}:
+        return float(pixel["dark_voltage_v_per_sec"])
+    if key == "darkelectrons":
+        conversion_gain = max(float(pixel["conversion_gain_v_per_electron"]), 1e-30)
+        return float(pixel["dark_voltage_v_per_sec"]) / conversion_gain
+    if key == "darkcurrent":
+        return float(_sensor_pixel_get(sensor, "darkelectrons")) * _ELEMENTARY_CHARGE_C
+    if key == "darkcurrentdensity":
+        return float(_sensor_pixel_get(sensor, "darkcurrent")) / max(_pixel_pd_area_m2(sensor), 1e-30)
+    if key in {"readnoise", "readnoisevolts"}:
+        return float(pixel["read_noise_v"])
+    if key == "readnoisemillivolts":
+        return float(pixel["read_noise_v"]) * 1e3
+    if key == "readnoiseelectrons":
+        conversion_gain = max(float(pixel["conversion_gain_v_per_electron"]), 1e-30)
+        return float(pixel["read_noise_v"]) / conversion_gain
+    raise KeyError(f"Unsupported sensor pixel parameter: {parameter}")
+
+
+def _sensor_pixel_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
+    key = param_format(parameter)
+    if key in {"pixel", "pixelfields"}:
+        sensor.fields["pixel"] = _default_pixel(dict(value))
+        sensor.fields["etendue"] = None
+        return sensor
+    if key in {"size", "pixelsize"}:
+        size = np.asarray(value, dtype=float)
+        if size.size == 1:
+            size = np.repeat(size, 2)
+        sensor.fields["pixel"]["size_m"] = size
+        sensor.fields["etendue"] = None
+        _sensor_clear_data(sensor)
+        return sensor
+    if key == "fillfactor":
+        sensor.fields["pixel"]["fill_factor"] = float(value)
+        sensor.fields["etendue"] = None
+        return sensor
+    if key == "pdsize":
+        pd_size = np.asarray(value, dtype=float).reshape(-1)
+        if pd_size.size == 1:
+            pd_size = np.repeat(pd_size, 2)
+        pixel_size = np.asarray(sensor.fields["pixel"]["size_m"], dtype=float).reshape(-1)[:2]
+        sensor.fields["pixel"]["fill_factor"] = float(np.prod(pd_size[:2]) / max(np.prod(pixel_size), 1e-30))
+        sensor.fields["etendue"] = None
+        return sensor
+    if key in {"pdspectralqe", "spectralqe", "qe"}:
+        qe = np.asarray(value, dtype=float).reshape(-1)
+        if qe.size == 1:
+            sensor.fields["pixel_qe"] = np.full(np.asarray(sensor.fields["wave"], dtype=float).size, float(qe[0]), dtype=float)
+        elif qe.size == np.asarray(sensor.fields["wave"], dtype=float).size:
+            sensor.fields["pixel_qe"] = qe
+        else:
+            raise ValueError("pixel spectral QE must match the sensor wavelength sampling.")
+        return sensor
+    if key in {"conversiongain", "conversiongainvpelectron"}:
+        sensor.fields["pixel"]["conversion_gain_v_per_electron"] = float(value)
+        return sensor
+    if key in {"voltageswing", "vswing"}:
+        sensor.fields["pixel"]["voltage_swing"] = float(value)
+        return sensor
+    if key in {"darkvolt", "darkvoltage", "darkvolts", "darkvoltageperpixelpersec"}:
+        sensor.fields["pixel"]["dark_voltage_v_per_sec"] = float(value)
+        return sensor
+    if key in {"readnoise", "readnoisevolts"}:
+        sensor.fields["pixel"]["read_noise_v"] = float(value)
+        return sensor
+    raise KeyError(f"Unsupported sensor pixel parameter: {parameter}")
 
 
 def _copy_metadata_value(value: Any) -> Any:
@@ -1064,6 +1163,14 @@ def _sensor_chromaticity(sensor: Sensor, rect_or_locs: Any = None, mode: str = "
 
 
 def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
+    object_type, object_param = ie_parameter_otype(parameter)
+    if object_type == "pixel":
+        try:
+            if object_param is None:
+                return sensor.fields["pixel"]
+            return _sensor_pixel_get(sensor, object_param, *args)
+        except KeyError:
+            pass
     key = param_format(parameter)
     if key == "type":
         return sensor.type
@@ -1541,6 +1648,12 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
 
 
 def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
+    object_type, object_param = ie_parameter_otype(parameter)
+    if object_type == "pixel":
+        try:
+            return _sensor_pixel_set(sensor, object_param or "pixel", value)
+        except KeyError:
+            pass
     key = param_format(parameter)
     if key == "name":
         sensor.name = str(value)

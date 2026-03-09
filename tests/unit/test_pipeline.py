@@ -2092,6 +2092,42 @@ def test_sensor_get_set_supports_raw_color_surface(asset_store) -> None:
     assert sensor_get(sensor, "filter names cell") == ["r", "g", "b"]
 
 
+def test_sensor_get_set_supports_pixel_passthrough_surface(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "fill factor", 0.5)
+    sensor = sensor_set(sensor, "conversion gain", 2.0e-4)
+    sensor = sensor_set(sensor, "voltage swing", 1.5)
+    sensor = sensor_set(sensor, "dark voltage", 2.0e-3)
+    sensor = sensor_set(sensor, "read noise volts", 3.0e-3)
+    sensor = sensor_set(sensor, "pixel spectral qe", np.array([0.2, 0.4, 0.6, 0.8, 1.0, 0.6, 0.4, 0.2, 0.1, 0.05, 0.02, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=float))
+
+    pixel_size = np.asarray(sensor_get(sensor, "pixel size"), dtype=float)
+    pd_area = float(sensor_get(sensor, "pd area"))
+
+    assert np.isclose(sensor_get(sensor, "fill factor"), 0.5)
+    assert np.isclose(pd_area, np.prod(pixel_size) * 0.5)
+    assert np.isclose(sensor_get(sensor, "conversion gain"), 2.0e-4)
+    assert np.isclose(sensor_get(sensor, "voltage swing"), 1.5)
+    assert np.isclose(sensor_get(sensor, "well capacity"), 1.5 / 2.0e-4)
+    assert np.isclose(sensor_get(sensor, "dark voltage"), 2.0e-3)
+    assert np.isclose(sensor_get(sensor, "dark electrons"), 2.0e-3 / 2.0e-4)
+    assert np.isclose(sensor_get(sensor, "dark current"), sensor_get(sensor, "dark electrons") * 1.602177e-19)
+    assert np.isclose(sensor_get(sensor, "dark current density"), sensor_get(sensor, "dark current") / pd_area)
+    assert np.isclose(sensor_get(sensor, "read noise volts"), 3.0e-3)
+    assert np.isclose(sensor_get(sensor, "read noise electrons"), 3.0e-3 / 2.0e-4)
+    assert np.isclose(sensor_get(sensor, "read noise millivolts"), 3.0)
+    assert np.allclose(sensor_get(sensor, "pd spectral qe"), sensor_get(sensor, "pixel spectral qe"))
+    assert np.allclose(sensor_get(sensor, "pd spectral sr"), sensor_get(sensor, "pixel spectral sr"))
+
+    replacement_pixel = dict(sensor_get(sensor, "pixel"))
+    replacement_pixel["fill_factor"] = 0.25
+    replacement_pixel["conversion_gain_v_per_electron"] = 1.0e-4
+    sensor = sensor_set(sensor, "pixel", replacement_pixel)
+
+    assert np.isclose(sensor_get(sensor, "fill factor"), 0.25)
+    assert np.isclose(sensor_get(sensor, "conversion gain"), 1.0e-4)
+
+
 def test_sensor_get_set_supports_chart_and_metadata_surface(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
     corner_points = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float)
