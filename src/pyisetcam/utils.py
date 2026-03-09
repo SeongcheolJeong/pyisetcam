@@ -279,6 +279,13 @@ _PARAMETER_OTYPE_UNIQUE = {
         "exposureplane",
         "cds",
         "vignetting",
+        "vignettingflag",
+        "pixelvignetting",
+        "sensorvignetting",
+        "bareetendue",
+        "sensorbareetendue",
+        "nomicrolensetendue",
+        "vignettingname",
         "nsamplesperpixel",
         "sensormovement",
         "movementpositions",
@@ -438,16 +445,29 @@ def ie_parameter_otype(param: str) -> tuple[str, str | None]:
     if direct is not None:
         return direct, None
 
+    exact_unique_match: tuple[str, str] | None = None
+    for object_type, unique_params in _PARAMETER_OTYPE_UNIQUE.items():
+        if normalized in unique_params:
+            exact_unique_match = (object_type, normalized)
+            break
+
     positions = [idx for idx in (param.find(" "), param.find("/"), param.find("_")) if idx >= 0]
     if positions:
         pos = min(positions)
         prefix = _PARAMETER_OTYPE_PREFIXES.get(param_format(param[:pos]))
         if prefix is not None:
-            return prefix, param_format(param[(pos + 1) :])
-
-    for object_type, unique_params in _PARAMETER_OTYPE_UNIQUE.items():
-        if normalized in unique_params:
-            return object_type, normalized
+            remainder = param_format(param[(pos + 1) :])
+            prefix_unique = _PARAMETER_OTYPE_UNIQUE.get(prefix)
+            if (
+                prefix_unique is None
+                or remainder in prefix_unique
+                or exact_unique_match is None
+                or exact_unique_match[0] == prefix
+            ):
+                return prefix, remainder
+            return exact_unique_match
+    if exact_unique_match is not None:
+        return exact_unique_match
     return "", normalized
 
 
