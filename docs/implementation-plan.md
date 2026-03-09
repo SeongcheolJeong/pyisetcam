@@ -41,6 +41,7 @@
 - The adjacent line/FFT metadata surface is tighter now too: single-line sensor plots return plot labels plus filter-color metadata, and `plotSensorFFT(...)` accepts the same `capture` selection path for multi-capture stacks while exposing the MATLAB y-axis label.
 - The remaining supported histogram/chromaticity wrappers now return the corresponding headless plot metadata too: histogram axis labels plus filter-color metadata, and MATLAB-style `r/g` chromaticity axis labels with the `rg sensor chromaticity` title string.
 - The supported spectral and etendue wrappers now expose the same core plot metadata as well: spectral wavelength-axis labels plus MATLAB-style name strings, and etendue x/y/z axis labels with the matching `ISET: Etendue (...)` name.
+- The headless `plotSensor('pixel snr')` / `plotSensor('sensor snr')` wrappers now return the matching plot metadata too: `Signal (V)` / `SNR (db)` axis labels, MATLAB-style title strings, and legend entries for the component SNR curves.
 
 ## Summary
 - Build a new Python library, `pyisetcam`, that ports the numerical `scene -> optical image -> sensor -> image processor -> camera` pipeline from ISETCam and validates it against GNU Octave runs of the upstream MATLAB code.

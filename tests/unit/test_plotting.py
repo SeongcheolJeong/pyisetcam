@@ -525,8 +525,16 @@ def test_pixel_and_sensor_snr_helpers_and_plot_wrappers(asset_store) -> None:
     assert np.allclose(sensor_prnu, 10.0 * np.log10(signal_power / ((prnu_gain_sd * (volts / conv_gain)) ** 2)))
     assert np.allclose(pixel_udata["snr"], pixel_snr(sensor)[0])
     assert np.allclose(pixel_udata["volts"], pixel_snr(sensor)[1])
+    assert pixel_udata["xLabel"] == "Signal (V)"
+    assert pixel_udata["yLabel"] == "SNR (db)"
+    assert pixel_udata["titleString"] == "Pixel SNR over response range"
+    assert pixel_udata["legend"] == ["Total pixel SNR", "Shot noise SNR", "Read noise SNR"]
     assert np.allclose(sensor_udata["snr"], sensor_snr(sensor)[0])
     assert np.allclose(sensor_udata["volts"], sensor_snr(sensor)[1])
+    assert sensor_udata["xLabel"] == "Signal (V)"
+    assert sensor_udata["yLabel"] == "SNR (db)"
+    assert sensor_udata["titleString"] == "Sensor SNR over response range"
+    assert sensor_udata["legend"] == ["Total", "Shot", "Read", "DSNU", "PRNU"]
 
 
 def test_plot_sensor_spectral_wrappers(asset_store) -> None:

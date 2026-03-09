@@ -341,6 +341,9 @@ the MATLAB-style `rg` chromaticity axis/title strings.
 The spectral and etendue wrappers now return the same core plot metadata as
 well, including spectral wavelength-axis labels plus MATLAB-style window
 names and the etendue axis labels/name string.
+The headless pixel/sensor SNR wrappers now expose the matching plot labels
+too, including signal/SNR axis labels, title strings, and legend entries
+for the returned component curves.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

@@ -741,9 +741,25 @@ def sensor_plot(
         return _sensor_plot_cfa(sensor, full_array=True), None
     if key == "pixelsnr":
         snr, volts, snr_shot, snr_read = pixel_snr(sensor)
-        return {"volts": volts, "snr": snr, "snrShot": snr_shot, "snrRead": snr_read}, None
+        return {
+            "volts": volts,
+            "snr": snr,
+            "snrShot": snr_shot,
+            "snrRead": snr_read,
+            "xLabel": "Signal (V)",
+            "yLabel": "SNR (db)",
+            "titleString": "Pixel SNR over response range",
+            "legend": ["Total pixel SNR", "Shot noise SNR", "Read noise SNR"],
+        }, None
     if key in {"sensorsnr", "snr"}:
         snr, volts, snr_shot, snr_read, snr_dsnu, snr_prnu = sensor_snr(sensor)
+        legend = ["Total", "Shot"]
+        if np.all(np.isfinite(np.asarray(snr_read, dtype=float))):
+            legend.append("Read")
+        if np.all(np.isfinite(np.asarray(snr_dsnu, dtype=float))):
+            legend.append("DSNU")
+        if np.all(np.isfinite(np.asarray(snr_prnu, dtype=float))):
+            legend.append("PRNU")
         return {
             "volts": volts,
             "snr": snr,
@@ -751,6 +767,10 @@ def sensor_plot(
             "snrRead": snr_read,
             "snrDSNU": snr_dsnu,
             "snrPRNU": snr_prnu,
+            "xLabel": "Signal (V)",
+            "yLabel": "SNR (db)",
+            "titleString": "Sensor SNR over response range",
+            "legend": legend,
         }, None
     if key == "colorfilters":
         return _sensor_plot_spectra(sensor, key), None
