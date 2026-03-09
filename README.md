@@ -363,7 +363,10 @@ with MATLAB-style area-unit scaling and optional channel extraction. The
 same neighboring quantization block now also includes `sensorGet/Set('bits')`,
 `sensorGet/Set('qMethod')`, `sensorGet/Set('lut')`, and
 `sensorGet/Set('quantization structure')` while preserving the existing
-string-returning `sensorGet('quantization')` path used locally. The neighboring sensor model surface now also includes raw
+string-returning `sensorGet('quantization')` path used locally. The same
+adjacent raw color/filter block now also includes `sensorGet/Set('color')`
+plus the MATLAB cell-style aliases `filter names cell array`,
+`filter color names cell array`, and `filter names cell`. The neighboring sensor model surface now also includes raw
 `sensorGet/Set('diffusion MTF')` storage for legacy compatibility. The
 neighboring legacy scene/lens aliases now round-trip too through
 `sensorGet/Set('scene_name')`, `sensorGet/Set('lens')`, and

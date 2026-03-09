@@ -185,6 +185,14 @@ def _sensor_spectrum_struct(sensor: Sensor) -> dict[str, Any]:
     return spectrum
 
 
+def _sensor_color_struct(sensor: Sensor) -> dict[str, Any]:
+    return {
+        "filterSpectra": np.asarray(sensor.fields["filter_spectra"], dtype=float).copy(),
+        "filterNames": list(sensor.fields["filter_names"]),
+        "irFilter": _sensor_ir_filter(sensor),
+    }
+
+
 def _sensor_chart_parameters(sensor: Sensor) -> dict[str, Any]:
     stored = sensor.fields.get("chartP")
     if not isinstance(stored, dict):
@@ -332,6 +340,16 @@ def _spectrum_struct_from_value(value: Any) -> dict[str, Any]:
         spectrum["wave"] = wave
     spectrum["wave"] = np.asarray(spectrum["wave"], dtype=float).reshape(-1)
     return spectrum
+
+
+def _sensor_color_struct_from_value(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        color = dict(value)
+    else:
+        color = {}
+        if hasattr(value, "__dict__"):
+            color.update(vars(value))
+    return color
 
 
 def _microlens_struct_from_value(value: Any) -> dict[str, Any]:
@@ -1105,6 +1123,8 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return _copy_metadata_value(sensor.fields.get("mccRectHandles"))
     if key in {"spectrum", "sensorspectrum"}:
         return _sensor_spectrum_struct(sensor)
+    if key == "color":
+        return _sensor_color_struct(sensor)
     if key in {"binwidth", "waveresolution", "wavelengthresolution"}:
         wave = np.asarray(sensor.fields["wave"], dtype=float).reshape(-1)
         return float(wave[1] - wave[0]) if wave.size > 1 else 1.0
@@ -1171,6 +1191,8 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return _sensor_filter_color_letters(sensor)
     if key == "filtercolorletterscell":
         return list(_sensor_filter_color_letters(sensor))
+    if key in {"filternamescellarray", "filtercolornamescellarray", "filternamescell"}:
+        return [str(letter) for letter in _sensor_filter_color_letters(sensor)]
     if key in {"cfa", "colorfilterarray"}:
         return _sensor_cfa_struct(sensor)
     if key in {"cfapattern", "pattern"}:
@@ -1572,6 +1594,21 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         sensor = _sensor_update_wave(sensor, np.asarray(spectrum["wave"], dtype=float).reshape(-1))
         sensor.fields["spectrum"] = spectrum
         sensor.fields["spectrum"]["wave"] = np.asarray(sensor.fields["wave"], dtype=float).copy()
+        return sensor
+    if key == "color":
+        color = _sensor_color_struct_from_value(value)
+        if "filterSpectra" in color:
+            sensor.fields["filter_spectra"] = np.asarray(color["filterSpectra"], dtype=float)
+        if "filterNames" in color:
+            sensor.fields["filter_names"] = list(color["filterNames"])
+        if "irFilter" in color:
+            ir_filter = np.asarray(color["irFilter"], dtype=float).reshape(-1)
+            if ir_filter.size == 1:
+                sensor.fields["ir_filter"] = np.full(np.asarray(sensor.fields["wave"], dtype=float).size, float(ir_filter[0]), dtype=float)
+            elif ir_filter.size == np.asarray(sensor.fields["wave"], dtype=float).size:
+                sensor.fields["ir_filter"] = ir_filter
+            else:
+                raise ValueError("IR filter must match the sensor wavelength sampling.")
         return sensor
     if key in {"chartparameters"}:
         sensor.fields["chartP"] = _sensor_chart_parameters(sensor)

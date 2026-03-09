@@ -2072,6 +2072,26 @@ def test_sensor_get_set_supports_matlab_style_spectrum_metadata(asset_store) -> 
     assert sensor_get(sensor, "sensor spectrum")["comment"] == "test spectrum"
 
 
+def test_sensor_get_set_supports_raw_color_surface(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "wave", np.array([500.0, 600.0], dtype=float))
+    color = {
+        "filterSpectra": np.array([[1.0, 0.0, 0.2], [0.0, 1.0, 0.8]], dtype=float),
+        "filterNames": ["red", "green", "blue"],
+        "irFilter": np.array([0.75, 0.25], dtype=float),
+    }
+
+    sensor = sensor_set(sensor, "color", color)
+
+    exported = sensor_get(sensor, "color")
+    assert np.allclose(exported["filterSpectra"], color["filterSpectra"])
+    assert exported["filterNames"] == color["filterNames"]
+    assert np.allclose(exported["irFilter"], color["irFilter"])
+    assert sensor_get(sensor, "filter names cell array") == ["r", "g", "b"]
+    assert sensor_get(sensor, "filter color names cell array") == ["r", "g", "b"]
+    assert sensor_get(sensor, "filter names cell") == ["r", "g", "b"]
+
+
 def test_sensor_get_set_supports_chart_and_metadata_surface(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
     corner_points = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float)
