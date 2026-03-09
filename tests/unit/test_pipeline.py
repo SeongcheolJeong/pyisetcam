@@ -2197,6 +2197,26 @@ def test_sensor_get_set_supports_photodetector_position_passthrough(asset_store)
         sensor_set(sensor, "pd position", np.array([3.0e-6, 2.5e-6], dtype=float))
 
 
+def test_sensor_set_pixel_size_same_fill_factor_scales_photodetector_geometry(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "pixel width", 4.0e-6)
+    sensor = sensor_set(sensor, "pixel height", 2.0e-6)
+    sensor = sensor_set(sensor, "pd size", np.array([1.0e-6, 2.0e-6], dtype=float))
+    sensor = sensor_set(sensor, "pd position", np.array([0.5e-6, 0.25e-6], dtype=float))
+
+    sensor = sensor_set(sensor, "pixel size same fill factor", np.array([4.0e-6, 8.0e-6], dtype=float))
+
+    assert np.allclose(sensor_get(sensor, "pixel size"), np.array([4.0e-6, 8.0e-6], dtype=float))
+    assert np.allclose(sensor_get(sensor, "pd size"), np.array([2.0e-6, 4.0e-6], dtype=float))
+    assert np.allclose(sensor_get(sensor, "pd position"), np.array([1.0e-6, 0.5e-6], dtype=float))
+    assert np.isclose(sensor_get(sensor, "fill factor"), 0.25)
+
+    sensor = sensor_set(sensor, "pixel size", np.array([8.0e-6, 16.0e-6], dtype=float))
+
+    assert np.allclose(sensor_get(sensor, "pd size"), np.array([2.0e-6, 4.0e-6], dtype=float))
+    assert not np.isclose(sensor_get(sensor, "fill factor"), 0.25)
+
+
 def test_sensor_get_set_supports_chart_and_metadata_surface(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
     corner_points = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float)

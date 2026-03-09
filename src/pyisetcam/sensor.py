@@ -550,6 +550,27 @@ def _sensor_pixel_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         sensor.fields["etendue"] = None
         _sensor_clear_data(sensor)
         return sensor
+    if key in {"sizeconstantfillfactor", "sizekeepfillfactor", "sizesamefillfactor"}:
+        size = np.asarray(value, dtype=float).reshape(-1)
+        if size.size == 1:
+            size = np.repeat(size, 2)
+        current_size = np.array([pixel_size[0], pixel_size[1]], dtype=float)
+        current_pd_size = _pixel_pd_size_from_pixel(sensor.fields["pixel"])
+        stored_pd_position = sensor.fields["pixel"].get("pd_position_m")
+        current_pd_position = (
+            _pixel_pd_position_from_pixel(sensor.fields["pixel"])
+            if stored_pd_position is not None
+            else None
+        )
+        scale_factor = size[:2] / np.maximum(current_size, 1e-30)
+        sensor.fields["pixel"]["size_m"] = size[:2].copy()
+        sensor.fields["pixel"]["pd_size_m"] = current_pd_size * scale_factor
+        if current_pd_position is not None:
+            sensor.fields["pixel"]["pd_position_m"] = current_pd_position * scale_factor
+        _sync_pixel_pd_state(sensor.fields["pixel"])
+        sensor.fields["etendue"] = None
+        _sensor_clear_data(sensor)
+        return sensor
     if key in {"size", "pixelsize"}:
         size = np.asarray(value, dtype=float)
         if size.size == 1:

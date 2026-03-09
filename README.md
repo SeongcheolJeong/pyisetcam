@@ -380,6 +380,10 @@ The neighboring pixel metadata surface now also covers `pixel layer thicknesses`
 The same pixel passthrough now also covers `pd xpos`, `pd ypos`, and
 `pd position`, and that metadata now feeds the internal photodetector array
 placement instead of being stored as a dead field.
+The adjacent setter semantics now also match MATLAB for
+`pixel size same fill factor` / `pixel size constant fill factor`, scaling the
+photodetector geometry with the pixel size instead of treating that alias like
+a plain pixel-size replacement.
 The neighboring sensor model surface now also includes raw
 `sensorGet/Set('diffusion MTF')` storage for legacy compatibility. The
 neighboring legacy scene/lens aliases now round-trip too through
