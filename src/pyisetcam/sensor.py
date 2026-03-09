@@ -1317,7 +1317,7 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return _copy_metadata_value(sensor.metadata.get("sensorname"))
     if key == "metadatacrop":
         return _copy_metadata_value(sensor.metadata.get("crop"))
-    if key in {"zerolevel", "zero"}:
+    if key in {"blacklevel", "zerolevel", "zero"}:
         return float(sensor.fields.get("zero_level", 0.0))
     if key in {"maxdigital", "maxdigitalvalue"}:
         nbits = int(sensor_get(sensor, "nbits"))
@@ -1625,7 +1625,7 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
     if key in {"cds", "correlateddoublesampling"}:
         sensor.fields["cds"] = bool(value)
         return sensor
-    if key in {"zerolevel", "zero"}:
+    if key in {"blacklevel", "zerolevel", "zero"}:
         sensor.fields["zero_level"] = float(value)
         return sensor
     if key in {"metadatascenename", "scenename", "scene_name"}:

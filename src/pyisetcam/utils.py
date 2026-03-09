@@ -215,6 +215,8 @@ _PARAMETER_OTYPE_UNIQUE = {
         "columnprnu",
         "coloffsetfpnvector",
         "colgainfpnvector",
+        "blacklevel",
+        "zerolevel",
         "noiseflag",
         "shotnoiseflag",
         "reusenoise",

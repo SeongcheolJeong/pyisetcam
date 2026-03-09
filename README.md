@@ -342,6 +342,9 @@ neighboring legacy human-cone storage surface now round-trips too through
 neighboring legacy MCC aliases now round-trip too through
 `sensorGet/Set('mcc corner points')`, which reuses the chart corner-point
 field, plus raw `sensorGet/Set('mcc rect handles')` storage. The
+neighboring noise-summary aliases now also include
+`sensorGet/Set('black level')`, mapped onto the same stored zero-level
+state used by `zero level` / `zero`. The
 neighboring legacy scene/lens aliases now round-trip too through
 `sensorGet/Set('scene_name')`, `sensorGet/Set('lens')`, and
 `sensorGet('metadata lensname'/'metadata lens')`. The adjacent raw

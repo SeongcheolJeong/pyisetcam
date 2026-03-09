@@ -2383,6 +2383,22 @@ def test_sensor_get_supports_response_and_dynamic_range_aliases(asset_store) -> 
     assert sensor_get(sensor, "shot noise flag") == 1
 
 
+def test_sensor_get_set_supports_black_level_alias(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    nbits = int(sensor_get(sensor, "nbits"))
+
+    sensor = sensor_set(sensor, "black level", 64)
+
+    assert sensor_get(sensor, "black level") == 64.0
+    assert sensor_get(sensor, "zero level") == 64.0
+    assert sensor_get(sensor, "max digital value") == float((2**nbits) - 64)
+
+    sensor = sensor_set(sensor, "zero", 32)
+
+    assert sensor_get(sensor, "blacklevel") == 32.0
+    assert sensor_get(sensor, "zerolevel") == 32.0
+
+
 def test_sensor_compute_uses_stored_noise_seed_when_seed_omitted(asset_store) -> None:
     scene = scene_create("uniform d65")
     oi = oi_compute(oi_create(), scene)
