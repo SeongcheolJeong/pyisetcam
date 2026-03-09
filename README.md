@@ -323,6 +323,10 @@ settings they use.
 The adjacent raw CFA compatibility surface now also includes
 `sensorGet/Set('cfa')`, `sensorGet('cfa pattern')`, `sensorGet('cfa name')`,
 and `sensorGet('unit block config')` with MATLAB-style unit-block metadata.
+The neighboring spectral metadata surface now also includes
+`sensorGet/Set('spectrum')`, wavelength aliases, `sensorGet('bin width')`,
+and MATLAB-style wave updates that keep stored filter spectra, pixel QE,
+and IR-filter samples interpolated onto the new wavelength grid.
 The same headless plotting surface now
 also covers `plotSensor('etendue')`, returning MATLAB-style support and
 relative-illumination payloads without opening a mesh plot window. Sensor

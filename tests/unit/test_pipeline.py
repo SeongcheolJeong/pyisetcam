@@ -2048,6 +2048,29 @@ def test_sensor_get_reports_matlab_style_geometry_and_cfa_metadata(asset_store) 
     assert np.array_equal(pattern_colors, np.array([["g", "r"], ["b", "g"]], dtype="<U1"))
 
 
+def test_sensor_get_set_supports_matlab_style_spectrum_metadata(asset_store) -> None:
+    sensor = sensor_create("monochrome", asset_store=asset_store)
+    sensor = sensor_set(sensor, "wave", np.array([400.0, 500.0, 600.0], dtype=float))
+    sensor = sensor_set(sensor, "filter spectra", np.array([[0.0], [1.0], [0.0]], dtype=float))
+    sensor = sensor_set(sensor, "pixel spectral qe", np.array([0.2, 0.6, 1.0], dtype=float))
+    sensor = sensor_set(sensor, "ir filter", np.array([1.0, 0.5, 0.0], dtype=float))
+
+    spectrum = sensor_get(sensor, "spectrum")
+    assert np.array_equal(spectrum["wave"], np.array([400.0, 500.0, 600.0], dtype=float))
+    assert sensor_get(sensor, "wavelength resolution") == 100.0
+    assert sensor_get(sensor, "nwaves") == 3
+
+    sensor = sensor_set(sensor, "spectrum", {"wave": np.array([450.0, 550.0], dtype=float), "comment": "test spectrum"})
+
+    assert np.array_equal(sensor_get(sensor, "wavelength"), np.array([450.0, 550.0], dtype=float))
+    assert sensor_get(sensor, "bin width") == 100.0
+    assert sensor_get(sensor, "number of wavelength samples") == 2
+    assert np.allclose(sensor_get(sensor, "filter spectra"), np.array([[0.5], [0.5]], dtype=float))
+    assert np.allclose(sensor_get(sensor, "pixel spectral qe"), np.array([0.4, 0.8], dtype=float))
+    assert np.allclose(sensor_get(sensor, "ir filter"), np.array([0.75, 0.25], dtype=float))
+    assert sensor_get(sensor, "sensor spectrum")["comment"] == "test spectrum"
+
+
 def test_sensor_set_cfa_round_trips_matlab_style_struct(asset_store) -> None:
     sensor = sensor_create("rgbw", asset_store=asset_store)
     cfa = sensor_get(sensor, "cfa")

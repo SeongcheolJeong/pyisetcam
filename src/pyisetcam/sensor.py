@@ -66,6 +66,7 @@ def _sensor_base(
     sensor.fields.update(
         {
             "wave": np.asarray(wave, dtype=float),
+            "spectrum": {"wave": np.asarray(wave, dtype=float).copy()},
             "size": (int(size[0]), int(size[1])),
             "pixel": _default_pixel(pixel),
             "render": {"gamma": 1.0, "scale": False},
@@ -140,6 +141,32 @@ def _sensor_filter_color_letters(sensor: Sensor) -> str:
 
 def _sensor_cfa_pattern(sensor: Sensor) -> np.ndarray:
     return np.asarray(sensor.fields["pattern"], dtype=int)
+
+
+def _sensor_spectrum_struct(sensor: Sensor) -> dict[str, Any]:
+    stored = sensor.fields.get("spectrum")
+    if not isinstance(stored, dict):
+        stored = {}
+        sensor.fields["spectrum"] = stored
+    spectrum = dict(stored)
+    spectrum["wave"] = np.asarray(sensor.fields["wave"], dtype=float).copy()
+    return spectrum
+
+
+def _spectrum_struct_from_value(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        spectrum = dict(value)
+    else:
+        spectrum = {}
+        if hasattr(value, "__dict__"):
+            spectrum.update(vars(value))
+    if "wave" not in spectrum:
+        wave = getattr(value, "wave", None)
+        if wave is None:
+            raise ValueError("Spectrum value must include a wave field.")
+        spectrum["wave"] = wave
+    spectrum["wave"] = np.asarray(spectrum["wave"], dtype=float).reshape(-1)
+    return spectrum
 
 
 def _sensor_unit_block_config(sensor: Sensor) -> np.ndarray:
@@ -357,6 +384,46 @@ def _sensor_rgb_image(
         if np.any(mask):
             linear_rgb[mask] = normalized[mask, None] * color.reshape(1, 3)
     return linear_to_srgb(np.power(np.clip(linear_rgb, 0.0, 1.0), gamma_value))
+
+
+def _interp_spectral_array(old_wave: np.ndarray, new_wave: np.ndarray, values: np.ndarray) -> np.ndarray:
+    array = np.asarray(values, dtype=float)
+    if array.ndim == 0:
+        return np.full(new_wave.shape, float(array), dtype=float)
+    if array.ndim == 1:
+        if array.size == 1:
+            return np.full(new_wave.shape, float(array[0]), dtype=float)
+        return np.interp(new_wave, old_wave, array, left=0.0, right=0.0)
+    if array.shape[0] == 1:
+        return np.repeat(array.astype(float), new_wave.size, axis=0)
+    interpolated = np.empty((new_wave.size, array.shape[1]), dtype=float)
+    for index in range(array.shape[1]):
+        interpolated[:, index] = np.interp(new_wave, old_wave, array[:, index], left=0.0, right=0.0)
+    return interpolated
+
+
+def _sensor_update_wave(sensor: Sensor, new_wave: np.ndarray) -> Sensor:
+    old_wave = np.asarray(sensor.fields["wave"], dtype=float).reshape(-1)
+    new_wave = np.asarray(new_wave, dtype=float).reshape(-1)
+
+    if old_wave.size > 0 and not np.array_equal(old_wave, new_wave):
+        filter_spectra = np.asarray(sensor.fields.get("filter_spectra"), dtype=float)
+        if filter_spectra.ndim >= 1 and filter_spectra.shape[0] == old_wave.size:
+            sensor.fields["filter_spectra"] = _interp_spectral_array(old_wave, new_wave, filter_spectra)
+
+        pixel_qe = np.asarray(sensor.fields.get("pixel_qe"), dtype=float).reshape(-1)
+        if pixel_qe.size == old_wave.size:
+            sensor.fields["pixel_qe"] = _interp_spectral_array(old_wave, new_wave, pixel_qe)
+
+        ir_filter = np.asarray(sensor.fields.get("ir_filter"), dtype=float).reshape(-1)
+        if ir_filter.size == old_wave.size:
+            sensor.fields["ir_filter"] = _interp_spectral_array(old_wave, new_wave, ir_filter)
+
+    sensor.fields["wave"] = new_wave
+    spectrum = _sensor_spectrum_struct(sensor)
+    spectrum["wave"] = new_wave.copy()
+    sensor.fields["spectrum"] = spectrum
+    return sensor
 
 
 def _sensor_aligned_dimension(value: Any, block_size: int) -> int:
@@ -775,9 +842,14 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return sensor.type
     if key == "name":
         return sensor.name
-    if key == "wave":
+    if key in {"wave", "wavelength", "wavelengthsamples"}:
         return np.asarray(sensor.fields["wave"], dtype=float)
-    if key == "nwave":
+    if key in {"spectrum", "sensorspectrum"}:
+        return _sensor_spectrum_struct(sensor)
+    if key in {"binwidth", "waveresolution", "wavelengthresolution"}:
+        wave = np.asarray(sensor.fields["wave"], dtype=float).reshape(-1)
+        return float(wave[1] - wave[0]) if wave.size > 1 else 1.0
+    if key in {"nwave", "nwaves", "numberofwavelengthsamples"}:
         return int(np.asarray(sensor.fields["wave"]).size)
     if key == "pattern":
         return np.asarray(sensor.fields["pattern"], dtype=int)
@@ -1057,8 +1129,14 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
     if key == "name":
         sensor.name = str(value)
         return sensor
-    if key == "wave":
-        sensor.fields["wave"] = np.asarray(value, dtype=float).reshape(-1)
+    if key in {"spectrum", "sensorspectrum"}:
+        spectrum = _spectrum_struct_from_value(value)
+        sensor = _sensor_update_wave(sensor, np.asarray(spectrum["wave"], dtype=float).reshape(-1))
+        sensor.fields["spectrum"] = spectrum
+        sensor.fields["spectrum"]["wave"] = np.asarray(sensor.fields["wave"], dtype=float).copy()
+        return sensor
+    if key in {"wave", "wavelength", "wavelengthsamples"}:
+        sensor = _sensor_update_wave(sensor, np.asarray(value, dtype=float).reshape(-1))
         return sensor
     if key == "size":
         sensor = sensor_set(sensor, "rows", value[0])
