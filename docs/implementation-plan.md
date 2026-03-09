@@ -37,6 +37,7 @@
 - A matching headless `plotSensorFFT(...)` wrapper is now in place too for monochrome horizontal/vertical line FFT payloads, carrying MATLAB-style `cpd`, `amp`, `mean`, and `peakContrast` data without opening a graph window.
 - The adjacent headless sensor chromaticity plot is now covered too through `plotSensor('chromaticity')`, returning MATLAB-style `rg`, `rect`, and `spectrumlocus` payloads for ROI-driven sensor chromaticity plots.
 - The supported headless sensor line-profile plots now also accept MATLAB-style adjacent-line aggregation through `plotSensor(..., 'two lines', True)`, returning merged `pixPos`, `pixData`, and `pixColor` payloads on top of the existing line-profile surface.
+- That same headless `plotSensor(...)` wrapper now also accepts MATLAB-style `capture` selection for multi-capture sensor stacks, with `sensorGet(..., 'n captures')` reporting the available capture count from stacked volts/DV data.
 
 ## Summary
 - Build a new Python library, `pyisetcam`, that ports the numerical `scene -> optical image -> sensor -> image processor -> camera` pipeline from ISETCam and validates it against GNU Octave runs of the upstream MATLAB code.

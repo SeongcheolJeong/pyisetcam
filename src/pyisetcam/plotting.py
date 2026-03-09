@@ -650,6 +650,32 @@ def oi_plot(
     raise UnsupportedOptionError("oiPlot", p_type)
 
 
+def _sensor_plot_select_capture(sensor: Sensor, capture: Any) -> Sensor:
+    capture_index = int(np.rint(float(capture)))
+    if capture_index < 1:
+        raise IndexError("Sensor capture index must be positive and 1-based.")
+
+    n_captures = int(sensor_get(sensor, "n captures"))
+    if capture_index > n_captures:
+        raise IndexError(f"Requested sensor capture {capture_index} exceeds available captures ({n_captures}).")
+    if n_captures <= 1:
+        return sensor
+
+    selected = sensor.clone()
+    capture_zero_based = capture_index - 1
+    for key in ("volts", "dv"):
+        data = selected.data.get(key)
+        if data is None:
+            continue
+        array = np.asarray(data, dtype=float)
+        if array.ndim >= 3:
+            selected.data[key] = np.asarray(array[:, :, capture_zero_based], dtype=float).copy()
+    integration_time = np.asarray(selected.fields.get("integration_time"))
+    if integration_time.ndim > 0 and integration_time.size > 1:
+        selected.fields["integration_time"] = float(integration_time.reshape(-1)[capture_zero_based])
+    return selected
+
+
 def sensor_plot(
     sensor: Sensor,
     p_type: str = "volts hline",
@@ -659,6 +685,7 @@ def sensor_plot(
     """Return MATLAB-style `plotSensor` user-data without opening a figure."""
 
     two_lines = bool(_plot_option(args, "twolines", False))
+    sensor = _sensor_plot_select_capture(sensor, _plot_option(args, "capture", 1))
     key = param_format(p_type)
     if key in {"electronshline", "hlineelectrons", "electronsvline", "vlineelectrons", "voltshline", "hlinevolts", "voltsvline", "vlinevolts", "dvhline", "hlinedv", "dvvline", "vlinedv"}:
         xy = _roi_required("plotSensor", p_type, roi_locs)

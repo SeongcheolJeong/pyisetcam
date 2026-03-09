@@ -738,6 +738,17 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return _sensor_electrons(sensor)
     if key == "dv":
         return sensor.data.get("dv")
+    if key in {"ncaptures", "ncapture"}:
+        volts = sensor.data.get("volts")
+        if volts is not None and np.asarray(volts).ndim >= 3:
+            return int(np.asarray(volts).shape[2])
+        dv = sensor.data.get("dv")
+        if dv is not None and np.asarray(dv).ndim >= 3:
+            return int(np.asarray(dv).shape[2])
+        integration_time = np.asarray(sensor.fields.get("integration_time"))
+        if integration_time.ndim > 0 and integration_time.size > 1:
+            return int(integration_time.size)
+        return 1
     if key == "dvorvolts":
         return sensor.data.get("dv", sensor.data.get("volts"))
     if key in {"hlinevolts", "hlineelectrons", "hlinedv", "vlinevolts", "vlineelectrons", "vlinedv"}:

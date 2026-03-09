@@ -330,7 +330,8 @@ and `plotSensor('chromaticity')` now returns MATLAB-style `rg` and
 spectrum-locus payloads for sensor ROI plots without opening a figure.
 Line-profile plots also now support MATLAB-style adjacent-line aggregation
 through `plotSensor(..., 'two lines', True)` on the supported sensor
-horizontal/vertical line cases.
+horizontal/vertical line cases, and headless `plotSensor(...)` now also
+accepts MATLAB-style `capture` selection for multi-capture sensor stacks.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

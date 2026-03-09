@@ -333,6 +333,58 @@ def test_plot_sensor_histogram_data(asset_store) -> None:
     assert np.allclose(dv_udata["data"], expected_dv)
 
 
+def test_plot_sensor_capture_selection(asset_store) -> None:
+    sensor = sensor_create("monochrome", asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 2)
+    sensor = sensor_set(sensor, "cols", 3)
+    volts = np.array(
+        [
+            [[0.1, 1.1], [0.2, 1.2], [0.3, 1.3]],
+            [[0.4, 1.4], [0.5, 1.5], [0.6, 1.6]],
+        ],
+        dtype=float,
+    )
+    dv = np.array(
+        [
+            [[10.0, 110.0], [20.0, 120.0], [30.0, 130.0]],
+            [[40.0, 140.0], [50.0, 150.0], [60.0, 160.0]],
+        ],
+        dtype=float,
+    )
+    sensor = sensor_set(sensor, "volts", volts)
+    sensor = sensor_set(sensor, "dv", dv)
+    sensor.fields["integration_time"] = np.array([0.01, 0.02], dtype=float)
+    roi = np.array([1, 1, 2, 1], dtype=int)
+
+    line_udata, line_handle = plotSensor(sensor, "volts hline", np.array([1, 2], dtype=int), "capture", 2)
+    hist_udata, hist_handle = plotSensor(sensor, "dv hist", roi, "capture", 2)
+
+    selected_sensor = sensor.clone()
+    selected_sensor.data["volts"] = volts[:, :, 1]
+    selected_sensor.data["dv"] = dv[:, :, 1]
+    selected_sensor.fields["integration_time"] = float(sensor.fields["integration_time"][1])
+    expected_line = sensor_get(selected_sensor, "hline volts", 2)
+    expected_hist = np.asarray(vc_get_roi_data(selected_sensor, roi, "dv"), dtype=float)
+
+    assert line_handle is None
+    assert hist_handle is None
+    assert sensor_get(sensor, "n captures") == 2
+    assert np.allclose(line_udata["data"][0], np.asarray(expected_line["data"][0], dtype=float))
+    assert np.allclose(line_udata["pos"][0], 1e6 * np.asarray(expected_line["pos"][0], dtype=float))
+    assert np.allclose(hist_udata["data"], expected_hist)
+    assert np.isclose(float(sensor.fields["integration_time"][1]), 0.02)
+
+
+def test_plot_sensor_capture_selection_rejects_invalid_index(asset_store) -> None:
+    sensor = sensor_create("monochrome", asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 2)
+    sensor = sensor_set(sensor, "cols", 2)
+    sensor = sensor_set(sensor, "volts", np.ones((2, 2, 2), dtype=float))
+
+    with pytest.raises(IndexError):
+        plotSensor(sensor, "volts hline", np.array([1, 1], dtype=int), "capture", 3)
+
+
 def test_ip_plot_rgb_histogram_rgb3d_and_luminance(asset_store) -> None:
     ip = ip_create(asset_store=asset_store)
     result = np.array(
