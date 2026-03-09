@@ -73,6 +73,8 @@ def test_ie_parameter_otype_handles_direct_prefix_and_unique_params() -> None:
     assert ie_parameter_otype("layer thicknesses") == ("pixel", "layerthicknesses")
     assert ie_parameter_otype("refractive indices") == ("pixel", "refractiveindices")
     assert ie_parameter_otype("stack height") == ("pixel", "stackheight")
+    assert ie_parameter_otype("pd xpos") == ("pixel", "pdxpos")
+    assert ie_parameter_otype("pd position") == ("pixel", "pdposition")
     assert ie_parameter_otype("diffusion MTF") == ("sensor", "diffusionmtf")
     assert ie_parameter_otype("ag") == ("sensor", "ag")
     assert ie_parameter_otype("ao") == ("sensor", "ao")

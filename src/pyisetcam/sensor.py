@@ -363,6 +363,18 @@ def _pixel_spectrum_struct(sensor: Sensor) -> dict[str, Any]:
     return spectrum
 
 
+def _pixel_pd_position_from_pixel(pixel: dict[str, Any]) -> np.ndarray:
+    stored = pixel.get("pd_position_m")
+    if stored is not None:
+        position = np.asarray(stored, dtype=float).reshape(-1)
+        if position.size == 1:
+            position = np.repeat(position, 2)
+        return position[:2].copy()
+    pixel_size = _pixel_size_m(pixel)
+    pd_size = _pixel_pd_size_from_pixel(pixel)
+    return ((pixel_size - pd_size) / 2.0).astype(float, copy=False)
+
+
 def _pixel_pd_size_from_pixel(pixel: dict[str, Any]) -> np.ndarray:
     stored = pixel.get("pd_size_m")
     if stored is not None:
@@ -377,11 +389,17 @@ def _pixel_pd_size_from_pixel(pixel: dict[str, Any]) -> np.ndarray:
 def _sync_pixel_pd_state(pixel: dict[str, Any]) -> None:
     pixel_size = _pixel_size_m(pixel)
     pd_size = _pixel_pd_size_from_pixel(pixel)
+    pd_position = _pixel_pd_position_from_pixel(pixel)
     if np.any(pd_size < 0.0):
         raise ValueError("photodetector size must be nonnegative.")
     if np.any(pd_size - pixel_size > 1e-18):
         raise ValueError("photodetector size must not exceed the pixel size.")
+    if np.any(pd_position < 0.0):
+        raise ValueError("photodetector position must be nonnegative.")
+    if np.any(pd_position + pd_size - pixel_size > 1e-18):
+        raise ValueError("photodetector position must keep the photodetector inside the pixel.")
     pixel["pd_size_m"] = pd_size
+    pixel["pd_position_m"] = pd_position
     pixel["fill_factor"] = float(np.prod(pd_size) / max(np.prod(pixel_size), 1e-30))
 
 
@@ -419,6 +437,13 @@ def _sensor_pixel_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return float(pd_size[0]) * spatial_scale
     if key in {"pdsize", "photodetectorsize"}:
         return pd_size * spatial_scale
+    pd_position = _pixel_pd_position_from_pixel(pixel)
+    if key == "pdxpos":
+        return float(pd_position[1]) * spatial_scale
+    if key == "pdypos":
+        return float(pd_position[0]) * spatial_scale
+    if key == "pdposition":
+        return np.array([pd_position[1], pd_position[0]], dtype=float) * spatial_scale
     if key == "pddimension":
         return np.array([pd_size[1], pd_size[0]], dtype=float) * spatial_scale
     if key == "pdarea":
@@ -548,6 +573,7 @@ def _sensor_pixel_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
     if key == "fillfactor":
         sensor.fields["pixel"]["fill_factor"] = float(value)
         sensor.fields["pixel"].pop("pd_size_m", None)
+        sensor.fields["pixel"].pop("pd_position_m", None)
         sensor.fields["etendue"] = None
         return sensor
     if key in {"pdsize", "photodetectorsize"}:
@@ -555,6 +581,26 @@ def _sensor_pixel_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         if pd_size.size == 1:
             pd_size = np.repeat(pd_size, 2)
         sensor.fields["pixel"]["pd_size_m"] = pd_size[:2].copy()
+        _sync_pixel_pd_state(sensor.fields["pixel"])
+        sensor.fields["etendue"] = None
+        return sensor
+    if key == "pdxpos":
+        pd_position = _pixel_pd_position_from_pixel(sensor.fields["pixel"])
+        sensor.fields["pixel"]["pd_position_m"] = np.array([pd_position[0], float(value)], dtype=float)
+        _sync_pixel_pd_state(sensor.fields["pixel"])
+        sensor.fields["etendue"] = None
+        return sensor
+    if key == "pdypos":
+        pd_position = _pixel_pd_position_from_pixel(sensor.fields["pixel"])
+        sensor.fields["pixel"]["pd_position_m"] = np.array([float(value), pd_position[1]], dtype=float)
+        _sync_pixel_pd_state(sensor.fields["pixel"])
+        sensor.fields["etendue"] = None
+        return sensor
+    if key == "pdposition":
+        pd_position = np.asarray(value, dtype=float).reshape(-1)
+        if pd_position.size == 1:
+            pd_position = np.repeat(pd_position, 2)
+        sensor.fields["pixel"]["pd_position_m"] = np.array([pd_position[1], pd_position[0]], dtype=float)
         _sync_pixel_pd_state(sensor.fields["pixel"])
         sensor.fields["etendue"] = None
         return sensor
@@ -2358,7 +2404,7 @@ def _sensor_pd_array(sensor: Sensor, spacing: float) -> np.ndarray:
     pixel = sensor.fields["pixel"]
     pixel_size = np.asarray(pixel["size_m"], dtype=float)
     pd_size = _pixel_pd_size_m(pixel)
-    pd_position = (pixel_size - pd_size) / 2.0
+    pd_position = _pixel_pd_position_from_pixel(pixel)
 
     normalized_pd_min = pd_position / (spacing * pixel_size)
     normalized_pd_max = (pd_size + pd_position) / (spacing * pixel_size)

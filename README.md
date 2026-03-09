@@ -377,6 +377,9 @@ geometry such as `pixel width` / `pixel height`, `width gap` / `height gap`,
 The neighboring pixel metadata surface now also covers `pixel layer thicknesses`,
 `pixel refractive indices`, `pixel spectrum` / `pixel wavelength`,
 `pixel bin width` / `pixel nwave`, and MATLAB-style `pixel dr`.
+The same pixel passthrough now also covers `pd xpos`, `pd ypos`, and
+`pd position`, and that metadata now feeds the internal photodetector array
+placement instead of being stored as a dead field.
 The neighboring sensor model surface now also includes raw
 `sensorGet/Set('diffusion MTF')` storage for legacy compatibility. The
 neighboring legacy scene/lens aliases now round-trip too through

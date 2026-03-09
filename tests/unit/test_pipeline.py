@@ -2172,6 +2172,31 @@ def test_sensor_get_set_supports_pixel_optical_and_spectral_metadata(asset_store
     assert np.isclose(sensor_get(sensor, "pixel dr"), expected_pixel_dr)
 
 
+def test_sensor_get_set_supports_photodetector_position_passthrough(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "pixel width", 4.0e-6)
+    sensor = sensor_set(sensor, "pixel height", 3.0e-6)
+    sensor = sensor_set(sensor, "pd size", np.array([1.0e-6, 2.0e-6], dtype=float))
+
+    assert np.allclose(sensor_get(sensor, "pd position", "um"), np.array([1.0, 1.0], dtype=float))
+    assert np.isclose(sensor_get(sensor, "pd xpos", "um"), 1.0)
+    assert np.isclose(sensor_get(sensor, "pd ypos", "um"), 1.0)
+
+    sensor = sensor_set(sensor, "pd xpos", 0.5e-6)
+    sensor = sensor_set(sensor, "pd ypos", 0.75e-6)
+
+    assert np.allclose(sensor_get(sensor, "pd position", "um"), np.array([0.5, 0.75], dtype=float))
+    assert np.isclose(sensor_get(sensor, "pd xpos", "um"), 0.5)
+    assert np.isclose(sensor_get(sensor, "pd ypos", "um"), 0.75)
+
+    sensor = sensor_set(sensor, "pd position", np.array([0.25e-6, 0.5e-6], dtype=float))
+
+    assert np.allclose(sensor_get(sensor, "pd position", "um"), np.array([0.25, 0.5], dtype=float))
+
+    with pytest.raises(ValueError, match="photodetector position must keep the photodetector inside the pixel."):
+        sensor_set(sensor, "pd position", np.array([3.0e-6, 2.5e-6], dtype=float))
+
+
 def test_sensor_get_set_supports_chart_and_metadata_surface(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
     corner_points = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float)
