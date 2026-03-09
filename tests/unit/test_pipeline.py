@@ -2076,11 +2076,13 @@ def test_sensor_get_set_supports_chart_and_metadata_surface(asset_store) -> None
     corner_points = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float)
     rects = np.array([[10.0, 20.0, 5.0, 6.0]], dtype=float)
     current_rect = np.array([7.0, 8.0, 9.0, 10.0], dtype=float)
+    rect_handles = ["r1", "r2"]
 
     sensor = sensor_set(sensor, "chart parameters", {"name": "Macbeth", "nSquares": 24})
     sensor = sensor_set(sensor, "chart corner points", corner_points)
     sensor = sensor_set(sensor, "chart rectangles", rects)
     sensor = sensor_set(sensor, "current rect", current_rect)
+    sensor = sensor_set(sensor, "mcc rect handles", rect_handles)
     sensor = sensor_set(sensor, "metadata sensor name", "sensor-a")
     sensor = sensor_set(sensor, "metadata scene name", "scene-a")
     sensor = sensor_set(sensor, "metadata optics name", "optics-a")
@@ -2094,12 +2096,18 @@ def test_sensor_get_set_supports_chart_and_metadata_surface(asset_store) -> None
     assert np.array_equal(chart["rects"], rects)
     assert np.array_equal(chart["currentRect"], current_rect)
     assert np.array_equal(sensor_get(sensor, "chart corner points"), corner_points)
+    assert np.array_equal(sensor_get(sensor, "mcc corner points"), corner_points)
     assert np.array_equal(sensor_get(sensor, "chart rectangles"), rects)
     assert np.array_equal(sensor_get(sensor, "current rect"), current_rect)
+    assert sensor_get(sensor, "mcc rect handles") == rect_handles
     assert sensor_get(sensor, "metadata sensor name") == "sensor-a"
     assert sensor_get(sensor, "metadata scene name") == "scene-a"
     assert sensor_get(sensor, "metadata optics name") == "optics-a"
     assert np.array_equal(sensor_get(sensor, "metadata crop"), np.array([1, 2, 3, 4], dtype=int))
+
+    sensor = sensor_set(sensor, "mcc corner points", corner_points + 1.0)
+
+    assert np.array_equal(sensor_get(sensor, "chart corner points"), corner_points + 1.0)
 
 
 def test_sensor_get_set_supports_movement_metadata_surface(asset_store) -> None:

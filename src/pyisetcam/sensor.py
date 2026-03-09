@@ -1053,6 +1053,8 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         chart = sensor.fields.get("chartP", {})
         value = chart.get("cornerPoints")
         return None if value is None else np.asarray(value).copy()
+    if key == "mcccornerpoints":
+        return sensor_get(sensor, "chart corner points")
     if key in {"chartrects", "chartrectangles"}:
         chart = sensor.fields.get("chartP", {})
         value = chart.get("rects")
@@ -1061,6 +1063,8 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         chart = sensor.fields.get("chartP", {})
         value = chart.get("currentRect")
         return None if value is None else np.asarray(value).copy()
+    if key == "mccrecthandles":
+        return _copy_metadata_value(sensor.fields.get("mccRectHandles"))
     if key in {"spectrum", "sensorspectrum"}:
         return _sensor_spectrum_struct(sensor)
     if key in {"binwidth", "waveresolution", "wavelengthresolution"}:
@@ -1498,6 +1502,10 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         sensor.fields["chartP"] = _sensor_chart_parameters(sensor)
         sensor.fields["chartP"]["cornerPoints"] = np.asarray(value).copy()
         return sensor
+    if key == "mcccornerpoints":
+        sensor.fields["chartP"] = _sensor_chart_parameters(sensor)
+        sensor.fields["chartP"]["cornerPoints"] = np.asarray(value).copy()
+        return sensor
     if key in {"chartrects", "chartrectangles"}:
         sensor.fields["chartP"] = _sensor_chart_parameters(sensor)
         sensor.fields["chartP"]["rects"] = np.asarray(value).copy()
@@ -1505,6 +1513,9 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
     if key in {"chartcurrentrect", "currentrect"}:
         sensor.fields["chartP"] = _sensor_chart_parameters(sensor)
         sensor.fields["chartP"]["currentRect"] = np.asarray(value).copy()
+        return sensor
+    if key == "mccrecthandles":
+        sensor.fields["mccRectHandles"] = _copy_metadata_value(value)
         return sensor
     if key in {"wave", "wavelength", "wavelengthsamples"}:
         sensor = _sensor_update_wave(sensor, np.asarray(value, dtype=float).reshape(-1))

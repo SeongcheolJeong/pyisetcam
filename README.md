@@ -339,6 +339,9 @@ neighboring legacy human-cone storage surface now round-trips too through
 `sensorGet/Set('human')`, `sensorGet/Set('cone type')`,
 `sensorGet/Set('densities')`, `sensorGet/Set('xy')`, and the
 `human cone seed` / `rseed` aliases. The
+neighboring legacy MCC aliases now round-trip too through
+`sensorGet/Set('mcc corner points')`, which reuses the chart corner-point
+field, plus raw `sensorGet/Set('mcc rect handles')` storage. The
 neighboring legacy scene/lens aliases now round-trip too through
 `sensorGet/Set('scene_name')`, `sensorGet/Set('lens')`, and
 `sensorGet('metadata lensname'/'metadata lens')`. The adjacent raw

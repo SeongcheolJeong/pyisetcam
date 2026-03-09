@@ -45,6 +45,8 @@ def test_ie_parameter_otype_handles_direct_prefix_and_unique_params() -> None:
     assert ie_parameter_otype("shot noise flag") == ("sensor", "shotnoiseflag")
     assert ie_parameter_otype("human cone densities") == ("sensor", "humanconedensities")
     assert ie_parameter_otype("human cone seed") == ("sensor", "humanconeseed")
+    assert ie_parameter_otype("mcc corner points") == ("sensor", "mcccornerpoints")
+    assert ie_parameter_otype("mcc rect handles") == ("sensor", "mccrecthandles")
     assert ie_parameter_otype("fnumber") == ("optics", "fnumber")
     assert ie_parameter_otype("asset light") == ("asset", "assetlight")
     assert ieParameterOtype("ip display") == ("ip", "display")
