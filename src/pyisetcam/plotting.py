@@ -329,16 +329,29 @@ def _sensor_plot_data(sensor: Sensor, *, cfa_constant: bool = False) -> tuple[np
     return np.asarray(array, dtype=float), data_type
 
 
-def _sensor_plot_scale(sensor: Sensor, data_type: str) -> float:
+def _sensor_plot_scale(sensor: Sensor, data_type: str, data: np.ndarray, *, scale_max: bool) -> float:
+    if scale_max:
+        return float(max(np.max(np.asarray(data, dtype=float)), 1e-12))
     if param_format(data_type) == "dv":
         return float(max((2 ** int(sensor_get(sensor, "nbits"))) - 1, 1))
     return float(max(sensor.fields["pixel"]["voltage_swing"], 1e-12))
 
 
-def _sensor_render_image(sensor: Sensor, data: np.ndarray, data_type: str) -> np.ndarray:
-    normalized = np.clip(np.asarray(data, dtype=float) / _sensor_plot_scale(sensor, data_type), 0.0, 1.0)
+def _sensor_render_image(
+    sensor: Sensor,
+    data: np.ndarray,
+    data_type: str,
+    *,
+    gamma: float = 1.0,
+    scale_max: bool = False,
+) -> np.ndarray:
+    normalized = np.clip(
+        np.asarray(data, dtype=float) / _sensor_plot_scale(sensor, data_type, data, scale_max=scale_max),
+        0.0,
+        1.0,
+    )
     if int(sensor_get(sensor, "nfilters")) <= 1:
-        return normalized.copy()
+        return np.power(normalized, float(gamma))
     pattern = tile_pattern(np.asarray(sensor_get(sensor, "pattern"), dtype=int), normalized.shape[0], normalized.shape[1])
     filter_colors = _sensor_filter_display_colors(sensor)
     linear_rgb = np.zeros(normalized.shape + (3,), dtype=float)
@@ -346,24 +359,32 @@ def _sensor_render_image(sensor: Sensor, data: np.ndarray, data_type: str) -> np
         mask = pattern == index
         if np.any(mask):
             linear_rgb[mask] = normalized[mask, None] * color.reshape(1, 3)
-    return linear_to_srgb(linear_rgb)
+    return linear_to_srgb(np.power(np.clip(linear_rgb, 0.0, 1.0), float(gamma)))
 
 
 def _sensor_plot_true_size(sensor: Sensor) -> dict[str, Any]:
     data, data_type = _sensor_plot_data(sensor)
+    gamma = float(sensor_get(sensor, "gamma"))
+    scale_max = bool(sensor_get(sensor, "scale max"))
     return {
-        "img": _sensor_render_image(sensor, data, data_type),
+        "img": _sensor_render_image(sensor, data, data_type, gamma=gamma, scale_max=scale_max),
         "dataType": data_type,
         "nameString": _sensor_name_string(sensor),
+        "gamma": gamma,
+        "scaleMax": scale_max,
     }
 
 
 def _sensor_plot_cfa_image(sensor: Sensor) -> dict[str, Any]:
     data, data_type = _sensor_plot_data(sensor, cfa_constant=True)
+    gamma = 1.0
+    scale_max = False
     return {
-        "img": _sensor_render_image(sensor, data, data_type),
+        "img": _sensor_render_image(sensor, data, data_type, gamma=gamma, scale_max=scale_max),
         "dataType": data_type,
         "nameString": _sensor_name_string(sensor),
+        "gamma": gamma,
+        "scaleMax": scale_max,
     }
 
 
@@ -372,7 +393,11 @@ def _sensor_plot_channels(sensor: Sensor) -> dict[str, Any]:
     rows, cols = data.shape[:2]
     pattern = tile_pattern(np.asarray(sensor_get(sensor, "pattern"), dtype=int), rows, cols)
     filter_colors = _sensor_filter_display_colors(sensor)
-    normalized = np.clip(np.asarray(data, dtype=float) / _sensor_plot_scale(sensor, data_type), 0.0, 1.0)
+    normalized = np.clip(
+        np.asarray(data, dtype=float) / _sensor_plot_scale(sensor, data_type, data, scale_max=False),
+        0.0,
+        1.0,
+    )
     channel_data: list[np.ndarray] = []
     channel_images: list[np.ndarray] = []
     masks: list[np.ndarray] = []

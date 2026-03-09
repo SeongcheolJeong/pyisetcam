@@ -685,6 +685,10 @@ def test_plot_sensor_true_size_and_cfa_image_wrappers(asset_store) -> None:
     assert cfa_image_udata["dataType"] == "volts"
     assert true_udata["nameString"] == expected_name
     assert cfa_image_udata["nameString"] == expected_name
+    assert true_udata["gamma"] == 1.0
+    assert true_udata["scaleMax"] is False
+    assert cfa_image_udata["gamma"] == 1.0
+    assert cfa_image_udata["scaleMax"] is False
     assert true_udata["img"].shape == (2, 2, 3)
     assert cfa_image_udata["img"].shape == (2, 2, 3)
     assert np.allclose(true_udata["img"][0, 0], np.array([0.0, 0.0, 0.0], dtype=float))
@@ -695,6 +699,24 @@ def test_plot_sensor_true_size_and_cfa_image_wrappers(asset_store) -> None:
     assert np.allclose(cfa_image_udata["img"][0, 1], np.array([1.0, 0.0, 0.0], dtype=float))
     assert np.allclose(cfa_image_udata["img"][1, 0], np.array([0.0, 0.0, 1.0], dtype=float))
     assert np.allclose(cfa_image_udata["img"][1, 1], np.array([0.0, 1.0, 0.0], dtype=float))
+
+
+def test_plot_sensor_true_size_respects_render_controls(asset_store) -> None:
+    sensor = sensor_create("monochrome", asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 1)
+    sensor = sensor_set(sensor, "cols", 2)
+    sensor = sensor_set(sensor, "volts", np.array([[0.25, 0.5]], dtype=float))
+    sensor = sensor_set(sensor, "gamma", 2.0)
+    sensor = sensor_set(sensor, "scale max", True)
+
+    true_udata, true_handle = plotSensor(sensor, "true size")
+
+    assert true_handle is None
+    assert sensor_get(sensor, "gamma") == 2.0
+    assert sensor_get(sensor, "scale max") is True
+    assert true_udata["gamma"] == 2.0
+    assert true_udata["scaleMax"] is True
+    assert np.allclose(true_udata["img"], np.array([[0.25, 1.0]], dtype=float))
 
 
 def test_plot_sensor_channels_wrapper(asset_store) -> None:

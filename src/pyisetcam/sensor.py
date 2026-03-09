@@ -68,6 +68,7 @@ def _sensor_base(
             "wave": np.asarray(wave, dtype=float),
             "size": (int(size[0]), int(size[1])),
             "pixel": _default_pixel(pixel),
+            "render": {"gamma": 1.0, "scale": False},
             "analog_gain": 1.0,
             "analog_offset": 0.0,
             "nbits": 10,
@@ -134,6 +135,16 @@ def _sensor_unit_block(sensor: Sensor) -> tuple[int, int]:
 def _sensor_filter_color_letters(sensor: Sensor) -> str:
     names = sensor.fields.get("filter_names", [])
     return "".join(str(name)[0].lower() if str(name) else "k" for name in names)
+
+
+def _sensor_render_state(sensor: Sensor) -> dict[str, Any]:
+    render = sensor.fields.get("render")
+    if not isinstance(render, dict):
+        render = {}
+        sensor.fields["render"] = render
+    render.setdefault("gamma", 1.0)
+    render.setdefault("scale", False)
+    return render
 
 
 def _sensor_pixel_qe(sensor: Sensor, *, dtype: Any = float) -> np.ndarray:
@@ -677,6 +688,10 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return letters[np.clip(pattern - 1, 0, letters.size - 1)]
     if key in {"integrationtime", "exptime"}:
         return float(sensor.fields["integration_time"])
+    if key == "gamma":
+        return float(_sensor_render_state(sensor)["gamma"])
+    if key in {"maxbright", "scalemax", "scaleintensity"}:
+        return bool(_sensor_render_state(sensor)["scale"])
     if key == "autoexposure":
         return bool(sensor.fields["auto_exposure"])
     if key == "analoggain":
@@ -925,6 +940,12 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
     if key in {"integrationtime", "exptime"}:
         sensor.fields["integration_time"] = float(value)
         sensor.fields["auto_exposure"] = False
+        return sensor
+    if key == "gamma":
+        _sensor_render_state(sensor)["gamma"] = float(value)
+        return sensor
+    if key in {"maxbright", "scalemax", "scaleintensity"}:
+        _sensor_render_state(sensor)["scale"] = bool(value)
         return sensor
     if key == "autoexposure":
         enabled = bool(value)
