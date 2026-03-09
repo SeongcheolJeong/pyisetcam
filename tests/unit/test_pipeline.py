@@ -2184,7 +2184,7 @@ def test_sensor_get_set_supports_pixel_optical_and_spectral_metadata(asset_store
     sensor = sensor_create("default", asset_store=asset_store)
     sensor = sensor_set(sensor, "integration time", 0.01)
     sensor = sensor_set(sensor, "pixel layer thicknesses", np.array([1.0e-6, 2.0e-6, 0.5e-6], dtype=float))
-    sensor = sensor_set(sensor, "pixel refractive indices", np.array([1.0, 1.5, 3.4], dtype=float))
+    sensor = sensor_set(sensor, "refractive index", np.array([1.0, 1.5, 3.4], dtype=float))
     sensor = sensor_set(sensor, "pixel spectrum", {"wave": np.array([450.0, 550.0, 650.0], dtype=float), "comment": "pixel spectrum"})
     sensor = sensor_set(sensor, "pixel quantum efficiency", np.array([0.1, 0.2, 0.3], dtype=float))
     sensor = sensor_set(sensor, "dark voltage", 2.0e-3)
@@ -2196,6 +2196,8 @@ def test_sensor_get_set_supports_pixel_optical_and_spectral_metadata(asset_store
     assert np.isclose(sensor_get(sensor, "pixel depth", "um"), 3.5)
     assert np.isclose(sensor_get(sensor, "pixel depth meters"), 3.5e-6)
     assert np.allclose(sensor_get(sensor, "refractive indices"), np.array([1.0, 1.5, 3.4], dtype=float))
+    assert np.allclose(sensor_get(sensor, "refractive index"), np.array([1.0, 1.5, 3.4], dtype=float))
+    assert np.allclose(sensor_get(sensor, "n"), np.array([1.0, 1.5, 3.4], dtype=float))
     assert np.array_equal(sensor_get(sensor, "pixel wavelength"), np.array([450.0, 550.0, 650.0], dtype=float))
     assert sensor_get(sensor, "pixel bin width") == 100.0
     assert sensor_get(sensor, "pixel nwave") == 3
@@ -2206,6 +2208,9 @@ def test_sensor_get_set_supports_pixel_optical_and_spectral_metadata(asset_store
 
     expected_pixel_dr = 20.0 * np.log10((1.2 - 2.0e-3 * 0.01) / np.sqrt((2.0e-3 * 0.01) + (1.0e-3**2)))
     assert np.isclose(sensor_get(sensor, "pixel dr"), expected_pixel_dr)
+
+    sensor = sensor_set(sensor, "n", np.array([1.0, 2.0, 3.5], dtype=float))
+    assert np.allclose(sensor_get(sensor, "refractive indices"), np.array([1.0, 2.0, 3.5], dtype=float))
 
 
 def test_sensor_get_set_supports_photodetector_position_passthrough(asset_store) -> None:

@@ -405,6 +405,9 @@ MATLAB-style calls no longer require an explicit `pixel` prefix.
 The same adjacent unit/electrical alias surface now also covers
 `pixel width meters`, `pixel height meters`, `pixel depth meters`, and the
 direct `conversion gain v per electron` form.
+The neighboring pixel material alias surface now also supports direct
+sensor-level `refractive index` and `n` access without requiring the
+explicit `pixel` prefix.
 The adjacent setter semantics now also match MATLAB for
 `pixel size same fill factor` / `pixel size constant fill factor`, scaling the
 photodetector geometry with the pixel size instead of treating that alias like
