@@ -47,6 +47,8 @@ def test_ie_parameter_otype_handles_direct_prefix_and_unique_params() -> None:
     assert ie_parameter_otype("zero level") == ("sensor", "zerolevel")
     assert ie_parameter_otype("digital value") == ("sensor", "digitalvalue")
     assert ie_parameter_otype("digital values") == ("sensor", "digitalvalues")
+    assert ie_parameter_otype("dv or volts") == ("sensor", "dvorvolts")
+    assert ie_parameter_otype("digital or volts") == ("sensor", "digitalorvolts")
     assert ie_parameter_otype("diffusion MTF") == ("sensor", "diffusionmtf")
     assert ie_parameter_otype("human cone densities") == ("sensor", "humanconedensities")
     assert ie_parameter_otype("human cone seed") == ("sensor", "humanconeseed")

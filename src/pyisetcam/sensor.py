@@ -1363,7 +1363,7 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         if integration_time.ndim > 0 and integration_time.size > 1:
             return int(integration_time.size)
         return 1
-    if key == "dvorvolts":
+    if key in {"dvorvolts", "digitalorvolts"}:
         return sensor.data.get("dv", sensor.data.get("volts"))
     if key in {"hlinevolts", "hlineelectrons", "hlinedv", "vlinevolts", "vlineelectrons", "vlinedv"}:
         if not args:

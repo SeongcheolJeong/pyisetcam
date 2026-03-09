@@ -171,6 +171,8 @@ _PARAMETER_OTYPE_UNIQUE = {
         "digitalvalue",
         "digitalvalues",
         "electrons",
+        "dvorvolts",
+        "digitalorvolts",
         "dvorvoltsroielectrons",
         "roivoltsmean",
         "roielectronsmean",
