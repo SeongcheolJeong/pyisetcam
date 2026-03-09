@@ -2472,8 +2472,8 @@ def test_sensor_get_set_supports_microlens_storage_surface(asset_store) -> None:
     }
     ml_offset = np.array([[1.0, -1.0], [0.5, -0.5]], dtype=float)
 
-    sensor = sensor_set(sensor, "microlens", microlens)
-    sensor = sensor_set(sensor, "mloffset", ml_offset)
+    sensor = sensor_set(sensor, "ulens", microlens)
+    sensor = sensor_set(sensor, "microlens offset", ml_offset)
 
     stored = sensor_get(sensor, "ml")
 
@@ -2481,6 +2481,7 @@ def test_sensor_get_set_supports_microlens_storage_surface(asset_store) -> None:
     assert stored["type"] == "microlens"
     assert np.array_equal(stored["offset"], np.array([0.0, 1.0], dtype=float))
     assert stored["wavelength"] == 500.0
+    assert sensor_get(sensor, "ulens")["name"] == "default"
     assert np.array_equal(sensor_get(sensor, "microlens offset"), ml_offset)
 
     stored["offset"][0] = 9.0
