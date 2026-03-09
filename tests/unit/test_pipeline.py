@@ -2212,6 +2212,19 @@ def test_sensor_get_set_supports_pixel_optical_and_spectral_metadata(asset_store
     sensor = sensor_set(sensor, "n", np.array([1.0, 2.0, 3.5], dtype=float))
     assert np.allclose(sensor_get(sensor, "refractive indices"), np.array([1.0, 2.0, 3.5], dtype=float))
 
+    sensor = sensor_set(sensor, "conversiongainvpelectron", 2.5e-6)
+    assert np.isclose(sensor_get(sensor, "conversiongainvpelectron"), 2.5e-6)
+    assert np.isclose(sensor_get(sensor, "conversion gain"), 2.5e-6)
+
+    sensor = sensor_set(sensor, "vswing", 1.3)
+    assert np.isclose(sensor_get(sensor, "vswing"), 1.3)
+    assert np.isclose(sensor_get(sensor, "max voltage"), 1.3)
+
+    sensor = sensor_set(sensor, "darkvolt", 3.0e-3)
+    assert np.isclose(sensor_get(sensor, "darkvolt"), 3.0e-3)
+    assert np.isclose(sensor_get(sensor, "darkvolts"), 3.0e-3)
+    assert np.isclose(sensor_get(sensor, "volts per second"), 3.0e-3)
+
 
 def test_sensor_get_set_supports_photodetector_position_passthrough(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
