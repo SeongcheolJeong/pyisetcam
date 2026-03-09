@@ -2041,7 +2041,7 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         sensor.fields["chartP"] = _sensor_chart_parameters(sensor)
         sensor.fields["chartP"].update(dict(value))
         return sensor
-    if key in {"chartcornerpoints", "cornerpoints"}:
+    if key in {"chartcornerpoints", "cornerpoints", "chartcorners"}:
         sensor.fields["chartP"] = _sensor_chart_parameters(sensor)
         sensor.fields["chartP"]["cornerPoints"] = np.asarray(value).copy()
         return sensor

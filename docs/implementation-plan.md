@@ -46,6 +46,7 @@
 - The neighboring sampling/noise-control block now also has parser-level routing for `pixel samples`, `n pixel samples for computing`, `spatial samples per pixel`, and `response type`.
 - The adjacent movement block now also has parser-level routing for `eye movement`, `frames per position`, `exposure times per position`, and `etime per pos`.
 - The neighboring legacy human block now also has parser-level routing for `human`, `cone type`, `densities`, `xy`, and `rseed`.
+- The adjacent chart block now also has parser-level routing for `chart parameters`, `corner points`, `chart corners`, `chart rects`, `chart rectangles`, `current rect`, and `chart current rect`.
 - The neighboring vignetting alias block now also has parser-level support for `vignetting flag`, `pixel vignetting`, `sensor vignetting`, `sensor bare etendue`, `no microlens etendue`, and `vignetting name`.
 - The same headless sensor plotting surface now also covers `plotSensor('etendue')`, returning MATLAB-style support and relative-illumination payloads without opening a mesh plot window.
 - The sensor spectral-wrapper surface now also includes `plotSensor('ir filter')`, `plotSensor('pixel spectral qe')`, `plotSensor('pixel spectral sr')`, and `plotSensor('sensor spectral sr')`, backed by explicit `ir filter` and `pixel spectral qe` state plus MATLAB-style combined `sensorGet(..., 'spectral qe')` / `sensorGet(..., 'sensor spectral sr')` semantics.

@@ -2327,9 +2327,9 @@ def test_sensor_get_set_supports_chart_and_metadata_surface(asset_store) -> None
     rect_handles = ["r1", "r2"]
 
     sensor = sensor_set(sensor, "chart parameters", {"name": "Macbeth", "nSquares": 24})
-    sensor = sensor_set(sensor, "chart corner points", corner_points)
-    sensor = sensor_set(sensor, "chart rectangles", rects)
-    sensor = sensor_set(sensor, "current rect", current_rect)
+    sensor = sensor_set(sensor, "corner points", corner_points)
+    sensor = sensor_set(sensor, "chart rects", rects)
+    sensor = sensor_set(sensor, "chart current rect", current_rect)
     sensor = sensor_set(sensor, "mcc rect handles", rect_handles)
     sensor = sensor_set(sensor, "metadata sensor name", "sensor-a")
     sensor = sensor_set(sensor, "metadata scene name", "scene-a")
@@ -2343,6 +2343,7 @@ def test_sensor_get_set_supports_chart_and_metadata_surface(asset_store) -> None
     assert np.array_equal(chart["cornerPoints"], corner_points)
     assert np.array_equal(chart["rects"], rects)
     assert np.array_equal(chart["currentRect"], current_rect)
+    assert np.array_equal(sensor_get(sensor, "chart corners"), corner_points)
     assert np.array_equal(sensor_get(sensor, "chart corner points"), corner_points)
     assert np.array_equal(sensor_get(sensor, "mcc corner points"), corner_points)
     assert np.array_equal(sensor_get(sensor, "chart rectangles"), rects)
@@ -2353,7 +2354,7 @@ def test_sensor_get_set_supports_chart_and_metadata_surface(asset_store) -> None
     assert sensor_get(sensor, "metadata optics name") == "optics-a"
     assert np.array_equal(sensor_get(sensor, "metadata crop"), np.array([1, 2, 3, 4], dtype=int))
 
-    sensor = sensor_set(sensor, "mcc corner points", corner_points + 1.0)
+    sensor = sensor_set(sensor, "chart corners", corner_points + 1.0)
 
     assert np.array_equal(sensor_get(sensor, "chart corner points"), corner_points + 1.0)
 
