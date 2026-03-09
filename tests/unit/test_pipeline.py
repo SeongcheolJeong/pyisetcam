@@ -2328,8 +2328,8 @@ def test_sensor_get_set_supports_chart_and_metadata_surface(asset_store) -> None
 
     sensor = sensor_set(sensor, "chart parameters", {"name": "Macbeth", "nSquares": 24})
     sensor = sensor_set(sensor, "chart corner points", corner_points)
-    sensor = sensor_set(sensor, "chart rects", rects)
-    sensor = sensor_set(sensor, "chart current rect", current_rect)
+    sensor = sensor_set(sensor, "chart rectangles", rects)
+    sensor = sensor_set(sensor, "current rect", current_rect)
     sensor = sensor_set(sensor, "mcc rect handles", rect_handles)
     sensor = sensor_set(sensor, "metadata sensor name", "sensor-a")
     sensor = sensor_set(sensor, "metadata scene name", "scene-a")

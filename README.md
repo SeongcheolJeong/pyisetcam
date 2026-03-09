@@ -451,6 +451,8 @@ The adjacent chart block now also has parser-level routing for
 `chart rectangles`, `current rect`, and `chart current rect`.
 That same chart surface now also has focused parser/runtime coverage for the
 natural long-form setter alias `chart corner points`.
+The same runtime coverage now also exercises the long-form setter path for
+`chart rectangles` and `current rect`.
 The neighboring metadata block now also has focused parser/runtime coverage for
 `scene name`, `metadata scene name`, `metadata lens name`, `metadata lens`,
 `metadata optics name`, `metadata sensor name`, and `metadata crop`.
