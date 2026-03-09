@@ -381,6 +381,12 @@ and MATLAB-style `pixel dr`.
 The same pixel passthrough now also covers `pd xpos`, `pd ypos`, and
 `pd position`, and that metadata now feeds the internal photodetector array
 placement instead of being stored as a dead field.
+The neighboring pixel electrical alias surface now also matches MATLAB for
+`volts per electron`, `saturation voltage` / `max voltage`,
+`dark current per pixel`, `dark voltage per pixel`, `volts per second`,
+and the `read noise` family, including the important setter rule that
+`sensorSet(..., 'read noise', value)` is interpreted in electrons rather
+than volts.
 The adjacent setter semantics now also match MATLAB for
 `pixel size same fill factor` / `pixel size constant fill factor`, scaling the
 photodetector geometry with the pixel size instead of treating that alias like

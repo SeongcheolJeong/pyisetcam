@@ -476,27 +476,27 @@ def _sensor_pixel_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return _pixel_spectral_sr(sensor)
     if key in {"pixeldr", "pixeldynamicrange", "dr", "dynamicrange"}:
         return _pixel_dynamic_range(sensor, args[0] if args else None)
-    if key in {"conversiongain", "conversiongainvpelectron"}:
+    if key in {"conversiongain", "conversiongainvpelectron", "voltsperelectron"}:
         return float(pixel["conversion_gain_v_per_electron"])
-    if key in {"voltageswing", "vswing"}:
+    if key in {"voltageswing", "vswing", "saturationvoltage", "maxvoltage"}:
         return float(pixel["voltage_swing"])
     if key == "wellcapacity":
         conversion_gain = max(float(pixel["conversion_gain_v_per_electron"]), 1e-30)
         return float(pixel["voltage_swing"]) / conversion_gain
-    if key in {"darkvolt", "darkvoltage", "darkvolts", "darkvoltageperpixelpersec"}:
+    if key in {"darkvolt", "darkvoltage", "darkvolts", "darkvoltageperpixelpersec", "darkvoltageperpixel", "voltspersecond"}:
         return float(pixel["dark_voltage_v_per_sec"])
     if key == "darkelectrons":
         conversion_gain = max(float(pixel["conversion_gain_v_per_electron"]), 1e-30)
         return float(pixel["dark_voltage_v_per_sec"]) / conversion_gain
-    if key == "darkcurrent":
+    if key in {"darkcurrent", "darkcurrentperpixel"}:
         return float(_sensor_pixel_get(sensor, "darkelectrons")) * _ELEMENTARY_CHARGE_C
     if key == "darkcurrentdensity":
         return float(_sensor_pixel_get(sensor, "darkcurrent")) / max(_pixel_pd_area_m2(sensor), 1e-30)
-    if key in {"readnoise", "readnoisevolts"}:
+    if key in {"readnoise", "readnoisevolts", "readstandarddeviationvolts", "readnoisestdvolts"}:
         return float(pixel["read_noise_v"])
     if key == "readnoisemillivolts":
         return float(pixel["read_noise_v"]) * 1e3
-    if key == "readnoiseelectrons":
+    if key in {"readnoiseelectrons", "readstandarddeviationelectrons"}:
         conversion_gain = max(float(pixel["conversion_gain_v_per_electron"]), 1e-30)
         return float(pixel["read_noise_v"]) / conversion_gain
     raise KeyError(f"Unsupported sensor pixel parameter: {parameter}")
@@ -669,17 +669,24 @@ def _sensor_pixel_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         else:
             raise ValueError("pixel spectral QE must match the sensor wavelength sampling.")
         return sensor
-    if key in {"conversiongain", "conversiongainvpelectron"}:
+    if key in {"conversiongain", "conversiongainvpelectron", "voltsperelectron"}:
         sensor.fields["pixel"]["conversion_gain_v_per_electron"] = float(value)
         return sensor
-    if key in {"voltageswing", "vswing"}:
+    if key in {"voltageswing", "vswing", "saturationvoltage", "maxvoltage"}:
         sensor.fields["pixel"]["voltage_swing"] = float(value)
         return sensor
-    if key in {"darkvolt", "darkvoltage", "darkvolts", "darkvoltageperpixelpersec"}:
+    if key in {"darkvolt", "darkvoltage", "darkvolts", "darkvoltageperpixelpersec", "darkvoltageperpixel", "voltspersecond"}:
         sensor.fields["pixel"]["dark_voltage_v_per_sec"] = float(value)
         return sensor
-    if key in {"readnoise", "readnoisevolts"}:
+    if key in {"readnoise", "readnoiseelectrons", "readstandarddeviationelectrons"}:
+        conversion_gain = max(float(sensor.fields["pixel"]["conversion_gain_v_per_electron"]), 1e-30)
+        sensor.fields["pixel"]["read_noise_v"] = float(value) * conversion_gain
+        return sensor
+    if key in {"readnoisevolts", "readstandarddeviationvolts", "readnoisestdvolts"}:
         sensor.fields["pixel"]["read_noise_v"] = float(value)
+        return sensor
+    if key == "readnoisemillivolts":
+        sensor.fields["pixel"]["read_noise_v"] = float(value) * 1e-3
         return sensor
     raise KeyError(f"Unsupported sensor pixel parameter: {parameter}")
 
