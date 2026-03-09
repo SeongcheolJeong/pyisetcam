@@ -2436,13 +2436,13 @@ def test_sensor_get_set_supports_legacy_human_storage_surface(asset_store) -> No
     sensor = sensor_set(sensor, "human cone type", cone_type)
     sensor = sensor_set(sensor, "human cone densities", densities)
     sensor = sensor_set(sensor, "human cone locs", xy)
-    sensor = sensor_set(sensor, "human cone seed", 23)
+    sensor = sensor_set(sensor, "humanrseed", 23)
 
     assert np.array_equal(sensor_get(sensor, "cone type"), cone_type)
     assert np.array_equal(sensor_get(sensor, "human cone densities"), densities)
     assert np.array_equal(sensor_get(sensor, "human cone locs"), xy)
     assert np.array_equal(sensor_get(sensor, "xy"), xy)
-    assert sensor_get(sensor, "human cone seed") == 23
+    assert sensor_get(sensor, "humanrseed") == 23
 
 
 def test_sensor_get_set_supports_legacy_scene_and_lens_metadata_aliases(asset_store) -> None:
