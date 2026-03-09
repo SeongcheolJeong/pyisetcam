@@ -398,6 +398,10 @@ QE aliases such as `pixel quantum efficiency`,
 `photodetector spectral quantum efficiency`.
 The same pixel geometry alias layer now also covers the MATLAB gap-spacing
 names `width between pixels` and `height between pixels`.
+The direct unprefixed sensor-routing path now also recognizes the remaining
+unique pixel setters such as `width and height`, `pd width and height`,
+`size same fill factor`, and `dark voltage per pixel per sec`, so those
+MATLAB-style calls no longer require an explicit `pixel` prefix.
 The adjacent setter semantics now also match MATLAB for
 `pixel size same fill factor` / `pixel size constant fill factor`, scaling the
 photodetector geometry with the pixel size instead of treating that alias like

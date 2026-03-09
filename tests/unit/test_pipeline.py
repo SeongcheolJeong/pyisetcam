@@ -2254,6 +2254,25 @@ def test_sensor_set_supports_matlab_width_height_pair_aliases(asset_store) -> No
     assert np.isclose(sensor_get(sensor, "pd height"), 1.5e-6)
 
 
+def test_sensor_set_routes_direct_unique_pixel_aliases_without_prefix(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+
+    sensor = sensor_set(sensor, "width and height", np.array([4.0e-6, 3.0e-6], dtype=float))
+    assert np.isclose(sensor_get(sensor, "pixel width"), 4.0e-6)
+    assert np.isclose(sensor_get(sensor, "pixel height"), 3.0e-6)
+
+    sensor = sensor_set(sensor, "pd width and height", np.array([2.0e-6, 1.0e-6], dtype=float))
+    assert np.isclose(sensor_get(sensor, "pd width"), 2.0e-6)
+    assert np.isclose(sensor_get(sensor, "pd height"), 1.0e-6)
+
+    initial_fill_factor = float(sensor_get(sensor, "fill factor"))
+    sensor = sensor_set(sensor, "size same fill factor", np.array([8.0e-6, 6.0e-6], dtype=float))
+    assert np.isclose(sensor_get(sensor, "fill factor"), initial_fill_factor)
+
+    sensor = sensor_set(sensor, "dark voltage per pixel per sec", 1.5e-3)
+    assert np.isclose(sensor_get(sensor, "dark voltage"), 1.5e-3)
+
+
 def test_sensor_set_pixel_size_same_fill_factor_scales_photodetector_geometry(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
     sensor = sensor_set(sensor, "pixel width", 4.0e-6)
