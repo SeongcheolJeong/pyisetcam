@@ -2167,6 +2167,41 @@ def test_sensor_get_set_supports_microlens_storage_surface(asset_store) -> None:
     assert np.array_equal(sensor_get(sensor, "mlens")["offset"], np.array([0.0, 1.0], dtype=float))
 
 
+def test_sensor_get_set_supports_column_fpn_storage_surface(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    cols = int(sensor_get(sensor, "cols"))
+    column_offset = np.linspace(-0.01, 0.01, cols, dtype=float)
+    column_gain = np.linspace(0.9, 1.1, cols, dtype=float)
+
+    assert np.array_equal(sensor_get(sensor, "column fpn"), np.array([0.0, 0.0], dtype=float))
+    assert sensor_get(sensor, "column dsnu") == 0.0
+    assert sensor_get(sensor, "column prnu") == 0.0
+    assert sensor_get(sensor, "col offset fpn vector") is None
+    assert sensor_get(sensor, "col gain fpn vector") is None
+
+    sensor = sensor_set(sensor, "column fpn", np.array([0.125, 0.25], dtype=float))
+    sensor = sensor_set(sensor, "column dsnu", column_offset)
+    sensor = sensor_set(sensor, "column prnu", column_gain)
+
+    assert np.array_equal(sensor_get(sensor, "colfpn"), np.array([0.125, 0.25], dtype=float))
+    assert sensor_get(sensor, "columnfpnoffset") == 0.125
+    assert sensor_get(sensor, "columnfpngain") == 0.25
+    assert np.array_equal(sensor_get(sensor, "coloffset"), column_offset)
+    assert np.array_equal(sensor_get(sensor, "colgain"), column_gain)
+
+    stored = sensor_get(sensor, "coloffsetfpnvector")
+    assert stored is not None
+    stored[0] = 9.0
+    assert np.array_equal(sensor_get(sensor, "col offset fpn vector"), column_offset)
+
+    with pytest.raises(ValueError, match="Column FPN"):
+        sensor_set(sensor, "column fpn", np.array([1.0, 2.0, 3.0], dtype=float))
+    with pytest.raises(ValueError, match="Bad column offset data"):
+        sensor_set(sensor, "column dsnu", np.ones(cols - 1, dtype=float))
+    with pytest.raises(ValueError, match="Bad column gain data"):
+        sensor_set(sensor, "column prnu", np.ones(cols - 1, dtype=float))
+
+
 def test_sensor_get_set_supports_consistency_and_compute_method_storage(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
 

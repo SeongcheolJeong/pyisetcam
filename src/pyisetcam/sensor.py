@@ -223,6 +223,13 @@ def _sensor_movement(sensor: Sensor) -> dict[str, Any]:
     return movement
 
 
+def _sensor_column_fpn(sensor: Sensor) -> np.ndarray:
+    stored = sensor.fields.get("column_fpn")
+    if stored is None:
+        return np.array([0.0, 0.0], dtype=float)
+    return np.asarray(stored, dtype=float).reshape(-1).copy()
+
+
 def _copy_metadata_value(value: Any) -> Any:
     if isinstance(value, np.ndarray):
         return value.copy()
@@ -1147,6 +1154,20 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
     if key in {"prnuimage", "gainfpnimage"}:
         stored = sensor.fields.get("gain_fpn_image")
         return None if stored is None else np.asarray(stored, dtype=float).copy()
+    if key in {"columnfpn", "columnfixedpatternnoise", "colfpn"}:
+        return _sensor_column_fpn(sensor)
+    if key in {"columndsnu", "columnfpnoffset", "colfpnoffset", "coldsnu"}:
+        column_fpn = _sensor_column_fpn(sensor)
+        return float(column_fpn[0]) if column_fpn.size >= 1 else 0.0
+    if key in {"columnprnu", "columnfpngain", "colfpngain", "colprnu"}:
+        column_fpn = _sensor_column_fpn(sensor)
+        return float(column_fpn[1]) if column_fpn.size >= 2 else 0.0
+    if key in {"coloffsetfpnvector", "coloffsetfpn", "coloffset"}:
+        stored = sensor.fields.get("column_offset_fpn")
+        return None if stored is None else np.asarray(stored, dtype=float).copy()
+    if key in {"colgainfpnvector", "colgainfpn", "colgain"}:
+        stored = sensor.fields.get("column_gain_fpn")
+        return None if stored is None else np.asarray(stored, dtype=float).copy()
     if key == "reusenoise":
         return bool(sensor.fields.get("reuse_noise", False))
     if key == "noiseseed":
@@ -1551,6 +1572,33 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         if image.shape != tuple(sensor.fields["size"]):
             raise ValueError("PRNU image must match the sensor size.")
         sensor.fields["gain_fpn_image"] = image
+        return sensor
+    if key in {"columnfpnparameters", "columnfpn", "columnfixedpatternnoise", "colfpn"}:
+        column_fpn = np.asarray(value, dtype=float).reshape(-1)
+        if column_fpn.size == 0:
+            sensor.fields.pop("column_fpn", None)
+            return sensor
+        if column_fpn.size != 2:
+            raise ValueError("Column FPN must be in [offset, gain] format.")
+        sensor.fields["column_fpn"] = column_fpn.copy()
+        return sensor
+    if key in {"colgainfpnvector", "columnprnu"}:
+        column_gain = np.asarray(value, dtype=float).reshape(-1)
+        if column_gain.size == 0:
+            sensor.fields.pop("column_gain_fpn", None)
+            return sensor
+        if column_gain.size != int(sensor_get(sensor, "cols")):
+            raise ValueError("Bad column gain data.")
+        sensor.fields["column_gain_fpn"] = column_gain.copy()
+        return sensor
+    if key in {"coloffsetfpnvector", "columndsnu"}:
+        column_offset = np.asarray(value, dtype=float).reshape(-1)
+        if column_offset.size == 0:
+            sensor.fields.pop("column_offset_fpn", None)
+            return sensor
+        if column_offset.size != int(sensor_get(sensor, "cols")):
+            raise ValueError("Bad column offset data.")
+        sensor.fields["column_offset_fpn"] = column_offset.copy()
         return sensor
     if key == "reusenoise":
         sensor.fields["reuse_noise"] = bool(value)

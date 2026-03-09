@@ -357,7 +357,11 @@ sampling and vignetting aliases now also round-trip through
 The adjacent noise-control storage surface now also includes
 `sensorGet/Set('reuse noise')`, `sensorGet/Set('noise seed')`, and
 `sensorGet/Set('response type')`, with stored noise seeds now feeding
-`sensorCompute(...)` whenever no explicit seed argument is passed.
+`sensorCompute(...)` whenever no explicit seed argument is passed. The
+neighboring column fixed-pattern-noise storage surface now also
+round-trips through `sensorGet/Set('column fpn')`,
+`sensorGet('column dsnu'/'column prnu')`, and
+`sensorGet/Set('col offset fpn vector'/'col gain fpn vector')`.
 The same headless plotting surface now
 also covers `plotSensor('etendue')`, returning MATLAB-style support and
 relative-illumination payloads without opening a mesh plot window. Sensor
