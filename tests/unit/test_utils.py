@@ -37,6 +37,8 @@ def test_ie_parameter_otype_handles_direct_prefix_and_unique_params() -> None:
     assert ie_parameter_otype("scene") == ("scene", None)
     assert ie_parameter_otype("oi size") == ("oi", "size")
     assert ie_parameter_otype("pixel/size") == ("pixel", "size")
+    assert ie_parameter_otype("pixel width and height") == ("pixel", "widthandheight")
+    assert ie_parameter_otype("pixel pd width and height") == ("pixel", "pdwidthandheight")
     assert ie_parameter_otype("wvf_zcoeffs") == ("wvf", "zcoeffs")
     assert ie_parameter_otype("display gamma") == ("display", "gamma")
     assert ie_parameter_otype("dsnu sigma") == ("sensor", "dsnusigma")

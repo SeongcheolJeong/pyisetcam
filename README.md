@@ -387,6 +387,10 @@ The neighboring pixel electrical alias surface now also matches MATLAB for
 and the `read noise` family, including the important setter rule that
 `sensorSet(..., 'read noise', value)` is interpreted in electrons rather
 than volts.
+The adjacent MATLAB pair-setter surface now also matches upstream ordering
+for `pixel width and height` and `pixel pd width and height`, so those
+aliases accept `[width, height]` inputs without changing the existing local
+`pixel size` / `pd size` semantics.
 The adjacent setter semantics now also match MATLAB for
 `pixel size same fill factor` / `pixel size constant fill factor`, scaling the
 photodetector geometry with the pixel size instead of treating that alias like

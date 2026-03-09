@@ -583,6 +583,16 @@ def _sensor_pixel_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         sensor.fields["etendue"] = None
         _sensor_clear_data(sensor)
         return sensor
+    if key in {"widthheight", "widthandheight"}:
+        size = np.asarray(value, dtype=float).reshape(-1)
+        if size.size == 1:
+            size = np.repeat(size, 2)
+        sensor.fields["pixel"]["size_m"] = np.array([size[1], size[0]], dtype=float)
+        if sensor.fields["pixel"].get("pd_size_m") is not None:
+            _sync_pixel_pd_state(sensor.fields["pixel"])
+        sensor.fields["etendue"] = None
+        _sensor_clear_data(sensor)
+        return sensor
     if key in {"size", "pixelsize"}:
         size = np.asarray(value, dtype=float)
         if size.size == 1:
@@ -614,6 +624,14 @@ def _sensor_pixel_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         if pd_size.size == 1:
             pd_size = np.repeat(pd_size, 2)
         sensor.fields["pixel"]["pd_size_m"] = pd_size[:2].copy()
+        _sync_pixel_pd_state(sensor.fields["pixel"])
+        sensor.fields["etendue"] = None
+        return sensor
+    if key == "pdwidthandheight":
+        pd_size = np.asarray(value, dtype=float).reshape(-1)
+        if pd_size.size == 1:
+            pd_size = np.repeat(pd_size, 2)
+        sensor.fields["pixel"]["pd_size_m"] = np.array([pd_size[1], pd_size[0]], dtype=float)
         _sync_pixel_pd_state(sensor.fields["pixel"])
         sensor.fields["etendue"] = None
         return sensor
