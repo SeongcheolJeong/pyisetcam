@@ -436,6 +436,8 @@ and `response type`.
 The adjacent movement block now also has parser-level routing for
 `eye movement`, `frames per position`, `exposure times per position`,
 and `etime per pos`.
+The neighboring legacy human block now also has parser-level routing for
+`human`, `cone type`, `densities`, `xy`, and `rseed`.
 The neighboring pixel material alias surface now also supports direct
 sensor-level `refractive index` and `n` access without requiring the
 explicit `pixel` prefix.
