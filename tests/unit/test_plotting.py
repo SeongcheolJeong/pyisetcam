@@ -717,6 +717,22 @@ def test_plot_sensor_true_size_respects_render_controls(asset_store) -> None:
     assert true_udata["gamma"] == 2.0
     assert true_udata["scaleMax"] is True
     assert np.allclose(true_udata["img"], np.array([[0.25, 1.0]], dtype=float))
+    assert np.allclose(sensor_get(sensor, "rgb", "volts", 2.0, True), true_udata["img"])
+
+
+def test_sensor_get_rgb_and_display_ranges(asset_store) -> None:
+    sensor = sensor_create("monochrome", asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 1)
+    sensor = sensor_set(sensor, "cols", 2)
+    sensor = sensor_set(sensor, "zero level", 4)
+    sensor = sensor_set(sensor, "dv", np.array([[260.0, 516.0]], dtype=float))
+
+    rgb = np.asarray(sensor_get(sensor, "rgb", "dv or volts", 1.0, False), dtype=float)
+
+    assert sensor_get(sensor, "max output") == sensor_get(sensor, "voltage swing")
+    assert sensor_get(sensor, "zero level") == 4.0
+    assert sensor_get(sensor, "max digital value") == 1020.0
+    assert np.allclose(rgb, np.array([[260.0 / 1020.0, 516.0 / 1020.0]], dtype=float))
 
 
 def test_plot_sensor_channels_wrapper(asset_store) -> None:

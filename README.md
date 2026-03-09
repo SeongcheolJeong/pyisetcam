@@ -316,8 +316,10 @@ place too through `plotSensor('cfa image')`, `plotSensor('true size')`,
 and `plotSensor('channels')`, returning image and per-channel payloads
 with MATLAB-style sensor-name metadata instead of opening GUI windows.
 The explicit sensor render surface now also includes `sensorGet/Set(...,
-'gamma'/'scale max')`, and headless true-size / CFA-image payloads report
-the gamma / scale-max settings they use.
+'gamma'/'scale max')`, shared `sensorGet('rgb', ...)` rendering with
+upstream-style `max output` / `max digital value` scaling semantics, and
+headless true-size / CFA-image payloads report the gamma / scale-max
+settings they use.
 The same headless plotting surface now
 also covers `plotSensor('etendue')`, returning MATLAB-style support and
 relative-illumination payloads without opening a mesh plot window. Sensor

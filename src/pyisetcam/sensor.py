@@ -10,13 +10,13 @@ from scipy.ndimage import map_coordinates
 from scipy.signal import convolve2d
 
 from .assets import AssetStore
-from .color import luminance_from_photons
+from .color import luminance_from_photons, xyz_color_matching
 from .exceptions import UnsupportedOptionError
 from .optics import DEFAULT_FOCAL_LENGTH_M
 from .optics import oi_get
 from .session import track_session_object
 from .types import OpticalImage, Scene, Sensor, SessionContext
-from .utils import DEFAULT_WAVE, ensure_multiple, param_format, tile_pattern
+from .utils import DEFAULT_WAVE, ensure_multiple, linear_to_srgb, param_format, tile_pattern, xyz_to_linear_srgb
 
 _DEFAULT_PIXEL = {
     "size_m": np.array([2.8e-6, 2.8e-6], dtype=float),
@@ -69,6 +69,7 @@ def _sensor_base(
             "size": (int(size[0]), int(size[1])),
             "pixel": _default_pixel(pixel),
             "render": {"gamma": 1.0, "scale": False},
+            "zero_level": 0.0,
             "analog_gain": 1.0,
             "analog_offset": 0.0,
             "nbits": 10,
@@ -137,6 +138,52 @@ def _sensor_filter_color_letters(sensor: Sensor) -> str:
     return "".join(str(name)[0].lower() if str(name) else "k" for name in names)
 
 
+def _sensor_filter_display_colors(sensor: Sensor) -> np.ndarray:
+    letters = list(_sensor_filter_color_letters(sensor))
+    filter_spectra = _sensor_combined_qe(sensor, dtype=float)
+    colors = np.zeros((filter_spectra.shape[1], 3), dtype=float)
+    standard = {
+        "r": np.array([1.0, 0.0, 0.0], dtype=float),
+        "g": np.array([0.0, 1.0, 0.0], dtype=float),
+        "b": np.array([0.0, 0.0, 1.0], dtype=float),
+        "c": np.array([0.0, 1.0, 1.0], dtype=float),
+        "m": np.array([1.0, 0.0, 1.0], dtype=float),
+        "y": np.array([1.0, 1.0, 0.0], dtype=float),
+        "w": np.array([1.0, 1.0, 1.0], dtype=float),
+        "k": np.array([0.0, 0.0, 0.0], dtype=float),
+    }
+
+    fallback_indices: list[int] = []
+    for index in range(colors.shape[0]):
+        letter = letters[index].lower() if index < len(letters) and letters[index] else ""
+        mapped = standard.get(letter)
+        if mapped is not None:
+            colors[index] = mapped
+        else:
+            fallback_indices.append(index)
+
+    if fallback_indices:
+        wave = np.asarray(sensor.fields["wave"], dtype=float)
+        xyz = np.asarray(
+            filter_spectra[:, fallback_indices].T @ xyz_color_matching(wave, quanta=True),
+            dtype=float,
+        )
+        linear_rgb = np.clip(xyz_to_linear_srgb(xyz), 0.0, None)
+        row_max = np.max(linear_rgb, axis=1, keepdims=True)
+        normalized = np.divide(
+            linear_rgb,
+            np.maximum(row_max, 1e-12),
+            out=np.zeros_like(linear_rgb),
+            where=row_max > 1e-12,
+        )
+        low_energy = np.ravel(row_max <= 1e-12)
+        if np.any(low_energy):
+            normalized[low_energy] = 1.0
+        colors[fallback_indices] = linear_to_srgb(normalized)
+
+    return np.clip(colors, 0.0, 1.0)
+
+
 def _sensor_render_state(sensor: Sensor) -> dict[str, Any]:
     render = sensor.fields.get("render")
     if not isinstance(render, dict):
@@ -186,6 +233,75 @@ def _pixel_spectral_sr(sensor: Sensor, *, dtype: Any = float) -> np.ndarray:
     wave_m = np.asarray(sensor.fields["wave"], dtype=float).reshape(-1) * 1e-9
     pixel_qe = _sensor_pixel_qe(sensor, dtype=dtype).reshape(-1)
     return ((wave_m * _ELEMENTARY_CHARGE_C) / (_PLANCK_CONSTANT_J_S * _LIGHT_SPEED_M_S) * pixel_qe).astype(dtype, copy=False)
+
+
+def _sensor_rgb_source(sensor: Sensor, data_type: str) -> tuple[np.ndarray | None, str]:
+    key = param_format(data_type)
+    resolved = key
+    if key in {"dvorvolts", "digitalorvolts"}:
+        if sensor.data.get("dv") is not None:
+            resolved = "dv"
+            source = sensor.data.get("dv")
+        else:
+            resolved = "volts"
+            source = sensor.data.get("volts")
+    elif key == "dv":
+        source = sensor.data.get("dv")
+    elif key == "electrons":
+        source = _sensor_electrons(sensor)
+    else:
+        resolved = "volts"
+        source = sensor.data.get("volts")
+
+    if source is None:
+        return None, resolved
+
+    array = np.asarray(source, dtype=float)
+    if array.ndim == 0:
+        array = array.reshape(1, 1)
+    elif array.ndim >= 3:
+        array = np.asarray(array[:, :, 0], dtype=float)
+    return np.asarray(array, dtype=float), resolved
+
+
+def _sensor_display_scale(sensor: Sensor, data: np.ndarray, data_type: str, *, scale_max: bool) -> float:
+    if scale_max:
+        return float(max(np.max(np.asarray(data, dtype=float)), 1e-12))
+    key = param_format(data_type)
+    if key == "dv":
+        return float(max(sensor_get(sensor, "max digital value"), 1.0))
+    return float(max(sensor_get(sensor, "max output"), 1e-12))
+
+
+def _sensor_rgb_image(
+    sensor: Sensor,
+    data_type: str = "volts",
+    gamma: float | None = None,
+    scale_max: bool | None = None,
+) -> np.ndarray | None:
+    data, resolved_type = _sensor_rgb_source(sensor, data_type)
+    if data is None:
+        return None
+
+    gamma_value = float(sensor_get(sensor, "gamma") if gamma is None else gamma)
+    scale_max_value = bool(sensor_get(sensor, "scale max") if scale_max is None else scale_max)
+    normalized = np.clip(
+        np.asarray(data, dtype=float) / _sensor_display_scale(sensor, data, resolved_type, scale_max=scale_max_value),
+        0.0,
+        1.0,
+    )
+
+    if int(sensor_get(sensor, "nfilters")) <= 1:
+        return np.power(normalized, gamma_value)
+
+    pattern = tile_pattern(np.asarray(sensor.fields["pattern"], dtype=int), normalized.shape[0], normalized.shape[1])
+    filter_colors = _sensor_filter_display_colors(sensor)
+    linear_rgb = np.zeros(normalized.shape + (3,), dtype=float)
+    for index, color in enumerate(filter_colors, start=1):
+        mask = pattern == index
+        if np.any(mask):
+            linear_rgb[mask] = normalized[mask, None] * color.reshape(1, 3)
+    return linear_to_srgb(np.power(np.clip(linear_rgb, 0.0, 1.0), gamma_value))
 
 
 def _sensor_aligned_dimension(value: Any, block_size: int) -> int:
@@ -749,6 +865,14 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return sensor.fields["quantization"]
     if key in {"pixelvoltageswing", "voltageswing"}:
         return float(sensor.fields["pixel"]["voltage_swing"])
+    if key in {"maxvoltage", "max", "maxoutput"}:
+        return float(sensor_get(sensor, "pixel voltage swing"))
+    if key in {"zerolevel", "zero"}:
+        return float(sensor.fields.get("zero_level", 0.0))
+    if key in {"maxdigital", "maxdigitalvalue"}:
+        nbits = int(sensor_get(sensor, "nbits"))
+        zero_level = float(sensor_get(sensor, "zero level"))
+        return float((2**nbits) - zero_level)
     if key in {"roi", "roilocs"}:
         roi = sensor.fields.get("roi")
         if roi is None:
@@ -845,6 +969,11 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
             max_digital = float(2**nbits)
             return float(np.max(np.asarray(dv, dtype=float)) / max(max_digital, 1e-12))
         return 0.0
+    if key == "rgb":
+        data_type = str(args[0]) if args else "volts"
+        gamma = float(args[1]) if len(args) > 1 else None
+        scale_max = bool(args[2]) if len(args) > 2 else None
+        return _sensor_rgb_image(sensor, data_type, gamma, scale_max)
     if key in {"fovhorizontal", "fov"}:
         scene_or_distance = args[0] if args else None
         oi = args[1] if len(args) >= 2 else args[0] if args and isinstance(args[0], OpticalImage) else None
@@ -940,6 +1069,9 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
     if key in {"integrationtime", "exptime"}:
         sensor.fields["integration_time"] = float(value)
         sensor.fields["auto_exposure"] = False
+        return sensor
+    if key in {"zerolevel", "zero"}:
+        sensor.fields["zero_level"] = float(value)
         return sensor
     if key == "gamma":
         _sensor_render_state(sensor)["gamma"] = float(value)
