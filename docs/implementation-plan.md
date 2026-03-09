@@ -43,6 +43,7 @@
 - The adjacent microlens block now also has parser-level support for `ml`, `mlens`, `ulens`, `microlens offset`, `mloffset`, and `microlens offset microns`.
 - The adjacent consistency block now also has parser-level routing for `consistency`, `sensor consistency`, and `sensor compute`.
 - The neighboring exposure block now also has parser-level routing for `integration time`, `exptimes`, `unique exptimes`, `central exposure`, `exposure method`, `n exposures`, `exposure plane`, `correlated double sampling`, `auto exposure`, and `automatic exposure`.
+- The neighboring sampling/noise-control block now also has parser-level routing for `pixel samples`, `n pixel samples for computing`, `spatial samples per pixel`, and `response type`.
 - The neighboring vignetting alias block now also has parser-level support for `vignetting flag`, `pixel vignetting`, `sensor vignetting`, `sensor bare etendue`, `no microlens etendue`, and `vignetting name`.
 - The same headless sensor plotting surface now also covers `plotSensor('etendue')`, returning MATLAB-style support and relative-illumination payloads without opening a mesh plot window.
 - The sensor spectral-wrapper surface now also includes `plotSensor('ir filter')`, `plotSensor('pixel spectral qe')`, `plotSensor('pixel spectral sr')`, and `plotSensor('sensor spectral sr')`, backed by explicit `ir filter` and `pixel spectral qe` state plus MATLAB-style combined `sensorGet(..., 'spectral qe')` / `sensorGet(..., 'sensor spectral sr')` semantics.

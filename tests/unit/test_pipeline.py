@@ -2608,11 +2608,12 @@ def test_sensor_get_set_supports_sampling_and_vignetting_aliases(asset_store) ->
     assert sensor_get(sensor, "pixel samples") == 1
     assert sensor_get(sensor, "sensor bare etendue") == 0
 
-    sensor = sensor_set(sensor, "n pixel samples for computing", 3)
+    sensor = sensor_set(sensor, "spatial samples per pixel", 3)
     sensor = sensor_set(sensor, "vignetting flag", "bare")
 
     assert sensor_get(sensor, "ngrid samples") == 3
     assert sensor_get(sensor, "nsamples per pixel") == 3
+    assert sensor_get(sensor, "pixel samples") == 3
     assert sensor_get(sensor, "sensor vignetting") == "bare"
     assert sensor_get(sensor, "vignetting flag") == "bare"
     assert sensor_get(sensor, "vignetting name") == "bare"
@@ -2629,7 +2630,7 @@ def test_sensor_get_set_supports_noise_seed_reuse_and_response_type(asset_store)
 
     sensor = sensor_set(sensor, "reuse noise", True)
     sensor = sensor_set(sensor, "noise seed", 7)
-    sensor = sensor_set(sensor, "response type", "LOG")
+    sensor = sensor_set(sensor, "responsetype", "LOG")
 
     assert sensor_get(sensor, "reusenoise") is True
     assert sensor_get(sensor, "noiseseed") == 7
