@@ -2254,6 +2254,41 @@ def test_sensor_get_set_supports_sampling_and_vignetting_aliases(asset_store) ->
     assert sensor_get(sensor, "no microlens etendue") == "bare"
 
 
+def test_sensor_get_set_supports_noise_seed_reuse_and_response_type(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+
+    assert sensor_get(sensor, "reuse noise") is False
+    assert sensor_get(sensor, "noise seed") == 0
+    assert sensor_get(sensor, "response type") == "linear"
+
+    sensor = sensor_set(sensor, "reuse noise", True)
+    sensor = sensor_set(sensor, "noise seed", 7)
+    sensor = sensor_set(sensor, "response type", "LOG")
+
+    assert sensor_get(sensor, "reusenoise") is True
+    assert sensor_get(sensor, "noiseseed") == 7
+    assert sensor_get(sensor, "responsetype") == "log"
+
+
+def test_sensor_compute_uses_stored_noise_seed_when_seed_omitted(asset_store) -> None:
+    scene = scene_create("uniform d65")
+    oi = oi_compute(oi_create(), scene)
+
+    sensor_a = sensor_set(sensor_create("monochrome", asset_store=asset_store), "noise flag", 2)
+    sensor_a = sensor_set(sensor_a, "noise seed", 11)
+    sensor_b = sensor_set(sensor_create("monochrome", asset_store=asset_store), "noise flag", 2)
+    sensor_b = sensor_set(sensor_b, "noise seed", 11)
+    sensor_c = sensor_set(sensor_create("monochrome", asset_store=asset_store), "noise flag", 2)
+    sensor_c = sensor_set(sensor_c, "noise seed", 13)
+
+    result_a = sensor_compute(sensor_a, oi)
+    result_b = sensor_compute(sensor_b, oi)
+    result_c = sensor_compute(sensor_c, oi)
+
+    assert np.allclose(np.asarray(result_a.data["volts"], dtype=float), np.asarray(result_b.data["volts"], dtype=float))
+    assert not np.allclose(np.asarray(result_a.data["volts"], dtype=float), np.asarray(result_c.data["volts"], dtype=float))
+
+
 def test_sensor_set_cfa_round_trips_matlab_style_struct(asset_store) -> None:
     sensor = sensor_create("rgbw", asset_store=asset_store)
     cfa = sensor_get(sensor, "cfa")

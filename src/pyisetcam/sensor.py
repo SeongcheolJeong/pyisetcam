@@ -97,6 +97,9 @@ def _sensor_base(
             "analog_offset": 0.0,
             "nbits": 10,
             "noise_flag": 2,
+            "reuse_noise": False,
+            "noise_seed": 0,
+            "response_type": "linear",
             "auto_exposure": True,
             "integration_time": 0.0,
             "quantization": "analog",
@@ -1144,6 +1147,10 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
     if key in {"prnuimage", "gainfpnimage"}:
         stored = sensor.fields.get("gain_fpn_image")
         return None if stored is None else np.asarray(stored, dtype=float).copy()
+    if key == "reusenoise":
+        return bool(sensor.fields.get("reuse_noise", False))
+    if key == "noiseseed":
+        return _copy_metadata_value(sensor.fields.get("noise_seed", 0))
     if key == "nbits":
         return int(sensor.fields["nbits"])
     if key in {
@@ -1191,6 +1198,8 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return int(sensor.fields.get("n_samples_per_pixel", 1))
     if key in {"quantization", "quantizationmethod"}:
         return sensor.fields["quantization"]
+    if key == "responsetype":
+        return str(sensor.fields.get("response_type", "linear"))
     if key in {"pixelvoltageswing", "voltageswing"}:
         return float(sensor.fields["pixel"]["voltage_swing"])
     if key in {"maxvoltage", "max", "maxoutput"}:
@@ -1543,6 +1552,12 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
             raise ValueError("PRNU image must match the sensor size.")
         sensor.fields["gain_fpn_image"] = image
         return sensor
+    if key == "reusenoise":
+        sensor.fields["reuse_noise"] = bool(value)
+        return sensor
+    if key == "noiseseed":
+        sensor.fields["noise_seed"] = _copy_metadata_value(value)
+        return sensor
     if key in {
         "vignetting",
         "vignettingflag",
@@ -1572,6 +1587,12 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         return sensor
     if key in {"quantization", "quantizationmethod"}:
         sensor.fields["quantization"] = str(value)
+        return sensor
+    if key == "responsetype":
+        normalized = str(param_format(value))
+        if normalized not in {"linear", "log"}:
+            raise ValueError("response type must be 'linear' or 'log'.")
+        sensor.fields["response_type"] = normalized
         return sensor
     if key == "volts":
         volts = np.asarray(value, dtype=float)
@@ -1957,7 +1978,7 @@ def sensor_compute(
     oi: OpticalImage,
     show_bar: bool | None = None,
     *,
-    seed: int = 0,
+    seed: int | None = None,
     session: SessionContext | None = None,
 ) -> Sensor:
     """Compute sensor response from an optical image."""
@@ -1981,7 +2002,8 @@ def sensor_compute(
         computed.fields["integration_time"] = _auto_exposure_default(computed, oi)
 
     integration_time = float(computed.fields["integration_time"])
-    rng = np.random.default_rng(seed)
+    seed_value = sensor.fields.get("noise_seed", 0) if seed is None else seed
+    rng = np.random.default_rng(seed_value)
     noise_flag = int(computed.fields["noise_flag"])
 
     if computed.fields["mosaic"]:

@@ -354,6 +354,10 @@ exposure arrays until bracketed/CFA capture compute is ported. The nearby
 sampling and vignetting aliases now also round-trip through
 `sensorGet/Set('pixel samples'/'n pixel samples for computing')` and
 `sensorGet/Set('sensor vignetting'/'sensor bare etendue'/'no microlens etendue')`.
+The adjacent noise-control storage surface now also includes
+`sensorGet/Set('reuse noise')`, `sensorGet/Set('noise seed')`, and
+`sensorGet/Set('response type')`, with stored noise seeds now feeding
+`sensorCompute(...)` whenever no explicit seed argument is passed.
 The same headless plotting surface now
 also covers `plotSensor('etendue')`, returning MATLAB-style support and
 relative-illumination payloads without opening a mesh plot window. Sensor
