@@ -230,6 +230,39 @@ def _sensor_column_fpn(sensor: Sensor) -> np.ndarray:
     return np.asarray(stored, dtype=float).reshape(-1).copy()
 
 
+def _sensor_dynamic_range(sensor: Sensor, integration_time: Any = None) -> Any:
+    if integration_time is None:
+        integration_time = sensor_get(sensor, "integration time")
+    integration_time_array = np.asarray(integration_time, dtype=float).reshape(-1)
+    if integration_time_array.size == 0:
+        return None
+    if integration_time_array.size == 1 and np.isclose(integration_time_array[0], 0.0):
+        return None
+    integration_time_array = np.sort(integration_time_array)
+    if integration_time_array.size > 1:
+        integration_time_array = integration_time_array[[0, -1]]
+
+    pixel = sensor.fields["pixel"]
+    dark_voltage = float(pixel["dark_voltage_v_per_sec"])
+    read_noise = float(pixel["read_noise_v"])
+    conversion_gain = max(float(pixel["conversion_gain_v_per_electron"]), 1e-12)
+    dsnu_sigma = float(pixel["dsnu_sigma_v"])
+    voltage_swing = float(pixel["voltage_swing"])
+
+    dark_variance = (dark_voltage * integration_time_array / conversion_gain) * (conversion_gain**2)
+    read_variance = read_noise**2
+    offset_variance = dsnu_sigma**2
+    noise_sd = np.sqrt(dark_variance + read_variance + offset_variance)
+    max_voltage = voltage_swing - (dark_voltage * integration_time_array)
+
+    dr = np.full(noise_sd.shape, np.inf, dtype=float)
+    positive = noise_sd > 0.0
+    dr[positive] = 10.0 * np.log10(np.maximum(max_voltage[positive], 0.0) / noise_sd[positive])
+    if dr.size == 1:
+        return float(dr[0])
+    return dr
+
+
 def _copy_metadata_value(value: Any) -> Any:
     if isinstance(value, np.ndarray):
         return value.copy()
@@ -1140,8 +1173,11 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return float(sensor.fields["analog_gain"])
     if key == "analogoffset":
         return float(sensor.fields["analog_offset"])
-    if key == "noiseflag":
+    if key in {"noiseflag", "shotnoiseflag"}:
         return int(sensor.fields["noise_flag"])
+    if key in {"dr", "drdb20", "dynamicrange", "sensordynamicrange"}:
+        integration_time = args[0] if args else None
+        return _sensor_dynamic_range(sensor, integration_time)
     if key in {"fpnparameters", "fpn", "fpnoffsetgain", "fpnoffsetandgain"}:
         return np.array([sensor_get(sensor, "dsnu sigma"), sensor_get(sensor, "prnu sigma")], dtype=float)
     if key in {"dsnulevel", "sigmaoffsetfpn", "offsetfpn", "offset", "offsetsd", "dsnusigma", "sigmadsnu"}:
@@ -1172,6 +1208,15 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return bool(sensor.fields.get("reuse_noise", False))
     if key == "noiseseed":
         return _copy_metadata_value(sensor.fields.get("noise_seed", 0))
+    if key == "responsedr":
+        volts = sensor.data.get("volts")
+        if volts is None:
+            return None
+        volts_array = np.asarray(volts, dtype=float)
+        voltage_swing = float(sensor_get(sensor, "pixel voltage swing"))
+        v_max = float(np.max(volts_array))
+        v_min = max(float(np.min(volts_array)), voltage_swing / float(2**12))
+        return v_max / v_min
     if key == "nbits":
         return int(sensor.fields["nbits"])
     if key in {

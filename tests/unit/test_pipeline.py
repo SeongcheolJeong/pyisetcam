@@ -2305,6 +2305,39 @@ def test_sensor_get_set_supports_noise_seed_reuse_and_response_type(asset_store)
     assert sensor_get(sensor, "responsetype") == "log"
 
 
+def test_sensor_get_supports_response_and_dynamic_range_aliases(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "integration time", 0.05)
+    sensor = sensor_set(sensor, "dsnu sigma", 0.002)
+
+    pixel = sensor_get(sensor, "pixel")
+    dark_voltage = float(pixel["dark_voltage_v_per_sec"])
+    read_noise = float(pixel["read_noise_v"])
+    conversion_gain = float(pixel["conversion_gain_v_per_electron"])
+    dsnu_sigma = float(pixel["dsnu_sigma_v"])
+    voltage_swing = float(pixel["voltage_swing"])
+    expected_noise_sd = np.sqrt(
+        ((dark_voltage * 0.05) / conversion_gain) * (conversion_gain**2)
+        + (read_noise**2)
+        + (dsnu_sigma**2)
+    )
+    expected_dr = 10.0 * np.log10((voltage_swing - (dark_voltage * 0.05)) / expected_noise_sd)
+
+    assert np.isclose(sensor_get(sensor, "dr"), expected_dr)
+    assert np.isclose(sensor_get(sensor, "dr db20"), expected_dr)
+    assert np.isclose(sensor_get(sensor, "dynamic range"), expected_dr)
+    assert np.isclose(sensor_get(sensor, "sensor dynamic range"), expected_dr)
+
+    sensor = sensor_set(sensor, "integration time", 0.0)
+    assert sensor_get(sensor, "sensor dynamic range") is None
+
+    sensor = sensor_set(sensor, "volts", np.array([[0.0, 0.5], [0.25, 0.75]], dtype=float))
+    assert np.isclose(sensor_get(sensor, "response dr"), 0.75 / (1.0 / 4096.0))
+
+    sensor = sensor_set(sensor, "noise flag", 1)
+    assert sensor_get(sensor, "shot noise flag") == 1
+
+
 def test_sensor_compute_uses_stored_noise_seed_when_seed_omitted(asset_store) -> None:
     scene = scene_create("uniform d65")
     oi = oi_compute(oi_create(), scene)

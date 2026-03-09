@@ -361,7 +361,10 @@ The adjacent noise-control storage surface now also includes
 neighboring column fixed-pattern-noise storage surface now also
 round-trips through `sensorGet/Set('column fpn')`,
 `sensorGet('column dsnu'/'column prnu')`, and
-`sensorGet/Set('col offset fpn vector'/'col gain fpn vector')`.
+`sensorGet/Set('col offset fpn vector'/'col gain fpn vector')`. The same
+adjacent response/noise summary block now also includes
+`sensorGet('response dr')`, `sensorGet('dr'/'dynamic range'/'sensor dynamic range')`,
+and the upstream `shot noise flag` getter alias.
 The same headless plotting surface now
 also covers `plotSensor('etendue')`, returning MATLAB-style support and
 relative-illumination payloads without opening a mesh plot window. Sensor
