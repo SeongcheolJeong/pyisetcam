@@ -364,21 +364,58 @@ def test_pixel_and_sensor_snr_helpers_and_plot_wrappers(asset_store) -> None:
 
 def test_plot_sensor_spectral_wrappers(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "wave", np.array([500.0, 600.0], dtype=float))
+    sensor = sensor_set(
+        sensor,
+        "color filters",
+        np.array(
+            [
+                [0.9, 0.5, 0.1],
+                [0.6, 0.2, 0.8],
+            ],
+            dtype=float,
+        ),
+    )
+    sensor = sensor_set(sensor, "pixel spectral qe", np.array([0.5, 0.25], dtype=float))
+    sensor = sensor_set(sensor, "ir filter", np.array([0.8, 0.4], dtype=float))
 
     color_udata, color_handle = plotSensor(sensor, "color filters")
+    ir_udata, ir_handle = plotSensor(sensor, "ir filter")
+    pixel_qe_udata, pixel_qe_handle = plotSensor(sensor, "pixel spectral qe")
+    pixel_sr_udata, pixel_sr_handle = plotSensor(sensor, "pixel spectral sr")
     qe_udata, qe_handle = plotSensor(sensor, "sensor spectral qe")
 
     expected_wave = np.asarray(sensor_get(sensor, "wave"), dtype=float)
     expected_filters = np.asarray(sensor_get(sensor, "color filters"), dtype=float)
-    expected_qe = np.asarray(sensor_get(sensor, "spectral qe"), dtype=float)
+    expected_ir = np.array([[0.8], [0.4]], dtype=float)
+    expected_pixel_qe = np.array([[0.5], [0.25]], dtype=float)
+    expected_pixel_sr = (
+        (expected_wave.reshape(-1, 1) * 1e-9 * 1.602177e-19) / (6.62607015e-34 * 2.99792458e8)
+    ) * expected_pixel_qe
+    expected_qe = expected_filters * expected_pixel_qe * expected_ir
     expected_names = list(sensor_get(sensor, "filter color letters cell"))
 
     assert color_handle is None
+    assert ir_handle is None
+    assert pixel_qe_handle is None
+    assert pixel_sr_handle is None
     assert qe_handle is None
     assert np.allclose(color_udata["x"], expected_wave)
     assert np.allclose(color_udata["y"], expected_filters)
     assert color_udata["filterNames"] == expected_names
     assert color_udata["yLabel"] == "Transmittance"
+    assert np.allclose(ir_udata["x"], expected_wave)
+    assert np.allclose(ir_udata["y"], expected_ir)
+    assert ir_udata["filterNames"] == ["o"]
+    assert ir_udata["yLabel"] == "Transmittance"
+    assert np.allclose(pixel_qe_udata["x"], expected_wave)
+    assert np.allclose(pixel_qe_udata["y"], expected_pixel_qe)
+    assert pixel_qe_udata["filterNames"] == ["k"]
+    assert pixel_qe_udata["yLabel"] == "QE"
+    assert np.allclose(pixel_sr_udata["x"], expected_wave)
+    assert np.allclose(pixel_sr_udata["y"], expected_pixel_sr)
+    assert pixel_sr_udata["filterNames"] == ["k"]
+    assert pixel_sr_udata["yLabel"] == "Responsivity:  Volts/Watt"
     assert np.allclose(qe_udata["x"], expected_wave)
     assert np.allclose(qe_udata["y"], expected_qe)
     assert qe_udata["filterNames"] == expected_names

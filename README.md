@@ -316,7 +316,11 @@ place too through `plotSensor('cfa image')`, `plotSensor('true size')`,
 and `plotSensor('channels')`, returning image and per-channel payloads
 instead of opening GUI windows. The same headless plotting surface now
 also covers `plotSensor('etendue')`, returning MATLAB-style support and
-relative-illumination payloads without opening a mesh plot window.
+relative-illumination payloads without opening a mesh plot window. Sensor
+spectral plotting now also includes `plotSensor('ir filter')`,
+`plotSensor('pixel spectral qe')`, and `plotSensor('pixel spectral sr')`,
+backed by explicit `ir filter` and `pixel spectral qe` state on the
+sensor model.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

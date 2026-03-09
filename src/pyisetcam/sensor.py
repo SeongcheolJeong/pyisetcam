@@ -29,6 +29,8 @@ _DEFAULT_PIXEL = {
     "prnu_sigma": 0.0,
 }
 _ELEMENTARY_CHARGE_C = 1.602177e-19
+_PLANCK_CONSTANT_J_S = 6.62607015e-34
+_LIGHT_SPEED_M_S = 2.99792458e8
 _SPATIAL_UNIT_SCALE = {
     "meters": 1.0,
     "meter": 1.0,
@@ -77,6 +79,8 @@ def _sensor_base(
             "n_samples_per_pixel": 1,
             "vignetting": 0,
             "etendue": None,
+            "pixel_qe": np.ones(np.asarray(wave, dtype=float).size, dtype=float),
+            "ir_filter": np.ones(np.asarray(wave, dtype=float).size, dtype=float),
         }
     )
     return sensor
@@ -130,6 +134,41 @@ def _sensor_unit_block(sensor: Sensor) -> tuple[int, int]:
 def _sensor_filter_color_letters(sensor: Sensor) -> str:
     names = sensor.fields.get("filter_names", [])
     return "".join(str(name)[0].lower() if str(name) else "k" for name in names)
+
+
+def _sensor_pixel_qe(sensor: Sensor, *, dtype: Any = float) -> np.ndarray:
+    stored = sensor.fields.get("pixel_qe")
+    if stored is None:
+        return np.ones(np.asarray(sensor.fields["wave"], dtype=float).size, dtype=dtype)
+    qe = np.asarray(stored, dtype=dtype).reshape(-1)
+    if qe.size == 1:
+        return np.full(np.asarray(sensor.fields["wave"], dtype=float).size, float(qe[0]), dtype=dtype)
+    return qe
+
+
+def _sensor_ir_filter(sensor: Sensor, *, dtype: Any = float) -> np.ndarray:
+    stored = sensor.fields.get("ir_filter")
+    if stored is None:
+        return np.ones(np.asarray(sensor.fields["wave"], dtype=float).size, dtype=dtype)
+    ir_filter = np.asarray(stored, dtype=dtype).reshape(-1)
+    if ir_filter.size == 1:
+        return np.full(np.asarray(sensor.fields["wave"], dtype=float).size, float(ir_filter[0]), dtype=dtype)
+    return ir_filter
+
+
+def _sensor_combined_qe(sensor: Sensor, *, dtype: Any = float) -> np.ndarray:
+    filter_spectra = np.asarray(sensor.fields["filter_spectra"], dtype=dtype)
+    if filter_spectra.ndim == 1:
+        filter_spectra = filter_spectra.reshape(-1, 1)
+    pixel_qe = _sensor_pixel_qe(sensor, dtype=dtype).reshape(-1, 1)
+    ir_filter = _sensor_ir_filter(sensor, dtype=dtype).reshape(-1, 1)
+    return filter_spectra * pixel_qe * ir_filter
+
+
+def _pixel_spectral_sr(sensor: Sensor, *, dtype: Any = float) -> np.ndarray:
+    wave_m = np.asarray(sensor.fields["wave"], dtype=float).reshape(-1) * 1e-9
+    pixel_qe = _sensor_pixel_qe(sensor, dtype=dtype).reshape(-1)
+    return ((wave_m * _ELEMENTARY_CHARGE_C) / (_PLANCK_CONSTANT_J_S * _LIGHT_SPEED_M_S) * pixel_qe).astype(dtype, copy=False)
 
 
 def _sensor_aligned_dimension(value: Any, block_size: int) -> int:
@@ -216,6 +255,8 @@ def _sensor_from_upstream_model(
     sensor.fields["pattern"] = pattern
     sensor.fields["filter_spectra"] = filter_spectra
     sensor.fields["filter_names"] = _matlab_string_list(model.color.filterNames)
+    sensor.fields["pixel_qe"] = np.asarray(getattr(model.pixel, "spectralQE", np.ones(wave.size)), dtype=float).reshape(-1)
+    sensor.fields["ir_filter"] = np.asarray(getattr(model.color, "irFilter", np.ones(wave.size)), dtype=float).reshape(-1)
     sensor.fields["analog_gain"] = float(model.analogGain)
     sensor.fields["analog_offset"] = float(model.analogOffset)
     sensor.fields["quantization"] = str(model.quantization)
@@ -554,8 +595,14 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return np.asarray(sensor.fields["pattern"], dtype=int)
     if key in {"filterspectra", "colorfilters"}:
         return np.asarray(sensor.fields["filter_spectra"], dtype=float)
-    if key in {"spectralqe", "qe"}:
-        return np.asarray(sensor.fields["filter_spectra"], dtype=float)
+    if key in {"spectralqe", "sensorqe", "sensorspectralqe", "qe"}:
+        return _sensor_combined_qe(sensor)
+    if key in {"pixelspectralqe", "pdspectralqe", "pixelqe"}:
+        return _sensor_pixel_qe(sensor)
+    if key in {"spectralsr", "pdspectralsr", "pixelspectralsr", "sr"}:
+        return _pixel_spectral_sr(sensor)
+    if key in {"ir", "infraredfilter", "irfilter", "otherfilter"}:
+        return _sensor_ir_filter(sensor)
     if key in {"filternames", "filtername"}:
         return list(sensor.fields["filter_names"])
     if key in {"nfilters", "nfilter", "ncolors", "ncolor", "nsensors", "nsensor"}:
@@ -770,6 +817,25 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         return sensor
     if key in {"filterspectra", "colorfilters"}:
         sensor.fields["filter_spectra"] = np.asarray(value, dtype=float)
+        return sensor
+    if key in {"pixelspectralqe", "pdspectralqe", "pixelqe"}:
+        current = _sensor_pixel_qe(sensor)
+        qe = np.asarray(value, dtype=float).reshape(-1)
+        if qe.size == 1:
+            sensor.fields["pixel_qe"] = current * float(qe[0])
+            return sensor
+        if qe.size != np.asarray(sensor.fields["wave"], dtype=float).size:
+            raise ValueError("pixel spectral QE must match the sensor wavelength sampling.")
+        sensor.fields["pixel_qe"] = qe
+        return sensor
+    if key in {"ir", "infraredfilter", "irfilter", "otherfilter"}:
+        ir_filter = np.asarray(value, dtype=float).reshape(-1)
+        if ir_filter.size == 1:
+            sensor.fields["ir_filter"] = np.full(np.asarray(sensor.fields["wave"], dtype=float).size, float(ir_filter[0]), dtype=float)
+            return sensor
+        if ir_filter.size != np.asarray(sensor.fields["wave"], dtype=float).size:
+            raise ValueError("IR filter must match the sensor wavelength sampling.")
+        sensor.fields["ir_filter"] = ir_filter
         return sensor
     if key in {"filternames", "filtername"}:
         sensor.fields["filter_names"] = list(value)
@@ -1054,7 +1120,7 @@ def _interp2_linear_constant_zero(
 def _sensor_qe_on_wave(sensor: Sensor, target_wave: np.ndarray, *, dtype: Any = float) -> np.ndarray:
     target_wave = np.asarray(target_wave, dtype=float).reshape(-1)
     sensor_wave = np.asarray(sensor.fields["wave"], dtype=float).reshape(-1)
-    spectral_qe = np.asarray(sensor.fields["filter_spectra"], dtype=dtype)
+    spectral_qe = _sensor_combined_qe(sensor, dtype=dtype)
     if spectral_qe.ndim == 1:
         spectral_qe = spectral_qe.reshape(-1, 1)
     if np.array_equal(target_wave, sensor_wave):

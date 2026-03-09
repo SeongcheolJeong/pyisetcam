@@ -83,6 +83,18 @@ def _sensor_plot_spectra(sensor: Sensor, data_type: str) -> dict[str, Any]:
         data = np.asarray(sensor_get(sensor, "color filters"), dtype=float)
         names = list(sensor_get(sensor, "filter color letters cell"))
         y_label = "Transmittance"
+    elif key == "irfilter":
+        data = np.asarray(sensor_get(sensor, "ir filter"), dtype=float).reshape(-1, 1)
+        names = ["o"]
+        y_label = "Transmittance"
+    elif key in {"pdspectralqe", "pixelspectralqe"}:
+        data = np.asarray(sensor_get(sensor, "pixel spectral qe"), dtype=float).reshape(-1, 1)
+        names = ["k"]
+        y_label = "QE"
+    elif key in {"spectralsr", "sr", "pdspectralsr", "pixelspectralsr"}:
+        data = np.asarray(sensor_get(sensor, "pixel spectral sr"), dtype=float).reshape(-1, 1)
+        names = ["k"]
+        y_label = "Responsivity:  Volts/Watt"
     elif key in {"spectralqe", "sensorspectralqe"}:
         data = np.asarray(sensor_get(sensor, "spectral qe"), dtype=float)
         names = list(sensor_get(sensor, "filter color letters cell"))
@@ -492,6 +504,12 @@ def sensor_plot(
             "snrPRNU": snr_prnu,
         }, None
     if key == "colorfilters":
+        return _sensor_plot_spectra(sensor, key), None
+    if key == "irfilter":
+        return _sensor_plot_spectra(sensor, key), None
+    if key in {"pdspectralqe", "pixelspectralqe"}:
+        return _sensor_plot_spectra(sensor, key), None
+    if key in {"spectralsr", "sr", "pdspectralsr", "pixelspectralsr"}:
         return _sensor_plot_spectra(sensor, key), None
     if key in {"spectralqe", "sensorspectralqe"}:
         return _sensor_plot_spectra(sensor, key), None
