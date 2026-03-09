@@ -153,6 +153,28 @@ def _sensor_spectrum_struct(sensor: Sensor) -> dict[str, Any]:
     return spectrum
 
 
+def _sensor_chart_parameters(sensor: Sensor) -> dict[str, Any]:
+    stored = sensor.fields.get("chartP")
+    if not isinstance(stored, dict):
+        stored = {}
+        sensor.fields["chartP"] = stored
+    chart = dict(stored)
+    for key in ("cornerPoints", "rects", "currentRect"):
+        if key in chart and chart[key] is not None:
+            chart[key] = np.asarray(chart[key]).copy()
+    return chart
+
+
+def _copy_metadata_value(value: Any) -> Any:
+    if isinstance(value, np.ndarray):
+        return value.copy()
+    if isinstance(value, dict):
+        return dict(value)
+    if isinstance(value, list):
+        return list(value)
+    return value
+
+
 def _spectrum_struct_from_value(value: Any) -> dict[str, Any]:
     if isinstance(value, dict):
         spectrum = dict(value)
@@ -844,6 +866,20 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return sensor.name
     if key in {"wave", "wavelength", "wavelengthsamples"}:
         return np.asarray(sensor.fields["wave"], dtype=float)
+    if key in {"chartparameters"}:
+        return _sensor_chart_parameters(sensor)
+    if key in {"cornerpoints", "chartcornerpoints", "chartcorners"}:
+        chart = sensor.fields.get("chartP", {})
+        value = chart.get("cornerPoints")
+        return None if value is None else np.asarray(value).copy()
+    if key in {"chartrects", "chartrectangles"}:
+        chart = sensor.fields.get("chartP", {})
+        value = chart.get("rects")
+        return None if value is None else np.asarray(value).copy()
+    if key in {"currentrect", "chartcurrentrect"}:
+        chart = sensor.fields.get("chartP", {})
+        value = chart.get("currentRect")
+        return None if value is None else np.asarray(value).copy()
     if key in {"spectrum", "sensorspectrum"}:
         return _sensor_spectrum_struct(sensor)
     if key in {"binwidth", "waveresolution", "wavelengthresolution"}:
@@ -1002,6 +1038,14 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return float(sensor.fields["pixel"]["voltage_swing"])
     if key in {"maxvoltage", "max", "maxoutput"}:
         return float(sensor_get(sensor, "pixel voltage swing"))
+    if key == "metadatasensorname":
+        return _copy_metadata_value(sensor.metadata.get("sensorname"))
+    if key == "metadatascenename":
+        return _copy_metadata_value(sensor.metadata.get("scenename"))
+    if key == "metadataopticsname":
+        return _copy_metadata_value(sensor.metadata.get("opticsname"))
+    if key == "metadatacrop":
+        return _copy_metadata_value(sensor.metadata.get("crop"))
     if key in {"zerolevel", "zero"}:
         return float(sensor.fields.get("zero_level", 0.0))
     if key in {"maxdigital", "maxdigitalvalue"}:
@@ -1135,6 +1179,22 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         sensor.fields["spectrum"] = spectrum
         sensor.fields["spectrum"]["wave"] = np.asarray(sensor.fields["wave"], dtype=float).copy()
         return sensor
+    if key in {"chartparameters"}:
+        sensor.fields["chartP"] = _sensor_chart_parameters(sensor)
+        sensor.fields["chartP"].update(dict(value))
+        return sensor
+    if key in {"chartcornerpoints", "cornerpoints"}:
+        sensor.fields["chartP"] = _sensor_chart_parameters(sensor)
+        sensor.fields["chartP"]["cornerPoints"] = np.asarray(value).copy()
+        return sensor
+    if key in {"chartrects", "chartrectangles"}:
+        sensor.fields["chartP"] = _sensor_chart_parameters(sensor)
+        sensor.fields["chartP"]["rects"] = np.asarray(value).copy()
+        return sensor
+    if key in {"chartcurrentrect", "currentrect"}:
+        sensor.fields["chartP"] = _sensor_chart_parameters(sensor)
+        sensor.fields["chartP"]["currentRect"] = np.asarray(value).copy()
+        return sensor
     if key in {"wave", "wavelength", "wavelengthsamples"}:
         sensor = _sensor_update_wave(sensor, np.asarray(value, dtype=float).reshape(-1))
         return sensor
@@ -1216,6 +1276,18 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         return sensor
     if key in {"zerolevel", "zero"}:
         sensor.fields["zero_level"] = float(value)
+        return sensor
+    if key == "metadatasensorname":
+        sensor.metadata["sensorname"] = _copy_metadata_value(value)
+        return sensor
+    if key == "metadatascenename":
+        sensor.metadata["scenename"] = _copy_metadata_value(value)
+        return sensor
+    if key == "metadataopticsname":
+        sensor.metadata["opticsname"] = _copy_metadata_value(value)
+        return sensor
+    if key == "metadatacrop":
+        sensor.metadata["crop"] = _copy_metadata_value(value)
         return sensor
     if key == "gamma":
         _sensor_render_state(sensor)["gamma"] = float(value)

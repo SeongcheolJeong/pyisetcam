@@ -2071,6 +2071,37 @@ def test_sensor_get_set_supports_matlab_style_spectrum_metadata(asset_store) -> 
     assert sensor_get(sensor, "sensor spectrum")["comment"] == "test spectrum"
 
 
+def test_sensor_get_set_supports_chart_and_metadata_surface(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    corner_points = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float)
+    rects = np.array([[10.0, 20.0, 5.0, 6.0]], dtype=float)
+    current_rect = np.array([7.0, 8.0, 9.0, 10.0], dtype=float)
+
+    sensor = sensor_set(sensor, "chart parameters", {"name": "Macbeth", "nSquares": 24})
+    sensor = sensor_set(sensor, "chart corner points", corner_points)
+    sensor = sensor_set(sensor, "chart rectangles", rects)
+    sensor = sensor_set(sensor, "current rect", current_rect)
+    sensor = sensor_set(sensor, "metadata sensor name", "sensor-a")
+    sensor = sensor_set(sensor, "metadata scene name", "scene-a")
+    sensor = sensor_set(sensor, "metadata optics name", "optics-a")
+    sensor = sensor_set(sensor, "metadata crop", np.array([1, 2, 3, 4], dtype=int))
+
+    chart = sensor_get(sensor, "chart parameters")
+
+    assert chart["name"] == "Macbeth"
+    assert chart["nSquares"] == 24
+    assert np.array_equal(chart["cornerPoints"], corner_points)
+    assert np.array_equal(chart["rects"], rects)
+    assert np.array_equal(chart["currentRect"], current_rect)
+    assert np.array_equal(sensor_get(sensor, "chart corner points"), corner_points)
+    assert np.array_equal(sensor_get(sensor, "chart rectangles"), rects)
+    assert np.array_equal(sensor_get(sensor, "current rect"), current_rect)
+    assert sensor_get(sensor, "metadata sensor name") == "sensor-a"
+    assert sensor_get(sensor, "metadata scene name") == "scene-a"
+    assert sensor_get(sensor, "metadata optics name") == "optics-a"
+    assert np.array_equal(sensor_get(sensor, "metadata crop"), np.array([1, 2, 3, 4], dtype=int))
+
+
 def test_sensor_set_cfa_round_trips_matlab_style_struct(asset_store) -> None:
     sensor = sensor_create("rgbw", asset_store=asset_store)
     cfa = sensor_get(sensor, "cfa")

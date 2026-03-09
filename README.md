@@ -327,6 +327,11 @@ The neighboring spectral metadata surface now also includes
 `sensorGet/Set('spectrum')`, wavelength aliases, `sensorGet('bin width')`,
 and MATLAB-style wave updates that keep stored filter spectra, pixel QE,
 and IR-filter samples interpolated onto the new wavelength grid.
+The adjacent raw chart/metadata block is now covered too through
+`sensorGet/Set('chart parameters')`, `sensorGet/Set('chart corner points')`,
+`sensorGet/Set('chart rectangles')`, `sensorGet/Set('current rect')`, and
+the nearby `metadata sensor/scene/optics name` plus `metadata crop`
+round-trip fields.
 The same headless plotting surface now
 also covers `plotSensor('etendue')`, returning MATLAB-style support and
 relative-illumination payloads without opening a mesh plot window. Sensor
