@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from pyisetcam import (
     ipPlot,
@@ -14,6 +15,7 @@ from pyisetcam import (
     oi_set,
     plotScene,
     plotSensor,
+    plotSensorFFT,
     scene_create,
     scene_get,
     scene_set,
@@ -25,6 +27,7 @@ from pyisetcam import (
     xyz_to_lab,
     xyz_to_luv,
 )
+from pyisetcam.exceptions import UnsupportedOptionError
 
 
 def _expected_shot_noise_map(electrons: np.ndarray, conversion_gain: float) -> np.ndarray:
@@ -647,3 +650,77 @@ def test_plot_sensor_noise_wrappers_use_stored_images_and_shot_noise(asset_store
         shot_udata["noisyImage"],
         float(sensor.fields["pixel"]["conversion_gain_v_per_electron"]) * np.rint(electrons + (expected_shot / float(sensor.fields["pixel"]["conversion_gain_v_per_electron"]))),
     )
+
+
+def test_plot_sensor_fft_wrapper(asset_store) -> None:
+    sensor = sensor_create("monochrome", asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 3)
+    sensor = sensor_set(sensor, "cols", 5)
+    sensor = sensor_set(
+        sensor,
+        "volts",
+        np.array(
+            [
+                [0.1, 0.2, 0.3, 0.4, 0.5],
+                [0.5, 0.4, 0.3, 0.2, 0.1],
+                [0.2, 0.3, 0.5, 0.7, 0.9],
+            ],
+            dtype=float,
+        ),
+    )
+    sensor = sensor_set(
+        sensor,
+        "dv",
+        np.array(
+            [
+                [10.0, 20.0, 30.0, 40.0, 50.0],
+                [50.0, 40.0, 30.0, 20.0, 10.0],
+                [15.0, 25.0, 35.0, 45.0, 55.0],
+            ],
+            dtype=float,
+        ),
+    )
+
+    volts_udata, volts_handle = plotSensorFFT(sensor, "h", "volts", np.array([2, 2], dtype=int))
+    dv_udata, dv_handle = plotSensorFFT(sensor, "vertical", "dv", np.array([3, 1], dtype=int))
+
+    h_line = np.asarray(sensor_get(sensor, "volts"), dtype=float)[1, :]
+    h_fov = float(sensor_get(sensor, "fov"))
+    expected_h_cpd = np.arange(0, round((h_line.size - 1) / 2) + 1, dtype=float) / h_fov
+    expected_h_amp = np.abs(np.fft.fft(h_line - np.mean(h_line))) / expected_h_cpd.size
+
+    v_line = np.asarray(sensor_get(sensor, "dv"), dtype=float)[:, 2]
+    expected_v_cpd = np.arange(0, round((v_line.size - 1) / 2) + 1, dtype=float) / h_fov
+    expected_v_amp = np.abs(np.fft.fft(v_line - np.mean(v_line))) / expected_v_cpd.size
+
+    assert volts_handle is None
+    assert dv_handle is None
+    assert np.array_equal(volts_udata["xy"], np.array([2, 2], dtype=int))
+    assert volts_udata["ori"] == "h"
+    assert volts_udata["dataType"] == "volts"
+    assert volts_udata["titleString"] == "ISET:  Horizontal fft 2"
+    assert volts_udata["xLabel"] == "Cycles/deg (col)"
+    assert np.allclose(volts_udata["cpd"], expected_h_cpd)
+    assert np.allclose(volts_udata["amp"], expected_h_amp)
+    assert np.allclose(volts_udata["ampPlot"], expected_h_amp[: expected_h_cpd.size])
+    assert np.isclose(volts_udata["mean"], float(np.mean(h_line)))
+    assert np.isclose(volts_udata["peakContrast"], float(np.max(expected_h_amp) / np.mean(h_line)))
+
+    assert np.array_equal(dv_udata["xy"], np.array([3, 1], dtype=int))
+    assert dv_udata["ori"] == "v"
+    assert dv_udata["dataType"] == "dv"
+    assert dv_udata["titleString"] == "ISET:  Vertical fft 3"
+    assert dv_udata["xLabel"] == "Cycles/deg (row)"
+    assert np.allclose(dv_udata["cpd"], expected_v_cpd)
+    assert np.allclose(dv_udata["amp"], expected_v_amp)
+    assert np.allclose(dv_udata["ampPlot"], expected_v_amp[: expected_v_cpd.size])
+
+
+def test_plot_sensor_fft_rejects_color_sensors(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 2)
+    sensor = sensor_set(sensor, "cols", 2)
+    sensor = sensor_set(sensor, "volts", np.ones((2, 2), dtype=float))
+
+    with pytest.raises(UnsupportedOptionError):
+        plotSensorFFT(sensor, "h", "volts", np.array([1, 1], dtype=int))

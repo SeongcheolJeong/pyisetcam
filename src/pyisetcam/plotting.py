@@ -296,6 +296,48 @@ def _sensor_plot_etendue(sensor: Sensor) -> dict[str, Any]:
     }
 
 
+def _sensor_fft_payload(sensor: Sensor, orientation: str, data_type: str, xy: Any) -> dict[str, Any]:
+    if int(sensor_get(sensor, "nfilters")) > 1:
+        raise UnsupportedOptionError("plotSensorFFT", "color sensors")
+    line_index, xy_array = _line_index("plotSensorFFT", orientation, xy, orientation)
+    data = sensor_get(sensor, data_type)
+    if data is None:
+        raise ValueError(f"Sensor has no {data_type} data for plotSensorFFT.")
+    array = np.asarray(data, dtype=float)
+    if array.ndim >= 3:
+        array = np.asarray(array[:, :, 0], dtype=float)
+    if orientation == "h":
+        if line_index < 1 or line_index > array.shape[0]:
+            raise IndexError("Horizontal sensor FFT line index is out of range.")
+        line = np.asarray(array[line_index - 1, :], dtype=float)
+        title_string = f"ISET:  Horizontal fft {line_index}"
+        x_label = "Cycles/deg (col)"
+    else:
+        if line_index < 1 or line_index > array.shape[1]:
+            raise IndexError("Vertical sensor FFT line index is out of range.")
+        line = np.asarray(array[:, line_index - 1], dtype=float)
+        title_string = f"ISET:  Vertical fft {line_index}"
+        x_label = "Cycles/deg (row)"
+    fov = float(sensor_get(sensor, "fov"))
+    cpd = np.arange(0, round((line.size - 1) / 2) + 1, dtype=float) / max(fov, 1e-12)
+    n_freq = int(cpd.size)
+    mean_value = float(np.mean(line))
+    amp = np.abs(np.fft.fft(line - mean_value)) / max(float(n_freq), 1.0)
+    peak_contrast = float(np.max(amp) / mean_value) if not np.isclose(mean_value, 0.0) else float(np.inf)
+    return {
+        "xy": xy_array.copy(),
+        "ori": orientation,
+        "dataType": data_type,
+        "cpd": cpd.copy(),
+        "amp": np.asarray(amp, dtype=float).copy(),
+        "ampPlot": np.asarray(amp[:n_freq], dtype=float).copy(),
+        "mean": mean_value,
+        "peakContrast": peak_contrast,
+        "titleString": title_string,
+        "xLabel": x_label,
+    }
+
+
 def _sensor_noise_title(the_noise: np.ndarray, voltage_swing: float) -> str:
     noise = np.asarray(the_noise, dtype=float)
     return f"Max/min: [{float(np.max(noise)):.2E},{float(np.min(noise)):.2E}] on voltage swing {float(voltage_swing):.2f}"
@@ -598,6 +640,25 @@ def sensor_plot(
     raise UnsupportedOptionError("plotSensor", p_type)
 
 
+def sensor_plot_fft(
+    sensor: Sensor,
+    ori: str = "h",
+    data_type: str = "volts",
+    xy: Any | None = None,
+) -> tuple[dict[str, Any], None]:
+    """Return MATLAB-style `plotSensorFFT` user-data without opening a figure."""
+
+    orientation_key = param_format(ori)
+    if orientation_key in {"h", "horizontal"}:
+        orientation = "h"
+    elif orientation_key in {"v", "vertical"}:
+        orientation = "v"
+    else:
+        raise UnsupportedOptionError("plotSensorFFT", ori)
+    selector = _roi_required("plotSensorFFT", f"{ori} {data_type}", xy)
+    return _sensor_fft_payload(sensor, orientation, param_format(data_type), selector), None
+
+
 def ip_plot(
     ip: ImageProcessor,
     p_type: str = "horizontal line",
@@ -678,4 +739,5 @@ def ip_plot(
 plotScene = scene_plot
 oiPlot = oi_plot
 plotSensor = sensor_plot
+plotSensorFFT = sensor_plot_fft
 ipPlot = ip_plot

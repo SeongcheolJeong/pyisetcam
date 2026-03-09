@@ -324,7 +324,8 @@ spectral plotting now also includes `plotSensor('ir filter')`,
 responsivity derived from the stored QE/filter bundle. The same headless
 sensor plotting layer now also includes deterministic noise-map payloads
 for `plotSensor('shot noise')`, `plotSensor('dsnu')`, and
-`plotSensor('prnu')`.
+`plotSensor('prnu')`. A matching headless `plotSensorFFT(...)` wrapper is
+now available too for monochrome horizontal/vertical line FFT payloads.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
