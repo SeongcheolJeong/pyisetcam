@@ -223,6 +223,13 @@ def _sensor_movement(sensor: Sensor) -> dict[str, Any]:
     return movement
 
 
+def _sensor_human(sensor: Sensor) -> dict[str, Any] | None:
+    stored = sensor.fields.get("human")
+    if stored is None:
+        return None
+    return copy.deepcopy(stored)
+
+
 def _sensor_column_fpn(sensor: Sensor) -> np.ndarray:
     stored = sensor.fields.get("column_fpn")
     if stored is None:
@@ -296,6 +303,15 @@ def _microlens_struct_from_value(value: Any) -> dict[str, Any]:
     if hasattr(value, "__dict__"):
         microlens.update(vars(value))
     return copy.deepcopy(microlens)
+
+
+def _human_struct_from_value(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return copy.deepcopy(value)
+    human = {}
+    if hasattr(value, "__dict__"):
+        human.update(vars(value))
+    return copy.deepcopy(human)
 
 
 def _movement_struct_from_value(value: Any) -> dict[str, Any]:
@@ -997,6 +1013,23 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return sensor.type
     if key == "name":
         return sensor.name
+    if key == "human":
+        return _sensor_human(sensor)
+    if key in {"humanconetype", "conetype"}:
+        human = sensor.fields.get("human", {})
+        value = human.get("coneType")
+        return None if value is None else np.asarray(value).copy()
+    if key in {"humanconedensities", "densities"}:
+        human = sensor.fields.get("human", {})
+        value = human.get("densities")
+        return None if value is None else np.asarray(value, dtype=float).copy()
+    if key in {"humanconelocs", "conexy", "conelocs", "xy"}:
+        human = sensor.fields.get("human", {})
+        value = human.get("xy")
+        return None if value is None else np.asarray(value, dtype=float).copy()
+    if key in {"humanrseed", "humanconeseed", "rseed"}:
+        human = sensor.fields.get("human", {})
+        return _copy_metadata_value(human.get("rSeed"))
     if key in {"sensormovement", "eyemovement"}:
         return _sensor_movement(sensor)
     if key in {"movementpositions", "sensorpositions"}:
@@ -1406,6 +1439,37 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
     key = param_format(parameter)
     if key == "name":
         sensor.name = str(value)
+        return sensor
+    if key == "human":
+        sensor.fields["human"] = None if value is None else _human_struct_from_value(value)
+        return sensor
+    if key in {"humanconetype", "conetype"}:
+        human = sensor.fields.get("human")
+        if not isinstance(human, dict):
+            human = {}
+        human["coneType"] = np.asarray(value).copy()
+        sensor.fields["human"] = human
+        return sensor
+    if key in {"humanconedensities", "densities"}:
+        human = sensor.fields.get("human")
+        if not isinstance(human, dict):
+            human = {}
+        human["densities"] = np.asarray(value, dtype=float).copy()
+        sensor.fields["human"] = human
+        return sensor
+    if key in {"humanconelocs", "conexy", "conelocs", "xy"}:
+        human = sensor.fields.get("human")
+        if not isinstance(human, dict):
+            human = {}
+        human["xy"] = np.asarray(value, dtype=float).copy()
+        sensor.fields["human"] = human
+        return sensor
+    if key in {"humanrseed", "humanconeseed", "rseed"}:
+        human = sensor.fields.get("human")
+        if not isinstance(human, dict):
+            human = {}
+        human["rSeed"] = _copy_metadata_value(value)
+        sensor.fields["human"] = human
         return sensor
     if key in {"sensormovement", "eyemovement"}:
         sensor.fields["movement"] = _movement_struct_from_value(value)

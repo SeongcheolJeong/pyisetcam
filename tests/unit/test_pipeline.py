@@ -2123,6 +2123,43 @@ def test_sensor_get_set_supports_movement_metadata_surface(asset_store) -> None:
     assert np.array_equal(sensor_get(sensor, "etime per pos"), frames)
 
 
+def test_sensor_get_set_supports_legacy_human_storage_surface(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    human = {
+        "name": "human",
+        "coneType": np.array([[1, 2], [3, 4]], dtype=int),
+        "densities": np.array([0.0, 0.6, 0.3, 0.1], dtype=float),
+        "xy": np.array([[0.1, 0.2], [0.3, 0.4]], dtype=float),
+        "rSeed": 17,
+    }
+
+    sensor = sensor_set(sensor, "human", human)
+
+    stored = sensor_get(sensor, "human")
+    assert stored is not None
+    assert stored["name"] == "human"
+    assert np.array_equal(sensor_get(sensor, "cone type"), human["coneType"])
+    assert np.array_equal(sensor_get(sensor, "human cone densities"), human["densities"])
+    assert np.array_equal(sensor_get(sensor, "cone xy"), human["xy"])
+    assert sensor_get(sensor, "human cone seed") == 17
+
+    stored["coneType"][0, 0] = 9
+    assert np.array_equal(sensor_get(sensor, "human")["coneType"], human["coneType"])
+
+    cone_type = np.array([[4, 3], [2, 1]], dtype=int)
+    densities = np.array([0.1, 0.5, 0.3, 0.1], dtype=float)
+    xy = np.array([[0.5, 0.6]], dtype=float)
+    sensor = sensor_set(sensor, "cone type", cone_type)
+    sensor = sensor_set(sensor, "densities", densities)
+    sensor = sensor_set(sensor, "xy", xy)
+    sensor = sensor_set(sensor, "rseed", 23)
+
+    assert np.array_equal(sensor_get(sensor, "humanconetype"), cone_type)
+    assert np.array_equal(sensor_get(sensor, "densities"), densities)
+    assert np.array_equal(sensor_get(sensor, "human cone locs"), xy)
+    assert sensor_get(sensor, "humanrseed") == 23
+
+
 def test_sensor_get_set_supports_legacy_scene_and_lens_metadata_aliases(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
 

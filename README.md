@@ -335,6 +335,10 @@ round-trip fields, along with the adjacent sensor movement surface through
 `sensorGet/Set('sensor movement'/'eye movement')`,
 `sensorGet/Set('movement positions'/'sensor positions')`, and
 `sensorGet/Set('frames per position'/'exposure times per position')`. The
+neighboring legacy human-cone storage surface now round-trips too through
+`sensorGet/Set('human')`, `sensorGet/Set('cone type')`,
+`sensorGet/Set('densities')`, `sensorGet/Set('xy')`, and the
+`human cone seed` / `rseed` aliases. The
 neighboring legacy scene/lens aliases now round-trip too through
 `sensorGet/Set('scene_name')`, `sensorGet/Set('lens')`, and
 `sensorGet('metadata lensname'/'metadata lens')`. The adjacent raw
