@@ -162,6 +162,35 @@ def test_plot_sensor_line_data(asset_store) -> None:
     assert np.allclose(dv_udata["data"][0], np.asarray(expected_dv["data"][0], dtype=float))
 
 
+def test_plot_sensor_chromaticity_wrapper(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(
+        sensor,
+        "volts",
+        np.array(
+            [
+                [2.0, 4.0, 2.0, 4.0],
+                [6.0, 2.0, 6.0, 2.0],
+                [2.0, 4.0, 2.0, 4.0],
+                [6.0, 2.0, 6.0, 2.0],
+            ],
+            dtype=float,
+        ),
+    )
+    roi = np.array([1, 1, 3, 3], dtype=int)
+
+    chroma_udata, chroma_handle = plotSensor(sensor, "chromaticity", roi)
+
+    expected_rg = np.asarray(sensor_get(sensor, "chromaticity", roi), dtype=float)
+    spectral_qe = np.asarray(sensor_get(sensor, "spectral qe"), dtype=float)
+    expected_locus = spectral_qe[:, :2] / np.sum(spectral_qe, axis=1, keepdims=True)
+
+    assert chroma_handle is None
+    assert np.array_equal(chroma_udata["rect"], roi)
+    assert np.allclose(chroma_udata["rg"], expected_rg)
+    assert np.allclose(chroma_udata["spectrumlocus"], expected_locus)
+
+
 def test_ip_plot_line_chromaticity_and_luminance(asset_store) -> None:
     ip = ip_create(asset_store=asset_store)
     result = np.array(

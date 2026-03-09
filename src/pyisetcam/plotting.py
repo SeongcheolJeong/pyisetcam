@@ -76,6 +76,26 @@ def _sensor_plot_histogram(sensor: Sensor, data_type: str, roi_locs: Any) -> dic
     return payload
 
 
+def _sensor_plot_chromaticity(sensor: Sensor, roi_locs: Any | None) -> dict[str, Any]:
+    roi = roi_locs if roi_locs is not None else sensor_get(sensor, "roi")
+    roi = _roi_required("plotSensor", "chromaticity", roi)
+    if int(sensor_get(sensor, "nfilters")) < 2:
+        raise UnsupportedOptionError("plotSensor", "chromaticity")
+    rg = np.asarray(sensor_get(sensor, "chromaticity", roi), dtype=float)
+    spectral_qe = np.asarray(sensor_get(sensor, "spectral qe"), dtype=float)
+    sums = np.sum(spectral_qe, axis=1, keepdims=True)
+    spectrum_locus = np.divide(
+        spectral_qe[:, :2],
+        sums,
+        out=np.full((spectral_qe.shape[0], 2), np.nan, dtype=float),
+        where=sums > 0.0,
+    )
+    payload = _roi_payload(roi)
+    payload["rg"] = rg.copy()
+    payload["spectrumlocus"] = spectrum_locus.copy()
+    return payload
+
+
 def _sensor_plot_spectra(sensor: Sensor, data_type: str) -> dict[str, Any]:
     key = param_format(data_type)
     wave = np.asarray(sensor_get(sensor, "wave"), dtype=float)
@@ -587,6 +607,8 @@ def sensor_plot(
     if key in {"electronshline", "hlineelectrons", "electronsvline", "vlineelectrons", "voltshline", "hlinevolts", "voltsvline", "vlinevolts", "dvhline", "hlinedv", "dvvline", "vlinedv"}:
         xy = _roi_required("plotSensor", p_type, roi_locs)
         return _sensor_plot_line_data(sensor, key, xy), None
+    if key == "chromaticity":
+        return _sensor_plot_chromaticity(sensor, roi_locs), None
     if key == "shotnoise":
         return _sensor_plot_shot_noise(sensor), None
     if key in {"dsnu", "prnu"}:

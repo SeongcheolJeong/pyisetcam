@@ -35,6 +35,7 @@
 - The sensor spectral-wrapper surface now also includes `plotSensor('ir filter')`, `plotSensor('pixel spectral qe')`, `plotSensor('pixel spectral sr')`, and `plotSensor('sensor spectral sr')`, backed by explicit `ir filter` and `pixel spectral qe` state plus MATLAB-style combined `sensorGet(..., 'spectral qe')` / `sensorGet(..., 'sensor spectral sr')` semantics.
 - That same headless sensor plotting layer now also covers deterministic noise-map payloads for `plotSensor('shot noise')`, `plotSensor('dsnu')`, and `plotSensor('prnu')`, backed by MATLAB-style DSNU/PRNU aliases on the sensor object.
 - A matching headless `plotSensorFFT(...)` wrapper is now in place too for monochrome horizontal/vertical line FFT payloads, carrying MATLAB-style `cpd`, `amp`, `mean`, and `peakContrast` data without opening a graph window.
+- The adjacent headless sensor chromaticity plot is now covered too through `plotSensor('chromaticity')`, returning MATLAB-style `rg`, `rect`, and `spectrumlocus` payloads for ROI-driven sensor chromaticity plots.
 
 ## Summary
 - Build a new Python library, `pyisetcam`, that ports the numerical `scene -> optical image -> sensor -> image processor -> camera` pipeline from ISETCam and validates it against GNU Octave runs of the upstream MATLAB code.
