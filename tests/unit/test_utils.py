@@ -107,6 +107,7 @@ def test_ie_parameter_otype_handles_direct_prefix_and_unique_params() -> None:
     assert ie_parameter_otype("pd xpos") == ("pixel", "pdxpos")
     assert ie_parameter_otype("photodetector x position") == ("pixel", "photodetectorxposition")
     assert ie_parameter_otype("pd position") == ("pixel", "pdposition")
+    assert ie_parameter_otype("quantum efficiency") == ("pixel", "quantumefficiency")
     assert ie_parameter_otype("pixel quantum efficiency") == ("pixel", "quantumefficiency")
     assert ie_parameter_otype("photodetector quantum efficiency") == ("pixel", "photodetectorquantumefficiency")
     assert ie_parameter_otype("photodetector spectral quantum efficiency") == ("pixel", "photodetectorspectralquantumefficiency")

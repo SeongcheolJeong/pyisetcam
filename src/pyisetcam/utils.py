@@ -303,6 +303,7 @@ _PARAMETER_OTYPE_UNIQUE = {
         "fillfactor",
         "pdarea",
         "pdspectralqe",
+        "quantumefficiency",
         "pixelqe",
         "pixelquantumefficiency",
         "photodetectorquantumefficiency",

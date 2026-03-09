@@ -2186,7 +2186,7 @@ def test_sensor_get_set_supports_pixel_optical_and_spectral_metadata(asset_store
     sensor = sensor_set(sensor, "pixel layer thicknesses", np.array([1.0e-6, 2.0e-6, 0.5e-6], dtype=float))
     sensor = sensor_set(sensor, "refractive index", np.array([1.0, 1.5, 3.4], dtype=float))
     sensor = sensor_set(sensor, "pixel spectrum", {"wave": np.array([450.0, 550.0, 650.0], dtype=float), "comment": "pixel spectrum"})
-    sensor = sensor_set(sensor, "pixel quantum efficiency", np.array([0.1, 0.2, 0.3], dtype=float))
+    sensor = sensor_set(sensor, "quantum efficiency", np.array([0.1, 0.2, 0.3], dtype=float))
     sensor = sensor_set(sensor, "dark voltage", 2.0e-3)
     sensor = sensor_set(sensor, "read noise volts", 1.0e-3)
     sensor = sensor_set(sensor, "voltage swing", 1.2)
@@ -2202,6 +2202,7 @@ def test_sensor_get_set_supports_pixel_optical_and_spectral_metadata(asset_store
     assert sensor_get(sensor, "pixel bin width") == 100.0
     assert sensor_get(sensor, "pixel nwave") == 3
     assert sensor_get(sensor, "pixel spectrum")["comment"] == "pixel spectrum"
+    assert np.allclose(sensor_get(sensor, "quantum efficiency"), np.array([0.1, 0.2, 0.3], dtype=float))
     assert np.allclose(sensor_get(sensor, "pixel quantum efficiency"), np.array([0.1, 0.2, 0.3], dtype=float))
     assert np.allclose(sensor_get(sensor, "photodetector quantum efficiency"), np.array([0.1, 0.2, 0.3], dtype=float))
     assert np.allclose(sensor_get(sensor, "photodetector spectral quantum efficiency"), np.array([0.1, 0.2, 0.3], dtype=float))
