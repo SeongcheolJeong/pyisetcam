@@ -209,7 +209,9 @@ def _sensor_plot_spectra(sensor: Sensor, data_type: str) -> dict[str, Any]:
         "y": data.copy(),
         "filterNames": names,
         "dataType": key,
+        "xLabel": "Wavelength (nm)",
         "yLabel": y_label,
+        "nameString": f"ISET: {key}",
     }
 
 
@@ -391,7 +393,10 @@ def _sensor_plot_etendue(sensor: Sensor) -> dict[str, Any]:
     return {
         "support": sensor_get(sensor, "spatial support", "um"),
         "sensorEtendue": np.asarray(sensor_get(sensor, "etendue"), dtype=float),
+        "xLabel": "Position (um)",
+        "yLabel": "Position (um)",
         "zLabel": "Relative illumination",
+        "nameString": f"ISET: Etendue ({sensor_get(sensor, 'vignetting name')})",
     }
 
 

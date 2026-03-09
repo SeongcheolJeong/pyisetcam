@@ -338,6 +338,9 @@ accepts the same capture selection path for multi-capture stacks.
 The remaining histogram/chromaticity wrappers now return the matching
 headless plot labels too, including histogram axis labels/filter colors and
 the MATLAB-style `rg` chromaticity axis/title strings.
+The spectral and etendue wrappers now return the same core plot metadata as
+well, including spectral wavelength-axis labels plus MATLAB-style window
+names and the etendue axis labels/name string.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

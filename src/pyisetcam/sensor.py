@@ -701,6 +701,28 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return int(sensor.fields["nbits"])
     if key in {"vignetting", "vignettingflag", "pixelvignetting"}:
         return sensor.fields.get("vignetting", 0)
+    if key == "vignettingname":
+        vignetting = sensor.fields.get("vignetting", 0)
+        if isinstance(vignetting, str):
+            normalized = param_format(vignetting)
+            if normalized in {"", "skip"}:
+                return "skip"
+            if normalized in {"bare"}:
+                return "bare"
+            if normalized in {"centered"}:
+                return "centered"
+            if normalized in {"optimal"}:
+                return "optimal"
+            return str(vignetting)
+        if vignetting in {0, None}:
+            return "skip"
+        if int(vignetting) == 1:
+            return "bare"
+        if int(vignetting) == 2:
+            return "centered"
+        if int(vignetting) == 3:
+            return "optimal"
+        return str(vignetting)
     if key in {"etendue", "sensoretendue", "imagesensorarrayetendue"}:
         stored = sensor.fields.get("etendue")
         if stored is None:

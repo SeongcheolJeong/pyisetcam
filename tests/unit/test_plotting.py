@@ -573,28 +573,40 @@ def test_plot_sensor_spectral_wrappers(asset_store) -> None:
     assert np.allclose(color_udata["x"], expected_wave)
     assert np.allclose(color_udata["y"], expected_filters)
     assert color_udata["filterNames"] == expected_names
+    assert color_udata["xLabel"] == "Wavelength (nm)"
     assert color_udata["yLabel"] == "Transmittance"
+    assert color_udata["nameString"] == "ISET: colorfilters"
     assert np.allclose(ir_udata["x"], expected_wave)
     assert np.allclose(ir_udata["y"], expected_ir)
     assert ir_udata["filterNames"] == ["o"]
+    assert ir_udata["xLabel"] == "Wavelength (nm)"
     assert ir_udata["yLabel"] == "Transmittance"
+    assert ir_udata["nameString"] == "ISET: irfilter"
     assert np.allclose(pixel_qe_udata["x"], expected_wave)
     assert np.allclose(pixel_qe_udata["y"], expected_pixel_qe)
     assert pixel_qe_udata["filterNames"] == ["k"]
+    assert pixel_qe_udata["xLabel"] == "Wavelength (nm)"
     assert pixel_qe_udata["yLabel"] == "QE"
+    assert pixel_qe_udata["nameString"] == "ISET: pixelspectralqe"
     assert np.allclose(pixel_sr_udata["x"], expected_wave)
     assert np.allclose(pixel_sr_udata["y"], expected_pixel_sr)
     assert pixel_sr_udata["filterNames"] == ["k"]
+    assert pixel_sr_udata["xLabel"] == "Wavelength (nm)"
     assert pixel_sr_udata["yLabel"] == "Responsivity:  Volts/Watt"
+    assert pixel_sr_udata["nameString"] == "ISET: pixelspectralsr"
     assert np.allclose(qe_udata["x"], expected_wave)
     assert np.allclose(qe_udata["y"], expected_qe)
     assert qe_udata["filterNames"] == expected_names
+    assert qe_udata["xLabel"] == "Wavelength (nm)"
     assert qe_udata["yLabel"] == "Quantum efficiency"
+    assert qe_udata["nameString"] == "ISET: sensorspectralqe"
     assert np.allclose(sensor_get(sensor, "sensor spectral sr"), expected_sensor_sr)
     assert np.allclose(sensor_sr_udata["x"], expected_wave)
     assert np.allclose(sensor_sr_udata["y"], expected_sensor_sr)
     assert sensor_sr_udata["filterNames"] == expected_names
+    assert sensor_sr_udata["xLabel"] == "Wavelength (nm)"
     assert sensor_sr_udata["yLabel"] == "Responsivity:  Volts/Watt"
+    assert sensor_sr_udata["nameString"] == "ISET: sensorspectralsr"
 
 
 def test_plot_sensor_cfa_wrappers(asset_store) -> None:
@@ -722,6 +734,10 @@ def test_plot_sensor_etendue_wrapper(asset_store) -> None:
     expected_support = sensor_get(sensor, "spatial support", "um")
 
     assert handle is None
+    assert sensor_get(sensor, "vignetting name") == "skip"
+    assert udata["nameString"] == "ISET: Etendue (skip)"
+    assert udata["xLabel"] == "Position (um)"
+    assert udata["yLabel"] == "Position (um)"
     assert udata["zLabel"] == "Relative illumination"
     assert np.allclose(udata["sensorEtendue"], etendue)
     assert np.allclose(udata["support"]["x"], expected_support["x"])
