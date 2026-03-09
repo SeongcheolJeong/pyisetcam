@@ -1049,6 +1049,14 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return letters[np.clip(pattern - 1, 0, letters.size - 1)]
     if key in {"integrationtime", "exptime"}:
         return float(sensor.fields["integration_time"])
+    if key == "nexposures":
+        return int(np.asarray(sensor.fields.get("integration_time")).size)
+    if key == "exposureplane":
+        if "exposure_plane" in sensor.fields:
+            return int(sensor.fields["exposure_plane"])
+        return int(np.floor(sensor_get(sensor, "n exposures") / 2.0) + 1)
+    if key in {"cds", "correlateddoublesampling"}:
+        return bool(sensor.fields.get("cds", False))
     if key == "gamma":
         return float(_sensor_render_state(sensor)["gamma"])
     if key in {"maxbright", "scalemax", "scaleintensity"}:
@@ -1373,6 +1381,12 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         sensor.fields["integration_time"] = float(value)
         sensor.fields["auto_exposure"] = False
         return sensor
+    if key == "exposureplane":
+        sensor.fields["exposure_plane"] = int(np.rint(float(value)))
+        return sensor
+    if key in {"cds", "correlateddoublesampling"}:
+        sensor.fields["cds"] = bool(value)
+        return sensor
     if key in {"zerolevel", "zero"}:
         sensor.fields["zero_level"] = float(value)
         return sensor
@@ -1399,7 +1413,10 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         _sensor_render_state(sensor)["scale"] = bool(value)
         return sensor
     if key == "autoexposure":
-        enabled = bool(value)
+        if isinstance(value, str):
+            enabled = param_format(value) == "on"
+        else:
+            enabled = bool(value)
         sensor.fields["auto_exposure"] = enabled
         if enabled:
             sensor.fields["integration_time"] = 0.0

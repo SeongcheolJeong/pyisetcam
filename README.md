@@ -343,7 +343,10 @@ microlens storage surface now round-trips as well through
 `sensorGet/Set('microlens offset'/'mloffset')`. The remaining scalar hooks
 in that upstream block now round-trip too through
 `sensorGet/Set('consistency'/'sensor consistency')` and
-`sensorGet/Set('sensor compute'/'sensor compute method')`.
+`sensorGet/Set('sensor compute'/'sensor compute method')`. The adjacent
+exposure-control surface now includes `sensorGet('n exposures')`,
+`sensorGet/Set('exposure plane')`, `sensorGet/Set('cds')`, and MATLAB-style
+`auto exposure` string handling for `'on'` / `'off'`.
 The same headless plotting surface now
 also covers `plotSensor('etendue')`, returning MATLAB-style support and
 relative-illumination payloads without opening a mesh plot window. Sensor

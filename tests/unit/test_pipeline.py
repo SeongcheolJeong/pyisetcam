@@ -2182,6 +2182,29 @@ def test_sensor_get_set_supports_consistency_and_compute_method_storage(asset_st
     assert sensor_get(sensor, "sensor compute method") == {"name": "binning", "factor": 2}
 
 
+def test_sensor_get_set_supports_exposure_plane_and_cds_surface(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+
+    assert sensor_get(sensor, "n exposures") == 1
+    assert sensor_get(sensor, "exposure plane") == 1
+    assert sensor_get(sensor, "cds") is False
+
+    sensor.fields["integration_time"] = np.array([0.01, 0.02, 0.03], dtype=float)
+    sensor = sensor_set(sensor, "exposure plane", 3.2)
+    sensor = sensor_set(sensor, "correlated double sampling", True)
+    sensor = sensor_set(sensor, "auto exposure", "off")
+
+    assert sensor_get(sensor, "n exposures") == 3
+    assert sensor_get(sensor, "exposure plane") == 3
+    assert sensor_get(sensor, "correlated double sampling") is True
+    assert sensor_get(sensor, "auto exposure") is False
+
+    sensor = sensor_set(sensor, "auto exposure", "on")
+
+    assert sensor_get(sensor, "auto exposure") is True
+    assert sensor_get(sensor, "integration time") == 0.0
+
+
 def test_sensor_set_cfa_round_trips_matlab_style_struct(asset_store) -> None:
     sensor = sensor_create("rgbw", asset_store=asset_store)
     cfa = sensor_get(sensor, "cfa")
