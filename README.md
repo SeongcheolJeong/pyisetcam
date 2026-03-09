@@ -441,6 +441,9 @@ The neighboring legacy human block now also has parser-level routing for
 The adjacent chart block now also has parser-level routing for
 `chart parameters`, `corner points`, `chart corners`, `chart rects`,
 `chart rectangles`, `current rect`, and `chart current rect`.
+The neighboring metadata block now also has focused parser/runtime coverage for
+`scene name`, `metadata scene name`, `metadata lens name`, `metadata lens`,
+`metadata optics name`, `metadata sensor name`, and `metadata crop`.
 The neighboring pixel material alias surface now also supports direct
 sensor-level `refractive index` and `n` access without requiring the
 explicit `pixel` prefix.
