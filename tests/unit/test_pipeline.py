@@ -2420,9 +2420,9 @@ def test_sensor_get_set_supports_legacy_human_storage_surface(asset_store) -> No
     stored = sensor_get(sensor, "human")
     assert stored is not None
     assert stored["name"] == "human"
-    assert np.array_equal(sensor_get(sensor, "cone type"), human["coneType"])
+    assert np.array_equal(sensor_get(sensor, "human cone type"), human["coneType"])
     assert np.array_equal(sensor_get(sensor, "human cone densities"), human["densities"])
-    assert np.array_equal(sensor_get(sensor, "cone xy"), human["xy"])
+    assert np.array_equal(sensor_get(sensor, "human cone locs"), human["xy"])
     assert np.array_equal(sensor_get(sensor, "cone locs"), human["xy"])
     assert sensor_get(sensor, "human cone seed") == 17
 
@@ -2432,14 +2432,14 @@ def test_sensor_get_set_supports_legacy_human_storage_surface(asset_store) -> No
     cone_type = np.array([[4, 3], [2, 1]], dtype=int)
     densities = np.array([0.1, 0.5, 0.3, 0.1], dtype=float)
     xy = np.array([[0.5, 0.6]], dtype=float)
-    sensor = sensor_set(sensor, "cone type", cone_type)
+    sensor = sensor_set(sensor, "human cone type", cone_type)
     sensor = sensor_set(sensor, "densities", densities)
-    sensor = sensor_set(sensor, "cone locs", xy)
+    sensor = sensor_set(sensor, "human cone locs", xy)
     sensor = sensor_set(sensor, "rseed", 23)
 
     assert np.array_equal(sensor_get(sensor, "cone type"), cone_type)
     assert np.array_equal(sensor_get(sensor, "densities"), densities)
-    assert np.array_equal(sensor_get(sensor, "cone xy"), xy)
+    assert np.array_equal(sensor_get(sensor, "human cone locs"), xy)
     assert np.array_equal(sensor_get(sensor, "xy"), xy)
     assert sensor_get(sensor, "rseed") == 23
 
