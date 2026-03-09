@@ -22,6 +22,9 @@ from .utils import DEFAULT_WAVE, ensure_multiple, ie_parameter_otype, linear_to_
 _DEFAULT_PIXEL = {
     "size_m": np.array([2.8e-6, 2.8e-6], dtype=float),
     "fill_factor": 0.75,
+    "layer_thickness_m": np.array([], dtype=float),
+    "refractive_indices": np.array([], dtype=float),
+    "spectrum": {},
     "conversion_gain_v_per_electron": 1.0e-4,
     "voltage_swing": 1.0,
     "dark_voltage_v_per_sec": 1.0e-3,
@@ -75,6 +78,15 @@ def _default_pixel(pixel: dict[str, Any] | None) -> dict[str, Any]:
     if pixel:
         merged.update(pixel)
     merged["size_m"] = np.asarray(merged["size_m"], dtype=float)
+    merged["layer_thickness_m"] = np.asarray(merged.get("layer_thickness_m", np.array([], dtype=float)), dtype=float).reshape(-1)
+    merged["refractive_indices"] = np.asarray(merged.get("refractive_indices", np.array([], dtype=float)), dtype=float).reshape(-1)
+    stored_spectrum = merged.get("spectrum", {})
+    if isinstance(stored_spectrum, dict):
+        merged["spectrum"] = copy.deepcopy(stored_spectrum)
+    elif stored_spectrum is None:
+        merged["spectrum"] = {}
+    else:
+        merged["spectrum"] = copy.deepcopy(dict(vars(stored_spectrum)))
     return merged
 
 
@@ -279,6 +291,28 @@ def _sensor_dynamic_range(sensor: Sensor, integration_time: Any = None) -> Any:
     return dr
 
 
+def _pixel_dynamic_range(sensor: Sensor, integration_time: Any = None) -> Any:
+    if integration_time is None:
+        integration_time = sensor_get(sensor, "integration time")
+    integration_time_array = np.asarray(integration_time, dtype=float).reshape(-1)
+    if integration_time_array.size == 0:
+        return None
+    if integration_time_array.size > 1:
+        return None
+    integration_time_value = float(integration_time_array[0])
+    if np.isclose(integration_time_value, 0.0):
+        return None
+
+    pixel = sensor.fields["pixel"]
+    dark_voltage = float(pixel["dark_voltage_v_per_sec"])
+    read_noise = float(pixel["read_noise_v"])
+    noise_sd = np.sqrt((dark_voltage * integration_time_value) + (read_noise**2))
+    max_voltage = float(pixel["voltage_swing"]) - (dark_voltage * integration_time_value)
+    if np.isclose(noise_sd, 0.0):
+        return float(np.inf)
+    return float(20.0 * np.log10(max(max_voltage, 0.0) / noise_sd))
+
+
 def _sensor_plane_images(sensor: Sensor, data: np.ndarray | None, *, empty_value: float = np.nan) -> np.ndarray | None:
     if data is None:
         return None
@@ -314,6 +348,19 @@ def _pixel_pd_area_m2(sensor: Sensor) -> float:
 
 def _sensor_pd_size_m(sensor: Sensor) -> np.ndarray:
     return _pixel_pd_size_from_pixel(sensor.fields["pixel"])
+
+
+def _pixel_spectrum_struct(sensor: Sensor) -> dict[str, Any]:
+    pixel = sensor.fields["pixel"]
+    stored = pixel.get("spectrum", {})
+    if isinstance(stored, dict):
+        spectrum = copy.deepcopy(stored)
+    elif stored is None:
+        spectrum = {}
+    else:
+        spectrum = copy.deepcopy(dict(vars(stored)))
+    spectrum["wave"] = np.asarray(sensor.fields["wave"], dtype=float).copy()
+    return spectrum
 
 
 def _pixel_pd_size_from_pixel(pixel: dict[str, Any]) -> np.ndarray:
@@ -376,10 +423,28 @@ def _sensor_pixel_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return np.array([pd_size[1], pd_size[0]], dtype=float) * spatial_scale
     if key == "pdarea":
         return float(_pixel_pd_area_m2(sensor) * (spatial_scale**2))
+    if key in {"layerthickness", "layerthicknesses"}:
+        return np.asarray(pixel.get("layer_thickness_m", np.array([], dtype=float)), dtype=float).copy() * spatial_scale
+    if key in {"pixeldepth", "depth", "pixeldepthmeters", "stackheight"}:
+        layer_thickness = np.asarray(pixel.get("layer_thickness_m", np.array([], dtype=float)), dtype=float).reshape(-1)
+        return float(np.sum(layer_thickness)) * spatial_scale
+    if key in {"refractiveindex", "refractiveindices", "n"}:
+        return np.asarray(pixel.get("refractive_indices", np.array([], dtype=float)), dtype=float).copy()
+    if key in {"spectrum", "pixelspectrum"}:
+        return _pixel_spectrum_struct(sensor)
+    if key in {"wave", "wavelength", "wavelengthsamples"}:
+        return np.asarray(sensor.fields["wave"], dtype=float).copy()
+    if key in {"binwidth", "wavelengthresolution"}:
+        wave = np.asarray(sensor.fields["wave"], dtype=float).reshape(-1)
+        return float(wave[1] - wave[0]) if wave.size > 1 else 1.0
+    if key in {"nwave", "nwaves", "numberofwavelengthsamples"}:
+        return int(np.asarray(sensor.fields["wave"], dtype=float).size)
     if key in {"pdspectralqe", "spectralqe", "qe"}:
         return _sensor_pixel_qe(sensor)
     if key in {"pdspectralsr", "spectralsr", "sr"}:
         return _pixel_spectral_sr(sensor)
+    if key in {"pixeldr", "pixeldynamicrange", "dr", "dynamicrange"}:
+        return _pixel_dynamic_range(sensor, args[0] if args else None)
     if key in {"conversiongain", "conversiongainvpelectron"}:
         return float(pixel["conversion_gain_v_per_electron"])
     if key in {"voltageswing", "vswing"}:
@@ -498,6 +563,24 @@ def _sensor_pixel_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         if pd_dimension.size == 1:
             pd_dimension = np.repeat(pd_dimension, 2)
         return _sensor_pixel_set(sensor, "pd size", np.array([pd_dimension[1], pd_dimension[0]], dtype=float))
+    if key in {"layerthickness", "layerthicknesses"}:
+        sensor.fields["pixel"]["layer_thickness_m"] = np.asarray(value, dtype=float).reshape(-1).copy()
+        return sensor
+    if key in {"refractiveindex", "refractiveindices", "n"}:
+        sensor.fields["pixel"]["refractive_indices"] = np.asarray(value, dtype=float).reshape(-1).copy()
+        return sensor
+    if key in {"spectrum", "pixelspectrum"}:
+        payload = dict(value) if isinstance(value, dict) else dict(vars(value))
+        if "wave" in payload:
+            sensor = _sensor_update_wave(sensor, np.asarray(payload["wave"], dtype=float).reshape(-1))
+        payload["wave"] = np.asarray(sensor.fields["wave"], dtype=float).copy()
+        sensor.fields["pixel"]["spectrum"] = copy.deepcopy(payload)
+        return sensor
+    if key in {"wave", "wavelength", "wavelengthsamples"}:
+        sensor = _sensor_update_wave(sensor, np.asarray(value, dtype=float).reshape(-1))
+        spectrum = _pixel_spectrum_struct(sensor)
+        sensor.fields["pixel"]["spectrum"] = copy.deepcopy(spectrum)
+        return sensor
     if key in {"pdspectralqe", "spectralqe", "qe"}:
         qe = np.asarray(value, dtype=float).reshape(-1)
         if qe.size == 1:

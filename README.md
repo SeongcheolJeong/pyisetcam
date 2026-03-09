@@ -374,6 +374,9 @@ stored pixel model, including whole-`pixel` replacement via
 `sensorSet('pixel', ...)`. The same passthrough now also covers pixel spatial
 geometry such as `pixel width` / `pixel height`, `width gap` / `height gap`,
 `pd width` / `pd height`, `pd size`, `pd dimension`, and `pixel area`.
+The neighboring pixel metadata surface now also covers `pixel layer thicknesses`,
+`pixel refractive indices`, `pixel spectrum` / `pixel wavelength`,
+`pixel bin width` / `pixel nwave`, and MATLAB-style `pixel dr`.
 The neighboring sensor model surface now also includes raw
 `sensorGet/Set('diffusion MTF')` storage for legacy compatibility. The
 neighboring legacy scene/lens aliases now round-trip too through
