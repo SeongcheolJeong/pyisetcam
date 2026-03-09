@@ -2474,6 +2474,23 @@ def test_sensor_get_supports_volt_images(asset_store) -> None:
     assert np.array_equal(~np.isnan(plane_images[:, :, 2]), tiled_pattern == 3)
 
 
+def test_sensor_get_set_supports_voltage_electron_and_analog_aliases(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    volts = np.full((2, 2), 0.25, dtype=float)
+
+    sensor = sensor_set(sensor, "ag", 2.5)
+    sensor = sensor_set(sensor, "ao", 0.05)
+    sensor = sensor_set(sensor, "voltage", volts)
+
+    assert np.isclose(sensor_get(sensor, "analog gain"), 2.5)
+    assert np.isclose(sensor_get(sensor, "ag"), 2.5)
+    assert np.isclose(sensor_get(sensor, "analog offset"), 0.05)
+    assert np.isclose(sensor_get(sensor, "ao"), 0.05)
+    assert np.array_equal(sensor_get(sensor, "volts"), volts)
+    assert np.array_equal(sensor_get(sensor, "voltage"), volts)
+    assert np.array_equal(sensor_get(sensor, "electron"), sensor_get(sensor, "electrons"))
+
+
 def test_sensor_compute_uses_stored_noise_seed_when_seed_omitted(asset_store) -> None:
     scene = scene_create("uniform d65")
     oi = oi_compute(oi_create(), scene)

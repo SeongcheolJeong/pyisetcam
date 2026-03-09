@@ -1227,9 +1227,9 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return bool(_sensor_render_state(sensor)["scale"])
     if key in {"autoexp", "autoexposure", "automaticexposure"}:
         return bool(sensor.fields["auto_exposure"])
-    if key == "analoggain":
+    if key in {"analoggain", "ag"}:
         return float(sensor.fields["analog_gain"])
-    if key == "analogoffset":
+    if key in {"analogoffset", "ao"}:
         return float(sensor.fields["analog_offset"])
     if key in {"noiseflag", "shotnoiseflag"}:
         return int(sensor.fields["noise_flag"])
@@ -1364,11 +1364,11 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         from .roi import ie_locs2_rect
 
         return ie_locs2_rect(roi_array)
-    if key == "volts":
+    if key in {"volts", "voltage"}:
         return sensor.data.get("volts")
     if key == "voltimages":
         return _sensor_plane_images(sensor, sensor.data.get("volts"))
-    if key == "electrons":
+    if key in {"electrons", "electron"}:
         return _sensor_electrons(sensor)
     if key in {"dv", "digitalvalue", "digitalvalues"}:
         return sensor.data.get("dv")
@@ -1690,10 +1690,10 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
             else:
                 sensor.fields["integration_time"] = 0.0
         return sensor
-    if key == "analoggain":
+    if key in {"analoggain", "ag"}:
         sensor.fields["analog_gain"] = float(value)
         return sensor
-    if key == "analogoffset":
+    if key in {"analogoffset", "ao"}:
         sensor.fields["analog_offset"] = float(value)
         return sensor
     if key == "noiseflag":
@@ -1788,7 +1788,7 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
             raise ValueError("response type must be 'linear' or 'log'.")
         sensor.fields["response_type"] = normalized
         return sensor
-    if key == "volts":
+    if key in {"volts", "voltage"}:
         volts = np.asarray(value, dtype=float)
         sensor.data["volts"] = volts
         if param_format(sensor.fields.get("quantization", "analog")) == "analog":
