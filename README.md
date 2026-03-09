@@ -355,7 +355,8 @@ headless sensor data-view surface now also includes
 adjacent voltage/response block now also includes the upstream short-form
 aliases `sensorGet/Set('voltage')`, `sensorGet('electron')`, and
 `sensorGet/Set('ag'/'ao')` for voltage, electron, analog-gain, and
-analog-offset access. The neighboring sensor model surface now also includes raw
+analog-offset access, and the same `volts` / `dv` / `electrons` getters
+now accept a channel index to return MATLAB-style per-filter vectors. The neighboring sensor model surface now also includes raw
 `sensorGet/Set('diffusion MTF')` storage for legacy compatibility. The
 neighboring legacy scene/lens aliases now round-trip too through
 `sensorGet/Set('scene_name')`, `sensorGet/Set('lens')`, and

@@ -288,6 +288,17 @@ def _sensor_plane_images(sensor: Sensor, data: np.ndarray | None, *, empty_value
     return plane_stack
 
 
+def _sensor_color_data(sensor: Sensor, data: np.ndarray | None, which_sensor: Any) -> np.ndarray | None:
+    plane_stack = _sensor_plane_images(sensor, data)
+    if plane_stack is None:
+        return None
+    sensor_index = int(np.rint(float(np.asarray(which_sensor).reshape(-1)[0])))
+    if sensor_index < 1 or sensor_index > plane_stack.shape[2]:
+        raise ValueError("Requested sensor channel is out of range.")
+    channel = np.asarray(plane_stack[:, :, sensor_index - 1], dtype=float)
+    return channel[~np.isnan(channel)]
+
+
 def _copy_metadata_value(value: Any) -> Any:
     if isinstance(value, np.ndarray):
         return value.copy()
@@ -1365,13 +1376,22 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
 
         return ie_locs2_rect(roi_array)
     if key in {"volts", "voltage"}:
-        return sensor.data.get("volts")
+        volts = sensor.data.get("volts")
+        if args and volts is not None:
+            return _sensor_color_data(sensor, volts, args[0])
+        return volts
     if key == "voltimages":
         return _sensor_plane_images(sensor, sensor.data.get("volts"))
     if key in {"electrons", "electron"}:
-        return _sensor_electrons(sensor)
+        electrons = _sensor_electrons(sensor)
+        if args and electrons is not None:
+            return _sensor_color_data(sensor, electrons, args[0])
+        return electrons
     if key in {"dv", "digitalvalue", "digitalvalues"}:
-        return sensor.data.get("dv")
+        dv = sensor.data.get("dv")
+        if args and dv is not None:
+            return _sensor_color_data(sensor, dv, args[0])
+        return dv
     if key in {"ncaptures", "ncapture"}:
         volts = sensor.data.get("volts")
         if volts is not None and np.asarray(volts).ndim >= 3:

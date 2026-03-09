@@ -2491,6 +2491,31 @@ def test_sensor_get_set_supports_voltage_electron_and_analog_aliases(asset_store
     assert np.array_equal(sensor_get(sensor, "electron"), sensor_get(sensor, "electrons"))
 
 
+def test_sensor_get_supports_channel_select_for_sensor_data(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 4)
+    sensor = sensor_set(sensor, "cols", 4)
+    sensor = sensor_set(sensor, "ag", 2.0)
+    sensor = sensor_set(sensor, "ao", 0.1)
+    volts = np.arange(1, 17, dtype=float).reshape(4, 4) / 10.0
+    dv = np.arange(1, 17, dtype=float).reshape(4, 4)
+    sensor = sensor_set(sensor, "volts", volts)
+    sensor = sensor_set(sensor, "dv", dv)
+
+    pattern = np.asarray(sensor_get(sensor, "pattern"), dtype=int)
+    tiled_pattern = tile_pattern(pattern, 4, 4)
+    expected_volts = volts[tiled_pattern == 2]
+    expected_dv = dv[tiled_pattern == 2]
+    expected_electrons = np.asarray(sensor_get(sensor, "electrons"))[tiled_pattern == 2]
+
+    assert np.array_equal(sensor_get(sensor, "volts", 2), expected_volts)
+    assert np.array_equal(sensor_get(sensor, "voltage", 2), expected_volts)
+    assert np.array_equal(sensor_get(sensor, "dv", 2), expected_dv)
+    assert np.array_equal(sensor_get(sensor, "digital values", 2), expected_dv)
+    assert np.array_equal(sensor_get(sensor, "electrons", 2), expected_electrons)
+    assert np.array_equal(sensor_get(sensor, "electron", 2), expected_electrons)
+
+
 def test_sensor_compute_uses_stored_noise_seed_when_seed_omitted(asset_store) -> None:
     scene = scene_create("uniform d65")
     oi = oi_compute(oi_create(), scene)
