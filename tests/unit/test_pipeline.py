@@ -2094,6 +2094,11 @@ def test_sensor_get_set_supports_raw_color_surface(asset_store) -> None:
 
 def test_sensor_get_set_supports_pixel_passthrough_surface(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
+    assert sensor_get(sensor, "pixel name") == "aps"
+    assert sensor_get(sensor, "pixel type") == "pixel"
+
+    sensor = sensor_set(sensor, "pixel name", "custom-pixel")
+    sensor = sensor_set(sensor, "pixel type", "custom-type")
     sensor = sensor_set(sensor, "fill factor", 0.5)
     sensor = sensor_set(sensor, "conversion gain", 2.0e-4)
     sensor = sensor_set(sensor, "voltage swing", 1.5)
@@ -2109,6 +2114,8 @@ def test_sensor_get_set_supports_pixel_passthrough_surface(asset_store) -> None:
     pd_area = float(sensor_get(sensor, "pd area"))
 
     assert np.isclose(sensor_get(sensor, "fill factor"), 0.5)
+    assert sensor_get(sensor, "pixel name") == "custom-pixel"
+    assert sensor_get(sensor, "pixel type") == "custom-type"
     assert np.allclose(pixel_size, np.array([3.25e-6, 4.5e-6], dtype=float))
     assert np.isclose(sensor_get(sensor, "pixel width", "um"), 4.0)
     assert np.isclose(sensor_get(sensor, "pixel height", "um"), 3.0)
@@ -2142,10 +2149,14 @@ def test_sensor_get_set_supports_pixel_passthrough_surface(asset_store) -> None:
     replacement_pixel = dict(sensor_get(sensor, "pixel"))
     replacement_pixel["fill_factor"] = 0.25
     replacement_pixel["conversion_gain_v_per_electron"] = 1.0e-4
+    replacement_pixel["name"] = "replacement-pixel"
+    replacement_pixel["type"] = "replacement-type"
     sensor = sensor_set(sensor, "pixel", replacement_pixel)
 
     assert np.isclose(sensor_get(sensor, "fill factor"), 0.25)
     assert np.isclose(sensor_get(sensor, "conversion gain"), 1.0e-4)
+    assert sensor_get(sensor, "pixel name") == "replacement-pixel"
+    assert sensor_get(sensor, "pixel type") == "replacement-type"
 
 
 def test_sensor_get_set_supports_pixel_optical_and_spectral_metadata(asset_store) -> None:

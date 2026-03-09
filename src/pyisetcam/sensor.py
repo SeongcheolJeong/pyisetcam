@@ -20,6 +20,8 @@ from .types import OpticalImage, Scene, Sensor, SessionContext
 from .utils import DEFAULT_WAVE, ensure_multiple, ie_parameter_otype, linear_to_srgb, param_format, tile_pattern, xyz_to_linear_srgb
 
 _DEFAULT_PIXEL = {
+    "name": "aps",
+    "type": "pixel",
     "size_m": np.array([2.8e-6, 2.8e-6], dtype=float),
     "fill_factor": 0.75,
     "layer_thickness_m": np.array([], dtype=float),
@@ -411,6 +413,10 @@ def _sensor_pixel_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
     pixel_gaps = _pixel_gaps_m(pixel)
     pixel_spacing = pixel_size + pixel_gaps
     pd_size = _sensor_pd_size_m(sensor)
+    if key == "name":
+        return str(pixel.get("name", ""))
+    if key == "type":
+        return str(pixel.get("type", "pixel"))
     if key in {"width", "pixelwidth", "pixelwidthmeters"}:
         return float(pixel_size[1]) * spatial_scale
     if key in {"height", "pixelheight", "pixelheightmeters"}:
@@ -506,6 +512,12 @@ def _sensor_pixel_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
     pixel_size = _pixel_size_m(pixel)
     pixel_gaps = _pixel_gaps_m(pixel)
     pd_size = _sensor_pd_size_m(sensor)
+    if key == "name":
+        pixel["name"] = str(value)
+        return sensor
+    if key == "type":
+        pixel["type"] = str(value)
+        return sensor
     if key in {"width", "pixelwidth", "pixelwidthmeters"}:
         pixel["size_m"] = np.array([pixel_size[0], float(value)], dtype=float)
         if pixel.get("pd_size_m") is not None:
