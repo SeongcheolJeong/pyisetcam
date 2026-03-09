@@ -433,6 +433,9 @@ The neighboring exposure block now also has parser-level routing for
 The neighboring sampling/noise-control block now also has parser-level routing for
 `pixel samples`, `n pixel samples for computing`, `spatial samples per pixel`,
 and `response type`.
+The adjacent movement block now also has parser-level routing for
+`eye movement`, `frames per position`, `exposure times per position`,
+and `etime per pos`.
 The neighboring pixel material alias surface now also supports direct
 sensor-level `refractive index` and `n` access without requiring the
 explicit `pixel` prefix.

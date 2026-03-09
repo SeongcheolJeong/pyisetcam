@@ -2386,18 +2386,20 @@ def test_sensor_get_set_supports_movement_metadata_surface(asset_store) -> None:
     positions = np.array([[0.1, 0.2], [0.3, 0.4]], dtype=float)
     frames = np.array([2, 3], dtype=int)
 
-    sensor = sensor_set(sensor, "sensor movement", {"name": "shake", "enabled": True})
-    sensor = sensor_set(sensor, "movement positions", positions)
-    sensor = sensor_set(sensor, "frames per position", frames)
+    sensor = sensor_set(sensor, "eye movement", {"name": "shake", "enabled": True})
+    sensor = sensor_set(sensor, "sensor positions", positions)
+    sensor = sensor_set(sensor, "exposure times per position", frames)
 
-    movement = sensor_get(sensor, "eye movement")
+    movement = sensor_get(sensor, "sensor movement")
 
     assert movement["name"] == "shake"
     assert movement["enabled"] is True
     assert np.array_equal(movement["pos"], positions)
+    assert np.array_equal(sensor_get(sensor, "movement positions"), positions)
     assert np.array_equal(sensor_get(sensor, "sensor positions"), positions)
     assert np.array_equal(sensor_get(sensor, "sensor positions x"), positions[:, 0])
     assert np.array_equal(sensor_get(sensor, "sensor positions y"), positions[:, 1])
+    assert np.array_equal(sensor_get(sensor, "frames per position"), frames)
     assert np.array_equal(sensor_get(sensor, "exposure times per position"), frames)
     assert np.array_equal(sensor_get(sensor, "etime per pos"), frames)
 
