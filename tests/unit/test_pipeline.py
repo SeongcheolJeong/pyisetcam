@@ -2099,13 +2099,26 @@ def test_sensor_get_set_supports_pixel_passthrough_surface(asset_store) -> None:
     sensor = sensor_set(sensor, "voltage swing", 1.5)
     sensor = sensor_set(sensor, "dark voltage", 2.0e-3)
     sensor = sensor_set(sensor, "read noise volts", 3.0e-3)
+    sensor = sensor_set(sensor, "pixel width", 4.0e-6)
+    sensor = sensor_set(sensor, "pixel height", 3.0e-6)
+    sensor = sensor_set(sensor, "pixel width gap", 0.5e-6)
+    sensor = sensor_set(sensor, "pixel height gap", 0.25e-6)
     sensor = sensor_set(sensor, "pixel spectral qe", np.array([0.2, 0.4, 0.6, 0.8, 1.0, 0.6, 0.4, 0.2, 0.1, 0.05, 0.02, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=float))
 
     pixel_size = np.asarray(sensor_get(sensor, "pixel size"), dtype=float)
     pd_area = float(sensor_get(sensor, "pd area"))
 
     assert np.isclose(sensor_get(sensor, "fill factor"), 0.5)
-    assert np.isclose(pd_area, np.prod(pixel_size) * 0.5)
+    assert np.allclose(pixel_size, np.array([3.25e-6, 4.5e-6], dtype=float))
+    assert np.isclose(sensor_get(sensor, "pixel width", "um"), 4.0)
+    assert np.isclose(sensor_get(sensor, "pixel height", "um"), 3.0)
+    assert np.isclose(sensor_get(sensor, "width gap", "um"), 0.5)
+    assert np.isclose(sensor_get(sensor, "height gap", "um"), 0.25)
+    assert np.allclose(sensor_get(sensor, "xy spacing", "um"), np.array([4.5, 3.25], dtype=float))
+    assert np.isclose(sensor_get(sensor, "pixel area"), np.prod(pixel_size))
+    assert np.isclose(pd_area, (3.0e-6 * 4.0e-6) * 0.5)
+    assert np.allclose(sensor_get(sensor, "pd size", "um"), np.sqrt(0.5) * np.array([3.0, 4.0], dtype=float))
+    assert np.allclose(sensor_get(sensor, "pd dimension", "um"), np.sqrt(0.5) * np.array([4.0, 3.0], dtype=float))
     assert np.isclose(sensor_get(sensor, "conversion gain"), 2.0e-4)
     assert np.isclose(sensor_get(sensor, "voltage swing"), 1.5)
     assert np.isclose(sensor_get(sensor, "well capacity"), 1.5 / 2.0e-4)
@@ -2118,6 +2131,13 @@ def test_sensor_get_set_supports_pixel_passthrough_surface(asset_store) -> None:
     assert np.isclose(sensor_get(sensor, "read noise millivolts"), 3.0)
     assert np.allclose(sensor_get(sensor, "pd spectral qe"), sensor_get(sensor, "pixel spectral qe"))
     assert np.allclose(sensor_get(sensor, "pd spectral sr"), sensor_get(sensor, "pixel spectral sr"))
+
+    sensor = sensor_set(sensor, "pd width", 2.0e-6)
+    sensor = sensor_set(sensor, "pd height", 1.5e-6)
+
+    assert np.isclose(sensor_get(sensor, "pd width", "um"), 2.0)
+    assert np.isclose(sensor_get(sensor, "pd height", "um"), 1.5)
+    assert np.isclose(sensor_get(sensor, "fill factor"), (2.0e-6 * 1.5e-6) / (4.0e-6 * 3.0e-6))
 
     replacement_pixel = dict(sensor_get(sensor, "pixel"))
     replacement_pixel["fill_factor"] = 0.25

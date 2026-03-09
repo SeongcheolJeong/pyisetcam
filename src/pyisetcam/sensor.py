@@ -309,30 +309,71 @@ def _sensor_color_data(sensor: Sensor, data: np.ndarray | None, which_sensor: An
 
 
 def _pixel_pd_area_m2(sensor: Sensor) -> float:
-    pixel_size = np.asarray(sensor.fields["pixel"]["size_m"], dtype=float).reshape(-1)
-    if pixel_size.size == 1:
-        pixel_size = np.repeat(pixel_size, 2)
-    fill_factor = float(sensor.fields["pixel"].get("fill_factor", 1.0))
-    return float(np.prod(pixel_size[:2]) * fill_factor)
+    return float(np.prod(_pixel_pd_size_from_pixel(sensor.fields["pixel"])))
 
 
-def _pixel_pd_size_m(sensor: Sensor) -> np.ndarray:
-    pixel_size = np.asarray(sensor.fields["pixel"]["size_m"], dtype=float).reshape(-1)
-    if pixel_size.size == 1:
-        pixel_size = np.repeat(pixel_size, 2)
-    return np.sqrt(float(sensor.fields["pixel"].get("fill_factor", 1.0))) * pixel_size[:2]
+def _sensor_pd_size_m(sensor: Sensor) -> np.ndarray:
+    return _pixel_pd_size_from_pixel(sensor.fields["pixel"])
+
+
+def _pixel_pd_size_from_pixel(pixel: dict[str, Any]) -> np.ndarray:
+    stored = pixel.get("pd_size_m")
+    if stored is not None:
+        pd_size = np.asarray(stored, dtype=float).reshape(-1)
+        if pd_size.size == 1:
+            pd_size = np.repeat(pd_size, 2)
+        return pd_size[:2].copy()
+    pixel_size = _pixel_size_m(pixel)
+    return np.sqrt(float(pixel.get("fill_factor", 1.0))) * pixel_size[:2]
+
+
+def _sync_pixel_pd_state(pixel: dict[str, Any]) -> None:
+    pixel_size = _pixel_size_m(pixel)
+    pd_size = _pixel_pd_size_from_pixel(pixel)
+    if np.any(pd_size < 0.0):
+        raise ValueError("photodetector size must be nonnegative.")
+    if np.any(pd_size - pixel_size > 1e-18):
+        raise ValueError("photodetector size must not exceed the pixel size.")
+    pixel["pd_size_m"] = pd_size
+    pixel["fill_factor"] = float(np.prod(pd_size) / max(np.prod(pixel_size), 1e-30))
 
 
 def _sensor_pixel_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
     key = param_format(parameter)
     pixel = sensor.fields["pixel"]
     spatial_scale = _spatial_unit_scale(args[0] if args else None)
+    pixel_size = _pixel_size_m(pixel)
+    pixel_gaps = _pixel_gaps_m(pixel)
+    pixel_spacing = pixel_size + pixel_gaps
+    pd_size = _sensor_pd_size_m(sensor)
+    if key in {"width", "pixelwidth", "pixelwidthmeters"}:
+        return float(pixel_size[1]) * spatial_scale
+    if key in {"height", "pixelheight", "pixelheightmeters"}:
+        return float(pixel_size[0]) * spatial_scale
+    if key in {"pixelwidthgap", "widthgap"}:
+        return float(pixel_gaps[1]) * spatial_scale
+    if key in {"pixelheightgap", "heightgap"}:
+        return float(pixel_gaps[0]) * spatial_scale
+    if key in {"wspatialresolution", "deltax"}:
+        return float(pixel_spacing[1]) * spatial_scale
+    if key in {"hspatialresolution", "deltay"}:
+        return float(pixel_spacing[0]) * spatial_scale
+    if key in {"xyspacing", "dimension"}:
+        return np.array([pixel_spacing[1], pixel_spacing[0]], dtype=float) * spatial_scale
     if key in {"size", "pixelsize"}:
-        return np.asarray(pixel["size_m"], dtype=float).copy() * spatial_scale
+        return np.array([pixel_spacing[0], pixel_spacing[1]], dtype=float) * spatial_scale
+    if key in {"pixelarea", "area"}:
+        return float(np.prod(pixel_spacing) * (spatial_scale**2))
     if key == "fillfactor":
         return float(pixel["fill_factor"])
-    if key == "pdsize":
-        return _pixel_pd_size_m(sensor) * spatial_scale
+    if key in {"photodetectorwidth", "pdwidth"}:
+        return float(pd_size[1]) * spatial_scale
+    if key in {"photodetectorheight", "pdheight"}:
+        return float(pd_size[0]) * spatial_scale
+    if key in {"pdsize", "photodetectorsize"}:
+        return pd_size * spatial_scale
+    if key == "pddimension":
+        return np.array([pd_size[1], pd_size[0]], dtype=float) * spatial_scale
     if key == "pdarea":
         return float(_pixel_pd_area_m2(sensor) * (spatial_scale**2))
     if key in {"pdspectralqe", "spectralqe", "qe"}:
@@ -371,26 +412,92 @@ def _sensor_pixel_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         sensor.fields["pixel"] = _default_pixel(dict(value))
         sensor.fields["etendue"] = None
         return sensor
+    pixel = sensor.fields["pixel"]
+    pixel_size = _pixel_size_m(pixel)
+    pixel_gaps = _pixel_gaps_m(pixel)
+    pd_size = _sensor_pd_size_m(sensor)
+    if key in {"width", "pixelwidth", "pixelwidthmeters"}:
+        pixel["size_m"] = np.array([pixel_size[0], float(value)], dtype=float)
+        if pixel.get("pd_size_m") is not None:
+            _sync_pixel_pd_state(pixel)
+        sensor.fields["etendue"] = None
+        _sensor_clear_data(sensor)
+        return sensor
+    if key in {"height", "pixelheight", "pixelheightmeters"}:
+        pixel["size_m"] = np.array([float(value), pixel_size[1]], dtype=float)
+        if pixel.get("pd_size_m") is not None:
+            _sync_pixel_pd_state(pixel)
+        sensor.fields["etendue"] = None
+        _sensor_clear_data(sensor)
+        return sensor
+    if key in {"pixelwidthgap", "widthgap"}:
+        pixel["width_gap_m"] = float(value)
+        sensor.fields["etendue"] = None
+        _sensor_clear_data(sensor)
+        return sensor
+    if key in {"pixelheightgap", "heightgap"}:
+        pixel["height_gap_m"] = float(value)
+        sensor.fields["etendue"] = None
+        _sensor_clear_data(sensor)
+        return sensor
+    if key in {"wspatialresolution", "deltax"}:
+        width = float(value) - float(pixel_gaps[1])
+        if width <= 0.0:
+            raise ValueError("pixel width must stay positive after subtracting the width gap.")
+        pixel["size_m"] = np.array([pixel_size[0], width], dtype=float)
+        if pixel.get("pd_size_m") is not None:
+            _sync_pixel_pd_state(pixel)
+        sensor.fields["etendue"] = None
+        _sensor_clear_data(sensor)
+        return sensor
+    if key in {"hspatialresolution", "deltay"}:
+        height = float(value) - float(pixel_gaps[0])
+        if height <= 0.0:
+            raise ValueError("pixel height must stay positive after subtracting the height gap.")
+        pixel["size_m"] = np.array([height, pixel_size[1]], dtype=float)
+        if pixel.get("pd_size_m") is not None:
+            _sync_pixel_pd_state(pixel)
+        sensor.fields["etendue"] = None
+        _sensor_clear_data(sensor)
+        return sensor
     if key in {"size", "pixelsize"}:
         size = np.asarray(value, dtype=float)
         if size.size == 1:
             size = np.repeat(size, 2)
         sensor.fields["pixel"]["size_m"] = size
+        if sensor.fields["pixel"].get("pd_size_m") is not None:
+            _sync_pixel_pd_state(sensor.fields["pixel"])
         sensor.fields["etendue"] = None
         _sensor_clear_data(sensor)
         return sensor
-    if key == "fillfactor":
-        sensor.fields["pixel"]["fill_factor"] = float(value)
+    if key in {"photodetectorwidth", "pdwidth"}:
+        sensor.fields["pixel"]["pd_size_m"] = np.array([pd_size[0], float(value)], dtype=float)
+        _sync_pixel_pd_state(sensor.fields["pixel"])
         sensor.fields["etendue"] = None
         return sensor
-    if key == "pdsize":
+    if key in {"photodetectorheight", "pdheight"}:
+        sensor.fields["pixel"]["pd_size_m"] = np.array([float(value), pd_size[1]], dtype=float)
+        _sync_pixel_pd_state(sensor.fields["pixel"])
+        sensor.fields["etendue"] = None
+        return sensor
+    if key == "fillfactor":
+        sensor.fields["pixel"]["fill_factor"] = float(value)
+        sensor.fields["pixel"].pop("pd_size_m", None)
+        sensor.fields["etendue"] = None
+        return sensor
+    if key in {"pdsize", "photodetectorsize"}:
         pd_size = np.asarray(value, dtype=float).reshape(-1)
         if pd_size.size == 1:
             pd_size = np.repeat(pd_size, 2)
-        pixel_size = np.asarray(sensor.fields["pixel"]["size_m"], dtype=float).reshape(-1)[:2]
-        sensor.fields["pixel"]["fill_factor"] = float(np.prod(pd_size[:2]) / max(np.prod(pixel_size), 1e-30))
+        sensor.fields["pixel"]["pd_size_m"] = pd_size[:2].copy()
+        _sync_pixel_pd_state(sensor.fields["pixel"])
         sensor.fields["etendue"] = None
         return sensor
+    if key == "pddimension":
+        pd_dimension = np.asarray(value, dtype=float).reshape(-1)
+        if pd_dimension.size == 1:
+            pd_dimension = np.repeat(pd_dimension, 2)
+        return _sensor_pixel_set(sensor, "pd size", np.array([pd_dimension[1], pd_dimension[0]], dtype=float))
     if key in {"pdspectralqe", "spectralqe", "qe"}:
         qe = np.asarray(value, dtype=float).reshape(-1)
         if qe.size == 1:
@@ -2159,11 +2266,7 @@ def _sensor_etendue(sensor: Sensor) -> np.ndarray:
 
 
 def _pixel_pd_size_m(pixel: dict[str, Any]) -> np.ndarray:
-    pixel_size = np.asarray(pixel["size_m"], dtype=float)
-    fill_factor = float(pixel["fill_factor"])
-    if fill_factor <= 0.0:
-        return np.zeros(2, dtype=float)
-    return np.sqrt(fill_factor) * pixel_size
+    return _pixel_pd_size_from_pixel(pixel)
 
 
 def _sensor_pd_array(sensor: Sensor, spacing: float) -> np.ndarray:

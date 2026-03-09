@@ -371,7 +371,10 @@ sensor-facing pixel passthrough now also routes supported pixel electrical
 and geometric names such as `fill factor`, `pd area`, `conversion gain`,
 `well capacity`, `dark current`, and `read noise volts` through the
 stored pixel model, including whole-`pixel` replacement via
-`sensorSet('pixel', ...)`. The neighboring sensor model surface now also includes raw
+`sensorSet('pixel', ...)`. The same passthrough now also covers pixel spatial
+geometry such as `pixel width` / `pixel height`, `width gap` / `height gap`,
+`pd width` / `pd height`, `pd size`, `pd dimension`, and `pixel area`.
+The neighboring sensor model surface now also includes raw
 `sensorGet/Set('diffusion MTF')` storage for legacy compatibility. The
 neighboring legacy scene/lens aliases now round-trip too through
 `sensorGet/Set('scene_name')`, `sensorGet/Set('lens')`, and
