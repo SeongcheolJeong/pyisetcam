@@ -2219,11 +2219,11 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
     if key == "noiseflag":
         sensor.fields["noise_flag"] = int(value)
         return sensor
-    if key in {"dsnulevel", "sigmaoffsetfpn", "offsetfpn", "offset", "offsetsd", "dsnusigma", "sigmadsnu"}:
+    if key in {"dsnulevel", "sigmaoffsetfpn", "offsetfpn", "offset", "offsetsd", "offsetnoisevalue", "dsnusigma", "sigmadsnu"}:
         sensor.fields["pixel"]["dsnu_sigma_v"] = float(value)
         sensor.fields.pop("offset_fpn_image", None)
         return sensor
-    if key in {"sigmagainfpn", "gainfpn", "gain", "gainsd", "prnusigma", "sigmaprnu", "prnulevel"}:
+    if key in {"sigmagainfpn", "gainfpn", "gain", "gainsd", "gainnoisevalue", "prnusigma", "sigmaprnu", "prnulevel"}:
         sensor.fields["pixel"]["prnu_sigma"] = float(value) / 100.0
         sensor.fields.pop("gain_fpn_image", None)
         return sensor

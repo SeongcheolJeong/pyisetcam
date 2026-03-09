@@ -2495,10 +2495,14 @@ def test_sensor_get_set_supports_column_fpn_storage_surface(asset_store) -> None
     assert sensor_get(sensor, "col offset fpn vector") is None
     assert sensor_get(sensor, "col gain fpn vector") is None
 
+    sensor = sensor_set(sensor, "offset noise value", 0.015)
+    sensor = sensor_set(sensor, "gain noise value", 3.5)
     sensor = sensor_set(sensor, "column fpn", np.array([0.125, 0.25], dtype=float))
     sensor = sensor_set(sensor, "column dsnu", column_offset)
     sensor = sensor_set(sensor, "column prnu", column_gain)
 
+    assert np.isclose(sensor_get(sensor, "dsnu sigma"), 0.015)
+    assert np.isclose(sensor_get(sensor, "prnu sigma"), 3.5)
     assert np.array_equal(sensor_get(sensor, "colfpn"), np.array([0.125, 0.25], dtype=float))
     assert sensor_get(sensor, "columnfpnoffset") == 0.125
     assert sensor_get(sensor, "columnfpngain") == 0.25

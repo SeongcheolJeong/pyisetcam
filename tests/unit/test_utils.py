@@ -48,6 +48,8 @@ def test_ie_parameter_otype_handles_direct_prefix_and_unique_params() -> None:
     assert ie_parameter_otype("wvf_zcoeffs") == ("wvf", "zcoeffs")
     assert ie_parameter_otype("display gamma") == ("display", "gamma")
     assert ie_parameter_otype("dsnu sigma") == ("sensor", "dsnusigma")
+    assert ie_parameter_otype("offset noise value") == ("sensor", "offsetnoisevalue")
+    assert ie_parameter_otype("gain noise value") == ("sensor", "gainnoisevalue")
     assert ie_parameter_otype("sensorspectralsr") == ("sensor", "sensorspectralsr")
     assert ie_parameter_otype("dynamic range") == ("sensor", "dynamicrange")
     assert ie_parameter_otype("shot noise flag") == ("sensor", "shotnoiseflag")

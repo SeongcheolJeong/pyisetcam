@@ -410,6 +410,8 @@ direct sensor-level `conversiongainvpelectron`, `vswing`, `darkvolt`, and
 `darkvolts` access without requiring the explicit `pixel` prefix.
 The adjacent QE alias surface now also supports direct sensor-level
 `quantum efficiency` access without requiring the explicit `pixel` prefix.
+The neighboring FPN setter surface now also supports the upstream
+`offset noise value` and `gain noise value` aliases.
 The neighboring pixel material alias surface now also supports direct
 sensor-level `refractive index` and `n` access without requiring the
 explicit `pixel` prefix.
