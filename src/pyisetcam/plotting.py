@@ -292,6 +292,69 @@ def _sensor_plot_etendue(sensor: Sensor) -> dict[str, Any]:
     }
 
 
+def _sensor_noise_title(the_noise: np.ndarray, voltage_swing: float) -> str:
+    noise = np.asarray(the_noise, dtype=float)
+    return f"Max/min: [{float(np.max(noise)):.2E},{float(np.min(noise)):.2E}] on voltage swing {float(voltage_swing):.2f}"
+
+
+def _sensor_plot_shot_noise(sensor: Sensor) -> dict[str, Any]:
+    electrons = sensor_get(sensor, "electrons")
+    if electrons is None:
+        electrons = np.zeros(sensor_get(sensor, "size"), dtype=float)
+    electron_image = np.clip(np.asarray(electrons, dtype=float), 0.0, None)
+    rng = np.random.default_rng(0)
+    electron_noise = np.sqrt(electron_image) * rng.standard_normal(electron_image.shape)
+    low_count = electron_image < 25.0
+    if np.any(low_count):
+        poisson_counts = rng.poisson(electron_image[low_count])
+        electron_noise[low_count] = poisson_counts - electron_image[low_count]
+    conversion_gain = float(sensor.fields["pixel"]["conversion_gain_v_per_electron"])
+    the_noise = conversion_gain * electron_noise
+    noisy_image = conversion_gain * np.rint(electron_image + electron_noise)
+    return {
+        "noiseType": "shotnoise",
+        "nameString": "ISET:  Shot noise",
+        "titleString": _sensor_noise_title(the_noise, float(sensor_get(sensor, "voltage swing"))),
+        "signal": electron_image.copy(),
+        "noisyImage": np.asarray(noisy_image, dtype=float).copy(),
+        "theNoise": np.asarray(the_noise, dtype=float).copy(),
+    }
+
+
+def _sensor_plot_fixed_pattern_noise(sensor: Sensor, noise_type: str) -> dict[str, Any]:
+    rows, cols = sensor_get(sensor, "size")
+    rng = np.random.default_rng(0)
+    normalized = param_format(noise_type)
+    voltage_swing = float(sensor_get(sensor, "voltage swing"))
+    if normalized == "dsnu":
+        the_noise = sensor_get(sensor, "dsnu image")
+        if the_noise is None:
+            sigma = float(sensor_get(sensor, "dsnu sigma"))
+            the_noise = rng.normal(0.0, sigma, size=(int(rows), int(cols)))
+        the_noise = np.asarray(the_noise, dtype=float)
+        noisy_image = the_noise.copy()
+        name_string = "ISET:  DSNU"
+        title_string = _sensor_noise_title(the_noise, voltage_swing)
+    elif normalized == "prnu":
+        the_noise = sensor_get(sensor, "prnu image")
+        if the_noise is None:
+            sigma = float(sensor.fields["pixel"]["prnu_sigma"])
+            the_noise = 1.0 + rng.normal(0.0, sigma, size=(int(rows), int(cols)))
+        the_noise = np.asarray(the_noise, dtype=float)
+        noisy_image = the_noise.copy()
+        name_string = "ISET:  PRNU"
+        title_string = f"Max/min: [{float(np.max(the_noise)):.2E},{float(np.min(the_noise)):.2E}] slope"
+    else:
+        raise UnsupportedOptionError("plotSensor", noise_type)
+    return {
+        "noiseType": normalized,
+        "nameString": name_string,
+        "titleString": title_string,
+        "noisyImage": noisy_image.copy(),
+        "theNoise": the_noise.copy(),
+    }
+
+
 def _ip_line_data(ip: ImageProcessor, orientation: str, xy: Any) -> dict[str, Any]:
     line_index, xy_array = _line_index("ipPlot", f"{orientation}line", xy, orientation)
     data = ip_get(ip, "result")
@@ -478,6 +541,10 @@ def sensor_plot(
     if key in {"electronshline", "hlineelectrons", "electronsvline", "vlineelectrons", "voltshline", "hlinevolts", "voltsvline", "vlinevolts", "dvhline", "hlinedv", "dvvline", "vlinedv"}:
         xy = _roi_required("plotSensor", p_type, roi_locs)
         return _sensor_plot_line_data(sensor, key, xy), None
+    if key == "shotnoise":
+        return _sensor_plot_shot_noise(sensor), None
+    if key in {"dsnu", "prnu"}:
+        return _sensor_plot_fixed_pattern_noise(sensor, key), None
     if key == "etendue":
         return _sensor_plot_etendue(sensor), None
     if key == "channels":

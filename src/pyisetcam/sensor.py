@@ -671,6 +671,18 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return float(sensor.fields["analog_offset"])
     if key == "noiseflag":
         return int(sensor.fields["noise_flag"])
+    if key in {"fpnparameters", "fpn", "fpnoffsetgain", "fpnoffsetandgain"}:
+        return np.array([sensor_get(sensor, "dsnu sigma"), sensor_get(sensor, "prnu sigma")], dtype=float)
+    if key in {"dsnulevel", "sigmaoffsetfpn", "offsetfpn", "offset", "offsetsd", "dsnusigma", "sigmadsnu"}:
+        return float(sensor.fields["pixel"]["dsnu_sigma_v"])
+    if key in {"sigmagainfpn", "gainfpn", "gain", "gainsd", "prnusigma", "sigmaprnu", "prnulevel"}:
+        return float(sensor.fields["pixel"]["prnu_sigma"]) * 100.0
+    if key in {"dsnuimage", "offsetfpnimage"}:
+        stored = sensor.fields.get("offset_fpn_image")
+        return None if stored is None else np.asarray(stored, dtype=float).copy()
+    if key in {"prnuimage", "gainfpnimage"}:
+        stored = sensor.fields.get("gain_fpn_image")
+        return None if stored is None else np.asarray(stored, dtype=float).copy()
     if key == "nbits":
         return int(sensor.fields["nbits"])
     if key in {"vignetting", "vignettingflag", "pixelvignetting"}:
@@ -881,6 +893,26 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         return sensor
     if key == "noiseflag":
         sensor.fields["noise_flag"] = int(value)
+        return sensor
+    if key in {"dsnulevel", "sigmaoffsetfpn", "offsetfpn", "offset", "offsetsd", "dsnusigma", "sigmadsnu"}:
+        sensor.fields["pixel"]["dsnu_sigma_v"] = float(value)
+        sensor.fields.pop("offset_fpn_image", None)
+        return sensor
+    if key in {"sigmagainfpn", "gainfpn", "gain", "gainsd", "prnusigma", "sigmaprnu", "prnulevel"}:
+        sensor.fields["pixel"]["prnu_sigma"] = float(value) / 100.0
+        sensor.fields.pop("gain_fpn_image", None)
+        return sensor
+    if key in {"dsnuimage", "offsetfpnimage"}:
+        image = np.asarray(value, dtype=float)
+        if image.shape != tuple(sensor.fields["size"]):
+            raise ValueError("DSNU image must match the sensor size.")
+        sensor.fields["offset_fpn_image"] = image
+        return sensor
+    if key in {"prnuimage", "gainfpnimage"}:
+        image = np.asarray(value, dtype=float)
+        if image.shape != tuple(sensor.fields["size"]):
+            raise ValueError("PRNU image must match the sensor size.")
+        sensor.fields["gain_fpn_image"] = image
         return sensor
     if key in {"vignetting", "vignettingflag", "pixelvignetting"}:
         sensor.fields["vignetting"] = value

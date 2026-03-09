@@ -27,6 +27,17 @@ from pyisetcam import (
 )
 
 
+def _expected_shot_noise_map(electrons: np.ndarray, conversion_gain: float) -> np.ndarray:
+    rng = np.random.default_rng(0)
+    electron_image = np.clip(np.asarray(electrons, dtype=float), 0.0, None)
+    electron_noise = np.sqrt(electron_image) * rng.standard_normal(electron_image.shape)
+    low_count = electron_image < 25.0
+    if np.any(low_count):
+        poisson_counts = rng.poisson(electron_image[low_count])
+        electron_noise[low_count] = poisson_counts - electron_image[low_count]
+    return conversion_gain * electron_noise
+
+
 def test_plot_scene_radiance_photons_roi_and_chromaticity(asset_store) -> None:
     scene = scene_create("uniform ee", 4, asset_store=asset_store)
     scene = scene_set(scene, "wave", np.array([500.0, 600.0], dtype=float))
@@ -551,3 +562,80 @@ def test_plot_sensor_etendue_wrapper(asset_store) -> None:
     assert np.allclose(udata["sensorEtendue"], etendue)
     assert np.allclose(udata["support"]["x"], expected_support["x"])
     assert np.allclose(udata["support"]["y"], expected_support["y"])
+
+
+def test_plot_sensor_noise_wrappers_from_levels(asset_store) -> None:
+    sensor = sensor_create("monochrome", asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 2)
+    sensor = sensor_set(sensor, "cols", 3)
+    sensor = sensor_set(sensor, "dsnu level", 0.01)
+    sensor = sensor_set(sensor, "prnu sigma", 5.0)
+
+    dsnu_udata, dsnu_handle = plotSensor(sensor, "dsnu")
+    prnu_udata, prnu_handle = plotSensor(sensor, "prnu")
+
+    expected_dsnu = np.random.default_rng(0).normal(0.0, 0.01, size=(2, 3))
+    expected_prnu = 1.0 + np.random.default_rng(0).normal(0.0, 0.05, size=(2, 3))
+
+    assert dsnu_handle is None
+    assert prnu_handle is None
+    assert np.allclose(sensor_get(sensor, "fpn parameters"), np.array([0.01, 5.0], dtype=float))
+    assert np.isclose(sensor_get(sensor, "dsnu sigma"), 0.01)
+    assert np.isclose(sensor_get(sensor, "prnu sigma"), 5.0)
+    assert dsnu_udata["noiseType"] == "dsnu"
+    assert dsnu_udata["nameString"] == "ISET:  DSNU"
+    assert np.allclose(dsnu_udata["theNoise"], expected_dsnu)
+    assert np.allclose(dsnu_udata["noisyImage"], expected_dsnu)
+    assert dsnu_udata["titleString"] == (
+        f"Max/min: [{float(np.max(expected_dsnu)):.2E},{float(np.min(expected_dsnu)):.2E}] on voltage swing 1.00"
+    )
+    assert prnu_udata["noiseType"] == "prnu"
+    assert prnu_udata["nameString"] == "ISET:  PRNU"
+    assert np.allclose(prnu_udata["theNoise"], expected_prnu)
+    assert np.allclose(prnu_udata["noisyImage"], expected_prnu)
+    assert prnu_udata["titleString"] == f"Max/min: [{float(np.max(expected_prnu)):.2E},{float(np.min(expected_prnu)):.2E}] slope"
+
+
+def test_plot_sensor_noise_wrappers_use_stored_images_and_shot_noise(asset_store) -> None:
+    sensor = sensor_create("monochrome", asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 2)
+    sensor = sensor_set(sensor, "cols", 2)
+    sensor = sensor_set(
+        sensor,
+        "volts",
+        np.array(
+            [
+                [4.0e-4, 2.5e-3],
+                [3.6e-3, 9.0e-4],
+            ],
+            dtype=float,
+        ),
+    )
+    dsnu_image = np.array([[0.1, -0.2], [0.05, 0.0]], dtype=float)
+    prnu_image = np.array([[1.02, 0.98], [1.01, 0.97]], dtype=float)
+    sensor = sensor_set(sensor, "dsnu image", dsnu_image)
+    sensor = sensor_set(sensor, "prnu image", prnu_image)
+
+    dsnu_udata, _ = plotSensor(sensor, "dsnu")
+    prnu_udata, _ = plotSensor(sensor, "prnu")
+    shot_udata, shot_handle = plotSensor(sensor, "shot noise")
+
+    electrons = np.asarray(sensor_get(sensor, "electrons"), dtype=float)
+    expected_shot = _expected_shot_noise_map(
+        electrons,
+        float(sensor.fields["pixel"]["conversion_gain_v_per_electron"]),
+    )
+
+    assert np.allclose(sensor_get(sensor, "dsnu image"), dsnu_image)
+    assert np.allclose(sensor_get(sensor, "prnu image"), prnu_image)
+    assert np.allclose(dsnu_udata["theNoise"], dsnu_image)
+    assert np.allclose(prnu_udata["theNoise"], prnu_image)
+    assert shot_handle is None
+    assert shot_udata["noiseType"] == "shotnoise"
+    assert shot_udata["nameString"] == "ISET:  Shot noise"
+    assert np.allclose(shot_udata["signal"], electrons)
+    assert np.allclose(shot_udata["theNoise"], expected_shot)
+    assert np.allclose(
+        shot_udata["noisyImage"],
+        float(sensor.fields["pixel"]["conversion_gain_v_per_electron"]) * np.rint(electrons + (expected_shot / float(sensor.fields["pixel"]["conversion_gain_v_per_electron"]))),
+    )
