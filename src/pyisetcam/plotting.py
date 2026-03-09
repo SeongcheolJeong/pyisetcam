@@ -99,6 +99,10 @@ def _sensor_plot_spectra(sensor: Sensor, data_type: str) -> dict[str, Any]:
         data = np.asarray(sensor_get(sensor, "spectral qe"), dtype=float)
         names = list(sensor_get(sensor, "filter color letters cell"))
         y_label = "Quantum efficiency"
+    elif key in {"sensorspectralsr"}:
+        data = np.asarray(sensor_get(sensor, "sensor spectral sr"), dtype=float)
+        names = list(sensor_get(sensor, "filter color letters cell"))
+        y_label = "Responsivity:  Volts/Watt"
     else:
         raise UnsupportedOptionError("plotSensor", data_type)
     return {
@@ -579,6 +583,8 @@ def sensor_plot(
     if key in {"spectralsr", "sr", "pdspectralsr", "pixelspectralsr"}:
         return _sensor_plot_spectra(sensor, key), None
     if key in {"spectralqe", "sensorspectralqe"}:
+        return _sensor_plot_spectra(sensor, key), None
+    if key in {"sensorspectralsr"}:
         return _sensor_plot_spectra(sensor, key), None
     if key in {"voltshistogram", "voltshist"}:
         roi = _roi_required("plotSensor", p_type, roi_locs)

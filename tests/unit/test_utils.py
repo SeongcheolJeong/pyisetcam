@@ -40,6 +40,7 @@ def test_ie_parameter_otype_handles_direct_prefix_and_unique_params() -> None:
     assert ie_parameter_otype("wvf_zcoeffs") == ("wvf", "zcoeffs")
     assert ie_parameter_otype("display gamma") == ("display", "gamma")
     assert ie_parameter_otype("dsnu sigma") == ("sensor", "dsnusigma")
+    assert ie_parameter_otype("sensorspectralsr") == ("sensor", "sensorspectralsr")
     assert ie_parameter_otype("fnumber") == ("optics", "fnumber")
     assert ie_parameter_otype("asset light") == ("asset", "assetlight")
     assert ieParameterOtype("ip display") == ("ip", "display")

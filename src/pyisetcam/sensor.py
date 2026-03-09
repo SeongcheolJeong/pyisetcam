@@ -165,6 +165,12 @@ def _sensor_combined_qe(sensor: Sensor, *, dtype: Any = float) -> np.ndarray:
     return filter_spectra * pixel_qe * ir_filter
 
 
+def _sensor_combined_sr(sensor: Sensor, *, dtype: Any = float) -> np.ndarray:
+    wave_m = np.asarray(sensor.fields["wave"], dtype=float).reshape(-1, 1) * 1e-9
+    conversion = (wave_m * _ELEMENTARY_CHARGE_C) / (_PLANCK_CONSTANT_J_S * _LIGHT_SPEED_M_S)
+    return (conversion * _sensor_combined_qe(sensor, dtype=dtype)).astype(dtype, copy=False)
+
+
 def _pixel_spectral_sr(sensor: Sensor, *, dtype: Any = float) -> np.ndarray:
     wave_m = np.asarray(sensor.fields["wave"], dtype=float).reshape(-1) * 1e-9
     pixel_qe = _sensor_pixel_qe(sensor, dtype=dtype).reshape(-1)
@@ -597,6 +603,8 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return np.asarray(sensor.fields["filter_spectra"], dtype=float)
     if key in {"spectralqe", "sensorqe", "sensorspectralqe", "qe"}:
         return _sensor_combined_qe(sensor)
+    if key in {"sensorspectralsr"}:
+        return _sensor_combined_sr(sensor)
     if key in {"pixelspectralqe", "pdspectralqe", "pixelqe"}:
         return _sensor_pixel_qe(sensor)
     if key in {"spectralsr", "pdspectralsr", "pixelspectralsr", "sr"}:

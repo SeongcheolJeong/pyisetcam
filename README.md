@@ -318,11 +318,13 @@ instead of opening GUI windows. The same headless plotting surface now
 also covers `plotSensor('etendue')`, returning MATLAB-style support and
 relative-illumination payloads without opening a mesh plot window. Sensor
 spectral plotting now also includes `plotSensor('ir filter')`,
-`plotSensor('pixel spectral qe')`, and `plotSensor('pixel spectral sr')`,
-backed by explicit `ir filter` and `pixel spectral qe` state on the
-sensor model. The same headless sensor plotting layer now also includes
-deterministic noise-map payloads for `plotSensor('shot noise')`,
-`plotSensor('dsnu')`, and `plotSensor('prnu')`.
+`plotSensor('pixel spectral qe')`, `plotSensor('pixel spectral sr')`, and
+`plotSensor('sensor spectral sr')`, backed by explicit `ir filter` and
+`pixel spectral qe` state on the sensor model plus combined sensor
+responsivity derived from the stored QE/filter bundle. The same headless
+sensor plotting layer now also includes deterministic noise-map payloads
+for `plotSensor('shot noise')`, `plotSensor('dsnu')`, and
+`plotSensor('prnu')`.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.

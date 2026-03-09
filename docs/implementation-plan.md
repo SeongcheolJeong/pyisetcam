@@ -32,7 +32,7 @@
 - The current headless `plotSensor` subset now also includes spectral wrappers for `color filters` and `sensor spectral qe`, returning MATLAB-style `{x, y}` spectral payloads plus filter labels from the stored sensor spectral bundle, along with headless CFA views for `cfa` / `cfa block` and `cfa full` that follow MATLAB unit-block/full-array tiling and default image scaling.
 - The adjacent headless sensor image-view surface is now covered too through `plotSensor('cfa image')`, `plotSensor('true size')`, and `plotSensor('channels')`, returning rendered image and per-channel payloads instead of opening GUI windows.
 - The same headless sensor plotting surface now also covers `plotSensor('etendue')`, returning MATLAB-style support and relative-illumination payloads without opening a mesh plot window.
-- The sensor spectral-wrapper surface now also includes `plotSensor('ir filter')`, `plotSensor('pixel spectral qe')`, and `plotSensor('pixel spectral sr')`, backed by explicit `ir filter` and `pixel spectral qe` state plus MATLAB-style combined `sensorGet(..., 'spectral qe')` semantics.
+- The sensor spectral-wrapper surface now also includes `plotSensor('ir filter')`, `plotSensor('pixel spectral qe')`, `plotSensor('pixel spectral sr')`, and `plotSensor('sensor spectral sr')`, backed by explicit `ir filter` and `pixel spectral qe` state plus MATLAB-style combined `sensorGet(..., 'spectral qe')` / `sensorGet(..., 'sensor spectral sr')` semantics.
 - That same headless sensor plotting layer now also covers deterministic noise-map payloads for `plotSensor('shot noise')`, `plotSensor('dsnu')`, and `plotSensor('prnu')`, backed by MATLAB-style DSNU/PRNU aliases on the sensor object.
 
 ## Summary

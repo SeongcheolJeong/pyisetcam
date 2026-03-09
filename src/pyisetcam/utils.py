@@ -200,6 +200,7 @@ _PARAMETER_OTYPE_UNIQUE = {
         "filtercolorletterscell",
         "filterplotcolors",
         "spectralqe",
+        "sensorspectralsr",
         "pattern",
         "dsnusigma",
         "prnusigma",

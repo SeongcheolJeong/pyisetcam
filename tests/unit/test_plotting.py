@@ -395,6 +395,7 @@ def test_plot_sensor_spectral_wrappers(asset_store) -> None:
     pixel_qe_udata, pixel_qe_handle = plotSensor(sensor, "pixel spectral qe")
     pixel_sr_udata, pixel_sr_handle = plotSensor(sensor, "pixel spectral sr")
     qe_udata, qe_handle = plotSensor(sensor, "sensor spectral qe")
+    sensor_sr_udata, sensor_sr_handle = plotSensor(sensor, "sensor spectral sr")
 
     expected_wave = np.asarray(sensor_get(sensor, "wave"), dtype=float)
     expected_filters = np.asarray(sensor_get(sensor, "color filters"), dtype=float)
@@ -404,6 +405,7 @@ def test_plot_sensor_spectral_wrappers(asset_store) -> None:
         (expected_wave.reshape(-1, 1) * 1e-9 * 1.602177e-19) / (6.62607015e-34 * 2.99792458e8)
     ) * expected_pixel_qe
     expected_qe = expected_filters * expected_pixel_qe * expected_ir
+    expected_sensor_sr = expected_filters * expected_ir * expected_pixel_sr
     expected_names = list(sensor_get(sensor, "filter color letters cell"))
 
     assert color_handle is None
@@ -411,6 +413,7 @@ def test_plot_sensor_spectral_wrappers(asset_store) -> None:
     assert pixel_qe_handle is None
     assert pixel_sr_handle is None
     assert qe_handle is None
+    assert sensor_sr_handle is None
     assert np.allclose(color_udata["x"], expected_wave)
     assert np.allclose(color_udata["y"], expected_filters)
     assert color_udata["filterNames"] == expected_names
@@ -431,6 +434,11 @@ def test_plot_sensor_spectral_wrappers(asset_store) -> None:
     assert np.allclose(qe_udata["y"], expected_qe)
     assert qe_udata["filterNames"] == expected_names
     assert qe_udata["yLabel"] == "Quantum efficiency"
+    assert np.allclose(sensor_get(sensor, "sensor spectral sr"), expected_sensor_sr)
+    assert np.allclose(sensor_sr_udata["x"], expected_wave)
+    assert np.allclose(sensor_sr_udata["y"], expected_sensor_sr)
+    assert sensor_sr_udata["filterNames"] == expected_names
+    assert sensor_sr_udata["yLabel"] == "Responsivity:  Volts/Watt"
 
 
 def test_plot_sensor_cfa_wrappers(asset_store) -> None:
