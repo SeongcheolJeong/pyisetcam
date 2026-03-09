@@ -2123,6 +2123,25 @@ def test_sensor_get_set_supports_movement_metadata_surface(asset_store) -> None:
     assert np.array_equal(sensor_get(sensor, "etime per pos"), frames)
 
 
+def test_sensor_get_set_supports_legacy_scene_and_lens_metadata_aliases(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+
+    sensor = sensor_set(sensor, "scene_name", "scene-b")
+    sensor = sensor_set(sensor, "lens", "lens-b")
+
+    assert sensor_get(sensor, "scene_name") == "scene-b"
+    assert sensor_get(sensor, "metadata scene name") == "scene-b"
+    assert sensor_get(sensor, "lens") == "lens-b"
+    assert sensor_get(sensor, "metadata lensname") == "lens-b"
+    assert sensor_get(sensor, "metadata lens") == "lens-b"
+    assert sensor_get(sensor, "metadata optics name") == "lens-b"
+
+    sensor = sensor_set(sensor, "metadata optics name", "lens-c")
+
+    assert sensor_get(sensor, "lens") == "lens-c"
+    assert sensor_get(sensor, "metadata lensname") == "lens-c"
+
+
 def test_sensor_set_cfa_round_trips_matlab_style_struct(asset_store) -> None:
     sensor = sensor_create("rgbw", asset_store=asset_store)
     cfa = sensor_get(sensor, "cfa")

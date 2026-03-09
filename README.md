@@ -334,7 +334,10 @@ the nearby `metadata sensor/scene/optics name` plus `metadata crop`
 round-trip fields, along with the adjacent sensor movement surface through
 `sensorGet/Set('sensor movement'/'eye movement')`,
 `sensorGet/Set('movement positions'/'sensor positions')`, and
-`sensorGet/Set('frames per position'/'exposure times per position')`.
+`sensorGet/Set('frames per position'/'exposure times per position')`. The
+neighboring legacy scene/lens aliases now round-trip too through
+`sensorGet/Set('scene_name')`, `sensorGet/Set('lens')`, and
+`sensorGet('metadata lensname'/'metadata lens')`.
 The same headless plotting surface now
 also covers `plotSensor('etendue')`, returning MATLAB-style support and
 relative-illumination payloads without opening a mesh plot window. Sensor

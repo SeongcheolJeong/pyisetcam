@@ -1091,12 +1091,14 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return float(sensor.fields["pixel"]["voltage_swing"])
     if key in {"maxvoltage", "max", "maxoutput"}:
         return float(sensor_get(sensor, "pixel voltage swing"))
+    if key in {"metadatascenename", "scenename", "scene_name"}:
+        value = sensor.metadata.get("scenename", sensor.metadata.get("scene_name"))
+        return _copy_metadata_value(value)
+    if key in {"metadataopticsname", "metadatalensname", "metadatalens", "lens"}:
+        value = sensor.metadata.get("opticsname", sensor.metadata.get("lens"))
+        return _copy_metadata_value(value)
     if key == "metadatasensorname":
         return _copy_metadata_value(sensor.metadata.get("sensorname"))
-    if key == "metadatascenename":
-        return _copy_metadata_value(sensor.metadata.get("scenename"))
-    if key == "metadataopticsname":
-        return _copy_metadata_value(sensor.metadata.get("opticsname"))
     if key == "metadatacrop":
         return _copy_metadata_value(sensor.metadata.get("crop"))
     if key in {"zerolevel", "zero"}:
@@ -1343,14 +1345,18 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
     if key in {"zerolevel", "zero"}:
         sensor.fields["zero_level"] = float(value)
         return sensor
+    if key in {"metadatascenename", "scenename", "scene_name"}:
+        copied = _copy_metadata_value(value)
+        sensor.metadata["scenename"] = copied
+        sensor.metadata["scene_name"] = _copy_metadata_value(copied)
+        return sensor
+    if key in {"metadataopticsname", "metadatalensname", "metadatalens", "lens"}:
+        copied = _copy_metadata_value(value)
+        sensor.metadata["opticsname"] = copied
+        sensor.metadata["lens"] = _copy_metadata_value(copied)
+        return sensor
     if key == "metadatasensorname":
         sensor.metadata["sensorname"] = _copy_metadata_value(value)
-        return sensor
-    if key == "metadatascenename":
-        sensor.metadata["scenename"] = _copy_metadata_value(value)
-        return sensor
-    if key == "metadataopticsname":
-        sensor.metadata["opticsname"] = _copy_metadata_value(value)
         return sensor
     if key == "metadatacrop":
         sensor.metadata["crop"] = _copy_metadata_value(value)
