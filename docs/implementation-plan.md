@@ -51,6 +51,7 @@
 - That same legacy human surface now also has focused parser/runtime coverage for the long-form aliases `human cone type` and `human cone locs`.
 - The same legacy human runtime coverage now also exercises `human cone densities` and `human cone seed` directly.
 - That same legacy human runtime/parser coverage now also exercises the exact legacy alias `humanrseed`.
+- The same legacy human coverage now also exercises the exact no-space aliases `humanconetype`, `humanconedensities`, `humanconelocs`, and `humanconeseed`.
 - The adjacent chart block now also has parser-level routing for `chart parameters`, `corner points`, `chart corners`, `chart rects`, `chart rectangles`, `current rect`, and `chart current rect`.
 - That same chart surface now also has focused parser/runtime coverage for the long-form setter alias `chart corner points`.
 - That same chart runtime coverage now also exercises the long-form setter path for `chart rectangles` and `current rect`, plus the adjacent `mcc corner points` setter alias.
