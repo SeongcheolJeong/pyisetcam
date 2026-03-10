@@ -31,6 +31,12 @@
       "atol": 1e-08
     },
     {
+      "name": "metrics_xyz_from_energy_1d",
+      "matlab_function": "ieXYZFromEnergy",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "scene_illuminant_change",
       "matlab_function": "sceneAdjustIlluminant",
       "rtol": 1e-05,

@@ -47,6 +47,13 @@ switch case_name
         payload.photons = photons;
         payload.energy_roundtrip = Quanta2Energy(wave, photons);
 
+    case 'metrics_xyz_from_energy_1d'
+        wave = (400:10:700)';
+        energy = linspace(0.05, 1.55, numel(wave));
+        payload.wave = wave;
+        payload.energy = energy;
+        payload.xyz = ieXYZFromEnergy(energy, wave);
+
     case 'scene_illuminant_change'
         scene = sceneCreate();
         bb = blackbody(sceneGet(scene, 'wave'), 3000, 'energy');

@@ -10,6 +10,7 @@ import numpy as np
 from .assets import AssetStore
 from .camera import camera_compute, camera_create
 from .display import display_create
+from .metrics import xyz_from_energy
 from .ip import ip_compute, ip_create
 from .optics import (
     _cos4th_factor,
@@ -105,6 +106,19 @@ def run_python_case_with_context(
                 "energy": energy,
                 "photons": photons,
                 "energy_roundtrip": quanta_to_energy(photons, wave),
+            },
+            context={},
+        )
+
+    if case_name == "metrics_xyz_from_energy_1d":
+        wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+        energy = np.linspace(0.05, 1.55, wave.size, dtype=float)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "energy": energy,
+                "xyz": xyz_from_energy(energy, wave, asset_store=store),
             },
             context={},
         )
