@@ -515,6 +515,9 @@ sampling and vignetting aliases now also round-trip through
 `sensorGet/Set('sensor vignetting'/'sensor bare etendue'/'no microlens etendue')`.
 The same vignetting block now also has parser-level support for
 `vignetting flag`, `pixel vignetting`, and `vignetting name`.
+That same vignetting coverage now also exercises the exact no-space aliases
+`vignettingflag`, `pixelvignetting`, `sensorvignetting`,
+`sensorbareetendue`, `nomicrolensetendue`, and `vignettingname`.
 The adjacent noise-control storage surface now also includes
 `sensorGet/Set('reuse noise')`, `sensorGet/Set('noise seed')`, and
 `sensorGet/Set('response type')`, with stored noise seeds now feeding
