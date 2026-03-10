@@ -70,6 +70,11 @@ switch case_name
         payload.temperatures = temperatures;
         payload.photons = blackbody(wave, temperatures, 'photons');
 
+    case 'utility_ie_param_format_string'
+        original = 'Exposure Time';
+        payload.original = original;
+        payload.formatted = ieParamFormat(original);
+
     case 'metrics_xyz_from_energy_1d'
         wave = (400:10:700)';
         energy = linspace(0.05, 1.55, numel(wave));

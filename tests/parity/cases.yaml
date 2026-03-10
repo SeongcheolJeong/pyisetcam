@@ -49,6 +49,12 @@
       "atol": 1e-08
     },
     {
+      "name": "utility_ie_param_format_string",
+      "matlab_function": "ieParamFormat",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "metrics_xyz_from_energy_1d",
       "matlab_function": "ieXYZFromEnergy",
       "rtol": 1e-05,

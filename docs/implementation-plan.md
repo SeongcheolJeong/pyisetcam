@@ -146,6 +146,7 @@
 - `utility_energy_quanta_matrix`: `Energy2Quanta` / `Quanta2Energy` parity on a wave-first energy matrix, compare wave, photons matrix, and round-trip-restored energy for the matrix conversion path.
 - `utility_blackbody_energy_small`: `blackbody(..., 'energy')` parity on two fixed color temperatures, compare wave, temperatures, and the returned spectral energy matrix for a standalone illumination helper.
 - `utility_blackbody_quanta_small`: `blackbody(..., 'photons')` parity on two fixed color temperatures, compare wave, temperatures, and the returned photon matrix for a standalone illumination helper.
+- `utility_ie_param_format_string`: `ieParamFormat('Exposure Time')` parity on a deterministic string input, compare the original and formatted string result for the core parameter-normalization helper.
 - `metrics_xyz_from_energy_1d`: `ieXYZFromEnergy` parity on a 1D SPD, compare wave, energy, and XYZ tristimulus output for the first metrics-family helper case.
 - `metrics_xyz_to_luv_1d`: `xyz2luv` parity on a single XYZ/white-point pair, compare the XYZ input, white point, and resulting LUV vector for another deterministic metrics-family helper.
 - `metrics_xyz_to_lab_1d`: `ieXYZ2LAB` parity on a single XYZ/white-point pair, compare the XYZ input, white point, and resulting LAB vector for another deterministic metrics-family helper.

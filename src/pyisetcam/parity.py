@@ -23,7 +23,7 @@ from .optics import (
 )
 from .scene import scene_adjust_illuminant, scene_create, scene_get
 from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_set
-from .utils import blackbody, energy_to_quanta, quanta_to_energy, unit_frequency_list
+from .utils import blackbody, energy_to_quanta, param_format, quanta_to_energy, unit_frequency_list
 
 
 @dataclass
@@ -154,6 +154,17 @@ def run_python_case_with_context(
                 "wave": wave,
                 "temperatures": temperatures,
                 "photons": blackbody(wave, temperatures, kind="quanta"),
+            },
+            context={},
+        )
+
+    if case_name == "utility_ie_param_format_string":
+        original = "Exposure Time"
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "original": original,
+                "formatted": param_format(original),
             },
             context={},
         )
