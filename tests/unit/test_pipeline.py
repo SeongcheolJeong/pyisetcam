@@ -2611,15 +2611,16 @@ def test_sensor_compute_rejects_multiple_integration_times(asset_store) -> None:
 def test_sensor_get_set_supports_sampling_and_vignetting_aliases(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
 
-    assert sensor_get(sensor, "pixel samples") == 1
+    assert sensor_get(sensor, "pixelsamples") == 1
     assert sensor_get(sensor, "sensor bare etendue") == 0
 
-    sensor = sensor_set(sensor, "spatial samples per pixel", 3)
+    sensor = sensor_set(sensor, "spatialsamplesperpixel", 3)
     sensor = sensor_set(sensor, "vignetting flag", "bare")
 
-    assert sensor_get(sensor, "ngrid samples") == 3
-    assert sensor_get(sensor, "nsamples per pixel") == 3
-    assert sensor_get(sensor, "pixel samples") == 3
+    assert sensor_get(sensor, "ngridsamples") == 3
+    assert sensor_get(sensor, "nsamplesperpixel") == 3
+    assert sensor_get(sensor, "npixelsamplesforcomputing") == 3
+    assert sensor_get(sensor, "pixelsamples") == 3
     assert sensor_get(sensor, "sensor vignetting") == "bare"
     assert sensor_get(sensor, "vignetting flag") == "bare"
     assert sensor_get(sensor, "vignetting name") == "bare"
@@ -2630,12 +2631,12 @@ def test_sensor_get_set_supports_sampling_and_vignetting_aliases(asset_store) ->
 def test_sensor_get_set_supports_noise_seed_reuse_and_response_type(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
 
-    assert sensor_get(sensor, "reuse noise") is False
-    assert sensor_get(sensor, "noise seed") == 0
-    assert sensor_get(sensor, "response type") == "linear"
+    assert sensor_get(sensor, "reusenoise") is False
+    assert sensor_get(sensor, "noiseseed") == 0
+    assert sensor_get(sensor, "responsetype") == "linear"
 
-    sensor = sensor_set(sensor, "reuse noise", True)
-    sensor = sensor_set(sensor, "noise seed", 7)
+    sensor = sensor_set(sensor, "reusenoise", True)
+    sensor = sensor_set(sensor, "noiseseed", 7)
     sensor = sensor_set(sensor, "responsetype", "LOG")
 
     assert sensor_get(sensor, "reusenoise") is True

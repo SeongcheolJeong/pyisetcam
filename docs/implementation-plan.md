@@ -45,6 +45,7 @@
 - The neighboring exposure block now also has parser-level routing for `integration time`, `exptimes`, `unique exptimes`, `central exposure`, `exposure method`, `n exposures`, `exposure plane`, `correlated double sampling`, `auto exposure`, and `automatic exposure`.
 - That same exposure coverage now also exercises the exact no-space aliases `integrationtime`, `uniqueexptimes`, `centralexposure`, `exposuremethod`, `nexposures`, `exposureplane`, `correlateddoublesampling`, `autoexp`, `autoexposure`, and `automaticexposure`.
 - The neighboring sampling/noise-control block now also has parser-level routing for `pixel samples`, `n pixel samples for computing`, `spatial samples per pixel`, and `response type`.
+- That same sampling/noise-control coverage now also exercises the exact no-space aliases `pixelsamples`, `npixelsamplesforcomputing`, `spatialsamplesperpixel`, `reusenoise`, `noiseseed`, and `responsetype`.
 - The adjacent movement block now also has parser-level routing for `eye movement`, `frames per position`, `exposure times per position`, and `etime per pos`.
 - The same movement alias surface now also has focused parser/runtime coverage for `movement positions` plus the prefixed `sensor positions` and `sensor positions x/y` forms.
 - That same movement coverage now also exercises the exact no-space aliases `eyemovement`, `movementpositions`, `sensorpositions`, `sensorpositionsx`, `sensorpositionsy`, and `framesperposition`.
