@@ -2228,12 +2228,18 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         sensor.fields.pop("gain_fpn_image", None)
         return sensor
     if key in {"dsnuimage", "offsetfpnimage"}:
+        if value is None:
+            sensor.fields.pop("offset_fpn_image", None)
+            return sensor
         image = np.asarray(value, dtype=float)
         if image.shape != tuple(sensor.fields["size"]):
             raise ValueError("DSNU image must match the sensor size.")
         sensor.fields["offset_fpn_image"] = image
         return sensor
     if key in {"prnuimage", "gainfpnimage"}:
+        if value is None:
+            sensor.fields.pop("gain_fpn_image", None)
+            return sensor
         image = np.asarray(value, dtype=float)
         if image.shape != tuple(sensor.fields["size"]):
             raise ValueError("PRNU image must match the sensor size.")

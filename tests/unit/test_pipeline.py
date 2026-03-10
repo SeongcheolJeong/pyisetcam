@@ -2602,6 +2602,35 @@ def test_sensor_get_set_supports_column_fpn_storage_surface(asset_store) -> None
         sensor_set(sensor, "colgainfpnvector", np.ones(cols - 1, dtype=float))
 
 
+def test_sensor_get_set_supports_fpn_image_surface(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    rows, cols = sensor_get(sensor, "size")
+    dsnu_image = np.arange(rows * cols, dtype=float).reshape(rows, cols)
+    prnu_image = np.linspace(0.9, 1.1, rows * cols, dtype=float).reshape(rows, cols)
+
+    sensor = sensor_set(sensor, "dsnuimage", dsnu_image)
+    sensor = sensor_set(sensor, "prnuimage", prnu_image)
+
+    stored_dsnu = sensor_get(sensor, "dsnuimage")
+    stored_prnu = sensor_get(sensor, "prnuimage")
+
+    assert np.array_equal(stored_dsnu, dsnu_image)
+    assert np.array_equal(sensor_get(sensor, "offsetfpnimage"), dsnu_image)
+    assert np.array_equal(stored_prnu, prnu_image)
+    assert np.array_equal(sensor_get(sensor, "gainfpnimage"), prnu_image)
+
+    stored_dsnu[0, 0] = -1.0
+    stored_prnu[0, 0] = -1.0
+    assert np.array_equal(sensor_get(sensor, "dsnuimage"), dsnu_image)
+    assert np.array_equal(sensor_get(sensor, "prnuimage"), prnu_image)
+
+    sensor = sensor_set(sensor, "offsetfpnimage", None)
+    sensor = sensor_set(sensor, "gainfpnimage", None)
+
+    assert sensor_get(sensor, "dsnuimage") is None
+    assert sensor_get(sensor, "prnuimage") is None
+
+
 def test_sensor_get_set_supports_consistency_and_compute_method_storage(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
 

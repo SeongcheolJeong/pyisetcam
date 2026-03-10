@@ -599,7 +599,10 @@ CFA/filter metadata block now also exercises the exact forms `pattern`,
 now also exercises the exact forms `dsnusigma`, `offsetnoisevalue`,
 `prnusigma`, `gainnoisevalue`, `fpnparameters`,
 `columnfixedpatternnoise`, `coloffsetfpnvector`,
-`colgainfpnvector`, and `noiseflag`. The neighboring exposure-summary
+`colgainfpnvector`, and `noiseflag`, and the same neighboring FPN-image
+surface now also supports exact `dsnuimage`, `offsetfpnimage`,
+`prnuimage`, and `gainfpnimage` access, including clearing those stored
+images with `None`. The neighboring exposure-summary
 block now also exercises the exact forms `exptime`, `exposuretimes`,
 `exposuretime`, `expduration`, `exposureduration`,
 `exposuredurations`, `uniqueintegrationtimes`, `uniqueexptime`,
