@@ -2542,7 +2542,8 @@ def test_sensor_get_set_supports_column_fpn_storage_surface(asset_store) -> None
     column_offset = np.linspace(-0.01, 0.01, cols, dtype=float)
     column_gain = np.linspace(0.9, 1.1, cols, dtype=float)
 
-    assert np.array_equal(sensor_get(sensor, "columnfpn"), np.array([0.0, 0.0], dtype=float))
+    assert np.array_equal(sensor_get(sensor, "columnfixedpatternnoise"), np.array([0.0, 0.0], dtype=float))
+    assert np.array_equal(sensor_get(sensor, "colfpn"), np.array([0.0, 0.0], dtype=float))
     assert sensor_get(sensor, "columnfpnoffset") == 0.0
     assert sensor_get(sensor, "columnfpngain") == 0.0
     assert sensor_get(sensor, "coloffsetfpn") is None
@@ -2551,20 +2552,39 @@ def test_sensor_get_set_supports_column_fpn_storage_surface(asset_store) -> None
     sensor = sensor_set(sensor, "columnfpnparameters", np.array([0.05, 0.1], dtype=float))
     assert np.array_equal(sensor_get(sensor, "columnfpn"), np.array([0.05, 0.1], dtype=float))
 
-    sensor = sensor_set(sensor, "sigma offset fpn", 0.015)
-    sensor = sensor_set(sensor, "sigma gain fpn", 3.5)
-    sensor = sensor_set(sensor, "columnfpn", np.array([0.125, 0.25], dtype=float))
-    sensor = sensor_set(sensor, "columndsnu", column_offset)
-    sensor = sensor_set(sensor, "columnprnu", column_gain)
+    sensor = sensor_set(sensor, "offsetnoisevalue", 0.015)
+    sensor = sensor_set(sensor, "gainnoisevalue", 3.5)
+    sensor = sensor_set(sensor, "columnfixedpatternnoise", np.array([0.125, 0.25], dtype=float))
+    sensor = sensor_set(sensor, "coloffsetfpnvector", column_offset)
+    sensor = sensor_set(sensor, "colgainfpnvector", column_gain)
 
-    assert np.isclose(sensor_get(sensor, "offset"), 0.015)
-    assert np.isclose(sensor_get(sensor, "gain"), 3.5)
-    assert np.array_equal(sensor_get(sensor, "columnfpn"), np.array([0.125, 0.25], dtype=float))
+    assert np.isclose(sensor_get(sensor, "dsnusigma"), 0.015)
+    assert np.isclose(sensor_get(sensor, "dsnulevel"), 0.015)
+    assert np.isclose(sensor_get(sensor, "sigmaoffsetfpn"), 0.015)
+    assert np.isclose(sensor_get(sensor, "offsetfpn"), 0.015)
+    assert np.isclose(sensor_get(sensor, "offsetsd"), 0.015)
+    assert np.isclose(sensor_get(sensor, "offsetnoisevalue"), 0.015)
+    assert np.isclose(sensor_get(sensor, "prnusigma"), 3.5)
+    assert np.isclose(sensor_get(sensor, "prnulevel"), 3.5)
+    assert np.isclose(sensor_get(sensor, "sigmagainfpn"), 3.5)
+    assert np.isclose(sensor_get(sensor, "gainfpn"), 3.5)
+    assert np.isclose(sensor_get(sensor, "gainsd"), 3.5)
+    assert np.isclose(sensor_get(sensor, "gainnoisevalue"), 3.5)
+    assert np.isclose(sensor_get(sensor, "sigmaprnu"), 3.5)
+    assert np.allclose(sensor_get(sensor, "fpnparameters"), np.array([0.015, 3.5], dtype=float))
+    assert np.allclose(sensor_get(sensor, "fpnoffsetgain"), np.array([0.015, 3.5], dtype=float))
+    assert np.allclose(sensor_get(sensor, "fpnoffsetandgain"), np.array([0.015, 3.5], dtype=float))
+    assert np.array_equal(sensor_get(sensor, "columnfixedpatternnoise"), np.array([0.125, 0.25], dtype=float))
+    assert np.array_equal(sensor_get(sensor, "colfpn"), np.array([0.125, 0.25], dtype=float))
     assert sensor_get(sensor, "columnfpnoffset") == 0.125
     assert sensor_get(sensor, "columnfpngain") == 0.25
+    assert sensor_get(sensor, "columndsnu") == 0.125
+    assert sensor_get(sensor, "columnprnu") == 0.25
     assert np.array_equal(sensor_get(sensor, "coloffsetfpn"), column_offset)
+    assert np.array_equal(sensor_get(sensor, "coloffsetfpnvector"), column_offset)
     assert np.array_equal(sensor_get(sensor, "coloffset"), column_offset)
     assert np.array_equal(sensor_get(sensor, "colgainfpn"), column_gain)
+    assert np.array_equal(sensor_get(sensor, "colgainfpnvector"), column_gain)
     assert np.array_equal(sensor_get(sensor, "colgain"), column_gain)
 
     stored = sensor_get(sensor, "coloffsetfpn")
@@ -2573,11 +2593,11 @@ def test_sensor_get_set_supports_column_fpn_storage_surface(asset_store) -> None
     assert np.array_equal(sensor_get(sensor, "coloffsetfpn"), column_offset)
 
     with pytest.raises(ValueError, match="Column FPN"):
-        sensor_set(sensor, "columnfpn", np.array([1.0, 2.0, 3.0], dtype=float))
+        sensor_set(sensor, "columnfixedpatternnoise", np.array([1.0, 2.0, 3.0], dtype=float))
     with pytest.raises(ValueError, match="Bad column offset data"):
-        sensor_set(sensor, "columndsnu", np.ones(cols - 1, dtype=float))
+        sensor_set(sensor, "coloffsetfpnvector", np.ones(cols - 1, dtype=float))
     with pytest.raises(ValueError, match="Bad column gain data"):
-        sensor_set(sensor, "columnprnu", np.ones(cols - 1, dtype=float))
+        sensor_set(sensor, "colgainfpnvector", np.ones(cols - 1, dtype=float))
 
 
 def test_sensor_get_set_supports_consistency_and_compute_method_storage(asset_store) -> None:
@@ -2717,7 +2737,8 @@ def test_sensor_get_supports_response_and_dynamic_range_aliases(asset_store) -> 
     sensor = sensor_set(sensor, "volts", np.array([[0.0, 0.5], [0.25, 0.75]], dtype=float))
     assert np.isclose(sensor_get(sensor, "responsedr"), 0.75 / (1.0 / 4096.0))
 
-    sensor = sensor_set(sensor, "noise flag", 1)
+    sensor = sensor_set(sensor, "noiseflag", 1)
+    assert sensor_get(sensor, "noiseflag") == 1
     assert sensor_get(sensor, "shotnoiseflag") == 1
 
 

@@ -1706,9 +1706,9 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return _sensor_dynamic_range(sensor, integration_time)
     if key in {"fpnparameters", "fpn", "fpnoffsetgain", "fpnoffsetandgain"}:
         return np.array([sensor_get(sensor, "dsnu sigma"), sensor_get(sensor, "prnu sigma")], dtype=float)
-    if key in {"dsnulevel", "sigmaoffsetfpn", "offsetfpn", "offset", "offsetsd", "dsnusigma", "sigmadsnu"}:
+    if key in {"dsnulevel", "sigmaoffsetfpn", "offsetfpn", "offset", "offsetsd", "offsetnoisevalue", "dsnusigma", "sigmadsnu"}:
         return float(sensor.fields["pixel"]["dsnu_sigma_v"])
-    if key in {"sigmagainfpn", "gainfpn", "gain", "gainsd", "prnusigma", "sigmaprnu", "prnulevel"}:
+    if key in {"sigmagainfpn", "gainfpn", "gain", "gainsd", "gainnoisevalue", "prnusigma", "sigmaprnu", "prnulevel"}:
         return float(sensor.fields["pixel"]["prnu_sigma"]) * 100.0
     if key in {"dsnuimage", "offsetfpnimage"}:
         stored = sensor.fields.get("offset_fpn_image")
