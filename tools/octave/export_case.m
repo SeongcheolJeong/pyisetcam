@@ -77,6 +77,15 @@ switch case_name
         payload.white_point = white_point;
         payload.delta_e = deltaEab(xyz1, xyz2, white_point, '1976');
 
+    case 'metrics_spd_angle_1d'
+        wave = [500 510 520];
+        spd1 = [1 0 0];
+        spd2 = [0 1 0];
+        payload.wave = wave;
+        payload.spd1 = spd1;
+        payload.spd2 = spd2;
+        payload.angle = metricsSPD(spd1, spd2, 'metric', 'angle', 'wave', wave);
+
     case 'scene_illuminant_change'
         scene = sceneCreate();
         bb = blackbody(sceneGet(scene, 'wave'), 3000, 'energy');

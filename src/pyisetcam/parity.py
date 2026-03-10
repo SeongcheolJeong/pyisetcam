@@ -10,7 +10,7 @@ import numpy as np
 from .assets import AssetStore
 from .camera import camera_compute, camera_create
 from .display import display_create
-from .metrics import delta_e_ab, xyz_from_energy, xyz_to_lab, xyz_to_luv
+from .metrics import delta_e_ab, metrics_spd, xyz_from_energy, xyz_to_lab, xyz_to_luv
 from .ip import ip_compute, ip_create
 from .optics import (
     _cos4th_factor,
@@ -160,6 +160,21 @@ def run_python_case_with_context(
                 "xyz2": xyz2,
                 "white_point": white_point,
                 "delta_e": delta_e_ab(xyz1, xyz2, white_point),
+            },
+            context={},
+        )
+
+    if case_name == "metrics_spd_angle_1d":
+        wave = np.array([500.0, 510.0, 520.0], dtype=float)
+        spd1 = np.array([1.0, 0.0, 0.0], dtype=float)
+        spd2 = np.array([0.0, 1.0, 0.0], dtype=float)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "spd1": spd1,
+                "spd2": spd2,
+                "angle": metrics_spd(spd1, spd2, metric="angle", wave=wave),
             },
             context={},
         )

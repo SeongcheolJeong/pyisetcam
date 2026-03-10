@@ -3374,3 +3374,12 @@ def test_run_python_case_supports_delta_e_ab_metrics_parity_case(asset_store) ->
     assert case.payload["xyz2"].shape == (3,)
     assert case.payload["white_point"].shape == (3,)
     assert float(case.payload["delta_e"]) > 0.0
+
+
+def test_run_python_case_supports_metrics_spd_angle_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_spd_angle_1d", asset_store=asset_store)
+
+    assert case.payload["wave"].shape == (3,)
+    assert case.payload["spd1"].shape == (3,)
+    assert case.payload["spd2"].shape == (3,)
+    assert np.isclose(float(case.payload["angle"]), 90.0)
