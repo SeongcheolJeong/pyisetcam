@@ -117,6 +117,8 @@ class AssetStore:
 
     def resolve(self, relative_path: str | Path) -> Path:
         relative_path = Path(relative_path)
+        if relative_path.exists():
+            return relative_path
         candidate = self.ensure() / relative_path
         if not candidate.exists():
             raise MissingAssetError(f"Asset not found: {relative_path}")

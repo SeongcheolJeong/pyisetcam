@@ -3349,6 +3349,17 @@ def test_run_python_case_supports_sweep_frequency_scene_parity_case(asset_store)
     assert case.payload["mean_luminance"] > 0.0
 
 
+def test_run_python_case_supports_reflectance_chart_scene_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_reflectance_chart_small", asset_store=asset_store)
+
+    assert case.payload["photons"].shape == case.context["scene"].data["photons"].shape
+    assert np.array_equal(case.payload["wave"], case.context["scene"].fields["wave"])
+    assert case.payload["photons"].shape[:2] == (24, 24)
+    assert np.array_equal(case.payload["chart_rowcol"], np.array([3, 3]))
+    assert case.payload["chart_index_map"].shape == (24, 24)
+    assert case.payload["mean_luminance"] > 0.0
+
+
 def test_run_python_case_supports_unit_frequency_utility_parity_case(asset_store) -> None:
     case = run_python_case_with_context("utility_unit_frequency_list", asset_store=asset_store)
 

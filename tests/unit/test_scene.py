@@ -149,6 +149,57 @@ def test_sweep_frequency_scene_supports_custom_frequency_and_contrast_profile(as
     assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
 
 
+def test_reflectance_chart_scene_supports_explicit_sample_lists(asset_store) -> None:
+    scene = scene_create(
+        "reflectance chart",
+        8,
+        [[1, 2], [1, 2], [1]],
+        [
+            "MunsellSamples_Vhrel.mat",
+            "Food_Vhrel.mat",
+            "skin/HyspexSkinReflectance.mat",
+        ],
+        None,
+        True,
+        "without replacement",
+        asset_store=asset_store,
+    )
+
+    photons = scene_get(scene, "photons")
+    chart_parameters = scene_get(scene, "chart parameters")
+
+    assert photons.shape == (24, 24, scene_get(scene, "wave").size)
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
+    assert np.array_equal(chart_parameters["rowcol"], np.array([3, 3]))
+    assert chart_parameters["rIdxMap"].shape == (24, 24)
+    assert np.array_equal(chart_parameters["sSamples"][0], np.array([1, 2]))
+    assert np.array_equal(chart_parameters["sSamples"][1], np.array([1, 2]))
+    assert np.array_equal(chart_parameters["sSamples"][2], np.array([1]))
+
+
+def test_reflectance_chart_scene_supports_struct_parameters_and_absolute_paths(asset_store) -> None:
+    params = {
+        "pSize": 8,
+        "sFiles": [
+            asset_store.resolve("data/surfaces/reflectances/MunsellSamples_Vhrel.mat"),
+            asset_store.resolve("data/surfaces/reflectances/Food_Vhrel.mat"),
+            asset_store.resolve("data/surfaces/reflectances/skin/HyspexSkinReflectance.mat"),
+        ],
+        "sSamples": [[1], [1], [1]],
+        "grayFlag": False,
+        "sampling": "all",
+    }
+
+    scene = scene_create("reflectance chart", params, asset_store=asset_store)
+    photons = scene_get(scene, "photons")
+    chart_parameters = scene_get(scene, "chart parameters")
+
+    assert photons.shape == (16, 16, scene_get(scene, "wave").size)
+    assert np.array_equal(chart_parameters["rowcol"], np.array([2, 2]))
+    assert all(np.array_equal(item, np.array([1])) for item in chart_parameters["sSamples"])
+    assert all(path.endswith(".mat") for path in chart_parameters["sFiles"])
+
+
 def test_scene_from_file_rgb_array_uses_display_geometry(asset_store) -> None:
     display = display_create("default", asset_store=asset_store)
     image = np.array(

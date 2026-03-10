@@ -65,6 +65,25 @@ switch case_name
         payload.photons = sceneGet(scene, 'photons');
         payload.mean_luminance = sceneGet(scene, 'mean luminance');
 
+    case 'scene_reflectance_chart_small'
+        sFiles = {
+            fullfile(upstream_root, 'data', 'surfaces', 'reflectances', 'MunsellSamples_Vhrel.mat')
+            fullfile(upstream_root, 'data', 'surfaces', 'reflectances', 'Food_Vhrel.mat')
+            fullfile(upstream_root, 'data', 'surfaces', 'reflectances', 'skin', 'HyspexSkinReflectance.mat')
+        };
+        sSamples = {
+            [1 2]
+            [1 2]
+            [1]
+        };
+        scene = sceneCreate('reflectance chart', 8, sSamples, sFiles, [], true, 'without replacement');
+        payload.wave = sceneGet(scene, 'wave');
+        payload.photons = sceneGet(scene, 'photons');
+        payload.mean_luminance = sceneGet(scene, 'mean luminance');
+        chart_params = sceneGet(scene, 'chart parameters');
+        payload.chart_rowcol = chart_params.rowcol;
+        payload.chart_index_map = chart_params.rIdxMap;
+
     case 'utility_unit_frequency_list'
         payload.even = unitFrequencyList(50);
         payload.odd = unitFrequencyList(51);

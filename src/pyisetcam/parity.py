@@ -136,6 +136,34 @@ def run_python_case_with_context(
             context={"scene": scene},
         )
 
+    if case_name == "scene_reflectance_chart_small":
+        scene = scene_create(
+            "reflectance chart",
+            8,
+            [[1, 2], [1, 2], [1]],
+            [
+                store.resolve("data/surfaces/reflectances/MunsellSamples_Vhrel.mat"),
+                store.resolve("data/surfaces/reflectances/Food_Vhrel.mat"),
+                store.resolve("data/surfaces/reflectances/skin/HyspexSkinReflectance.mat"),
+            ],
+            None,
+            True,
+            "without replacement",
+            asset_store=store,
+        )
+        chart_parameters = scene_get(scene, "chart parameters")
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": scene_get(scene, "wave"),
+                "photons": scene_get(scene, "photons"),
+                "mean_luminance": scene_get(scene, "mean luminance", asset_store=store),
+                "chart_rowcol": np.asarray(chart_parameters["rowcol"], dtype=int),
+                "chart_index_map": np.asarray(chart_parameters["rIdxMap"], dtype=int),
+            },
+            context={"scene": scene},
+        )
+
     if case_name == "utility_unit_frequency_list":
         return ParityCaseResult(
             payload={

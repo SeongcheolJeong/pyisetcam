@@ -789,6 +789,201 @@ def _equal_photon_pattern_scene(
     return scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
 
 
+def _default_reflectance_chart_files() -> list[str]:
+    return [
+        "MunsellSamples_Vhrel.mat",
+        "Food_Vhrel.mat",
+        "skin/HyspexSkinReflectance.mat",
+    ]
+
+
+def _reflectance_chart_sources(value: Any | None) -> list[Any]:
+    if value is None:
+        return _default_reflectance_chart_files()
+    if isinstance(value, (str, Path, np.ndarray)):
+        return [value]
+    if isinstance(value, tuple):
+        return list(value)
+    if isinstance(value, list):
+        return value.copy()
+    return [value]
+
+
+def _load_reflectance_source(
+    source: Any,
+    wave: np.ndarray,
+    *,
+    asset_store: AssetStore,
+) -> np.ndarray:
+    if isinstance(source, (str, Path)):
+        source_path = Path(source)
+        if source_path.exists():
+            data = asset_store.load_mat(source_path)
+        else:
+            data = asset_store.load_mat(Path("data/surfaces/reflectances") / source_path)
+        reflectance = np.asarray(data["data"], dtype=float)
+        source_wave = np.asarray(data["wavelength"], dtype=float).reshape(-1)
+        if reflectance.ndim == 1:
+            reflectance = reflectance.reshape(-1, 1)
+        if not np.array_equal(source_wave, wave):
+            from .utils import interp_spectra
+
+            reflectance = interp_spectra(source_wave, reflectance, wave)
+        return np.asarray(reflectance, dtype=float)
+    reflectance = np.asarray(source, dtype=float)
+    if reflectance.ndim == 1:
+        reflectance = reflectance.reshape(-1, 1)
+    if reflectance.shape[0] != wave.size:
+        raise ValueError("Reflectance matrices must be provided on the target wavelength grid.")
+    return reflectance
+
+
+def _reflectance_sample_lists(
+    reflectance_sets: list[np.ndarray],
+    sample_spec: Any,
+    sampling: str,
+) -> list[np.ndarray]:
+    normalized_sampling = param_format(sampling)
+    with_replacement = normalized_sampling.startswith("r")
+    use_all = normalized_sampling == "all"
+
+    if isinstance(sample_spec, (list, tuple)) and len(sample_spec) == len(reflectance_sets):
+        explicit = []
+        is_explicit = True
+        for item in sample_spec:
+            if np.isscalar(item):
+                is_explicit = False
+                break
+            values = np.asarray(item, dtype=int).reshape(-1)
+            if values.size == 0:
+                explicit.append(values)
+                continue
+            explicit.append(values)
+        if is_explicit:
+            return explicit
+
+    if sample_spec is None:
+        counts = [24] * len(reflectance_sets)
+    else:
+        counts_array = np.asarray(sample_spec, dtype=int).reshape(-1)
+        if counts_array.size != len(reflectance_sets):
+            raise ValueError("Reflectance chart sample counts must match the number of reflectance sources.")
+        counts = counts_array.tolist()
+
+    rng = np.random.default_rng(0)
+    sample_lists: list[np.ndarray] = []
+    for count, reflectance in zip(counts, reflectance_sets, strict=True):
+        n_reflectances = reflectance.shape[1]
+        if use_all:
+            sample_lists.append(np.arange(1, n_reflectances + 1, dtype=int))
+            continue
+        count = int(count)
+        if with_replacement:
+            sample_lists.append(rng.integers(1, n_reflectances + 1, size=count, endpoint=False, dtype=int))
+        else:
+            if count > n_reflectances:
+                raise ValueError("Requested more reflectance samples than available without replacement.")
+            perm = rng.permutation(n_reflectances)[:count]
+            sample_lists.append(np.asarray(perm + 1, dtype=int))
+    return sample_lists
+
+
+def _reflectance_chart_parameters(
+    value: Any | None,
+    *,
+    wave: np.ndarray | None = None,
+) -> dict[str, Any]:
+    normalized = _normalized_parameter_dict(value)
+    files = _reflectance_chart_sources(normalized.get("sfiles"))
+    samples = normalized.get("ssamples", np.array([50, 40, 10], dtype=int))
+    patch_size = int(np.rint(normalized.get("psize", 24)))
+    chart_wave = _wave_or_default(normalized.get("wave", wave))
+    gray_flag = bool(normalized.get("grayflag", 1))
+    sampling = str(normalized.get("sampling", "r"))
+    return {
+        "sfiles": files,
+        "ssamples": samples,
+        "psize": max(patch_size, 1),
+        "wave": chart_wave,
+        "grayflag": gray_flag,
+        "sampling": sampling,
+    }
+
+
+def _reflectance_chart_scene(
+    source_files: list[Any],
+    sample_spec: Any,
+    patch_size: int,
+    wave: np.ndarray,
+    gray_flag: bool,
+    sampling: str,
+    *,
+    asset_store: AssetStore,
+) -> Scene:
+    reflectance_sets = [_load_reflectance_source(source, wave, asset_store=asset_store) for source in source_files]
+    sample_lists = _reflectance_sample_lists(reflectance_sets, sample_spec, sampling)
+    sampled_blocks = []
+    for reflectance, sample_list in zip(reflectance_sets, sample_lists, strict=True):
+        if sample_list.size == 0:
+            continue
+        sampled_blocks.append(reflectance[:, sample_list.astype(int) - 1])
+    if sampled_blocks:
+        reflectances = np.concatenate(sampled_blocks, axis=1)
+    else:
+        reflectances = np.zeros((wave.size, 0), dtype=float)
+
+    n_samples = reflectances.shape[1]
+    rows = int(np.ceil(np.sqrt(n_samples))) if n_samples > 0 else 1
+    cols = int(np.ceil(n_samples / max(rows, 1))) if n_samples > 0 else 1
+    if gray_flag:
+        gray_strip = np.ones((wave.size, rows), dtype=float) * np.logspace(0.0, np.log10(0.05), rows, dtype=float)
+        reflectances = np.concatenate((reflectances, gray_strip), axis=1)
+        cols += 1
+
+    illuminant_energy, illuminant_photons = _spectral_illuminant("ee", wave, asset_store=asset_store)
+    radiance = reflectances * illuminant_photons.reshape(-1, 1)
+    patch_cube = np.zeros((rows, cols, wave.size), dtype=float)
+    index_map = np.zeros((rows, cols), dtype=int)
+    for row in range(rows):
+        for col in range(cols):
+            idx = row + col * rows
+            if idx < radiance.shape[1]:
+                patch_cube[row, col, :] = radiance[:, idx]
+                index_map[row, col] = idx + 1
+            else:
+                patch_cube[row, col, :] = 0.2 * illuminant_photons
+
+    xyz = xyz_from_energy(
+        quanta_to_energy(patch_cube.reshape(-1, wave.size), wave),
+        wave,
+        asset_store=asset_store,
+    ).reshape(rows, cols, 3)
+
+    photons = np.repeat(np.repeat(patch_cube, patch_size, axis=0), patch_size, axis=1)
+    scene = Scene(name="Reflectance Chart (EE)")
+    scene.fields["wave"] = wave
+    scene.fields["illuminant_format"] = "spectral"
+    scene.fields["illuminant_energy"] = illuminant_energy
+    scene.fields["illuminant_photons"] = illuminant_photons
+    scene.fields["illuminant_comment"] = "Equal energy"
+    scene.fields["distance_m"] = DEFAULT_DISTANCE_M
+    scene.fields["fov_deg"] = DEFAULT_FOV_DEG
+    scene.fields["chart_parameters"] = {
+        "sFiles": [str(item) for item in source_files],
+        "sSamples": [np.asarray(item, dtype=int).copy() for item in sample_lists],
+        "grayFlag": bool(gray_flag),
+        "sampling": str(sampling),
+        "pSize": int(patch_size),
+        "wave": np.asarray(wave, dtype=float).copy(),
+        "XYZ": xyz.copy(),
+        "rowcol": np.array([rows, cols], dtype=int),
+        "rIdxMap": np.repeat(np.repeat(index_map, patch_size, axis=0), patch_size, axis=1),
+    }
+    scene.data["photons"] = photons
+    _update_scene_geometry(scene)
+    return scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
+
+
 def scene_create(
     scene_name: str = "default",
     *args: Any,
@@ -848,6 +1043,38 @@ def scene_create(
         wavelength = args[0] if len(args) > 0 else 500.0
         size = args[1] if len(args) > 1 else 128
         return track_session_object(session, _uniform_monochromatic_scene(size, wavelength, asset_store=store))
+
+    if name in {"reflectancechart", "reflectance"}:
+        if args and isinstance(args[0], dict):
+            params = _reflectance_chart_parameters(args[0])
+        elif len(args) == 1 and hasattr(args[0], "items"):
+            params = _reflectance_chart_parameters(args[0])
+        else:
+            params = _reflectance_chart_parameters(None)
+            if len(args) > 0:
+                params["psize"] = max(int(np.rint(args[0])), 1)
+            if len(args) > 1:
+                params["ssamples"] = args[1]
+            if len(args) > 2:
+                params["sfiles"] = _reflectance_chart_sources(args[2])
+            if len(args) > 3:
+                params["wave"] = _wave_or_default(args[3])
+            if len(args) > 4:
+                params["grayflag"] = bool(args[4])
+            if len(args) > 5:
+                params["sampling"] = str(args[5])
+        return track_session_object(
+            session,
+            _reflectance_chart_scene(
+                params["sfiles"],
+                params["ssamples"],
+                params["psize"],
+                params["wave"],
+                params["grayflag"],
+                params["sampling"],
+                asset_store=store,
+            ),
+        )
 
     if name in {"line", "lined65", "impulse1dd65"}:
         size = args[0] if len(args) > 0 else 64
@@ -1259,6 +1486,8 @@ def scene_get(scene: Scene, parameter: str, *args: Any, asset_store: AssetStore 
         return scene.fields.get("illuminant_format", "spectral")
     if key == "illuminantcomment":
         return scene.fields.get("illuminant_comment")
+    if key == "chartparameters":
+        return scene.fields.get("chart_parameters")
     if key == "illuminantphotons":
         return np.asarray(scene.fields["illuminant_photons"], dtype=float)
     if key == "illuminantenergy":
@@ -1425,5 +1654,8 @@ def scene_set(scene: Scene, parameter: str, value: Any) -> Scene:
     if key == "illuminantphotons":
         scene.fields["illuminant_photons"] = np.asarray(value, dtype=float).reshape(-1)
         _invalidate_scene_caches(scene)
+        return scene
+    if key == "chartparameters":
+        scene.fields["chart_parameters"] = dict(value)
         return scene
     raise KeyError(f"Unsupported sceneSet parameter: {parameter}")
