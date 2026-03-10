@@ -525,6 +525,10 @@ The neighboring quantization and color/filter coverage now also
 exercises the exact no-space aliases `qmethod`,
 `quantizationstructure`, `quantizationlut`, `filternamescellarray`,
 `filtercolornamescellarray`, and `filternamescell`.
+The adjacent CFA and spectral-metadata coverage now also exercises the
+exact no-space aliases `cfapattern`, `cfaname`, `unitblockconfig`,
+`sensorspectrum`, `wavelengthresolution`, `binwidth`, and
+`numberofwavelengthsamples`.
 The adjacent noise-control storage surface now also includes
 `sensorGet/Set('reuse noise')`, `sensorGet/Set('noise seed')`, and
 `sensorGet/Set('response type')`, with stored noise seeds now feeding
