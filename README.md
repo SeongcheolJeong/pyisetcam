@@ -529,6 +529,10 @@ round-trips through `sensorGet/Set('column fpn')`,
 adjacent response/noise summary block now also includes
 `sensorGet('response dr')`, `sensorGet('dr'/'dynamic range'/'sensor dynamic range')`,
 and the upstream `shot noise flag` getter alias.
+That same noise-summary coverage now also exercises the exact no-space aliases
+`columnfpnparameters`, `columnfpn`, `columnfpnoffset`, `columnfpngain`,
+`coloffsetfpn`, `coloffset`, `colgainfpn`, `colgain`, `responsedr`,
+`drdb20`, `shotnoiseflag`, `blacklevel`, and `zerolevel`.
 The same headless plotting surface now
 also covers `plotSensor('etendue')`, returning MATLAB-style support and
 relative-illumination payloads without opening a mesh plot window. Sensor
