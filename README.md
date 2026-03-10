@@ -5,7 +5,7 @@
 - `scene -> optical image -> sensor -> image processor -> camera`
 - pinned to upstream ISETCam commit `412b9f9bdb3262f2552b96f0e769b5ad6cdff821`
 - validated through a GNU Octave parity harness for curated cases
-- with the broad-parity expansion now started by adding a post-core checkerboard scene case
+- with the broad-parity expansion now started by adding post-core checkerboard and uniform-blackbody scene cases
 
 ## Status
 

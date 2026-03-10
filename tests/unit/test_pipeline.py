@@ -3312,3 +3312,11 @@ def test_run_python_case_supports_checkerboard_scene_parity_case(asset_store) ->
     assert case.payload["photons"].shape == case.context["scene"].data["photons"].shape
     assert np.array_equal(case.payload["wave"], case.context["scene"].fields["wave"])
     assert case.payload["mean_luminance"] > 0.0
+
+
+def test_run_python_case_supports_uniform_bb_scene_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_uniform_bb_small", asset_store=asset_store)
+
+    assert case.payload["photons"].shape == case.context["scene"].data["photons"].shape
+    assert np.array_equal(case.payload["wave"], case.context["scene"].fields["wave"])
+    assert case.payload["mean_luminance"] > 0.0
