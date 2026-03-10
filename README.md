@@ -430,6 +430,10 @@ The neighboring exposure block now also has parser-level routing for
 `integration time`, `exptimes`, `unique exptimes`, `central exposure`,
 `exposure method`, `n exposures`, `exposure plane`, `correlated double sampling`,
 `auto exposure`, and `automatic exposure`.
+That same exposure coverage now also exercises the exact no-space aliases
+`integrationtime`, `uniqueexptimes`, `centralexposure`, `exposuremethod`,
+`nexposures`, `exposureplane`, `correlateddoublesampling`, `autoexp`,
+`autoexposure`, and `automaticexposure`.
 The neighboring sampling/noise-control block now also has parser-level routing for
 `pixel samples`, `n pixel samples for computing`, `spatial samples per pixel`,
 and `response type`.

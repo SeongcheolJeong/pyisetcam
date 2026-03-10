@@ -43,6 +43,7 @@
 - The adjacent microlens block now also has parser-level support for `ml`, `mlens`, `ulens`, `microlens offset`, `mloffset`, and `microlens offset microns`.
 - The adjacent consistency block now also has parser-level routing for `consistency`, `sensor consistency`, and `sensor compute`.
 - The neighboring exposure block now also has parser-level routing for `integration time`, `exptimes`, `unique exptimes`, `central exposure`, `exposure method`, `n exposures`, `exposure plane`, `correlated double sampling`, `auto exposure`, and `automatic exposure`.
+- That same exposure coverage now also exercises the exact no-space aliases `integrationtime`, `uniqueexptimes`, `centralexposure`, `exposuremethod`, `nexposures`, `exposureplane`, `correlateddoublesampling`, `autoexp`, `autoexposure`, and `automaticexposure`.
 - The neighboring sampling/noise-control block now also has parser-level routing for `pixel samples`, `n pixel samples for computing`, `spatial samples per pixel`, and `response type`.
 - The adjacent movement block now also has parser-level routing for `eye movement`, `frames per position`, `exposure times per position`, and `etime per pos`.
 - The same movement alias surface now also has focused parser/runtime coverage for `movement positions` plus the prefixed `sensor positions` and `sensor positions x/y` forms.
