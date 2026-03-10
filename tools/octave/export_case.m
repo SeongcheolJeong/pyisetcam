@@ -242,6 +242,27 @@ switch case_name
         payload.wave = oiGet(oi, 'wave');
         payload.photons = oiGet(oi, 'photons');
 
+    case 'oi_custom_otf_flare_small'
+        scene = sceneCreate('point array', 64, 16);
+        scene = sceneSet(scene, 'hfov', 40);
+        fname = fullfile(isetRootPath, 'data', 'optics', 'flare', 'flare1.png');
+        OTF = opticsPSF2OTF(fname, 1.2e-6, 400:10:700);
+        oi = oiCreate('shift invariant');
+        oi = oiSet(oi, 'optics otfstruct', OTF);
+        oi = oiSet(oi, 'compute method', 'opticsotf');
+        oi = oiSet(oi, 'wangular', sceneGet(scene, 'wangular'));
+        oi = oiSet(oi, 'wave', sceneGet(scene, 'wave'));
+        paddedOI = oiSet(oi, 'photons', oiCalculateIrradiance(scene, oi));
+        paddedOI = oiPadValue(paddedOI, [round(64/8), round(64/8), 0], 'zero photons', sceneGet(scene, 'distance'));
+        interpOTF = oiCalculateOTF(paddedOI, oiGet(paddedOI, 'wave'), 'mm');
+        oi = oiCompute(oi, scene, 'crop', true);
+        payload.wave = oiGet(oi, 'wave');
+        payload.photons = double(oi.data.photons);
+        payload.fx = OTF.fx;
+        payload.fy = OTF.fy;
+        payload.otf_abs550 = abs(OTF.OTF(:,:,16));
+        payload.interp_otf_abs550 = abs(interpOTF(:,:,16));
+
     case 'oi_wvf_defocus_small'
         params = FOTParams;
         params.blockSize = 16;

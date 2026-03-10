@@ -71,6 +71,28 @@ def test_compare_supports_mean_rel_field_override() -> None:
     assert np.isclose(photons["mean_rel"], 0.02)
 
 
+def test_compare_supports_scale_invariant_field_override() -> None:
+    parity_report = _load_parity_report_module()
+
+    reference = {"photons": np.ones((2, 2), dtype=float)}
+    actual = {"photons": np.full((2, 2), 0.1, dtype=float)}
+
+    comparison = parity_report._compare(
+        reference,
+        actual,
+        rtol=1e-4,
+        atol=1e-6,
+        field_rules={"photons": {"mode": "scale_invariant", "max_mean_rel": 1e-8}},
+    )
+
+    photons = comparison["fields"]["photons"]
+    assert photons["comparison_mode"] == "scale_invariant"
+    assert photons["pass"]
+    assert np.isclose(photons["scale"], 10.0)
+    assert np.isclose(photons["mean_rel"], 0.0)
+    assert np.isclose(photons["unscaled_mean_rel"], 0.9)
+
+
 def test_case_diagnostics_recompute_sensor_from_reference_oi(asset_store) -> None:
     parity_report = _load_parity_report_module()
 

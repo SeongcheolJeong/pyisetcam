@@ -17,6 +17,7 @@ from pyisetcam import (
     ip_set,
     ip_compute,
     ip_create,
+    optics_psf_to_otf,
     optics_ray_trace,
     oi_calculate_illuminance,
     oi_diffuser,
@@ -1987,6 +1988,38 @@ def test_oi_create_psf_accepts_custom_shift_invariant_psf_data(asset_store) -> N
     assert computed.data["photons"].shape[2] == scene.data["photons"].shape[2]
 
 
+def test_optics_psf_to_otf_builds_custom_otf_struct(asset_store) -> None:
+    otf = optics_psf_to_otf(
+        asset_store.resolve("data/optics/flare/flare1.png"),
+        1.2e-6,
+        np.arange(400.0, 701.0, 10.0, dtype=float),
+    )
+
+    assert otf["function"] == "custom"
+    assert np.asarray(otf["OTF"]).shape[2] == 31
+    assert np.asarray(otf["fx"]).ndim == 1
+    assert np.asarray(otf["fy"]).ndim == 1
+    assert np.isclose(float(np.abs(np.asarray(otf["OTF"])[0, 0, 0])), 1.0)
+
+
+def test_oi_set_optics_otfstruct_supports_custom_shift_invariant_otf(asset_store) -> None:
+    scene = scene_create("point array", 64, 16, asset_store=asset_store)
+    scene = scene_set(scene, "hfov", 40.0)
+    otf = optics_psf_to_otf(
+        asset_store.resolve("data/optics/flare/flare1.png"),
+        1.2e-6,
+        np.arange(400.0, 701.0, 10.0, dtype=float),
+    )
+    oi = oi_set(oi_create("shift invariant"), "optics otfstruct", otf)
+    computed = oi_compute(oi, scene, crop=True)
+
+    stored = oi_get(oi, "optics otfstruct")
+    assert stored is not None
+    assert oi.fields["optics"]["compute_method"] == "opticsotf"
+    assert np.asarray(stored["OTF"]).shape == np.asarray(otf["OTF"]).shape
+    assert computed.data["photons"].shape[:2] == scene.data["photons"].shape[:2]
+
+
 def test_oi_compute_wvf_uses_custom_aperture(asset_store) -> None:
     scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
     default_oi = oi_compute(oi_create("wvf"), scene, crop=True)
@@ -3445,6 +3478,16 @@ def test_run_python_case_supports_psf_default_oi_parity_case(asset_store) -> Non
     assert case.payload["photons"].shape == case.context["oi"].data["photons"].shape
     assert np.array_equal(case.payload["wave"], case.context["oi"].fields["wave"])
     assert case.context["oi"].fields["optics"]["model"] == "shiftinvariant"
+    assert case.context["oi"].fields["optics"]["compute_method"] == "opticsotf"
+
+
+def test_run_python_case_supports_custom_otf_flare_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("oi_custom_otf_flare_small", asset_store=asset_store)
+
+    assert case.payload["photons"].shape == case.context["oi"].data["photons"].shape
+    assert np.array_equal(case.payload["wave"], case.context["oi"].fields["wave"])
+    assert case.payload["otf_abs550"].shape == (case.payload["fy"].size, case.payload["fx"].size)
+    assert case.payload["interp_otf_abs550"].shape[0] > case.payload["photons"].shape[0]
     assert case.context["oi"].fields["optics"]["compute_method"] == "opticsotf"
 
 

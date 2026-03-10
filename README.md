@@ -110,6 +110,13 @@ The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit
 `psf` / `wave` / `umPerSamp` custom PSF data.
+The same shift-invariant optics surface now also includes
+`optics_psf_to_otf` / `opticsPSF2OTF` and
+`oi_set(..., 'optics otfstruct', ...)` for MATLAB-style custom OTF
+injection from flare PSFs, with a curated Octave parity case on the
+upstream flare image; that case compares `photons` with a scale-invariant
+rule because the upstream Octave path preserves image shape but returns a
+constant-factor magnitude offset.
 The adjacent wavefront helper surface now also includes
 `wvf_set` / `wvfSet`, `wvf_get` / `wvfGet`,
 `wvf_defocus_diopters_to_microns` /

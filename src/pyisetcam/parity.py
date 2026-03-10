@@ -17,6 +17,7 @@ from .optics import (
     _oi_geometry,
     _pad_scene,
     _radiance_to_irradiance,
+    _shift_invariant_custom_otf,
     _wvf_psf_stack,
     oi_compute,
     oi_create,
@@ -24,6 +25,8 @@ from .optics import (
     wvf_create,
     wvf_get,
     wvf_set,
+    optics_psf_to_otf,
+    oi_set,
 )
 from .scene import scene_adjust_illuminant, scene_create, scene_get, scene_set
 from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_set
@@ -431,6 +434,44 @@ def run_python_case_with_context(
         oi = oi_compute(oi_create("psf"), scene, crop=True)
         return ParityCaseResult(
             payload={"case_name": case_name, "wave": oi.fields["wave"], "photons": oi.data["photons"]},
+            context={"scene": scene, "oi": oi},
+        )
+
+    if case_name == "oi_custom_otf_flare_small":
+        scene = scene_create("point array", 64, 16, asset_store=store)
+        scene = scene_set(scene, "hfov", 40.0)
+        otf_struct = optics_psf_to_otf(
+            store.resolve("data/optics/flare/flare1.png"),
+            1.2e-6,
+            np.arange(400.0, 701.0, 10.0, dtype=float),
+        )
+        oi = oi_create("shift invariant")
+        oi = oi_set(oi, "optics otfstruct", otf_struct)
+        optics = dict(oi.fields["optics"])
+        _, width_m, _ = _oi_geometry(optics, scene)
+        sample_spacing_m = float(width_m) / max(int(scene.data["photons"].shape[1]), 1)
+        pad_rows = int(np.round(scene.data["photons"].shape[0] / 8.0))
+        pad_cols = int(np.round(scene.data["photons"].shape[1] / 8.0))
+        custom_otf = _shift_invariant_custom_otf(
+            (
+                int(scene.data["photons"].shape[0] + (2 * pad_rows)),
+                int(scene.data["photons"].shape[1] + (2 * pad_cols)),
+            ),
+            sample_spacing_m,
+            np.asarray(scene.fields["wave"], dtype=float),
+            optics,
+        )
+        oi = oi_compute(oi, scene, crop=True)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": oi_get(oi, "wave"),
+                "photons": oi_get(oi, "photons"),
+                "fx": np.asarray(otf_struct["fx"], dtype=float),
+                "fy": np.asarray(otf_struct["fy"], dtype=float),
+                "otf_abs550": np.abs(np.asarray(otf_struct["OTF"], dtype=complex)[:, :, 15]),
+                "interp_otf_abs550": np.abs(np.asarray(custom_otf, dtype=complex)[:, :, 15]),
+            },
             context={"scene": scene, "oi": oi},
         )
 

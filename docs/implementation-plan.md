@@ -6,6 +6,7 @@
 - `scene_from_file` / `sceneFromFile` is implemented for RGB and monochrome emissive-display inputs.
 - Additional MATLAB-style scene patterns are now implemented: `uniform bb`, `uniform monochromatic`, `line ee`, `line ep`, `bar`, `point array`, `grid lines`, `white noise`, `harmonic`, `frequency orientation` / `freq orient`, `sweep frequency`, `star pattern`, and `reflectance chart`.
 - Script-driven shift-invariant optics coverage now also includes `oiCreate('psf')`, including the default synthetic PSF constructor path and explicit custom `psf` / `wave` / `umPerSamp` PSF data.
+- The same shift-invariant optics surface now also includes `opticsPSF2OTF` plus `oiSet('optics otfstruct', ...)` for MATLAB-style custom OTF injection from flare PSFs, with a curated parity case that treats the final `photons` field scale-invariantly because upstream Octave preserves image shape but returns a constant-factor magnitude offset.
 - Script-driven WVF coverage now also includes MATLAB-style `wvfSet` / `wvfGet`, defocus microns/diopters conversion helpers, `wvf2oi`, and direct `oiCompute(wvf, scene)` support for named Zernike workflows.
 - Sensor preset expansion now includes generic `rgbw` / `rccc` creation and upstream-backed `mt9v024` / `ar0132at` RGBW and RCCC model variants.
 - `camera_create(...)` now forwards those expanded sensor presets too, so camera constructors can directly target `rgbw`, `rccc`, and vendor sensor variants like `mt9v024` / `ar0132at`.
@@ -166,6 +167,7 @@
 - `scene_illuminant_change`: apply a 3000 K blackbody illuminant with `preserveMean=True` and `False`; compare luminance preservation and spectral ratios.
 - `display_create_lcd_example`: load and resample a display calibration; compare `spd`, `gamma`, and wave grid.
 - `oi_psf_default_small`: `oiCreate('psf')` plus `oiCompute(..., crop=true)` parity on the default synthetic shift-invariant PSF optics path, compare wave axis and irradiance cube.
+- `oi_custom_otf_flare_small`: `opticsPSF2OTF('flare1.png')` plus `oiSet('optics otfstruct', OTF)` and `oiCompute(..., crop=true)` parity on the MATLAB custom-OTF flare workflow, compare wave axis, flare OTF diagnostics, and scale-invariant image-shape agreement on the final irradiance cube.
 - `oi_wvf_defocus_small`: `wvfSet(..., 'zcoeffs', [2, 0.5], {'defocus', 'vertical_astigmatism'})` plus `oiCompute(wvf, scene, crop=true)` parity on a script-driven WVF defocus/astigmatism workflow, compare wave axis, irradiance cube, and recovered named Zernike coefficients.
 - `oi_diffraction_limited_default`: default scene through `oiCreate()/oiCompute()`, compare irradiance cube, padding behavior, and FOV-derived geometry.
 - `oi_wvf_small_scene`: small deterministic wavefront case, compare PSF/OTF-derived irradiance numerically with relaxed FFT tolerance.

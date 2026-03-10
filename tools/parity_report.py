@@ -177,6 +177,36 @@ def _compare(
             "max_mean_rel": threshold,
             **metrics,
         }
+    if rule and rule.get("mode") == "scale_invariant":
+        reference_array = np.asarray(normalized_reference, dtype=float)
+        actual_array = np.asarray(normalized_actual, dtype=float)
+        reference_flat = reference_array.reshape(-1)
+        actual_flat = actual_array.reshape(-1)
+        denominator = float(np.dot(actual_flat, actual_flat))
+        if denominator <= 0.0:
+            return {
+                "pass": False,
+                "comparison_mode": "scale_invariant",
+                "reason": "Scale-invariant comparison requires nonzero actual data.",
+                **metrics,
+            }
+        scale = float(np.dot(reference_flat, actual_flat)) / denominator
+        scaled_actual = scale * actual_array
+        scaled_metrics = _array_metrics(reference_array, scaled_actual)
+        result = {
+            "comparison_mode": "scale_invariant",
+            "scale": scale,
+            "unscaled_mean_rel": metrics["mean_rel"],
+            "unscaled_max_rel": metrics["max_rel"],
+            **scaled_metrics,
+        }
+        if "max_mean_rel" in rule:
+            threshold = float(rule["max_mean_rel"])
+            result["pass"] = bool(scaled_metrics["mean_rel"] <= threshold)
+            result["max_mean_rel"] = threshold
+        else:
+            result["pass"] = bool(np.allclose(scaled_actual, reference_array, rtol=rtol, atol=atol))
+        return result
 
     passed = bool(
         np.allclose(

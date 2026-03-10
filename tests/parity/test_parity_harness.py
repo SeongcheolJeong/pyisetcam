@@ -80,6 +80,20 @@ def _compare(
         relative = np.abs(actual_array - reference_array) / np.maximum(np.abs(reference_array), 1e-12)
         assert float(np.mean(relative)) <= float(rule["max_mean_rel"])
         return
+    if rule and rule.get("mode") == "scale_invariant":
+        reference_flat = reference_array.reshape(-1)
+        actual_flat = actual_array.reshape(-1)
+        denominator = float(np.dot(actual_flat, actual_flat))
+        if denominator <= 0.0:
+            raise AssertionError("Scale-invariant comparison requires nonzero actual data.")
+        scale = float(np.dot(reference_flat, actual_flat)) / denominator
+        scaled_actual = scale * actual_array
+        if "max_mean_rel" in rule:
+            relative = np.abs(scaled_actual - reference_array) / np.maximum(np.abs(reference_array), 1e-12)
+            assert float(np.mean(relative)) <= float(rule["max_mean_rel"])
+        else:
+            assert np.allclose(scaled_actual, reference_array, rtol=rtol, atol=atol)
+        return
     assert np.allclose(actual_array, reference_array, rtol=rtol, atol=atol)
 
 

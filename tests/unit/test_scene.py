@@ -112,7 +112,6 @@ def test_point_array_and_grid_lines_follow_spacing(asset_store) -> None:
     assert [int(point_positions[0, 0]), int(point_positions[0, 1])] == [3, 3]
     assert np.all((point_positions[:, 0] - 3) % 8 == 0)
     assert np.all((point_positions[:, 1] - 3) % 8 == 0)
-
     assert np.all(grid_plane[3::8, :] > 0.5)
     assert np.all(grid_plane[:, 3::8] > 0.5)
 
