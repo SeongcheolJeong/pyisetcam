@@ -2239,11 +2239,14 @@ def test_sensor_get_set_supports_photodetector_position_passthrough(asset_store)
     sensor = sensor_create("default", asset_store=asset_store)
     sensor = sensor_set(sensor, "pixel width", 4.0e-6)
     sensor = sensor_set(sensor, "pixel height", 3.0e-6)
-    sensor = sensor_set(sensor, "pd size", np.array([1.0e-6, 2.0e-6], dtype=float))
+    sensor = sensor_set(sensor, "photodetectorsize", np.array([1.0e-6, 2.0e-6], dtype=float))
 
     assert np.allclose(sensor_get(sensor, "pdposition", "um"), np.array([1.0, 1.0], dtype=float))
     assert np.isclose(sensor_get(sensor, "pdxpos", "um"), 1.0)
     assert np.isclose(sensor_get(sensor, "pdypos", "um"), 1.0)
+    assert np.allclose(sensor_get(sensor, "photodetectorsize", "um"), np.array([1.0, 2.0], dtype=float))
+    assert np.isclose(sensor_get(sensor, "photodetectorwidth", "um"), 2.0)
+    assert np.isclose(sensor_get(sensor, "photodetectorheight", "um"), 1.0)
 
     sensor = sensor_set(sensor, "pdxpos", 0.5e-6)
     sensor = sensor_set(sensor, "pdypos", 0.75e-6)
@@ -2252,11 +2255,11 @@ def test_sensor_get_set_supports_photodetector_position_passthrough(asset_store)
     assert np.isclose(sensor_get(sensor, "pdxpos", "um"), 0.5)
     assert np.isclose(sensor_get(sensor, "pdypos", "um"), 0.75)
 
-    sensor = sensor_set(sensor, "photodetector x position", 0.25e-6)
-    sensor = sensor_set(sensor, "photodetector y position", 0.5e-6)
+    sensor = sensor_set(sensor, "photodetectorxposition", 0.25e-6)
+    sensor = sensor_set(sensor, "photodetectoryposition", 0.5e-6)
 
-    assert np.isclose(sensor_get(sensor, "photodetector x position", "um"), 0.25)
-    assert np.isclose(sensor_get(sensor, "photodetector y position", "um"), 0.5)
+    assert np.isclose(sensor_get(sensor, "photodetectorxposition", "um"), 0.25)
+    assert np.isclose(sensor_get(sensor, "photodetectoryposition", "um"), 0.5)
 
     sensor = sensor_set(sensor, "pdposition", np.array([0.25e-6, 0.5e-6], dtype=float))
 
@@ -2278,14 +2281,14 @@ def test_sensor_set_supports_matlab_width_height_pair_aliases(asset_store) -> No
     assert np.isclose(sensor_get(sensor, "pixel width"), 5.0e-6)
     assert np.isclose(sensor_get(sensor, "pixel height"), 5.0e-6)
 
-    sensor = sensor_set(sensor, "pixel pd width and height", np.array([2.0e-6, 1.0e-6], dtype=float))
-    assert np.isclose(sensor_get(sensor, "pd width"), 2.0e-6)
-    assert np.isclose(sensor_get(sensor, "pd height"), 1.0e-6)
-    assert np.allclose(sensor_get(sensor, "pd size"), np.array([1.0e-6, 2.0e-6], dtype=float))
+    sensor = sensor_set(sensor, "pdwidthandheight", np.array([2.0e-6, 1.0e-6], dtype=float))
+    assert np.isclose(sensor_get(sensor, "photodetectorwidth"), 2.0e-6)
+    assert np.isclose(sensor_get(sensor, "photodetectorheight"), 1.0e-6)
+    assert np.allclose(sensor_get(sensor, "photodetectorsize"), np.array([1.0e-6, 2.0e-6], dtype=float))
 
-    sensor = sensor_set(sensor, "pixel pd width and height", 1.5e-6)
-    assert np.isclose(sensor_get(sensor, "pd width"), 1.5e-6)
-    assert np.isclose(sensor_get(sensor, "pd height"), 1.5e-6)
+    sensor = sensor_set(sensor, "pdwidthandheight", 1.5e-6)
+    assert np.isclose(sensor_get(sensor, "photodetectorwidth"), 1.5e-6)
+    assert np.isclose(sensor_get(sensor, "photodetectorheight"), 1.5e-6)
 
 
 def test_sensor_set_routes_direct_unique_pixel_aliases_without_prefix(asset_store) -> None:
