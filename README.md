@@ -541,6 +541,12 @@ The neighboring geometry/block metadata coverage now also exercises the
 exact no-space aliases `unitblockrows`, `unitblockcols`, and `cfasize`,
 while the runtime surface now also uses the exact sensor getter form
 `spatialsupport`.
+The adjacent control/summary coverage now also exercises the exact
+no-space aliases `autoexposure`, `integrationtime`,
+`integrationtimes`, `nsamplesperpixel`, `sensorconsistency`,
+`sensorcompute`, `sensorcomputemethod`, `dynamicrange`,
+`sensordynamicrange`, `maxdigitalvalue`, `analoggain`, and
+`analogoffset`.
 The adjacent noise-control storage surface now also includes
 `sensorGet/Set('reuse noise')`, `sensorGet/Set('noise seed')`, and
 `sensorGet/Set('response type')`, with stored noise seeds now feeding

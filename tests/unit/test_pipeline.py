@@ -2001,17 +2001,17 @@ def test_sensor_compute_noiseless_auto_exposure_matches_regression(asset_store) 
 
 def test_sensor_set_integration_time_disables_auto_exposure(asset_store) -> None:
     sensor = sensor_create(asset_store=asset_store)
-    sensor = sensor_set(sensor, "auto exposure", True)
-    sensor = sensor_set(sensor, "integration time", 0.125)
+    sensor = sensor_set(sensor, "autoexposure", True)
+    sensor = sensor_set(sensor, "integrationtime", 0.125)
     assert sensor.fields["auto_exposure"] is False
     assert np.isclose(sensor.fields["integration_time"], 0.125)
 
 
 def test_sensor_get_set_supports_n_samples_per_pixel(asset_store) -> None:
     sensor = sensor_create(asset_store=asset_store)
-    sensor = sensor_set(sensor, "n samples per pixel", 3)
+    sensor = sensor_set(sensor, "nsamplesperpixel", 3)
 
-    assert sensor_get(sensor, "n samples per pixel") == 3
+    assert sensor_get(sensor, "nsamplesperpixel") == 3
 
 
 def test_sensor_get_reports_matlab_style_geometry_and_cfa_metadata(asset_store) -> None:
@@ -2564,16 +2564,15 @@ def test_sensor_get_set_supports_column_fpn_storage_surface(asset_store) -> None
 def test_sensor_get_set_supports_consistency_and_compute_method_storage(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
 
-    assert sensor_get(sensor, "consistency") is False
-    assert sensor_get(sensor, "sensor compute method") is None
+    assert sensor_get(sensor, "sensorconsistency") is False
+    assert sensor_get(sensor, "sensorcomputemethod") is None
 
-    sensor = sensor_set(sensor, "consistency", True)
-    sensor = sensor_set(sensor, "sensor compute method", {"name": "binning", "factor": 2})
+    sensor = sensor_set(sensor, "sensorconsistency", True)
+    sensor = sensor_set(sensor, "sensorcomputemethod", {"name": "binning", "factor": 2})
 
-    assert sensor_get(sensor, "consistency") is True
-    assert sensor_get(sensor, "sensor consistency") is True
-    assert sensor_get(sensor, "sensor compute") == {"name": "binning", "factor": 2}
-    assert sensor_get(sensor, "sensor compute method") == {"name": "binning", "factor": 2}
+    assert sensor_get(sensor, "sensorconsistency") is True
+    assert sensor_get(sensor, "sensorcompute") == {"name": "binning", "factor": 2}
+    assert sensor_get(sensor, "sensorcomputemethod") == {"name": "binning", "factor": 2}
 
 
 def test_sensor_get_set_supports_exposure_plane_and_cds_surface(asset_store) -> None:
@@ -2618,7 +2617,7 @@ def test_sensor_get_set_supports_exposure_method_and_time_summaries(asset_store)
     sensor = sensor_set(sensor, "integrationtime", np.array([[0.01, 0.02], [0.03, 0.04]], dtype=float))
     sensor = sensor_set(sensor, "automaticexposure", "on")
 
-    assert sensor_get(sensor, "automatic exposure") is True
+    assert sensor_get(sensor, "automaticexposure") is True
     assert np.array_equal(sensor_get(sensor, "integrationtime"), np.zeros((2, 2), dtype=float))
     assert sensor_get(sensor, "exposuremethod") == "videoExposure"
 
@@ -2627,7 +2626,7 @@ def test_sensor_compute_rejects_multiple_integration_times(asset_store) -> None:
     scene = scene_create("uniform d65")
     oi = oi_compute(oi_create(), scene)
     sensor = sensor_create("default", asset_store=asset_store)
-    sensor = sensor_set(sensor, "integration times", np.array([0.01, 0.02], dtype=float))
+    sensor = sensor_set(sensor, "integrationtimes", np.array([0.01, 0.02], dtype=float))
 
     with pytest.raises(UnsupportedOptionError, match="sensorCompute"):
         sensor_compute(sensor, oi)
@@ -2671,8 +2670,8 @@ def test_sensor_get_set_supports_noise_seed_reuse_and_response_type(asset_store)
 
 def test_sensor_get_supports_response_and_dynamic_range_aliases(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
-    sensor = sensor_set(sensor, "integration time", 0.05)
-    sensor = sensor_set(sensor, "dsnu sigma", 0.002)
+    sensor = sensor_set(sensor, "integrationtime", 0.05)
+    sensor = sensor_set(sensor, "dsnusigma", 0.002)
 
     pixel = sensor_get(sensor, "pixel")
     dark_voltage = float(pixel["dark_voltage_v_per_sec"])
@@ -2689,11 +2688,11 @@ def test_sensor_get_supports_response_and_dynamic_range_aliases(asset_store) -> 
 
     assert np.isclose(sensor_get(sensor, "dr"), expected_dr)
     assert np.isclose(sensor_get(sensor, "drdb20"), expected_dr)
-    assert np.isclose(sensor_get(sensor, "dynamic range"), expected_dr)
-    assert np.isclose(sensor_get(sensor, "sensor dynamic range"), expected_dr)
+    assert np.isclose(sensor_get(sensor, "dynamicrange"), expected_dr)
+    assert np.isclose(sensor_get(sensor, "sensordynamicrange"), expected_dr)
 
-    sensor = sensor_set(sensor, "integration time", 0.0)
-    assert sensor_get(sensor, "sensor dynamic range") is None
+    sensor = sensor_set(sensor, "integrationtime", 0.0)
+    assert sensor_get(sensor, "sensordynamicrange") is None
 
     sensor = sensor_set(sensor, "volts", np.array([[0.0, 0.5], [0.25, 0.75]], dtype=float))
     assert np.isclose(sensor_get(sensor, "responsedr"), 0.75 / (1.0 / 4096.0))
@@ -2710,7 +2709,7 @@ def test_sensor_get_set_supports_black_level_alias(asset_store) -> None:
 
     assert sensor_get(sensor, "blacklevel") == 64.0
     assert sensor_get(sensor, "zerolevel") == 64.0
-    assert sensor_get(sensor, "max digital value") == float((2**nbits) - 64)
+    assert sensor_get(sensor, "maxdigitalvalue") == float((2**nbits) - 64)
 
     sensor = sensor_set(sensor, "zerolevel", 32)
 
@@ -2777,9 +2776,9 @@ def test_sensor_get_set_supports_voltage_electron_and_analog_aliases(asset_store
     sensor = sensor_set(sensor, "ao", 0.05)
     sensor = sensor_set(sensor, "voltage", volts)
 
-    assert np.isclose(sensor_get(sensor, "analog gain"), 2.5)
+    assert np.isclose(sensor_get(sensor, "analoggain"), 2.5)
     assert np.isclose(sensor_get(sensor, "ag"), 2.5)
-    assert np.isclose(sensor_get(sensor, "analog offset"), 0.05)
+    assert np.isclose(sensor_get(sensor, "analogoffset"), 0.05)
     assert np.isclose(sensor_get(sensor, "ao"), 0.05)
     assert np.array_equal(sensor_get(sensor, "volts"), volts)
     assert np.array_equal(sensor_get(sensor, "voltage"), volts)

@@ -208,6 +208,8 @@ _PARAMETER_OTYPE_UNIQUE = {
         "quantization",
         "quantizationstructure",
         "nbits",
+        "maxdigital",
+        "maxdigitalvalue",
         "bits",
         "maxoutput",
         "lut",
