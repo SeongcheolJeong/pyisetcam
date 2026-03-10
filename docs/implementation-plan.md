@@ -144,6 +144,7 @@
 - `utility_unit_frequency_list`: `unitFrequencyList(50/51)` parity, compare even- and odd-length normalized frequency support for a standalone helper function.
 - `utility_energy_quanta_1d`: `Energy2Quanta` / `Quanta2Energy` parity on a 1D spectrum, compare wave, photons, and round-trip-restored energy for a standalone conversion helper.
 - `metrics_xyz_from_energy_1d`: `ieXYZFromEnergy` parity on a 1D SPD, compare wave, energy, and XYZ tristimulus output for the first metrics-family helper case.
+- `metrics_xyz_to_luv_1d`: `xyz2luv` parity on a single XYZ/white-point pair, compare the XYZ input, white point, and resulting LUV vector for another deterministic metrics-family helper.
 - `scene_illuminant_change`: apply a 3000 K blackbody illuminant with `preserveMean=True` and `False`; compare luminance preservation and spectral ratios.
 - `display_create_lcd_example`: load and resample a display calibration; compare `spd`, `gamma`, and wave grid.
 - `oi_diffraction_limited_default`: default scene through `oiCreate()/oiCompute()`, compare irradiance cube, padding behavior, and FOV-derived geometry.

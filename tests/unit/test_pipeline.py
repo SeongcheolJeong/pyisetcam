@@ -3347,3 +3347,12 @@ def test_run_python_case_supports_xyz_from_energy_metrics_parity_case(asset_stor
     assert case.payload["energy"].shape == (31,)
     assert case.payload["xyz"].shape == (3,)
     assert np.all(np.asarray(case.payload["xyz"], dtype=float) > 0.0)
+
+
+def test_run_python_case_supports_xyz_to_luv_metrics_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_xyz_to_luv_1d", asset_store=asset_store)
+
+    assert case.payload["xyz"].shape == (3,)
+    assert case.payload["white_point"].shape == (3,)
+    assert case.payload["luv"].shape == (3,)
+    assert case.payload["luv"][0] > 0.0

@@ -54,6 +54,13 @@ switch case_name
         payload.energy = energy;
         payload.xyz = ieXYZFromEnergy(energy, wave);
 
+    case 'metrics_xyz_to_luv_1d'
+        xyz = [20.0 30.0 15.0];
+        white_point = [95.047 100.0 108.883];
+        payload.xyz = xyz;
+        payload.white_point = white_point;
+        payload.luv = xyz2luv(xyz, white_point);
+
     case 'scene_illuminant_change'
         scene = sceneCreate();
         bb = blackbody(sceneGet(scene, 'wave'), 3000, 'energy');

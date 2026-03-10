@@ -83,8 +83,16 @@ def xyz_to_luv(xyz: Any, white_point: Any) -> NDArray[np.float64]:
     delta = 6.0 / 29.0
     threshold = delta**3
     lstar = np.where(y_ratio > threshold, (116.0 * np.cbrt(y_ratio)) - 16.0, (903.3 * y_ratio))
-    uv = xyz_to_uv(xyz_array)
-    uv_white = xyz_to_uv(white)
+
+    def _uv_prime(values: NDArray[np.float64]) -> NDArray[np.float64]:
+        denominator = np.maximum(values[..., 0] + (15.0 * values[..., 1]) + (3.0 * values[..., 2]), 1e-12)
+        uv = np.empty(values.shape[:-1] + (2,), dtype=float)
+        uv[..., 0] = (4.0 * values[..., 0]) / denominator
+        uv[..., 1] = (9.0 * values[..., 1]) / denominator
+        return uv
+
+    uv = _uv_prime(xyz_array)
+    uv_white = _uv_prime(white)
     luv = np.empty_like(xyz_array, dtype=float)
     luv[..., 0] = lstar
     luv[..., 1] = 13.0 * lstar * (uv[..., 0] - uv_white[..., 0])

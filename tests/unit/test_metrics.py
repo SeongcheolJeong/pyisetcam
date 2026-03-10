@@ -31,6 +31,14 @@ def test_xyz_to_luv_maps_white_point_to_neutral() -> None:
     assert np.allclose(luv, np.array([100.0, 0.0, 0.0]), atol=1e-6)
 
 
+def test_xyz_to_luv_matches_cie_1976_reference_values() -> None:
+    white = np.array([95.047, 100.0, 108.883], dtype=float)
+    xyz = np.array([20.0, 30.0, 15.0], dtype=float)
+    luv = xyz_to_luv(xyz, white)
+
+    assert np.allclose(luv, np.array([61.65422221, -34.06397300, 44.83261015]), atol=1e-8)
+
+
 def test_delta_e_ab_is_zero_for_identical_xyz() -> None:
     white = np.array([95.047, 100.0, 108.883], dtype=float)
     xyz = np.array([20.0, 30.0, 15.0], dtype=float)
