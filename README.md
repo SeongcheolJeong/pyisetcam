@@ -106,6 +106,10 @@ sensor presets too, so camera constructors can directly target `rgbw`,
 `rccc`, `mt9v024`, and `ar0132at` sensor variants. The first
 metrics/validation slice is also in place:
 `metrics_spd`, CIELAB helpers, and generic MAE/RMSE/PSNR utilities.
+The optics expansion now also includes script-driven
+`oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
+including a MATLAB-style default synthetic PSF constructor and explicit
+`psf` / `wave` / `umPerSamp` custom PSF data.
 Initial ray-trace optics support is also in place: `oi_create('ray trace')`
 loads the pinned upstream Zemax-derived optics asset, and `oi_compute`
 applies upstream-backed geometric distortion, relative illumination, and

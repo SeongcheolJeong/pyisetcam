@@ -422,6 +422,14 @@ def run_python_case_with_context(
             context={"display": display},
         )
 
+    if case_name == "oi_psf_default_small":
+        scene = scene_create("checkerboard", 8, 4, asset_store=store)
+        oi = oi_compute(oi_create("psf"), scene, crop=True)
+        return ParityCaseResult(
+            payload={"case_name": case_name, "wave": oi.fields["wave"], "photons": oi.data["photons"]},
+            context={"scene": scene, "oi": oi},
+        )
+
     if case_name == "oi_diffraction_limited_default":
         scene = scene_create(asset_store=store)
         oi = oi_compute(oi_create(), scene, crop=True)

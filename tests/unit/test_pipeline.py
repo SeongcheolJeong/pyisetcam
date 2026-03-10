@@ -1917,6 +1917,40 @@ def test_oi_create_wvf_matches_upstream_default_wavefront_metadata() -> None:
     assert np.isclose(wavefront["sce_params"]["yo_mm"], 0.0)
 
 
+def test_oi_create_psf_builds_default_shift_invariant_psf_optics() -> None:
+    oi = oi_create("psf")
+
+    assert oi.fields["optics"]["compute_method"] == "opticsotf"
+    assert oi.fields["optics"]["model"] == "shiftinvariant"
+    psf_data = oi_get(oi, "psfdata")
+    assert psf_data is not None
+    assert np.asarray(psf_data["psf"]).ndim == 3
+    assert np.asarray(psf_data["wave"]).shape == (31,)
+    assert np.allclose(np.asarray(psf_data["umPerSamp"], dtype=float), np.array([0.25, 0.25], dtype=float))
+    assert np.asarray(oi.fields["optics"]["otf_data"]).shape == (129, 129, 31)
+
+
+def test_oi_create_psf_accepts_custom_shift_invariant_psf_data(asset_store) -> None:
+    psf = np.zeros((33, 33, 1), dtype=float)
+    psf[16, 16, 0] = 1.0
+    oi = oi_create(
+        "psf",
+        {
+            "psf": psf,
+            "wave": np.array([550.0], dtype=float),
+            "umPerSamp": np.array([0.25, 0.25], dtype=float),
+        },
+    )
+    stored = oi_get(oi, "psfdata")
+    scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
+    computed = oi_compute(oi, scene, crop=True)
+
+    assert np.asarray(stored["psf"]).shape == (33, 33, 1)
+    assert np.array_equal(np.asarray(stored["wave"]), np.array([550.0], dtype=float))
+    assert computed.data["photons"].shape[:2] == scene.data["photons"].shape[:2]
+    assert computed.data["photons"].shape[2] == scene.data["photons"].shape[2]
+
+
 def test_oi_compute_wvf_uses_custom_aperture(asset_store) -> None:
     scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
     default_oi = oi_compute(oi_create("wvf"), scene, crop=True)
@@ -3367,6 +3401,15 @@ def test_run_python_case_supports_star_pattern_scene_parity_case(asset_store) ->
     assert np.array_equal(case.payload["wave"], case.context["scene"].fields["wave"])
     assert case.payload["photons"].shape[:2] == (64, 64)
     assert case.payload["mean_luminance"] > 0.0
+
+
+def test_run_python_case_supports_psf_default_oi_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("oi_psf_default_small", asset_store=asset_store)
+
+    assert case.payload["photons"].shape == case.context["oi"].data["photons"].shape
+    assert np.array_equal(case.payload["wave"], case.context["oi"].fields["wave"])
+    assert case.context["oi"].fields["optics"]["model"] == "shiftinvariant"
+    assert case.context["oi"].fields["optics"]["compute_method"] == "opticsotf"
 
 
 def test_run_python_case_supports_unit_frequency_utility_parity_case(asset_store) -> None:

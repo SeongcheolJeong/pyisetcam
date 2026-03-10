@@ -235,6 +235,13 @@ switch case_name
         payload.wave = oiGet(oi, 'wave');
         payload.photons = oiGet(oi, 'photons');
 
+    case 'oi_psf_default_small'
+        scene = sceneCreate('checkerboard', 8, 4);
+        oi = oiCreate('psf');
+        oi = oiCompute(oi, scene, 'crop', true);
+        payload.wave = oiGet(oi, 'wave');
+        payload.photons = oiGet(oi, 'photons');
+
     case 'oi_wvf_small_scene'
         scene = sceneCreate('checkerboard', 8, 4);
         oi = oiCreate('wvf');

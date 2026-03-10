@@ -151,6 +151,12 @@
       "atol": 1e-08
     },
     {
+      "name": "oi_psf_default_small",
+      "matlab_function": "oiCreate/oiCompute",
+      "rtol": 1e-04,
+      "atol": 1e-06
+    },
+    {
       "name": "oi_diffraction_limited_default",
       "matlab_function": "oiCompute",
       "rtol": 1e-04,
