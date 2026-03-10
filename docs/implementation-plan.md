@@ -40,6 +40,7 @@
 - The same FPN block now also has parser-level support for the broader MATLAB alias family around DSNU/PRNU and column-FPN names such as `sigma offset fpn`, `gain fpn`, `column fixed pattern noise`, and `col gain`.
 - That same FPN parser surface now also recognizes the setter-only `column fpn parameters` alias.
 - The neighboring sensor metadata block now also has parser-level support for `scene_name`, `metadata scene name`, `lens`, `metadata lensname`, `metadata optics name`, `metadata sensor name`, and `metadata crop`.
+- The adjacent sensor-data compatibility surface now also has exact runtime/parser coverage for the no-space aliases `digitalvalue`, `digitalvalues`, `dvorvolts`, `digitalorvolts`, `voltimages`, `voltage`, `electron`, `ag`, and `ao`.
 - The adjacent microlens block now also has parser-level support for `ml`, `mlens`, `ulens`, `microlens offset`, `mloffset`, and `microlens offset microns`.
 - The adjacent consistency block now also has parser-level routing for `consistency`, `sensor consistency`, and `sensor compute`.
 - The neighboring exposure block now also has parser-level routing for `integration time`, `exptimes`, `unique exptimes`, `central exposure`, `exposure method`, `n exposures`, `exposure plane`, `correlated double sampling`, `auto exposure`, and `automatic exposure`.

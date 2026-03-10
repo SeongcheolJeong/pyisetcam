@@ -2714,13 +2714,13 @@ def test_sensor_get_set_supports_digital_value_aliases(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
     dv = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float)
 
-    sensor = sensor_set(sensor, "digital value", dv)
+    sensor = sensor_set(sensor, "digitalvalue", dv)
 
     assert np.array_equal(sensor_get(sensor, "dv"), dv)
-    assert np.array_equal(sensor_get(sensor, "digital value"), dv)
-    assert np.array_equal(sensor_get(sensor, "digital values"), dv)
+    assert np.array_equal(sensor_get(sensor, "digitalvalue"), dv)
+    assert np.array_equal(sensor_get(sensor, "digitalvalues"), dv)
 
-    sensor = sensor_set(sensor, "digital values", dv + 1.0)
+    sensor = sensor_set(sensor, "digitalvalues", dv + 1.0)
 
     assert np.array_equal(sensor_get(sensor, "digitalvalue"), dv + 1.0)
 
@@ -2731,11 +2731,11 @@ def test_sensor_get_supports_dv_or_volts_aliases(asset_store) -> None:
     dv = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float)
 
     sensor = sensor_set(sensor, "volts", volts)
-    assert np.array_equal(sensor_get(sensor, "dv or volts"), volts)
-    assert np.array_equal(sensor_get(sensor, "digital or volts"), volts)
+    assert np.array_equal(sensor_get(sensor, "dvorvolts"), volts)
+    assert np.array_equal(sensor_get(sensor, "digitalorvolts"), volts)
 
     sensor = sensor_set(sensor, "dv", dv)
-    assert np.array_equal(sensor_get(sensor, "dv or volts"), dv)
+    assert np.array_equal(sensor_get(sensor, "dvorvolts"), dv)
     assert np.array_equal(sensor_get(sensor, "digitalorvolts"), dv)
 
 
@@ -2746,7 +2746,7 @@ def test_sensor_get_supports_volt_images(asset_store) -> None:
     volts = np.arange(1, 17, dtype=float).reshape(4, 4) / 16.0
     sensor = sensor_set(sensor, "volts", volts)
 
-    plane_images = sensor_get(sensor, "volt images")
+    plane_images = sensor_get(sensor, "voltimages")
 
     assert plane_images is not None
     assert plane_images.shape == (4, 4, 3)

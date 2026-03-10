@@ -518,6 +518,9 @@ The same vignetting block now also has parser-level support for
 That same vignetting coverage now also exercises the exact no-space aliases
 `vignettingflag`, `pixelvignetting`, `sensorvignetting`,
 `sensorbareetendue`, `nomicrolensetendue`, and `vignettingname`.
+The adjacent sensor-data coverage now also exercises the exact no-space
+aliases `digitalvalue`, `digitalvalues`, `dvorvolts`, `digitalorvolts`,
+`voltimages`, `voltage`, `electron`, `ag`, and `ao`.
 The adjacent noise-control storage surface now also includes
 `sensorGet/Set('reuse noise')`, `sensorGet/Set('noise seed')`, and
 `sensorGet/Set('response type')`, with stored noise seeds now feeding
