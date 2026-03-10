@@ -521,6 +521,10 @@ That same vignetting coverage now also exercises the exact no-space aliases
 The adjacent sensor-data coverage now also exercises the exact no-space
 aliases `digitalvalue`, `digitalvalues`, `dvorvolts`, `digitalorvolts`,
 `voltimages`, `voltage`, `electron`, `ag`, and `ao`.
+The neighboring quantization and color/filter coverage now also
+exercises the exact no-space aliases `qmethod`,
+`quantizationstructure`, `quantizationlut`, `filternamescellarray`,
+`filtercolornamescellarray`, and `filternamescell`.
 The adjacent noise-control storage surface now also includes
 `sensorGet/Set('reuse noise')`, `sensorGet/Set('noise seed')`, and
 `sensorGet/Set('response type')`, with stored noise seeds now feeding

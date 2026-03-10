@@ -2087,9 +2087,9 @@ def test_sensor_get_set_supports_raw_color_surface(asset_store) -> None:
     assert np.allclose(exported["filterSpectra"], color["filterSpectra"])
     assert exported["filterNames"] == color["filterNames"]
     assert np.allclose(exported["irFilter"], color["irFilter"])
-    assert sensor_get(sensor, "filter names cell array") == ["r", "g", "b"]
-    assert sensor_get(sensor, "filter color names cell array") == ["r", "g", "b"]
-    assert sensor_get(sensor, "filter names cell") == ["r", "g", "b"]
+    assert sensor_get(sensor, "filternamescellarray") == ["r", "g", "b"]
+    assert sensor_get(sensor, "filtercolornamescellarray") == ["r", "g", "b"]
+    assert sensor_get(sensor, "filternamescell") == ["r", "g", "b"]
 
 
 def test_sensor_get_set_supports_pixel_passthrough_surface(asset_store) -> None:
@@ -2835,22 +2835,22 @@ def test_sensor_get_set_supports_quantization_alias_surface(asset_store) -> None
 
     quantization = sensor_get(sensor, "quantization")
     quantization_method = sensor_get(sensor, "qmethod")
-    quantization_struct = sensor_get(sensor, "quantization structure")
+    quantization_struct = sensor_get(sensor, "quantizationstructure")
 
     assert quantization == "12 bit"
     assert quantization_method == "12 bit"
     assert sensor_get(sensor, "bits") == 12
     assert sensor_get(sensor, "nbits") == 12
     assert np.array_equal(sensor_get(sensor, "lut"), lut)
-    assert np.array_equal(sensor_get(sensor, "quantization lut"), lut)
+    assert np.array_equal(sensor_get(sensor, "quantizationlut"), lut)
     assert quantization_struct["bits"] == 12
     assert quantization_struct["method"] == "12 bit"
     assert np.array_equal(quantization_struct["lut"], lut)
 
-    sensor = sensor_set(sensor, "quantization structure", {"bits": 8, "method": "8 bit", "lut": np.array([0.0, 0.5], dtype=float)})
+    sensor = sensor_set(sensor, "quantizationstructure", {"bits": 8, "method": "8 bit", "lut": np.array([0.0, 0.5], dtype=float)})
 
     assert sensor_get(sensor, "bits") == 8
-    assert sensor_get(sensor, "quantization method") == "8 bit"
+    assert sensor_get(sensor, "quantizationmethod") == "8 bit"
     assert np.array_equal(sensor_get(sensor, "lut"), np.array([0.0, 0.5], dtype=float))
 
 
