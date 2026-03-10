@@ -22,7 +22,7 @@ from .optics import (
 )
 from .scene import scene_adjust_illuminant, scene_create, scene_get
 from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_set
-from .utils import blackbody, unit_frequency_list
+from .utils import blackbody, energy_to_quanta, quanta_to_energy, unit_frequency_list
 
 
 @dataclass
@@ -90,6 +90,21 @@ def run_python_case_with_context(
                 "case_name": case_name,
                 "even": unit_frequency_list(50),
                 "odd": unit_frequency_list(51),
+            },
+            context={},
+        )
+
+    if case_name == "utility_energy_quanta_1d":
+        wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+        energy = np.linspace(0.1, 3.1, wave.size, dtype=float)
+        photons = energy_to_quanta(energy, wave)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "energy": energy,
+                "photons": photons,
+                "energy_roundtrip": quanta_to_energy(photons, wave),
             },
             context={},
         )

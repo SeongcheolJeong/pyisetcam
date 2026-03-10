@@ -3329,3 +3329,12 @@ def test_run_python_case_supports_unit_frequency_utility_parity_case(asset_store
     assert np.allclose(case.payload["odd"], np.asarray(case.payload["odd"], dtype=float))
     assert case.payload["even"].shape == (50,)
     assert case.payload["odd"].shape == (51,)
+
+
+def test_run_python_case_supports_energy_quanta_utility_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("utility_energy_quanta_1d", asset_store=asset_store)
+
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["energy"].shape == (31,)
+    assert case.payload["photons"].shape == (31,)
+    assert np.allclose(case.payload["energy_roundtrip"], case.payload["energy"])

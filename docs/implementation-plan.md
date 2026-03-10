@@ -142,6 +142,7 @@
 - `scene_checkerboard_small`: `sceneCreate('checkerboard', 8, 4)` parity, compare wave axis, photons cube, and mean luminance for a non-Macbeth synthetic scene.
 - `scene_uniform_bb_small`: `sceneCreate('uniform bb', 16, 4500)` parity, compare wave axis, photons cube, and mean luminance for direct blackbody scene construction.
 - `utility_unit_frequency_list`: `unitFrequencyList(50/51)` parity, compare even- and odd-length normalized frequency support for a standalone helper function.
+- `utility_energy_quanta_1d`: `Energy2Quanta` / `Quanta2Energy` parity on a 1D spectrum, compare wave, photons, and round-trip-restored energy for a standalone conversion helper.
 - `scene_illuminant_change`: apply a 3000 K blackbody illuminant with `preserveMean=True` and `False`; compare luminance preservation and spectral ratios.
 - `display_create_lcd_example`: load and resample a display calibration; compare `spd`, `gamma`, and wave grid.
 - `oi_diffraction_limited_default`: default scene through `oiCreate()/oiCompute()`, compare irradiance cube, padding behavior, and FOV-derived geometry.

@@ -38,6 +38,15 @@ switch case_name
         payload.even = unitFrequencyList(50);
         payload.odd = unitFrequencyList(51);
 
+    case 'utility_energy_quanta_1d'
+        wave = (400:10:700)';
+        energy = linspace(0.1, 3.1, numel(wave))';
+        photons = Energy2Quanta(wave, energy);
+        payload.wave = wave;
+        payload.energy = energy;
+        payload.photons = photons;
+        payload.energy_roundtrip = Quanta2Energy(wave, photons);
+
     case 'scene_illuminant_change'
         scene = sceneCreate();
         bb = blackbody(sceneGet(scene, 'wave'), 3000, 'energy');

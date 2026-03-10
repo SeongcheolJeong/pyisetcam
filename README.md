@@ -5,7 +5,7 @@
 - `scene -> optical image -> sensor -> image processor -> camera`
 - pinned to upstream ISETCam commit `412b9f9bdb3262f2552b96f0e769b5ad6cdff821`
 - validated through a GNU Octave parity harness for curated cases
-- with the broad-parity expansion now started by adding post-core scene-family cases and the first utility-helper `unitFrequencyList` case
+- with the broad-parity expansion now started by adding post-core scene-family cases plus utility-helper cases for `unitFrequencyList` and 1D energy/quanta conversion
 
 ## Status
 
