@@ -46,6 +46,7 @@
 - The neighboring sampling/noise-control block now also has parser-level routing for `pixel samples`, `n pixel samples for computing`, `spatial samples per pixel`, and `response type`.
 - The adjacent movement block now also has parser-level routing for `eye movement`, `frames per position`, `exposure times per position`, and `etime per pos`.
 - The same movement alias surface now also has focused parser/runtime coverage for `movement positions` plus the prefixed `sensor positions` and `sensor positions x/y` forms.
+- That same movement coverage now also exercises the exact no-space aliases `eyemovement`, `movementpositions`, `sensorpositions`, `sensorpositionsx`, `sensorpositionsy`, and `framesperposition`.
 - The neighboring legacy human block now also has parser-level routing for `human`, `cone type`, `densities`, `xy`, and `rseed`.
 - That same legacy human block now also routes the location aliases `cone xy` and `cone locs`.
 - That same legacy human surface now also has focused parser/runtime coverage for the long-form aliases `human cone type` and `human cone locs`.
