@@ -2275,39 +2275,45 @@ def test_sensor_get_set_supports_photodetector_position_passthrough(asset_store)
 def test_sensor_set_supports_matlab_width_height_pair_aliases(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
 
-    sensor = sensor_set(sensor, "pixel width and height", np.array([4.0e-6, 3.0e-6], dtype=float))
-    assert np.isclose(sensor_get(sensor, "pixel width"), 4.0e-6)
-    assert np.isclose(sensor_get(sensor, "pixel height"), 3.0e-6)
-    assert np.allclose(sensor_get(sensor, "pixel size"), np.array([3.0e-6, 4.0e-6], dtype=float))
+    sensor = sensor_set(sensor, "widthandheight", np.array([4.0e-6, 3.0e-6], dtype=float))
+    assert np.isclose(sensor_get(sensor, "pixelwidth"), 4.0e-6)
+    assert np.isclose(sensor_get(sensor, "pixelheight"), 3.0e-6)
+    assert np.allclose(sensor_get(sensor, "pixelsize"), np.array([3.0e-6, 4.0e-6], dtype=float))
 
-    sensor = sensor_set(sensor, "pixel width and height", 5.0e-6)
-    assert np.isclose(sensor_get(sensor, "pixel width"), 5.0e-6)
-    assert np.isclose(sensor_get(sensor, "pixel height"), 5.0e-6)
+    sensor = sensor_set(sensor, "widthheight", 5.0e-6)
+    assert np.isclose(sensor_get(sensor, "pixelwidth"), 5.0e-6)
+    assert np.isclose(sensor_get(sensor, "pixelheight"), 5.0e-6)
 
     sensor = sensor_set(sensor, "pdwidthandheight", np.array([2.0e-6, 1.0e-6], dtype=float))
     assert np.isclose(sensor_get(sensor, "photodetectorwidth"), 2.0e-6)
     assert np.isclose(sensor_get(sensor, "photodetectorheight"), 1.0e-6)
     assert np.allclose(sensor_get(sensor, "photodetectorsize"), np.array([1.0e-6, 2.0e-6], dtype=float))
+    assert np.allclose(sensor_get(sensor, "pddimension"), np.array([2.0e-6, 1.0e-6], dtype=float))
 
     sensor = sensor_set(sensor, "pdwidthandheight", 1.5e-6)
     assert np.isclose(sensor_get(sensor, "photodetectorwidth"), 1.5e-6)
     assert np.isclose(sensor_get(sensor, "photodetectorheight"), 1.5e-6)
+    assert np.allclose(sensor_get(sensor, "pddimension"), np.array([1.5e-6, 1.5e-6], dtype=float))
 
 
 def test_sensor_set_routes_direct_unique_pixel_aliases_without_prefix(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
 
-    sensor = sensor_set(sensor, "width and height", np.array([4.0e-6, 3.0e-6], dtype=float))
-    assert np.isclose(sensor_get(sensor, "pixel width"), 4.0e-6)
-    assert np.isclose(sensor_get(sensor, "pixel height"), 3.0e-6)
+    sensor = sensor_set(sensor, "widthandheight", np.array([4.0e-6, 3.0e-6], dtype=float))
+    assert np.isclose(sensor_get(sensor, "pixelwidth"), 4.0e-6)
+    assert np.isclose(sensor_get(sensor, "pixelheight"), 3.0e-6)
 
-    sensor = sensor_set(sensor, "pd width and height", np.array([2.0e-6, 1.0e-6], dtype=float))
-    assert np.isclose(sensor_get(sensor, "pd width"), 2.0e-6)
-    assert np.isclose(sensor_get(sensor, "pd height"), 1.0e-6)
+    sensor = sensor_set(sensor, "pdwidthandheight", np.array([2.0e-6, 1.0e-6], dtype=float))
+    assert np.isclose(sensor_get(sensor, "pdwidth"), 2.0e-6)
+    assert np.isclose(sensor_get(sensor, "pdheight"), 1.0e-6)
+    assert np.allclose(sensor_get(sensor, "pddimension"), np.array([2.0e-6, 1.0e-6], dtype=float))
 
-    initial_fill_factor = float(sensor_get(sensor, "fill factor"))
-    sensor = sensor_set(sensor, "size same fill factor", np.array([8.0e-6, 6.0e-6], dtype=float))
-    assert np.isclose(sensor_get(sensor, "fill factor"), initial_fill_factor)
+    initial_fill_factor = float(sensor_get(sensor, "fillfactor"))
+    sensor = sensor_set(sensor, "sizeconstantfillfactor", np.array([8.0e-6, 6.0e-6], dtype=float))
+    assert np.isclose(sensor_get(sensor, "fillfactor"), initial_fill_factor)
+
+    sensor = sensor_set(sensor, "sizekeepfillfactor", np.array([10.0e-6, 8.0e-6], dtype=float))
+    assert np.isclose(sensor_get(sensor, "fillfactor"), initial_fill_factor)
 
     sensor = sensor_set(sensor, "dark voltage per pixel per sec", 1.5e-3)
     assert np.isclose(sensor_get(sensor, "dark voltage"), 1.5e-3)
@@ -2320,17 +2326,17 @@ def test_sensor_set_pixel_size_same_fill_factor_scales_photodetector_geometry(as
     sensor = sensor_set(sensor, "pd size", np.array([1.0e-6, 2.0e-6], dtype=float))
     sensor = sensor_set(sensor, "pd position", np.array([0.5e-6, 0.25e-6], dtype=float))
 
-    sensor = sensor_set(sensor, "pixel size same fill factor", np.array([4.0e-6, 8.0e-6], dtype=float))
+    sensor = sensor_set(sensor, "sizesamefillfactor", np.array([4.0e-6, 8.0e-6], dtype=float))
 
-    assert np.allclose(sensor_get(sensor, "pixel size"), np.array([4.0e-6, 8.0e-6], dtype=float))
-    assert np.allclose(sensor_get(sensor, "pd size"), np.array([2.0e-6, 4.0e-6], dtype=float))
-    assert np.allclose(sensor_get(sensor, "pd position"), np.array([1.0e-6, 0.5e-6], dtype=float))
-    assert np.isclose(sensor_get(sensor, "fill factor"), 0.25)
+    assert np.allclose(sensor_get(sensor, "pixelsize"), np.array([4.0e-6, 8.0e-6], dtype=float))
+    assert np.allclose(sensor_get(sensor, "photodetectorsize"), np.array([2.0e-6, 4.0e-6], dtype=float))
+    assert np.allclose(sensor_get(sensor, "pdposition"), np.array([1.0e-6, 0.5e-6], dtype=float))
+    assert np.isclose(sensor_get(sensor, "fillfactor"), 0.25)
 
-    sensor = sensor_set(sensor, "pixel size", np.array([8.0e-6, 16.0e-6], dtype=float))
+    sensor = sensor_set(sensor, "pixelsize", np.array([8.0e-6, 16.0e-6], dtype=float))
 
-    assert np.allclose(sensor_get(sensor, "pd size"), np.array([2.0e-6, 4.0e-6], dtype=float))
-    assert not np.isclose(sensor_get(sensor, "fill factor"), 0.25)
+    assert np.allclose(sensor_get(sensor, "photodetectorsize"), np.array([2.0e-6, 4.0e-6], dtype=float))
+    assert not np.isclose(sensor_get(sensor, "fillfactor"), 0.25)
 
 
 def test_sensor_get_set_supports_chart_and_metadata_surface(asset_store) -> None:
