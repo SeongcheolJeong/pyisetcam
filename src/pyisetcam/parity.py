@@ -259,6 +259,24 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "metrics_spd_mired_1d":
+        wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+        spd1 = np.asarray(blackbody(wave, 6500.0, kind="energy"), dtype=float)
+        spd2 = np.asarray(blackbody(wave, 5000.0, kind="energy"), dtype=float)
+        value, params = metrics_spd(spd1, spd2, metric="mired", wave=wave, asset_store=store, return_params=True)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "spd1": spd1,
+                "spd2": spd2,
+                "mired": value,
+                "uv": np.asarray(params["uv"], dtype=float),
+                "cct_k": np.asarray(params["cct_k"], dtype=float),
+            },
+            context={},
+        )
+
     if case_name == "scene_illuminant_change":
         scene = scene_create(asset_store=store)
         wave = scene_get(scene, "wave")

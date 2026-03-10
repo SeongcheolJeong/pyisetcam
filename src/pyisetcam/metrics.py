@@ -115,6 +115,35 @@ def xyz_to_uv(xyz: Any) -> NDArray[np.float64]:
     return uv
 
 
+def _cct_from_uv(uv: Any, *, asset_store: AssetStore | None = None) -> NDArray[np.float64]:
+    uv_array = np.asarray(uv, dtype=float)
+    if uv_array.shape[-1] != 2:
+        raise ValueError("uv must have a trailing dimension of size 2.")
+    points = uv_array.reshape(-1, 2)
+    table = np.asarray((asset_store or AssetStore.default()).load_mat("color/cct.mat")["table"], dtype=float)
+    temperatures = table[:, 0]
+    u_table = table[:, 1][:, None]
+    v_table = table[:, 2][:, None]
+    slopes = table[:, 3][:, None]
+    us = points[:, 0][None, :]
+    vs = points[:, 1][None, :]
+    distance = ((us - u_table) - (slopes * (vs - v_table))) / np.sqrt(1.0 + np.square(slopes))
+    signs = np.sign(distance)
+    signs = np.where(signs == 0.0, 1.0, signs)
+    signs = np.vstack([signs, np.zeros((1, points.shape[0]), dtype=float)])
+    transitions = np.abs(np.diff(signs, axis=0)) == 2.0
+    if np.any(np.sum(transitions, axis=0) != 1):
+        raise ValueError("uv coordinates are outside the supported cct.mat lookup range.")
+    row_index = np.argmax(transitions, axis=0)
+    column_index = np.arange(points.shape[0])
+    d0 = distance[row_index, column_index]
+    d1 = distance[row_index + 1, column_index]
+    t0 = temperatures[row_index]
+    t1 = temperatures[row_index + 1]
+    cct = 1.0 / ((1.0 / t0) + (d0 / (d0 - d1)) * ((1.0 / t1) - (1.0 / t0)))
+    return cct.reshape(uv_array.shape[:-1])
+
+
 def delta_e_ab(xyz1: Any, xyz2: Any, white_point: Any) -> NDArray[np.float64]:
     """Compute the CIELAB 1976 Delta E between XYZ values."""
 
@@ -137,17 +166,15 @@ def spectral_angle(spd1: Any, spd2: Any, *, degrees: bool = True) -> float:
     return float(np.rad2deg(angle)) if degrees else angle
 
 
-def correlated_color_temperature(xyz: Any) -> float:
-    """Approximate correlated color temperature from XYZ using McCamy's formula."""
+def correlated_color_temperature(
+    xyz: Any,
+    *,
+    asset_store: AssetStore | None = None,
+) -> float | NDArray[np.float64]:
+    """Estimate correlated color temperature from XYZ using the upstream cct.mat lookup table."""
 
-    xy = chromaticity_xy(np.asarray(xyz, dtype=float))
-    x = float(xy[..., 0])
-    y = float(xy[..., 1])
-    denominator = y - 0.1858
-    if abs(denominator) < 1e-12:
-        denominator = np.copysign(1e-12, denominator if denominator != 0.0 else 1.0)
-    n = (x - 0.3320) / denominator
-    return float((-449.0 * n**3) + (3525.0 * n**2) - (6823.3 * n) + 5520.33)
+    cct = _cct_from_uv(xyz_to_uv(np.asarray(xyz, dtype=float)), asset_store=asset_store)
+    return float(cct) if np.ndim(cct) == 0 else cct
 
 
 def mired_difference(cct1_k: float, cct2_k: float) -> float:
@@ -251,15 +278,15 @@ def metrics_spd(
         xyz2 = xyz_from_energy(second, wave_array, asset_store=asset_store)
         cct_values = np.array(
             [
-                correlated_color_temperature(xyz1),
-                correlated_color_temperature(xyz2),
+                correlated_color_temperature(xyz1, asset_store=asset_store),
+                correlated_color_temperature(xyz2, asset_store=asset_store),
             ],
             dtype=float,
         )
         value = mired_difference(float(cct_values[0]), float(cct_values[1]))
         params = {
             "xyz": np.vstack([xyz1, xyz2]),
-            "uv": np.vstack([xyz_to_uv(xyz1), xyz_to_uv(xyz2)]),
+            "uv": np.column_stack([xyz_to_uv(xyz1), xyz_to_uv(xyz2)]),
             "cct_k": cct_values,
         }
         return (value, params) if return_params else value

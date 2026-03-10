@@ -133,6 +133,18 @@ switch case_name
         payload.lab2 = params.lab2;
         payload.white_point = white_point;
 
+    case 'metrics_spd_mired_1d'
+        wave = (400:10:700)';
+        spd1 = blackbody(wave, 6500, 'energy');
+        spd2 = blackbody(wave, 5000, 'energy');
+        [mired, params] = metricsSPD(spd1, spd2, 'metric', 'mired', 'wave', wave);
+        payload.wave = wave;
+        payload.spd1 = spd1;
+        payload.spd2 = spd2;
+        payload.mired = mired;
+        payload.uv = params.uv;
+        payload.cct_k = params.cTemps;
+
     case 'scene_illuminant_change'
         scene = sceneCreate();
         bb = blackbody(sceneGet(scene, 'wave'), 3000, 'energy');

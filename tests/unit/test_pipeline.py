@@ -3431,3 +3431,14 @@ def test_run_python_case_supports_metrics_spd_cielab_parity_case(asset_store) ->
     assert case.payload["lab1"].shape == (3,)
     assert case.payload["lab2"].shape == (3,)
     assert case.payload["white_point"].shape == (3,)
+
+
+def test_run_python_case_supports_metrics_spd_mired_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_spd_mired_1d", asset_store=asset_store)
+
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["spd1"].shape == (31,)
+    assert case.payload["spd2"].shape == (31,)
+    assert float(case.payload["mired"]) > 0.0
+    assert case.payload["uv"].shape == (2, 2)
+    assert case.payload["cct_k"].shape == (2,)
