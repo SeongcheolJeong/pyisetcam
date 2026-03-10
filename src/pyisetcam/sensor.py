@@ -1519,7 +1519,7 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
     if key == "sensorpositionsy":
         positions = sensor_get(sensor, "sensor positions")
         return None if positions is None else np.asarray(positions, dtype=float)[:, 1].copy()
-    if key in {"framesperposition", "exposuretimesperposition", "etimeperpos"}:
+    if key in {"framesperposition", "framesperpositions", "exposuretimesperposition", "etimeperpos"}:
         movement = sensor.fields.get("movement", {})
         return _copy_metadata_value(movement.get("framesPerPosition"))
     if key in {"wave", "wavelength", "wavelengthsamples"}:
@@ -2011,7 +2011,7 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         movement["pos"] = _movement_positions_from_value(value)
         sensor.fields["movement"] = movement
         return sensor
-    if key in {"framesperposition", "exposuretimesperposition", "etimeperpos"}:
+    if key in {"framesperposition", "framesperpositions", "exposuretimesperposition", "etimeperpos"}:
         movement = _sensor_movement(sensor)
         movement["framesPerPosition"] = _copy_metadata_value(value)
         sensor.fields["movement"] = movement

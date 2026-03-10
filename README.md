@@ -604,6 +604,9 @@ block now also exercises the exact forms `exptime`, `exposuretimes`,
 `exposuretime`, `expduration`, `exposureduration`,
 `exposuredurations`, `uniqueintegrationtimes`, `uniqueexptime`,
 `uniqueexptimes`, `geometricmeanexposuretime`, `expmethod`, and `cds`.
+The adjacent movement and legacy-human block now also exercises the
+exact forms `sensormovement`, `framesperpositions`, `conetype`,
+`conexy`, and `conelocs`.
 The adjacent noise-control storage surface now also includes
 `sensorGet/Set('reuse noise')`, `sensorGet/Set('noise seed')`, and
 `sensorGet/Set('response type')`, with stored noise seeds now feeding

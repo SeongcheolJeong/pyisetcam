@@ -2426,9 +2426,9 @@ def test_sensor_get_set_supports_movement_metadata_surface(asset_store) -> None:
     positions = np.array([[0.1, 0.2], [0.3, 0.4]], dtype=float)
     frames = np.array([2, 3], dtype=int)
 
-    sensor = sensor_set(sensor, "eyemovement", {"name": "shake", "enabled": True})
+    sensor = sensor_set(sensor, "sensormovement", {"name": "shake", "enabled": True})
     sensor = sensor_set(sensor, "movementpositions", positions)
-    sensor = sensor_set(sensor, "framesperposition", frames)
+    sensor = sensor_set(sensor, "framesperpositions", frames)
 
     movement = sensor_get(sensor, "sensormovement")
 
@@ -2439,6 +2439,7 @@ def test_sensor_get_set_supports_movement_metadata_surface(asset_store) -> None:
     assert np.array_equal(sensor_get(sensor, "sensorpositions"), positions)
     assert np.array_equal(sensor_get(sensor, "sensorpositionsx"), positions[:, 0])
     assert np.array_equal(sensor_get(sensor, "sensorpositionsy"), positions[:, 1])
+    assert np.array_equal(sensor_get(sensor, "framesperpositions"), frames)
     assert np.array_equal(sensor_get(sensor, "framesperposition"), frames)
     assert np.array_equal(sensor_get(sensor, "exposuretimesperposition"), frames)
     assert np.array_equal(sensor_get(sensor, "etimeperpos"), frames)
@@ -2459,9 +2460,9 @@ def test_sensor_get_set_supports_legacy_human_storage_surface(asset_store) -> No
     stored = sensor_get(sensor, "human")
     assert stored is not None
     assert stored["name"] == "human"
-    assert np.array_equal(sensor_get(sensor, "human cone type"), human["coneType"])
+    assert np.array_equal(sensor_get(sensor, "conetype"), human["coneType"])
     assert np.array_equal(sensor_get(sensor, "human cone densities"), human["densities"])
-    assert np.array_equal(sensor_get(sensor, "human cone locs"), human["xy"])
+    assert np.array_equal(sensor_get(sensor, "conexy"), human["xy"])
     assert np.array_equal(sensor_get(sensor, "conelocs"), human["xy"])
     assert sensor_get(sensor, "humanrseed") == 17
 
@@ -2471,11 +2472,12 @@ def test_sensor_get_set_supports_legacy_human_storage_surface(asset_store) -> No
     cone_type = np.array([[4, 3], [2, 1]], dtype=int)
     densities = np.array([0.1, 0.5, 0.3, 0.1], dtype=float)
     xy = np.array([[0.5, 0.6]], dtype=float)
-    sensor = sensor_set(sensor, "humanconetype", cone_type)
+    sensor = sensor_set(sensor, "conetype", cone_type)
     sensor = sensor_set(sensor, "humanconedensities", densities)
     sensor = sensor_set(sensor, "conexy", xy)
     sensor = sensor_set(sensor, "humanrseed", 23)
 
+    assert np.array_equal(sensor_get(sensor, "conetype"), cone_type)
     assert np.array_equal(sensor_get(sensor, "humanconetype"), cone_type)
     assert np.array_equal(sensor_get(sensor, "humanconedensities"), densities)
     assert np.array_equal(sensor_get(sensor, "humanconelocs"), xy)
