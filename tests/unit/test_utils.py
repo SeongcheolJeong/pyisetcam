@@ -85,6 +85,7 @@ def test_ie_parameter_otype_handles_direct_prefix_and_unique_params() -> None:
     assert ie_parameter_otype("bits") == ("sensor", "bits")
     assert ie_parameter_otype("voltage") == ("sensor", "voltage")
     assert ie_parameter_otype("scene_name") == ("sensor", "scene_name")
+    assert ie_parameter_otype("scenename") == ("sensor", "scenename")
     assert ie_parameter_otype("scene name") == ("sensor", "scenename")
     assert ie_parameter_otype("metadata scene name") == ("sensor", "metadatascenename")
     assert ie_parameter_otype("metadatascenename") == ("sensor", "metadatascenename")

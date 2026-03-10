@@ -478,8 +478,9 @@ aliases `chartcornerpoints`, `chartrectangles`, and `chartcurrentrect`.
 The neighboring metadata block now also has focused parser/runtime coverage for
 `scene name`, `metadata scene name`, `metadata lens name`, `metadata lens`,
 `metadata optics name`, `metadata sensor name`, and `metadata crop`.
-That same runtime coverage now also exercises the exact legacy aliases
-`scene_name`, `metadata lensname`, `metadatalensname`, and `metadatalens`.
+That same runtime coverage now also exercises the exact aliases `scene_name`,
+`scenename`, `metadatalensname`, `metadatalens`, `metadatasensorname`, and
+`metadatacrop`.
 The adjacent chart/metadata coverage now also exercises the exact no-space MCC
 and metadata aliases `mcccornerpoints`, `mccrecthandles`,
 `metadatascenename`, `metadataopticsname`, `metadatasensorname`, and

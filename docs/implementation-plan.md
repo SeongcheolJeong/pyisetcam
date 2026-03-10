@@ -61,7 +61,7 @@
 - That same chart coverage now also exercises the exact no-space aliases `chartparameters`, `cornerpoints`, `chartcorners`, `chartrects`, `currentrect`, and `mccrecthandles`.
 - The same runtime coverage now also exercises the exact long no-space chart aliases `chartcornerpoints`, `chartrectangles`, and `chartcurrentrect`.
 - The neighboring metadata block now also has focused parser/runtime coverage for `scene name`, `metadata scene name`, `metadata lens name`, `metadata lens`, `metadata optics name`, `metadata sensor name`, and `metadata crop`.
-- That same metadata runtime coverage now also exercises the exact legacy aliases `scene_name`, `metadata lensname`, `metadatalensname`, and `metadatalens`.
+- That same metadata runtime coverage now also exercises the exact aliases `scene_name`, `scenename`, `metadatalensname`, `metadatalens`, `metadatasensorname`, and `metadatacrop`.
 - The adjacent chart/metadata coverage now also exercises the exact no-space MCC and metadata aliases `mcccornerpoints`, `mccrecthandles`, `metadatascenename`, `metadataopticsname`, `metadatasensorname`, and `metadatacrop`.
 - The neighboring vignetting alias block now also has parser-level support for `vignetting flag`, `pixel vignetting`, `sensor vignetting`, `sensor bare etendue`, `no microlens etendue`, and `vignetting name`.
 - The same headless sensor plotting surface now also covers `plotSensor('etendue')`, returning MATLAB-style support and relative-illumination payloads without opening a mesh plot window.
