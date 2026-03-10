@@ -60,6 +60,18 @@ def run_python_case_with_context(
             context={"scene": scene},
         )
 
+    if case_name == "scene_checkerboard_small":
+        scene = scene_create("checkerboard", 8, 4, asset_store=store)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": scene_get(scene, "wave"),
+                "photons": scene_get(scene, "photons"),
+                "mean_luminance": scene_get(scene, "mean luminance", asset_store=store),
+            },
+            context={"scene": scene},
+        )
+
     if case_name == "scene_illuminant_change":
         scene = scene_create(asset_store=store)
         wave = scene_get(scene, "wave")
