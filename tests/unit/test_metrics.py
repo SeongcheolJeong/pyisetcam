@@ -14,6 +14,7 @@ from pyisetcam import (
     xyz_from_energy,
     xyz_to_lab,
     xyz_to_luv,
+    xyz_to_uv,
 )
 
 
@@ -37,6 +38,13 @@ def test_xyz_to_luv_matches_cie_1976_reference_values() -> None:
     luv = xyz_to_luv(xyz, white)
 
     assert np.allclose(luv, np.array([61.65422221, -34.06397300, 44.83261015]), atol=1e-8)
+
+
+def test_xyz_to_uv_matches_cie_1960_reference_values() -> None:
+    xyz = np.array([20.0, 30.0, 15.0], dtype=float)
+    uv = xyz_to_uv(xyz)
+
+    assert np.allclose(uv, np.array([0.15533981, 0.34951456]), atol=1e-8)
 
 
 def test_delta_e_ab_is_zero_for_identical_xyz() -> None:

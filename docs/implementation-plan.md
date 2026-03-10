@@ -150,6 +150,7 @@
 - `metrics_xyz_from_energy_1d`: `ieXYZFromEnergy` parity on a 1D SPD, compare wave, energy, and XYZ tristimulus output for the first metrics-family helper case.
 - `metrics_xyz_to_luv_1d`: `xyz2luv` parity on a single XYZ/white-point pair, compare the XYZ input, white point, and resulting LUV vector for another deterministic metrics-family helper.
 - `metrics_xyz_to_lab_1d`: `ieXYZ2LAB` parity on a single XYZ/white-point pair, compare the XYZ input, white point, and resulting LAB vector for another deterministic metrics-family helper.
+- `metrics_xyz_to_uv_1d`: `xyz2uv(..., 'uv')` parity on a single XYZ vector, compare the XYZ input and resulting CIE 1960 uv chromaticity pair for another deterministic metrics-family helper.
 - `metrics_delta_e_ab_1976_1d`: `deltaEab(..., '1976')` parity on one XYZ pair and white point, compare the XYZ inputs, white point, and resulting 1976 Delta E scalar for a deterministic metrics-family helper.
 - `metrics_spd_angle_1d`: `metricsSPD(..., 'angle')` parity on two short orthogonal SPDs, compare wave, both SPDs, and the resulting angle scalar for a deterministic metrics-family helper.
 - `metrics_spd_cielab_1d`: `metricsSPD(..., 'cielab')` parity on two fixed SPDs, compare wave, both SPDs, resulting delta E scalar, XYZs, LABs, and derived white point for another deterministic metrics-family helper.

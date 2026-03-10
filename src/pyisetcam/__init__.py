@@ -27,6 +27,7 @@ from .metrics import (
     xyz_from_energy,
     xyz_to_lab,
     xyz_to_luv,
+    xyz_to_uv,
 )
 from .optics import (
     ie_field_height_to_index,
@@ -391,6 +392,7 @@ __all__ = [
     "xyz_from_energy",
     "xyz_to_lab",
     "xyz_to_luv",
+    "xyz_to_uv",
     "xyz2luv",
     "zemaxLoad",
     "zemaxReadHeader",

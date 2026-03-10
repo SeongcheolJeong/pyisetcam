@@ -96,6 +96,12 @@ switch case_name
         payload.white_point = white_point;
         payload.lab = ieXYZ2LAB(xyz, white_point);
 
+    case 'metrics_xyz_to_uv_1d'
+        xyz = [20.0 30.0 15.0];
+        payload.xyz = xyz;
+        [u, v] = xyz2uv(xyz, 'uv');
+        payload.uv = [u v];
+
     case 'metrics_delta_e_ab_1976_1d'
         xyz1 = [20.0 30.0 15.0];
         xyz2 = [18.0 27.0 16.5];
