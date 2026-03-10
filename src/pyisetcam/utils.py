@@ -233,6 +233,7 @@ _PARAMETER_OTYPE_UNIQUE = {
         "filtercolorletters",
         "filtercolorletterscell",
         "filterplotcolors",
+        "patterncolors",
         "spectralqe",
         "sensorspectralsr",
         "pattern",
