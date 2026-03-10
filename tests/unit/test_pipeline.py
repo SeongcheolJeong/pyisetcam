@@ -3320,3 +3320,12 @@ def test_run_python_case_supports_uniform_bb_scene_parity_case(asset_store) -> N
     assert case.payload["photons"].shape == case.context["scene"].data["photons"].shape
     assert np.array_equal(case.payload["wave"], case.context["scene"].fields["wave"])
     assert case.payload["mean_luminance"] > 0.0
+
+
+def test_run_python_case_supports_unit_frequency_utility_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("utility_unit_frequency_list", asset_store=asset_store)
+
+    assert np.allclose(case.payload["even"], np.asarray(case.payload["even"], dtype=float))
+    assert np.allclose(case.payload["odd"], np.asarray(case.payload["odd"], dtype=float))
+    assert case.payload["even"].shape == (50,)
+    assert case.payload["odd"].shape == (51,)

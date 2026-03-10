@@ -22,7 +22,7 @@ from .optics import (
 )
 from .scene import scene_adjust_illuminant, scene_create, scene_get
 from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_set
-from .utils import blackbody
+from .utils import blackbody, unit_frequency_list
 
 
 @dataclass
@@ -82,6 +82,16 @@ def run_python_case_with_context(
                 "mean_luminance": scene_get(scene, "mean luminance", asset_store=store),
             },
             context={"scene": scene},
+        )
+
+    if case_name == "utility_unit_frequency_list":
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "even": unit_frequency_list(50),
+                "odd": unit_frequency_list(51),
+            },
+            context={},
         )
 
     if case_name == "scene_illuminant_change":

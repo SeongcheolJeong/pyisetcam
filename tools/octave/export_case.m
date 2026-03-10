@@ -34,6 +34,10 @@ switch case_name
         payload.photons = sceneGet(scene, 'photons');
         payload.mean_luminance = sceneGet(scene, 'mean luminance');
 
+    case 'utility_unit_frequency_list'
+        payload.even = unitFrequencyList(50);
+        payload.odd = unitFrequencyList(51);
+
     case 'scene_illuminant_change'
         scene = sceneCreate();
         bb = blackbody(sceneGet(scene, 'wave'), 3000, 'energy');
