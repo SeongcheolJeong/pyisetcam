@@ -236,6 +236,7 @@ def test_ie_parameter_otype_handles_direct_prefix_and_unique_params() -> None:
     assert ie_parameter_otype("human cone locs") == ("sensor", "humanconelocs")
     assert ie_parameter_otype("rseed") == ("sensor", "rseed")
     assert ie_parameter_otype("human rseed") == ("sensor", "humanrseed")
+    assert ie_parameter_otype("humanrseed") == ("sensor", "humanrseed")
     assert ie_parameter_otype("humanconeseed") == ("sensor", "humanconeseed")
     assert ie_parameter_otype("chart parameters") == ("sensor", "chartparameters")
     assert ie_parameter_otype("chartparameters") == ("sensor", "chartparameters")

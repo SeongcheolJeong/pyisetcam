@@ -457,9 +457,11 @@ the long-form aliases `human cone type` and `human cone locs`.
 The same test coverage now also exercises `human cone densities` and
 `human cone seed` directly on the runtime path.
 That same runtime/parser coverage now also exercises the exact legacy alias
-`humanrseed`.
+`humanrseed`, and the same runtime coverage now also exercises the exact
+location aliases `conexy` and `conelocs`.
 The same legacy human coverage now also exercises the exact no-space aliases
-`humanconetype`, `humanconedensities`, `humanconelocs`, and `humanconeseed`.
+`humanconetype`, `humanconedensities`, and `humanconelocs`, with parser
+coverage also including `humanconeseed`.
 The adjacent chart block now also has parser-level routing for
 `chart parameters`, `corner points`, `chart corners`, `chart rects`,
 `chart rectangles`, `current rect`, and `chart current rect`.
