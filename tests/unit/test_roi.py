@@ -127,9 +127,9 @@ def test_sensor_get_roi_queries_and_means(asset_store) -> None:
     sensor = sensor_set(sensor, "analog offset", 1.0)
     sensor = sensor_set(sensor, "volts", np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float))
     sensor = sensor_set(sensor, "dv", np.array([[10.0, 20.0], [30.0, 40.0]], dtype=float))
-    sensor = sensor_set(sensor, "roi rect", np.array([1, 1, 1, 1], dtype=int))
+    sensor = sensor_set(sensor, "roirect", np.array([1, 1, 1, 1], dtype=int))
 
-    roi_locs = sensor_get(sensor, "roi locs")
+    roi_locs = sensor_get(sensor, "roilocs")
     roi_volts = sensor_get(sensor, "roivolts")
     roi_electrons = sensor_get(sensor, "roielectrons")
     roi_dv = sensor_get(sensor, "roidv")
@@ -137,7 +137,8 @@ def test_sensor_get_roi_queries_and_means(asset_store) -> None:
     roi_electrons_mean = sensor_get(sensor, "roielectronsmean")
 
     assert np.array_equal(roi_locs, np.array([[1, 1], [1, 2], [2, 1], [2, 2]], dtype=int))
-    assert np.array_equal(sensor_get(sensor, "roi rect"), np.array([1, 1, 1, 1], dtype=int))
+    assert np.array_equal(sensor_get(sensor, "roirect"), np.array([1, 1, 1, 1], dtype=int))
+    assert np.array_equal(sensor_get(sensor, "roi"), np.array([1, 1, 1, 1], dtype=int))
     assert np.allclose(
         roi_volts,
         np.array(

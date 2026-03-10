@@ -586,7 +586,9 @@ line-profile aliases `hlinevolts`, `hlineelectrons`, `hlinedv`,
 `vlinevolts`, `vlineelectrons`, and `vlinedv`. That same sensor ROI and
 line-profile block now also exercises the exact getter form
 `roichromaticitymean`, with prefixed parser coverage for
-`sensor chromaticity` and `sensor roichromaticitymean`.
+`sensor chromaticity` and `sensor roichromaticitymean`. The adjacent ROI
+geometry block now also exercises the exact forms `roi`, `roilocs`, and
+`roirect`.
 The adjacent noise-control storage surface now also includes
 `sensorGet/Set('reuse noise')`, `sensorGet/Set('noise seed')`, and
 `sensorGet/Set('response type')`, with stored noise seeds now feeding
