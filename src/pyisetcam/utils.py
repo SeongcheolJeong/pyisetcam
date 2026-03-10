@@ -384,6 +384,7 @@ _PARAMETER_OTYPE_UNIQUE = {
         "metadatacrop",
     },
     "pixel": {
+        "pixelsize",
         "widthheight",
         "widthandheight",
         "sizeconstantfillfactor",

@@ -547,6 +547,14 @@ no-space aliases `autoexposure`, `integrationtime`,
 `sensorcompute`, `sensorcomputemethod`, `dynamicrange`,
 `sensordynamicrange`, `maxdigitalvalue`, `analoggain`, and
 `analogoffset`.
+The neighboring pixel passthrough coverage now also exercises the exact
+no-space aliases `fillfactor`, `pixelsize`, `pixelwidth`,
+`pixelheight`, `pixelwidthmeters`, `pixelheightmeters`, `widthgap`,
+`heightgap`, `widthbetweenpixels`, `heightbetweenpixels`,
+`xyspacing`, `pdarea`, `voltsperelectron`, `wellcapacity`,
+`maxvoltage`, `darkvoltageperpixel`, `darkelectrons`,
+`darkcurrentdensity`, `readnoisevolts`, `readnoiseelectrons`,
+`readstandarddeviationvolts`, and `readnoisemillivolts`.
 The adjacent noise-control storage surface now also includes
 `sensorGet/Set('reuse noise')`, `sensorGet/Set('noise seed')`, and
 `sensorGet/Set('response type')`, with stored noise seeds now feeding
