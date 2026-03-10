@@ -2518,17 +2518,18 @@ def test_sensor_get_set_supports_microlens_storage_surface(asset_store) -> None:
     }
     ml_offset = np.array([[1.0, -1.0], [0.5, -0.5]], dtype=float)
 
-    sensor = sensor_set(sensor, "ulens", microlens)
-    sensor = sensor_set(sensor, "microlens offset", ml_offset)
+    sensor = sensor_set(sensor, "microlens", microlens)
+    sensor = sensor_set(sensor, "microlensoffset", ml_offset)
 
-    stored = sensor_get(sensor, "ml")
+    stored = sensor_get(sensor, "microlens")
 
     assert stored["name"] == "default"
     assert stored["type"] == "microlens"
     assert np.array_equal(stored["offset"], np.array([0.0, 1.0], dtype=float))
     assert stored["wavelength"] == 500.0
     assert sensor_get(sensor, "ulens")["name"] == "default"
-    assert np.array_equal(sensor_get(sensor, "microlens offset"), ml_offset)
+    assert np.array_equal(sensor_get(sensor, "microlensoffset"), ml_offset)
+    assert np.array_equal(sensor_get(sensor, "microlensoffsetmicrons"), ml_offset)
 
     stored["offset"][0] = 9.0
     assert np.array_equal(sensor_get(sensor, "mlens")["offset"], np.array([0.0, 1.0], dtype=float))
@@ -2656,12 +2657,13 @@ def test_sensor_get_set_supports_sampling_and_vignetting_aliases(asset_store) ->
     assert sensor_get(sensor, "sensorbareetendue") == 0
 
     sensor = sensor_set(sensor, "spatialsamplesperpixel", 3)
-    sensor = sensor_set(sensor, "vignettingflag", "bare")
+    sensor = sensor_set(sensor, "vignetting", "bare")
 
     assert sensor_get(sensor, "ngridsamples") == 3
     assert sensor_get(sensor, "nsamplesperpixel") == 3
     assert sensor_get(sensor, "npixelsamplesforcomputing") == 3
     assert sensor_get(sensor, "pixelsamples") == 3
+    assert sensor_get(sensor, "vignetting") == "bare"
     assert sensor_get(sensor, "sensorvignetting") == "bare"
     assert sensor_get(sensor, "vignettingflag") == "bare"
     assert sensor_get(sensor, "vignettingname") == "bare"
@@ -3030,7 +3032,7 @@ def test_sensor_set_etendue_scales_noiseless_response(asset_store) -> None:
 
     attenuated_sensor = sensor_set(
         baseline_sensor.clone(),
-        "sensor etendue",
+        "sensoretendue",
         np.full(baseline_sensor.fields["size"], 0.5, dtype=float),
     )
 
@@ -3038,7 +3040,7 @@ def test_sensor_set_etendue_scales_noiseless_response(asset_store) -> None:
     attenuated = sensor_compute(attenuated_sensor, oi, seed=0)
 
     assert np.allclose(attenuated.data["volts"], baseline.data["volts"] * 0.5)
-    assert np.allclose(sensor_get(attenuated, "sensor etendue"), 0.5)
+    assert np.allclose(sensor_get(attenuated, "sensoretendue"), 0.5)
 
 
 def test_sensor_compute_rejects_unsupported_vignetting_modes(asset_store) -> None:

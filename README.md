@@ -588,7 +588,10 @@ line-profile block now also exercises the exact getter form
 `roichromaticitymean`, with prefixed parser coverage for
 `sensor chromaticity` and `sensor roichromaticitymean`. The adjacent ROI
 geometry block now also exercises the exact forms `roi`, `roilocs`, and
-`roirect`.
+`roirect`. The neighboring microlens/vignetting/etendue block now also
+exercises the exact forms `microlens`, `microlensoffset`,
+`microlensoffsetmicrons`, `vignetting`, `ngridsamples`, and
+`sensoretendue`.
 The adjacent noise-control storage surface now also includes
 `sensorGet/Set('reuse noise')`, `sensorGet/Set('noise seed')`, and
 `sensorGet/Set('response type')`, with stored noise seeds now feeding
