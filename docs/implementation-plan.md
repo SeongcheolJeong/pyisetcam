@@ -143,6 +143,7 @@
 - `scene_uniform_bb_small`: `sceneCreate('uniform bb', 16, 4500)` parity, compare wave axis, photons cube, and mean luminance for direct blackbody scene construction.
 - `utility_unit_frequency_list`: `unitFrequencyList(50/51)` parity, compare even- and odd-length normalized frequency support for a standalone helper function.
 - `utility_energy_quanta_1d`: `Energy2Quanta` / `Quanta2Energy` parity on a 1D spectrum, compare wave, photons, and round-trip-restored energy for a standalone conversion helper.
+- `utility_blackbody_energy_small`: `blackbody(..., 'energy')` parity on two fixed color temperatures, compare wave, temperatures, and the returned spectral energy matrix for a standalone illumination helper.
 - `metrics_xyz_from_energy_1d`: `ieXYZFromEnergy` parity on a 1D SPD, compare wave, energy, and XYZ tristimulus output for the first metrics-family helper case.
 - `metrics_xyz_to_luv_1d`: `xyz2luv` parity on a single XYZ/white-point pair, compare the XYZ input, white point, and resulting LUV vector for another deterministic metrics-family helper.
 - `metrics_xyz_to_lab_1d`: `ieXYZ2LAB` parity on a single XYZ/white-point pair, compare the XYZ input, white point, and resulting LAB vector for another deterministic metrics-family helper.
