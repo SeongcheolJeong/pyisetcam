@@ -599,7 +599,11 @@ CFA/filter metadata block now also exercises the exact forms `pattern`,
 now also exercises the exact forms `dsnusigma`, `offsetnoisevalue`,
 `prnusigma`, `gainnoisevalue`, `fpnparameters`,
 `columnfixedpatternnoise`, `coloffsetfpnvector`,
-`colgainfpnvector`, and `noiseflag`.
+`colgainfpnvector`, and `noiseflag`. The neighboring exposure-summary
+block now also exercises the exact forms `exptime`, `exposuretimes`,
+`exposuretime`, `expduration`, `exposureduration`,
+`exposuredurations`, `uniqueintegrationtimes`, `uniqueexptime`,
+`uniqueexptimes`, `geometricmeanexposuretime`, `expmethod`, and `cds`.
 The adjacent noise-control storage surface now also includes
 `sensorGet/Set('reuse noise')`, `sensorGet/Set('noise seed')`, and
 `sensorGet/Set('response type')`, with stored noise seeds now feeding

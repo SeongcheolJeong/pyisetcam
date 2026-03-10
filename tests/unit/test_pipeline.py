@@ -2623,11 +2623,12 @@ def test_sensor_get_set_supports_exposure_plane_and_cds_surface(asset_store) -> 
 
     sensor.fields["integration_time"] = np.array([0.01, 0.02, 0.03], dtype=float)
     sensor = sensor_set(sensor, "exposureplane", 3.2)
-    sensor = sensor_set(sensor, "correlateddoublesampling", True)
+    sensor = sensor_set(sensor, "cds", True)
     sensor = sensor_set(sensor, "autoexp", "off")
 
     assert sensor_get(sensor, "nexposures") == 3
     assert sensor_get(sensor, "exposureplane") == 3
+    assert sensor_get(sensor, "cds") is True
     assert sensor_get(sensor, "correlateddoublesampling") is True
     assert sensor_get(sensor, "autoexposure") is False
 
@@ -2640,16 +2641,23 @@ def test_sensor_get_set_supports_exposure_plane_and_cds_surface(asset_store) -> 
 def test_sensor_get_set_supports_exposure_method_and_time_summaries(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
 
-    sensor = sensor_set(sensor, "exptimes", np.array([0.01, 0.02, 0.04], dtype=float))
+    sensor = sensor_set(sensor, "exposuretimes", np.array([0.01, 0.02, 0.04], dtype=float))
 
-    assert np.array_equal(sensor_get(sensor, "exptimes"), np.array([0.01, 0.02, 0.04], dtype=float))
-    assert np.array_equal(sensor_get(sensor, "exposure times", "ms"), np.array([10.0, 20.0, 40.0], dtype=float))
+    assert np.array_equal(sensor_get(sensor, "exptime"), np.array([0.01, 0.02, 0.04], dtype=float))
+    assert np.array_equal(sensor_get(sensor, "exposuretimes"), np.array([0.01, 0.02, 0.04], dtype=float))
+    assert np.array_equal(sensor_get(sensor, "exposuretime", "ms"), np.array([10.0, 20.0, 40.0], dtype=float))
+    assert np.array_equal(sensor_get(sensor, "expduration"), np.array([0.01, 0.02, 0.04], dtype=float))
+    assert np.array_equal(sensor_get(sensor, "exposureduration"), np.array([0.01, 0.02, 0.04], dtype=float))
+    assert np.array_equal(sensor_get(sensor, "exposuredurations"), np.array([0.01, 0.02, 0.04], dtype=float))
+    assert np.array_equal(sensor_get(sensor, "uniqueintegrationtimes"), np.array([0.01, 0.02, 0.04], dtype=float))
+    assert np.array_equal(sensor_get(sensor, "uniqueexptime"), np.array([0.01, 0.02, 0.04], dtype=float))
     assert np.array_equal(sensor_get(sensor, "uniqueexptimes"), np.array([0.01, 0.02, 0.04], dtype=float))
     assert np.isclose(sensor_get(sensor, "centralexposure"), 0.02)
-    assert sensor_get(sensor, "exposuremethod") == "bracketedExposure"
+    assert np.isclose(sensor_get(sensor, "geometricmeanexposuretime"), 0.02)
+    assert sensor_get(sensor, "expmethod") == "bracketedExposure"
     assert sensor_get(sensor, "nexposures") == 3
 
-    sensor = sensor_set(sensor, "exposuremethod", "videoExposure")
+    sensor = sensor_set(sensor, "expmethod", "videoExposure")
 
     assert sensor_get(sensor, "expmethod") == "videoExposure"
 
