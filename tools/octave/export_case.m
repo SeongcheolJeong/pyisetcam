@@ -68,6 +68,15 @@ switch case_name
         payload.white_point = white_point;
         payload.lab = ieXYZ2LAB(xyz, white_point);
 
+    case 'metrics_delta_e_ab_1976_1d'
+        xyz1 = [20.0 30.0 15.0];
+        xyz2 = [18.0 27.0 16.5];
+        white_point = [95.047 100.0 108.883];
+        payload.xyz1 = xyz1;
+        payload.xyz2 = xyz2;
+        payload.white_point = white_point;
+        payload.delta_e = deltaEab(xyz1, xyz2, white_point, '1976');
+
     case 'scene_illuminant_change'
         scene = sceneCreate();
         bb = blackbody(sceneGet(scene, 'wave'), 3000, 'energy');

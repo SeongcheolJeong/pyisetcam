@@ -10,7 +10,7 @@ import numpy as np
 from .assets import AssetStore
 from .camera import camera_compute, camera_create
 from .display import display_create
-from .metrics import xyz_from_energy, xyz_to_lab, xyz_to_luv
+from .metrics import delta_e_ab, xyz_from_energy, xyz_to_lab, xyz_to_luv
 from .ip import ip_compute, ip_create
 from .optics import (
     _cos4th_factor,
@@ -145,6 +145,21 @@ def run_python_case_with_context(
                 "xyz": xyz,
                 "white_point": white_point,
                 "lab": xyz_to_lab(xyz, white_point),
+            },
+            context={},
+        )
+
+    if case_name == "metrics_delta_e_ab_1976_1d":
+        xyz1 = np.array([20.0, 30.0, 15.0], dtype=float)
+        xyz2 = np.array([18.0, 27.0, 16.5], dtype=float)
+        white_point = np.array([95.047, 100.0, 108.883], dtype=float)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "xyz1": xyz1,
+                "xyz2": xyz2,
+                "white_point": white_point,
+                "delta_e": delta_e_ab(xyz1, xyz2, white_point),
             },
             context={},
         )

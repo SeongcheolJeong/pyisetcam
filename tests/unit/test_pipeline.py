@@ -3365,3 +3365,12 @@ def test_run_python_case_supports_xyz_to_lab_metrics_parity_case(asset_store) ->
     assert case.payload["white_point"].shape == (3,)
     assert case.payload["lab"].shape == (3,)
     assert case.payload["lab"][0] > 0.0
+
+
+def test_run_python_case_supports_delta_e_ab_metrics_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_delta_e_ab_1976_1d", asset_store=asset_store)
+
+    assert case.payload["xyz1"].shape == (3,)
+    assert case.payload["xyz2"].shape == (3,)
+    assert case.payload["white_point"].shape == (3,)
+    assert float(case.payload["delta_e"]) > 0.0
