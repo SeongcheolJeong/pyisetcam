@@ -2019,7 +2019,7 @@ def test_sensor_get_reports_matlab_style_geometry_and_cfa_metadata(asset_store) 
     pixel_size = np.asarray(sensor.fields["pixel"]["size_m"], dtype=float)
     rows, cols = sensor.fields["size"]
 
-    support = sensor_get(sensor, "spatial support", "um")
+    support = sensor_get(sensor, "spatialsupport", "um")
     cfa = sensor_get(sensor, "cfa")
     pattern = sensor_get(sensor, "cfapattern")
     cfa_config = sensor_get(sensor, "unitblockconfig")
@@ -2034,9 +2034,9 @@ def test_sensor_get_reports_matlab_style_geometry_and_cfa_metadata(asset_store) 
     assert support["y"].shape == (rows,)
     assert np.isclose(support["x"][0], -support["x"][-1])
     assert np.isclose(support["y"][0], -support["y"][-1])
-    assert sensor_get(sensor, "unit block rows") == 2
-    assert sensor_get(sensor, "unit block cols") == 2
-    assert sensor_get(sensor, "cfa size") == (2, 2)
+    assert sensor_get(sensor, "unitblockrows") == 2
+    assert sensor_get(sensor, "unitblockcols") == 2
+    assert sensor_get(sensor, "cfasize") == (2, 2)
     assert sensor_get(sensor, "cfaname") == "Bayer RGB"
     assert sensor_get(sensor, "filtercolorletters") == "rgb"
     assert np.array_equal(pattern, np.array([[2, 1], [3, 2]], dtype=int))

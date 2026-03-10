@@ -537,6 +537,10 @@ The adjacent spectral-filter and pixel-response coverage now also
 exercises the exact no-space aliases `filterspectra`, `colorfilters`,
 `infraredfilter`, `irfilter`, `pixelspectralqe`, `pdspectralqe`,
 `pixelqe`, `spectralsr`, `pdspectralsr`, `pixelspectralsr`, and `sr`.
+The neighboring geometry/block metadata coverage now also exercises the
+exact no-space aliases `unitblockrows`, `unitblockcols`, and `cfasize`,
+while the runtime surface now also uses the exact sensor getter form
+`spatialsupport`.
 The adjacent noise-control storage surface now also includes
 `sensorGet/Set('reuse noise')`, `sensorGet/Set('noise seed')`, and
 `sensorGet/Set('response type')`, with stored noise seeds now feeding
