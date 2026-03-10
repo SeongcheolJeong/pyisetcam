@@ -59,6 +59,11 @@ from .optics import (
     rt_sample_heights,
     rt_synthetic,
     wvf_create,
+    wvf_defocus_diopters_to_microns,
+    wvf_defocus_microns_to_diopters,
+    wvf_get,
+    wvf_set,
+    wvf_to_oi,
     zemax_load,
     zemax_read_header,
 )
@@ -387,6 +392,11 @@ __all__ = [
     "vc_save_object",
     "vc_set_figure_handles",
     "wvf_create",
+    "wvf_defocus_diopters_to_microns",
+    "wvf_defocus_microns_to_diopters",
+    "wvf_get",
+    "wvf_set",
+    "wvf_to_oi",
     "chromaticity_xy",
     "plotScene",
     "plotSensor",
@@ -451,6 +461,12 @@ rtPrecomputePSFApply = rt_precompute_psf_apply
 rtRIInterp = rt_ri_interp
 rtSampleHeights = rt_sample_heights
 rtSynthetic = rt_synthetic
+wvfCreate = wvf_create
+wvfGet = wvf_get
+wvfSet = wvf_set
+wvf2oi = wvf_to_oi
+wvfDefocusDioptersToMicrons = wvf_defocus_diopters_to_microns
+wvfDefocusMicronsToDiopters = wvf_defocus_microns_to_diopters
 zemaxLoad = zemax_load
 zemaxReadHeader = zemax_read_header
 

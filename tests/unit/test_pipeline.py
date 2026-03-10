@@ -52,6 +52,11 @@ from pyisetcam import (
     sensor_get,
     sensor_set,
     wvf_create,
+    wvf_defocus_diopters_to_microns,
+    wvf_defocus_microns_to_diopters,
+    wvf_get,
+    wvf_set,
+    wvf_to_oi,
     zemax_load,
     zemax_read_header,
 )
@@ -1917,6 +1922,37 @@ def test_oi_create_wvf_matches_upstream_default_wavefront_metadata() -> None:
     assert np.isclose(wavefront["sce_params"]["yo_mm"], 0.0)
 
 
+def test_wvf_set_and_get_named_zcoeffs_round_trip() -> None:
+    wvf = wvf_create(wave=np.array([450.0, 550.0, 650.0], dtype=float))
+    wvf = wvf_set(wvf, "zcoeffs", np.array([2.0, 0.5], dtype=float), ["defocus", "vertical_astigmatism"])
+
+    assert np.isclose(wvf_get(wvf, "zcoeffs", "defocus"), 2.0)
+    assert np.isclose(wvf_get(wvf, "zcoeffs", "vertical_astigmatism"), 0.5)
+    assert np.array_equal(wvf_get(wvf, "wave"), np.array([450.0, 550.0, 650.0], dtype=float))
+
+
+def test_wvf_defocus_diopter_micron_round_trip() -> None:
+    microns = wvf_defocus_diopters_to_microns(1.5, 4.0)
+    diopters = wvf_defocus_microns_to_diopters(microns, 4.0)
+
+    assert np.isclose(float(np.asarray(microns).reshape(-1)[0]), 1.5 * (4.0**2) / (16.0 * np.sqrt(3.0)))
+    assert np.isclose(float(np.asarray(diopters).reshape(-1)[0]), 1.5)
+
+
+def test_oi_compute_accepts_wvf_input(asset_store) -> None:
+    scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
+    wvf = wvf_create(wave=scene_get(scene, "wave"))
+    wvf = wvf_set(wvf, "zcoeffs", np.array([2.0, 0.5], dtype=float), ["defocus", "vertical_astigmatism"])
+
+    oi = oi_compute(wvf, scene, crop=True)
+
+    assert oi.fields["optics"]["model"] == "shiftinvariant"
+    assert np.isclose(float(oi_get(oi, "wvf", "zcoeffs", "defocus")), 2.0)
+    assert np.isclose(float(oi_get(oi, "wvf", "zcoeffs", "vertical_astigmatism")), 0.5)
+    assert oi_get(oi, "photons").shape[:2] == scene.data["photons"].shape[:2]
+    assert wvf_to_oi(wvf).fields["optics"]["model"] == "shiftinvariant"
+
+
 def test_oi_create_psf_builds_default_shift_invariant_psf_optics() -> None:
     oi = oi_create("psf")
 
@@ -3410,6 +3446,15 @@ def test_run_python_case_supports_psf_default_oi_parity_case(asset_store) -> Non
     assert np.array_equal(case.payload["wave"], case.context["oi"].fields["wave"])
     assert case.context["oi"].fields["optics"]["model"] == "shiftinvariant"
     assert case.context["oi"].fields["optics"]["compute_method"] == "opticsotf"
+
+
+def test_run_python_case_supports_wvf_defocus_oi_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("oi_wvf_defocus_small", asset_store=asset_store)
+
+    assert case.payload["photons"].shape == case.context["oi"].data["photons"].shape
+    assert np.array_equal(case.payload["wave"], case.context["oi"].fields["wave"])
+    assert np.isclose(float(case.payload["defocus"]), 2.0)
+    assert np.isclose(float(case.payload["vertical_astigmatism"]), 0.5)
 
 
 def test_run_python_case_supports_unit_frequency_utility_parity_case(asset_store) -> None:

@@ -157,6 +157,18 @@
       "atol": 1e-06
     },
     {
+      "name": "oi_wvf_defocus_small",
+      "matlab_function": "wvfSet/oiCompute",
+      "rtol": 1e-04,
+      "atol": 1e-06,
+      "field_overrides": {
+        "photons": {
+          "mode": "mean_rel",
+          "max_mean_rel": 5e-05
+        }
+      }
+    },
+    {
       "name": "oi_diffraction_limited_default",
       "matlab_function": "oiCompute",
       "rtol": 1e-04,

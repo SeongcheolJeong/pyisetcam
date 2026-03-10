@@ -1305,6 +1305,210 @@ def wvf_create(
     }
 
 
+_WVF_ABERRATION_NAME_TO_OSA_INDEX = {
+    "piston": 0,
+    "verticaltilt": 1,
+    "horizontaltilt": 2,
+    "obliqueastigmatism": 3,
+    "defocus": 4,
+    "verticalastigmatism": 5,
+    "verticaltrefoil": 6,
+    "verticalcoma": 7,
+    "horizontalcoma": 8,
+    "obliquetrefoil": 9,
+    "obliquequadrafoil": 10,
+    "obliquesecondaryastigmatism": 11,
+    "primaryspherical": 12,
+    "spherical": 12,
+    "verticalsecondaryastigmatism": 13,
+    "verticalquadrafoil": 14,
+}
+
+
+def _normalize_wvf_aberration_name(name: Any) -> str:
+    return param_format(name).replace("_", "").replace("-", "")
+
+
+def _coerce_wvf_zcoeff_indices(indices: Any) -> np.ndarray:
+    if isinstance(indices, str):
+        normalized = _normalize_wvf_aberration_name(indices)
+        if normalized not in _WVF_ABERRATION_NAME_TO_OSA_INDEX:
+            raise ValueError(f"Unsupported wavefront aberration name: {indices}")
+        return np.asarray([_WVF_ABERRATION_NAME_TO_OSA_INDEX[normalized]], dtype=int)
+
+    if isinstance(indices, (list, tuple)):
+        result: list[int] = []
+        for item in indices:
+            result.extend(_coerce_wvf_zcoeff_indices(item).tolist())
+        return np.asarray(result, dtype=int)
+
+    vector = np.asarray(indices, dtype=object).reshape(-1)
+    if vector.size == 0:
+        return np.empty(0, dtype=int)
+    if all(isinstance(item, str) for item in vector.tolist()):
+        return _coerce_wvf_zcoeff_indices(vector.tolist())
+    return np.asarray(vector, dtype=int).reshape(-1)
+
+
+def wvf_defocus_diopters_to_microns(diopters: Any, pupil_size_mm: Any) -> np.ndarray:
+    diopters_array = np.asarray(diopters, dtype=float)
+    pupil_size = float(pupil_size_mm)
+    return diopters_array * (pupil_size**2) / (16.0 * np.sqrt(3.0))
+
+
+def wvf_defocus_microns_to_diopters(microns: Any, pupil_size_mm: Any) -> np.ndarray:
+    microns_array = np.asarray(microns, dtype=float)
+    pupil_size = float(pupil_size_mm)
+    return (16.0 * np.sqrt(3.0)) * microns_array / max(pupil_size**2, 1e-12)
+
+
+def wvf_set(wvf: dict[str, Any], parameter: str, value: Any, *args: Any) -> dict[str, Any]:
+    key = param_format(parameter)
+    updated = dict(wvf)
+
+    if key in {"name", "type", "sampleintervaldomain", "lcamethod"}:
+        mapped_key = {
+            "name": "name",
+            "type": "type",
+            "sampleintervaldomain": "sample_interval_domain",
+            "lcamethod": "lca_method",
+        }[key]
+        updated[mapped_key] = str(value)
+        return updated
+
+    if key in {"wave", "wavelength", "wavelengths", "calcwave", "calcwavelengths", "wls"}:
+        updated["wave"] = np.asarray(value, dtype=float).reshape(-1)
+        if "sce_params" in updated:
+            updated["sce_params"] = _normalize_sce_params(updated["wave"], updated.get("sce_params"))
+        return updated
+
+    if key in {"zcoeffs", "zcoeff", "zcoef"}:
+        if not args:
+            updated["zcoeffs"] = np.asarray(value, dtype=float).reshape(-1).copy()
+            return updated
+        indices = _coerce_wvf_zcoeff_indices(args[0])
+        values = np.asarray(value, dtype=float).reshape(-1)
+        if values.size != indices.size:
+            raise ValueError("Wavefront coefficient values must match the number of requested indices.")
+        zcoeffs = np.asarray(updated.get("zcoeffs", np.array([0.0], dtype=float)), dtype=float).reshape(-1).copy()
+        max_index = int(np.max(indices)) if indices.size > 0 else -1
+        if max_index >= zcoeffs.size:
+            zcoeffs = np.pad(zcoeffs, (0, max_index + 1 - zcoeffs.size), constant_values=0.0)
+        zcoeffs[indices] = values
+        updated["zcoeffs"] = zcoeffs
+        return updated
+
+    if key in {"calcpupildiameter", "calcpupilsize", "calculatedpupil", "calculatedpupildiameter"}:
+        updated["calc_pupil_diameter_mm"] = float(value) / _spatial_unit_scale(args[0] if args else "mm") * 1e3
+        updated["f_number"] = (float(updated.get("focal_length_m", DEFAULT_WVF_FOCAL_LENGTH_M)) * 1e3) / max(
+            float(updated["calc_pupil_diameter_mm"]), 1e-12
+        )
+        return updated
+
+    if key in {"measuredpupil", "measuredpupilsize", "measuredpupildiameter", "measuredpupilmm"}:
+        updated["measured_pupil_diameter_mm"] = float(value) / _spatial_unit_scale(args[0] if args else "mm") * 1e3
+        return updated
+
+    if key in {"measuredwl", "measuredwave", "measuredwavelength"}:
+        updated["measured_wavelength_nm"] = float(value)
+        return updated
+
+    if key in {"spatialsamples", "numberspatialsamples", "npixels", "fieldsizepixels"}:
+        updated["spatial_samples"] = int(value)
+        return updated
+
+    if key in {"refpupilplanesize", "pupilplanesize", "refpupilplanesizemm", "fieldsizemm", "fieldsizemm"}:
+        updated["ref_pupil_plane_size_mm"] = float(value) / _spatial_unit_scale(args[0] if args else "mm") * 1e3
+        return updated
+
+    if key in {"focallength"}:
+        updated["focal_length_m"] = float(value) / _spatial_unit_scale(args[0] if args else "m")
+        if float(updated.get("calc_pupil_diameter_mm", 0.0)) > 0.0:
+            updated["f_number"] = (updated["focal_length_m"] * 1e3) / float(updated["calc_pupil_diameter_mm"])
+        return updated
+
+    if key in {"defocusdiopters", "calcobserverfocuscorrection"}:
+        defocus_microns = np.asarray(
+            wvf_defocus_diopters_to_microns(value, updated.get("measured_pupil_diameter_mm", DEFAULT_WVF_MEASURED_PUPIL_MM)),
+            dtype=float,
+        ).reshape(-1)
+        return wvf_set(updated, "zcoeffs", defocus_microns, "defocus")
+
+    if key in {"compute_sce", "computesce"}:
+        updated["compute_sce"] = bool(value)
+        return updated
+
+    if key in {"sceparams", "stilescrawford"}:
+        updated["sce_params"] = _normalize_sce_params(np.asarray(updated.get("wave", DEFAULT_WAVE), dtype=float), value)
+        return updated
+
+    raise KeyError(f"Unsupported wvfSet parameter: {parameter}")
+
+
+def wvf_get(wvf: dict[str, Any], parameter: str, *args: Any) -> Any:
+    key = param_format(parameter)
+
+    if key in {"name", "type"}:
+        return wvf.get(key)
+
+    if key in {"wave", "wavelength", "wavelengths", "calcwave", "calcwavelengths", "wls"}:
+        return np.asarray(wvf.get("wave", DEFAULT_WAVE), dtype=float).copy()
+
+    if key in {"zcoeffs", "zcoeff", "zcoef"}:
+        zcoeffs = np.asarray(wvf.get("zcoeffs", np.array([0.0], dtype=float)), dtype=float).reshape(-1)
+        if not args:
+            return zcoeffs.copy()
+        indices = _coerce_wvf_zcoeff_indices(args[0])
+        values = zcoeffs[indices]
+        if values.size == 1:
+            return float(values[0])
+        return values
+
+    if key in {"calcpupildiameter", "calcpupilsize", "calculatedpupil", "calculatedpupildiameter"}:
+        return (float(wvf.get("calc_pupil_diameter_mm", DEFAULT_WVF_CALC_PUPIL_DIAMETER_MM)) / 1e3) * _spatial_unit_scale(
+            args[0] if args else "mm"
+        )
+
+    if key in {"measuredpupil", "measuredpupilsize", "measuredpupildiameter", "measuredpupilmm"}:
+        return (float(wvf.get("measured_pupil_diameter_mm", DEFAULT_WVF_MEASURED_PUPIL_MM)) / 1e3) * _spatial_unit_scale(
+            args[0] if args else "mm"
+        )
+
+    if key in {"measuredwl", "measuredwave", "measuredwavelength"}:
+        return float(wvf.get("measured_wavelength_nm", DEFAULT_WVF_MEASURED_WAVELENGTH_NM))
+
+    if key in {"spatialsamples", "numberspatialsamples", "npixels", "fieldsizepixels"}:
+        return int(wvf.get("spatial_samples", DEFAULT_WVF_SPATIAL_SAMPLES))
+
+    if key in {"refpupilplanesize", "pupilplanesize", "refpupilplanesizemm", "fieldsizemm"}:
+        return (float(wvf.get("ref_pupil_plane_size_mm", DEFAULT_WVF_REF_PUPIL_PLANE_SIZE_MM)) / 1e3) * _spatial_unit_scale(
+            args[0] if args else "mm"
+        )
+
+    if key in {"focallength"}:
+        return float(wvf.get("focal_length_m", DEFAULT_WVF_FOCAL_LENGTH_M)) * _spatial_unit_scale(args[0] if args else "m")
+
+    if key in {"defocusdiopters", "calcobserverfocuscorrection"}:
+        defocus_microns = float(wvf_get(wvf, "zcoeffs", "defocus"))
+        return float(
+            np.asarray(
+                wvf_defocus_microns_to_diopters(
+                    defocus_microns, wvf.get("measured_pupil_diameter_mm", DEFAULT_WVF_MEASURED_PUPIL_MM)
+                ),
+                dtype=float,
+            ).reshape(-1)[0]
+        )
+
+    if key in {"sceparams", "stilescrawford"}:
+        return dict(wvf.get("sce_params", {}))
+
+    raise KeyError(f"Unsupported wvfGet parameter: {parameter}")
+
+
+def wvf_to_oi(wvf: dict[str, Any]) -> OpticalImage:
+    return oi_create("wvf", dict(wvf))
+
+
 def oi_create(
     oi_type: str = "diffraction limited",
     *args: Any,
@@ -3505,7 +3709,7 @@ def _raytrace_apply_psf(
 
 
 def oi_compute(
-    oi: OpticalImage,
+    oi: OpticalImage | dict[str, Any],
     scene: Scene,
     *args: Any,
     pad_value: str = "zero",
@@ -3517,6 +3721,8 @@ def oi_compute(
     """Compute a supported optical image from a scene."""
 
     del args
+    if isinstance(oi, dict) and param_format(oi.get("type", "")) == "wvf":
+        oi = wvf_to_oi(oi)
     optics = dict(oi.fields["optics"])
     compute_scene = scene
     if pixel_size is not None:
@@ -4100,8 +4306,11 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         return float(oi.fields.get("diffuser_blur_m", 0.0))
     if key in {"offaxismethod", "opticsoffaxismethod"}:
         return oi.fields["optics"].get("offaxis_method", "cos4th")
-    if key in {"opticswvf"}:
-        return oi.fields["optics"].get("wavefront")
+    if key in {"opticswvf", "wvf", "wavefront"}:
+        wavefront = dict(oi.fields["optics"].get("wavefront", {}))
+        if not args:
+            return wavefront
+        return wvf_get(wavefront, str(args[0]), *args[1:])
     if key in {"opticsraytrace", "raytrace", "rt"}:
         return _export_raytrace(oi.fields["optics"].get("raytrace", {}))
     if key in {"rtname"}:
@@ -4397,7 +4606,7 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any, *args: Any) -> OpticalI
     if key in {"offaxismethod", "opticsoffaxismethod"}:
         oi.fields["optics"]["offaxis_method"] = str(value)
         return oi
-    if key == "opticswvf":
+    if key in {"opticswvf", "wvf", "wavefront"}:
         oi.fields["optics"]["wavefront"] = dict(value)
         return oi
     if key in {"psfstruct", "shiftvariantstructure"}:

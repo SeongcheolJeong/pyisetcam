@@ -242,6 +242,22 @@ switch case_name
         payload.wave = oiGet(oi, 'wave');
         payload.photons = oiGet(oi, 'photons');
 
+    case 'oi_wvf_defocus_small'
+        params = FOTParams;
+        params.blockSize = 16;
+        params.angles = [0, pi/4, pi/2];
+        params.freqs = [1, 2, 4];
+        params.contrast = 1.0;
+        scene = sceneCreate('freq orient', params);
+        scene = sceneSet(scene, 'fov', 5);
+        wvf = wvfCreate('wave', sceneGet(scene, 'wave'));
+        wvf = wvfSet(wvf, 'zcoeffs', [2, 0.5], {'defocus', 'vertical_astigmatism'});
+        oi = oiCompute(wvf, scene, 'crop', true);
+        payload.wave = oiGet(oi, 'wave');
+        payload.photons = oiGet(oi, 'photons');
+        payload.defocus = wvfGet(wvf, 'zcoeffs', 'defocus');
+        payload.vertical_astigmatism = wvfGet(wvf, 'zcoeffs', 'vertical_astigmatism');
+
     case 'oi_wvf_small_scene'
         scene = sceneCreate('checkerboard', 8, 4);
         oi = oiCreate('wvf');
