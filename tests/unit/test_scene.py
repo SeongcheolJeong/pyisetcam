@@ -37,6 +37,7 @@ def test_supported_pattern_scenes(asset_store) -> None:
     freq_orient = scene_create("frequency orientation", asset_store=asset_store)
     harmonic = scene_create("harmonic", asset_store=asset_store)
     sweep = scene_create("sweep frequency", asset_store=asset_store)
+    star = scene_create("star pattern", 64, "ee", 6, asset_store=asset_store)
     line = scene_create("line ee", 32, 2, asset_store=asset_store)
     bar = scene_create("bar", 32, 5, asset_store=asset_store)
     point_array = scene_create("point array", 64, 16, "ep", 3, asset_store=asset_store)
@@ -47,6 +48,7 @@ def test_supported_pattern_scenes(asset_store) -> None:
     assert scene_get(freq_orient, "photons").shape[:2] == (256, 256)
     assert scene_get(harmonic, "photons").shape[:2] == (65, 65)
     assert scene_get(sweep, "photons").shape[:2] == (128, 128)
+    assert scene_get(star, "photons").shape[:2] == (64, 64)
     assert scene_get(line, "photons").shape[:2] == (32, 32)
     assert scene_get(bar, "photons").shape[:2] == (32, 32)
     assert scene_get(point_array, "photons").shape[:2] == (64, 64)
@@ -55,12 +57,26 @@ def test_supported_pattern_scenes(asset_store) -> None:
     assert np.isclose(scene_get(freq_orient, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
     assert np.isclose(scene_get(harmonic, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
     assert np.isclose(scene_get(sweep, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
+    assert np.isclose(scene_get(star, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
     assert np.isclose(scene_get(freq_orient, "fov"), 10.0)
     assert np.isclose(scene_get(harmonic, "fov"), 1.0)
     assert np.isclose(scene_get(sweep, "fov"), 10.0)
     assert np.isclose(scene_get(point_array, "fov"), 40.0)
     assert np.isclose(scene_get(grid_lines, "fov"), 40.0)
     assert np.isclose(scene_get(white_noise, "fov"), 1.0)
+
+
+def test_star_pattern_scene_matches_radial_lines_alias(asset_store) -> None:
+    star = scene_create("star pattern", 64, "ee", 6, asset_store=asset_store)
+    radial = scene_create("radial lines", 64, "ee", 6, asset_store=asset_store)
+
+    star_photons = scene_get(star, "photons")
+    radial_photons = scene_get(radial, "photons")
+
+    assert np.array_equal(star_photons, radial_photons)
+    assert star_photons.shape[:2] == (64, 64)
+    assert np.isclose(scene_get(star, "fov"), 10.0)
+    assert float(star_photons[32, 32, 0]) > float(star_photons[0, 0, 0])
 
 
 def test_uniform_blackbody_and_monochromatic_scenes(asset_store) -> None:

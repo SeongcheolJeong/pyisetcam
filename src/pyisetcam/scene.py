@@ -227,6 +227,11 @@ def _matlab_round_scalar(value: float) -> int:
     return int(np.floor(float(value) + 0.5))
 
 
+def _matlab_round(values: Any) -> np.ndarray:
+    numeric = np.asarray(values, dtype=float)
+    return np.sign(numeric) * np.floor(np.abs(numeric) + 0.5)
+
+
 def _spectral_illuminant(
     spectral_type: str,
     wave: np.ndarray,
@@ -538,6 +543,60 @@ def _grid_lines_scene(
     scene.data["photons"] = photons
     _update_scene_geometry(scene)
     return scene
+
+
+def _star_pattern_scene(
+    image_size: int,
+    spectral_type: str,
+    n_lines: int,
+    wave: np.ndarray,
+    *,
+    asset_store: AssetStore,
+) -> Scene:
+    im_size = max(int(image_size), 1)
+    n_rays = max(int(n_lines), 1)
+    radians = np.pi * np.arange(n_rays, dtype=float) / float(n_rays)
+    end_points = np.column_stack((np.cos(radians), np.sin(radians))) * (im_size / 2.0)
+    end_points = _matlab_round(end_points).astype(int)
+
+    image = np.zeros((im_size, im_size), dtype=float)
+    center = im_size / 2.0
+    for x, y in end_points:
+        u = -int(x)
+        v = -int(y)
+        if x > 0:
+            x, y, u, v = u, v, int(x), int(y)
+        if u != x:
+            slope = (float(y) - float(v)) / (float(u) - float(x))
+            jj_values = np.arange(float(x), float(u) + 0.2001, 0.2, dtype=float)
+            kk_values = _matlab_round(jj_values * slope).astype(int)
+            row_idx = _matlab_round(kk_values + center).astype(int)
+            col_idx = _matlab_round(jj_values + center).astype(int)
+            valid = (
+                (row_idx >= 0)
+                & (row_idx < im_size)
+                & (col_idx >= 0)
+                & (col_idx < im_size)
+            )
+            image[row_idx[valid], col_idx[valid]] = 1.0
+        else:
+            image[:, int(im_size / 2)] = 1.0
+
+    image[image == 0.0] = 1e-4
+    image = image / max(float(np.max(image)), 1e-12)
+
+    illuminant_energy, illuminant_photons = _spectral_illuminant(spectral_type, wave, asset_store=asset_store)
+    photons = image[:, :, None] * illuminant_photons.reshape(1, 1, -1)
+    scene = Scene(name=f"radialLine-{param_format(spectral_type)}")
+    scene.fields["wave"] = wave
+    scene.fields["illuminant_format"] = "spectral"
+    scene.fields["illuminant_energy"] = illuminant_energy
+    scene.fields["illuminant_photons"] = illuminant_photons
+    scene.fields["distance_m"] = DEFAULT_DISTANCE_M
+    scene.fields["fov_deg"] = DEFAULT_FOV_DEG
+    scene.data["photons"] = photons
+    _update_scene_geometry(scene)
+    return scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
 
 
 def _white_noise_scene(
@@ -1131,6 +1190,16 @@ def scene_create(
             "wave": wave.copy(),
         }
         return track_session_object(session, scene)
+
+    if name in {"starpattern", "radiallines"}:
+        image_size = int(args[0]) if len(args) > 0 else 256
+        spectral_type = str(args[1]) if len(args) > 1 else "ep"
+        n_lines = int(args[2]) if len(args) > 2 else 8
+        wave = _wave_or_default(args[3] if len(args) > 3 else None)
+        return track_session_object(
+            session,
+            _star_pattern_scene(image_size, spectral_type, n_lines, wave, asset_store=store),
+        )
 
     if name == "bar":
         size = args[0] if len(args) > 0 else 64

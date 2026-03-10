@@ -98,7 +98,7 @@ preset growth. `scene_from_file` / `sceneFromFile` supports RGB and
 monochrome inputs backed by emissive display calibration, the classic test
 scene catalog has been expanded with script-driven patterns such as
 `harmonic`, `frequency orientation` / `freq orient`, and
-`sweep frequency`, plus script-driven `reflectance chart` support with
+`sweep frequency`, `star pattern`, plus script-driven `reflectance chart` support with
 explicit sample-list recreation, and `sensor_create` now includes generic
 `rgbw` / `rccc` presets plus upstream-backed `mt9v024` and `ar0132at`
 RGBW/RCCC variants. `camera_create(...)` now forwards those expanded

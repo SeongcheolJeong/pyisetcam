@@ -84,6 +84,12 @@ switch case_name
         payload.chart_rowcol = chart_params.rowcol;
         payload.chart_index_map = chart_params.rIdxMap;
 
+    case 'scene_star_pattern_small'
+        scene = sceneCreate('star pattern', 64, 'ee', 6);
+        payload.wave = sceneGet(scene, 'wave');
+        payload.photons = sceneGet(scene, 'photons');
+        payload.mean_luminance = sceneGet(scene, 'mean luminance');
+
     case 'utility_unit_frequency_list'
         payload.even = unitFrequencyList(50);
         payload.odd = unitFrequencyList(51);

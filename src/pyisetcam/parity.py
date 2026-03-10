@@ -164,6 +164,18 @@ def run_python_case_with_context(
             context={"scene": scene},
         )
 
+    if case_name == "scene_star_pattern_small":
+        scene = scene_create("star pattern", 64, "ee", 6, asset_store=store)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": scene_get(scene, "wave"),
+                "photons": scene_get(scene, "photons"),
+                "mean_luminance": scene_get(scene, "mean luminance", asset_store=store),
+            },
+            context={"scene": scene},
+        )
+
     if case_name == "utility_unit_frequency_list":
         return ParityCaseResult(
             payload={
