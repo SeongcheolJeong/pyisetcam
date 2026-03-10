@@ -208,6 +208,8 @@ def test_sensor_get_line_profiles(asset_store) -> None:
     sensor = sensor_set(sensor, "dv", np.array([[10.0, 20.0], [30.0, 40.0]], dtype=float))
 
     hline_volts = sensor_get(sensor, "hlinevolts", 1)
+    hline_electrons = sensor_get(sensor, "hlineelectrons", 1)
+    vline_volts = sensor_get(sensor, "vlinevolts", 1)
     vline_electrons = sensor_get(sensor, "vlineelectrons", 1)
     hline_dv = sensor_get(sensor, "hlinedv", 1)
     vline_dv = sensor_get(sensor, "vlinedv", 1)
@@ -223,6 +225,20 @@ def test_sensor_get_line_profiles(asset_store) -> None:
     assert np.allclose(hline_volts["pixPos"][0], hline_volts["pos"][0])
     assert np.allclose(hline_volts["pixPos"][1], hline_volts["pos"][1])
     assert hline_volts["pixPos"][2].size == 0
+
+    assert np.allclose(hline_electrons["data"][0], np.array([6.0], dtype=float))
+    assert np.allclose(hline_electrons["data"][1], np.array([2.0], dtype=float))
+    assert hline_electrons["data"][2].size == 0
+    assert np.allclose(hline_electrons["pos"][0], np.array([support["x"][1]], dtype=float))
+    assert np.allclose(hline_electrons["pos"][1], np.array([support["x"][0]], dtype=float))
+    assert hline_electrons["pos"][2].size == 0
+
+    assert vline_volts["data"][0].size == 0
+    assert np.allclose(vline_volts["data"][1], np.array([1.0], dtype=float))
+    assert np.allclose(vline_volts["data"][2], np.array([3.0], dtype=float))
+    assert vline_volts["pos"][0].size == 0
+    assert np.allclose(vline_volts["pos"][1], np.array([support["y"][0]], dtype=float))
+    assert np.allclose(vline_volts["pos"][2], np.array([support["y"][1]], dtype=float))
 
     assert vline_electrons["data"][0].size == 0
     assert np.allclose(vline_electrons["data"][1], np.array([2.0], dtype=float))
@@ -261,7 +277,7 @@ def test_sensor_get_chromaticity_and_roi_mean(asset_store) -> None:
 
     chromaticity_vec = sensor_get(sensor, "chromaticity")
     chromaticity_matrix = sensor_get(sensor, "chromaticity", np.array([1, 1, 3, 3], dtype=int), "matrix")
-    roi_chromaticity_mean = sensor_get(sensor, "roi chromaticity mean", np.array([1, 1, 3, 3], dtype=int))
+    roi_chromaticity_mean = sensor_get(sensor, "roichromaticitymean", np.array([1, 1, 3, 3], dtype=int))
 
     expected_xy = np.array([4.0 / 12.0, 2.0 / 12.0], dtype=float)
     assert chromaticity_vec.shape == (16, 2)

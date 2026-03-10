@@ -583,7 +583,10 @@ also explicitly exercises `roivolts`, `roielectrons`, `roidv`,
 exact ROI-data synonym family `roidata`, `roidatav`, `roidatavolts`,
 `roidatae`, `roidataelectrons`, and `roidigitalcount`, plus the exact
 line-profile aliases `hlinevolts`, `hlineelectrons`, `hlinedv`,
-`vlinevolts`, `vlineelectrons`, and `vlinedv`.
+`vlinevolts`, `vlineelectrons`, and `vlinedv`. That same sensor ROI and
+line-profile block now also exercises the exact getter form
+`roichromaticitymean`, with prefixed parser coverage for
+`sensor chromaticity` and `sensor roichromaticitymean`.
 The adjacent noise-control storage surface now also includes
 `sensorGet/Set('reuse noise')`, `sensorGet/Set('noise seed')`, and
 `sensorGet/Set('response type')`, with stored noise seeds now feeding
