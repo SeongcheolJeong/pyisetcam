@@ -2195,8 +2195,8 @@ def test_sensor_get_set_supports_pixel_optical_and_spectral_metadata(asset_store
     sensor = sensor_set(sensor, "refractiveindices", np.array([1.0, 1.5, 3.4], dtype=float))
     sensor = sensor_set(sensor, "pixelspectrum", {"wave": np.array([450.0, 550.0, 650.0], dtype=float), "comment": "pixel spectrum"})
     sensor = sensor_set(sensor, "quantum efficiency", np.array([0.1, 0.2, 0.3], dtype=float))
-    sensor = sensor_set(sensor, "dark voltage", 2.0e-3)
-    sensor = sensor_set(sensor, "read noise volts", 1.0e-3)
+    sensor = sensor_set(sensor, "darkvoltageperpixelpersec", 2.0e-3)
+    sensor = sensor_set(sensor, "readnoisestdvolts", 1.0e-3)
     sensor = sensor_set(sensor, "voltage swing", 1.2)
 
     assert np.allclose(sensor_get(sensor, "layerthicknesses", "um"), np.array([1.0, 2.0, 0.5], dtype=float))
@@ -2216,7 +2216,7 @@ def test_sensor_get_set_supports_pixel_optical_and_spectral_metadata(asset_store
     assert np.allclose(sensor_get(sensor, "photodetector spectral quantum efficiency"), np.array([0.1, 0.2, 0.3], dtype=float))
 
     expected_pixel_dr = 20.0 * np.log10((1.2 - 2.0e-3 * 0.01) / np.sqrt((2.0e-3 * 0.01) + (1.0e-3**2)))
-    assert np.isclose(sensor_get(sensor, "pixel dr"), expected_pixel_dr)
+    assert np.isclose(sensor_get(sensor, "pixeldynamicrange"), expected_pixel_dr)
 
     sensor = sensor_set(sensor, "n", np.array([1.0, 2.0, 3.5], dtype=float))
     assert np.allclose(sensor_get(sensor, "refractive indices"), np.array([1.0, 2.0, 3.5], dtype=float))
@@ -2232,7 +2232,10 @@ def test_sensor_get_set_supports_pixel_optical_and_spectral_metadata(asset_store
     sensor = sensor_set(sensor, "darkvolt", 3.0e-3)
     assert np.isclose(sensor_get(sensor, "darkvolt"), 3.0e-3)
     assert np.isclose(sensor_get(sensor, "darkvolts"), 3.0e-3)
-    assert np.isclose(sensor_get(sensor, "volts per second"), 3.0e-3)
+    assert np.isclose(sensor_get(sensor, "darkvoltageperpixelpersec"), 3.0e-3)
+    assert np.isclose(sensor_get(sensor, "voltspersecond"), 3.0e-3)
+    assert np.isclose(sensor_get(sensor, "readnoisestdvolts"), 1.0e-3)
+    assert np.isclose(sensor_get(sensor, "readstandarddeviationelectrons"), 1.0e-3 / 2.5e-6)
 
 
 def test_sensor_get_set_supports_photodetector_position_passthrough(asset_store) -> None:

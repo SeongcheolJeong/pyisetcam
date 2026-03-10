@@ -468,6 +468,7 @@ _PARAMETER_OTYPE_UNIQUE = {
         "pixelspectralsr",
         "sr",
         "pixeldr",
+        "pixeldynamicrange",
     },
     "ip": {
         "chromaticity",

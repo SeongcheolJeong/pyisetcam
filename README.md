@@ -560,7 +560,10 @@ no-space aliases `fillfactor`, `pixelsize`, `pixelwidth`,
 `pixeldepthmeters`, `pdposition`, `pdxpos`, `pdypos`,
 `photodetectorwidth`, `photodetectorheight`,
 `photodetectorsize`, `photodetectorxposition`,
-`photodetectoryposition`, and `pdwidthandheight`.
+`photodetectoryposition`, `pdwidthandheight`,
+`pixeldynamicrange`, `darkvoltageperpixelpersec`,
+`voltspersecond`, `readnoisestdvolts`, and
+`readstandarddeviationelectrons`.
 The adjacent noise-control storage surface now also includes
 `sensorGet/Set('reuse noise')`, `sensorGet/Set('noise seed')`, and
 `sensorGet/Set('response type')`, with stored noise seeds now feeding
