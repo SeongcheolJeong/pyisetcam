@@ -591,7 +591,9 @@ geometry block now also exercises the exact forms `roi`, `roilocs`, and
 `roirect`. The neighboring microlens/vignetting/etendue block now also
 exercises the exact forms `microlens`, `microlensoffset`,
 `microlensoffsetmicrons`, `vignetting`, `ngridsamples`, and
-`sensoretendue`.
+`sensoretendue`. The adjacent quantization block now also exercises the
+exact forms `quantization`, `quantizationmethod`, `nbits`,
+`quantizatonlut`, `maxdigital`, and `maxoutput`.
 The adjacent noise-control storage surface now also includes
 `sensorGet/Set('reuse noise')`, `sensorGet/Set('noise seed')`, and
 `sensorGet/Set('response type')`, with stored noise seeds now feeding

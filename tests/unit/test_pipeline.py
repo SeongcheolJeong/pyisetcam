@@ -2873,28 +2873,31 @@ def test_sensor_get_set_supports_quantization_alias_surface(asset_store) -> None
     sensor = sensor_create("default", asset_store=asset_store)
     lut = np.array([0.0, 1.0, 2.0], dtype=float)
 
-    sensor = sensor_set(sensor, "bits", 12)
-    sensor = sensor_set(sensor, "qmethod", "12 bit")
-    sensor = sensor_set(sensor, "lut", lut)
+    sensor = sensor_set(sensor, "nbits", 12)
+    sensor = sensor_set(sensor, "quantization", "12 bit")
+    sensor = sensor_set(sensor, "quantizatonlut", lut)
 
     quantization = sensor_get(sensor, "quantization")
-    quantization_method = sensor_get(sensor, "qmethod")
+    quantization_method = sensor_get(sensor, "quantizationmethod")
     quantization_struct = sensor_get(sensor, "quantizationstructure")
 
     assert quantization == "12 bit"
     assert quantization_method == "12 bit"
-    assert sensor_get(sensor, "bits") == 12
     assert sensor_get(sensor, "nbits") == 12
-    assert np.array_equal(sensor_get(sensor, "lut"), lut)
+    assert sensor_get(sensor, "bits") == 12
+    assert np.array_equal(sensor_get(sensor, "quantizatonlut"), lut)
     assert np.array_equal(sensor_get(sensor, "quantizationlut"), lut)
     assert quantization_struct["bits"] == 12
     assert quantization_struct["method"] == "12 bit"
     assert np.array_equal(quantization_struct["lut"], lut)
+    assert sensor_get(sensor, "maxdigital") == float((2**12) - sensor_get(sensor, "zero level"))
+    assert sensor_get(sensor, "maxoutput") == sensor.fields["pixel"]["voltage_swing"]
 
     sensor = sensor_set(sensor, "quantizationstructure", {"bits": 8, "method": "8 bit", "lut": np.array([0.0, 0.5], dtype=float)})
 
-    assert sensor_get(sensor, "bits") == 8
     assert sensor_get(sensor, "quantizationmethod") == "8 bit"
+    assert sensor_get(sensor, "nbits") == 8
+    assert sensor_get(sensor, "bits") == 8
     assert np.array_equal(sensor_get(sensor, "lut"), np.array([0.0, 0.5], dtype=float))
 
 
