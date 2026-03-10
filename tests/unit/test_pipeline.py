@@ -2052,9 +2052,9 @@ def test_sensor_get_reports_matlab_style_geometry_and_cfa_metadata(asset_store) 
 def test_sensor_get_set_supports_matlab_style_spectrum_metadata(asset_store) -> None:
     sensor = sensor_create("monochrome", asset_store=asset_store)
     sensor = sensor_set(sensor, "wave", np.array([400.0, 500.0, 600.0], dtype=float))
-    sensor = sensor_set(sensor, "filter spectra", np.array([[0.0], [1.0], [0.0]], dtype=float))
-    sensor = sensor_set(sensor, "pixel spectral qe", np.array([0.2, 0.6, 1.0], dtype=float))
-    sensor = sensor_set(sensor, "ir filter", np.array([1.0, 0.5, 0.0], dtype=float))
+    sensor = sensor_set(sensor, "filterspectra", np.array([[0.0], [1.0], [0.0]], dtype=float))
+    sensor = sensor_set(sensor, "pixelspectralqe", np.array([0.2, 0.6, 1.0], dtype=float))
+    sensor = sensor_set(sensor, "irfilter", np.array([1.0, 0.5, 0.0], dtype=float))
 
     spectrum = sensor_get(sensor, "sensorspectrum")
     assert np.array_equal(spectrum["wave"], np.array([400.0, 500.0, 600.0], dtype=float))
@@ -2066,9 +2066,12 @@ def test_sensor_get_set_supports_matlab_style_spectrum_metadata(asset_store) -> 
     assert np.array_equal(sensor_get(sensor, "wavelength"), np.array([450.0, 550.0], dtype=float))
     assert sensor_get(sensor, "binwidth") == 100.0
     assert sensor_get(sensor, "numberofwavelengthsamples") == 2
-    assert np.allclose(sensor_get(sensor, "filter spectra"), np.array([[0.5], [0.5]], dtype=float))
-    assert np.allclose(sensor_get(sensor, "pixel spectral qe"), np.array([0.4, 0.8], dtype=float))
-    assert np.allclose(sensor_get(sensor, "ir filter"), np.array([0.75, 0.25], dtype=float))
+    assert np.allclose(sensor_get(sensor, "filterspectra"), np.array([[0.5], [0.5]], dtype=float))
+    assert np.allclose(sensor_get(sensor, "colorfilters"), np.array([[0.5], [0.5]], dtype=float))
+    assert np.allclose(sensor_get(sensor, "pixelspectralqe"), np.array([0.4, 0.8], dtype=float))
+    assert np.allclose(sensor_get(sensor, "pixelqe"), np.array([0.4, 0.8], dtype=float))
+    assert np.allclose(sensor_get(sensor, "infraredfilter"), np.array([0.75, 0.25], dtype=float))
+    assert np.allclose(sensor_get(sensor, "irfilter"), np.array([0.75, 0.25], dtype=float))
     assert np.allclose(sensor_get(sensor, "spectralqe"), np.array([[0.15], [0.1]], dtype=float))
     assert np.allclose(sensor_get(sensor, "sensorspectralsr"), sensor_get(sensor, "sensor spectral sr"))
     assert sensor_get(sensor, "sensorspectrum")["comment"] == "test spectrum"
@@ -2110,7 +2113,7 @@ def test_sensor_get_set_supports_pixel_passthrough_surface(asset_store) -> None:
     sensor = sensor_set(sensor, "pixel height", 3.0e-6)
     sensor = sensor_set(sensor, "width between pixels", 0.5e-6)
     sensor = sensor_set(sensor, "height between pixels", 0.25e-6)
-    sensor = sensor_set(sensor, "pixel spectral qe", np.array([0.2, 0.4, 0.6, 0.8, 1.0, 0.6, 0.4, 0.2, 0.1, 0.05, 0.02, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=float))
+    sensor = sensor_set(sensor, "pixelspectralqe", np.array([0.2, 0.4, 0.6, 0.8, 1.0, 0.6, 0.4, 0.2, 0.1, 0.05, 0.02, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=float))
 
     pixel_size = np.asarray(sensor_get(sensor, "pixel size"), dtype=float)
     pd_area = float(sensor_get(sensor, "pd area"))
@@ -2149,8 +2152,11 @@ def test_sensor_get_set_supports_pixel_passthrough_surface(asset_store) -> None:
     assert np.isclose(sensor_get(sensor, "read standard deviation volts"), 3.0e-3)
     assert np.isclose(sensor_get(sensor, "read standard deviation electrons"), 3.0e-3 / 2.0e-4)
     assert np.isclose(sensor_get(sensor, "read noise millivolts"), 3.0)
-    assert np.allclose(sensor_get(sensor, "pd spectral qe"), sensor_get(sensor, "pixel spectral qe"))
-    assert np.allclose(sensor_get(sensor, "pd spectral sr"), sensor_get(sensor, "pixel spectral sr"))
+    assert np.allclose(sensor_get(sensor, "pdspectralqe"), sensor_get(sensor, "pixelspectralqe"))
+    assert np.allclose(sensor_get(sensor, "pixelqe"), sensor_get(sensor, "pixelspectralqe"))
+    assert np.allclose(sensor_get(sensor, "pdspectralsr"), sensor_get(sensor, "pixelspectralsr"))
+    assert np.allclose(sensor_get(sensor, "spectralsr"), sensor_get(sensor, "pixelspectralsr"))
+    assert np.allclose(sensor_get(sensor, "sr"), sensor_get(sensor, "pixelspectralsr"))
 
     sensor = sensor_set(sensor, "read noise", 10.0)
     assert np.isclose(sensor_get(sensor, "read noise volts"), 10.0 * 2.0e-4)
