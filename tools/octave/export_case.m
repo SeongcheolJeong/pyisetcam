@@ -47,6 +47,15 @@ switch case_name
         payload.photons = photons;
         payload.energy_roundtrip = Quanta2Energy(wave, photons);
 
+    case 'utility_energy_quanta_matrix'
+        wave = [400 500 600]';
+        energy = [0.2 0.4; 0.5 0.7; 0.8 1.0];
+        photons = Energy2Quanta(wave, energy);
+        payload.wave = wave;
+        payload.energy = energy;
+        payload.photons = photons;
+        payload.energy_roundtrip = Quanta2Energy(wave, photons')';
+
     case 'utility_blackbody_energy_small'
         wave = (400:10:700)';
         temperatures = [3000 5000];

@@ -110,6 +110,28 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "utility_energy_quanta_matrix":
+        wave = np.array([400.0, 500.0, 600.0], dtype=float)
+        energy = np.array(
+            [
+                [0.2, 0.4],
+                [0.5, 0.7],
+                [0.8, 1.0],
+            ],
+            dtype=float,
+        )
+        photons = energy_to_quanta(energy, wave)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "energy": energy,
+                "photons": photons,
+                "energy_roundtrip": quanta_to_energy(photons, wave),
+            },
+            context={},
+        )
+
     if case_name == "utility_blackbody_energy_small":
         wave = np.arange(400.0, 701.0, 10.0, dtype=float)
         temperatures = np.array([3000.0, 5000.0], dtype=float)

@@ -31,6 +31,12 @@
       "atol": 1e-08
     },
     {
+      "name": "utility_energy_quanta_matrix",
+      "matlab_function": "Energy2Quanta/Quanta2Energy",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "utility_blackbody_energy_small",
       "matlab_function": "blackbody",
       "rtol": 1e-05,

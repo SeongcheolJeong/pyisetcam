@@ -3340,6 +3340,15 @@ def test_run_python_case_supports_energy_quanta_utility_parity_case(asset_store)
     assert np.allclose(case.payload["energy_roundtrip"], case.payload["energy"])
 
 
+def test_run_python_case_supports_energy_quanta_matrix_utility_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("utility_energy_quanta_matrix", asset_store=asset_store)
+
+    assert case.payload["wave"].shape == (3,)
+    assert case.payload["energy"].shape == (3, 2)
+    assert case.payload["photons"].shape == (3, 2)
+    assert np.allclose(case.payload["energy_roundtrip"], case.payload["energy"])
+
+
 def test_run_python_case_supports_blackbody_utility_parity_case(asset_store) -> None:
     case = run_python_case_with_context("utility_blackbody_energy_small", asset_store=asset_store)
 
