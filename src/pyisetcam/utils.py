@@ -654,14 +654,37 @@ def quanta_to_energy(quanta: NDArray[np.float64], wave_nm: NDArray[np.float64]) 
     """Convert photons/quanta to energy."""
 
     wave_m = np.asarray(wave_nm, dtype=float) * 1e-9
-    return np.asarray(quanta, dtype=float) * (_PLANCK * _LIGHT_SPEED / wave_m)
+    quanta_array = np.asarray(quanta, dtype=float)
+    scale = _wave_scale_like(quanta_array, wave_m)
+    return quanta_array * (_PLANCK * _LIGHT_SPEED / scale)
 
 
 def energy_to_quanta(energy: NDArray[np.float64], wave_nm: NDArray[np.float64]) -> NDArray[np.float64]:
     """Convert energy to photons/quanta."""
 
     wave_m = np.asarray(wave_nm, dtype=float) * 1e-9
-    return np.asarray(energy, dtype=float) * wave_m / (_PLANCK * _LIGHT_SPEED)
+    energy_array = np.asarray(energy, dtype=float)
+    scale = _wave_scale_like(energy_array, wave_m)
+    return energy_array * scale / (_PLANCK * _LIGHT_SPEED)
+
+
+def _wave_scale_like(values: NDArray[np.float64], wave_m: NDArray[np.float64]) -> NDArray[np.float64]:
+    """Broadcast wavelength samples onto either wave-last or wave-first arrays."""
+
+    if values.ndim == 0:
+        raise ValueError("values must not be scalar.")
+    if values.ndim == 1:
+        if values.shape[0] != wave_m.size:
+            raise ValueError("1D values must match the wavelength vector length.")
+        return wave_m
+
+    if values.shape[-1] == wave_m.size:
+        return wave_m.reshape((1,) * (values.ndim - 1) + (wave_m.size,))
+
+    if values.shape[0] == wave_m.size:
+        return wave_m.reshape((wave_m.size,) + (1,) * (values.ndim - 1))
+
+    raise ValueError("values must match the wavelength vector on the first or last axis.")
 
 
 def blackbody(

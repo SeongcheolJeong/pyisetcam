@@ -54,6 +54,13 @@ switch case_name
         payload.temperatures = temperatures;
         payload.energy = blackbody(wave, temperatures, 'energy');
 
+    case 'utility_blackbody_quanta_small'
+        wave = (400:10:700)';
+        temperatures = [3000 5000];
+        payload.wave = wave;
+        payload.temperatures = temperatures;
+        payload.photons = blackbody(wave, temperatures, 'photons');
+
     case 'metrics_xyz_from_energy_1d'
         wave = (400:10:700)';
         energy = linspace(0.05, 1.55, numel(wave));

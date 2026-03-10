@@ -37,6 +37,12 @@
       "atol": 1e-08
     },
     {
+      "name": "utility_blackbody_quanta_small",
+      "matlab_function": "blackbody",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "metrics_xyz_from_energy_1d",
       "matlab_function": "ieXYZFromEnergy",
       "rtol": 1e-05,

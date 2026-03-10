@@ -123,6 +123,19 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "utility_blackbody_quanta_small":
+        wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+        temperatures = np.array([3000.0, 5000.0], dtype=float)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "temperatures": temperatures,
+                "photons": blackbody(wave, temperatures, kind="quanta"),
+            },
+            context={},
+        )
+
     if case_name == "metrics_xyz_from_energy_1d":
         wave = np.arange(400.0, 701.0, 10.0, dtype=float)
         energy = np.linspace(0.05, 1.55, wave.size, dtype=float)

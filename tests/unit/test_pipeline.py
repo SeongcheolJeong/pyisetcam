@@ -3349,6 +3349,15 @@ def test_run_python_case_supports_blackbody_utility_parity_case(asset_store) -> 
     assert np.all(np.asarray(case.payload["energy"], dtype=float) > 0.0)
 
 
+def test_run_python_case_supports_blackbody_quanta_utility_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("utility_blackbody_quanta_small", asset_store=asset_store)
+
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["temperatures"].shape == (2,)
+    assert case.payload["photons"].shape == (31, 2)
+    assert np.all(np.asarray(case.payload["photons"], dtype=float) > 0.0)
+
+
 def test_run_python_case_supports_xyz_from_energy_metrics_parity_case(asset_store) -> None:
     case = run_python_case_with_context("metrics_xyz_from_energy_1d", asset_store=asset_store)
 

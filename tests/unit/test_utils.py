@@ -19,6 +19,21 @@ def test_energy_quanta_round_trip() -> None:
     assert np.allclose(restored, energy)
 
 
+def test_energy_quanta_round_trip_supports_wave_first_matrices() -> None:
+    wave = np.array([400.0, 500.0, 600.0])
+    energy = np.array(
+        [
+            [0.2, 0.4],
+            [0.5, 0.7],
+            [0.8, 1.0],
+        ],
+        dtype=float,
+    )
+    quanta = energy_to_quanta(energy, wave)
+    restored = quanta_to_energy(quanta, wave)
+    assert np.allclose(restored, energy)
+
+
 def test_blackbody_matlab_scaling() -> None:
     wave = np.arange(400.0, 701.0, 10.0)
     spectra = blackbody(wave, np.array([3000.0, 5000.0]))
