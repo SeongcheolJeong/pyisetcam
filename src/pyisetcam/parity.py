@@ -10,7 +10,7 @@ import numpy as np
 from .assets import AssetStore
 from .camera import camera_compute, camera_create
 from .display import display_create
-from .metrics import delta_e_ab, metrics_spd, xyz_from_energy, xyz_to_lab, xyz_to_luv, xyz_to_uv
+from .metrics import cct_from_uv, delta_e_ab, metrics_spd, xyz_from_energy, xyz_to_lab, xyz_to_luv, xyz_to_uv
 from .ip import ip_compute, ip_create
 from .optics import (
     _cos4th_factor,
@@ -215,6 +215,17 @@ def run_python_case_with_context(
                 "case_name": case_name,
                 "xyz": xyz,
                 "uv": xyz_to_uv(xyz),
+            },
+            context={},
+        )
+
+    if case_name == "metrics_cct_from_uv_1d":
+        uv = np.array([0.20029948, 0.31055768], dtype=float)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "uv": uv,
+                "cct_k": cct_from_uv(uv, asset_store=store),
             },
             context={},
         )

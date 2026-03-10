@@ -79,6 +79,12 @@
       "atol": 1e-08
     },
     {
+      "name": "metrics_cct_from_uv_1d",
+      "matlab_function": "cct",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "metrics_delta_e_ab_1976_1d",
       "matlab_function": "deltaEab (1976)",
       "rtol": 1e-05,

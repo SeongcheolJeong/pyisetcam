@@ -3409,6 +3409,13 @@ def test_run_python_case_supports_xyz_to_uv_metrics_parity_case(asset_store) -> 
     assert np.all(np.asarray(case.payload["uv"], dtype=float) > 0.0)
 
 
+def test_run_python_case_supports_cct_from_uv_metrics_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_cct_from_uv_1d", asset_store=asset_store)
+
+    assert case.payload["uv"].shape == (2,)
+    assert float(case.payload["cct_k"]) > 0.0
+
+
 def test_run_python_case_supports_delta_e_ab_metrics_parity_case(asset_store) -> None:
     case = run_python_case_with_context("metrics_delta_e_ab_1976_1d", asset_store=asset_store)
 

@@ -5,6 +5,7 @@ import numpy as np
 from pyisetcam import (
     DEFAULT_WAVE,
     blackbody,
+    cct_from_uv,
     comparison_metrics,
     correlated_color_temperature,
     delta_e_ab,
@@ -45,6 +46,13 @@ def test_xyz_to_uv_matches_cie_1960_reference_values() -> None:
     uv = xyz_to_uv(xyz)
 
     assert np.allclose(uv, np.array([0.15533981, 0.34951456]), atol=1e-8)
+
+
+def test_cct_from_uv_matches_upstream_lookup_table_value() -> None:
+    uv = np.array([0.20029948, 0.31055768], dtype=float)
+    cct = cct_from_uv(uv)
+
+    assert np.isclose(cct, 6500.0, atol=200.0)
 
 
 def test_delta_e_ab_is_zero_for_identical_xyz() -> None:

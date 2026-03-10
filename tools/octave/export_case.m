@@ -102,6 +102,11 @@ switch case_name
         [u, v] = xyz2uv(xyz, 'uv');
         payload.uv = [u v];
 
+    case 'metrics_cct_from_uv_1d'
+        uv = [0.20029948; 0.31055768];
+        payload.uv = uv;
+        payload.cct_k = cct(uv);
+
     case 'metrics_delta_e_ab_1976_1d'
         xyz1 = [20.0 30.0 15.0];
         xyz2 = [18.0 27.0 16.5];

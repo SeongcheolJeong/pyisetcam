@@ -11,6 +11,7 @@ from .display import display_create, display_get, display_set
 from .fileio import vc_export_object, vc_load_object, vc_save_object
 from .ip import image_data_xyz, ip_compute, ip_create, ip_get, ip_set
 from .metrics import (
+    cct_from_uv,
     chromaticity_xy,
     comparison_metrics,
     correlated_color_temperature,
@@ -156,6 +157,8 @@ __all__ = [
     "camera_create",
     "camera_get",
     "camera_set",
+    "cct",
+    "cct_from_uv",
     "displayCreate",
     "displayGet",
     "displaySet",
@@ -463,6 +466,7 @@ sensorSetSizeToFOV = sensor_set_size_to_fov
 metricsSPD = metrics_spd
 deltaEab = delta_e_ab
 xyz2luv = xyz_to_luv
+cct = cct_from_uv
 
 ieAddObject = ie_add_object
 ieAppGet = ie_app_get

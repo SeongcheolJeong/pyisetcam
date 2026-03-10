@@ -144,6 +144,17 @@ def _cct_from_uv(uv: Any, *, asset_store: AssetStore | None = None) -> NDArray[n
     return cct.reshape(uv_array.shape[:-1])
 
 
+def cct_from_uv(
+    uv: Any,
+    *,
+    asset_store: AssetStore | None = None,
+) -> float | NDArray[np.float64]:
+    """Estimate correlated color temperature from CIE 1960 uv coordinates using the upstream cct.mat table."""
+
+    cct = _cct_from_uv(uv, asset_store=asset_store)
+    return float(cct) if np.ndim(cct) == 0 else cct
+
+
 def delta_e_ab(xyz1: Any, xyz2: Any, white_point: Any) -> NDArray[np.float64]:
     """Compute the CIELAB 1976 Delta E between XYZ values."""
 
@@ -173,7 +184,7 @@ def correlated_color_temperature(
 ) -> float | NDArray[np.float64]:
     """Estimate correlated color temperature from XYZ using the upstream cct.mat lookup table."""
 
-    cct = _cct_from_uv(xyz_to_uv(np.asarray(xyz, dtype=float)), asset_store=asset_store)
+    cct = cct_from_uv(xyz_to_uv(np.asarray(xyz, dtype=float)), asset_store=asset_store)
     return float(cct) if np.ndim(cct) == 0 else cct
 
 
