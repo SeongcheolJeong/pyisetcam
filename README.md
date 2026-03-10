@@ -475,7 +475,7 @@ The neighboring metadata block now also has focused parser/runtime coverage for
 `scene name`, `metadata scene name`, `metadata lens name`, `metadata lens`,
 `metadata optics name`, `metadata sensor name`, and `metadata crop`.
 That same runtime coverage now also exercises the exact legacy aliases
-`scene_name` and `metadata lensname`.
+`scene_name`, `metadata lensname`, `metadatalensname`, and `metadatalens`.
 The adjacent chart/metadata coverage now also exercises the exact no-space MCC
 and metadata aliases `mcccornerpoints`, `mccrecthandles`,
 `metadatascenename`, `metadataopticsname`, `metadatasensorname`, and

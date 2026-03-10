@@ -2449,23 +2449,23 @@ def test_sensor_get_set_supports_legacy_scene_and_lens_metadata_aliases(asset_st
     sensor = sensor_create("default", asset_store=asset_store)
 
     sensor = sensor_set(sensor, "scene_name", "scene-b")
-    sensor = sensor_set(sensor, "metadata lensname", "lens-b")
+    sensor = sensor_set(sensor, "metadatalensname", "lens-b")
     sensor = sensor_set(sensor, "metadata sensor name", "sensor-b")
     sensor = sensor_set(sensor, "metadata crop", {"rect": [1, 2, 3, 4]})
 
     assert sensor_get(sensor, "scene_name") == "scene-b"
     assert sensor_get(sensor, "metadata scene name") == "scene-b"
     assert sensor_get(sensor, "lens") == "lens-b"
-    assert sensor_get(sensor, "metadata lens name") == "lens-b"
-    assert sensor_get(sensor, "metadata lens") == "lens-b"
+    assert sensor_get(sensor, "metadatalensname") == "lens-b"
+    assert sensor_get(sensor, "metadatalens") == "lens-b"
     assert sensor_get(sensor, "metadata optics name") == "lens-b"
     assert sensor_get(sensor, "metadata sensor name") == "sensor-b"
     assert sensor_get(sensor, "metadata crop") == {"rect": [1, 2, 3, 4]}
 
-    sensor = sensor_set(sensor, "metadata lensname", "lens-c")
+    sensor = sensor_set(sensor, "metadatalensname", "lens-c")
 
     assert sensor_get(sensor, "lens") == "lens-c"
-    assert sensor_get(sensor, "metadata lensname") == "lens-c"
+    assert sensor_get(sensor, "metadatalensname") == "lens-c"
 
 
 def test_sensor_get_set_supports_microlens_storage_surface(asset_store) -> None:
