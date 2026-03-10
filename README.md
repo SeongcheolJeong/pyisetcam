@@ -458,6 +458,9 @@ natural long-form setter alias `chart corner points`.
 The same runtime coverage now also exercises the long-form setter path for
 `chart rectangles` and `current rect`, plus the adjacent `mcc corner points`
 setter alias.
+That same chart coverage now also exercises the exact no-space aliases
+`chartparameters`, `chartcornerpoints`, `chartrectangles`, `chartcurrentrect`,
+and `mccrecthandles`.
 The neighboring metadata block now also has focused parser/runtime coverage for
 `scene name`, `metadata scene name`, `metadata lens name`, `metadata lens`,
 `metadata optics name`, `metadata sensor name`, and `metadata crop`.

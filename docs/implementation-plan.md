@@ -55,6 +55,7 @@
 - The adjacent chart block now also has parser-level routing for `chart parameters`, `corner points`, `chart corners`, `chart rects`, `chart rectangles`, `current rect`, and `chart current rect`.
 - That same chart surface now also has focused parser/runtime coverage for the long-form setter alias `chart corner points`.
 - That same chart runtime coverage now also exercises the long-form setter path for `chart rectangles` and `current rect`, plus the adjacent `mcc corner points` setter alias.
+- That same chart coverage now also exercises the exact no-space aliases `chartparameters`, `chartcornerpoints`, `chartrectangles`, `chartcurrentrect`, and `mccrecthandles`.
 - The neighboring metadata block now also has focused parser/runtime coverage for `scene name`, `metadata scene name`, `metadata lens name`, `metadata lens`, `metadata optics name`, `metadata sensor name`, and `metadata crop`.
 - That same metadata runtime coverage now also exercises the exact legacy aliases `scene_name` and `metadata lensname`.
 - The neighboring vignetting alias block now also has parser-level support for `vignetting flag`, `pixel vignetting`, `sensor vignetting`, `sensor bare etendue`, `no microlens etendue`, and `vignetting name`.

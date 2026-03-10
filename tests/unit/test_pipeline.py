@@ -2326,17 +2326,17 @@ def test_sensor_get_set_supports_chart_and_metadata_surface(asset_store) -> None
     current_rect = np.array([7.0, 8.0, 9.0, 10.0], dtype=float)
     rect_handles = ["r1", "r2"]
 
-    sensor = sensor_set(sensor, "chart parameters", {"name": "Macbeth", "nSquares": 24})
-    sensor = sensor_set(sensor, "chart corner points", corner_points)
-    sensor = sensor_set(sensor, "chart rectangles", rects)
-    sensor = sensor_set(sensor, "current rect", current_rect)
-    sensor = sensor_set(sensor, "mcc rect handles", rect_handles)
+    sensor = sensor_set(sensor, "chartparameters", {"name": "Macbeth", "nSquares": 24})
+    sensor = sensor_set(sensor, "chartcornerpoints", corner_points)
+    sensor = sensor_set(sensor, "chartrectangles", rects)
+    sensor = sensor_set(sensor, "chartcurrentrect", current_rect)
+    sensor = sensor_set(sensor, "mccrecthandles", rect_handles)
     sensor = sensor_set(sensor, "metadata sensor name", "sensor-a")
     sensor = sensor_set(sensor, "metadata scene name", "scene-a")
     sensor = sensor_set(sensor, "metadata optics name", "optics-a")
     sensor = sensor_set(sensor, "metadata crop", np.array([1, 2, 3, 4], dtype=int))
 
-    chart = sensor_get(sensor, "chart parameters")
+    chart = sensor_get(sensor, "chartparameters")
 
     assert chart["name"] == "Macbeth"
     assert chart["nSquares"] == 24
@@ -2348,7 +2348,7 @@ def test_sensor_get_set_supports_chart_and_metadata_surface(asset_store) -> None
     assert np.array_equal(sensor_get(sensor, "mcc corner points"), corner_points)
     assert np.array_equal(sensor_get(sensor, "chart rectangles"), rects)
     assert np.array_equal(sensor_get(sensor, "current rect"), current_rect)
-    assert sensor_get(sensor, "mcc rect handles") == rect_handles
+    assert sensor_get(sensor, "mccrecthandles") == rect_handles
     assert sensor_get(sensor, "metadata sensor name") == "sensor-a"
     assert sensor_get(sensor, "metadata scene name") == "scene-a"
     assert sensor_get(sensor, "metadata optics name") == "optics-a"
