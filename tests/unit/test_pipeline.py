@@ -2021,7 +2021,7 @@ def test_sensor_get_reports_matlab_style_geometry_and_cfa_metadata(asset_store) 
 
     support = sensor_get(sensor, "spatialsupport", "um")
     cfa = sensor_get(sensor, "cfa")
-    pattern = sensor_get(sensor, "cfapattern")
+    pattern = sensor_get(sensor, "pattern")
     cfa_config = sensor_get(sensor, "unitblockconfig")
     pattern_colors = sensor_get(sensor, "patterncolors")
 
@@ -2097,6 +2097,7 @@ def test_sensor_get_set_supports_raw_color_surface(asset_store) -> None:
     assert np.allclose(exported["filterSpectra"], color["filterSpectra"])
     assert exported["filterNames"] == color["filterNames"]
     assert np.allclose(exported["irFilter"], color["irFilter"])
+    assert sensor_get(sensor, "filternames") == ["red", "green", "blue"]
     assert sensor_get(sensor, "filternamescellarray") == ["r", "g", "b"]
     assert sensor_get(sensor, "filtercolornamescellarray") == ["r", "g", "b"]
     assert sensor_get(sensor, "filternamescell") == ["r", "g", "b"]
@@ -2405,7 +2406,7 @@ def test_sensor_get_set_supports_diffusion_mtf_storage(asset_store) -> None:
         "support": np.array([0.0, 0.5, 1.0], dtype=float),
     }
 
-    sensor = sensor_set(sensor, "diffusion MTF", diffusion)
+    sensor = sensor_set(sensor, "diffusionmtf", diffusion)
 
     stored = sensor_get(sensor, "diffusionmtf")
     assert stored is not None
@@ -2414,9 +2415,9 @@ def test_sensor_get_set_supports_diffusion_mtf_storage(asset_store) -> None:
     assert np.array_equal(stored["support"], diffusion["support"])
 
     stored["otf"][0] = 9.0
-    assert np.array_equal(sensor_get(sensor, "diffusion mtf")["otf"], diffusion["otf"])
+    assert np.array_equal(sensor_get(sensor, "diffusionmtf")["otf"], diffusion["otf"])
 
-    sensor = sensor_set(sensor, "diffusion MTF", None)
+    sensor = sensor_set(sensor, "diffusionmtf", None)
     assert sensor_get(sensor, "diffusionmtf") is None
 
 

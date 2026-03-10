@@ -593,7 +593,9 @@ exercises the exact forms `microlens`, `microlensoffset`,
 `microlensoffsetmicrons`, `vignetting`, `ngridsamples`, and
 `sensoretendue`. The adjacent quantization block now also exercises the
 exact forms `quantization`, `quantizationmethod`, `nbits`,
-`quantizatonlut`, `maxdigital`, and `maxoutput`.
+`quantizatonlut`, `maxdigital`, and `maxoutput`. The neighboring
+CFA/filter metadata block now also exercises the exact forms `pattern`,
+`filternames`, and `diffusionmtf`.
 The adjacent noise-control storage surface now also includes
 `sensorGet/Set('reuse noise')`, `sensorGet/Set('noise seed')`, and
 `sensorGet/Set('response type')`, with stored noise seeds now feeding
