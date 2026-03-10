@@ -579,7 +579,11 @@ coverage now also explicitly exercises `volts`, `voltage`, `dv`,
 through the exact no-space aliases. The adjacent ROI/response block now
 also explicitly exercises `roivolts`, `roielectrons`, `roidv`,
 `roivoltsmean`, `roielectronsmean`, `responseratio`, and
-`volts2maxratio`.
+`volts2maxratio`. That same ROI/response block now also exercises the
+exact ROI-data synonym family `roidata`, `roidatav`, `roidatavolts`,
+`roidatae`, `roidataelectrons`, and `roidigitalcount`, plus the exact
+line-profile aliases `hlinevolts`, `hlineelectrons`, `hlinedv`,
+`vlinevolts`, `vlineelectrons`, and `vlinedv`.
 The adjacent noise-control storage surface now also includes
 `sensorGet/Set('reuse noise')`, `sensorGet/Set('noise seed')`, and
 `sensorGet/Set('response type')`, with stored noise seeds now feeding

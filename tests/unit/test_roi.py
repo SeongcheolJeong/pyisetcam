@@ -179,6 +179,12 @@ def test_sensor_get_roi_queries_and_means(asset_store) -> None:
     )
     assert np.allclose(roi_volts_mean, np.array([2.0, 2.5, 3.0], dtype=float))
     assert np.allclose(roi_electrons_mean, np.array([6.0, 8.0, 10.0], dtype=float))
+    assert np.allclose(sensor_get(sensor, "roidata"), roi_volts, equal_nan=True)
+    assert np.allclose(sensor_get(sensor, "roidatav"), roi_volts, equal_nan=True)
+    assert np.allclose(sensor_get(sensor, "roidatavolts"), roi_volts, equal_nan=True)
+    assert np.allclose(sensor_get(sensor, "roidatae"), roi_electrons, equal_nan=True)
+    assert np.allclose(sensor_get(sensor, "roidataelectrons"), roi_electrons, equal_nan=True)
+    assert np.allclose(sensor_get(sensor, "roidigitalcount"), roi_dv, equal_nan=True)
 
 
 def test_sensor_get_electrons_direct_getter(asset_store) -> None:
@@ -199,9 +205,12 @@ def test_sensor_get_line_profiles(asset_store) -> None:
     sensor = sensor_set(sensor, "analog gain", 2.0)
     sensor = sensor_set(sensor, "analog offset", 1.0)
     sensor = sensor_set(sensor, "volts", np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float))
+    sensor = sensor_set(sensor, "dv", np.array([[10.0, 20.0], [30.0, 40.0]], dtype=float))
 
-    hline_volts = sensor_get(sensor, "hline volts", 1)
-    vline_electrons = sensor_get(sensor, "vline electrons", 1)
+    hline_volts = sensor_get(sensor, "hlinevolts", 1)
+    vline_electrons = sensor_get(sensor, "vlineelectrons", 1)
+    hline_dv = sensor_get(sensor, "hlinedv", 1)
+    vline_dv = sensor_get(sensor, "vlinedv", 1)
     support = sensor_get(sensor, "spatial support")
 
     assert set(hline_volts) == {"data", "pos", "pixPos"}
@@ -221,6 +230,17 @@ def test_sensor_get_line_profiles(asset_store) -> None:
     assert vline_electrons["pos"][0].size == 0
     assert np.allclose(vline_electrons["pos"][1], np.array([support["y"][0]], dtype=float))
     assert np.allclose(vline_electrons["pos"][2], np.array([support["y"][1]], dtype=float))
+
+    assert np.allclose(hline_dv["data"][0], np.array([20.0], dtype=float))
+    assert np.allclose(hline_dv["data"][1], np.array([10.0], dtype=float))
+    assert hline_dv["data"][2].size == 0
+    assert np.allclose(hline_dv["pos"][0], np.array([support["x"][1]], dtype=float))
+    assert np.allclose(hline_dv["pos"][1], np.array([support["x"][0]], dtype=float))
+    assert hline_dv["pos"][2].size == 0
+
+    assert vline_dv["data"][0].size == 0
+    assert np.allclose(vline_dv["data"][1], np.array([10.0], dtype=float))
+    assert np.allclose(vline_dv["data"][2], np.array([30.0], dtype=float))
 
 
 def test_sensor_get_chromaticity_and_roi_mean(asset_store) -> None:
