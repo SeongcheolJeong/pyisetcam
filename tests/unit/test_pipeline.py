@@ -2327,9 +2327,9 @@ def test_sensor_get_set_supports_chart_and_metadata_surface(asset_store) -> None
     rect_handles = ["r1", "r2"]
 
     sensor = sensor_set(sensor, "chartparameters", {"name": "Macbeth", "nSquares": 24})
-    sensor = sensor_set(sensor, "chartcornerpoints", corner_points)
-    sensor = sensor_set(sensor, "chartrectangles", rects)
-    sensor = sensor_set(sensor, "chartcurrentrect", current_rect)
+    sensor = sensor_set(sensor, "cornerpoints", corner_points)
+    sensor = sensor_set(sensor, "chartrects", rects)
+    sensor = sensor_set(sensor, "currentrect", current_rect)
     sensor = sensor_set(sensor, "mccrecthandles", rect_handles)
     sensor = sensor_set(sensor, "metadatasensorname", "sensor-a")
     sensor = sensor_set(sensor, "metadatascenename", "scene-a")
@@ -2343,10 +2343,14 @@ def test_sensor_get_set_supports_chart_and_metadata_surface(asset_store) -> None
     assert np.array_equal(chart["cornerPoints"], corner_points)
     assert np.array_equal(chart["rects"], rects)
     assert np.array_equal(chart["currentRect"], current_rect)
+    assert np.array_equal(sensor_get(sensor, "cornerpoints"), corner_points)
+    assert np.array_equal(sensor_get(sensor, "chartcorners"), corner_points)
     assert np.array_equal(sensor_get(sensor, "chart corners"), corner_points)
     assert np.array_equal(sensor_get(sensor, "chart corner points"), corner_points)
     assert np.array_equal(sensor_get(sensor, "mcccornerpoints"), corner_points)
+    assert np.array_equal(sensor_get(sensor, "chartrects"), rects)
     assert np.array_equal(sensor_get(sensor, "chart rectangles"), rects)
+    assert np.array_equal(sensor_get(sensor, "currentrect"), current_rect)
     assert np.array_equal(sensor_get(sensor, "current rect"), current_rect)
     assert sensor_get(sensor, "mccrecthandles") == rect_handles
     assert sensor_get(sensor, "metadatasensorname") == "sensor-a"
@@ -2356,6 +2360,7 @@ def test_sensor_get_set_supports_chart_and_metadata_surface(asset_store) -> None
 
     sensor = sensor_set(sensor, "mcccornerpoints", corner_points + 1.0)
 
+    assert np.array_equal(sensor_get(sensor, "cornerpoints"), corner_points + 1.0)
     assert np.array_equal(sensor_get(sensor, "chart corner points"), corner_points + 1.0)
     assert np.array_equal(sensor_get(sensor, "mcccornerpoints"), corner_points + 1.0)
 
