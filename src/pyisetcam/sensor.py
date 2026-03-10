@@ -463,12 +463,12 @@ def _sensor_pixel_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return np.asarray(pixel.get("refractive_indices", np.array([], dtype=float)), dtype=float).copy()
     if key in {"spectrum", "pixelspectrum"}:
         return _pixel_spectrum_struct(sensor)
-    if key in {"wave", "wavelength", "wavelengthsamples"}:
+    if key in {"wave", "wavelength", "wavelengthsamples", "pixelwavelength", "pixelwavelengthsamples"}:
         return np.asarray(sensor.fields["wave"], dtype=float).copy()
-    if key in {"binwidth", "wavelengthresolution"}:
+    if key in {"binwidth", "wavelengthresolution", "pixelbinwidth"}:
         wave = np.asarray(sensor.fields["wave"], dtype=float).reshape(-1)
         return float(wave[1] - wave[0]) if wave.size > 1 else 1.0
-    if key in {"nwave", "nwaves", "numberofwavelengthsamples"}:
+    if key in {"nwave", "nwaves", "numberofwavelengthsamples", "pixelnwave"}:
         return int(np.asarray(sensor.fields["wave"], dtype=float).size)
     if key in {
         "pdspectralqe",
@@ -683,7 +683,7 @@ def _sensor_pixel_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         payload["wave"] = np.asarray(sensor.fields["wave"], dtype=float).copy()
         sensor.fields["pixel"]["spectrum"] = copy.deepcopy(payload)
         return sensor
-    if key in {"wave", "wavelength", "wavelengthsamples"}:
+    if key in {"wave", "wavelength", "wavelengthsamples", "pixelwavelength", "pixelwavelengthsamples"}:
         sensor = _sensor_update_wave(sensor, np.asarray(value, dtype=float).reshape(-1))
         spectrum = _pixel_spectrum_struct(sensor)
         sensor.fields["pixel"]["spectrum"] = copy.deepcopy(spectrum)

@@ -2191,25 +2191,25 @@ def test_sensor_get_set_supports_pixel_passthrough_surface(asset_store) -> None:
 def test_sensor_get_set_supports_pixel_optical_and_spectral_metadata(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
     sensor = sensor_set(sensor, "integration time", 0.01)
-    sensor = sensor_set(sensor, "pixel layer thicknesses", np.array([1.0e-6, 2.0e-6, 0.5e-6], dtype=float))
-    sensor = sensor_set(sensor, "refractive index", np.array([1.0, 1.5, 3.4], dtype=float))
-    sensor = sensor_set(sensor, "pixel spectrum", {"wave": np.array([450.0, 550.0, 650.0], dtype=float), "comment": "pixel spectrum"})
+    sensor = sensor_set(sensor, "layerthicknesses", np.array([1.0e-6, 2.0e-6, 0.5e-6], dtype=float))
+    sensor = sensor_set(sensor, "refractiveindices", np.array([1.0, 1.5, 3.4], dtype=float))
+    sensor = sensor_set(sensor, "pixelspectrum", {"wave": np.array([450.0, 550.0, 650.0], dtype=float), "comment": "pixel spectrum"})
     sensor = sensor_set(sensor, "quantum efficiency", np.array([0.1, 0.2, 0.3], dtype=float))
     sensor = sensor_set(sensor, "dark voltage", 2.0e-3)
     sensor = sensor_set(sensor, "read noise volts", 1.0e-3)
     sensor = sensor_set(sensor, "voltage swing", 1.2)
 
-    assert np.allclose(sensor_get(sensor, "layer thicknesses", "um"), np.array([1.0, 2.0, 0.5], dtype=float))
-    assert np.isclose(sensor_get(sensor, "stack height", "um"), 3.5)
-    assert np.isclose(sensor_get(sensor, "pixel depth", "um"), 3.5)
-    assert np.isclose(sensor_get(sensor, "pixel depth meters"), 3.5e-6)
-    assert np.allclose(sensor_get(sensor, "refractive indices"), np.array([1.0, 1.5, 3.4], dtype=float))
-    assert np.allclose(sensor_get(sensor, "refractive index"), np.array([1.0, 1.5, 3.4], dtype=float))
+    assert np.allclose(sensor_get(sensor, "layerthicknesses", "um"), np.array([1.0, 2.0, 0.5], dtype=float))
+    assert np.isclose(sensor_get(sensor, "stackheight", "um"), 3.5)
+    assert np.isclose(sensor_get(sensor, "pixeldepth", "um"), 3.5)
+    assert np.isclose(sensor_get(sensor, "pixeldepthmeters"), 3.5e-6)
+    assert np.allclose(sensor_get(sensor, "refractiveindices"), np.array([1.0, 1.5, 3.4], dtype=float))
+    assert np.allclose(sensor_get(sensor, "refractiveindex"), np.array([1.0, 1.5, 3.4], dtype=float))
     assert np.allclose(sensor_get(sensor, "n"), np.array([1.0, 1.5, 3.4], dtype=float))
-    assert np.array_equal(sensor_get(sensor, "pixel wavelength"), np.array([450.0, 550.0, 650.0], dtype=float))
-    assert sensor_get(sensor, "pixel bin width") == 100.0
-    assert sensor_get(sensor, "pixel nwave") == 3
-    assert sensor_get(sensor, "pixel spectrum")["comment"] == "pixel spectrum"
+    assert np.array_equal(sensor_get(sensor, "pixelwavelength"), np.array([450.0, 550.0, 650.0], dtype=float))
+    assert sensor_get(sensor, "pixelbinwidth") == 100.0
+    assert sensor_get(sensor, "pixelnwave") == 3
+    assert sensor_get(sensor, "pixelspectrum")["comment"] == "pixel spectrum"
     assert np.allclose(sensor_get(sensor, "quantum efficiency"), np.array([0.1, 0.2, 0.3], dtype=float))
     assert np.allclose(sensor_get(sensor, "pixel quantum efficiency"), np.array([0.1, 0.2, 0.3], dtype=float))
     assert np.allclose(sensor_get(sensor, "photodetector quantum efficiency"), np.array([0.1, 0.2, 0.3], dtype=float))
@@ -2241,16 +2241,16 @@ def test_sensor_get_set_supports_photodetector_position_passthrough(asset_store)
     sensor = sensor_set(sensor, "pixel height", 3.0e-6)
     sensor = sensor_set(sensor, "pd size", np.array([1.0e-6, 2.0e-6], dtype=float))
 
-    assert np.allclose(sensor_get(sensor, "pd position", "um"), np.array([1.0, 1.0], dtype=float))
-    assert np.isclose(sensor_get(sensor, "pd xpos", "um"), 1.0)
-    assert np.isclose(sensor_get(sensor, "pd ypos", "um"), 1.0)
+    assert np.allclose(sensor_get(sensor, "pdposition", "um"), np.array([1.0, 1.0], dtype=float))
+    assert np.isclose(sensor_get(sensor, "pdxpos", "um"), 1.0)
+    assert np.isclose(sensor_get(sensor, "pdypos", "um"), 1.0)
 
-    sensor = sensor_set(sensor, "pd xpos", 0.5e-6)
-    sensor = sensor_set(sensor, "pd ypos", 0.75e-6)
+    sensor = sensor_set(sensor, "pdxpos", 0.5e-6)
+    sensor = sensor_set(sensor, "pdypos", 0.75e-6)
 
-    assert np.allclose(sensor_get(sensor, "pd position", "um"), np.array([0.5, 0.75], dtype=float))
-    assert np.isclose(sensor_get(sensor, "pd xpos", "um"), 0.5)
-    assert np.isclose(sensor_get(sensor, "pd ypos", "um"), 0.75)
+    assert np.allclose(sensor_get(sensor, "pdposition", "um"), np.array([0.5, 0.75], dtype=float))
+    assert np.isclose(sensor_get(sensor, "pdxpos", "um"), 0.5)
+    assert np.isclose(sensor_get(sensor, "pdypos", "um"), 0.75)
 
     sensor = sensor_set(sensor, "photodetector x position", 0.25e-6)
     sensor = sensor_set(sensor, "photodetector y position", 0.5e-6)
@@ -2258,12 +2258,12 @@ def test_sensor_get_set_supports_photodetector_position_passthrough(asset_store)
     assert np.isclose(sensor_get(sensor, "photodetector x position", "um"), 0.25)
     assert np.isclose(sensor_get(sensor, "photodetector y position", "um"), 0.5)
 
-    sensor = sensor_set(sensor, "pd position", np.array([0.25e-6, 0.5e-6], dtype=float))
+    sensor = sensor_set(sensor, "pdposition", np.array([0.25e-6, 0.5e-6], dtype=float))
 
-    assert np.allclose(sensor_get(sensor, "pd position", "um"), np.array([0.25, 0.5], dtype=float))
+    assert np.allclose(sensor_get(sensor, "pdposition", "um"), np.array([0.25, 0.5], dtype=float))
 
     with pytest.raises(ValueError, match="photodetector position must keep the photodetector inside the pixel."):
-        sensor_set(sensor, "pd position", np.array([3.0e-6, 2.5e-6], dtype=float))
+        sensor_set(sensor, "pdposition", np.array([3.0e-6, 2.5e-6], dtype=float))
 
 
 def test_sensor_set_supports_matlab_width_height_pair_aliases(asset_store) -> None:
