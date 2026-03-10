@@ -473,6 +473,8 @@ setter alias.
 That same chart coverage now also exercises the exact no-space aliases
 `chartparameters`, `cornerpoints`, `chartcorners`, `chartrects`,
 `currentrect`, and `mccrecthandles`.
+The same runtime coverage now also exercises the exact long no-space chart
+aliases `chartcornerpoints`, `chartrectangles`, and `chartcurrentrect`.
 The neighboring metadata block now also has focused parser/runtime coverage for
 `scene name`, `metadata scene name`, `metadata lens name`, `metadata lens`,
 `metadata optics name`, `metadata sensor name`, and `metadata crop`.

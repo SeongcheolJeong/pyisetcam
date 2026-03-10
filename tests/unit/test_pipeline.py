@@ -2344,13 +2344,16 @@ def test_sensor_get_set_supports_chart_and_metadata_surface(asset_store) -> None
     assert np.array_equal(chart["rects"], rects)
     assert np.array_equal(chart["currentRect"], current_rect)
     assert np.array_equal(sensor_get(sensor, "cornerpoints"), corner_points)
+    assert np.array_equal(sensor_get(sensor, "chartcornerpoints"), corner_points)
     assert np.array_equal(sensor_get(sensor, "chartcorners"), corner_points)
     assert np.array_equal(sensor_get(sensor, "chart corners"), corner_points)
     assert np.array_equal(sensor_get(sensor, "chart corner points"), corner_points)
     assert np.array_equal(sensor_get(sensor, "mcccornerpoints"), corner_points)
     assert np.array_equal(sensor_get(sensor, "chartrects"), rects)
+    assert np.array_equal(sensor_get(sensor, "chartrectangles"), rects)
     assert np.array_equal(sensor_get(sensor, "chart rectangles"), rects)
     assert np.array_equal(sensor_get(sensor, "currentrect"), current_rect)
+    assert np.array_equal(sensor_get(sensor, "chartcurrentrect"), current_rect)
     assert np.array_equal(sensor_get(sensor, "current rect"), current_rect)
     assert sensor_get(sensor, "mccrecthandles") == rect_handles
     assert sensor_get(sensor, "metadatasensorname") == "sensor-a"
@@ -2359,10 +2362,14 @@ def test_sensor_get_set_supports_chart_and_metadata_surface(asset_store) -> None
     assert np.array_equal(sensor_get(sensor, "metadatacrop"), np.array([1, 2, 3, 4], dtype=int))
 
     sensor = sensor_set(sensor, "mcccornerpoints", corner_points + 1.0)
+    sensor = sensor_set(sensor, "chartrectangles", rects + 1.0)
+    sensor = sensor_set(sensor, "chartcurrentrect", current_rect + 1.0)
 
     assert np.array_equal(sensor_get(sensor, "cornerpoints"), corner_points + 1.0)
     assert np.array_equal(sensor_get(sensor, "chart corner points"), corner_points + 1.0)
     assert np.array_equal(sensor_get(sensor, "mcccornerpoints"), corner_points + 1.0)
+    assert np.array_equal(sensor_get(sensor, "chartrectangles"), rects + 1.0)
+    assert np.array_equal(sensor_get(sensor, "chartcurrentrect"), current_rect + 1.0)
 
 
 def test_sensor_get_set_supports_diffusion_mtf_storage(asset_store) -> None:
