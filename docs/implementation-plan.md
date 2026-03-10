@@ -148,6 +148,7 @@
 - `metrics_xyz_to_lab_1d`: `ieXYZ2LAB` parity on a single XYZ/white-point pair, compare the XYZ input, white point, and resulting LAB vector for another deterministic metrics-family helper.
 - `metrics_delta_e_ab_1976_1d`: `deltaEab(..., '1976')` parity on one XYZ pair and white point, compare the XYZ inputs, white point, and resulting 1976 Delta E scalar for a deterministic metrics-family helper.
 - `metrics_spd_angle_1d`: `metricsSPD(..., 'angle')` parity on two short orthogonal SPDs, compare wave, both SPDs, and the resulting angle scalar for a deterministic metrics-family helper.
+- `metrics_spd_cielab_1d`: `metricsSPD(..., 'cielab')` parity on two fixed SPDs, compare wave, both SPDs, resulting delta E scalar, XYZs, LABs, and derived white point for another deterministic metrics-family helper.
 - `scene_illuminant_change`: apply a 3000 K blackbody illuminant with `preserveMean=True` and `False`; compare luminance preservation and spectral ratios.
 - `display_create_lcd_example`: load and resample a display calibration; compare `spd`, `gamma`, and wave grid.
 - `oi_diffraction_limited_default`: default scene through `oiCreate()/oiCompute()`, compare irradiance cube, padding behavior, and FOV-derived geometry.

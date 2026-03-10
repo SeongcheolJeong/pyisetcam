@@ -86,6 +86,25 @@ switch case_name
         payload.spd2 = spd2;
         payload.angle = metricsSPD(spd1, spd2, 'metric', 'angle', 'wave', wave);
 
+    case 'metrics_spd_cielab_1d'
+        wave = (400:10:700)';
+        spd1 = linspace(0.5, 1.7, numel(wave))';
+        spd2 = linspace(1.6, 0.4, numel(wave))';
+        [delta_e, params] = metricsSPD(spd1, spd2, 'metric', 'cielab', 'wave', wave);
+        spd1_scaled = (spd1 / ieLuminanceFromEnergy(spd1, wave)) * 100;
+        spd2_scaled = (spd2 / ieLuminanceFromEnergy(spd2, wave)) * 100;
+        white_point = ieXYZFromEnergy(spd1_scaled', wave);
+        white_point = (white_point / white_point(2)) * 100;
+        payload.wave = wave;
+        payload.spd1 = spd1;
+        payload.spd2 = spd2;
+        payload.delta_e = delta_e;
+        payload.xyz1 = ieXYZFromEnergy(spd1_scaled', wave);
+        payload.xyz2 = ieXYZFromEnergy(spd2_scaled', wave);
+        payload.lab1 = params.lab1;
+        payload.lab2 = params.lab2;
+        payload.white_point = white_point;
+
     case 'scene_illuminant_change'
         scene = sceneCreate();
         bb = blackbody(sceneGet(scene, 'wave'), 3000, 'energy');

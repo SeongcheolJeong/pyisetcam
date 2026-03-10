@@ -179,6 +179,27 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "metrics_spd_cielab_1d":
+        wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+        spd1 = np.linspace(0.5, 1.7, wave.size, dtype=float)
+        spd2 = np.linspace(1.6, 0.4, wave.size, dtype=float)
+        value, params = metrics_spd(spd1, spd2, metric="cielab", wave=wave, return_params=True)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "spd1": spd1,
+                "spd2": spd2,
+                "delta_e": value,
+                "xyz1": np.asarray(params["xyz1"], dtype=float),
+                "xyz2": np.asarray(params["xyz2"], dtype=float),
+                "lab1": np.asarray(params["lab1"], dtype=float),
+                "lab2": np.asarray(params["lab2"], dtype=float),
+                "white_point": np.asarray(params["white_point"], dtype=float),
+            },
+            context={},
+        )
+
     if case_name == "scene_illuminant_change":
         scene = scene_create(asset_store=store)
         wave = scene_get(scene, "wave")
