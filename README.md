@@ -576,7 +576,10 @@ because the bare names intentionally stay object-generic in
 coverage now also explicitly exercises `volts`, `voltage`, `dv`,
 `digitalvalue`, `digitalvalues`, `electrons`, `electron`,
 `dvorvolts`, `digitalorvolts`, `voltimages`, and channel-select access
-through the exact no-space aliases.
+through the exact no-space aliases. The adjacent ROI/response block now
+also explicitly exercises `roivolts`, `roielectrons`, `roidv`,
+`roivoltsmean`, `roielectronsmean`, `responseratio`, and
+`volts2maxratio`.
 The adjacent noise-control storage surface now also includes
 `sensorGet/Set('reuse noise')`, `sensorGet/Set('noise seed')`, and
 `sensorGet/Set('response type')`, with stored noise seeds now feeding

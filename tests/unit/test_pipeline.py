@@ -2764,6 +2764,22 @@ def test_sensor_get_supports_dv_or_volts_aliases(asset_store) -> None:
     assert np.array_equal(sensor_get(sensor, "digitalorvolts"), dv)
 
 
+def test_sensor_get_supports_response_ratio_aliases(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "volts", np.array([[0.25, 0.5], [0.75, 1.0]], dtype=float))
+
+    expected_volts_ratio = 1.0 / float(sensor.fields["pixel"]["voltage_swing"])
+    assert np.isclose(sensor_get(sensor, "responseratio"), expected_volts_ratio)
+    assert np.isclose(sensor_get(sensor, "volts2maxratio"), expected_volts_ratio)
+
+    sensor = sensor_set(sensor, "digitalvalue", np.array([[64.0, 128.0], [256.0, 512.0]], dtype=float))
+    sensor.data.pop("volts", None)
+    expected_dv_ratio = 512.0 / float(2 ** int(sensor.fields["nbits"]))
+
+    assert np.isclose(sensor_get(sensor, "responseratio"), expected_dv_ratio)
+    assert np.isclose(sensor_get(sensor, "volts2maxratio"), expected_dv_ratio)
+
+
 def test_sensor_get_supports_volt_images(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
     sensor = sensor_set(sensor, "rows", 4)
