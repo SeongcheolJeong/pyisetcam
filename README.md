@@ -447,7 +447,7 @@ The same movement alias surface now also has focused parser/runtime coverage for
 `movement positions` plus the prefixed `sensor positions` and `sensor positions x/y` forms.
 That same movement coverage now also exercises the exact no-space aliases
 `eyemovement`, `movementpositions`, `sensorpositions`, `sensorpositionsx`,
-`sensorpositionsy`, and `framesperposition`.
+`sensorpositionsy`, `framesperposition`, `exposuretimesperposition`, and `etimeperpos`.
 The neighboring legacy human block now also has parser-level routing for
 `human`, `cone type`, `densities`, `xy`, and `rseed`.
 That same block now also routes the legacy location aliases `cone xy` and

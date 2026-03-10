@@ -2402,8 +2402,8 @@ def test_sensor_get_set_supports_movement_metadata_surface(asset_store) -> None:
     assert np.array_equal(sensor_get(sensor, "sensorpositionsx"), positions[:, 0])
     assert np.array_equal(sensor_get(sensor, "sensorpositionsy"), positions[:, 1])
     assert np.array_equal(sensor_get(sensor, "framesperposition"), frames)
-    assert np.array_equal(sensor_get(sensor, "exposure times per position"), frames)
-    assert np.array_equal(sensor_get(sensor, "etime per pos"), frames)
+    assert np.array_equal(sensor_get(sensor, "exposuretimesperposition"), frames)
+    assert np.array_equal(sensor_get(sensor, "etimeperpos"), frames)
 
 
 def test_sensor_get_set_supports_legacy_human_storage_surface(asset_store) -> None:
