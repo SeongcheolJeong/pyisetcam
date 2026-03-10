@@ -2747,6 +2747,7 @@ def test_sensor_get_set_supports_digital_value_aliases(asset_store) -> None:
     sensor = sensor_set(sensor, "digitalvalues", dv + 1.0)
 
     assert np.array_equal(sensor_get(sensor, "digitalvalue"), dv + 1.0)
+    assert np.array_equal(sensor_get(sensor, "digitalvalues"), dv + 1.0)
 
 
 def test_sensor_get_supports_dv_or_volts_aliases(asset_store) -> None:
@@ -2822,7 +2823,8 @@ def test_sensor_get_supports_channel_select_for_sensor_data(asset_store) -> None
     assert np.array_equal(sensor_get(sensor, "volts", 2), expected_volts)
     assert np.array_equal(sensor_get(sensor, "voltage", 2), expected_volts)
     assert np.array_equal(sensor_get(sensor, "dv", 2), expected_dv)
-    assert np.array_equal(sensor_get(sensor, "digital values", 2), expected_dv)
+    assert np.array_equal(sensor_get(sensor, "digitalvalue", 2), expected_dv)
+    assert np.array_equal(sensor_get(sensor, "digitalvalues", 2), expected_dv)
     assert np.array_equal(sensor_get(sensor, "electrons", 2), expected_electrons)
     assert np.array_equal(sensor_get(sensor, "electron", 2), expected_electrons)
 
