@@ -85,6 +85,57 @@ def run_python_case_with_context(
             context={"scene": scene},
         )
 
+    if case_name == "scene_frequency_orientation_small":
+        params = {
+            "angles": np.linspace(0.0, np.pi / 2.0, 4),
+            "freqs": np.array([1.0, 2.0, 4.0, 8.0], dtype=float),
+            "blockSize": 16,
+            "contrast": 0.8,
+        }
+        scene = scene_create("frequency orientation", params, asset_store=store)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": scene_get(scene, "wave"),
+                "photons": scene_get(scene, "photons"),
+                "mean_luminance": scene_get(scene, "mean luminance", asset_store=store),
+            },
+            context={"scene": scene},
+        )
+
+    if case_name == "scene_harmonic_small":
+        params = {
+            "freq": np.array([1.0, 5.0], dtype=float),
+            "contrast": np.array([0.2, 0.6], dtype=float),
+            "ph": np.array([0.0, np.pi / 3.0], dtype=float),
+            "ang": np.array([0.0, 0.0], dtype=float),
+            "row": 64,
+            "col": 64,
+            "GaborFlag": 0.2,
+        }
+        scene = scene_create("harmonic", params, asset_store=store)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": scene_get(scene, "wave"),
+                "photons": scene_get(scene, "photons"),
+                "mean_luminance": scene_get(scene, "mean luminance", asset_store=store),
+            },
+            context={"scene": scene},
+        )
+
+    if case_name == "scene_sweep_frequency_small":
+        scene = scene_create("sweep frequency", 64, 12, asset_store=store)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": scene_get(scene, "wave"),
+                "photons": scene_get(scene, "photons"),
+                "mean_luminance": scene_get(scene, "mean luminance", asset_store=store),
+            },
+            context={"scene": scene},
+        )
+
     if case_name == "utility_unit_frequency_list":
         return ParityCaseResult(
             payload={

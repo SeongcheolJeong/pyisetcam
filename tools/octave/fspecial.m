@@ -3,6 +3,7 @@ function h = fspecial(type, varargin)
 %
 % Supports:
 %   fspecial('gaussian', hsize, sigma)
+%   fspecial('gauss', hsize, sigma)
 %   fspecial('average')
 %   fspecial('average', hsize)
 
@@ -12,7 +13,7 @@ end
 
 type = lower(type);
 switch type
-    case 'gaussian'
+    case {'gaussian', 'gauss'}
         if numel(varargin) < 1 || isempty(varargin{1})
             hsize = [3 3];
         else

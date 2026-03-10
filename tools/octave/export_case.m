@@ -34,6 +34,37 @@ switch case_name
         payload.photons = sceneGet(scene, 'photons');
         payload.mean_luminance = sceneGet(scene, 'mean luminance');
 
+    case 'scene_frequency_orientation_small'
+        params = struct();
+        params.angles = linspace(0, pi / 2, 4);
+        params.freqs = [1 2 4 8];
+        params.blockSize = 16;
+        params.contrast = 0.8;
+        scene = sceneCreate('frequency orientation', params);
+        payload.wave = sceneGet(scene, 'wave');
+        payload.photons = sceneGet(scene, 'photons');
+        payload.mean_luminance = sceneGet(scene, 'mean luminance');
+
+    case 'scene_harmonic_small'
+        params = struct();
+        params.freq = [1 5];
+        params.contrast = [0.2 0.6];
+        params.ph = [0 pi/3];
+        params.ang = [0 0];
+        params.row = 64;
+        params.col = 64;
+        params.GaborFlag = 0.2;
+        scene = sceneCreate('harmonic', params);
+        payload.wave = sceneGet(scene, 'wave');
+        payload.photons = sceneGet(scene, 'photons');
+        payload.mean_luminance = sceneGet(scene, 'mean luminance');
+
+    case 'scene_sweep_frequency_small'
+        scene = sceneCreate('sweep frequency', 64, 12);
+        payload.wave = sceneGet(scene, 'wave');
+        payload.photons = sceneGet(scene, 'photons');
+        payload.mean_luminance = sceneGet(scene, 'mean luminance');
+
     case 'utility_unit_frequency_list'
         payload.even = unitFrequencyList(50);
         payload.odd = unitFrequencyList(51);

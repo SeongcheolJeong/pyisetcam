@@ -34,6 +34,9 @@ def test_scene_adjust_illuminant_preserves_mean(asset_store) -> None:
 def test_supported_pattern_scenes(asset_store) -> None:
     checkerboard = scene_create("checkerboard", 8, 4, asset_store=asset_store)
     slanted_bar = scene_create("slanted bar", 64, 0.6, 3.0, asset_store=asset_store)
+    freq_orient = scene_create("frequency orientation", asset_store=asset_store)
+    harmonic = scene_create("harmonic", asset_store=asset_store)
+    sweep = scene_create("sweep frequency", asset_store=asset_store)
     line = scene_create("line ee", 32, 2, asset_store=asset_store)
     bar = scene_create("bar", 32, 5, asset_store=asset_store)
     point_array = scene_create("point array", 64, 16, "ep", 3, asset_store=asset_store)
@@ -41,11 +44,20 @@ def test_supported_pattern_scenes(asset_store) -> None:
     white_noise = scene_create("white noise", 32, 20, asset_store=asset_store)
     assert scene_get(checkerboard, "photons").shape[:2] == (64, 64)
     assert scene_get(slanted_bar, "photons").shape[:2] == (64, 64)
+    assert scene_get(freq_orient, "photons").shape[:2] == (256, 256)
+    assert scene_get(harmonic, "photons").shape[:2] == (65, 65)
+    assert scene_get(sweep, "photons").shape[:2] == (128, 128)
     assert scene_get(line, "photons").shape[:2] == (32, 32)
     assert scene_get(bar, "photons").shape[:2] == (32, 32)
     assert scene_get(point_array, "photons").shape[:2] == (64, 64)
     assert scene_get(grid_lines, "photons").shape[:2] == (64, 64)
     assert scene_get(white_noise, "photons").shape[:2] == (32, 32)
+    assert np.isclose(scene_get(freq_orient, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
+    assert np.isclose(scene_get(harmonic, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
+    assert np.isclose(scene_get(sweep, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
+    assert np.isclose(scene_get(freq_orient, "fov"), 10.0)
+    assert np.isclose(scene_get(harmonic, "fov"), 1.0)
+    assert np.isclose(scene_get(sweep, "fov"), 10.0)
     assert np.isclose(scene_get(point_array, "fov"), 40.0)
     assert np.isclose(scene_get(grid_lines, "fov"), 40.0)
     assert np.isclose(scene_get(white_noise, "fov"), 1.0)
@@ -87,6 +99,54 @@ def test_point_array_and_grid_lines_follow_spacing(asset_store) -> None:
 
     assert np.all(grid_plane[3::8, :] > 0.5)
     assert np.all(grid_plane[:, 3::8] > 0.5)
+
+
+def test_frequency_orientation_scene_matches_upstream_parameterization(asset_store) -> None:
+    params = {
+        "angles": np.linspace(0.0, np.pi / 2.0, 5),
+        "freqs": np.array([1.0, 2.0, 4.0, 8.0, 16.0]),
+        "blockSize": 64,
+        "contrast": 0.8,
+    }
+    scene = scene_create("frequency orientation", params, asset_store=asset_store)
+    photons = scene_get(scene, "photons")[:, :, 0]
+
+    assert photons.shape == (320, 320)
+    assert np.max(photons) > np.min(photons)
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
+
+
+def test_freq_orient_scalar_size_matches_tutorial_shape(asset_store) -> None:
+    scene = scene_create("freq orient", 512, asset_store=asset_store)
+    assert scene_get(scene, "photons").shape[:2] == (512, 512)
+
+
+def test_harmonic_scene_supports_multiple_components_and_gabor_window(asset_store) -> None:
+    params = {
+        "freq": np.array([1.0, 5.0]),
+        "contrast": np.array([0.2, 0.6]),
+        "ph": np.array([0.0, np.pi / 3.0]),
+        "ang": np.array([0.0, 0.0]),
+        "row": 128,
+        "col": 128,
+        "GaborFlag": 0.2,
+    }
+    scene = scene_create("harmonic", params, asset_store=asset_store)
+    photons = scene_get(scene, "photons")[:, :, 0]
+
+    assert photons.shape == (128, 128)
+    assert np.isclose(scene_get(scene, "fov"), 1.0)
+    assert photons[64, 64] > photons[0, 0]
+
+
+def test_sweep_frequency_scene_supports_custom_frequency_and_contrast_profile(asset_store) -> None:
+    y_contrast = np.linspace(1.0, 0.25, 64, dtype=float)
+    scene = scene_create("sweepFrequency", 64, 12, None, y_contrast, asset_store=asset_store)
+    photons = scene_get(scene, "photons")[:, :, 0]
+
+    assert photons.shape == (64, 64)
+    assert np.ptp(photons[0, :]) > np.ptp(photons[-1, :])
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
 
 
 def test_scene_from_file_rgb_array_uses_display_geometry(asset_store) -> None:

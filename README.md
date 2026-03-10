@@ -96,7 +96,9 @@ binary so baseline export works even when the raw CLI crashes at startup.
 Post-milestone expansion now covers broader scene support and early sensor
 preset growth. `scene_from_file` / `sceneFromFile` supports RGB and
 monochrome inputs backed by emissive display calibration, the classic test
-scene catalog has been expanded, and `sensor_create` now includes generic
+scene catalog has been expanded with script-driven patterns such as
+`harmonic`, `frequency orientation` / `freq orient`, and
+`sweep frequency`, and `sensor_create` now includes generic
 `rgbw` / `rccc` presets plus upstream-backed `mt9v024` and `ar0132at`
 RGBW/RCCC variants. `camera_create(...)` now forwards those expanded
 sensor presets too, so camera constructors can directly target `rgbw`,

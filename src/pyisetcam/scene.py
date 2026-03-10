@@ -566,6 +566,229 @@ def _white_noise_scene(
     return scene
 
 
+def _normalized_parameter_dict(value: Any) -> dict[str, Any]:
+    if value is None:
+        return {}
+    if isinstance(value, dict):
+        raw = value
+    elif hasattr(value, "items"):
+        raw = dict(value.items())
+    elif hasattr(value, "__dict__"):
+        raw = vars(value)
+    else:
+        return {"imagesize": value}
+    return {param_format(str(key)): item for key, item in raw.items()}
+
+
+def _broadcast_parameter_vector(values: np.ndarray, count: int, name: str) -> np.ndarray:
+    if values.size == count:
+        return values.astype(float, copy=False)
+    if values.size == 1:
+        return np.repeat(values.astype(float, copy=False), count)
+    raise ValueError(f"Harmonic parameter '{name}' must be scalar or length {count}.")
+
+
+def _scale_range(values: np.ndarray, out_min: float, out_max: float) -> np.ndarray:
+    current = np.asarray(values, dtype=float)
+    current_min = float(np.min(current))
+    current_max = float(np.max(current))
+    if current_max <= current_min:
+        return np.full_like(current, float(out_min), dtype=float)
+    scaled = (current - current_min) / (current_max - current_min)
+    return scaled * (float(out_max) - float(out_min)) + float(out_min)
+
+
+def _harmonic_parameters(value: Any | None) -> dict[str, Any]:
+    normalized = _normalized_parameter_dict(value)
+    default = {
+        "name": "harmonicP",
+        "ang": np.array([0.0], dtype=float),
+        "contrast": np.array([1.0], dtype=float),
+        "freq": np.array([1.0], dtype=float),
+        "ph": np.array([np.pi / 2.0], dtype=float),
+        "row": 65,
+        "col": 65,
+        "center": np.array([0.0, 0.0], dtype=float),
+        "gaborflag": 0.0,
+    }
+
+    imagesize = normalized.get("imagesize")
+    row = int(np.rint(normalized.get("row", default["row"])))
+    col = int(np.rint(normalized.get("col", default["col"])))
+    if imagesize is not None:
+        image_size = np.asarray(imagesize, dtype=float).reshape(-1)
+        if image_size.size == 1:
+            row = int(np.rint(image_size[0]))
+            col = int(np.rint(image_size[0]))
+        elif image_size.size >= 2:
+            row = int(np.rint(image_size[0]))
+            col = int(np.rint(image_size[1]))
+
+    angle = np.asarray(normalized.get("orientation", normalized.get("ang", default["ang"])), dtype=float).reshape(-1)
+    contrast = np.asarray(normalized.get("contrast", default["contrast"]), dtype=float).reshape(-1)
+    frequency = np.asarray(normalized.get("frequency", normalized.get("freq", default["freq"])), dtype=float).reshape(-1)
+    phase = np.asarray(normalized.get("phase", normalized.get("ph", default["ph"])), dtype=float).reshape(-1)
+    count = max(angle.size, contrast.size, frequency.size, phase.size)
+
+    center = np.asarray(normalized.get("center", default["center"]), dtype=float).reshape(-1)
+    if center.size == 1:
+        center = np.repeat(center, 2)
+    if center.size != 2:
+        raise ValueError("Harmonic 'center' must contain one or two values.")
+
+    return {
+        "name": str(normalized.get("name", default["name"])),
+        "ang": _broadcast_parameter_vector(angle, count, "ang"),
+        "contrast": _broadcast_parameter_vector(contrast, count, "contrast"),
+        "freq": _broadcast_parameter_vector(frequency, count, "freq"),
+        "ph": _broadcast_parameter_vector(phase, count, "ph"),
+        "row": max(row, 1),
+        "col": max(col, 1),
+        "center": center.astype(float, copy=False),
+        "gaborflag": float(normalized.get("gaborflag", default["gaborflag"])),
+    }
+
+
+def _image_harmonic(params: dict[str, Any]) -> tuple[np.ndarray, dict[str, Any]]:
+    row = int(params["row"])
+    col = int(params["col"])
+    center = np.asarray(params["center"], dtype=float)
+
+    x = np.arange(col, dtype=float) / max(col, 1)
+    y = np.arange(row, dtype=float) / max(row, 1)
+    x = x - (x[-1] / 2.0)
+    y = y - (y[-1] / 2.0)
+    x = x - center[0] / max(col, 1)
+    y = y - center[1] / max(row, 1)
+    xx, yy = np.meshgrid(x, y)
+
+    x_pixels = np.arange(col, dtype=float) - ((col - 1) / 2.0) - center[0]
+    y_pixels = np.arange(row, dtype=float) - ((row - 1) / 2.0) - center[1]
+    xx_pixels, yy_pixels = np.meshgrid(x_pixels, y_pixels)
+
+    gabor_flag = float(params["gaborflag"])
+    if gabor_flag > 0.0:
+        sigma = gabor_flag * min(row, col)
+        window = np.exp(-((xx_pixels**2 + yy_pixels**2) / (2.0 * sigma**2)))
+        window /= max(float(np.max(window)), 1e-12)
+    elif gabor_flag < 0.0:
+        radius = -gabor_flag * min(row, col)
+        x_arg = np.pi * xx_pixels / (2.0 * radius)
+        y_arg = np.pi * yy_pixels / (2.0 * radius)
+        window = np.cos(x_arg) * np.cos(y_arg)
+        mask = (np.abs(x_arg) <= (np.pi / 2.0)) & (np.abs(y_arg) <= (np.pi / 2.0))
+        window = np.where(mask, window, 0.0)
+        window /= max(float(np.max(window)), 1e-12)
+    else:
+        window = np.ones((row, col), dtype=float)
+
+    image = np.zeros((row, col), dtype=float)
+    count = len(params["freq"])
+    for ii in range(count):
+        image += (
+            params["contrast"][ii]
+            * window
+            * np.cos(
+                2.0
+                * np.pi
+                * params["freq"][ii]
+                * (np.cos(params["ang"][ii]) * xx + np.sin(params["ang"][ii]) * yy)
+                + params["ph"][ii]
+            )
+            + 1.0
+        )
+    image /= max(count, 1)
+    return image, params
+
+
+def _frequency_orientation_parameters(value: Any | None) -> dict[str, Any]:
+    normalized = _normalized_parameter_dict(value)
+    angles = np.asarray(normalized.get("angles", np.linspace(0.0, np.pi / 2.0, 8)), dtype=float).reshape(-1)
+    freqs = np.asarray(normalized.get("freqs", np.arange(1.0, 9.0, dtype=float)), dtype=float).reshape(-1)
+    contrast = float(normalized.get("contrast", 1.0))
+    block_size = normalized.get("blocksize")
+    if block_size is None:
+        requested_size = normalized.get("imagesize")
+        if requested_size is None:
+            block_size = 32
+        else:
+            requested = np.asarray(requested_size, dtype=float).reshape(-1)
+            if requested.size == 1:
+                block_size = max(int(np.rint(requested[0] / max(len(angles), len(freqs)))), 1)
+            else:
+                block_size = max(int(np.rint(min(requested[0] / max(len(freqs), 1), requested[1] / max(len(angles), 1)))), 1)
+    return {
+        "angles": angles,
+        "freqs": freqs,
+        "contrast": contrast,
+        "blocksize": max(int(np.rint(block_size)), 1),
+    }
+
+
+def _frequency_orientation_image(params: dict[str, Any]) -> tuple[np.ndarray, dict[str, Any]]:
+    block_size = int(params["blocksize"])
+    x = np.arange(block_size, dtype=float) / block_size
+    xx, yy = np.meshgrid(x, x)
+    rows: list[np.ndarray] = []
+    for frequency in params["freqs"]:
+        blocks: list[np.ndarray] = []
+        for angle in params["angles"]:
+            block = 0.5 * (
+                1.0
+                + params["contrast"]
+                * np.sin(2.0 * np.pi * frequency * (np.cos(angle) * xx + np.sin(angle) * yy))
+            )
+            blocks.append(block)
+        rows.append(np.concatenate(blocks, axis=1))
+    image = np.concatenate(rows, axis=0).T
+    return image, params
+
+
+def _sweep_frequency_image(
+    size: Any,
+    max_frequency: float,
+    y_contrast: Any | None = None,
+) -> np.ndarray:
+    rows, cols = _scene_size_2d(size, default=128)
+    x = np.arange(1.0, cols + 1.0, dtype=float) / cols
+    frequency = (x**2) * float(max_frequency)
+    x_image = np.sin(2.0 * np.pi * (frequency * x))
+    if y_contrast is None:
+        contrast = np.linspace(1.0, 0.0, rows, dtype=float)
+    else:
+        contrast = np.asarray(y_contrast, dtype=float).reshape(-1)
+        if contrast.size == 1:
+            contrast = np.repeat(contrast, rows)
+        elif contrast.size != rows:
+            raise ValueError("Sweep-frequency yContrast must be scalar or length rows.")
+    image = contrast[:, None] * x_image[None, :] + 0.5
+    image = _scale_range(image, 1.0, 256.0)
+    return image / max(float(np.max(image)), 1e-12)
+
+
+def _equal_photon_pattern_scene(
+    name: str,
+    image: np.ndarray,
+    wave: np.ndarray,
+    *,
+    fov_deg: float,
+    asset_store: AssetStore,
+    illuminant_comment: str = "equal photons",
+) -> Scene:
+    illuminant_energy, illuminant_photons = _spectral_illuminant("ep", wave, asset_store=asset_store)
+    scene = Scene(name=name)
+    scene.fields["wave"] = wave
+    scene.fields["illuminant_format"] = "spectral"
+    scene.fields["illuminant_energy"] = illuminant_energy
+    scene.fields["illuminant_photons"] = illuminant_photons
+    scene.fields["illuminant_comment"] = illuminant_comment
+    scene.fields["distance_m"] = DEFAULT_DISTANCE_M
+    scene.fields["fov_deg"] = float(fov_deg)
+    scene.data["photons"] = np.asarray(image, dtype=float)[:, :, None] * illuminant_photons.reshape(1, 1, -1)
+    _update_scene_geometry(scene)
+    return scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
+
+
 def scene_create(
     scene_name: str = "default",
     *args: Any,
@@ -642,6 +865,45 @@ def scene_create(
         offset = int(args[1]) if len(args) > 1 else 0
         wave = _wave_or_default(args[2] if len(args) > 2 else None)
         return track_session_object(session, _line_scene("ep", size, offset, wave, asset_store=store))
+
+    if name in {"frequencyorientation", "demosaictarget", "freqorientpattern", "freqorient"}:
+        params = _frequency_orientation_parameters(args[0] if len(args) > 0 else None)
+        wave = _wave_or_default(args[1] if len(args) > 1 else None)
+        image, params = _frequency_orientation_image(params)
+        image = np.clip(image, 1e-4, 1.0)
+        image = image / max(float(np.max(image)), 1e-12)
+        scene = _equal_photon_pattern_scene("FOTarget", image, wave, fov_deg=DEFAULT_FOV_DEG, asset_store=store)
+        scene.fields["frequency_orientation_params"] = params
+        return track_session_object(session, scene)
+
+    if name in {"harmonic", "sinusoid"}:
+        params = _harmonic_parameters(args[0] if len(args) > 0 else None)
+        wave = _wave_or_default(args[1] if len(args) > 1 else None)
+        image, params = _image_harmonic(params)
+        image = np.where(image == 0.0, 1e-4, image)
+        image = image / (2.0 * max(float(np.max(image)), 1e-12))
+        scene = _equal_photon_pattern_scene("harmonic", image, wave, fov_deg=1.0, asset_store=store)
+        scene.fields["harmonic_params"] = params
+        return track_session_object(session, scene)
+
+    if name in {"sweep", "sweepfrequency"}:
+        size = args[0] if len(args) > 0 else 128
+        if np.isscalar(size):
+            default_max_frequency = float(size) / 16.0
+        else:
+            size_vec = np.asarray(size, dtype=float).reshape(-1)
+            default_max_frequency = float(size_vec[1] if size_vec.size > 1 else size_vec[0]) / 16.0
+        max_frequency = float(args[1]) if len(args) > 1 else default_max_frequency
+        wave = _wave_or_default(args[2] if len(args) > 2 else None)
+        y_contrast = args[3] if len(args) > 3 else None
+        image = _sweep_frequency_image(size, max_frequency, y_contrast)
+        scene = _equal_photon_pattern_scene("sweep", image, wave, fov_deg=DEFAULT_FOV_DEG, asset_store=store)
+        scene.fields["sweep_params"] = {
+            "size": _scene_size_2d(size, default=128),
+            "max_frequency": max_frequency,
+            "wave": wave.copy(),
+        }
+        return track_session_object(session, scene)
 
     if name == "bar":
         size = args[0] if len(args) > 0 else 64
