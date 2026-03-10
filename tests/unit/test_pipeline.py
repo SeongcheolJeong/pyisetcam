@@ -2025,9 +2025,14 @@ def test_sensor_get_reports_matlab_style_geometry_and_cfa_metadata(asset_store) 
     cfa_config = sensor_get(sensor, "unitblockconfig")
     pattern_colors = sensor_get(sensor, "patterncolors")
 
-    assert np.isclose(sensor_get(sensor, "height"), rows * pixel_size[0])
-    assert np.isclose(sensor_get(sensor, "width", "mm"), cols * pixel_size[1] * 1e3)
+    assert sensor_get(sensor, "rows") == rows
+    assert sensor_get(sensor, "cols") == cols
+    assert sensor_get(sensor, "size") == (rows, cols)
+    assert np.isclose(sensor_get(sensor, "arrayheight"), rows * pixel_size[0])
+    assert np.isclose(sensor_get(sensor, "arraywidth", "mm"), cols * pixel_size[1] * 1e3)
     assert np.allclose(sensor_get(sensor, "dimension", "um"), np.array([rows * pixel_size[0], cols * pixel_size[1]]) * 1e6)
+    assert np.isclose(sensor_get(sensor, "wspatialresolution", "um"), pixel_size[1] * 1e6)
+    assert np.isclose(sensor_get(sensor, "hspatialresolution"), pixel_size[0])
     assert np.isclose(sensor_get(sensor, "deltax", "um"), pixel_size[1] * 1e6)
     assert np.isclose(sensor_get(sensor, "deltay"), pixel_size[0])
     assert support["x"].shape == (cols,)

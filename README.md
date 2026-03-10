@@ -566,7 +566,13 @@ no-space aliases `fillfactor`, `pixelsize`, `pixelwidth`,
 `readstandarddeviationelectrons`, `widthandheight`,
 `widthheight`, `sizeconstantfillfactor`,
 `sizekeepfillfactor`, `sizesamefillfactor`, and
-`pddimension`.
+`pddimension`. The neighboring direct sensor geometry/data runtime
+coverage now also exercises `rows`, `cols`, `size`, `dimension`,
+`arraywidth`, `arrayheight`, `wspatialresolution`,
+`hspatialresolution`, `deltax`, and `deltay`; parser coverage for this
+block remains on the unambiguous prefixed forms like `sensor rows`
+because the bare names intentionally stay object-generic in
+`ie_parameter_otype(...)`.
 The adjacent noise-control storage surface now also includes
 `sensorGet/Set('reuse noise')`, `sensorGet/Set('noise seed')`, and
 `sensorGet/Set('response type')`, with stored noise seeds now feeding
