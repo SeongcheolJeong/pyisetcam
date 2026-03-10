@@ -466,6 +466,10 @@ The neighboring metadata block now also has focused parser/runtime coverage for
 `metadata optics name`, `metadata sensor name`, and `metadata crop`.
 That same runtime coverage now also exercises the exact legacy aliases
 `scene_name` and `metadata lensname`.
+The adjacent chart/metadata coverage now also exercises the exact no-space MCC
+and metadata aliases `mcccornerpoints`, `mccrecthandles`,
+`metadatascenename`, `metadataopticsname`, `metadatasensorname`, and
+`metadatacrop`.
 The neighboring pixel material alias surface now also supports direct
 sensor-level `refractive index` and `n` access without requiring the
 explicit `pixel` prefix.

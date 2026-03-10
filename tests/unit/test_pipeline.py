@@ -2331,10 +2331,10 @@ def test_sensor_get_set_supports_chart_and_metadata_surface(asset_store) -> None
     sensor = sensor_set(sensor, "chartrectangles", rects)
     sensor = sensor_set(sensor, "chartcurrentrect", current_rect)
     sensor = sensor_set(sensor, "mccrecthandles", rect_handles)
-    sensor = sensor_set(sensor, "metadata sensor name", "sensor-a")
-    sensor = sensor_set(sensor, "metadata scene name", "scene-a")
-    sensor = sensor_set(sensor, "metadata optics name", "optics-a")
-    sensor = sensor_set(sensor, "metadata crop", np.array([1, 2, 3, 4], dtype=int))
+    sensor = sensor_set(sensor, "metadatasensorname", "sensor-a")
+    sensor = sensor_set(sensor, "metadatascenename", "scene-a")
+    sensor = sensor_set(sensor, "metadataopticsname", "optics-a")
+    sensor = sensor_set(sensor, "metadatacrop", np.array([1, 2, 3, 4], dtype=int))
 
     chart = sensor_get(sensor, "chartparameters")
 
@@ -2345,19 +2345,19 @@ def test_sensor_get_set_supports_chart_and_metadata_surface(asset_store) -> None
     assert np.array_equal(chart["currentRect"], current_rect)
     assert np.array_equal(sensor_get(sensor, "chart corners"), corner_points)
     assert np.array_equal(sensor_get(sensor, "chart corner points"), corner_points)
-    assert np.array_equal(sensor_get(sensor, "mcc corner points"), corner_points)
+    assert np.array_equal(sensor_get(sensor, "mcccornerpoints"), corner_points)
     assert np.array_equal(sensor_get(sensor, "chart rectangles"), rects)
     assert np.array_equal(sensor_get(sensor, "current rect"), current_rect)
     assert sensor_get(sensor, "mccrecthandles") == rect_handles
-    assert sensor_get(sensor, "metadata sensor name") == "sensor-a"
-    assert sensor_get(sensor, "metadata scene name") == "scene-a"
-    assert sensor_get(sensor, "metadata optics name") == "optics-a"
-    assert np.array_equal(sensor_get(sensor, "metadata crop"), np.array([1, 2, 3, 4], dtype=int))
+    assert sensor_get(sensor, "metadatasensorname") == "sensor-a"
+    assert sensor_get(sensor, "metadatascenename") == "scene-a"
+    assert sensor_get(sensor, "metadataopticsname") == "optics-a"
+    assert np.array_equal(sensor_get(sensor, "metadatacrop"), np.array([1, 2, 3, 4], dtype=int))
 
-    sensor = sensor_set(sensor, "mcc corner points", corner_points + 1.0)
+    sensor = sensor_set(sensor, "mcccornerpoints", corner_points + 1.0)
 
     assert np.array_equal(sensor_get(sensor, "chart corner points"), corner_points + 1.0)
-    assert np.array_equal(sensor_get(sensor, "mcc corner points"), corner_points + 1.0)
+    assert np.array_equal(sensor_get(sensor, "mcccornerpoints"), corner_points + 1.0)
 
 
 def test_sensor_get_set_supports_diffusion_mtf_storage(asset_store) -> None:
