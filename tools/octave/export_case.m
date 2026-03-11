@@ -516,6 +516,17 @@ switch case_name
         payload.psf_center = psf(middleRow, floor(size(psf, 2) / 2) + 1);
         payload.airy_disk_radius = airyDisk(550, wvfGet(wvf, 'fnumber'), 'units', 'um');
 
+    case 'wvf_plot_image_psf_normalized_small'
+        wvf = wvfCreate('wave', 550);
+        wvf = wvfSet(wvf, 'spatial samples', 401);
+        wvf = wvfCompute(wvf);
+        uData = wvfPlot(wvf, 'image psf normalized', 'unit', 'um', 'wave', 550, 'plot range', 20, 'window', false);
+        psf = uData.z;
+        middleRow = floor(size(psf, 1) / 2) + 1;
+        payload.x = uData.x(:)';
+        payload.psf_mid_row = psf(middleRow, :);
+        payload.psf_center = psf(middleRow, floor(size(psf, 2) / 2) + 1);
+
     case 'wvf_plot_psf_small'
         wvf = wvfCreate('wave', 550);
         wvf = wvfSet(wvf, 'spatial samples', 401);
