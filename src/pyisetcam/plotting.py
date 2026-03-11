@@ -10,7 +10,7 @@ from .color import xyz_color_matching
 from .exceptions import UnsupportedOptionError
 from .ip import ip_get
 from .metrics import xyz_to_lab, xyz_to_luv
-from .optics import oi_get, wvf_get
+from .optics import airy_disk, oi_get, wvf_get
 from .scene import scene_get
 from .sensor import pixel_snr, sensor_get, sensor_snr
 from .types import ImageProcessor, OpticalImage, Scene, Sensor
@@ -55,6 +55,14 @@ def _plot_option(args: tuple[Any, ...], key: str, default: Any = None) -> Any:
         if param_format(args[index]) == normalized_key:
             return args[index + 1]
     return default
+
+
+def _airy_disk_circle(radius: float, *, sample_count: int = 200) -> dict[str, np.ndarray]:
+    theta = np.linspace(0.0, 2.0 * np.pi, int(sample_count), endpoint=False, dtype=float)
+    return {
+        "x": float(radius) * np.cos(theta),
+        "y": float(radius) * np.sin(theta),
+    }
 
 
 def _middle_samples_1d(values: np.ndarray, size: int) -> np.ndarray:
@@ -747,11 +755,23 @@ def oi_plot(
             udata = {"x": xy[:, :, 0].copy(), "y": xy[:, :, 1].copy(), **psf_data}
             udata["wave"] = float(this_wave)
             udata["units"] = units
-            udata["airyDisk"] = bool(_plot_option(tuple(remaining), "airydisk", True)) if remaining else True
+            airy_disk_flag = bool(_plot_option(tuple(remaining), "airydisk", True)) if remaining else True
+            udata["airyDisk"] = airy_disk_flag
+            if airy_disk_flag:
+                radius = float(airy_disk(this_wave, float(oi_get(oi, "fnumber")), "units", units))
+                udata["airyDiskRadius"] = radius
+                udata["airyDiskDiameter"] = radius * 2.0
+                udata["airyDiskCircle"] = _airy_disk_circle(radius)
             return udata, None
         udata = dict(oi_get(oi, "psf xaxis" if key == "psfxaxis" else "psf yaxis", this_wave, units))
         udata["wave"] = float(this_wave)
         udata["units"] = units
+        airy_disk_flag = bool(_plot_option(tuple(remaining), "airydisk", False))
+        udata["airyDisk"] = airy_disk_flag
+        if airy_disk_flag:
+            radius = float(airy_disk(this_wave, float(oi_get(oi, "fnumber")), "units", units))
+            udata["airyDiskRadius"] = radius
+            udata["airyDiskDiameter"] = radius * 2.0
         return udata, None
     if key in {"lswavelength", "lsfwavelength"}:
         middle_samps = int(args[0]) if args else 40
@@ -846,7 +866,7 @@ def wvf_plot(
     unit = str(_plot_option(args, "unit", "mm"))
     wave = float(_plot_option(args, "wave", _wvf_default_wave(wvf)))
     plot_range = float(_plot_option(args, "plotrange", _plot_option(args, "plot range", np.inf)))
-    airy_disk = bool(_plot_option(args, "airydisk", False))
+    show_airy_disk = bool(_plot_option(args, "airydisk", False))
 
     if key in {"psf", "psfnormalized", "imagepsf", "imagepsfnormalized"}:
         samp = np.asarray(wvf_get(wvf, "psf spatial samples", unit, wave), dtype=float)
@@ -854,14 +874,20 @@ def wvf_plot(
         if "normalized" in key:
             psf = psf / max(float(np.max(psf)), 1e-12)
         samp, psf = _wvf_crop_axis_and_plane(samp, psf, plot_range)
-        return {
+        udata = {
             "x": samp,
             "y": samp.copy(),
             "z": psf,
             "wave": float(wave),
             "unit": unit,
-            "airyDisk": airy_disk,
-        }, None
+            "airyDisk": show_airy_disk,
+        }
+        if show_airy_disk:
+            radius = float(airy_disk(wave, float(wvf_get(wvf, "fnumber")), "units", unit))
+            udata["airyDiskRadius"] = radius
+            udata["airyDiskDiameter"] = radius * 2.0
+            udata["airyDiskCircle"] = _airy_disk_circle(radius)
+        return udata, None
 
     if key in {"psfangle", "2dpsfangle", "2dpsfanglenormalized", "imagepsfangle"}:
         samp = np.asarray(wvf_get(wvf, "psf angular samples", unit, wave), dtype=float)
@@ -872,7 +898,13 @@ def wvf_plot(
         return {"x": samp, "y": samp.copy(), "z": psf, "wave": float(wave), "unit": unit}, None
 
     if key in {"psfxaxis", "psfyaxis"}:
-        return _wvf_line_payload(wvf, key, wave, unit, plot_range), None
+        udata = _wvf_line_payload(wvf, key, wave, unit, plot_range)
+        udata["airyDisk"] = show_airy_disk
+        if show_airy_disk:
+            radius = float(airy_disk(wave, float(wvf_get(wvf, "fnumber")), "units", unit))
+            udata["airyDiskRadius"] = radius
+            udata["airyDiskDiameter"] = radius * 2.0
+        return udata, None
 
     if key in {"1dpsf", "1dpsfspace", "1dpsfnormalized"}:
         samp = np.asarray(dict(wvf_get(wvf, "psf xaxis", unit, wave))["samp"], dtype=float)
@@ -880,7 +912,12 @@ def wvf_plot(
         if "normalized" in key:
             line = line / max(float(np.max(line)), 1e-12)
         samp, line = _wvf_crop_axis_and_plane(samp, line, plot_range)
-        return {"x": samp, "y": line, "wave": float(wave), "unit": unit}, None
+        udata = {"x": samp, "y": line, "wave": float(wave), "unit": unit, "airyDisk": show_airy_disk}
+        if show_airy_disk:
+            radius = float(airy_disk(wave, float(wvf_get(wvf, "fnumber")), "units", unit))
+            udata["airyDiskRadius"] = radius
+            udata["airyDiskDiameter"] = radius * 2.0
+        return udata, None
 
     if key in {"1dpsfangle", "1dpsfanglenormalized"}:
         samp = np.asarray(wvf_get(wvf, "psf angular samples", unit, wave), dtype=float)

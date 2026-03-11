@@ -2286,6 +2286,15 @@ def test_oi_si_custom_file_small_parity_case(asset_store) -> None:
     assert np.asarray(payload["input_psf_mid_row_550"]).ndim == 1
 
 
+def test_optics_airy_disk_small_parity_case(asset_store) -> None:
+    payload = run_python_case("optics_airy_disk_small", asset_store=asset_store)
+
+    assert float(payload["radius_um"]) > 0.0
+    assert float(payload["diameter_um"]) == pytest.approx(float(payload["radius_um"]) * 2.0)
+    assert int(payload["image_rows"]) > 0
+    assert int(payload["image_cols"]) > 0
+
+
 def test_si_synthetic_custom_loads_psf_mat_file(tmp_path, asset_store) -> None:
     psf = np.zeros((129, 129, 1), dtype=float)
     psf[64, 64, 0] = 1.0

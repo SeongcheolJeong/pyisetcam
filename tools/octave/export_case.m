@@ -159,6 +159,16 @@ switch case_name
         [u, v] = xyz2uv(xyz, 'uv');
         payload.uv = [u v];
 
+    case 'optics_airy_disk_small'
+        [radius_um, img] = airyDisk(550, 3, 'units', 'um');
+        payload.radius_um = radius_um;
+        payload.diameter_um = airyDisk(550, 3, 'units', 'um', 'diameter', true);
+        payload.radius_mm = airyDisk(550, 3, 'units', 'mm');
+        payload.radius_deg = airyDisk(700, [], 'units', 'deg', 'pupil diameter', 1e-3);
+        payload.radius_rad = airyDisk(700, [], 'units', 'rad', 'pupil diameter', 1e-3);
+        payload.image_rows = size(img.data, 1);
+        payload.image_cols = size(img.data, 2);
+
     case 'metrics_cct_from_uv_1d'
         uv = [0.20029948; 0.31055768];
         payload.uv = uv;

@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from pyisetcam import (
+    airyDisk,
     ipPlot,
     ip_create,
     ip_get,
@@ -29,6 +30,7 @@ from pyisetcam import (
     wvf_create,
     wvf_get,
     wvfPlot,
+    wvf_to_oi,
     xyz_to_lab,
     xyz_to_luv,
 )
@@ -221,6 +223,34 @@ def test_wvf_plot_psf_views() -> None:
     assert yaxis_udata["data"].shape == yaxis_udata["samp"].shape
     assert np.asarray(wvf_get(wvf, "psf")).ndim == 3
     assert np.asarray(wvf_get(wvf, "psf", 550.0)).ndim == 2
+
+
+def test_airy_disk_helper_and_overlay_payloads() -> None:
+    radius_um, image = airyDisk(550.0, 3.0, "units", "um", return_image=True)
+
+    assert radius_um == pytest.approx(1.22 * 3.0 * 550.0e-3)
+    assert image is not None
+    assert image["data"].ndim == 2
+    assert image["data"].shape[0] == image["data"].shape[1]
+    assert image["x"].ndim == 1
+    assert image["y"].ndim == 1
+
+    wvf = wvf_compute(wvf_create(wave=np.array([550.0], dtype=float)))
+    expected_radius = float(airyDisk(550.0, float(wvf_get(wvf, "fnumber")), "units", "um"))
+    psf_udata, _ = wvfPlot(wvf, "psf", "unit", "um", "wave", 550.0, "plot range", 10.0, "airy disk", True)
+    xaxis_udata, _ = wvfPlot(wvf, "psfxaxis", "unit", "um", "wave", 550.0, "plot range", 10.0, "airy disk", True)
+
+    assert psf_udata["airyDisk"] is True
+    assert psf_udata["airyDiskRadius"] == pytest.approx(expected_radius)
+    assert psf_udata["airyDiskDiameter"] == pytest.approx(expected_radius * 2.0)
+    assert psf_udata["airyDiskCircle"]["x"].shape == psf_udata["airyDiskCircle"]["y"].shape
+    assert xaxis_udata["airyDisk"] is True
+    assert xaxis_udata["airyDiskRadius"] == pytest.approx(expected_radius)
+
+    oi = wvf_to_oi(wvf)
+    oi_udata, _ = oiPlot(oi, "psf", None, 550.0, "um", "airy disk", True)
+    assert oi_udata["airyDisk"] is True
+    assert oi_udata["airyDiskRadius"] > 0.0
 
 
 def test_wvf_plot_pupil_and_wavefront_images() -> None:

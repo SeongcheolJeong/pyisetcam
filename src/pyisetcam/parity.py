@@ -21,6 +21,7 @@ from .optics import (
     _radiance_to_irradiance,
     _shift_invariant_custom_otf,
     _wvf_psf_stack,
+    airy_disk,
     oi_compute,
     oi_create,
     oi_get,
@@ -323,6 +324,24 @@ def run_python_case_with_context(
                 "case_name": case_name,
                 "xyz": xyz,
                 "uv": xyz_to_uv(xyz),
+            },
+            context={},
+        )
+
+    if case_name == "optics_airy_disk_small":
+        radius_um, image = airy_disk(550.0, 3.0, "units", "um", return_image=True)
+        assert image is not None
+        image_data = np.asarray(image["data"], dtype=float)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "radius_um": radius_um,
+                "diameter_um": airy_disk(550.0, 3.0, "units", "um", "diameter", True),
+                "radius_mm": airy_disk(550.0, 3.0, "units", "mm"),
+                "radius_deg": airy_disk(700.0, None, "units", "deg", "pupil diameter", 1e-3),
+                "radius_rad": airy_disk(700.0, None, "units", "rad", "pupil diameter", 1e-3),
+                "image_rows": int(image_data.shape[0]),
+                "image_cols": int(image_data.shape[1]),
             },
             context={},
         )

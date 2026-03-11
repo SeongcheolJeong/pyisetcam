@@ -98,6 +98,76 @@ def _scalar(value: Any, default: float) -> float:
     return float(array.reshape(-1)[0])
 
 
+def airy_disk(
+    this_wave: float,
+    f_number: float | None,
+    *args: Any,
+    return_image: bool = False,
+) -> float | tuple[float, dict[str, np.ndarray] | None]:
+    """Return the Airy disk radius or diameter in the requested units.
+
+    This follows the upstream MATLAB ``airyDisk(...)`` semantics:
+    wavelengths may be provided in nm or meters, spatial units default to
+    meters, angular units use the pupil-diameter formula, and the optional
+    image payload is produced from the diffraction-limited WVF PSF path.
+    """
+
+    units = "m"
+    diameter = False
+    pupil_diameter_m = 3e-3
+    if len(args) % 2 != 0:
+        raise ValueError("airy_disk optional arguments must be key/value pairs.")
+    for index in range(0, len(args), 2):
+        key = param_format(args[index])
+        value = args[index + 1]
+        if key == "units":
+            units = str(value)
+        elif key == "diameter":
+            diameter = bool(value)
+        elif key == "pupildiameter":
+            pupil_diameter_m = float(np.asarray(value, dtype=float).reshape(-1)[0])
+        else:
+            raise UnsupportedOptionError("airyDisk", str(args[index]))
+
+    normalized_unit = param_format(units)
+    wave_m = float(this_wave)
+    if wave_m > 200.0:
+        wave_m *= 1e-9
+
+    f_number_array = np.asarray(f_number if f_number is not None else [], dtype=float)
+    f_number_is_empty = f_number is None or f_number_array.size == 0
+    if f_number_is_empty and normalized_unit not in {"deg", "rad"}:
+        raise ValueError("Airy disk spatial units require a finite f-number.")
+
+    if normalized_unit in {"m", "meter", "meters", "mm", "millimeter", "millimeters", "um", "micron", "microns"}:
+        radius = 1.22 * float(f_number_array.reshape(-1)[0]) * wave_m
+        radius *= _spatial_unit_scale(normalized_unit)
+    elif normalized_unit == "deg":
+        radius = float(np.degrees(np.arcsin(1.22 * wave_m / max(pupil_diameter_m, 1e-12))))
+    elif normalized_unit == "rad":
+        radius = float(np.arcsin(1.22 * wave_m / max(pupil_diameter_m, 1e-12)))
+    else:
+        raise UnsupportedOptionError("airyDisk", f"units {units}")
+
+    if diameter:
+        radius *= 2.0
+
+    if not return_image:
+        return float(radius)
+
+    if f_number_is_empty:
+        return float(radius), None
+
+    wave_nm = wave_m * 1e9
+    wvf = wvf_create(wave=np.array([wave_nm], dtype=float))
+    focal_length_mm = float(wvf_get(wvf, "focal length", "mm"))
+    wvf = wvf_set(wvf, "calc pupil diameter", focal_length_mm / float(f_number_array.reshape(-1)[0]), "mm")
+    wvf = wvf_compute(wvf)
+    psf = np.asarray(wvf_get(wvf, "psf", wave_nm), dtype=float)
+    axis = np.asarray(wvf_get(wvf, "psf spatial samples", "um", wave_nm), dtype=float)
+    return float(radius), {"data": psf, "x": axis.copy(), "y": axis.copy()}
+
+
 def _normalize_shift_invariant_psf_data(value: Any) -> dict[str, Any]:
     current = dict(value)
     psf = np.asarray(current.get("psf"), dtype=float)
@@ -671,6 +741,13 @@ def _oi_psf_data(
             x_axis_m = _centered_support_axis(psf.shape[1], sample_spacing_m)
             y_axis_m = _centered_support_axis(psf.shape[0], sample_spacing_m)
             return {"psf": np.asarray(psf, dtype=float), "xy": _support_grid_from_axes(x_axis_m, y_axis_m, units)}
+
+        wavefront = optics.get("wavefront")
+        if isinstance(wavefront, dict) and wavefront:
+            psf = np.asarray(wvf_get(wavefront, "psf", this_wave), dtype=float)
+            x_axis_m = np.asarray(wvf_get(wavefront, "psf spatial samples", "m", this_wave), dtype=float).reshape(-1)
+            y_axis_m = x_axis_m.copy()
+            return {"psf": psf, "xy": _support_grid_from_axes(x_axis_m, y_axis_m, units)}
 
         otf_bundle = _synthesized_shift_invariant_otf_bundle(oi)
         if otf_bundle is None:
@@ -2337,6 +2414,12 @@ def wvf_set(wvf: dict[str, Any], parameter: str, value: Any, *args: Any) -> dict
             updated["f_number"] = (updated["focal_length_m"] * 1e3) / float(updated["calc_pupil_diameter_mm"])
         return updated
 
+    if key in {"fnumber", "f#"}:
+        updated["f_number"] = float(value)
+        focal_length_mm = float(updated.get("focal_length_m", DEFAULT_WVF_FOCAL_LENGTH_M)) * 1e3
+        updated["calc_pupil_diameter_mm"] = focal_length_mm / max(float(updated["f_number"]), 1e-12)
+        return updated
+
     if key in {"defocusdiopters", "calcobserverfocuscorrection"}:
         defocus_microns = np.asarray(
             wvf_defocus_diopters_to_microns(value, updated.get("measured_pupil_diameter_mm", DEFAULT_WVF_MEASURED_PUPIL_MM)),
@@ -2443,6 +2526,9 @@ def wvf_get(wvf: dict[str, Any], parameter: str, *args: Any) -> Any:
 
     if key in {"focallength"}:
         return float(wvf.get("focal_length_m", DEFAULT_WVF_FOCAL_LENGTH_M)) * _spatial_unit_scale(args[0] if args else "m")
+
+    if key in {"fnumber", "f#"}:
+        return float(wvf.get("f_number", 4.0))
 
     if key in {"defocusdiopters", "calcobserverfocuscorrection"}:
         defocus_microns = float(wvf_get(wvf, "zcoeffs", "defocus"))

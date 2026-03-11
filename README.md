@@ -185,6 +185,10 @@ pupil phase, wavefront-aberration, PSF-angle, and OTF views, backed by
 wavelength-aware `wvfGet(...)` support for `psf`, `pupil function`,
 `wavefront aberrations`, `psf spatial samples`, `psf angular samples`,
 `pupil spatial samples`, `1d psf`, and OTF support.
+That same optics helper surface now also includes `airy_disk` /
+`airyDisk` plus headless airy-disk overlay payloads for `wvfPlot(...)`
+and `oiPlot(...)`, with direct Octave parity on the scalar/image helper
+contract used by the upstream diffraction plotting workflows.
 That same script-driven WVF surface now also includes the spatial getter
 family used by `s_wvfSpatial.m`, including `calc nwave`, `psf sample spacing`,
 `ref psf sample interval`, `pupil sample spacing`, `pupil positions`,

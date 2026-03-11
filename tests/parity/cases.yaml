@@ -109,6 +109,12 @@
       "atol": 1e-08
     },
     {
+      "name": "optics_airy_disk_small",
+      "matlab_function": "airyDisk",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "metrics_cct_from_uv_1d",
       "matlab_function": "cct",
       "rtol": 1e-05,

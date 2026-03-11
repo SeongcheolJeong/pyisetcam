@@ -31,6 +31,7 @@ from .metrics import (
     xyz_to_uv,
 )
 from .optics import (
+    airy_disk,
     ie_field_height_to_index,
     optics_ray_trace,
     oi_calculate_illuminance,
@@ -150,6 +151,7 @@ from .utils import DEFAULT_WAVE, blackbody, ie_parameter_otype, param_format
 
 __all__ = [
     "AssetStore",
+    "airy_disk",
     "Camera",
     "DEFAULT_UPSTREAM_SHA",
     "DEFAULT_UPSTREAM_TARBALL_SHA256",
@@ -270,6 +272,7 @@ __all__ = [
     "param_format",
     "peak_signal_to_noise_ratio",
     "psf2zcoeff",
+    "airyDisk",
     "psf_to_zcoeff_error",
     "root_mean_squared_error",
     "scene_plot",
@@ -477,6 +480,7 @@ plotScene = scene_plot
 plotSensor = sensor_plot
 plotSensorFFT = sensor_plot_fft
 wvfPlot = wvf_plot
+airyDisk = airy_disk
 opticsRayTrace = optics_ray_trace
 ieFieldHeight2Index = ie_field_height_to_index
 rtAngleLUT = rt_angle_lut
