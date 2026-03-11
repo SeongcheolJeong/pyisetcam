@@ -3966,6 +3966,14 @@ def test_run_python_case_supports_wvf_plot_wavefront_aberrations_parity_case(ass
     assert np.isfinite(float(case.payload["wavefront_center"]))
 
 
+def test_run_python_case_supports_wvf_plot_2d_wavefront_aberrations_space_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("wvf_plot_2d_wavefront_aberrations_space_small", asset_store=asset_store)
+
+    assert case.payload["x"].ndim == 1
+    assert case.payload["wavefront_mid_row"].shape == case.payload["x"].shape
+    assert np.isfinite(float(case.payload["wavefront_center"]))
+
+
 def test_run_python_case_supports_wvf_plot_image_psf_parity_case(asset_store) -> None:
     case = run_python_case_with_context("wvf_plot_image_psf_small", asset_store=asset_store)
 

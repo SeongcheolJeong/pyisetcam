@@ -401,6 +401,12 @@
       "atol": 1e-08
     },
     {
+      "name": "wvf_plot_2d_wavefront_aberrations_space_small",
+      "matlab_function": "wvfPlot",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "wvf_plot_image_psf_small",
       "matlab_function": "wvfPlot",
       "rtol": 1e-05,
