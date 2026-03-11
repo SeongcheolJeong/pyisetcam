@@ -28,6 +28,7 @@
 - That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., 'image psf angle', ...)`, comparing the returned angular support axis and PSF center row.
 - That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., '1d psf', ...)`, comparing the returned cropped spatial support axis and raw PSF line slice.
 - That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., '1d psf normalized', ...)`, comparing the returned cropped spatial support axis and normalized PSF line slice.
+- That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., '1d psf angle', ...)`, comparing the returned cropped angular support axis and raw PSF line slice.
 - That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., '1d psf angle normalized', ...)`, comparing the returned cropped angular support axis and normalized PSF line slice.
 - That same optics helper surface now also includes `airy_disk` / `airyDisk` plus headless airy-disk overlay payloads for `wvfPlot(...)` and `oiPlot(...)`, with direct Octave parity on the scalar/image helper contract used by the upstream diffraction plotting workflows.
 - That same script-driven WVF surface now also includes the spatial getter family used by `s_wvfSpatial.m`, including `calc nwave`, `psf sample spacing`, `ref psf sample interval`, `pupil sample spacing`, `pupil positions`, `pupil function amplitude`, and `pupil function phase`.

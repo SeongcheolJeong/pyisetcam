@@ -217,6 +217,9 @@ That same script-driven WVF plotting surface now also has direct Octave
 parity on `wvfPlot(..., '1d psf normalized', ...)`, including the
 returned cropped spatial support axis and normalized line slice.
 That same script-driven WVF plotting surface now also has direct Octave
+parity on `wvfPlot(..., '1d psf angle', ...)`, including the returned
+cropped angular support axis and raw line slice.
+That same script-driven WVF plotting surface now also has direct Octave
 parity on `wvfPlot(..., '1d psf angle normalized', ...)`, including the
 returned cropped angular support axis and normalized line slice.
 That same optics helper surface now also includes `airy_disk` /
