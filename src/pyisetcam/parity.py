@@ -828,6 +828,21 @@ def run_python_case_with_context(
             context={"wvf": wvf},
         )
 
+    if case_name == "wvf_plot_1d_psf_normalized_small":
+        wvf = wvf_create(wave=np.array([550.0], dtype=float))
+        wvf = wvf_set(wvf, "spatial samples", 401)
+        wvf = wvf_compute(wvf)
+        udata, _ = wvf_plot(wvf, "1d psf normalized", "unit", "um", "wave", 550.0, "plot range", 10.0, "window", False)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "x": np.asarray(udata["x"], dtype=float),
+                "y": np.asarray(udata["y"], dtype=float),
+                "peak": float(np.max(np.asarray(udata["y"], dtype=float))),
+            },
+            context={"wvf": wvf},
+        )
+
     if case_name == "wvf_plot_psf_xaxis_airy_small":
         wvf = wvf_create(wave=np.array([550.0], dtype=float))
         wvf = wvf_set(wvf, "spatial samples", 401)

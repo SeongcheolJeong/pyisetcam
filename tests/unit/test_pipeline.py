@@ -3912,6 +3912,14 @@ def test_run_python_case_supports_wvf_plot_image_psf_angle_parity_case(asset_sto
     assert float(case.payload["psf_center"]) > 0.0
 
 
+def test_run_python_case_supports_wvf_plot_1d_psf_normalized_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("wvf_plot_1d_psf_normalized_small", asset_store=asset_store)
+
+    assert case.payload["x"].ndim == 1
+    assert case.payload["y"].shape == case.payload["x"].shape
+    assert np.isclose(float(case.payload["peak"]), 1.0)
+
+
 def test_run_python_case_supports_wvf_plot_psf_xaxis_airy_parity_case(asset_store) -> None:
     case = run_python_case_with_context("wvf_plot_psf_xaxis_airy_small", asset_store=asset_store)
 
