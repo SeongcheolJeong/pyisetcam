@@ -57,6 +57,89 @@ def _plot_option(args: tuple[Any, ...], key: str, default: Any = None) -> Any:
     return default
 
 
+def _middle_samples_1d(values: np.ndarray, size: int) -> np.ndarray:
+    vector = np.asarray(values)
+    if vector.ndim != 1:
+        raise ValueError("Expected a 1-D vector for middle-sample extraction.")
+    half = int(np.rint(float(size) / 2.0))
+    center = int(np.rint(vector.size / 2.0))
+    start = max(0, center - half - 1)
+    stop = min(vector.size, center + half)
+    return np.asarray(vector[start:stop], dtype=vector.dtype)
+
+
+def _oi_otf_wavelength_payload(
+    oi: OpticalImage,
+    *,
+    units: str = "um",
+    n_samp: int = 100,
+) -> dict[str, Any]:
+    optics = dict(oi.fields.get("optics", {}))
+    model = param_format(optics.get("model", ""))
+    wave = np.asarray(oi_get(oi, "wave"), dtype=float).reshape(-1)
+    if wave.size == 0:
+        raise ValueError("Optical image has no wavelength support.")
+
+    if model == "diffractionlimited":
+        f_number = float(optics.get("f_number", 4.0))
+        wave_um = wave * 1e-3
+        in_cutoff = 1.0 / np.maximum(wave_um * max(f_number, 1e-12), 1e-12)
+        peak_f = 3.0 * float(np.max(in_cutoff))
+        f_samp = np.arange(-int(n_samp), int(n_samp), dtype=float) / float(max(int(n_samp), 1))
+        fx = f_samp * peak_f
+        otf_wave = np.empty((fx.size, wave.size), dtype=float)
+        for wave_index, wavelength_um in enumerate(wave_um):
+            cutoff = 1.0 / max(float(wavelength_um) * max(f_number, 1e-12), 1e-12)
+            normalized = np.abs(fx) / max(cutoff, 1e-12)
+            clipped = np.clip(normalized, 0.0, 1.0)
+            line = (2.0 / np.pi) * (np.arccos(clipped) - clipped * np.sqrt(1.0 - clipped**2))
+            line[normalized >= 1.0] = 0.0
+            otf_wave[:, wave_index] = np.asarray(line, dtype=float)
+        return {"fSupport": fx, "wavelength": wave.copy(), "otf": otf_wave}
+
+    if model == "shiftinvariant":
+        otf_struct = oi_get(oi, "optics otfstruct")
+        if otf_struct is None:
+            raise ValueError("Shift-invariant OTF data are missing or inconsistent.")
+        otf = np.asarray(otf_struct["OTF"], dtype=complex)
+        fx_mm = np.asarray(otf_struct["fx"], dtype=float).reshape(-1)
+        if otf.ndim != 3 or fx_mm.size != otf.shape[1]:
+            raise ValueError("Shift-invariant OTF data are missing or inconsistent.")
+        scale = 1e-3 if param_format(units) == "um" else 1.0
+        fx = fx_mm * scale
+        otf_wave = np.empty((fx.size, wave.size), dtype=float)
+        for wave_index in range(wave.size):
+            otf_wave[:, wave_index] = np.abs(np.fft.fftshift(otf[0, :, wave_index]))
+        return {"fSupport": fx, "wavelength": wave.copy(), "otf": otf_wave}
+
+    raise UnsupportedOptionError("oiPlot", "otf wavelength")
+
+
+def _oi_lswavelength_payload(
+    oi: OpticalImage,
+    *,
+    units: str = "um",
+    middle_samps: int = 40,
+    n_samp: int = 100,
+) -> dict[str, Any]:
+    otf_payload = _oi_otf_wavelength_payload(oi, units=units, n_samp=n_samp)
+    fx = np.asarray(otf_payload["fSupport"], dtype=float).reshape(-1)
+    wave = np.asarray(otf_payload["wavelength"], dtype=float).reshape(-1)
+    otf_wave = np.asarray(otf_payload["otf"], dtype=float)
+    peak_f = float(np.max(np.abs(fx))) if fx.size > 0 else 0.0
+    delta_space = 1.0 / max(2.0 * peak_f, 1e-12) if peak_f > 0.0 else 0.0
+
+    ls_wave = np.empty((_middle_samples_1d(np.arange(2 * int(n_samp), dtype=float), middle_samps).size, wave.size), dtype=float)
+    for wave_index in range(wave.size):
+        tmp = np.asarray(otf_wave[:, wave_index], dtype=complex)
+        lsf = np.fft.fftshift(np.fft.ifft(tmp))
+        ls_wave[:, wave_index] = np.abs(_middle_samples_1d(np.asarray(lsf).reshape(-1), middle_samps))
+
+    x = np.arange(-int(n_samp), int(n_samp), dtype=float) * float(delta_space)
+    x = np.asarray(_middle_samples_1d(x, middle_samps), dtype=float)
+    return {"x": x, "wavelength": wave.copy(), "lsWave": ls_wave.T}
+
+
 def _sensor_plot_line_data(sensor: Sensor, line_key: str, xy: Any) -> dict[str, Any]:
     key = param_format(line_key)
     orientation = "h" if "hline" in key else "v"
@@ -669,6 +752,13 @@ def oi_plot(
         udata = dict(oi_get(oi, "psf xaxis" if key == "psfxaxis" else "psf yaxis", this_wave, units))
         udata["wave"] = float(this_wave)
         udata["units"] = units
+        return udata, None
+    if key in {"lswavelength", "lsfwavelength"}:
+        middle_samps = int(args[0]) if args else 40
+        udata = _oi_lswavelength_payload(oi, units="um", middle_samps=middle_samps, n_samp=100)
+        return udata, None
+    if key in {"otfwavelength", "mtfwavelength"}:
+        udata = _oi_otf_wavelength_payload(oi, units="um", n_samp=100)
         return udata, None
     if key == "irradiancephotonsroi":
         roi = _roi_required("oiPlot", p_type, roi_locs)

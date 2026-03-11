@@ -144,6 +144,13 @@ The same script-driven optics surface now also includes headless
 `oiPlot(..., 'psf'/'psf550'/'psfxaxis'/'psfyaxis')` support, backed by
 computed `oiGet(..., 'psf data'/'psf xaxis'/'psf yaxis')` access for
 diffraction-limited, custom-PSF, and computed WVF shift-invariant optics.
+The adjacent diffraction-limited optics plotting surface now also includes
+headless `oiPlot(..., 'ls wavelength'/'lswavelength'/'otf wavelength'/'mtf wavelength')`
+support for the script-driven line-spread and OTF-by-wavelength workflows
+used in the upstream diffraction PSF tutorials.
+That same diffraction plotting surface now also includes direct
+`oiPlot(..., 'psf', [], 550)` parity coverage for the upstream
+`s_opticsDLPsf.m` workflow.
 The adjacent wavefront plotting surface now also includes headless
 `wvfPlot(...)` support for script-driven PSF, 1D PSF, pupil amplitude,
 pupil phase, wavefront-aberration, PSF-angle, and OTF views, backed by

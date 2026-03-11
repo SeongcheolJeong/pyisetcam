@@ -610,8 +610,12 @@ def _diffraction_limited_plot_otf(
     wavelength_m = float(wavelength_nm) * 1e-9
     f_number = float(optics.get("f_number", 4.0))
     cutoff_frequency = 1.0 / max(wavelength_m * max(f_number, 1e-12), 1e-12)
-    fx = unit_frequency_list(cols) * cutoff_frequency
-    fy = unit_frequency_list(rows) * cutoff_frequency
+    # Match MATLAB opticsGet(optics, 'dl fsupport matrix', wave, units, nSamp):
+    # fSamp = (-nSamp:(nSamp-1)) / nSamp, then the PSF plotting path expands
+    # the support by a factor of 4 before calling dlMTF().
+    f_samp = np.arange(-int(n_samp), int(n_samp), dtype=float) / max(float(n_samp), 1.0)
+    fx = f_samp * cutoff_frequency * 4.0
+    fy = f_samp * cutoff_frequency * 4.0
     rho = np.sqrt(fy[:, None] ** 2 + fx[None, :] ** 2)
     normalized = rho / max(cutoff_frequency, 1e-12)
     clipped = np.clip(normalized, 0.0, 1.0)
@@ -634,8 +638,11 @@ def _oi_psf_data(
     if model == "diffractionlimited":
         otf, fx, fy = _diffraction_limited_plot_otf(oi, this_wave, n_samp=n_samp)
         psf = np.abs(np.fft.fftshift(np.fft.ifft2(otf)))
-        x_axis_m = _spatial_axis_from_frequency_support(fx, support_unit_to_m=1.0)
-        y_axis_m = _spatial_axis_from_frequency_support(fy, support_unit_to_m=1.0)
+        peak_frequency = float(np.max(fx)) if fx.size > 0 else 0.0
+        delta_space_m = 1.0 / max(2.0 * peak_frequency, 1e-12) if peak_frequency > 0.0 else 0.0
+        samples = np.arange(-int(n_samp), int(n_samp), dtype=float)
+        x_axis_m = samples * delta_space_m
+        y_axis_m = samples * delta_space_m
         return {"psf": psf, "xy": _support_grid_from_axes(x_axis_m, y_axis_m, units)}
 
     if model == "shiftinvariant":

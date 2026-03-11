@@ -31,6 +31,7 @@ from .optics import (
     oi_set,
     si_synthetic,
 )
+from .plotting import oi_plot
 from .scene import scene_adjust_illuminant, scene_create, scene_get, scene_set
 from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_set
 from .utils import blackbody, energy_to_quanta, param_format, quanta_to_energy, unit_frequency_list
@@ -440,6 +441,23 @@ def run_python_case_with_context(
             context={"scene": scene, "oi": oi},
         )
 
+    if case_name == "oi_psf550_diffraction_small":
+        oi = oi_create("diffraction limited")
+        optics = dict(oi.fields["optics"])
+        optics["focal_length_m"] = 0.017
+        optics["f_number"] = 17.0 / 3.0
+        oi.fields["optics"] = optics
+        udata, _ = oi_plot(oi, "psf", None, 550.0)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "x": np.asarray(udata["x"], dtype=float),
+                "y": np.asarray(udata["y"], dtype=float),
+                "psf": np.asarray(udata["psf"], dtype=float),
+            },
+            context={"oi": oi},
+        )
+
     if case_name == "oi_si_lorentzian_small":
         scene = scene_create("grid lines", [64, 64], 16, "ee", 2, asset_store=store)
         scene = scene_set(scene, "fov", 2.0)
@@ -562,6 +580,23 @@ def run_python_case_with_context(
                 "f_number": oi_get(oi, "fnumber"),
             },
             context={"scene": scene, "wvf": wvf, "oi": oi},
+        )
+
+    if case_name == "oi_lswavelength_diffraction_small":
+        oi = oi_create("diffraction limited")
+        optics = dict(oi.fields["optics"])
+        optics["focal_length_m"] = 0.017
+        optics["f_number"] = 17.0 / 3.0
+        oi.fields["optics"] = optics
+        udata, _ = oi_plot(oi, "ls wavelength")
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "x": np.asarray(udata["x"], dtype=float),
+                "wavelength": np.asarray(udata["wavelength"], dtype=float),
+                "lsWave": np.asarray(udata["lsWave"], dtype=float),
+            },
+            context={"oi": oi},
         )
 
     if case_name == "oi_diffraction_limited_default":

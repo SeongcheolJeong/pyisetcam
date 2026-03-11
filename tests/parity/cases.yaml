@@ -157,6 +157,12 @@
       "atol": 1e-06
     },
     {
+      "name": "oi_psf550_diffraction_small",
+      "matlab_function": "oiPlot (psf 550)",
+      "rtol": 1e-04,
+      "atol": 1e-06
+    },
+    {
       "name": "oi_si_lorentzian_small",
       "matlab_function": "siSynthetic/oiSet/oiCompute",
       "rtol": 1e-04,
@@ -215,6 +221,12 @@
           "max_mean_rel": 5e-05
         }
       }
+    },
+    {
+      "name": "oi_lswavelength_diffraction_small",
+      "matlab_function": "oiPlot (ls wavelength)",
+      "rtol": 1e-04,
+      "atol": 1e-06
     },
     {
       "name": "oi_diffraction_limited_default",

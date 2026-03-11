@@ -165,6 +165,37 @@ def test_oi_plot_psf_for_computed_wvf_oi(asset_store) -> None:
     assert np.max(udata["psf"]) > 0.0
 
 
+def test_oi_plot_lswavelength_and_otfwavelength_for_diffraction_limited_oi(asset_store) -> None:
+    oi = oi_create("diffraction limited", asset_store=asset_store)
+
+    ls_udata, ls_handle = oiPlot(oi, "ls wavelength")
+    otf_udata, otf_handle = oiPlot(oi, "otf wavelength")
+
+    assert ls_handle is None
+    assert otf_handle is None
+    assert ls_udata["x"].ndim == 1
+    assert ls_udata["wavelength"].ndim == 1
+    assert ls_udata["lsWave"].shape == (ls_udata["wavelength"].size, ls_udata["x"].size)
+    assert np.all(ls_udata["lsWave"] >= 0.0)
+    assert otf_udata["fSupport"].ndim == 1
+    assert otf_udata["wavelength"].ndim == 1
+    assert otf_udata["otf"].shape == (otf_udata["fSupport"].size, otf_udata["wavelength"].size)
+    assert np.all(otf_udata["otf"] >= 0.0)
+
+
+def test_oi_plot_otfwavelength_for_shift_invariant_oi(asset_store) -> None:
+    scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
+    oi = oi_compute(oi_create("shift invariant", asset_store=asset_store), scene, crop=True)
+
+    udata, handle = oiPlot(oi, "mtf wavelength")
+
+    assert handle is None
+    assert udata["fSupport"].ndim == 1
+    assert udata["wavelength"].ndim == 1
+    assert udata["otf"].shape == (udata["fSupport"].size, udata["wavelength"].size)
+    assert np.all(udata["otf"] >= 0.0)
+
+
 def test_wvf_plot_psf_views() -> None:
     wvf = wvf_compute(wvf_create(wave=np.array([550.0], dtype=float)))
 
