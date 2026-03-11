@@ -188,6 +188,9 @@ wavelength-aware `wvfGet(...)` support for `psf`, `pupil function`,
 That same WVF plotting surface now also has direct Octave parity on the
 `wvfPlot(..., '2d otf', ...)` workflow from `s_wvfPlot.m`, including the
 returned OTF support axis and center-row magnitude data.
+The same script-driven WVF plotting surface now also has direct Octave
+parity on `wvfPlot(..., 'image pupil amp', ...)`, including the returned
+spatial support axis and pupil-amplitude center row.
 That same optics helper surface now also includes `airy_disk` /
 `airyDisk` plus headless airy-disk overlay payloads for `wvfPlot(...)`
 and `oiPlot(...)`, with direct Octave parity on the scalar/image helper

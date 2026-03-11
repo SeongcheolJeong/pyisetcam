@@ -3872,6 +3872,14 @@ def test_run_python_case_supports_wvf_plot_otf_parity_case(asset_store) -> None:
     assert float(case.payload["otf_center"]) > 0.0
 
 
+def test_run_python_case_supports_wvf_plot_pupil_amp_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("wvf_plot_pupil_amp_small", asset_store=asset_store)
+
+    assert case.payload["x"].ndim == 1
+    assert case.payload["amp_mid_row"].shape == case.payload["x"].shape
+    assert float(case.payload["amp_center"]) > 0.0
+
+
 def test_wvf_wave_getter_supports_unit_and_index() -> None:
     wvf = wvf_create(wave=np.array([450.0, 550.0, 650.0], dtype=float))
 
