@@ -374,6 +374,23 @@ switch case_name
         payload.pupil_amp_row = pupilAmp(middleRow, :);
         payload.pupil_phase_row = pupilPhase(middleRow, :);
 
+    case 'wvf_compute_psf_small'
+        wvf = wvfCreate('wave', 550);
+        wvf = wvfSet(wvf, 'spatial samples', 101);
+        wvf = wvfPupilFunction(wvf);
+        wvf = wvfComputePSF(wvf, 'compute pupil func', false);
+        thisWave = wvfGet(wvf, 'wave');
+        psf = wvfGet(wvf, 'psf', thisWave);
+        pupilAmp = wvfGet(wvf, 'pupil function amplitude', thisWave);
+        pupilPhase = wvfGet(wvf, 'pupil function phase', thisWave);
+        middleRow = floor(size(psf, 1) / 2) + 1;
+        payload.wave = wvfGet(wvf, 'wave');
+        payload.npixels = wvfGet(wvf, 'npixels');
+        payload.psf_sum = sum(psf(:));
+        payload.psf_mid_row = psf(middleRow, :);
+        payload.pupil_amp_row = pupilAmp(middleRow, :);
+        payload.pupil_phase_row = pupilPhase(middleRow, :);
+
     case 'oi_lswavelength_diffraction_small'
         oi = oiCreate('diffraction limited');
         optics = oiGet(oi, 'optics');

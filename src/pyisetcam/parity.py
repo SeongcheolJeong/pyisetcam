@@ -23,8 +23,10 @@ from .optics import (
     oi_create,
     oi_get,
     wvf_compute,
+    wvf_compute_psf,
     wvf_create,
     wvf_get,
+    wvf_pupil_function,
     wvf_set,
     wvf_to_oi,
     optics_psf_to_otf,
@@ -632,6 +634,29 @@ def run_python_case_with_context(
                 "psf_xaxis_um": np.asarray(psf_xaxis["samp"], dtype=float),
                 "psf_xaxis_data": np.asarray(psf_xaxis["data"], dtype=float),
                 "pupil_amp_row": pupil_amplitude[middle_row, :],
+                "pupil_phase_row": pupil_phase[middle_row, :],
+            },
+            context={"wvf": wvf},
+        )
+
+    if case_name == "wvf_compute_psf_small":
+        wvf = wvf_create(wave=np.array([550.0], dtype=float))
+        wvf = wvf_set(wvf, "spatial samples", 101)
+        wvf = wvf_pupil_function(wvf)
+        wvf = wvf_compute_psf(wvf, "compute pupil func", False)
+        wave = float(np.asarray(wvf_get(wvf, "wave"), dtype=float).reshape(-1)[0])
+        psf = np.asarray(wvf_get(wvf, "psf", wave), dtype=float)
+        pupil_amp = np.asarray(wvf_get(wvf, "pupil function amplitude", wave), dtype=float)
+        pupil_phase = np.asarray(wvf_get(wvf, "pupil function phase", wave), dtype=float)
+        middle_row = psf.shape[0] // 2
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wvf_get(wvf, "wave"),
+                "npixels": wvf_get(wvf, "npixels"),
+                "psf_sum": float(np.sum(psf)),
+                "psf_mid_row": psf[middle_row, :],
+                "pupil_amp_row": pupil_amp[middle_row, :],
                 "pupil_phase_row": pupil_phase[middle_row, :],
             },
             context={"wvf": wvf},

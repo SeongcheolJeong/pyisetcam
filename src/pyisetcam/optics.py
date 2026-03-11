@@ -1847,6 +1847,120 @@ def _wvf_parse_wave_and_unit_args(
     return wavelength_nm, unit
 
 
+def _parse_key_value_options(args: tuple[Any, ...], context: str) -> dict[str, Any]:
+    if len(args) % 2 != 0:
+        raise ValueError(f"{context} expects key/value arguments.")
+    options: dict[str, Any] = {}
+    for index in range(0, len(args), 2):
+        key = args[index]
+        if not isinstance(key, str):
+            raise ValueError(f"{context} expects string keys in key/value arguments.")
+        options[param_format(key)] = args[index + 1]
+    return options
+
+
+def _wvf_base_amplitude_mask(n_pixels: int, aperture: np.ndarray | None = None) -> np.ndarray:
+    if aperture is not None:
+        current = np.asarray(aperture, dtype=float)
+        if current.shape != (n_pixels, n_pixels):
+            current = _resize_image(current, (n_pixels, n_pixels), method="linear")
+        return np.asarray(current, dtype=float)
+
+    sample_positions = (np.arange(n_pixels, dtype=float) + 1.0) - (np.floor(n_pixels / 2.0) + 1.0)
+    xpos, ypos = np.meshgrid(sample_positions, sample_positions)
+    radius = np.sqrt(xpos**2 + ypos**2) / max((n_pixels - 1) / 2.0, 1e-12)
+    return (radius <= 1.0).astype(float)
+
+
+def _wvf_compute_pupil_function_explicit(
+    wvf: dict[str, Any],
+    *,
+    aperture: np.ndarray | None = None,
+) -> dict[str, Any]:
+    updated = dict(wvf)
+    wave = np.asarray(updated.get("wave", DEFAULT_WAVE), dtype=float).reshape(-1)
+    spatial_samples = int(updated.get("spatial_samples", DEFAULT_WVF_SPATIAL_SAMPLES))
+    n_pixels = max(spatial_samples, 3)
+    zcoeffs = np.asarray(updated.get("zcoeffs", np.array([0.0], dtype=float)), dtype=float).reshape(-1)
+    pupil_diameter_mm = float(updated.get("calc_pupil_diameter_mm", DEFAULT_WVF_CALC_PUPIL_DIAMETER_MM))
+    base_amplitude = _wvf_base_amplitude_mask(n_pixels, aperture=aperture)
+    pupil_function = np.zeros((n_pixels, n_pixels, wave.size), dtype=np.complex128)
+    wavefront_stack = np.zeros((n_pixels, n_pixels, wave.size), dtype=float)
+    areapix = np.zeros(wave.size, dtype=float)
+    areapixapod = np.zeros(wave.size, dtype=float)
+
+    for band_index, wavelength_nm in enumerate(wave):
+        wave_um = float(wavelength_nm) * 1e-3
+        pupil_plane_size_mm = _wvf_pupil_plane_size_m(updated, float(wavelength_nm)) * 1e3
+        pupil_pos = ((np.arange(n_pixels, dtype=float) + 1.0) - (np.floor(n_pixels / 2.0) + 1.0))
+        pupil_pos = pupil_pos * (pupil_plane_size_mm / max(n_pixels, 1))
+        xpos, ypos = np.meshgrid(pupil_pos, pupil_pos)
+        ypos = -ypos
+        norm_radius = np.sqrt(xpos**2 + ypos**2) / max(pupil_diameter_mm / 2.0, 1e-12)
+        theta = np.arctan2(ypos, xpos)
+        norm_radius_index = norm_radius <= 1.0
+
+        bounding_box = _image_bounding_box(norm_radius_index)
+        target_shape = (
+            max(int(round(bounding_box[3])), 1),
+            max(int(round(bounding_box[2])), 1),
+        )
+        amplitude_band = _resize_image(base_amplitude, target_shape, method="linear")
+        pad = int(round((n_pixels - bounding_box[2]) / 2.0))
+        if pad > 0:
+            amplitude_band = np.pad(amplitude_band, ((pad, pad), (pad, pad)), mode="constant")
+        amplitude_band = _resize_image(amplitude_band, (n_pixels, n_pixels), method="linear")
+        amplitude_band = np.clip(amplitude_band, 0.0, 1.0)
+
+        wavefront_aberrations_um = _zernike_surface_osa(zcoeffs, norm_radius, theta)
+        pupil_phase = np.exp(-1j * 2.0 * np.pi * wavefront_aberrations_um / max(wave_um, 1e-12))
+        pupil_phase[norm_radius > 0.5] = 1.0
+        pupil = amplitude_band * pupil_phase
+
+        wavefront_stack[:, :, band_index] = wavefront_aberrations_um
+        pupil_function[:, :, band_index] = pupil
+        areapix[band_index] = float(np.sum(np.abs(pupil_phase)))
+        areapixapod[band_index] = float(np.sum(np.abs(pupil)))
+
+    updated["computed"] = True
+    updated["aperture_function"] = np.asarray(aperture, dtype=float).copy() if aperture is not None else updated.get("aperture_function")
+    updated["pupil_function"] = pupil_function
+    updated["pupil_amplitude"] = np.abs(pupil_function)
+    updated["pupil_phase"] = np.angle(pupil_function)
+    updated["wavefront_aberrations_um"] = wavefront_stack
+    updated["pupil_support"] = ((np.arange(n_pixels, dtype=float) + 1.0) - (np.floor(n_pixels / 2.0) + 1.0))
+    updated["areapix"] = areapix
+    updated["areapixapod"] = areapixapod
+    return updated
+
+
+def _wvf_compute_psf_from_pupil_function(
+    wvf: dict[str, Any],
+    pupil_function: np.ndarray,
+) -> dict[str, Any]:
+    updated = dict(wvf)
+    pupil_stack = np.asarray(pupil_function, dtype=np.complex128)
+    if pupil_stack.ndim == 2:
+        pupil_stack = pupil_stack[:, :, None]
+    psf_stack = np.zeros_like(np.abs(pupil_stack), dtype=float)
+
+    for band_index in range(pupil_stack.shape[2]):
+        amp = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(pupil_stack[:, :, band_index])))
+        intensity = np.real(amp * np.conjugate(amp))
+        intensity_sum = float(np.sum(intensity))
+        if intensity_sum > 0.0:
+            intensity = intensity / intensity_sum
+        if bool(updated.get("flip_psf_upside_down", False)):
+            intensity = np.flipud(intensity)
+        if bool(updated.get("rotate_psf_90_degs", False)):
+            intensity = np.rot90(intensity)
+        psf_stack[:, :, band_index] = intensity
+
+    updated["computed"] = True
+    updated["psf"] = psf_stack
+    return updated
+
+
 def _wvf_wave_for_query(wvf: dict[str, Any], args: tuple[Any, ...], default_unit: str) -> tuple[str, float]:
     unit = default_unit
     wavelength_nm = _default_plot_wavelength(_wvf_wave_values(wvf))
@@ -1945,6 +2059,8 @@ def wvf_compute(
     if not compute_pupil_function and not compute_psf:
         updated["computed"] = False
         return updated
+    if aperture is None and updated.get("aperture_function") is not None:
+        aperture = np.asarray(updated.get("aperture_function"), dtype=float)
 
     wave = np.asarray(updated.get("wave", DEFAULT_WAVE), dtype=float).reshape(-1)
     lca_method = param_format(updated.get("lca_method", "none"))
@@ -2009,6 +2125,42 @@ def wvf_compute(
     updated["psf"] = psf_stack if compute_psf else None
     updated["pupil_support"] = sample_positions.copy()
     return updated
+
+
+def wvf_pupil_function(
+    wvf: dict[str, Any],
+    *args: Any,
+) -> dict[str, Any]:
+    options = _parse_key_value_options(args, "wvfPupilFunction")
+    aperture = options.pop("aperturefunction", None)
+    if options:
+        unsupported = next(iter(options))
+        raise KeyError(f"Unsupported wvfPupilFunction parameter: {unsupported}")
+
+    updated = dict(wvf)
+    if aperture is not None:
+        updated["aperture_function"] = np.asarray(aperture, dtype=float).copy()
+    return _wvf_compute_pupil_function_explicit(updated, aperture=aperture)
+
+
+def wvf_compute_psf(
+    wvf: dict[str, Any],
+    *args: Any,
+) -> dict[str, Any]:
+    options = _parse_key_value_options(args, "wvfComputePSF")
+    compute_pupil_func = bool(options.pop("computepupilfunc", False))
+    lca = bool(options.pop("lca", False))
+    if lca:
+        raise UnsupportedOptionError("wvfComputePSF", "lca=true")
+    if options:
+        unsupported = next(iter(options))
+        raise KeyError(f"Unsupported wvfComputePSF parameter: {unsupported}")
+
+    current = dict(wvf)
+    pupil_available = current.get("pupil_function") is not None
+    if compute_pupil_func or not pupil_available:
+        current = _wvf_compute_pupil_function_explicit(current)
+    return _wvf_compute_psf_from_pupil_function(current, current.get("pupil_function"))
 
 
 def wvf_set(wvf: dict[str, Any], parameter: str, value: Any, *args: Any) -> dict[str, Any]:
@@ -2091,6 +2243,18 @@ def wvf_set(wvf: dict[str, Any], parameter: str, value: Any, *args: Any) -> dict
         updated["sce_params"] = _normalize_sce_params(np.asarray(updated.get("wave", DEFAULT_WAVE), dtype=float), value)
         return updated
 
+    if key in {"aperturefunction", "aperturefunc"}:
+        updated["aperture_function"] = np.asarray(value, dtype=float).copy()
+        return updated
+
+    if key in {"flippsfupsidedown"}:
+        updated["flip_psf_upside_down"] = bool(value)
+        return updated
+
+    if key in {"rotatepsf90degs"}:
+        updated["rotate_psf_90_degs"] = bool(value)
+        return updated
+
     raise KeyError(f"Unsupported wvfSet parameter: {parameter}")
 
 
@@ -2167,6 +2331,18 @@ def wvf_get(wvf: dict[str, Any], parameter: str, *args: Any) -> Any:
 
     if key in {"sceparams", "stilescrawford"}:
         return dict(wvf.get("sce_params", {}))
+
+    if key in {"aperturefunction", "aperturefunc"}:
+        aperture = wvf.get("aperture_function")
+        if aperture is None:
+            raise KeyError("Wavefront aperture function has not been set.")
+        return np.asarray(aperture, dtype=float).copy()
+
+    if key in {"flippsfupsidedown"}:
+        return bool(wvf.get("flip_psf_upside_down", False))
+
+    if key in {"rotatepsf90degs"}:
+        return bool(wvf.get("rotate_psf_90_degs", False))
 
     if key in {"psfanglepersample", "psfangularsample", "angleperpixel", "angperpix"}:
         unit, wavelength_nm = _wvf_wave_for_query(wvf, args, "min")

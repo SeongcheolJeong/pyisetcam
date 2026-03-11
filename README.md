@@ -140,6 +140,11 @@ The adjacent wavefront helper surface now also includes
 `oi_compute(wvf, scene)` support, MATLAB-style `oi_get(..., 'wvf ...')`,
 and rebuilding `oi_set(..., 'wvf ...')` / `oi_set(..., 'optics wvf', ...)`
 for script-driven WVF defocus/Zernike workflows.
+That same explicit wavefront surface now also includes
+`wvf_pupil_function` / `wvfPupilFunction` and
+`wvf_compute_psf` / `wvfComputePSF`, including the MATLAB-style
+stored-aperture workflow and direct parity coverage on the standalone
+pupil-function/PSF path.
 The same script-driven optics surface now also includes headless
 `oiPlot(..., 'psf'/'psf550'/'psfxaxis'/'psfyaxis')` support, backed by
 computed `oiGet(..., 'psf data'/'psf xaxis'/'psf yaxis')` access for

@@ -241,6 +241,22 @@
       }
     },
     {
+      "name": "wvf_compute_psf_small",
+      "matlab_function": "wvfPupilFunction/wvfComputePSF",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "psf_mid_row": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.04
+        },
+        "pupil_amp_row": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.06
+        }
+      }
+    },
+    {
       "name": "oi_lswavelength_diffraction_small",
       "matlab_function": "oiPlot (ls wavelength)",
       "rtol": 1e-04,

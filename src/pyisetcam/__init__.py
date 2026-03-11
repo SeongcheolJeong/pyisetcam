@@ -61,10 +61,12 @@ from .optics import (
     rt_synthetic,
     si_synthetic,
     wvf_compute,
+    wvf_compute_psf,
     wvf_create,
     wvf_defocus_diopters_to_microns,
     wvf_defocus_microns_to_diopters,
     wvf_get,
+    wvf_pupil_function,
     wvf_set,
     wvf_to_oi,
     zemax_load,
@@ -334,6 +336,7 @@ __all__ = [
     "siSynthetic",
     "si_synthetic",
     "wvf_compute",
+    "wvf_compute_psf",
     "run_python_case",
     "run_python_case_with_context",
     "sceneAdjustIlluminant",
@@ -400,15 +403,19 @@ __all__ = [
     "vc_set_figure_handles",
     "wvfCompute",
     "wvfCreate",
+    "wvfComputePSF",
     "wvfGet",
+    "wvfPupilFunction",
     "wvfSet",
     "wvf2oi",
     "wvfDefocusDioptersToMicrons",
     "wvfDefocusMicronsToDiopters",
     "wvf_create",
+    "wvf_compute_psf",
     "wvf_defocus_diopters_to_microns",
     "wvf_defocus_microns_to_diopters",
     "wvf_get",
+    "wvf_pupil_function",
     "wvf_set",
     "wvf_to_oi",
     "wvf_plot",
@@ -481,8 +488,10 @@ rtSampleHeights = rt_sample_heights
 rtSynthetic = rt_synthetic
 siSynthetic = si_synthetic
 wvfCompute = wvf_compute
+wvfComputePSF = wvf_compute_psf
 wvfCreate = wvf_create
 wvfGet = wvf_get
+wvfPupilFunction = wvf_pupil_function
 wvfSet = wvf_set
 wvf2oi = wvf_to_oi
 wvfDefocusDioptersToMicrons = wvf_defocus_diopters_to_microns

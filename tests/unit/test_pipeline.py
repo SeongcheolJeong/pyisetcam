@@ -55,10 +55,12 @@ from pyisetcam import (
     sensor_get,
     sensor_set,
     wvf_compute,
+    wvf_compute_psf,
     wvf_create,
     wvf_defocus_diopters_to_microns,
     wvf_defocus_microns_to_diopters,
     wvf_get,
+    wvf_pupil_function,
     wvf_set,
     wvf_to_oi,
     zemax_load,
@@ -1959,6 +1961,29 @@ def test_wvf_compute_returns_psf_and_pupil_function() -> None:
     assert np.asarray(wvf_get(computed, "pupil function")).shape == (201, 201, 2)
 
 
+def test_wvf_pupil_function_and_compute_psf_support_explicit_aperture() -> None:
+    aperture = np.ones((41, 41), dtype=float)
+    aperture[:, 20:] *= 0.5
+    aperture[18:23, 10:31] = 0.0
+
+    wvf = wvf_create(wave=np.array([550.0], dtype=float))
+    wvf = wvf_set(wvf, "spatial samples", 101)
+    wvf = wvf_pupil_function(wvf, "aperture function", aperture)
+
+    stored_aperture = np.asarray(wvf_get(wvf, "aperture function"), dtype=float)
+    stored_pupil = np.asarray(wvf_get(wvf, "pupil function", 550.0), dtype=np.complex128)
+
+    assert stored_aperture.shape == aperture.shape
+    assert stored_pupil.shape == (101, 101)
+
+    computed = wvf_compute_psf(wvf, "compute pupil func", False)
+    psf = np.asarray(wvf_get(computed, "psf", 550.0), dtype=float)
+
+    assert psf.shape == (101, 101)
+    assert np.isclose(float(np.sum(psf)), 1.0)
+    assert np.asarray(wvf_get(computed, "pupil function", 550.0), dtype=np.complex128).shape == (101, 101)
+
+
 def test_wvf_spatial_sampling_getters_match_spatial_model() -> None:
     wvf = wvf_create()
     wvf = wvf_set(wvf, "calc pupil diameter", 7.0 / 4.0, "mm")
@@ -3721,6 +3746,16 @@ def test_run_python_case_supports_wvf_spatial_sampling_parity_case(asset_store) 
     assert case.payload["pupil_amp_row"].shape == (int(case.payload["npixels"]),)
     assert case.payload["pupil_phase_row"].shape == (int(case.payload["npixels"]),)
     assert float(case.payload["psf_sample_spacing_arcmin"]) > 0.0
+
+
+def test_run_python_case_supports_wvf_compute_psf_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("wvf_compute_psf_small", asset_store=asset_store)
+
+    assert int(case.payload["npixels"]) == 101
+    assert np.isclose(float(case.payload["psf_sum"]), 1.0)
+    assert case.payload["psf_mid_row"].shape == (int(case.payload["npixels"]),)
+    assert case.payload["pupil_amp_row"].shape == (int(case.payload["npixels"]),)
+    assert case.payload["pupil_phase_row"].shape == (int(case.payload["npixels"]),)
 
 
 def test_run_python_case_supports_lswavelength_diffraction_parity_case(asset_store) -> None:
