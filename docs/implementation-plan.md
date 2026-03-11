@@ -22,6 +22,7 @@
 - The same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., 'image pupil amp', ...)`, comparing the returned spatial support axis and pupil-amplitude center row.
 - That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., 'image pupil phase', ...)`, comparing the returned spatial support axis and pupil-phase center row.
 - That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., 'image wavefront aberrations', ...)`, comparing the returned spatial support axis and wavefront-aberration center row.
+- That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., 'image psf', ...)`, comparing the returned spatial support axis and PSF center row.
 - That same optics helper surface now also includes `airy_disk` / `airyDisk` plus headless airy-disk overlay payloads for `wvfPlot(...)` and `oiPlot(...)`, with direct Octave parity on the scalar/image helper contract used by the upstream diffraction plotting workflows.
 - That same script-driven WVF surface now also includes the spatial getter family used by `s_wvfSpatial.m`, including `calc nwave`, `psf sample spacing`, `ref psf sample interval`, `pupil sample spacing`, `pupil positions`, `pupil function amplitude`, and `pupil function phase`.
 - Sensor preset expansion now includes generic `rgbw` / `rccc` creation and upstream-backed `mt9v024` / `ar0132at` RGBW and RCCC model variants.

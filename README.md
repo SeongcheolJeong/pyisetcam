@@ -197,6 +197,9 @@ returned spatial support axis and pupil-phase center row.
 That same script-driven WVF plotting surface now also has direct Octave
 parity on `wvfPlot(..., 'image wavefront aberrations', ...)`, including
 the returned spatial support axis and wavefront-aberration center row.
+That same script-driven WVF plotting surface now also has direct Octave
+parity on `wvfPlot(..., 'image psf', ...)`, including the returned
+spatial support axis and PSF center row.
 That same optics helper surface now also includes `airy_disk` /
 `airyDisk` plus headless airy-disk overlay payloads for `wvfPlot(...)`
 and `oiPlot(...)`, with direct Octave parity on the scalar/image helper

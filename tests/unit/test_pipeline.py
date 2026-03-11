@@ -3896,6 +3896,14 @@ def test_run_python_case_supports_wvf_plot_wavefront_aberrations_parity_case(ass
     assert np.isfinite(float(case.payload["wavefront_center"]))
 
 
+def test_run_python_case_supports_wvf_plot_image_psf_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("wvf_plot_image_psf_small", asset_store=asset_store)
+
+    assert case.payload["x"].ndim == 1
+    assert case.payload["psf_mid_row"].shape == case.payload["x"].shape
+    assert float(case.payload["psf_center"]) > 0.0
+
+
 def test_wvf_wave_getter_supports_unit_and_index() -> None:
     wvf = wvf_create(wave=np.array([450.0, 550.0, 650.0], dtype=float))
 
