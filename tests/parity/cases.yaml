@@ -183,8 +183,14 @@
     {
       "name": "oi_si_pillbox_small",
       "matlab_function": "siSynthetic/oiSet/oiCompute",
-      "rtol": 1e-04,
-      "atol": 1e-06
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
+      "name": "oi_si_gaussian_ratio_small",
+      "matlab_function": "siSynthetic/oiSet/oiCompute",
+      "rtol": 1e-05,
+      "atol": 1e-08
     },
     {
       "name": "oi_si_custom_file_small",

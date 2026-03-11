@@ -381,7 +381,10 @@ def _synthetic_shift_invariant_gaussian_psf_data_from_spreads(
         sigma_y = max(float(x_spread[wave_index] * xy_ratio_values[wave_index]) / max(float(sample_spacing_um), 1e-12), 1e-12)
         plane = np.exp(-0.5 * (((xx / sigma_x) ** 2) + ((yy / sigma_y) ** 2)))
         plane = plane / max(float(np.sum(plane)), 1e-12)
-        psf[:, :, wave_index] = plane
+        # MATLAB siSynthetic rotates the Gaussian PSF before OTF conversion,
+        # which swaps the displayed horizontal/vertical spread in the
+        # stored PSF data returned by opticsGet(..., 'psf data').
+        psf[:, :, wave_index] = np.rot90(plane)
 
     return _normalize_shift_invariant_psf_data(
         {

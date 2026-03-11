@@ -2252,7 +2252,7 @@ def test_si_synthetic_gaussian_builds_anisotropic_shift_invariant_optics() -> No
     center = psf.shape[0] // 2
     horizontal = np.count_nonzero(psf[center, :, 0] > 1e-8)
     vertical = np.count_nonzero(psf[:, center, 0] > 1e-8)
-    assert vertical > horizontal
+    assert horizontal > vertical
 
 
 def test_si_synthetic_lorentzian_applies_to_grid_lines_scene(asset_store) -> None:
@@ -2280,6 +2280,13 @@ def test_oi_si_lorentzian_small_parity_case(asset_store) -> None:
 
 def test_oi_si_pillbox_small_parity_case(asset_store) -> None:
     payload = run_python_case("oi_si_pillbox_small", asset_store=asset_store)
+
+    assert np.asarray(payload["wave"]).ndim == 1
+    assert np.asarray(payload["input_psf_mid_row_550"]).ndim == 1
+
+
+def test_oi_si_gaussian_ratio_small_parity_case(asset_store) -> None:
+    payload = run_python_case("oi_si_gaussian_ratio_small", asset_store=asset_store)
 
     assert np.asarray(payload["wave"]).ndim == 1
     assert np.asarray(payload["input_psf_mid_row_550"]).ndim == 1
