@@ -217,6 +217,9 @@ parity on `wvfPlot(..., 'psf xaxis', ..., 'airy disk', true)`, including
 the full returned support/data payload and Airy-disk radius from
 `s_wvfSpatial.m`.
 That same script-driven WVF plotting surface now also has direct Octave
+parity on `wvfPlot(..., 'psf xaxis', ...)`, including the full returned
+support/data payload from `s_wvfSpatial.m`.
+That same script-driven WVF plotting surface now also has direct Octave
 parity on `wvfPlot(..., 'psf yaxis', ..., 'airy disk', true)`, including
 the full returned support/data payload and Airy-disk radius from
 `s_wvfSpatial.m`.
