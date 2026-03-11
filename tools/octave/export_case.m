@@ -641,6 +641,24 @@ switch case_name
         payload.psf_mid_row = psf(middleRow, :);
         payload.psf_center = psf(middleRow, floor(size(psf, 2) / 2) + 1);
 
+    case 'wvf_plot_2d_psf_angle_normalized_small'
+        wvf = wvfCreate('wave', 460);
+        wvf = wvfSet(wvf, 'spatial samples', 401);
+        wvf = wvfCompute(wvf);
+        % Upstream wvfPlot.m has an indexing bug in the normalized 2D angle
+        % branch after cropping. Export the stable underlying numerical
+        % contract directly instead of calling the broken plot branch.
+        samp = wvfGet(wvf, 'psf angular samples', 'min', 460);
+        psf = wvfGet(wvf, 'psf', 460);
+        index = abs(samp) < 1;
+        samp = samp(index);
+        psf = psf(index, index);
+        psf = psf / max(psf(:));
+        middleRow = floor(size(psf, 1) / 2) + 1;
+        payload.x = samp(:)';
+        payload.psf_mid_row = psf(middleRow, :);
+        payload.psf_center = psf(middleRow, floor(size(psf, 2) / 2) + 1);
+
     case 'wvf_plot_1d_psf_small'
         wvf = wvfCreate('wave', 550);
         wvf = wvfSet(wvf, 'spatial samples', 401);

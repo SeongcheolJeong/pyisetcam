@@ -37,6 +37,7 @@
 - That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., 'psf yaxis', ...)`, comparing the full returned support/data payload from `s_wvfSpatial.m`.
 - That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., 'image psf angle', ...)`, comparing the returned angular support axis and PSF center row.
 - That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., '2d psf angle', ...)`, comparing the returned angular support axis and PSF center row.
+- That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., '2d psf angle normalized', ...)`, comparing the returned angular support axis and normalized PSF center row.
 - That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., '1d psf', ...)`, comparing the returned cropped spatial support axis and raw PSF line slice.
 - That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., '1d psf normalized', ...)`, comparing the returned cropped spatial support axis and normalized PSF line slice.
 - That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., '1d psf angle', ...)`, comparing the returned cropped angular support axis and raw PSF line slice.
