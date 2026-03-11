@@ -264,6 +264,17 @@ switch case_name
         payload.y = psfData.xy(:, :, 2);
         payload.psf = psfData.psf;
 
+    case 'oi_psfxaxis_diffraction_small'
+        oi = oiCreate('diffraction limited');
+        optics = oiGet(oi, 'optics');
+        optics = opticsSet(optics, 'flength', 0.017);
+        optics = opticsSet(optics, 'fnumber', 17/3);
+        oi = oiSet(oi, 'optics', optics);
+        uData = oiGet(oi, 'optics psf xaxis', 550, 'um');
+        payload.samp = uData.samp;
+        payload.data = uData.data;
+        payload.wave = 550;
+
     case 'oi_si_lorentzian_small'
         scene = sceneCreate('grid lines', [64 64], 16, 'ee', 2);
         scene = sceneSet(scene, 'fov', 2.0);
