@@ -746,6 +746,23 @@ def run_python_case_with_context(
             context={"wvf": wvf},
         )
 
+    if case_name == "wvf_plot_pupil_phase_small":
+        wvf = wvf_create(wave=np.array([550.0], dtype=float))
+        wvf = wvf_set(wvf, "spatial samples", 401)
+        wvf = wvf_compute(wvf)
+        udata, _ = wvf_plot(wvf, "image pupil phase", "unit", "mm", "wave", 550.0, "plot range", 2.0, "window", False)
+        phase = np.asarray(udata["z"], dtype=float)
+        middle_row = phase.shape[0] // 2
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "x": np.asarray(udata["x"], dtype=float),
+                "phase_mid_row": phase[middle_row, :],
+                "phase_center": float(phase[middle_row, phase.shape[1] // 2]),
+            },
+            context={"wvf": wvf},
+        )
+
     if case_name == "wvf_psf2zcoeff_error_small":
         wvf = wvf_create(wave=np.array([550.0], dtype=float))
         wvf = wvf_set(wvf, "zcoeffs", 0.2, "defocus")

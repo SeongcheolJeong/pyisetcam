@@ -448,6 +448,17 @@ switch case_name
         payload.amp_mid_row = amp(middleRow, :);
         payload.amp_center = amp(middleRow, floor(size(amp, 2) / 2) + 1);
 
+    case 'wvf_plot_pupil_phase_small'
+        wvf = wvfCreate('wave', 550);
+        wvf = wvfSet(wvf, 'spatial samples', 401);
+        wvf = wvfCompute(wvf);
+        uData = wvfPlot(wvf, 'image pupil phase', 'unit', 'mm', 'wave', 550, 'plot range', 2, 'window', false);
+        phase = uData.z;
+        middleRow = floor(size(phase, 1) / 2) + 1;
+        payload.x = uData.x(:)';
+        payload.phase_mid_row = phase(middleRow, :);
+        payload.phase_center = phase(middleRow, floor(size(phase, 2) / 2) + 1);
+
     case 'wvf_psf2zcoeff_error_small'
         wvf = wvfCreate('wave', 550);
         wvf = wvfSet(wvf, 'zcoeffs', 0.2, 'defocus');
