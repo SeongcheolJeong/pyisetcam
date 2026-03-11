@@ -482,6 +482,17 @@ switch case_name
         payload.psf_mid_row = psf(middleRow, :);
         payload.psf_center = psf(middleRow, floor(size(psf, 2) / 2) + 1);
 
+    case 'wvf_plot_image_psf_angle_small'
+        wvf = wvfCreate('wave', 460);
+        wvf = wvfSet(wvf, 'spatial samples', 401);
+        wvf = wvfCompute(wvf);
+        uData = wvfPlot(wvf, 'image psf angle', 'unit', 'min', 'wave', 460, 'plot range', 1, 'window', false);
+        psf = uData.z;
+        middleRow = floor(size(psf, 1) / 2) + 1;
+        payload.x = uData.x(:)';
+        payload.psf_mid_row = psf(middleRow, :);
+        payload.psf_center = psf(middleRow, floor(size(psf, 2) / 2) + 1);
+
     case 'wvf_plot_psf_xaxis_airy_small'
         wvf = wvfCreate('wave', 550);
         wvf = wvfSet(wvf, 'spatial samples', 401);
