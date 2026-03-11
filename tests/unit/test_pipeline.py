@@ -3918,6 +3918,14 @@ def test_run_python_case_supports_wvf_plot_pupil_phase_parity_case(asset_store) 
     assert np.isfinite(float(case.payload["phase_center"]))
 
 
+def test_run_python_case_supports_wvf_plot_2d_pupil_phase_space_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("wvf_plot_2d_pupil_phase_space_small", asset_store=asset_store)
+
+    assert case.payload["x"].ndim == 1
+    assert case.payload["phase_mid_row"].shape == case.payload["x"].shape
+    assert np.isfinite(float(case.payload["phase_center"]))
+
+
 def test_run_python_case_supports_wvf_plot_wavefront_aberrations_parity_case(asset_store) -> None:
     case = run_python_case_with_context("wvf_plot_wavefront_aberrations_small", asset_store=asset_store)
 

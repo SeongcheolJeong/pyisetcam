@@ -214,6 +214,10 @@ That same script-driven WVF plotting surface now also has direct Octave
 parity on `wvfPlot(..., 'image pupil phase', ...)`, including the
 returned spatial support axis and pupil-phase center row.
 That same script-driven WVF plotting surface now also has direct Octave
+parity on `wvfPlot(..., '2d pupil phase space', ...)`, including the
+returned spatial support axis and pupil-phase center row for the exact
+legacy plot name used by the upstream Zernike tutorial.
+That same script-driven WVF plotting surface now also has direct Octave
 parity on `wvfPlot(..., 'image wavefront aberrations', ...)`, including
 the returned spatial support axis and wavefront-aberration center row.
 That same script-driven WVF plotting surface now also has direct Octave
