@@ -217,6 +217,9 @@ That same WVF plotting surface now also has direct Octave parity on
 `wvfPlot(..., '1d otf angle normalized', ...)`, including the returned
 cropped frequency support axis and normalized OTF center row.
 That same WVF plotting surface now also has direct Octave parity on
+`wvfPlot(..., '1d psf space', ...)`, including the returned spatial
+support axis and 1D PSF line data.
+That same WVF plotting surface now also has direct Octave parity on
 `wvfPlot(..., '2d wavefront aberrations space', ...)`, including the
 returned spatial support axis and wavefront-aberration center row.
 The same script-driven WVF plotting surface now also has direct Octave
