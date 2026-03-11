@@ -605,6 +605,38 @@ def run_python_case_with_context(
             context={"scene": scene, "wvf": wvf, "oi": oi},
         )
 
+    if case_name == "wvf_spatial_sampling_small":
+        wvf = wvf_create(wave=np.array([550.0], dtype=float))
+        this_wave = float(np.asarray(wvf_get(wvf, "wave"), dtype=float).reshape(-1)[0])
+        focal_length_m = 7e-3
+        f_number = 4.0
+        wvf = wvf_set(wvf, "calc pupil diameter", (focal_length_m * 1e3) / f_number, "mm")
+        wvf = wvf_set(wvf, "focal length", focal_length_m, "m")
+        wvf = wvf_compute(wvf)
+        psf_xaxis = dict(wvf_get(wvf, "psf xaxis", "um", this_wave))
+        pupil_amplitude = np.asarray(wvf_get(wvf, "pupil function amplitude", this_wave), dtype=float)
+        pupil_phase = np.asarray(wvf_get(wvf, "pupil function phase", this_wave), dtype=float)
+        middle_row = pupil_amplitude.shape[0] // 2
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wvf_get(wvf, "wave"),
+                "npixels": wvf_get(wvf, "npixels"),
+                "calc_nwave": wvf_get(wvf, "calc nwave"),
+                "psf_sample_spacing_arcmin": wvf_get(wvf, "psf sample spacing"),
+                "ref_psf_sample_interval_arcmin": wvf_get(wvf, "ref psf sample interval"),
+                "um_per_degree": wvf_get(wvf, "um per degree"),
+                "pupil_plane_size_mm": wvf_get(wvf, "pupil plane size", "mm", this_wave),
+                "pupil_sample_spacing_mm": wvf_get(wvf, "pupil sample spacing", "mm", this_wave),
+                "pupil_positions_mm": wvf_get(wvf, "pupil positions", this_wave, "mm"),
+                "psf_xaxis_um": np.asarray(psf_xaxis["samp"], dtype=float),
+                "psf_xaxis_data": np.asarray(psf_xaxis["data"], dtype=float),
+                "pupil_amp_row": pupil_amplitude[middle_row, :],
+                "pupil_phase_row": pupil_phase[middle_row, :],
+            },
+            context={"wvf": wvf},
+        )
+
     if case_name == "oi_lswavelength_diffraction_small":
         oi = oi_create("diffraction limited")
         optics = dict(oi.fields["optics"])

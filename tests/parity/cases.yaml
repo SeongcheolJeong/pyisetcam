@@ -229,6 +229,18 @@
       }
     },
     {
+      "name": "wvf_spatial_sampling_small",
+      "matlab_function": "wvfGet/wvfCompute",
+      "rtol": 3e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "psf_xaxis_um": {
+          "mode": "mean_rel",
+          "max_mean_rel": 3e-05
+        }
+      }
+    },
+    {
       "name": "oi_lswavelength_diffraction_small",
       "matlab_function": "oiPlot (ls wavelength)",
       "rtol": 1e-04,

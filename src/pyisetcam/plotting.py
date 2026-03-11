@@ -875,7 +875,7 @@ def wvf_plot(
         return _wvf_line_payload(wvf, key, wave, unit, plot_range), None
 
     if key in {"1dpsf", "1dpsfspace", "1dpsfnormalized"}:
-        samp = np.asarray(wvf_get(wvf, "psf spatial samples", unit, wave), dtype=float)
+        samp = np.asarray(dict(wvf_get(wvf, "psf xaxis", unit, wave))["samp"], dtype=float)
         line = np.asarray(wvf_get(wvf, "1d psf", wave), dtype=float)
         if "normalized" in key:
             line = line / max(float(np.max(line)), 1e-12)

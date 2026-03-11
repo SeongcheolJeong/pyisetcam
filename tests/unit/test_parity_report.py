@@ -93,6 +93,17 @@ def test_compare_supports_scale_invariant_field_override() -> None:
     assert np.isclose(photons["unscaled_mean_rel"], 0.9)
 
 
+def test_compare_treats_zero_dim_arrays_as_scalars() -> None:
+    parity_report = _load_parity_report_module()
+
+    comparison = parity_report._compare(np.array(1.5), np.array(1.5), rtol=1e-5, atol=1e-8)
+
+    assert comparison["pass"]
+    assert np.isclose(comparison["expected"], 1.5)
+    assert np.isclose(comparison["actual"], 1.5)
+    assert np.isclose(comparison["abs_diff"], 0.0)
+
+
 def test_case_diagnostics_recompute_sensor_from_reference_oi(asset_store) -> None:
     parity_report = _load_parity_report_module()
 

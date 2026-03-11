@@ -73,6 +73,13 @@ def _array_metrics(reference: Any, actual: Any) -> dict[str, Any]:
         "max_rel": float(np.max(relative)),
         "normalized_mae": float(np.mean(difference)) / max(float(np.mean(np.abs(reference_array))), 1e-12),
     }
+    if reference_array.ndim == 0:
+        metrics["max_index"] = []
+        metrics["max_index_ref"] = float(reference_array)
+        metrics["max_index_actual"] = float(actual_array)
+        metrics["max_index_abs"] = float(difference)
+        metrics["max_index_rel"] = float(relative)
+        return metrics
     max_index = tuple(int(item) for item in np.unravel_index(int(np.argmax(relative)), relative.shape))
     metrics["max_index"] = list(max_index)
     metrics["max_index_ref"] = float(reference_array[max_index])
@@ -153,6 +160,19 @@ def _compare(
             "pass": passed,
             "expected": normalized_reference,
             "actual": normalized_actual,
+        }
+
+    if np.asarray(normalized_reference).ndim == 0 and np.asarray(normalized_actual).ndim == 0:
+        reference_scalar = float(np.asarray(normalized_reference))
+        actual_scalar = float(np.asarray(normalized_actual))
+        difference = abs(actual_scalar - reference_scalar)
+        passed = bool(np.isclose(actual_scalar, reference_scalar, rtol=rtol, atol=atol))
+        return {
+            "pass": passed,
+            "expected": reference_scalar,
+            "actual": actual_scalar,
+            "abs_diff": difference,
+            "rel_diff": float(difference / max(abs(reference_scalar), 1e-12)),
         }
 
     if np.isscalar(normalized_reference) and np.isscalar(normalized_actual):

@@ -1959,6 +1959,29 @@ def test_wvf_compute_returns_psf_and_pupil_function() -> None:
     assert np.asarray(wvf_get(computed, "pupil function")).shape == (201, 201, 2)
 
 
+def test_wvf_spatial_sampling_getters_match_spatial_model() -> None:
+    wvf = wvf_create()
+    wvf = wvf_set(wvf, "calc pupil diameter", 7.0 / 4.0, "mm")
+    wvf = wvf_set(wvf, "focal length", 7e-3, "m")
+    wvf = wvf_compute(wvf)
+
+    wave = float(np.asarray(wvf_get(wvf, "wave"), dtype=float).reshape(-1)[0])
+    n_pixels = int(wvf_get(wvf, "npixels"))
+    pupil_plane_size_mm = float(wvf_get(wvf, "pupil plane size", "mm", wave))
+    pupil_sample_spacing_mm = float(wvf_get(wvf, "pupil sample spacing", "mm", wave))
+    pupil_positions_mm = np.asarray(wvf_get(wvf, "pupil positions", wave, "mm"), dtype=float)
+    pupil_amplitude = np.asarray(wvf_get(wvf, "pupil function amplitude", wave), dtype=float)
+    pupil_phase = np.asarray(wvf_get(wvf, "pupil function phase", wave), dtype=float)
+
+    assert int(wvf_get(wvf, "calc nwave")) == int(np.asarray(wvf_get(wvf, "wave"), dtype=float).size)
+    assert np.isclose(float(wvf_get(wvf, "psf sample spacing")), float(wvf_get(wvf, "ref psf sample interval")))
+    assert np.isclose(pupil_sample_spacing_mm, pupil_plane_size_mm / n_pixels)
+    assert pupil_positions_mm.shape == (n_pixels,)
+    assert np.isclose(pupil_positions_mm[1] - pupil_positions_mm[0], pupil_sample_spacing_mm)
+    assert pupil_amplitude.shape == (n_pixels, n_pixels)
+    assert pupil_phase.shape == (n_pixels, n_pixels)
+
+
 def test_oi_compute_accepts_wvf_input(asset_store) -> None:
     scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
     wvf = wvf_create(wave=scene_get(scene, "wave"))
@@ -3686,6 +3709,18 @@ def test_run_python_case_supports_wvf_script_defocus_oi_parity_case(asset_store)
     assert np.isclose(float(case.payload["defocus_zcoeff"]), 1.5)
     assert np.isclose(float(case.payload["pupil_diameter_mm"]), 3.0)
     assert case.payload["f_number"] > 0.0
+
+
+def test_run_python_case_supports_wvf_spatial_sampling_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("wvf_spatial_sampling_small", asset_store=asset_store)
+
+    assert int(case.payload["npixels"]) == 201
+    assert int(case.payload["calc_nwave"]) == int(np.asarray(case.payload["wave"], dtype=float).size)
+    assert case.payload["psf_xaxis_um"].shape == case.payload["psf_xaxis_data"].shape
+    assert case.payload["pupil_positions_mm"].shape == (int(case.payload["npixels"]),)
+    assert case.payload["pupil_amp_row"].shape == (int(case.payload["npixels"]),)
+    assert case.payload["pupil_phase_row"].shape == (int(case.payload["npixels"]),)
+    assert float(case.payload["psf_sample_spacing_arcmin"]) > 0.0
 
 
 def test_run_python_case_supports_lswavelength_diffraction_parity_case(asset_store) -> None:

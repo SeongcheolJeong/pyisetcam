@@ -1825,6 +1825,28 @@ def _wvf_wave_values(wvf: dict[str, Any]) -> np.ndarray:
     return np.asarray(wvf.get("wave", DEFAULT_WAVE), dtype=float).reshape(-1)
 
 
+def _wvf_parse_wave_and_unit_args(
+    wvf: dict[str, Any],
+    args: tuple[Any, ...],
+    default_unit: str,
+) -> tuple[float, str]:
+    wavelength_nm = _default_plot_wavelength(_wvf_wave_values(wvf))
+    unit = str(default_unit)
+    if args:
+        first = args[0]
+        if isinstance(first, str):
+            unit = str(first)
+        else:
+            wavelength_nm = float(np.asarray(first, dtype=float).reshape(-1)[0])
+    if len(args) > 1:
+        second = args[1]
+        if isinstance(second, str):
+            unit = str(second)
+        else:
+            wavelength_nm = float(np.asarray(second, dtype=float).reshape(-1)[0])
+    return wavelength_nm, unit
+
+
 def _wvf_wave_for_query(wvf: dict[str, Any], args: tuple[Any, ...], default_unit: str) -> tuple[str, float]:
     unit = default_unit
     wavelength_nm = _default_plot_wavelength(_wvf_wave_values(wvf))
@@ -2081,11 +2103,16 @@ def wvf_get(wvf: dict[str, Any], parameter: str, *args: Any) -> Any:
     if key in {"wave", "wavelength", "wavelengths", "calcwave", "calcwavelengths", "wls"}:
         return np.asarray(wvf.get("wave", DEFAULT_WAVE), dtype=float).copy()
 
+    if key in {"calcnwave", "nwave", "numbercalcwavelengths", "nwavelengths"}:
+        return int(_wvf_wave_values(wvf).size)
+
     if key in {"sampleintervaldomain"}:
         return str(wvf.get("sample_interval_domain", "psf"))
 
     if key in {"umperdegree", "umperdeg"}:
-        return _wvf_um_per_degree(wvf)
+        # MATLAB/Octave wvfGet('um per degree') reports the mm-per-degree
+        # scale for this legacy getter path.
+        return _wvf_um_per_degree(wvf) / 1e3
 
     if key in {"zcoeffs", "zcoeff", "zcoef"}:
         zcoeffs = np.asarray(wvf.get("zcoeffs", np.array([0.0], dtype=float)), dtype=float).reshape(-1)
@@ -2145,6 +2172,12 @@ def wvf_get(wvf: dict[str, Any], parameter: str, *args: Any) -> Any:
         unit, wavelength_nm = _wvf_wave_for_query(wvf, args, "min")
         return float(_wvf_angle_samples_for_unit(np.array([_wvf_psf_angle_per_sample_deg(wvf, wavelength_nm)], dtype=float), unit)[0])
 
+    if key in {"psfsamplespacing", "psfsampleinterval", "refpsfsampleinterval", "refpsfarcminpersample", "refpsfarcminperpixel"}:
+        unit = str(args[0]) if args else "min"
+        measured_wavelength_nm = float(wvf.get("measured_wavelength_nm", DEFAULT_WVF_MEASURED_WAVELENGTH_NM))
+        spacing_deg = _wvf_psf_angle_per_sample_deg(wvf, measured_wavelength_nm)
+        return float(_wvf_angle_samples_for_unit(np.array([spacing_deg], dtype=float), unit)[0])
+
     if key in {"psfangularsamples"}:
         unit, wavelength_nm = _wvf_wave_for_query(wvf, args, "min")
         return _wvf_psf_angular_samples(wvf, unit, wavelength_nm)
@@ -2152,6 +2185,21 @@ def wvf_get(wvf: dict[str, Any], parameter: str, *args: Any) -> Any:
     if key in {"psfsupport", "psfspatialsample", "psfspatialsamples", "samplesspace", "supportspace", "spatialsupport"}:
         unit, wavelength_nm = _wvf_wave_for_query(wvf, args, "deg")
         return _wvf_psf_spatial_samples(wvf, unit, wavelength_nm)
+
+    if key in {"pupilpositions", "pupilpos", "pupilsamples"}:
+        wavelength_nm, unit = _wvf_parse_wave_and_unit_args(wvf, args, "mm")
+        spacing = float(wvf_get(wvf, "pupil sample spacing", unit, wavelength_nm))
+        n_pixels = int(wvf_get(wvf, "npixels"))
+        positions = ((np.arange(n_pixels, dtype=float) + 1.0) - _wvf_middle_row(wvf)) * spacing
+        return positions
+
+    if key in {"pupilsamplespacing", "pupilsampleinterval"}:
+        unit, wavelength_nm = _wvf_wave_for_query(wvf, args, "mm")
+        return float(_wvf_pupil_plane_size_m(wvf, wavelength_nm) / max(int(wvf_get(wvf, "npixels")), 1) * _spatial_unit_scale(unit))
+
+    if key in {"refpupilplanesampleinterval", "fieldsamplesizemmperpixel", "refpupilplanesampleintervalmm", "fieldsamplesize"}:
+        unit = str(args[0]) if args else "mm"
+        return float(_wvf_ref_pupil_plane_size_m(wvf) / max(int(wvf_get(wvf, "npixels")), 1) * _spatial_unit_scale(unit))
 
     if key in {"pupilsupport", "pupilspatialsamples"}:
         unit, wavelength_nm = _wvf_wave_for_query(wvf, args, "mm")
@@ -2166,13 +2214,19 @@ def wvf_get(wvf: dict[str, Any], parameter: str, *args: Any) -> Any:
     if key in {"psfxaxis"}:
         unit, wavelength_nm = _wvf_wave_for_query(wvf, args, "mm")
         psf = np.asarray(wvf_get(wvf, "psf", wavelength_nm), dtype=float)
-        samp = _wvf_psf_spatial_samples(wvf, unit, wavelength_nm)
+        # MATLAB/Octave wvfGet('psf xaxis','um',...) returns the underlying
+        # mm-scaled support for this path. Keep that quirk for parity.
+        axis_unit = "mm" if unit == "um" else unit
+        samp = _wvf_psf_spatial_samples(wvf, axis_unit, wavelength_nm)
         return {"samp": samp.copy(), "data": np.interp(samp, samp, psf[int(_wvf_middle_row(wvf)) - 1, :]).copy()}
 
     if key in {"psfyaxis"}:
         unit, wavelength_nm = _wvf_wave_for_query(wvf, args, "mm")
         psf = np.asarray(wvf_get(wvf, "psf", wavelength_nm), dtype=float)
-        samp = _wvf_psf_spatial_samples(wvf, unit, wavelength_nm)
+        # MATLAB/Octave wvfGet('psf yaxis','um',...) returns the underlying
+        # mm-scaled support for this path. Keep that quirk for parity.
+        axis_unit = "mm" if unit == "um" else unit
+        samp = _wvf_psf_spatial_samples(wvf, axis_unit, wavelength_nm)
         return {"samp": samp.copy(), "data": np.interp(samp, samp, psf[:, int(_wvf_middle_row(wvf)) - 1]).copy()}
 
     if key in {"otfsupport"}:
@@ -2205,10 +2259,10 @@ def wvf_get(wvf: dict[str, Any], parameter: str, *args: Any) -> Any:
             )
         return np.asarray(pupil_function, dtype=np.complex128).copy()
 
-    if key in {"pupilamplitude", "pupilamp"}:
+    if key in {"pupilfunctionamplitude", "pupilamplitude", "pupilamp", "aperture"}:
         return np.abs(np.asarray(wvf_get(wvf, "pupil function", *args), dtype=np.complex128))
 
-    if key in {"pupilphase"}:
+    if key in {"pupilfunctionphase", "pupilphase"}:
         return np.angle(np.asarray(wvf_get(wvf, "pupil function", *args), dtype=np.complex128))
 
     if key in {"psf"}:

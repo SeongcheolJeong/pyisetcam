@@ -348,6 +348,32 @@ switch case_name
         payload.pupil_diameter_mm = wvfGet(wvf, 'pupil diameter', 'mm');
         payload.f_number = oiGet(oi, 'f number');
 
+    case 'wvf_spatial_sampling_small'
+        wvf = wvfCreate('wave', 550);
+        thisWave = wvfGet(wvf, 'wave');
+        focalLengthM = 7e-3;
+        fNumber = 4.0;
+        wvf = wvfSet(wvf, 'calc pupil diameter', (focalLengthM * 1e3) / fNumber);
+        wvf = wvfSet(wvf, 'focal length', focalLengthM);
+        wvf = wvfCompute(wvf);
+        psfX = wvfGet(wvf, 'psf xaxis', 'um', thisWave);
+        pupilAmp = wvfGet(wvf, 'pupil function amplitude', thisWave);
+        pupilPhase = wvfGet(wvf, 'pupil function phase', thisWave);
+        middleRow = floor(size(pupilAmp, 1) / 2) + 1;
+        payload.wave = wvfGet(wvf, 'wave');
+        payload.npixels = wvfGet(wvf, 'npixels');
+        payload.calc_nwave = wvfGet(wvf, 'calc nwave');
+        payload.psf_sample_spacing_arcmin = wvfGet(wvf, 'psf sample spacing');
+        payload.ref_psf_sample_interval_arcmin = wvfGet(wvf, 'ref psf sample interval');
+        payload.um_per_degree = wvfGet(wvf, 'um per degree');
+        payload.pupil_plane_size_mm = wvfGet(wvf, 'pupil plane size', 'mm', thisWave);
+        payload.pupil_sample_spacing_mm = wvfGet(wvf, 'pupil sample spacing', 'mm', thisWave);
+        payload.pupil_positions_mm = wvfGet(wvf, 'pupil positions', thisWave, 'mm');
+        payload.psf_xaxis_um = psfX.samp;
+        payload.psf_xaxis_data = psfX.data;
+        payload.pupil_amp_row = pupilAmp(middleRow, :);
+        payload.pupil_phase_row = pupilPhase(middleRow, :);
+
     case 'oi_lswavelength_diffraction_small'
         oi = oiCreate('diffraction limited');
         optics = oiGet(oi, 'optics');

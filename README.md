@@ -160,6 +160,10 @@ pupil phase, wavefront-aberration, PSF-angle, and OTF views, backed by
 wavelength-aware `wvfGet(...)` support for `psf`, `pupil function`,
 `wavefront aberrations`, `psf spatial samples`, `psf angular samples`,
 `pupil spatial samples`, `1d psf`, and OTF support.
+That same script-driven WVF surface now also includes the spatial getter
+family used by `s_wvfSpatial.m`, including `calc nwave`, `psf sample spacing`,
+`ref psf sample interval`, `pupil sample spacing`, `pupil positions`,
+`pupil function amplitude`, and `pupil function phase`.
 Initial ray-trace optics support is also in place: `oi_create('ray trace')`
 loads the pinned upstream Zemax-derived optics asset, and `oi_compute`
 applies upstream-backed geometric distortion, relative illumination, and
