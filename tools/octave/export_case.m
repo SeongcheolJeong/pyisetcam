@@ -502,6 +502,15 @@ switch case_name
         payload.y = uData.y(:)';
         payload.peak = max(uData.y(:));
 
+    case 'wvf_plot_1d_psf_angle_normalized_small'
+        wvf = wvfCreate('wave', 550);
+        wvf = wvfSet(wvf, 'spatial samples', 401);
+        wvf = wvfCompute(wvf);
+        uData = wvfPlot(wvf, '1d psf angle normalized', 'unit', 'min', 'wave', 550, 'plot range', 1, 'window', false);
+        payload.x = uData.x(:)';
+        payload.y = uData.y(:)';
+        payload.peak = max(uData.y(:));
+
     case 'wvf_plot_psf_xaxis_airy_small'
         wvf = wvfCreate('wave', 550);
         wvf = wvfSet(wvf, 'spatial samples', 401);
