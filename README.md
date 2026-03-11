@@ -208,6 +208,9 @@ That same script-driven WVF plotting surface now also has direct Octave
 parity on `wvfPlot(..., 'image psf angle', ...)`, including the returned
 angular support axis and PSF center row.
 That same script-driven WVF plotting surface now also has direct Octave
+parity on `wvfPlot(..., '1d psf', ...)`, including the returned cropped
+spatial support axis and raw PSF line slice.
+That same script-driven WVF plotting surface now also has direct Octave
 parity on `wvfPlot(..., '1d psf normalized', ...)`, including the
 returned cropped spatial support axis and normalized line slice.
 That same script-driven WVF plotting surface now also has direct Octave

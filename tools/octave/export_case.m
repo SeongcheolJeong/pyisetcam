@@ -493,6 +493,15 @@ switch case_name
         payload.psf_mid_row = psf(middleRow, :);
         payload.psf_center = psf(middleRow, floor(size(psf, 2) / 2) + 1);
 
+    case 'wvf_plot_1d_psf_small'
+        wvf = wvfCreate('wave', 550);
+        wvf = wvfSet(wvf, 'spatial samples', 401);
+        wvf = wvfCompute(wvf);
+        uData = wvfPlot(wvf, '1d psf', 'unit', 'um', 'wave', 550, 'plot range', 10, 'window', false);
+        payload.x = uData.x(:)';
+        payload.y = uData.y(:)';
+        payload.peak = max(uData.y(:));
+
     case 'wvf_plot_1d_psf_normalized_small'
         wvf = wvfCreate('wave', 550);
         wvf = wvfSet(wvf, 'spatial samples', 401);
