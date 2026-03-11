@@ -225,6 +225,47 @@ def test_wvf_plot_pupil_and_wavefront_images() -> None:
     assert np.asarray(wvf_get(wvf, "wavefront aberrations", 550.0)).ndim == 2
 
 
+def test_wvf_plot_angle_and_otf_views() -> None:
+    wvf = wvf_compute(
+        wvf_create(
+            wave=np.array([550.0], dtype=float),
+            zcoeffs=np.array([0.0, 0.0, 0.0, 0.0, 0.08], dtype=float),
+        )
+    )
+
+    psf_angle_udata, psf_angle_handle = wvfPlot(
+        wvf, "psf angle", "unit", "min", "wave", 550.0, "plot range", 1.0
+    )
+    image_psf_angle_udata, image_psf_angle_handle = wvfPlot(
+        wvf, "image psf angle", "unit", "min", "wave", 550.0, "plot range", 1.0
+    )
+    line_angle_udata, line_angle_handle = wvfPlot(
+        wvf, "1d psf angle normalized", "unit", "min", "wave", 550.0, "plot range", 1.0
+    )
+    otf_udata, otf_handle = wvfPlot(wvf, "otf", "unit", "mm", "wave", 550.0, "plot range", 200.0)
+    otf_1d_udata, otf_1d_handle = wvfPlot(wvf, "1d otf", "unit", "mm", "wave", 550.0, "plot range", 200.0)
+    otf_1d_angle_udata, otf_1d_angle_handle = wvfPlot(
+        wvf, "1d otf angle", "unit", "deg", "wave", 550.0, "plot range", 60.0
+    )
+
+    assert psf_angle_handle is None
+    assert image_psf_angle_handle is None
+    assert line_angle_handle is None
+    assert otf_handle is None
+    assert otf_1d_handle is None
+    assert otf_1d_angle_handle is None
+    assert psf_angle_udata["z"].shape == image_psf_angle_udata["z"].shape
+    assert psf_angle_udata["x"].ndim == 1
+    assert np.isclose(float(np.max(line_angle_udata["y"])), 1.0)
+    assert otf_udata["otf"].ndim == 2
+    assert otf_udata["otf"].shape == (otf_udata["fy"].size, otf_udata["fx"].size)
+    assert otf_1d_udata["fx"].ndim == 1
+    assert otf_1d_udata["otf"].shape == otf_1d_udata["fx"].shape
+    assert otf_1d_angle_udata["fx"].ndim == 1
+    assert otf_1d_angle_udata["otf"].shape == otf_1d_angle_udata["fx"].shape
+    assert np.asarray(wvf_get(wvf, "otf", 550.0)).ndim == 2
+
+
 def test_plot_sensor_line_data(asset_store) -> None:
     sensor = sensor_create("monochrome", asset_store=asset_store)
     sensor = sensor_set(sensor, "rows", 2)

@@ -146,9 +146,10 @@ computed `oiGet(..., 'psf data'/'psf xaxis'/'psf yaxis')` access for
 diffraction-limited, custom-PSF, and computed WVF shift-invariant optics.
 The adjacent wavefront plotting surface now also includes headless
 `wvfPlot(...)` support for script-driven PSF, 1D PSF, pupil amplitude,
-pupil phase, and wavefront-aberration views, backed by wavelength-aware
-`wvfGet(...)` support for `psf`, `pupil function`, `wavefront aberrations`,
-`psf spatial samples`, `pupil spatial samples`, `1d psf`, and OTF support.
+pupil phase, wavefront-aberration, PSF-angle, and OTF views, backed by
+wavelength-aware `wvfGet(...)` support for `psf`, `pupil function`,
+`wavefront aberrations`, `psf spatial samples`, `psf angular samples`,
+`pupil spatial samples`, `1d psf`, and OTF support.
 Initial ray-trace optics support is also in place: `oi_create('ray trace')`
 loads the pinned upstream Zemax-derived optics asset, and `oi_compute`
 applies upstream-backed geometric distortion, relative illumination, and

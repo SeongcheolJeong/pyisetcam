@@ -2172,6 +2172,11 @@ def wvf_get(wvf: dict[str, Any], parameter: str, *args: Any) -> Any:
         unit, wavelength_nm = _wvf_wave_for_query(wvf, args, "mm")
         return _wvf_otf_support(wvf, unit, wavelength_nm)
 
+    if key in {"otf"}:
+        wavelength_nm = float(np.asarray(args[0], dtype=float).reshape(-1)[0]) if args else _default_plot_wavelength(_wvf_wave_values(wvf))
+        psf = np.asarray(wvf_get(wvf, "psf", wavelength_nm), dtype=float)
+        return np.asarray(np.fft.ifftshift(np.fft.fft2(np.fft.ifftshift(psf))), dtype=np.complex128)
+
     if key in {"wavefrontaberrations", "wavefrontaberration"}:
         computed = wvf if wvf.get("wavefront_aberrations_um") is not None else wvf_compute(wvf, compute_psf=False)
         wavefront = computed.get("wavefront_aberrations_um")
