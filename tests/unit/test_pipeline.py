@@ -2069,6 +2069,58 @@ def test_oi_set_optics_otfstruct_supports_custom_shift_invariant_otf(asset_store
     assert computed.data["photons"].shape[:2] == scene.data["photons"].shape[:2]
 
 
+def test_oi_get_optics_otf_synthesizes_shift_invariant_otf_after_compute(asset_store) -> None:
+    scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
+    oi = oi_compute(oi_create("shift invariant"), scene, crop=True)
+
+    otf = oi_get(oi, "optics OTF")
+
+    assert otf is not None
+    assert np.asarray(otf).shape == oi.data["photons"].shape
+    assert np.isclose(float(np.abs(np.asarray(otf)[0, 0, 0])), 1.0, atol=1e-6)
+
+
+def test_oi_set_optics_otf_supports_direct_raw_shift_invariant_otf(asset_store) -> None:
+    params = {
+        "angles": np.array([0.0, np.pi / 4.0, np.pi / 2.0], dtype=float),
+        "freqs": np.array([1.0, 2.0, 4.0], dtype=float),
+        "blockSize": 16,
+        "contrast": 1.0,
+    }
+    scene = scene_create("frequency orientation", params, asset_store=asset_store)
+    scene = scene_set(scene, "fov", 3.0)
+    base = oi_compute(oi_create("shift invariant"), scene, crop=True)
+    raw_otf = oi_get(base, "optics OTF")
+    assert raw_otf is not None
+
+    ideal = oi_set(base, "optics OTF", np.ones_like(np.asarray(raw_otf), dtype=complex))
+    stored = oi_get(ideal, "optics OTF")
+    computed = oi_compute(ideal, scene, crop=True)
+
+    assert stored is not None
+    assert np.asarray(stored).shape == np.asarray(raw_otf).shape
+    assert np.allclose(np.asarray(stored), 1.0)
+    assert ideal.fields["optics"]["compute_method"] == "opticsotf"
+    assert not np.allclose(computed.data["photons"], base.data["photons"])
+
+
+def test_oi_set_optics_otf_repeats_2d_otf_across_wave(asset_store) -> None:
+    scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
+    base = oi_compute(oi_create("shift invariant"), scene, crop=True)
+    raw_otf = oi_get(base, "optics OTF")
+    assert raw_otf is not None
+    samples = np.asarray(raw_otf).shape[0]
+    support = np.linspace(-1.0, 1.0, samples, dtype=float)
+    xx, yy = np.meshgrid(support, support)
+    gaussian = np.exp(-((xx**2) + (yy**2)) / 0.1)
+
+    oi = oi_set(base, "optics OTF", gaussian)
+    stored = np.asarray(oi_get(oi, "optics OTF"))
+
+    assert stored.shape == np.asarray(raw_otf).shape
+    assert np.allclose(stored[:, :, 0], gaussian)
+    assert np.allclose(stored[:, :, -1], gaussian)
+
 def test_oi_compute_wvf_uses_custom_aperture(asset_store) -> None:
     scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
     default_oi = oi_compute(oi_create("wvf"), scene, crop=True)

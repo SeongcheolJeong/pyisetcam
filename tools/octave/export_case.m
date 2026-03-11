@@ -263,6 +263,22 @@ switch case_name
         payload.otf_abs550 = abs(OTF.OTF(:,:,16));
         payload.interp_otf_abs550 = abs(interpOTF(:,:,16));
 
+    case 'oi_ideal_otf_small'
+        params = FOTParams;
+        params.blockSize = 16;
+        params.angles = [0, pi/4, pi/2];
+        params.freqs = [1, 2, 4];
+        params.contrast = 1.0;
+        scene = sceneCreate('freq orient', params);
+        scene = sceneSet(scene, 'fov', 3);
+        oi = oiCreate('shift invariant');
+        oi = oiCompute(oi, scene, 'crop', true);
+        OTF = oiGet(oi, 'optics OTF');
+        oi = oiSet(oi, 'optics OTF', ones(size(OTF)));
+        oi = oiCompute(oi, scene, 'crop', true);
+        payload.wave = oiGet(oi, 'wave');
+        payload.photons = oiGet(oi, 'photons');
+
     case 'oi_wvf_defocus_small'
         params = FOTParams;
         params.blockSize = 16;

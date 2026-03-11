@@ -477,6 +477,28 @@ def run_python_case_with_context(
             context={"scene": scene, "oi": oi},
         )
 
+    if case_name == "oi_ideal_otf_small":
+        params = {
+            "angles": np.array([0.0, np.pi / 4.0, np.pi / 2.0], dtype=float),
+            "freqs": np.array([1.0, 2.0, 4.0], dtype=float),
+            "blockSize": 16,
+            "contrast": 1.0,
+        }
+        scene = scene_create("frequency orientation", params, asset_store=store)
+        scene = scene_set(scene, "fov", 3.0)
+        oi = oi_compute(oi_create("shift invariant"), scene, crop=True)
+        raw_otf = oi_get(oi, "optics OTF")
+        oi = oi_set(oi, "optics OTF", np.ones_like(np.asarray(raw_otf), dtype=complex))
+        oi = oi_compute(oi, scene, crop=True)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": oi_get(oi, "wave"),
+                "photons": oi_get(oi, "photons"),
+            },
+            context={"scene": scene, "oi": oi},
+        )
+
     if case_name == "oi_wvf_defocus_small":
         params = {
             "angles": np.array([0.0, np.pi / 4.0, np.pi / 2.0], dtype=float),

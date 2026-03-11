@@ -71,6 +71,7 @@ def _array_metrics(reference: Any, actual: Any) -> dict[str, Any]:
         "max_abs": float(np.max(difference)),
         "mean_rel": float(np.mean(relative)),
         "max_rel": float(np.max(relative)),
+        "normalized_mae": float(np.mean(difference)) / max(float(np.mean(np.abs(reference_array))), 1e-12),
     }
     max_index = tuple(int(item) for item in np.unravel_index(int(np.argmax(relative)), relative.shape))
     metrics["max_index"] = list(max_index)
@@ -175,6 +176,14 @@ def _compare(
             "pass": bool(metrics["mean_rel"] <= threshold),
             "comparison_mode": "mean_rel",
             "max_mean_rel": threshold,
+            **metrics,
+        }
+    if rule and rule.get("mode") == "normalized_mae":
+        threshold = float(rule["max_normalized_mae"])
+        return {
+            "pass": bool(metrics["normalized_mae"] <= threshold),
+            "comparison_mode": "normalized_mae",
+            "max_normalized_mae": threshold,
             **metrics,
         }
     if rule and rule.get("mode") == "scale_invariant":

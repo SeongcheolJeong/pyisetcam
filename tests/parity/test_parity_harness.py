@@ -80,6 +80,10 @@ def _compare(
         relative = np.abs(actual_array - reference_array) / np.maximum(np.abs(reference_array), 1e-12)
         assert float(np.mean(relative)) <= float(rule["max_mean_rel"])
         return
+    if rule and rule.get("mode") == "normalized_mae":
+        normalized_mae = float(np.mean(np.abs(actual_array - reference_array))) / max(float(np.mean(np.abs(reference_array))), 1e-12)
+        assert normalized_mae <= float(rule["max_normalized_mae"])
+        return
     if rule and rule.get("mode") == "scale_invariant":
         reference_flat = reference_array.reshape(-1)
         actual_flat = actual_array.reshape(-1)

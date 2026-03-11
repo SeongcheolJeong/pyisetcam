@@ -117,6 +117,12 @@ injection from flare PSFs, with a curated Octave parity case on the
 upstream flare image; that case compares `photons` with a scale-invariant
 rule because the upstream Octave path preserves image shape but returns a
 constant-factor magnitude offset.
+The same raw OTF workflow now also includes direct
+`oi_get(..., 'optics OTF')` / `oi_set(..., 'optics OTF', ...)` support
+for MATLAB-style shift-invariant OTF access and replacement, with a
+curated Octave parity case that replaces the stored OTF with an ideal
+all-ones OTF and compares the resulting image using a normalized-MAE rule
+that stays stable in dark regions.
 The adjacent wavefront helper surface now also includes
 `wvf_set` / `wvfSet`, `wvf_get` / `wvfGet`,
 `wvf_compute` / `wvfCompute`,

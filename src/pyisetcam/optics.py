@@ -337,6 +337,68 @@ def _custom_shift_invariant_otf_bundle(
     }
 
 
+def _shift_invariant_otf_support(
+    rows: int,
+    cols: int,
+    sample_spacing_m: float | None,
+) -> tuple[np.ndarray, np.ndarray]:
+    spacing_mm = float(sample_spacing_m) * 1e3 if sample_spacing_m is not None else 0.0
+    if spacing_mm > 0.0:
+        fx = unit_frequency_list(int(cols)) * (1.0 / max(2.0 * spacing_mm, 1e-12))
+        fy = unit_frequency_list(int(rows)) * (1.0 / max(2.0 * spacing_mm, 1e-12))
+    else:
+        fx = unit_frequency_list(int(cols))
+        fy = unit_frequency_list(int(rows))
+    return np.asarray(fx, dtype=float), np.asarray(fy, dtype=float)
+
+
+def _synthesized_shift_invariant_otf_bundle(oi: OpticalImage) -> dict[str, Any] | None:
+    optics = dict(oi.fields.get("optics", {}))
+    otf_data = optics.get("otf_data")
+    if otf_data is not None:
+        source = np.asarray(otf_data, dtype=complex)
+        rows, cols = source.shape[:2]
+        fx = optics.get("otf_fx")
+        fy = optics.get("otf_fy")
+        if fx is None or fy is None:
+            support_fx, support_fy = _shift_invariant_otf_support(
+                rows,
+                cols,
+                oi.fields.get("sample_spacing_m"),
+            )
+            fx = support_fx
+            fy = support_fy
+        return {
+            "OTF": source.copy(),
+            "fx": np.asarray(fx, dtype=float).reshape(-1).copy(),
+            "fy": np.asarray(fy, dtype=float).reshape(-1).copy(),
+            "wave": np.asarray(optics.get("otf_wave", oi.fields.get("wave", DEFAULT_WAVE)), dtype=float).reshape(-1).copy(),
+        }
+
+    if param_format(optics.get("model", "")) != "shiftinvariant":
+        return None
+
+    rows, cols = _oi_shape(oi)
+    sample_spacing_m = oi.fields.get("sample_spacing_m")
+    wave = np.asarray(oi.fields.get("wave", DEFAULT_WAVE), dtype=float).reshape(-1)
+    if rows <= 0 or cols <= 0 or sample_spacing_m is None or float(sample_spacing_m) <= 0.0 or wave.size == 0:
+        return None
+
+    psf_stack = _shift_invariant_psf_stack((rows, cols), float(sample_spacing_m), wave, optics)
+    otf_stack = np.empty((rows, cols, wave.size), dtype=complex)
+    for band_index in range(wave.size):
+        plane = np.asarray(psf_stack[:, :, band_index], dtype=float)
+        plane = plane / max(float(np.sum(plane)), 1e-12)
+        otf_stack[:, :, band_index] = np.fft.fft2(np.fft.fftshift(plane))
+    fx, fy = _shift_invariant_otf_support(rows, cols, float(sample_spacing_m))
+    return {
+        "OTF": otf_stack,
+        "fx": fx,
+        "fy": fy,
+        "wave": wave.copy(),
+    }
+
+
 def _normalize_raytrace_table(raw: dict[str, Any] | None) -> dict[str, Any]:
     current = {} if raw is None else dict(raw)
     return {
@@ -4687,20 +4749,19 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
     if key in {"transmittancenwave", "opticstransmittancenwave"}:
         transmittance = _ensure_optics_transmittance(oi.fields["optics"], wave=np.asarray(oi.fields["wave"], dtype=float))
         return int(np.asarray(transmittance["wave"], dtype=float).size)
-    if key in {"otfstruct", "opticsotfstruct"}:
-        otf_data = oi.fields["optics"].get("otf_data")
-        otf_fx = oi.fields["optics"].get("otf_fx")
-        otf_fy = oi.fields["optics"].get("otf_fy")
-        otf_wave = oi.fields["optics"].get("otf_wave", oi.fields.get("wave"))
-        if otf_data is None or otf_fx is None or otf_fy is None:
+    if key in {"otf", "opticsotf", "otfstruct", "opticsotfstruct"}:
+        otf_bundle = _synthesized_shift_invariant_otf_bundle(oi)
+        if otf_bundle is None:
             return None
+        if key in {"otf", "opticsotf"}:
+            return np.asarray(otf_bundle["OTF"], dtype=complex).copy()
         return _export_shift_invariant_otf_struct(
             {
                 "function": oi.fields["optics"].get("otf_function", "custom"),
-                "OTF": otf_data,
-                "fx": otf_fx,
-                "fy": otf_fy,
-                "wave": otf_wave,
+                "OTF": otf_bundle["OTF"],
+                "fx": otf_bundle["fx"],
+                "fy": otf_bundle["fy"],
+                "wave": otf_bundle["wave"],
             }
         )
     if key in {"otfdata", "opticsotfdata"}:
@@ -4827,6 +4888,41 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any, *args: Any) -> OpticalI
         new_wave = np.asarray(oi.fields["wave"], dtype=float).reshape(-1)
         transmittance["wave"] = new_wave.copy()
         transmittance["scale"] = np.interp(new_wave, old_wave, old_scale, left=1.0, right=1.0)
+        return oi
+    if key in {"otf", "opticsotf"}:
+        otf = np.asarray(value, dtype=complex)
+        if otf.ndim == 2:
+            otf = otf[:, :, None]
+        if otf.ndim != 3:
+            raise ValueError("Shift-invariant OTF data must be a 2-D or 3-D array.")
+
+        wave = np.asarray(oi.fields.get("wave", DEFAULT_WAVE), dtype=float).reshape(-1)
+        if otf.shape[2] == 1 and wave.size > 1:
+            otf = np.repeat(otf, wave.size, axis=2)
+        elif otf.shape[2] != wave.size:
+            raise ValueError("Shift-invariant OTF wavelength dimension must match the wavelength vector.")
+
+        current_bundle = _synthesized_shift_invariant_otf_bundle(oi)
+        rows, cols = otf.shape[:2]
+        if current_bundle is not None and np.asarray(current_bundle["OTF"]).shape[:2] == (rows, cols):
+            fx = np.asarray(current_bundle["fx"], dtype=float).reshape(-1)
+            fy = np.asarray(current_bundle["fy"], dtype=float).reshape(-1)
+        else:
+            fx, fy = _shift_invariant_otf_support(rows, cols, oi.fields.get("sample_spacing_m"))
+
+        oi.fields["optics"]["otf_data"] = np.asarray(otf, dtype=complex)
+        oi.fields["optics"]["otf_fx"] = fx.copy()
+        oi.fields["optics"]["otf_fy"] = fy.copy()
+        oi.fields["optics"]["otf_wave"] = wave.copy()
+        oi.fields["optics"]["otf_function"] = "custom"
+        oi.fields["optics"]["model"] = "shiftinvariant"
+        oi.fields["optics"]["compute_method"] = "opticsotf"
+        oi.fields["compute_method"] = "opticsotf"
+        transmittance = _ensure_optics_transmittance(oi.fields["optics"], wave=wave)
+        old_wave = np.asarray(transmittance["wave"], dtype=float).reshape(-1)
+        old_scale = np.asarray(transmittance["scale"], dtype=float).reshape(-1)
+        transmittance["wave"] = wave.copy()
+        transmittance["scale"] = np.interp(wave, old_wave, old_scale, left=1.0, right=1.0)
         return oi
     if key in {"otfstruct", "opticsotfstruct"}:
         otf_struct = _normalize_shift_invariant_otf_struct(value, target_wave=np.asarray(oi.fields.get("wave", DEFAULT_WAVE), dtype=float))
