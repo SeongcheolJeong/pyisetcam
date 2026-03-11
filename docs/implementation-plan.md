@@ -21,6 +21,7 @@
 - That same WVF plotting surface now also has direct Octave parity on the `wvfPlot(..., '2d otf', ...)` workflow from `s_wvfPlot.m`, comparing the returned OTF support axis and center-row magnitude data.
 - That same WVF plotting surface now also has direct Octave parity on `wvfPlot(..., '2d otf normalized', ...)`, comparing the returned OTF support axis and normalized center-row magnitude data.
 - That same WVF plotting surface now also has direct Octave parity on `wvfPlot(..., '1d otf', ...)`, comparing the returned cropped OTF support axis and OTF center row.
+- That same WVF plotting surface now also has direct Octave parity on `wvfPlot(..., '1d otf normalized', ...)`, comparing the returned cropped OTF support axis and normalized OTF center row.
 - That same WVF plotting surface now also has direct Octave parity on `wvfPlot(..., '1d otf angle', ...)`, comparing the returned cropped frequency support axis and OTF center row.
 - The same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., 'image pupil amp', ...)`, comparing the returned spatial support axis and pupil-amplitude center row.
 - That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., '2d pupil amplitude space', ...)`, comparing the returned spatial support axis and pupil-amplitude center row for the exact legacy alias.
