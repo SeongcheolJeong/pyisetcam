@@ -896,6 +896,34 @@ def run_python_case_with_context(
             context={"wvf": wvf},
         )
 
+    if case_name == "wvf_plot_2d_psf_angle_small":
+        wvf = wvf_create(wave=np.array([460.0], dtype=float))
+        wvf = wvf_set(wvf, "spatial samples", 401)
+        wvf = wvf_compute(wvf)
+        udata, _ = wvf_plot(
+            wvf,
+            "2d psf angle",
+            "unit",
+            "min",
+            "wave",
+            460.0,
+            "plot range",
+            1.0,
+            "window",
+            False,
+        )
+        psf = np.asarray(udata["z"], dtype=float)
+        middle_row = psf.shape[0] // 2
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "x": np.asarray(udata["x"], dtype=float),
+                "psf_mid_row": psf[middle_row, :],
+                "psf_center": float(psf[middle_row, psf.shape[1] // 2]),
+            },
+            context={"wvf": wvf},
+        )
+
     if case_name == "wvf_plot_1d_psf_small":
         wvf = wvf_create(wave=np.array([550.0], dtype=float))
         wvf = wvf_set(wvf, "spatial samples", 401)
