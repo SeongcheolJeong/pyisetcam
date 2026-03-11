@@ -215,6 +215,7 @@
 - `oi_lswavelength_diffraction_small`: `oiPlot(oi, 'ls wavelength')` parity on a diffraction-limited OI configured like the upstream diffraction PSF script, compare the returned spatial axis, wavelength vector, and line-spread-by-wavelength surface.
 - `oi_psf550_diffraction_small`: `oiPlot(oi, 'psf', [], 550)` parity on a diffraction-limited OI configured like the upstream diffraction PSF script, compare the returned spatial support grids and PSF surface.
 - `oi_psfxaxis_diffraction_small`: `oiPlot(oi, 'psf xaxis', [], 550, 'um')` parity on a diffraction-limited OI configured like the upstream diffraction/WVF spatial scripts, compare the returned spatial support axis and PSF cross-section.
+- `oi_psfyaxis_diffraction_small`: `oiPlot(oi, 'psf yaxis', [], 550, 'um')` parity on a diffraction-limited OI configured like the upstream diffraction/WVF spatial scripts, compare the returned spatial support axis and PSF cross-section.
 - `optics_psf_to_otf_flare_small`: direct `opticsPSF2OTF(...)` parity on the upstream `flare1.png` workflow, compare the returned frequency axes plus a 550 nm OTF center crop and central row from the generated custom OTF struct.
 - `oi_diffraction_limited_default`: default scene through `oiCreate()/oiCompute()`, compare irradiance cube, padding behavior, and FOV-derived geometry.
 - `oi_wvf_small_scene`: small deterministic wavefront case, compare PSF/OTF-derived irradiance numerically with relaxed FFT tolerance.

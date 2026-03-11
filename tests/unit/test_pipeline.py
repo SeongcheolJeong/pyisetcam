@@ -4152,6 +4152,15 @@ def test_run_python_case_supports_psfxaxis_diffraction_parity_case(asset_store) 
     assert np.all(case.payload["data"] >= 0.0)
 
 
+def test_run_python_case_supports_psfyaxis_diffraction_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("oi_psfyaxis_diffraction_small", asset_store=asset_store)
+
+    assert case.payload["samp"].ndim == 1
+    assert case.payload["data"].shape == case.payload["samp"].shape
+    assert np.isclose(float(case.payload["wave"]), 550.0)
+    assert np.all(case.payload["data"] >= 0.0)
+
+
 def test_run_python_case_supports_unit_frequency_utility_parity_case(asset_store) -> None:
     case = run_python_case_with_context("utility_unit_frequency_list", asset_store=asset_store)
 

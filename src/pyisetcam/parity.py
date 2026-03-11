@@ -500,6 +500,23 @@ def run_python_case_with_context(
             context={"oi": oi},
         )
 
+    if case_name == "oi_psfyaxis_diffraction_small":
+        oi = oi_create("diffraction limited")
+        optics = dict(oi.fields["optics"])
+        optics["focal_length_m"] = 0.017
+        optics["f_number"] = 17.0 / 3.0
+        oi.fields["optics"] = optics
+        udata, _ = oi_plot(oi, "psfyaxis", None, 550.0, "um")
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "samp": np.asarray(udata["samp"], dtype=float),
+                "data": np.asarray(udata["data"], dtype=float),
+                "wave": float(udata["wave"]),
+            },
+            context={"oi": oi},
+        )
+
     if case_name == "oi_si_lorentzian_small":
         scene = scene_create("grid lines", [64, 64], 16, "ee", 2, asset_store=store)
         scene = scene_set(scene, "fov", 2.0)

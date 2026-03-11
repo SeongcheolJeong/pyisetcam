@@ -186,6 +186,9 @@ That same diffraction plotting surface now also includes direct
 That same diffraction plotting surface now also includes direct
 `oiPlot(..., 'psf xaxis', [], 550, 'um')` parity coverage for the
 upstream diffraction and WVF spatial scripts.
+That same diffraction plotting surface now also includes direct
+`oiPlot(..., 'psf yaxis', [], 550, 'um')` parity coverage for the
+upstream diffraction and WVF spatial scripts.
 The script-driven custom optics surface now also includes direct
 `opticsPSF2OTF(...)` parity coverage for the upstream flare-image
 workflow from `s_opticsPSF2OTF.m`.
