@@ -40,7 +40,7 @@ from .optics import (
 )
 from .plotting import oi_plot, wvf_plot
 from .scene import scene_adjust_illuminant, scene_create, scene_get, scene_set
-from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_set
+from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_crop, sensor_get, sensor_set
 from .utils import blackbody, energy_to_quanta, param_format, quanta_to_energy, unit_frequency_list
 
 
@@ -515,6 +515,42 @@ def run_python_case_with_context(
                 "wave": float(udata["wave"]),
             },
             context={"oi": oi},
+        )
+
+    if case_name == "oi_psfxaxis_wvf_small":
+        wvf = wvf_create(wave=np.array([550.0], dtype=float))
+        this_wave = 550.0
+        wvf = wvf_compute(wvf)
+        oi = wvf_to_oi(wvf)
+        oi_line = dict(oi_get(oi, "optics psf xaxis", this_wave, "um"))
+        wvf_line, _ = wvf_plot(wvf, "psfxaxis", "unit", "um", "wave", this_wave)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": this_wave,
+                "oi_samp": np.asarray(oi_line["samp"], dtype=float),
+                "oi_data": np.asarray(oi_line["data"], dtype=float),
+                "wvf_samp": np.asarray(wvf_line["samp"], dtype=float),
+                "wvf_data": np.asarray(wvf_line["data"], dtype=float),
+            },
+            context={"wvf": wvf, "oi": oi},
+        )
+
+    if case_name == "oi_psf550_wvf_small":
+        wvf = wvf_create(wave=np.array([550.0], dtype=float))
+        wvf = wvf_set(wvf, "focal length", 8.0, "mm")
+        wvf = wvf_set(wvf, "pupil diameter", 3.0, "mm")
+        wvf = wvf_compute(wvf)
+        oi = wvf_to_oi(wvf)
+        udata, _ = oi_plot(oi, "psf550")
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "x": np.asarray(udata["x"], dtype=float),
+                "y": np.asarray(udata["y"], dtype=float),
+                "psf": np.asarray(udata["psf"], dtype=float),
+            },
+            context={"wvf": wvf, "oi": oi},
         )
 
     if case_name == "oi_si_lorentzian_small":
@@ -1640,6 +1676,25 @@ def run_python_case_with_context(
         return ParityCaseResult(
             payload={"case_name": case_name, **_stats(sensor.data["volts"])},
             context={"scene": scene, "oi": oi, "sensor": sensor},
+        )
+
+    if case_name == "sensor_imx363_crop_small":
+        sensor = sensor_create("IMX363", None, "row col", [12, 16], asset_store=store)
+        sensor = sensor_set(sensor, "pattern", np.array([[2, 1], [3, 2]], dtype=int))
+        sensor = sensor_set(sensor, "wave", np.arange(400.0, 701.0, 10.0, dtype=float))
+        dv = np.arange(12 * 16, dtype=float).reshape((12, 16), order="F")
+        sensor = sensor_set(sensor, "digital values", dv)
+        cropped = sensor_crop(sensor, np.array([2, 3, 7, 5], dtype=float))
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "name": str(cropped.name),
+                "size": np.asarray(sensor_get(cropped, "size"), dtype=int),
+                "metadata_crop": np.asarray(sensor_get(cropped, "metadata crop"), dtype=int),
+                "pattern": np.asarray(sensor_get(cropped, "pattern"), dtype=int),
+                "digital_values": np.asarray(sensor_get(cropped, "digital values"), dtype=float),
+            },
+            context={"sensor": cropped},
         )
 
     if case_name == "ip_default_pipeline":

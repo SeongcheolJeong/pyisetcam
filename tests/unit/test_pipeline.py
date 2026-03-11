@@ -53,6 +53,7 @@ from pyisetcam import (
     scene_get,
     scene_set,
     sensor_compute,
+    sensor_crop,
     sensor_create,
     sensor_get,
     sensor_set,
@@ -3486,6 +3487,26 @@ def test_sensor_create_vendor_models_load_upstream_rgbw_and_rccc_metadata(asset_
     assert np.array_equal(sensor_get(ar0132at_rccc, "patterncolors"), np.array([["w", "w"], ["w", "r"]], dtype="<U1"))
 
 
+def test_sensor_create_imx363_and_crop_support_raw_tutorial_flow(asset_store) -> None:
+    sensor = sensor_create("IMX363", None, "row col", [12, 16], asset_store=asset_store)
+
+    assert sensor.name == "IMX363"
+    assert sensor.fields["size"] == (12, 16)
+    assert sensor_get(sensor, "quantizationmethod") == "10 bit"
+
+    sensor = sensor_set(sensor, "pattern", np.array([[2, 1], [3, 2]], dtype=int))
+    sensor = sensor_set(sensor, "wave", np.arange(400.0, 701.0, 10.0, dtype=float))
+    dv = np.arange(12 * 16, dtype=float).reshape((12, 16), order="F")
+    sensor = sensor_set(sensor, "digital values", dv)
+
+    cropped = sensor_crop(sensor, [2, 3, 7, 5])
+
+    assert sensor_get(cropped, "size") == (6, 8)
+    assert np.array_equal(sensor_get(cropped, "metadata crop"), np.array([3, 3, 7, 5], dtype=int))
+    assert np.array_equal(sensor_get(cropped, "pattern"), np.array([[2, 1], [3, 2]], dtype=int))
+    assert np.array_equal(sensor_get(cropped, "digital values"), dv[2:8, 2:10])
+
+
 def test_sensor_compute_supports_rgbw_and_rccc_presets(asset_store) -> None:
     scene = scene_create("uniform ee", 16, asset_store=asset_store)
     oi = oi_compute(oi_create(), scene, crop=True)
@@ -4232,6 +4253,28 @@ def test_run_python_case_supports_psfyaxis_diffraction_parity_case(asset_store) 
     assert np.all(case.payload["data"] >= 0.0)
 
 
+def test_run_python_case_supports_psfxaxis_wvf_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("oi_psfxaxis_wvf_small", asset_store=asset_store)
+
+    assert np.isclose(float(case.payload["wave"]), 550.0)
+    assert case.payload["oi_samp"].ndim == 1
+    assert case.payload["oi_data"].shape == case.payload["oi_samp"].shape
+    assert case.payload["wvf_samp"].shape == case.payload["oi_samp"].shape
+    assert case.payload["wvf_data"].shape == case.payload["oi_samp"].shape
+    assert np.all(case.payload["oi_data"] >= 0.0)
+    assert np.all(case.payload["wvf_data"] >= 0.0)
+
+
+def test_run_python_case_supports_psf550_wvf_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("oi_psf550_wvf_small", asset_store=asset_store)
+
+    assert case.payload["x"].ndim == 2
+    assert case.payload["y"].ndim == 2
+    assert case.payload["psf"].shape == case.payload["x"].shape
+    assert case.payload["psf"].shape == case.payload["y"].shape
+    assert np.all(case.payload["psf"] >= 0.0)
+
+
 def test_run_python_case_supports_unit_frequency_utility_parity_case(asset_store) -> None:
     case = run_python_case_with_context("utility_unit_frequency_list", asset_store=asset_store)
 
@@ -4367,3 +4410,12 @@ def test_run_python_case_supports_metrics_spd_mired_parity_case(asset_store) -> 
     assert float(case.payload["mired"]) > 0.0
     assert case.payload["uv"].shape == (2, 2)
     assert case.payload["cct_k"].shape == (2,)
+
+
+def test_run_python_case_supports_sensor_imx363_crop_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_imx363_crop_small", asset_store=asset_store)
+
+    assert case.payload["name"] == "IMX363"
+    assert np.array_equal(case.payload["size"], np.array([6, 8], dtype=int))
+    assert np.array_equal(case.payload["metadata_crop"], np.array([3, 3, 7, 5], dtype=int))
+    assert case.payload["digital_values"].shape == (6, 8)

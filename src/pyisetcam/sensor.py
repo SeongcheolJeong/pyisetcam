@@ -1154,10 +1154,30 @@ def _sensor_from_upstream_model(
     sensor.fields["ir_filter"] = np.asarray(getattr(model.color, "irFilter", np.ones(wave.size)), dtype=float).reshape(-1)
     sensor.fields["analog_gain"] = float(model.analogGain)
     sensor.fields["analog_offset"] = float(model.analogOffset)
-    sensor.fields["quantization"] = str(model.quantization)
+    quantization = getattr(model, "quantization", "analog")
+    if hasattr(quantization, "bits") and hasattr(quantization, "method"):
+        bits_value = np.asarray(quantization.bits, dtype=float).reshape(-1)
+        bits = int(np.rint(float(bits_value[0]))) if bits_value.size else 0
+        method = str(quantization.method)
+        if param_format(method) == "linear" and bits > 0:
+            sensor.fields["quantization"] = f"{bits} bit"
+        else:
+            sensor.fields["quantization"] = method
+        sensor.fields["nbits"] = bits
+    else:
+        sensor.fields["quantization"] = str(quantization)
     sensor.fields["integration_time"] = float(model.integrationTime)
     sensor.fields["auto_exposure"] = bool(model.AE)
     sensor.fields["noise_flag"] = int(model.noiseFlag)
+    sensor.fields["cds"] = bool(getattr(model, "CDS", False))
+    if hasattr(model, "sigmaOffsetFPN"):
+        sensor.fields["pixel"]["dsnu_sigma_v"] = float(model.sigmaOffsetFPN)
+    if hasattr(model, "sigmaGainFPN"):
+        sensor.fields["pixel"]["prnu_sigma"] = float(model.sigmaGainFPN)
+    if hasattr(model, "offsetFPNimage") and np.size(model.offsetFPNimage):
+        sensor.fields["offset_fpn_image"] = np.asarray(model.offsetFPNimage, dtype=float).copy()
+    if hasattr(model, "gainFPNimage") and np.size(model.gainFPNimage):
+        sensor.fields["gain_fpn_image"] = np.asarray(model.gainFPNimage, dtype=float).copy()
     return sensor
 
 
@@ -1191,6 +1211,10 @@ def _sensor_vendor_ar0132at(variant: str, *, asset_store: AssetStore) -> Sensor:
     if normalized not in mapping:
         raise UnsupportedOptionError("sensorCreate", f"ar0132at/{variant}")
     return _sensor_from_upstream_model(mapping[normalized], asset_store=asset_store)
+
+
+def _sensor_vendor_imx363(*, asset_store: AssetStore) -> Sensor:
+    return _sensor_from_upstream_model("data/sensor/sony/imx363.mat", asset_store=asset_store)
 
 
 def sensor_create(
@@ -1246,6 +1270,37 @@ def sensor_create(
 
     if normalized == "ar0132at":
         return track_session_object(session, _sensor_vendor_ar0132at(_sensor_variant_name(args, "rgb"), asset_store=store))
+
+    if normalized in {"imx363", "googlepixel4a"}:
+        sensor = _sensor_vendor_imx363(asset_store=store)
+        if args:
+            if len(args) % 2 != 0:
+                raise ValueError("sensorCreate('IMX363', ...) expects key/value pairs.")
+            current_gain = float(sensor.fields["analog_gain"])
+            current_offset = float(sensor.fields["analog_offset"])
+            black_level_v = current_offset / max(current_gain, 1e-12)
+            for index in range(0, len(args), 2):
+                parameter = param_format(args[index])
+                value = args[index + 1]
+                if parameter in {"rowcol", "rowcolsize"}:
+                    rows, cols = np.rint(np.asarray(value, dtype=float).reshape(-1)[:2]).astype(int)
+                    sensor = sensor_set(sensor, "rows", int(rows))
+                    sensor = sensor_set(sensor, "cols", int(cols))
+                    continue
+                if parameter in {"isospeed", "iso"}:
+                    iso_speed = float(value)
+                    analog_gain = 55.0 / max(iso_speed, 1e-12)
+                    sensor = sensor_set(sensor, "analog gain", analog_gain)
+                    sensor = sensor_set(sensor, "analog offset", black_level_v * analog_gain)
+                    continue
+                if parameter in {"exposuretime", "exptime", "integrationtime"}:
+                    sensor = sensor_set(sensor, "integration time", value)
+                    continue
+                if parameter == "wave":
+                    sensor = sensor_set(sensor, "wave", value)
+                    continue
+                sensor = sensor_set(sensor, parameter, value)
+        return track_session_object(session, sensor)
 
     if normalized == "ideal":
         return sensor_create_ideal("xyz", None, asset_store=store, session=session)
@@ -1435,6 +1490,59 @@ def _sensor_crop_rect(data: np.ndarray | None, rect: np.ndarray | None) -> np.nd
     row_end = min(int(rect[1] + rect[3]), array.shape[0])
     col_end = min(int(rect[0] + rect[2]), array.shape[1])
     return np.asarray(array[row_start:row_end, col_start:col_end, ...], dtype=float).copy()
+
+
+def _sensor_cfa_crop_rect(sensor: Sensor, rect: Any) -> np.ndarray:
+    rect_array = np.rint(np.asarray(rect, dtype=float).reshape(-1)[:4]).astype(int)
+    if rect_array.size != 4:
+        raise ValueError("Crop rect must be [x, y, width, height].")
+
+    cfa_rows, cfa_cols = _sensor_unit_block(sensor)
+    cfa_xy = np.array([max(int(cfa_cols), 1), max(int(cfa_rows), 1)], dtype=int)
+    adjusted = rect_array.copy()
+    for axis in range(2):
+        start_index = axis
+        size_index = axis + 2
+        remainder = adjusted[start_index] % cfa_xy[axis]
+        if remainder != 1:
+            if remainder == 0:
+                adjusted[start_index] += 1
+            else:
+                adjusted[start_index] += cfa_xy[axis] - remainder + 1
+        count = adjusted[size_index] + 1
+        remainder = count % cfa_xy[axis]
+        if remainder != 0:
+            adjusted[size_index] += cfa_xy[axis] - remainder
+
+    adjusted[:2] = np.maximum(adjusted[:2], 1)
+    adjusted[2:] = np.maximum(adjusted[2:], 0)
+    return adjusted
+
+
+def sensor_crop(sensor: Sensor, rect: Any) -> Sensor:
+    """Crop a sensor while preserving CFA alignment."""
+
+    adjusted_rect = _sensor_cfa_crop_rect(sensor, rect)
+    cropped = sensor.clone()
+
+    volts = sensor.data.get("volts")
+    dv = sensor.data.get("dv")
+    new_size: tuple[int, int] | None = None
+    if volts is not None:
+        new_volts = _sensor_crop_rect(volts, adjusted_rect)
+        if new_volts is not None:
+            cropped.data["volts"] = new_volts
+            new_size = tuple(int(value) for value in new_volts.shape[:2])
+    if dv is not None:
+        new_dv = _sensor_crop_rect(dv, adjusted_rect)
+        if new_dv is not None:
+            cropped.data["dv"] = np.rint(new_dv).astype(np.asarray(dv).dtype, copy=False)
+            if new_size is None:
+                new_size = tuple(int(value) for value in new_dv.shape[:2])
+    if new_size is not None:
+        cropped.fields["size"] = new_size
+    cropped.metadata["crop"] = adjusted_rect.copy()
+    return cropped
 
 
 def _sensor_chromaticity(sensor: Sensor, rect_or_locs: Any = None, mode: str = "vec") -> np.ndarray | None:

@@ -140,6 +140,7 @@ from .sensor import (
     pixel_snr,
     sensor_snr,
     sensor_compute,
+    sensor_crop,
     sensor_create,
     sensor_create_ideal,
     sensor_get,
@@ -366,6 +367,7 @@ __all__ = [
     "scene_get",
     "scene_set",
     "sensorCompute",
+    "sensorCrop",
     "sensorCreate",
     "sensorCreateIdeal",
     "sensorGet",
@@ -373,6 +375,7 @@ __all__ = [
     "sensorSet",
     "sensorSetSizeToFOV",
     "sensor_compute",
+    "sensor_crop",
     "sensor_create",
     "sensor_create_ideal",
     "sensor_get",
@@ -520,6 +523,7 @@ zemaxReadHeader = zemax_read_header
 sensorCreate = sensor_create
 sensorCreateIdeal = sensor_create_ideal
 sensorCompute = sensor_compute
+sensorCrop = sensor_crop
 sensorGet = sensor_get
 sensorSNR = sensor_snr
 pixelSNR = pixel_snr

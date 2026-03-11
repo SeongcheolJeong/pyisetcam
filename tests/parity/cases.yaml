@@ -181,6 +181,38 @@
       "atol": 1e-06
     },
     {
+      "name": "oi_psfxaxis_wvf_small",
+      "matlab_function": "wvf2oi/oiGet/wvfGet",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "oi_samp": {
+          "mode": "mean_rel",
+          "max_mean_rel": 3e-05
+        },
+        "wvf_samp": {
+          "mode": "mean_rel",
+          "max_mean_rel": 3e-05
+        }
+      }
+    },
+    {
+      "name": "oi_psf550_wvf_small",
+      "matlab_function": "wvf2oi/oiPlot",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "x": {
+          "mode": "mean_rel",
+          "max_mean_rel": 3e-05
+        },
+        "y": {
+          "mode": "mean_rel",
+          "max_mean_rel": 3e-05
+        }
+      }
+    },
+    {
       "name": "oi_si_lorentzian_small",
       "matlab_function": "siSynthetic/oiSet/oiCompute",
       "rtol": 1e-04,
@@ -679,6 +711,12 @@
       "matlab_function": "sensorCompute",
       "rtol": 0.01,
       "atol": 0.02
+    },
+    {
+      "name": "sensor_imx363_crop_small",
+      "matlab_function": "sensorCreate/sensorCrop",
+      "rtol": 1e-05,
+      "atol": 1e-08
     },
     {
       "name": "ip_default_pipeline",

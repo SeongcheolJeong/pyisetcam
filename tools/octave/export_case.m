@@ -286,6 +286,30 @@ switch case_name
         payload.data = uData.data;
         payload.wave = 550;
 
+    case 'oi_psfxaxis_wvf_small'
+        wvf = wvfCreate('wave', 550);
+        thisWave = 550;
+        wvf = wvfCompute(wvf);
+        oi = wvf2oi(wvf);
+        oiLine = oiGet(oi, 'optics psf xaxis', thisWave, 'um');
+        wvfLine = wvfPlot(wvf, 'psf xaxis', 'unit', 'um', 'wave', thisWave, 'window', false);
+        payload.wave = thisWave;
+        payload.oi_samp = oiLine.samp;
+        payload.oi_data = oiLine.data;
+        payload.wvf_samp = wvfLine.samp;
+        payload.wvf_data = wvfLine.data;
+
+    case 'oi_psf550_wvf_small'
+        wvf = wvfCreate('wave', 550);
+        wvf = wvfSet(wvf, 'focal length', 8, 'mm');
+        wvf = wvfSet(wvf, 'pupil diameter', 3, 'mm');
+        wvf = wvfCompute(wvf);
+        oi = wvf2oi(wvf);
+        psfData = oiGet(oi, 'optics psf data', 550, 'um');
+        payload.x = psfData.xy(:, :, 1);
+        payload.y = psfData.xy(:, :, 2);
+        payload.psf = psfData.psf;
+
     case 'oi_si_lorentzian_small'
         scene = sceneCreate('grid lines', [64 64], 16, 'ee', 2);
         scene = sceneSet(scene, 'fov', 2.0);
@@ -993,6 +1017,21 @@ switch case_name
         payload.std = std(volts(:));
         payload.p05 = prctile(volts(:), 5);
         payload.p95 = prctile(volts(:), 95);
+
+    case 'sensor_imx363_crop_small'
+        load(fullfile(isetRootPath, 'data', 'sensor', 'sony', 'imx363.mat'), 'sensor');
+        sensor = sensorSet(sensor, 'rows', 12);
+        sensor = sensorSet(sensor, 'cols', 16);
+        sensor = sensorSet(sensor, 'pattern', [2 1; 3 2]);
+        sensor = sensorSet(sensor, 'wave', 400:10:700);
+        dv = reshape(0:(12*16 - 1), [12 16]);
+        sensor = sensorSet(sensor, 'digital values', dv);
+        sensor = sensorCrop(sensor, [2 3 7 5]);
+        payload.name = sensorGet(sensor, 'name');
+        payload.size = sensorGet(sensor, 'size');
+        payload.metadata_crop = sensorGet(sensor, 'metadata crop');
+        payload.pattern = sensorGet(sensor, 'pattern');
+        payload.digital_values = sensorGet(sensor, 'digital values');
 
     case 'ip_default_pipeline'
         scene = sceneCreate();
