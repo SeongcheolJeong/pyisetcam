@@ -841,13 +841,13 @@ def _wvf_crop_axis_and_plane(axis: np.ndarray, plane: np.ndarray, plot_range: fl
 
 
 def _wvf_line_payload(wvf: dict[str, Any], key: str, wave: float, unit: str, plot_range: float) -> dict[str, Any]:
-    xaxis = dict(wvf_get(wvf, "psf xaxis" if key == "psfxaxis" else "psfyaxis", unit, wave))
-    samp = np.asarray(xaxis["samp"], dtype=float)
-    data = np.asarray(xaxis["data"], dtype=float)
-    if np.isfinite(float(plot_range)):
-        index = np.abs(samp) < float(plot_range)
-        samp = samp[index]
-        data = data[index]
+    samp = np.asarray(wvf_get(wvf, "psf spatial samples", unit, wave), dtype=float)
+    psf = np.asarray(wvf_get(wvf, "psf", wave), dtype=float)
+    middle = psf.shape[0] // 2
+    if key == "psfxaxis":
+        data = np.asarray(psf[middle, :], dtype=float)
+    else:
+        data = np.asarray(psf[:, middle], dtype=float)
     return {"samp": samp, "data": data, "wave": float(wave), "unit": unit}
 
 
@@ -907,7 +907,7 @@ def wvf_plot(
         return udata, None
 
     if key in {"1dpsf", "1dpsfspace", "1dpsfnormalized"}:
-        samp = np.asarray(dict(wvf_get(wvf, "psf xaxis", unit, wave))["samp"], dtype=float)
+        samp = np.asarray(wvf_get(wvf, "psf spatial samples", unit, wave), dtype=float)
         line = np.asarray(wvf_get(wvf, "1d psf", wave), dtype=float)
         if "normalized" in key:
             line = line / max(float(np.max(line)), 1e-12)

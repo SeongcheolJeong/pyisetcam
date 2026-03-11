@@ -3904,6 +3904,14 @@ def test_run_python_case_supports_wvf_plot_image_psf_parity_case(asset_store) ->
     assert float(case.payload["psf_center"]) > 0.0
 
 
+def test_run_python_case_supports_wvf_plot_psf_xaxis_airy_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("wvf_plot_psf_xaxis_airy_small", asset_store=asset_store)
+
+    assert case.payload["samp"].ndim == 1
+    assert case.payload["data"].shape == case.payload["samp"].shape
+    assert float(case.payload["airy_disk_radius"]) > 0.0
+
+
 def test_wvf_wave_getter_supports_unit_and_index() -> None:
     wvf = wvf_create(wave=np.array([450.0, 550.0, 650.0], dtype=float))
 

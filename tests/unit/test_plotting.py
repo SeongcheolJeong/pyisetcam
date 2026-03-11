@@ -218,7 +218,8 @@ def test_wvf_plot_psf_views() -> None:
     assert psf_udata["z"].shape == (psf_udata["y"].size, psf_udata["x"].size)
     assert np.isclose(float(np.max(psf_udata["z"])), 1.0)
     assert np.isclose(float(np.max(line_udata["y"])), 1.0)
-    assert np.allclose(xaxis_udata["samp"], line_udata["x"])
+    expected_index = np.abs(xaxis_udata["samp"]) < 10.0
+    assert np.allclose(xaxis_udata["samp"][expected_index], line_udata["x"])
     assert xaxis_udata["data"].shape == xaxis_udata["samp"].shape
     assert yaxis_udata["data"].shape == yaxis_udata["samp"].shape
     assert np.asarray(wvf_get(wvf, "psf")).ndim == 3
