@@ -1062,6 +1062,31 @@ def run_python_case_with_context(
             context={"wvf": wvf},
         )
 
+    if case_name == "wvf_plot_psfyaxis_small":
+        wvf = wvf_create(wave=np.array([550.0], dtype=float))
+        wvf = wvf_set(wvf, "spatial samples", 401)
+        wvf = wvf_compute(wvf)
+        udata, _ = wvf_plot(
+            wvf,
+            "psf yaxis",
+            "unit",
+            "um",
+            "wave",
+            550.0,
+            "plot range",
+            20.0,
+            "window",
+            False,
+        )
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "samp": np.asarray(udata["samp"], dtype=float),
+                "data": np.asarray(udata["data"], dtype=float),
+            },
+            context={"wvf": wvf},
+        )
+
     if case_name == "wvf_psf2zcoeff_error_small":
         wvf = wvf_create(wave=np.array([550.0], dtype=float))
         wvf = wvf_set(wvf, "zcoeffs", 0.2, "defocus")

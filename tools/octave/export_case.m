@@ -602,6 +602,14 @@ switch case_name
         payload.data = uData.psf(:)';
         payload.airy_disk_radius = airyDisk(550, wvfGet(wvf, 'fnumber'), 'units', 'um');
 
+    case 'wvf_plot_psfyaxis_small'
+        wvf = wvfCreate('wave', 550);
+        wvf = wvfSet(wvf, 'spatial samples', 401);
+        wvf = wvfCompute(wvf);
+        uData = wvfPlot(wvf, 'psf yaxis', 'unit', 'um', 'wave', 550, 'plot range', 20, 'window', false);
+        payload.samp = uData.samp(:)';
+        payload.data = uData.psf(:)';
+
     case 'wvf_psf2zcoeff_error_small'
         wvf = wvfCreate('wave', 550);
         wvf = wvfSet(wvf, 'zcoeffs', 0.2, 'defocus');
