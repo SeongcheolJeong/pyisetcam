@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 from datetime import datetime
 
 import numpy as np
 from scipy.io import loadmat, savemat
+from tifffile import TiffFile
 
+from .exceptions import UnsupportedOptionError
 from .session import ie_add_object, session_add_object, session_replace_object
 from .types import BaseISETObject, Camera, Display, ImageProcessor, OpticalImage, Scene, Sensor, SessionContext
 from .utils import param_format
@@ -250,3 +253,250 @@ def ie_save_si_data_file(
 
 
 ieSaveSIDataFile = ie_save_si_data_file
+
+
+def _is_numeric_scalar(value: Any) -> bool:
+    return isinstance(value, (int, float, np.integer, np.floating))
+
+
+def _decode_tiff_value(value: Any) -> Any:
+    if isinstance(value, bytes):
+        return value
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, np.ndarray):
+        if value.shape == ():
+            return _decode_tiff_value(value.item())
+        return np.asarray([_decode_tiff_value(item) for item in value.tolist()])
+    if isinstance(value, Mapping):
+        return {str(key): _decode_tiff_value(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_decode_tiff_value(item) for item in value]
+    if isinstance(value, tuple):
+        if len(value) == 2 and all(_is_numeric_scalar(item) for item in value):
+            numerator = float(value[0])
+            denominator = float(value[1])
+            return numerator / denominator if denominator != 0 else np.nan
+        if len(value) > 2 and len(value) % 2 == 0 and all(_is_numeric_scalar(item) for item in value):
+            pairs = np.asarray(value, dtype=float).reshape(-1, 2)
+            if np.all(pairs[:, 1] != 0):
+                return pairs[:, 0] / pairs[:, 1]
+        return tuple(_decode_tiff_value(item) for item in value)
+    return value
+
+
+def _dng_scalar(value: Any) -> Any:
+    decoded = _decode_tiff_value(value)
+    if isinstance(decoded, np.ndarray) and decoded.shape == (1,):
+        return decoded.reshape(-1)[0].item()
+    return decoded
+
+
+def _select_raw_series(tif: TiffFile) -> Any:
+    candidates = [series for series in tif.series if len(series.shape) == 2]
+    if not candidates:
+        raise ValueError("No raw mosaic image found in DNG file.")
+    return max(candidates, key=lambda series: int(np.prod(series.shape)))
+
+
+def _select_rgb_series(tif: TiffFile) -> Any:
+    candidates = [series for series in tif.series if len(series.shape) == 3 and series.shape[-1] >= 3]
+    if candidates:
+        return max(candidates, key=lambda series: int(np.prod(series.shape)))
+    if not tif.series:
+        raise ValueError("No image series found in DNG file.")
+    return tif.series[0]
+
+
+def _extract_dng_info(tif: TiffFile, path: Path) -> dict[str, Any]:
+    preview_page = tif.pages[0]
+    raw_series = _select_raw_series(tif)
+    raw_page = raw_series.pages[0]
+
+    make_tag = preview_page.tags.get("Make")
+    model_tag = preview_page.tags.get("Model")
+    orientation_tag = preview_page.tags.get("Orientation")
+    exif_tag = preview_page.tags.get("ExifTag")
+
+    subifd_entry: dict[str, Any] = {}
+    for tag_name in (
+        "BlackLevel",
+        "CFARepeatPatternDim",
+        "CFAPattern",
+        "ActiveArea",
+        "DefaultCropOrigin",
+        "DefaultCropSize",
+    ):
+        tag = raw_page.tags.get(tag_name)
+        if tag is not None:
+            subifd_entry[tag_name] = _decode_tiff_value(tag.value)
+
+    digital_camera = _decode_tiff_value(exif_tag.value if exif_tag is not None else {})
+    info: dict[str, Any] = {
+        "Filename": str(path),
+        "Make": str(_dng_scalar(make_tag.value)) if make_tag is not None else "",
+        "Model": str(_dng_scalar(model_tag.value)) if model_tag is not None else "",
+        "Orientation": int(_dng_scalar(orientation_tag.value)) if orientation_tag is not None else 1,
+        "DigitalCamera": digital_camera,
+        "SubIFDs": [subifd_entry],
+        "ImageLength": int(raw_series.shape[0]),
+        "ImageWidth": int(raw_series.shape[1]),
+    }
+
+    if isinstance(digital_camera, dict):
+        if "ISOSpeedRatings" in digital_camera:
+            info["ISOSpeedRatings"] = int(round(float(_dng_scalar(digital_camera["ISOSpeedRatings"]))))
+        if "ExposureTime" in digital_camera:
+            info["ExposureTime"] = float(_dng_scalar(digital_camera["ExposureTime"]))
+    if "BlackLevel" in subifd_entry:
+        info["BlackLevel"] = np.asarray(subifd_entry["BlackLevel"], dtype=float).reshape(-1)
+    return info
+
+
+def ie_dng_simple_info(info: Mapping[str, Any]) -> dict[str, Any]:
+    """Return the reduced MATLAB-style DNG metadata summary."""
+
+    digital_camera = info.get("DigitalCamera")
+    if isinstance(digital_camera, Mapping):
+        iso_speed = digital_camera.get("ISOSpeedRatings")
+        exposure_time = digital_camera.get("ExposureTime")
+        subifds = info.get("SubIFDs", [])
+        black_level = None
+        if isinstance(subifds, list) and subifds:
+            first_subifd = subifds[0]
+            if isinstance(first_subifd, Mapping):
+                black_level = first_subifd.get("BlackLevel")
+        if black_level is None:
+            black_level = info.get("BlackLevel")
+        orientation = info.get("Orientation", 1)
+    else:
+        iso_speed = info.get("ISOSpeedRatings")
+        exposure_time = info.get("ExposureTime")
+        black_level = info.get("BlackLevel")
+        orientation = info.get("Orientation", 1)
+
+    black_level_array = np.asarray([] if black_level is None else black_level, dtype=float).reshape(-1)
+    return {
+        "isoSpeed": int(round(float(_dng_scalar(iso_speed)))) if iso_speed is not None else None,
+        "exposureTime": float(_dng_scalar(exposure_time)) if exposure_time is not None else None,
+        "blackLevel": black_level_array,
+        "orientation": int(_dng_scalar(orientation)),
+    }
+
+
+def ie_dng_read(
+    fname: str | Path,
+    *args: Any,
+    only_info: bool = False,
+    simple_info: bool = False,
+    rgb: bool = False,
+) -> tuple[np.ndarray | None, dict[str, Any]]:
+    """Read a DNG file as raw mosaic or rendered RGB plus MATLAB-style metadata."""
+
+    if len(args) % 2 != 0:
+        raise ValueError("ieDNGRead expects key/value pairs.")
+    for index in range(0, len(args), 2):
+        parameter = param_format(args[index])
+        value = args[index + 1]
+        if parameter == "onlyinfo":
+            only_info = bool(value)
+        elif parameter == "simpleinfo":
+            simple_info = bool(value)
+        elif parameter == "rgb":
+            rgb = bool(value)
+        else:
+            raise UnsupportedOptionError("ieDNGRead", str(args[index]))
+
+    path = Path(fname)
+    with TiffFile(path) as tif:
+        info = _extract_dng_info(tif, path)
+        reduced_info = ie_dng_simple_info(info) if simple_info else info
+        if only_info:
+            return None, reduced_info
+        series = _select_rgb_series(tif) if rgb else _select_raw_series(tif)
+        image = np.asarray(series.asarray())
+    return image, reduced_info
+
+
+def _dng_orientation_pattern(orientation: int) -> np.ndarray:
+    mapping = {
+        1: np.array([[1, 2], [2, 3]], dtype=int),
+        3: np.array([[3, 2], [2, 1]], dtype=int),
+        6: np.array([[2, 1], [3, 2]], dtype=int),
+        8: np.array([[2, 3], [1, 2]], dtype=int),
+    }
+    if orientation not in mapping:
+        raise ValueError(f"Unknown DNG orientation value: {orientation}")
+    return mapping[orientation].copy()
+
+
+def _normalize_sensor_dng_crop(crop: Any, size: tuple[int, int]) -> np.ndarray:
+    crop_array = np.asarray(crop, dtype=float).reshape(-1)
+    if crop_array.size == 4:
+        row, col, height, width = crop_array[:4]
+        return np.rint(np.array([col, row, width, height], dtype=float)).astype(int)
+    if crop_array.size == 1:
+        fraction = float(crop_array[0])
+        if not (0.0 < fraction < 1.0):
+            raise ValueError(f"Bad crop value {fraction}")
+        sensor_size = np.asarray(size, dtype=float)
+        middle_position = sensor_size / 2.0
+        rowcol = fraction * sensor_size
+        row = middle_position[0] - rowcol[0] / 2.0
+        col = middle_position[1] - rowcol[1] / 2.0
+        height = rowcol[0]
+        width = rowcol[1]
+        return np.rint(np.array([col, row, width, height], dtype=float)).astype(int)
+    raise ValueError(f"Bad crop value {crop}")
+
+
+def sensor_dng_read(
+    fname: str | Path,
+    *args: Any,
+    asset_store: Any | None = None,
+) -> tuple[Sensor, dict[str, Any]]:
+    """Read a DNG file into an IMX363 sensor with MATLAB-style metadata handling."""
+
+    full_info = True
+    crop: Any = None
+    if len(args) % 2 != 0:
+        raise ValueError("sensorDNGRead expects key/value pairs.")
+    for index in range(0, len(args), 2):
+        parameter = param_format(args[index])
+        value = args[index + 1]
+        if parameter == "fullinfo":
+            full_info = bool(value)
+        elif parameter == "crop":
+            crop = value
+        else:
+            raise UnsupportedOptionError("sensorDNGRead", str(args[index]))
+
+    from .sensor import sensor_create, sensor_crop, sensor_get, sensor_set
+
+    image, info = ie_dng_read(fname)
+    if image is None:
+        raise ValueError("ieDNGRead returned no image data.")
+    simple_info = ie_dng_simple_info(info)
+    black_level = int(np.ceil(float(simple_info["blackLevel"][0]))) if simple_info["blackLevel"].size else 0
+    exposure_time = float(simple_info["exposureTime"]) if simple_info["exposureTime"] is not None else 0.0
+    iso_speed = float(simple_info["isoSpeed"]) if simple_info["isoSpeed"] is not None else 1.0
+
+    clipped_image = np.clip(np.asarray(image, dtype=float), black_level, None)
+    sensor = sensor_create("IMX363", None, "isospeed", iso_speed, asset_store=asset_store)
+    sensor = sensor_set(sensor, "size", clipped_image.shape[:2])
+    sensor = sensor_set(sensor, "exp time", exposure_time)
+    sensor = sensor_set(sensor, "black level", black_level)
+    sensor = sensor_set(sensor, "name", str(Path(fname)))
+    sensor = sensor_set(sensor, "digital values", clipped_image)
+    sensor = sensor_set(sensor, "pattern", _dng_orientation_pattern(int(simple_info["orientation"])))
+
+    if crop is not None:
+        crop_rect = _normalize_sensor_dng_crop(crop, tuple(int(value) for value in sensor_get(sensor, "size")))
+        sensor = sensor_crop(sensor, crop_rect)
+
+    return sensor, info if full_info else simple_info
+
+
+ieDNGRead = ie_dng_read
+ieDNGSimpleInfo = ie_dng_simple_info
+sensorDNGRead = sensor_dng_read

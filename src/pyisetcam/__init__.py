@@ -8,7 +8,15 @@ from .assets import (
 )
 from .camera import camera_compute, camera_create, camera_get, camera_set
 from .display import display_create, display_get, display_set
-from .fileio import ie_save_si_data_file, vc_export_object, vc_load_object, vc_save_object
+from .fileio import (
+    ie_dng_read,
+    ie_dng_simple_info,
+    ie_save_si_data_file,
+    sensor_dng_read,
+    vc_export_object,
+    vc_load_object,
+    vc_save_object,
+)
 from .ip import image_data_xyz, ip_compute, ip_create, ip_get, ip_set
 from .metrics import (
     cct_from_uv,
@@ -190,6 +198,8 @@ __all__ = [
     "ieAddObject",
     "ieAppGet",
     "ieDeleteObject",
+    "ieDNGRead",
+    "ieDNGSimpleInfo",
     "ieEquivalentObjtype",
     "ieFieldHeight2Index",
     "ieFindObjectByName",
@@ -231,6 +241,8 @@ __all__ = [
     "ie_rect2_vertices",
     "ie_roi2_locs",
     "ie_replace_object",
+    "ie_dng_read",
+    "ie_dng_simple_info",
     "ie_save_si_data_file",
     "ie_session_get",
     "ie_session_set",
@@ -369,6 +381,7 @@ __all__ = [
     "sensorCompute",
     "sensorCrop",
     "sensorCreate",
+    "sensorDNGRead",
     "sensorCreateIdeal",
     "sensorGet",
     "sensorSNR",
@@ -378,6 +391,7 @@ __all__ = [
     "sensor_crop",
     "sensor_create",
     "sensor_create_ideal",
+    "sensor_dng_read",
     "sensor_get",
     "pixelSNR",
     "sensor_set",
@@ -521,6 +535,7 @@ zemaxLoad = zemax_load
 zemaxReadHeader = zemax_read_header
 
 sensorCreate = sensor_create
+sensorDNGRead = sensor_dng_read
 sensorCreateIdeal = sensor_create_ideal
 sensorCompute = sensor_compute
 sensorCrop = sensor_crop
@@ -552,6 +567,8 @@ ieRect2Locs = ie_rect2_locs
 ieRect2Vertices = ie_rect2_vertices
 ieRoi2Locs = ie_roi2_locs
 ieReplaceObject = ie_replace_object
+ieDNGRead = ie_dng_read
+ieDNGSimpleInfo = ie_dng_simple_info
 ieSaveSIDataFile = ie_save_si_data_file
 ieSessionGet = ie_session_get
 ieSessionSet = ie_session_set

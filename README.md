@@ -106,6 +106,12 @@ sensor presets too, so camera constructors can directly target `rgbw`,
 `rccc`, `mt9v024`, and `ar0132at` sensor variants. The first
 metrics/validation slice is also in place:
 `metrics_spd`, CIELAB helpers, and generic MAE/RMSE/PSNR utilities.
+The same sensor/tutorial wave now also includes headless raw DNG support
+through `ie_dng_read` / `ieDNGRead`, `ie_dng_simple_info` /
+`ieDNGSimpleInfo`, and `sensor_dng_read` / `sensorDNGRead`, covering the
+checked-in Pixel 4a `MCC-centered.dng` workflow from
+`t_sensorReadRaw.m` and upstream-backed `sensorCreate('IMX363')` crop
+flows.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit

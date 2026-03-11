@@ -18,6 +18,7 @@ dependencies = [
   "scikit-image",
   "matplotlib",
   "imageio",
+  "tifffile",
   "h5py",
   "pooch",
 ]
@@ -54,4 +55,3 @@ warn_unused_ignores = true
 warn_redundant_casts = true
 disallow_untyped_defs = true
 ignore_missing_imports = false
-

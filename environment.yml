@@ -9,6 +9,7 @@ dependencies:
   - scikit-image
   - matplotlib
   - imageio
+  - tifffile
   - h5py
   - pooch
   - pytest
@@ -17,4 +18,3 @@ dependencies:
   - mypy
   - git
   - pip
-
