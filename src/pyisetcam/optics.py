@@ -2064,14 +2064,50 @@ def _wvf_otf_support(wvf: dict[str, Any], unit: Any, wavelength_nm: float) -> np
     return unit_frequency_list(support.size) * nyquist
 
 
+def _logical_scalar(value: Any) -> bool:
+    array = np.asarray(value)
+    if array.size == 0:
+        return False
+    current = array.reshape(-1)[0]
+    if isinstance(current, bytes):
+        current = current.decode("utf-8")
+    if isinstance(current, str):
+        normalized = param_format(current)
+        if normalized in {"true", "yes", "on", "1"}:
+            return True
+        if normalized in {"false", "no", "off", "0"}:
+            return False
+    return bool(current)
+
+
 def wvf_compute(
     wvf: dict[str, Any],
-    *,
-    compute_pupil_function: bool = True,
-    compute_psf: bool = True,
+    *args: Any,
+    compute_pupil_function: bool | None = None,
+    compute_psf: bool | None = None,
     aperture: np.ndarray | None = None,
     compute_sce: bool | None = None,
 ) -> dict[str, Any]:
+    options = _parse_key_value_options(args, "wvfCompute") if args else {}
+    if "computepupilfunction" in options:
+        compute_pupil_function = _logical_scalar(options.pop("computepupilfunction"))
+    if "computepupilfunc" in options:
+        compute_pupil_function = _logical_scalar(options.pop("computepupilfunc"))
+    if "computepsf" in options:
+        compute_psf = _logical_scalar(options.pop("computepsf"))
+    if "aperture" in options:
+        aperture = np.asarray(options.pop("aperture"), dtype=float)
+    if "computesce" in options:
+        compute_sce = _logical_scalar(options.pop("computesce"))
+    if options:
+        unsupported = next(iter(options))
+        raise KeyError(f"Unsupported wvfCompute parameter: {unsupported}")
+
+    if compute_pupil_function is None:
+        compute_pupil_function = True
+    if compute_psf is None:
+        compute_psf = True
+
     updated = dict(wvf)
     if not compute_pupil_function and not compute_psf:
         updated["computed"] = False

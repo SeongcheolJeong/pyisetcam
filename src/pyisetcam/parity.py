@@ -693,6 +693,40 @@ def run_python_case_with_context(
             context={"wvf": wvf},
         )
 
+    if case_name == "wvf_compute_aperture_polygon_small":
+        wvf = wvf_create(wave=np.array([550.0], dtype=float))
+        wvf = wvf_set(wvf, "spatial samples", 101)
+        aperture, params = wvf_aperture(
+            wvf,
+            "n sides",
+            8,
+            "dot mean",
+            0,
+            "dot sd",
+            0,
+            "line mean",
+            0,
+            "line sd",
+            0,
+            "image rotate",
+            0,
+        )
+        wvf = wvf_compute(wvf, "aperture", aperture)
+        wave = float(np.asarray(wvf_get(wvf, "wave"), dtype=float).reshape(-1)[0])
+        psf = np.asarray(wvf_get(wvf, "psf", wave), dtype=float)
+        pupil_amp = np.asarray(wvf_get(wvf, "pupil function amplitude", wave), dtype=float)
+        middle_row = psf.shape[0] // 2
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "psf_sum": float(np.sum(psf)),
+                "psf_mid_row": np.asarray(psf[middle_row, :], dtype=float),
+                "pupil_amp_row": np.asarray(pupil_amp[middle_row, :], dtype=float),
+                "nsides": int(params["nsides"]),
+            },
+            context={"wvf": wvf},
+        )
+
     if case_name == "oi_lswavelength_diffraction_small":
         oi = oi_create("diffraction limited")
         optics = dict(oi.fields["optics"])

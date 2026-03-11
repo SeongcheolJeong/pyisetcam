@@ -2018,6 +2018,35 @@ def test_wvf_aperture_clean_polygon_supports_wvf_pupil_function() -> None:
     assert np.asarray(wvf_get(wvf, "aperture function"), dtype=float).ndim == 2
 
 
+def test_wvf_compute_accepts_matlab_style_aperture_option() -> None:
+    wvf = wvf_create(wave=np.array([550.0], dtype=float))
+    wvf = wvf_set(wvf, "spatial samples", 101)
+    aperture, _ = wvf_aperture(
+        wvf,
+        "n sides",
+        8,
+        "dot mean",
+        0,
+        "dot sd",
+        0,
+        "line mean",
+        0,
+        "line sd",
+        0,
+        "image rotate",
+        0,
+    )
+
+    computed = wvf_compute(wvf, "aperture", aperture, "compute sce", False)
+    psf = np.asarray(wvf_get(computed, "psf", 550.0), dtype=float)
+    pupil = np.asarray(wvf_get(computed, "pupil function", 550.0), dtype=np.complex128)
+
+    assert computed["computed"] is True
+    assert psf.shape == (101, 101)
+    assert pupil.shape == (101, 101)
+    assert np.isclose(float(np.sum(psf)), 1.0)
+
+
 def test_wvf_spatial_sampling_getters_match_spatial_model() -> None:
     wvf = wvf_create()
     wvf = wvf_set(wvf, "calc pupil diameter", 7.0 / 4.0, "mm")
@@ -3799,6 +3828,15 @@ def test_run_python_case_supports_wvf_aperture_polygon_parity_case(asset_store) 
     assert case.payload["image"].shape == (101, 101)
     assert case.payload["mid_row"].shape == (101,)
     assert float(case.payload["image_sum"]) > 0.0
+
+
+def test_run_python_case_supports_wvf_compute_aperture_polygon_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("wvf_compute_aperture_polygon_small", asset_store=asset_store)
+
+    assert int(case.payload["nsides"]) == 8
+    assert np.isclose(float(case.payload["psf_sum"]), 1.0)
+    assert case.payload["psf_mid_row"].shape == (101,)
+    assert case.payload["pupil_amp_row"].shape == (101,)
 
 
 def test_run_python_case_supports_lswavelength_diffraction_parity_case(asset_store) -> None:

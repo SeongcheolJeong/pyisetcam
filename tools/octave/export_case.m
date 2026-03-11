@@ -407,6 +407,26 @@ switch case_name
         payload.image_sum = sum(aperture(:));
         payload.nsides = params.nsides;
 
+    case 'wvf_compute_aperture_polygon_small'
+        wvf = wvfCreate('wave', 550);
+        wvf = wvfSet(wvf, 'spatial samples', 101);
+        [aperture, params] = wvfAperture(wvf, ...
+            'n sides', 8, ...
+            'dot mean', 0, ...
+            'dot sd', 0, ...
+            'line mean', 0, ...
+            'line sd', 0, ...
+            'image rotate', 0);
+        wvf = wvfCompute(wvf, 'aperture', aperture);
+        thisWave = wvfGet(wvf, 'wave');
+        psf = wvfGet(wvf, 'psf', thisWave);
+        pupilAmp = wvfGet(wvf, 'pupil function amplitude', thisWave);
+        middleRow = floor(size(psf, 1) / 2) + 1;
+        payload.psf_sum = sum(psf(:));
+        payload.psf_mid_row = psf(middleRow, :);
+        payload.pupil_amp_row = pupilAmp(middleRow, :);
+        payload.nsides = params.nsides;
+
     case 'oi_lswavelength_diffraction_small'
         oi = oiCreate('diffraction limited');
         optics = oiGet(oi, 'optics');

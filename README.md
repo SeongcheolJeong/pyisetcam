@@ -150,6 +150,10 @@ The same WVF backend now also includes
 for script-driven synthetic aperture generation, including deterministic
 clean polygon support used by the upstream flare scripts and direct
 Octave parity on that clean-aperture path.
+That same explicit WVF compute surface now also supports the MATLAB
+key/value workflow `wvfCompute(wvf, 'aperture', aperture)`, with direct
+parity on the script-driven polygon-aperture compute path used by the
+upstream flare scripts.
 The same script-driven optics surface now also includes headless
 `oiPlot(..., 'psf'/'psf550'/'psfxaxis'/'psfyaxis')` support, backed by
 computed `oiGet(..., 'psf data'/'psf xaxis'/'psf yaxis')` access for
