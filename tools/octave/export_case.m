@@ -518,6 +518,17 @@ switch case_name
         payload.amp_mid_row = amp(middleRow, :);
         payload.amp_center = amp(middleRow, floor(size(amp, 2) / 2) + 1);
 
+    case 'wvf_plot_2d_pupil_amplitude_space_small'
+        wvf = wvfCreate('wave', 550);
+        wvf = wvfSet(wvf, 'spatial samples', 401);
+        wvf = wvfCompute(wvf);
+        uData = wvfPlot(wvf, '2d pupil amplitude space', 'unit', 'mm', 'wave', 550, 'plot range', 2, 'window', false);
+        amp = uData.z;
+        middleRow = floor(size(amp, 1) / 2) + 1;
+        payload.x = uData.x(:)';
+        payload.amp_mid_row = amp(middleRow, :);
+        payload.amp_center = amp(middleRow, floor(size(amp, 2) / 2) + 1);
+
     case 'wvf_plot_pupil_phase_small'
         wvf = wvfCreate('wave', 550);
         wvf = wvfSet(wvf, 'spatial samples', 401);

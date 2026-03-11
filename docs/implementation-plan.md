@@ -22,6 +22,7 @@
 - That same WVF plotting surface now also has direct Octave parity on `wvfPlot(..., '1d otf', ...)`, comparing the returned cropped OTF support axis and OTF center row.
 - That same WVF plotting surface now also has direct Octave parity on `wvfPlot(..., '1d otf angle', ...)`, comparing the returned cropped frequency support axis and OTF center row.
 - The same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., 'image pupil amp', ...)`, comparing the returned spatial support axis and pupil-amplitude center row.
+- That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., '2d pupil amplitude space', ...)`, comparing the returned spatial support axis and pupil-amplitude center row for the exact legacy alias.
 - That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., 'image pupil phase', ...)`, comparing the returned spatial support axis and pupil-phase center row.
 - That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., '2d pupil phase space', ...)`, comparing the returned spatial support axis and pupil-phase center row for the exact legacy plot name used by the upstream Zernike tutorial.
 - That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., 'image wavefront aberrations', ...)`, comparing the returned spatial support axis and wavefront-aberration center row.

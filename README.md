@@ -211,6 +211,10 @@ The same script-driven WVF plotting surface now also has direct Octave
 parity on `wvfPlot(..., 'image pupil amp', ...)`, including the returned
 spatial support axis and pupil-amplitude center row.
 That same script-driven WVF plotting surface now also has direct Octave
+parity on `wvfPlot(..., '2d pupil amplitude space', ...)`, including the
+returned spatial support axis and pupil-amplitude center row for the
+exact legacy alias.
+That same script-driven WVF plotting surface now also has direct Octave
 parity on `wvfPlot(..., 'image pupil phase', ...)`, including the
 returned spatial support axis and pupil-phase center row.
 That same script-driven WVF plotting surface now also has direct Octave

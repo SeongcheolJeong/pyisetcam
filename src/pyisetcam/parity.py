@@ -854,6 +854,34 @@ def run_python_case_with_context(
             context={"wvf": wvf},
         )
 
+    if case_name == "wvf_plot_2d_pupil_amplitude_space_small":
+        wvf = wvf_create(wave=np.array([550.0], dtype=float))
+        wvf = wvf_set(wvf, "spatial samples", 401)
+        wvf = wvf_compute(wvf)
+        udata, _ = wvf_plot(
+            wvf,
+            "2d pupil amplitude space",
+            "unit",
+            "mm",
+            "wave",
+            550.0,
+            "plot range",
+            2.0,
+            "window",
+            False,
+        )
+        amp = np.asarray(udata["z"], dtype=float)
+        middle_row = amp.shape[0] // 2
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "x": np.asarray(udata["x"], dtype=float),
+                "amp_mid_row": amp[middle_row, :],
+                "amp_center": float(amp[middle_row, amp.shape[1] // 2]),
+            },
+            context={"wvf": wvf},
+        )
+
     if case_name == "wvf_plot_pupil_phase_small":
         wvf = wvf_create(wave=np.array([550.0], dtype=float))
         wvf = wvf_set(wvf, "spatial samples", 401)
