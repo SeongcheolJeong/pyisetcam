@@ -946,22 +946,35 @@ def wvf_plot(
         samp, wavefront = _wvf_crop_axis_and_plane(samp, wavefront, plot_range)
         return {"x": samp, "y": samp.copy(), "z": wavefront, "wave": float(wave), "unit": unit}, None
 
-    if key in {"2dotf", "otfspace", "otf"}:
+    if key in {"2dotf", "otfspace", "otf", "2dotfnormalized", "otfspacenormalized", "otfnormalized"}:
         freq = np.asarray(wvf_get(wvf, "otf support", unit, wave), dtype=float)
-        otf = np.abs(_wvf_centered_otf(np.asarray(wvf_get(wvf, "psf", wave), dtype=float)))
+        psf = np.asarray(wvf_get(wvf, "psf", wave), dtype=float)
+        if "normalized" in key:
+            psf = psf / max(float(np.max(psf)), 1e-12)
+        otf = np.abs(_wvf_centered_otf(psf))
         freq, otf = _wvf_crop_axis_and_plane(freq, otf, plot_range)
         return {"fx": freq, "fy": freq.copy(), "otf": otf, "wave": float(wave), "unit": unit}, None
 
-    if key in {"1dotf", "1dotfspace", "1dotfangle"}:
+    if key in {
+        "1dotf",
+        "1dotfspace",
+        "1dotfangle",
+        "1dotfnormalized",
+        "1dotfspacenormalized",
+        "1dotfanglenormalized",
+    }:
         freq = np.asarray(wvf_get(wvf, "otf support", unit, wave), dtype=float)
-        otf = np.abs(_wvf_centered_otf(np.asarray(wvf_get(wvf, "psf", wave), dtype=float)))
+        psf = np.asarray(wvf_get(wvf, "psf", wave), dtype=float)
+        if "normalized" in key:
+            psf = psf / max(float(np.max(psf)), 1e-12)
+        otf = np.abs(_wvf_centered_otf(psf))
         freq, otf = _wvf_crop_axis_and_plane(freq, otf, plot_range)
         return {
             "fx": freq,
             "fy": freq.copy(),
             "otf": otf,
             "wave": float(wave),
-            "unit": unit if key != "1dotfangle" else "deg",
+            "unit": "deg" if "angle" in key else unit,
         }, None
 
     raise UnsupportedOptionError("wvfPlot", p_type)

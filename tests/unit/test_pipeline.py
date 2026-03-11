@@ -3886,6 +3886,14 @@ def test_run_python_case_supports_wvf_plot_otf_parity_case(asset_store) -> None:
     assert float(case.payload["otf_center"]) > 0.0
 
 
+def test_run_python_case_supports_wvf_plot_otf_normalized_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("wvf_plot_otf_normalized_small", asset_store=asset_store)
+
+    assert case.payload["fx"].ndim == 1
+    assert case.payload["otf_mid_row"].shape == case.payload["fx"].shape
+    assert float(case.payload["otf_center"]) > 1.0
+
+
 def test_run_python_case_supports_wvf_plot_1d_otf_angle_parity_case(asset_store) -> None:
     case = run_python_case_with_context("wvf_plot_1d_otf_angle_small", asset_store=asset_store)
 
