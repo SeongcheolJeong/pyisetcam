@@ -459,6 +459,18 @@ switch case_name
         payload.phase_mid_row = phase(middleRow, :);
         payload.phase_center = phase(middleRow, floor(size(phase, 2) / 2) + 1);
 
+    case 'wvf_plot_wavefront_aberrations_small'
+        wvf = wvfCreate('wave', 550);
+        wvf = wvfSet(wvf, 'zcoeffs', 0.12, 'defocus');
+        wvf = wvfSet(wvf, 'spatial samples', 401);
+        wvf = wvfCompute(wvf);
+        uData = wvfPlot(wvf, 'image wavefront aberrations', 'unit', 'mm', 'wave', 550, 'plot range', 1.5, 'window', false);
+        wavefront = uData.z;
+        middleRow = floor(size(wavefront, 1) / 2) + 1;
+        payload.x = uData.x(:)';
+        payload.wavefront_mid_row = wavefront(middleRow, :);
+        payload.wavefront_center = wavefront(middleRow, floor(size(wavefront, 2) / 2) + 1);
+
     case 'wvf_psf2zcoeff_error_small'
         wvf = wvfCreate('wave', 550);
         wvf = wvfSet(wvf, 'zcoeffs', 0.2, 'defocus');

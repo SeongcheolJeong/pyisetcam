@@ -299,6 +299,12 @@
       "atol": 1e-08
     },
     {
+      "name": "wvf_plot_wavefront_aberrations_small",
+      "matlab_function": "wvfPlot",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "wvf_psf2zcoeff_error_small",
       "matlab_function": "psf2zcoeff",
       "rtol": 1e-05,
