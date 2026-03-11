@@ -539,6 +539,158 @@ def _synthesized_shift_invariant_otf_bundle(oi: OpticalImage) -> dict[str, Any] 
     }
 
 
+def _default_plot_wavelength(wave: Any) -> float:
+    wavelengths = np.asarray(wave, dtype=float).reshape(-1)
+    if wavelengths.size == 0:
+        return 550.0
+    if wavelengths.size == 1:
+        return float(wavelengths[0])
+    return 550.0
+
+
+def _support_grid_from_axes(x_axis_m: np.ndarray, y_axis_m: np.ndarray, units: Any | None) -> np.ndarray:
+    scale = _spatial_unit_scale(units)
+    x_axis = np.asarray(x_axis_m, dtype=float) * scale
+    y_axis = np.asarray(y_axis_m, dtype=float) * scale
+    xx, yy = np.meshgrid(x_axis, y_axis, indexing="xy")
+    return np.stack((xx, yy), axis=2)
+
+
+def _plane_at_wavelength(stack: np.ndarray, wave: np.ndarray, wavelength_nm: float) -> np.ndarray:
+    source = np.asarray(stack, dtype=float)
+    wavelengths = np.asarray(wave, dtype=float).reshape(-1)
+    if source.ndim == 2:
+        return source.copy()
+    if source.shape[2] == 1 or wavelengths.size <= 1:
+        return np.asarray(source[:, :, 0], dtype=float).copy()
+
+    query = float(wavelength_nm)
+    if query <= float(wavelengths[0]):
+        return np.asarray(source[:, :, 0], dtype=float).copy()
+    if query >= float(wavelengths[-1]):
+        return np.asarray(source[:, :, -1], dtype=float).copy()
+
+    upper_index = int(np.searchsorted(wavelengths, query, side="right"))
+    lower_index = max(upper_index - 1, 0)
+    upper_index = min(upper_index, wavelengths.size - 1)
+    lower_wave = float(wavelengths[lower_index])
+    upper_wave = float(wavelengths[upper_index])
+    if np.isclose(lower_wave, upper_wave):
+        return np.asarray(source[:, :, lower_index], dtype=float).copy()
+    weight = (query - lower_wave) / (upper_wave - lower_wave)
+    return (
+        (1.0 - weight) * np.asarray(source[:, :, lower_index], dtype=float)
+        + weight * np.asarray(source[:, :, upper_index], dtype=float)
+    )
+
+
+def _spatial_axis_from_frequency_support(f_support: np.ndarray, *, support_unit_to_m: float) -> np.ndarray:
+    support = np.asarray(f_support, dtype=float).reshape(-1)
+    if support.size == 0:
+        return np.zeros(0, dtype=float)
+    peak_frequency = float(np.max(np.abs(support)))
+    if peak_frequency <= 0.0:
+        return np.zeros(support.size, dtype=float)
+    sample_spacing_m = (1.0 / max(2.0 * peak_frequency, 1e-12)) * float(support_unit_to_m)
+    return _centered_support_axis(support.size, sample_spacing_m)
+
+
+def _diffraction_limited_plot_otf(
+    oi: OpticalImage,
+    wavelength_nm: float,
+    *,
+    n_samp: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    optics = dict(oi.fields.get("optics", {}))
+    rows = cols = max(2 * int(n_samp), 2)
+    wavelength_m = float(wavelength_nm) * 1e-9
+    f_number = float(optics.get("f_number", 4.0))
+    cutoff_frequency = 1.0 / max(wavelength_m * max(f_number, 1e-12), 1e-12)
+    fx = unit_frequency_list(cols) * cutoff_frequency
+    fy = unit_frequency_list(rows) * cutoff_frequency
+    rho = np.sqrt(fy[:, None] ** 2 + fx[None, :] ** 2)
+    normalized = rho / max(cutoff_frequency, 1e-12)
+    clipped = np.clip(normalized, 0.0, 1.0)
+    otf = (2.0 / np.pi) * (np.arccos(clipped) - clipped * np.sqrt(1.0 - clipped**2))
+    otf[normalized >= 1.0] = 0.0
+    return np.fft.ifftshift(otf), fx, fy
+
+
+def _oi_psf_data(
+    oi: OpticalImage,
+    wavelength_nm: Any | None = None,
+    units: Any | None = "um",
+    n_samp: int = 25,
+) -> dict[str, Any]:
+    optics = dict(oi.fields.get("optics", {}))
+    model = param_format(optics.get("model", ""))
+    wave = np.asarray(oi.fields.get("wave", DEFAULT_WAVE), dtype=float).reshape(-1)
+    this_wave = _default_plot_wavelength(wave) if wavelength_nm is None else float(np.asarray(wavelength_nm, dtype=float).reshape(-1)[0])
+
+    if model == "diffractionlimited":
+        otf, fx, fy = _diffraction_limited_plot_otf(oi, this_wave, n_samp=n_samp)
+        psf = np.abs(np.fft.fftshift(np.fft.ifft2(otf)))
+        x_axis_m = _spatial_axis_from_frequency_support(fx, support_unit_to_m=1.0)
+        y_axis_m = _spatial_axis_from_frequency_support(fy, support_unit_to_m=1.0)
+        return {"psf": psf, "xy": _support_grid_from_axes(x_axis_m, y_axis_m, units)}
+
+    if model == "shiftinvariant":
+        psf_data = optics.get("psf_data")
+        if isinstance(psf_data, dict):
+            normalized = _normalize_shift_invariant_psf_data(psf_data)
+            psf = _plane_at_wavelength(normalized["psf"], normalized["wave"], this_wave)
+            sample_spacing_m = float(normalized["sample_spacing_m"])
+            x_axis_m = _centered_support_axis(psf.shape[1], sample_spacing_m)
+            y_axis_m = _centered_support_axis(psf.shape[0], sample_spacing_m)
+            return {"psf": np.asarray(psf, dtype=float), "xy": _support_grid_from_axes(x_axis_m, y_axis_m, units)}
+
+        otf_bundle = _synthesized_shift_invariant_otf_bundle(oi)
+        if otf_bundle is None:
+            raise ValueError("Optical image has no shift-invariant PSF or OTF data available.")
+        otf = _interpolate_shift_invariant_otf_wavelength(otf_bundle["OTF"], otf_bundle["wave"], this_wave)
+        psf = np.abs(np.fft.fftshift(np.fft.ifft2(otf)))
+        x_axis_m = _spatial_axis_from_frequency_support(np.asarray(otf_bundle["fx"], dtype=float), support_unit_to_m=1e-3)
+        y_axis_m = _spatial_axis_from_frequency_support(np.asarray(otf_bundle["fy"], dtype=float), support_unit_to_m=1e-3)
+        return {"psf": np.asarray(psf, dtype=float), "xy": _support_grid_from_axes(x_axis_m, y_axis_m, units)}
+
+    raise UnsupportedOptionError("oiGet", "optics psf data")
+
+
+def _oi_psf_axis(
+    oi: OpticalImage,
+    axis: str,
+    wavelength_nm: Any | None = None,
+    units: Any | None = "um",
+    n_samp: int = 25,
+) -> dict[str, Any]:
+    psf_data = _oi_psf_data(oi, wavelength_nm, units, n_samp=n_samp)
+    psf = np.asarray(psf_data["psf"], dtype=float)
+    xy = np.asarray(psf_data["xy"], dtype=float)
+    x_axis = np.asarray(xy[0, :, 0], dtype=float)
+    y_axis = np.asarray(xy[:, 0, 1], dtype=float)
+
+    if axis == "x":
+        row_coord = float(np.interp(0.0, y_axis, np.arange(y_axis.size, dtype=float)))
+        data = map_coordinates(
+            psf,
+            [np.full(x_axis.size, row_coord, dtype=float), np.arange(x_axis.size, dtype=float)],
+            order=1,
+            mode="nearest",
+            prefilter=False,
+        )
+        return {"samp": x_axis.copy(), "data": np.asarray(data, dtype=float)}
+
+    col_coord = float(np.interp(0.0, x_axis, np.arange(x_axis.size, dtype=float)))
+    data = map_coordinates(
+        psf,
+        [np.arange(y_axis.size, dtype=float), np.full(y_axis.size, col_coord, dtype=float)],
+        order=1,
+        mode="nearest",
+        prefilter=False,
+    )
+    return {"samp": y_axis.copy(), "data": np.asarray(data, dtype=float)}
+
+
 def _normalize_raytrace_table(raw: dict[str, Any] | None) -> dict[str, Any]:
     current = {} if raw is None else dict(raw)
     return {
@@ -4984,7 +5136,22 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         return None if data is None else np.asarray(data, dtype=float).copy()
     if key in {"otffunction", "opticsotffunction"}:
         return oi.fields["optics"].get("otf_function")
+    if key in {"psfxaxis"}:
+        this_wave = args[0] if args else _default_plot_wavelength(oi.fields.get("wave", DEFAULT_WAVE))
+        units = args[1] if len(args) >= 2 else "um"
+        n_samp = int(args[2]) if len(args) >= 3 else 25
+        return _oi_psf_axis(oi, "x", this_wave, units, n_samp=n_samp)
+    if key in {"psfyaxis"}:
+        this_wave = args[0] if args else _default_plot_wavelength(oi.fields.get("wave", DEFAULT_WAVE))
+        units = args[1] if len(args) >= 2 else "um"
+        n_samp = int(args[2]) if len(args) >= 3 else 25
+        return _oi_psf_axis(oi, "y", this_wave, units, n_samp=n_samp)
     if key in {"psfdata", "opticspsfdata", "shiftinvariantpsfdata"}:
+        if args:
+            this_wave = args[0]
+            units = args[1] if len(args) >= 2 else "um"
+            n_samp = int(args[2]) if len(args) >= 3 else 25
+            return _oi_psf_data(oi, this_wave, units, n_samp=n_samp)
         psf_data = oi.fields["optics"].get("psf_data")
         if isinstance(psf_data, dict):
             return _export_shift_invariant_psf_data(psf_data)

@@ -645,6 +645,31 @@ def oi_plot(
     """Return MATLAB-style `oiPlot` user-data without opening a figure."""
 
     key = param_format(p_type)
+    if key in {"psf", "psf550", "psfxaxis", "psfyaxis"}:
+        default_wave = 550.0 if key == "psf550" else float(np.asarray(oi_get(oi, "wave"), dtype=float).reshape(-1)[0]) if np.asarray(oi_get(oi, "wave"), dtype=float).size == 1 else 550.0
+        remaining = list(args)
+        this_wave = default_wave
+        units = "um"
+        if remaining:
+            candidate = remaining[0]
+            candidate_array = np.asarray(candidate) if not isinstance(candidate, str) else None
+            if candidate_array is not None and candidate_array.size == 1:
+                this_wave = float(candidate_array.reshape(-1)[0])
+                remaining.pop(0)
+        if remaining and isinstance(remaining[0], str) and param_format(remaining[0]) not in {"airydisk", "airydisk"}:
+            units = str(remaining.pop(0))
+        if key in {"psf", "psf550"}:
+            psf_data = dict(oi_get(oi, "psf data", this_wave, units))
+            xy = np.asarray(psf_data.pop("xy"), dtype=float)
+            udata = {"x": xy[:, :, 0].copy(), "y": xy[:, :, 1].copy(), **psf_data}
+            udata["wave"] = float(this_wave)
+            udata["units"] = units
+            udata["airyDisk"] = bool(_plot_option(tuple(remaining), "airydisk", True)) if remaining else True
+            return udata, None
+        udata = dict(oi_get(oi, "psf xaxis" if key == "psfxaxis" else "psf yaxis", this_wave, units))
+        udata["wave"] = float(this_wave)
+        udata["units"] = units
+        return udata, None
     if key == "irradiancephotonsroi":
         roi = _roi_required("oiPlot", p_type, roi_locs)
         irradiance = np.mean(np.asarray(oi_get(oi, "roi photons", roi), dtype=float), axis=0).reshape(-1)

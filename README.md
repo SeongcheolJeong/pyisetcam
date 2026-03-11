@@ -140,6 +140,10 @@ The adjacent wavefront helper surface now also includes
 `oi_compute(wvf, scene)` support, MATLAB-style `oi_get(..., 'wvf ...')`,
 and rebuilding `oi_set(..., 'wvf ...')` / `oi_set(..., 'optics wvf', ...)`
 for script-driven WVF defocus/Zernike workflows.
+The same script-driven optics surface now also includes headless
+`oiPlot(..., 'psf'/'psf550'/'psfxaxis'/'psfyaxis')` support, backed by
+computed `oiGet(..., 'psf data'/'psf xaxis'/'psf yaxis')` access for
+diffraction-limited, custom-PSF, and computed WVF shift-invariant optics.
 Initial ray-trace optics support is also in place: `oi_create('ray trace')`
 loads the pinned upstream Zemax-derived optics asset, and `oi_compute`
 applies upstream-backed geometric distortion, relative illumination, and

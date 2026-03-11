@@ -10,6 +10,7 @@ from pyisetcam import (
     ip_set,
     pixel_snr,
     oiPlot,
+    oi_compute,
     oi_create,
     oi_get,
     oi_set,
@@ -110,6 +111,54 @@ def test_oi_plot_roi_and_line_data(asset_store) -> None:
     assert np.allclose(line_udata["pos"], np.asarray(expected_line["pos"], dtype=float))
     assert np.allclose(line_udata["data"], np.asarray(expected_line["data"], dtype=float))
     assert np.array_equal(line_udata["roiLocs"], line)
+
+
+def test_oi_plot_psf_and_axes_for_custom_psf_oi(asset_store) -> None:
+    oi = oi_create("psf", asset_store=asset_store)
+
+    psf_udata, psf_handle = oiPlot(oi, "psf550")
+    xaxis_udata, xaxis_handle = oiPlot(oi, "psfxaxis", None, 550, "um")
+    yaxis_udata, yaxis_handle = oiPlot(oi, "psfyaxis", None, 550, "um")
+
+    assert psf_handle is None
+    assert xaxis_handle is None
+    assert yaxis_handle is None
+    assert psf_udata["units"] == "um"
+    assert np.isclose(psf_udata["wave"], 550.0)
+    assert psf_udata["psf"].shape == psf_udata["x"].shape == psf_udata["y"].shape
+    assert psf_udata["psf"].ndim == 2
+    assert np.isclose(np.sum(psf_udata["psf"]), 1.0, rtol=1e-4)
+    assert np.allclose(xaxis_udata["samp"], np.asarray(psf_udata["x"][0, :], dtype=float))
+    assert np.allclose(yaxis_udata["samp"], np.asarray(psf_udata["y"][:, 0], dtype=float))
+    assert xaxis_udata["data"].shape == xaxis_udata["samp"].shape
+    assert yaxis_udata["data"].shape == yaxis_udata["samp"].shape
+
+
+def test_oi_plot_psf_for_diffraction_limited_oi(asset_store) -> None:
+    oi = oi_create("diffraction limited", asset_store=asset_store)
+
+    udata, handle = oiPlot(oi, "psf", None, 550, "um")
+
+    assert handle is None
+    assert np.isclose(udata["wave"], 550.0)
+    assert udata["units"] == "um"
+    assert udata["psf"].shape == (50, 50)
+    assert udata["x"].shape == (50, 50)
+    assert udata["y"].shape == (50, 50)
+    assert np.max(udata["psf"]) > 0.0
+
+
+def test_oi_plot_psf_for_computed_wvf_oi(asset_store) -> None:
+    scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
+    oi = oi_compute(oi_create("wvf", asset_store=asset_store), scene, crop=True)
+
+    udata, handle = oiPlot(oi, "psf", None, 550, "um")
+
+    assert handle is None
+    assert np.isclose(udata["wave"], 550.0)
+    assert udata["psf"].shape == udata["x"].shape == udata["y"].shape
+    assert udata["psf"].ndim == 2
+    assert np.max(udata["psf"]) > 0.0
 
 
 def test_plot_sensor_line_data(asset_store) -> None:
