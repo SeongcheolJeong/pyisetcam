@@ -335,6 +335,18 @@
       }
     },
     {
+      "name": "wvf_plot_1d_otf_angle_normalized_small",
+      "matlab_function": "wvfPlot",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "fx": {
+          "mode": "mean_rel",
+          "max_mean_rel": 3e-05
+        }
+      }
+    },
+    {
       "name": "wvf_plot_1d_otf_small",
       "matlab_function": "wvfPlot",
       "rtol": 1e-05,

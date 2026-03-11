@@ -837,6 +837,34 @@ def run_python_case_with_context(
             context={"wvf": wvf},
         )
 
+    if case_name == "wvf_plot_1d_otf_angle_normalized_small":
+        wvf = wvf_create(wave=np.array([550.0], dtype=float))
+        wvf = wvf_set(wvf, "spatial samples", 401)
+        wvf = wvf_compute(wvf)
+        udata, _ = wvf_plot(
+            wvf,
+            "1d otf angle normalized",
+            "unit",
+            "deg",
+            "wave",
+            550.0,
+            "plot range",
+            10.0,
+            "window",
+            False,
+        )
+        otf = np.asarray(udata["otf"], dtype=float)
+        middle_row = otf.shape[0] // 2
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "fx": np.asarray(udata["fx"], dtype=float),
+                "otf_mid_row": otf[middle_row, :],
+                "otf_center": float(otf[middle_row, otf.shape[1] // 2]),
+            },
+            context={"wvf": wvf},
+        )
+
     if case_name == "wvf_plot_1d_otf_small":
         wvf = wvf_create(wave=np.array([550.0], dtype=float))
         wvf = wvf_set(wvf, "spatial samples", 401)

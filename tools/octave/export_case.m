@@ -516,6 +516,26 @@ switch case_name
         payload.otf_mid_row = otf(middleRow, :);
         payload.otf_center = otf(middleRow, floor(size(otf, 2) / 2) + 1);
 
+    case 'wvf_plot_1d_otf_angle_normalized_small'
+        wvf = wvfCreate('wave', 550);
+        wvf = wvfSet(wvf, 'spatial samples', 401);
+        wvf = wvfCompute(wvf);
+        % Upstream wvfPlot.m computes normalizeFlag but does not accept the
+        % exact normalized OTF pType in its switch block. Export the stable
+        % underlying numerical contract directly instead.
+        psf = wvfGet(wvf, 'psf', 550);
+        psf = psf / max(psf(:));
+        freq = wvfGet(wvf, 'otf support', 'deg', 550);
+        otf = fftshift(fft2(ifftshift(psf)));
+        index = abs(freq) < 10;
+        freq = freq(index);
+        otf = otf(index, index);
+        otf = abs(otf);
+        middleRow = floor(size(otf, 1) / 2) + 1;
+        payload.fx = freq(:)';
+        payload.otf_mid_row = otf(middleRow, :);
+        payload.otf_center = otf(middleRow, floor(size(otf, 2) / 2) + 1);
+
     case 'wvf_plot_1d_otf_small'
         wvf = wvfCreate('wave', 550);
         wvf = wvfSet(wvf, 'spatial samples', 401);

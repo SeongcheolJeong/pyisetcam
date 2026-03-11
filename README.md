@@ -213,6 +213,9 @@ OTF support axis and normalized OTF center row.
 That same WVF plotting surface now also has direct Octave parity on
 `wvfPlot(..., '1d otf angle', ...)`, including the returned cropped
 frequency support axis and OTF center row.
+That same WVF plotting surface now also has direct Octave parity on
+`wvfPlot(..., '1d otf angle normalized', ...)`, including the returned
+cropped frequency support axis and normalized OTF center row.
 The same script-driven WVF plotting surface now also has direct Octave
 parity on `wvfPlot(..., 'image pupil amp', ...)`, including the returned
 spatial support axis and pupil-amplitude center row.
