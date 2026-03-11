@@ -496,6 +496,25 @@ def run_python_case_with_context(
             context={"scene": scene, "oi": oi},
         )
 
+    if case_name == "oi_si_pillbox_small":
+        scene = scene_create("grid lines", [256, 256], 64, "ee", 3, asset_store=store)
+        scene = scene_set(scene, "fov", 2.0)
+        oi = oi_create("psf")
+        patch_size_mm = float(airy_disk(700.0, float(oi_get(oi, "optics fnumber")), "units", "mm"))
+        optics = si_synthetic("pillbox", oi, patch_size_mm)
+        oi = oi_set(oi, "optics", optics)
+        oi = oi_compute(oi, scene, crop=True)
+        psf_data = np.asarray(optics["psf_data"]["psf"], dtype=float)
+        middle_row = psf_data.shape[0] // 2
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": oi.fields["wave"],
+                "input_psf_mid_row_550": psf_data[middle_row, :, 15],
+            },
+            context={"scene": scene, "oi": oi},
+        )
+
     if case_name == "oi_si_custom_file_small":
         scene = scene_create("grid lines", [64, 64], 16, "ee", 2, asset_store=store)
         scene = scene_set(scene, "fov", 2.0)

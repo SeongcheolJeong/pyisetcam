@@ -181,6 +181,12 @@
       }
     },
     {
+      "name": "oi_si_pillbox_small",
+      "matlab_function": "siSynthetic/oiSet/oiCompute",
+      "rtol": 1e-04,
+      "atol": 1e-06
+    },
+    {
       "name": "oi_si_custom_file_small",
       "matlab_function": "ieSaveSIDataFile/siSynthetic/oiSet/oiCompute",
       "rtol": 1e-04,

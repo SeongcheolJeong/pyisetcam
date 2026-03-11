@@ -275,6 +275,18 @@ switch case_name
         payload.wave = oiGet(oi, 'wave');
         payload.photons = oiGet(oi, 'photons');
 
+    case 'oi_si_pillbox_small'
+        scene = sceneCreate('grid lines', [256 256], 64, 'ee', 3);
+        scene = sceneSet(scene, 'fov', 2.0);
+        oi = oiCreate('psf');
+        patchSize = airyDisk(700, oiGet(oi, 'optics fnumber'), 'units', 'mm');
+        optics = siSynthetic('pillbox', oi, patchSize);
+        oi = oiSet(oi, 'optics', optics);
+        oi = oiCompute(oi, scene, 'crop', true);
+        psfData = opticsGet(optics, 'psf data');
+        payload.wave = oiGet(oi, 'wave');
+        payload.input_psf_mid_row_550 = squeeze(psfData.psf(floor(size(psfData.psf, 1) / 2) + 1, :, 16));
+
     case 'oi_si_custom_file_small'
         scene = sceneCreate('grid lines', [64 64], 16, 'ee', 2);
         scene = sceneSet(scene, 'fov', 2.0);
