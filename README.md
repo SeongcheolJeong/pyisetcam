@@ -222,6 +222,9 @@ support axis and 1D PSF line data.
 That same WVF plotting surface now also has direct Octave parity on
 `wvfPlot(..., '2d wavefront aberrations space', ...)`, including the
 returned spatial support axis and wavefront-aberration center row.
+The shift-invariant optics script coverage now also has direct Octave
+parity on the circular Gaussian `siSynthetic('gaussian', ..., xyRatio=1)`
+workflow from `s_opticsSIExamples.m`.
 The same script-driven WVF plotting surface now also has direct Octave
 parity on `wvfPlot(..., 'image pupil amp', ...)`, including the returned
 spatial support axis and pupil-amplitude center row.

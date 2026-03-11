@@ -2285,6 +2285,13 @@ def test_oi_si_pillbox_small_parity_case(asset_store) -> None:
     assert np.asarray(payload["input_psf_mid_row_550"]).ndim == 1
 
 
+def test_oi_si_gaussian_small_parity_case(asset_store) -> None:
+    payload = run_python_case("oi_si_gaussian_small", asset_store=asset_store)
+
+    assert np.asarray(payload["wave"]).ndim == 1
+    assert np.asarray(payload["input_psf_mid_row_550"]).ndim == 1
+
+
 def test_oi_si_gaussian_ratio_small_parity_case(asset_store) -> None:
     payload = run_python_case("oi_si_gaussian_ratio_small", asset_store=asset_store)
 
