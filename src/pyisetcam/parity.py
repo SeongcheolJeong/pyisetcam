@@ -509,6 +509,29 @@ def run_python_case_with_context(
             context={"scene": scene, "oi": oi},
         )
 
+    if case_name == "optics_psf_to_otf_flare_small":
+        otf_struct = optics_psf_to_otf(
+            store.resolve("data/optics/flare/flare1.png"),
+            1.2e-6,
+            np.arange(400.0, 701.0, 10.0, dtype=float),
+        )
+        otf_plane = np.abs(np.fft.fftshift(np.asarray(otf_struct["OTF"], dtype=complex)[:, :, 15]))
+        row_index = (otf_plane.shape[0] // 2)
+        center_row = int(np.rint(otf_plane.shape[0] / 2.0)) - 1
+        center_col = int(np.rint(otf_plane.shape[1] / 2.0)) - 1
+        row = otf_plane[row_index, :]
+        center = otf_plane[max(0, center_row - 16) : center_row + 17, max(0, center_col - 16) : center_col + 17]
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "fx": np.asarray(otf_struct["fx"], dtype=float),
+                "fy": np.asarray(otf_struct["fy"], dtype=float),
+                "otf_abs550_row": np.asarray(row, dtype=float),
+                "otf_abs550_center": np.asarray(center, dtype=float),
+            },
+            context={"otf_struct": otf_struct},
+        )
+
     if case_name == "oi_ideal_otf_small":
         params = {
             "angles": np.array([0.0, np.pi / 4.0, np.pi / 2.0], dtype=float),

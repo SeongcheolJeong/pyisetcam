@@ -285,6 +285,16 @@ switch case_name
         payload.otf_abs550 = abs(OTF.OTF(:,:,16));
         payload.interp_otf_abs550 = abs(interpOTF(:,:,16));
 
+    case 'optics_psf_to_otf_flare_small'
+        fname = fullfile(isetRootPath, 'data', 'optics', 'flare', 'flare1.png');
+        OTF = opticsPSF2OTF(fname, 1.2e-6, 400:10:700);
+        otf550 = fftshift(abs(OTF.OTF(:, :, 16)));
+        midRow = floor(size(otf550, 1) / 2) + 1;
+        payload.fx = OTF.fx;
+        payload.fy = OTF.fy;
+        payload.otf_abs550_row = otf550(midRow, :);
+        payload.otf_abs550_center = getMiddleMatrix(otf550, 32);
+
     case 'oi_ideal_otf_small'
         params = FOTParams;
         params.blockSize = 16;

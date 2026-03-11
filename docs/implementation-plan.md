@@ -11,6 +11,7 @@
 - The same script-driven optics surface now also includes headless `oiPlot(..., 'psf'/'psf550'/'psfxaxis'/'psfyaxis')`, backed by computed `oiGet(..., 'psf data'/'psf xaxis'/'psf yaxis')` support for diffraction-limited, custom-PSF, and computed WVF shift-invariant optics.
 - The adjacent diffraction-limited optics plotting surface now also includes headless `oiPlot(..., 'ls wavelength'/'lswavelength'/'otf wavelength'/'mtf wavelength')` support for the MATLAB line-spread and OTF-by-wavelength workflows used by the diffraction PSF scripts.
 - That same diffraction plotting surface now also includes direct `oiPlot(..., 'psf', [], 550)` parity coverage for the upstream `s_opticsDLPsf.m` workflow.
+- The same script-driven custom optics surface now also includes direct `opticsPSF2OTF(...)` parity coverage for the upstream flare-image workflow in `s_opticsPSF2OTF.m`.
 - The adjacent wavefront plotting surface now also includes headless `wvfPlot(...)` support for script-driven PSF, 1D PSF, pupil amplitude, pupil phase, wavefront-aberration, PSF-angle, and OTF inspection, backed by wavelength-aware `wvfGet(...)` support for `psf`, `pupil function`, `wavefront aberrations`, `psf spatial samples`, `psf angular samples`, `pupil spatial samples`, `1d psf`, and OTF support.
 - Sensor preset expansion now includes generic `rgbw` / `rccc` creation and upstream-backed `mt9v024` / `ar0132at` RGBW and RCCC model variants.
 - `camera_create(...)` now forwards those expanded sensor presets too, so camera constructors can directly target `rgbw`, `rccc`, and vendor sensor variants like `mt9v024` / `ar0132at`.
@@ -178,6 +179,7 @@
 - `oi_wvf_script_defocus_small`: explicit `wvfCompute` plus `wvf2oi` and `oiCompute(..., crop=true)` parity on the MATLAB defocus script flow, compare wave axis, irradiance cube, defocus Zernike coefficient, pupil diameter, and resulting f-number.
 - `oi_lswavelength_diffraction_small`: `oiPlot(oi, 'ls wavelength')` parity on a diffraction-limited OI configured like the upstream diffraction PSF script, compare the returned spatial axis, wavelength vector, and line-spread-by-wavelength surface.
 - `oi_psf550_diffraction_small`: `oiPlot(oi, 'psf', [], 550)` parity on a diffraction-limited OI configured like the upstream diffraction PSF script, compare the returned spatial support grids and PSF surface.
+- `optics_psf_to_otf_flare_small`: direct `opticsPSF2OTF(...)` parity on the upstream `flare1.png` workflow, compare the returned frequency axes plus a 550 nm OTF center crop and central row from the generated custom OTF struct.
 - `oi_diffraction_limited_default`: default scene through `oiCreate()/oiCompute()`, compare irradiance cube, padding behavior, and FOV-derived geometry.
 - `oi_wvf_small_scene`: small deterministic wavefront case, compare PSF/OTF-derived irradiance numerically with relaxed FFT tolerance.
 - `sensor_bayer_noiseless`: default Bayer sensor with `noise flag = 0`, compare `volts` and exposure-derived scaling.

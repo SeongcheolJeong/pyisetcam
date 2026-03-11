@@ -187,6 +187,12 @@
       }
     },
     {
+      "name": "optics_psf_to_otf_flare_small",
+      "matlab_function": "opticsPSF2OTF",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "oi_ideal_otf_small",
       "matlab_function": "oiGet/oiSet/oiCompute",
       "rtol": 1e-04,

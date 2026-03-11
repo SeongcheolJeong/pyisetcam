@@ -151,6 +151,9 @@ used in the upstream diffraction PSF tutorials.
 That same diffraction plotting surface now also includes direct
 `oiPlot(..., 'psf', [], 550)` parity coverage for the upstream
 `s_opticsDLPsf.m` workflow.
+The script-driven custom optics surface now also includes direct
+`opticsPSF2OTF(...)` parity coverage for the upstream flare-image
+workflow from `s_opticsPSF2OTF.m`.
 The adjacent wavefront plotting surface now also includes headless
 `wvfPlot(...)` support for script-driven PSF, 1D PSF, pupil amplitude,
 pupil phase, wavefront-aberration, PSF-angle, and OTF views, backed by

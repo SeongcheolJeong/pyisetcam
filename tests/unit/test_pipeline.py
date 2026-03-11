@@ -3659,6 +3659,16 @@ def test_run_python_case_supports_custom_otf_flare_parity_case(asset_store) -> N
     assert case.context["oi"].fields["optics"]["compute_method"] == "opticsotf"
 
 
+def test_run_python_case_supports_optics_psf_to_otf_flare_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("optics_psf_to_otf_flare_small", asset_store=asset_store)
+
+    assert case.payload["fx"].ndim == 1
+    assert case.payload["fy"].ndim == 1
+    assert case.payload["otf_abs550_row"].shape == case.payload["fx"].shape
+    assert case.payload["otf_abs550_center"].shape == (33, 33)
+    assert np.max(case.payload["otf_abs550_center"]) > 0.0
+
+
 def test_run_python_case_supports_wvf_defocus_oi_parity_case(asset_store) -> None:
     case = run_python_case_with_context("oi_wvf_defocus_small", asset_store=asset_store)
 
