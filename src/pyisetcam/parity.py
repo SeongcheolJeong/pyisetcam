@@ -38,7 +38,7 @@ from .optics import (
     oi_set,
     si_synthetic,
 )
-from .plotting import oi_plot
+from .plotting import oi_plot, wvf_plot
 from .scene import scene_adjust_illuminant, scene_create, scene_get, scene_set
 from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_set
 from .utils import blackbody, energy_to_quanta, param_format, quanta_to_energy, unit_frequency_list
@@ -708,6 +708,23 @@ def run_python_case_with_context(
                 "psf_mid_row": psf[middle_row, :],
                 "pupil_amp_row": pupil_amp[middle_row, :],
                 "pupil_phase_row": pupil_phase[middle_row, :],
+            },
+            context={"wvf": wvf},
+        )
+
+    if case_name == "wvf_plot_otf_small":
+        wvf = wvf_create(wave=np.array([550.0], dtype=float))
+        wvf = wvf_set(wvf, "spatial samples", 401)
+        wvf = wvf_compute(wvf)
+        udata, _ = wvf_plot(wvf, "2d otf", "unit", "mm", "wave", 550.0, "plot range", 300.0, "window", False)
+        otf = np.asarray(udata["otf"], dtype=float)
+        middle_row = otf.shape[0] // 2
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "fx": np.asarray(udata["fx"], dtype=float),
+                "otf_mid_row": otf[middle_row, :],
+                "otf_center": float(otf[middle_row, otf.shape[1] // 2]),
             },
             context={"wvf": wvf},
         )

@@ -426,6 +426,17 @@ switch case_name
         payload.pupil_amp_row = pupilAmp(middleRow, :);
         payload.pupil_phase_row = pupilPhase(middleRow, :);
 
+    case 'wvf_plot_otf_small'
+        wvf = wvfCreate('wave', 550);
+        wvf = wvfSet(wvf, 'spatial samples', 401);
+        wvf = wvfCompute(wvf);
+        uData = wvfPlot(wvf, '2d otf', 'unit', 'mm', 'wave', 550, 'plot range', 300, 'window', false);
+        otf = uData.otf;
+        middleRow = floor(size(otf, 1) / 2) + 1;
+        payload.fx = uData.fx(:)';
+        payload.otf_mid_row = otf(middleRow, :);
+        payload.otf_center = otf(middleRow, floor(size(otf, 2) / 2) + 1);
+
     case 'wvf_psf2zcoeff_error_small'
         wvf = wvfCreate('wave', 550);
         wvf = wvfSet(wvf, 'zcoeffs', 0.2, 'defocus');
