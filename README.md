@@ -122,6 +122,11 @@ injection from flare PSFs, with a curated Octave parity case on the
 upstream flare image; that case compares `photons` with a scale-invariant
 rule because the upstream Octave path preserves image shape but returns a
 constant-factor magnitude offset.
+The adjacent custom shift-invariant file workflow now also includes
+`ie_save_si_data_file` / `ieSaveSIDataFile` plus direct
+`siSynthetic('custom', file)` parity, with the case comparing the saved
+input PSF row directly and treating the downstream OI `photons` field
+scale-invariantly for the same stable custom-OTF magnitude offset.
 The same raw OTF workflow now also includes direct
 `oi_get(..., 'optics OTF')` / `oi_set(..., 'optics OTF', ...)` support
 for MATLAB-style shift-invariant OTF access and replacement, with a

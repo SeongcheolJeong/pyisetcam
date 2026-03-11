@@ -175,6 +175,18 @@
       }
     },
     {
+      "name": "oi_si_custom_file_small",
+      "matlab_function": "ieSaveSIDataFile/siSynthetic/oiSet/oiCompute",
+      "rtol": 1e-04,
+      "atol": 1e-06,
+      "field_overrides": {
+        "photons": {
+          "mode": "scale_invariant",
+          "max_mean_rel": 1e-05
+        }
+      }
+    },
+    {
       "name": "oi_custom_otf_flare_small",
       "matlab_function": "opticsPSF2OTF/oiSet/oiCompute",
       "rtol": 1e-04,

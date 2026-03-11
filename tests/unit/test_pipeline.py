@@ -13,6 +13,7 @@ from pyisetcam import (
     camera_create,
     camera_get,
     camera_set,
+    ie_save_si_data_file,
     ie_field_height_to_index,
     ip_get,
     ip_set,
@@ -2276,6 +2277,14 @@ def test_oi_si_lorentzian_small_parity_case(asset_store) -> None:
     assert payload["photons"].shape[2] == np.asarray(payload["wave"]).size
 
 
+def test_oi_si_custom_file_small_parity_case(asset_store) -> None:
+    payload = run_python_case("oi_si_custom_file_small", asset_store=asset_store)
+
+    assert payload["photons"].ndim == 3
+    assert payload["photons"].shape[2] == np.asarray(payload["wave"]).size
+    assert np.asarray(payload["input_psf_mid_row_550"]).ndim == 1
+
+
 def test_si_synthetic_custom_loads_psf_mat_file(tmp_path, asset_store) -> None:
     psf = np.zeros((129, 129, 1), dtype=float)
     psf[64, 64, 0] = 1.0
@@ -2297,6 +2306,30 @@ def test_si_synthetic_custom_loads_psf_mat_file(tmp_path, asset_store) -> None:
     stored = oi_get(oi, "psfdata")
     assert np.asarray(stored["psf"]).shape == (129, 129, 1)
     assert np.array_equal(np.asarray(stored["wave"]), np.array([550.0], dtype=float))
+    assert computed.data["photons"].shape[:2] == scene.data["photons"].shape[:2]
+
+
+def test_ie_save_si_data_file_roundtrips_into_si_synthetic_custom(tmp_path, asset_store) -> None:
+    samples = np.arange(129, dtype=float) - 64.0
+    xx, yy = np.meshgrid(samples, samples, indexing="xy")
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    psf = np.zeros((129, 129, wave.size), dtype=float)
+    for idx, wavelength in enumerate(wave):
+        sigma = 1.2 + 0.01 * ((wavelength - wave[0]) / 10.0)
+        plane = np.exp(-0.5 * ((xx / sigma) ** 2 + (yy / sigma) ** 2))
+        psf[:, :, idx] = plane / np.sum(plane)
+
+    path = ie_save_si_data_file(psf, wave, np.array([0.25, 0.25], dtype=float), tmp_path / "custom_si_psf")
+    scene = scene_create("grid lines", [64, 64], 16, "ee", 2, asset_store=asset_store)
+    scene = scene_set(scene, "fov", 2.0)
+    oi = oi_create("shift invariant")
+    optics = si_synthetic("custom", oi, path)
+    oi = oi_set(oi, "optics", optics)
+    computed = oi_compute(oi, scene, crop=True)
+
+    stored = oi_get(oi, "psfdata")
+    assert np.asarray(stored["psf"]).shape == psf.shape
+    assert np.array_equal(np.asarray(stored["wave"]), wave)
     assert computed.data["photons"].shape[:2] == scene.data["photons"].shape[:2]
 
 def test_oi_compute_wvf_uses_custom_aperture(asset_store) -> None:

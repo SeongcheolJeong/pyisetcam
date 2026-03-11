@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import tempfile
 from typing import Any
 
 import numpy as np
@@ -10,6 +11,7 @@ import numpy as np
 from .assets import AssetStore
 from .camera import camera_compute, camera_create
 from .display import display_create
+from .fileio import ie_save_si_data_file
 from .metrics import cct_from_uv, delta_e_ab, metrics_spd, xyz_from_energy, xyz_to_lab, xyz_to_luv, xyz_to_uv
 from .ip import ip_compute, ip_create
 from .optics import (
@@ -471,6 +473,33 @@ def run_python_case_with_context(
         oi = oi_compute(oi, scene, crop=True)
         return ParityCaseResult(
             payload={"case_name": case_name, "wave": oi.fields["wave"], "photons": oi.data["photons"]},
+            context={"scene": scene, "oi": oi},
+        )
+
+    if case_name == "oi_si_custom_file_small":
+        scene = scene_create("grid lines", [64, 64], 16, "ee", 2, asset_store=store)
+        scene = scene_set(scene, "fov", 2.0)
+        oi = oi_create("shift invariant")
+        wave = np.asarray(oi_get(oi, "wave"), dtype=float).reshape(-1)
+        samples = np.arange(129, dtype=float) - 64.0
+        xx, yy = np.meshgrid(samples, samples, indexing="xy")
+        psf = np.zeros((129, 129, wave.size), dtype=float)
+        for idx, wavelength in enumerate(wave):
+            sigma = 1.2 + 0.01 * ((float(wavelength) - float(wave[0])) / 10.0)
+            plane = np.exp(-0.5 * ((xx / sigma) ** 2 + (yy / sigma) ** 2))
+            psf[:, :, idx] = plane / np.sum(plane)
+        with tempfile.TemporaryDirectory(prefix="pyisetcam-si-custom-") as tmpdir:
+            path = ie_save_si_data_file(psf, wave, np.array([0.25, 0.25], dtype=float), f"{tmpdir}/custom_si_psf.mat")
+            optics = si_synthetic("custom", oi, path)
+        oi = oi_set(oi, "optics", optics)
+        oi = oi_compute(oi, scene, crop=True)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": oi_get(oi, "wave"),
+                "photons": oi_get(oi, "photons"),
+                "input_psf_mid_row_550": psf[64, :, 15],
+            },
             context={"scene": scene, "oi": oi},
         )
 

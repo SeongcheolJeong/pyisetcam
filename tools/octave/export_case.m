@@ -6,6 +6,7 @@ if nargin < 3
 end
 
 addpath(genpath(upstream_root));
+addpath(fileparts(mfilename('fullpath')));
 try
     ieInitSession;
 catch
@@ -263,6 +264,30 @@ switch case_name
         oi = oiCompute(oi, scene, 'crop', true);
         payload.wave = oiGet(oi, 'wave');
         payload.photons = oiGet(oi, 'photons');
+
+    case 'oi_si_custom_file_small'
+        scene = sceneCreate('grid lines', [64 64], 16, 'ee', 2);
+        scene = sceneSet(scene, 'fov', 2.0);
+        oi = oiCreate('shift invariant');
+        wave = oiGet(oi, 'wave');
+        samples = ((1:129) - 65);
+        [xx, yy] = meshgrid(samples, samples);
+        psf = zeros(129, 129, numel(wave));
+        for ii = 1:numel(wave)
+            sigma = 1.2 + 0.01 * ((wave(ii) - wave(1)) / 10);
+            plane = exp(-0.5 * ((xx ./ sigma).^2 + (yy ./ sigma).^2));
+            psf(:, :, ii) = plane ./ sum(plane(:));
+        end
+        fName = fullfile(tempdir, 'custom_si_psf_octave.mat');
+        ieSaveSIDataFile(psf, wave, [0.25 0.25], fName);
+        optics = siSynthetic('custom', oi, fName);
+        oi = oiSet(oi, 'optics', optics);
+        oi = oiSet(oi, 'compute method', 'opticsotf');
+        oi = oiCompute(oi, scene, 'crop', true);
+        payload.wave = oiGet(oi, 'wave');
+        payload.photons = oiGet(oi, 'photons');
+        payload.input_psf_mid_row_550 = squeeze(psf(65, :, 16));
+        if exist(fName, 'file'), delete(fName); end
 
     case 'oi_custom_otf_flare_small'
         scene = sceneCreate('point array', 64, 16);

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from datetime import datetime
 
 import numpy as np
 from scipy.io import loadmat, savemat
@@ -208,3 +209,44 @@ def vc_load_object(
 vcSaveObject = vc_save_object
 vcExportObject = vc_export_object
 vcLoadObject = vc_load_object
+
+
+def ie_save_si_data_file(
+    psf: Any,
+    wave: Any,
+    um_per_samp: Any,
+    f_name: str | Path | None = None,
+) -> str:
+    """Write MATLAB-style shift-invariant PSF data for `siSynthetic('custom', ...)`."""
+
+    if psf is None:
+        raise ValueError("psf volume required")
+    if wave is None:
+        raise ValueError("wavelength samples required (nm)")
+    if um_per_samp is None:
+        raise ValueError("Microns per sample(2-vector) required")
+
+    path = _normalize_save_path(f_name or (Path.cwd() / "siSynthetic.mat"))
+    psf_array = np.asarray(psf, dtype=float)
+    wave_array = np.asarray(wave, dtype=float).reshape(-1)
+    um_per_samp_array = np.asarray(um_per_samp, dtype=float).reshape(-1)
+    if um_per_samp_array.size == 1:
+        um_per_samp_array = np.repeat(um_per_samp_array, 2)
+    if um_per_samp_array.size != 2:
+        raise ValueError("umPerSamp must be a scalar or 2-vector.")
+
+    notes = {"timeStamp": datetime.now().isoformat()}
+    savemat(
+        path,
+        {
+            "psf": psf_array,
+            "wave": wave_array,
+            "umPerSamp": um_per_samp_array,
+            "notes": notes,
+        },
+        do_compression=True,
+    )
+    return str(path)
+
+
+ieSaveSIDataFile = ie_save_si_data_file

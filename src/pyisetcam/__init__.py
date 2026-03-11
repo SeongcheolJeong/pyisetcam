@@ -8,7 +8,7 @@ from .assets import (
 )
 from .camera import camera_compute, camera_create, camera_get, camera_set
 from .display import display_create, display_get, display_set
-from .fileio import vc_export_object, vc_load_object, vc_save_object
+from .fileio import ie_save_si_data_file, vc_export_object, vc_load_object, vc_save_object
 from .ip import image_data_xyz, ip_compute, ip_create, ip_get, ip_set
 from .metrics import (
     cct_from_uv,
@@ -203,6 +203,7 @@ __all__ = [
     "ieRect2Vertices",
     "ieRoi2Locs",
     "ieReplaceObject",
+    "ieSaveSIDataFile",
     "ieSessionGet",
     "ieSessionSet",
     "ieWindowsGet",
@@ -226,6 +227,7 @@ __all__ = [
     "ie_rect2_vertices",
     "ie_roi2_locs",
     "ie_replace_object",
+    "ie_save_si_data_file",
     "ie_session_get",
     "ie_session_set",
     "ie_windows_get",
@@ -538,6 +540,7 @@ ieRect2Locs = ie_rect2_locs
 ieRect2Vertices = ie_rect2_vertices
 ieRoi2Locs = ie_roi2_locs
 ieReplaceObject = ie_replace_object
+ieSaveSIDataFile = ie_save_si_data_file
 ieSessionGet = ie_session_get
 ieSessionSet = ie_session_set
 ieWindowsGet = ie_windows_get
