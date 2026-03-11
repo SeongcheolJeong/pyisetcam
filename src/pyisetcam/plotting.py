@@ -955,13 +955,11 @@ def wvf_plot(
     if key in {"1dotf", "1dotfspace", "1dotfangle"}:
         freq = np.asarray(wvf_get(wvf, "otf support", unit, wave), dtype=float)
         otf = np.abs(_wvf_centered_otf(np.asarray(wvf_get(wvf, "psf", wave), dtype=float)))
-        middle = otf.shape[0] // 2
-        positive = freq >= 0.0
-        if np.isfinite(float(plot_range)):
-            positive &= freq < float(plot_range)
+        freq, otf = _wvf_crop_axis_and_plane(freq, otf, plot_range)
         return {
-            "fx": np.asarray(freq[positive], dtype=float),
-            "otf": np.asarray(otf[middle, positive], dtype=float),
+            "fx": freq,
+            "fy": freq.copy(),
+            "otf": otf,
             "wave": float(wave),
             "unit": unit if key != "1dotfangle" else "deg",
         }, None

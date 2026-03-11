@@ -322,9 +322,11 @@ def test_wvf_plot_angle_and_otf_views() -> None:
     assert otf_udata["otf"].ndim == 2
     assert otf_udata["otf"].shape == (otf_udata["fy"].size, otf_udata["fx"].size)
     assert otf_1d_udata["fx"].ndim == 1
-    assert otf_1d_udata["otf"].shape == otf_1d_udata["fx"].shape
+    assert otf_1d_udata["fy"].shape == otf_1d_udata["fx"].shape
+    assert otf_1d_udata["otf"].shape == (otf_1d_udata["fy"].size, otf_1d_udata["fx"].size)
     assert otf_1d_angle_udata["fx"].ndim == 1
-    assert otf_1d_angle_udata["otf"].shape == otf_1d_angle_udata["fx"].shape
+    assert otf_1d_angle_udata["fy"].shape == otf_1d_angle_udata["fx"].shape
+    assert otf_1d_angle_udata["otf"].shape == (otf_1d_angle_udata["fy"].size, otf_1d_angle_udata["fx"].size)
     assert np.asarray(wvf_get(wvf, "otf", 550.0)).ndim == 2
 
 
