@@ -269,6 +269,12 @@
       }
     },
     {
+      "name": "wvf_psf2zcoeff_error_small",
+      "matlab_function": "psf2zcoeff",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "wvf_aperture_polygon_clean_small",
       "matlab_function": "wvfAperture",
       "rtol": 1e-05,

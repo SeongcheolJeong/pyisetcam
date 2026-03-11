@@ -2003,6 +2003,17 @@ def _wvf_pupil_plane_size_m(wvf: dict[str, Any], wavelength_nm: float) -> float:
     raise UnsupportedOptionError("wvfGet", f"sample interval domain {wvf.get('sample_interval_domain')}")
 
 
+def _wave_unit_scale(unit: Any) -> float:
+    normalized = param_format(unit if unit is not None else "nm")
+    if normalized in {"nm", "nanometer", "nanometers"}:
+        return 1.0
+    if normalized in {"um", "micron", "microns"}:
+        return 1e-3
+    if normalized in {"m", "meter", "meters"}:
+        return 1e-9
+    raise ValueError(f"Unsupported wavelength unit: {unit}")
+
+
 def _wvf_um_per_degree(wvf: dict[str, Any]) -> float:
     focal_length_m = float(wvf.get("focal_length_m", DEFAULT_WVF_FOCAL_LENGTH_M))
     return focal_length_m * (np.pi / 180.0) * 1e6
@@ -2216,6 +2227,51 @@ def wvf_compute_psf(
     return _wvf_compute_psf_from_pupil_function(current, current.get("pupil_function"))
 
 
+def psf_to_zcoeff_error(
+    zcoeffs: Any,
+    psf_target: Any,
+    pupil_size_mm: Any,
+    z_pupil_diameter_mm: Any,
+    pupil_plane_size_mm: Any,
+    wave_um: Any,
+    n_pixels: Any,
+) -> float:
+    coefficients = np.asarray(zcoeffs, dtype=float).reshape(-1).copy()
+    if coefficients.size == 0:
+        coefficients = np.zeros(1, dtype=float)
+    coefficients[0] = 0.0
+    if coefficients.size < 5:
+        coefficients = np.pad(coefficients, (0, 5 - coefficients.size), constant_values=0.0)
+
+    pixels = int(n_pixels)
+    psf_reference = np.asarray(psf_target, dtype=float)
+    if psf_reference.shape != (pixels, pixels):
+        raise ValueError("psf_target shape must match n_pixels x n_pixels.")
+
+    pupil_pos = (np.arange(pixels, dtype=float) + 1.0) - (np.floor(pixels / 2.0) + 1.0)
+    pupil_pos = pupil_pos * (float(pupil_plane_size_mm) / max(pixels, 1))
+    xpos, ypos = np.meshgrid(pupil_pos, pupil_pos, indexing="xy")
+    ypos = -ypos
+
+    z_pupil_diameter_mm = float(z_pupil_diameter_mm)
+    pupil_size_mm = float(pupil_size_mm)
+    norm_radius = np.sqrt(xpos**2 + ypos**2) / max(z_pupil_diameter_mm / 2.0, 1e-12)
+    theta = np.arctan2(ypos, xpos)
+
+    wavefront_aberrations_um = _zernike_surface_osa(coefficients, norm_radius, theta)
+    pupilfuncphase = np.exp(-1j * 2.0 * np.pi * wavefront_aberrations_um / max(float(wave_um), 1e-12))
+    pupilfuncphase[norm_radius > (pupil_size_mm / max(z_pupil_diameter_mm, 1e-12))] = 0.0
+
+    amp = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(pupilfuncphase)))
+    intensity = np.real(amp * np.conj(amp))
+    psf = intensity / max(float(np.sum(intensity)), 1e-12)
+    diff = psf_reference - psf
+    return float(np.sqrt(np.mean(np.square(diff))))
+
+
+psf2zcoeff = psf_to_zcoeff_error
+
+
 def wvf_set(wvf: dict[str, Any], parameter: str, value: Any, *args: Any) -> dict[str, Any]:
     key = param_format(parameter)
     updated = dict(wvf)
@@ -2318,7 +2374,21 @@ def wvf_get(wvf: dict[str, Any], parameter: str, *args: Any) -> Any:
         return wvf.get(key)
 
     if key in {"wave", "wavelength", "wavelengths", "calcwave", "calcwavelengths", "wls"}:
-        return np.asarray(wvf.get("wave", DEFAULT_WAVE), dtype=float).copy()
+        values = np.asarray(wvf.get("wave", DEFAULT_WAVE), dtype=float).reshape(-1).copy()
+        unit = None
+        index = None
+        if args:
+            if isinstance(args[0], str):
+                unit = args[0]
+                if len(args) > 1:
+                    index = int(np.asarray(args[1], dtype=int).reshape(-1)[0])
+            else:
+                index = int(np.asarray(args[0], dtype=int).reshape(-1)[0])
+        if unit is not None:
+            values = values * _wave_unit_scale(unit)
+        if index is not None:
+            return float(values[index - 1])
+        return values
 
     if key in {"calcnwave", "nwave", "numbercalcwavelengths", "nwavelengths"}:
         return int(_wvf_wave_values(wvf).size)
@@ -2346,13 +2416,16 @@ def wvf_get(wvf: dict[str, Any], parameter: str, *args: Any) -> Any:
             args[0] if args else "mm"
         )
 
-    if key in {"measuredpupil", "measuredpupilsize", "measuredpupildiameter", "measuredpupilmm", "pupildiameter", "pupilsize"}:
+    if key in {"zpupildiameter", "zpupilsize", "measuredpupil", "measuredpupilsize", "measuredpupildiameter", "measuredpupilmm", "pupildiameter", "pupilsize"}:
         return (float(wvf.get("measured_pupil_diameter_mm", DEFAULT_WVF_MEASURED_PUPIL_MM)) / 1e3) * _spatial_unit_scale(
             args[0] if args else "mm"
         )
 
     if key in {"measuredwl", "measuredwave", "measuredwavelength"}:
-        return float(wvf.get("measured_wavelength_nm", DEFAULT_WVF_MEASURED_WAVELENGTH_NM))
+        value_nm = float(wvf.get("measured_wavelength_nm", DEFAULT_WVF_MEASURED_WAVELENGTH_NM))
+        if args:
+            return value_nm * _wave_unit_scale(args[0])
+        return value_nm
 
     if key in {"spatialsamples", "numberspatialsamples", "npixels", "fieldsizepixels"}:
         return int(wvf.get("spatial_samples", DEFAULT_WVF_SPATIAL_SAMPLES))

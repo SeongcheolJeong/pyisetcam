@@ -27,6 +27,7 @@ from pyisetcam import (
     oi_create,
     oi_get,
     oi_set,
+    psf_to_zcoeff_error,
     rt_angle_lut,
     rt_block_center,
     rt_choose_block_size,
@@ -3852,6 +3853,68 @@ def test_run_python_case_supports_wvf_compute_psf_parity_case(asset_store) -> No
     assert case.payload["psf_mid_row"].shape == (int(case.payload["npixels"]),)
     assert case.payload["pupil_amp_row"].shape == (int(case.payload["npixels"]),)
     assert case.payload["pupil_phase_row"].shape == (int(case.payload["npixels"]),)
+
+
+def test_wvf_wave_getter_supports_unit_and_index() -> None:
+    wvf = wvf_create(wave=np.array([450.0, 550.0, 650.0], dtype=float))
+
+    assert np.array_equal(np.asarray(wvf_get(wvf, "wave"), dtype=float), np.array([450.0, 550.0, 650.0], dtype=float))
+    assert np.allclose(np.asarray(wvf_get(wvf, "wave", "um"), dtype=float), np.array([0.45, 0.55, 0.65], dtype=float))
+    assert np.isclose(float(wvf_get(wvf, "wave", "um", 2)), 0.55)
+    assert np.isclose(float(wvf_get(wvf, "measured wavelength", "um")), 0.55)
+
+
+def test_psf2zcoeff_error_is_small_for_matching_wvf_psf() -> None:
+    wvf = wvf_create(wave=np.array([550.0], dtype=float))
+    wvf = wvf_set(wvf, "zcoeffs", 0.2, "defocus")
+    wvf = wvf_set(wvf, "zcoeffs", 0.0, "vertical_astigmatism")
+    wvf = wvf_compute(wvf)
+
+    this_wave_nm = float(wvf_get(wvf, "wave", 1))
+    this_wave_um = float(wvf_get(wvf, "wave", "um", 1))
+    psf_target = np.asarray(wvf_get(wvf, "psf", this_wave_nm), dtype=float)
+    zcoeffs = np.asarray(wvf_get(wvf, "zcoeffs"), dtype=float)
+
+    matching_error = psf_to_zcoeff_error(
+        zcoeffs[:6],
+        psf_target,
+        wvf_get(wvf, "pupil size", "mm"),
+        wvf_get(wvf, "z pupil diameter"),
+        wvf_get(wvf, "pupil plane size", "mm", this_wave_nm),
+        this_wave_um,
+        wvf_get(wvf, "spatial samples"),
+    )
+    query_error = psf_to_zcoeff_error(
+        np.array([0.0, 0.0, 0.0, 0.0, 0.15, 0.02], dtype=float),
+        psf_target,
+        wvf_get(wvf, "pupil size", "mm"),
+        wvf_get(wvf, "z pupil diameter"),
+        wvf_get(wvf, "pupil plane size", "mm", this_wave_nm),
+        this_wave_um,
+        wvf_get(wvf, "spatial samples"),
+    )
+    mismatched_error = psf_to_zcoeff_error(
+        np.array([0.0, 0.0, 0.0, 0.0, 0.05, 0.0], dtype=float),
+        psf_target,
+        wvf_get(wvf, "pupil size", "mm"),
+        wvf_get(wvf, "z pupil diameter"),
+        wvf_get(wvf, "pupil plane size", "mm", this_wave_nm),
+        this_wave_um,
+        wvf_get(wvf, "spatial samples"),
+    )
+
+    assert matching_error > 0.0
+    assert query_error > 0.0
+    assert mismatched_error > query_error
+
+
+def test_run_python_case_supports_wvf_psf2zcoeff_error_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("wvf_psf2zcoeff_error_small", asset_store=asset_store)
+
+    assert np.isclose(float(case.payload["wave_um"]), 0.55)
+    assert int(case.payload["n_pixels"]) == 201
+    assert case.payload["query_zcoeffs"].shape == (6,)
+    assert float(case.payload["error"]) >= 0.0
 
 
 def test_run_python_case_supports_wvf_aperture_polygon_parity_case(asset_store) -> None:

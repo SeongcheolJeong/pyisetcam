@@ -40,6 +40,7 @@ from .optics import (
     oi_get,
     oi_set,
     optics_psf_to_otf,
+    psf_to_zcoeff_error,
     rt_angle_lut,
     rt_block_center,
     rt_choose_block_size,
@@ -268,6 +269,8 @@ __all__ = [
     "optics_psf_to_otf",
     "param_format",
     "peak_signal_to_noise_ratio",
+    "psf2zcoeff",
+    "psf_to_zcoeff_error",
     "root_mean_squared_error",
     "scene_plot",
     "pixel_snr",
@@ -467,6 +470,7 @@ oiSet = oi_set
 oiCalculateIlluminance = oi_calculate_illuminance
 oiDiffuser = oi_diffuser
 opticsPSF2OTF = optics_psf_to_otf
+psf2zcoeff = psf_to_zcoeff_error
 oiPlot = oi_plot
 ipPlot = ip_plot
 plotScene = scene_plot

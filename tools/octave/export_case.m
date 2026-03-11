@@ -416,6 +416,27 @@ switch case_name
         payload.pupil_amp_row = pupilAmp(middleRow, :);
         payload.pupil_phase_row = pupilPhase(middleRow, :);
 
+    case 'wvf_psf2zcoeff_error_small'
+        wvf = wvfCreate('wave', 550);
+        wvf = wvfSet(wvf, 'zcoeffs', 0.2, 'defocus');
+        wvf = wvfSet(wvf, 'zcoeffs', 0.0, 'vertical_astigmatism');
+        wvf = wvfCompute(wvf);
+        thisWaveNM = wvfGet(wvf, 'wave', 'nm', 1);
+        thisWaveUM = wvfGet(wvf, 'wave', 'um', 1);
+        pupilSizeMM = wvfGet(wvf, 'pupil size', 'mm');
+        zpupilDiameterMM = wvfGet(wvf, 'z pupil diameter');
+        pupilPlaneSizeMM = wvfGet(wvf, 'pupil plane size', 'mm', thisWaveNM);
+        nPixels = wvfGet(wvf, 'spatial samples');
+        psfTarget = wvfGet(wvf, 'psf', thisWaveNM);
+        queryZcoeffs = [0 0 0 0 0.15 0.02];
+        payload.wave_um = thisWaveUM;
+        payload.pupil_size_mm = pupilSizeMM;
+        payload.z_pupil_diameter_mm = zpupilDiameterMM;
+        payload.pupil_plane_size_mm = pupilPlaneSizeMM;
+        payload.n_pixels = nPixels;
+        payload.query_zcoeffs = queryZcoeffs;
+        payload.error = psf2zcoeff(queryZcoeffs, psfTarget, pupilSizeMM, zpupilDiameterMM, pupilPlaneSizeMM, thisWaveUM, nPixels);
+
     case 'wvf_aperture_polygon_clean_small'
         wvf = wvfCreate('wave', 550);
         wvf = wvfSet(wvf, 'spatial samples', 101);

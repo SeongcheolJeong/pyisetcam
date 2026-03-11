@@ -150,6 +150,12 @@ That same explicit wavefront surface now also includes
 `wvf_compute_psf` / `wvfComputePSF`, including the MATLAB-style
 stored-aperture workflow and direct parity coverage on the standalone
 pupil-function/PSF path.
+That same explicit WVF helper surface now also includes
+`psf_to_zcoeff_error` / `psf2zcoeff`, plus unit-aware/index-aware
+`wvfGet(..., 'wave', unit, idx)`, unit-aware
+`wvfGet(..., 'measured wavelength', unit)`, and MATLAB-style
+`wvfGet(..., 'z pupil diameter')` support for the upstream
+`s_opticsPSF2Zcoeffs.m` workflow.
 The same WVF backend now also includes
 `wvf_aperture` / `wvfAperture` plus `wvf_aperture_params` / `wvfApertureP`
 for script-driven synthetic aperture generation, including deterministic

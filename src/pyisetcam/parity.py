@@ -24,6 +24,7 @@ from .optics import (
     oi_compute,
     oi_create,
     oi_get,
+    psf_to_zcoeff_error,
     wvf_compute,
     wvf_aperture,
     wvf_compute_psf,
@@ -688,6 +689,42 @@ def run_python_case_with_context(
                 "psf_mid_row": psf[middle_row, :],
                 "pupil_amp_row": pupil_amp[middle_row, :],
                 "pupil_phase_row": pupil_phase[middle_row, :],
+            },
+            context={"wvf": wvf},
+        )
+
+    if case_name == "wvf_psf2zcoeff_error_small":
+        wvf = wvf_create(wave=np.array([550.0], dtype=float))
+        wvf = wvf_set(wvf, "zcoeffs", 0.2, "defocus")
+        wvf = wvf_set(wvf, "zcoeffs", 0.0, "vertical_astigmatism")
+        wvf = wvf_compute(wvf)
+        this_wave_nm = float(wvf_get(wvf, "wave", 1))
+        this_wave_um = float(wvf_get(wvf, "wave", "um", 1))
+        pupil_size_mm = float(wvf_get(wvf, "pupil size", "mm"))
+        z_pupil_diameter_mm = float(wvf_get(wvf, "z pupil diameter"))
+        pupil_plane_size_mm = float(wvf_get(wvf, "pupil plane size", "mm", this_wave_nm))
+        n_pixels = int(wvf_get(wvf, "spatial samples"))
+        psf_target = np.asarray(wvf_get(wvf, "psf", this_wave_nm), dtype=float)
+        query_zcoeffs = np.asarray([0.0, 0.0, 0.0, 0.0, 0.15, 0.02], dtype=float)
+        error = psf_to_zcoeff_error(
+            query_zcoeffs,
+            psf_target,
+            pupil_size_mm,
+            z_pupil_diameter_mm,
+            pupil_plane_size_mm,
+            this_wave_um,
+            n_pixels,
+        )
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave_um": this_wave_um,
+                "pupil_size_mm": pupil_size_mm,
+                "z_pupil_diameter_mm": z_pupil_diameter_mm,
+                "pupil_plane_size_mm": pupil_plane_size_mm,
+                "n_pixels": n_pixels,
+                "query_zcoeffs": query_zcoeffs,
+                "error": error,
             },
             context={"wvf": wvf},
         )
