@@ -29,6 +29,7 @@ from .optics import (
     wvf_to_oi,
     optics_psf_to_otf,
     oi_set,
+    si_synthetic,
 )
 from .scene import scene_adjust_illuminant, scene_create, scene_get, scene_set
 from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_set
@@ -434,6 +435,19 @@ def run_python_case_with_context(
     if case_name == "oi_psf_default_small":
         scene = scene_create("checkerboard", 8, 4, asset_store=store)
         oi = oi_compute(oi_create("psf"), scene, crop=True)
+        return ParityCaseResult(
+            payload={"case_name": case_name, "wave": oi.fields["wave"], "photons": oi.data["photons"]},
+            context={"scene": scene, "oi": oi},
+        )
+
+    if case_name == "oi_si_lorentzian_small":
+        scene = scene_create("grid lines", [64, 64], 16, "ee", 2, asset_store=store)
+        scene = scene_set(scene, "fov", 2.0)
+        oi = oi_create("psf")
+        gamma = np.logspace(0.0, 1.0, np.asarray(oi_get(oi, "wave"), dtype=float).size)
+        optics = si_synthetic("lorentzian", oi, gamma)
+        oi = oi_set(oi, "optics", optics)
+        oi = oi_compute(oi, scene, crop=True)
         return ParityCaseResult(
             payload={"case_name": case_name, "wave": oi.fields["wave"], "photons": oi.data["photons"]},
             context={"scene": scene, "oi": oi},

@@ -111,6 +111,11 @@ The optics expansion now also includes script-driven
 including a MATLAB-style default synthetic PSF constructor and explicit
 `psf` / `wave` / `umPerSamp` custom PSF data.
 The same shift-invariant optics surface now also includes
+`si_synthetic` / `siSynthetic` for the script-driven synthetic PSF
+families from `s_opticsSIExamples.m`, including MATLAB-style Gaussian,
+Lorentzian, pillbox, and custom-PSF workflows that return
+shift-invariant optics ready for `oiSet(..., 'optics', optics)`.
+The same shift-invariant optics surface now also includes
 `optics_psf_to_otf` / `opticsPSF2OTF` and
 `oi_set(..., 'optics otfstruct', ...)` for MATLAB-style custom OTF
 injection from flare PSFs, with a curated Octave parity case on the
@@ -123,6 +128,10 @@ for MATLAB-style shift-invariant OTF access and replacement, with a
 curated Octave parity case that replaces the stored OTF with an ideal
 all-ones OTF and compares the resulting image using a normalized-MAE rule
 that stays stable in dark regions.
+The script-driven synthetic-PSF workflow is also parity-covered by a
+Lorentzian `siSynthetic` case that compares the final irradiance cube
+scale-invariantly, because the upstream Octave path preserves image shape
+while retaining a stable magnitude offset.
 The adjacent wavefront helper surface now also includes
 `wvf_set` / `wvfSet`, `wvf_get` / `wvfGet`,
 `wvf_compute` / `wvfCompute`,

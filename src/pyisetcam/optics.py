@@ -261,6 +261,111 @@ def _synthetic_shift_invariant_gaussian_psf_data(
     )
 
 
+def _synthetic_shift_invariant_gaussian_psf_data_from_spreads(
+    wave: np.ndarray,
+    x_spread_um: Any,
+    xy_ratio: Any,
+    *,
+    samples: int = 129,
+    sample_spacing_um: float = 0.25,
+) -> dict[str, Any]:
+    wave_values = np.asarray(wave, dtype=float).reshape(-1)
+    n_wave = wave_values.size
+
+    x_spread = np.asarray(x_spread_um, dtype=float).reshape(-1)
+    if x_spread.size == 1:
+        x_spread = np.full(n_wave, float(x_spread[0]), dtype=float)
+    if x_spread.size != n_wave:
+        raise ValueError("Gaussian waveSpread must be scalar or match the wavelength count.")
+
+    xy_ratio_values = np.asarray(xy_ratio, dtype=float).reshape(-1)
+    if xy_ratio_values.size == 1:
+        xy_ratio_values = np.full(n_wave, float(xy_ratio_values[0]), dtype=float)
+    if xy_ratio_values.size != n_wave:
+        raise ValueError("Gaussian xyRatio must be scalar or match the wavelength count.")
+
+    center = (int(samples) - 1) / 2.0
+    positions = np.arange(int(samples), dtype=float) - center
+    xx, yy = np.meshgrid(positions, positions, indexing="xy")
+    psf = np.empty((int(samples), int(samples), n_wave), dtype=float)
+
+    for wave_index in range(n_wave):
+        sigma_x = max(float(x_spread[wave_index]) / max(float(sample_spacing_um), 1e-12), 1e-12)
+        sigma_y = max(float(x_spread[wave_index] * xy_ratio_values[wave_index]) / max(float(sample_spacing_um), 1e-12), 1e-12)
+        plane = np.exp(-0.5 * (((xx / sigma_x) ** 2) + ((yy / sigma_y) ** 2)))
+        plane = plane / max(float(np.sum(plane)), 1e-12)
+        psf[:, :, wave_index] = plane
+
+    return _normalize_shift_invariant_psf_data(
+        {
+            "psf": psf,
+            "wave": wave_values,
+            "umPerSamp": np.array([sample_spacing_um, sample_spacing_um], dtype=float),
+        }
+    )
+
+
+def _synthetic_shift_invariant_lorentzian_psf_data(
+    wave: np.ndarray,
+    g_parameter: Any,
+    *,
+    samples: int = 129,
+    sample_spacing_um: float = 0.25,
+) -> dict[str, Any]:
+    wave_values = np.asarray(wave, dtype=float).reshape(-1)
+    n_wave = wave_values.size
+
+    gamma = np.asarray(g_parameter, dtype=float).reshape(-1)
+    if gamma.size == 1:
+        gamma = np.full(n_wave, float(gamma[0]), dtype=float)
+    if gamma.size != n_wave:
+        raise ValueError("Lorentzian gParameter must be scalar or match the wavelength count.")
+
+    center = (int(samples) - 1) / 2.0
+    positions = np.arange(int(samples), dtype=float) - center
+    xx, yy = np.meshgrid(positions, positions, indexing="xy")
+    radius = np.sqrt(xx**2 + yy**2)
+    psf = np.empty((int(samples), int(samples), n_wave), dtype=float)
+
+    for wave_index in range(n_wave):
+        plane = 1.0 / (1.0 + (radius / max(float(gamma[wave_index]), 1e-12)) ** 2)
+        plane = plane / max(float(np.sum(plane)), 1e-12)
+        psf[:, :, wave_index] = plane
+
+    return _normalize_shift_invariant_psf_data(
+        {
+            "psf": psf,
+            "wave": wave_values,
+            "umPerSamp": np.array([sample_spacing_um, sample_spacing_um], dtype=float),
+        }
+    )
+
+
+def _synthetic_shift_invariant_pillbox_psf_data(
+    wave: np.ndarray,
+    patch_size_mm: float,
+    *,
+    samples: int = 129,
+    sample_spacing_um: float = 0.25,
+) -> dict[str, Any]:
+    wave_values = np.asarray(wave, dtype=float).reshape(-1)
+    sample_spacing_mm = float(sample_spacing_um) * 1e-3
+    patch_samples = int(np.ceil(float(patch_size_mm) / max(sample_spacing_mm, 1e-12)))
+    center = (int(samples) - 1) / 2.0
+    positions = np.arange(int(samples), dtype=float) - center
+    xx, yy = np.meshgrid(positions, positions, indexing="xy")
+    plane = ((np.abs(xx) <= patch_samples) & (np.abs(yy) <= patch_samples)).astype(float)
+    plane = plane / max(float(np.sum(plane)), 1e-12)
+    psf = np.repeat(plane[:, :, None], wave_values.size, axis=2)
+    return _normalize_shift_invariant_psf_data(
+        {
+            "psf": psf,
+            "wave": wave_values,
+            "umPerSamp": np.array([sample_spacing_um, sample_spacing_um], dtype=float),
+        }
+    )
+
+
 def _synthetic_shift_invariant_gaussian_otf_bundle(
     wave: np.ndarray,
     f_number: float,
@@ -333,6 +438,41 @@ def _custom_shift_invariant_otf_bundle(
         "otf_data": otf_data,
         "otf_fx": support.copy(),
         "otf_fy": support.copy(),
+        "otf_wave": source_wave.copy(),
+    }
+
+
+def _shift_invariant_otf_bundle_from_psf_data(
+    psf_data: dict[str, Any],
+    *,
+    center_shift: str = "fft",
+) -> dict[str, Any]:
+    normalized = _normalize_shift_invariant_psf_data(psf_data)
+    source_psf = np.asarray(normalized["psf"], dtype=float)
+    source_wave = np.asarray(normalized["wave"], dtype=float).reshape(-1)
+    sample_spacing_mm = float(normalized["sample_spacing_m"]) * 1e3
+    rows, cols = source_psf.shape[:2]
+    otf_data = np.empty((rows, cols, source_wave.size), dtype=complex)
+
+    for band_index in range(source_wave.size):
+        plane = np.asarray(source_psf[:, :, 0 if source_psf.shape[2] == 1 else band_index], dtype=float)
+        plane = np.clip(plane, 0.0, None)
+        plane = plane / max(float(np.sum(plane)), 1e-12)
+        if center_shift == "ifft":
+            shifted = np.fft.ifftshift(plane)
+        elif center_shift == "fft":
+            shifted = np.fft.fftshift(plane)
+        else:
+            raise ValueError("center_shift must be 'fft' or 'ifft'.")
+        otf_data[:, :, band_index] = np.fft.fft2(shifted)
+
+    nyquist_frequency = 1.0 / max(2.0 * sample_spacing_mm, 1e-12)
+    fx = unit_frequency_list(cols) * nyquist_frequency
+    fy = unit_frequency_list(rows) * nyquist_frequency
+    return {
+        "otf_data": otf_data,
+        "otf_fx": fx.copy(),
+        "otf_fy": fy.copy(),
         "otf_wave": source_wave.copy(),
     }
 
@@ -1743,6 +1883,72 @@ def wvf_get(wvf: dict[str, Any], parameter: str, *args: Any) -> Any:
 def wvf_to_oi(wvf: dict[str, Any]) -> OpticalImage:
     current = dict(wvf if wvf.get("computed") else wvf_compute(wvf))
     return oi_create("wvf", current)
+
+
+def si_synthetic(
+    psf_type: str = "gaussian",
+    oi: OpticalImage | None = None,
+    *args: Any,
+) -> dict[str, Any]:
+    current_oi = oi_create("shift invariant") if oi is None else oi
+    wave = np.asarray(oi_get(current_oi, "wave"), dtype=float).reshape(-1)
+    if wave.size == 0:
+        wave = DEFAULT_WAVE.copy()
+
+    normalized = param_format(psf_type)
+    psf_data: dict[str, Any]
+    optics_name = "siSynthetic"
+
+    if normalized == "gaussian":
+        if len(args) < 2:
+            raise ValueError("siSynthetic('gaussian', ...) requires waveSpread and xyRatio.")
+        psf_data = _synthetic_shift_invariant_gaussian_psf_data_from_spreads(wave, args[0], args[1])
+        otf_bundle = _shift_invariant_otf_bundle_from_psf_data(psf_data, center_shift="ifft")
+    elif normalized == "lorentzian":
+        gamma = args[0] if args else 1.0
+        psf_data = _synthetic_shift_invariant_lorentzian_psf_data(wave, gamma)
+        otf_bundle = _shift_invariant_otf_bundle_from_psf_data(psf_data, center_shift="ifft")
+    elif normalized == "pillbox":
+        if args:
+            patch_size_mm = float(args[0])
+        else:
+            patch_size_mm = 1.22 * float(oi_get(current_oi, "fnumber")) * (float(np.max(wave)) * 1e-6)
+        psf_data = _synthetic_shift_invariant_pillbox_psf_data(wave, patch_size_mm)
+        otf_bundle = _shift_invariant_otf_bundle_from_psf_data(psf_data, center_shift="ifft")
+    elif normalized == "custom":
+        if not args:
+            raise ValueError("siSynthetic('custom', ...) requires a PSF struct or .mat file path.")
+        source = args[0]
+        if isinstance(source, (str, Path)):
+            raw = loadmat(Path(source), squeeze_me=True, struct_as_record=False)
+            if "psf" not in raw or "wave" not in raw or "umPerSamp" not in raw:
+                raise ValueError("Custom shift-invariant PSF files must contain psf, wave, and umPerSamp.")
+            psf_data = _normalize_shift_invariant_psf_data(
+                {
+                    "psf": np.asarray(raw["psf"], dtype=float),
+                    "wave": np.asarray(raw["wave"], dtype=float).reshape(-1),
+                    "umPerSamp": np.asarray(raw["umPerSamp"], dtype=float).reshape(-1),
+                }
+            )
+            optics_name = str(Path(source).stem)
+        else:
+            psf_data = _normalize_shift_invariant_psf_data(source)
+        otf_bundle = _custom_shift_invariant_otf_bundle(psf_data)
+    else:
+        raise UnsupportedOptionError("siSynthetic", psf_type)
+
+    return {
+        "name": optics_name,
+        "model": "shiftinvariant",
+        "f_number": float(oi_get(current_oi, "fnumber")),
+        "focal_length_m": float(oi_get(current_oi, "focal length")),
+        "compute_method": "opticsotf",
+        "aberration_scale": float(current_oi.fields.get("optics", {}).get("aberration_scale", 0.0)),
+        "offaxis_method": str(current_oi.fields.get("optics", {}).get("offaxis_method", "cos4th")),
+        "psf_data": psf_data,
+        "otf_function": "custom",
+        **otf_bundle,
+    }
 
 
 def _rebuild_oi_from_wvf(oi: OpticalImage, wvf: dict[str, Any]) -> OpticalImage:

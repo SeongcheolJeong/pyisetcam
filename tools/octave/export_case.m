@@ -242,6 +242,17 @@ switch case_name
         payload.wave = oiGet(oi, 'wave');
         payload.photons = oiGet(oi, 'photons');
 
+    case 'oi_si_lorentzian_small'
+        scene = sceneCreate('grid lines', [64 64], 16, 'ee', 2);
+        scene = sceneSet(scene, 'fov', 2.0);
+        oi = oiCreate('psf');
+        gamma = logspace(0, 1, oiGet(oi, 'nwave'));
+        optics = siSynthetic('lorentzian', oi, gamma);
+        oi = oiSet(oi, 'optics', optics);
+        oi = oiCompute(oi, scene, 'crop', true);
+        payload.wave = oiGet(oi, 'wave');
+        payload.photons = oiGet(oi, 'photons');
+
     case 'oi_custom_otf_flare_small'
         scene = sceneCreate('point array', 64, 16);
         scene = sceneSet(scene, 'hfov', 40);

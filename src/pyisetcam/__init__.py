@@ -59,6 +59,7 @@ from .optics import (
     rt_ri_interp,
     rt_sample_heights,
     rt_synthetic,
+    si_synthetic,
     wvf_compute,
     wvf_create,
     wvf_defocus_diopters_to_microns,
@@ -330,6 +331,8 @@ __all__ = [
     "rt_sample_heights",
     "rtSynthetic",
     "rt_synthetic",
+    "siSynthetic",
+    "si_synthetic",
     "wvf_compute",
     "run_python_case",
     "run_python_case_with_context",
@@ -473,6 +476,7 @@ rtPrecomputePSFApply = rt_precompute_psf_apply
 rtRIInterp = rt_ri_interp
 rtSampleHeights = rt_sample_heights
 rtSynthetic = rt_synthetic
+siSynthetic = si_synthetic
 wvfCompute = wvf_compute
 wvfCreate = wvf_create
 wvfGet = wvf_get

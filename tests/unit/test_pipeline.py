@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 import pyisetcam.optics as optics_module
+from scipy.io import savemat
 
 from pyisetcam.exceptions import UnsupportedOptionError
 from pyisetcam.parity import run_python_case_with_context
@@ -44,6 +45,7 @@ from pyisetcam import (
     rt_ri_interp,
     rt_sample_heights,
     rt_synthetic,
+    si_synthetic,
     run_python_case,
     scene_create,
     scene_get,
@@ -2120,6 +2122,71 @@ def test_oi_set_optics_otf_repeats_2d_otf_across_wave(asset_store) -> None:
     assert stored.shape == np.asarray(raw_otf).shape
     assert np.allclose(stored[:, :, 0], gaussian)
     assert np.allclose(stored[:, :, -1], gaussian)
+
+
+def test_si_synthetic_gaussian_builds_anisotropic_shift_invariant_optics() -> None:
+    oi = oi_create("shift invariant")
+    wave = np.asarray(oi_get(oi, "wave"), dtype=float)
+
+    optics = si_synthetic("gaussian", oi, wave / wave[0], 2.0)
+    updated = oi_set(oi, "optics", optics)
+    psf_data = oi_get(updated, "psfdata")
+    psf = np.asarray(psf_data["psf"], dtype=float)
+
+    assert updated.fields["optics"]["model"] == "shiftinvariant"
+    assert updated.fields["optics"]["compute_method"] == "opticsotf"
+    assert psf.shape == (129, 129, wave.size)
+    center = psf.shape[0] // 2
+    horizontal = np.count_nonzero(psf[center, :, 0] > 1e-8)
+    vertical = np.count_nonzero(psf[:, center, 0] > 1e-8)
+    assert vertical > horizontal
+
+
+def test_si_synthetic_lorentzian_applies_to_grid_lines_scene(asset_store) -> None:
+    scene = scene_create("grid lines", [64, 64], 16, "ee", 2, asset_store=asset_store)
+    scene = scene_set(scene, "fov", 2.0)
+    oi = oi_create("psf")
+    gamma = np.logspace(0.0, 1.0, np.asarray(oi_get(oi, "wave"), dtype=float).size)
+
+    optics = si_synthetic("lorentzian", oi, gamma)
+    updated = oi_set(oi, "optics", optics)
+    computed = oi_compute(updated, scene, crop=True)
+
+    assert updated.fields["optics"]["compute_method"] == "opticsotf"
+    assert updated.fields["optics"]["model"] == "shiftinvariant"
+    assert np.asarray(oi_get(updated, "psfdata")["psf"]).shape[2] == np.asarray(oi_get(oi, "wave")).size
+    assert computed.data["photons"].shape[:2] == scene.data["photons"].shape[:2]
+
+
+def test_oi_si_lorentzian_small_parity_case(asset_store) -> None:
+    payload = run_python_case("oi_si_lorentzian_small", asset_store=asset_store)
+
+    assert payload["photons"].ndim == 3
+    assert payload["photons"].shape[2] == np.asarray(payload["wave"]).size
+
+
+def test_si_synthetic_custom_loads_psf_mat_file(tmp_path, asset_store) -> None:
+    psf = np.zeros((129, 129, 1), dtype=float)
+    psf[64, 64, 0] = 1.0
+    path = tmp_path / "custom_si_psf.mat"
+    savemat(
+        path,
+        {
+            "psf": psf,
+            "wave": np.array([550.0], dtype=float),
+            "umPerSamp": np.array([0.25, 0.25], dtype=float),
+        },
+    )
+
+    scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
+    optics = si_synthetic("custom", oi_create("shift invariant"), path)
+    oi = oi_set(oi_create("shift invariant"), "optics", optics)
+    computed = oi_compute(oi, scene, crop=True)
+
+    stored = oi_get(oi, "psfdata")
+    assert np.asarray(stored["psf"]).shape == (129, 129, 1)
+    assert np.array_equal(np.asarray(stored["wave"]), np.array([550.0], dtype=float))
+    assert computed.data["photons"].shape[:2] == scene.data["photons"].shape[:2]
 
 def test_oi_compute_wvf_uses_custom_aperture(asset_store) -> None:
     scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
