@@ -1452,6 +1452,81 @@ def wvf_defocus_microns_to_diopters(microns: Any, pupil_size_mm: Any) -> np.ndar
     return (16.0 * np.sqrt(3.0)) * microns_array / max(pupil_size**2, 1e-12)
 
 
+def wvf_compute(
+    wvf: dict[str, Any],
+    *,
+    compute_pupil_function: bool = True,
+    compute_psf: bool = True,
+    aperture: np.ndarray | None = None,
+    compute_sce: bool | None = None,
+) -> dict[str, Any]:
+    updated = dict(wvf)
+    if not compute_pupil_function and not compute_psf:
+        updated["computed"] = False
+        return updated
+
+    wave = np.asarray(updated.get("wave", DEFAULT_WAVE), dtype=float).reshape(-1)
+    lca_method = param_format(updated.get("lca_method", "none"))
+    if lca_method not in {"none", ""}:
+        raise UnsupportedOptionError("wvfCompute", f"lca method {updated.get('lca_method')}")
+
+    spatial_samples = int(updated.get("spatial_samples", DEFAULT_WVF_SPATIAL_SAMPLES))
+    n_pixels = max(spatial_samples, 3)
+    ref_pupil_size_mm = float(updated.get("ref_pupil_plane_size_mm", DEFAULT_WVF_REF_PUPIL_PLANE_SIZE_MM))
+    calc_pupil_mm = float(updated.get("calc_pupil_diameter_mm", DEFAULT_WVF_CALC_PUPIL_DIAMETER_MM))
+    measured_pupil_mm = float(updated.get("measured_pupil_diameter_mm", DEFAULT_WVF_MEASURED_PUPIL_MM))
+    measured_wavelength_nm = float(updated.get("measured_wavelength_nm", DEFAULT_WVF_MEASURED_WAVELENGTH_NM))
+    focal_length_mm = float(updated.get("focal_length_m", DEFAULT_WVF_FOCAL_LENGTH_M)) * 1e3
+    calc_radius = max(calc_pupil_mm / max(measured_pupil_mm, 1e-12), 1e-12)
+    local_compute_sce = bool(updated.get("compute_sce", False) if compute_sce is None else compute_sce)
+    sce_params = _normalize_sce_params(wave, updated.get("sce_params"))
+    middle_row = np.floor(n_pixels / 2.0) + 1.0
+    sample_positions = (np.arange(n_pixels, dtype=float) + 1.0) - middle_row
+    pupil_function = np.zeros((n_pixels, n_pixels, wave.size), dtype=np.complex128)
+    psf_stack = np.zeros((n_pixels, n_pixels, wave.size), dtype=float)
+
+    zcoeffs = np.asarray(updated.get("zcoeffs", np.array([0.0], dtype=float)), dtype=float).reshape(-1)
+    for band_index, wavelength_nm in enumerate(wave):
+        pupil_plane_size_mm = ref_pupil_size_mm * (float(wavelength_nm) / max(measured_wavelength_nm, 1e-12))
+        pupil_sample_spacing_mm = pupil_plane_size_mm / max(n_pixels, 1)
+        pupil_pos = sample_positions * pupil_sample_spacing_mm
+        xpos, ypos = np.meshgrid(pupil_pos, -pupil_pos)
+        norm_radius = np.sqrt(xpos**2 + ypos**2) / max(measured_pupil_mm / 2.0, 1e-12)
+        theta = np.arctan2(ypos, xpos)
+        calc_radius_index = norm_radius <= calc_radius
+        aperture_mask = _wvf_aperture_mask(n_pixels, calc_radius_index, aperture=aperture)
+        if local_compute_sce:
+            rho = _sce_rho_for_wave(sce_params, float(wavelength_nm))
+            xo_mm = float(sce_params.get("xo_mm", 0.0))
+            yo_mm = float(sce_params.get("yo_mm", 0.0))
+            aperture_mask = aperture_mask * np.power(10.0, -rho * ((xpos - xo_mm) ** 2 + (ypos - yo_mm) ** 2))
+
+        wavefront_aberrations_um = _zernike_surface_osa(zcoeffs, norm_radius, theta)
+        wavefront_aberrations_um[norm_radius > calc_radius] = 0.0
+        pupil_phase = np.exp(-1j * 2.0 * np.pi * wavefront_aberrations_um / max(float(wavelength_nm) * 1e-3, 1e-12))
+        local_pupil = aperture_mask * pupil_phase
+        pupil_function[:, :, band_index] = local_pupil
+        if compute_psf:
+            psf = np.abs(np.fft.fftshift(np.fft.fft2(local_pupil))) ** 2
+            psf_sum = float(np.sum(psf))
+            if psf_sum > 0.0:
+                psf = psf / psf_sum
+            if bool(updated.get("flip_psf_upside_down", False)):
+                psf = np.flipud(psf)
+            if bool(updated.get("rotate_psf_90_degs", False)):
+                psf = np.rot90(psf)
+            psf_stack[:, :, band_index] = psf
+
+    updated["computed"] = True
+    updated["sce_params"] = sce_params
+    updated["pupil_function"] = pupil_function if compute_pupil_function else None
+    updated["pupil_amplitude"] = np.abs(pupil_function) if compute_pupil_function else None
+    updated["pupil_phase"] = np.angle(pupil_function) if compute_pupil_function else None
+    updated["psf"] = psf_stack if compute_psf else None
+    updated["pupil_support"] = sample_positions.copy()
+    return updated
+
+
 def wvf_set(wvf: dict[str, Any], parameter: str, value: Any, *args: Any) -> dict[str, Any]:
     key = param_format(parameter)
     updated = dict(wvf)
@@ -1495,7 +1570,7 @@ def wvf_set(wvf: dict[str, Any], parameter: str, value: Any, *args: Any) -> dict
         )
         return updated
 
-    if key in {"measuredpupil", "measuredpupilsize", "measuredpupildiameter", "measuredpupilmm"}:
+    if key in {"measuredpupil", "measuredpupilsize", "measuredpupildiameter", "measuredpupilmm", "pupildiameter", "pupilsize"}:
         updated["measured_pupil_diameter_mm"] = float(value) / _spatial_unit_scale(args[0] if args else "mm") * 1e3
         return updated
 
@@ -1559,7 +1634,7 @@ def wvf_get(wvf: dict[str, Any], parameter: str, *args: Any) -> Any:
             args[0] if args else "mm"
         )
 
-    if key in {"measuredpupil", "measuredpupilsize", "measuredpupildiameter", "measuredpupilmm"}:
+    if key in {"measuredpupil", "measuredpupilsize", "measuredpupildiameter", "measuredpupilmm", "pupildiameter", "pupilsize"}:
         return (float(wvf.get("measured_pupil_diameter_mm", DEFAULT_WVF_MEASURED_PUPIL_MM)) / 1e3) * _spatial_unit_scale(
             args[0] if args else "mm"
         )
@@ -1592,11 +1667,43 @@ def wvf_get(wvf: dict[str, Any], parameter: str, *args: Any) -> Any:
     if key in {"sceparams", "stilescrawford"}:
         return dict(wvf.get("sce_params", {}))
 
+    if key in {"pupilfunction", "pupilfunc", "pupfun"}:
+        computed = wvf if wvf.get("pupil_function") is not None else wvf_compute(wvf, compute_psf=False)
+        return np.asarray(computed.get("pupil_function"), dtype=np.complex128).copy()
+
+    if key in {"psf"}:
+        computed = wvf if wvf.get("psf") is not None else wvf_compute(wvf)
+        return np.asarray(computed.get("psf"), dtype=float).copy()
+
     raise KeyError(f"Unsupported wvfGet parameter: {parameter}")
 
 
 def wvf_to_oi(wvf: dict[str, Any]) -> OpticalImage:
-    return oi_create("wvf", dict(wvf))
+    current = dict(wvf if wvf.get("computed") else wvf_compute(wvf))
+    return oi_create("wvf", current)
+
+
+def _rebuild_oi_from_wvf(oi: OpticalImage, wvf: dict[str, Any]) -> OpticalImage:
+    diffuser_method = oi.fields.get("diffuser_method", "skip")
+    diffuser_blur_m = float(oi.fields.get("diffuser_blur_m", 0.0))
+    compute_method = str(oi.fields.get("compute_method", oi.fields.get("optics", {}).get("compute_method", "opticspsf")))
+    optics_model = str(oi.fields.get("optics", {}).get("model", "shiftinvariant"))
+    metadata = dict(oi.metadata)
+    depth_map = oi.fields.get("depth_map_m")
+    wangular = float(oi.fields.get("fov_deg", 10.0))
+
+    rebuilt = wvf_to_oi(wvf)
+    rebuilt.fields["diffuser_method"] = diffuser_method
+    rebuilt.fields["diffuser_blur_m"] = diffuser_blur_m
+    rebuilt.fields["compute_method"] = compute_method
+    rebuilt.fields["optics"]["compute_method"] = compute_method
+    rebuilt.fields["optics"]["model"] = optics_model
+    rebuilt.metadata = metadata
+    rebuilt = oi_set(rebuilt, "wangular", wangular)
+    if depth_map is not None:
+        rebuilt.fields["depth_map_m"] = np.asarray(depth_map, dtype=float).copy()
+    rebuilt.data.clear()
+    return rebuilt
 
 
 def oi_create(
@@ -4150,11 +4257,14 @@ def _sync_oi_geometry_fields(oi: OpticalImage) -> None:
 
 def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
     key = param_format(parameter)
-    prefix, remainder = split_prefixed_parameter(parameter, ("optics",))
+    prefix, remainder = split_prefixed_parameter(parameter, ("optics", "wvf"))
     if prefix == "optics" and remainder:
         if remainder in {"rtpsfsize", "rtpsfdimensions"}:
             return _raw_raytrace_psf_dimensions(oi)
         return oi_get(oi, remainder, *args)
+    if prefix == "wvf" and remainder:
+        wavefront = dict(oi.fields["optics"].get("wavefront", {}))
+        return wvf_get(wavefront, remainder, *args)
     if key == "type":
         return oi.type
     if key == "name":
@@ -4623,9 +4733,13 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
 
 def oi_set(oi: OpticalImage, parameter: str, value: Any, *args: Any) -> OpticalImage:
     key = param_format(parameter)
-    prefix, remainder = split_prefixed_parameter(parameter, ("optics",))
+    prefix, remainder = split_prefixed_parameter(parameter, ("optics", "wvf"))
     if prefix == "optics" and remainder:
         return oi_set(oi, remainder, value, *args)
+    if prefix == "wvf" and remainder:
+        wavefront = dict(oi.fields["optics"].get("wavefront", {}))
+        updated_wvf = wvf_set(wavefront, remainder, value, *args)
+        return _rebuild_oi_from_wvf(oi, updated_wvf)
     if key == "name":
         oi.name = str(value)
         return oi
@@ -4746,8 +4860,7 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any, *args: Any) -> OpticalI
         oi.fields["optics"]["offaxis_method"] = str(value)
         return oi
     if key in {"opticswvf", "wvf", "wavefront"}:
-        oi.fields["optics"]["wavefront"] = dict(value)
-        return oi
+        return _rebuild_oi_from_wvf(oi, dict(value))
     if key in {"psfstruct", "shiftvariantstructure"}:
         oi.fields["psf_struct"] = _normalize_psf_struct(value)
         _sync_psf_metadata_fields(oi)

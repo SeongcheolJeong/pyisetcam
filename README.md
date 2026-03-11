@@ -119,10 +119,12 @@ rule because the upstream Octave path preserves image shape but returns a
 constant-factor magnitude offset.
 The adjacent wavefront helper surface now also includes
 `wvf_set` / `wvfSet`, `wvf_get` / `wvfGet`,
+`wvf_compute` / `wvfCompute`,
 `wvf_defocus_diopters_to_microns` /
-`wvfDefocusDioptersToMicrons`, `wvf_to_oi` / `wvf2oi`, and direct
-`oi_compute(wvf, scene)` support for script-driven WVF defocus/Zernike
-workflows.
+`wvfDefocusDioptersToMicrons`, `wvf_to_oi` / `wvf2oi`, direct
+`oi_compute(wvf, scene)` support, MATLAB-style `oi_get(..., 'wvf ...')`,
+and rebuilding `oi_set(..., 'wvf ...')` / `oi_set(..., 'optics wvf', ...)`
+for script-driven WVF defocus/Zernike workflows.
 Initial ray-trace optics support is also in place: `oi_create('ray trace')`
 loads the pinned upstream Zemax-derived optics asset, and `oi_compute`
 applies upstream-backed geometric distortion, relative illumination, and

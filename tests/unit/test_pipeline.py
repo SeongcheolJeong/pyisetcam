@@ -52,6 +52,7 @@ from pyisetcam import (
     sensor_create,
     sensor_get,
     sensor_set,
+    wvf_compute,
     wvf_create,
     wvf_defocus_diopters_to_microns,
     wvf_defocus_microns_to_diopters,
@@ -1940,6 +1941,22 @@ def test_wvf_defocus_diopter_micron_round_trip() -> None:
     assert np.isclose(float(np.asarray(diopters).reshape(-1)[0]), 1.5)
 
 
+def test_wvf_compute_returns_psf_and_pupil_function() -> None:
+    wvf = wvf_create(wave=np.array([500.0, 600.0], dtype=float))
+    wvf = wvf_set(wvf, "pupil diameter", 3.0, "mm")
+    computed = wvf_compute(wvf)
+
+    assert computed["computed"] is True
+    assert computed["psf"].shape == (201, 201, 2)
+    assert computed["pupil_function"].shape == (201, 201, 2)
+    assert computed["pupil_amplitude"].shape == (201, 201, 2)
+    assert computed["pupil_phase"].shape == (201, 201, 2)
+    assert np.isclose(float(np.sum(computed["psf"][:, :, 0])), 1.0)
+    assert np.isclose(float(wvf_get(computed, "pupil diameter", "mm")), 3.0)
+    assert np.asarray(wvf_get(computed, "psf")).shape == (201, 201, 2)
+    assert np.asarray(wvf_get(computed, "pupil function")).shape == (201, 201, 2)
+
+
 def test_oi_compute_accepts_wvf_input(asset_store) -> None:
     scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
     wvf = wvf_create(wave=scene_get(scene, "wave"))
@@ -1952,6 +1969,38 @@ def test_oi_compute_accepts_wvf_input(asset_store) -> None:
     assert np.isclose(float(oi_get(oi, "wvf", "zcoeffs", "vertical_astigmatism")), 0.5)
     assert oi_get(oi, "photons").shape[:2] == scene.data["photons"].shape[:2]
     assert wvf_to_oi(wvf).fields["optics"]["model"] == "shiftinvariant"
+
+
+def test_oi_set_wvf_prefixed_parameter_rebuilds_oi(asset_store) -> None:
+    scene = scene_create("point array", 64, 16, asset_store=asset_store)
+    scene = scene_set(scene, "hfov", 1.5)
+    oi = oi_compute(oi_create("wvf"), scene, crop=True)
+
+    original_wangular = float(oi_get(oi, "wangular"))
+    updated = oi_set(oi, "wvf zcoeffs", 1.5, "defocus")
+
+    assert np.isclose(float(oi_get(updated, "wvf zcoeffs", "defocus")), 1.5)
+    assert np.isclose(float(oi_get(updated, "wvf pupil diameter", "mm")), float(oi_get(oi, "wvf pupil diameter", "mm")))
+    assert np.isclose(float(oi_get(updated, "wangular")), original_wangular)
+    assert updated.data == {}
+
+    recomputed = oi_compute(updated, scene, crop=True)
+    assert recomputed.data["photons"].shape[:2] == scene.data["photons"].shape[:2]
+
+
+def test_oi_set_optics_wvf_rebuilds_oi_from_wavefront(asset_store) -> None:
+    scene = scene_create("point array", 64, 16, asset_store=asset_store)
+    scene = scene_set(scene, "hfov", 1.5)
+    oi = oi_compute(oi_create("wvf"), scene, crop=True)
+
+    wavefront = wvf_set(oi_get(oi, "optics wvf"), "zcoeffs", 0.75, "defocus")
+    updated = oi_set(oi, "optics wvf", wavefront)
+
+    assert np.isclose(float(oi_get(updated, "wvf zcoeffs", "defocus")), 0.75)
+    assert updated.data == {}
+
+    recomputed = oi_compute(updated, scene, crop=True)
+    assert recomputed.data["photons"].shape[:2] == scene.data["photons"].shape[:2]
 
 
 def test_oi_create_psf_builds_default_shift_invariant_psf_optics() -> None:
@@ -3498,6 +3547,16 @@ def test_run_python_case_supports_wvf_defocus_oi_parity_case(asset_store) -> Non
     assert np.array_equal(case.payload["wave"], case.context["oi"].fields["wave"])
     assert np.isclose(float(case.payload["defocus"]), 2.0)
     assert np.isclose(float(case.payload["vertical_astigmatism"]), 0.5)
+
+
+def test_run_python_case_supports_wvf_script_defocus_oi_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("oi_wvf_script_defocus_small", asset_store=asset_store)
+
+    assert case.payload["photons"].shape == case.context["oi"].data["photons"].shape
+    assert np.array_equal(case.payload["wave"], case.context["oi"].fields["wave"])
+    assert np.isclose(float(case.payload["defocus_zcoeff"]), 1.5)
+    assert np.isclose(float(case.payload["pupil_diameter_mm"]), 3.0)
+    assert case.payload["f_number"] > 0.0
 
 
 def test_run_python_case_supports_unit_frequency_utility_parity_case(asset_store) -> None:

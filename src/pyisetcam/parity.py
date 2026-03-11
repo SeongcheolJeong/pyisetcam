@@ -22,9 +22,11 @@ from .optics import (
     oi_compute,
     oi_create,
     oi_get,
+    wvf_compute,
     wvf_create,
     wvf_get,
     wvf_set,
+    wvf_to_oi,
     optics_psf_to_otf,
     oi_set,
 )
@@ -494,6 +496,34 @@ def run_python_case_with_context(
                 "photons": oi_get(oi, "photons"),
                 "defocus": wvf_get(oi_get(oi, "wvf"), "zcoeffs", "defocus"),
                 "vertical_astigmatism": wvf_get(oi_get(oi, "wvf"), "zcoeffs", "vertical_astigmatism"),
+            },
+            context={"scene": scene, "wvf": wvf, "oi": oi},
+        )
+
+    if case_name == "oi_wvf_script_defocus_small":
+        params = {
+            "angles": np.array([0.0, np.pi / 4.0, np.pi / 2.0], dtype=float),
+            "freqs": np.array([1.0, 2.0, 4.0], dtype=float),
+            "blockSize": 16,
+            "contrast": 1.0,
+        }
+        scene = scene_create("frequency orientation", params, asset_store=store)
+        scene = scene_set(scene, "fov", 5.0)
+        wvf = wvf_create(wave=scene_get(scene, "wave"))
+        wvf = wvf_set(wvf, "focal length", 8.0, "mm")
+        wvf = wvf_set(wvf, "pupil diameter", 3.0, "mm")
+        wvf = wvf_set(wvf, "zcoeffs", 1.5, "defocus")
+        wvf = wvf_compute(wvf)
+        oi = wvf_to_oi(wvf)
+        oi = oi_compute(oi, scene, crop=True)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": oi_get(oi, "wave"),
+                "photons": oi_get(oi, "photons"),
+                "defocus_zcoeff": wvf_get(wvf, "zcoeffs", "defocus"),
+                "pupil_diameter_mm": wvf_get(wvf, "pupil diameter", "mm"),
+                "f_number": oi_get(oi, "fnumber"),
             },
             context={"scene": scene, "wvf": wvf, "oi": oi},
         )

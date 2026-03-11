@@ -59,6 +59,7 @@ from .optics import (
     rt_ri_interp,
     rt_sample_heights,
     rt_synthetic,
+    wvf_compute,
     wvf_create,
     wvf_defocus_diopters_to_microns,
     wvf_defocus_microns_to_diopters,
@@ -329,6 +330,7 @@ __all__ = [
     "rt_sample_heights",
     "rtSynthetic",
     "rt_synthetic",
+    "wvf_compute",
     "run_python_case",
     "run_python_case_with_context",
     "sceneAdjustIlluminant",
@@ -393,6 +395,13 @@ __all__ = [
     "vc_rect2_locs",
     "vc_save_object",
     "vc_set_figure_handles",
+    "wvfCompute",
+    "wvfCreate",
+    "wvfGet",
+    "wvfSet",
+    "wvf2oi",
+    "wvfDefocusDioptersToMicrons",
+    "wvfDefocusMicronsToDiopters",
     "wvf_create",
     "wvf_defocus_diopters_to_microns",
     "wvf_defocus_microns_to_diopters",
@@ -464,6 +473,7 @@ rtPrecomputePSFApply = rt_precompute_psf_apply
 rtRIInterp = rt_ri_interp
 rtSampleHeights = rt_sample_heights
 rtSynthetic = rt_synthetic
+wvfCompute = wvf_compute
 wvfCreate = wvf_create
 wvfGet = wvf_get
 wvfSet = wvf_set
