@@ -25,6 +25,10 @@ from pyisetcam import (
     sensor_snr,
     sensor_set,
     vc_get_roi_data,
+    wvf_compute,
+    wvf_create,
+    wvf_get,
+    wvfPlot,
     xyz_to_lab,
     xyz_to_luv,
 )
@@ -159,6 +163,66 @@ def test_oi_plot_psf_for_computed_wvf_oi(asset_store) -> None:
     assert udata["psf"].shape == udata["x"].shape == udata["y"].shape
     assert udata["psf"].ndim == 2
     assert np.max(udata["psf"]) > 0.0
+
+
+def test_wvf_plot_psf_views() -> None:
+    wvf = wvf_compute(wvf_create(wave=np.array([550.0], dtype=float)))
+
+    psf_udata, psf_handle = wvfPlot(wvf, "psf normalized", "unit", "um", "wave", 550.0, "plot range", 10.0)
+    line_udata, line_handle = wvfPlot(wvf, "1d psf normalized", "unit", "um", "wave", 550.0, "plot range", 10.0)
+    xaxis_udata, xaxis_handle = wvfPlot(wvf, "psfxaxis", "unit", "um", "wave", 550.0, "plot range", 10.0)
+    yaxis_udata, yaxis_handle = wvfPlot(wvf, "psfyaxis", "unit", "um", "wave", 550.0, "plot range", 10.0)
+
+    assert psf_handle is None
+    assert line_handle is None
+    assert xaxis_handle is None
+    assert yaxis_handle is None
+    assert np.isclose(psf_udata["wave"], 550.0)
+    assert psf_udata["unit"] == "um"
+    assert psf_udata["z"].ndim == 2
+    assert psf_udata["x"].ndim == 1
+    assert psf_udata["y"].ndim == 1
+    assert psf_udata["z"].shape == (psf_udata["y"].size, psf_udata["x"].size)
+    assert np.isclose(float(np.max(psf_udata["z"])), 1.0)
+    assert np.isclose(float(np.max(line_udata["y"])), 1.0)
+    assert np.allclose(xaxis_udata["samp"], line_udata["x"])
+    assert xaxis_udata["data"].shape == xaxis_udata["samp"].shape
+    assert yaxis_udata["data"].shape == yaxis_udata["samp"].shape
+    assert np.asarray(wvf_get(wvf, "psf")).ndim == 3
+    assert np.asarray(wvf_get(wvf, "psf", 550.0)).ndim == 2
+
+
+def test_wvf_plot_pupil_and_wavefront_images() -> None:
+    wvf = wvf_compute(
+        wvf_create(
+            wave=np.array([550.0], dtype=float),
+            zcoeffs=np.array([0.0, 0.0, 0.0, 0.0, 0.12], dtype=float),
+        )
+    )
+
+    amp_udata, amp_handle = wvfPlot(wvf, "image pupil amp", "unit", "mm", "wave", 550.0, "plot range", 1.5)
+    phase_udata, phase_handle = wvfPlot(wvf, "image pupil phase", "unit", "mm", "wave", 550.0, "plot range", 1.5)
+    wavefront_udata, wavefront_handle = wvfPlot(
+        wvf,
+        "image wavefront aberrations",
+        "unit",
+        "mm",
+        "wave",
+        550.0,
+        "plot range",
+        1.5,
+    )
+
+    assert amp_handle is None
+    assert phase_handle is None
+    assert wavefront_handle is None
+    assert amp_udata["z"].shape == phase_udata["z"].shape == wavefront_udata["z"].shape
+    assert amp_udata["z"].ndim == 2
+    assert np.all(amp_udata["z"] >= 0.0)
+    assert np.max(np.abs(phase_udata["z"])) <= np.pi + 1e-12
+    assert np.max(np.abs(wavefront_udata["z"])) > 0.0
+    assert np.asarray(wvf_get(wvf, "pupil function", 550.0)).ndim == 2
+    assert np.asarray(wvf_get(wvf, "wavefront aberrations", 550.0)).ndim == 2
 
 
 def test_plot_sensor_line_data(asset_store) -> None:

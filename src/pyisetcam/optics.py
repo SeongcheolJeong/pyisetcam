@@ -556,19 +556,19 @@ def _support_grid_from_axes(x_axis_m: np.ndarray, y_axis_m: np.ndarray, units: A
     return np.stack((xx, yy), axis=2)
 
 
-def _plane_at_wavelength(stack: np.ndarray, wave: np.ndarray, wavelength_nm: float) -> np.ndarray:
-    source = np.asarray(stack, dtype=float)
+def _stack_plane_at_wavelength(stack: np.ndarray, wave: np.ndarray, wavelength_nm: float) -> np.ndarray:
+    source = np.asarray(stack)
     wavelengths = np.asarray(wave, dtype=float).reshape(-1)
     if source.ndim == 2:
         return source.copy()
     if source.shape[2] == 1 or wavelengths.size <= 1:
-        return np.asarray(source[:, :, 0], dtype=float).copy()
+        return np.asarray(source[:, :, 0]).copy()
 
     query = float(wavelength_nm)
     if query <= float(wavelengths[0]):
-        return np.asarray(source[:, :, 0], dtype=float).copy()
+        return np.asarray(source[:, :, 0]).copy()
     if query >= float(wavelengths[-1]):
-        return np.asarray(source[:, :, -1], dtype=float).copy()
+        return np.asarray(source[:, :, -1]).copy()
 
     upper_index = int(np.searchsorted(wavelengths, query, side="right"))
     lower_index = max(upper_index - 1, 0)
@@ -576,12 +576,16 @@ def _plane_at_wavelength(stack: np.ndarray, wave: np.ndarray, wavelength_nm: flo
     lower_wave = float(wavelengths[lower_index])
     upper_wave = float(wavelengths[upper_index])
     if np.isclose(lower_wave, upper_wave):
-        return np.asarray(source[:, :, lower_index], dtype=float).copy()
+        return np.asarray(source[:, :, lower_index]).copy()
     weight = (query - lower_wave) / (upper_wave - lower_wave)
     return (
-        (1.0 - weight) * np.asarray(source[:, :, lower_index], dtype=float)
-        + weight * np.asarray(source[:, :, upper_index], dtype=float)
+        (1.0 - weight) * np.asarray(source[:, :, lower_index])
+        + weight * np.asarray(source[:, :, upper_index])
     )
+
+
+def _plane_at_wavelength(stack: np.ndarray, wave: np.ndarray, wavelength_nm: float) -> np.ndarray:
+    return np.asarray(_stack_plane_at_wavelength(stack, wave, wavelength_nm), dtype=float)
 
 
 def _spatial_axis_from_frequency_support(f_support: np.ndarray, *, support_unit_to_m: float) -> np.ndarray:
@@ -1806,6 +1810,100 @@ def wvf_defocus_microns_to_diopters(microns: Any, pupil_size_mm: Any) -> np.ndar
     return (16.0 * np.sqrt(3.0)) * microns_array / max(pupil_size**2, 1e-12)
 
 
+def _wvf_middle_row(wvf: dict[str, Any]) -> float:
+    return np.floor(int(wvf.get("spatial_samples", DEFAULT_WVF_SPATIAL_SAMPLES)) / 2.0) + 1.0
+
+
+def _wvf_wave_values(wvf: dict[str, Any]) -> np.ndarray:
+    return np.asarray(wvf.get("wave", DEFAULT_WAVE), dtype=float).reshape(-1)
+
+
+def _wvf_wave_for_query(wvf: dict[str, Any], args: tuple[Any, ...], default_unit: str) -> tuple[str, float]:
+    unit = default_unit
+    wavelength_nm = _default_plot_wavelength(_wvf_wave_values(wvf))
+    if args:
+        unit = str(args[0])
+    if len(args) > 1:
+        wavelength_nm = float(np.asarray(args[1], dtype=float).reshape(-1)[0])
+    return unit, wavelength_nm
+
+
+def _wvf_ref_pupil_plane_size_m(wvf: dict[str, Any]) -> float:
+    return float(wvf.get("ref_pupil_plane_size_mm", DEFAULT_WVF_REF_PUPIL_PLANE_SIZE_MM)) * 1e-3
+
+
+def _wvf_pupil_plane_size_m(wvf: dict[str, Any], wavelength_nm: float) -> float:
+    ref_size_m = _wvf_ref_pupil_plane_size_m(wvf)
+    measured_wavelength_nm = float(wvf.get("measured_wavelength_nm", DEFAULT_WVF_MEASURED_WAVELENGTH_NM))
+    which_domain = param_format(wvf.get("sample_interval_domain", "psf"))
+    if which_domain == "psf":
+        return ref_size_m * (float(wavelength_nm) / max(measured_wavelength_nm, 1e-12))
+    if which_domain == "pupil":
+        return ref_size_m
+    raise UnsupportedOptionError("wvfGet", f"sample interval domain {wvf.get('sample_interval_domain')}")
+
+
+def _wvf_um_per_degree(wvf: dict[str, Any]) -> float:
+    focal_length_m = float(wvf.get("focal_length_m", DEFAULT_WVF_FOCAL_LENGTH_M))
+    return focal_length_m * (np.pi / 180.0) * 1e6
+
+
+def _wvf_psf_angle_per_sample_deg(wvf: dict[str, Any], wavelength_nm: float) -> float:
+    ref_size_m = _wvf_ref_pupil_plane_size_m(wvf)
+    measured_wavelength_nm = float(wvf.get("measured_wavelength_nm", DEFAULT_WVF_MEASURED_WAVELENGTH_NM))
+    which_domain = param_format(wvf.get("sample_interval_domain", "psf"))
+    if which_domain == "psf":
+        radians_per_sample = (measured_wavelength_nm * 1e-9) / max(ref_size_m, 1e-12)
+    elif which_domain == "pupil":
+        radians_per_sample = (float(wavelength_nm) * 1e-9) / max(ref_size_m, 1e-12)
+    else:
+        raise UnsupportedOptionError("wvfGet", f"sample interval domain {wvf.get('sample_interval_domain')}")
+    return float(np.degrees(radians_per_sample))
+
+
+def _wvf_angle_samples_for_unit(samples_deg: np.ndarray, unit: Any) -> np.ndarray:
+    normalized = param_format(unit or "deg")
+    if normalized in {"deg", "degree", "degrees"}:
+        return samples_deg
+    if normalized in {"min", "arcmin", "minute", "minutes"}:
+        return samples_deg * 60.0
+    if normalized in {"sec", "arcsec", "second", "seconds"}:
+        return samples_deg * 3600.0
+    raise UnsupportedOptionError("wvfGet", f"angle unit {unit}")
+
+
+def _wvf_psf_angular_samples(wvf: dict[str, Any], unit: Any, wavelength_nm: float) -> np.ndarray:
+    n_pixels = int(wvf.get("spatial_samples", DEFAULT_WVF_SPATIAL_SAMPLES))
+    angle_per_sample_deg = _wvf_psf_angle_per_sample_deg(wvf, wavelength_nm)
+    samples_deg = angle_per_sample_deg * ((np.arange(n_pixels, dtype=float) + 1.0) - _wvf_middle_row(wvf))
+    return _wvf_angle_samples_for_unit(samples_deg, unit)
+
+
+def _wvf_psf_spatial_samples(wvf: dict[str, Any], unit: Any, wavelength_nm: float) -> np.ndarray:
+    normalized = param_format(unit or "deg")
+    angle_support_deg = _wvf_psf_angular_samples(wvf, "deg", wavelength_nm)
+    if normalized in {"deg", "degree", "degrees", "min", "arcmin", "minute", "minutes", "sec", "arcsec", "second", "seconds"}:
+        return _wvf_angle_samples_for_unit(angle_support_deg, normalized)
+    support_m = angle_support_deg * (_wvf_um_per_degree(wvf) * 1e-6)
+    return support_m * _spatial_unit_scale(normalized)
+
+
+def _wvf_pupil_spatial_samples(wvf: dict[str, Any], unit: Any, wavelength_nm: float) -> np.ndarray:
+    n_pixels = int(wvf.get("spatial_samples", DEFAULT_WVF_SPATIAL_SAMPLES))
+    spacing_m = _wvf_pupil_plane_size_m(wvf, wavelength_nm) / max(n_pixels, 1)
+    samples_m = spacing_m * ((np.arange(n_pixels, dtype=float) + 1.0) - _wvf_middle_row(wvf))
+    return samples_m * _spatial_unit_scale(unit or "m")
+
+
+def _wvf_otf_support(wvf: dict[str, Any], unit: Any, wavelength_nm: float) -> np.ndarray:
+    support = _wvf_psf_spatial_samples(wvf, unit, wavelength_nm)
+    if support.size < 2:
+        return np.zeros_like(support, dtype=float)
+    dx = float(support[1] - support[0])
+    nyquist = 1.0 / max(2.0 * dx, 1e-12)
+    return unit_frequency_list(support.size) * nyquist
+
+
 def wvf_compute(
     wvf: dict[str, Any],
     *,
@@ -1838,6 +1936,7 @@ def wvf_compute(
     sample_positions = (np.arange(n_pixels, dtype=float) + 1.0) - middle_row
     pupil_function = np.zeros((n_pixels, n_pixels, wave.size), dtype=np.complex128)
     psf_stack = np.zeros((n_pixels, n_pixels, wave.size), dtype=float)
+    wavefront_stack = np.zeros((n_pixels, n_pixels, wave.size), dtype=float)
 
     zcoeffs = np.asarray(updated.get("zcoeffs", np.array([0.0], dtype=float)), dtype=float).reshape(-1)
     for band_index, wavelength_nm in enumerate(wave):
@@ -1857,6 +1956,7 @@ def wvf_compute(
 
         wavefront_aberrations_um = _zernike_surface_osa(zcoeffs, norm_radius, theta)
         wavefront_aberrations_um[norm_radius > calc_radius] = 0.0
+        wavefront_stack[:, :, band_index] = wavefront_aberrations_um
         pupil_phase = np.exp(-1j * 2.0 * np.pi * wavefront_aberrations_um / max(float(wavelength_nm) * 1e-3, 1e-12))
         local_pupil = aperture_mask * pupil_phase
         pupil_function[:, :, band_index] = local_pupil
@@ -1876,6 +1976,7 @@ def wvf_compute(
     updated["pupil_function"] = pupil_function if compute_pupil_function else None
     updated["pupil_amplitude"] = np.abs(pupil_function) if compute_pupil_function else None
     updated["pupil_phase"] = np.angle(pupil_function) if compute_pupil_function else None
+    updated["wavefront_aberrations_um"] = wavefront_stack if compute_pupil_function else None
     updated["psf"] = psf_stack if compute_psf else None
     updated["pupil_support"] = sample_positions.copy()
     return updated
@@ -1973,6 +2074,12 @@ def wvf_get(wvf: dict[str, Any], parameter: str, *args: Any) -> Any:
     if key in {"wave", "wavelength", "wavelengths", "calcwave", "calcwavelengths", "wls"}:
         return np.asarray(wvf.get("wave", DEFAULT_WAVE), dtype=float).copy()
 
+    if key in {"sampleintervaldomain"}:
+        return str(wvf.get("sample_interval_domain", "psf"))
+
+    if key in {"umperdegree", "umperdeg"}:
+        return _wvf_um_per_degree(wvf)
+
     if key in {"zcoeffs", "zcoeff", "zcoef"}:
         zcoeffs = np.asarray(wvf.get("zcoeffs", np.array([0.0], dtype=float)), dtype=float).reshape(-1)
         if not args:
@@ -1999,10 +2106,16 @@ def wvf_get(wvf: dict[str, Any], parameter: str, *args: Any) -> Any:
     if key in {"spatialsamples", "numberspatialsamples", "npixels", "fieldsizepixels"}:
         return int(wvf.get("spatial_samples", DEFAULT_WVF_SPATIAL_SAMPLES))
 
+    if key in {"middlerow"}:
+        return int(_wvf_middle_row(wvf))
+
     if key in {"refpupilplanesize", "pupilplanesize", "refpupilplanesizemm", "fieldsizemm"}:
-        return (float(wvf.get("ref_pupil_plane_size_mm", DEFAULT_WVF_REF_PUPIL_PLANE_SIZE_MM)) / 1e3) * _spatial_unit_scale(
-            args[0] if args else "mm"
-        )
+        unit, wavelength_nm = _wvf_wave_for_query(wvf, args, "mm")
+        if key in {"refpupilplanesize", "refpupilplanesizemm", "fieldsizemm"}:
+            size_m = _wvf_ref_pupil_plane_size_m(wvf)
+        else:
+            size_m = _wvf_pupil_plane_size_m(wvf, wavelength_nm)
+        return size_m * _spatial_unit_scale(unit)
 
     if key in {"focallength"}:
         return float(wvf.get("focal_length_m", DEFAULT_WVF_FOCAL_LENGTH_M)) * _spatial_unit_scale(args[0] if args else "m")
@@ -2021,13 +2134,82 @@ def wvf_get(wvf: dict[str, Any], parameter: str, *args: Any) -> Any:
     if key in {"sceparams", "stilescrawford"}:
         return dict(wvf.get("sce_params", {}))
 
+    if key in {"psfanglepersample", "psfangularsample", "angleperpixel", "angperpix"}:
+        unit, wavelength_nm = _wvf_wave_for_query(wvf, args, "min")
+        return float(_wvf_angle_samples_for_unit(np.array([_wvf_psf_angle_per_sample_deg(wvf, wavelength_nm)], dtype=float), unit)[0])
+
+    if key in {"psfangularsamples"}:
+        unit, wavelength_nm = _wvf_wave_for_query(wvf, args, "min")
+        return _wvf_psf_angular_samples(wvf, unit, wavelength_nm)
+
+    if key in {"psfsupport", "psfspatialsample", "psfspatialsamples", "samplesspace", "supportspace", "spatialsupport"}:
+        unit, wavelength_nm = _wvf_wave_for_query(wvf, args, "deg")
+        return _wvf_psf_spatial_samples(wvf, unit, wavelength_nm)
+
+    if key in {"pupilsupport", "pupilspatialsamples"}:
+        unit, wavelength_nm = _wvf_wave_for_query(wvf, args, "mm")
+        return _wvf_pupil_spatial_samples(wvf, unit, wavelength_nm)
+
+    if key in {"1dpsf"}:
+        wavelength_nm = float(np.asarray(args[0], dtype=float).reshape(-1)[0]) if args else _default_plot_wavelength(_wvf_wave_values(wvf))
+        which_row = int(args[1]) if len(args) > 1 else int(_wvf_middle_row(wvf))
+        psf = np.asarray(wvf_get(wvf, "psf", wavelength_nm), dtype=float)
+        return np.asarray(psf[which_row - 1, :], dtype=float).copy()
+
+    if key in {"psfxaxis"}:
+        unit, wavelength_nm = _wvf_wave_for_query(wvf, args, "mm")
+        psf = np.asarray(wvf_get(wvf, "psf", wavelength_nm), dtype=float)
+        samp = _wvf_psf_spatial_samples(wvf, unit, wavelength_nm)
+        return {"samp": samp.copy(), "data": np.interp(samp, samp, psf[int(_wvf_middle_row(wvf)) - 1, :]).copy()}
+
+    if key in {"psfyaxis"}:
+        unit, wavelength_nm = _wvf_wave_for_query(wvf, args, "mm")
+        psf = np.asarray(wvf_get(wvf, "psf", wavelength_nm), dtype=float)
+        samp = _wvf_psf_spatial_samples(wvf, unit, wavelength_nm)
+        return {"samp": samp.copy(), "data": np.interp(samp, samp, psf[:, int(_wvf_middle_row(wvf)) - 1]).copy()}
+
+    if key in {"otfsupport"}:
+        unit, wavelength_nm = _wvf_wave_for_query(wvf, args, "mm")
+        return _wvf_otf_support(wvf, unit, wavelength_nm)
+
+    if key in {"wavefrontaberrations", "wavefrontaberration"}:
+        computed = wvf if wvf.get("wavefront_aberrations_um") is not None else wvf_compute(wvf, compute_psf=False)
+        wavefront = computed.get("wavefront_aberrations_um")
+        if wavefront is None:
+            raise ValueError("Wavefront aberrations are unavailable.")
+        if args:
+            return np.asarray(_stack_plane_at_wavelength(np.asarray(wavefront), _wvf_wave_values(computed), float(np.asarray(args[0], dtype=float).reshape(-1)[0])), dtype=float)
+        return np.asarray(wavefront, dtype=float).copy()
+
     if key in {"pupilfunction", "pupilfunc", "pupfun"}:
         computed = wvf if wvf.get("pupil_function") is not None else wvf_compute(wvf, compute_psf=False)
-        return np.asarray(computed.get("pupil_function"), dtype=np.complex128).copy()
+        pupil_function = computed.get("pupil_function")
+        if pupil_function is None:
+            raise ValueError("Pupil function is unavailable.")
+        if args:
+            return np.asarray(
+                _stack_plane_at_wavelength(np.asarray(pupil_function), _wvf_wave_values(computed), float(np.asarray(args[0], dtype=float).reshape(-1)[0])),
+                dtype=np.complex128,
+            )
+        return np.asarray(pupil_function, dtype=np.complex128).copy()
+
+    if key in {"pupilamplitude", "pupilamp"}:
+        return np.abs(np.asarray(wvf_get(wvf, "pupil function", *args), dtype=np.complex128))
+
+    if key in {"pupilphase"}:
+        return np.angle(np.asarray(wvf_get(wvf, "pupil function", *args), dtype=np.complex128))
 
     if key in {"psf"}:
         computed = wvf if wvf.get("psf") is not None else wvf_compute(wvf)
-        return np.asarray(computed.get("psf"), dtype=float).copy()
+        psf = computed.get("psf")
+        if psf is None:
+            raise ValueError("PSF is unavailable.")
+        if args:
+            return np.asarray(
+                _stack_plane_at_wavelength(np.asarray(psf), _wvf_wave_values(computed), float(np.asarray(args[0], dtype=float).reshape(-1)[0])),
+                dtype=float,
+            )
+        return np.asarray(psf, dtype=float).copy()
 
     raise KeyError(f"Unsupported wvfGet parameter: {parameter}")
 

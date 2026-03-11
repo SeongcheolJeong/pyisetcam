@@ -10,7 +10,7 @@ from .color import xyz_color_matching
 from .exceptions import UnsupportedOptionError
 from .ip import ip_get
 from .metrics import xyz_to_lab, xyz_to_luv
-from .optics import oi_get
+from .optics import oi_get, wvf_get
 from .scene import scene_get
 from .sensor import pixel_snr, sensor_get, sensor_snr
 from .types import ImageProcessor, OpticalImage, Scene, Sensor
@@ -709,6 +709,97 @@ def oi_plot(
         data = np.asarray(oi_get(oi, "chromaticity", roi), dtype=float)
         return {"x": data[:, 0].copy(), "y": data[:, 1].copy(), "roiLocs": np.asarray(roi, dtype=int).copy()}, None
     raise UnsupportedOptionError("oiPlot", p_type)
+
+
+def _wvf_default_wave(wvf: dict[str, Any]) -> float:
+    wave = np.asarray(wvf_get(wvf, "wave"), dtype=float).reshape(-1)
+    if wave.size == 0:
+        return 550.0
+    if wave.size == 1:
+        return float(wave[0])
+    return 550.0
+
+
+def _wvf_crop_axis_and_plane(axis: np.ndarray, plane: np.ndarray, plot_range: float) -> tuple[np.ndarray, np.ndarray]:
+    if not np.isfinite(float(plot_range)):
+        return axis.copy(), plane.copy()
+    index = np.abs(axis) < float(plot_range)
+    cropped_axis = np.asarray(axis[index], dtype=float)
+    if plane.ndim == 2:
+        return cropped_axis, np.asarray(plane[np.ix_(index, index)], dtype=float)
+    return cropped_axis, np.asarray(plane[index], dtype=float)
+
+
+def _wvf_line_payload(wvf: dict[str, Any], key: str, wave: float, unit: str, plot_range: float) -> dict[str, Any]:
+    xaxis = dict(wvf_get(wvf, "psf xaxis" if key == "psfxaxis" else "psfyaxis", unit, wave))
+    samp = np.asarray(xaxis["samp"], dtype=float)
+    data = np.asarray(xaxis["data"], dtype=float)
+    if np.isfinite(float(plot_range)):
+        index = np.abs(samp) < float(plot_range)
+        samp = samp[index]
+        data = data[index]
+    return {"samp": samp, "data": data, "wave": float(wave), "unit": unit}
+
+
+def wvf_plot(
+    wvf: dict[str, Any],
+    p_type: str = "psf",
+    *args: Any,
+) -> tuple[dict[str, Any], None]:
+    """Return MATLAB-style `wvfPlot` user-data without opening a figure."""
+
+    key = param_format(p_type)
+    unit = str(_plot_option(args, "unit", "mm"))
+    wave = float(_plot_option(args, "wave", _wvf_default_wave(wvf)))
+    plot_range = float(_plot_option(args, "plotrange", _plot_option(args, "plot range", np.inf)))
+    airy_disk = bool(_plot_option(args, "airydisk", False))
+
+    if key in {"psf", "psfnormalized", "imagepsf", "imagepsfnormalized"}:
+        samp = np.asarray(wvf_get(wvf, "psf spatial samples", unit, wave), dtype=float)
+        psf = np.asarray(wvf_get(wvf, "psf", wave), dtype=float)
+        if "normalized" in key:
+            psf = psf / max(float(np.max(psf)), 1e-12)
+        samp, psf = _wvf_crop_axis_and_plane(samp, psf, plot_range)
+        return {
+            "x": samp,
+            "y": samp.copy(),
+            "z": psf,
+            "wave": float(wave),
+            "unit": unit,
+            "airyDisk": airy_disk,
+        }, None
+
+    if key in {"psfxaxis", "psfyaxis"}:
+        return _wvf_line_payload(wvf, key, wave, unit, plot_range), None
+
+    if key in {"1dpsf", "1dpsfspace", "1dpsfnormalized"}:
+        samp = np.asarray(wvf_get(wvf, "psf spatial samples", unit, wave), dtype=float)
+        line = np.asarray(wvf_get(wvf, "1d psf", wave), dtype=float)
+        if "normalized" in key:
+            line = line / max(float(np.max(line)), 1e-12)
+        samp, line = _wvf_crop_axis_and_plane(samp, line, plot_range)
+        return {"x": samp, "y": line, "wave": float(wave), "unit": unit}, None
+
+    if key in {"imagepupilamp", "imagepupilamplitude", "imagepupilampspace", "2dpupilamplitudespace"}:
+        samp = np.asarray(wvf_get(wvf, "pupil spatial samples", unit, wave), dtype=float)
+        pupil = np.asarray(wvf_get(wvf, "pupil function", wave), dtype=np.complex128)
+        amp = np.abs(pupil)
+        samp, amp = _wvf_crop_axis_and_plane(samp, amp, plot_range)
+        return {"x": samp, "y": samp.copy(), "z": amp, "wave": float(wave), "unit": unit}, None
+
+    if key in {"imagepupilphase", "2dpupilphasespace"}:
+        samp = np.asarray(wvf_get(wvf, "pupil spatial samples", unit, wave), dtype=float)
+        phase = np.asarray(wvf_get(wvf, "pupil phase", wave), dtype=float)
+        samp, phase = _wvf_crop_axis_and_plane(samp, phase, plot_range)
+        return {"x": samp, "y": samp.copy(), "z": phase, "wave": float(wave), "unit": unit}, None
+
+    if key in {"imagewavefrontaberrations", "2dwavefrontaberrationsspace"}:
+        samp = np.asarray(wvf_get(wvf, "pupil spatial samples", unit, wave), dtype=float)
+        wavefront = np.asarray(wvf_get(wvf, "wavefront aberrations", wave), dtype=float)
+        samp, wavefront = _wvf_crop_axis_and_plane(samp, wavefront, plot_range)
+        return {"x": samp, "y": samp.copy(), "z": wavefront, "wave": float(wave), "unit": unit}, None
+
+    raise UnsupportedOptionError("wvfPlot", p_type)
 
 
 def _sensor_plot_select_capture(sensor: Sensor, capture: Any) -> Sensor:

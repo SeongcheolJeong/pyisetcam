@@ -71,7 +71,7 @@ from .optics import (
     zemax_read_header,
 )
 from .parity import run_python_case, run_python_case_with_context
-from .plotting import ip_plot, oi_plot, scene_plot, sensor_plot, sensor_plot_fft
+from .plotting import ip_plot, oi_plot, scene_plot, sensor_plot, sensor_plot_fft, wvf_plot
 from .ptable import IEPTable, ie_p_table
 from .roi import ie_locs2_rect, ie_rect2_locs, ie_rect2_vertices, ie_roi2_locs, vc_get_roi_data, vc_rect2_locs
 from .session import (
@@ -411,11 +411,13 @@ __all__ = [
     "wvf_get",
     "wvf_set",
     "wvf_to_oi",
+    "wvf_plot",
     "chromaticity_xy",
     "plotScene",
     "plotSensor",
     "plotSensorFFT",
     "oiPlot",
+    "wvfPlot",
     "xyz_from_energy",
     "xyz_to_lab",
     "xyz_to_luv",
@@ -455,6 +457,7 @@ ipPlot = ip_plot
 plotScene = scene_plot
 plotSensor = sensor_plot
 plotSensorFFT = sensor_plot_fft
+wvfPlot = wvf_plot
 opticsRayTrace = optics_ray_trace
 ieFieldHeight2Index = ie_field_height_to_index
 rtAngleLUT = rt_angle_lut
