@@ -23,6 +23,7 @@ from .optics import (
     oi_create,
     oi_get,
     wvf_compute,
+    wvf_aperture,
     wvf_compute_psf,
     wvf_create,
     wvf_get,
@@ -658,6 +659,36 @@ def run_python_case_with_context(
                 "psf_mid_row": psf[middle_row, :],
                 "pupil_amp_row": pupil_amp[middle_row, :],
                 "pupil_phase_row": pupil_phase[middle_row, :],
+            },
+            context={"wvf": wvf},
+        )
+
+    if case_name == "wvf_aperture_polygon_clean_small":
+        wvf = wvf_create(wave=np.array([550.0], dtype=float))
+        wvf = wvf_set(wvf, "spatial samples", 101)
+        aperture, params = wvf_aperture(
+            wvf,
+            "n sides",
+            8,
+            "dot mean",
+            0,
+            "dot sd",
+            0,
+            "line mean",
+            0,
+            "line sd",
+            0,
+            "image rotate",
+            0,
+        )
+        middle_row = aperture.shape[0] // 2
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "image": np.asarray(aperture, dtype=float),
+                "mid_row": np.asarray(aperture[middle_row, :], dtype=float),
+                "image_sum": float(np.sum(aperture)),
+                "nsides": int(params["nsides"]),
             },
             context={"wvf": wvf},
         )

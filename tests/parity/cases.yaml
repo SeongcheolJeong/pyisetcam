@@ -257,6 +257,12 @@
       }
     },
     {
+      "name": "wvf_aperture_polygon_clean_small",
+      "matlab_function": "wvfAperture",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "oi_lswavelength_diffraction_small",
       "matlab_function": "oiPlot (ls wavelength)",
       "rtol": 1e-04,

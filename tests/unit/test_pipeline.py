@@ -54,6 +54,7 @@ from pyisetcam import (
     sensor_create,
     sensor_get,
     sensor_set,
+    wvf_aperture,
     wvf_compute,
     wvf_compute_psf,
     wvf_create,
@@ -1984,6 +1985,39 @@ def test_wvf_pupil_function_and_compute_psf_support_explicit_aperture() -> None:
     assert np.asarray(wvf_get(computed, "pupil function", 550.0), dtype=np.complex128).shape == (101, 101)
 
 
+def test_wvf_aperture_clean_polygon_supports_wvf_pupil_function() -> None:
+    wvf = wvf_create(wave=np.array([550.0], dtype=float))
+    wvf = wvf_set(wvf, "spatial samples", 101)
+    aperture, params = wvf_aperture(
+        wvf,
+        "n sides",
+        8,
+        "dot mean",
+        0,
+        "dot sd",
+        0,
+        "line mean",
+        0,
+        "line sd",
+        0,
+        "image rotate",
+        0,
+    )
+
+    assert aperture.shape == (101, 101)
+    assert np.isclose(float(np.max(aperture)), 1.0)
+    assert np.isclose(float(np.min(aperture)), 0.0)
+    assert int(params["nsides"]) == 8
+
+    wvf = wvf_pupil_function(wvf, "aperture function", aperture)
+    wvf = wvf_compute_psf(wvf, "compute pupil func", False)
+    psf = np.asarray(wvf_get(wvf, "psf", 550.0), dtype=float)
+
+    assert psf.shape == (101, 101)
+    assert np.isclose(float(np.sum(psf)), 1.0)
+    assert np.asarray(wvf_get(wvf, "aperture function"), dtype=float).ndim == 2
+
+
 def test_wvf_spatial_sampling_getters_match_spatial_model() -> None:
     wvf = wvf_create()
     wvf = wvf_set(wvf, "calc pupil diameter", 7.0 / 4.0, "mm")
@@ -3756,6 +3790,15 @@ def test_run_python_case_supports_wvf_compute_psf_parity_case(asset_store) -> No
     assert case.payload["psf_mid_row"].shape == (int(case.payload["npixels"]),)
     assert case.payload["pupil_amp_row"].shape == (int(case.payload["npixels"]),)
     assert case.payload["pupil_phase_row"].shape == (int(case.payload["npixels"]),)
+
+
+def test_run_python_case_supports_wvf_aperture_polygon_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("wvf_aperture_polygon_clean_small", asset_store=asset_store)
+
+    assert int(case.payload["nsides"]) == 8
+    assert case.payload["image"].shape == (101, 101)
+    assert case.payload["mid_row"].shape == (101,)
+    assert float(case.payload["image_sum"]) > 0.0
 
 
 def test_run_python_case_supports_lswavelength_diffraction_parity_case(asset_store) -> None:

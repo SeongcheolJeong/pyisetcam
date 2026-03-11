@@ -12,6 +12,7 @@ import numpy as np
 from scipy.io import loadmat
 from scipy.ndimage import map_coordinates, rotate, uniform_filter
 from scipy.signal import fftconvolve
+from skimage.draw import polygon2mask
 
 from .assets import AssetStore
 from .color import luminance_from_photons
@@ -40,6 +41,22 @@ DEFAULT_WVF_REF_PUPIL_PLANE_SIZE_MM = 16.212
 DEFAULT_WVF_CALC_PUPIL_DIAMETER_MM = 3.0
 DEFAULT_CAMERA_WVF_CALC_PUPIL_DIAMETER_MM = 9.6569e-01
 DEFAULT_RAYTRACE_ANGLE_STEP_DEG = 10.0
+DEFAULT_WVF_APERTURE_PARAMS = {
+    "shape": "polygon",
+    "nsides": 5,
+    "aspectratio": np.array([1.0, 1.0], dtype=float),
+    "dotmean": 10.0,
+    "dotsd": 5.0,
+    "dotopacity": 0.5,
+    "dotradius": 5.0,
+    "linemean": 10.0,
+    "linesd": 5.0,
+    "lineopacity": 0.5,
+    "linewidth": 2.0,
+    "segmentlength": 600.0,
+    "texfile": None,
+    "imagerotate": None,
+}
 _SPATIAL_UNIT_SCALE = {
     "meters": 1.0,
     "meter": 1.0,
@@ -3108,6 +3125,246 @@ def _wvf_aperture_mask(
     current = np.clip(current, 0.0, 1.0)
     current[~calc_radius_index] = 0.0
     return current
+
+
+def _wvf_aperture_defaults() -> dict[str, Any]:
+    defaults: dict[str, Any] = {}
+    for key, value in DEFAULT_WVF_APERTURE_PARAMS.items():
+        if isinstance(value, np.ndarray):
+            defaults[key] = np.asarray(value, dtype=float).copy()
+        else:
+            defaults[key] = value
+    return defaults
+
+
+def _normalize_wvf_aperture_options(args: tuple[Any, ...]) -> dict[str, Any]:
+    options = _wvf_aperture_defaults()
+    if len(args) == 1 and isinstance(args[0], dict):
+        incoming = {param_format(key): value for key, value in dict(args[0]).items()}
+    elif args:
+        incoming = _parse_key_value_options(args, "wvfAperture")
+    else:
+        incoming = {}
+
+    for key, value in incoming.items():
+        if key in {"shape"}:
+            options["shape"] = str(value)
+        elif key in {"nsides", "nside"}:
+            options["nsides"] = int(np.asarray(value, dtype=float).reshape(-1)[0])
+        elif key in {"aspectratio"}:
+            aspect_ratio = np.asarray(value, dtype=float).reshape(-1)
+            if aspect_ratio.size != 2:
+                raise ValueError("wvfAperture aspect ratio must have two entries.")
+            options["aspectratio"] = aspect_ratio.copy()
+        elif key in {
+            "dotmean",
+            "dotsd",
+            "dotopacity",
+            "dotradius",
+            "linemean",
+            "linesd",
+            "lineopacity",
+            "linewidth",
+            "segmentlength",
+        }:
+            options[key] = float(np.asarray(value, dtype=float).reshape(-1)[0])
+        elif key in {"texfile"}:
+            options["texfile"] = value
+        elif key in {"imagerotate"}:
+            array = np.asarray(value, dtype=float).reshape(-1)
+            options["imagerotate"] = None if array.size == 0 else float(array[0])
+        else:
+            raise KeyError(f"Unsupported wvfAperture parameter: {key}")
+    return options
+
+
+def _random_points_in_unit_circle(num_points: int, rng: np.random.Generator) -> np.ndarray:
+    radius = rng.random(int(num_points), dtype=np.float32)
+    theta = rng.random(int(num_points), dtype=np.float32) * (2.0 * np.pi)
+    return np.vstack((radius * np.cos(theta), radius * np.sin(theta)))
+
+
+def _apply_filled_circle(
+    image: np.ndarray,
+    center_x: float,
+    center_y: float,
+    radius: float,
+    *,
+    color: float,
+    blend: bool,
+) -> None:
+    if radius <= 0:
+        return
+    rows, cols = image.shape
+    x_min = max(int(np.floor(center_x - radius)), 0)
+    x_max = min(int(np.ceil(center_x + radius)), cols - 1)
+    y_min = max(int(np.floor(center_y - radius)), 0)
+    y_max = min(int(np.ceil(center_y + radius)), rows - 1)
+    if x_min > x_max or y_min > y_max:
+        return
+    yy, xx = np.ogrid[y_min : y_max + 1, x_min : x_max + 1]
+    mask = ((xx - center_x) ** 2 + (yy - center_y) ** 2) <= (radius**2)
+    current = image[y_min : y_max + 1, x_min : x_max + 1]
+    if blend:
+        current[mask] = current[mask] * max(1.0 - float(color), 0.0)
+    else:
+        current[mask] = float(color)
+
+
+def _apply_polyline(
+    image: np.ndarray,
+    vertices_xy: np.ndarray,
+    *,
+    width: float,
+    color: float,
+) -> None:
+    radius = max(float(width) / 2.0, 0.5)
+    for segment_index in range(vertices_xy.shape[1] - 1):
+        start_xy = vertices_xy[:, segment_index]
+        stop_xy = vertices_xy[:, segment_index + 1]
+        length = float(np.linalg.norm(stop_xy - start_xy))
+        n_samples = max(int(np.ceil(length * 2.0)), 1)
+        samples = np.linspace(0.0, 1.0, n_samples + 1, dtype=float)
+        for alpha in samples:
+            point = ((1.0 - alpha) * start_xy) + (alpha * stop_xy)
+            _apply_filled_circle(
+                image,
+                float(point[0]),
+                float(point[1]),
+                radius,
+                color=float(color),
+                blend=False,
+            )
+
+
+def _polygon_mask_from_vertices(image_size: int, vertices_xy: np.ndarray) -> np.ndarray:
+    vertices_rc = np.column_stack((np.floor(vertices_xy[:, 1]) - 1.0, np.floor(vertices_xy[:, 0]) - 1.0))
+    return polygon2mask((image_size, image_size), vertices_rc).astype(float)
+
+
+def wvf_aperture_params() -> dict[str, Any]:
+    return _wvf_aperture_defaults()
+
+
+def wvf_aperture(
+    wvf: dict[str, Any],
+    *args: Any,
+) -> tuple[np.ndarray, dict[str, Any]]:
+    options = _normalize_wvf_aperture_options(args)
+    image_size = int(wvf_get(wvf, "spatial samples"))
+    image = np.ones((image_size, image_size), dtype=float)
+    rng = np.random.default_rng()
+
+    shape = param_format(options["shape"])
+    aspect_ratio = np.asarray(options["aspectratio"], dtype=float).reshape(2)
+    n_sides = int(options["nsides"])
+    rotate_deg = options["imagerotate"]
+    tex_file = options["texfile"]
+
+    dot_mean = float(options["dotmean"])
+    dot_sd = float(options["dotsd"])
+    dot_opacity = float(options["dotopacity"])
+    dot_radius = float(options["dotradius"])
+    line_mean = float(options["linemean"])
+    line_sd = float(options["linesd"])
+    line_opacity = float(options["lineopacity"])
+    line_width = float(options["linewidth"])
+    segment_length = float(options["segmentlength"])
+
+    if tex_file is None:
+        if dot_radius <= 0.0:
+            dot_radius = float(max(int(round(image_size / 200.0)), 0))
+        num_dots = int(np.round(rng.normal(dot_mean, dot_sd)))
+        max_radius = dot_radius * 5.0
+        for _ in range(max(num_dots, 0)):
+            radius = float(max(np.round(dot_radius + (rng.random() * 5.0)), 0.0))
+            radius = min(radius, max_radius)
+            center_x = float(rng.random() * image_size)
+            center_y = float(rng.random() * image_size)
+            opacity = min(dot_opacity + (float(rng.random()) * 0.5), 1.0)
+            _apply_filled_circle(
+                image,
+                center_x,
+                center_y,
+                radius,
+                color=opacity,
+                blend=True,
+            )
+
+        num_lines = int(np.round(rng.normal(line_mean, line_sd)))
+        for _ in range(max(num_lines, 0)):
+            num_segments = int(rng.integers(1, 17))
+            this_segment_length = float(rng.random() * segment_length)
+            start_xy = rng.random(2) * image_size
+            segments_xy = _random_points_in_unit_circle(num_segments, rng) * this_segment_length
+            vertices_xy = np.cumsum(np.column_stack((start_xy, segments_xy)), axis=1)
+            width = int(np.round(max(1.0, line_width + rng.normal(0.0, line_width / 2.0))))
+            opacity = line_opacity + (float(rng.random()) * 0.5)
+            _apply_polyline(image, vertices_xy, width=width, color=float(opacity))
+    else:
+        texture = np.asarray(iio.imread(Path(tex_file)), dtype=float)
+        if texture.ndim == 3:
+            texture = np.mean(texture[:, :, :3], axis=2)
+        texture = np.asarray(texture, dtype=float)
+        max_value = float(np.max(texture)) if texture.size else 0.0
+        if max_value > 0.0:
+            texture = texture / max_value
+        if float(np.mean(texture)) < 0.2:
+            texture = 1.0 - texture
+        dark = texture < 0.95
+        if np.any(dark):
+            texture[dark] = np.maximum(texture[dark] - float(rng.random()), 0.0)
+        image = _resize_image(texture, (image_size, image_size), method="linear")
+
+    center_x = (image_size / 2.0) + 1.0
+    center_y = (image_size / 2.0) + 1.0
+    radius = (image_size - 1.0) / 2.0
+
+    if shape == "polygon":
+        if n_sides > 0:
+            theta = np.linspace(0.0, 2.0 * np.pi, n_sides, endpoint=False, dtype=float)
+            vertices_x = center_x + (radius * np.cos(theta))
+            vertices_y = center_y + (radius * np.sin(theta))
+            polygon_mask = _polygon_mask_from_vertices(
+                image_size,
+                np.column_stack((vertices_x, vertices_y)),
+            )
+            image = image * polygon_mask
+    elif shape == "rectangle":
+        mx = max(float(np.max(aspect_ratio)), 1e-12)
+        rect_sides = np.round((aspect_ratio / (1.1 * mx)) * image_size)
+        ll = np.array([image_size / 2.0 - rect_sides[1] / 2.0, image_size / 2.0 - rect_sides[0] / 2.0], dtype=float)
+        ul = np.array([image_size / 2.0 - rect_sides[1] / 2.0, image_size / 2.0 + rect_sides[0] / 2.0], dtype=float)
+        ur = np.array([image_size / 2.0 + rect_sides[1] / 2.0, image_size / 2.0 + rect_sides[0] / 2.0], dtype=float)
+        lr = np.array([image_size / 2.0 + rect_sides[1] / 2.0, image_size / 2.0 - rect_sides[0] / 2.0], dtype=float)
+        corners_xy = np.vstack((ll, ul, ur, lr))
+        rectangle_mask = _polygon_mask_from_vertices(image_size, corners_xy)
+        image = image * rectangle_mask
+    else:
+        raise UnsupportedOptionError("wvfAperture", f"shape {options['shape']}")
+
+    if shape == "polygon":
+        xx, yy = np.meshgrid((np.arange(1, image_size + 1, dtype=float) - center_x), (np.arange(1, image_size + 1, dtype=float) - center_y))
+        image[np.sqrt(xx**2 + yy**2) > radius] = 0.0
+        rotation = int(rng.integers(1, 31)) if rotate_deg is None else float(rotate_deg)
+        if not np.isclose(rotation, 0.0):
+            image = rotate(image, rotation, reshape=True, order=1, mode="constant", cval=0.0, prefilter=False)
+    elif shape == "rectangle" and rotate_deg is not None and not np.isclose(float(rotate_deg), 0.0):
+        image = rotate(image, float(rotate_deg), reshape=True, order=1, mode="constant", cval=0.0, prefilter=False)
+
+    params = {
+        "dotMean": dot_mean,
+        "dotSD": dot_sd,
+        "dotOpacity": dot_opacity,
+        "dotRadius": dot_radius,
+        "lineMean": line_mean,
+        "lineSD": line_sd,
+        "lineOpacity": line_opacity,
+        "lineWidth": line_width,
+        "segmentLength": segment_length,
+        "nsides": n_sides,
+    }
+    return np.asarray(image, dtype=float), params
 
 
 def _centered_support_axis(size: int, sample_spacing_m: float) -> np.ndarray:

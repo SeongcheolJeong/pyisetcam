@@ -391,6 +391,22 @@ switch case_name
         payload.pupil_amp_row = pupilAmp(middleRow, :);
         payload.pupil_phase_row = pupilPhase(middleRow, :);
 
+    case 'wvf_aperture_polygon_clean_small'
+        wvf = wvfCreate('wave', 550);
+        wvf = wvfSet(wvf, 'spatial samples', 101);
+        [aperture, params] = wvfAperture(wvf, ...
+            'n sides', 8, ...
+            'dot mean', 0, ...
+            'dot sd', 0, ...
+            'line mean', 0, ...
+            'line sd', 0, ...
+            'image rotate', 0);
+        middleRow = floor(size(aperture, 1) / 2) + 1;
+        payload.image = aperture;
+        payload.mid_row = aperture(middleRow, :);
+        payload.image_sum = sum(aperture(:));
+        payload.nsides = params.nsides;
+
     case 'oi_lswavelength_diffraction_small'
         oi = oiCreate('diffraction limited');
         optics = oiGet(oi, 'optics');

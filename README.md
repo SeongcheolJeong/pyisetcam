@@ -145,6 +145,11 @@ That same explicit wavefront surface now also includes
 `wvf_compute_psf` / `wvfComputePSF`, including the MATLAB-style
 stored-aperture workflow and direct parity coverage on the standalone
 pupil-function/PSF path.
+The same WVF backend now also includes
+`wvf_aperture` / `wvfAperture` plus `wvf_aperture_params` / `wvfApertureP`
+for script-driven synthetic aperture generation, including deterministic
+clean polygon support used by the upstream flare scripts and direct
+Octave parity on that clean-aperture path.
 The same script-driven optics surface now also includes headless
 `oiPlot(..., 'psf'/'psf550'/'psfxaxis'/'psfyaxis')` support, backed by
 computed `oiGet(..., 'psf data'/'psf xaxis'/'psf yaxis')` access for

@@ -60,6 +60,8 @@ from .optics import (
     rt_sample_heights,
     rt_synthetic,
     si_synthetic,
+    wvf_aperture,
+    wvf_aperture_params,
     wvf_compute,
     wvf_compute_psf,
     wvf_create,
@@ -402,6 +404,8 @@ __all__ = [
     "vc_save_object",
     "vc_set_figure_handles",
     "wvfCompute",
+    "wvfAperture",
+    "wvfApertureP",
     "wvfCreate",
     "wvfComputePSF",
     "wvfGet",
@@ -410,6 +414,8 @@ __all__ = [
     "wvf2oi",
     "wvfDefocusDioptersToMicrons",
     "wvfDefocusMicronsToDiopters",
+    "wvf_aperture",
+    "wvf_aperture_params",
     "wvf_create",
     "wvf_compute_psf",
     "wvf_defocus_diopters_to_microns",
@@ -487,6 +493,8 @@ rtRIInterp = rt_ri_interp
 rtSampleHeights = rt_sample_heights
 rtSynthetic = rt_synthetic
 siSynthetic = si_synthetic
+wvfAperture = wvf_aperture
+wvfApertureP = wvf_aperture_params
 wvfCompute = wvf_compute
 wvfComputePSF = wvf_compute_psf
 wvfCreate = wvf_create
