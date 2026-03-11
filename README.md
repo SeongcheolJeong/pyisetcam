@@ -210,6 +210,9 @@ That same script-driven WVF plotting surface now also has direct Octave
 parity on `wvfPlot(..., 'psf', 'unit', 'mm', ...)`, including the
 returned cropped spatial support axis and PSF center row.
 That same script-driven WVF plotting surface now also has direct Octave
+parity on `wvfPlot(..., 'psf normalized', 'unit', 'mm', ...)`, including
+the returned cropped spatial support axis and normalized PSF center row.
+That same script-driven WVF plotting surface now also has direct Octave
 parity on `wvfPlot(..., 'psf xaxis', ..., 'airy disk', true)`, including
 the full returned support/data payload and Airy-disk radius from
 `s_wvfSpatial.m`.
