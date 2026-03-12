@@ -30,6 +30,7 @@ from .optics import (
     wvf_aperture,
     wvf_compute_psf,
     wvf_create,
+    wvf_defocus_diopters_to_microns,
     wvf_get,
     wvf_load_thibos_virtual_eyes,
     wvf_pupil_function,
@@ -292,6 +293,51 @@ def run_python_case_with_context(
                 "both_eyes": np.asarray(subject_coeffs["both_eyes"], dtype=float),
             },
             context={},
+        )
+
+    if case_name == "wvf_pupil_size_human_small":
+        measured_pupil_mm = 7.5
+        calc_pupil_mm = 3.0
+        wavelength_nm = 520.0
+        zcoeffs = wvf_load_thibos_virtual_eyes(measured_pupil_mm, asset_store=store)
+        wvf = wvf_create(
+            "calc wavelengths",
+            np.array([wavelength_nm], dtype=float),
+            "zcoeffs",
+            zcoeffs,
+            "measured pupil size",
+            measured_pupil_mm,
+            "calc pupil size",
+            calc_pupil_mm,
+            "name",
+            "7-pupil",
+        )
+        wvf = wvf_set(wvf, "lcaMethod", "human")
+        wvf = wvf_compute(wvf)
+        psf = np.asarray(wvf_get(wvf, "psf", wavelength_nm), dtype=float)
+        middle_row = psf.shape[0] // 2
+        measured_wavelength_nm = float(wvf_get(wvf, "measured wavelength", "nm"))
+        lca_diopters = 1.8859 - (1.8859 - (0.63346 / (0.001 * measured_wavelength_nm - 0.2141))) - (
+            0.63346 / (0.001 * wavelength_nm - 0.2141)
+        )
+        lca_microns = np.asarray(
+            wvf_defocus_diopters_to_microns(-lca_diopters, measured_pupil_mm),
+            dtype=float,
+        ).reshape(-1)[0]
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "measured_pupil_mm": measured_pupil_mm,
+                "calc_pupil_mm": calc_pupil_mm,
+                "measured_wavelength_nm": measured_wavelength_nm,
+                "wave": np.asarray(wvf_get(wvf, "wave"), dtype=float),
+                "f_number": float(wvf_get(wvf, "fnumber")),
+                "lca_diopters": float(lca_diopters),
+                "lca_microns": float(lca_microns),
+                "psf_sum": float(np.sum(psf)),
+                "psf_mid_row": np.asarray(psf[middle_row, :], dtype=float),
+            },
+            context={"wvf": wvf},
         )
 
     if case_name == "metrics_xyz_from_energy_1d":

@@ -141,6 +141,32 @@ switch case_name
         payload.right_eye = subject_coeffs.rightEye;
         payload.both_eyes = subject_coeffs.bothEyes;
 
+    case 'wvf_pupil_size_human_small'
+        measuredPupilMM = 7.5;
+        calcPupilMM = 3.0;
+        wave = 520;
+        zCoefs = wvfLoadThibosVirtualEyes(measuredPupilMM);
+        wvf = wvfCreate('calc wavelengths', wave, ...
+            'zcoeffs', zCoefs, ...
+            'measured pupil size', measuredPupilMM, ...
+            'calc pupil size', calcPupilMM, ...
+            'name', '7-pupil');
+        wvf = wvfSet(wvf, 'lcaMethod', 'human');
+        wvf = wvfCompute(wvf);
+        psf = wvfGet(wvf, 'psf', wave);
+        middleRow = floor(size(psf, 1)/2) + 1;
+        measuredWavelengthNM = wvfGet(wvf, 'measured wavelength', 'nm');
+        lcaDiopters = wvfLCAFromWavelengthDifference(measuredWavelengthNM, wave);
+        payload.measured_pupil_mm = measuredPupilMM;
+        payload.calc_pupil_mm = calcPupilMM;
+        payload.measured_wavelength_nm = measuredWavelengthNM;
+        payload.wave = wvfGet(wvf, 'wave');
+        payload.f_number = wvfGet(wvf, 'fnumber');
+        payload.lca_diopters = lcaDiopters;
+        payload.lca_microns = wvfDefocusDioptersToMicrons(-lcaDiopters, measuredPupilMM);
+        payload.psf_sum = sum(psf(:));
+        payload.psf_mid_row = psf(middleRow, :);
+
     case 'metrics_xyz_from_energy_1d'
         wave = (400:10:700)';
         energy = linspace(0.05, 1.55, numel(wave));

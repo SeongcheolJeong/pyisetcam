@@ -162,6 +162,47 @@ def test_wvf_load_thibos_virtual_eyes_drives_pupil_size_smoke(asset_store) -> No
     assert np.isclose(wvf_get(wvf, "calc pupil size", "mm"), 3.0)
 
 
+def test_wvf_create_key_value_and_human_lca_smoke(asset_store) -> None:
+    zcoeffs = wvf_load_thibos_virtual_eyes(7.5, asset_store=asset_store)
+
+    wvf = wvf_create(
+        "calc wavelengths",
+        np.array([520.0], dtype=float),
+        "zcoeffs",
+        zcoeffs,
+        "measured pupil size",
+        7.5,
+        "calc pupil size",
+        3.0,
+        "name",
+        "7-pupil",
+    )
+    wvf = wvf_set(wvf, "lcaMethod", "human")
+    wvf = wvf_compute(wvf)
+
+    wvf_no_lca = wvf_create(
+        "calc wavelengths",
+        np.array([520.0], dtype=float),
+        "zcoeffs",
+        zcoeffs,
+        "measured pupil size",
+        7.5,
+        "calc pupil size",
+        3.0,
+    )
+    wvf_no_lca = wvf_compute(wvf_no_lca)
+
+    psf_human = np.asarray(wvf_get(wvf, "psf", 520.0), dtype=float)
+    psf_none = np.asarray(wvf_get(wvf_no_lca, "psf", 520.0), dtype=float)
+
+    assert wvf_get(wvf, "name") == "7-pupil"
+    assert np.isclose(wvf_get(wvf, "measured pupil size", "mm"), 7.5)
+    assert np.isclose(wvf_get(wvf, "calc pupil size", "mm"), 3.0)
+    assert wvf_get(wvf, "lcaMethod") == "human"
+    assert np.isclose(np.sum(psf_human), 1.0)
+    assert float(np.max(np.abs(psf_human - psf_none))) > 1e-8
+
+
 def test_scene_get_depth_map_defaults_to_scene_distance(asset_store) -> None:
     scene = scene_create(asset_store=asset_store)
     depth_map = scene_get(scene, "depth map")

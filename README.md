@@ -180,6 +180,9 @@ and now includes `wvf_load_thibos_virtual_eyes` /
 `wvfLoadThibosVirtualEyes` for the upstream pupil-size scripts, with the
 MATLAB default mean-vector return plus an explicit full-output path for
 covariance and measured-subject coefficient matrices.
+That same pupil-size workflow now also supports MATLAB key/value
+`wvfCreate(...)` construction together with `lcaMethod='human'`, with
+direct Octave parity on the Thibos pupil-size compute path.
 for script-driven synthetic aperture generation, including deterministic
 clean polygon support used by the upstream flare scripts and direct
 Octave parity on that clean-aperture path.

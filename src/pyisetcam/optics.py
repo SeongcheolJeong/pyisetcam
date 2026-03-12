@@ -1815,46 +1815,86 @@ def rt_synthetic(
     return normalized
 
 
-def wvf_create(
-    *,
-    wave: np.ndarray | None = None,
-    focal_length_m: float = DEFAULT_WVF_FOCAL_LENGTH_M,
-    f_number: float | None = None,
-    aberration_scale: float = 0.0,
-    measured_pupil_diameter_mm: float = DEFAULT_WVF_MEASURED_PUPIL_MM,
-    measured_wavelength_nm: float = DEFAULT_WVF_MEASURED_WAVELENGTH_NM,
-    calc_pupil_diameter_mm: float = DEFAULT_WVF_CALC_PUPIL_DIAMETER_MM,
-    zcoeffs: np.ndarray | None = None,
-    lca_method: str = "none",
-    flip_psf_upside_down: bool = False,
-    rotate_psf_90_degs: bool = False,
-    compute_sce: bool = False,
-    sce_params: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    calc_pupil = float(calc_pupil_diameter_mm)
-    focal_length = float(focal_length_m)
-    wave_values = np.asarray(DEFAULT_WAVE if wave is None else wave, dtype=float)
-    if f_number is None:
-        f_number = (focal_length * 1e3) / max(calc_pupil, 1e-12)
+def _wvf_default_state() -> dict[str, Any]:
+    calc_pupil = float(DEFAULT_WVF_CALC_PUPIL_DIAMETER_MM)
+    focal_length = float(DEFAULT_WVF_FOCAL_LENGTH_M)
+    wave_values = np.asarray(DEFAULT_WAVE, dtype=float)
     return {
         "type": "wvf",
-        "wave": wave_values,
+        "wave": wave_values.copy(),
         "focal_length_m": focal_length,
-        "f_number": float(f_number),
-        "aberration_scale": float(aberration_scale),
-        "measured_pupil_diameter_mm": float(measured_pupil_diameter_mm),
-        "measured_wavelength_nm": float(measured_wavelength_nm),
+        "f_number": (focal_length * 1e3) / max(calc_pupil, 1e-12),
+        "aberration_scale": 0.0,
+        "measured_pupil_diameter_mm": float(DEFAULT_WVF_MEASURED_PUPIL_MM),
+        "measured_wavelength_nm": float(DEFAULT_WVF_MEASURED_WAVELENGTH_NM),
         "sample_interval_domain": "psf",
         "spatial_samples": DEFAULT_WVF_SPATIAL_SAMPLES,
         "ref_pupil_plane_size_mm": DEFAULT_WVF_REF_PUPIL_PLANE_SIZE_MM,
         "calc_pupil_diameter_mm": calc_pupil,
-        "zcoeffs": np.asarray([0.0] if zcoeffs is None else zcoeffs, dtype=float).reshape(-1),
-        "lca_method": str(lca_method),
-        "flip_psf_upside_down": bool(flip_psf_upside_down),
-        "rotate_psf_90_degs": bool(rotate_psf_90_degs),
-        "compute_sce": bool(compute_sce),
-        "sce_params": _normalize_sce_params(wave_values, sce_params),
+        "zcoeffs": np.asarray([0.0], dtype=float),
+        "lca_method": "none",
+        "flip_psf_upside_down": False,
+        "rotate_psf_90_degs": False,
+        "compute_sce": False,
+        "sce_params": _normalize_sce_params(wave_values, None),
     }
+
+
+def wvf_create(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    wvf = _wvf_default_state()
+    updates: list[tuple[Any, Any]] = []
+    if args:
+        if len(args) % 2 != 0:
+            raise ValueError("wvfCreate expects key/value arguments.")
+        for index in range(0, len(args), 2):
+            key = args[index]
+            if not isinstance(key, str):
+                raise ValueError("wvfCreate expects string keys in key/value arguments.")
+            updates.append((key, args[index + 1]))
+    updates.extend(kwargs.items())
+
+    for key, value in updates:
+        normalized = param_format(key).replace("_", "").replace("-", "")
+        if normalized in {"wave", "wavelength", "wavelengths", "calcwave", "calcwavelengths", "wls"}:
+            wvf = wvf_set(wvf, "wave", value)
+        elif normalized in {"focallengthm"}:
+            wvf = wvf_set(wvf, "focal length", value, "m")
+        elif normalized in {"focallength"}:
+            # MATLAB wvfCreate('focal length', ...) uses millimeters.
+            wvf = wvf_set(wvf, "focal length", value, "mm")
+        elif normalized in {"fnumber", "f"}:
+            wvf = wvf_set(wvf, "fnumber", value)
+        elif normalized in {"aberrationscale"}:
+            wvf["aberration_scale"] = float(np.asarray(value, dtype=float).reshape(-1)[0])
+        elif normalized in {"measuredpupildiametermm", "measuredpupildiameter", "measuredpupilsize", "measuredpupil"}:
+            wvf = wvf_set(wvf, "measured pupil size", value, "mm")
+        elif normalized in {"measuredwavelengthnm", "measuredwavelength", "measuredwl", "measuredwave"}:
+            wvf = wvf_set(wvf, "measured wavelength", value)
+        elif normalized in {"calcpupildiametermm", "calcpupildiameter", "calcpupilsize", "calculatedpupil", "calculatedpupildiameter"}:
+            wvf = wvf_set(wvf, "calc pupil size", value, "mm")
+        elif normalized in {"zcoeffs", "zcoeff", "zcoef"}:
+            wvf = wvf_set(wvf, "zcoeffs", value)
+        elif normalized in {"lcamethod"}:
+            wvf = wvf_set(wvf, "lca method", value)
+        elif normalized in {"flippsfupsidedown"}:
+            wvf = wvf_set(wvf, "flipPSFUpsideDown", value)
+        elif normalized in {"rotatepsf90degs"}:
+            wvf = wvf_set(wvf, "rotatePSF90degs", value)
+        elif normalized in {"computesce"}:
+            wvf = wvf_set(wvf, "compute_sce", value)
+        elif normalized in {"sceparams"}:
+            wvf = wvf_set(wvf, "sce params", value)
+        elif normalized in {"sampleintervaldomain"}:
+            wvf = wvf_set(wvf, "sample interval domain", value)
+        elif normalized in {"spatialsamples", "numberspatialsamples", "npixels", "fieldsizepixels"}:
+            wvf = wvf_set(wvf, "spatial samples", value)
+        elif normalized in {"refpupilplanesize", "refpupilplanesizemm", "fieldsizemm"}:
+            wvf = wvf_set(wvf, "ref pupil plane size", value, "mm")
+        elif normalized in {"name", "type"}:
+            wvf = wvf_set(wvf, str(key), value)
+        else:
+            wvf = wvf_set(wvf, str(key), value)
+    return wvf
 
 
 _WVF_ABERRATION_NAME_TO_OSA_INDEX = {
@@ -1912,6 +1952,75 @@ def wvf_defocus_microns_to_diopters(microns: Any, pupil_size_mm: Any) -> np.ndar
     microns_array = np.asarray(microns, dtype=float)
     pupil_size = float(pupil_size_mm)
     return (16.0 * np.sqrt(3.0)) * microns_array / max(pupil_size**2, 1e-12)
+
+
+def _human_wave_defocus(wave_nm: Any) -> np.ndarray:
+    wave = np.asarray(wave_nm, dtype=float)
+    q1 = 1.7312
+    q2 = 0.63346
+    q3 = 0.21410
+    return q1 - (q2 / (wave * 1e-3 - q3))
+
+
+def _wvf_lca_from_wavelength_difference(
+    wl1_nm: Any,
+    wl2_nm: Any,
+    which_calc: str = "hoferCode",
+) -> np.ndarray:
+    first = np.asarray(wl1_nm, dtype=float)
+    second = np.asarray(wl2_nm, dtype=float)
+    mode = param_format(which_calc)
+    if mode in {"hofercode", ""}:
+        constant = 1.8859 - (0.63346 / (0.001 * first - 0.2141))
+        return 1.8859 - constant - (0.63346 / (0.001 * second - 0.2141))
+    if mode == "thibospaper":
+        r_m = 5.55e-3
+        n_d = 1.333
+        a = 1.320535
+        b = 0.004685
+        c = 0.214102
+        wl1_um = first * 1e-3
+        wl2_um = second * 1e-3
+        n1 = a + b / (wl1_um - c)
+        n2 = a + b / (wl2_um - c)
+        return (n1 - n2) / (n_d * r_m)
+    if mode == "iset":
+        if np.any(first != 580):
+            raise ValueError("'iset' LCA mode assumes the first wavelength is 580 nm.")
+        return _human_wave_defocus(second)
+    raise UnsupportedOptionError("wvfLCAFromWavelengthDifference", which_calc)
+
+
+def _wvf_lca_microns(
+    wvf: dict[str, Any],
+    wavelength_nm: float,
+) -> float:
+    raw_method = wvf.get("lca_method", "none")
+    method = param_format(raw_method)
+    if method in {"none", ""}:
+        return 0.0
+    measured_wavelength_nm = float(wvf.get("measured_wavelength_nm", DEFAULT_WVF_MEASURED_WAVELENGTH_NM))
+    measured_pupil_mm = float(wvf.get("measured_pupil_diameter_mm", DEFAULT_WVF_MEASURED_PUPIL_MM))
+    if method == "human":
+        lca_diopters = _wvf_lca_from_wavelength_difference(measured_wavelength_nm, wavelength_nm)
+    elif callable(raw_method):
+        lca_diopters = raw_method(measured_wavelength_nm, wavelength_nm)
+    else:
+        raise UnsupportedOptionError("wvfCompute", f"wvf lca method {raw_method}")
+    return float(
+        np.asarray(
+            wvf_defocus_diopters_to_microns(-np.asarray(lca_diopters, dtype=float), measured_pupil_mm),
+            dtype=float,
+        ).reshape(-1)[0]
+    )
+
+
+def _wvf_zcoeffs_with_lca(zcoeffs: np.ndarray, lca_microns: float) -> np.ndarray:
+    coefficients = np.asarray(zcoeffs, dtype=float).reshape(-1).copy()
+    if coefficients.size < 5:
+        coefficients = np.pad(coefficients, (0, 5 - coefficients.size), constant_values=0.0)
+    coefficients[4] += float(lca_microns)
+    return coefficients
 
 
 def wvf_load_thibos_virtual_eyes(
@@ -2021,7 +2130,8 @@ def _wvf_compute_pupil_function_explicit(
         amplitude_band = _resize_image(amplitude_band, (n_pixels, n_pixels), method="linear")
         amplitude_band = np.clip(amplitude_band, 0.0, 1.0)
 
-        wavefront_aberrations_um = _zernike_surface_osa(zcoeffs, norm_radius, theta)
+        lca_microns = _wvf_lca_microns(updated, float(wavelength_nm))
+        wavefront_aberrations_um = _zernike_surface_osa(_wvf_zcoeffs_with_lca(zcoeffs, lca_microns), norm_radius, theta)
         pupil_phase = np.exp(-1j * 2.0 * np.pi * wavefront_aberrations_um / max(wave_um, 1e-12))
         pupil_phase[norm_radius > 0.5] = 1.0
         pupil = amplitude_band * pupil_phase
@@ -2219,10 +2329,6 @@ def wvf_compute(
         aperture = np.asarray(updated.get("aperture_function"), dtype=float)
 
     wave = np.asarray(updated.get("wave", DEFAULT_WAVE), dtype=float).reshape(-1)
-    lca_method = param_format(updated.get("lca_method", "none"))
-    if lca_method not in {"none", ""}:
-        raise UnsupportedOptionError("wvfCompute", f"lca method {updated.get('lca_method')}")
-
     spatial_samples = int(updated.get("spatial_samples", DEFAULT_WVF_SPATIAL_SAMPLES))
     n_pixels = max(spatial_samples, 3)
     ref_pupil_size_mm = float(updated.get("ref_pupil_plane_size_mm", DEFAULT_WVF_REF_PUPIL_PLANE_SIZE_MM))
@@ -2255,7 +2361,8 @@ def wvf_compute(
             yo_mm = float(sce_params.get("yo_mm", 0.0))
             aperture_mask = aperture_mask * np.power(10.0, -rho * ((xpos - xo_mm) ** 2 + (ypos - yo_mm) ** 2))
 
-        wavefront_aberrations_um = _zernike_surface_osa(zcoeffs, norm_radius, theta)
+        lca_microns = _wvf_lca_microns(updated, float(wavelength_nm))
+        wavefront_aberrations_um = _zernike_surface_osa(_wvf_zcoeffs_with_lca(zcoeffs, lca_microns), norm_radius, theta)
         wavefront_aberrations_um[norm_radius > calc_radius] = 0.0
         wavefront_stack[:, :, band_index] = wavefront_aberrations_um
         pupil_phase = np.exp(-1j * 2.0 * np.pi * wavefront_aberrations_um / max(float(wavelength_nm) * 1e-3, 1e-12))
@@ -2493,6 +2600,9 @@ def wvf_get(wvf: dict[str, Any], parameter: str, *args: Any) -> Any:
 
     if key in {"sampleintervaldomain"}:
         return str(wvf.get("sample_interval_domain", "psf"))
+
+    if key in {"lcamethod"}:
+        return str(wvf.get("lca_method", "none"))
 
     if key in {"umperdegree", "umperdeg"}:
         # MATLAB/Octave wvfGet('um per degree') reports the mm-per-degree
@@ -3737,9 +3847,6 @@ def _wvf_psf_stack(
     wavefront = dict(optics.get("wavefront", {}))
     measured_pupil_mm = float(wavefront.get("measured_pupil_diameter_mm", DEFAULT_WVF_MEASURED_PUPIL_MM))
     measured_wavelength_nm = float(wavefront.get("measured_wavelength_nm", DEFAULT_WVF_MEASURED_WAVELENGTH_NM))
-    lca_method = param_format(wavefront.get("lca_method", "none"))
-    if lca_method not in {"none", ""}:
-        raise UnsupportedOptionError("oiCompute", f"wvf lca method {wavefront.get('lca_method')}")
     compute_sce = bool(wavefront.get("compute_sce", False))
     sce_params = _normalize_sce_params(np.asarray(wave, dtype=float), wavefront.get("sce_params"))
     zcoeffs = np.asarray(wavefront.get("zcoeffs", np.array([0.0], dtype=float)), dtype=float).reshape(-1)
@@ -3772,7 +3879,8 @@ def _wvf_psf_stack(
             xo_mm = float(sce_params.get("xo_mm", 0.0))
             yo_mm = float(sce_params.get("yo_mm", 0.0))
             aperture_mask = aperture_mask * np.power(10.0, -rho * ((xpos - xo_mm) ** 2 + (ypos - yo_mm) ** 2))
-        wavefront_aberrations_um = _zernike_surface_osa(zcoeffs, norm_radius, theta)
+        lca_microns = _wvf_lca_microns(wavefront, float(wavelength_nm))
+        wavefront_aberrations_um = _zernike_surface_osa(_wvf_zcoeffs_with_lca(zcoeffs, lca_microns), norm_radius, theta)
         pupil_phase = np.exp(-1j * 2.0 * np.pi * wavefront_aberrations_um / max(float(wavelength_nm) * 1e-3, 1e-12))
         pupil_phase[norm_radius > calc_radius] = 0.0
         pupil_function = aperture_mask * pupil_phase
