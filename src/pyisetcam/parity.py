@@ -340,6 +340,59 @@ def run_python_case_with_context(
             context={"wvf": wvf},
         )
 
+    if case_name == "wvf_pupil_size_measured_compare_small":
+        measured_pupils_mm = np.array([7.5, 6.0, 4.5, 3.0], dtype=float)
+        calc_pupil_mm = 3.0
+        wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+        wavelength_nm = 550.0
+        psf_mid_rows: list[np.ndarray] = []
+        psf_peaks: list[float] = []
+        psf_sums: list[float] = []
+        max_abs_diffs: list[float] = []
+        reference_psf: np.ndarray | None = None
+
+        for measured_pupil_mm in measured_pupils_mm:
+            zcoeffs = wvf_load_thibos_virtual_eyes(float(measured_pupil_mm), asset_store=store)
+            wvf = wvf_create(
+                "calc wavelengths",
+                wave,
+                "zcoeffs",
+                zcoeffs,
+                "measured pupil size",
+                float(measured_pupil_mm),
+                "calc pupil size",
+                calc_pupil_mm,
+                "name",
+                f"{measured_pupil_mm:g}-pupil",
+            )
+            wvf = wvf_set(wvf, "lcaMethod", "human")
+            wvf = wvf_compute(wvf)
+            psf = np.asarray(wvf_get(wvf, "psf", wavelength_nm), dtype=float)
+            middle_row = psf.shape[0] // 2
+            psf_mid_rows.append(np.asarray(psf[middle_row, :], dtype=float))
+            psf_peaks.append(float(np.max(psf)))
+            psf_sums.append(float(np.sum(psf)))
+            if reference_psf is None:
+                reference_psf = psf
+                max_abs_diffs.append(0.0)
+            else:
+                max_abs_diffs.append(float(np.max(np.abs(reference_psf - psf))))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "measured_pupil_mm": measured_pupils_mm,
+                "calc_pupil_mm": calc_pupil_mm,
+                "wave": wave,
+                "wavelength_nm": wavelength_nm,
+                "psf_sum": np.asarray(psf_sums, dtype=float),
+                "psf_peak_550": np.asarray(psf_peaks, dtype=float),
+                "max_abs_diff_vs_first_550": np.asarray(max_abs_diffs, dtype=float),
+                "psf_mid_row_550": np.asarray(psf_mid_rows, dtype=float),
+            },
+            context={},
+        )
+
     if case_name == "metrics_xyz_from_energy_1d":
         wave = np.arange(400.0, 701.0, 10.0, dtype=float)
         energy = np.linspace(0.05, 1.55, wave.size, dtype=float)

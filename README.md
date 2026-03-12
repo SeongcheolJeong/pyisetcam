@@ -183,6 +183,10 @@ covariance and measured-subject coefficient matrices.
 That same pupil-size workflow now also supports MATLAB key/value
 `wvfCreate(...)` construction together with `lcaMethod='human'`, with
 direct Octave parity on the Thibos pupil-size compute path.
+That same pupil-size workflow now also has direct Octave parity on the
+measured-vs-calculated pupil comparison path from `s_wvfPupilSize.m`,
+holding the calculated pupil fixed while varying the measured Thibos
+coefficient set.
 for script-driven synthetic aperture generation, including deterministic
 clean polygon support used by the upstream flare scripts and direct
 Octave parity on that clean-aperture path.

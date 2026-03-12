@@ -203,6 +203,38 @@ def test_wvf_create_key_value_and_human_lca_smoke(asset_store) -> None:
     assert float(np.max(np.abs(psf_human - psf_none))) > 1e-8
 
 
+def test_wvf_measured_pupil_variation_smoke(asset_store) -> None:
+    measured_pupils = [7.5, 6.0, 4.5, 3.0]
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    psf_mid_rows = []
+
+    for measured_pupil in measured_pupils:
+        zcoeffs = wvf_load_thibos_virtual_eyes(measured_pupil, asset_store=asset_store)
+        wvf = wvf_create(
+            "calc wavelengths",
+            wave,
+            "zcoeffs",
+            zcoeffs,
+            "measured pupil size",
+            measured_pupil,
+            "calc pupil size",
+            3.0,
+            "name",
+            f"{measured_pupil:g}-pupil",
+        )
+        wvf = wvf_set(wvf, "lcaMethod", "human")
+        wvf = wvf_compute(wvf)
+        psf = np.asarray(wvf_get(wvf, "psf", 550.0), dtype=float)
+        psf_mid_rows.append(np.asarray(psf[psf.shape[0] // 2, :], dtype=float))
+        assert np.isclose(np.sum(psf), 1.0)
+
+    max_diffs = [
+        float(np.max(np.abs(psf_mid_rows[0] - row)))
+        for row in psf_mid_rows[1:]
+    ]
+    assert any(diff > 1e-9 for diff in max_diffs)
+
+
 def test_scene_get_depth_map_defaults_to_scene_distance(asset_store) -> None:
     scene = scene_create(asset_store=asset_store)
     depth_map = scene_get(scene, "depth map")

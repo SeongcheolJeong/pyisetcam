@@ -167,6 +167,47 @@ switch case_name
         payload.psf_sum = sum(psf(:));
         payload.psf_mid_row = psf(middleRow, :);
 
+    case 'wvf_pupil_size_measured_compare_small'
+        measuredPupilMM = [7.5 6 4.5 3];
+        calcPupilMM = 3.0;
+        wave = (400:10:700)';
+        index550 = find(wave == 550);
+        psfSums = zeros(size(measuredPupilMM));
+        psfPeaks = zeros(size(measuredPupilMM));
+        maxAbsDiffs = zeros(size(measuredPupilMM));
+        psfMidRows = [];
+        referencePSF = [];
+        for ii = 1:numel(measuredPupilMM)
+            zCoefs = wvfLoadThibosVirtualEyes(measuredPupilMM(ii));
+            wvf = wvfCreate('calc wavelengths', wave, ...
+                'zcoeffs', zCoefs, ...
+                'measured pupil size', measuredPupilMM(ii), ...
+                'calc pupil size', calcPupilMM, ...
+                'name', sprintf('%g-pupil', measuredPupilMM(ii)));
+            wvf = wvfSet(wvf, 'lcaMethod', 'human');
+            wvf = wvfCompute(wvf);
+            psf = wvfGet(wvf, 'psf');
+            psf550 = psf{index550};
+            middleRow = floor(size(psf550, 1)/2) + 1;
+            psfMidRows(ii, :) = psf550(middleRow, :);
+            psfSums(ii) = sum(psf550(:));
+            psfPeaks(ii) = max(psf550(:));
+            if isempty(referencePSF)
+                referencePSF = psf550;
+                maxAbsDiffs(ii) = 0;
+            else
+                maxAbsDiffs(ii) = max(abs(referencePSF(:) - psf550(:)));
+            end
+        end
+        payload.measured_pupil_mm = measuredPupilMM;
+        payload.calc_pupil_mm = calcPupilMM;
+        payload.wave = wave;
+        payload.wavelength_nm = 550;
+        payload.psf_sum = psfSums;
+        payload.psf_peak_550 = psfPeaks;
+        payload.max_abs_diff_vs_first_550 = maxAbsDiffs;
+        payload.psf_mid_row_550 = psfMidRows;
+
     case 'metrics_xyz_from_energy_1d'
         wave = (400:10:700)';
         energy = linspace(0.05, 1.55, numel(wave));

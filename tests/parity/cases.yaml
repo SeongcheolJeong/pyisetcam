@@ -97,6 +97,12 @@
       "atol": 1e-08
     },
     {
+      "name": "wvf_pupil_size_measured_compare_small",
+      "matlab_function": "wvfLoadThibosVirtualEyes/wvfCreate/wvfCompute",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "metrics_xyz_from_energy_1d",
       "matlab_function": "ieXYZFromEnergy",
       "rtol": 1e-05,
