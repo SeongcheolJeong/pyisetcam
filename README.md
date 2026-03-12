@@ -143,6 +143,10 @@ The script-driven synthetic-PSF workflow is also parity-covered by a
 Lorentzian `siSynthetic` case that compares the final irradiance cube
 scale-invariantly, because the upstream Octave path preserves image shape
 while retaining a stable magnitude offset.
+That same Lorentzian `siSynthetic(...)` workflow now also has direct
+Octave parity on `oiPlot(..., 'psf', 550)`, comparing the returned PSF
+surface and spatial support grids on the shift-invariant optics object
+before image formation.
 That same synthetic-PSF surface now also has direct Octave parity on the
 pillbox `siSynthetic(...)` workflow from `s_opticsSIExamples.m`,
 including the returned wave axis and the 550 nm input PSF center row.

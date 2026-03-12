@@ -462,6 +462,35 @@ switch case_name
         payload.wave = oiGet(oi, 'wave');
         payload.photons = oiGet(oi, 'photons');
 
+    case 'oi_otfwavelength_si_lorentzian_small'
+        oi = oiCreate('psf');
+        gamma = logspace(0, 1, oiGet(oi, 'nwave'));
+        optics = siSynthetic('lorentzian', oi, gamma);
+        oi = oiSet(oi, 'optics', optics);
+        wavelength = oiGet(oi, 'wavelength');
+        optics = oiGet(oi, 'optics');
+        fSupport = opticsGet(optics, 'otf support matrix');
+        fx = fSupport(1, :, 1);
+        nWave = numel(wavelength);
+        otfWave = zeros(numel(fx), nWave);
+        for ii = 1:nWave
+            otf = abs(opticsGet(optics, 'otfdata', wavelength(ii)));
+            otfWave(:, ii) = fftshift(otf(1, :))';
+        end
+        payload.fSupport = fx;
+        payload.wavelength = wavelength;
+        payload.otf = otfWave;
+
+    case 'oi_psf550_si_lorentzian_small'
+        oi = oiCreate('psf');
+        gamma = logspace(0, 1, oiGet(oi, 'nwave'));
+        optics = siSynthetic('lorentzian', oi, gamma);
+        oi = oiSet(oi, 'optics', optics);
+        psfData = opticsGet(oiGet(oi, 'optics'), 'psf data', 550, 'um');
+        payload.x = psfData.xy(:, :, 1);
+        payload.y = psfData.xy(:, :, 2);
+        payload.psf = psfData.psf;
+
     case 'oi_si_pillbox_small'
         scene = sceneCreate('grid lines', [256 256], 64, 'ee', 3);
         scene = sceneSet(scene, 'fov', 2.0);

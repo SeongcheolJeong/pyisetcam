@@ -818,6 +818,38 @@ def run_python_case_with_context(
             context={"scene": scene, "oi": oi},
         )
 
+    if case_name == "oi_otfwavelength_si_lorentzian_small":
+        oi = oi_create("psf")
+        gamma = np.logspace(0.0, 1.0, np.asarray(oi_get(oi, "wave"), dtype=float).size)
+        optics = si_synthetic("lorentzian", oi, gamma)
+        oi = oi_set(oi, "optics", optics)
+        udata, _ = oi_plot(oi, "otf wavelength")
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "fSupport": np.asarray(udata["fSupport"], dtype=float),
+                "wavelength": np.asarray(udata["wavelength"], dtype=float),
+                "otf": np.asarray(udata["otf"], dtype=float),
+            },
+            context={"oi": oi},
+        )
+
+    if case_name == "oi_psf550_si_lorentzian_small":
+        oi = oi_create("psf")
+        gamma = np.logspace(0.0, 1.0, np.asarray(oi_get(oi, "wave"), dtype=float).size)
+        optics = si_synthetic("lorentzian", oi, gamma)
+        oi = oi_set(oi, "optics", optics)
+        udata, _ = oi_plot(oi, "psf550")
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "x": np.asarray(udata["x"], dtype=float),
+                "y": np.asarray(udata["y"], dtype=float),
+                "psf": np.asarray(udata["psf"], dtype=float),
+            },
+            context={"oi": oi},
+        )
+
     if case_name == "oi_si_pillbox_small":
         scene = scene_create("grid lines", [256, 256], 64, "ee", 3, asset_store=store)
         scene = scene_set(scene, "fov", 2.0)

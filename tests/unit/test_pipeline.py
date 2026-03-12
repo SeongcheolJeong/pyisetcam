@@ -2422,6 +2422,15 @@ def test_oi_si_lorentzian_small_parity_case(asset_store) -> None:
     assert payload["photons"].shape[2] == np.asarray(payload["wave"]).size
 
 
+def test_oi_psf550_si_lorentzian_small_parity_case(asset_store) -> None:
+    payload = run_python_case("oi_psf550_si_lorentzian_small", asset_store=asset_store)
+
+    assert payload["x"].ndim == 2
+    assert payload["y"].ndim == 2
+    assert payload["psf"].shape == payload["x"].shape == payload["y"].shape
+    assert np.all(payload["psf"] >= 0.0)
+
+
 def test_oi_si_pillbox_small_parity_case(asset_store) -> None:
     payload = run_python_case("oi_si_pillbox_small", asset_store=asset_store)
 

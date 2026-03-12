@@ -289,6 +289,18 @@
       }
     },
     {
+      "name": "oi_otfwavelength_si_lorentzian_small",
+      "matlab_function": "siSynthetic/oiPlot (otf wavelength)",
+      "rtol": 1e-04,
+      "atol": 1e-06
+    },
+    {
+      "name": "oi_psf550_si_lorentzian_small",
+      "matlab_function": "siSynthetic/oiPlot (psf 550)",
+      "rtol": 1e-04,
+      "atol": 1e-06
+    },
+    {
       "name": "oi_si_pillbox_small",
       "matlab_function": "siSynthetic/oiSet/oiCompute",
       "rtol": 1e-05,
