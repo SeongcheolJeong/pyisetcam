@@ -111,7 +111,10 @@ through `ie_dng_read` / `ieDNGRead`, `ie_dng_simple_info` /
 `ieDNGSimpleInfo`, and `sensor_dng_read` / `sensorDNGRead`, covering the
 checked-in Pixel 4a `MCC-centered.dng` workflow from
 `t_sensorReadRaw.m` and upstream-backed `sensorCreate('IMX363')` crop
-flows. That same tutorial path now also includes headless
+flows. The raw DNG parity case now matches decoded `digital_values`
+exactly and checks the rendered RGB result with a bounded normalized-MAE
+comparator to absorb the remaining legacy display-gain mismatch between
+the Python and Octave render paths. That same tutorial path now also includes headless
 `sensor_plot_line` / `sensorPlotLine` coverage for the
 `t_sensorSpatialResolution.m` line-profile workflow, and headless
 `sensor_description` / `sensorDescription` coverage for the

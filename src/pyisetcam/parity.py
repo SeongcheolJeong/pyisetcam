@@ -12,6 +12,7 @@ from .assets import AssetStore
 from .camera import camera_compute, camera_create
 from .display import display_create
 from .fileio import ie_save_si_data_file
+from .fileio import sensor_dng_read
 from .metrics import cct_from_uv, delta_e_ab, metrics_spd, xyz_from_energy, xyz_to_lab, xyz_to_luv, xyz_to_uv
 from .ip import ip_compute, ip_create
 from .optics import (
@@ -2227,6 +2228,33 @@ def run_python_case_with_context(
                 "spectral_qe": np.asarray(sensor_get(sensor, "spectral qe"), dtype=float),
             },
             context={"sensor": sensor},
+        )
+
+    if case_name == "sensor_dng_read_crop_small":
+        dng_path = store.resolve("data/images/rawcamera/MCC-centered.dng")
+        sensor, info = sensor_dng_read(
+            dng_path,
+            "full info",
+            False,
+            "crop",
+            [500, 1000, 256, 256],
+            asset_store=store,
+        )
+        ip = ip_compute(ip_create(asset_store=store), sensor, asset_store=store)
+        result = np.asarray(ip.data["result"], dtype=float)
+        result = result / np.maximum(np.max(result, axis=(0, 1), keepdims=True), 1e-12)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "size": np.asarray(sensor_get(sensor, "size"), dtype=int),
+                "pattern": np.asarray(sensor_get(sensor, "pattern"), dtype=int),
+                "black_level": float(sensor_get(sensor, "black level")),
+                "exp_time": float(sensor_get(sensor, "exp time")),
+                "iso_speed": float(info["isoSpeed"]),
+                "digital_values": np.asarray(sensor_get(sensor, "digital values"), dtype=float),
+                "result": result,
+            },
+            context={"sensor": sensor, "ip": ip},
         )
 
     if case_name == "ip_default_pipeline":

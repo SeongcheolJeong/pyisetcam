@@ -131,26 +131,28 @@ def _ie_bilinear(planes: np.ndarray, cfa_pattern: np.ndarray) -> np.ndarray:
 
 
 def _sensor_space(sensor: Sensor) -> np.ndarray:
-    volts = sensor.data.get("volts")
-    if volts is None:
+    sensor_data = sensor.data.get("volts")
+    if sensor_data is None:
+        sensor_data = sensor.data.get("dv")
+    if sensor_data is None:
         raise ValueError("Sensor has no computed volts.")
-    if np.asarray(volts).ndim == 3 and not sensor.fields["mosaic"]:
-        return np.asarray(volts, dtype=float)
-    if np.asarray(volts).ndim == 3:
-        return np.asarray(volts, dtype=float)
+    if np.asarray(sensor_data).ndim == 3 and not sensor.fields["mosaic"]:
+        return np.asarray(sensor_data, dtype=float)
+    if np.asarray(sensor_data).ndim == 3:
+        return np.asarray(sensor_data, dtype=float)
     if sensor.fields["mosaic"]:
         pattern = np.asarray(sensor.fields["pattern"], dtype=int)
-        rows, cols = np.asarray(volts).shape
+        rows, cols = np.asarray(sensor_data).shape
         nfilters = int(np.asarray(sensor.fields["filter_spectra"]).shape[1])
         tiled = tile_pattern(pattern, rows, cols)
         planes = np.zeros((rows, cols, nfilters), dtype=float)
         for channel_index in range(nfilters):
             mask = tiled == (channel_index + 1)
-            planes[:, :, channel_index][mask] = np.asarray(volts, dtype=float)[mask]
+            planes[:, :, channel_index][mask] = np.asarray(sensor_data, dtype=float)[mask]
         if nfilters == 1:
             return planes
         return _ie_bilinear(planes, pattern)
-    return np.repeat(np.asarray(volts, dtype=float)[..., None], 3, axis=2)
+    return np.repeat(np.asarray(sensor_data, dtype=float)[..., None], 3, axis=2)
 
 
 def _sensor_to_internal(

@@ -57,6 +57,7 @@ from pyisetcam import (
     sensor_compute,
     sensor_crop,
     sensor_create,
+    sensor_dng_read,
     sensor_get,
     sensor_set_size_to_fov,
     sensor_set,
@@ -4735,6 +4736,18 @@ def test_run_python_case_supports_sensor_filter_transmissivities_parity_case(ass
     assert case.payload["spectral_qe"].shape == case.payload["filters"].shape
 
 
+def test_run_python_case_supports_sensor_dng_read_crop_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_dng_read_crop_small", asset_store=asset_store)
+
+    assert tuple(case.payload["size"]) == (258, 258)
+    assert case.payload["pattern"].shape == (2, 2)
+    assert case.payload["digital_values"].shape == (258, 258)
+    assert case.payload["result"].shape == (258, 258, 3)
+    assert float(case.payload["black_level"]) > 0.0
+    assert float(case.payload["exp_time"]) > 0.0
+    assert float(case.payload["iso_speed"]) > 0.0
+
+
 def test_sensor_exposure_color_tutorial_flow(asset_store) -> None:
     oi = oi_create(asset_store=asset_store)
     scene = scene_create(asset_store=asset_store)
@@ -4766,6 +4779,30 @@ def test_sensor_exposure_color_tutorial_flow(asset_store) -> None:
     rendered = np.asarray(ip_get(ip, "result"), dtype=float)
     assert rendered.ndim == 3 and rendered.shape[2] == 3
     assert float(np.max(rendered)) <= 1.0 + 1e-8
+
+
+def test_sensor_read_raw_tutorial_flow(asset_store) -> None:
+    dng_path = asset_store.resolve("data/images/rawcamera/MCC-centered.dng")
+
+    sensor, info = sensor_dng_read(
+        dng_path,
+        "full info",
+        False,
+        "crop",
+        [500, 1000, 256, 256],
+        asset_store=asset_store,
+    )
+    ip = ip_create(asset_store=asset_store)
+    ip = ip_compute(ip, sensor)
+
+    assert tuple(sensor_get(sensor, "size")) == (258, 258)
+    assert np.array_equal(sensor_get(sensor, "pattern"), np.array([[2, 1], [3, 2]], dtype=int))
+    assert float(sensor_get(sensor, "black level")) > 0.0
+    assert float(info["isoSpeed"]) > 0.0
+
+    rendered = np.asarray(ip_get(ip, "result"), dtype=float)
+    assert rendered.shape == (258, 258, 3)
+    assert np.isfinite(rendered).all()
 
 
 def test_wvf_osa_index_helpers_round_trip() -> None:

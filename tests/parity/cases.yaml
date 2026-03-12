@@ -877,6 +877,18 @@
       "atol": 1e-08
     },
     {
+      "name": "sensor_dng_read_crop_small",
+      "matlab_function": "sensorDNGRead/ipCompute",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "result": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.3
+        }
+      }
+    },
+    {
       "name": "ip_default_pipeline",
       "matlab_function": "ipCompute",
       "rtol": 0.001,

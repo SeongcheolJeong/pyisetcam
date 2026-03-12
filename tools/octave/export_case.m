@@ -1465,6 +1465,23 @@ switch case_name
         payload.filters = sensorGet(sensor, 'filter transmissivities');
         payload.spectral_qe = sensorGet(sensor, 'spectral qe');
 
+    case 'sensor_dng_read_crop_small'
+        fname = fullfile(isetRootPath, 'data', 'images', 'rawcamera', 'MCC-centered.dng');
+        [sensor, info] = sensorDNGRead(fname, 'full info', false, 'crop', [500 1000 256 256]);
+        ip = ipCreate;
+        ip = ipCompute(ip, sensor);
+        result = double(ipGet(ip, 'result'));
+        channelMax = max(max(result, [], 1), [], 2);
+        channelMax = max(channelMax, 1e-12);
+        result = result ./ reshape(channelMax, [1 1 numel(channelMax)]);
+        payload.size = sensorGet(sensor, 'size');
+        payload.pattern = sensorGet(sensor, 'pattern');
+        payload.black_level = sensorGet(sensor, 'black level');
+        payload.exp_time = sensorGet(sensor, 'exp time');
+        payload.iso_speed = info.isoSpeed;
+        payload.digital_values = double(sensorGet(sensor, 'digital values'));
+        payload.result = result;
+
     case 'ip_default_pipeline'
         scene = sceneCreate();
         oi = oiCreate();
