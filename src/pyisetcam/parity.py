@@ -31,6 +31,7 @@ from .optics import (
     wvf_compute_psf,
     wvf_create,
     wvf_get,
+    wvf_load_thibos_virtual_eyes,
     wvf_pupil_function,
     wvf_set,
     wvf_to_oi,
@@ -274,6 +275,21 @@ def run_python_case_with_context(
                 "case_name": case_name,
                 "original": original,
                 "formatted": param_format(original),
+            },
+            context={},
+        )
+
+    if case_name == "wvf_load_thibos_virtual_eyes_small":
+        sample_mean, sample_cov, subject_coeffs = wvf_load_thibos_virtual_eyes(6.0, asset_store=store, full=True)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "pupil_diameter_mm": 6.0,
+                "sample_mean": sample_mean,
+                "sample_cov": sample_cov,
+                "left_eye": np.asarray(subject_coeffs["left_eye"], dtype=float),
+                "right_eye": np.asarray(subject_coeffs["right_eye"], dtype=float),
+                "both_eyes": np.asarray(subject_coeffs["both_eyes"], dtype=float),
             },
             context={},
         )

@@ -132,6 +132,15 @@ switch case_name
         payload.original = original;
         payload.formatted = ieParamFormat(original);
 
+    case 'wvf_load_thibos_virtual_eyes_small'
+        [sample_mean, sample_cov, subject_coeffs] = wvfLoadThibosVirtualEyes(6.0);
+        payload.pupil_diameter_mm = 6.0;
+        payload.sample_mean = sample_mean;
+        payload.sample_cov = sample_cov;
+        payload.left_eye = subject_coeffs.leftEye;
+        payload.right_eye = subject_coeffs.rightEye;
+        payload.both_eyes = subject_coeffs.bothEyes;
+
     case 'metrics_xyz_from_energy_1d'
         wave = (400:10:700)';
         energy = linspace(0.05, 1.55, numel(wave));

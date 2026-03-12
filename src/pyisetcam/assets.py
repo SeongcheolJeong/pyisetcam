@@ -202,6 +202,33 @@ class AssetStore:
             wavelengths = np.asarray(wave_nm, dtype=float)
         return wavelengths, xyz
 
+    def load_thibos_virtual_eyes(
+        self,
+        pupil_diameter_mm: float = 6.0,
+    ) -> tuple[np.ndarray, np.ndarray, dict[str, np.ndarray]]:
+        pupil = float(np.asarray(pupil_diameter_mm, dtype=float).reshape(-1)[0])
+        candidates = {
+            7.5: "data/optics/thibosvirtualeyes/IASstats75.mat",
+            6.0: "data/optics/thibosvirtualeyes/IASstats60.mat",
+            4.5: "data/optics/thibosvirtualeyes/IASstats45.mat",
+            3.0: "data/optics/thibosvirtualeyes/IASstats30.mat",
+        }
+        matched = next((size for size in candidates if np.isclose(pupil, size)), None)
+        if matched is None:
+            raise MissingAssetError(
+                f"Unsupported Thibos pupil size {pupil:.4g} mm. Options are 3.0, 4.5, 6.0, and 7.5."
+            )
+
+        data = self.load_mat(candidates[matched])
+        sample_mean = np.asarray(data["sample_mean"], dtype=float).reshape(-1).copy()
+        sample_cov = np.asarray(data["S"], dtype=float).copy()
+        subject_coeffs = {
+            "left_eye": np.asarray(data["OS"], dtype=float).copy(),
+            "right_eye": np.asarray(data["OD"], dtype=float).copy(),
+            "both_eyes": np.asarray(data["OU"], dtype=float).T.copy(),
+        }
+        return sample_mean, sample_cov, subject_coeffs
+
     def load_color_filters(
         self,
         filter_name: str,

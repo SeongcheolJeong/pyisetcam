@@ -78,6 +78,7 @@ from .optics import (
     wvf_defocus_diopters_to_microns,
     wvf_defocus_microns_to_diopters,
     wvf_get,
+    wvf_load_thibos_virtual_eyes,
     wvf_pupil_function,
     wvf_set,
     wvf_to_oi,
@@ -434,6 +435,7 @@ __all__ = [
     "wvfCreate",
     "wvfComputePSF",
     "wvfGet",
+    "wvfLoadThibosVirtualEyes",
     "wvfPupilFunction",
     "wvfSet",
     "wvf2oi",
@@ -446,6 +448,7 @@ __all__ = [
     "wvf_defocus_diopters_to_microns",
     "wvf_defocus_microns_to_diopters",
     "wvf_get",
+    "wvf_load_thibos_virtual_eyes",
     "wvf_pupil_function",
     "wvf_set",
     "wvf_to_oi",
@@ -526,6 +529,7 @@ wvfCompute = wvf_compute
 wvfComputePSF = wvf_compute_psf
 wvfCreate = wvf_create
 wvfGet = wvf_get
+wvfLoadThibosVirtualEyes = wvf_load_thibos_virtual_eyes
 wvfPupilFunction = wvf_pupil_function
 wvfSet = wvf_set
 wvf2oi = wvf_to_oi

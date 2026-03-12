@@ -64,6 +64,7 @@ from pyisetcam import (
     wvf_defocus_diopters_to_microns,
     wvf_defocus_microns_to_diopters,
     wvf_get,
+    wvf_load_thibos_virtual_eyes,
     wvf_pupil_function,
     wvf_set,
     wvf_to_oi,
@@ -133,6 +134,32 @@ def test_oi_compute_matches_scene_wave(asset_store) -> None:
     oi = oi_compute(oi_create(), scene, crop=True)
     assert oi.data["photons"].shape[:2] == scene.data["photons"].shape[:2]
     assert np.array_equal(oi.fields["wave"], scene.fields["wave"])
+
+
+def test_wvf_load_thibos_virtual_eyes_drives_pupil_size_smoke(asset_store) -> None:
+    default_mean = wvf_load_thibos_virtual_eyes(asset_store=asset_store)
+    assert default_mean.shape == (36,)
+
+    sample_mean, sample_cov, subject_coeffs = wvf_load_thibos_virtual_eyes(7.5, asset_store=asset_store, full=True)
+    assert sample_mean.shape == (66,)
+    assert sample_cov.shape == (66, 66)
+    assert subject_coeffs["left_eye"].shape == (66, 70)
+    assert subject_coeffs["right_eye"].shape == (66, 70)
+    assert subject_coeffs["both_eyes"].shape == (66, 140)
+
+    wvf = wvf_create(
+        wave=np.array([550.0], dtype=float),
+        zcoeffs=sample_mean,
+        measured_pupil_diameter_mm=7.5,
+        calc_pupil_diameter_mm=3.0,
+    )
+    wvf = wvf_compute(wvf)
+    psf = np.asarray(wvf_get(wvf, "psf", 550.0), dtype=float)
+
+    assert psf.shape == (int(wvf_get(wvf, "spatial samples")), int(wvf_get(wvf, "spatial samples")))
+    assert np.isclose(np.sum(psf), 1.0)
+    assert np.isclose(wvf_get(wvf, "measured pupil size", "mm"), 7.5)
+    assert np.isclose(wvf_get(wvf, "calc pupil size", "mm"), 3.0)
 
 
 def test_scene_get_depth_map_defaults_to_scene_distance(asset_store) -> None:

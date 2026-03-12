@@ -176,6 +176,10 @@ That same explicit WVF helper surface now also includes
 `s_opticsPSF2Zcoeffs.m` workflow.
 The same WVF backend now also includes
 `wvf_aperture` / `wvfAperture` plus `wvf_aperture_params` / `wvfApertureP`
+and now includes `wvf_load_thibos_virtual_eyes` /
+`wvfLoadThibosVirtualEyes` for the upstream pupil-size scripts, with the
+MATLAB default mean-vector return plus an explicit full-output path for
+covariance and measured-subject coefficient matrices.
 for script-driven synthetic aperture generation, including deterministic
 clean polygon support used by the upstream flare scripts and direct
 Octave parity on that clean-aperture path.

@@ -1914,6 +1914,18 @@ def wvf_defocus_microns_to_diopters(microns: Any, pupil_size_mm: Any) -> np.ndar
     return (16.0 * np.sqrt(3.0)) * microns_array / max(pupil_size**2, 1e-12)
 
 
+def wvf_load_thibos_virtual_eyes(
+    pupil_diameter_mm: float = 6.0,
+    *,
+    asset_store: AssetStore | None = None,
+    full: bool = False,
+) -> Any:
+    sample_mean, sample_cov, subject_coeffs = _store(asset_store).load_thibos_virtual_eyes(pupil_diameter_mm)
+    if full:
+        return sample_mean, sample_cov, subject_coeffs
+    return sample_mean.copy()
+
+
 def _wvf_middle_row(wvf: dict[str, Any]) -> float:
     return np.floor(int(wvf.get("spatial_samples", DEFAULT_WVF_SPATIAL_SAMPLES)) / 2.0) + 1.0
 
