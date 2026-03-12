@@ -911,6 +911,24 @@ def run_python_case_with_context(
             context={"scene": scene, "oi": oi},
         )
 
+    if case_name == "oi_psf550_si_gaussian_ratio_small":
+        oi = oi_create("psf")
+        wave = np.asarray(oi_get(oi, "wave"), dtype=float)
+        wave_spread = 0.5 * (wave / float(wave[0])) ** 3
+        xy_ratio = np.full(wave.size, 2.0, dtype=float)
+        optics = si_synthetic("gaussian", oi, wave_spread, xy_ratio)
+        oi = oi_set(oi, "optics", optics)
+        udata, _ = oi_plot(oi, "psf550")
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "x": np.asarray(udata["x"], dtype=float),
+                "y": np.asarray(udata["y"], dtype=float),
+                "psf": np.asarray(udata["psf"], dtype=float),
+            },
+            context={"oi": oi},
+        )
+
     if case_name == "oi_si_custom_file_small":
         scene = scene_create("grid lines", [64, 64], 16, "ee", 2, asset_store=store)
         scene = scene_set(scene, "fov", 2.0)

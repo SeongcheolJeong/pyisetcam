@@ -531,6 +531,18 @@ switch case_name
         payload.wave = oiGet(oi, 'wave');
         payload.input_psf_mid_row_550 = squeeze(psfData.psf(floor(size(psfData.psf, 1) / 2) + 1, :, 16));
 
+    case 'oi_psf550_si_gaussian_ratio_small'
+        oi = oiCreate('psf');
+        wave = oiGet(oi, 'wave');
+        waveSpread = 0.5 * (wave / wave(1)).^3;
+        xyRatio = 2 * ones(1, numel(wave));
+        optics = siSynthetic('gaussian', oi, double(waveSpread), xyRatio);
+        oi = oiSet(oi, 'optics', optics);
+        psfData = opticsGet(oiGet(oi, 'optics'), 'psf data', 550, 'um');
+        payload.x = psfData.xy(:, :, 1);
+        payload.y = psfData.xy(:, :, 2);
+        payload.psf = psfData.psf;
+
     case 'oi_si_custom_file_small'
         scene = sceneCreate('grid lines', [64 64], 16, 'ee', 2);
         scene = sceneSet(scene, 'fov', 2.0);

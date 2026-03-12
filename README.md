@@ -154,6 +154,9 @@ That same synthetic-PSF surface now also has direct Octave parity on the
 anisotropic Gaussian `siSynthetic(...)` workflow from
 `s_opticsSIExamples.m`, including the returned wave axis plus the 550 nm
 input PSF center row.
+That same anisotropic Gaussian workflow now also has direct Octave parity
+on `oiPlot(..., 'psf', 550)`, comparing the returned PSF surface and
+spatial support grids at 550 nm.
 The adjacent wavefront helper surface now also includes
 `wvf_set` / `wvfSet`, `wvf_get` / `wvfGet`,
 `wvf_compute` / `wvfCompute`,

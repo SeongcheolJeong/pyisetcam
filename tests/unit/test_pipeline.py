@@ -2452,6 +2452,15 @@ def test_oi_si_gaussian_ratio_small_parity_case(asset_store) -> None:
     assert np.asarray(payload["input_psf_mid_row_550"]).ndim == 1
 
 
+def test_oi_psf550_si_gaussian_ratio_small_parity_case(asset_store) -> None:
+    payload = run_python_case("oi_psf550_si_gaussian_ratio_small", asset_store=asset_store)
+
+    assert payload["x"].ndim == 2
+    assert payload["y"].ndim == 2
+    assert payload["psf"].shape == payload["x"].shape == payload["y"].shape
+    assert np.all(payload["psf"] >= 0.0)
+
+
 def test_oi_si_custom_file_small_parity_case(asset_store) -> None:
     payload = run_python_case("oi_si_custom_file_small", asset_store=asset_store)
 
