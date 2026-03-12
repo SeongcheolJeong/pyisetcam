@@ -1954,6 +1954,29 @@ def wvf_defocus_microns_to_diopters(microns: Any, pupil_size_mm: Any) -> np.ndar
     return (16.0 * np.sqrt(3.0)) * microns_array / max(pupil_size**2, 1e-12)
 
 
+def wvf_osa_index_to_zernike_nm(j: Any) -> tuple[Any, Any]:
+    indices = np.asarray(j, dtype=float)
+    n = np.ceil((-3.0 + np.sqrt(9.0 + 8.0 * indices)) / 2.0).astype(int)
+    m = (2.0 * indices - n * (n + 2.0)).astype(int)
+    if np.isscalar(j):
+        return int(n.reshape(())), int(m.reshape(()))
+    return n, m
+
+
+def wvf_zernike_nm_to_osa_index(n: Any, m: Any) -> Any:
+    radial = np.asarray(n, dtype=float)
+    angular = np.asarray(m, dtype=float)
+    indices = ((radial * (radial + 2.0)) + angular) / 2.0
+    indices = indices.astype(int)
+    if np.isscalar(n) and np.isscalar(m):
+        return int(indices.reshape(()))
+    return indices
+
+
+wvfOSAIndexToZernikeNM = wvf_osa_index_to_zernike_nm
+wvfZernikeNMToOSAIndex = wvf_zernike_nm_to_osa_index
+
+
 def _human_wave_defocus(wave_nm: Any) -> np.ndarray:
     wave = np.asarray(wave_nm, dtype=float)
     q1 = 1.7312
@@ -2220,7 +2243,7 @@ def _wave_unit_scale(unit: Any) -> float:
 
 def _wvf_um_per_degree(wvf: dict[str, Any]) -> float:
     focal_length_m = float(wvf.get("focal_length_m", DEFAULT_WVF_FOCAL_LENGTH_M))
-    return focal_length_m * (np.pi / 180.0) * 1e6
+    return focal_length_m * (2.0 * np.tan(np.deg2rad(0.5))) * 1e6
 
 
 def _wvf_psf_angle_per_sample_deg(wvf: dict[str, Any], wavelength_nm: float) -> float:

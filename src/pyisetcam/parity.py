@@ -33,9 +33,11 @@ from .optics import (
     wvf_defocus_diopters_to_microns,
     wvf_get,
     wvf_load_thibos_virtual_eyes,
+    wvf_osa_index_to_zernike_nm,
     wvf_pupil_function,
     wvf_set,
     wvf_to_oi,
+    wvf_zernike_nm_to_osa_index,
     optics_psf_to_otf,
     oi_set,
     si_synthetic,
@@ -420,6 +422,27 @@ def run_python_case_with_context(
                 "ref_psf_sample_interval_arcmin": float(wvf_get(wvf, "ref psf sample interval")),
             },
             context={"wvf": wvf},
+        )
+
+    if case_name == "wvf_osa_index_conversion_small":
+        indices = np.asarray([0, 1, 2, 5, 15, 20, 35], dtype=int)
+        n, m = wvf_osa_index_to_zernike_nm(indices)
+        roundtrip = np.asarray(wvf_zernike_nm_to_osa_index(n, m), dtype=int)
+        scalar_n, scalar_m = wvf_osa_index_to_zernike_nm(15)
+        scalar_roundtrip = int(wvf_zernike_nm_to_osa_index(scalar_n, scalar_m))
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "indices": indices,
+                "n": np.asarray(n, dtype=int),
+                "m": np.asarray(m, dtype=int),
+                "roundtrip_indices": roundtrip,
+                "scalar_index": 15,
+                "scalar_n": int(scalar_n),
+                "scalar_m": int(scalar_m),
+                "scalar_roundtrip_index": scalar_roundtrip,
+            },
+            context={},
         )
 
     if case_name == "metrics_xyz_from_energy_1d":
@@ -981,6 +1004,82 @@ def run_python_case_with_context(
                 "pupil_phase_row": pupil_phase[middle_row, :],
             },
             context={"wvf": wvf},
+        )
+
+    if case_name == "wvf_spatial_controls_small":
+        this_wave = 550.0
+        focal_length_m = 7e-3
+        focal_length_mm = focal_length_m * 1e3
+        f_number = 4.0
+
+        def _build_wvf() -> dict[str, Any]:
+            wavefront = wvf_create(wave=np.array([this_wave], dtype=float))
+            wavefront = wvf_set(wavefront, "calc pupil diameter", focal_length_mm / f_number, "mm")
+            wavefront = wvf_set(wavefront, "focal length", focal_length_m, "m")
+            return wavefront
+
+        def _measure(wavefront: dict[str, Any]) -> dict[str, float]:
+            computed = wvf_compute(wavefront)
+            um_per_degree = float(wvf_get(computed, "um per degree"))
+            return {
+                "npixels": float(wvf_get(computed, "npixels")),
+                "psf_sample_spacing_arcmin": float(wvf_get(computed, "psf sample spacing")),
+                "um_per_degree": um_per_degree,
+                "pupil_plane_size_mm": float(wvf_get(computed, "pupil plane size", "mm", this_wave)),
+                "pupil_sample_spacing_mm": float(wvf_get(computed, "pupil sample spacing", "mm", this_wave)),
+                # Match the legacy MATLAB/Octave wvfGet('focal length', 'm')
+                # contract used by the parity baseline, which derives
+                # focal length from the returned "um per degree" value.
+                "focal_length_m": (um_per_degree / (2.0 * np.tan(np.deg2rad(0.5)))) * 1e-6,
+            }
+
+        base = _measure(_build_wvf())
+
+        reduced_pixels = _build_wvf()
+        reduced_pixels = wvf_set(reduced_pixels, "npixels", round(base["npixels"] / 4.0))
+        reduced_pixels = _measure(reduced_pixels)
+
+        enlarged_pupil_plane = _build_wvf()
+        enlarged_pupil_plane = wvf_set(enlarged_pupil_plane, "pupil plane size", base["pupil_plane_size_mm"] * 4.0, "mm")
+        enlarged_pupil_plane = _measure(enlarged_pupil_plane)
+
+        reduced_pupil_plane = _build_wvf()
+        reduced_pupil_plane = wvf_set(reduced_pupil_plane, "pupil plane size", base["pupil_plane_size_mm"] / 4.0, "mm")
+        reduced_pupil_plane = _measure(reduced_pupil_plane)
+
+        focal_half = _build_wvf()
+        focal_half = wvf_set(focal_half, "focal length", focal_length_m / 2.0, "m")
+        focal_half = _measure(focal_half)
+
+        focal_double = _build_wvf()
+        focal_double = wvf_set(focal_double, "focal length", focal_length_m * 2.0, "m")
+        focal_double = _measure(focal_double)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": np.array([this_wave], dtype=float),
+                "base_npixels": base["npixels"],
+                "base_psf_sample_spacing_arcmin": base["psf_sample_spacing_arcmin"],
+                "base_um_per_degree": base["um_per_degree"],
+                "base_pupil_plane_size_mm": base["pupil_plane_size_mm"],
+                "reduced_pixels_npixels": reduced_pixels["npixels"],
+                "reduced_pixels_psf_sample_spacing_arcmin": reduced_pixels["psf_sample_spacing_arcmin"],
+                "reduced_pixels_um_per_degree": reduced_pixels["um_per_degree"],
+                "pupil_plane_x4_psf_sample_spacing_arcmin": enlarged_pupil_plane["psf_sample_spacing_arcmin"],
+                "pupil_plane_x4_um_per_degree": enlarged_pupil_plane["um_per_degree"],
+                "pupil_plane_x4_size_mm": enlarged_pupil_plane["pupil_plane_size_mm"],
+                "pupil_plane_div4_psf_sample_spacing_arcmin": reduced_pupil_plane["psf_sample_spacing_arcmin"],
+                "pupil_plane_div4_um_per_degree": reduced_pupil_plane["um_per_degree"],
+                "pupil_plane_div4_size_mm": reduced_pupil_plane["pupil_plane_size_mm"],
+                "focal_length_half_m": focal_half["focal_length_m"],
+                "focal_length_half_psf_sample_spacing_arcmin": focal_half["psf_sample_spacing_arcmin"],
+                "focal_length_half_um_per_degree": focal_half["um_per_degree"],
+                "focal_length_double_m": focal_double["focal_length_m"],
+                "focal_length_double_psf_sample_spacing_arcmin": focal_double["psf_sample_spacing_arcmin"],
+                "focal_length_double_um_per_degree": focal_double["um_per_degree"],
+            },
+            context={},
         )
 
     if case_name == "wvf_compute_psf_small":

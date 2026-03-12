@@ -190,6 +190,9 @@ coefficient set.
 The same WVF surface now also supports the `s_wvfPSFSpacing.m` numeric
 path through `wvfSet(..., 'psf sample spacing', ...)`, with direct Octave
 parity on the resulting field-size and sampling relationship.
+That same script-driven WVF helper surface now also includes
+`wvfOSAIndexToZernikeNM` / `wvfZernikeNMToOSAIndex`, with direct Octave
+parity on the OSA index round-trip used by `s_wvfWavefronts.m`.
 for script-driven synthetic aperture generation, including deterministic
 clean polygon support used by the upstream flare scripts and direct
 Octave parity on that clean-aperture path.
@@ -325,6 +328,10 @@ That same script-driven WVF surface now also includes the spatial getter
 family used by `s_wvfSpatial.m`, including `calc nwave`, `psf sample spacing`,
 `ref psf sample interval`, `pupil sample spacing`, `pupil positions`,
 `pupil function amplitude`, and `pupil function phase`.
+That same script-driven WVF surface now also has direct Octave parity on
+the scalar control workflow from `s_wvfSpatial.m`, comparing how `npixels`,
+`pupil plane size`, and `focal length` change PSF sample spacing and
+`um per degree`.
 Initial ray-trace optics support is also in place: `oi_create('ray trace')`
 loads the pinned upstream Zemax-derived optics asset, and `oi_compute`
 applies upstream-backed geometric distortion, relative illumination, and

@@ -79,9 +79,11 @@ from .optics import (
     wvf_defocus_microns_to_diopters,
     wvf_get,
     wvf_load_thibos_virtual_eyes,
+    wvf_osa_index_to_zernike_nm,
     wvf_pupil_function,
     wvf_set,
     wvf_to_oi,
+    wvf_zernike_nm_to_osa_index,
     zemax_load,
     zemax_read_header,
 )
@@ -436,8 +438,10 @@ __all__ = [
     "wvfComputePSF",
     "wvfGet",
     "wvfLoadThibosVirtualEyes",
+    "wvfOSAIndexToZernikeNM",
     "wvfPupilFunction",
     "wvfSet",
+    "wvfZernikeNMToOSAIndex",
     "wvf2oi",
     "wvfDefocusDioptersToMicrons",
     "wvfDefocusMicronsToDiopters",
@@ -449,10 +453,12 @@ __all__ = [
     "wvf_defocus_microns_to_diopters",
     "wvf_get",
     "wvf_load_thibos_virtual_eyes",
+    "wvf_osa_index_to_zernike_nm",
     "wvf_pupil_function",
     "wvf_set",
     "wvf_to_oi",
     "wvf_plot",
+    "wvf_zernike_nm_to_osa_index",
     "chromaticity_xy",
     "plotScene",
     "plotSensor",
@@ -530,9 +536,11 @@ wvfComputePSF = wvf_compute_psf
 wvfCreate = wvf_create
 wvfGet = wvf_get
 wvfLoadThibosVirtualEyes = wvf_load_thibos_virtual_eyes
+wvfOSAIndexToZernikeNM = wvf_osa_index_to_zernike_nm
 wvfPupilFunction = wvf_pupil_function
 wvfSet = wvf_set
 wvf2oi = wvf_to_oi
+wvfZernikeNMToOSAIndex = wvf_zernike_nm_to_osa_index
 wvfDefocusDioptersToMicrons = wvf_defocus_diopters_to_microns
 wvfDefocusMicronsToDiopters = wvf_defocus_microns_to_diopters
 zemaxLoad = zemax_load

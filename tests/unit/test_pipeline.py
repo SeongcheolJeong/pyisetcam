@@ -65,9 +65,11 @@ from pyisetcam import (
     wvf_defocus_microns_to_diopters,
     wvf_get,
     wvf_load_thibos_virtual_eyes,
+    wvf_osa_index_to_zernike_nm,
     wvf_pupil_function,
     wvf_set,
     wvf_to_oi,
+    wvf_zernike_nm_to_osa_index,
     zemax_load,
     zemax_read_header,
 )
@@ -4022,6 +4024,32 @@ def test_run_python_case_supports_wvf_spatial_sampling_parity_case(asset_store) 
     assert float(case.payload["psf_sample_spacing_arcmin"]) > 0.0
 
 
+def test_run_python_case_supports_wvf_spatial_controls_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("wvf_spatial_controls_small", asset_store=asset_store)
+
+    assert int(case.payload["base_npixels"]) == 201
+    assert int(case.payload["reduced_pixels_npixels"]) == round(float(case.payload["base_npixels"]) / 4.0)
+    assert np.isclose(
+        float(case.payload["reduced_pixels_psf_sample_spacing_arcmin"]),
+        float(case.payload["base_psf_sample_spacing_arcmin"]),
+    )
+    assert np.isclose(float(case.payload["reduced_pixels_um_per_degree"]), float(case.payload["base_um_per_degree"]))
+    assert float(case.payload["pupil_plane_x4_psf_sample_spacing_arcmin"]) < float(case.payload["base_psf_sample_spacing_arcmin"])
+    assert float(case.payload["pupil_plane_div4_psf_sample_spacing_arcmin"]) > float(case.payload["base_psf_sample_spacing_arcmin"])
+    assert np.isclose(float(case.payload["pupil_plane_x4_um_per_degree"]), float(case.payload["base_um_per_degree"]))
+    assert np.isclose(float(case.payload["pupil_plane_div4_um_per_degree"]), float(case.payload["base_um_per_degree"]))
+    assert np.isclose(
+        float(case.payload["focal_length_half_psf_sample_spacing_arcmin"]),
+        float(case.payload["base_psf_sample_spacing_arcmin"]),
+    )
+    assert np.isclose(
+        float(case.payload["focal_length_double_psf_sample_spacing_arcmin"]),
+        float(case.payload["base_psf_sample_spacing_arcmin"]),
+    )
+    assert float(case.payload["focal_length_half_um_per_degree"]) < float(case.payload["base_um_per_degree"])
+    assert float(case.payload["focal_length_double_um_per_degree"]) > float(case.payload["base_um_per_degree"])
+
+
 def test_run_python_case_supports_wvf_compute_psf_parity_case(asset_store) -> None:
     case = run_python_case_with_context("wvf_compute_psf_small", asset_store=asset_store)
 
@@ -4557,3 +4585,27 @@ def test_run_python_case_supports_sensor_imx363_crop_parity_case(asset_store) ->
     assert np.array_equal(case.payload["size"], np.array([6, 8], dtype=int))
     assert np.array_equal(case.payload["metadata_crop"], np.array([3, 3, 7, 5], dtype=int))
     assert case.payload["digital_values"].shape == (6, 8)
+
+
+def test_wvf_osa_index_helpers_round_trip() -> None:
+    indices = np.array([0, 1, 2, 5, 15, 20, 35], dtype=int)
+
+    n, m = wvf_osa_index_to_zernike_nm(indices)
+    roundtrip = wvf_zernike_nm_to_osa_index(n, m)
+
+    assert np.array_equal(n, np.array([0, 1, 1, 2, 5, 5, 7], dtype=int))
+    assert np.array_equal(m, np.array([0, -1, 1, 2, -5, 5, 7], dtype=int))
+    assert np.array_equal(roundtrip, indices)
+    assert wvf_osa_index_to_zernike_nm(15) == (5, -5)
+    assert wvf_zernike_nm_to_osa_index(5, -5) == 15
+
+
+def test_run_python_case_supports_wvf_osa_index_conversion_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("wvf_osa_index_conversion_small", asset_store=asset_store)
+
+    assert np.array_equal(case.payload["indices"], np.array([0, 1, 2, 5, 15, 20, 35], dtype=int))
+    assert np.array_equal(case.payload["roundtrip_indices"], case.payload["indices"])
+    assert int(case.payload["scalar_index"]) == 15
+    assert int(case.payload["scalar_n"]) == 5
+    assert int(case.payload["scalar_m"]) == -5
+    assert int(case.payload["scalar_roundtrip_index"]) == 15

@@ -109,6 +109,18 @@
       "atol": 1e-08
     },
     {
+      "name": "wvf_osa_index_conversion_small",
+      "matlab_function": "wvfOSAIndexToZernikeNM/wvfZernikeNMToOSAIndex",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
+      "name": "wvf_spatial_controls_small",
+      "matlab_function": "wvfSet/wvfGet/wvfCompute",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "metrics_xyz_from_energy_1d",
       "matlab_function": "ieXYZFromEnergy",
       "rtol": 1e-05,

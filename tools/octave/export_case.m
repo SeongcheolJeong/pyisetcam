@@ -231,6 +231,21 @@ switch case_name
         payload.psf_sample_spacing_arcmin = wvfGet(wvf, 'psf sample spacing');
         payload.ref_psf_sample_interval_arcmin = wvfGet(wvf, 'ref psf sample interval');
 
+    case 'wvf_osa_index_conversion_small'
+        indices = [0 1 2 5 15 20 35];
+        [n, m] = wvfOSAIndexToZernikeNM(indices);
+        roundtrip = wvfZernikeNMToOSAIndex(n, m);
+        [scalarN, scalarM] = wvfOSAIndexToZernikeNM(15);
+        scalarRoundtrip = wvfZernikeNMToOSAIndex(scalarN, scalarM);
+        payload.indices = indices(:);
+        payload.n = n(:);
+        payload.m = m(:);
+        payload.roundtrip_indices = roundtrip(:);
+        payload.scalar_index = 15;
+        payload.scalar_n = scalarN;
+        payload.scalar_m = scalarM;
+        payload.scalar_roundtrip_index = scalarRoundtrip;
+
     case 'metrics_xyz_from_energy_1d'
         wave = (400:10:700)';
         energy = linspace(0.05, 1.55, numel(wave));
@@ -606,6 +621,89 @@ switch case_name
         payload.psf_xaxis_data = psfX.data;
         payload.pupil_amp_row = pupilAmp(middleRow, :);
         payload.pupil_phase_row = pupilPhase(middleRow, :);
+
+    case 'wvf_spatial_controls_small'
+        thisWave = 550;
+        focalLengthM = 7e-3;
+        focalLengthMM = focalLengthM * 1e3;
+        fNumber = 4.0;
+
+        wvf = wvfCreate('wave', thisWave);
+        wvf = wvfSet(wvf, 'calc pupil diameter', focalLengthMM / fNumber);
+        wvf = wvfSet(wvf, 'focal length', focalLengthM);
+        wvf = wvfCompute(wvf);
+        base.npixels = wvfGet(wvf, 'npixels');
+        base.psf_sample_spacing_arcmin = wvfGet(wvf, 'psf sample spacing');
+        base.um_per_degree = wvfGet(wvf, 'um per degree');
+        base.pupil_plane_size_mm = wvfGet(wvf, 'pupil plane size', 'mm', thisWave);
+        base.pupil_sample_spacing_mm = wvfGet(wvf, 'pupil sample spacing', 'mm', thisWave);
+        base.focal_length_mm = wvfGet(wvf, 'focal length', 'mm');
+
+        reducedPixels = wvfCreate('wave', thisWave);
+        reducedPixels = wvfSet(reducedPixels, 'calc pupil diameter', focalLengthMM / fNumber);
+        reducedPixels = wvfSet(reducedPixels, 'focal length', focalLengthM);
+        reducedPixels = wvfSet(reducedPixels, 'npixels', round(base.npixels / 4));
+        reducedPixels = wvfCompute(reducedPixels);
+        reducedPixels.npixels = wvfGet(reducedPixels, 'npixels');
+        reducedPixels.psf_sample_spacing_arcmin = wvfGet(reducedPixels, 'psf sample spacing');
+        reducedPixels.um_per_degree = wvfGet(reducedPixels, 'um per degree');
+
+        enlargedPupilPlane = wvfCreate('wave', thisWave);
+        enlargedPupilPlane = wvfSet(enlargedPupilPlane, 'calc pupil diameter', focalLengthMM / fNumber);
+        enlargedPupilPlane = wvfSet(enlargedPupilPlane, 'focal length', focalLengthM);
+        enlargedPupilPlane = wvfSet(enlargedPupilPlane, 'pupil plane size', base.pupil_plane_size_mm * 4, 'mm');
+        enlargedPupilPlane = wvfCompute(enlargedPupilPlane);
+        enlargedPupilPlane.psf_sample_spacing_arcmin = wvfGet(enlargedPupilPlane, 'psf sample spacing');
+        enlargedPupilPlane.um_per_degree = wvfGet(enlargedPupilPlane, 'um per degree');
+        enlargedPupilPlane.pupil_plane_size_mm = wvfGet(enlargedPupilPlane, 'pupil plane size', 'mm', thisWave);
+
+        reducedPupilPlane = wvfCreate('wave', thisWave);
+        reducedPupilPlane = wvfSet(reducedPupilPlane, 'calc pupil diameter', focalLengthMM / fNumber);
+        reducedPupilPlane = wvfSet(reducedPupilPlane, 'focal length', focalLengthM);
+        reducedPupilPlane = wvfSet(reducedPupilPlane, 'pupil plane size', base.pupil_plane_size_mm / 4, 'mm');
+        reducedPupilPlane = wvfCompute(reducedPupilPlane);
+        reducedPupilPlane.psf_sample_spacing_arcmin = wvfGet(reducedPupilPlane, 'psf sample spacing');
+        reducedPupilPlane.um_per_degree = wvfGet(reducedPupilPlane, 'um per degree');
+        reducedPupilPlane.pupil_plane_size_mm = wvfGet(reducedPupilPlane, 'pupil plane size', 'mm', thisWave);
+
+        focalHalf = wvfCreate('wave', thisWave);
+        focalHalf = wvfSet(focalHalf, 'calc pupil diameter', focalLengthMM / fNumber);
+        focalHalf = wvfSet(focalHalf, 'focal length', focalLengthM);
+        focalHalf = wvfSet(focalHalf, 'focal length', focalLengthM / 2);
+        focalHalf = wvfCompute(focalHalf);
+        focalHalf.focal_length_m = wvfGet(focalHalf, 'focal length', 'm');
+        focalHalf.psf_sample_spacing_arcmin = wvfGet(focalHalf, 'psf sample spacing');
+        focalHalf.um_per_degree = wvfGet(focalHalf, 'um per degree');
+
+        focalDouble = wvfCreate('wave', thisWave);
+        focalDouble = wvfSet(focalDouble, 'calc pupil diameter', focalLengthMM / fNumber);
+        focalDouble = wvfSet(focalDouble, 'focal length', focalLengthM);
+        focalDouble = wvfSet(focalDouble, 'focal length', focalLengthM * 2);
+        focalDouble = wvfCompute(focalDouble);
+        focalDouble.focal_length_m = wvfGet(focalDouble, 'focal length', 'm');
+        focalDouble.psf_sample_spacing_arcmin = wvfGet(focalDouble, 'psf sample spacing');
+        focalDouble.um_per_degree = wvfGet(focalDouble, 'um per degree');
+
+        payload.wave = thisWave;
+        payload.base_npixels = base.npixels;
+        payload.base_psf_sample_spacing_arcmin = base.psf_sample_spacing_arcmin;
+        payload.base_um_per_degree = base.um_per_degree;
+        payload.base_pupil_plane_size_mm = base.pupil_plane_size_mm;
+        payload.reduced_pixels_npixels = reducedPixels.npixels;
+        payload.reduced_pixels_psf_sample_spacing_arcmin = reducedPixels.psf_sample_spacing_arcmin;
+        payload.reduced_pixels_um_per_degree = reducedPixels.um_per_degree;
+        payload.pupil_plane_x4_psf_sample_spacing_arcmin = enlargedPupilPlane.psf_sample_spacing_arcmin;
+        payload.pupil_plane_x4_um_per_degree = enlargedPupilPlane.um_per_degree;
+        payload.pupil_plane_x4_size_mm = enlargedPupilPlane.pupil_plane_size_mm;
+        payload.pupil_plane_div4_psf_sample_spacing_arcmin = reducedPupilPlane.psf_sample_spacing_arcmin;
+        payload.pupil_plane_div4_um_per_degree = reducedPupilPlane.um_per_degree;
+        payload.pupil_plane_div4_size_mm = reducedPupilPlane.pupil_plane_size_mm;
+        payload.focal_length_half_m = focalHalf.focal_length_m;
+        payload.focal_length_half_psf_sample_spacing_arcmin = focalHalf.psf_sample_spacing_arcmin;
+        payload.focal_length_half_um_per_degree = focalHalf.um_per_degree;
+        payload.focal_length_double_m = focalDouble.focal_length_m;
+        payload.focal_length_double_psf_sample_spacing_arcmin = focalDouble.psf_sample_spacing_arcmin;
+        payload.focal_length_double_um_per_degree = focalDouble.um_per_degree;
 
     case 'wvf_compute_psf_small'
         wvf = wvfCreate('wave', 550);
