@@ -2461,6 +2461,16 @@ def test_oi_psf550_si_gaussian_ratio_small_parity_case(asset_store) -> None:
     assert np.all(payload["psf"] >= 0.0)
 
 
+def test_oi_illuminance_lines_si_gaussian_ratio_small_parity_case(asset_store) -> None:
+    payload = run_python_case("oi_illuminance_lines_si_gaussian_ratio_small", asset_store=asset_store)
+
+    assert payload["xy_middle"].shape == (2,)
+    assert payload["v_pos"].ndim == 1
+    assert payload["h_pos"].ndim == 1
+    assert payload["v_data"].shape == payload["v_pos"].shape
+    assert payload["h_data"].shape == payload["h_pos"].shape
+
+
 def test_oi_si_custom_file_small_parity_case(asset_store) -> None:
     payload = run_python_case("oi_si_custom_file_small", asset_store=asset_store)
 
@@ -4446,6 +4456,16 @@ def test_run_python_case_supports_otfwavelength_wvf_parity_case(asset_store) -> 
     assert case.payload["wavelength"].ndim == 1
     assert case.payload["otf"].shape == (case.payload["fSupport"].size, case.payload["wavelength"].size)
     assert np.all(case.payload["otf"] >= 0.0)
+
+
+def test_run_python_case_supports_irradiance_hline_diffraction_lineep_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("oi_irradiance_hline_diffraction_lineep_small", asset_store=asset_store)
+
+    assert case.payload["roi_locs"].shape == (2,)
+    assert case.payload["pos"].ndim == 1
+    assert case.payload["wave"].ndim == 1
+    assert case.payload["data"].shape == (case.payload["wave"].size, case.payload["pos"].size)
+    assert np.all(case.payload["data"] >= 0.0)
 
 
 def test_run_python_case_supports_psf550_diffraction_parity_case(asset_store) -> None:

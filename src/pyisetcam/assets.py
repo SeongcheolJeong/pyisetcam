@@ -202,6 +202,19 @@ class AssetStore:
             wavelengths = np.asarray(wave_nm, dtype=float)
         return wavelengths, xyz
 
+    def load_luminosity(
+        self,
+        *,
+        wave_nm: np.ndarray | None = None,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        data = self.load_mat("data/human/luminosity.mat")
+        wavelengths = np.asarray(data["wavelength"], dtype=float)
+        luminosity = np.asarray(data["data"], dtype=float).reshape(-1)
+        if wave_nm is not None:
+            luminosity = interp_spectra(wavelengths, luminosity, np.asarray(wave_nm, dtype=float))
+            wavelengths = np.asarray(wave_nm, dtype=float)
+        return wavelengths, np.asarray(luminosity, dtype=float).reshape(-1)
+
     def load_thibos_virtual_eyes(
         self,
         pupil_diameter_mm: float = 6.0,

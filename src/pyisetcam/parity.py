@@ -786,6 +786,24 @@ def run_python_case_with_context(
             context={"wvf": wvf, "oi": oi},
         )
 
+    if case_name == "oi_irradiance_hline_diffraction_lineep_small":
+        scene = scene_create("line ep", [128, 128], asset_store=store)
+        scene = scene_set(scene, "fov", 0.5)
+        oi = oi_create()
+        oi = oi_compute(oi, scene)
+        roi_locs = np.array([80, 80], dtype=int)
+        udata, _ = oi_plot(oi, "irradiance hline", roi_locs)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "roi_locs": roi_locs,
+                "pos": np.asarray(udata["pos"], dtype=float),
+                "wave": np.asarray(udata["wave"], dtype=float),
+                "data": np.asarray(udata["data"], dtype=float),
+            },
+            context={"scene": scene, "oi": oi},
+        )
+
     if case_name == "oi_wvf_otf_compare_small":
         wvf = wvf_create(wave=np.array([550.0], dtype=float))
         wvf = wvf_set(wvf, "focal length", 8.0, "mm")
@@ -927,6 +945,32 @@ def run_python_case_with_context(
                 "psf": np.asarray(udata["psf"], dtype=float),
             },
             context={"oi": oi},
+        )
+
+    if case_name == "oi_illuminance_lines_si_gaussian_ratio_small":
+        scene = scene_create("grid lines", [64, 64], 16, "ee", 2, asset_store=store)
+        scene = scene_set(scene, "fov", 2.0)
+        oi = oi_create("psf")
+        wave = np.asarray(oi_get(oi, "wave"), dtype=float)
+        wave_spread = 0.5 * (wave / float(wave[0])) ** 3
+        xy_ratio = np.full(wave.size, 2.0, dtype=float)
+        optics = si_synthetic("gaussian", oi, wave_spread, xy_ratio)
+        oi = oi_set(oi, "optics", optics)
+        oi = oi_compute(oi, scene, crop=True)
+        size = np.asarray(oi_get(oi, "size"), dtype=int).reshape(-1)
+        xy_middle = np.array([int(np.ceil(size[1] / 2.0)), int(np.ceil(size[0] / 2.0))], dtype=int)
+        v_data, _ = oi_plot(oi, "illuminance vline", xy_middle)
+        h_data, _ = oi_plot(oi, "illuminance hline", xy_middle)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "xy_middle": xy_middle,
+                "v_pos": np.asarray(v_data["pos"], dtype=float),
+                "v_data": np.asarray(v_data["data"], dtype=float),
+                "h_pos": np.asarray(h_data["pos"], dtype=float),
+                "h_data": np.asarray(h_data["data"], dtype=float),
+            },
+            context={"scene": scene, "oi": oi},
         )
 
     if case_name == "oi_si_custom_file_small":

@@ -325,6 +325,22 @@
       "atol": 1e-06
     },
     {
+      "name": "oi_illuminance_lines_si_gaussian_ratio_small",
+      "matlab_function": "siSynthetic/oiPlot (illuminance hline/vline)",
+      "rtol": 1e-04,
+      "atol": 1e-06,
+      "field_overrides": {
+        "v_data": {
+          "mode": "scale_invariant",
+          "max_mean_rel": 0.45
+        },
+        "h_data": {
+          "mode": "scale_invariant",
+          "max_mean_rel": 0.13
+        }
+      }
+    },
+    {
       "name": "oi_si_custom_file_small",
       "matlab_function": "ieSaveSIDataFile/siSynthetic/oiSet/oiCompute",
       "rtol": 1e-04,
@@ -793,6 +809,18 @@
       "matlab_function": "oiPlot (otf wavelength wvf)",
       "rtol": 1e-04,
       "atol": 1e-06
+    },
+    {
+      "name": "oi_irradiance_hline_diffraction_lineep_small",
+      "matlab_function": "oiPlot (irradiance hline diffraction line ep)",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "data": {
+          "mode": "scale_invariant",
+          "max_mean_rel": 5e-05
+        }
+      }
     },
     {
       "name": "oi_diffraction_limited_default",

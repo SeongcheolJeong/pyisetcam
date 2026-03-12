@@ -15,7 +15,6 @@ from scipy.signal import fftconvolve
 from skimage.draw import polygon2mask
 
 from .assets import AssetStore
-from .color import luminance_from_photons
 from .exceptions import UnsupportedOptionError
 from .metrics import chromaticity_xy, xyz_from_energy
 from .scene import scene_get
@@ -4554,7 +4553,10 @@ def _oi_illuminance(oi: OpticalImage) -> np.ndarray:
         if photons.ndim >= 2:
             return np.empty(photons.shape[:2], dtype=float)
         return np.empty((0, 0), dtype=float)
-    return luminance_from_photons(photons, wave, asset_store=AssetStore.default())
+    store = AssetStore.default()
+    _, luminosity = store.load_luminosity(wave_nm=wave)
+    energy = quanta_to_energy(photons, wave)
+    return 683.0 * spectral_step(wave) * np.tensordot(energy, luminosity, axes=([2], [0]))
 
 
 def oi_calculate_illuminance(oi: OpticalImage) -> tuple[np.ndarray, float, float]:

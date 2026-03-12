@@ -543,6 +543,26 @@ switch case_name
         payload.y = psfData.xy(:, :, 2);
         payload.psf = psfData.psf;
 
+    case 'oi_illuminance_lines_si_gaussian_ratio_small'
+        scene = sceneCreate('grid lines', [64 64], 16, 'ee', 2);
+        scene = sceneSet(scene, 'fov', 2.0);
+        oi = oiCreate('psf');
+        wave = oiGet(oi, 'wave');
+        waveSpread = 0.5 * (wave / wave(1)).^3;
+        xyRatio = 2 * ones(1, numel(wave));
+        optics = siSynthetic('gaussian', oi, double(waveSpread), xyRatio);
+        oi = oiSet(oi, 'optics', optics);
+        oi = oiCompute(oi, scene, 'crop', true);
+        sz = oiGet(oi, 'size');
+        xyMiddle = [ceil(sz(2) / 2), ceil(sz(1) / 2)];
+        illum = oiGet(oi, 'illuminance');
+        posMicrons = oiSpatialSupport(oi, 'um');
+        payload.xy_middle = xyMiddle(:);
+        payload.v_pos = posMicrons.y(:);
+        payload.v_data = illum(:, xyMiddle(1));
+        payload.h_pos = posMicrons.x(:);
+        payload.h_data = illum(xyMiddle(2), :)';
+
     case 'oi_si_custom_file_small'
         scene = sceneCreate('grid lines', [64 64], 16, 'ee', 2);
         scene = sceneSet(scene, 'fov', 2.0);
@@ -1275,6 +1295,22 @@ switch case_name
         payload.fSupport = fx;
         payload.wavelength = wavelength;
         payload.otf = otfWave;
+
+    case 'oi_irradiance_hline_diffraction_lineep_small'
+        scene = sceneCreate('line ep', [128 128]);
+        scene = sceneSet(scene, 'fov', 0.5);
+        oi = oiCreate;
+        oi = oiCompute(oi, scene);
+        roiLocs = [80 80];
+        data = oiGet(oi, 'photons');
+        wave = oiGet(oi, 'wave');
+        data = squeeze(data(roiLocs(2), :, :));
+        if isa(data, 'single'), data = double(data); end
+        posMicrons = oiSpatialSupport(oi, 'um');
+        payload.roi_locs = roiLocs(:);
+        payload.pos = posMicrons.x(:);
+        payload.wave = wave(:);
+        payload.data = double(data');
 
     case 'oi_otfwavelength_diffraction_small'
         oi = oiCreate('diffraction limited');

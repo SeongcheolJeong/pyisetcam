@@ -157,6 +157,10 @@ input PSF center row.
 That same anisotropic Gaussian workflow now also has direct Octave parity
 on `oiPlot(..., 'psf', 550)`, comparing the returned PSF surface and
 spatial support grids at 550 nm.
+That same anisotropic Gaussian workflow now also has direct Octave parity
+on the `oiPlot(..., 'illuminance hline'/'illuminance vline', ..., 'nofigure')`
+comparison used in `s_opticsSIExamples.m`, comparing the returned
+horizontal and vertical illuminance line profiles through the image center.
 The adjacent wavefront helper surface now also includes
 `wvf_set` / `wvfSet`, `wvf_get` / `wvfGet`,
 `wvf_compute` / `wvfCompute`,
@@ -226,6 +230,11 @@ OTF-by-wavelength surface.
 That same WVF-backed OI plotting surface now also has direct Octave parity
 on `oiPlot(..., 'otf wavelength')`, comparing the returned frequency axis,
 wavelength vector, and OTF-by-wavelength surface after `wvf2oi`.
+That same diffraction image-formation plotting surface now also has
+direct Octave parity on `oiPlot(..., 'irradiance hline', [80 80])` from
+`s_opticsImageFormation.m`, comparing the returned spatial axis,
+wavelength vector, and irradiance mesh data for the diffraction-limited
+line scene.
 That same diffraction plotting surface now also includes direct
 `oiPlot(..., 'psf', [], 550)` parity coverage for the upstream
 `s_opticsDLPsf.m` workflow.
