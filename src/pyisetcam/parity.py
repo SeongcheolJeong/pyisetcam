@@ -43,8 +43,9 @@ from .optics import (
     si_synthetic,
 )
 from .plotting import oi_plot, sensor_plot_line, wvf_plot
-from .scene import scene_adjust_illuminant, scene_create, scene_get, scene_set
+from .scene import scene_adjust_illuminant, scene_adjust_luminance, scene_create, scene_get, scene_set
 from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_crop, sensor_get, sensor_set
+from .sensor import signal_current
 from .utils import blackbody, energy_to_quanta, param_format, quanta_to_energy, unit_frequency_list
 
 
@@ -2187,6 +2188,28 @@ def run_python_case_with_context(
                 "pixData": np.asarray(udata["pixData"], dtype=float),
             },
             context={"sensor": sensor},
+        )
+
+    if case_name == "sensor_signal_current_uniform_small":
+        scene = scene_create("uniform ee", 64, asset_store=store)
+        scene = scene_set(scene, "fov", 8.0)
+        scene = scene_set(scene, "distance", 1.2)
+        scene = scene_set(scene, "name", "uniform ee")
+        scene = scene_adjust_luminance(scene, 1.0, asset_store=store)
+        oi = oi_compute(oi_create(asset_store=store), scene)
+        sensor = sensor_create("monochrome", asset_store=store)
+        sensor = sensor_set(sensor, "noise flag", 0)
+        sensor = sensor_set(sensor, "exp time", 1.0)
+        current = np.asarray(signal_current(oi, sensor), dtype=float)
+        start = (current.shape[0] - 40) // 2
+        stop = start + 40
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "current_center": current[start:stop, start:stop],
+                "mean_current": float(np.mean(current)),
+            },
+            context={"scene": scene, "oi": oi, "sensor": sensor},
         )
 
     if case_name == "ip_default_pipeline":

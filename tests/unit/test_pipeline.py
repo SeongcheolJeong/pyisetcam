@@ -50,8 +50,10 @@ from pyisetcam import (
     si_synthetic,
     run_python_case,
     scene_create,
+    scene_adjust_luminance,
     scene_get,
     scene_set,
+    signal_current,
     sensor_compute,
     sensor_crop,
     sensor_create,
@@ -4691,6 +4693,36 @@ def test_run_python_case_supports_sensor_plot_line_volts_space_parity_case(asset
     assert case.payload["pixData"].ndim == 1
     assert case.payload["pixPos"].size == case.payload["pixData"].size
     assert case.payload["pixPos"].size > 0
+
+
+def test_signal_current_matches_sensor_compute_mean_electrons(asset_store) -> None:
+    scene = scene_create("uniform ee", 64, asset_store=asset_store)
+    scene = scene_set(scene, "fov", 8.0)
+    scene = scene_set(scene, "distance", 1.2)
+    scene = scene_adjust_luminance(scene, 1.0, asset_store=asset_store)
+    oi = oi_compute(oi_create(asset_store=asset_store), scene)
+    sensor = sensor_create("monochrome", asset_store=asset_store)
+    sensor = sensor_set(sensor, "noise flag", 0)
+    sensor = sensor_set(sensor, "exp time", 1.0)
+
+    current = signal_current(oi, sensor)
+    computed = sensor_compute(sensor, oi, seed=0)
+    electrons = np.asarray(sensor_get(computed, "electrons"), dtype=float)
+
+    start = (current.shape[0] - 40) // 2
+    stop = start + 40
+    current_center = np.asarray(current[start:stop, start:stop], dtype=float)
+    electrons_center = electrons[start:stop, start:stop]
+    coulombs_to_electrons = float(sensor_get(sensor, "integration time")) / 1.602176634e-19
+
+    assert np.mean(current_center * coulombs_to_electrons) == pytest.approx(np.mean(electrons_center), rel=1e-5)
+
+
+def test_run_python_case_supports_sensor_signal_current_uniform_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_signal_current_uniform_small", asset_store=asset_store)
+
+    assert case.payload["current_center"].shape == (40, 40)
+    assert float(case.payload["mean_current"]) > 0.0
 
 
 def test_wvf_osa_index_helpers_round_trip() -> None:

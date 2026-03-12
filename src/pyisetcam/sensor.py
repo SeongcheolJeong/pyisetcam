@@ -2725,6 +2725,25 @@ def _spatial_integrate_current_density(scdi: np.ndarray, oi: OpticalImage, senso
     return blurred[start::n_samples_per_pixel, start::n_samples_per_pixel]
 
 
+def signal_current(oi: OpticalImage, sensor: Sensor) -> np.ndarray:
+    """Compute signal current in Amps/pixel using the MATLAB signalCurrent path."""
+
+    working = sensor.clone()
+    if working.fields["mosaic"]:
+        current_density = _signal_current_density(oi, working)
+        return np.asarray(_spatial_integrate_current_density(current_density, oi, working), dtype=float)
+
+    cube = np.asarray(oi.data["photons"], dtype=float)
+    wave = np.asarray(oi.fields["wave"], dtype=float)
+    delta_nm = np.mean(np.diff(wave)) if wave.size > 1 else 1.0
+    pixel = working.fields["pixel"]
+    pixel_area = float(np.prod(np.asarray(pixel["size_m"], dtype=float)) * float(pixel["fill_factor"]))
+    filter_spectra = _sensor_qe_on_wave(working, wave)
+    electron_rate_density = np.tensordot(cube * delta_nm, filter_spectra, axes=([2], [0]))
+    electron_rate = _regrid_electron_rate_density(electron_rate_density, oi, working) * pixel_area
+    return np.asarray(electron_rate * _ELEMENTARY_CHARGE_C, dtype=float)
+
+
 def _regrid_electron_rate_density(
     density_cube: np.ndarray,
     oi: OpticalImage,

@@ -150,6 +150,7 @@ from .scene import (
 )
 from .sensor import (
     pixel_snr,
+    signal_current,
     sensor_snr,
     sensor_compute,
     sensor_crop,
@@ -391,6 +392,8 @@ __all__ = [
     "sensorDNGRead",
     "sensorCreateIdeal",
     "sensorGet",
+    "signalCurrent",
+    "signal_current",
     "sensorSNR",
     "sensorSet",
     "sensorSetSizeToFOV",
@@ -558,6 +561,7 @@ sensorCreate = sensor_create
 sensorDNGRead = sensor_dng_read
 sensorCreateIdeal = sensor_create_ideal
 sensorCompute = sensor_compute
+signalCurrent = signal_current
 sensorCrop = sensor_crop
 sensorGet = sensor_get
 sensorSNR = sensor_snr

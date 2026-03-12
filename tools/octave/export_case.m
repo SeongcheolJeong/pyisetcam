@@ -1438,6 +1438,23 @@ switch case_name
         payload.pixPos = sSupport.x;
         payload.pixData = squeeze(volts(2,:));
 
+    case 'sensor_signal_current_uniform_small'
+        scene = sceneCreate('uniform ee', 64);
+        scene = sceneSet(scene, 'fov', 8);
+        scene = sceneSet(scene, 'distance', 1.2);
+        scene = sceneSet(scene, 'name', 'uniform ee');
+        scene = sceneAdjustLuminance(scene, 1);
+        oi = oiCreate();
+        oi = oiCompute(oi, scene);
+        sensor = sensorCreate('monochrome');
+        sensor = sensorSet(sensor, 'noise flag', 0);
+        sensor = sensorSet(sensor, 'exp time', 1);
+        current = signalCurrent(oi, sensor);
+        start = floor((size(current,1) - 40) / 2) + 1;
+        stop = start + 39;
+        payload.current_center = current(start:stop, start:stop);
+        payload.mean_current = mean(current(:));
+
     case 'ip_default_pipeline'
         scene = sceneCreate();
         oi = oiCreate();

@@ -865,6 +865,12 @@
       "atol": 1e-08
     },
     {
+      "name": "sensor_signal_current_uniform_small",
+      "matlab_function": "signalCurrent",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "ip_default_pipeline",
       "matlab_function": "ipCompute",
       "rtol": 0.001,
