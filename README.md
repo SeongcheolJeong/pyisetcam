@@ -159,8 +159,10 @@ The adjacent wavefront helper surface now also includes
 and rebuilding `oi_set(..., 'wvf ...')` / `oi_set(..., 'optics wvf', ...)`
 for script-driven WVF defocus/Zernike workflows.
 That same WVF-to-OI bridge now also has direct Octave parity on the
-`s_wvfOI.m` PSF-slice workflow, comparing `wvfGet(..., 'psf xaxis', ...)`
-against `oiGet(wvf2oi(wvf), 'optics psf xaxis', ...)` at 550 nm.
+`s_wvfOI.m` PSF-slice workflow, comparing both
+`wvfGet(..., 'psf xaxis', ...)` / `wvfGet(..., 'psf yaxis', ...)` against
+`oiGet(wvf2oi(wvf), 'optics psf xaxis'/'optics psf yaxis', ...)` at
+550 nm.
 That same explicit wavefront surface now also includes
 `wvf_pupil_function` / `wvfPupilFunction` and
 `wvf_compute_psf` / `wvfComputePSF`, including the MATLAB-style

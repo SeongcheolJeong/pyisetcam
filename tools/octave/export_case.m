@@ -299,6 +299,19 @@ switch case_name
         payload.wvf_samp = wvfLine.samp;
         payload.wvf_data = wvfLine.data;
 
+    case 'oi_psfyaxis_wvf_small'
+        wvf = wvfCreate('wave', 550);
+        thisWave = 550;
+        wvf = wvfCompute(wvf);
+        oi = wvf2oi(wvf);
+        oiLine = oiGet(oi, 'optics psf yaxis', thisWave, 'um');
+        wvfLine = wvfGet(wvf, 'psf yaxis', 'um', thisWave);
+        payload.wave = thisWave;
+        payload.oi_samp = oiLine.samp;
+        payload.oi_data = oiLine.data;
+        payload.wvf_samp = wvfLine.samp;
+        payload.wvf_data = wvfLine.data;
+
     case 'oi_psf550_wvf_small'
         wvf = wvfCreate('wave', 550);
         wvf = wvfSet(wvf, 'focal length', 8, 'mm');

@@ -536,6 +536,25 @@ def run_python_case_with_context(
             context={"wvf": wvf, "oi": oi},
         )
 
+    if case_name == "oi_psfyaxis_wvf_small":
+        wvf = wvf_create(wave=np.array([550.0], dtype=float))
+        this_wave = 550.0
+        wvf = wvf_compute(wvf)
+        oi = wvf_to_oi(wvf)
+        oi_line = dict(oi_get(oi, "optics psf yaxis", this_wave, "um"))
+        wvf_line, _ = wvf_plot(wvf, "psfyaxis", "unit", "um", "wave", this_wave)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": this_wave,
+                "oi_samp": np.asarray(oi_line["samp"], dtype=float),
+                "oi_data": np.asarray(oi_line["data"], dtype=float),
+                "wvf_samp": np.asarray(wvf_line["samp"], dtype=float),
+                "wvf_data": np.asarray(wvf_line["data"], dtype=float),
+            },
+            context={"wvf": wvf, "oi": oi},
+        )
+
     if case_name == "oi_psf550_wvf_small":
         wvf = wvf_create(wave=np.array([550.0], dtype=float))
         wvf = wvf_set(wvf, "focal length", 8.0, "mm")

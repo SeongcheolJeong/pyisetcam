@@ -4265,6 +4265,18 @@ def test_run_python_case_supports_psfxaxis_wvf_parity_case(asset_store) -> None:
     assert np.all(case.payload["wvf_data"] >= 0.0)
 
 
+def test_run_python_case_supports_psfyaxis_wvf_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("oi_psfyaxis_wvf_small", asset_store=asset_store)
+
+    assert np.isclose(float(case.payload["wave"]), 550.0)
+    assert case.payload["oi_samp"].ndim == 1
+    assert case.payload["oi_data"].shape == case.payload["oi_samp"].shape
+    assert case.payload["wvf_samp"].shape == case.payload["oi_samp"].shape
+    assert case.payload["wvf_data"].shape == case.payload["oi_samp"].shape
+    assert np.all(case.payload["oi_data"] >= 0.0)
+    assert np.all(case.payload["wvf_data"] >= 0.0)
+
+
 def test_run_python_case_supports_psf550_wvf_parity_case(asset_store) -> None:
     case = run_python_case_with_context("oi_psf550_wvf_small", asset_store=asset_store)
 
