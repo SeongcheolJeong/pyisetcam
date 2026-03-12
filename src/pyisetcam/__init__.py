@@ -7,6 +7,7 @@ from .assets import (
     ensure_upstream_snapshot,
 )
 from .camera import camera_compute, camera_create, camera_get, camera_set
+from .description import HeadlessDescriptionHandle, sensor_description
 from .display import display_create, display_get, display_set
 from .fileio import (
     ie_dng_read,
@@ -186,6 +187,7 @@ __all__ = [
     "camera_set",
     "cct",
     "cct_from_uv",
+    "HeadlessDescriptionHandle",
     "displayCreate",
     "displayGet",
     "displaySet",
@@ -385,6 +387,7 @@ __all__ = [
     "sensorCompute",
     "sensorCrop",
     "sensorCreate",
+    "sensorDescription",
     "sensorDNGRead",
     "sensorCreateIdeal",
     "sensorGet",
@@ -395,6 +398,7 @@ __all__ = [
     "sensor_crop",
     "sensor_create",
     "sensor_create_ideal",
+    "sensor_description",
     "sensor_dng_read",
     "sensor_get",
     "pixelSNR",
@@ -493,6 +497,7 @@ sceneClearData = scene_clear_data
 displayCreate = display_create
 displayGet = display_get
 displaySet = display_set
+sensorDescription = sensor_description
 
 oiCreate = oi_create
 oiCompute = oi_compute
