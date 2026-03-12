@@ -265,6 +265,12 @@
       }
     },
     {
+      "name": "oi_lswavelength_wvf_small",
+      "matlab_function": "wvf2oi/oiPlot",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "oi_wvf_otf_compare_small",
       "matlab_function": "wvf2oi/oiGet/wvfGet",
       "rtol": 1e-05,
@@ -749,6 +755,12 @@
     {
       "name": "oi_lswavelength_diffraction_small",
       "matlab_function": "oiPlot (ls wavelength)",
+      "rtol": 1e-04,
+      "atol": 1e-06
+    },
+    {
+      "name": "oi_lswavelength_wvf_small",
+      "matlab_function": "oiPlot (ls wavelength wvf)",
       "rtol": 1e-04,
       "atol": 1e-06
     },

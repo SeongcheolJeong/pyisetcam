@@ -208,6 +208,10 @@ The adjacent diffraction-limited optics plotting surface now also includes
 headless `oiPlot(..., 'ls wavelength'/'lswavelength'/'otf wavelength'/'mtf wavelength')`
 support for the script-driven line-spread and OTF-by-wavelength workflows
 used in the upstream diffraction PSF tutorials.
+That same line-spread plotting surface now also has direct Octave parity on
+the WVF-backed `oiPlot(..., 'ls wavelength')` workflow, comparing the
+returned spatial axis, wavelength vector, and line-spread-by-wavelength
+surface after `wvf2oi`.
 That same diffraction plotting surface now also includes direct
 `oiPlot(..., 'psf', [], 550)` parity coverage for the upstream
 `s_opticsDLPsf.m` workflow.

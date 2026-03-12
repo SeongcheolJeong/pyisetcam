@@ -5775,7 +5775,7 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         return oi.metadata
     if key == "data":
         return oi.data
-    if key == "wave":
+    if key in {"wave", "wavelength"}:
         return np.asarray(oi.fields["wave"], dtype=float)
     if key == "photons":
         return np.asarray(oi.data["photons"], dtype=float)

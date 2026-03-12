@@ -1179,6 +1179,42 @@ switch case_name
         payload.wavelength = wavelength;
         payload.lsWave = lsWave;
 
+    case 'oi_lswavelength_wvf_small'
+        wvf = wvfCreate('wave', [450; 550; 650]);
+        wvf = wvfSet(wvf, 'focal length', 8, 'mm');
+        wvf = wvfSet(wvf, 'pupil diameter', 3, 'mm');
+        wvf = wvfCompute(wvf);
+        oi = wvf2oi(wvf);
+        units = 'um';
+        wavelength = oiGet(oi, 'wavelength');
+        nWave = oiGet(oi, 'nwave');
+        optics = oiGet(oi, 'optics');
+        fx = opticsGet(optics, 'otffx', units);
+        peakF = max(abs(fx(:)));
+        middleSamps = 40;
+        deltaSpace = 1/(2*peakF);
+        nSamp = 100;
+        fSamp = (-nSamp:(nSamp - 1))/nSamp;
+        [fX, fY] = meshgrid(fSamp, fSamp);
+        fSupport(:, :, 1) = fX * peakF;
+        fSupport(:, :, 2) = fY * peakF;
+        sz = opticsGet(optics, 'otf size');
+        otf = zeros(sz(1), sz(2), nWave);
+        for ii = 1:nWave
+            otf(:, :, ii) = opticsGet(optics, 'otfdata', wavelength(ii));
+        end
+        for ii = 1:nWave
+            tmp = otf(1, :, ii);
+            lsf = fftshift(ifft(tmp));
+            lsWave(:, ii) = getMiddleMatrix(lsf, middleSamps); %#ok<AGROW>
+        end
+        lsWave = abs(lsWave);
+        X = (-nSamp:(nSamp - 1)) * deltaSpace;
+        X = getMiddleMatrix(X, middleSamps);
+        payload.x = X;
+        payload.wavelength = wavelength;
+        payload.lsWave = lsWave';
+
     case 'oi_wvf_small_scene'
         scene = sceneCreate('checkerboard', 8, 4);
         oi = oiCreate('wvf');

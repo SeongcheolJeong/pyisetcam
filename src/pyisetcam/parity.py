@@ -739,6 +739,23 @@ def run_python_case_with_context(
             context={"wvf": wvf, "oi": oi},
         )
 
+    if case_name == "oi_lswavelength_wvf_small":
+        wvf = wvf_create(wave=np.array([450.0, 550.0, 650.0], dtype=float))
+        wvf = wvf_set(wvf, "focal length", 8.0, "mm")
+        wvf = wvf_set(wvf, "pupil diameter", 3.0, "mm")
+        wvf = wvf_compute(wvf)
+        oi = wvf_to_oi(wvf)
+        udata, _ = oi_plot(oi, "ls wavelength")
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "x": np.asarray(udata["x"], dtype=float),
+                "wavelength": np.asarray(udata["wavelength"], dtype=float),
+                "lsWave": np.asarray(udata["lsWave"], dtype=float),
+            },
+            context={"wvf": wvf, "oi": oi},
+        )
+
     if case_name == "oi_wvf_otf_compare_small":
         wvf = wvf_create(wave=np.array([550.0], dtype=float))
         wvf = wvf_set(wvf, "focal length", 8.0, "mm")
@@ -1918,6 +1935,23 @@ def run_python_case_with_context(
                 "lsWave": np.asarray(udata["lsWave"], dtype=float),
             },
             context={"oi": oi},
+        )
+
+    if case_name == "oi_lswavelength_wvf_small":
+        wvf = wvf_create(wave=np.array([450.0, 550.0, 650.0], dtype=float))
+        wvf = wvf_set(wvf, "focal length", 8.0, "mm")
+        wvf = wvf_set(wvf, "pupil diameter", 3.0, "mm")
+        wvf = wvf_compute(wvf)
+        oi = wvf_to_oi(wvf)
+        udata, _ = oi_plot(oi, "ls wavelength")
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "x": np.asarray(udata["x"], dtype=float),
+                "wavelength": np.asarray(udata["wavelength"], dtype=float),
+                "lsWave": np.asarray(udata["lsWave"], dtype=float),
+            },
+            context={"wvf": wvf, "oi": oi},
         )
 
     if case_name == "oi_diffraction_limited_default":

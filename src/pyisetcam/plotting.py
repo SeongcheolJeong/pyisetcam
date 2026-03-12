@@ -130,9 +130,40 @@ def _oi_lswavelength_payload(
     middle_samps: int = 40,
     n_samp: int = 100,
 ) -> dict[str, Any]:
+    optics = dict(oi.fields.get("optics", {}))
+    model = param_format(optics.get("model", optics.get("compute_method", "diffractionlimited")))
+    wave = np.asarray(oi_get(oi, "wavelength"), dtype=float).reshape(-1)
+
+    if model == "shiftinvariant":
+        otf_struct = oi_get(oi, "optics otfstruct")
+        if otf_struct is None:
+            raise ValueError("Shift-invariant OTF data are missing or inconsistent.")
+        otf = np.asarray(otf_struct["OTF"], dtype=complex)
+        fx_mm = np.asarray(otf_struct["fx"], dtype=float).reshape(-1)
+        if otf.ndim != 3 or fx_mm.size != otf.shape[1]:
+            raise ValueError("Shift-invariant OTF data are missing or inconsistent.")
+        scale = 1e-3 if param_format(units) == "um" else 1.0
+        fx = fx_mm * scale
+        peak_f = float(np.max(np.abs(fx))) if fx.size > 0 else 0.0
+        delta_space = 1.0 / max(2.0 * peak_f, 1e-12) if peak_f > 0.0 else 0.0
+
+        ls_wave = np.empty((_middle_samples_1d(np.arange(2 * int(n_samp), dtype=float), middle_samps).size, wave.size), dtype=float)
+        for wave_index in range(wave.size):
+            tmp = np.asarray(otf[0, :, wave_index], dtype=complex)
+            lsf = np.fft.fftshift(np.fft.ifft(tmp))
+            lsf_vector = np.asarray(lsf).reshape(-1)
+            half = int(np.rint(float(middle_samps) / 2.0))
+            center = int(np.rint(lsf_vector.size / 2.0))
+            start = max(0, center - half)
+            stop = min(lsf_vector.size, center + half + 1)
+            ls_wave[:, wave_index] = np.abs(np.asarray(lsf_vector[start:stop], dtype=lsf_vector.dtype))
+
+        x = np.arange(-int(n_samp), int(n_samp), dtype=float) * float(delta_space)
+        x = np.asarray(_middle_samples_1d(x, middle_samps), dtype=float)
+        return {"x": x, "wavelength": wave.copy(), "lsWave": ls_wave.T}
+
     otf_payload = _oi_otf_wavelength_payload(oi, units=units, n_samp=n_samp)
     fx = np.asarray(otf_payload["fSupport"], dtype=float).reshape(-1)
-    wave = np.asarray(otf_payload["wavelength"], dtype=float).reshape(-1)
     otf_wave = np.asarray(otf_payload["otf"], dtype=float)
     peak_f = float(np.max(np.abs(fx))) if fx.size > 0 else 0.0
     delta_space = 1.0 / max(2.0 * peak_f, 1e-12) if peak_f > 0.0 else 0.0

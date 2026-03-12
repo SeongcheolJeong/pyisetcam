@@ -4403,6 +4403,15 @@ def test_run_python_case_supports_lswavelength_diffraction_parity_case(asset_sto
     assert np.all(case.payload["lsWave"] >= 0.0)
 
 
+def test_run_python_case_supports_lswavelength_wvf_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("oi_lswavelength_wvf_small", asset_store=asset_store)
+
+    assert case.payload["x"].ndim == 1
+    assert case.payload["wavelength"].ndim == 1
+    assert case.payload["lsWave"].shape == (case.payload["wavelength"].size, case.payload["x"].size)
+    assert np.all(case.payload["lsWave"] >= 0.0)
+
+
 def test_run_python_case_supports_psf550_diffraction_parity_case(asset_store) -> None:
     case = run_python_case_with_context("oi_psf550_diffraction_small", asset_store=asset_store)
 
