@@ -1215,6 +1215,26 @@ switch case_name
         payload.wavelength = wavelength;
         payload.lsWave = lsWave';
 
+    case 'oi_otfwavelength_wvf_small'
+        wvf = wvfCreate('wave', [450; 550; 650]);
+        wvf = wvfSet(wvf, 'focal length', 8, 'mm');
+        wvf = wvfSet(wvf, 'pupil diameter', 3, 'mm');
+        wvf = wvfCompute(wvf);
+        oi = wvf2oi(wvf);
+        wavelength = oiGet(oi, 'wavelength');
+        optics = oiGet(oi, 'optics');
+        fSupport = opticsGet(optics, 'otf support matrix');
+        fx = fSupport(1, :, 1);
+        nWave = numel(wavelength);
+        otfWave = zeros(numel(fx), nWave);
+        for ii = 1:nWave
+            otf = abs(opticsGet(optics, 'otfdata', wavelength(ii)));
+            otfWave(:, ii) = fftshift(otf(1, :))';
+        end
+        payload.fSupport = fx;
+        payload.wavelength = wavelength;
+        payload.otf = otfWave;
+
     case 'oi_wvf_small_scene'
         scene = sceneCreate('checkerboard', 8, 4);
         oi = oiCreate('wvf');

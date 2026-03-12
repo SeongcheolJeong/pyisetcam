@@ -113,8 +113,7 @@ def _oi_otf_wavelength_payload(
         fx_mm = np.asarray(otf_struct["fx"], dtype=float).reshape(-1)
         if otf.ndim != 3 or fx_mm.size != otf.shape[1]:
             raise ValueError("Shift-invariant OTF data are missing or inconsistent.")
-        scale = 1e-3 if param_format(units) == "um" else 1.0
-        fx = fx_mm * scale
+        fx = fx_mm
         otf_wave = np.empty((fx.size, wave.size), dtype=float)
         for wave_index in range(wave.size):
             otf_wave[:, wave_index] = np.abs(np.fft.fftshift(otf[0, :, wave_index]))

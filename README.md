@@ -212,6 +212,9 @@ That same line-spread plotting surface now also has direct Octave parity on
 the WVF-backed `oiPlot(..., 'ls wavelength')` workflow, comparing the
 returned spatial axis, wavelength vector, and line-spread-by-wavelength
 surface after `wvf2oi`.
+That same WVF-backed OI plotting surface now also has direct Octave parity
+on `oiPlot(..., 'otf wavelength')`, comparing the returned frequency axis,
+wavelength vector, and OTF-by-wavelength surface after `wvf2oi`.
 That same diffraction plotting surface now also includes direct
 `oiPlot(..., 'psf', [], 550)` parity coverage for the upstream
 `s_opticsDLPsf.m` workflow.

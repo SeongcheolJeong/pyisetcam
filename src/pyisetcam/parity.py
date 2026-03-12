@@ -756,6 +756,23 @@ def run_python_case_with_context(
             context={"wvf": wvf, "oi": oi},
         )
 
+    if case_name == "oi_otfwavelength_wvf_small":
+        wvf = wvf_create(wave=np.array([450.0, 550.0, 650.0], dtype=float))
+        wvf = wvf_set(wvf, "focal length", 8.0, "mm")
+        wvf = wvf_set(wvf, "pupil diameter", 3.0, "mm")
+        wvf = wvf_compute(wvf)
+        oi = wvf_to_oi(wvf)
+        udata, _ = oi_plot(oi, "otf wavelength")
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "fSupport": np.asarray(udata["fSupport"], dtype=float),
+                "wavelength": np.asarray(udata["wavelength"], dtype=float),
+                "otf": np.asarray(udata["otf"], dtype=float),
+            },
+            context={"wvf": wvf, "oi": oi},
+        )
+
     if case_name == "oi_wvf_otf_compare_small":
         wvf = wvf_create(wave=np.array([550.0], dtype=float))
         wvf = wvf_set(wvf, "focal length", 8.0, "mm")
