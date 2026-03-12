@@ -1455,6 +1455,16 @@ switch case_name
         payload.current_center = current(start:stop, start:stop);
         payload.mean_current = mean(current(:));
 
+    case 'sensor_filter_transmissivities_small'
+        sensor = sensorCreate();
+        filters = sensorGet(sensor, 'filter transmissivities');
+        filters(:,1) = filters(:,1) * 0.2;
+        filters(:,3) = filters(:,3) * 0.5;
+        sensor = sensorSet(sensor, 'filter transmissivities', filters);
+        payload.wave = sensorGet(sensor, 'wave');
+        payload.filters = sensorGet(sensor, 'filter transmissivities');
+        payload.spectral_qe = sensorGet(sensor, 'spectral qe');
+
     case 'ip_default_pipeline'
         scene = sceneCreate();
         oi = oiCreate();

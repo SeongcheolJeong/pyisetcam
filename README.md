@@ -117,7 +117,9 @@ flows. That same tutorial path now also includes headless
 `sensor_description` / `sensorDescription` coverage for the
 `t_sensorFPN.m` summary path. The same sensor tutorial wave now also
 includes `signal_current` / `signalCurrent` coverage for the
-`t_sensorInputRefer.m` current-to-electrons workflow.
+`t_sensorInputRefer.m` current-to-electrons workflow, plus
+`filter transmissivities` coverage for the color-scaled exposure workflow
+from `t_sensorExposureColor.m`.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit

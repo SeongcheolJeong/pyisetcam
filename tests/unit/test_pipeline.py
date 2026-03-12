@@ -58,6 +58,7 @@ from pyisetcam import (
     sensor_crop,
     sensor_create,
     sensor_get,
+    sensor_set_size_to_fov,
     sensor_set,
     wvf_aperture,
     wvf_compute,
@@ -4723,6 +4724,48 @@ def test_run_python_case_supports_sensor_signal_current_uniform_parity_case(asse
 
     assert case.payload["current_center"].shape == (40, 40)
     assert float(case.payload["mean_current"]) > 0.0
+
+
+def test_run_python_case_supports_sensor_filter_transmissivities_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_filter_transmissivities_small", asset_store=asset_store)
+
+    assert case.payload["wave"].ndim == 1
+    assert case.payload["filters"].shape[0] == case.payload["wave"].size
+    assert case.payload["filters"].shape[1] == 3
+    assert case.payload["spectral_qe"].shape == case.payload["filters"].shape
+
+
+def test_sensor_exposure_color_tutorial_flow(asset_store) -> None:
+    oi = oi_create(asset_store=asset_store)
+    scene = scene_create(asset_store=asset_store)
+    oi = oi_compute(oi, scene)
+
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set_size_to_fov(sensor, scene_get(scene, "fov"), oi)
+    filters = np.asarray(sensor_get(sensor, "filter transmissivities"), dtype=float)
+    filters[:, 0] = filters[:, 0] * 0.2
+    filters[:, 2] = filters[:, 2] * 0.5
+    sensor = sensor_set(sensor, "filter transmissivities", filters)
+    sensor = sensor_set(sensor, "auto exposure", "on")
+
+    sensor = sensor_compute(sensor, oi, seed=0)
+    exposure_time = float(sensor_get(sensor, "exposure time"))
+    assert exposure_time > 0.0
+
+    ip = ip_create(asset_store=asset_store)
+    ip = ip_compute(ip, sensor)
+    combined_transform = np.asarray(ip_get(ip, "combined transform"), dtype=float)
+    assert combined_transform.shape == (3, 3)
+
+    ip = ip_set(ip, "transform method", "current")
+    sensor = sensor_set(sensor, "auto exposure", "off")
+    sensor = sensor_set(sensor, "exposure time", 3.0 * exposure_time)
+    sensor = sensor_compute(sensor, oi, seed=0)
+    ip = ip_compute(ip, sensor)
+
+    rendered = np.asarray(ip_get(ip, "result"), dtype=float)
+    assert rendered.ndim == 3 and rendered.shape[2] == 3
+    assert float(np.max(rendered)) <= 1.0 + 1e-8
 
 
 def test_wvf_osa_index_helpers_round_trip() -> None:

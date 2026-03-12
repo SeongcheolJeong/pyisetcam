@@ -871,6 +871,12 @@
       "atol": 1e-08
     },
     {
+      "name": "sensor_filter_transmissivities_small",
+      "matlab_function": "sensorGet/sensorSet",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "ip_default_pipeline",
       "matlab_function": "ipCompute",
       "rtol": 0.001,

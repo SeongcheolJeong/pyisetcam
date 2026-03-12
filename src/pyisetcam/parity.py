@@ -2212,6 +2212,23 @@ def run_python_case_with_context(
             context={"scene": scene, "oi": oi, "sensor": sensor},
         )
 
+    if case_name == "sensor_filter_transmissivities_small":
+        sensor = sensor_create(asset_store=store)
+        filters = np.asarray(sensor_get(sensor, "filter transmissivities"), dtype=float)
+        modified = filters.copy()
+        modified[:, 0] = modified[:, 0] * 0.2
+        modified[:, 2] = modified[:, 2] * 0.5
+        sensor = sensor_set(sensor, "filter transmissivities", modified)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": np.asarray(sensor_get(sensor, "wave"), dtype=float),
+                "filters": np.asarray(sensor_get(sensor, "filter transmissivities"), dtype=float),
+                "spectral_qe": np.asarray(sensor_get(sensor, "spectral qe"), dtype=float),
+            },
+            context={"sensor": sensor},
+        )
+
     if case_name == "ip_default_pipeline":
         scene = scene_create(asset_store=store)
         oi = oi_compute(oi_create(), scene, crop=True)

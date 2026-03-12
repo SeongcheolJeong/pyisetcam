@@ -1661,7 +1661,7 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return int(np.asarray(sensor.fields["wave"]).size)
     if key == "pattern":
         return np.asarray(sensor.fields["pattern"], dtype=int)
-    if key in {"filterspectra", "colorfilters"}:
+    if key in {"filterspectra", "colorfilters", "filtertransmissivities"}:
         return np.asarray(sensor.fields["filter_spectra"], dtype=float)
     if key in {"spectralqe", "sensorqe", "sensorspectralqe", "qe"}:
         return _sensor_combined_qe(sensor)
@@ -2195,7 +2195,7 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
     if key in {"colorfilterarray", "cfa"}:
         sensor.fields["pattern"] = _cfa_pattern_from_value(value)
         return sensor
-    if key in {"filterspectra", "colorfilters"}:
+    if key in {"filterspectra", "colorfilters", "filtertransmissivities"}:
         sensor.fields["filter_spectra"] = np.asarray(value, dtype=float)
         return sensor
     if key in {"pixelspectralqe", "pdspectralqe", "pixelqe"}:
