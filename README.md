@@ -126,10 +126,11 @@ curated parity on the four `noise flag` modes and two-line volts plot used
 by the rest of that tutorial. The same sensor tutorial wave now also
 includes `signal_current` / `signalCurrent` coverage for the
 `t_sensorInputRefer.m` current-to-electrons workflow, plus
-`filter transmissivities` coverage for the color-scaled exposure workflow
+`filter transmissivities` and overexposed `ipCompute` color-shift coverage
 from `t_sensorExposureColor.m`, and `ieFitLine`-driven dark-voltage
 estimation coverage for `s_sensorAnalyzeDarkVoltage.m`, plus slope-based
-PRNU estimation coverage for `s_sensorSpatialNoisePRNU.m`.
+PRNU estimation coverage for `s_sensorSpatialNoisePRNU.m`, plus DSNU
+estimation coverage for `s_sensorSpatialNoiseDSNU.m`.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit

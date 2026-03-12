@@ -1465,6 +1465,38 @@ switch case_name
         payload.filters = sensorGet(sensor, 'filter transmissivities');
         payload.spectral_qe = sensorGet(sensor, 'spectral qe');
 
+    case 'sensor_exposure_color_small'
+        oi = oiCreate;
+        scene = sceneCreate;
+        oi = oiCompute(oi, scene);
+
+        sensor = sensorCreate;
+        sensor = sensorSetSizeToFOV(sensor, sceneGet(scene, 'fov'), oi);
+
+        filters = sensorGet(sensor, 'filter transmissivities');
+        filters(:,1) = filters(:,1) * 0.2;
+        filters(:,3) = filters(:,3) * 0.5;
+        sensor = sensorSet(sensor, 'filter transmissivities', filters);
+        sensor = sensorSet(sensor, 'auto exposure', 'on');
+
+        sensor = sensorCompute(sensor, oi);
+        eTime = sensorGet(sensor, 'exposure time');
+
+        ip = ipCreate;
+        ip = ipCompute(ip, sensor);
+        payload.exposure_time = eTime;
+        payload.combined_transform = ipGet(ip, 'combined transform');
+
+        ip = ipSet(ip, 'transform method', 'current');
+        sensor = sensorSet(sensor, 'auto exposure', 'off');
+        sensor = sensorSet(sensor, 'exposure time', 3 * eTime);
+        sensor = sensorCompute(sensor, oi);
+        ip = ipCompute(ip, sensor);
+        result = double(ipGet(ip, 'result'));
+        payload.mean_rgb = squeeze(mean(mean(result, 1), 2));
+        payload.white_patch_rgb = squeeze(mean(mean(result(29:44, 37:52, :), 1), 2));
+        payload.result = result;
+
     case 'sensor_dark_voltage_small'
         rand('seed', 1);
         randn('seed', 1);
@@ -1561,6 +1593,52 @@ switch case_name
         payload.offset_mean = mean(offsets);
         payload.offset_std = std(offsets);
         payload.slope_sample = slopes(1:8)';
+
+    case 'sensor_dsnu_estimate_small'
+        rand('seed', 1);
+        randn('seed', 1);
+        scene = sceneCreate('uniform ee');
+        darkScene = sceneAdjustLuminance(scene, 0.1);
+
+        oi = oiCreate('default', [], [], 0);
+
+        sensor = sensorCreate();
+        sensor = sensorSet(sensor, 'size', [64 64]);
+        darkScene = sceneSet(darkScene, 'fov', sensorGet(sensor, 'fov') * 1.5);
+        darkOI = oiCompute(oi, darkScene);
+
+        sensor = sensorSet(sensor, 'DSNU level', 0.05);
+        sensor = sensorSet(sensor, 'PRNU level', 0.1);
+        sensor = sensorSet(sensor, 'Exposure Time', 0.001);
+        sensor = sensorSet(sensor, 'pixel read noise volts', 0.001);
+        sensor = sensorSet(sensor, 'noise flag', 2);
+
+        nFilters = sensorGet(sensor, 'nfilters');
+        nRepeats = 25;
+        if nFilters == 3
+            nSamp = prod(sensorGet(sensor, 'size')) / 2;
+        else
+            nSamp = prod(sensorGet(sensor, 'size'));
+        end
+        volts = zeros(nSamp, nRepeats);
+        for ii = 1:nRepeats
+            sensor = sensorCompute(sensor, darkOI, 0);
+            if nFilters == 3
+                volts(:, ii) = sensorGet(sensor, 'volts', 2);
+            else
+                tmp = sensorGet(sensor, 'volts');
+                volts(:, ii) = tmp(:);
+            end
+        end
+
+        v2 = volts(volts > 1e-6);
+        v2 = [-1 * v2(:); v2(:)];
+        meanOffset = mean(volts, 2);
+
+        payload.estimated_dsnu = std(v2(:));
+        payload.mean_offset_mean = mean(meanOffset);
+        payload.mean_offset_std = std(meanOffset);
+        payload.mean_offset_percentiles = prctile(meanOffset, [10 50 90])';
 
     case 'sensor_spatial_resolution_small'
         scene = sceneCreate('sweepFrequency');

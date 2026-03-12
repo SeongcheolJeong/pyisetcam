@@ -877,6 +877,30 @@
       "atol": 1e-08
     },
     {
+      "name": "sensor_exposure_color_small",
+      "matlab_function": "sensorCompute/ipCompute overexposure color",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "exposure_time": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        },
+        "mean_rgb": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        },
+        "white_patch_rgb": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        },
+        "result": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.02
+        }
+      }
+    },
+    {
       "name": "sensor_dark_voltage_small",
       "matlab_function": "sensorCompute/ieFitLine",
       "rtol": 1e-05,
@@ -921,6 +945,30 @@
         "slope_sample": {
           "mode": "normalized_mae",
           "max_normalized_mae": 0.05
+        }
+      }
+    },
+    {
+      "name": "sensor_dsnu_estimate_small",
+      "matlab_function": "sensorCompute/DSNU estimate",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "estimated_dsnu": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.15
+        },
+        "mean_offset_mean": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.1
+        },
+        "mean_offset_std": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.2
+        },
+        "mean_offset_percentiles": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.1
         }
       }
     },

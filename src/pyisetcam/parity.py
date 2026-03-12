@@ -15,7 +15,7 @@ from .display import display_create
 from .fileio import ie_save_si_data_file
 from .fileio import sensor_dng_read
 from .metrics import cct_from_uv, delta_e_ab, metrics_spd, xyz_from_energy, xyz_to_lab, xyz_to_luv, xyz_to_uv
-from .ip import ip_compute, ip_create
+from .ip import ip_compute, ip_create, ip_get, ip_set
 from .optics import (
     _cos4th_factor,
     _oi_geometry,
@@ -47,6 +47,7 @@ from .optics import (
 from .plotting import oi_plot, sensor_plot, sensor_plot_line, wvf_plot
 from .scene import scene_adjust_illuminant, scene_adjust_luminance, scene_create, scene_get, scene_set
 from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_crop, sensor_get, sensor_set
+from .sensor import sensor_set_size_to_fov
 from .sensor import signal_current
 from .utils import blackbody, energy_to_quanta, ie_fit_line, param_format, quanta_to_energy, unit_frequency_list
 
@@ -2244,6 +2245,46 @@ def run_python_case_with_context(
             context={"sensor": sensor},
         )
 
+    if case_name == "sensor_exposure_color_small":
+        scene = scene_create(asset_store=store)
+        oi = oi_compute(oi_create(asset_store=store), scene)
+
+        sensor = sensor_create(asset_store=store)
+        sensor = sensor_set_size_to_fov(sensor, float(scene_get(scene, "fov")), oi)
+
+        filters = np.asarray(sensor_get(sensor, "filter transmissivities"), dtype=float)
+        filters = filters.copy()
+        filters[:, 0] *= 0.2
+        filters[:, 2] *= 0.5
+        sensor = sensor_set(sensor, "filter transmissivities", filters)
+        sensor = sensor_set(sensor, "auto exposure", "on")
+
+        sensor = sensor_compute(sensor, oi)
+        exposure_time = float(sensor_get(sensor, "exposure time"))
+
+        ip = ip_create(asset_store=store)
+        ip = ip_compute(ip, sensor)
+        combined_transform = np.asarray(ip_get(ip, "combined transform"), dtype=float)
+
+        ip = ip_set(ip, "transform method", "current")
+        sensor = sensor_set(sensor, "auto exposure", "off")
+        sensor = sensor_set(sensor, "exposure time", 3.0 * exposure_time)
+        sensor = sensor_compute(sensor, oi)
+        ip = ip_compute(ip, sensor)
+        result = np.asarray(ip_get(ip, "result"), dtype=float)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "exposure_time": exposure_time,
+                "combined_transform": combined_transform,
+                "mean_rgb": np.mean(result, axis=(0, 1)),
+                "white_patch_rgb": np.mean(result[28:44, 36:52, :], axis=(0, 1)),
+                "result": result,
+            },
+            context={"scene": scene, "oi": oi, "sensor": sensor, "ip": ip},
+        )
+
     if case_name == "sensor_dark_voltage_small":
         scene = scene_create("uniform ee", asset_store=store)
         scene = scene_set(scene, "fov", 5.0)
@@ -2336,6 +2377,52 @@ def run_python_case_with_context(
                 "slope_sample": slopes[:8],
             },
             context={"scene": scene, "oi": oi, "sensor": sensor},
+        )
+
+    if case_name == "sensor_dsnu_estimate_small":
+        scene = scene_create("uniform ee", asset_store=store)
+        dark_scene = scene_adjust_luminance(scene, 0.1, asset_store=store)
+
+        oi = oi_create("default", asset_store=store)
+
+        sensor = sensor_create(asset_store=store)
+        sensor = sensor_set(sensor, "size", np.array([64, 64], dtype=int))
+        dark_scene = scene_set(dark_scene, "fov", float(sensor_get(sensor, "fov")) * 1.5)
+        dark_oi = oi_compute(oi, dark_scene)
+
+        sensor = sensor_set(sensor, "dsnu sigma", 0.05)
+        sensor = sensor_set(sensor, "prnu sigma", 0.1)
+        sensor = sensor_set(sensor, "exposure time", 0.001)
+        sensor = sensor_set(sensor, "pixel read noise volts", 0.001)
+        sensor = sensor_set(sensor, "noise flag", 2)
+
+        n_filters = int(sensor_get(sensor, "nfilters"))
+        n_repeats = 25
+        if n_filters == 3:
+            n_samp = int(np.prod(sensor_get(sensor, "size")) // 2)
+        else:
+            n_samp = int(np.prod(sensor_get(sensor, "size")))
+        volts = np.zeros((n_samp, n_repeats), dtype=float)
+        for ii in range(n_repeats):
+            computed = sensor_compute(sensor, dark_oi, seed=ii + 1)
+            if n_filters == 3:
+                volts[:, ii] = np.asarray(sensor_get(computed, "volts", 2), dtype=float).reshape(-1, order="F")
+            else:
+                volts[:, ii] = np.asarray(sensor_get(computed, "volts"), dtype=float).reshape(-1, order="F")
+
+        mirrored = volts[volts > 1.0e-6]
+        mirrored = np.concatenate([-mirrored.reshape(-1), mirrored.reshape(-1)])
+        mean_offset = np.mean(volts, axis=1)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "estimated_dsnu": float(np.std(mirrored)),
+                "mean_offset_mean": float(np.mean(mean_offset)),
+                "mean_offset_std": float(np.std(mean_offset)),
+                "mean_offset_percentiles": np.percentile(mean_offset, [10.0, 50.0, 90.0]),
+            },
+            context={"scene": dark_scene, "oi": dark_oi, "sensor": sensor},
         )
 
     if case_name == "sensor_spatial_resolution_small":

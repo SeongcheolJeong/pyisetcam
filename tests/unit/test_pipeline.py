@@ -4736,6 +4736,16 @@ def test_run_python_case_supports_sensor_filter_transmissivities_parity_case(ass
     assert case.payload["spectral_qe"].shape == case.payload["filters"].shape
 
 
+def test_run_python_case_supports_sensor_exposure_color_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_exposure_color_small", asset_store=asset_store)
+
+    assert float(case.payload["exposure_time"]) > 0.0
+    assert case.payload["combined_transform"].shape == (3, 3)
+    assert case.payload["mean_rgb"].shape == (3,)
+    assert case.payload["white_patch_rgb"].shape == (3,)
+    assert case.payload["result"].ndim == 3
+
+
 def test_run_python_case_supports_sensor_dark_voltage_small_parity_case(asset_store) -> None:
     case = run_python_case_with_context("sensor_dark_voltage_small", asset_store=asset_store)
 
@@ -4758,6 +4768,15 @@ def test_run_python_case_supports_sensor_prnu_estimate_small_parity_case(asset_s
     assert float(case.payload["slope_std"]) > 0.0
     assert float(case.payload["offset_std"]) > 0.0
     assert case.payload["slope_sample"].shape == (8,)
+
+
+def test_run_python_case_supports_sensor_dsnu_estimate_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_dsnu_estimate_small", asset_store=asset_store)
+
+    assert float(case.payload["estimated_dsnu"]) > 0.0
+    assert float(case.payload["mean_offset_mean"]) > 0.0
+    assert float(case.payload["mean_offset_std"]) > 0.0
+    assert case.payload["mean_offset_percentiles"].shape == (3,)
 
 
 def test_run_python_case_supports_sensor_spatial_resolution_small_parity_case(asset_store) -> None:
