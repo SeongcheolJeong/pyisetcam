@@ -2182,6 +2182,15 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         sensor = sensor_set(sensor, "rows", value[0])
         sensor = sensor_set(sensor, "cols", value[1])
         return sensor
+    if key == "matchoi":
+        if not isinstance(value, OpticalImage):
+            raise ValueError("match oi requires an optical image.")
+        pixel_size = float(oi_get(value, "width spatial resolution", "m"))
+        sensor = sensor_set(sensor, "pixel size same fill factor", pixel_size)
+        oi_size = np.asarray(oi_get(value, "size"), dtype=int).reshape(-1)
+        if oi_size.size != 2:
+            raise ValueError("match oi requires an optical image with a 2D size.")
+        return sensor_set(sensor, "size", oi_size)
     if key in {"rows", "row"}:
         block_rows, _ = _sensor_unit_block(sensor)
         rows = _sensor_aligned_dimension(value, block_rows)
@@ -2648,6 +2657,15 @@ def _interp2_linear_constant_zero(
         row_coords = np.zeros_like(target_rows, dtype=float)
     else:
         row_coords = (np.asarray(target_rows, dtype=float) - float(source_rows[0])) / float(source_rows[1] - source_rows[0])
+    # Match MATLAB's endpoint-inclusive behavior for coordinates that only miss
+    # the valid range by floating-point roundoff.
+    eps = 1e-9
+    max_row = float(np.asarray(plane).shape[0] - 1)
+    max_col = float(np.asarray(plane).shape[1] - 1)
+    row_coords = np.where(np.abs(row_coords) <= eps, 0.0, row_coords)
+    col_coords = np.where(np.abs(col_coords) <= eps, 0.0, col_coords)
+    row_coords = np.where(np.abs(row_coords - max_row) <= eps, max_row, row_coords)
+    col_coords = np.where(np.abs(col_coords - max_col) <= eps, max_col, col_coords)
     row_grid, col_grid = np.meshgrid(row_coords, col_coords, indexing="ij")
     return map_coordinates(
         np.asarray(plane, dtype=float),

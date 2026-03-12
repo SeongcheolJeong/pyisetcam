@@ -1498,6 +1498,63 @@ switch case_name
         payload.fine_pixPos = sSupport.x;
         payload.fine_pixData = squeeze(volts(row, :));
 
+    case 'sensor_fpn_noise_modes_small'
+        scene = sceneCreate('uniform', 512);
+        scene = sceneSet(scene, 'fov', 8);
+
+        oi = oiCreate('wvf');
+        oi = oiCompute(oi, scene);
+
+        sensor = sensorCreate();
+        sensor = sensorSet(sensor, 'match oi', oi);
+        sensor = sensorSet(sensor, 'dsnu sigma', 0.05);
+        sensor = sensorSet(sensor, 'prnu sigma', 1);
+        sensor = sensorSet(sensor, 'read noise volts', 0.1);
+
+        xy = [1 320];
+        flags = [0 -2 1 2];
+        names = {'noise0', 'noiseM2', 'noise1', 'noise2'};
+        for ii = 1:numel(flags)
+            s = sensorSet(sensor, 'noise flag', flags(ii));
+            s = sensorSet(s, 'reuse noise', true);
+            s = sensorSet(s, 'noise seed', 0);
+            rand('seed', 0);
+            randn('seed', 0);
+            s = sensorCompute(s, oi);
+            uData1 = sensorGet(s, 'hline volts', xy(2));
+            uData2 = sensorGet(s, 'hline volts', xy(2) + 1);
+            pixPosCells = {};
+            pixDataCells = {};
+            pixColor = [];
+            for uData = {uData1, uData2}
+                lineData = uData{1};
+                for jj = 1:numel(lineData.data)
+                    if isempty(lineData.data{jj})
+                        continue;
+                    end
+                    pixPosCells{end + 1} = lineData.pos{jj};
+                    pixDataCells{end + 1} = lineData.data{jj};
+                    pixColor(end + 1, 1) = jj;
+                end
+            end
+            pixPos = cell2mat(pixPosCells);
+            pixPos = pixPos(:);
+            pixData = cell2mat(pixDataCells);
+            pixData = pixData(:);
+            if flags(ii) == 0
+                payload.pixPos = pixPos;
+                payload.pixColor = pixColor;
+                payload.noise0_pixData = pixData;
+            else
+                payload.([names{ii} '_stats']) = [
+                    mean(pixData),
+                    std(pixData, 1),
+                    prctile(pixData, 5),
+                    prctile(pixData, 95)
+                ];
+            end
+        end
+
     case 'sensor_description_fpn_small'
         sensor = sensorCreate();
         sensor = sensorSet(sensor, 'dsnu sigma', 0.05);

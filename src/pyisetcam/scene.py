@@ -1077,7 +1077,7 @@ def scene_create(
             _uniform_scene("Uniform D65", size, wave, illuminant_energy, illuminant_comment="D65.mat", asset_store=store),
         )
 
-    if name in {"uniformee", "uniformequalenergy"}:
+    if name in {"uniform", "uniformee", "uniformequalenergy"}:
         size = int(args[0]) if len(args) > 0 else 32
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
         return track_session_object(

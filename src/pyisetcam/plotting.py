@@ -228,15 +228,19 @@ def _sensor_plot_two_lines(sensor: Sensor, line_key: str, xy: Any) -> dict[str, 
 
     first_line = _sensor_plot_line_data(sensor, line_key, xy_array)
     second_line = _sensor_plot_line_data(sensor, line_key, second_xy)
+    first_profile = sensor_get(sensor, f"{orientation}line {data_type}", line_index)
+    second_profile = sensor_get(sensor, f"{orientation}line {data_type}", line_index + 1)
 
     pix_pos: list[np.ndarray] = []
     pix_data: list[np.ndarray] = []
     pix_color: list[int] = []
-    for line in (first_line, second_line):
-        for color_index, (positions, values) in enumerate(zip(line["pos"], line["data"]), start=1):
+    for line, profile in ((first_line, first_profile), (second_line, second_profile)):
+        for color_index, (positions, values, raw_positions) in enumerate(
+            zip(line["pos"], line["data"], profile["pos"]), start=1
+        ):
             if np.asarray(values).size == 0:
                 continue
-            pix_pos.append(np.asarray(positions, dtype=float).copy())
+            pix_pos.append(np.asarray(raw_positions, dtype=float).copy())
             pix_data.append(np.asarray(values, dtype=float).copy())
             pix_color.append(color_index)
 

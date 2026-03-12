@@ -163,6 +163,7 @@ _PARAMETER_OTYPE_UNIQUE = {
         "refsizeoffieldmm",
     },
     "sensor": {
+        "matchoi",
         "chiefrayangle",
         "chiefrayangledegrees",
         "sensoretendue",

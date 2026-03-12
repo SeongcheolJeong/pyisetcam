@@ -4753,6 +4753,20 @@ def test_run_python_case_supports_sensor_spatial_resolution_small_parity_case(as
     assert case.payload["oi_pos"].size == case.payload["oi_data"].size
 
 
+def test_run_python_case_supports_sensor_fpn_noise_modes_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_fpn_noise_modes_small", asset_store=asset_store)
+
+    assert case.payload["pixPos"].ndim == 1
+    assert case.payload["pixColor"].ndim == 1
+    assert case.payload["noise0_pixData"].ndim == 1
+    assert case.payload["pixPos"].size == case.payload["noise0_pixData"].size
+    assert case.payload["pixColor"].size > 0
+    for key in ("noiseM2_stats", "noise1_stats", "noise2_stats"):
+        values = np.asarray(case.payload[key], dtype=float)
+        assert values.shape == (4,)
+        assert np.all(np.isfinite(values))
+
+
 def test_run_python_case_supports_sensor_description_fpn_small_parity_case(asset_store) -> None:
     case = run_python_case_with_context("sensor_description_fpn_small", asset_store=asset_store)
 

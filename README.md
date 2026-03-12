@@ -121,7 +121,9 @@ the Python and Octave render paths. That same tutorial path now also includes he
 curated parity on the coarse/fine sensor-vs-OI line data, and headless
 `sensor_description` / `sensorDescription` coverage for the
 `t_sensorFPN.m` summary path, with curated parity on the returned summary
-table fields for the fixed-noise setup used by that tutorial. The same sensor tutorial wave now also
+table fields for the fixed-noise setup used by that tutorial, plus direct
+curated parity on the four `noise flag` modes and two-line volts plot used
+by the rest of that tutorial. The same sensor tutorial wave now also
 includes `signal_current` / `signalCurrent` coverage for the
 `t_sensorInputRefer.m` current-to-electrons workflow, plus
 `filter transmissivities` coverage for the color-scaled exposure workflow

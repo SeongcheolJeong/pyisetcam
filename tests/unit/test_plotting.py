@@ -452,7 +452,7 @@ def test_plot_sensor_two_lines_wrapper(asset_store) -> None:
             values_array = np.asarray(values, dtype=float)
             if values_array.size == 0:
                 continue
-            expected_pos.append(1e6 * np.asarray(positions, dtype=float))
+            expected_pos.append(np.asarray(positions, dtype=float))
             expected_data.append(values_array)
             expected_color.append(color_index)
 

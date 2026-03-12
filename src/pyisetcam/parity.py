@@ -44,7 +44,7 @@ from .optics import (
     oi_set,
     si_synthetic,
 )
-from .plotting import oi_plot, sensor_plot_line, wvf_plot
+from .plotting import oi_plot, sensor_plot, sensor_plot_line, wvf_plot
 from .scene import scene_adjust_illuminant, scene_adjust_luminance, scene_create, scene_get, scene_set
 from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_crop, sensor_get, sensor_set
 from .sensor import signal_current
@@ -65,6 +65,19 @@ def _stats(values: np.ndarray) -> dict[str, float]:
         "p05": float(np.percentile(flat, 5)),
         "p95": float(np.percentile(flat, 95)),
     }
+
+
+def _stats_vector(values: np.ndarray) -> np.ndarray:
+    flat = np.asarray(values, dtype=float).reshape(-1)
+    return np.array(
+        [
+            float(np.mean(flat)),
+            float(np.std(flat)),
+            float(np.percentile(flat, 5)),
+            float(np.percentile(flat, 95)),
+        ],
+        dtype=float,
+    )
 
 
 def run_python_case_with_context(
@@ -2267,6 +2280,42 @@ def run_python_case_with_context(
                 "oi_data": np.asarray(oi_line["data"], dtype=float),
             },
             context={"scene": scene, "oi": oi, "sensor": sensor_small},
+        )
+
+    if case_name == "sensor_fpn_noise_modes_small":
+        scene = scene_create("uniform", 512, asset_store=store)
+        scene = scene_set(scene, "fov", 8.0)
+
+        oi = oi_compute(oi_create("wvf", asset_store=store), scene)
+
+        sensor = sensor_create(asset_store=store)
+        sensor = sensor_set(sensor, "match oi", oi)
+        sensor = sensor_set(sensor, "dsnu sigma", 0.05)
+        sensor = sensor_set(sensor, "prnu sigma", 1.0)
+        sensor = sensor_set(sensor, "read noise volts", 0.1)
+
+        xy = np.array([1, 320], dtype=int)
+        payload: dict[str, Any] = {"case_name": case_name}
+        for noise_flag, label in ((0, "noise0"), (-2, "noiseM2"), (1, "noise1"), (2, "noise2")):
+            trial_sensor = sensor.clone()
+            trial_sensor = sensor_set(trial_sensor, "noise flag", noise_flag)
+            trial_sensor = sensor_set(trial_sensor, "reuse noise", True)
+            trial_sensor = sensor_set(trial_sensor, "noise seed", 0)
+            computed = sensor_compute(trial_sensor, oi, seed=0)
+            udata, _ = sensor_plot(computed, "volts hline", xy, "two lines", True)
+            pix_pos = np.concatenate([np.asarray(values, dtype=float).reshape(-1) for values in udata["pixPos"]])
+            pix_data = np.concatenate([np.asarray(values, dtype=float).reshape(-1) for values in udata["pixData"]])
+            pix_color = np.asarray(udata["pixColor"], dtype=int).reshape(-1)
+            if noise_flag == 0:
+                payload["pixPos"] = pix_pos
+                payload["pixColor"] = pix_color
+                payload["noise0_pixData"] = pix_data
+            else:
+                payload[f"{label}_stats"] = _stats_vector(pix_data)
+
+        return ParityCaseResult(
+            payload=payload,
+            context={"scene": scene, "oi": oi, "sensor": sensor},
         )
 
     if case_name == "sensor_description_fpn_small":

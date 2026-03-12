@@ -893,6 +893,30 @@
       }
     },
     {
+      "name": "sensor_fpn_noise_modes_small",
+      "matlab_function": "sensorCompute/sensorPlot",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "noise0_pixData": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 1e-06
+        },
+        "noiseM2_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.15
+        },
+        "noise1_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.15
+        },
+        "noise2_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.15
+        }
+      }
+    },
+    {
       "name": "sensor_description_fpn_small",
       "matlab_function": "sensorDescription",
       "rtol": 1e-05,

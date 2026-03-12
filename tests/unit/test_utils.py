@@ -68,6 +68,7 @@ def test_ie_parameter_otype_handles_direct_prefix_and_unique_params() -> None:
     assert ie_parameter_otype("dark voltage per pixel per sec") == ("pixel", "darkvoltageperpixelpersec")
     assert ie_parameter_otype("wvf_zcoeffs") == ("wvf", "zcoeffs")
     assert ie_parameter_otype("display gamma") == ("display", "gamma")
+    assert ie_parameter_otype("match oi") == ("sensor", "matchoi")
     assert ie_parameter_otype("dsnu sigma") == ("sensor", "dsnusigma")
     assert ie_parameter_otype("dsnusigma") == ("sensor", "dsnusigma")
     assert ie_parameter_otype("dsnulevel") == ("sensor", "dsnulevel")
