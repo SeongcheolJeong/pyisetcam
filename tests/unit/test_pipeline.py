@@ -4749,6 +4749,17 @@ def test_run_python_case_supports_sensor_dark_voltage_small_parity_case(asset_st
     assert percent_error < 0.05
 
 
+def test_run_python_case_supports_sensor_prnu_estimate_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_prnu_estimate_small", asset_store=asset_store)
+
+    assert case.payload["exp_times"].shape == (33,)
+    assert float(case.payload["prnu_estimate"]) > 0.0
+    assert float(case.payload["slope_mean"]) == pytest.approx(1.0, rel=1e-6)
+    assert float(case.payload["slope_std"]) > 0.0
+    assert float(case.payload["offset_std"]) > 0.0
+    assert case.payload["slope_sample"].shape == (8,)
+
+
 def test_run_python_case_supports_sensor_spatial_resolution_small_parity_case(asset_store) -> None:
     case = run_python_case_with_context("sensor_spatial_resolution_small", asset_store=asset_store)
 

@@ -1508,6 +1508,60 @@ switch case_name
         payload.offset = offset;
         payload.true_dark_voltage = trueDV;
 
+    case 'sensor_prnu_estimate_small'
+        rand('seed', 1);
+        randn('seed', 1);
+        scene = sceneCreate('uniform ee');
+        scene = sceneAdjustLuminance(scene, 100);
+        scene = sceneSet(scene, 'fov', 2);
+
+        oi = oiCreate('default', [], [], 0);
+        oi = oiSet(oi, 'optics offaxis method', 'skip');
+
+        sensor = sensorCreate();
+        sensor = sensorSet(sensor, 'size', [64 64]);
+        sensor = sensorSet(sensor, 'noise flag', 2);
+        scene = sceneSet(scene, 'fov', sensorGet(sensor, 'fov') * 1.5);
+        oi = oiCompute(oi, scene);
+
+        expTimes = repmat((40:2:60) / 1000, 1, 3);
+        sensor = sensorSet(sensor, 'DSNU level', 0.0);
+        sensor = sensorSet(sensor, 'PRNU level', 1.0);
+        sensor = sensorSet(sensor, 'pixel Read noise volts', 0.0);
+        sensor = sensorSet(sensor, 'pixel Dark voltage', 0.0);
+
+        nFilters = sensorGet(sensor, 'nfilters');
+        if nFilters == 3
+            nSamp = prod(sensorGet(sensor, 'size')) / 2;
+        else
+            nSamp = prod(sensorGet(sensor, 'size'));
+        end
+        volts = zeros(nSamp, length(expTimes));
+        for ii = 1:length(expTimes)
+            sensor = sensorSet(sensor, 'Exposure Time', expTimes(ii));
+            sensor = sensorCompute(sensor, oi, 0);
+            if nFilters == 3
+                volts(:, ii) = sensorGet(sensor, 'volts', 2);
+            else
+                tmp = sensorGet(sensor, 'volts');
+                volts(:, ii) = tmp(:);
+            end
+        end
+
+        A = [expTimes(:), ones(length(expTimes), 1)];
+        x = A \ volts';
+        slopes = x(1, :);
+        slopes = slopes / mean(slopes(:));
+        offsets = x(2, :);
+
+        payload.exp_times = expTimes(:);
+        payload.prnu_estimate = 100 * std(slopes);
+        payload.slope_mean = mean(slopes);
+        payload.slope_std = std(slopes);
+        payload.offset_mean = mean(offsets);
+        payload.offset_std = std(offsets);
+        payload.slope_sample = slopes(1:8)';
+
     case 'sensor_spatial_resolution_small'
         scene = sceneCreate('sweepFrequency');
         scene = sceneSet(scene, 'fov', 1);

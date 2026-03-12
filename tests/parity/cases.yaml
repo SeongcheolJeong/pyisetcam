@@ -897,6 +897,34 @@
       }
     },
     {
+      "name": "sensor_prnu_estimate_small",
+      "matlab_function": "sensorCompute/PRNU slope estimate",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "prnu_estimate": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.3
+        },
+        "slope_std": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.3
+        },
+        "offset_mean": {
+          "mode": "mean_rel",
+          "max_mean_rel": 6.0
+        },
+        "offset_std": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.5
+        },
+        "slope_sample": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.05
+        }
+      }
+    },
+    {
       "name": "sensor_spatial_resolution_small",
       "matlab_function": "sensorPlotLine/oiPlot",
       "rtol": 1e-05,

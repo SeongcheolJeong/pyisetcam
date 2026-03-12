@@ -2284,6 +2284,60 @@ def run_python_case_with_context(
             context={"scene": dark_scene, "oi": oi, "sensor": sensor},
         )
 
+    if case_name == "sensor_prnu_estimate_small":
+        scene = scene_create("uniform ee", asset_store=store)
+        scene = scene_adjust_luminance(scene, 100.0, asset_store=store)
+        scene = scene_set(scene, "fov", 2.0)
+
+        oi = oi_create("default", asset_store=store)
+        oi = oi_set(oi, "optics offaxis method", "skip")
+
+        sensor = sensor_create(asset_store=store)
+        sensor = sensor_set(sensor, "size", np.array([64, 64], dtype=int))
+        sensor = sensor_set(sensor, "noise flag", 2)
+        scene = scene_set(scene, "fov", float(sensor_get(sensor, "fov")) * 1.5)
+        oi = oi_compute(oi, scene)
+
+        exp_times = np.tile(np.arange(40.0, 62.0, 2.0, dtype=float) / 1000.0, 3)
+        sensor = sensor_set(sensor, "dsnu sigma", 0.0)
+        sensor = sensor_set(sensor, "prnu sigma", 1.0)
+        sensor = sensor_set(sensor, "pixel read noise volts", 0.0)
+        sensor = sensor_set(sensor, "pixel dark voltage", 0.0)
+
+        volt_columns: list[np.ndarray] = []
+        n_filters = int(sensor_get(sensor, "nfilters"))
+        for ii, exp_time in enumerate(exp_times, start=1):
+            trial_sensor = sensor.clone()
+            trial_sensor = sensor_set(trial_sensor, "exposure time", float(exp_time))
+            computed = sensor_compute(trial_sensor, oi, seed=ii)
+            if n_filters == 3:
+                volts = np.asarray(sensor_get(computed, "volts", 2), dtype=float).reshape(-1, order="F")
+            else:
+                volts = np.asarray(sensor_get(computed, "volts"), dtype=float).reshape(-1, order="F")
+            volt_columns.append(volts)
+
+        volts = np.column_stack(volt_columns)
+        a = np.column_stack([exp_times, np.ones(exp_times.shape[0], dtype=float)])
+        fit = np.linalg.lstsq(a, volts.T, rcond=None)[0]
+        slopes = np.asarray(fit[0, :], dtype=float)
+        slopes = slopes / max(float(np.mean(slopes)), 1e-12)
+        offsets = np.asarray(fit[1, :], dtype=float)
+        prnu_estimate = 100.0 * float(np.std(slopes))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "exp_times": exp_times,
+                "prnu_estimate": prnu_estimate,
+                "slope_mean": float(np.mean(slopes)),
+                "slope_std": float(np.std(slopes)),
+                "offset_mean": float(np.mean(offsets)),
+                "offset_std": float(np.std(offsets)),
+                "slope_sample": slopes[:8],
+            },
+            context={"scene": scene, "oi": oi, "sensor": sensor},
+        )
+
     if case_name == "sensor_spatial_resolution_small":
         scene = scene_create("sweepFrequency", asset_store=store)
         scene = scene_set(scene, "fov", 1.0)
