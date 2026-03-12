@@ -88,7 +88,7 @@ from .optics import (
     zemax_read_header,
 )
 from .parity import run_python_case, run_python_case_with_context
-from .plotting import ip_plot, oi_plot, scene_plot, sensor_plot, sensor_plot_fft, wvf_plot
+from .plotting import ip_plot, oi_plot, scene_plot, sensor_plot, sensor_plot_fft, sensor_plot_line, wvf_plot
 from .ptable import IEPTable, ie_p_table
 from .roi import ie_locs2_rect, ie_rect2_locs, ie_rect2_vertices, ie_roi2_locs, vc_get_roi_data, vc_rect2_locs
 from .session import (
@@ -296,6 +296,7 @@ __all__ = [
     "sensor_snr",
     "sensor_plot",
     "sensor_plot_fft",
+    "sensor_plot_line",
     "session_add_and_select_object",
     "session_add_object",
     "session_count_objects",
@@ -463,6 +464,7 @@ __all__ = [
     "plotScene",
     "plotSensor",
     "plotSensorFFT",
+    "sensorPlotLine",
     "oiPlot",
     "wvfPlot",
     "xyz_from_energy",
@@ -505,6 +507,7 @@ ipPlot = ip_plot
 plotScene = scene_plot
 plotSensor = sensor_plot
 plotSensorFFT = sensor_plot_fft
+sensorPlotLine = sensor_plot_line
 wvfPlot = wvf_plot
 airyDisk = airy_disk
 opticsRayTrace = optics_ray_trace

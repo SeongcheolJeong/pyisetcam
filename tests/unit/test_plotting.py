@@ -18,6 +18,7 @@ from pyisetcam import (
     plotScene,
     plotSensor,
     plotSensorFFT,
+    sensorPlotLine,
     scene_create,
     scene_get,
     scene_set,
@@ -390,6 +391,37 @@ def test_plot_sensor_line_data(asset_store) -> None:
     assert dv_udata["yLabel"] == "digital value"
     assert dv_udata["titleString"] == "Vertical line 2"
     assert np.allclose(dv_udata["data"][0], np.asarray(expected_dv["data"][0], dtype=float))
+
+
+def test_sensor_plot_line_matches_matlab_style_line_contract(asset_store) -> None:
+    sensor = sensor_create("monochrome", asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 2)
+    sensor = sensor_set(sensor, "cols", 4)
+    sensor = sensor_set(
+        sensor,
+        "volts",
+        np.array(
+            [
+                [1.0, 2.0, 3.0, 4.0],
+                [5.0, 6.0, 7.0, 8.0],
+            ],
+            dtype=float,
+        ),
+    )
+
+    fig_num, udata = sensorPlotLine(sensor, "h", "volts", "space", np.array([1, 2], dtype=int))
+    fft_fig_num, fft_udata = sensorPlotLine(sensor, "h", "volts", "fft", np.array([1, 2], dtype=int))
+    expected_line = sensor_get(sensor, "hline volts", 2)
+    expected_fft, _ = plotSensorFFT(sensor, "h", "volts", np.array([1, 2], dtype=int))
+
+    assert fig_num is None
+    assert fft_fig_num is None
+    assert np.allclose(udata["pixPos"], 1e6 * np.asarray(expected_line["pos"][0], dtype=float))
+    assert np.allclose(udata["pixData"], np.asarray(expected_line["data"][0], dtype=float))
+    assert np.allclose(fft_udata["freq"], np.asarray(expected_fft["cpd"], dtype=float))
+    assert np.allclose(fft_udata["amp"], np.asarray(expected_fft["ampPlot"], dtype=float))
+    assert np.isclose(float(fft_udata["mean"]), float(expected_fft["mean"]))
+    assert np.isclose(float(fft_udata["peakContrast"]), float(expected_fft["peakContrast"]))
 
 
 def test_plot_sensor_two_lines_wrapper(asset_store) -> None:

@@ -1148,6 +1148,56 @@ def sensor_plot_fft(
     return _sensor_fft_payload(sensor, orientation, param_format(data_type), selector), None
 
 
+def sensor_plot_line(
+    sensor: Sensor,
+    ori: str = "h",
+    data_type: str = "dv",
+    s_or_t: str = "space",
+    xy: Any | None = None,
+) -> tuple[None, dict[str, Any]]:
+    """Return MATLAB-style `sensorPlotLine` user-data without opening a figure."""
+
+    orientation_key = param_format(ori)
+    if orientation_key in {"h", "horizontal"}:
+        orientation = "h"
+    elif orientation_key in {"v", "vertical"}:
+        orientation = "v"
+    else:
+        raise UnsupportedOptionError("sensorPlotLine", ori)
+
+    data_key = param_format(data_type)
+    if data_key not in {"volts", "electrons", "dv"}:
+        raise UnsupportedOptionError("sensorPlotLine", data_type)
+
+    domain_key = param_format(s_or_t)
+    if domain_key in {"spatial", "space", "spacedomain"}:
+        selector = _roi_required("sensorPlotLine", f"{ori} {data_type}", xy)
+        line_key = f"{data_key} {'hline' if orientation == 'h' else 'vline'}"
+        payload = _sensor_plot_line_data(sensor, line_key, selector)
+        if int(sensor_get(sensor, "nfilters")) > 1:
+            return None, {
+                "pos": [np.asarray(values, dtype=float).copy() for values in payload["pos"]],
+                "data": [np.asarray(values, dtype=float).copy() for values in payload["data"]],
+                "pixColor": [int(color) for color in np.asarray(payload["pixColor"], dtype=int).reshape(-1)],
+            }
+        return None, {
+            "pixPos": np.asarray(payload["pos"][0], dtype=float).copy(),
+            "pixData": np.asarray(payload["data"][0], dtype=float).copy(),
+        }
+
+    if domain_key in {"transform", "fourier", "fourierdomain", "fft"}:
+        selector = _roi_required("sensorPlotLine", f"{ori} {data_type}", xy)
+        payload = _sensor_fft_payload(sensor, orientation, data_key, selector)
+        return None, {
+            "freq": np.asarray(payload["cpd"], dtype=float).copy(),
+            "amp": np.asarray(payload["ampPlot"], dtype=float).copy(),
+            "mean": float(payload["mean"]),
+            "peakContrast": float(payload["peakContrast"]),
+        }
+
+    raise UnsupportedOptionError("sensorPlotLine", s_or_t)
+
+
 def ip_plot(
     ip: ImageProcessor,
     p_type: str = "horizontal line",
@@ -1229,4 +1279,6 @@ plotScene = scene_plot
 oiPlot = oi_plot
 plotSensor = sensor_plot
 plotSensorFFT = sensor_plot_fft
+sensorPlotLine = sensor_plot_line
 ipPlot = ip_plot
+wvfPlot = wvf_plot

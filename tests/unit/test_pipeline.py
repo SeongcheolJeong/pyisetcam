@@ -4684,6 +4684,15 @@ def test_run_python_case_supports_sensor_imx363_crop_parity_case(asset_store) ->
     assert case.payload["digital_values"].shape == (6, 8)
 
 
+def test_run_python_case_supports_sensor_plot_line_volts_space_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_plot_line_volts_space_small", asset_store=asset_store)
+
+    assert case.payload["pixPos"].ndim == 1
+    assert case.payload["pixData"].ndim == 1
+    assert case.payload["pixPos"].size == case.payload["pixData"].size
+    assert case.payload["pixPos"].size > 0
+
+
 def test_wvf_osa_index_helpers_round_trip() -> None:
     indices = np.array([0, 1, 2, 5, 15, 20, 35], dtype=int)
 

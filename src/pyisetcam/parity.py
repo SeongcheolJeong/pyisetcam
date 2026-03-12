@@ -42,7 +42,7 @@ from .optics import (
     oi_set,
     si_synthetic,
 )
-from .plotting import oi_plot, wvf_plot
+from .plotting import oi_plot, sensor_plot_line, wvf_plot
 from .scene import scene_adjust_illuminant, scene_create, scene_get, scene_set
 from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_crop, sensor_get, sensor_set
 from .utils import blackbody, energy_to_quanta, param_format, quanta_to_energy, unit_frequency_list
@@ -2162,6 +2162,31 @@ def run_python_case_with_context(
                 "digital_values": np.asarray(sensor_get(cropped, "digital values"), dtype=float),
             },
             context={"sensor": cropped},
+        )
+
+    if case_name == "sensor_plot_line_volts_space_small":
+        sensor = sensor_create("monochrome", asset_store=store)
+        sensor = sensor_set(sensor, "rows", 2)
+        sensor = sensor_set(sensor, "cols", 4)
+        sensor = sensor_set(
+            sensor,
+            "volts",
+            np.array(
+                [
+                    [1.0, 2.0, 3.0, 4.0],
+                    [5.0, 6.0, 7.0, 8.0],
+                ],
+                dtype=float,
+            ),
+        )
+        _, udata = sensor_plot_line(sensor, "h", "volts", "space", np.array([1, 2], dtype=int))
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "pixPos": np.asarray(udata["pixPos"], dtype=float),
+                "pixData": np.asarray(udata["pixData"], dtype=float),
+            },
+            context={"sensor": sensor},
         )
 
     if case_name == "ip_default_pipeline":

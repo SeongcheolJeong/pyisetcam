@@ -859,6 +859,12 @@
       "atol": 1e-08
     },
     {
+      "name": "sensor_plot_line_volts_space_small",
+      "matlab_function": "sensorPlotLine",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "ip_default_pipeline",
       "matlab_function": "ipCompute",
       "rtol": 0.001,

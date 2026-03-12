@@ -111,7 +111,9 @@ through `ie_dng_read` / `ieDNGRead`, `ie_dng_simple_info` /
 `ieDNGSimpleInfo`, and `sensor_dng_read` / `sensorDNGRead`, covering the
 checked-in Pixel 4a `MCC-centered.dng` workflow from
 `t_sensorReadRaw.m` and upstream-backed `sensorCreate('IMX363')` crop
-flows.
+flows. That same tutorial path now also includes headless
+`sensor_plot_line` / `sensorPlotLine` coverage for the
+`t_sensorSpatialResolution.m` line-profile workflow.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit

@@ -1428,6 +1428,16 @@ switch case_name
         payload.pattern = sensorGet(sensor, 'pattern');
         payload.digital_values = sensorGet(sensor, 'digital values');
 
+    case 'sensor_plot_line_volts_space_small'
+        sensor = sensorCreate('monochrome');
+        sensor = sensorSet(sensor, 'rows', 2);
+        sensor = sensorSet(sensor, 'cols', 4);
+        sensor = sensorSet(sensor, 'volts', [1 2 3 4; 5 6 7 8]);
+        sSupport = sensorGet(sensor, 'spatialSupport', 'microns');
+        volts = sensorGet(sensor, 'volts');
+        payload.pixPos = sSupport.x;
+        payload.pixData = squeeze(volts(2,:));
+
     case 'ip_default_pipeline'
         scene = sceneCreate();
         oi = oiCreate();
