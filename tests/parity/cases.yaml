@@ -765,6 +765,12 @@
       "atol": 1e-06
     },
     {
+      "name": "oi_otfwavelength_diffraction_small",
+      "matlab_function": "oiPlot (otf wavelength diffraction)",
+      "rtol": 1e-04,
+      "atol": 1e-06
+    },
+    {
       "name": "oi_otfwavelength_wvf_small",
       "matlab_function": "oiPlot (otf wavelength wvf)",
       "rtol": 1e-04,

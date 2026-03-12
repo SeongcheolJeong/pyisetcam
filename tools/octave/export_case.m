@@ -1235,6 +1235,29 @@ switch case_name
         payload.wavelength = wavelength;
         payload.otf = otfWave;
 
+    case 'oi_otfwavelength_diffraction_small'
+        oi = oiCreate('diffraction limited');
+        optics = oiGet(oi, 'optics');
+        wavelength = opticsGet(optics, 'wavelength');
+        nWave = numel(wavelength);
+        units = 'um';
+        inCutoff = opticsGet(optics, 'inCutoff', units);
+        peakF = 3 * max(inCutoff);
+        nSamp = 100;
+        fSamp = (-nSamp:(nSamp - 1)) / nSamp;
+        [fX, fY] = meshgrid(fSamp, fSamp);
+        fSupport(:, :, 1) = fX * peakF;
+        fSupport(:, :, 2) = fY * peakF;
+        otf = dlMTF(oi, fSupport, wavelength, units);
+        fx = fSupport(1, :, 1);
+        otfWave = zeros(length(fx), nWave);
+        for ii = 1:nWave
+            otfWave(:, ii) = fftshift(otf(1, :, ii))';
+        end
+        payload.fSupport = fx;
+        payload.wavelength = wavelength;
+        payload.otf = otfWave;
+
     case 'oi_wvf_small_scene'
         scene = sceneCreate('checkerboard', 8, 4);
         oi = oiCreate('wvf');
