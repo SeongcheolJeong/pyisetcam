@@ -1496,6 +1496,65 @@ switch case_name
         payload.estimate_sparse = estimateSparse;
         payload.rgb_pred_sparse = rgbPredSparse;
 
+    case 'sensor_spectral_estimation_small'
+        scene = sceneCreate('uniform ee');
+        wave = sceneGet(scene, 'wave');
+
+        oi = oiCreate('default');
+        oi = oiSet(oi, 'optics model', 'diffraction limited');
+        oi = oiSet(oi, 'optics fnumber', 0.01);
+
+        sensor = sensorCreate();
+        sensor = sensorSet(sensor, 'size', [64 64]);
+        sensor = sensorSet(sensor, 'auto exposure', true);
+
+        scene = sceneSet(scene, 'fov', sensorGet(sensor, 'fov', scene, oi) * 1.5);
+
+        waveStep = 50;
+        centers = (wave(1):waveStep:wave(end))';
+        widths = waveStep / 2;
+        nLights = length(centers);
+
+        spd = zeros(length(wave), nLights);
+        for ii = 1:nLights
+            spd(:, ii) = exp(-0.5 * ((wave - centers(ii)) / widths).^2);
+        end
+        spd = spd * 1e16;
+
+        nFilters = sensorGet(sensor, 'nfilters');
+        exposureTimes = zeros(1, nLights);
+        responsivity = zeros(nFilters, nLights);
+
+        for ii = 1:nLights
+            spdImage = repmat(spd(:, ii), [1, 32, 32]);
+            spdImage = permute(spdImage, [2, 3, 1]);
+            trialScene = sceneSet(scene, 'photons', spdImage);
+            trialOI = oiCompute(oi, trialScene);
+            computed = sensorCompute(sensor, trialOI, 0);
+            exposureTimes(ii) = sensorGet(computed, 'exposure time');
+
+            for jj = 1:nFilters
+                volts = sensorGet(computed, 'volts', jj);
+                responsivity(jj, ii) = mean(volts(:)) / exposureTimes(ii);
+            end
+        end
+
+        weights = responsivity / (spd' * spd);
+        estimatedFilters = (weights * spd')';
+        estimatedFilters = estimatedFilters / max(estimatedFilters(:));
+
+        sensorFilters = sensorGet(sensor, 'color filters');
+        sensorFilters = sensorFilters / max(sensorFilters(:));
+
+        payload.wave = wave;
+        payload.centers = centers;
+        payload.spd = spd;
+        payload.exposure_times = exposureTimes;
+        payload.responsivity = responsivity;
+        payload.weights = weights;
+        payload.estimated_filters = estimatedFilters;
+        payload.sensor_filters = sensorFilters;
+
     case 'sensor_exposure_color_small'
         oi = oiCreate;
         scene = sceneCreate;

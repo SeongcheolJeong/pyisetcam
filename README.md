@@ -129,6 +129,8 @@ includes `signal_current` / `signalCurrent` coverage for the
 `ie_read_spectra` / `ieReadSpectra` coverage for the core spectral-loading
 path used by `t_sensorEstimation.m`, together with curated parity on the
 Macbeth/D65/scanner pseudoinverse estimation workflow,
+plus direct curated parity on the simulated filter-responsivity and
+spectral-filter recovery workflow from `s_sensorSpectralEstimation.m`,
 plus
 `filter transmissivities` and overexposed `ipCompute` color-shift coverage
 from `t_sensorExposureColor.m`, and `ieFitLine`-driven dark-voltage

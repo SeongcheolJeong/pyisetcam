@@ -4897,6 +4897,21 @@ def test_run_python_case_supports_sensor_estimation_small_parity_case(asset_stor
     assert case.payload["rgb_pred_sparse"].shape == (3, 24)
 
 
+def test_run_python_case_supports_sensor_spectral_estimation_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_spectral_estimation_small", asset_store=asset_store)
+
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["centers"].shape == (7,)
+    assert case.payload["spd"].shape == (31, 7)
+    assert case.payload["exposure_times"].shape == (7,)
+    assert case.payload["responsivity"].shape == (3, 7)
+    assert case.payload["weights"].shape == (3, 7)
+    assert case.payload["estimated_filters"].shape == (31, 3)
+    assert case.payload["sensor_filters"].shape == (31, 3)
+    assert float(np.max(case.payload["estimated_filters"])) <= 1.0 + 1e-8
+    assert float(np.max(case.payload["sensor_filters"])) <= 1.0 + 1e-8
+
+
 def test_sensor_read_raw_tutorial_flow(asset_store) -> None:
     dng_path = asset_store.resolve("data/images/rawcamera/MCC-centered.dng")
 

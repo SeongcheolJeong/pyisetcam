@@ -883,6 +883,26 @@
       "atol": 1e-08
     },
     {
+      "name": "sensor_spectral_estimation_small",
+      "matlab_function": "s_sensorSpectralEstimation",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "exposure_times": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.001
+        },
+        "responsivity": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        },
+        "estimated_filters": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        }
+      }
+    },
+    {
       "name": "sensor_exposure_color_small",
       "matlab_function": "sensorCompute/ipCompute overexposure color",
       "rtol": 1e-05,

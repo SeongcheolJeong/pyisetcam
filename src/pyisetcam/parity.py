@@ -2282,6 +2282,65 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "sensor_spectral_estimation_small":
+        scene = scene_create("uniform ee", asset_store=store)
+        wave = np.asarray(scene_get(scene, "wave"), dtype=float)
+
+        oi = oi_create("default", asset_store=store)
+        oi = oi_set(oi, "optics model", "diffraction limited")
+        oi = oi_set(oi, "optics fnumber", 0.01)
+
+        sensor = sensor_create(asset_store=store)
+        sensor = sensor_set(sensor, "size", np.array([64, 64], dtype=int))
+        sensor = sensor_set(sensor, "auto exposure", True)
+
+        scene = scene_set(scene, "fov", float(sensor_get(sensor, "fov", scene, oi)) * 1.5)
+
+        wave_step = 50.0
+        centers = np.arange(wave[0], wave[-1] + wave_step, wave_step, dtype=float)
+        width = wave_step / 2.0
+        spd = np.exp(-0.5 * ((wave[:, None] - centers[None, :]) / width) ** 2)
+        spd *= 1.0e16
+
+        n_filters = int(sensor_get(sensor, "nfilters"))
+        responsivity = np.zeros((n_filters, centers.size), dtype=float)
+        exposure_times = np.zeros(centers.size, dtype=float)
+
+        for ii in range(centers.size):
+            spd_image = np.broadcast_to(spd[:, ii][None, None, :], (32, 32, wave.size)).copy()
+            trial_scene = scene_set(scene, "photons", spd_image)
+            trial_oi = oi_compute(oi, trial_scene)
+            computed = sensor_compute(sensor, trial_oi, False)
+            exposure_times[ii] = float(sensor_get(computed, "exposure time"))
+
+            for jj in range(n_filters):
+                volts = np.asarray(sensor_get(computed, "volts", jj + 1), dtype=float)
+                responsivity[jj, ii] = float(np.mean(volts)) / max(exposure_times[ii], 1e-12)
+
+        weights = responsivity @ np.linalg.pinv(spd.T @ spd)
+        estimated_filters = (weights @ spd.T).T
+        estimated_peak = float(np.max(estimated_filters))
+        if abs(estimated_peak) > 0.0:
+            estimated_filters = estimated_filters / estimated_peak
+
+        sensor_filters = np.asarray(sensor_get(sensor, "color filters"), dtype=float)
+        sensor_filters = sensor_filters / max(float(np.max(sensor_filters)), 1e-12)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "centers": centers,
+                "spd": spd,
+                "exposure_times": exposure_times,
+                "responsivity": responsivity,
+                "weights": weights,
+                "estimated_filters": estimated_filters,
+                "sensor_filters": sensor_filters,
+            },
+            context={"scene": scene, "oi": oi, "sensor": sensor},
+        )
+
     if case_name == "sensor_exposure_color_small":
         scene = scene_create(asset_store=store)
         oi = oi_compute(oi_create(asset_store=store), scene)
