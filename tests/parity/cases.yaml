@@ -103,6 +103,12 @@
       "atol": 1e-08
     },
     {
+      "name": "wvf_psf_spacing_small",
+      "matlab_function": "wvfSet/wvfGet",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "metrics_xyz_from_energy_1d",
       "matlab_function": "ieXYZFromEnergy",
       "rtol": 1e-05,

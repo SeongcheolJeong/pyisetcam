@@ -187,6 +187,9 @@ That same pupil-size workflow now also has direct Octave parity on the
 measured-vs-calculated pupil comparison path from `s_wvfPupilSize.m`,
 holding the calculated pupil fixed while varying the measured Thibos
 coefficient set.
+The same WVF surface now also supports the `s_wvfPSFSpacing.m` numeric
+path through `wvfSet(..., 'psf sample spacing', ...)`, with direct Octave
+parity on the resulting field-size and sampling relationship.
 for script-driven synthetic aperture generation, including deterministic
 clean polygon support used by the upstream flare scripts and direct
 Octave parity on that clean-aperture path.

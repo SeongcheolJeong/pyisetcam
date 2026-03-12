@@ -235,6 +235,32 @@ def test_wvf_measured_pupil_variation_smoke(asset_store) -> None:
     assert any(diff > 1e-9 for diff in max_diffs)
 
 
+def test_wvf_psf_sample_spacing_setter_matches_formula() -> None:
+    wavelength_nm = 550.0
+    focal_length_mm = 4.0
+    f_number = 4.0
+    n_pixels = 1024
+    psf_spacing_mm = 1e-3
+
+    wvf = wvf_create()
+    wvf = wvf_set(wvf, "wave", wavelength_nm)
+    wvf = wvf_set(wvf, "focal length", focal_length_mm, "mm")
+    wvf = wvf_set(wvf, "calc pupil diameter", focal_length_mm / f_number, "mm")
+    wvf = wvf_set(wvf, "spatial samples", n_pixels)
+    wvf = wvf_set(wvf, "psf sample spacing", psf_spacing_mm)
+
+    lambda_mm = float(np.asarray(wvf_get(wvf, "wave", "mm"), dtype=float).reshape(-1)[0])
+    pupil_spacing_mm = lambda_mm * focal_length_mm / (psf_spacing_mm * n_pixels)
+    expected_field_size_mm = pupil_spacing_mm * n_pixels
+
+    assert np.isclose(float(wvf_get(wvf, "field size mm", "mm")), expected_field_size_mm)
+    assert np.isclose(float(wvf_get(wvf, "pupil sample spacing", "mm", wavelength_nm)), pupil_spacing_mm)
+    assert np.isclose(
+        float(wvf_get(wvf, "psf sample spacing")),
+        float(wvf_get(wvf, "ref psf sample interval")),
+    )
+
+
 def test_scene_get_depth_map_defaults_to_scene_distance(asset_store) -> None:
     scene = scene_create(asset_store=asset_store)
     depth_map = scene_get(scene, "depth map")

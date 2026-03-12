@@ -393,6 +393,35 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "wvf_psf_spacing_small":
+        wavelength_nm = 550.0
+        focal_length_mm = 4.0
+        f_number = 4.0
+        n_pixels = 1024
+        psf_spacing_mm = 1e-3
+
+        wvf = wvf_create()
+        wvf = wvf_set(wvf, "wave", wavelength_nm)
+        wvf = wvf_set(wvf, "focal length", focal_length_mm, "mm")
+        wvf = wvf_set(wvf, "calc pupil diameter", focal_length_mm / f_number, "mm")
+        wvf = wvf_set(wvf, "spatial samples", n_pixels)
+        wvf = wvf_set(wvf, "psf sample spacing", psf_spacing_mm)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wavelength_nm": wavelength_nm,
+                "focal_length_mm": focal_length_mm,
+                "calc_pupil_diameter_mm": float(wvf_get(wvf, "calc pupil size", "mm")),
+                "npixels": int(wvf_get(wvf, "npixels")),
+                "field_size_mm": float(wvf_get(wvf, "field size mm", "mm")),
+                "pupil_sample_spacing_mm": float(wvf_get(wvf, "pupil sample spacing", "mm", wavelength_nm)),
+                "psf_sample_spacing_arcmin": float(wvf_get(wvf, "psf sample spacing")),
+                "ref_psf_sample_interval_arcmin": float(wvf_get(wvf, "ref psf sample interval")),
+            },
+            context={"wvf": wvf},
+        )
+
     if case_name == "metrics_xyz_from_energy_1d":
         wave = np.arange(400.0, 701.0, 10.0, dtype=float)
         energy = np.linspace(0.05, 1.55, wave.size, dtype=float)

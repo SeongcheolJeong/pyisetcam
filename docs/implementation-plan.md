@@ -17,6 +17,7 @@
 - The same script-driven WVF surface now also includes `wvfLoadThibosVirtualEyes`, with the MATLAB default mean-vector return plus explicit covariance/subject-coefficient outputs for the upstream pupil-size scripts.
 - That same pupil-size WVF surface now also supports MATLAB key/value `wvfCreate(...)` construction together with `lcaMethod='human'`, with direct Octave parity on the Thibos pupil-size compute path.
 - That same pupil-size WVF surface now also has direct Octave parity on the measured-vs-calculated pupil comparison path from `s_wvfPupilSize.m`.
+- The same script-driven WVF surface now also supports `wvfSet(..., 'psf sample spacing', ...)`, with direct Octave parity on the `s_wvfPSFSpacing.m` field-size/sampling path.
 - That same explicit WVF compute surface now also supports the MATLAB key/value workflow `wvfCompute(wvf, 'aperture', aperture)`, with direct Octave parity on the polygon-aperture compute path used by the upstream flare scripts.
 - The same script-driven optics surface now also includes headless `oiPlot(..., 'psf'/'psf550'/'psfxaxis'/'psfyaxis')`, backed by computed `oiGet(..., 'psf data'/'psf xaxis'/'psf yaxis')` support for diffraction-limited, custom-PSF, and computed WVF shift-invariant optics.
 - The adjacent diffraction-limited optics plotting surface now also includes headless `oiPlot(..., 'ls wavelength'/'lswavelength'/'otf wavelength'/'mtf wavelength')` support for the MATLAB line-spread and OTF-by-wavelength workflows used by the diffraction PSF scripts.

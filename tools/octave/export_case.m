@@ -208,6 +208,29 @@ switch case_name
         payload.max_abs_diff_vs_first_550 = maxAbsDiffs;
         payload.psf_mid_row_550 = psfMidRows;
 
+    case 'wvf_psf_spacing_small'
+        lambdaNM = 550;
+        fnumber = 4;
+        focallengthMM = 4;
+        nPixels = 1024;
+        psf_spacingMM = 1e-3;
+
+        wvf = wvfCreate;
+        wvf = wvfSet(wvf, 'wave', lambdaNM);
+        wvf = wvfSet(wvf, 'focal length', focallengthMM, 'mm');
+        wvf = wvfSet(wvf, 'calc pupil diameter', focallengthMM/fnumber);
+        wvf = wvfSet(wvf, 'spatial samples', nPixels);
+        wvf = wvfSet(wvf, 'psf sample spacing', psf_spacingMM);
+
+        payload.wavelength_nm = lambdaNM;
+        payload.focal_length_mm = focallengthMM;
+        payload.calc_pupil_diameter_mm = wvfGet(wvf, 'calc pupil size', 'mm');
+        payload.npixels = wvfGet(wvf, 'npixels');
+        payload.field_size_mm = wvfGet(wvf, 'field size mm', 'mm');
+        payload.pupil_sample_spacing_mm = wvfGet(wvf, 'pupil sample spacing', 'mm', lambdaNM);
+        payload.psf_sample_spacing_arcmin = wvfGet(wvf, 'psf sample spacing');
+        payload.ref_psf_sample_interval_arcmin = wvfGet(wvf, 'ref psf sample interval');
+
     case 'metrics_xyz_from_energy_1d'
         wave = (400:10:700)';
         energy = linspace(0.05, 1.55, numel(wave));

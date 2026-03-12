@@ -2211,6 +2211,8 @@ def _wave_unit_scale(unit: Any) -> float:
         return 1.0
     if normalized in {"um", "micron", "microns"}:
         return 1e-3
+    if normalized in {"mm", "millimeter", "millimeters"}:
+        return 1e-6
     if normalized in {"m", "meter", "meters"}:
         return 1e-9
     raise ValueError(f"Unsupported wavelength unit: {unit}")
@@ -2243,6 +2245,20 @@ def _wvf_angle_samples_for_unit(samples_deg: np.ndarray, unit: Any) -> np.ndarra
     if normalized in {"sec", "arcsec", "second", "seconds"}:
         return samples_deg * 3600.0
     raise UnsupportedOptionError("wvfGet", f"angle unit {unit}")
+
+
+def _wvf_angle_scalar_to_radians(value: Any, unit: Any | None = None) -> float:
+    normalized = param_format(unit or "min")
+    scalar = float(np.asarray(value, dtype=float).reshape(-1)[0])
+    if normalized in {"deg", "degree", "degrees"}:
+        return float(np.deg2rad(scalar))
+    if normalized in {"min", "arcmin", "minute", "minutes"}:
+        return float(np.deg2rad(scalar / 60.0))
+    if normalized in {"sec", "arcsec", "second", "seconds"}:
+        return float(np.deg2rad(scalar / 3600.0))
+    if normalized in {"rad", "radian", "radians"}:
+        return scalar
+    raise UnsupportedOptionError("wvfSet", f"angle unit {unit}")
 
 
 def _wvf_psf_angular_samples(wvf: dict[str, Any], unit: Any, wavelength_nm: float) -> np.ndarray:
@@ -2528,6 +2544,24 @@ def wvf_set(wvf: dict[str, Any], parameter: str, value: Any, *args: Any) -> dict
 
     if key in {"refpupilplanesize", "pupilplanesize", "refpupilplanesizemm", "fieldsizemm", "fieldsizemm"}:
         updated["ref_pupil_plane_size_mm"] = float(value) / _spatial_unit_scale(args[0] if args else "mm") * 1e3
+        return updated
+
+    if key in {"psfsampleinterval", "refpsfsampleinterval", "refpsfarcminpersample", "refpsfarcminperpixel"}:
+        radians_per_pixel = _wvf_angle_scalar_to_radians(value, args[0] if args else "min")
+        measured_wavelength_mm = float(wvf_get(updated, "measured wavelength", "mm"))
+        field_size_mm = measured_wavelength_mm / max(radians_per_pixel, 1e-12)
+        updated = wvf_set(updated, "field size mm", field_size_mm)
+        updated["computed"] = False
+        return updated
+
+    if key in {"psfsamplespacing", "psfdx"}:
+        psf_spacing_mm = float(value) / _spatial_unit_scale(args[0] if args else "mm") * 1e3
+        lambda_mm = float(np.asarray(wvf_get(updated, "wave", "mm"), dtype=float).reshape(-1)[0])
+        focal_length_mm = float(wvf_get(updated, "focal length", "mm"))
+        n_pixels = int(wvf_get(updated, "npixels"))
+        pupil_spacing_mm = lambda_mm * focal_length_mm / max(psf_spacing_mm * n_pixels, 1e-12)
+        updated = wvf_set(updated, "field size mm", pupil_spacing_mm * n_pixels)
+        updated["computed"] = False
         return updated
 
     if key in {"focallength"}:
