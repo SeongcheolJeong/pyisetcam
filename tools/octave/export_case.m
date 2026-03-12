@@ -1465,6 +1465,49 @@ switch case_name
         payload.filters = sensorGet(sensor, 'filter transmissivities');
         payload.spectral_qe = sensorGet(sensor, 'spectral qe');
 
+    case 'sensor_dark_voltage_small'
+        rand('seed', 1);
+        randn('seed', 1);
+        scene = sceneCreate('uniform ee');
+        scene = sceneSet(scene, 'fov', 5);
+        darkScene = sceneAdjustLuminance(scene, 1e-8);
+
+        oi = oiCreate('default', [], [], 0);
+        darkOI = oiCompute(oi, darkScene);
+
+        sensor = sensorCreate();
+        sensor = sensorSet(sensor, 'noise flag', 2);
+        expTimes = logspace(0, 1.5, 10);
+        nFilters = sensorGet(sensor, 'nfilters');
+
+        clear volts
+        if nFilters == 3
+            nSamp = prod(sensorGet(sensor, 'size')) / 2;
+        else
+            nSamp = prod(sensorGet(sensor, 'size'));
+        end
+        volts = zeros(nSamp, length(expTimes));
+        for ii = 1:length(expTimes)
+            sensor = sensorSet(sensor, 'exposureTime', expTimes(ii));
+            sensor = sensorCompute(sensor, darkOI, 0);
+            if nFilters == 3
+                volts(:, ii) = sensorGet(sensor, 'volts', 2);
+            else
+                tmp = sensorGet(sensor, 'volts');
+                volts(:, ii) = tmp(:);
+            end
+        end
+        meanVolts = mean(volts, 1);
+        [darkVoltageEstimate, offset] = ieFitLine(expTimes, meanVolts);
+        pixel = sensorGet(sensor, 'pixel');
+        trueDV = pixelGet(pixel, 'darkvoltage');
+
+        payload.exp_times = expTimes(:);
+        payload.mean_volts = meanVolts(:);
+        payload.dark_voltage_estimate = darkVoltageEstimate;
+        payload.offset = offset;
+        payload.true_dark_voltage = trueDV;
+
     case 'sensor_spatial_resolution_small'
         scene = sceneCreate('sweepFrequency');
         scene = sceneSet(scene, 'fov', 1);

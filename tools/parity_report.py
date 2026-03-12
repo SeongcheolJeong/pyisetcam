@@ -133,6 +133,7 @@ def _compare(
 ) -> dict[str, Any]:
     normalized_reference = _normalize(reference)
     normalized_actual = _normalize(actual)
+    rule = field_rules.get(path[0]) if field_rules and path else None
 
     if isinstance(normalized_reference, dict):
         keys = sorted(key for key in normalized_reference if not key.startswith("__"))
@@ -166,30 +167,97 @@ def _compare(
         reference_scalar = float(np.asarray(normalized_reference))
         actual_scalar = float(np.asarray(normalized_actual))
         difference = abs(actual_scalar - reference_scalar)
-        passed = bool(np.isclose(actual_scalar, reference_scalar, rtol=rtol, atol=atol))
-        return {
-            "pass": passed,
+        rel_diff = float(difference / max(abs(reference_scalar), 1e-12))
+        base = {
             "expected": reference_scalar,
             "actual": actual_scalar,
             "abs_diff": difference,
-            "rel_diff": float(difference / max(abs(reference_scalar), 1e-12)),
+            "rel_diff": rel_diff,
         }
+        if rule and rule.get("mode") in {"mean_rel", "normalized_mae"}:
+            threshold_key = "max_mean_rel" if rule["mode"] == "mean_rel" else "max_normalized_mae"
+            threshold = float(rule[threshold_key])
+            return {
+                "pass": bool(rel_diff <= threshold),
+                "comparison_mode": str(rule["mode"]),
+                threshold_key: threshold,
+                **base,
+            }
+        if rule and rule.get("mode") == "scale_invariant":
+            if abs(actual_scalar) <= 0.0:
+                return {
+                    "pass": False,
+                    "comparison_mode": "scale_invariant",
+                    "reason": "Scale-invariant comparison requires nonzero actual data.",
+                    **base,
+                }
+            scale = reference_scalar / actual_scalar
+            scaled_actual = scale * actual_scalar
+            scaled_rel_diff = float(abs(scaled_actual - reference_scalar) / max(abs(reference_scalar), 1e-12))
+            result = {
+                "pass": bool(np.isclose(scaled_actual, reference_scalar, rtol=rtol, atol=atol)),
+                "comparison_mode": "scale_invariant",
+                "scale": scale,
+                "scaled_actual": scaled_actual,
+                "scaled_rel_diff": scaled_rel_diff,
+                **base,
+            }
+            if "max_mean_rel" in rule:
+                threshold = float(rule["max_mean_rel"])
+                result["pass"] = bool(scaled_rel_diff <= threshold)
+                result["max_mean_rel"] = threshold
+            return result
+        passed = bool(np.isclose(actual_scalar, reference_scalar, rtol=rtol, atol=atol))
+        return {"pass": passed, **base}
 
     if np.isscalar(normalized_reference) and np.isscalar(normalized_actual):
         reference_scalar = float(normalized_reference)
         actual_scalar = float(normalized_actual)
         difference = abs(actual_scalar - reference_scalar)
-        passed = bool(np.isclose(actual_scalar, reference_scalar, rtol=rtol, atol=atol))
-        return {
-            "pass": passed,
+        rel_diff = float(difference / max(abs(reference_scalar), 1e-12))
+        base = {
             "expected": reference_scalar,
             "actual": actual_scalar,
             "abs_diff": difference,
-            "rel_diff": float(difference / max(abs(reference_scalar), 1e-12)),
+            "rel_diff": rel_diff,
         }
+        if rule and rule.get("mode") in {"mean_rel", "normalized_mae"}:
+            threshold_key = "max_mean_rel" if rule["mode"] == "mean_rel" else "max_normalized_mae"
+            threshold = float(rule[threshold_key])
+            return {
+                "pass": bool(rel_diff <= threshold),
+                "comparison_mode": str(rule["mode"]),
+                threshold_key: threshold,
+                **base,
+            }
+        if rule and rule.get("mode") == "scale_invariant":
+            if abs(actual_scalar) <= 0.0:
+                return {
+                    "pass": False,
+                    "comparison_mode": "scale_invariant",
+                    "reason": "Scale-invariant comparison requires nonzero actual data.",
+                    **base,
+                }
+            scale = reference_scalar / actual_scalar
+            scaled_actual = scale * actual_scalar
+            scaled_rel_diff = float(abs(scaled_actual - reference_scalar) / max(abs(reference_scalar), 1e-12))
+            result = {
+                "pass": bool(np.isclose(scaled_actual, reference_scalar, rtol=rtol, atol=atol)),
+                "comparison_mode": "scale_invariant",
+                "scale": scale,
+                "scaled_actual": scaled_actual,
+                "scaled_rel_diff": scaled_rel_diff,
+                **base,
+            }
+            if "max_mean_rel" in rule:
+                threshold = float(rule["max_mean_rel"])
+                result["pass"] = bool(scaled_rel_diff <= threshold)
+                result["max_mean_rel"] = threshold
+            return result
+        passed = bool(np.isclose(actual_scalar, reference_scalar, rtol=rtol, atol=atol))
+        return {"pass": passed, **base}
 
     metrics = _array_metrics(normalized_reference, normalized_actual)
-    rule = field_rules.get(path[0]) if field_rules and path else None
     if rule and rule.get("mode") == "mean_rel":
         threshold = float(rule["max_mean_rel"])
         return {

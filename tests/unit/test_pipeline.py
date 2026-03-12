@@ -4736,6 +4736,19 @@ def test_run_python_case_supports_sensor_filter_transmissivities_parity_case(ass
     assert case.payload["spectral_qe"].shape == case.payload["filters"].shape
 
 
+def test_run_python_case_supports_sensor_dark_voltage_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_dark_voltage_small", asset_store=asset_store)
+
+    assert case.payload["exp_times"].shape == (10,)
+    assert case.payload["mean_volts"].shape == (10,)
+    assert float(case.payload["dark_voltage_estimate"]) > 0.0
+    assert float(case.payload["true_dark_voltage"]) > 0.0
+    percent_error = abs(float(case.payload["dark_voltage_estimate"]) - float(case.payload["true_dark_voltage"])) / float(
+        case.payload["true_dark_voltage"]
+    )
+    assert percent_error < 0.05
+
+
 def test_run_python_case_supports_sensor_spatial_resolution_small_parity_case(asset_store) -> None:
     case = run_python_case_with_context("sensor_spatial_resolution_small", asset_store=asset_store)
 

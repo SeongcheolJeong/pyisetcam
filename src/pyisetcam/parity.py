@@ -48,7 +48,7 @@ from .plotting import oi_plot, sensor_plot, sensor_plot_line, wvf_plot
 from .scene import scene_adjust_illuminant, scene_adjust_luminance, scene_create, scene_get, scene_set
 from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_crop, sensor_get, sensor_set
 from .sensor import signal_current
-from .utils import blackbody, energy_to_quanta, param_format, quanta_to_energy, unit_frequency_list
+from .utils import blackbody, energy_to_quanta, ie_fit_line, param_format, quanta_to_energy, unit_frequency_list
 
 
 @dataclass
@@ -2242,6 +2242,46 @@ def run_python_case_with_context(
                 "spectral_qe": np.asarray(sensor_get(sensor, "spectral qe"), dtype=float),
             },
             context={"sensor": sensor},
+        )
+
+    if case_name == "sensor_dark_voltage_small":
+        scene = scene_create("uniform ee", asset_store=store)
+        scene = scene_set(scene, "fov", 5.0)
+        dark_scene = scene_adjust_luminance(scene, 1e-8, asset_store=store)
+
+        oi = oi_compute(oi_create(asset_store=store), dark_scene)
+
+        sensor = sensor_create(asset_store=store)
+        sensor = sensor_set(sensor, "noise flag", 2)
+        sensor = sensor_set(sensor, "noise seed", 1)
+        exp_times = np.logspace(0.0, 1.5, 10)
+        n_filters = int(sensor_get(sensor, "nfilters"))
+
+        volt_columns: list[np.ndarray] = []
+        for exp_time in exp_times:
+            sensor = sensor_set(sensor, "exposureTime", float(exp_time))
+            computed = sensor_compute(sensor, oi, 0)
+            if n_filters == 3:
+                volts = np.asarray(sensor_get(computed, "volts", 2), dtype=float).reshape(-1, order="F")
+            else:
+                volts = np.asarray(sensor_get(computed, "volts"), dtype=float).reshape(-1, order="F")
+            volt_columns.append(volts)
+
+        volts = np.column_stack(volt_columns)
+        mean_volts = np.mean(volts, axis=0)
+        dark_voltage_estimate, offset = ie_fit_line(exp_times, mean_volts)
+        true_dark_voltage = float(sensor_get(sensor, "dark voltage"))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "exp_times": exp_times,
+                "mean_volts": mean_volts,
+                "dark_voltage_estimate": float(dark_voltage_estimate),
+                "offset": float(offset),
+                "true_dark_voltage": true_dark_voltage,
+            },
+            context={"scene": dark_scene, "oi": oi, "sensor": sensor},
         )
 
     if case_name == "sensor_spatial_resolution_small":

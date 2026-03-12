@@ -51,6 +51,7 @@ def _compare(
 ) -> None:
     reference = _normalize(reference)
     actual = _normalize(actual)
+    rule = field_rules.get(path[0]) if field_rules and path else None
     if isinstance(reference, dict):
         for key in reference:
             if key.startswith("__"):
@@ -70,12 +71,29 @@ def _compare(
         assert actual == reference
         return
     if np.isscalar(reference) and np.isscalar(actual):
-        assert np.isclose(float(actual), float(reference), rtol=rtol, atol=atol)
+        reference_scalar = float(reference)
+        actual_scalar = float(actual)
+        rel_diff = abs(actual_scalar - reference_scalar) / max(abs(reference_scalar), 1e-12)
+        if rule and rule.get("mode") in {"mean_rel", "normalized_mae"}:
+            threshold_key = "max_mean_rel" if rule["mode"] == "mean_rel" else "max_normalized_mae"
+            assert rel_diff <= float(rule[threshold_key])
+            return
+        if rule and rule.get("mode") == "scale_invariant":
+            if abs(actual_scalar) <= 0.0:
+                raise AssertionError("Scale-invariant comparison requires nonzero actual data.")
+            scale = reference_scalar / actual_scalar
+            scaled_actual = scale * actual_scalar
+            if "max_mean_rel" in rule:
+                scaled_rel_diff = abs(scaled_actual - reference_scalar) / max(abs(reference_scalar), 1e-12)
+                assert scaled_rel_diff <= float(rule["max_mean_rel"])
+            else:
+                assert np.isclose(scaled_actual, reference_scalar, rtol=rtol, atol=atol)
+            return
+        assert np.isclose(actual_scalar, reference_scalar, rtol=rtol, atol=atol)
         return
     reference_array = np.asarray(reference, dtype=float)
     actual_array = np.asarray(actual, dtype=float)
     assert reference_array.shape == actual_array.shape
-    rule = field_rules.get(path[0]) if field_rules and path else None
     if rule and rule.get("mode") == "mean_rel":
         relative = np.abs(actual_array - reference_array) / np.maximum(np.abs(reference_array), 1e-12)
         assert float(np.mean(relative)) <= float(rule["max_mean_rel"])

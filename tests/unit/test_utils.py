@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from pyisetcam import ieParameterOtype
-from pyisetcam.utils import blackbody, energy_to_quanta, ie_parameter_otype, param_format, quanta_to_energy, unit_frequency_list
+from pyisetcam.utils import blackbody, energy_to_quanta, ie_fit_line, ie_parameter_otype, param_format, quanta_to_energy, unit_frequency_list
 
 
 def test_param_format_string_and_key_value_list() -> None:
@@ -46,6 +47,20 @@ def test_blackbody_matlab_scaling() -> None:
 def test_unit_frequency_list_matches_matlab_even_and_odd() -> None:
     assert np.allclose(unit_frequency_list(4), np.array([-1.0, -0.5, 0.0, 0.5]))
     assert np.allclose(unit_frequency_list(5), np.array([-1.0, -0.5, 0.0, 0.5, 1.0]))
+
+
+def test_ie_fit_line_matches_matlab_one_line_and_multiple_lines() -> None:
+    x = np.array([1.0, 2.0, 3.0], dtype=float)
+    y = 2.0 * x + 0.5
+    slope, offset = ie_fit_line(x, y)
+    assert slope == pytest.approx(2.0)
+    assert offset == pytest.approx(0.5)
+
+    x_multi = x.reshape(-1, 1)
+    y_multi = np.column_stack((2.0 * x + 0.5, -1.0 * x + 3.0))
+    slopes, offsets = ie_fit_line(x_multi, y_multi, "multipleLines")
+    assert np.allclose(slopes, np.array([2.0, -1.0], dtype=float))
+    assert np.allclose(offsets, np.array([0.5, 3.0], dtype=float))
 
 
 def test_ie_parameter_otype_handles_direct_prefix_and_unique_params() -> None:

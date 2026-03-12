@@ -628,6 +628,53 @@ def unit_frequency_list(sample_count: int) -> NDArray[np.float64]:
     return coordinates / np.max(np.abs(coordinates))
 
 
+def ie_fit_line(
+    x: NDArray[np.float64] | list[float] | tuple[float, ...],
+    y: NDArray[np.float64] | list[float] | tuple[float, ...],
+    method: str = "leastSquares",
+) -> tuple[float | NDArray[np.float64], float | NDArray[np.float64]]:
+    """Mirror ISETCam's ieFitLine() least-squares line fitting behavior."""
+
+    normalized_method = param_format(method)
+    x_array = np.asarray(x, dtype=float)
+    y_array = np.asarray(y, dtype=float)
+
+    if x_array.ndim == 0 or y_array.ndim == 0:
+        raise ValueError("x and y must contain at least one sample.")
+    if x_array.ndim == 1:
+        x_array = x_array.reshape(-1, 1)
+    if y_array.ndim == 1:
+        y_array = y_array.reshape(-1, 1)
+    if x_array.shape[0] != y_array.shape[0]:
+        raise ValueError("x and y must have the same number of rows.")
+
+    n_data = y_array.shape[1]
+    if n_data > 1 and x_array.shape[1] == 1:
+        x_array = np.repeat(x_array, n_data, axis=1)
+    if x_array.shape != y_array.shape:
+        raise ValueError("x and y must have matching shapes after MATLAB-style replication.")
+
+    if normalized_method in {"oneline", "onelineleastsquares", "leastsquares"}:
+        x_flat = x_array.reshape(-1, order="F")
+        y_flat = y_array.reshape(-1, order="F")
+        design = np.column_stack((x_flat, np.ones(x_flat.size, dtype=float)))
+        fit = np.linalg.pinv(design) @ y_flat
+        return float(fit[0]), float(fit[1])
+
+    if normalized_method in {"multiplelines", "multiplelinesleastsquares"}:
+        slopes = np.empty(n_data, dtype=float)
+        offsets = np.empty(n_data, dtype=float)
+        ones_col = np.ones(x_array.shape[0], dtype=float)
+        for index in range(n_data):
+            design = np.column_stack((x_array[:, index], ones_col))
+            fit = np.linalg.pinv(design) @ y_array[:, index]
+            slopes[index] = float(fit[0])
+            offsets[index] = float(fit[1])
+        return slopes, offsets
+
+    raise ValueError(f"Unsupported ieFitLine method: {method}")
+
+
 def interp_spectra(
     source_wave_nm: NDArray[np.float64],
     values: NDArray[np.float64],

@@ -877,6 +877,26 @@
       "atol": 1e-08
     },
     {
+      "name": "sensor_dark_voltage_small",
+      "matlab_function": "sensorCompute/ieFitLine",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "mean_volts": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.01
+        },
+        "dark_voltage_estimate": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.001
+        },
+        "offset": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.2
+        }
+      }
+    },
+    {
       "name": "sensor_spatial_resolution_small",
       "matlab_function": "sensorPlotLine/oiPlot",
       "rtol": 1e-05,
