@@ -8,7 +8,7 @@ from typing import Any
 
 import numpy as np
 
-from .assets import AssetStore
+from .assets import AssetStore, ie_read_spectra
 from .camera import camera_compute, camera_create
 from .description import sensor_description
 from .display import display_create
@@ -2243,6 +2243,43 @@ def run_python_case_with_context(
                 "spectral_qe": np.asarray(sensor_get(sensor, "spectral qe"), dtype=float),
             },
             context={"sensor": sensor},
+        )
+
+    if case_name == "sensor_estimation_small":
+        wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+        macbeth_chart = ie_read_spectra("macbethChart", wave, asset_store=store)
+        illuminant_d65 = ie_read_spectra("D65.mat", wave, asset_store=store).reshape(-1)
+        sensors = ie_read_spectra("cMatch/camera", wave, asset_store=store)
+        cones = ie_read_spectra("SmithPokornyCones", wave, asset_store=store)
+
+        spectral_signals = illuminant_d65[:, None] * macbeth_chart
+        rgb_responses = sensors.T @ spectral_signals
+
+        estimate_full = (rgb_responses @ np.linalg.pinv(spectral_signals)).T
+        rgb_pred_full = estimate_full.T @ spectral_signals
+
+        sample_indices = np.arange(0, macbeth_chart.shape[1], 5, dtype=int)
+        estimate_sparse = (rgb_responses[:, sample_indices] @ np.linalg.pinv(spectral_signals[:, sample_indices])).T
+        rgb_pred_sparse = estimate_sparse.T @ spectral_signals
+
+        gray_series = np.arange(3, macbeth_chart.shape[1], 4, dtype=int)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "green_reflectance": macbeth_chart[:, 6],
+                "red_reflectance": macbeth_chart[:, 10],
+                "gray_reflectance": macbeth_chart[:, 11],
+                "illuminant_d65": illuminant_d65,
+                "sensors": sensors,
+                "cones": cones,
+                "rgb_responses_gray": rgb_responses[:, gray_series],
+                "estimate_full": estimate_full,
+                "rgb_pred_full": rgb_pred_full,
+                "estimate_sparse": estimate_sparse,
+                "rgb_pred_sparse": rgb_pred_sparse,
+            },
+            context={},
         )
 
     if case_name == "sensor_exposure_color_small":

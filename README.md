@@ -126,6 +126,10 @@ curated parity on the four `noise flag` modes and two-line volts plot used
 by the rest of that tutorial. The same sensor tutorial wave now also
 includes `signal_current` / `signalCurrent` coverage for the
 `t_sensorInputRefer.m` current-to-electrons workflow, plus
+`ie_read_spectra` / `ieReadSpectra` coverage for the core spectral-loading
+path used by `t_sensorEstimation.m`, together with curated parity on the
+Macbeth/D65/scanner pseudoinverse estimation workflow,
+plus
 `filter transmissivities` and overexposed `ipCompute` color-shift coverage
 from `t_sensorExposureColor.m`, and `ieFitLine`-driven dark-voltage
 estimation coverage for `s_sensorAnalyzeDarkVoltage.m`, plus slope-based

@@ -13,6 +13,7 @@ from pyisetcam import (
     camera_create,
     camera_get,
     camera_set,
+    ie_read_spectra,
     ie_save_si_data_file,
     ie_field_height_to_index,
     ip_get,
@@ -4865,6 +4866,35 @@ def test_sensor_exposure_color_tutorial_flow(asset_store) -> None:
     rendered = np.asarray(ip_get(ip, "result"), dtype=float)
     assert rendered.ndim == 3 and rendered.shape[2] == 3
     assert float(np.max(rendered)) <= 1.0 + 1e-8
+
+
+def test_ie_read_spectra_supports_sensor_estimation_sources(asset_store) -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+
+    macbeth_chart = ie_read_spectra("macbethChart", wave, asset_store=asset_store)
+    illuminant_d65 = ie_read_spectra("D65.mat", wave, asset_store=asset_store)
+    sensors = ie_read_spectra("cMatch/camera", wave, asset_store=asset_store)
+    cones = ie_read_spectra("SmithPokornyCones", wave, asset_store=asset_store)
+
+    assert macbeth_chart.shape == (wave.size, 24)
+    assert illuminant_d65.shape == (wave.size, 1)
+    assert sensors.shape == (wave.size, 3)
+    assert cones.shape == (wave.size, 3)
+
+
+def test_run_python_case_supports_sensor_estimation_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_estimation_small", asset_store=asset_store)
+
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["green_reflectance"].shape == (31,)
+    assert case.payload["illuminant_d65"].shape == (31,)
+    assert case.payload["sensors"].shape == (31, 3)
+    assert case.payload["cones"].shape == (31, 3)
+    assert case.payload["rgb_responses_gray"].shape == (3, 6)
+    assert case.payload["estimate_full"].shape == (31, 3)
+    assert case.payload["rgb_pred_full"].shape == (3, 24)
+    assert case.payload["estimate_sparse"].shape == (31, 3)
+    assert case.payload["rgb_pred_sparse"].shape == (3, 24)
 
 
 def test_sensor_read_raw_tutorial_flow(asset_store) -> None:

@@ -1465,6 +1465,37 @@ switch case_name
         payload.filters = sensorGet(sensor, 'filter transmissivities');
         payload.spectral_qe = sensorGet(sensor, 'spectral qe');
 
+    case 'sensor_estimation_small'
+        wavelength = (400:10:700)';
+        macbethChart = ieReadSpectra('macbethChart', wavelength);
+        D65 = ieReadSpectra('D65.mat', wavelength);
+        sensors = ieReadSpectra('cMatch/camera', wavelength);
+        cones = ieReadSpectra('SmithPokornyCones', wavelength);
+
+        spectral_signals = diag(D65) * macbethChart;
+        rgbResponses = sensors' * spectral_signals;
+
+        estimateFull = (rgbResponses * pinv(spectral_signals))';
+        rgbPredFull = estimateFull' * spectral_signals;
+
+        sampleIndices = 1:5:size(macbethChart, 2);
+        estimateSparse = (rgbResponses(:, sampleIndices) * pinv(spectral_signals(:, sampleIndices)))';
+        rgbPredSparse = estimateSparse' * spectral_signals;
+
+        graySeries = 4:4:size(macbethChart, 2);
+        payload.wave = wavelength;
+        payload.green_reflectance = macbethChart(:, 7);
+        payload.red_reflectance = macbethChart(:, 11);
+        payload.gray_reflectance = macbethChart(:, 12);
+        payload.illuminant_d65 = D65;
+        payload.sensors = sensors;
+        payload.cones = cones;
+        payload.rgb_responses_gray = rgbResponses(:, graySeries);
+        payload.estimate_full = estimateFull;
+        payload.rgb_pred_full = rgbPredFull;
+        payload.estimate_sparse = estimateSparse;
+        payload.rgb_pred_sparse = rgbPredSparse;
+
     case 'sensor_exposure_color_small'
         oi = oiCreate;
         scene = sceneCreate;

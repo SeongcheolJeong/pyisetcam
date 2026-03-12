@@ -5,6 +5,7 @@ from .assets import (
     DEFAULT_UPSTREAM_TARBALL_SHA256,
     AssetStore,
     ensure_upstream_snapshot,
+    ie_read_spectra,
 )
 from .camera import camera_compute, camera_create, camera_get, camera_set
 from .description import HeadlessDescriptionHandle, sensor_description
@@ -220,6 +221,7 @@ __all__ = [
     "image_data_xyz",
     "ieMainClose",
     "ieRefreshWindow",
+    "ieReadSpectra",
     "ieRect2Locs",
     "ieRect2Vertices",
     "ieRoi2Locs",
@@ -235,6 +237,7 @@ __all__ = [
     "ie_delete_object",
     "ie_equivalent_objtype",
     "ie_fit_line",
+    "ie_read_spectra",
     "ie_find_object_by_name",
     "ie_locs2_rect",
     "ie_parameter_otype",
@@ -582,6 +585,7 @@ ieDeleteObject = ie_delete_object
 ieEquivalentObjtype = ie_equivalent_objtype
 ieFindObjectByName = ie_find_object_by_name
 ieFitLine = ie_fit_line
+ieReadSpectra = ie_read_spectra
 ieLocs2Rect = ie_locs2_rect
 ieParameterOtype = ie_parameter_otype
 iePTable = ie_p_table

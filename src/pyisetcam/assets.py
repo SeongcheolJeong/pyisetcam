@@ -174,6 +174,57 @@ class AssetStore:
             wavelengths = np.asarray(wave_nm, dtype=float)
         return wavelengths, np.asarray(illuminant, dtype=float).reshape(-1)
 
+    def _resolve_spectra_path(self, spectra_name: str | Path) -> Path:
+        source = Path(spectra_name)
+        candidates: list[Path] = []
+
+        def add(candidate: Path) -> None:
+            if candidate not in candidates:
+                candidates.append(candidate)
+
+        add(source)
+        if source.suffix == "":
+            add(source.with_suffix(".mat"))
+
+        prefixes = (
+            Path("data/surfaces/reflectances"),
+            Path("data/lights"),
+            Path("data/human"),
+            Path("scripts/color"),
+        )
+        for candidate in list(candidates):
+            if candidate.is_absolute():
+                continue
+            if candidate.parts and candidate.parts[0] in {"data", "scripts"}:
+                continue
+            for prefix in prefixes:
+                add(prefix / candidate)
+
+        snapshot_root = self.ensure()
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+            resolved = snapshot_root / candidate
+            if resolved.exists():
+                return resolved
+
+        raise MissingAssetError(f"Spectral asset not found: {spectra_name}")
+
+    def load_spectra(
+        self,
+        spectra_name: str | Path,
+        wave_nm: np.ndarray | None = None,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        data = self.load_mat(self._resolve_spectra_path(spectra_name))
+        wavelengths = np.asarray(data["wavelength"], dtype=float).reshape(-1)
+        spectra = np.asarray(data["data"], dtype=float)
+        if spectra.ndim == 1:
+            spectra = spectra.reshape(-1, 1)
+        if wave_nm is not None:
+            spectra = interp_spectra(wavelengths, spectra, np.asarray(wave_nm, dtype=float))
+            wavelengths = np.asarray(wave_nm, dtype=float).reshape(-1)
+        return wavelengths, np.asarray(spectra, dtype=float)
+
     def load_xyz(
         self,
         *,
@@ -295,3 +346,17 @@ class AssetStore:
             name = f"{name}.mat"
         data = self.load_mat(Path("data/displays") / name)
         return data["d"]
+
+
+def ie_read_spectra(
+    spectra_name: str | Path,
+    wave_nm: np.ndarray | list[float] | tuple[float, ...] | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> np.ndarray:
+    """Mirror MATLAB ieReadSpectra() for upstream MAT-based spectral assets."""
+
+    store = asset_store or AssetStore.default()
+    wave = None if wave_nm is None else np.asarray(wave_nm, dtype=float).reshape(-1)
+    _, spectra = store.load_spectra(spectra_name, wave_nm=wave)
+    return np.asarray(spectra, dtype=float)
