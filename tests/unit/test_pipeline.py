@@ -4736,6 +4736,18 @@ def test_run_python_case_supports_sensor_filter_transmissivities_parity_case(ass
     assert case.payload["spectral_qe"].shape == case.payload["filters"].shape
 
 
+def test_run_python_case_supports_sensor_description_fpn_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_description_fpn_small", asset_store=asset_store)
+
+    assert case.payload["title"] == "ISET Parameter Table for a Sensor"
+    assert case.payload["handle_title"] == case.payload["title"]
+    assert int(case.payload["row_count"]) > 0
+    assert int(case.payload["col_count"]) == 3
+    assert case.payload["read_noise_volts"] == "0.100"
+    assert case.payload["analog_gain"] == "1"
+    assert case.payload["exposure_time"] == "0"
+
+
 def test_run_python_case_supports_sensor_dng_read_crop_small_parity_case(asset_store) -> None:
     case = run_python_case_with_context("sensor_dng_read_crop_small", asset_store=asset_store)
 

@@ -10,6 +10,7 @@ import numpy as np
 
 from .assets import AssetStore
 from .camera import camera_compute, camera_create
+from .description import sensor_description
 from .display import display_create
 from .fileio import ie_save_si_data_file
 from .fileio import sensor_dng_read
@@ -2226,6 +2227,27 @@ def run_python_case_with_context(
                 "wave": np.asarray(sensor_get(sensor, "wave"), dtype=float),
                 "filters": np.asarray(sensor_get(sensor, "filter transmissivities"), dtype=float),
                 "spectral_qe": np.asarray(sensor_get(sensor, "spectral qe"), dtype=float),
+            },
+            context={"sensor": sensor},
+        )
+
+    if case_name == "sensor_description_fpn_small":
+        sensor = sensor_create(asset_store=store)
+        sensor = sensor_set(sensor, "dsnu sigma", 0.05)
+        sensor = sensor_set(sensor, "prnu sigma", 1.0)
+        sensor = sensor_set(sensor, "read noise volts", 0.1)
+        table, string_table, handle = sensor_description(sensor, show=False, close_window=False)
+        rows = {str(row[0]): str(row[1]) for row in string_table.tolist()}
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "title": str(table.title),
+                "handle_title": "" if handle is None else str(handle.title),
+                "row_count": int(string_table.shape[0]),
+                "col_count": int(string_table.shape[1]),
+                "read_noise_volts": rows["Read noise (V)"],
+                "analog_gain": rows["Analog gain"],
+                "exposure_time": rows["Exposure time"],
             },
             context={"sensor": sensor},
         )

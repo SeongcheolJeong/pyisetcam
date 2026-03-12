@@ -877,6 +877,12 @@
       "atol": 1e-08
     },
     {
+      "name": "sensor_description_fpn_small",
+      "matlab_function": "sensorDescription",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "sensor_dng_read_crop_small",
       "matlab_function": "sensorDNGRead/ipCompute",
       "rtol": 1e-05,

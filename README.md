@@ -118,7 +118,8 @@ the Python and Octave render paths. That same tutorial path now also includes he
 `sensor_plot_line` / `sensorPlotLine` coverage for the
 `t_sensorSpatialResolution.m` line-profile workflow, and headless
 `sensor_description` / `sensorDescription` coverage for the
-`t_sensorFPN.m` summary path. The same sensor tutorial wave now also
+`t_sensorFPN.m` summary path, with curated parity on the returned summary
+table fields for the fixed-noise setup used by that tutorial. The same sensor tutorial wave now also
 includes `signal_current` / `signalCurrent` coverage for the
 `t_sensorInputRefer.m` current-to-electrons workflow, plus
 `filter transmissivities` coverage for the color-scaled exposure workflow

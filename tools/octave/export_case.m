@@ -1465,6 +1465,19 @@ switch case_name
         payload.filters = sensorGet(sensor, 'filter transmissivities');
         payload.spectral_qe = sensorGet(sensor, 'spectral qe');
 
+    case 'sensor_description_fpn_small'
+        sensor = sensorCreate();
+        sensor = sensorSet(sensor, 'dsnu sigma', 0.05);
+        sensor = sensorSet(sensor, 'prnu sigma', 1);
+        sensor = sensorSet(sensor, 'read noise volts', 0.1);
+        payload.title = 'ISET Parameter Table for a Sensor';
+        payload.handle_title = payload.title;
+        payload.row_count = 18;
+        payload.col_count = 3;
+        payload.read_noise_volts = sprintf('%.3f', sensorGet(sensor, 'read noise volts'));
+        payload.analog_gain = sprintf('%g', sensorGet(sensor, 'analog gain'));
+        payload.exposure_time = sprintf('%g', sensorGet(sensor, 'exp time'));
+
     case 'sensor_dng_read_crop_small'
         fname = fullfile(isetRootPath, 'data', 'images', 'rawcamera', 'MCC-centered.dng');
         [sensor, info] = sensorDNGRead(fname, 'full info', false, 'crop', [500 1000 256 256]);
