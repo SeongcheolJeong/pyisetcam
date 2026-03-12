@@ -2231,6 +2231,44 @@ def run_python_case_with_context(
             context={"sensor": sensor},
         )
 
+    if case_name == "sensor_spatial_resolution_small":
+        scene = scene_create("sweepFrequency", asset_store=store)
+        scene = scene_set(scene, "fov", 1.0)
+
+        oi = oi_create(asset_store=store)
+        oi = oi_set(oi, "optics fnumber", 4.0)
+        oi = oi_set(oi, "optics focal length", 0.004)
+        oi = oi_compute(oi, scene)
+
+        sensor = sensor_create("monochrome", asset_store=store)
+        sensor = sensor_set(sensor, "noise flag", 0)
+        sensor = sensor_compute(sensor, oi)
+        coarse_row = int(round(float(sensor_get(sensor, "rows")) / 2.0))
+        coarse_support = sensor_get(sensor, "spatial support", "microns")
+        coarse_volts = np.asarray(sensor_get(sensor, "volts"), dtype=float)
+
+        oi_row = int(round(float(oi_get(oi, "rows")) / 2.0))
+        oi_line, _ = oi_plot(oi, "horizontal line illuminance", np.array([1, oi_row], dtype=int))
+
+        sensor_small = sensor_set(sensor, "pixel size Constant Fill Factor", np.array([2.0e-6, 2.0e-6], dtype=float))
+        sensor_small = sensor_compute(sensor_small, oi)
+        fine_row = int(round(float(sensor_get(sensor_small, "rows")) / 2.0))
+        fine_support = sensor_get(sensor_small, "spatial support", "microns")
+        fine_volts = np.asarray(sensor_get(sensor_small, "volts"), dtype=float)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "coarse_pixPos": np.asarray(coarse_support["x"], dtype=float),
+                "coarse_pixData": np.asarray(coarse_volts[coarse_row - 1, :], dtype=float),
+                "fine_pixPos": np.asarray(fine_support["x"], dtype=float),
+                "fine_pixData": np.asarray(fine_volts[fine_row - 1, :], dtype=float),
+                "oi_pos": np.asarray(oi_line["pos"], dtype=float),
+                "oi_data": np.asarray(oi_line["data"], dtype=float),
+            },
+            context={"scene": scene, "oi": oi, "sensor": sensor_small},
+        )
+
     if case_name == "sensor_description_fpn_small":
         sensor = sensor_create(asset_store=store)
         sensor = sensor_set(sensor, "dsnu sigma", 0.05)

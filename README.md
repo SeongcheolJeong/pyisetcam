@@ -116,7 +116,9 @@ exactly and checks the rendered RGB result with a bounded normalized-MAE
 comparator to absorb the remaining legacy display-gain mismatch between
 the Python and Octave render paths. That same tutorial path now also includes headless
 `sensor_plot_line` / `sensorPlotLine` coverage for the
-`t_sensorSpatialResolution.m` line-profile workflow, and headless
+`t_sensorSpatialResolution.m` line-profile workflow, including the exact
+`sensorSet(..., 'pixel size Constant Fill Factor', ...)` tutorial path and
+curated parity on the coarse/fine sensor-vs-OI line data, and headless
 `sensor_description` / `sensorDescription` coverage for the
 `t_sensorFPN.m` summary path, with curated parity on the returned summary
 table fields for the fixed-noise setup used by that tutorial. The same sensor tutorial wave now also

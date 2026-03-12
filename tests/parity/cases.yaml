@@ -877,6 +877,22 @@
       "atol": 1e-08
     },
     {
+      "name": "sensor_spatial_resolution_small",
+      "matlab_function": "sensorPlotLine/oiPlot",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "coarse_pixData": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "fine_pixData": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        }
+      }
+    },
+    {
       "name": "sensor_description_fpn_small",
       "matlab_function": "sensorDescription",
       "rtol": 1e-05,

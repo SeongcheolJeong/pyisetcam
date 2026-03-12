@@ -572,7 +572,14 @@ def _sensor_pixel_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         sensor.fields["etendue"] = None
         _sensor_clear_data(sensor)
         return sensor
-    if key in {"sizeconstantfillfactor", "sizekeepfillfactor", "sizesamefillfactor"}:
+    if key in {
+        "sizeconstantfillfactor",
+        "sizekeepfillfactor",
+        "sizesamefillfactor",
+        "pixelsizeconstantfillfactor",
+        "pixelsizekeepfillfactor",
+        "pixelsizesamefillfactor",
+    }:
         size = np.asarray(value, dtype=float).reshape(-1)
         if size.size == 1:
             size = np.repeat(size, 2)

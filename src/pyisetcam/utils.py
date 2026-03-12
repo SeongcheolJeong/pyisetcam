@@ -398,6 +398,9 @@ _PARAMETER_OTYPE_UNIQUE = {
     },
     "pixel": {
         "pixelsize",
+        "pixelsizeconstantfillfactor",
+        "pixelsizekeepfillfactor",
+        "pixelsizesamefillfactor",
         "widthheight",
         "widthandheight",
         "sizeconstantfillfactor",

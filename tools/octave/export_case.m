@@ -1465,6 +1465,39 @@ switch case_name
         payload.filters = sensorGet(sensor, 'filter transmissivities');
         payload.spectral_qe = sensorGet(sensor, 'spectral qe');
 
+    case 'sensor_spatial_resolution_small'
+        scene = sceneCreate('sweepFrequency');
+        scene = sceneSet(scene, 'fov', 1);
+
+        oi = oiCreate();
+        oi = oiSet(oi, 'optics fnumber', 4);
+        oi = oiSet(oi, 'optics focal length', 0.004);
+        oi = oiCompute(oi, scene);
+
+        sensor = sensorCreate('monochrome');
+        sensor = sensorSet(sensor, 'noise flag', 0);
+        sensor = sensorCompute(sensor, oi);
+        row = sensorGet(sensor, 'rows'); row = round(row / 2);
+        sSupport = sensorGet(sensor, 'spatial support', 'microns');
+        volts = sensorGet(sensor, 'volts');
+        payload.coarse_pixPos = sSupport.x;
+        payload.coarse_pixData = squeeze(volts(row, :));
+
+        row = oiGet(oi, 'rows'); row = round(row / 2);
+        dist = oiGet(oi, 'distance per sample', 'um');
+        cols = oiGet(oi, 'cols');
+        payload.oi_pos = linspace(-(cols * dist(2)) / 2 + dist(2) / 2, (cols * dist(2)) / 2 - dist(2) / 2, cols);
+        illum = oiGet(oi, 'illuminance');
+        payload.oi_data = squeeze(illum(row, :));
+
+        sensorSmall = sensorSet(sensor, 'pixel size Constant Fill Factor', [2 2] * 1e-6);
+        sensorSmall = sensorCompute(sensorSmall, oi);
+        row = sensorGet(sensorSmall, 'rows'); row = round(row / 2);
+        sSupport = sensorGet(sensorSmall, 'spatial support', 'microns');
+        volts = sensorGet(sensorSmall, 'volts');
+        payload.fine_pixPos = sSupport.x;
+        payload.fine_pixData = squeeze(volts(row, :));
+
     case 'sensor_description_fpn_small'
         sensor = sensorCreate();
         sensor = sensorSet(sensor, 'dsnu sigma', 0.05);

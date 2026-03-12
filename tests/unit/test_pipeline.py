@@ -4736,6 +4736,23 @@ def test_run_python_case_supports_sensor_filter_transmissivities_parity_case(ass
     assert case.payload["spectral_qe"].shape == case.payload["filters"].shape
 
 
+def test_run_python_case_supports_sensor_spatial_resolution_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_spatial_resolution_small", asset_store=asset_store)
+
+    assert case.payload["coarse_pixPos"].ndim == 1
+    assert case.payload["coarse_pixData"].ndim == 1
+    assert case.payload["fine_pixPos"].ndim == 1
+    assert case.payload["fine_pixData"].ndim == 1
+    assert case.payload["oi_pos"].ndim == 1
+    assert case.payload["oi_data"].ndim == 1
+    assert case.payload["coarse_pixPos"].size == case.payload["coarse_pixData"].size
+    assert case.payload["fine_pixPos"].size == case.payload["fine_pixData"].size
+    coarse_spacing = float(np.mean(np.diff(case.payload["coarse_pixPos"])))
+    fine_spacing = float(np.mean(np.diff(case.payload["fine_pixPos"])))
+    assert abs(fine_spacing) < abs(coarse_spacing)
+    assert case.payload["oi_pos"].size == case.payload["oi_data"].size
+
+
 def test_run_python_case_supports_sensor_description_fpn_small_parity_case(asset_store) -> None:
     case = run_python_case_with_context("sensor_description_fpn_small", asset_store=asset_store)
 
