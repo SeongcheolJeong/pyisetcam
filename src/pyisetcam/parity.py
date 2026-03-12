@@ -739,6 +739,25 @@ def run_python_case_with_context(
             context={"wvf": wvf, "oi": oi},
         )
 
+    if case_name == "oi_wvf_otf_compare_small":
+        wvf = wvf_create(wave=np.array([550.0], dtype=float))
+        wvf = wvf_set(wvf, "focal length", 8.0, "mm")
+        wvf = wvf_set(wvf, "pupil diameter", 3.0, "mm")
+        wvf = wvf_compute(wvf)
+        oi = wvf_to_oi(wvf)
+        wvf_otf = np.asarray(wvf_get(wvf, "otf", 550.0), dtype=complex)
+        oi_otf = np.asarray(oi_get(oi, "optics otf"), dtype=complex)
+        if oi_otf.ndim == 3:
+            oi_otf = oi_otf[:, :, 0]
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "oi_otf_abs": np.abs(oi_otf),
+                "wvf_otf_abs_shifted": np.abs(wvf_otf),
+            },
+            context={"wvf": wvf, "oi": oi},
+        )
+
     if case_name == "oi_si_lorentzian_small":
         scene = scene_create("grid lines", [64, 64], 16, "ee", 2, asset_store=store)
         scene = scene_set(scene, "fov", 2.0)
@@ -1485,6 +1504,34 @@ def run_python_case_with_context(
         wvf = wvf_set(wvf, "spatial samples", 401)
         wvf = wvf_compute(wvf)
         udata, _ = wvf_plot(wvf, "image psf angle", "unit", "min", "wave", 460.0, "plot range", 1.0, "window", False)
+        psf = np.asarray(udata["z"], dtype=float)
+        middle_row = psf.shape[0] // 2
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "x": np.asarray(udata["x"], dtype=float),
+                "psf_mid_row": psf[middle_row, :],
+                "psf_center": float(psf[middle_row, psf.shape[1] // 2]),
+            },
+            context={"wvf": wvf},
+        )
+
+    if case_name == "wvf_plot_image_psf_angle_normalized_small":
+        wvf = wvf_create(wave=np.array([460.0], dtype=float))
+        wvf = wvf_set(wvf, "spatial samples", 401)
+        wvf = wvf_compute(wvf)
+        udata, _ = wvf_plot(
+            wvf,
+            "image psf angle normalized",
+            "unit",
+            "min",
+            "wave",
+            460.0,
+            "plot range",
+            1.0,
+            "window",
+            False,
+        )
         psf = np.asarray(udata["z"], dtype=float)
         middle_row = psf.shape[0] // 2
         return ParityCaseResult(

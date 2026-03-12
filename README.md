@@ -220,6 +220,11 @@ upstream diffraction and WVF spatial scripts.
 The script-driven custom optics surface now also includes direct
 `opticsPSF2OTF(...)` parity coverage for the upstream flare-image
 workflow from `s_opticsPSF2OTF.m`.
+The adjacent `s_wvfOI.m` bridge is now covered on the direct OTF path
+too: `wvf2oi(...)`-backed OIs can synthesize `oiGet(..., 'optics otf')`
+from the embedded wavefront, and curated parity checks that against
+`wvfGet(..., 'otf')` after the same `ifftshift` relationship used by the
+MATLAB script.
 The adjacent wavefront plotting surface now also includes headless
 `wvfPlot(...)` support for script-driven PSF, 1D PSF, pupil amplitude,
 pupil phase, wavefront-aberration, PSF-angle, and OTF views, backed by
@@ -302,6 +307,9 @@ support/data payload from `s_wvfSpatial.m`.
 That same script-driven WVF plotting surface now also has direct Octave
 parity on `wvfPlot(..., 'image psf angle', ...)`, including the returned
 angular support axis and PSF center row.
+That same script-driven WVF plotting surface now also has Octave-backed
+parity on the normalized `image psf angle` numerical contract,
+including the returned angular support axis and normalized PSF center row.
 That same script-driven WVF plotting surface now also has direct Octave
 parity on `wvfPlot(..., '2d psf angle', ...)`, including the returned
 angular support axis and PSF center row.

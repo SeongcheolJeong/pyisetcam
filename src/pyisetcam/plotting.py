@@ -889,7 +889,7 @@ def wvf_plot(
             udata["airyDiskCircle"] = _airy_disk_circle(radius)
         return udata, None
 
-    if key in {"psfangle", "2dpsfangle", "2dpsfanglenormalized", "imagepsfangle"}:
+    if key in {"psfangle", "2dpsfangle", "2dpsfanglenormalized", "imagepsfangle", "imagepsfanglenormalized"}:
         samp = np.asarray(wvf_get(wvf, "psf angular samples", unit, wave), dtype=float)
         psf = np.asarray(wvf_get(wvf, "psf", wave), dtype=float)
         if "normalized" in key:

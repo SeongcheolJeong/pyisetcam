@@ -437,6 +437,20 @@ switch case_name
         payload.y = psfData.xy(:, :, 2);
         payload.psf = psfData.psf;
 
+    case 'oi_wvf_otf_compare_small'
+        wvf = wvfCreate('wave', 550);
+        wvf = wvfSet(wvf, 'focal length', 8, 'mm');
+        wvf = wvfSet(wvf, 'pupil diameter', 3, 'mm');
+        wvf = wvfCompute(wvf);
+        oi = wvf2oi(wvf);
+        wvfOTF = wvfGet(wvf, 'otf', 550);
+        oiOTF = oiGet(oi, 'optics otf');
+        if ndims(oiOTF) == 3
+            oiOTF = oiOTF(:, :, 1);
+        end
+        payload.oi_otf_abs = abs(oiOTF);
+        payload.wvf_otf_abs_shifted = abs(ifftshift(wvfOTF));
+
     case 'oi_si_lorentzian_small'
         scene = sceneCreate('grid lines', [64 64], 16, 'ee', 2);
         scene = sceneSet(scene, 'fov', 2.0);
@@ -947,6 +961,21 @@ switch case_name
         psf = uData.z;
         middleRow = floor(size(psf, 1) / 2) + 1;
         payload.x = uData.x(:)';
+        payload.psf_mid_row = psf(middleRow, :);
+        payload.psf_center = psf(middleRow, floor(size(psf, 2) / 2) + 1);
+
+    case 'wvf_plot_image_psf_angle_normalized_small'
+        wvf = wvfCreate('wave', 460);
+        wvf = wvfSet(wvf, 'spatial samples', 401);
+        wvf = wvfCompute(wvf);
+        samp = wvfGet(wvf, 'psf angular samples', 'min', 460);
+        psf = wvfGet(wvf, 'psf', 460);
+        psf = psf / max(psf(:));
+        index = (abs(samp) < 1);
+        samp = samp(index);
+        psf = psf(index, index);
+        middleRow = floor(size(psf, 1) / 2) + 1;
+        payload.x = samp(:)';
         payload.psf_mid_row = psf(middleRow, :);
         payload.psf_center = psf(middleRow, floor(size(psf, 2) / 2) + 1);
 

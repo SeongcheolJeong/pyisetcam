@@ -2318,10 +2318,21 @@ def test_oi_get_optics_otf_synthesizes_shift_invariant_otf_after_compute(asset_s
     oi = oi_compute(oi_create("shift invariant"), scene, crop=True)
 
     otf = oi_get(oi, "optics OTF")
+    fx = oi_get(oi, "optics OTF fx")
+    fy = oi_get(oi, "optics OTF fy")
 
     assert otf is not None
-    assert np.asarray(otf).shape == oi.data["photons"].shape
-    assert np.isclose(float(np.abs(np.asarray(otf)[0, 0, 0])), 1.0, atol=1e-6)
+    assert fx is not None
+    assert fy is not None
+    assert np.asarray(otf).ndim == 3
+    assert np.asarray(otf).shape[2] == oi.data["photons"].shape[2]
+    assert np.asarray(otf).shape[0] == np.asarray(fy).size
+    assert np.asarray(otf).shape[1] == np.asarray(fx).size
+    otf_plane = np.abs(np.asarray(otf)[:, :, 0])
+    dc_value = float(otf_plane[0, 0])
+    assert dc_value > 0.5
+    assert np.isfinite(np.asarray(otf)).all()
+    assert np.isclose(float(np.max(otf_plane[:2, :2])), float(np.max(otf_plane)), atol=1e-6)
 
 
 def test_oi_set_optics_otf_supports_direct_raw_shift_invariant_otf(asset_store) -> None:
@@ -2337,13 +2348,17 @@ def test_oi_set_optics_otf_supports_direct_raw_shift_invariant_otf(asset_store) 
     raw_otf = oi_get(base, "optics OTF")
     assert raw_otf is not None
 
-    ideal = oi_set(base, "optics OTF", np.ones_like(np.asarray(raw_otf), dtype=complex))
+    custom_otf = np.zeros_like(np.asarray(raw_otf), dtype=complex)
+    center_row = custom_otf.shape[0] // 2
+    center_col = custom_otf.shape[1] // 2
+    custom_otf[center_row, center_col, :] = 1.0
+    ideal = oi_set(base, "optics OTF", custom_otf)
     stored = oi_get(ideal, "optics OTF")
     computed = oi_compute(ideal, scene, crop=True)
 
     assert stored is not None
     assert np.asarray(stored).shape == np.asarray(raw_otf).shape
-    assert np.allclose(np.asarray(stored), 1.0)
+    assert np.allclose(np.asarray(stored), custom_otf)
     assert ideal.fields["optics"]["compute_method"] == "opticsotf"
     assert not np.allclose(computed.data["photons"], base.data["photons"])
 
@@ -4205,6 +4220,14 @@ def test_run_python_case_supports_wvf_plot_image_psf_angle_parity_case(asset_sto
     assert float(case.payload["psf_center"]) > 0.0
 
 
+def test_run_python_case_supports_wvf_plot_image_psf_angle_normalized_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("wvf_plot_image_psf_angle_normalized_small", asset_store=asset_store)
+
+    assert case.payload["x"].ndim == 1
+    assert case.payload["psf_mid_row"].shape == case.payload["x"].shape
+    assert np.isclose(float(case.payload["psf_center"]), 1.0)
+
+
 def test_run_python_case_supports_wvf_plot_2d_psf_angle_parity_case(asset_store) -> None:
     case = run_python_case_with_context("wvf_plot_2d_psf_angle_small", asset_store=asset_store)
 
@@ -4439,6 +4462,15 @@ def test_run_python_case_supports_psf550_wvf_parity_case(asset_store) -> None:
     assert case.payload["psf"].shape == case.payload["x"].shape
     assert case.payload["psf"].shape == case.payload["y"].shape
     assert np.all(case.payload["psf"] >= 0.0)
+
+
+def test_run_python_case_supports_oi_wvf_otf_compare_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("oi_wvf_otf_compare_small", asset_store=asset_store)
+
+    assert case.payload["oi_otf_abs"].ndim == 2
+    assert case.payload["wvf_otf_abs_shifted"].shape == case.payload["oi_otf_abs"].shape
+    assert np.all(case.payload["oi_otf_abs"] >= 0.0)
+    assert np.all(case.payload["wvf_otf_abs_shifted"] >= 0.0)
 
 
 def test_run_python_case_supports_unit_frequency_utility_parity_case(asset_store) -> None:

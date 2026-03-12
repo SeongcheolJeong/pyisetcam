@@ -23,6 +23,7 @@
 - The adjacent diffraction-limited optics plotting surface now also includes headless `oiPlot(..., 'ls wavelength'/'lswavelength'/'otf wavelength'/'mtf wavelength')` support for the MATLAB line-spread and OTF-by-wavelength workflows used by the diffraction PSF scripts.
 - That same diffraction plotting surface now also includes direct `oiPlot(..., 'psf', [], 550)` parity coverage for the upstream `s_opticsDLPsf.m` workflow.
 - The same script-driven custom optics surface now also includes direct `opticsPSF2OTF(...)` parity coverage for the upstream flare-image workflow in `s_opticsPSF2OTF.m`.
+- The adjacent `s_wvfOI.m` bridge is now covered on the direct OTF path too: `wvf2oi(...)`-backed OIs can synthesize `oiGet(..., 'optics otf')` from the stored wavefront, and curated parity checks that against `wvfGet(..., 'otf')` after the same `ifftshift` relationship used by the MATLAB script.
 - The adjacent wavefront plotting surface now also includes headless `wvfPlot(...)` support for script-driven PSF, 1D PSF, pupil amplitude, pupil phase, wavefront-aberration, PSF-angle, and OTF inspection, backed by wavelength-aware `wvfGet(...)` support for `psf`, `pupil function`, `wavefront aberrations`, `psf spatial samples`, `psf angular samples`, `pupil spatial samples`, `1d psf`, and OTF support.
 - That same WVF plotting surface now also has direct Octave parity on the `wvfPlot(..., '2d otf', ...)` workflow from `s_wvfPlot.m`, comparing the returned OTF support axis and center-row magnitude data.
 - That same WVF plotting surface now also has direct Octave parity on `wvfPlot(..., '2d otf normalized', ...)`, comparing the returned OTF support axis and normalized center-row magnitude data.
@@ -48,6 +49,7 @@
 - That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., 'psf yaxis', ..., 'airy disk', true)`, comparing the full returned support/data payload and Airy-disk radius from `s_wvfSpatial.m`.
 - That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., 'psf yaxis', ...)`, comparing the full returned support/data payload from `s_wvfSpatial.m`.
 - That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., 'image psf angle', ...)`, comparing the returned angular support axis and PSF center row.
+- That same script-driven WVF plotting surface now also has Octave-backed parity on the normalized `image psf angle` numerical contract, comparing the returned angular support axis and normalized PSF center row.
 - That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., '2d psf angle', ...)`, comparing the returned angular support axis and PSF center row.
 - That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., '2d psf angle normalized', ...)`, comparing the returned angular support axis and normalized PSF center row.
 - That same script-driven WVF plotting surface now also has direct Octave parity on `wvfPlot(..., '1d psf', ...)`, comparing the returned cropped spatial support axis and raw PSF line slice.

@@ -608,6 +608,32 @@ def _synthesized_shift_invariant_otf_bundle(oi: OpticalImage) -> dict[str, Any] 
     if param_format(optics.get("model", "")) != "shiftinvariant":
         return None
 
+    wavefront = optics.get("wavefront")
+    if isinstance(wavefront, dict):
+        current_wvf = dict(wavefront if wavefront.get("computed") else wvf_compute(wavefront))
+        wave = np.asarray(current_wvf.get("wave", oi.fields.get("wave", DEFAULT_WAVE)), dtype=float).reshape(-1)
+        if wave.size == 0:
+            wave = DEFAULT_WAVE.copy()
+        first_wave = float(wave[0])
+        first_plane = np.fft.fftshift(np.asarray(wvf_get(current_wvf, "otf", first_wave), dtype=complex))
+        rows, cols = first_plane.shape[:2]
+        otf_stack = np.empty((rows, cols, wave.size), dtype=complex)
+        otf_stack[:, :, 0] = first_plane
+        for band_index in range(1, wave.size):
+            otf_stack[:, :, band_index] = np.fft.fftshift(
+                np.asarray(
+                    wvf_get(current_wvf, "otf", float(wave[band_index])),
+                    dtype=complex,
+                )
+            )
+        support = np.asarray(wvf_get(current_wvf, "otf support", "mm", first_wave), dtype=float).reshape(-1)
+        return {
+            "OTF": otf_stack,
+            "fx": support.copy(),
+            "fy": support.copy(),
+            "wave": wave.copy(),
+        }
+
     rows, cols = _oi_shape(oi)
     sample_spacing_m = oi.fields.get("sample_spacing_m")
     wave = np.asarray(oi.fields.get("wave", DEFAULT_WAVE), dtype=float).reshape(-1)
@@ -619,7 +645,7 @@ def _synthesized_shift_invariant_otf_bundle(oi: OpticalImage) -> dict[str, Any] 
     for band_index in range(wave.size):
         plane = np.asarray(psf_stack[:, :, band_index], dtype=float)
         plane = plane / max(float(np.sum(plane)), 1e-12)
-        otf_stack[:, :, band_index] = np.fft.fft2(np.fft.fftshift(plane))
+        otf_stack[:, :, band_index] = np.fft.fft2(np.fft.ifftshift(plane))
     fx, fy = _shift_invariant_otf_support(rows, cols, float(sample_spacing_m))
     return {
         "OTF": otf_stack,
@@ -6183,13 +6209,22 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         return None if data is None else np.asarray(data).copy()
     if key in {"otffx", "opticsotffx"}:
         data = oi.fields["optics"].get("otf_fx")
-        return None if data is None else np.asarray(data, dtype=float).copy()
+        if data is not None:
+            return np.asarray(data, dtype=float).copy()
+        otf_bundle = _synthesized_shift_invariant_otf_bundle(oi)
+        return None if otf_bundle is None else np.asarray(otf_bundle["fx"], dtype=float).copy()
     if key in {"otffy", "opticsotffy"}:
         data = oi.fields["optics"].get("otf_fy")
-        return None if data is None else np.asarray(data, dtype=float).copy()
+        if data is not None:
+            return np.asarray(data, dtype=float).copy()
+        otf_bundle = _synthesized_shift_invariant_otf_bundle(oi)
+        return None if otf_bundle is None else np.asarray(otf_bundle["fy"], dtype=float).copy()
     if key in {"otfwave", "opticsotfwave"}:
         data = oi.fields["optics"].get("otf_wave")
-        return None if data is None else np.asarray(data, dtype=float).copy()
+        if data is not None:
+            return np.asarray(data, dtype=float).copy()
+        otf_bundle = _synthesized_shift_invariant_otf_bundle(oi)
+        return None if otf_bundle is None else np.asarray(otf_bundle["wave"], dtype=float).copy()
     if key in {"otffunction", "opticsotffunction"}:
         return oi.fields["optics"].get("otf_function")
     if key in {"psfxaxis"}:
