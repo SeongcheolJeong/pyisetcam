@@ -58,7 +58,30 @@ def _normalize(value: Any) -> Any:
     return value
 
 
+def _is_string_like_array(value: Any) -> bool:
+    array = np.asarray(value)
+    if array.dtype.kind in {"U", "S"}:
+        return True
+    if array.dtype.kind != "O":
+        return False
+    flat = np.ravel(array)
+    return all(isinstance(item, (str, bytes, np.str_, np.bytes_)) for item in flat)
+
+
+def _string_array_payload(value: Any) -> list[str]:
+    return [str(item) for item in np.ravel(np.asarray(value, dtype=object))]
+
+
 def _array_metrics(reference: Any, actual: Any) -> dict[str, Any]:
+    if _is_string_like_array(reference) or _is_string_like_array(actual):
+        reference_array = np.asarray(reference)
+        actual_array = np.asarray(actual)
+        return {
+            "shape": list(reference_array.shape),
+            "string_values_match": _string_array_payload(reference_array) == _string_array_payload(actual_array),
+            "expected_values": _string_array_payload(reference_array),
+            "actual_values": _string_array_payload(actual_array),
+        }
     reference_array = np.asarray(reference, dtype=float)
     actual_array = np.asarray(actual, dtype=float)
     difference = np.abs(actual_array - reference_array)
@@ -256,6 +279,18 @@ def _compare(
             return result
         passed = bool(np.isclose(actual_scalar, reference_scalar, rtol=rtol, atol=atol))
         return {"pass": passed, **base}
+
+    if _is_string_like_array(normalized_reference) or _is_string_like_array(normalized_actual):
+        reference_array = np.asarray(normalized_reference)
+        actual_array = np.asarray(normalized_actual)
+        expected_values = _string_array_payload(reference_array)
+        actual_values = _string_array_payload(actual_array)
+        return {
+            "pass": bool(reference_array.shape == actual_array.shape and expected_values == actual_values),
+            "shape": list(reference_array.shape),
+            "expected_values": expected_values,
+            "actual_values": actual_values,
+        }
 
     metrics = _array_metrics(normalized_reference, normalized_actual)
     if rule and rule.get("mode") == "mean_rel":

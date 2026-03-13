@@ -1486,6 +1486,15 @@ switch case_name
         payload.comment = savedStruct.comment;
         payload.peak_wavelengths = savedStruct.peakWavelengths(:);
 
+    case 'sensor_color_filter_asset_nikond100_small'
+        wavelength = (400:1000)';
+        data = ieReadColorFilter(wavelength, 'NikonD100');
+        savedStruct = load(fullfile(isetRootPath, 'data', 'sensor', 'colorfilters', 'nikon', 'NikonD100.mat'));
+        payload.wave = wavelength;
+        payload.filters = data;
+        payload.filter_names = savedStruct.filterNames;
+        payload.comment = savedStruct.comment;
+
     case 'sensor_cfa_ycmy_small'
         sensor = sensorCreate('ycmy');
         sensor = sensorSet(sensor, 'size', [4 4]);

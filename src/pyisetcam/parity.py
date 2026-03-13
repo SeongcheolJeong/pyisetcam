@@ -2274,6 +2274,20 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "sensor_color_filter_asset_nikond100_small":
+        wave = np.arange(400.0, 1001.0, 1.0, dtype=float)
+        filters, names, file_data = ie_read_color_filter(wave, "NikonD100", asset_store=store)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "filters": np.asarray(filters, dtype=float),
+                "filter_names": np.asarray(names, dtype=object),
+                "comment": str(file_data.get("comment", "")),
+            },
+            context={},
+        )
+
     if case_name == "sensor_cfa_ycmy_small":
         sensor = sensor_create("ycmy", asset_store=store)
         sensor = sensor_set(sensor, "size", np.array([4, 4], dtype=int))

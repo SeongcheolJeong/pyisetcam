@@ -4815,6 +4815,15 @@ def test_run_python_case_supports_sensor_color_filter_gaussian_roundtrip_small_p
     assert list(case.payload["filter_names"]) == ["a", "b", "c", "d", "e", "f", "g", "h"]
 
 
+def test_run_python_case_supports_sensor_color_filter_asset_nikond100_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_color_filter_asset_nikond100_small", asset_store=asset_store)
+
+    assert case.payload["wave"].shape == (601,)
+    assert case.payload["filters"].shape == (601, 3)
+    assert list(case.payload["filter_names"]) == ["r_custom_", "g_custom_", "b_custom_"]
+    assert str(case.payload["comment"])
+
+
 def test_sensor_create_supports_ycmy_and_cyym_variants(asset_store) -> None:
     ycmy = sensor_create("ycmy", asset_store=asset_store)
     cyym = sensor_create("cyym", asset_store=asset_store)

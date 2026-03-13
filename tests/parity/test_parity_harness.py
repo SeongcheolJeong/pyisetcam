@@ -40,6 +40,20 @@ def _normalize(value: Any) -> Any:
     return value
 
 
+def _is_string_like_array(value: Any) -> bool:
+    array = np.asarray(value)
+    if array.dtype.kind in {"U", "S"}:
+        return True
+    if array.dtype.kind != "O":
+        return False
+    flat = np.ravel(array)
+    return all(isinstance(item, (str, bytes, np.str_, np.bytes_)) for item in flat)
+
+
+def _string_array_payload(value: Any) -> list[str]:
+    return [str(item) for item in np.ravel(np.asarray(value, dtype=object))]
+
+
 def _compare(
     reference: Any,
     actual: Any,
@@ -90,6 +104,12 @@ def _compare(
                 assert np.isclose(scaled_actual, reference_scalar, rtol=rtol, atol=atol)
             return
         assert np.isclose(actual_scalar, reference_scalar, rtol=rtol, atol=atol)
+        return
+    if _is_string_like_array(reference) or _is_string_like_array(actual):
+        reference_array = np.asarray(reference)
+        actual_array = np.asarray(actual)
+        assert reference_array.shape == actual_array.shape
+        assert _string_array_payload(actual_array) == _string_array_payload(reference_array)
         return
     reference_array = np.asarray(reference, dtype=float)
     actual_array = np.asarray(actual, dtype=float)

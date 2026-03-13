@@ -133,6 +133,8 @@ plus `sensor_color_filter` / `sensorColorFilter`,
 `ie_read_color_filter` / `ieReadColorFilter`, and
 `ie_save_color_filter` / `ieSaveColorFilter` coverage for the Gaussian
 color-filter roundtrip workflow from `s_sensorGaussianFilter.m`,
+plus direct curated parity on calibrated `ieReadColorFilter('NikonD100')`
+asset loading from `s_sensorPlotColorFilters.m`,
 plus direct curated parity on the simulated filter-responsivity and
 spectral-filter recovery workflow from `s_sensorSpectralEstimation.m`,
 plus direct curated parity on the CFA construction workflow from
