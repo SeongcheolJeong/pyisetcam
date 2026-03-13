@@ -123,7 +123,8 @@ curated parity on the coarse/fine sensor-vs-OI line data, and headless
 `t_sensorFPN.m` summary path, with curated parity on the returned summary
 table fields for the fixed-noise setup used by that tutorial, plus direct
 curated parity on the four `noise flag` modes and two-line volts plot used
-by the rest of that tutorial. The same sensor tutorial wave now also
+by the rest of that tutorial, plus ROI-DV summary parity for
+`s_sensorPoissonNoise.m`. The same sensor tutorial wave now also
 includes `signal_current` / `signalCurrent` coverage for the
 `t_sensorInputRefer.m` current-to-electrons workflow, plus
 `ie_read_spectra` / `ieReadSpectra` coverage for the core spectral-loading

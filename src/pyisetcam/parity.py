@@ -2385,6 +2385,36 @@ def run_python_case_with_context(
             context={"scene": scene, "oi": oi},
         )
 
+    if case_name == "sensor_poisson_noise_small":
+        scene = scene_create("macbeth", asset_store=store)
+        scene = scene_set(scene, "fov", 10.0)
+        oi = oi_create("diffraction limited", asset_store=store)
+        oi = oi_compute(oi, scene)
+
+        sensor = sensor_create("imx363", asset_store=store)
+        sensor = sensor_set(sensor, "row", 256)
+        sensor = sensor_set(sensor, "col", 256)
+        sensor = sensor_set(sensor, "exp time", 0.016)
+        sensor = sensor_compute(sensor, oi, seed=1)
+
+        rect = np.array([96, 156, 24, 28], dtype=int)
+        sensor = sensor_set(sensor, "roi", rect)
+        dv = np.asarray(sensor_get(sensor, "roi dv", rect), dtype=float)
+        finite_dv = dv[np.isfinite(dv)]
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "rect": rect,
+                "roi_mean_dv": float(np.mean(finite_dv)),
+                "roi_std_dv": float(np.std(finite_dv, ddof=1)),
+                "roi_percentiles": np.percentile(finite_dv, [10.0, 50.0, 90.0]),
+                "sqrt_mean_dv": float(np.sqrt(np.mean(finite_dv))),
+                "sensor_mean_dv": float(np.nanmean(np.asarray(sensor_get(sensor, "dv"), dtype=float))),
+            },
+            context={"scene": scene, "oi": oi, "sensor": sensor},
+        )
+
     if case_name == "sensor_estimation_small":
         wave = np.arange(400.0, 701.0, 10.0, dtype=float)
         macbeth_chart = ie_read_spectra("macbethChart", wave, asset_store=store)

@@ -1558,6 +1558,35 @@ switch case_name
         payload.total_q = totalQ;
         payload.snr = totalQ * sFactor ./ sqrt(totalQ * sFactor);
 
+    case 'sensor_poisson_noise_small'
+        rand('seed', 1);
+        randn('seed', 1);
+        scene = sceneCreate('macbeth');
+        scene = sceneSet(scene, 'fov', 10);
+
+        oi = oiCreate('diffraction limited');
+        oi = oiCompute(oi, scene);
+
+        load(fullfile(isetRootPath, 'data', 'sensor', 'sony', 'imx363.mat'), 'sensor');
+        sensor = sensorSet(sensor, 'row', 256);
+        sensor = sensorSet(sensor, 'col', 256);
+        sensor = sensorSet(sensor, 'exp time', 0.016);
+        sensor = sensorCompute(sensor, oi);
+
+        rect = [96 156 24 28];
+        sensor = sensorSet(sensor, 'roi', rect);
+        dv = sensorGet(sensor, 'roi dv', rect);
+        finiteDV = dv(isfinite(dv));
+        sensorDV = sensorGet(sensor, 'dv');
+        finiteSensorDV = sensorDV(isfinite(sensorDV));
+
+        payload.rect = rect(:);
+        payload.roi_mean_dv = mean(finiteDV(:));
+        payload.roi_std_dv = std(finiteDV(:), 0);
+        payload.roi_percentiles = prctile(finiteDV(:), [10 50 90])';
+        payload.sqrt_mean_dv = sqrt(payload.roi_mean_dv);
+        payload.sensor_mean_dv = mean(finiteSensorDV(:));
+
     case 'sensor_estimation_small'
         wavelength = (400:10:700)';
         macbethChart = ieReadSpectra('macbethChart', wavelength);

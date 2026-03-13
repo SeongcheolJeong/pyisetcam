@@ -4878,6 +4878,18 @@ def test_run_python_case_supports_sensor_counting_photons_small_parity_case(asse
     assert np.all(np.diff(case.payload["snr"]) < 0.0)
 
 
+def test_run_python_case_supports_sensor_poisson_noise_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_poisson_noise_small", asset_store=asset_store)
+
+    assert np.array_equal(case.payload["rect"], np.array([96, 156, 24, 28], dtype=int))
+    assert float(case.payload["roi_mean_dv"]) > 0.0
+    assert float(case.payload["roi_std_dv"]) > 0.0
+    assert case.payload["roi_percentiles"].shape == (3,)
+    assert np.all(np.diff(case.payload["roi_percentiles"]) > 0.0)
+    assert float(case.payload["sqrt_mean_dv"]) == pytest.approx(np.sqrt(float(case.payload["roi_mean_dv"])))
+    assert float(case.payload["sensor_mean_dv"]) > 0.0
+
+
 def test_run_python_case_supports_sensor_exposure_color_small_parity_case(asset_store) -> None:
     case = run_python_case_with_context("sensor_exposure_color_small", asset_store=asset_store)
 
