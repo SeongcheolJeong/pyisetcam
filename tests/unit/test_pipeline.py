@@ -13,7 +13,9 @@ from pyisetcam import (
     camera_create,
     camera_get,
     camera_set,
+    ie_read_color_filter,
     ie_read_spectra,
+    ie_save_color_filter,
     ie_save_si_data_file,
     ie_field_height_to_index,
     ip_get,
@@ -56,6 +58,7 @@ from pyisetcam import (
     scene_set,
     signal_current,
     sensor_compute,
+    sensor_color_filter,
     sensor_crop,
     sensor_create,
     sensor_dng_read,
@@ -4780,6 +4783,36 @@ def test_run_python_case_supports_sensor_filter_transmissivities_parity_case(ass
     assert case.payload["filters"].shape[0] == case.payload["wave"].size
     assert case.payload["filters"].shape[1] == 3
     assert case.payload["spectral_qe"].shape == case.payload["filters"].shape
+
+
+def test_ie_save_color_filter_roundtrips_gaussian_filters(tmp_path, asset_store) -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    centers = np.arange(400.0, 701.0, 40.0, dtype=float)
+    filters, returned_wave = sensor_color_filter("gaussian", wave, centers, np.full(centers.shape, 30.0, dtype=float))
+    payload = {
+        "wavelength": returned_wave,
+        "data": filters,
+        "filterNames": ["a", "b", "c", "d", "e", "f", "g", "h"],
+        "comment": "Gaussian filters created by unit test",
+        "peakWavelengths": centers,
+    }
+
+    path = ie_save_color_filter(payload, tmp_path / "gFiltersDeleteMe")
+    read_filters, read_names, file_data = ie_read_color_filter(wave, path, asset_store=asset_store)
+
+    assert np.allclose(read_filters, filters)
+    assert read_names == payload["filterNames"]
+    assert np.allclose(np.asarray(file_data["peakWavelengths"], dtype=float).reshape(-1), centers)
+    assert str(file_data["comment"]) == payload["comment"]
+
+
+def test_run_python_case_supports_sensor_color_filter_gaussian_roundtrip_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_color_filter_gaussian_roundtrip_small", asset_store=asset_store)
+
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["created_filters"].shape == (31, 8)
+    assert np.allclose(case.payload["created_filters"], case.payload["read_filters"])
+    assert list(case.payload["filter_names"]) == ["a", "b", "c", "d", "e", "f", "g", "h"]
 
 
 def test_sensor_create_supports_ycmy_and_cyym_variants(asset_store) -> None:

@@ -255,6 +255,46 @@ def ie_save_si_data_file(
 ieSaveSIDataFile = ie_save_si_data_file
 
 
+def ie_save_color_filter(
+    in_data: Mapping[str, Any] | Sensor,
+    full_file_name: str | Path | None = None,
+) -> str:
+    """Write MATLAB-style color filter data from a sensor or filter structure."""
+
+    path = _normalize_save_path(full_file_name or (Path.cwd() / "colorFilter.mat"))
+
+    if isinstance(in_data, Sensor):
+        from .sensor import sensor_get
+
+        payload: dict[str, Any] = {
+            "wavelength": np.asarray(sensor_get(in_data, "wavelength"), dtype=float).reshape(-1),
+            "data": np.asarray(sensor_get(in_data, "colorfilters"), dtype=float),
+            "filterNames": np.asarray(list(sensor_get(in_data, "filternames")), dtype=object),
+            "comment": str(in_data.metadata.get("comment", "No comment")),
+        }
+    elif isinstance(in_data, Mapping):
+        if not {"wavelength", "data", "filterNames"} <= set(in_data.keys()):
+            raise ValueError("Input data missing fields. No file written.")
+        payload = {
+            "wavelength": np.asarray(in_data["wavelength"], dtype=float).reshape(-1),
+            "data": np.asarray(in_data["data"], dtype=float),
+            "filterNames": np.asarray(list(np.atleast_1d(in_data["filterNames"])), dtype=object),
+            "comment": str(in_data.get("comment", "No comment")),
+        }
+        for key, value in in_data.items():
+            if key in {"wavelength", "data", "filterNames", "comment"}:
+                continue
+            payload[str(key)] = _serialize_value(value)
+    else:
+        raise ValueError("Input data missing fields. No file written.")
+
+    savemat(path, payload, do_compression=True)
+    return str(path)
+
+
+ieSaveColorFilter = ie_save_color_filter
+
+
 def _is_numeric_scalar(value: Any) -> bool:
     return isinstance(value, (int, float, np.integer, np.floating))
 

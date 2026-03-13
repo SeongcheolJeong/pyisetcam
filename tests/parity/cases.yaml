@@ -877,6 +877,12 @@
       "atol": 1e-08
     },
     {
+      "name": "sensor_color_filter_gaussian_roundtrip_small",
+      "matlab_function": "sensorColorFilter/ieSaveColorFilter/ieReadColorFilter",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "sensor_cfa_ycmy_small",
       "matlab_function": "sensorCreate (ycmy)",
       "rtol": 1e-05,

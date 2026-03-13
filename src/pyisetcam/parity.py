@@ -8,11 +8,11 @@ from typing import Any
 
 import numpy as np
 
-from .assets import AssetStore, ie_read_spectra
+from .assets import AssetStore, ie_read_color_filter, ie_read_spectra
 from .camera import camera_compute, camera_create, camera_get, camera_set
 from .description import sensor_description
 from .display import display_create
-from .fileio import ie_save_si_data_file
+from .fileio import ie_save_color_filter, ie_save_si_data_file
 from .fileio import sensor_dng_read
 from .metrics import cct_from_uv, delta_e_ab, metrics_spd, xyz_from_energy, xyz_to_lab, xyz_to_luv, xyz_to_uv
 from .ip import ip_compute, ip_create, ip_get, ip_set
@@ -46,7 +46,7 @@ from .optics import (
 )
 from .plotting import oi_plot, sensor_plot, sensor_plot_line, wvf_plot
 from .scene import scene_adjust_illuminant, scene_adjust_luminance, scene_create, scene_get, scene_set
-from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_crop, sensor_get, sensor_set
+from .sensor import sensor_color_filter, sensor_compute, sensor_create, sensor_create_ideal, sensor_crop, sensor_get, sensor_set
 from .sensor import sensor_snr
 from .sensor import sensor_set_size_to_fov
 from .sensor import signal_current
@@ -2244,6 +2244,34 @@ def run_python_case_with_context(
                 "spectral_qe": np.asarray(sensor_get(sensor, "spectral qe"), dtype=float),
             },
             context={"sensor": sensor},
+        )
+
+    if case_name == "sensor_color_filter_gaussian_roundtrip_small":
+        wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+        c_pos = np.arange(400.0, 701.0, 40.0, dtype=float)
+        widths = np.full(c_pos.shape, 30.0, dtype=float)
+        filters, wave = sensor_color_filter("gaussian", wave, c_pos, widths)
+        payload = {
+            "wavelength": wave,
+            "data": filters,
+            "filterNames": ["a", "b", "c", "d", "e", "f", "g", "h"],
+            "comment": "Gaussian filters created by parity sensorColorFilter",
+            "peakWavelengths": c_pos,
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = ie_save_color_filter(payload, f"{tmpdir}/gFiltersDeleteMe.mat")
+            read_filters, read_names, file_data = ie_read_color_filter(wave, path, asset_store=store)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "created_filters": filters,
+                "read_filters": np.asarray(read_filters, dtype=float),
+                "filter_names": np.asarray(read_names, dtype=object),
+                "comment": str(file_data.get("comment", "")),
+                "peak_wavelengths": np.asarray(file_data.get("peakWavelengths", np.array([], dtype=float)), dtype=float).reshape(-1),
+            },
+            context={},
         )
 
     if case_name == "sensor_cfa_ycmy_small":

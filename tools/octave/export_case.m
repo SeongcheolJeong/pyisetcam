@@ -1465,6 +1465,27 @@ switch case_name
         payload.filters = sensorGet(sensor, 'filter transmissivities');
         payload.spectral_qe = sensorGet(sensor, 'spectral qe');
 
+    case 'sensor_color_filter_gaussian_roundtrip_small'
+        wavelength = 400:10:700;
+        cPos = 400:40:700;
+        widths = ones(size(cPos)) * 30;
+        cFilters = sensorColorFilter('gaussian', wavelength, cPos, widths);
+        d.data = cFilters;
+        d.wavelength = wavelength;
+        d.filterNames = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
+        d.comment = 'Gaussian filters created by parity sensorColorFilter';
+        d.peakWavelengths = cPos;
+        savedFile = fullfile(fileparts(output_path), 'gFiltersDeleteMe.mat');
+        ieSaveColorFilter(d, savedFile);
+        newFilters = ieReadColorFilter(wavelength, savedFile);
+        savedStruct = load(savedFile);
+        payload.wave = wavelength(:);
+        payload.created_filters = cFilters;
+        payload.read_filters = newFilters;
+        payload.filter_names = savedStruct.filterNames;
+        payload.comment = savedStruct.comment;
+        payload.peak_wavelengths = savedStruct.peakWavelengths(:);
+
     case 'sensor_cfa_ycmy_small'
         sensor = sensorCreate('ycmy');
         sensor = sensorSet(sensor, 'size', [4 4]);

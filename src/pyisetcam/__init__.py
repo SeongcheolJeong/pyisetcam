@@ -5,6 +5,7 @@ from .assets import (
     DEFAULT_UPSTREAM_TARBALL_SHA256,
     AssetStore,
     ensure_upstream_snapshot,
+    ie_read_color_filter,
     ie_read_spectra,
 )
 from .camera import camera_compute, camera_create, camera_get, camera_set
@@ -13,6 +14,7 @@ from .display import display_create, display_get, display_set
 from .fileio import (
     ie_dng_read,
     ie_dng_simple_info,
+    ie_save_color_filter,
     ie_save_si_data_file,
     sensor_dng_read,
     vc_export_object,
@@ -152,6 +154,7 @@ from .scene import (
 from .sensor import (
     pixel_snr,
     signal_current,
+    sensor_color_filter,
     sensor_snr,
     sensor_compute,
     sensor_crop,
@@ -222,6 +225,8 @@ __all__ = [
     "ieMainClose",
     "ieRefreshWindow",
     "ieReadSpectra",
+    "ieReadColorFilter",
+    "ieSaveColorFilter",
     "ieRect2Locs",
     "ieRect2Vertices",
     "ieRoi2Locs",
@@ -238,6 +243,8 @@ __all__ = [
     "ie_equivalent_objtype",
     "ie_fit_line",
     "ie_read_spectra",
+    "ie_read_color_filter",
+    "ie_save_color_filter",
     "ie_find_object_by_name",
     "ie_locs2_rect",
     "ie_parameter_otype",
@@ -399,6 +406,8 @@ __all__ = [
     "sensorGet",
     "signalCurrent",
     "signal_current",
+    "sensorColorFilter",
+    "sensor_color_filter",
     "sensorSNR",
     "sensorSet",
     "sensorSetSizeToFOV",
@@ -567,6 +576,7 @@ sensorDNGRead = sensor_dng_read
 sensorCreateIdeal = sensor_create_ideal
 sensorCompute = sensor_compute
 signalCurrent = signal_current
+sensorColorFilter = sensor_color_filter
 sensorCrop = sensor_crop
 sensorGet = sensor_get
 sensorSNR = sensor_snr
@@ -585,6 +595,7 @@ ieDeleteObject = ie_delete_object
 ieEquivalentObjtype = ie_equivalent_objtype
 ieFindObjectByName = ie_find_object_by_name
 ieFitLine = ie_fit_line
+ieReadColorFilter = ie_read_color_filter
 ieReadSpectra = ie_read_spectra
 ieLocs2Rect = ie_locs2_rect
 ieParameterOtype = ie_parameter_otype
@@ -600,6 +611,7 @@ ieRoi2Locs = ie_roi2_locs
 ieReplaceObject = ie_replace_object
 ieDNGRead = ie_dng_read
 ieDNGSimpleInfo = ie_dng_simple_info
+ieSaveColorFilter = ie_save_color_filter
 ieSaveSIDataFile = ie_save_si_data_file
 ieSessionGet = ie_session_get
 ieSessionSet = ie_session_set

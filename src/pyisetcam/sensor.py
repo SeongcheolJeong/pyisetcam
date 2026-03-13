@@ -7,7 +7,7 @@ from typing import Any
 
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
-from scipy.ndimage import map_coordinates
+from scipy.ndimage import gaussian_filter, map_coordinates
 from scipy.signal import convolve2d
 
 from .assets import AssetStore
@@ -73,6 +73,65 @@ _TIME_UNIT_SCALE = {
 
 def _store(asset_store: AssetStore | None) -> AssetStore:
     return asset_store or AssetStore.default()
+
+
+def sensor_color_filter(
+    cf_type: str = "gaussian",
+    wave: np.ndarray | list[float] | tuple[float, ...] | None = None,
+    *args: Any,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Create MATLAB-style sensor color filter curves."""
+
+    normalized_type = param_format(cf_type or "gaussian")
+    wave_array = (
+        np.arange(400.0, 701.0, 1.0, dtype=float)
+        if wave is None
+        else np.asarray(wave, dtype=float).reshape(-1)
+    )
+    smooth = -1.0
+
+    if normalized_type == "gaussian":
+        c_pos = np.asarray(args[0], dtype=float).reshape(-1) if len(args) >= 1 else np.array([450.0, 550.0, 650.0], dtype=float)
+        widths = np.asarray(args[1], dtype=float).reshape(-1) if len(args) >= 2 else np.full(c_pos.shape, 40.0, dtype=float)
+        if widths.size == 1 and c_pos.size > 1:
+            widths = np.full(c_pos.shape, float(widths[0]), dtype=float)
+        if widths.size != c_pos.size:
+            raise ValueError("Gaussian filter widths must match the number of center positions.")
+        filters = np.zeros((wave_array.size, c_pos.size), dtype=float)
+        for idx, (center, width) in enumerate(zip(c_pos, widths, strict=False)):
+            filters[:, idx] = np.exp(-0.5 * ((wave_array - float(center)) / float(width)) ** 2)
+    elif normalized_type == "block":
+        c_pos = np.asarray(args[0], dtype=float).reshape(-1) if len(args) >= 1 else np.array([450.0, 550.0, 650.0], dtype=float)
+        widths = np.asarray(args[1], dtype=float).reshape(-1) if len(args) >= 2 else np.full(c_pos.shape, 40.0, dtype=float)
+        if widths.size == 1 and c_pos.size > 1:
+            widths = np.full(c_pos.shape, float(widths[0]), dtype=float)
+        if widths.size != c_pos.size:
+            raise ValueError("Block filter widths must match the number of center positions.")
+        filters = np.zeros((wave_array.size, c_pos.size), dtype=float)
+        for idx, (center, width) in enumerate(zip(c_pos, widths, strict=False)):
+            filters[:, idx] = np.abs(wave_array - float(center)) <= (float(width) / 2.0)
+    elif normalized_type == "irfilter":
+        cut = float(args[0]) if len(args) >= 1 else 700.0
+        if len(args) >= 2:
+            smooth = float(args[1])
+        filters = np.ones((wave_array.size, 1), dtype=float)
+        filters[wave_array > cut, 0] = 0.0
+    elif normalized_type == "uvfilter":
+        cut = float(args[0]) if len(args) >= 1 else 400.0
+        if len(args) >= 2:
+            smooth = float(args[1])
+        filters = np.ones((wave_array.size, 1), dtype=float)
+        filters[wave_array < cut, 0] = 0.0
+    else:
+        raise UnsupportedOptionError("sensorColorFilter", cf_type)
+
+    if smooth > 0:
+        filters = gaussian_filter(filters, sigma=float(smooth))
+
+    return np.asarray(filters, dtype=float), wave_array
+
+
+sensorColorFilter = sensor_color_filter
 
 
 def _default_pixel(pixel: dict[str, Any] | None) -> dict[str, Any]:
