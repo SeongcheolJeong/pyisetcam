@@ -4737,6 +4737,18 @@ def test_run_python_case_supports_sensor_filter_transmissivities_parity_case(ass
     assert case.payload["spectral_qe"].shape == case.payload["filters"].shape
 
 
+def test_run_python_case_supports_sensor_snr_components_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_snr_components_small", asset_store=asset_store)
+
+    assert case.payload["volts"].shape == (20,)
+    assert case.payload["snr"].shape == (20,)
+    assert case.payload["snr_shot"].shape == (20,)
+    assert case.payload["snr_read"].shape == (20,)
+    assert case.payload["snr_dsnu"].shape == (20,)
+    assert case.payload["snr_prnu"].shape == (20,)
+    assert np.all(np.diff(case.payload["volts"]) > 0.0)
+
+
 def test_run_python_case_supports_sensor_counting_photons_small_parity_case(asset_store) -> None:
     case = run_python_case_with_context("sensor_counting_photons_small", asset_store=asset_store)
 

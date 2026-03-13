@@ -1465,6 +1465,24 @@ switch case_name
         payload.filters = sensorGet(sensor, 'filter transmissivities');
         payload.spectral_qe = sensorGet(sensor, 'spectral qe');
 
+    case 'sensor_snr_components_small'
+        sensor = sensorCreate();
+        pixel = sensorGet(sensor, 'pixel');
+        voltageSwing = sensorGet(sensor, 'pixel voltage swing');
+        readNoise = sensorGet(sensor, 'pixel read noise volts');
+        volts = logspace(log10(voltageSwing) - 4, log10(voltageSwing), 20);
+        pixel = pixelSet(pixel, 'read noise volts', 3 * readNoise);
+        sensor = sensorSet(sensor, 'pixel', pixel);
+        sensor = sensorSet(sensor, 'gainSD', 2.0);
+        sensor = sensorSet(sensor, 'offsetSD', voltageSwing * 0.005);
+        [snr, volts, snrShot, snrRead, snrDSNU, snrPRNU] = sensorSNR(sensor, volts);
+        payload.volts = volts;
+        payload.snr = snr;
+        payload.snr_shot = snrShot;
+        payload.snr_read = snrRead;
+        payload.snr_dsnu = snrDSNU;
+        payload.snr_prnu = snrPRNU;
+
     case 'sensor_counting_photons_small'
         scene = sceneCreate('uniform equal photon', [128 128]);
         scene = sceneSet(scene, 'mean luminance', 10);

@@ -47,6 +47,7 @@ from .optics import (
 from .plotting import oi_plot, sensor_plot, sensor_plot_line, wvf_plot
 from .scene import scene_adjust_illuminant, scene_adjust_luminance, scene_create, scene_get, scene_set
 from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_crop, sensor_get, sensor_set
+from .sensor import sensor_snr
 from .sensor import sensor_set_size_to_fov
 from .sensor import signal_current
 from .utils import blackbody, energy_to_quanta, ie_fit_line, param_format, quanta_to_energy, unit_frequency_list
@@ -2241,6 +2242,30 @@ def run_python_case_with_context(
                 "wave": np.asarray(sensor_get(sensor, "wave"), dtype=float),
                 "filters": np.asarray(sensor_get(sensor, "filter transmissivities"), dtype=float),
                 "spectral_qe": np.asarray(sensor_get(sensor, "spectral qe"), dtype=float),
+            },
+            context={"sensor": sensor},
+        )
+
+    if case_name == "sensor_snr_components_small":
+        sensor = sensor_create(asset_store=store)
+        voltage_swing = float(sensor_get(sensor, "pixel voltage swing"))
+        read_noise = float(sensor_get(sensor, "pixel read noise volts"))
+        volts = np.logspace(np.log10(voltage_swing) - 4.0, np.log10(voltage_swing), 20, dtype=float)
+
+        sensor = sensor_set(sensor, "pixel read noise volts", 3.0 * read_noise)
+        sensor = sensor_set(sensor, "gainSD", 2.0)
+        sensor = sensor_set(sensor, "offsetSD", voltage_swing * 0.005)
+
+        snr, volts, snr_shot, snr_read, snr_dsnu, snr_prnu = sensor_snr(sensor, volts)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "volts": np.asarray(volts, dtype=float),
+                "snr": np.asarray(snr, dtype=float),
+                "snr_shot": np.asarray(snr_shot, dtype=float),
+                "snr_read": np.asarray(snr_read, dtype=float),
+                "snr_dsnu": np.asarray(snr_dsnu, dtype=float),
+                "snr_prnu": np.asarray(snr_prnu, dtype=float),
             },
             context={"sensor": sensor},
         )

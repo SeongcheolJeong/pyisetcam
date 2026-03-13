@@ -140,7 +140,9 @@ estimation coverage for `s_sensorSpatialNoiseDSNU.m`, plus the
 `s_sensorCountingPhotons.m` workflow with MATLAB-style
 `sceneCreate('uniform equal photon', [rows cols])`,
 `sceneSet(..., 'mean luminance', ...)`, and
-`oiGet(..., 'optics aperture diameter', unit)` support.
+`oiGet(..., 'optics aperture diameter', unit)` support, plus direct
+curated parity for the `s_sensorSNR.m` sensor-noise component curves
+returned by `sensorSNR(...)`.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit

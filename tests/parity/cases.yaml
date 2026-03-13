@@ -877,6 +877,12 @@
       "atol": 1e-08
     },
     {
+      "name": "sensor_snr_components_small",
+      "matlab_function": "sensorSNR",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "sensor_counting_photons_small",
       "matlab_function": "s_sensorCountingPhotons",
       "rtol": 1e-04,
