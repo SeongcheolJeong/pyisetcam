@@ -3323,14 +3323,24 @@ def test_sensor_get_set_supports_exposure_method_and_time_summaries(asset_store)
     assert sensor_get(sensor, "exposuremethod") == "videoExposure"
 
 
-def test_sensor_compute_rejects_multiple_integration_times(asset_store) -> None:
+def test_sensor_compute_supports_multiple_integration_times(asset_store) -> None:
     scene = scene_create("uniform d65")
     oi = oi_compute(oi_create(), scene)
     sensor = sensor_create("default", asset_store=asset_store)
-    sensor = sensor_set(sensor, "integrationtimes", np.array([0.01, 0.02], dtype=float))
+    sensor = sensor_set(sensor, "noise flag", 0)
+    sensor = sensor_set(sensor, "integrationtimes", np.array([0.01, 0.02, 0.04], dtype=float))
+    sensor = sensor_set(sensor, "exposureplane", 2)
 
-    with pytest.raises(UnsupportedOptionError, match="sensorCompute"):
-        sensor_compute(sensor, oi)
+    computed = sensor_compute(sensor, oi)
+    volts = np.asarray(sensor_get(computed, "volts"), dtype=float)
+
+    assert volts.ndim == 3
+    assert volts.shape[2] == 3
+    assert sensor_get(computed, "ncaptures") == 3
+    assert sensor_get(computed, "exposureplane") == 2
+    assert np.array_equal(sensor_get(computed, "integrationtime"), np.array([0.01, 0.02, 0.04], dtype=float))
+    mean_volts = np.mean(volts, axis=(0, 1))
+    assert np.all(np.diff(mean_volts) > 0.0)
 
 
 def test_sensor_get_set_supports_sampling_and_vignetting_aliases(asset_store) -> None:

@@ -1650,6 +1650,30 @@ switch case_name
         payload.white_patch_rgb = squeeze(mean(mean(result(29:44, 37:52, :), 1), 2));
         payload.result = result;
 
+    case 'sensor_exposure_bracket_small'
+        scene = sceneCreate;
+        scene = sceneSet(scene, 'fov', 4);
+
+        oi = oiCreate;
+        oi = oiCompute(oi, scene);
+
+        sensor = sensorCreate;
+        expTimes = [0.02 0.04 0.08 0.16 0.32];
+        exposurePlane = floor(length(expTimes) / 2) + 1;
+        sensor = sensorSet(sensor, 'Exp Time', expTimes);
+        sensor = sensorSet(sensor, 'exposure plane', exposurePlane);
+        sensor = sensorSet(sensor, 'noise flag', 0);
+        sensor = sensorCompute(sensor, oi, 0);
+
+        volts = sensorGet(sensor, 'volts');
+        payload.integration_times = sensorGet(sensor, 'integration time');
+        payload.exposure_plane = sensorGet(sensor, 'exposure plane');
+        payload.n_captures = sensorGet(sensor, 'n captures');
+        payload.volts_means = squeeze(mean(mean(volts, 1), 2));
+        payload.center_pixel = squeeze(volts(floor(size(volts, 1) / 2) + 1, floor(size(volts, 2) / 2) + 1, :));
+        payload.center_row_mean = squeeze(mean(volts(floor(size(volts, 1) / 2) + 1, :, :), 2));
+        payload.center_col_mean = squeeze(mean(volts(:, floor(size(volts, 2) / 2) + 1, :), 1));
+
     case 'sensor_dark_voltage_small'
         rand('seed', 1);
         randn('seed', 1);

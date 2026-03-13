@@ -345,7 +345,11 @@ def _context_metadata(context: dict[str, Any]) -> dict[str, Any]:
     sensor = context.get("sensor")
     if sensor is not None:
         metadata["sensor_size"] = [int(sensor.fields["size"][0]), int(sensor.fields["size"][1])]
-        metadata["sensor_integration_time_s"] = float(sensor.fields.get("integration_time", 0.0))
+        integration_time = np.asarray(sensor.fields.get("integration_time", 0.0), dtype=float)
+        if integration_time.ndim == 0 or integration_time.size == 1:
+            metadata["sensor_integration_time_s"] = float(integration_time.reshape(-1)[0])
+        else:
+            metadata["sensor_integration_time_s"] = integration_time.reshape(-1).tolist()
         metadata["sensor_noise_flag"] = int(sensor.fields.get("noise_flag", 0))
 
     return metadata

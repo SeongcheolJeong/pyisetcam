@@ -2479,6 +2479,38 @@ def run_python_case_with_context(
             context={"scene": scene, "oi": oi, "sensor": sensor, "ip": ip},
         )
 
+    if case_name == "sensor_exposure_bracket_small":
+        scene = scene_create(asset_store=store)
+        scene = scene_set(scene, "fov", 4.0)
+
+        oi = oi_create(asset_store=store)
+        oi = oi_compute(oi, scene)
+
+        sensor = sensor_create(asset_store=store)
+        integration_times = np.array([0.02, 0.04, 0.08, 0.16, 0.32], dtype=float)
+        sensor = sensor_set(sensor, "exp time", integration_times)
+        sensor = sensor_set(sensor, "exposure plane", int(np.floor(integration_times.size / 2.0) + 1))
+        sensor = sensor_set(sensor, "noise flag", 0)
+        sensor = sensor_compute(sensor, oi, False, seed=0)
+
+        volts = np.asarray(sensor_get(sensor, "volts"), dtype=float)
+        center_row = volts[volts.shape[0] // 2, :, :]
+        center_col = volts[:, volts.shape[1] // 2, :]
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "integration_times": np.asarray(sensor_get(sensor, "integration time"), dtype=float),
+                "exposure_plane": int(sensor_get(sensor, "exposure plane")),
+                "n_captures": int(sensor_get(sensor, "n captures")),
+                "volts_means": np.mean(volts, axis=(0, 1)),
+                "center_pixel": volts[volts.shape[0] // 2, volts.shape[1] // 2, :],
+                "center_row_mean": np.mean(center_row, axis=0),
+                "center_col_mean": np.mean(center_col, axis=0),
+            },
+            context={"scene": scene, "oi": oi, "sensor": sensor},
+        )
+
     if case_name == "sensor_dark_voltage_small":
         scene = scene_create("uniform ee", asset_store=store)
         scene = scene_set(scene, "fov", 5.0)
