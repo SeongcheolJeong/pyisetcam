@@ -963,6 +963,26 @@
       "atol": 1e-08
     },
     {
+      "name": "sensor_exposure_cfa_small",
+      "matlab_function": "s_sensorExposureCFA",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "bluish_mean_volts": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.11
+        },
+        "reddish_mean_volts": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        },
+        "camera_mean_volts": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        }
+      }
+    },
+    {
       "name": "sensor_dark_voltage_small",
       "matlab_function": "sensorCompute/ieFitLine",
       "rtol": 1e-05,

@@ -9,7 +9,7 @@ from typing import Any
 import numpy as np
 
 from .assets import AssetStore, ie_read_spectra
-from .camera import camera_compute, camera_create
+from .camera import camera_compute, camera_create, camera_get, camera_set
 from .description import sensor_description
 from .display import display_create
 from .fileio import ie_save_si_data_file
@@ -2509,6 +2509,46 @@ def run_python_case_with_context(
                 "center_col_mean": np.mean(center_col, axis=0),
             },
             context={"scene": scene, "oi": oi, "sensor": sensor},
+        )
+
+    if case_name == "sensor_exposure_cfa_small":
+        scene = scene_create(asset_store=store)
+        scene = scene_set(scene, "fov", 4.0)
+
+        oi = oi_create(asset_store=store)
+        oi = oi_compute(oi, scene)
+
+        sensor = sensor_create(asset_store=store)
+        sensor = sensor_set(sensor, "noise flag", 0)
+        bluish = np.array([[0.04, 0.03], [0.30, 0.02]], dtype=float)
+        sensor_b = sensor_compute(sensor_set(sensor.clone(), "exposure duration", bluish), oi, False, seed=0)
+
+        reddish = np.array([[0.04, 0.70], [0.03, 0.02]], dtype=float)
+        sensor_r = sensor_compute(sensor_set(sensor.clone(), "exposure duration", reddish), oi, False, seed=0)
+
+        camera = camera_create(asset_store=store)
+        camera = camera_set(camera, "sensor noise flag", 0)
+        camera = camera_set(camera, "sensor exposure duration", reddish)
+        camera = camera_compute(camera, scene, asset_store=store)
+        camera_sensor = camera_get(camera, "sensor")
+        bluish_volts = np.asarray(sensor_get(sensor_b, "volts"), dtype=float)
+        reddish_volts = np.asarray(sensor_get(sensor_r, "volts"), dtype=float)
+        camera_volts = np.asarray(sensor_get(camera_sensor, "volts"), dtype=float)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "bluish_mean_volts": float(np.mean(bluish_volts)),
+                "reddish_mean_volts": float(np.mean(reddish_volts)),
+                "reddish_center_pixel": reddish_volts[
+                    int(sensor_r.fields["size"][0] // 2), int(sensor_r.fields["size"][1] // 2)
+                ],
+                "camera_mean_volts": float(np.mean(camera_volts)),
+                "camera_center_pixel": camera_volts[
+                    int(camera_sensor.fields["size"][0] // 2), int(camera_sensor.fields["size"][1] // 2)
+                ],
+            },
+            context={"scene": scene, "oi": oi, "sensor": sensor_r, "camera": camera},
         )
 
     if case_name == "sensor_dark_voltage_small":

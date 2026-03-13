@@ -2093,7 +2093,7 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         if dv is not None and np.asarray(dv).ndim >= 3:
             return int(np.asarray(dv).shape[2])
         integration_time = np.asarray(sensor.fields.get("integration_time"))
-        if integration_time.ndim > 0 and integration_time.size > 1:
+        if integration_time.ndim == 1 and integration_time.size > 1:
             return int(integration_time.size)
         return 1
     if key in {"dvorvolts", "digitalorvolts"}:
@@ -2663,11 +2663,12 @@ def _apply_fixed_pattern_noise(
     *,
     dsnu_sigma_v: float,
     prnu_sigma: float,
-    integration_time: float,
+    integration_time: float | np.ndarray,
     auto_exposure: bool,
 ) -> np.ndarray:
     dsnu = _pixel_plane(volts, rng.normal(0.0, dsnu_sigma_v, size=volts.shape[:2]))
-    if np.isclose(integration_time, 0.0) and not auto_exposure:
+    integration_time_array = np.asarray(integration_time, dtype=float)
+    if np.all(np.isclose(integration_time_array, 0.0)) and not auto_exposure:
         return dsnu
     prnu = _pixel_plane(volts, 1.0 + rng.normal(0.0, prnu_sigma, size=volts.shape[:2]))
     return (volts * prnu) + dsnu
@@ -2986,26 +2987,39 @@ def sensor_compute(
     pixel_area = float(np.prod(np.asarray(pixel["size_m"], dtype=float)) * pixel["fill_factor"])
     conversion_gain = float(pixel["conversion_gain_v_per_electron"])
 
-    integration_time_array = np.asarray(computed.fields["integration_time"], dtype=float)
-    if integration_time_array.ndim > 1:
-        raise UnsupportedOptionError("sensorCompute", "matrix integration times")
-    integration_time_array = integration_time_array.reshape(-1)
+    integration_time_value = np.asarray(computed.fields["integration_time"], dtype=float)
+    integration_time_matrix: np.ndarray | None = None
+    if integration_time_value.ndim > 1:
+        pattern = np.asarray(computed.fields["pattern"], dtype=int)
+        if not computed.fields["mosaic"]:
+            raise UnsupportedOptionError("sensorCompute", "matrix integration times on nonmosaic sensors")
+        if integration_time_value.shape != pattern.shape:
+            raise UnsupportedOptionError("sensorCompute", "matrix integration times with non-pattern shape")
+        if computed.fields["auto_exposure"]:
+            raise UnsupportedOptionError("sensorCompute", "auto exposure with matrix integration times")
+        if np.any(integration_time_value <= 0.0):
+            raise UnsupportedOptionError("sensorCompute", "nonpositive integration times")
+        integration_time_matrix = np.asarray(integration_time_value, dtype=float).copy()
+        computed.fields["integration_time"] = integration_time_matrix.copy()
+        integration_time_array = np.empty(0, dtype=float)
+    else:
+        integration_time_array = integration_time_value.reshape(-1)
 
-    if integration_time_array.size == 0:
+    if integration_time_matrix is None and integration_time_array.size == 0:
         integration_time_array = np.array([0.0], dtype=float)
 
-    if integration_time_array.size == 1 and (
+    if integration_time_matrix is None and integration_time_array.size == 1 and (
         computed.fields["auto_exposure"] or float(integration_time_array[0]) <= 0.0
     ):
         computed.fields["integration_time"] = _auto_exposure_default(computed, oi)
         integration_time_array = np.array([float(computed.fields["integration_time"])], dtype=float)
-    elif integration_time_array.size > 1:
+    elif integration_time_matrix is None and integration_time_array.size > 1:
         if computed.fields["auto_exposure"]:
             raise UnsupportedOptionError("sensorCompute", "auto exposure with multiple integration times")
         if np.any(integration_time_array <= 0.0):
             raise UnsupportedOptionError("sensorCompute", "nonpositive integration times")
         computed.fields["integration_time"] = integration_time_array.copy()
-    else:
+    elif integration_time_matrix is None:
         computed.fields["integration_time"] = float(integration_time_array[0])
 
     seed_value = sensor.fields.get("noise_seed", 0) if seed is None else seed
@@ -3015,9 +3029,22 @@ def sensor_compute(
     if computed.fields["mosaic"]:
         current_density = _signal_current_density(oi, computed)
         signal_current = _spatial_integrate_current_density(current_density, oi, computed)
+        exposure_map_m: np.ndarray | None = None
+        if integration_time_matrix is not None:
+            pattern_rows, pattern_cols = integration_time_matrix.shape
+            row_tiles = int(np.ceil(signal_current.shape[0] / pattern_rows))
+            col_tiles = int(np.ceil(signal_current.shape[1] / pattern_cols))
+            exposure_map_m = np.tile(integration_time_matrix, (row_tiles, col_tiles))[
+                : signal_current.shape[0], : signal_current.shape[1]
+            ]
 
         def _base_volts(current_integration_time: float) -> tuple[np.ndarray, None]:
             volts = signal_current * (current_integration_time * conversion_gain / _ELEMENTARY_CHARGE_C)
+            return np.asarray(volts, dtype=float).copy(), None
+
+        def _base_volts_matrix() -> tuple[np.ndarray, None]:
+            assert exposure_map_m is not None
+            volts = signal_current * (exposure_map_m * conversion_gain / _ELEMENTARY_CHARGE_C)
             return np.asarray(volts, dtype=float).copy(), None
 
     else:
@@ -3038,6 +3065,41 @@ def sensor_compute(
     volts_captures: list[np.ndarray] = []
     channel_volts_captures: list[np.ndarray] = []
     dv_captures: list[np.ndarray] = []
+
+    if integration_time_matrix is not None:
+        volts, channel_volts = _base_volts_matrix()
+        if volts.ndim == 2:
+            volts = volts * etendue
+        else:
+            volts = volts * etendue[:, :, None]
+
+        if noise_flag in {1, 2, -2}:
+            if noise_flag == 2:
+                volts = volts + (float(pixel["dark_voltage_v_per_sec"]) * exposure_map_m)
+            volts = _shot_noise_electrons(rng, volts / max(conversion_gain, 1e-12)) * conversion_gain
+            if noise_flag == 2:
+                volts = _apply_read_noise(rng, volts, float(pixel["read_noise_v"]))
+            if noise_flag in {1, 2}:
+                volts = _apply_fixed_pattern_noise(
+                    rng,
+                    volts,
+                    dsnu_sigma_v=float(pixel["dsnu_sigma_v"]),
+                    prnu_sigma=float(pixel["prnu_sigma"]),
+                    integration_time=exposure_map_m,
+                    auto_exposure=bool(computed.fields["auto_exposure"]),
+                )
+        elif noise_flag not in {0, -1}:
+            raise UnsupportedOptionError("sensorCompute", f"noise flag {noise_flag}")
+
+        volts = np.clip((volts + analog_offset) / max(analog_gain, 1e-12), 0.0, voltage_swing)
+        computed.data["volts"] = np.asarray(volts, dtype=float).copy()
+        computed.data["channel_volts"] = None if channel_volts is None else np.asarray(channel_volts, dtype=float).copy()
+
+        if param_format(computed.fields["quantization"]) != "analog":
+            nbits = int(computed.fields["nbits"])
+            max_digital = (2**nbits) - 1
+            computed.data["dv"] = np.round(volts / voltage_swing * max_digital).astype(np.int32)
+        return track_session_object(session, computed)
 
     for integration_time in integration_time_array:
         volts, channel_volts = _base_volts(float(integration_time))

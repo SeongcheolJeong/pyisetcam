@@ -360,3 +360,69 @@ def ie_read_spectra(
     wave = None if wave_nm is None else np.asarray(wave_nm, dtype=float).reshape(-1)
     _, spectra = store.load_spectra(spectra_name, wave_nm=wave)
     return np.asarray(spectra, dtype=float)
+
+
+def _resolve_color_filter_path(
+    filter_name: str | Path,
+    *,
+    asset_store: AssetStore,
+) -> Path:
+    source = Path(filter_name)
+    candidates: list[Path] = []
+
+    def add(candidate: Path) -> None:
+        if candidate not in candidates:
+            candidates.append(candidate)
+
+    add(source)
+    if source.suffix == "":
+        add(source.with_suffix(".mat"))
+
+    snapshot_root = asset_store.ensure()
+    color_filter_root = snapshot_root / "data" / "sensor" / "colorfilters"
+    for candidate in list(candidates):
+        if candidate.is_absolute():
+            continue
+        add(Path("data/sensor/colorfilters") / candidate)
+        for match in color_filter_root.rglob(candidate.name):
+            add(match)
+
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+        resolved = snapshot_root / candidate
+        if resolved.exists():
+            return resolved
+
+    raise MissingAssetError(f"Color filter asset not found: {filter_name}")
+
+
+def ie_read_color_filter(
+    wave_nm: np.ndarray | list[float] | tuple[float, ...] | None = None,
+    filter_name: str | Path | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[np.ndarray, list[str], dict[str, Any]]:
+    """Mirror MATLAB ieReadColorFilter() for MAT-based filter assets."""
+
+    store = asset_store or AssetStore.default()
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float) if wave_nm is None else np.asarray(wave_nm, dtype=float).reshape(-1)
+    if filter_name is None:
+        raise MissingAssetError("A color filter file name is required in headless mode.")
+
+    file_data = store.load_mat(_resolve_color_filter_path(filter_name, asset_store=store))
+    wavelengths = np.asarray(file_data["wavelength"], dtype=float).reshape(-1)
+    data = np.asarray(file_data["data"], dtype=float)
+    if data.ndim == 1:
+        data = data.reshape(-1, 1)
+    if wave is not None:
+        data = interp_spectra(wavelengths, data, wave)
+    if data.size:
+        data_max = float(np.max(data))
+        data_min = float(np.min(data))
+        if data_min < 0.0:
+            raise ValueError(f"Color filter data contains negative values: {filter_name}")
+        if data_max > 1.0:
+            data = data / data_max
+    filter_names = [str(value) for value in np.atleast_1d(file_data.get("filterNames", []))]
+    return np.asarray(data, dtype=float), filter_names, file_data

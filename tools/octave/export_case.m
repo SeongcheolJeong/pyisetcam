@@ -1674,6 +1674,41 @@ switch case_name
         payload.center_row_mean = squeeze(mean(volts(floor(size(volts, 1) / 2) + 1, :, :), 2));
         payload.center_col_mean = squeeze(mean(volts(:, floor(size(volts, 2) / 2) + 1, :), 1));
 
+    case 'sensor_exposure_cfa_small'
+        scene = sceneCreate;
+        scene = sceneSet(scene, 'fov', 4);
+
+        oi = oiCreate;
+        oi = oiCompute(oi, scene);
+
+        sensor = sensorCreate;
+        sensor = sensorSet(sensor, 'noise flag', 0);
+        bluish = [0.04 0.03; 0.30 0.02];
+        sensorB = sensorSet(sensor, 'exposure duration', bluish);
+        sensorB = sensorCompute(sensorB, oi, 0);
+        reddish = [0.04 0.70; 0.03 0.02];
+        sensorR = sensorSet(sensor, 'exposure duration', reddish);
+        sensorR = sensorCompute(sensorR, oi, 0);
+
+        ip = ipCreate;
+        ip = ipCompute(ip, sensorR);
+
+        camera = cameraCreate;
+        camera = cameraSet(camera, 'sensor noise flag', 0);
+        camera = cameraSet(camera, 'sensor exposure duration', reddish);
+        camera = cameraCompute(camera, scene);
+        cameraSensor = cameraGet(camera, 'sensor');
+
+        bluishVolts = sensorGet(sensorB, 'volts');
+        reddishVolts = sensorGet(sensorR, 'volts');
+        payload.bluish_mean_volts = mean(bluishVolts(:));
+        payload.reddish_mean_volts = mean(reddishVolts(:));
+        voltsR = sensorGet(sensorR, 'volts');
+        payload.reddish_center_pixel = voltsR(floor(size(voltsR, 1) / 2) + 1, floor(size(voltsR, 2) / 2) + 1);
+        cameraVolts = sensorGet(cameraSensor, 'volts');
+        payload.camera_mean_volts = mean(cameraVolts(:));
+        payload.camera_center_pixel = cameraVolts(floor(size(cameraVolts, 1) / 2) + 1, floor(size(cameraVolts, 2) / 2) + 1);
+
     case 'sensor_dark_voltage_small'
         rand('seed', 1);
         randn('seed', 1);
@@ -1964,4 +1999,33 @@ switch case_name
 end
 
 save('-mat7-binary', output_path, '-struct', 'payload');
+end
+
+function means = local_nanmean_channels(data)
+data = double(data);
+n_channels = size(data, 3);
+means = zeros(1, n_channels);
+for ii = 1:n_channels
+    channel = data(:, :, ii);
+    mask = ~isnan(channel);
+    if any(mask(:))
+        means(ii) = mean(channel(mask));
+    else
+        means(ii) = NaN;
+    end
+end
+end
+
+function means = local_sensor_filter_means(sensor)
+n_filters = sensorGet(sensor, 'nfilters');
+means = zeros(1, n_filters);
+for ii = 1:n_filters
+    channel = double(sensorGet(sensor, 'volts', ii));
+    channel = channel(~isnan(channel));
+    if isempty(channel)
+        means(ii) = NaN;
+    else
+        means(ii) = mean(channel);
+    end
+end
 end

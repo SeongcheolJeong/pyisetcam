@@ -3343,6 +3343,41 @@ def test_sensor_compute_supports_multiple_integration_times(asset_store) -> None
     assert np.all(np.diff(mean_volts) > 0.0)
 
 
+def test_sensor_compute_supports_cfa_exposure_duration_matrix(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    scene = scene_set(scene, "fov", 4.0)
+    oi = oi_compute(oi_create(asset_store=asset_store), scene)
+
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "noise flag", 0)
+
+    bluish = np.array([[0.04, 0.03], [0.30, 0.02]], dtype=float)
+    sensor_b = sensor_compute(sensor_set(sensor.clone(), "exposure duration", bluish), oi)
+    bluish_volt_images = np.asarray(sensor_get(sensor_b, "volt images"), dtype=float)
+    bluish_means = np.nanmean(bluish_volt_images, axis=(0, 1))
+
+    reddish = np.array([[0.04, 0.70], [0.03, 0.02]], dtype=float)
+    sensor_r = sensor_compute(sensor_set(sensor.clone(), "exposure duration", reddish), oi)
+    reddish_volt_images = np.asarray(sensor_get(sensor_r, "volt images"), dtype=float)
+    reddish_means = np.nanmean(reddish_volt_images, axis=(0, 1))
+
+    assert np.asarray(sensor_get(sensor_b, "integration time")).shape == (2, 2)
+    assert sensor_get(sensor_b, "n captures") == 1
+    assert not np.allclose(bluish_means, reddish_means)
+
+    camera = camera_create(asset_store=asset_store)
+    camera = camera_set(camera, "sensor noise flag", 0)
+    camera = camera_set(camera, "sensor exposure duration", reddish)
+    camera = camera_compute(camera, scene)
+    camera_sensor = camera_get(camera, "sensor")
+
+    assert np.asarray(sensor_get(camera_sensor, "integration time")).shape == (2, 2)
+    camera_volt_images = np.asarray(sensor_get(camera_sensor, "volt images"), dtype=float)
+    camera_means = np.nanmean(camera_volt_images, axis=(0, 1))
+    assert np.all(camera_means > 0.0)
+    assert np.allclose(camera_means, reddish_means, rtol=1.5e-1, atol=1e-8)
+
+
 def test_sensor_get_set_supports_sampling_and_vignetting_aliases(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
 
