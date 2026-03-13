@@ -4,7 +4,16 @@ import numpy as np
 import pytest
 
 from pyisetcam import ieParameterOtype
-from pyisetcam.utils import blackbody, energy_to_quanta, ie_fit_line, ie_parameter_otype, param_format, quanta_to_energy, unit_frequency_list
+from pyisetcam.utils import (
+    blackbody,
+    energy_to_quanta,
+    ie_fit_line,
+    ie_parameter_otype,
+    interp_spectra,
+    param_format,
+    quanta_to_energy,
+    unit_frequency_list,
+)
 
 
 def test_param_format_string_and_key_value_list() -> None:
@@ -33,6 +42,23 @@ def test_energy_quanta_round_trip_supports_wave_first_matrices() -> None:
     quanta = energy_to_quanta(energy, wave)
     restored = quanta_to_energy(quanta, wave)
     assert np.allclose(restored, energy)
+
+
+def test_interp_spectra_supports_descending_source_waves() -> None:
+    source_wave = np.array([700.0, 600.0, 500.0, 400.0], dtype=float)
+    values = np.array(
+        [
+            [0.7, 0.2],
+            [0.6, 0.3],
+            [0.5, 0.4],
+            [0.4, 0.5],
+        ],
+        dtype=float,
+    )
+    target_wave = np.array([400.0, 500.0, 600.0, 700.0], dtype=float)
+    interpolated = interp_spectra(source_wave, values, target_wave)
+    expected = values[::-1, :]
+    assert np.allclose(interpolated, expected)
 
 
 def test_blackbody_matlab_scaling() -> None:

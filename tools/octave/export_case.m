@@ -1465,6 +1465,25 @@ switch case_name
         payload.filters = sensorGet(sensor, 'filter transmissivities');
         payload.spectral_qe = sensorGet(sensor, 'spectral qe');
 
+    case 'sensor_cfa_ycmy_small'
+        sensor = sensorCreate('ycmy');
+        sensor = sensorSet(sensor, 'size', [4 4]);
+        sensor = sensorSet(sensor, 'volts', reshape(0:15, [4 4]) / 15);
+        payload.pattern = sensorGet(sensor, 'pattern');
+        payload.size = sensorGet(sensor, 'size');
+        payload.filter_spectra = sensorGet(sensor, 'filter transmissivities');
+        payload.rgb = sensorGet(sensor, 'rgb');
+
+    case 'sensor_cfa_pattern_and_size_rgb_small'
+        sensor = sensorCreate('rgb');
+        sensor = sensorSet(sensor, 'rows', 5);
+        sensor = sensorSet(sensor, 'cols', 7);
+        sensor = sensorSet(sensor, 'pattern and size', [2 1 2; 3 2 1; 2 3 2]);
+        sensor = sensorSet(sensor, 'volts', reshape(0:53, [6 9]) / 53);
+        payload.pattern = sensorGet(sensor, 'pattern');
+        payload.size = sensorGet(sensor, 'size');
+        payload.rgb = sensorGet(sensor, 'rgb');
+
     case 'sensor_snr_components_small'
         sensor = sensorCreate();
         pixel = sensorGet(sensor, 'pixel');

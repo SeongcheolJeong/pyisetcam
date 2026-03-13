@@ -689,6 +689,10 @@ def interp_spectra(
     target_wave_nm = np.asarray(target_wave_nm, dtype=float).reshape(-1)
     values = np.asarray(values, dtype=float)
     flattened = values.reshape(source_wave_nm.size, -1)
+    if source_wave_nm.size > 1 and np.any(np.diff(source_wave_nm) < 0):
+        order = np.argsort(source_wave_nm)
+        source_wave_nm = source_wave_nm[order]
+        flattened = flattened[order, :]
     interpolated = np.empty((target_wave_nm.size, flattened.shape[1]), dtype=float)
     for column in range(flattened.shape[1]):
         interpolated[:, column] = np.interp(

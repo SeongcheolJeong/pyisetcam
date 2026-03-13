@@ -877,6 +877,24 @@
       "atol": 1e-08
     },
     {
+      "name": "sensor_cfa_ycmy_small",
+      "matlab_function": "sensorCreate (ycmy)",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "rgb": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        }
+      }
+    },
+    {
+      "name": "sensor_cfa_pattern_and_size_rgb_small",
+      "matlab_function": "sensorSet (pattern and size)",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "sensor_snr_components_small",
       "matlab_function": "sensorSNR",
       "rtol": 1e-05,

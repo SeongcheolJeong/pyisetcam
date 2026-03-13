@@ -2246,6 +2246,45 @@ def run_python_case_with_context(
             context={"sensor": sensor},
         )
 
+    if case_name == "sensor_cfa_ycmy_small":
+        sensor = sensor_create("ycmy", asset_store=store)
+        sensor = sensor_set(sensor, "size", np.array([4, 4], dtype=int))
+        sensor = sensor_set(
+            sensor,
+            "volts",
+            np.arange(16, dtype=float).reshape((4, 4), order="F") / 15.0,
+        )
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "pattern": np.asarray(sensor_get(sensor, "pattern"), dtype=int),
+                "size": np.asarray(sensor_get(sensor, "size"), dtype=int),
+                "filter_spectra": np.asarray(sensor_get(sensor, "filter transmissivities"), dtype=float),
+                "rgb": np.asarray(sensor_get(sensor, "rgb"), dtype=float),
+            },
+            context={"sensor": sensor},
+        )
+
+    if case_name == "sensor_cfa_pattern_and_size_rgb_small":
+        sensor = sensor_create("rgb", asset_store=store)
+        sensor = sensor_set(sensor, "rows", 5)
+        sensor = sensor_set(sensor, "cols", 7)
+        sensor = sensor_set(sensor, "pattern and size", np.array([[2, 1, 2], [3, 2, 1], [2, 3, 2]], dtype=int))
+        sensor = sensor_set(
+            sensor,
+            "volts",
+            np.arange(54, dtype=float).reshape((6, 9), order="F") / 53.0,
+        )
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "pattern": np.asarray(sensor_get(sensor, "pattern"), dtype=int),
+                "size": np.asarray(sensor_get(sensor, "size"), dtype=int),
+                "rgb": np.asarray(sensor_get(sensor, "rgb"), dtype=float),
+            },
+            context={"sensor": sensor},
+        )
+
     if case_name == "sensor_snr_components_small":
         sensor = sensor_create(asset_store=store)
         voltage_swing = float(sensor_get(sensor, "pixel voltage swing"))

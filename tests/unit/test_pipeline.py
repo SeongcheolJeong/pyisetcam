@@ -4737,6 +4737,34 @@ def test_run_python_case_supports_sensor_filter_transmissivities_parity_case(ass
     assert case.payload["spectral_qe"].shape == case.payload["filters"].shape
 
 
+def test_sensor_create_supports_ycmy_and_cyym_variants(asset_store) -> None:
+    ycmy = sensor_create("ycmy", asset_store=asset_store)
+    cyym = sensor_create("cyym", asset_store=asset_store)
+
+    assert np.array_equal(sensor_get(ycmy, "pattern"), np.array([[2, 1], [3, 2]], dtype=int))
+    assert np.array_equal(sensor_get(cyym, "pattern"), np.array([[1, 2], [2, 3]], dtype=int))
+    assert sensor_get(ycmy, "cfaname") == "Bayer CMY"
+    assert sensor_get(cyym, "cfaname") == "Bayer CMY"
+    assert sensor_get(ycmy, "filtercolorletters") == "cym"
+
+
+def test_run_python_case_supports_sensor_cfa_ycmy_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_cfa_ycmy_small", asset_store=asset_store)
+
+    assert case.payload["pattern"].shape == (2, 2)
+    assert tuple(case.payload["size"]) == (4, 4)
+    assert case.payload["filter_spectra"].shape[1] == 3
+    assert case.payload["rgb"].shape == (4, 4, 3)
+
+
+def test_run_python_case_supports_sensor_cfa_pattern_and_size_rgb_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_cfa_pattern_and_size_rgb_small", asset_store=asset_store)
+
+    assert case.payload["pattern"].shape == (3, 3)
+    assert tuple(case.payload["size"]) == (6, 9)
+    assert case.payload["rgb"].shape == (6, 9, 3)
+
+
 def test_run_python_case_supports_sensor_snr_components_small_parity_case(asset_store) -> None:
     case = run_python_case_with_context("sensor_snr_components_small", asset_store=asset_store)
 

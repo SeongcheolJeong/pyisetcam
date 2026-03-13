@@ -17,7 +17,7 @@ from .optics import DEFAULT_FOCAL_LENGTH_M
 from .optics import oi_get
 from .session import track_session_object
 from .types import OpticalImage, Scene, Sensor, SessionContext
-from .utils import DEFAULT_WAVE, ensure_multiple, ie_parameter_otype, linear_to_srgb, param_format, tile_pattern, xyz_to_linear_srgb
+from .utils import DEFAULT_WAVE, blackbody, ensure_multiple, ie_parameter_otype, linear_to_srgb, param_format, tile_pattern, xyz_to_linear_srgb
 
 _DEFAULT_PIXEL = {
     "name": "aps",
@@ -913,6 +913,62 @@ def _sensor_filter_display_colors(sensor: Sensor) -> np.ndarray:
     return np.clip(colors, 0.0, 1.0)
 
 
+def _color_block_matrix(wave_nm: np.ndarray, extrap_val: float = 0.0) -> np.ndarray:
+    wave = np.asarray(wave_nm, dtype=float).reshape(-1)
+    default_wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    blue_count = 10
+    green_count = 8
+    red_count = default_wave.size - blue_count - green_count
+    default_matrix = np.column_stack(
+        (
+            np.concatenate((np.zeros(blue_count + green_count), np.ones(red_count))),
+            np.concatenate((np.zeros(blue_count), np.ones(green_count), np.zeros(red_count))),
+            np.concatenate((np.ones(blue_count), np.zeros(green_count + red_count))),
+        )
+    )
+    if np.array_equal(wave, default_wave):
+        matrix = default_matrix.copy()
+    else:
+        matrix = np.empty((wave.size, 3), dtype=float)
+        for index in range(3):
+            matrix[:, index] = np.interp(
+                wave,
+                default_wave,
+                default_matrix[:, index],
+                left=float(extrap_val),
+                right=float(extrap_val),
+            )
+    column_sums = np.sum(matrix, axis=0, keepdims=True)
+    matrix = np.divide(
+        matrix,
+        np.maximum(column_sums, 1e-12),
+        out=np.zeros_like(matrix),
+        where=column_sums > 0.0,
+    )
+    white_spd = blackbody(wave, 6500.0, kind="quanta").reshape(-1)
+    white_spd = white_spd / max(float(np.max(white_spd)), 1e-12)
+    rgb = white_spd @ matrix
+    matrix = matrix @ np.diag(1.0 / np.maximum(rgb, 1e-12))
+    return matrix
+
+
+def _sensor_display_transform(sensor: Sensor) -> np.ndarray:
+    block_matrix = _color_block_matrix(np.asarray(sensor.fields["wave"], dtype=float), extrap_val=0.2)
+    filter_spectra = np.asarray(sensor_get(sensor, "filterspectra"), dtype=float)
+    filter_rgb = block_matrix.T @ filter_spectra
+    transform = filter_rgb.T
+    scale = max(float(np.max(transform)), 1e-12)
+    return transform / scale
+
+
+def _image_linear_transform(image: np.ndarray, transform: np.ndarray) -> np.ndarray:
+    array = np.asarray(image, dtype=float)
+    rows, cols, channels = array.shape
+    xw = array.reshape(rows * cols, channels)
+    transformed = xw @ np.asarray(transform, dtype=float)
+    return transformed.reshape(rows, cols, -1)
+
+
 def _sensor_render_state(sensor: Sensor) -> dict[str, Any]:
     render = sensor.fields.get("render")
     if not isinstance(render, dict):
@@ -1023,14 +1079,45 @@ def _sensor_rgb_image(
     if int(sensor_get(sensor, "nfilters")) <= 1:
         return np.power(normalized, gamma_value)
 
-    pattern = tile_pattern(np.asarray(sensor.fields["pattern"], dtype=int), normalized.shape[0], normalized.shape[1])
-    filter_colors = _sensor_filter_display_colors(sensor)
-    linear_rgb = np.zeros(normalized.shape + (3,), dtype=float)
-    for index, color in enumerate(filter_colors, start=1):
-        mask = pattern == index
-        if np.any(mask):
-            linear_rgb[mask] = normalized[mask, None] * color.reshape(1, 3)
-    return linear_to_srgb(np.power(np.clip(linear_rgb, 0.0, 1.0), gamma_value))
+    linear = _sensor_plane_images(sensor, np.asarray(data, dtype=float), empty_value=0.0)
+    if linear is None:
+        return None
+    filter_letters = str(sensor_get(sensor, "filtercolorletters")).lower()
+    if filter_letters == "rgb":
+        transformed = linear
+    elif filter_letters == "wrgb":
+        transformed = _image_linear_transform(
+            linear,
+            np.array(
+                [
+                    [1.0, 1.0, 1.0],
+                    [1.0, 0.0, 0.0],
+                    [0.0, 1.0, 0.0],
+                    [0.0, 0.0, 1.0],
+                ],
+                dtype=float,
+            ),
+        )
+    elif filter_letters == "rgbw":
+        transformed = _image_linear_transform(
+            linear,
+            np.array(
+                [
+                    [1.0, 0.0, 0.0],
+                    [0.0, 1.0, 0.0],
+                    [0.0, 0.0, 1.0],
+                    [1.0, 1.0, 1.0],
+                ],
+                dtype=float,
+            ),
+        )
+    else:
+        transformed = _image_linear_transform(linear, _sensor_display_transform(sensor))
+    transformed = np.clip(transformed / _sensor_display_scale(sensor, data, resolved_type, scale_max=scale_max_value), 0.0, 1.0)
+    transformed = np.power(transformed, gamma_value)
+    if transformed.shape[2] == 3:
+        return linear_to_srgb(transformed)
+    return transformed
 
 
 def _interp_spectral_array(old_wave: np.ndarray, new_wave: np.ndarray, values: np.ndarray) -> np.ndarray:
@@ -1270,6 +1357,18 @@ def sensor_create(
         sensor = _sensor_base("rccc", wave, size, pixel_dict)
         sensor.fields["pattern"] = np.array([[2, 2], [2, 1]], dtype=int)
         sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle(["r", "w"], wave, asset_store=store)
+        return track_session_object(session, sensor)
+
+    if normalized in {"bayer-ycmy", "ycmy", "bayer(ycmy)"}:
+        sensor = _sensor_base("bayer-ycmy", wave, size, pixel_dict)
+        sensor.fields["pattern"] = np.array([[2, 1], [3, 2]], dtype=int)
+        sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle("cym", wave, asset_store=store)
+        return track_session_object(session, sensor)
+
+    if normalized in {"bayer-cyym", "cyym", "bayer(cyym)"}:
+        sensor = _sensor_base("bayer-cyym", wave, size, pixel_dict)
+        sensor.fields["pattern"] = np.array([[1, 2], [2, 3]], dtype=int)
+        sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle("cym", wave, asset_store=store)
         return track_session_object(session, sensor)
 
     if normalized == "mt9v024":
@@ -2207,6 +2306,18 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         return sensor
     if key == "pattern":
         sensor.fields["pattern"] = np.asarray(value, dtype=int)
+        return sensor
+    if key in {"patternandsize", "patternsize", "cfapatternandsize"}:
+        pattern = np.asarray(value, dtype=int)
+        sensor.fields["pattern"] = pattern
+        rows, cols = _sensor_rows_cols(sensor)
+        block_rows, block_cols = pattern.shape
+        new_rows = ensure_multiple(rows, block_rows)
+        new_cols = ensure_multiple(cols, block_cols)
+        if new_rows != rows or new_cols != cols:
+            sensor.fields["size"] = (new_rows, new_cols)
+        sensor.fields["etendue"] = None
+        _sensor_clear_data(sensor)
         return sensor
     if key in {"colorfilterarray", "cfa"}:
         sensor.fields["pattern"] = _cfa_pattern_from_value(value)
