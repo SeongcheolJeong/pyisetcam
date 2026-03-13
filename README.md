@@ -136,7 +136,11 @@ plus
 from `t_sensorExposureColor.m`, and `ieFitLine`-driven dark-voltage
 estimation coverage for `s_sensorAnalyzeDarkVoltage.m`, plus slope-based
 PRNU estimation coverage for `s_sensorSpatialNoisePRNU.m`, plus DSNU
-estimation coverage for `s_sensorSpatialNoiseDSNU.m`.
+estimation coverage for `s_sensorSpatialNoiseDSNU.m`, plus the
+`s_sensorCountingPhotons.m` workflow with MATLAB-style
+`sceneCreate('uniform equal photon', [rows cols])`,
+`sceneSet(..., 'mean luminance', ...)`, and
+`oiGet(..., 'optics aperture diameter', unit)` support.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit

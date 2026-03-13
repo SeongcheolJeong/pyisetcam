@@ -6000,6 +6000,11 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         if param_format(oi.fields["optics"].get("model", "")) == "raytrace":
             return float(oi.fields["optics"].get("raytrace", {}).get("f_number", oi.fields["optics"]["f_number"]))
         return float(oi.fields["optics"]["f_number"])
+    if key in {"aperturediameter", "opticsaperturediameter"}:
+        optics = oi.fields["optics"]
+        f_number = float(oi_get(oi, "fnumber"))
+        aperture_m = float(optics["focal_length_m"]) / max(f_number, 1.0e-12)
+        return aperture_m * _spatial_unit_scale(args[0] if args else None)
     if key in {"opticsmodel", "model"}:
         return oi.fields["optics"]["model"]
     if key in {"computemethod"}:

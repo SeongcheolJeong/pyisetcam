@@ -4737,6 +4737,20 @@ def test_run_python_case_supports_sensor_filter_transmissivities_parity_case(ass
     assert case.payload["spectral_qe"].shape == case.payload["filters"].shape
 
 
+def test_run_python_case_supports_sensor_counting_photons_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_counting_photons_small", asset_store=asset_store)
+
+    assert case.payload["wave"].ndim == 1
+    assert np.array_equal(case.payload["fnumbers"], np.arange(2.0, 17.0, dtype=float))
+    assert case.payload["aperture_d"].shape == case.payload["fnumbers"].shape
+    assert case.payload["spectral_irradiance"].shape == case.payload["wave"].shape
+    assert case.payload["total_q"].shape == case.payload["fnumbers"].shape
+    assert case.payload["snr"].shape == case.payload["fnumbers"].shape
+    assert np.all(np.diff(case.payload["aperture_d"]) < 0.0)
+    assert np.all(np.diff(case.payload["total_q"]) < 0.0)
+    assert np.all(np.diff(case.payload["snr"]) < 0.0)
+
+
 def test_run_python_case_supports_sensor_exposure_color_small_parity_case(asset_store) -> None:
     case = run_python_case_with_context("sensor_exposure_color_small", asset_store=asset_store)
 

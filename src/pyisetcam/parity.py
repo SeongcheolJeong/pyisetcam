@@ -2245,6 +2245,40 @@ def run_python_case_with_context(
             context={"sensor": sensor},
         )
 
+    if case_name == "sensor_counting_photons_small":
+        scene = scene_create("uniform equal photon", np.array([128, 128], dtype=int), asset_store=store)
+        scene = scene_set(scene, "mean luminance", 10.0)
+
+        oi = oi_create("diffraction limited", asset_store=store)
+        roi_rect = np.array([41, 31, 16, 23], dtype=int)
+        fnumbers = np.arange(2.0, 17.0, dtype=float)
+        total_q = np.zeros(fnumbers.shape, dtype=float)
+        aperture_d = np.zeros(fnumbers.shape, dtype=float)
+        spectral_irradiance = np.empty(0, dtype=float)
+
+        for idx, f_number in enumerate(fnumbers):
+            oi = oi_set(oi, "optics fnumber", float(f_number))
+            oi = oi_compute(oi, scene)
+            aperture_d[idx] = float(oi_get(oi, "optics aperture diameter", "mm"))
+            spectral_irradiance = np.asarray(oi_get(oi, "roi mean photons", roi_rect), dtype=float).reshape(-1)
+            total_q[idx] = float(np.sum(spectral_irradiance))
+
+        s_factor = (1.0e-6**2) * 50.0e-3
+        snr = (total_q * s_factor) / np.sqrt(np.maximum(total_q * s_factor, 1.0e-12))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": np.asarray(oi_get(oi, "wave"), dtype=float),
+                "fnumbers": fnumbers,
+                "aperture_d": aperture_d,
+                "spectral_irradiance": spectral_irradiance,
+                "total_q": total_q,
+                "snr": snr,
+            },
+            context={"scene": scene, "oi": oi},
+        )
+
     if case_name == "sensor_estimation_small":
         wave = np.arange(400.0, 701.0, 10.0, dtype=float)
         macbeth_chart = ie_read_spectra("macbethChart", wave, asset_store=store)

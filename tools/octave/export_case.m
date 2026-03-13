@@ -1465,6 +1465,32 @@ switch case_name
         payload.filters = sensorGet(sensor, 'filter transmissivities');
         payload.spectral_qe = sensorGet(sensor, 'spectral qe');
 
+    case 'sensor_counting_photons_small'
+        scene = sceneCreate('uniform equal photon', [128 128]);
+        scene = sceneSet(scene, 'mean luminance', 10);
+        oi = oiCreate('diffraction limited');
+        roiRect = [41 31 16 23];
+        fnumbers = 2:16;
+        totalQ = zeros(1, numel(fnumbers));
+        apertureD = zeros(size(totalQ));
+        spectralIrradiance = [];
+
+        for ff = 1:numel(fnumbers)
+            oi = oiSet(oi, 'optics fnumber', fnumbers(ff));
+            oi = oiCompute(oi, scene);
+            apertureD(ff) = oiGet(oi, 'optics aperture diameter', 'mm');
+            spectralIrradiance = oiGet(oi, 'roi mean photons', roiRect);
+            totalQ(ff) = sum(spectralIrradiance);
+        end
+
+        sFactor = (1e-6)^2 * 50e-3;
+        payload.wave = oiGet(oi, 'wave');
+        payload.fnumbers = fnumbers;
+        payload.aperture_d = apertureD;
+        payload.spectral_irradiance = spectralIrradiance;
+        payload.total_q = totalQ;
+        payload.snr = totalQ * sFactor ./ sqrt(totalQ * sFactor);
+
     case 'sensor_estimation_small'
         wavelength = (400:10:700)';
         macbethChart = ieReadSpectra('macbethChart', wavelength);

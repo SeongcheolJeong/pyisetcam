@@ -223,6 +223,10 @@ def _scene_size_2d(size: Any, *, default: int) -> tuple[int, int]:
     return (int(values[0]), int(values[1]))
 
 
+def _parse_image_size(size: Any) -> tuple[int, int]:
+    return _scene_size_2d(size, default=32)
+
+
 def _matlab_round_scalar(value: float) -> int:
     return int(np.floor(float(value) + 0.5))
 
@@ -287,13 +291,14 @@ def _create_macbeth_scene(
 
 def _uniform_scene(
     name: str,
-    size: int,
+    size: Any,
     wave: np.ndarray,
     illuminant_energy: np.ndarray,
     illuminant_comment: str | None = None,
     *,
     asset_store: AssetStore,
 ) -> Scene:
+    rows, cols = _parse_image_size(size)
     scene = Scene(name=name)
     scene.fields["wave"] = wave
     scene.fields["illuminant_format"] = "spectral"
@@ -303,7 +308,7 @@ def _uniform_scene(
         scene.fields["illuminant_comment"] = str(illuminant_comment)
     scene.fields["distance_m"] = DEFAULT_DISTANCE_M
     scene.fields["fov_deg"] = DEFAULT_FOV_DEG
-    photons = np.broadcast_to(scene.fields["illuminant_photons"], (size, size, wave.size)).copy()
+    photons = np.broadcast_to(scene.fields["illuminant_photons"], (rows, cols, wave.size)).copy()
     scene.data["photons"] = photons
     _update_scene_geometry(scene)
     return scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
@@ -1069,7 +1074,7 @@ def scene_create(
         return track_session_object(session, scene_clear_data(scene))
 
     if name in {"uniformd65", "uniform d65".replace(" ", "")}:
-        size = int(args[0]) if len(args) > 0 else 32
+        size = args[0] if len(args) > 0 else 32
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
         _, illuminant_energy = _load_d65(wave, store)
         return track_session_object(
@@ -1078,7 +1083,7 @@ def scene_create(
         )
 
     if name in {"uniform", "uniformee", "uniformequalenergy"}:
-        size = int(args[0]) if len(args) > 0 else 32
+        size = args[0] if len(args) > 0 else 32
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
         return track_session_object(
             session,
@@ -1088,6 +1093,23 @@ def scene_create(
                 wave,
                 np.ones(wave.size, dtype=float),
                 illuminant_comment="equal-energy",
+                asset_store=store,
+            ),
+        )
+
+    if name in {"uniformep", "uniformequalphoton", "uniformequalphotons"}:
+        size = args[0] if len(args) > 0 else 32
+        wave = _wave_or_default(args[1] if len(args) > 1 else None)
+        illuminant_photons = np.ones(wave.size, dtype=float)
+        illuminant_energy = quanta_to_energy(illuminant_photons, wave)
+        return track_session_object(
+            session,
+            _uniform_scene(
+                "Uniform EP",
+                size,
+                wave,
+                illuminant_energy,
+                illuminant_comment="equal-photons",
                 asset_store=store,
             ),
         )
@@ -1713,6 +1735,8 @@ def scene_set(scene: Scene, parameter: str, value: Any) -> Scene:
     if key in {"fov", "hfov", "wangular"}:
         scene.fields["fov_deg"] = float(value)
         return _update_scene_geometry(scene)
+    if key in {"meanluminance", "luminancemean"}:
+        return scene_adjust_luminance(scene, float(value))
     if key == "illuminantenergy":
         wave = np.asarray(scene.fields["wave"], dtype=float)
         energy = np.asarray(value, dtype=float).reshape(-1)

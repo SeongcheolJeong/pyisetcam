@@ -877,6 +877,12 @@
       "atol": 1e-08
     },
     {
+      "name": "sensor_counting_photons_small",
+      "matlab_function": "s_sensorCountingPhotons",
+      "rtol": 1e-04,
+      "atol": 1e-06
+    },
+    {
       "name": "sensor_estimation_small",
       "matlab_function": "ieReadSpectra/pinv spectral estimation",
       "rtol": 1e-05,
