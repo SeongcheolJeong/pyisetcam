@@ -991,3 +991,9 @@ for the returned component curves.
 Multispectral / EXR / reflective-display cases and the rest of the vendor
 sensor catalog remain explicitly out of scope until they are ported
 deliberately.
+The script-driven sensor slice now also covers the headless
+`s_sensorMCC.m` workflow: `sensorCreate('bayer (gbrg)')`, headless
+`sensorCCM(...)` chart fitting from stored corner points, and the fixed
+`ipSet(..., 'conversion method sensor', 'current matrix')` path now all
+run end to end with an Octave-backed parity case on the stable CCM and
+corrected-render summaries.

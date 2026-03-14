@@ -160,6 +160,7 @@ from .sensor import (
     mlens_set,
     pixel_snr,
     signal_current,
+    sensor_ccm,
     sensor_color_filter,
     sensor_compute_array,
     sensor_compute_samples,
@@ -430,8 +431,10 @@ __all__ = [
     "sensorCreateIdeal",
     "sensorCreateSplitPixel",
     "sensorGet",
+    "sensorCCM",
     "signalCurrent",
     "signal_current",
+    "sensor_ccm",
     "sensorColorFilter",
     "sensor_color_filter",
     "sensorSNR",
@@ -615,6 +618,7 @@ mlAnalyzeArrayEtendue = ml_analyze_array_etendue
 sensorCompute = sensor_compute
 sensorComputeArray = sensor_compute_array
 sensorComputeSamples = sensor_compute_samples
+sensorCCM = sensor_ccm
 signalCurrent = signal_current
 sensorColorFilter = sensor_color_filter
 sensorCrop = sensor_crop

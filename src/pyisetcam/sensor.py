@@ -13,6 +13,7 @@ from scipy.signal import convolve2d
 from .assets import AssetStore, ie_read_color_filter
 from .color import luminance_from_photons, xyz_color_matching
 from .exceptions import UnsupportedOptionError
+from .metrics import xyz_from_energy
 from .optics import DEFAULT_FOCAL_LENGTH_M
 from .optics import oi_get
 from .session import track_session_object
@@ -204,6 +205,10 @@ def _matlab_round_to_int(values: Any) -> np.ndarray:
     array = np.asarray(values, dtype=float)
     rounded = np.where(array >= 0.0, np.floor(array + 0.5), np.ceil(array - 0.5))
     return rounded.astype(int)
+
+
+def _matlab_round_scalar(value: Any) -> int:
+    return int(_matlab_round_to_int(np.asarray([value], dtype=float))[0])
 
 
 def _pixel_size_m(pixel: dict[str, Any]) -> np.ndarray:
@@ -978,6 +983,114 @@ def _sensor_filter_display_colors(sensor: Sensor) -> np.ndarray:
     return np.clip(colors, 0.0, 1.0)
 
 
+def _chart_roi(current_loc: Any, delta: Any) -> tuple[np.ndarray, np.ndarray]:
+    from .roi import ie_rect2_locs
+
+    current = np.asarray(current_loc, dtype=float).reshape(2)
+    delta_value = float(np.asarray(delta, dtype=float).reshape(-1)[0])
+    half_delta = _matlab_round_scalar(delta_value / 2.0)
+    rect = np.array(
+        [
+            _matlab_round_scalar(current[1]) - half_delta,
+            _matlab_round_scalar(current[0]) - half_delta,
+            _matlab_round_scalar(delta_value),
+            _matlab_round_scalar(delta_value),
+        ],
+        dtype=int,
+    )
+    return ie_rect2_locs(rect), rect
+
+
+def _chart_rectangles(
+    corner_points: Any,
+    n_rows: int,
+    n_cols: int,
+    s_factor: float = 0.5,
+    black_edge: bool = False,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    cp = np.asarray(corner_points, dtype=float)
+    if cp.shape != (4, 2):
+        raise ValueError("Chart corner points must be a 4x2 array in [x, y] order.")
+
+    chart_x = float(np.hypot(cp[3, 0] - cp[2, 0], cp[3, 1] - cp[2, 1]))
+    chart_y = float(np.hypot(cp[3, 0] - cp[0, 0], cp[3, 1] - cp[0, 1]))
+    p_size = _matlab_round_to_int(np.array([chart_y / float(n_rows), chart_x / float(n_cols)], dtype=float))
+
+    m_locs = np.zeros((2, int(n_rows) * int(n_cols)), dtype=int)
+    index = 0
+    for col in range(1, int(n_cols) + 1):
+        col_frac = float(col - 1) / float(n_cols)
+        this_col = (cp[3, :] * (1.0 - col_frac)) + (cp[2, :] * col_frac) + 0.5
+        this_col[0] = this_col[0] + (float(p_size[0]) / 2.0)
+        for row in range(1, int(n_rows) + 1):
+            row_frac = float(row - 1) / float(n_rows)
+            this_row = (cp[3, :] * (1.0 - row_frac)) + (cp[0, :] * row_frac) + 0.5
+            this_row[1] = this_row[1] + (float(p_size[1]) / 2.0)
+            this_point = _matlab_round_to_int(this_col + this_row - cp[3, :])
+            m_locs[:, index] = np.array([this_point[1], this_point[0]], dtype=int)
+            index += 1
+
+    if black_edge:
+        delta = _matlab_round_to_int(p_size / 8.0)
+        m_locs[0, :] = m_locs[0, :] - int(delta[0])
+        m_locs[1, :] = m_locs[1, :] - int(delta[1])
+        s_factor = float(s_factor) * 0.9
+
+    rects = np.zeros((m_locs.shape[1], 4), dtype=int)
+    rect_delta = float(p_size[0]) * float(s_factor)
+    for index in range(m_locs.shape[1]):
+        _, rect = _chart_roi(m_locs[:, index], rect_delta)
+        rects[index, :] = rect
+
+    return rects, m_locs, p_size
+
+
+def _chart_rects_data(
+    sensor: Sensor,
+    m_locs: Any,
+    delta: Any,
+    *,
+    full_data: bool = False,
+    data_type: str = "volts",
+) -> np.ndarray | list[np.ndarray]:
+    from .roi import vc_get_roi_data
+
+    locs = np.asarray(m_locs, dtype=float)
+    if locs.ndim != 2 or locs.shape[0] != 2:
+        raise ValueError("Chart midpoint locations must be a 2xN array in [row; col] order.")
+
+    patch_data: list[np.ndarray] = []
+    for index in range(locs.shape[1]):
+        roi_locs, _ = _chart_roi(locs[:, index], delta)
+        patch_data.append(np.asarray(vc_get_roi_data(sensor, roi_locs, data_type), dtype=float))
+
+    if full_data:
+        return patch_data
+
+    n_filters = int(patch_data[0].shape[1]) if patch_data else int(sensor_get(sensor, "nfilters"))
+    mean_rgb = np.zeros((locs.shape[1], n_filters), dtype=float)
+    for index, data in enumerate(patch_data):
+        for channel_index in range(n_filters):
+            channel = np.asarray(data[:, channel_index], dtype=float)
+            finite = np.isfinite(channel)
+            mean_rgb[index, channel_index] = float(np.mean(channel[finite])) if np.any(finite) else np.nan
+    return mean_rgb
+
+
+def _macbeth_ideal_linear_rgb(
+    wave: Any,
+    *,
+    asset_store: AssetStore,
+) -> np.ndarray:
+    wave_nm = np.asarray(wave, dtype=float).reshape(-1)
+    _, reflectances = asset_store.load_reflectances("macbethChart.mat", wave_nm=wave_nm)
+    _, illuminant_energy = asset_store.load_illuminant("D65.mat", wave_nm=wave_nm)
+    color_signal = np.asarray(reflectances, dtype=float) * np.asarray(illuminant_energy, dtype=float).reshape(-1, 1)
+    macbeth_xyz = xyz_from_energy(color_signal.T, wave_nm, asset_store=asset_store)
+    macbeth_xyz = 100.0 * (macbeth_xyz / max(float(np.max(macbeth_xyz[:, 1])), 1e-12))
+    return np.clip(xyz_to_linear_srgb(macbeth_xyz / 100.0), 0.0, 1.0)
+
+
 def _color_block_matrix(wave_nm: np.ndarray, extrap_val: float = 0.0) -> np.ndarray:
     wave = np.asarray(wave_nm, dtype=float).reshape(-1)
     default_wave = np.arange(400.0, 701.0, 10.0, dtype=float)
@@ -1470,6 +1583,12 @@ def sensor_create(
     if normalized in {"default", "color", "bayer", "rgb", "bayergrbg", "bayer-grbg"}:
         sensor = _sensor_base("bayer-grbg", wave, size, pixel_dict)
         sensor.fields["pattern"] = np.array([[2, 1], [3, 2]], dtype=int)
+        sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle("RGB", wave, asset_store=store)
+        return track_session_object(session, sensor)
+
+    if normalized in {"bayergbrg", "bayer-gbrg", "bayer(gbrg)"}:
+        sensor = _sensor_base("bayer-gbrg", wave, size, pixel_dict)
+        sensor.fields["pattern"] = np.array([[2, 3], [1, 2]], dtype=int)
         sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle("RGB", wave, asset_store=store)
         return track_session_object(session, sensor)
 
@@ -3997,3 +4116,43 @@ def sensor_compute_samples(
         samples.append(np.clip(sample, 0.0, voltage_swing))
 
     return np.stack(samples, axis=base.ndim)
+
+
+def sensor_ccm(
+    sensor: Sensor,
+    ccm_method: str | None = None,
+    point_loc: Any | None = None,
+    show_selection: bool = True,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Estimate a MATLAB-style sensor color conversion matrix from stored chart corners."""
+
+    store = _store(asset_store)
+    method = param_format(ccm_method or "macbeth")
+    if method != "macbeth":
+        raise UnsupportedOptionError("sensorCCM", ccm_method)
+
+    if point_loc is None or np.asarray(point_loc).size == 0:
+        corner_points = sensor_get(sensor, "chart corner points")
+    else:
+        corner_points = np.asarray(point_loc)
+    if corner_points is None or np.asarray(corner_points).size == 0:
+        raise ValueError("sensorCCM requires chart corner points in headless mode.")
+
+    rects, m_locs, p_size = _chart_rectangles(corner_points, 4, 6, 0.5)
+    delta = _matlab_round_scalar(float(p_size[0]) * 0.5)
+    rgb = np.asarray(_chart_rects_data(sensor, m_locs, delta, full_data=False, data_type="volts"), dtype=float)
+    ideal_rgb = _macbeth_ideal_linear_rgb(sensor_get(sensor, "wave"), asset_store=store)
+    matrix, _, _, _ = np.linalg.lstsq(rgb, ideal_rgb, rcond=None)
+
+    sensor.fields.setdefault("chartP", {})
+    sensor.fields["chartP"]["cornerPoints"] = np.asarray(corner_points).copy()
+    if show_selection:
+        sensor.fields["chartP"]["rects"] = rects.copy()
+
+    return np.asarray(matrix, dtype=float), np.asarray(corner_points).copy()
+
+
+sensorComputeSamples = sensor_compute_samples
+sensorCCM = sensor_ccm

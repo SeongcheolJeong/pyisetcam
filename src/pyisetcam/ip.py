@@ -169,6 +169,9 @@ def _sensor_to_internal(
     if conversion_method in {"none", "sensor"}:
         transform = np.eye(sensor_space.shape[2], dtype=float)
         internal = sensor_space.copy()
+    elif conversion_method in {"current", "currentmatrix", "manualmatrixentry"}:
+        transform = _ip_transform(ip, 0)
+        internal = sensor_space @ transform
     elif conversion_method in {"mccoptimized", "mcc", "esseroptimized", "esser"}:
         surfaces = "esser" if "esser" in conversion_method else "mcc"
         transform = sensor_to_target_matrix(

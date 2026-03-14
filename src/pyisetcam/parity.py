@@ -6,6 +6,7 @@ from dataclasses import dataclass
 import tempfile
 from typing import Any
 
+import imageio.v3 as iio
 import numpy as np
 
 from .assets import AssetStore, ie_read_color_filter, ie_read_spectra
@@ -53,6 +54,7 @@ from .sensor import (
     mlens_get,
     mlens_set,
     sensor_color_filter,
+    sensor_ccm,
     sensor_compute,
     sensor_compute_array,
     sensor_compute_samples,
@@ -96,6 +98,11 @@ def _stats_vector(values: np.ndarray) -> np.ndarray:
         ],
         dtype=float,
     )
+
+
+def _channel_normalize(values: Any) -> np.ndarray:
+    vector = np.asarray(values, dtype=float).reshape(-1)
+    return vector / max(float(np.max(np.abs(vector))), 1e-12)
 
 
 def run_python_case_with_context(
@@ -2567,6 +2574,64 @@ def run_python_case_with_context(
                 ),
             },
             context={"scene": scene, "oi": oi, "sensor": sensor_nf},
+        )
+
+    if case_name == "sensor_mcc_small":
+        mosaic_path = store.resolve("data/sensor/mccGBRGsensor.tif")
+        mosaic = np.asarray(iio.imread(mosaic_path), dtype=float)
+
+        sensor = sensor_create("bayer (gbrg)", asset_store=store)
+        sensor = sensor_set(sensor, "name", "Sensor demo")
+
+        minimum = float(np.min(mosaic))
+        maximum = float(np.max(mosaic))
+        voltage_swing = float(sensor_get(sensor, "pixel voltage swing"))
+        volts = ((mosaic - minimum) / max(maximum - minimum, 1e-12)) * voltage_swing
+
+        sensor = sensor_set(sensor, "size", np.asarray(volts.shape[:2], dtype=int))
+        sensor = sensor_set(sensor, "volts", volts)
+        corner_points = np.array([[15, 584], [782, 584], [784, 26], [23, 19]], dtype=float)
+        sensor = sensor_set(sensor, "chart corner points", corner_points)
+        estimated_ccm, _ = sensor_ccm(sensor, None, None, True, asset_store=store)
+
+        ip_uncorrected = ip_create(asset_store=store)
+        ip_uncorrected = ip_set(ip_uncorrected, "name", "No Correction")
+        ip_uncorrected = ip_set(ip_uncorrected, "scaledisplay", 1)
+        ip_uncorrected = ip_compute(ip_uncorrected, sensor, asset_store=store)
+        uncorrected = np.asarray(ip_get(ip_uncorrected, "result"), dtype=float)
+        uncorrected_flat = uncorrected.reshape(-1, uncorrected.shape[2])
+
+        fixed_matrix = np.array(
+            [
+                [0.9205, -0.1402, -0.1289],
+                [-0.0148, 0.8763, -0.0132],
+                [-0.2516, -0.1567, 0.6987],
+            ],
+            dtype=float,
+        )
+        ip_corrected = ip_create(asset_store=store)
+        ip_corrected = ip_set(ip_corrected, "name", "CCM Correction")
+        ip_corrected = ip_set(ip_corrected, "scaledisplay", 1)
+        ip_corrected = ip_set(ip_corrected, "conversion transform sensor", fixed_matrix)
+        ip_corrected = ip_set(ip_corrected, "correction transform illuminant", np.eye(3, dtype=float))
+        ip_corrected = ip_set(ip_corrected, "ics2Display Transform", np.eye(3, dtype=float))
+        ip_corrected = ip_set(ip_corrected, "conversion method sensor", "current matrix")
+        ip_corrected = ip_compute(ip_corrected, sensor, asset_store=store)
+        corrected = np.asarray(ip_get(ip_corrected, "result"), dtype=float)
+        corrected_flat = corrected.reshape(-1, corrected.shape[2])
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "mosaic_size": np.asarray(volts.shape[:2], dtype=int),
+                "volts_stats": _stats_vector(volts),
+                "estimated_ccm": np.asarray(estimated_ccm, dtype=float),
+                "uncorrected_mean_rgb_norm": _channel_normalize(np.mean(uncorrected_flat, axis=0, dtype=float)),
+                "uncorrected_p95_rgb_norm": _channel_normalize(np.percentile(uncorrected_flat, 95.0, axis=0)),
+                "corrected_mean_rgb_norm": _channel_normalize(np.mean(corrected_flat, axis=0, dtype=float)),
+                "corrected_p95_rgb_norm": _channel_normalize(np.percentile(corrected_flat, 95.0, axis=0)),
+            },
+            context={"sensor": sensor, "ip_uncorrected": ip_uncorrected, "ip_corrected": ip_corrected},
         )
 
     if case_name == "sensor_filter_transmissivities_small":

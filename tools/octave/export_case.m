@@ -1739,6 +1739,58 @@ switch case_name
         payload.mean_residual_stats = [mean(abs(meanResidual(:))); prctile(abs(meanResidual(:)), 95)];
         payload.pair_diff_stats = [std(pairDiff(:)); prctile(pairDiff(:), [5 50 95])'];
 
+    case 'sensor_mcc_small'
+        fileName = fullfile(upstream_root, 'data', 'sensor', 'mccGBRGsensor.tif');
+        mosaic = double(imread(fileName));
+
+        sensor = sensorCreate('bayer (gbrg)');
+        sensor = sensorSet(sensor, 'name', 'Sensor demo');
+
+        mn = min(mosaic(:));
+        mx = max(mosaic(:));
+        vSwing = sensorGet(sensor, 'pixel voltage swing');
+        volts = ((mosaic - mn) / max(mx - mn, eps)) * vSwing;
+
+        sensor = sensorSet(sensor, 'size', size(volts));
+        sensor = sensorSet(sensor, 'volts', volts);
+        cp = [15 584; 782 584; 784 26; 23 19];
+        sensor = sensorSet(sensor, 'chart corner points', cp);
+
+        [~, mLocs, pSize] = chartRectangles(cp, 4, 6, 0.5);
+        delta = round(pSize(1) * 0.5);
+        rgb = chartRectsData(sensor, mLocs, delta, false, 'volts');
+        idealRGB = macbethIdealColor('d65', 'lrgb');
+        estimatedCCM = pinv(rgb) * idealRGB;
+
+        ip = ipCreate;
+        ip = ipSet(ip, 'name', 'No Correction');
+        ip = ipSet(ip, 'scaledisplay', 1);
+        ip = ipCompute(ip, sensor);
+        uncorrected = ipGet(ip, 'result');
+
+        fixedM = [
+            0.9205   -0.1402   -0.1289
+            -0.0148    0.8763   -0.0132
+            -0.2516   -0.1567    0.6987
+        ];
+        ip = ipCreate;
+        ip = ipSet(ip, 'name', 'CCM Correction');
+        ip = ipSet(ip, 'scaledisplay', 1);
+        ip = ipSet(ip, 'conversion transform sensor', fixedM);
+        ip = ipSet(ip, 'correction transform illuminant', eye(3, 3));
+        ip = ipSet(ip, 'ics2Display Transform', eye(3, 3));
+        ip = ipSet(ip, 'conversion method sensor ', 'current matrix');
+        ip = ipCompute(ip, sensor);
+        corrected = ipGet(ip, 'result');
+
+        payload.mosaic_size = size(volts);
+        payload.volts_stats = [mean(volts(:)) std(volts(:)) prctile(volts(:), [5 95])];
+        payload.estimated_ccm = estimatedCCM;
+        payload.uncorrected_mean_rgb_norm = local_channel_normalize(squeeze(mean(mean(uncorrected, 1), 2)));
+        payload.uncorrected_p95_rgb_norm = local_channel_normalize(prctile(reshape(uncorrected, [], size(uncorrected, 3)), 95, 1));
+        payload.corrected_mean_rgb_norm = local_channel_normalize(squeeze(mean(mean(corrected, 1), 2)));
+        payload.corrected_p95_rgb_norm = local_channel_normalize(prctile(reshape(corrected, [], size(corrected, 3)), 95, 1));
+
     case 'sensor_filter_transmissivities_small'
         sensor = sensorCreate();
         filters = sensorGet(sensor, 'filter transmissivities');
@@ -2468,4 +2520,9 @@ sSupport = sensorGet(sensorAdjusted, 'spatial support', 'um');
 [X, Y] = meshgrid(sSupport.x, sSupport.y);
 cra = atan(sqrt(X .^ 2 + Y .^ 2) / sourceFL);
 optimalOffsets = mlFL * tan(asin(sin(cra) / n2));
+end
+
+function values = local_channel_normalize(values)
+values = double(values(:))';
+values = values / max(max(abs(values)), eps);
 end

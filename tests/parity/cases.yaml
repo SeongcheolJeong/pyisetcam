@@ -989,6 +989,34 @@
       }
     },
     {
+      "name": "sensor_mcc_small",
+      "matlab_function": "s_sensorMCC",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "estimated_ccm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "uncorrected_mean_rgb_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "uncorrected_p95_rgb_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "corrected_mean_rgb_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "corrected_p95_rgb_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        }
+      }
+    },
+    {
       "name": "sensor_filter_transmissivities_small",
       "matlab_function": "sensorGet/sensorSet",
       "rtol": 1e-05,

@@ -257,6 +257,7 @@
 - `ip_default_pipeline`: bilinear demosaic plus default rendering, compare `input`, `sensorspace`, and final RGB image with PSNR and MAE thresholds.
 - `camera_default_pipeline`: `cameraCreate('default')` plus `cameraCompute(scene)`, compare final `ip.data.result` and intermediate stage metadata.
 - Tolerances: deterministic scalar/vector math `rtol=1e-5`, `atol=1e-8`; FFT/convolution optics `rtol=1e-4`, `atol=1e-6`; final RGB `MAE <= 1e-3` and `PSNR >= 60 dB`; noise cases validated statistically within 1% on mean/std and 2% on percentile bands.
+- `sensor_mcc_small`: `s_sensorMCC.m` parity on the chart-based sensor color-correction workflow, compare the scaled TIFF voltage summary, the headless Macbeth-derived CCM, and normalized pre/post-correction RGB summaries from the fixed-matrix IP path.
 
 ## Validation Harness
 - Maintain parity case definitions in `tests/parity/cases.yaml`.

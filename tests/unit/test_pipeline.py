@@ -5040,6 +5040,19 @@ def test_run_python_case_supports_sensor_noise_samples_parity_case(asset_store) 
     assert case.payload["pair_diff_stats"].shape == (4,)
 
 
+def test_run_python_case_supports_sensor_mcc_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_mcc_small", asset_store=asset_store)
+
+    assert tuple(case.payload["mosaic_size"]) == (600, 800)
+    assert case.payload["volts_stats"].shape == (4,)
+    assert case.payload["estimated_ccm"].shape == (3, 3)
+    assert case.payload["uncorrected_mean_rgb_norm"].shape == (3,)
+    assert case.payload["uncorrected_p95_rgb_norm"].shape == (3,)
+    assert case.payload["corrected_mean_rgb_norm"].shape == (3,)
+    assert case.payload["corrected_p95_rgb_norm"].shape == (3,)
+    assert np.all(np.isfinite(case.payload["estimated_ccm"]))
+
+
 def test_run_python_case_supports_sensor_filter_transmissivities_parity_case(asset_store) -> None:
     case = run_python_case_with_context("sensor_filter_transmissivities_small", asset_store=asset_store)
 
