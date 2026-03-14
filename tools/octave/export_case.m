@@ -141,6 +141,78 @@ switch case_name
         payload.right_eye = subject_coeffs.rightEye;
         payload.both_eyes = subject_coeffs.bothEyes;
 
+    case 'wvf_thibos_model_small'
+        measuredPupilMM = 4.5;
+        calcPupilMM = 3.0;
+        measuredWavelengthNM = 550;
+        calcWaves = (450:100:650)';
+        [sampleMean, sampleCov] = wvfLoadThibosVirtualEyes(measuredPupilMM);
+        exampleCount = 10;
+        exampleSubjectIndices = 1:3:exampleCount;
+        standardNormal = local_deterministic_normal_samples(exampleCount, numel(sampleMean));
+        exampleCoeffs = local_ie_mvnrnd(sampleMean, sampleCov, standardNormal);
+
+        z = zeros(65, 1);
+        z(1:13) = sampleMean(1:13);
+        thisGuy = wvfCreate;
+        thisGuy = wvfSet(thisGuy, 'zcoeffs', z);
+        thisGuy = wvfSet(thisGuy, 'measured pupil', measuredPupilMM);
+        thisGuy = wvfSet(thisGuy, 'calculated pupil', calcPupilMM);
+        thisGuy = wvfSet(thisGuy, 'measured wavelength', measuredWavelengthNM);
+        thisGuy = wvfSet(thisGuy, 'calc wave', calcWaves);
+        thisGuy = wvfCompute(thisGuy);
+
+        meanSubjectRows = [];
+        meanSubjectPeaks = zeros(numel(calcWaves), 1);
+        for ii = 1:numel(calcWaves)
+            psf = wvfGet(thisGuy, 'psf', calcWaves(ii));
+            psf = double(psf);
+            meanSubjectRows(ii, :) = psf(floor(size(psf, 1) / 2) + 1, :);
+            meanSubjectPeaks(ii) = max(psf(:));
+        end
+
+        subject = wvfCreate;
+        subject = wvfSet(subject, 'measured pupil', measuredPupilMM);
+        subject = wvfSet(subject, 'calculated pupil', calcPupilMM);
+        subject = wvfSet(subject, 'measured wavelength', measuredWavelengthNM);
+        subjectRows450 = [];
+        subjectRows550 = [];
+        subjectPeaks450 = zeros(numel(exampleSubjectIndices), 1);
+        subjectPeaks550 = zeros(numel(exampleSubjectIndices), 1);
+        selectedCoeffs = [];
+        for ii = 1:numel(exampleSubjectIndices)
+            z = zeros(65, 1);
+            z(1:13) = exampleCoeffs(exampleSubjectIndices(ii), 1:13)';
+            selectedCoeffs(ii, :) = z(1:13)';
+            subject = wvfSet(subject, 'zcoeffs', z);
+
+            subject = wvfSet(subject, 'calc wave', 450);
+            subject = wvfCompute(subject);
+            psf450 = double(wvfGet(subject, 'psf', 450));
+            subjectRows450(ii, :) = psf450(floor(size(psf450, 1) / 2) + 1, :);
+            subjectPeaks450(ii) = max(psf450(:));
+
+            subject = wvfSet(subject, 'calc wave', 550);
+            subject = wvfCompute(subject);
+            psf550 = double(wvfGet(subject, 'psf', 550));
+            subjectRows550(ii, :) = psf550(floor(size(psf550, 1) / 2) + 1, :);
+            subjectPeaks550(ii) = max(psf550(:));
+        end
+
+        payload.measured_pupil_mm = measuredPupilMM;
+        payload.calc_pupil_mm = calcPupilMM;
+        payload.measured_wavelength_nm = measuredWavelengthNM;
+        payload.calc_waves_nm = double(calcWaves);
+        payload.example_coeffs = double(exampleCoeffs);
+        payload.mean_subject_psf_mid_rows = double(meanSubjectRows);
+        payload.mean_subject_psf_peaks = double(meanSubjectPeaks);
+        payload.example_subject_indices = double(exampleSubjectIndices(:));
+        payload.example_subject_coeffs = double(selectedCoeffs);
+        payload.example_subject_psf_mid_rows_450 = double(subjectRows450);
+        payload.example_subject_psf_mid_rows_550 = double(subjectRows550);
+        payload.example_subject_psf_peaks_450 = double(subjectPeaks450);
+        payload.example_subject_psf_peaks_550 = double(subjectPeaks550);
+
     case 'wvf_pupil_size_human_small'
         measuredPupilMM = 7.5;
         calcPupilMM = 3.0;
@@ -3432,6 +3504,64 @@ end
 function values = local_channel_normalize(values)
 values = double(values(:))';
 values = values / max(max(abs(values)), eps);
+end
+
+function samples = local_deterministic_normal_samples(nRows, nCols)
+indices = reshape(1:(nRows*nCols), nRows, nCols);
+u1 = mod(indices * 0.7548776662466927, 1);
+u2 = mod(indices * 0.5698402909980532, 1);
+u1 = min(max(u1, 1e-6), 1 - 1e-6);
+samples = sqrt(-2 .* log(u1)) .* cos(2 .* pi .* u2);
+end
+
+function s = local_ie_mvnrnd(mu, Sigma, standardNormal)
+mu = double(mu);
+Sigma = double(Sigma);
+if isscalar(mu)
+    mu = reshape(mu, 1, 1);
+elseif isvector(mu)
+    mu = reshape(mu, 1, []);
+else
+    mu = double(mu);
+end
+
+if size(mu, 2) == 1 && ~isscalar(Sigma)
+    mu = mu';
+end
+
+[n, d] = size(mu);
+if isscalar(Sigma)
+    Sigma = double(Sigma) * eye(d);
+end
+
+if any(size(Sigma) ~= [d, d])
+    error('Sigma must have dimensions d x d where mu is n x d.');
+end
+
+if nargin < 3 || isempty(standardNormal)
+    standardNormal = randn(n, d);
+else
+    standardNormal = double(standardNormal);
+    if n == 1 && size(standardNormal, 2) == d && size(standardNormal, 1) > 1
+        mu = repmat(mu, size(standardNormal, 1), 1);
+        n = size(mu, 1);
+    end
+    if any(size(standardNormal) ~= [n, d])
+        error('standardNormal must match the expanded mu shape.');
+    end
+end
+
+try
+    U = chol(Sigma);
+catch
+    [E, Lambda] = eig(Sigma);
+    if min(diag(Lambda)) < -1e-10
+        error('Sigma must be positive semi-definite.');
+    end
+    U = sqrt(max(Lambda, 0)) * E';
+end
+
+s = standardNormal * U + mu;
 end
 
 function values = local_canonical_profile(values, nSamples)

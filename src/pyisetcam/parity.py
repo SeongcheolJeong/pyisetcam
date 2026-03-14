@@ -83,7 +83,7 @@ from .sensor import (
 from .sensor import sensor_snr
 from .sensor import sensor_set_size_to_fov
 from .sensor import signal_current
-from .utils import blackbody, energy_to_quanta, ie_fit_line, param_format, quanta_to_energy, unit_frequency_list
+from .utils import blackbody, energy_to_quanta, ie_fit_line, ie_mvnrnd, param_format, quanta_to_energy, unit_frequency_list
 
 
 @dataclass
@@ -113,6 +113,14 @@ def _stats_vector(values: np.ndarray) -> np.ndarray:
         ],
         dtype=float,
     )
+
+
+def _deterministic_normal_samples(n_rows: int, n_cols: int) -> np.ndarray:
+    indices = np.arange(1, n_rows * n_cols + 1, dtype=float).reshape(n_rows, n_cols, order="F")
+    u1 = np.mod(indices * 0.7548776662466927, 1.0)
+    u2 = np.mod(indices * 0.5698402909980532, 1.0)
+    u1 = np.clip(u1, 1e-6, 1.0 - 1e-6)
+    return np.sqrt(-2.0 * np.log(u1)) * np.cos(2.0 * np.pi * u2)
 
 
 def _channel_normalize(values: Any) -> np.ndarray:
@@ -351,6 +359,83 @@ def run_python_case_with_context(
                 "both_eyes": np.asarray(subject_coeffs["both_eyes"], dtype=float),
             },
             context={},
+        )
+
+    if case_name == "wvf_thibos_model_small":
+        measured_pupil_mm = 4.5
+        calc_pupil_mm = 3.0
+        measured_wavelength_nm = 550.0
+        calc_waves = np.arange(450.0, 651.0, 100.0, dtype=float)
+        sample_mean, sample_cov, _ = wvf_load_thibos_virtual_eyes(measured_pupil_mm, asset_store=store, full=True)
+        example_count = 10
+        example_subject_indices = np.arange(0, example_count, 3, dtype=int)
+        standard_normal = _deterministic_normal_samples(example_count, sample_mean.size)
+        example_coeffs = ie_mvnrnd(sample_mean, sample_cov, standard_normal_samples=standard_normal)
+
+        sample_mean_zcoeffs = np.zeros(65, dtype=float)
+        sample_mean_zcoeffs[:13] = np.asarray(sample_mean[:13], dtype=float)
+
+        this_guy = wvf_create()
+        this_guy = wvf_set(this_guy, "zcoeffs", sample_mean_zcoeffs)
+        this_guy = wvf_set(this_guy, "measured pupil", measured_pupil_mm)
+        this_guy = wvf_set(this_guy, "calculated pupil", calc_pupil_mm)
+        this_guy = wvf_set(this_guy, "measured wavelength", measured_wavelength_nm)
+        this_guy = wvf_set(this_guy, "calc wave", calc_waves)
+        this_guy = wvf_compute(this_guy)
+
+        mean_subject_mid_rows: list[np.ndarray] = []
+        mean_subject_peaks: list[float] = []
+        for wavelength_nm in calc_waves:
+            psf = np.asarray(wvf_get(this_guy, "psf", float(wavelength_nm)), dtype=float)
+            mean_subject_mid_rows.append(np.asarray(psf[psf.shape[0] // 2, :], dtype=float))
+            mean_subject_peaks.append(float(np.max(psf)))
+
+        subject = wvf_create()
+        subject = wvf_set(subject, "measured pupil", measured_pupil_mm)
+        subject = wvf_set(subject, "calculated pupil", calc_pupil_mm)
+        subject = wvf_set(subject, "measured wavelength", measured_wavelength_nm)
+
+        subject_rows_450: list[np.ndarray] = []
+        subject_rows_550: list[np.ndarray] = []
+        subject_peaks_450: list[float] = []
+        subject_peaks_550: list[float] = []
+        selected_coeffs: list[np.ndarray] = []
+        for subject_index in example_subject_indices:
+            subject_zcoeffs = np.zeros(65, dtype=float)
+            subject_zcoeffs[:13] = np.asarray(example_coeffs[subject_index, :13], dtype=float)
+            selected_coeffs.append(np.asarray(subject_zcoeffs[:13], dtype=float))
+            subject = wvf_set(subject, "zcoeffs", subject_zcoeffs)
+
+            subject = wvf_set(subject, "calc wave", 450.0)
+            subject = wvf_compute(subject)
+            psf_450 = np.asarray(wvf_get(subject, "psf", 450.0), dtype=float)
+            subject_rows_450.append(np.asarray(psf_450[psf_450.shape[0] // 2, :], dtype=float))
+            subject_peaks_450.append(float(np.max(psf_450)))
+
+            subject = wvf_set(subject, "calc wave", 550.0)
+            subject = wvf_compute(subject)
+            psf_550 = np.asarray(wvf_get(subject, "psf", 550.0), dtype=float)
+            subject_rows_550.append(np.asarray(psf_550[psf_550.shape[0] // 2, :], dtype=float))
+            subject_peaks_550.append(float(np.max(psf_550)))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "measured_pupil_mm": measured_pupil_mm,
+                "calc_pupil_mm": calc_pupil_mm,
+                "measured_wavelength_nm": measured_wavelength_nm,
+                "calc_waves_nm": calc_waves,
+                "example_coeffs": np.asarray(example_coeffs, dtype=float),
+                "mean_subject_psf_mid_rows": np.vstack(mean_subject_mid_rows),
+                "mean_subject_psf_peaks": np.asarray(mean_subject_peaks, dtype=float),
+                "example_subject_indices": example_subject_indices + 1,
+                "example_subject_coeffs": np.vstack(selected_coeffs),
+                "example_subject_psf_mid_rows_450": np.vstack(subject_rows_450),
+                "example_subject_psf_mid_rows_550": np.vstack(subject_rows_550),
+                "example_subject_psf_peaks_450": np.asarray(subject_peaks_450, dtype=float),
+                "example_subject_psf_peaks_550": np.asarray(subject_peaks_550, dtype=float),
+            },
+            context={"wvf": this_guy},
         )
 
     if case_name == "wvf_pupil_size_human_small":

@@ -91,6 +91,12 @@
       "atol": 1e-08
     },
     {
+      "name": "wvf_thibos_model_small",
+      "matlab_function": "s_wvfThibosModel",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "wvf_pupil_size_human_small",
       "matlab_function": "wvfCreate/wvfCompute",
       "rtol": 1e-05,

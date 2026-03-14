@@ -675,6 +675,72 @@ def ie_fit_line(
     raise ValueError(f"Unsupported ieFitLine method: {method}")
 
 
+def ie_mvnrnd(
+    mu: Any = 0.0,
+    sigma: Any = 1.0,
+    k: int | None = None,
+    *,
+    rng: np.random.Generator | None = None,
+    standard_normal_samples: NDArray[np.float64] | None = None,
+) -> NDArray[np.float64]:
+    """Mirror ISETCam's ieMvnrnd() multivariate-normal sampling behavior."""
+
+    mu_array = np.asarray(mu, dtype=float)
+    sigma_array = np.asarray(sigma, dtype=float)
+
+    if mu_array.ndim == 0:
+        mu_array = mu_array.reshape(1, 1)
+    elif mu_array.ndim == 1:
+        mu_array = mu_array.reshape(1, -1)
+    elif mu_array.ndim != 2:
+        raise ValueError("mu must be scalar, vector, or a 2D matrix.")
+
+    if mu_array.shape[1] == 1 and sigma_array.ndim == 2 and sigma_array.size > 1:
+        mu_array = mu_array.T
+
+    if k is not None:
+        sample_count = int(k)
+        if sample_count <= 0:
+            raise ValueError("k must be positive when provided.")
+        mu_array = np.repeat(mu_array, sample_count, axis=0)
+    elif standard_normal_samples is not None:
+        requested = np.asarray(standard_normal_samples, dtype=float)
+        if requested.ndim != 2:
+            raise ValueError("standard_normal_samples must be a 2D matrix.")
+        if mu_array.shape[0] == 1 and requested.shape[1] == mu_array.shape[1] and requested.shape[0] > 1:
+            mu_array = np.repeat(mu_array, requested.shape[0], axis=0)
+
+    n_rows, n_dims = mu_array.shape
+
+    if sigma_array.ndim == 0:
+        sigma_array = np.array([[float(sigma_array)]], dtype=float)
+    elif sigma_array.ndim != 2:
+        raise ValueError("Sigma must be scalar or a 2D covariance matrix.")
+
+    if sigma_array.shape != (n_dims, n_dims):
+        raise ValueError("Sigma must have dimensions d x d where mu is n x d.")
+
+    try:
+        upper = np.linalg.cholesky(sigma_array).T
+    except np.linalg.LinAlgError:
+        eigenvalues, eigenvectors = np.linalg.eigh(sigma_array)
+        if float(np.min(eigenvalues)) < -1e-10:
+            raise ValueError("Sigma must be positive semi-definite.") from None
+        upper = np.diag(np.sqrt(np.clip(eigenvalues, 0.0, None))) @ eigenvectors.T
+
+    if standard_normal_samples is None:
+        if rng is None:
+            standard_normal = np.random.standard_normal((n_rows, n_dims))
+        else:
+            standard_normal = rng.standard_normal((n_rows, n_dims))
+    else:
+        standard_normal = np.asarray(standard_normal_samples, dtype=float)
+        if standard_normal.shape != (n_rows, n_dims):
+            raise ValueError("standard_normal_samples must match the expanded mu shape.")
+
+    return np.asarray(standard_normal, dtype=float) @ upper + mu_array
+
+
 def interp_spectra(
     source_wave_nm: NDArray[np.float64],
     values: NDArray[np.float64],

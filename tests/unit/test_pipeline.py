@@ -23,6 +23,7 @@ from pyisetcam import (
     ip_set,
     ip_compute,
     ip_create,
+    ie_mvnrnd,
     optics_coc,
     optics_dof,
     optics_psf_to_otf,
@@ -192,6 +193,67 @@ def test_wvf_load_thibos_virtual_eyes_drives_pupil_size_smoke(asset_store) -> No
     assert np.isclose(np.sum(psf), 1.0)
     assert np.isclose(wvf_get(wvf, "measured pupil size", "mm"), 7.5)
     assert np.isclose(wvf_get(wvf, "calc pupil size", "mm"), 3.0)
+
+
+def test_ie_mvnrnd_supports_explicit_standard_normal_samples() -> None:
+    mu = np.array([0.5, -1.0], dtype=float)
+    sigma = np.array([[4.0, 1.0], [1.0, 9.0]], dtype=float)
+    standard_normal = np.array([[0.25, -0.5], [1.0, 0.75], [-0.25, 0.5]], dtype=float)
+
+    samples = ie_mvnrnd(mu, sigma, standard_normal_samples=standard_normal)
+    expected = standard_normal @ np.linalg.cholesky(sigma).T + np.repeat(mu.reshape(1, -1), 3, axis=0)
+
+    assert samples.shape == (3, 2)
+    assert np.allclose(samples, expected)
+
+
+def test_wvf_thibos_model_workflow_supports_mean_and_example_subject_psfs(asset_store) -> None:
+    measured_pupil_mm = 4.5
+    calc_pupil_mm = 3.0
+    measured_wavelength_nm = 550.0
+    calc_waves = np.arange(450.0, 651.0, 100.0, dtype=float)
+    sample_mean, sample_cov, _ = wvf_load_thibos_virtual_eyes(measured_pupil_mm, asset_store=asset_store, full=True)
+    standard_normal = np.arange(1, 10 * sample_mean.size + 1, dtype=float).reshape(10, sample_mean.size, order="F")
+    standard_normal = np.sqrt(-2.0 * np.log(np.clip(np.mod(standard_normal * 0.7548776662466927, 1.0), 1e-6, 1.0 - 1e-6))) * np.cos(
+        2.0 * np.pi * np.mod(standard_normal * 0.5698402909980532, 1.0)
+    )
+    example_coeffs = ie_mvnrnd(sample_mean, sample_cov, standard_normal_samples=standard_normal)
+
+    assert example_coeffs.shape == (10, sample_mean.size)
+
+    zcoeffs = np.zeros(65, dtype=float)
+    zcoeffs[:13] = np.asarray(sample_mean[:13], dtype=float)
+    mean_subject = wvf_create()
+    mean_subject = wvf_set(mean_subject, "zcoeffs", zcoeffs)
+    mean_subject = wvf_set(mean_subject, "measured pupil", measured_pupil_mm)
+    mean_subject = wvf_set(mean_subject, "calculated pupil", calc_pupil_mm)
+    mean_subject = wvf_set(mean_subject, "measured wavelength", measured_wavelength_nm)
+    mean_subject = wvf_set(mean_subject, "calc wave", calc_waves)
+    mean_subject = wvf_compute(mean_subject)
+
+    psf_rows = []
+    for wavelength_nm in calc_waves:
+        psf = np.asarray(wvf_get(mean_subject, "psf", float(wavelength_nm)), dtype=float)
+        psf_rows.append(np.asarray(psf[psf.shape[0] // 2, :], dtype=float))
+
+    assert len(psf_rows) == 3
+    assert all(row.shape == psf_rows[0].shape for row in psf_rows)
+
+    subject = wvf_create()
+    subject = wvf_set(subject, "measured pupil", measured_pupil_mm)
+    subject = wvf_set(subject, "calculated pupil", calc_pupil_mm)
+    subject = wvf_set(subject, "measured wavelength", measured_wavelength_nm)
+
+    which_subjects = np.arange(0, 10, 3, dtype=int)
+    for subject_index in which_subjects:
+        subject_zcoeffs = np.zeros(65, dtype=float)
+        subject_zcoeffs[:13] = example_coeffs[subject_index, :13]
+        subject = wvf_set(subject, "zcoeffs", subject_zcoeffs)
+        subject = wvf_set(subject, "calc wave", 450.0)
+        subject = wvf_compute(subject)
+        psf = np.asarray(wvf_get(subject, "psf", 450.0), dtype=float)
+        assert psf.shape[0] == psf.shape[1]
+        assert np.isclose(float(np.sum(psf)), 1.0)
 
 
 def test_wvf_create_key_value_and_human_lca_smoke(asset_store) -> None:
@@ -4265,6 +4327,24 @@ def test_run_python_case_supports_wvf_astigmatism_parity_case(asset_store) -> No
     assert case.payload["psf_mid_cols"].shape == (9, case.payload["x"].size)
     assert case.payload["psf_centers"].shape == (9,)
     assert np.allclose(case.payload["psf_centers"], 1.0)
+
+
+def test_run_python_case_supports_wvf_thibos_model_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("wvf_thibos_model_small", asset_store=asset_store)
+
+    assert np.isclose(float(case.payload["measured_pupil_mm"]), 4.5)
+    assert np.isclose(float(case.payload["calc_pupil_mm"]), 3.0)
+    assert np.isclose(float(case.payload["measured_wavelength_nm"]), 550.0)
+    assert case.payload["calc_waves_nm"].shape == (3,)
+    assert case.payload["example_coeffs"].shape[0] == 10
+    assert case.payload["mean_subject_psf_mid_rows"].shape[0] == 3
+    assert case.payload["mean_subject_psf_peaks"].shape == (3,)
+    assert np.array_equal(case.payload["example_subject_indices"], np.array([1, 4, 7, 10], dtype=int))
+    assert case.payload["example_subject_coeffs"].shape == (4, 13)
+    assert case.payload["example_subject_psf_mid_rows_450"].shape[0] == 4
+    assert case.payload["example_subject_psf_mid_rows_550"].shape[0] == 4
+    assert case.payload["example_subject_psf_peaks_450"].shape == (4,)
+    assert case.payload["example_subject_psf_peaks_550"].shape == (4,)
 
 
 def test_wvf_diffraction_workflow_supports_script_sweeps() -> None:

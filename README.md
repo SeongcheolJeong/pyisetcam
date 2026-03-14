@@ -242,6 +242,11 @@ That same Phase 2 optics wave now also includes the `s_opticsMicrolens.m`
 workflow, with curated parity on the microlens getter/setter contract,
 default 30-degree sensor FOV setup, and the radiance-generated source and
 pixel irradiance center-line outputs plus etendue.
+That same Phase 2 wavefront block now also includes `ie_mvnrnd` /
+`ieMvnrnd` together with the `s_wvfThibosModel.m` workflow, with curated
+Octave parity on deterministic virtual-eye coefficient draws, the
+sample-mean subject PSFs across 450/550/650 nm, and the selected
+example-subject PSF center rows at 450 nm and 550 nm.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit

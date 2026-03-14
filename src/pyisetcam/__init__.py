@@ -184,7 +184,7 @@ from .sensor import (
     sensor_set_size_to_fov,
 )
 from .types import Camera, Display, ImageProcessor, OpticalImage, Scene, Sensor, SessionContext
-from .utils import DEFAULT_WAVE, blackbody, ie_fit_line, ie_parameter_otype, param_format
+from .utils import DEFAULT_WAVE, blackbody, ie_fit_line, ie_mvnrnd, ie_parameter_otype, param_format
 
 __all__ = [
     "AssetStore",
@@ -232,6 +232,7 @@ __all__ = [
     "ieEquivalentObjtype",
     "ieFieldHeight2Index",
     "ieFitLine",
+    "ieMvnrnd",
     "ieFindObjectByName",
     "ieLocs2Rect",
     "ieParameterOtype",
@@ -261,6 +262,7 @@ __all__ = [
     "ie_delete_object",
     "ie_equivalent_objtype",
     "ie_fit_line",
+    "ie_mvnrnd",
     "ie_read_spectra",
     "ie_read_color_filter",
     "ie_save_color_filter",
@@ -671,6 +673,7 @@ ieDeleteObject = ie_delete_object
 ieEquivalentObjtype = ie_equivalent_objtype
 ieFindObjectByName = ie_find_object_by_name
 ieFitLine = ie_fit_line
+ieMvnrnd = ie_mvnrnd
 ieReadColorFilter = ie_read_color_filter
 ieReadSpectra = ie_read_spectra
 ieLocs2Rect = ie_locs2_rect
