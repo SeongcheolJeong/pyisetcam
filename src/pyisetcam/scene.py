@@ -7,6 +7,7 @@ from typing import Any
 
 import imageio.v3 as iio
 import numpy as np
+from scipy.ndimage import zoom
 from scipy.signal import convolve2d
 
 from .assets import AssetStore
@@ -151,6 +152,100 @@ def _update_scene_geometry(scene: Scene) -> Scene:
         }
     )
     return scene
+
+
+def _scene_resize_array(data: np.ndarray, new_rows: int, new_cols: int) -> np.ndarray:
+    current = np.asarray(data, dtype=float)
+    if current.ndim == 2:
+        factors = (new_rows / max(current.shape[0], 1), new_cols / max(current.shape[1], 1))
+    elif current.ndim == 3:
+        factors = (
+            new_rows / max(current.shape[0], 1),
+            new_cols / max(current.shape[1], 1),
+            1.0,
+        )
+    else:
+        raise ValueError("Scene resize only supports 2D or 3D arrays.")
+    return zoom(current, factors, order=1)
+
+
+def _scene_resize(scene: Scene, new_size: Any) -> Scene:
+    values = np.asarray(new_size, dtype=float).reshape(-1)
+    if values.size == 0:
+        raise ValueError("scene resize requires a target size.")
+    if values.size == 1:
+        values = np.repeat(values, 2)
+    new_rows = max(int(np.rint(values[0])), 1)
+    new_cols = max(int(np.rint(values[1])), 1)
+
+    resized = scene.clone()
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+    resized = scene_set(resized, "photons", _scene_resize_array(photons, new_rows, new_cols))
+
+    depth_map = scene.fields.get("depth_map_m")
+    if depth_map is not None:
+        resized.fields["depth_map_m"] = _scene_resize_array(np.asarray(depth_map, dtype=float), new_rows, new_cols)
+
+    illuminant_photons = scene.fields.get("illuminant_photons")
+    if illuminant_photons is not None:
+        illuminant_array = np.asarray(illuminant_photons, dtype=float)
+        if illuminant_array.ndim >= 2:
+            resized.fields["illuminant_photons"] = _scene_resize_array(illuminant_array, new_rows, new_cols)
+
+    return resized
+
+
+def scene_combine(scene1: Scene, scene2: Scene, *args: Any) -> Scene:
+    direction = "horizontal"
+    if args:
+        if len(args) != 2 or param_format(args[0]) != "direction":
+            raise ValueError("scene_combine expects MATLAB-style 'direction', value arguments.")
+        direction = str(args[1]).lower()
+    normalized = param_format(direction)
+
+    wave1 = np.asarray(scene_get(scene1, "wave"), dtype=float)
+    wave2 = np.asarray(scene_get(scene2, "wave"), dtype=float)
+    if not np.array_equal(wave1, wave2):
+        raise ValueError("scene_combine requires matching wavelength samples.")
+
+    if normalized == "horizontal":
+        if int(scene_get(scene1, "rows")) != int(scene_get(scene2, "rows")):
+            raise ValueError("Horizontal scene_combine requires matching row counts.")
+        photons = np.concatenate(
+            (
+                np.asarray(scene_get(scene1, "photons"), dtype=float),
+                np.asarray(scene_get(scene2, "photons"), dtype=float),
+            ),
+            axis=1,
+        )
+        combined = scene_set(scene1.clone(), "photons", photons)
+        return scene_set(
+            combined,
+            "hfov",
+            float(scene_get(scene1, "fov")) + float(scene_get(scene2, "fov")),
+        )
+
+    if normalized == "vertical":
+        if int(scene_get(scene1, "cols")) != int(scene_get(scene2, "cols")):
+            raise ValueError("Vertical scene_combine requires matching column counts.")
+        photons = np.concatenate(
+            (
+                np.asarray(scene_get(scene1, "photons"), dtype=float),
+                np.asarray(scene_get(scene2, "photons"), dtype=float),
+            ),
+            axis=0,
+        )
+        return scene_set(scene1.clone(), "photons", photons)
+
+    if normalized == "both":
+        return scene_combine(scene_combine(scene1, scene2, "direction", "horizontal"), scene_combine(scene1, scene2, "direction", "horizontal"), "direction", "vertical")
+
+    if normalized == "centered":
+        scene_mid = scene_combine(scene2, scene_combine(scene1, scene2, "direction", "horizontal"), "direction", "horizontal")
+        scene_edge = scene_combine(scene_combine(scene2, scene2, "direction", "horizontal"), scene2, "direction", "horizontal")
+        return scene_combine(scene_combine(scene_edge, scene_mid, "direction", "vertical"), scene_edge, "direction", "vertical")
+
+    raise ValueError(f"Unsupported scene_combine direction: {direction}")
 
 
 def _macbeth_cube(
@@ -1735,6 +1830,8 @@ def scene_set(scene: Scene, parameter: str, value: Any) -> Scene:
     if key in {"fov", "hfov", "wangular"}:
         scene.fields["fov_deg"] = float(value)
         return _update_scene_geometry(scene)
+    if key == "resize":
+        return _scene_resize(scene, value)
     if key in {"meanluminance", "luminancemean"}:
         return scene_adjust_luminance(scene, float(value))
     if key == "illuminantenergy":

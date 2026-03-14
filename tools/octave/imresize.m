@@ -3,12 +3,16 @@ function out = imresize(in, target, method)
 %
 % Supports:
 %   imresize(A, [rows cols])
-%   imresize(A, [rows cols], 'nearest'|'linear')
+%   imresize(A, [rows cols], 'nearest'|'linear'|'bilinear')
 
 if nargin < 2
     error('imresize requires at least two arguments');
 end
 if nargin < 3 || isempty(method)
+    method = 'linear';
+end
+method = lower(method);
+if strcmp(method, 'bilinear')
     method = 'linear';
 end
 
@@ -36,11 +40,11 @@ col_positions = linspace(1, src_cols, dst_cols);
 [dst_x, dst_y] = meshgrid(col_positions, row_positions);
 
 if ndims(in) == 2
-    out = interp2(src_x, src_y, double(in), dst_x, dst_y, lower(method));
+    out = interp2(src_x, src_y, double(in), dst_x, dst_y, method);
 else
     out = zeros(dst_rows, dst_cols, size(in, 3), class(in));
     for ii = 1:size(in, 3)
-        out(:, :, ii) = cast(interp2(src_x, src_y, double(in(:, :, ii)), dst_x, dst_y, lower(method)), class(in));
+        out(:, :, ii) = cast(interp2(src_x, src_y, double(in(:, :, ii)), dst_x, dst_y, method), class(in));
     end
     return;
 end

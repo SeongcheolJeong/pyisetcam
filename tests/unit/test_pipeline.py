@@ -53,6 +53,7 @@ from pyisetcam import (
     rt_synthetic,
     si_synthetic,
     run_python_case,
+    scene_combine,
     scene_create,
     scene_adjust_luminance,
     scene_get,
@@ -4924,6 +4925,86 @@ def test_run_python_case_supports_sensor_microlens_etendue_parity_case(asset_sto
     assert case.payload["radiance_midline_neg10"].shape == (255,)
     assert case.payload["radiance_midline_0"].shape == (255,)
     assert case.payload["radiance_midline_10"].shape == (255,)
+
+
+def test_sensor_comparison_workflow_supports_mixed_sensor_types(asset_store) -> None:
+    patch_size = 24
+    scene_c = scene_create("macbeth d65", patch_size, asset_store=asset_store)
+    macbeth_size = np.asarray(scene_get(scene_c, "size"), dtype=int)
+    scene_c = scene_set(
+        scene_c,
+        "resize",
+        np.rint(np.array([macbeth_size[0], macbeth_size[1] / 2.0], dtype=float)).astype(int),
+    )
+    scene_s = scene_create("sweep frequency", int(macbeth_size[0]), float(macbeth_size[0]) / 16.0, asset_store=asset_store)
+    scene = scene_combine(scene_c, scene_s, "direction", "horizontal")
+    scene = scene_set(scene, "fov", 20.0)
+
+    assert tuple(scene_get(scene, "size")) == (96, 168)
+
+    oi = oi_create(asset_store=asset_store)
+    oi = oi_set(oi, "optics fnumber", 1.2)
+    oi = oi_compute(oi, scene)
+
+    scene_vfov = float(scene_get(scene, "vfov"))
+    small_sizes = []
+    large_sizes = []
+    for sensor_type in ("imx363", "mt9v024", "cyym"):
+        if sensor_type == "mt9v024":
+            sensor = sensor_create(sensor_type, None, "rccc", asset_store=asset_store)
+        else:
+            sensor = sensor_create(sensor_type, asset_store=asset_store)
+
+        sensor = sensor_set(sensor, "pixel size", 1.5e-6)
+        sensor = sensor_set(sensor, "hfov", 20.0, oi)
+        sensor = sensor_set(sensor, "vfov", scene_vfov)
+        sensor = sensor_set(sensor, "auto exposure", True)
+        sensor = sensor_compute(sensor, oi)
+        volts = np.asarray(sensor_get(sensor, "volts"), dtype=float)
+        small_sizes.append(tuple(sensor_get(sensor, "size")))
+        assert volts.shape == tuple(sensor_get(sensor, "size"))
+        assert np.all(np.isfinite(volts))
+
+        if sensor_type == "imx363":
+            ip = ip_compute(ip_create("imx363 RGB", sensor, asset_store=asset_store), sensor, asset_store=asset_store)
+            assert np.asarray(ip_get(ip, "result"), dtype=float).shape == volts.shape + (3,)
+        elif sensor_type == "mt9v024":
+            ip = ip_create("mt9v024 RCCC", sensor, asset_store=asset_store)
+            ip = ip_set(ip, "demosaic method", "analog rccc")
+            ip = ip_compute(ip, sensor, asset_store=asset_store)
+            assert np.asarray(ip_get(ip, "result"), dtype=float).shape == volts.shape + (3,)
+
+        sensor = sensor_set(sensor, "pixel size constant fill factor", 6e-6)
+        sensor = sensor_set(sensor, "hfov", 20.0, oi)
+        sensor = sensor_set(sensor, "vfov", scene_vfov)
+        sensor = sensor_set(sensor, "auto exposure", True)
+        sensor = sensor_compute(sensor, oi)
+        volts = np.asarray(sensor_get(sensor, "volts"), dtype=float)
+        large_sizes.append(tuple(sensor_get(sensor, "size")))
+        assert volts.shape == tuple(sensor_get(sensor, "size"))
+        assert np.all(np.isfinite(volts))
+
+    assert len(set(small_sizes)) == 1
+    assert len(set(large_sizes)) == 1
+    assert small_sizes[0][0] > large_sizes[0][0]
+    assert small_sizes[0][1] > large_sizes[0][1]
+
+
+def test_run_python_case_supports_sensor_comparison_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_comparison_small", asset_store=asset_store)
+
+    assert tuple(case.payload["scene_size"]) == (96, 168)
+    assert case.payload["oi_size"].shape == (2,)
+    assert case.payload["small_sensor_sizes"].shape == (3, 2)
+    assert case.payload["nonimx_small_sensor_mean_volts"].shape == (2,)
+    assert case.payload["nonimx_small_sensor_p90_volts"].shape == (2,)
+    assert case.payload["large_sensor_sizes"].shape == (3, 2)
+    assert case.payload["nonimx_large_sensor_mean_volts"].shape == (2,)
+    assert case.payload["nonimx_large_sensor_p90_volts"].shape == (2,)
+    assert float(case.payload["imx363_mean_ratio_large_small"]) > 0.0
+    assert float(case.payload["imx363_p90_ratio_large_small"]) > 0.0
+    assert case.payload["small_ip_sizes"].shape == (2, 3)
+    assert case.payload["large_ip_sizes"].shape == (2, 3)
 
 
 def test_run_python_case_supports_sensor_filter_transmissivities_parity_case(asset_store) -> None:

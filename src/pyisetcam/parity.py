@@ -45,7 +45,7 @@ from .optics import (
     si_synthetic,
 )
 from .plotting import ip_plot, oi_plot, sensor_plot, sensor_plot_line, wvf_plot
-from .scene import scene_adjust_illuminant, scene_adjust_luminance, scene_create, scene_get, scene_set
+from .scene import scene_adjust_illuminant, scene_adjust_luminance, scene_combine, scene_create, scene_get, scene_set
 from .sensor import (
     ml_analyze_array_etendue,
     ml_radiance,
@@ -2414,6 +2414,96 @@ def run_python_case_with_context(
                 "radiance_midline_10": radiance_midlines[2],
             },
             context={"oi": oi, "sensor": optimal},
+        )
+
+    if case_name == "sensor_comparison_small":
+        patch_size = 24
+        scene_c = scene_create("macbeth d65", patch_size, asset_store=store)
+        macbeth_size = np.asarray(scene_get(scene_c, "size"), dtype=int)
+        scene_c = scene_set(
+            scene_c,
+            "resize",
+            np.rint(np.array([macbeth_size[0], macbeth_size[1] / 2.0], dtype=float)).astype(int),
+        )
+        scene_s = scene_create("sweep frequency", int(macbeth_size[0]), float(macbeth_size[0]) / 16.0, asset_store=store)
+        scene = scene_combine(scene_c, scene_s, "direction", "horizontal")
+        scene = scene_set(scene, "fov", 20.0)
+        scene_vfov = float(scene_get(scene, "vfov"))
+
+        oi = oi_create(asset_store=store)
+        oi = oi_set(oi, "optics fnumber", 1.2)
+        oi = oi_compute(oi, scene)
+
+        sensor_names = ("imx363", "mt9v024", "cyym")
+        ip_names = ("imx363", "mt9v024")
+        small_sensor_sizes = np.zeros((len(sensor_names), 2), dtype=int)
+        small_sensor_mean_volts = np.zeros(len(sensor_names), dtype=float)
+        small_sensor_p90_volts = np.zeros(len(sensor_names), dtype=float)
+        large_sensor_sizes = np.zeros((len(sensor_names), 2), dtype=int)
+        large_sensor_mean_volts = np.zeros(len(sensor_names), dtype=float)
+        large_sensor_p90_volts = np.zeros(len(sensor_names), dtype=float)
+        small_ip_sizes = np.zeros((len(ip_names), 3), dtype=int)
+        large_ip_sizes = np.zeros((len(ip_names), 3), dtype=int)
+
+        def _compute_sensor(sensor_type: str, pixel_size_m: float) -> tuple[Any, np.ndarray]:
+            if sensor_type == "mt9v024":
+                sensor = sensor_create(sensor_type, None, "rccc", asset_store=store)
+            else:
+                sensor = sensor_create(sensor_type, asset_store=store)
+            sensor = sensor_set(sensor, "pixel size", pixel_size_m)
+            sensor = sensor_set(sensor, "hfov", 20.0, oi)
+            sensor = sensor_set(sensor, "vfov", scene_vfov)
+            sensor = sensor_set(sensor, "auto exposure", True)
+            sensor = sensor_compute(sensor, oi)
+            return sensor, np.asarray(sensor_get(sensor, "volts"), dtype=float)
+
+        def _compute_ip(sensor_type: str, sensor: Any) -> np.ndarray:
+            if sensor_type == "imx363":
+                ip = ip_create("imx363 RGB", sensor, asset_store=store)
+            elif sensor_type == "mt9v024":
+                ip = ip_create("mt9v024 RCCC", sensor, asset_store=store)
+                ip = ip_set(ip, "demosaic method", "analog rccc")
+            else:
+                raise ValueError(f"Unsupported IP comparison sensor: {sensor_type}")
+            ip = ip_compute(ip, sensor, asset_store=store)
+            return np.asarray(ip_get(ip, "result"), dtype=float)
+
+        for sensor_index, sensor_type in enumerate(sensor_names):
+            sensor_small, volts_small = _compute_sensor(sensor_type, 1.5e-6)
+            small_sensor_sizes[sensor_index, :] = np.asarray(sensor_get(sensor_small, "size"), dtype=int)
+            small_sensor_mean_volts[sensor_index] = float(np.mean(volts_small))
+            small_sensor_p90_volts[sensor_index] = float(np.percentile(volts_small, 90.0))
+
+            sensor_large, volts_large = _compute_sensor(sensor_type, 6.0e-6)
+            large_sensor_sizes[sensor_index, :] = np.asarray(sensor_get(sensor_large, "size"), dtype=int)
+            large_sensor_mean_volts[sensor_index] = float(np.mean(volts_large))
+            large_sensor_p90_volts[sensor_index] = float(np.percentile(volts_large, 90.0))
+
+            if sensor_type in ip_names:
+                ip_index = ip_names.index(sensor_type)
+                result_small = _compute_ip(sensor_type, sensor_small)
+                result_large = _compute_ip(sensor_type, sensor_large)
+                small_ip_sizes[ip_index, :] = np.asarray(result_small.shape, dtype=int)
+                large_ip_sizes[ip_index, :] = np.asarray(result_large.shape, dtype=int)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "scene_vfov": scene_vfov,
+                "oi_size": np.asarray(oi_get(oi, "size"), dtype=int),
+                "small_sensor_sizes": small_sensor_sizes,
+                "nonimx_small_sensor_mean_volts": small_sensor_mean_volts[1:],
+                "nonimx_small_sensor_p90_volts": small_sensor_p90_volts[1:],
+                "large_sensor_sizes": large_sensor_sizes,
+                "nonimx_large_sensor_mean_volts": large_sensor_mean_volts[1:],
+                "nonimx_large_sensor_p90_volts": large_sensor_p90_volts[1:],
+                "imx363_mean_ratio_large_small": float(large_sensor_mean_volts[0] / max(small_sensor_mean_volts[0], 1e-12)),
+                "imx363_p90_ratio_large_small": float(large_sensor_p90_volts[0] / max(small_sensor_p90_volts[0], 1e-12)),
+                "small_ip_sizes": small_ip_sizes,
+                "large_ip_sizes": large_ip_sizes,
+            },
+            context={"scene": scene, "oi": oi},
         )
 
     if case_name == "sensor_filter_transmissivities_small":

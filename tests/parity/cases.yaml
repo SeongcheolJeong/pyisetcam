@@ -929,6 +929,38 @@
       "atol": 1e-08
     },
     {
+      "name": "sensor_comparison_small",
+      "matlab_function": "s_sensorComparison",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "nonimx_small_sensor_mean_volts": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.005
+        },
+        "nonimx_small_sensor_p90_volts": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.005
+        },
+        "nonimx_large_sensor_mean_volts": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.005
+        },
+        "nonimx_large_sensor_p90_volts": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.005
+        },
+        "imx363_mean_ratio_large_small": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        },
+        "imx363_p90_ratio_large_small": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        }
+      }
+    },
+    {
       "name": "sensor_filter_transmissivities_small",
       "matlab_function": "sensorGet/sensorSet",
       "rtol": 1e-05,

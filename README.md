@@ -170,7 +170,12 @@ wave now also includes direct `mlensCreate` / `mlensSet` / `mlensGet` /
 and optimal-offset workflow from `s_sensorMicrolens.m`, with curated
 Octave parity on the no-microlens/centered/optimal etendue maps, the
 optimal-offset curve and offset maps, and the single-pixel irradiance
-midlines used in the script’s chief-ray-angle illustration.
+midlines used in the script’s chief-ray-angle illustration. That same
+sensor wave now also includes MATLAB-style `sceneSet(..., 'resize', ...)`,
+`sceneCombine(...)`, and `sensorSet(..., 'hfov'/'vfov', ...)` coverage for
+the mixed-sensor comparison workflow from `s_sensorComparison.m`, with
+curated Octave parity on the combined-scene geometry plus the IMX363,
+MT9V024 RCCC, and CYYM small-pixel/large-pixel response summaries.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit

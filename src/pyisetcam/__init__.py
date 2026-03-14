@@ -146,6 +146,7 @@ from .scene import (
     scene_adjust_luminance,
     scene_calculate_luminance,
     scene_clear_data,
+    scene_combine,
     scene_create,
     scene_from_file,
     scene_get,
@@ -393,10 +394,12 @@ __all__ = [
     "sceneAdjustLuminance",
     "sceneCalculateLuminance",
     "sceneClearData",
+    "sceneCombine",
     "sceneCreate",
     "sceneFromFile",
     "sceneGet",
     "sceneSet",
+    "scene_combine",
     "scene_adjust_illuminant",
     "scene_adjust_luminance",
     "scene_calculate_luminance",
@@ -530,6 +533,7 @@ sceneCreate = scene_create
 sceneFromFile = scene_from_file
 sceneGet = scene_get
 sceneSet = scene_set
+sceneCombine = scene_combine
 sceneAdjustIlluminant = scene_adjust_illuminant
 sceneAdjustLuminance = scene_adjust_luminance
 sceneCalculateLuminance = scene_calculate_luminance

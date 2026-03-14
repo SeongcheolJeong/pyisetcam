@@ -2474,7 +2474,7 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
     raise KeyError(f"Unsupported sensorGet parameter: {parameter}")
 
 
-def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
+def sensor_set(sensor: Sensor, parameter: str, value: Any, *args: Any) -> Sensor:
     object_type, object_param = ie_parameter_otype(parameter)
     if object_type == "pixel":
         try:
@@ -2589,6 +2589,18 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
         if oi_size.size != 2:
             raise ValueError("match oi requires an optical image with a 2D size.")
         return sensor_set(sensor, "size", oi_size)
+    if key in {"fov", "hfov", "horizontalfieldofview"}:
+        oi = args[0] if args else None
+        if not isinstance(oi, OpticalImage):
+            raise ValueError("sensorSet(..., 'hfov', ...) requires an optical image.")
+        return sensor_set_size_to_fov(sensor, float(value), oi)
+    if key in {"vfov", "verticalfieldofview"}:
+        hfov = float(sensor_get(sensor, "fov"))
+        if abs(hfov) <= 0.0:
+            raise ValueError("sensor vfov requires a non-zero horizontal field of view.")
+        size = np.asarray(sensor_get(sensor, "size"), dtype=float).reshape(-1)
+        new_rows = int(round((size[1] / hfov) * float(value)))
+        return sensor_set(sensor, "rows", new_rows)
     if key in {"rows", "row"}:
         block_rows, _ = _sensor_unit_block(sensor)
         rows = _sensor_aligned_dimension(value, block_rows)

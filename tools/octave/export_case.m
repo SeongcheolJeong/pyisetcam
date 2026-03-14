@@ -1621,6 +1621,95 @@ switch case_name
             end
         end
 
+    case 'sensor_comparison_small'
+        patchSize = 24;
+        sceneC = sceneCreate('macbethD65', patchSize);
+        sz = sceneGet(sceneC, 'size');
+        sceneC = sceneSet(sceneC, 'resize', round([sz(1), sz(2) / 2]));
+        sceneS = sceneCreate('sweep frequency', sz(1), sz(1) / 16);
+        scene = sceneCombine(sceneC, sceneS, 'direction', 'horizontal');
+        scene = sceneSet(scene, 'fov', 20);
+        sceneVFOV = sceneGet(scene, 'v fov');
+
+        oi = oiCreate;
+        oi = oiSet(oi, 'optics fnumber', 1.2);
+        oi = oiCompute(oi, scene);
+
+        sensorList = {'imx363', 'mt9v024', 'cyym'};
+        ipList = {'imx363', 'mt9v024'};
+        payload.scene_size = sceneGet(scene, 'size');
+        payload.scene_vfov = sceneVFOV;
+        payload.oi_size = oiGet(oi, 'size');
+        payload.small_sensor_sizes = zeros(numel(sensorList), 2);
+        smallSensorMeanVolts = zeros(numel(sensorList), 1);
+        smallSensorP90Volts = zeros(numel(sensorList), 1);
+        payload.large_sensor_sizes = zeros(numel(sensorList), 2);
+        largeSensorMeanVolts = zeros(numel(sensorList), 1);
+        largeSensorP90Volts = zeros(numel(sensorList), 1);
+        payload.small_ip_sizes = zeros(numel(ipList), 3);
+        payload.large_ip_sizes = zeros(numel(ipList), 3);
+
+        for ii = 1:numel(sensorList)
+            sensorType = sensorList{ii};
+            if isequal(sensorType, 'imx363')
+                load(fullfile(isetRootPath, 'data', 'sensor', 'sony', 'imx363.mat'), 'sensor');
+            elseif isequal(sensorType, 'mt9v024')
+                sensor = sensorCreate(sensorType, [], 'rccc');
+            else
+                sensor = sensorCreate(sensorType);
+            end
+            sensor = sensorSet(sensor, 'pixel size', 1.5e-6);
+            sensor = sensorSet(sensor, 'hfov', 20, oi);
+            sensor = sensorSet(sensor, 'vfov', sceneVFOV);
+            sensor = sensorSet(sensor, 'auto exposure', true);
+            sensor = sensorCompute(sensor, oi);
+            volts = sensorGet(sensor, 'volts');
+            payload.small_sensor_sizes(ii, :) = sensorGet(sensor, 'size');
+            smallSensorMeanVolts(ii) = mean(volts(:));
+            smallSensorP90Volts(ii) = prctile(volts(:), 90);
+
+            ipIndex = find(strcmp(ipList, sensorType), 1);
+            if ~isempty(ipIndex)
+                if isequal(sensorType, 'imx363')
+                    ip = ipCreate('imx363 RGB', sensor);
+                else
+                    ip = ipCreate('mt9v024 RCCC', sensor);
+                    ip = ipSet(ip, 'demosaic method', 'analog rccc');
+                end
+                ip = ipCompute(ip, sensor);
+                result = ipGet(ip, 'result');
+                payload.small_ip_sizes(ipIndex, :) = size(result);
+            end
+
+            sensor = sensorSet(sensor, 'pixel size constant fill factor', 6e-6);
+            sensor = sensorSet(sensor, 'hfov', 20, oi);
+            sensor = sensorSet(sensor, 'vfov', sceneVFOV);
+            sensor = sensorSet(sensor, 'auto exposure', true);
+            sensor = sensorCompute(sensor, oi);
+            volts = sensorGet(sensor, 'volts');
+            payload.large_sensor_sizes(ii, :) = sensorGet(sensor, 'size');
+            largeSensorMeanVolts(ii) = mean(volts(:));
+            largeSensorP90Volts(ii) = prctile(volts(:), 90);
+
+            if ~isempty(ipIndex)
+                if isequal(sensorType, 'imx363')
+                    ip = ipCreate('imx363 RGB', sensor);
+                else
+                    ip = ipCreate('mt9v024 RCCC', sensor);
+                    ip = ipSet(ip, 'demosaic method', 'analog rccc');
+                end
+                ip = ipCompute(ip, sensor);
+                result = ipGet(ip, 'result');
+                payload.large_ip_sizes(ipIndex, :) = size(result);
+            end
+        end
+        payload.nonimx_small_sensor_mean_volts = smallSensorMeanVolts(2:end);
+        payload.nonimx_small_sensor_p90_volts = smallSensorP90Volts(2:end);
+        payload.nonimx_large_sensor_mean_volts = largeSensorMeanVolts(2:end);
+        payload.nonimx_large_sensor_p90_volts = largeSensorP90Volts(2:end);
+        payload.imx363_mean_ratio_large_small = largeSensorMeanVolts(1) / max(smallSensorMeanVolts(1), eps);
+        payload.imx363_p90_ratio_large_small = largeSensorP90Volts(1) / max(smallSensorP90Volts(1), eps);
+
     case 'sensor_filter_transmissivities_small'
         sensor = sensorCreate();
         filters = sensorGet(sensor, 'filter transmissivities');
