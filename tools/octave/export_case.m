@@ -457,6 +457,40 @@ switch case_name
         payload.sensor_padded_pos_um = paddedSupport.x(:);
         payload.sensor_padded_row = paddedSensorVolts(paddedRowIndex, :)';
 
+    case 'optics_microlens_small'
+        oi = oiCreate;
+        sensor = sensorCreate;
+        sensor = sensorSet(sensor, 'fov', 30, oi);
+
+        ml = mlensCreate;
+        payload.name = mlensGet(ml, 'name');
+        payload.type = mlensGet(ml, 'type');
+        payload.source_fnumber = mlensGet(ml, 'source fnumber');
+        payload.source_diameter_m = mlensGet(ml, 'source diameter', 'meters');
+        payload.source_diameter_um = mlensGet(ml, 'source diameter', 'microns');
+        payload.ml_fnumber = mlensGet(ml, 'ml fnumber');
+        payload.ml_diameter_m = mlensGet(ml, 'ml diameter', 'meters');
+        payload.ml_diameter_um = mlensGet(ml, 'ml diameter', 'microns');
+        payload.chief_ray_angle_default_deg = mlensGet(ml, 'chief ray angle');
+        ml = mlensSet(ml, 'chief ray angle', 10);
+        payload.chief_ray_angle_set_deg = mlensGet(ml, 'chief ray angle');
+        payload.sensor_fov_deg = 30;
+
+        radianceML = mlensCreate;
+        radianceML = mlRadiance(radianceML);
+        sourceIrradiance = double(mlensGet(radianceML, 'source irradiance'));
+        pixelIrradiance = double(mlensGet(radianceML, 'pixel irradiance'));
+        xCoordinate = double(mlensGet(radianceML, 'x coordinate'));
+        sourceCenterRow = floor(size(sourceIrradiance, 1) / 2) + 1;
+        pixelCenterRow = floor(size(pixelIrradiance, 1) / 2) + 1;
+
+        payload.x_coordinate_um = xCoordinate(:);
+        payload.source_center_row = sourceIrradiance(sourceCenterRow, :)';
+        payload.pixel_center_row = pixelIrradiance(pixelCenterRow, :)';
+        payload.source_irradiance_stats = local_stats_vector(sourceIrradiance);
+        payload.pixel_irradiance_stats = local_stats_vector(pixelIrradiance);
+        payload.etendue = mlensGet(radianceML, 'etendue');
+
     case 'oi_psf_default_small'
         scene = sceneCreate('checkerboard', 8, 4);
         oi = oiCreate('psf');
@@ -3270,6 +3304,16 @@ sSupport = sensorGet(sensorAdjusted, 'spatial support', 'um');
 [X, Y] = meshgrid(sSupport.x, sSupport.y);
 cra = atan(sqrt(X .^ 2 + Y .^ 2) / sourceFL);
 optimalOffsets = mlFL * tan(asin(sin(cra) / n2));
+end
+
+function stats = local_stats_vector(values)
+values = double(values(:));
+stats = [
+    mean(values);
+    std(values);
+    prctile(values, 5);
+    prctile(values, 95);
+]';
 end
 
 function values = local_channel_normalize(values)

@@ -69,6 +69,10 @@ from pyisetcam import (
     scene_set,
     signal_current,
     imx490_compute,
+    ml_radiance,
+    mlens_create,
+    mlens_get,
+    mlens_set,
     sensor_compute,
     sensor_compute_array,
     sensor_compute_samples,
@@ -5095,6 +5099,58 @@ def test_run_python_case_supports_sensor_microlens_etendue_parity_case(asset_sto
     assert case.payload["radiance_midline_neg10"].shape == (255,)
     assert case.payload["radiance_midline_0"].shape == (255,)
     assert case.payload["radiance_midline_10"].shape == (255,)
+
+
+def test_optics_microlens_workflow_supports_getters_and_radiance(asset_store) -> None:
+    oi = oi_create(asset_store=asset_store)
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "fov", 30.0, oi)
+    microlens = mlens_create(asset_store=asset_store)
+
+    assert mlens_get(microlens, "name") == "default"
+    assert mlens_get(microlens, "type") == "microlens"
+    assert float(mlens_get(microlens, "source fnumber")) > 0.0
+    assert float(mlens_get(microlens, "source diameter", "meters")) > 0.0
+    assert float(mlens_get(microlens, "source diameter", "microns")) > 0.0
+    assert float(mlens_get(microlens, "ml fnumber")) > 0.0
+    assert float(mlens_get(microlens, "ml diameter", "meters")) > 0.0
+    assert float(mlens_get(microlens, "ml diameter", "microns")) > 0.0
+    assert float(sensor_get(sensor, "fov", oi)) == pytest.approx(30.0, abs=0.05)
+
+    microlens = mlens_set(microlens, "chief ray angle", 10.0)
+    assert float(mlens_get(microlens, "chief ray angle")) == pytest.approx(10.0)
+
+    radiance_microlens = ml_radiance(mlens_create(asset_store=asset_store), asset_store=asset_store)
+    source_irradiance = np.asarray(mlens_get(radiance_microlens, "source irradiance"), dtype=float)
+    pixel_irradiance = np.asarray(mlens_get(radiance_microlens, "pixel irradiance"), dtype=float)
+    x_coordinate = np.asarray(mlens_get(radiance_microlens, "x coordinate"), dtype=float)
+
+    assert source_irradiance.shape == (255, 255)
+    assert pixel_irradiance.shape == (255, 255)
+    assert x_coordinate.shape == (255,)
+    assert float(mlens_get(radiance_microlens, "etendue")) > 0.0
+
+
+def test_run_python_case_supports_optics_microlens_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("optics_microlens_small", asset_store=asset_store)
+
+    assert case.payload["name"] == "default"
+    assert case.payload["type"] == "microlens"
+    assert float(case.payload["source_fnumber"]) > 0.0
+    assert float(case.payload["source_diameter_m"]) > 0.0
+    assert float(case.payload["source_diameter_um"]) > 0.0
+    assert float(case.payload["ml_fnumber"]) > 0.0
+    assert float(case.payload["ml_diameter_m"]) > 0.0
+    assert float(case.payload["ml_diameter_um"]) > 0.0
+    assert float(case.payload["chief_ray_angle_default_deg"]) == pytest.approx(0.0)
+    assert float(case.payload["chief_ray_angle_set_deg"]) == pytest.approx(10.0)
+    assert float(case.payload["sensor_fov_deg"]) == pytest.approx(30.0, abs=0.05)
+    assert case.payload["x_coordinate_um"].shape == (255,)
+    assert case.payload["source_center_row"].shape == (255,)
+    assert case.payload["pixel_center_row"].shape == (255,)
+    assert case.payload["source_irradiance_stats"].shape == (4,)
+    assert case.payload["pixel_irradiance_stats"].shape == (4,)
+    assert float(case.payload["etendue"]) > 0.0
 
 
 def test_sensor_comparison_workflow_supports_mixed_sensor_types(asset_store) -> None:

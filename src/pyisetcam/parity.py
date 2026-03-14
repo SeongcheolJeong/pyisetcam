@@ -2310,6 +2310,46 @@ def run_python_case_with_context(
             context={"scene": scene, "oi": oi, "oi_cropped": oi_cropped},
         )
 
+    if case_name == "optics_microlens_small":
+        oi = oi_create(asset_store=store)
+        sensor = sensor_create(asset_store=store)
+        sensor = sensor_set(sensor, "fov", 30.0, oi)
+
+        microlens = mlens_create(asset_store=store)
+        chief_ray_angle_default_deg = float(mlens_get(microlens, "chief ray angle"))
+        microlens = mlens_set(microlens, "chief ray angle", 10.0)
+        chief_ray_angle_set_deg = float(mlens_get(microlens, "chief ray angle"))
+
+        radiance_microlens = mlens_create(asset_store=store)
+        radiance_microlens = ml_radiance(radiance_microlens, asset_store=store)
+        source_irradiance = np.asarray(mlens_get(radiance_microlens, "source irradiance"), dtype=float)
+        pixel_irradiance = np.asarray(mlens_get(radiance_microlens, "pixel irradiance"), dtype=float)
+        x_coordinate = np.asarray(mlens_get(radiance_microlens, "x coordinate"), dtype=float)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "name": mlens_get(microlens, "name"),
+                "type": mlens_get(microlens, "type"),
+                "source_fnumber": float(mlens_get(microlens, "source fnumber")),
+                "source_diameter_m": float(mlens_get(microlens, "source diameter", "meters")),
+                "source_diameter_um": float(mlens_get(microlens, "source diameter", "microns")),
+                "ml_fnumber": float(mlens_get(microlens, "ml fnumber")),
+                "ml_diameter_m": float(mlens_get(microlens, "ml diameter", "meters")),
+                "ml_diameter_um": float(mlens_get(microlens, "ml diameter", "microns")),
+                "chief_ray_angle_default_deg": chief_ray_angle_default_deg,
+                "chief_ray_angle_set_deg": chief_ray_angle_set_deg,
+                "sensor_fov_deg": 30.0,
+                "x_coordinate_um": x_coordinate,
+                "source_center_row": np.asarray(source_irradiance[source_irradiance.shape[0] // 2, :], dtype=float),
+                "pixel_center_row": np.asarray(pixel_irradiance[pixel_irradiance.shape[0] // 2, :], dtype=float),
+                "source_irradiance_stats": _stats_vector(source_irradiance),
+                "pixel_irradiance_stats": _stats_vector(pixel_irradiance),
+                "etendue": float(mlens_get(radiance_microlens, "etendue")),
+            },
+            context={"oi": oi, "sensor": sensor, "microlens": radiance_microlens},
+        )
+
     if case_name == "oi_wvf_small_scene":
         scene = scene_create("checkerboard", 8, 4, asset_store=store)
         oi_seed = oi_create("wvf")

@@ -899,6 +899,12 @@
       "atol": 1e-08
     },
     {
+      "name": "optics_microlens_small",
+      "matlab_function": "s_opticsMicrolens",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "sensor_bayer_noiseless",
       "matlab_function": "sensorCompute",
       "rtol": 1e-05,

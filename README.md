@@ -238,6 +238,10 @@ That same optics wave now also includes the `s_opticsPadCrop.m` workflow,
 with curated parity on the padded OI size, MATLAB crop rectangle, cropped
 OI geometry, and the deterministic sensor line-profile outputs for both
 the scene-FOV crop path and the expanded padded-FOV path.
+That same Phase 2 optics wave now also includes the `s_opticsMicrolens.m`
+workflow, with curated parity on the microlens getter/setter contract,
+default 30-degree sensor FOV setup, and the radiance-generated source and
+pixel irradiance center-line outputs plus etendue.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit
