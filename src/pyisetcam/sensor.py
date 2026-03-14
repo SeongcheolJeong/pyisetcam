@@ -3940,3 +3940,60 @@ def sensor_compute(
         computed.fields["exposure_plane"] = int(np.clip(exposure_plane, 1, len(volts_captures)))
 
     return track_session_object(session, computed)
+
+
+def sensor_compute_samples(
+    sensor_nf: Sensor,
+    n_samp: int = 10,
+    noise_flag: int = 2,
+    show_bar: bool | None = None,
+    *,
+    seed: int | None = None,
+) -> np.ndarray:
+    """Compute repeated noisy voltage captures from a precomputed noise-free sensor."""
+
+    del show_bar
+    if int(n_samp) <= 0:
+        raise ValueError("sensor_compute_samples requires a positive sample count.")
+
+    base_volts = sensor_nf.data.get("volts")
+    if base_volts is None:
+        raise ValueError("sensor_compute_samples requires a sensor with precomputed volts.")
+    base = np.asarray(base_volts, dtype=float)
+    if base.ndim not in {2, 3}:
+        raise ValueError("sensor_compute_samples supports 2-D or 3-D volts data.")
+
+    pixel = dict(sensor_nf.fields["pixel"])
+    voltage_swing = float(pixel["voltage_swing"])
+    conversion_gain = float(pixel["conversion_gain_v_per_electron"])
+    integration_time = np.asarray(sensor_nf.fields.get("integration_time", 0.0), dtype=float)
+    auto_exposure = bool(sensor_nf.fields.get("auto_exposure", False))
+    base_seed = sensor_nf.fields.get("noise_seed", 0) if seed is None else seed
+    samples: list[np.ndarray] = []
+
+    for sample_index in range(int(n_samp)):
+        sample = np.asarray(base, dtype=float).copy()
+        rng_seed = None if base_seed is None else int(base_seed) + sample_index
+        rng = np.random.default_rng(rng_seed)
+
+        if int(noise_flag) in {1, 2, -2}:
+            if int(noise_flag) == 2:
+                sample = sample + (float(pixel["dark_voltage_v_per_sec"]) * integration_time)
+            sample = _shot_noise_electrons(rng, sample / max(conversion_gain, 1e-12)) * conversion_gain
+            if int(noise_flag) == 2:
+                sample = _apply_read_noise(rng, sample, float(pixel["read_noise_v"]))
+            if int(noise_flag) in {1, 2}:
+                sample = _apply_fixed_pattern_noise(
+                    rng,
+                    sample,
+                    dsnu_sigma_v=float(pixel["dsnu_sigma_v"]),
+                    prnu_sigma=float(pixel["prnu_sigma"]),
+                    integration_time=integration_time,
+                    auto_exposure=auto_exposure,
+                )
+        elif int(noise_flag) not in {0, -1}:
+            raise UnsupportedOptionError("sensorComputeSamples", f"noise flag {noise_flag}")
+
+        samples.append(np.clip(sample, 0.0, voltage_swing))
+
+    return np.stack(samples, axis=base.ndim)

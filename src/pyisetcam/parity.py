@@ -55,6 +55,7 @@ from .sensor import (
     sensor_color_filter,
     sensor_compute,
     sensor_compute_array,
+    sensor_compute_samples,
     sensor_create,
     sensor_create_array,
     sensor_create_ideal,
@@ -2504,6 +2505,68 @@ def run_python_case_with_context(
                 "large_ip_sizes": large_ip_sizes,
             },
             context={"scene": scene, "oi": oi},
+        )
+
+    if case_name == "sensor_noise_samples_small":
+        scene = scene_create("slanted bar", 128, asset_store=store)
+        scene = scene_set(scene, "fov", 4.0)
+        oi = oi_compute(oi_create(asset_store=store), scene)
+
+        sensor = sensor_create(asset_store=store)
+        sensor = sensor_set(sensor, "exp time", 0.05)
+        sensor = sensor_set(sensor, "noise flag", 0)
+        sensor_nf = sensor_compute(sensor, oi, seed=0)
+        volts_nf = np.asarray(sensor_get(sensor_nf, "volts"), dtype=float)
+
+        n_samp = 64
+        volt_images = np.asarray(sensor_compute_samples(sensor_nf, n_samp, 2, seed=7), dtype=float)
+        noise_images = volt_images - volts_nf[:, :, np.newaxis]
+        std_image = np.std(volt_images, axis=2, ddof=1)
+        mean_image = np.mean(volt_images, axis=2, dtype=float)
+        pair_diff = volt_images[:, :, 0] - volt_images[:, :, 1]
+        mean_residual = mean_image - volts_nf
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "sample_shape": np.asarray(volt_images.shape, dtype=int),
+                "noise_free_mean": float(np.mean(volts_nf)),
+                "noise_std_image_stats": np.array(
+                    [
+                        float(np.mean(std_image)),
+                        float(np.percentile(std_image, 10.0)),
+                        float(np.percentile(std_image, 50.0)),
+                        float(np.percentile(std_image, 90.0)),
+                    ],
+                    dtype=float,
+                ),
+                "noise_distribution_stats": np.array(
+                    [
+                        float(np.std(noise_images, ddof=1)),
+                        float(np.percentile(noise_images, 5.0)),
+                        float(np.percentile(noise_images, 50.0)),
+                        float(np.percentile(noise_images, 95.0)),
+                    ],
+                    dtype=float,
+                ),
+                "mean_residual_stats": np.array(
+                    [
+                        float(np.mean(np.abs(mean_residual))),
+                        float(np.percentile(np.abs(mean_residual), 95.0)),
+                    ],
+                    dtype=float,
+                ),
+                "pair_diff_stats": np.array(
+                    [
+                        float(np.std(pair_diff, ddof=1)),
+                        float(np.percentile(pair_diff, 5.0)),
+                        float(np.percentile(pair_diff, 50.0)),
+                        float(np.percentile(pair_diff, 95.0)),
+                    ],
+                    dtype=float,
+                ),
+            },
+            context={"scene": scene, "oi": oi, "sensor": sensor_nf},
         )
 
     if case_name == "sensor_filter_transmissivities_small":

@@ -175,7 +175,11 @@ sensor wave now also includes MATLAB-style `sceneSet(..., 'resize', ...)`,
 `sceneCombine(...)`, and `sensorSet(..., 'hfov'/'vfov', ...)` coverage for
 the mixed-sensor comparison workflow from `s_sensorComparison.m`, with
 curated Octave parity on the combined-scene geometry plus the IMX363,
-MT9V024 RCCC, and CYYM small-pixel/large-pixel response summaries.
+MT9V024 RCCC, and CYYM small-pixel/large-pixel response summaries. That
+same sensor wave now also includes headless `sensorComputeSamples(...)`
+for the repeated-capture workflow from `s_sensorNoise.m`, with curated
+Octave parity on stable sample-stack noise statistics instead of raw
+RNG-matched captures.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit

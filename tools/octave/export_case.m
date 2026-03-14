@@ -1710,6 +1710,35 @@ switch case_name
         payload.imx363_mean_ratio_large_small = largeSensorMeanVolts(1) / max(smallSensorMeanVolts(1), eps);
         payload.imx363_p90_ratio_large_small = largeSensorP90Volts(1) / max(smallSensorP90Volts(1), eps);
 
+    case 'sensor_noise_samples_small'
+        rand('seed', 7);
+        randn('seed', 7);
+        scene = sceneCreate('slanted bar', 128);
+        scene = sceneSet(scene, 'fov', 4);
+        oi = oiCreate;
+        oi = oiCompute(oi, scene);
+
+        sensor = sensorCreate;
+        sensor = sensorSet(sensor, 'exp time', 0.050);
+        sensor = sensorSet(sensor, 'noise flag', 0);
+        sensorNF = sensorCompute(sensor, oi);
+        voltsNF = sensorGet(sensorNF, 'volts');
+
+        nSamp = 64;
+        voltImages = sensorComputeSamples(sensorNF, nSamp, 2, 0);
+        noiseImages = voltImages - repmat(voltsNF, [1 1 nSamp]);
+        stdImage = std(voltImages, 0, 3);
+        meanImage = mean(voltImages, 3);
+        pairDiff = voltImages(:, :, 1) - voltImages(:, :, 2);
+        meanResidual = meanImage - voltsNF;
+
+        payload.sample_shape = size(voltImages);
+        payload.noise_free_mean = mean(voltsNF(:));
+        payload.noise_std_image_stats = [mean(stdImage(:)); prctile(stdImage(:), [10 50 90])'];
+        payload.noise_distribution_stats = [std(noiseImages(:)); prctile(noiseImages(:), [5 50 95])'];
+        payload.mean_residual_stats = [mean(abs(meanResidual(:))); prctile(abs(meanResidual(:)), 95)];
+        payload.pair_diff_stats = [std(pairDiff(:)); prctile(pairDiff(:), [5 50 95])'];
+
     case 'sensor_filter_transmissivities_small'
         sensor = sensorCreate();
         filters = sensorGet(sensor, 'filter transmissivities');

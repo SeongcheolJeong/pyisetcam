@@ -61,6 +61,7 @@ from pyisetcam import (
     signal_current,
     sensor_compute,
     sensor_compute_array,
+    sensor_compute_samples,
     sensor_color_filter,
     sensor_crop,
     sensor_create,
@@ -5005,6 +5006,38 @@ def test_run_python_case_supports_sensor_comparison_parity_case(asset_store) -> 
     assert float(case.payload["imx363_p90_ratio_large_small"]) > 0.0
     assert case.payload["small_ip_sizes"].shape == (2, 3)
     assert case.payload["large_ip_sizes"].shape == (2, 3)
+
+
+def test_sensor_compute_samples_returns_multiple_noisy_captures(asset_store) -> None:
+    scene = scene_create("slanted bar", 128, asset_store=asset_store)
+    scene = scene_set(scene, "fov", 4.0)
+    oi = oi_compute(oi_create(asset_store=asset_store), scene)
+
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "exp time", 0.05)
+    sensor = sensor_set(sensor, "noise flag", 0)
+    sensor_nf = sensor_compute(sensor, oi, seed=0)
+
+    samples = np.asarray(sensor_compute_samples(sensor_nf, 8, 2, seed=7), dtype=float)
+    repeated = np.asarray(sensor_compute_samples(sensor_nf, 8, 2, seed=7), dtype=float)
+
+    assert samples.shape == np.asarray(sensor_get(sensor_nf, "volts"), dtype=float).shape + (8,)
+    assert np.allclose(samples, repeated)
+    assert not np.allclose(samples[:, :, 0], samples[:, :, 1])
+
+
+def test_run_python_case_supports_sensor_noise_samples_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_noise_samples_small", asset_store=asset_store)
+
+    assert case.payload["sample_shape"].shape == (3,)
+    assert int(case.payload["sample_shape"][2]) == 64
+    assert int(case.payload["sample_shape"][0]) > 0
+    assert int(case.payload["sample_shape"][1]) > 0
+    assert float(case.payload["noise_free_mean"]) > 0.0
+    assert case.payload["noise_std_image_stats"].shape == (4,)
+    assert case.payload["noise_distribution_stats"].shape == (4,)
+    assert case.payload["mean_residual_stats"].shape == (2,)
+    assert case.payload["pair_diff_stats"].shape == (4,)
 
 
 def test_run_python_case_supports_sensor_filter_transmissivities_parity_case(asset_store) -> None:

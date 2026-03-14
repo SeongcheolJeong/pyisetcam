@@ -162,6 +162,7 @@ from .sensor import (
     signal_current,
     sensor_color_filter,
     sensor_compute_array,
+    sensor_compute_samples,
     sensor_snr,
     sensor_compute,
     sensor_crop,
@@ -420,6 +421,7 @@ __all__ = [
     "mlens_set",
     "sensorCompute",
     "sensorComputeArray",
+    "sensorComputeSamples",
     "sensorCrop",
     "sensorCreate",
     "sensorCreateArray",
@@ -437,6 +439,7 @@ __all__ = [
     "sensorSetSizeToFOV",
     "sensor_compute",
     "sensor_compute_array",
+    "sensor_compute_samples",
     "sensor_crop",
     "sensor_create",
     "sensor_create_array",
@@ -611,6 +614,7 @@ mlRadiance = ml_radiance
 mlAnalyzeArrayEtendue = ml_analyze_array_etendue
 sensorCompute = sensor_compute
 sensorComputeArray = sensor_compute_array
+sensorComputeSamples = sensor_compute_samples
 signalCurrent = signal_current
 sensorColorFilter = sensor_color_filter
 sensorCrop = sensor_crop

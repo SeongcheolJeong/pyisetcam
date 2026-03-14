@@ -961,6 +961,34 @@
       }
     },
     {
+      "name": "sensor_noise_samples_small",
+      "matlab_function": "s_sensorNoise",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "noise_free_mean": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "noise_std_image_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.12
+        },
+        "noise_distribution_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.18
+        },
+        "mean_residual_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.25
+        },
+        "pair_diff_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.2
+        }
+      }
+    },
+    {
       "name": "sensor_filter_transmissivities_small",
       "matlab_function": "sensorGet/sensorSet",
       "rtol": 1e-05,
