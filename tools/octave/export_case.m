@@ -2013,6 +2013,75 @@ switch case_name
         payload.row15_profile_norm = local_channel_normalize(row15(sampledCols));
         payload.row114_profile_norm = local_channel_normalize(row114(sampledCols));
 
+    case 'sensor_aliasing_small'
+        fov = 5;
+        sweepScene = sceneCreate('sweep frequency', 768, 30);
+        sweepScene = sceneSet(sweepScene, 'fov', fov);
+
+        oi = oiCreate('diffraction limited');
+        oi = oiSet(oi, 'optics fnumber', 2);
+        oi = oiCompute(oi, sweepScene);
+
+        sensor = sensorCreate('monochrome');
+        sensor = sensorSetSizeToFOV(sensor, fov, oi);
+        sensor = sensorSet(sensor, 'noise flag', 0);
+
+        sensorSmall = sensorSet(sensor, 'pixel size constant fill factor', 2e-6);
+        sensorSmall = sensorCompute(sensorSmall, oi);
+        smallLine = sensorGet(sensorSmall, 'hline electrons', 1);
+        smallData = smallLine.data{1};
+        smallPos = smallLine.pos{1};
+
+        sensorLarge = sensorSet(sensor, 'pixel size constant fill factor', 6e-6);
+        sensorLarge = sensorSetSizeToFOV(sensorLarge, fov, oi);
+        sensorLarge = sensorCompute(sensorLarge, oi);
+        largeLine = sensorGet(sensorLarge, 'hline electrons', 1);
+        largeData = largeLine.data{1};
+        largePos = largeLine.pos{1};
+
+        oiBlur = oiSet(oi, 'optics fnumber', 12);
+        oiBlur = oiCompute(oiBlur, sweepScene);
+        sensorBlur = sensorCompute(sensorLarge, oiBlur);
+        blurLine = sensorGet(sensorBlur, 'hline electrons', 1);
+        blurData = blurLine.data{1};
+        blurPos = blurLine.pos{1};
+
+        slantedScene = sceneCreate('slanted bar', 1024);
+        slantedScene = sceneSet(slantedScene, 'fov', fov);
+
+        oiSlantedSharp = oiSet(oiBlur, 'optics fnumber', 2);
+        oiSlantedSharp = oiCompute(oiSlantedSharp, slantedScene);
+        sensorSlanted = sensorSet(sensorLarge, 'pixel size constant fill factor', 6e-6);
+        sensorSlanted = sensorSetSizeToFOV(sensorSlanted, fov, oiSlantedSharp);
+        sensorSlanted = sensorCompute(sensorSlanted, oiSlantedSharp);
+        slantedSharp = sensorGet(sensorSlanted, 'electrons');
+
+        oiSlantedBlur = oiSet(oiSlantedSharp, 'optics fnumber', 12);
+        oiSlantedBlur = oiCompute(oiSlantedBlur, slantedScene);
+        sensorSlantedBlur = sensorCompute(sensorSlanted, oiSlantedBlur);
+        slantedBlur = sensorGet(sensorSlantedBlur, 'electrons');
+
+        payload.fov_deg = fov;
+        payload.sweep_scene_size = sceneGet(sweepScene, 'size');
+        payload.sweep_oi_size = oiGet(oi, 'size');
+        payload.small_sensor_size = sensorGet(sensorSmall, 'size');
+        payload.large_sensor_size = sensorGet(sensorLarge, 'size');
+        payload.small_line_pos = smallPos(:);
+        payload.small_line_data_norm = local_channel_normalize(smallData(:));
+        payload.large_line_pos = largePos(:);
+        payload.large_line_data_norm = local_channel_normalize(largeData(:));
+        payload.blur_line_pos = blurPos(:);
+        payload.blur_line_data_norm = local_channel_normalize(blurData(:));
+        payload.small_line_stats = [mean(smallData(:)) std(smallData(:)) prctile(smallData(:), [5 95])];
+        payload.large_line_stats = [mean(largeData(:)) std(largeData(:)) prctile(largeData(:), [5 95])];
+        payload.blur_line_stats = [mean(blurData(:)) std(blurData(:)) prctile(blurData(:), [5 95])];
+        payload.slanted_scene_size = sceneGet(slantedScene, 'size');
+        payload.slanted_sensor_size = sensorGet(sensorSlanted, 'size');
+        payload.slanted_sharp_norm = slantedSharp / max(slantedSharp(:));
+        payload.slanted_blur_norm = slantedBlur / max(slantedBlur(:));
+        payload.slanted_sharp_stats = [mean(slantedSharp(:)) std(slantedSharp(:)) prctile(slantedSharp(:), [5 95])];
+        payload.slanted_blur_stats = [mean(slantedBlur(:)) std(slantedBlur(:)) prctile(slantedBlur(:), [5 95])];
+
     case 'sensor_filter_transmissivities_small'
         sensor = sensorCreate();
         filters = sensorGet(sensor, 'filter transmissivities');

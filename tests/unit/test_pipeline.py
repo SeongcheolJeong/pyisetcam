@@ -74,6 +74,7 @@ from pyisetcam import (
     sensor_dr,
     sensor_dng_read,
     sensor_get,
+    sensor_plot,
     sensor_set_size_to_fov,
     sensor_set,
     wvf_aperture,
@@ -5251,6 +5252,82 @@ def test_run_python_case_supports_sensor_log_ar0132at_small_parity_case(asset_st
     assert case.payload["row114_stats"].shape == (4,)
     assert case.payload["row15_profile_norm"].shape == (33,)
     assert case.payload["row114_profile_norm"].shape == (33,)
+
+
+def test_sensor_aliasing_workflow_matches_script_contract(asset_store) -> None:
+    fov = 5.0
+    sweep_scene = scene_create("sweep frequency", 768, 30.0, asset_store=asset_store)
+    sweep_scene = scene_set(sweep_scene, "fov", fov)
+
+    oi = oi_create("diffraction limited", asset_store=asset_store)
+    oi = oi_set(oi, "optics fnumber", 2.0)
+    oi = oi_compute(oi, sweep_scene)
+
+    sensor = sensor_create("monochrome", asset_store=asset_store)
+    sensor = sensor_set_size_to_fov(sensor, fov, oi)
+    sensor = sensor_set(sensor, "noise flag", 0)
+
+    sensor_small = sensor_set(sensor.clone(), "pixel size constant fill factor", 2.0e-6)
+    sensor_small = sensor_compute(sensor_small, oi)
+    small_plot, _ = sensor_plot(sensor_small, "electrons hline", np.array([5, 1], dtype=int))
+
+    sensor_large = sensor_set(sensor.clone(), "pixel size constant fill factor", 6.0e-6)
+    sensor_large = sensor_set_size_to_fov(sensor_large, fov, oi)
+    sensor_large = sensor_compute(sensor_large, oi)
+    large_plot, _ = sensor_plot(sensor_large, "electrons hline", np.array([5, 1], dtype=int))
+
+    oi_blur = oi_set(oi.clone(), "optics fnumber", 12.0)
+    oi_blur = oi_compute(oi_blur, sweep_scene)
+    sensor_blur = sensor_compute(sensor_large.clone(), oi_blur)
+    blur_plot, _ = sensor_plot(sensor_blur, "electrons hline", np.array([5, 1], dtype=int))
+
+    slanted_scene = scene_create("slanted bar", 1024, asset_store=asset_store)
+    slanted_scene = scene_set(slanted_scene, "fov", fov)
+    oi_sharp = oi_set(oi_blur.clone(), "optics fnumber", 2.0)
+    oi_sharp = oi_compute(oi_sharp, slanted_scene)
+    sensor_slanted = sensor_set(sensor_large.clone(), "pixel size constant fill factor", 6.0e-6)
+    sensor_slanted = sensor_set_size_to_fov(sensor_slanted, fov, oi_sharp)
+    sensor_slanted = sensor_compute(sensor_slanted, oi_sharp)
+    oi_soft = oi_set(oi_sharp.clone(), "optics fnumber", 12.0)
+    oi_soft = oi_compute(oi_soft, slanted_scene)
+    sensor_slanted_blur = sensor_compute(sensor_slanted.clone(), oi_soft)
+
+    assert tuple(sensor_get(sensor_small, "size")) == (99, 120)
+    assert tuple(sensor_get(sensor_large, "size")) == (46, 56)
+    assert small_plot["dataType"] == large_plot["dataType"] == blur_plot["dataType"] == "electrons"
+    assert len(small_plot["data"]) == 1
+    assert len(large_plot["data"]) == 1
+    assert len(blur_plot["data"]) == 1
+    assert np.asarray(small_plot["data"][0], dtype=float).shape == (120,)
+    assert np.asarray(large_plot["data"][0], dtype=float).shape == (56,)
+    assert np.asarray(blur_plot["data"][0], dtype=float).shape == (56,)
+    assert np.std(np.asarray(blur_plot["data"][0], dtype=float)) < np.std(np.asarray(large_plot["data"][0], dtype=float))
+    assert tuple(sensor_get(sensor_slanted, "size")) == (46, 56)
+    assert np.asarray(sensor_get(sensor_slanted, "electrons"), dtype=float).shape == (46, 56)
+    assert np.asarray(sensor_get(sensor_slanted_blur, "electrons"), dtype=float).shape == (46, 56)
+
+
+def test_run_python_case_supports_sensor_aliasing_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_aliasing_small", asset_store=asset_store)
+
+    assert tuple(case.payload["sweep_scene_size"]) == (768, 768)
+    assert tuple(case.payload["small_sensor_size"]) == (99, 120)
+    assert tuple(case.payload["large_sensor_size"]) == (46, 56)
+    assert case.payload["small_line_pos"].shape == (120,)
+    assert case.payload["small_line_data_norm"].shape == (120,)
+    assert case.payload["large_line_pos"].shape == (56,)
+    assert case.payload["large_line_data_norm"].shape == (56,)
+    assert case.payload["blur_line_pos"].shape == (56,)
+    assert case.payload["blur_line_data_norm"].shape == (56,)
+    assert case.payload["small_line_stats"].shape == (4,)
+    assert case.payload["large_line_stats"].shape == (4,)
+    assert case.payload["blur_line_stats"].shape == (4,)
+    assert tuple(case.payload["slanted_scene_size"]) == (1024, 1024)
+    assert tuple(case.payload["slanted_sensor_size"]) == (46, 56)
+    assert case.payload["slanted_sharp_norm"].shape == (46, 56)
+    assert case.payload["slanted_blur_norm"].shape == (46, 56)
+    assert case.payload["slanted_sharp_stats"].shape == (4,)
+    assert case.payload["slanted_blur_stats"].shape == (4,)
 
 
 def test_run_python_case_supports_sensor_filter_transmissivities_parity_case(asset_store) -> None:

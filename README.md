@@ -202,7 +202,11 @@ also includes `sceneCreate('linear intensity ramp')`,
 `sensorDR`, and headless log-response sensor compute support for
 `s_sensorLogAR0132AT.m`, with curated Octave parity on the stable
 noise-free log-response line-shape workflow and the script’s 1-second
-dynamic-range check.
+dynamic-range check. That same Phase 1 sensor wave now also includes the
+full `s_sensorAliasing.m` workflow, with curated Octave parity on the
+noise-free sweep-frequency aliasing line profiles for the fine-pixel,
+coarse-pixel, and blurred-lens cases plus canonicalized slanted-bar
+sensor captures for the sharp and anti-aliased large-pixel paths.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit

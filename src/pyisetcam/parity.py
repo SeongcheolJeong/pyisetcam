@@ -2874,6 +2874,83 @@ def run_python_case_with_context(
             context={"scene": scene, "oi": oi, "sensor": sensor},
         )
 
+    if case_name == "sensor_aliasing_small":
+        fov = 5.0
+        sweep_scene = scene_create("sweep frequency", 768, 30.0, asset_store=store)
+        sweep_scene = scene_set(sweep_scene, "fov", fov)
+
+        oi = oi_create("diffraction limited", asset_store=store)
+        oi = oi_set(oi, "optics fnumber", 2.0)
+        oi = oi_compute(oi, sweep_scene)
+
+        sensor = sensor_create("monochrome", asset_store=store)
+        sensor = sensor_set_size_to_fov(sensor, fov, oi)
+        sensor = sensor_set(sensor, "noise flag", 0)
+
+        sensor_small = sensor_set(sensor.clone(), "pixel size constant fill factor", 2.0e-6)
+        sensor_small = sensor_compute(sensor_small, oi)
+        small_line = sensor_get(sensor_small, "hline electrons", 1)
+        small_data = np.asarray(small_line["data"][0], dtype=float)
+        small_pos = np.asarray(small_line["pos"][0], dtype=float)
+
+        sensor_large = sensor_set(sensor.clone(), "pixel size constant fill factor", 6.0e-6)
+        sensor_large = sensor_set_size_to_fov(sensor_large, fov, oi)
+        sensor_large = sensor_compute(sensor_large, oi)
+        large_line = sensor_get(sensor_large, "hline electrons", 1)
+        large_data = np.asarray(large_line["data"][0], dtype=float)
+        large_pos = np.asarray(large_line["pos"][0], dtype=float)
+
+        oi_blur = oi_set(oi.clone(), "optics fnumber", 12.0)
+        oi_blur = oi_compute(oi_blur, sweep_scene)
+        sensor_blur = sensor_compute(sensor_large.clone(), oi_blur)
+        blur_line = sensor_get(sensor_blur, "hline electrons", 1)
+        blur_data = np.asarray(blur_line["data"][0], dtype=float)
+        blur_pos = np.asarray(blur_line["pos"][0], dtype=float)
+
+        slanted_scene = scene_create("slanted bar", 1024, asset_store=store)
+        slanted_scene = scene_set(slanted_scene, "fov", fov)
+
+        oi_slanted_sharp = oi_set(oi_blur.clone(), "optics fnumber", 2.0)
+        oi_slanted_sharp = oi_compute(oi_slanted_sharp, slanted_scene)
+        sensor_slanted = sensor_set(sensor_large.clone(), "pixel size constant fill factor", 6.0e-6)
+        sensor_slanted = sensor_set_size_to_fov(sensor_slanted, fov, oi_slanted_sharp)
+        sensor_slanted = sensor_compute(sensor_slanted, oi_slanted_sharp)
+        slanted_sharp = np.asarray(sensor_get(sensor_slanted, "electrons"), dtype=float)
+
+        oi_slanted_blur = oi_set(oi_slanted_sharp.clone(), "optics fnumber", 12.0)
+        oi_slanted_blur = oi_compute(oi_slanted_blur, slanted_scene)
+        sensor_slanted_blur = sensor_compute(sensor_slanted.clone(), oi_slanted_blur)
+        slanted_blur = np.asarray(sensor_get(sensor_slanted_blur, "electrons"), dtype=float)
+        slanted_sharp = np.flipud(np.fliplr(slanted_sharp))
+        slanted_blur = np.flipud(np.fliplr(slanted_blur))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "fov_deg": fov,
+                "sweep_scene_size": np.asarray(scene_get(sweep_scene, "size"), dtype=int),
+                "sweep_oi_size": np.asarray(oi_get(oi, "size"), dtype=int),
+                "small_sensor_size": np.asarray(sensor_get(sensor_small, "size"), dtype=int),
+                "large_sensor_size": np.asarray(sensor_get(sensor_large, "size"), dtype=int),
+                "small_line_pos": small_pos,
+                "small_line_data_norm": _channel_normalize(small_data),
+                "large_line_pos": large_pos,
+                "large_line_data_norm": _channel_normalize(large_data),
+                "blur_line_pos": blur_pos,
+                "blur_line_data_norm": _channel_normalize(blur_data),
+                "small_line_stats": _stats_vector(small_data),
+                "large_line_stats": _stats_vector(large_data),
+                "blur_line_stats": _stats_vector(blur_data),
+                "slanted_scene_size": np.asarray(scene_get(slanted_scene, "size"), dtype=int),
+                "slanted_sensor_size": np.asarray(sensor_get(sensor_slanted, "size"), dtype=int),
+                "slanted_sharp_norm": slanted_sharp / max(float(np.max(slanted_sharp)), 1.0e-12),
+                "slanted_blur_norm": slanted_blur / max(float(np.max(slanted_blur)), 1.0e-12),
+                "slanted_sharp_stats": _stats_vector(slanted_sharp),
+                "slanted_blur_stats": _stats_vector(slanted_blur),
+            },
+            context={"scene": slanted_scene, "oi": oi_slanted_blur, "sensor": sensor_slanted_blur},
+        )
+
     if case_name == "sensor_filter_transmissivities_small":
         sensor = sensor_create(asset_store=store)
         filters = np.asarray(sensor_get(sensor, "filter transmissivities"), dtype=float)

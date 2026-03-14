@@ -1151,6 +1151,58 @@
       }
     },
     {
+      "name": "sensor_aliasing_small",
+      "matlab_function": "s_sensorAliasing.m",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "small_line_data_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.001
+        },
+        "small_line_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "large_line_data_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.05
+        },
+        "large_line_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.03
+        },
+        "blur_line_data_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.02
+        },
+        "blur_line_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "slanted_sharp_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.05
+        },
+        "slanted_blur_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.05
+        },
+        "slanted_scene_size": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.001
+        },
+        "slanted_sharp_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        },
+        "slanted_blur_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        }
+      }
+    },
+    {
       "name": "sensor_color_filter_gaussian_roundtrip_small",
       "matlab_function": "sensorColorFilter/ieSaveColorFilter/ieReadColorFilter",
       "rtol": 1e-05,
