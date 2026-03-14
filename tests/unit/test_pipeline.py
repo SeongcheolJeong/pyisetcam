@@ -7,7 +7,7 @@ from scipy.io import savemat
 
 from pyisetcam.exceptions import UnsupportedOptionError
 from pyisetcam.parity import run_python_case_with_context
-from pyisetcam.utils import tile_pattern
+from pyisetcam.utils import energy_to_quanta, tile_pattern
 from pyisetcam import (
     camera_compute,
     camera_create,
@@ -5653,6 +5653,57 @@ def test_run_python_case_supports_sensor_estimation_small_parity_case(asset_stor
     assert case.payload["rgb_pred_full"].shape == (3, 24)
     assert case.payload["estimate_sparse"].shape == (31, 3)
     assert case.payload["rgb_pred_sparse"].shape == (3, 24)
+
+
+def test_sensor_macbeth_daylight_estimate_script_contract(asset_store) -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    reflectance = ie_read_spectra("macbethChart", wave, asset_store=asset_store)
+    sensor = sensor_create(asset_store=asset_store)
+    sensor_filters = np.asarray(sensor_get(sensor, "spectral qe"), dtype=float)
+    day_basis_quanta = energy_to_quanta(ie_read_spectra("cieDaylightBasis.mat", wave, asset_store=asset_store), wave)
+
+    true_weights = np.array([1.0, 0.0, 0.0], dtype=float)
+    illuminant_photons = day_basis_quanta @ true_weights
+    camera_data = sensor_filters.T @ (illuminant_photons[:, None] * reflectance)
+
+    x1 = sensor_filters.T @ (day_basis_quanta[:, [0]] * reflectance)
+    x2 = sensor_filters.T @ (day_basis_quanta[:, [1]] * reflectance)
+    x3 = sensor_filters.T @ (day_basis_quanta[:, [2]] * reflectance)
+    design_matrix = np.column_stack(
+        [
+            x1.reshape(-1, order="F"),
+            x2.reshape(-1, order="F"),
+            x3.reshape(-1, order="F"),
+        ]
+    )
+    camera_stacked = camera_data.reshape(-1, order="F")
+    estimated_weights = np.linalg.solve(design_matrix.T @ design_matrix, design_matrix.T @ camera_stacked)
+    estimated_weights = estimated_weights / estimated_weights[0]
+
+    assert reflectance.shape == (31, 24)
+    assert sensor_filters.shape == (31, 3)
+    assert day_basis_quanta.shape == (31, 3)
+    assert camera_data.shape == (3, 24)
+    assert design_matrix.shape == (72, 3)
+    assert np.allclose(estimated_weights, true_weights, atol=1e-10, rtol=1e-10)
+
+
+def test_run_python_case_supports_sensor_macbeth_daylight_estimate_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_macbeth_daylight_estimate_small", asset_store=asset_store)
+
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["reflectance"].shape == (31, 24)
+    assert case.payload["sensor_filters"].shape == (31, 3)
+    assert case.payload["day_basis_quanta"].shape == (31, 3)
+    assert case.payload["true_weights"].shape == (3,)
+    assert case.payload["illuminant_photons"].shape == (31,)
+    assert case.payload["camera_data"].shape == (3, 24)
+    assert case.payload["design_matrix"].shape == (72, 3)
+    assert case.payload["camera_stacked"].shape == (72,)
+    assert case.payload["normal_matrix"].shape == (3, 3)
+    assert case.payload["rhs"].shape == (3,)
+    assert case.payload["estimated_weights"].shape == (3,)
+    assert case.payload["estimated_illuminant"].shape == (31,)
 
 
 def test_run_python_case_supports_sensor_spectral_estimation_small_parity_case(asset_store) -> None:

@@ -1291,6 +1291,12 @@
       "atol": 1e-08
     },
     {
+      "name": "sensor_macbeth_daylight_estimate_small",
+      "matlab_function": "s_sensorMacbethDaylightEstimate.m",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "sensor_spectral_estimation_small",
       "matlab_function": "s_sensorSpectralEstimation",
       "rtol": 1e-05,

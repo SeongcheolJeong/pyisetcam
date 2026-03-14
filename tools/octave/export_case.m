@@ -2278,6 +2278,45 @@ switch case_name
         payload.estimate_sparse = estimateSparse;
         payload.rgb_pred_sparse = rgbPredSparse;
 
+    case 'sensor_macbeth_daylight_estimate_small'
+        wave = (400:10:700)';
+        reflectance = macbethReadReflectance(wave);
+
+        sensor = sensorCreate;
+        sensorFilters = sensorGet(sensor, 'spectral qe');
+
+        dayBasisEnergy = ieReadSpectra('cieDaylightBasis.mat', wave);
+        dayBasisQuanta = Energy2Quanta(wave, dayBasisEnergy);
+
+        trueWeights = [1 0 0]';
+        illuminantPhotons = dayBasisQuanta * trueWeights;
+        cameraData = sensorFilters' * diag(illuminantPhotons) * reflectance;
+
+        X1 = sensorFilters' * diag(dayBasisQuanta(:, 1)) * reflectance;
+        X2 = sensorFilters' * diag(dayBasisQuanta(:, 2)) * reflectance;
+        X3 = sensorFilters' * diag(dayBasisQuanta(:, 3)) * reflectance;
+        designMatrix = [X1(:), X2(:), X3(:)];
+        cameraStacked = cameraData(:);
+        normalMatrix = designMatrix' * designMatrix;
+        rhs = designMatrix' * cameraStacked;
+        solvedWeights = normalMatrix \ rhs;
+        estimatedWeights = solvedWeights / solvedWeights(1);
+        estimatedIlluminant = dayBasisQuanta * estimatedWeights;
+
+        payload.wave = wave;
+        payload.reflectance = reflectance;
+        payload.sensor_filters = sensorFilters;
+        payload.day_basis_quanta = dayBasisQuanta;
+        payload.true_weights = trueWeights';
+        payload.illuminant_photons = illuminantPhotons;
+        payload.camera_data = cameraData;
+        payload.design_matrix = designMatrix;
+        payload.camera_stacked = cameraStacked;
+        payload.normal_matrix = normalMatrix;
+        payload.rhs = rhs;
+        payload.estimated_weights = estimatedWeights';
+        payload.estimated_illuminant = estimatedIlluminant;
+
     case 'sensor_spectral_estimation_small'
         scene = sceneCreate('uniform ee');
         wave = sceneGet(scene, 'wave');

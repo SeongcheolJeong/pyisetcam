@@ -130,6 +130,8 @@ includes `signal_current` / `signalCurrent` coverage for the
 `ie_read_spectra` / `ieReadSpectra` coverage for the core spectral-loading
 path used by `t_sensorEstimation.m`, together with curated parity on the
 Macbeth/D65/scanner pseudoinverse estimation workflow,
+plus direct curated parity on the daylight-basis Macbeth illuminant solve
+from `s_sensorMacbethDaylightEstimate.m`,
 plus `sensor_color_filter` / `sensorColorFilter`,
 `ie_read_color_filter` / `ieReadColorFilter`, and
 `ie_save_color_filter` / `ieSaveColorFilter` coverage for the Gaussian

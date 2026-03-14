@@ -3211,6 +3211,57 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "sensor_macbeth_daylight_estimate_small":
+        wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+        reflectance = ie_read_spectra("macbethChart", wave, asset_store=store)
+
+        sensor = sensor_create(asset_store=store)
+        sensor_filters = np.asarray(sensor_get(sensor, "spectral qe"), dtype=float)
+
+        day_basis_energy = ie_read_spectra("cieDaylightBasis.mat", wave, asset_store=store)
+        day_basis_quanta = energy_to_quanta(day_basis_energy, wave)
+
+        true_weights = np.array([1.0, 0.0, 0.0], dtype=float)
+        illuminant_photons = day_basis_quanta @ true_weights
+        camera_data = sensor_filters.T @ (illuminant_photons[:, None] * reflectance)
+
+        x1 = sensor_filters.T @ (day_basis_quanta[:, [0]] * reflectance)
+        x2 = sensor_filters.T @ (day_basis_quanta[:, [1]] * reflectance)
+        x3 = sensor_filters.T @ (day_basis_quanta[:, [2]] * reflectance)
+        design_matrix = np.column_stack(
+            [
+                x1.reshape(-1, order="F"),
+                x2.reshape(-1, order="F"),
+                x3.reshape(-1, order="F"),
+            ]
+        )
+        camera_stacked = camera_data.reshape(-1, order="F")
+        normal_matrix = design_matrix.T @ design_matrix
+        rhs = design_matrix.T @ camera_stacked
+        solved_weights = np.linalg.solve(normal_matrix, rhs)
+        estimated_weights = solved_weights / solved_weights[0]
+        estimated_illuminant = day_basis_quanta @ estimated_weights
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "reflectance": reflectance,
+                "sensor_filters": sensor_filters,
+                "day_basis_quanta": day_basis_quanta,
+                "true_weights": true_weights,
+                "illuminant_photons": illuminant_photons,
+                "camera_data": camera_data,
+                "design_matrix": design_matrix,
+                "camera_stacked": camera_stacked,
+                "normal_matrix": normal_matrix,
+                "rhs": rhs,
+                "estimated_weights": estimated_weights,
+                "estimated_illuminant": estimated_illuminant,
+            },
+            context={"sensor": sensor},
+        )
+
     if case_name == "sensor_spectral_estimation_small":
         scene = scene_create("uniform ee", asset_store=store)
         wave = np.asarray(scene_get(scene, "wave"), dtype=float)
