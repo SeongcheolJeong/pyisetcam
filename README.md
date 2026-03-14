@@ -247,6 +247,11 @@ That same Phase 2 wavefront block now also includes `ie_mvnrnd` /
 Octave parity on deterministic virtual-eye coefficient draws, the
 sample-mean subject PSFs across 450/550/650 nm, and the selected
 example-subject PSF center rows at 450 nm and 550 nm.
+That same Phase 2 wavefront block now also includes the
+`s_wvfZernikeSet.m` workflow, with curated Octave parity on the
+defocus-plus-vertical-astigmatism loop, comparing the returned Zernike
+coefficients, 550 nm PSF center rows, and uncropped 550 nm OI center
+rows for `A = [-1, 0, 1]` at `D = 2` microns.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit

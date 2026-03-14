@@ -4347,6 +4347,58 @@ def test_run_python_case_supports_wvf_thibos_model_parity_case(asset_store) -> N
     assert case.payload["example_subject_psf_peaks_550"].shape == (4,)
 
 
+def test_wvf_zernike_set_workflow_supports_defocus_astigmatism_oi_bundle(asset_store) -> None:
+    params = {
+        "blockSize": 64,
+        "angles": np.array([0.0, np.pi / 4.0, np.pi / 2.0], dtype=float),
+    }
+    scene = scene_create("frequency orientation", params, asset_store=asset_store)
+    scene = scene_set(scene, "fov", 5.0)
+    astigmatism_values = np.array([-1.0, 0.0, 1.0], dtype=float)
+    defocus_microns = 2.0
+
+    wvf = wvf_create(wave=scene_get(scene, "wave"))
+    psf_rows = []
+    oi_rows = []
+    for astigmatism in astigmatism_values:
+        wvf = wvf_set(wvf, "zcoeffs", np.array([defocus_microns, astigmatism], dtype=float), ["defocus", "vertical_astigmatism"])
+        wvf = wvf_compute(wvf)
+        udata, handle = wvf_plot(wvf, "psf", "unit", "um", "wave", 550.0, "plot range", 40.0, "window", False)
+        psf = np.asarray(udata["z"], dtype=float)
+        psf_row = psf[psf.shape[0] // 2, :]
+        psf_rows.append(psf_row / max(float(np.max(np.abs(psf_row))), 1e-12))
+        assert handle is None
+
+        oi = oi_compute(wvf, scene)
+        photons = np.asarray(oi_get(oi, "photons"), dtype=float)
+        wave = np.asarray(oi_get(oi, "wave"), dtype=float).reshape(-1)
+        wave_index = int(np.argmin(np.abs(wave - 550.0)))
+        center_row = photons[photons.shape[0] // 2, :, wave_index]
+        oi_rows.append(center_row / max(float(np.max(np.abs(center_row))), 1e-12))
+
+        assert np.isclose(float(oi_get(oi, "wvf", "zcoeffs", "defocus")), defocus_microns)
+        assert np.isclose(float(oi_get(oi, "wvf", "zcoeffs", "vertical_astigmatism")), astigmatism)
+
+    assert len(psf_rows) == 3
+    assert len(oi_rows) == 3
+    assert all(row.shape == psf_rows[0].shape for row in psf_rows)
+    assert all(row.shape == oi_rows[0].shape for row in oi_rows)
+
+
+def test_run_python_case_supports_wvf_zernike_set_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("wvf_zernike_set_small", asset_store=asset_store)
+
+    assert case.payload["wave"].ndim == 1
+    assert np.array_equal(case.payload["astigmatism_values"], np.array([-1.0, 0.0, 1.0], dtype=float))
+    assert np.isclose(float(case.payload["defocus_microns"]), 2.0)
+    assert case.payload["psf_support_um"].ndim == 1
+    assert case.payload["psf_mid_rows"].shape[0] == 3
+    assert np.allclose(case.payload["oi_defocus_coeffs"], np.full(3, 2.0))
+    assert np.allclose(case.payload["oi_astigmatism_coeffs"], np.array([-1.0, 0.0, 1.0], dtype=float))
+    assert case.payload["oi_center_rows_550"].shape[0] == 3
+    assert case.payload["oi_peak_photons_550"].shape == (3,)
+
+
 def test_wvf_diffraction_workflow_supports_script_sweeps() -> None:
     flength_mm = 6.0
     flength_m = flength_mm * 1e-3

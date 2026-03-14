@@ -1406,6 +1406,82 @@ def run_python_case_with_context(
             context={"wvf": current},
         )
 
+    if case_name == "wvf_zernike_set_small":
+        params = {
+            "blockSize": 64,
+            "angles": np.array([0.0, np.pi / 4.0, np.pi / 2.0], dtype=float),
+        }
+        scene = scene_create("frequency orientation", params, asset_store=store)
+        scene = scene_set(scene, "fov", 5.0)
+        astigmatism_values = np.array([-1.0, 0.0, 1.0], dtype=float)
+        defocus_microns = 2.0
+        psf_support_um: np.ndarray | None = None
+        psf_mid_rows: list[np.ndarray] = []
+        oi_center_rows_550: list[np.ndarray] = []
+        oi_defocus: list[float] = []
+        oi_astigmatism: list[float] = []
+        oi_peak_photons_550: list[float] = []
+
+        def _normalize_profile(profile: np.ndarray) -> np.ndarray:
+            profile_array = np.asarray(profile, dtype=float)
+            return profile_array / max(float(np.max(np.abs(profile_array))), 1e-12)
+
+        current_wvf = wvf_create(wave=scene_get(scene, "wave"))
+        last_oi = None
+        for astigmatism in astigmatism_values:
+            current_wvf = wvf_set(
+                current_wvf,
+                "zcoeffs",
+                np.array([defocus_microns, astigmatism], dtype=float),
+                ["defocus", "vertical_astigmatism"],
+            )
+            current_wvf = wvf_compute(current_wvf)
+            udata, _ = wvf_plot(
+                current_wvf,
+                "psf",
+                "unit",
+                "um",
+                "wave",
+                550.0,
+                "plot range",
+                40.0,
+                "window",
+                False,
+            )
+            psf = np.asarray(udata["z"], dtype=float)
+            if psf_support_um is None:
+                psf_support_um = np.asarray(udata["x"], dtype=float)
+            psf_mid_rows.append(_normalize_profile(psf[psf.shape[0] // 2, :]))
+
+            oi = oi_compute(current_wvf, scene)
+            last_oi = oi
+            oi_wvf = oi_get(oi, "wvf")
+            oi_defocus.append(float(wvf_get(oi_wvf, "zcoeffs", "defocus")))
+            oi_astigmatism.append(float(wvf_get(oi_wvf, "zcoeffs", "vertical_astigmatism")))
+
+            photons = np.asarray(oi_get(oi, "photons"), dtype=float)
+            wave = np.asarray(oi_get(oi, "wave"), dtype=float).reshape(-1)
+            wave_index = int(np.argmin(np.abs(wave - 550.0)))
+            center_row = photons[photons.shape[0] // 2, :, wave_index]
+            oi_center_rows_550.append(_normalize_profile(center_row))
+            oi_peak_photons_550.append(float(np.max(photons[:, :, wave_index])))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": np.asarray(scene_get(scene, "wave"), dtype=float),
+                "astigmatism_values": astigmatism_values,
+                "defocus_microns": defocus_microns,
+                "psf_support_um": np.asarray(psf_support_um, dtype=float),
+                "psf_mid_rows": np.vstack(psf_mid_rows),
+                "oi_defocus_coeffs": np.asarray(oi_defocus, dtype=float),
+                "oi_astigmatism_coeffs": np.asarray(oi_astigmatism, dtype=float),
+                "oi_center_rows_550": np.vstack(oi_center_rows_550),
+                "oi_peak_photons_550": np.asarray(oi_peak_photons_550, dtype=float),
+            },
+            context={"scene": scene, "wvf": current_wvf, "oi": last_oi},
+        )
+
     if case_name == "wvf_diffraction_small":
         flength_mm = 6.0
         flength_m = flength_mm * 1e-3

@@ -213,6 +213,54 @@ switch case_name
         payload.example_subject_psf_peaks_450 = double(subjectPeaks450);
         payload.example_subject_psf_peaks_550 = double(subjectPeaks550);
 
+    case 'wvf_zernike_set_small'
+        params = FOTParams;
+        params.blockSize = 64;
+        params.angles = [0, pi/4, pi/2];
+        scene = sceneCreate('freq orient', params);
+        scene = sceneSet(scene, 'fov', 5);
+
+        astigmatismValues = [-1, 0, 1];
+        defocusMicrons = 2;
+        currentWvf = wvfCreate('wave', sceneGet(scene, 'wave'));
+        psfMidRows = [];
+        oiCenterRows550 = [];
+        oiDefocus = zeros(numel(astigmatismValues), 1);
+        oiAstigmatism = zeros(numel(astigmatismValues), 1);
+        oiPeakPhotons550 = zeros(numel(astigmatismValues), 1);
+        psfSupport = [];
+        wave = sceneGet(scene, 'wave');
+        wave550 = find(wave == 550, 1);
+
+        for ii = 1:numel(astigmatismValues)
+            currentWvf = wvfSet(currentWvf, 'zcoeffs', [defocusMicrons, astigmatismValues(ii)], {'defocus', 'vertical_astigmatism'});
+            currentWvf = wvfCompute(currentWvf);
+            uData = wvfPlot(currentWvf, 'psf', 'unit', 'um', 'wave', 550, 'plot range', 40, 'window', false);
+            psf = double(uData.z);
+            if isempty(psfSupport)
+                psfSupport = double(uData.x(:));
+            end
+            psfMidRows(ii, :) = local_channel_normalize(psf(floor(size(psf, 1) / 2) + 1, :));
+
+            oi = oiCompute(currentWvf, scene);
+            photons = double(oiGet(oi, 'photons'));
+            centerRow = squeeze(photons(floor(size(photons, 1) / 2) + 1, :, wave550));
+            oiCenterRows550(ii, :) = local_channel_normalize(centerRow);
+            oiDefocus(ii) = oiGet(oi, 'wvf', 'zcoeffs', 'defocus');
+            oiAstigmatism(ii) = oiGet(oi, 'wvf', 'zcoeffs', 'vertical_astigmatism');
+            oiPeakPhotons550(ii) = max(max(photons(:, :, wave550)));
+        end
+
+        payload.wave = double(wave(:));
+        payload.astigmatism_values = double(astigmatismValues(:));
+        payload.defocus_microns = defocusMicrons;
+        payload.psf_support_um = psfSupport;
+        payload.psf_mid_rows = double(psfMidRows);
+        payload.oi_defocus_coeffs = double(oiDefocus(:));
+        payload.oi_astigmatism_coeffs = double(oiAstigmatism(:));
+        payload.oi_center_rows_550 = double(oiCenterRows550);
+        payload.oi_peak_photons_550 = double(oiPeakPhotons550(:));
+
     case 'wvf_pupil_size_human_small'
         measuredPupilMM = 7.5;
         calcPupilMM = 3.0;

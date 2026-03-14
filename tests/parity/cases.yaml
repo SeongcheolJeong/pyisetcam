@@ -453,6 +453,22 @@
       }
     },
     {
+      "name": "wvf_zernike_set_small",
+      "matlab_function": "s_wvfZernikeSet",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "psf_mid_rows": {
+          "mode": "mean_rel",
+          "max_mean_rel": 1e-05
+        },
+        "oi_center_rows_550": {
+          "mode": "mean_rel",
+          "max_mean_rel": 1e-05
+        }
+      }
+    },
+    {
       "name": "wvf_diffraction_small",
       "matlab_function": "s_wvfDiffraction",
       "rtol": 1e-05,
