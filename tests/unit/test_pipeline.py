@@ -23,6 +23,8 @@ from pyisetcam import (
     ip_set,
     ip_compute,
     ip_create,
+    optics_coc,
+    optics_dof,
     optics_psf_to_otf,
     optics_ray_trace,
     oi_calculate_illuminance,
@@ -2506,6 +2508,39 @@ def test_optics_airy_disk_small_parity_case(asset_store) -> None:
     assert float(payload["diameter_um"]) == pytest.approx(float(payload["radius_um"]) * 2.0)
     assert int(payload["image_rows"]) > 0
     assert int(payload["image_cols"]) > 0
+
+
+def test_optics_coc_matches_thin_lens_formula() -> None:
+    oi = oi_create()
+    optics = dict(oi.fields["optics"])
+    optics["focal_length_m"] = 0.050
+    optics["f_number"] = 2.0
+
+    circ_mm, x_dist_m = optics_coc(optics, 0.5, "unit", "mm", "n samples", 50)
+    expected_dof = 2.0 * 2.0 * 20e-6 * (0.5**2) / (0.050**2)
+
+    assert x_dist_m.shape == (50,)
+    assert circ_mm.shape == (50,)
+    assert np.all(circ_mm >= 0.0)
+    assert np.any(x_dist_m < 0.5)
+    assert np.any(x_dist_m > 0.5)
+    assert np.isclose(float(optics_dof(optics, 0.5, 20e-6)), expected_dof)
+
+
+def test_optics_coc_small_parity_case(asset_store) -> None:
+    payload = run_python_case("optics_coc_small", asset_store=asset_store)
+
+    assert np.array_equal(payload["object_distances_m"], np.array([0.5, 3.0], dtype=float))
+    assert np.array_equal(payload["f_numbers"], np.array([2.0, 8.0], dtype=float))
+    assert np.isclose(float(payload["focal_length_m"]), 0.050)
+    assert payload["x_dist_focus_0_5_m"].shape == (50,)
+    assert payload["circ_f2_focus_0_5_mm"].shape == (50,)
+    assert payload["circ_f8_focus_0_5_mm"].shape == (50,)
+    assert payload["x_dist_focus_3_m"].shape == (50,)
+    assert payload["circ_f2_focus_3_mm"].shape == (50,)
+    assert payload["circ_f8_focus_3_mm"].shape == (50,)
+    assert np.all(payload["circ_f2_focus_0_5_mm"] >= 0.0)
+    assert np.all(payload["circ_f8_focus_3_mm"] >= 0.0)
 
 
 def test_si_synthetic_custom_loads_psf_mat_file(tmp_path, asset_store) -> None:

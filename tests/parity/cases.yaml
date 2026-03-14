@@ -151,6 +151,12 @@
       "atol": 1e-08
     },
     {
+      "name": "optics_coc_small",
+      "matlab_function": "opticsCoC",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "metrics_cct_from_uv_1d",
       "matlab_function": "cct",
       "rtol": 1e-05,

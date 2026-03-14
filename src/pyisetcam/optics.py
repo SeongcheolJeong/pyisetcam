@@ -167,6 +167,96 @@ def airy_disk(
     return float(radius), {"data": psf, "x": axis.copy(), "y": axis.copy()}
 
 
+def _coerce_optics_struct(optics: OpticalImage | dict[str, Any]) -> dict[str, Any]:
+    if isinstance(optics, OpticalImage):
+        return dict(optics.fields.get("optics", {}))
+    if isinstance(optics, dict):
+        return dict(optics)
+    raise TypeError("optics must be an OpticalImage or optics dictionary.")
+
+
+def optics_coc(
+    optics: OpticalImage | dict[str, Any],
+    o_dist: float,
+    *args: Any,
+    unit: str = "m",
+    xdist: Any | None = None,
+    nsamples: int = 21,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return the thin-lens circle of confusion for an in-focus object distance."""
+
+    options = {
+        "unit": unit,
+        "xdist": xdist,
+        "nsamples": nsamples,
+    }
+    if len(args) % 2 != 0:
+        raise ValueError("optics_coc optional arguments must be key/value pairs.")
+    for index in range(0, len(args), 2):
+        key = param_format(args[index]).replace("_", "").replace("-", "")
+        value = args[index + 1]
+        if key == "unit":
+            options["unit"] = value
+        elif key == "xdist":
+            options["xdist"] = value
+        elif key in {"nsamples", "nsample"}:
+            options["nsamples"] = value
+        else:
+            raise UnsupportedOptionError("opticsCoC", str(args[index]))
+
+    current = _coerce_optics_struct(optics)
+    normalized_unit = param_format(options["unit"])
+    if normalized_unit not in _SPATIAL_UNIT_SCALE:
+        raise UnsupportedOptionError("opticsCoC", f"unit {options['unit']}")
+
+    o_dist_m = float(np.asarray(o_dist, dtype=float).reshape(-1)[0])
+    if o_dist_m <= 0.0:
+        raise ValueError("o_dist must be positive.")
+
+    focal_length_m = float(np.asarray(current.get("focal_length_m", DEFAULT_FOCAL_LENGTH_M), dtype=float).reshape(-1)[0])
+    if focal_length_m <= 0.0:
+        raise ValueError("Optics focal length must be positive.")
+
+    f_number = float(np.asarray(current.get("f_number", 4.0), dtype=float).reshape(-1)[0])
+    if f_number <= 0.0:
+        raise ValueError("Optics f-number must be positive.")
+
+    raw_xdist = options["xdist"]
+    if raw_xdist is None:
+        x_dist_m = 10.0 ** (np.log10(o_dist_m) + np.linspace(-0.5, 0.5, int(np.asarray(options["nsamples"], dtype=int).reshape(-1)[0])))
+    else:
+        x_dist_m = np.asarray(raw_xdist, dtype=float).reshape(-1)
+    x_dist_m = np.asarray(x_dist_m[x_dist_m > focal_length_m], dtype=float)
+
+    lensmaker = lambda dist, focal_length: 1.0 / ((1.0 / focal_length) - (1.0 / dist))
+    aperture_m = focal_length_m / f_number
+    focus_distance_m = lensmaker(o_dist_m, focal_length_m)
+    image_distance_m = lensmaker(x_dist_m, focal_length_m)
+    image_distance_m = np.maximum(image_distance_m, 0.0)
+    circ = aperture_m * np.abs(image_distance_m - focus_distance_m) / image_distance_m
+    return np.asarray(circ * _spatial_unit_scale(normalized_unit), dtype=float), x_dist_m
+
+
+def optics_dof(
+    optics: OpticalImage | dict[str, Any],
+    o_dist: Any,
+    coc_diam: float = 10e-6,
+) -> float | np.ndarray:
+    """Return the thin-lens depth of field in meters."""
+
+    current = _coerce_optics_struct(optics)
+    f_number = float(np.asarray(current.get("f_number", 4.0), dtype=float).reshape(-1)[0])
+    focal_length_m = float(np.asarray(current.get("focal_length_m", DEFAULT_FOCAL_LENGTH_M), dtype=float).reshape(-1)[0])
+    if f_number <= 0.0 or focal_length_m <= 0.0:
+        raise ValueError("Optics f-number and focal length must be positive.")
+
+    object_distance_m = np.asarray(o_dist, dtype=float)
+    dof = (2.0 * f_number * float(coc_diam) * np.square(object_distance_m)) / max(focal_length_m**2, 1e-30)
+    if dof.ndim == 0:
+        return float(dof)
+    return np.asarray(dof, dtype=float)
+
+
 def _normalize_shift_invariant_psf_data(value: Any) -> dict[str, Any]:
     current = dict(value)
     psf = np.asarray(current.get("psf"), dtype=float)

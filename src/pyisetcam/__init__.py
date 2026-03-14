@@ -45,6 +45,8 @@ from .metrics import (
 from .optics import (
     airy_disk,
     ie_field_height_to_index,
+    optics_coc,
+    optics_dof,
     optics_ray_trace,
     oi_calculate_illuminance,
     oi_diffuser,
@@ -300,6 +302,10 @@ __all__ = [
     "metricsSPD",
     "metrics_spd",
     "mired_difference",
+    "opticsCoC",
+    "opticsDoF",
+    "optics_coc",
+    "optics_dof",
     "opticsRayTrace",
     "optics_ray_trace",
     "oiCalculateIlluminance",
@@ -584,6 +590,8 @@ plotSensorFFT = sensor_plot_fft
 sensorPlotLine = sensor_plot_line
 wvfPlot = wvf_plot
 airyDisk = airy_disk
+opticsCoC = optics_coc
+opticsDoF = optics_dof
 opticsRayTrace = optics_ray_trace
 ieFieldHeight2Index = ie_field_height_to_index
 rtAngleLUT = rt_angle_lut

@@ -25,6 +25,7 @@ from .optics import (
     _shift_invariant_custom_otf,
     _wvf_psf_stack,
     airy_disk,
+    optics_coc,
     oi_compute,
     oi_crop,
     oi_create,
@@ -556,6 +557,33 @@ def run_python_case_with_context(
                 "image_cols": int(image_data.shape[1]),
             },
             context={},
+        )
+
+    if case_name == "optics_coc_small":
+        base_optics = dict(oi_create(asset_store=store).fields["optics"])
+        base_optics["focal_length_m"] = 0.050
+        optics_f2 = dict(base_optics)
+        optics_f2["f_number"] = 2.0
+        optics_f8 = dict(base_optics)
+        optics_f8["f_number"] = 8.0
+        circ_f2_focus_0_5, x_dist_focus_0_5 = optics_coc(optics_f2, 0.5, "unit", "mm", "n samples", 50)
+        circ_f8_focus_0_5, _ = optics_coc(optics_f8, 0.5, "unit", "mm", "n samples", 50)
+        circ_f2_focus_3, x_dist_focus_3 = optics_coc(optics_f2, 3.0, "unit", "mm", "n samples", 50)
+        circ_f8_focus_3, _ = optics_coc(optics_f8, 3.0, "unit", "mm", "n samples", 50)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "object_distances_m": np.array([0.5, 3.0], dtype=float),
+                "f_numbers": np.array([2.0, 8.0], dtype=float),
+                "focal_length_m": 0.050,
+                "x_dist_focus_0_5_m": np.asarray(x_dist_focus_0_5, dtype=float),
+                "circ_f2_focus_0_5_mm": np.asarray(circ_f2_focus_0_5, dtype=float),
+                "circ_f8_focus_0_5_mm": np.asarray(circ_f8_focus_0_5, dtype=float),
+                "x_dist_focus_3_m": np.asarray(x_dist_focus_3, dtype=float),
+                "circ_f2_focus_3_mm": np.asarray(circ_f2_focus_3, dtype=float),
+                "circ_f8_focus_3_mm": np.asarray(circ_f8_focus_3, dtype=float),
+            },
+            context={"optics_f2": optics_f2, "optics_f8": optics_f8},
         )
 
     if case_name == "metrics_cct_from_uv_1d":

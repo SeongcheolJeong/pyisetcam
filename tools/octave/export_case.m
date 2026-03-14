@@ -283,6 +283,28 @@ switch case_name
         payload.image_rows = size(img.data, 1);
         payload.image_cols = size(img.data, 2);
 
+    case 'optics_coc_small'
+        object_distances = [0.5 3.0];
+        f_numbers = [2.0 8.0];
+        focal_length_m = 0.050;
+        optics = opticsCreate;
+        optics = opticsSet(optics, 'focal length', focal_length_m);
+        optics = opticsSet(optics, 'fnumber', f_numbers(1));
+        [circ_f2_focus_0_5, x_dist_focus_0_5] = opticsCoC(optics, object_distances(1), 'unit', 'mm', 'n samples', 50);
+        [circ_f2_focus_3, x_dist_focus_3] = opticsCoC(optics, object_distances(2), 'unit', 'mm', 'n samples', 50);
+        optics = opticsSet(optics, 'fnumber', f_numbers(2));
+        circ_f8_focus_0_5 = opticsCoC(optics, object_distances(1), 'unit', 'mm', 'n samples', 50);
+        circ_f8_focus_3 = opticsCoC(optics, object_distances(2), 'unit', 'mm', 'n samples', 50);
+        payload.object_distances_m = object_distances;
+        payload.f_numbers = f_numbers;
+        payload.focal_length_m = focal_length_m;
+        payload.x_dist_focus_0_5_m = x_dist_focus_0_5;
+        payload.circ_f2_focus_0_5_mm = circ_f2_focus_0_5;
+        payload.circ_f8_focus_0_5_mm = circ_f8_focus_0_5;
+        payload.x_dist_focus_3_m = x_dist_focus_3;
+        payload.circ_f2_focus_3_mm = circ_f2_focus_3;
+        payload.circ_f8_focus_3_mm = circ_f8_focus_3;
+
     case 'metrics_cct_from_uv_1d'
         uv = [0.20029948; 0.31055768];
         payload.uv = uv;
