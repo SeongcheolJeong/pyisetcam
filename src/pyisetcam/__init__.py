@@ -49,6 +49,7 @@ from .optics import (
     oi_calculate_illuminance,
     oi_diffuser,
     oi_compute,
+    oi_crop,
     oi_create,
     oi_get,
     oi_set,
@@ -150,6 +151,7 @@ from .scene import (
     scene_create,
     scene_from_file,
     scene_get,
+    scene_rotate,
     scene_set,
 )
 from .sensor import (
@@ -301,11 +303,13 @@ __all__ = [
     "oiDiffuser",
     "oiCompute",
     "oiCreate",
+    "oiCrop",
     "oiGet",
     "oiSet",
     "oi_calculate_illuminance",
     "oi_diffuser",
     "oi_compute",
+    "oi_crop",
     "oi_create",
     "oi_get",
     "oi_plot",
@@ -400,6 +404,7 @@ __all__ = [
     "sceneCreate",
     "sceneFromFile",
     "sceneGet",
+    "sceneRotate",
     "sceneSet",
     "scene_combine",
     "scene_adjust_illuminant",
@@ -409,6 +414,7 @@ __all__ = [
     "scene_create",
     "scene_from_file",
     "scene_get",
+    "scene_rotate",
     "scene_set",
     "mlAnalyzeArrayEtendue",
     "mlRadiance",
@@ -538,6 +544,7 @@ __version__ = "0.1.0"
 sceneCreate = scene_create
 sceneFromFile = scene_from_file
 sceneGet = scene_get
+sceneRotate = scene_rotate
 sceneSet = scene_set
 sceneCombine = scene_combine
 sceneAdjustIlluminant = scene_adjust_illuminant
@@ -552,6 +559,7 @@ sensorDescription = sensor_description
 
 oiCreate = oi_create
 oiCompute = oi_compute
+oiCrop = oi_crop
 oiGet = oi_get
 oiSet = oi_set
 oiCalculateIlluminance = oi_calculate_illuminance

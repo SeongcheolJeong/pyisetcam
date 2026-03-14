@@ -7,7 +7,7 @@ from typing import Any
 
 import imageio.v3 as iio
 import numpy as np
-from scipy.ndimage import zoom
+from scipy.ndimage import rotate, zoom
 from scipy.signal import convolve2d
 
 from .assets import AssetStore
@@ -246,6 +246,55 @@ def scene_combine(scene1: Scene, scene2: Scene, *args: Any) -> Scene:
         return scene_combine(scene_combine(scene_edge, scene_mid, "direction", "vertical"), scene_edge, "direction", "vertical")
 
     raise ValueError(f"Unsupported scene_combine direction: {direction}")
+
+
+def _scene_rotation_degrees(value: Any) -> float:
+    if isinstance(value, str):
+        normalized = param_format(value)
+        if normalized in {"cw", "clockwise"}:
+            return -90.0
+        if normalized in {"ccw", "counterclockwise"}:
+            return 90.0
+        raise ValueError(f"Unsupported scene rotation parameter: {value}")
+    return float(np.asarray(value, dtype=float).reshape(-1)[0])
+
+
+def scene_rotate(scene: Scene, degrees: Any) -> Scene:
+    angle_deg = _scene_rotation_degrees(degrees)
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+    if photons.ndim != 3:
+        raise ValueError("scene_rotate requires a scene photons cube.")
+
+    rotated = scene.clone()
+    rotated_photons = rotate(
+        photons,
+        angle_deg,
+        axes=(1, 0),
+        reshape=True,
+        order=1,
+        mode="constant",
+        cval=0.0,
+        prefilter=False,
+    )
+    rotated = scene_set(rotated, "photons", rotated_photons)
+
+    if param_format(scene_get(scene, "illuminant format")) == "spatialspectral":
+        illuminant = np.asarray(scene_get(scene, "illuminant photons"), dtype=float)
+        if illuminant.ndim < 2:
+            raise ValueError("Spatial-spectral illuminant photons must be at least 2-D.")
+        rotated.fields["illuminant_photons"] = rotate(
+            illuminant,
+            angle_deg,
+            axes=(1, 0),
+            reshape=True,
+            order=1,
+            mode="constant",
+            cval=0.0,
+            prefilter=False,
+        )
+        _invalidate_scene_caches(rotated)
+
+    return rotated
 
 
 def _macbeth_cube(
@@ -1842,7 +1891,7 @@ def scene_set(scene: Scene, parameter: str, value: Any) -> Scene:
         _invalidate_scene_caches(scene)
         return scene
     if key == "illuminantphotons":
-        scene.fields["illuminant_photons"] = np.asarray(value, dtype=float).reshape(-1)
+        scene.fields["illuminant_photons"] = np.asarray(value, dtype=float)
         _invalidate_scene_caches(scene)
         return scene
     if key == "chartparameters":

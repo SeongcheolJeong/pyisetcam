@@ -5611,6 +5611,39 @@ def oi_compute(
     return track_session_object(session, computed)
 
 
+def oi_crop(oi: OpticalImage, rect: Any) -> OpticalImage:
+    rect_array = np.rint(np.asarray(rect, dtype=float).reshape(-1)).astype(int)
+    if rect_array.size != 4:
+        raise ValueError("oi_crop expects [col, row, width, height].")
+
+    from .roi import ie_rect2_locs, vc_get_roi_data
+
+    roi_locs = ie_rect2_locs(rect_array)
+    cropped_rows = int(rect_array[3]) + 1
+    cropped_cols = int(rect_array[2]) + 1
+    sample_spacing = np.asarray(oi_get(oi, "distance per sample"), dtype=float)
+
+    photons = np.asarray(vc_get_roi_data(oi, roi_locs, "photons"), dtype=float)
+    photons = photons.reshape(cropped_rows, cropped_cols, -1)
+
+    cropped = oi.clone()
+    cropped = oi_set(cropped, "photons", photons)
+
+    depth_map = oi.fields.get("depth_map_m")
+    if depth_map is not None:
+        depth = np.asarray(depth_map, dtype=float)
+        row_index = np.clip(roi_locs[:, 0] - 1, 0, depth.shape[0] - 1)
+        col_index = np.clip(roi_locs[:, 1] - 1, 0, depth.shape[1] - 1)
+        cropped.fields["depth_map_m"] = depth[row_index, col_index].reshape(cropped_rows, cropped_cols)
+
+    oi_calculate_illuminance(cropped)
+
+    focal_length = float(oi_get(cropped, "optics focal length"))
+    new_wangular = float(np.rad2deg(2.0 * np.arctan2((cropped_cols * sample_spacing[1]) / 2.0, focal_length)))
+    cropped = oi_set(cropped, "wangular", new_wangular)
+    return cropped
+
+
 def _oi_shape(oi: OpticalImage) -> tuple[int, int]:
     photons = np.asarray(oi.data.get("photons", np.empty((0, 0, 0))), dtype=float)
     if photons.ndim >= 2:
@@ -5887,6 +5920,8 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         return _oi_shape(oi)[1]
     if key == "size":
         return _oi_shape(oi)
+    if key in {"centerpixel", "centerpoint"}:
+        return np.floor(np.array([oi_get(oi, "rows"), oi_get(oi, "cols")], dtype=float) / 2.0).astype(int) + 1
     if key in {"imagedistance", "focalplanedistance", "distance"}:
         return _oi_image_distance_m(oi)
     if key in {"wangular", "widthangular", "hfov", "horizontalfieldofview", "fov"}:

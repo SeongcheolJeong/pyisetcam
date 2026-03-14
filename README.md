@@ -179,7 +179,11 @@ MT9V024 RCCC, and CYYM small-pixel/large-pixel response summaries. That
 same sensor wave now also includes headless `sensorComputeSamples(...)`
 for the repeated-capture workflow from `s_sensorNoise.m`, with curated
 Octave parity on stable sample-stack noise statistics instead of raw
-RNG-matched captures.
+RNG-matched captures. That same Phase 1 sensor wave now also includes
+public `sceneRotate(...)` / `oiCrop(...)` support for the deterministic
+rolling-shutter assembly path from `s_sensorRollingShutter.m`, with
+curated Octave parity on the per-frame mean-voltage trace, final
+row summaries, and normalized final RGB summaries.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit
@@ -996,4 +1000,7 @@ The script-driven sensor slice now also covers the headless
 `sensorCCM(...)` chart fitting from stored corner points, and the fixed
 `ipSet(..., 'conversion method sensor', 'current matrix')` path now all
 run end to end with an Octave-backed parity case on the stable CCM and
-corrected-render summaries.
+corrected-render summaries. The adjacent `s_sensorRollingShutter.m`
+workflow is now also covered headlessly through `sceneRotate(...)`,
+`oiCrop(...)`, and a deterministic rolling-shutter assembly parity case
+that compares the temporal sensor trace plus the final assembled render.

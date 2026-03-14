@@ -1017,6 +1017,46 @@
       }
     },
     {
+      "name": "sensor_rolling_shutter_small",
+      "matlab_function": "s_sensorRollingShutter",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "first_crop_rect": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.05
+        },
+        "last_crop_rect": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.05
+        },
+        "temporal_mean_volts": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.03
+        },
+        "center_pixel_trace": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.07
+        },
+        "final_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "sampled_row_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.11
+        },
+        "result_mean_rgb_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "result_p95_rgb_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        }
+      }
+    },
+    {
       "name": "sensor_filter_transmissivities_small",
       "matlab_function": "sensorGet/sensorSet",
       "rtol": 1e-05,

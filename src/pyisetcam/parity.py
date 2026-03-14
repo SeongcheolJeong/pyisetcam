@@ -26,6 +26,7 @@ from .optics import (
     _wvf_psf_stack,
     airy_disk,
     oi_compute,
+    oi_crop,
     oi_create,
     oi_get,
     psf_to_zcoeff_error,
@@ -46,7 +47,7 @@ from .optics import (
     si_synthetic,
 )
 from .plotting import ip_plot, oi_plot, sensor_plot, sensor_plot_line, wvf_plot
-from .scene import scene_adjust_illuminant, scene_adjust_luminance, scene_combine, scene_create, scene_get, scene_set
+from .scene import scene_adjust_illuminant, scene_adjust_luminance, scene_combine, scene_create, scene_get, scene_rotate, scene_set
 from .sensor import (
     ml_analyze_array_etendue,
     ml_radiance,
@@ -2632,6 +2633,86 @@ def run_python_case_with_context(
                 "corrected_p95_rgb_norm": _channel_normalize(np.percentile(corrected_flat, 95.0, axis=0)),
             },
             context={"sensor": sensor, "ip_uncorrected": ip_uncorrected, "ip_corrected": ip_corrected},
+        )
+
+    if case_name == "sensor_rolling_shutter_small":
+        scene = scene_create("star pattern", 48, "ee", 4, asset_store=store)
+        scene = scene_set(scene, "fov", 3.0)
+        oi = oi_create(asset_store=store)
+
+        sensor = sensor_create(asset_store=store)
+        sensor = sensor_set(sensor, "pixel size constant fill factor", np.array([1.4e-6, 1.4e-6], dtype=float))
+        sensor = sensor_set(sensor, "fov", float(scene_get(scene, "fov")) / 2.0, oi)
+        sensor = sensor_set(sensor, "exp time", 4.0e-5)
+        sensor = sensor_set(sensor, "noise flag", 0)
+
+        sensor_size = np.asarray(sensor_get(sensor, "size"), dtype=int)
+        exp_time = float(sensor_get(sensor, "exp time"))
+        per_row = 10.0e-6
+        rate = 0.3
+        n_frames = int(sensor_size[0] + round(exp_time / per_row))
+        crop_width = int(sensor_size[1] - 1)
+        crop_height = int(sensor_size[0] - 1)
+
+        volt_stack = np.zeros((sensor_size[0], sensor_size[1], n_frames), dtype=float)
+        crop_rects = np.zeros((n_frames, 4), dtype=int)
+        temporal_mean_volts = np.zeros(n_frames, dtype=float)
+        current_sensor = sensor
+
+        for frame_index in range(n_frames):
+            rotated_scene = scene_rotate(scene, (frame_index + 1) * rate)
+            oi_frame = oi_compute(oi, rotated_scene)
+            center_pixel = np.asarray(oi_get(oi_frame, "center pixel"), dtype=float)
+            rect = np.rint(
+                [
+                    center_pixel[1] - crop_width / 2.0,
+                    center_pixel[0] - crop_height / 2.0,
+                    crop_width,
+                    crop_height,
+                ],
+            ).astype(int)
+            crop_rects[frame_index, :] = rect
+            oi_cropped = oi_crop(oi_frame, rect)
+            current_sensor = sensor_compute(current_sensor, oi_cropped, seed=0)
+            volts = np.asarray(sensor_get(current_sensor, "volts"), dtype=float)
+            volt_stack[:, :, frame_index] = volts
+            temporal_mean_volts[frame_index] = float(np.mean(volts))
+
+        integration_rows = max(int(round(exp_time / per_row)), 1)
+        slist = np.arange(integration_rows, dtype=int)
+        final = np.zeros((sensor_size[0], sensor_size[1]), dtype=float)
+        for row_index in range(sensor_size[0]):
+            slist = slist + 1
+            row_stack = volt_stack[row_index, :, :]
+            final[row_index, :] = np.sum(row_stack[:, slist], axis=1)
+
+        final_sensor = sensor_set(current_sensor.clone(), "volts", final)
+        ip = ip_compute(ip_create(asset_store=store), final_sensor, asset_store=store)
+        result = np.asarray(ip_get(ip, "result"), dtype=float)
+        result_flat = result.reshape(-1, result.shape[2])
+
+        sampled_rows = np.array([0, sensor_size[0] // 2, sensor_size[0] - 1], dtype=int)
+        sampled_cols = np.array([0, sensor_size[1] // 2, sensor_size[1] - 1], dtype=int)
+        sampled_row_stats = np.vstack([_stats_vector(final[row_index, :]) for row_index in sampled_rows])
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "sensor_size": sensor_size,
+                "n_frames": int(n_frames),
+                "crop_size": np.array([crop_height + 1, crop_width + 1], dtype=int),
+                "first_crop_rect": crop_rects[0, :],
+                "last_crop_rect": crop_rects[-1, :],
+                "temporal_mean_volts": temporal_mean_volts,
+                "center_pixel_trace": volt_stack[sensor_size[0] // 2, sensor_size[1] // 2, :],
+                "final_stats": _stats_vector(final),
+                "sampled_rows": sampled_rows + 1,
+                "sampled_cols": sampled_cols + 1,
+                "sampled_row_stats": sampled_row_stats,
+                "result_mean_rgb_norm": _channel_normalize(np.mean(result_flat, axis=0, dtype=float)),
+                "result_p95_rgb_norm": _channel_normalize(np.percentile(result_flat, 95.0, axis=0)),
+            },
+            context={"scene": scene, "sensor": final_sensor, "ip": ip},
         )
 
     if case_name == "sensor_filter_transmissivities_small":

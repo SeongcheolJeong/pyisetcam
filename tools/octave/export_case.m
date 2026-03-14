@@ -1791,6 +1791,78 @@ switch case_name
         payload.corrected_mean_rgb_norm = local_channel_normalize(squeeze(mean(mean(corrected, 1), 2)));
         payload.corrected_p95_rgb_norm = local_channel_normalize(prctile(reshape(corrected, [], size(corrected, 3)), 95, 1));
 
+    case 'sensor_rolling_shutter_small'
+        scene = sceneCreate('star pattern', 48, 'ee', 4);
+        scene = sceneSet(scene, 'fov', 3);
+        oi = oiCreate;
+
+        sensor = sensorCreate();
+        sensor = sensorSet(sensor, 'pixel size constant fill factor', [1.4 1.4] * 1e-6);
+        sensor = sensorSet(sensor, 'fov', sceneGet(scene, 'fov') / 2, oi);
+        sensor = sensorSet(sensor, 'exp time', 4e-5);
+        sensor = sensorSet(sensor, 'noise flag', 0);
+
+        sz = sensorGet(sensor, 'size');
+        expTime = sensorGet(sensor, 'exp time');
+        perRow = 10e-6;
+        rate = 0.3;
+        nFrames = sz(1) + round(expTime / perRow);
+        cropWidth = sz(2) - 1;
+        cropHeight = sz(1) - 1;
+
+        v = zeros(sz(1), sz(2), nFrames);
+        cropRects = zeros(nFrames, 4);
+        temporalMeanVolts = zeros(nFrames, 1);
+        currentSensor = sensor;
+        for ii = 1:nFrames
+            s = sceneRotate(scene, ii * rate);
+            oiFrame = oiCompute(oi, s);
+            cp = oiGet(oiFrame, 'center pixel');
+            rect = round([cp(2) - cropWidth / 2, cp(1) - cropHeight / 2, cropWidth, cropHeight]);
+            cropRects(ii, :) = rect;
+            oiC = oiCrop(oiFrame, rect);
+            currentSensor = sensorCompute(currentSensor, oiC, 0);
+            volts = sensorGet(currentSensor, 'volts');
+            v(:, :, ii) = volts;
+            temporalMeanVolts(ii) = mean(volts(:));
+        end
+
+        slist = 1:round(expTime / perRow);
+        final = zeros(sz);
+        for rr = 1:sz(1)
+            slist = slist + 1;
+            z = zeros(nFrames, 1);
+            z(slist) = 1;
+            tmp = squeeze(v(rr, :, :));
+            final(rr, :) = tmp * z;
+        end
+
+        sensorFinal = sensorSet(currentSensor, 'volts', final);
+        ip = ipCreate;
+        ip = ipCompute(ip, sensorFinal);
+        result = ipGet(ip, 'result');
+
+        sampleRows = [1, floor(sz(1) / 2) + 1, sz(1)];
+        sampleCols = [1, floor(sz(2) / 2) + 1, sz(2)];
+
+        payload.sensor_size = sz(:)';
+        payload.n_frames = nFrames;
+        payload.crop_size = [cropHeight + 1, cropWidth + 1];
+        payload.first_crop_rect = cropRects(1, :);
+        payload.last_crop_rect = cropRects(end, :);
+        payload.temporal_mean_volts = temporalMeanVolts;
+        payload.center_pixel_trace = squeeze(v(floor(sz(1) / 2) + 1, floor(sz(2) / 2) + 1, :));
+        payload.final_stats = [mean(final(:)) std(final(:)) prctile(final(:), [5 95])];
+        payload.sampled_rows = sampleRows;
+        payload.sampled_cols = sampleCols;
+        payload.sampled_row_stats = [
+            mean(final(sampleRows(1), :)) std(final(sampleRows(1), :)) prctile(final(sampleRows(1), :), [5 95]);
+            mean(final(sampleRows(2), :)) std(final(sampleRows(2), :)) prctile(final(sampleRows(2), :), [5 95]);
+            mean(final(sampleRows(3), :)) std(final(sampleRows(3), :)) prctile(final(sampleRows(3), :), [5 95])
+        ];
+        payload.result_mean_rgb_norm = local_channel_normalize(squeeze(mean(mean(result, 1), 2)));
+        payload.result_p95_rgb_norm = local_channel_normalize(prctile(reshape(result, [], size(result, 3)), 95, 1));
+
     case 'sensor_filter_transmissivities_small'
         sensor = sensorCreate();
         filters = sensorGet(sensor, 'filter transmissivities');

@@ -28,6 +28,7 @@ from pyisetcam import (
     oi_calculate_illuminance,
     oi_diffuser,
     oi_compute,
+    oi_crop,
     oi_create,
     oi_get,
     oi_set,
@@ -57,6 +58,7 @@ from pyisetcam import (
     scene_create,
     scene_adjust_luminance,
     scene_get,
+    scene_rotate,
     scene_set,
     signal_current,
     sensor_compute,
@@ -5051,6 +5053,53 @@ def test_run_python_case_supports_sensor_mcc_small_parity_case(asset_store) -> N
     assert case.payload["corrected_mean_rgb_norm"].shape == (3,)
     assert case.payload["corrected_p95_rgb_norm"].shape == (3,)
     assert np.all(np.isfinite(case.payload["estimated_ccm"]))
+
+
+def test_scene_rotate_and_oi_crop_support_centered_rolling_shutter_geometry(asset_store) -> None:
+    scene = scene_create("star pattern", 48, "ee", 4, asset_store=asset_store)
+    scene = scene_set(scene, "fov", 3.0)
+    rotated = scene_rotate(scene, 12.0)
+
+    original_size = np.asarray(scene_get(scene, "size"), dtype=int)
+    rotated_size = np.asarray(scene_get(rotated, "size"), dtype=int)
+    assert rotated_size[0] > original_size[0]
+    assert rotated_size[1] > original_size[1]
+
+    oi = oi_compute(oi_create(asset_store=asset_store), rotated)
+    center_pixel = np.asarray(oi_get(oi, "center pixel"), dtype=int)
+    crop_rows = 24
+    crop_cols = 20
+    rect = np.array(
+        [
+            int(np.rint(center_pixel[1] - (crop_cols - 1) / 2.0)),
+            int(np.rint(center_pixel[0] - (crop_rows - 1) / 2.0)),
+            crop_cols - 1,
+            crop_rows - 1,
+        ],
+        dtype=int,
+    )
+    cropped = oi_crop(oi, rect)
+
+    assert tuple(oi_get(cropped, "size")) == (crop_rows, crop_cols)
+    assert np.allclose(oi_get(cropped, "distance per sample"), oi_get(oi, "distance per sample"), rtol=5e-3)
+    assert np.asarray(oi_get(cropped, "illuminance"), dtype=float).shape == (crop_rows, crop_cols)
+
+
+def test_run_python_case_supports_sensor_rolling_shutter_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_rolling_shutter_small", asset_store=asset_store)
+
+    assert tuple(case.payload["sensor_size"]) == tuple(case.payload["crop_size"])
+    assert int(case.payload["n_frames"]) > int(case.payload["sensor_size"][0])
+    assert case.payload["first_crop_rect"].shape == (4,)
+    assert case.payload["last_crop_rect"].shape == (4,)
+    assert case.payload["temporal_mean_volts"].ndim == 1
+    assert case.payload["center_pixel_trace"].shape == case.payload["temporal_mean_volts"].shape
+    assert case.payload["final_stats"].shape == (4,)
+    assert case.payload["sampled_rows"].shape == (3,)
+    assert case.payload["sampled_cols"].shape == (3,)
+    assert case.payload["sampled_row_stats"].shape == (3, 4)
+    assert case.payload["result_mean_rgb_norm"].shape == (3,)
+    assert case.payload["result_p95_rgb_norm"].shape == (3,)
 
 
 def test_run_python_case_supports_sensor_filter_transmissivities_parity_case(asset_store) -> None:

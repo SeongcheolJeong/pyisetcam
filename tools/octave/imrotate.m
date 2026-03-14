@@ -1,5 +1,23 @@
-function out = imrotate(im, angle)
+function out = imrotate(im, angle, varargin)
 % Minimal imrotate shim for curated Codex parity cases.
+
+method = 'linear';
+shape = 'loose';
+if ~isempty(varargin)
+    if numel(varargin) >= 1 && ~isempty(varargin{1})
+        candidate = lower(char(varargin{1}));
+        if strcmp(candidate, 'bilinear')
+            method = 'linear';
+        elseif strcmp(candidate, 'nearest')
+            method = 'nearest';
+        else
+            method = candidate;
+        end
+    end
+    if numel(varargin) >= 2 && ~isempty(varargin{2})
+        shape = lower(char(varargin{2}));
+    end
+end
 
 if abs(angle) < eps
     out = im;
@@ -39,7 +57,14 @@ yShift = yOut - cy;
 xIn =  cos(theta) * xShift + sin(theta) * yShift + cx;
 yIn = -sin(theta) * xShift + cos(theta) * yShift + cy;
 
-out = interp2(1:cols, 1:rows, double(im), xIn, yIn, 'linear', 0);
+out = interp2(1:cols, 1:rows, double(im), xIn, yIn, method, 0);
+if strcmp(shape, 'crop')
+    rowStart = floor((size(out, 1) - rows) / 2) + 1;
+    colStart = floor((size(out, 2) - cols) / 2) + 1;
+    rowStop = rowStart + rows - 1;
+    colStop = colStart + cols - 1;
+    out = out(max(rowStart, 1):min(rowStop, size(out, 1)), max(colStart, 1):min(colStop, size(out, 2)));
+end
 if isa(im, 'single')
     out = single(out);
 end
