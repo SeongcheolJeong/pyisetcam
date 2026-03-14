@@ -154,6 +154,7 @@ from .scene import (
     scene_create,
     scene_from_file,
     scene_get,
+    scene_interpolate_w,
     scene_rotate,
     scene_set,
 )
@@ -415,6 +416,7 @@ __all__ = [
     "sceneCreate",
     "sceneFromFile",
     "sceneGet",
+    "sceneInterpolateW",
     "sceneRotate",
     "sceneSet",
     "scene_combine",
@@ -425,6 +427,7 @@ __all__ = [
     "scene_create",
     "scene_from_file",
     "scene_get",
+    "scene_interpolate_w",
     "scene_rotate",
     "scene_set",
     "mlAnalyzeArrayEtendue",
@@ -559,6 +562,7 @@ __version__ = "0.1.0"
 sceneCreate = scene_create
 sceneFromFile = scene_from_file
 sceneGet = scene_get
+sceneInterpolateW = scene_interpolate_w
 sceneRotate = scene_rotate
 sceneSet = scene_set
 sceneCombine = scene_combine

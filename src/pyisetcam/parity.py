@@ -49,7 +49,17 @@ from .optics import (
     si_synthetic,
 )
 from .plotting import ip_plot, oi_plot, sensor_plot, sensor_plot_line, wvf_plot
-from .scene import scene_adjust_illuminant, scene_adjust_luminance, scene_combine, scene_create, scene_from_file, scene_get, scene_rotate, scene_set
+from .scene import (
+    scene_adjust_illuminant,
+    scene_adjust_luminance,
+    scene_combine,
+    scene_create,
+    scene_from_file,
+    scene_get,
+    scene_interpolate_w,
+    scene_rotate,
+    scene_set,
+)
 from .sensor import (
     imx490_compute,
     ml_analyze_array_etendue,
@@ -998,6 +1008,37 @@ def run_python_case_with_context(
                 "case_name": case_name,
                 "wave": oi.fields["wave"],
                 "input_psf_mid_row_550": psf_data[middle_row, :, 15],
+            },
+            context={"scene": scene, "oi": oi},
+        )
+
+    if case_name == "oi_gaussian_psf_point_array_small":
+        wave = np.arange(450.0, 651.0, 100.0, dtype=float)
+        scene = scene_create("point array", 128, 32, asset_store=store)
+        scene = scene_interpolate_w(scene, wave, asset_store=store)
+        scene = scene_set(scene, "hfov", 1.0)
+        scene = scene_set(scene, "name", "psfPointArray")
+        oi = oi_create()
+        oi = oi_set(oi, "wave", scene_get(scene, "wave"))
+        xy_ratio = np.full(wave.size, 3.0, dtype=float)
+        wave_spread = wave / float(wave[0])
+        optics = si_synthetic("gaussian", oi, wave_spread, xy_ratio)
+        oi = oi_set(oi, "optics", optics)
+        oi = oi_compute(oi, scene)
+        photons = np.asarray(oi.data["photons"], dtype=float)
+        photons_normalized = photons / np.maximum(np.max(photons, axis=(0, 1), keepdims=True), 1e-12)
+        center_row = photons_normalized.shape[0] // 2
+        center_col = photons_normalized.shape[1] // 2
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": np.asarray(oi.fields["wave"], dtype=float),
+                "scene_wave": np.asarray(scene.fields["wave"], dtype=float),
+                "scene_name": scene.name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "oi_size": np.asarray(oi_get(oi, "size"), dtype=int),
+                "center_row_normalized": np.asarray(photons_normalized[center_row, :, :], dtype=float),
+                "center_col_normalized": np.asarray(photons_normalized[:, center_col, :], dtype=float),
             },
             context={"scene": scene, "oi": oi},
         )

@@ -1697,6 +1697,64 @@ def scene_adjust_luminance(
     return scene
 
 
+def scene_interpolate_w(
+    scene: Scene,
+    wave: Any,
+    preserve_luminance: bool = True,
+    *,
+    asset_store: AssetStore | None = None,
+) -> Scene:
+    source_wave = np.asarray(scene.fields.get("wave", DEFAULT_WAVE), dtype=float).reshape(-1)
+    target_wave = np.asarray(wave, dtype=float).reshape(-1)
+
+    if target_wave.size == 0:
+        raise ValueError("Target wavelength samples must not be empty.")
+    if source_wave.size == 0 or np.array_equal(source_wave, target_wave):
+        scene.fields["wave"] = target_wave
+        _invalidate_scene_caches(scene)
+        return scene
+    if float(np.min(target_wave)) < float(np.min(source_wave)) or float(np.max(target_wave)) > float(np.max(source_wave)):
+        raise ValueError("sceneInterpolateW does not support extrapolation outside the current wavelength support.")
+
+    store = _store(asset_store)
+    scene_photons = np.asarray(scene.data.get("photons", np.empty((0, 0, 0))), dtype=float)
+    original_mean: float | None = None
+    if scene_photons.size > 0:
+        if preserve_luminance:
+            original_mean = float(scene_get(scene, "mean luminance", asset_store=store))
+        scene.data["photons"] = _resample_wave_last(scene_photons, source_wave, target_wave)
+
+    illuminant_photons = scene.fields.get("illuminant_photons")
+    illuminant_energy = scene.fields.get("illuminant_energy")
+    if illuminant_photons is not None:
+        illuminant_array = np.asarray(illuminant_photons, dtype=float)
+        if illuminant_array.ndim == 1:
+            resampled_illuminant = np.asarray(interp_spectra(source_wave, illuminant_array, target_wave), dtype=float).reshape(-1)
+        else:
+            resampled_illuminant = _resample_wave_last(illuminant_array, source_wave, target_wave)
+        scene.fields["illuminant_photons"] = resampled_illuminant
+        energy = np.asarray(quanta_to_energy(resampled_illuminant, target_wave), dtype=float)
+        if energy.ndim == 3:
+            energy = np.mean(energy, axis=(0, 1))
+        scene.fields["illuminant_energy"] = energy
+    elif illuminant_energy is not None:
+        illuminant_array = np.asarray(illuminant_energy, dtype=float)
+        if illuminant_array.ndim == 1:
+            resampled_energy = np.asarray(interp_spectra(source_wave, illuminant_array, target_wave), dtype=float).reshape(-1)
+        else:
+            resampled_energy = _resample_wave_last(illuminant_array, source_wave, target_wave)
+            if resampled_energy.ndim == 3:
+                resampled_energy = np.mean(resampled_energy, axis=(0, 1))
+        scene.fields["illuminant_energy"] = np.asarray(resampled_energy, dtype=float)
+        scene.fields["illuminant_photons"] = np.asarray(energy_to_quanta(resampled_energy, target_wave), dtype=float)
+
+    scene.fields["wave"] = target_wave
+    _invalidate_scene_caches(scene)
+    if original_mean is not None:
+        scene_adjust_luminance(scene, original_mean, asset_store=store)
+    return scene
+
+
 def _scene_roi_xyz(scene: Scene, roi_locs: Any | None = None, *, asset_store: AssetStore | None = None) -> np.ndarray:
     store = _store(asset_store)
     wave = np.asarray(scene.fields["wave"], dtype=float)
@@ -2032,9 +2090,7 @@ def scene_set(scene: Scene, parameter: str, value: Any) -> Scene:
         scene.metadata = dict(value)
         return scene
     if key == "wave":
-        scene.fields["wave"] = np.asarray(value, dtype=float).reshape(-1)
-        _invalidate_scene_caches(scene)
-        return scene
+        return scene_interpolate_w(scene, value)
     if key == "photons":
         scene.data["photons"] = np.asarray(value, dtype=float)
         _invalidate_scene_caches(scene)

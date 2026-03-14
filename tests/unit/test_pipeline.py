@@ -63,6 +63,7 @@ from pyisetcam import (
     scene_from_file,
     scene_adjust_luminance,
     scene_get,
+    scene_interpolate_w,
     scene_rotate,
     scene_set,
     signal_current,
@@ -2422,6 +2423,33 @@ def test_si_synthetic_gaussian_builds_anisotropic_shift_invariant_optics() -> No
     assert horizontal > vertical
 
 
+def test_optics_gaussian_psf_point_array_script_flow(asset_store) -> None:
+    wave = np.arange(450.0, 651.0, 100.0, dtype=float)
+    scene = scene_create("point array", 128, 32, asset_store=asset_store)
+    original_mean = float(scene_get(scene, "mean luminance", asset_store=asset_store))
+
+    scene = scene_interpolate_w(scene, wave, asset_store=asset_store)
+    scene = scene_set(scene, "hfov", 1.0)
+    scene = scene_set(scene, "name", "psfPointArray")
+
+    oi = oi_create()
+    oi = oi_set(oi, "wave", scene_get(scene, "wave"))
+    optics = si_synthetic("gaussian", oi, wave / wave[0], np.full(wave.size, 3.0, dtype=float))
+    oi = oi_set(oi, "optics", optics)
+    oi = oi_compute(oi, scene)
+
+    assert scene.name == "psfPointArray"
+    assert np.asarray(scene.fields["wave"]).shape == (3,)
+    assert scene.data["photons"].shape == (128, 128, 3)
+    assert np.asarray(scene.fields["illuminant_photons"]).shape == (3,)
+    assert float(scene_get(scene, "mean luminance", asset_store=asset_store)) == pytest.approx(original_mean, rel=1e-6)
+    assert np.asarray(oi_get(oi, "wave")).shape == (3,)
+    assert oi.data["photons"].shape[2] == 3
+    assert oi.data["photons"].shape[:2] == tuple(np.asarray(oi_get(oi, "size"), dtype=int))
+    assert oi.data["photons"].shape[0] > scene.data["photons"].shape[0]
+    assert np.max(oi.data["photons"]) > 0.0
+
+
 def test_si_synthetic_lorentzian_applies_to_grid_lines_scene(asset_store) -> None:
     scene = scene_create("grid lines", [64, 64], 16, "ee", 2, asset_store=asset_store)
     scene = scene_set(scene, "fov", 2.0)
@@ -2473,6 +2501,18 @@ def test_oi_si_gaussian_ratio_small_parity_case(asset_store) -> None:
 
     assert np.asarray(payload["wave"]).ndim == 1
     assert np.asarray(payload["input_psf_mid_row_550"]).ndim == 1
+
+
+def test_oi_gaussian_psf_point_array_small_parity_case(asset_store) -> None:
+    payload = run_python_case("oi_gaussian_psf_point_array_small", asset_store=asset_store)
+
+    assert payload["scene_name"] == "psfPointArray"
+    assert np.asarray(payload["wave"]).shape == (3,)
+    assert np.asarray(payload["scene_wave"]).shape == (3,)
+    assert np.asarray(payload["scene_size"]).shape == (2,)
+    assert np.asarray(payload["oi_size"]).shape == (2,)
+    assert payload["center_row_normalized"].shape == (int(np.asarray(payload["oi_size"])[1]), 3)
+    assert payload["center_col_normalized"].shape == (int(np.asarray(payload["oi_size"])[0]), 3)
 
 
 def test_oi_psf550_si_gaussian_ratio_small_parity_case(asset_store) -> None:

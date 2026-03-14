@@ -325,6 +325,22 @@
       "atol": 1e-08
     },
     {
+      "name": "oi_gaussian_psf_point_array_small",
+      "matlab_function": "s_opticsGaussianPSF.m",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "center_row_normalized": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.19
+        },
+        "center_col_normalized": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.17
+        }
+      }
+    },
+    {
       "name": "oi_psf550_si_gaussian_ratio_small",
       "matlab_function": "siSynthetic/oiPlot (psf 550)",
       "rtol": 1e-04,

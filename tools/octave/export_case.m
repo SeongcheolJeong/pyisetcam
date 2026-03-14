@@ -586,6 +586,33 @@ switch case_name
         payload.wave = oiGet(oi, 'wave');
         payload.input_psf_mid_row_550 = squeeze(psfData.psf(floor(size(psfData.psf, 1) / 2) + 1, :, 16));
 
+    case 'oi_gaussian_psf_point_array_small'
+        wave = 450:100:650;
+        nWaves = numel(wave);
+        scene = sceneCreate('pointArray', 128, 32);
+        scene = sceneInterpolateW(scene, wave);
+        scene = sceneSet(scene, 'hfov', 1);
+        scene = sceneSet(scene, 'name', 'psfPointArray');
+        oi = oiCreate;
+        oi = oiSet(oi, 'wave', sceneGet(scene, 'wave'));
+        xyRatio = 3 * ones(1, nWaves);
+        waveSpread = wave / wave(1);
+        optics = siSynthetic('gaussian', oi, double(waveSpread), xyRatio);
+        oi = oiSet(oi, 'optics', optics);
+        oi = oiCompute(oi, scene);
+        photons = oiGet(oi, 'photons');
+        peakPerWave = squeeze(max(max(photons, [], 1), [], 2));
+        photonsNormalized = photons ./ reshape(max(peakPerWave, 1e-12), 1, 1, []);
+        centerRow = floor(size(photonsNormalized, 1) / 2) + 1;
+        centerCol = floor(size(photonsNormalized, 2) / 2) + 1;
+        payload.wave = oiGet(oi, 'wave');
+        payload.scene_wave = sceneGet(scene, 'wave');
+        payload.scene_name = sceneGet(scene, 'name');
+        payload.scene_size = sceneGet(scene, 'size')(:);
+        payload.oi_size = oiGet(oi, 'size')(:);
+        payload.center_row_normalized = squeeze(photonsNormalized(centerRow, :, :));
+        payload.center_col_normalized = squeeze(photonsNormalized(:, centerCol, :));
+
     case 'oi_psf550_si_gaussian_ratio_small'
         oi = oiCreate('psf');
         wave = oiGet(oi, 'wave');

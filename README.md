@@ -225,6 +225,11 @@ That same Phase 2 optics wave now also includes the wide-field
 `s_opticsCos4th.m` vignetting workflow, with curated Octave parity on the
 default and 4x-focal-length illuminance hline profiles and their mean
 illuminance summaries for a uniform D65 scene at 80 degrees FOV.
+That same optics wave now also includes MATLAB-style
+`scene_interpolate_w` / `sceneInterpolateW` behavior through
+`sceneSet(..., 'wave', ...)`, plus curated parity for the
+`s_opticsGaussianPSF.m` point-array workflow on the normalized blurred
+center row and column profiles across 450 nm, 550 nm, and 650 nm.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit
