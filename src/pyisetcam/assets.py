@@ -211,6 +211,7 @@ class AssetStore:
             Path("data/surfaces/reflectances"),
             Path("data/lights"),
             Path("data/human"),
+            Path("data/sensor/colorfilters"),
             Path("scripts/color"),
         )
         for candidate in list(candidates):
@@ -222,6 +223,12 @@ class AssetStore:
                 add(prefix / candidate)
 
         snapshot_root = self.ensure()
+        for candidate in list(candidates):
+            if candidate.is_absolute():
+                continue
+            for match in snapshot_root.rglob(candidate.name):
+                add(match.relative_to(snapshot_root))
+
         for candidate in candidates:
             if candidate.exists():
                 return candidate

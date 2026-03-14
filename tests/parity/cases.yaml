@@ -883,6 +883,46 @@
       }
     },
     {
+      "name": "sensor_stacked_pixels_foveon_small",
+      "matlab_function": "s_sensorStackedPixels",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "stacked_center_patch_mean": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.03
+        },
+        "stacked_center_patch_std": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "stacked_center_patch_p90": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.04
+        },
+        "stacked_mean_volts": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.001
+        },
+        "stacked_std_volts": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        },
+        "bayer_line_mean": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        },
+        "bayer_line_std": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "bayer_line_p90": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        }
+      }
+    },
+    {
       "name": "sensor_filter_transmissivities_small",
       "matlab_function": "sensorGet/sensorSet",
       "rtol": 1e-05,

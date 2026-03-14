@@ -3245,14 +3245,27 @@ def _auto_exposure_default(sensor: Sensor, oi: OpticalImage) -> float:
 
 
 def sensor_compute(
-    sensor: Sensor,
+    sensor: Sensor | list[Sensor] | tuple[Sensor, ...],
     oi: OpticalImage,
     show_bar: bool | None = None,
     *,
     seed: int | None = None,
     session: SessionContext | None = None,
-) -> Sensor:
-    """Compute sensor response from an optical image."""
+) -> Sensor | list[Sensor]:
+    """Compute sensor response from an optical image or sensor array."""
+
+    if isinstance(sensor, (list, tuple)):
+        computed_sensors = [
+            sensor_compute(
+                item,
+                oi,
+                show_bar,
+                seed=None if seed is None else int(seed) + index,
+                session=session,
+            )
+            for index, item in enumerate(sensor)
+        ]
+        return computed_sensors
 
     del show_bar
     computed = sensor.clone()

@@ -1486,6 +1486,86 @@ switch case_name
         end
         payload.saturated_counts = squeeze(sum(sum(combined.metadata.saturated, 1), 2));
 
+    case 'sensor_stacked_pixels_foveon_small'
+        horizontalFOV = 8;
+        meanLuminance = 100;
+        patchSize = 32;
+
+        scene = sceneCreate('macbeth d65', patchSize);
+        scene = sceneAdjustLuminance(scene, meanLuminance);
+        scene = sceneSet(scene, 'hfov', horizontalFOV);
+
+        oi = oiCreate;
+        oi = oiSet(oi, 'optics fnumber', 4);
+        oi = oiSet(oi, 'optics focal length', 3e-3);
+        oi = oiCompute(oi, scene);
+
+        wave = sceneGet(scene, 'wave');
+        fSpectra = ieReadSpectra('Foveon', wave);
+
+        clear sensorMonochrome
+        for ii = 1:3
+            sensorMonochrome(ii) = sensorCreate('monochrome');
+            sensorMonochrome(ii) = sensorSet(sensorMonochrome(ii), 'pixel size constant fill factor', [1.4 1.4] * 1e-6);
+            sensorMonochrome(ii) = sensorSet(sensorMonochrome(ii), 'exp time', 0.1);
+            sensorMonochrome(ii) = sensorSet(sensorMonochrome(ii), 'filterspectra', fSpectra(:, ii));
+            sensorMonochrome(ii) = sensorSet(sensorMonochrome(ii), 'name', sprintf('Channel-%.0f', ii));
+            sensorMonochrome(ii) = sensorSetSizeToFOV(sensorMonochrome(ii), sceneGet(scene, 'fov'), oi);
+            sensorMonochrome(ii) = sensorSet(sensorMonochrome(ii), 'wave', wave);
+        end
+        sensorMonochrome = sensorCompute(sensorMonochrome, oi);
+
+        sz = sensorGet(sensorMonochrome(1), 'size');
+        stackedVolts = zeros(sz(1), sz(2), 3);
+        for ii = 1:3
+            stackedVolts(:, :, ii) = sensorGet(sensorMonochrome(ii), 'volts');
+        end
+
+        sensorFoveon = sensorCreate;
+        sensorFoveon = sensorSet(sensorFoveon, 'name', 'foveon');
+        sensorFoveon = sensorSet(sensorFoveon, 'pixel size constant fill factor', [1.4 1.4] * 1e-6);
+        sensorFoveon = sensorSet(sensorFoveon, 'autoexp', 1);
+        sensorFoveon = sensorSetSizeToFOV(sensorFoveon, sceneGet(scene, 'fov'), oi);
+        sensorFoveon = sensorSet(sensorFoveon, 'wave', wave);
+        sensorFoveon = sensorSet(sensorFoveon, 'filter spectra', fSpectra);
+        sensorFoveon = sensorSet(sensorFoveon, 'pattern', [2]);
+        sensorFoveon = sensorSet(sensorFoveon, 'volts', stackedVolts);
+
+        ipFoveon = ipCreate;
+        ipFoveon = ipCompute(ipFoveon, sensorFoveon);
+        foveonResult = ipGet(ipFoveon, 'result');
+        lineRow = min(120, size(foveonResult, 1));
+        foveonLine = squeeze(foveonResult(lineRow, :, :));
+
+        bayerSpectra = ieReadSpectra('NikonD1', wave);
+        sensorBayer = sensorCreate;
+        sensorBayer = sensorSet(sensorBayer, 'filterspectra', bayerSpectra);
+        sensorBayer = sensorSet(sensorBayer, 'pixel size constant fill factor', [1.4 1.4] * 1e-6);
+        sensorBayer = sensorSet(sensorBayer, 'autoexp', 1);
+        sensorBayer = sensorSetSizeToFOV(sensorBayer, sceneGet(scene, 'fov'), oi);
+        sensorBayer = sensorCompute(sensorBayer, oi);
+
+        ipBayer = ipCreate;
+        ipBayer = ipCompute(ipBayer, sensorBayer);
+        bayerResult = ipGet(ipBayer, 'result');
+        bayerLine = squeeze(bayerResult(lineRow, :, :));
+
+        rowStart = floor((size(stackedVolts, 1) - 24) / 2) + 1;
+        colStart = floor((size(stackedVolts, 2) - 24) / 2) + 1;
+        rowStop = rowStart + 23;
+        colStop = colStart + 23;
+
+        stackedPatch = stackedVolts(rowStart:rowStop, colStart:colStop, :);
+        payload.stacked_center_patch_mean = squeeze(mean(mean(stackedPatch, 1), 2));
+        payload.stacked_center_patch_std = squeeze(std(reshape(stackedPatch, [], size(stackedPatch, 3)), 0, 1))';
+        payload.stacked_center_patch_p90 = squeeze(prctile(reshape(stackedPatch, [], size(stackedPatch, 3)), 90, 1))';
+        payload.stacked_mean_volts = squeeze(mean(mean(stackedVolts, 1), 2));
+        payload.stacked_std_volts = squeeze(std(reshape(stackedVolts, [], size(stackedVolts, 3)), 0, 1))';
+        payload.line_row = lineRow;
+        payload.bayer_line_mean = squeeze(mean(bayerLine, 1));
+        payload.bayer_line_std = squeeze(std(bayerLine, 0, 1));
+        payload.bayer_line_p90 = squeeze(prctile(bayerLine, 90, 1));
+
     case 'sensor_filter_transmissivities_small'
         sensor = sensorCreate();
         filters = sensorGet(sensor, 'filter transmissivities');

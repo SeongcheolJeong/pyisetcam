@@ -159,7 +159,12 @@ direct curated parity for the CFA-matched exposure-duration workflow from
 `sensorCreateArray`, `sensor_create_split_pixel` / `sensorCreateSplitPixel`,
 and `sensor_compute_array` / `sensorComputeArray` coverage for the
 OVT split-pixel saturated-combine workflow that underlies
-`s_sensorSplitPixel.m`.
+`s_sensorSplitPixel.m`. That same sensor wave now also includes
+sensor-array `sensor_compute(...)` support together with
+`ie_read_spectra('Foveon'/'NikonD1')` sensor-color-filter asset loading,
+covering the stacked monochrome-plane and triple-well image-processing
+workflow from `s_sensorStackedPixels.m` with curated parity on the stable
+stacked-plane and Bayer-comparison summaries.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit

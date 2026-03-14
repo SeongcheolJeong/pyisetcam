@@ -19,6 +19,7 @@ from pyisetcam import (
     ie_save_si_data_file,
     ie_field_height_to_index,
     ip_get,
+    ip_plot,
     ip_set,
     ip_compute,
     ip_create,
@@ -4834,6 +4835,78 @@ def test_run_python_case_supports_sensor_split_pixel_ovt_saturated_parity_case(a
     assert case.payload["sensor_max_volts"].shape == (3,)
     assert case.payload["saturated_counts"].shape == (3,)
     assert list(case.payload["sensor_names"]) == ["ovt-LPDLCG", "ovt-LPDHCG", "ovt-SPDLCG"]
+
+
+def test_ie_read_spectra_resolves_sensor_color_filter_assets(asset_store) -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+
+    foveon = ie_read_spectra("Foveon", wave, asset_store=asset_store)
+    nikon = ie_read_spectra("NikonD1", wave, asset_store=asset_store)
+
+    assert foveon.shape == (31, 3)
+    assert nikon.shape == (31, 3)
+    assert np.all(foveon >= 0.0)
+    assert np.all(nikon >= 0.0)
+
+
+def test_sensor_compute_supports_stacked_pixel_sensor_arrays(asset_store) -> None:
+    scene = scene_create("macbeth d65", 32, asset_store=asset_store)
+    scene = scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
+    scene = scene_set(scene, "hfov", 8.0)
+
+    oi = oi_create(asset_store=asset_store)
+    oi = oi_set(oi, "optics fnumber", 4.0)
+    oi = oi_set(oi, "optics focal length", 3e-3)
+    oi = oi_compute(oi, scene)
+
+    wave = np.asarray(scene_get(scene, "wave"), dtype=float)
+    foveon = np.asarray(ie_read_spectra("Foveon", wave, asset_store=asset_store), dtype=float)
+    sensors = []
+    for index in range(3):
+        sensor = sensor_create("monochrome", asset_store=asset_store)
+        sensor = sensor_set(sensor, "pixel size constant fill factor", np.array([1.4e-6, 1.4e-6], dtype=float))
+        sensor = sensor_set(sensor, "exp time", 0.1)
+        sensor = sensor_set(sensor, "filter spectra", foveon[:, index])
+        sensor = sensor_set(sensor, "name", f"Channel-{index + 1}")
+        sensor = sensor_set_size_to_fov(sensor, scene_get(scene, "fov"), oi)
+        sensor = sensor_set(sensor, "wave", wave)
+        sensors.append(sensor)
+
+    computed = sensor_compute(sensors, oi)
+
+    assert isinstance(computed, list)
+    assert len(computed) == 3
+    assert all(np.asarray(sensor_get(sensor, "volts"), dtype=float).shape == (245, 300) for sensor in computed)
+
+    stacked = np.stack([np.asarray(sensor_get(sensor, "volts"), dtype=float) for sensor in computed], axis=2)
+    sensor_foveon = sensor_create(asset_store=asset_store)
+    sensor_foveon = sensor_set(sensor_foveon, "pixel size constant fill factor", np.array([1.4e-6, 1.4e-6], dtype=float))
+    sensor_foveon = sensor_set(sensor_foveon, "autoexp", 1)
+    sensor_foveon = sensor_set_size_to_fov(sensor_foveon, scene_get(scene, "fov"), oi)
+    sensor_foveon = sensor_set(sensor_foveon, "wave", wave)
+    sensor_foveon = sensor_set(sensor_foveon, "filter spectra", foveon)
+    sensor_foveon = sensor_set(sensor_foveon, "pattern", np.array([[2]], dtype=int))
+    sensor_foveon = sensor_set(sensor_foveon, "volts", stacked)
+
+    ip = ip_compute(ip_create(asset_store=asset_store), sensor_foveon, asset_store=asset_store)
+    udata, _ = ip_plot(ip, "horizontal line", np.array([1, 120], dtype=int))
+
+    assert stacked.shape == (245, 300, 3)
+    assert np.asarray(udata["values"], dtype=float).shape == (300, 3)
+
+
+def test_run_python_case_supports_sensor_stacked_pixels_foveon_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_stacked_pixels_foveon_small", asset_store=asset_store)
+
+    assert case.payload["stacked_center_patch_mean"].shape == (3,)
+    assert case.payload["stacked_center_patch_std"].shape == (3,)
+    assert case.payload["stacked_center_patch_p90"].shape == (3,)
+    assert case.payload["stacked_mean_volts"].shape == (3,)
+    assert case.payload["stacked_std_volts"].shape == (3,)
+    assert float(case.payload["line_row"]) == 120.0
+    assert case.payload["bayer_line_mean"].shape == (3,)
+    assert case.payload["bayer_line_std"].shape == (3,)
+    assert case.payload["bayer_line_p90"].shape == (3,)
 
 
 def test_run_python_case_supports_sensor_filter_transmissivities_parity_case(asset_store) -> None:

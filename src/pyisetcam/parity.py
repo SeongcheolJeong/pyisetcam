@@ -44,7 +44,7 @@ from .optics import (
     oi_set,
     si_synthetic,
 )
-from .plotting import oi_plot, sensor_plot, sensor_plot_line, wvf_plot
+from .plotting import ip_plot, oi_plot, sensor_plot, sensor_plot_line, wvf_plot
 from .scene import scene_adjust_illuminant, scene_adjust_luminance, scene_create, scene_get, scene_set
 from .sensor import (
     sensor_color_filter,
@@ -2276,6 +2276,78 @@ def run_python_case_with_context(
                 "sensor_names": np.asarray([str(sensor_get(sensor, "name")) for sensor in captures], dtype=object),
             },
             context={"scene": scene, "oi": oi, "sensor": combined},
+        )
+
+    if case_name == "sensor_stacked_pixels_foveon_small":
+        scene = scene_create("macbeth d65", 32, asset_store=store)
+        scene = scene_adjust_luminance(scene, 100.0, asset_store=store)
+        scene = scene_set(scene, "hfov", 8.0)
+
+        oi = oi_create(asset_store=store)
+        oi = oi_set(oi, "optics fnumber", 4.0)
+        oi = oi_set(oi, "optics focal length", 3e-3)
+        oi = oi_compute(oi, scene)
+
+        wave = np.asarray(scene_get(scene, "wave"), dtype=float)
+        foveon_filters = np.asarray(ie_read_spectra("Foveon", wave, asset_store=store), dtype=float)
+
+        monochrome_array: list[Any] = []
+        for index in range(foveon_filters.shape[1]):
+            sensor = sensor_create("monochrome", asset_store=store)
+            sensor = sensor_set(sensor, "pixel size constant fill factor", np.array([1.4e-6, 1.4e-6], dtype=float))
+            sensor = sensor_set(sensor, "exp time", 0.1)
+            sensor = sensor_set(sensor, "filter spectra", foveon_filters[:, index])
+            sensor = sensor_set(sensor, "name", f"Channel-{index + 1}")
+            sensor = sensor_set_size_to_fov(sensor, scene_get(scene, "fov"), oi)
+            sensor = sensor_set(sensor, "wave", wave)
+            monochrome_array.append(sensor)
+        computed_planes = sensor_compute(monochrome_array, oi)
+        stacked_volts = np.stack([np.asarray(sensor_get(sensor, "volts"), dtype=float) for sensor in computed_planes], axis=2)
+
+        sensor_foveon = sensor_create(asset_store=store)
+        sensor_foveon = sensor_set(sensor_foveon, "name", "foveon")
+        sensor_foveon = sensor_set(sensor_foveon, "pixel size constant fill factor", np.array([1.4e-6, 1.4e-6], dtype=float))
+        sensor_foveon = sensor_set(sensor_foveon, "autoexp", 1)
+        sensor_foveon = sensor_set_size_to_fov(sensor_foveon, scene_get(scene, "fov"), oi)
+        sensor_foveon = sensor_set(sensor_foveon, "wave", wave)
+        sensor_foveon = sensor_set(sensor_foveon, "filter spectra", foveon_filters)
+        sensor_foveon = sensor_set(sensor_foveon, "pattern", np.array([[2]], dtype=int))
+        sensor_foveon = sensor_set(sensor_foveon, "volts", stacked_volts)
+
+        ip_foveon = ip_compute(ip_create(asset_store=store), sensor_foveon, asset_store=store)
+        line_row = min(120, int(np.asarray(sensor_get(sensor_foveon, "size"), dtype=int)[0]))
+        foveon_line, _ = ip_plot(ip_foveon, "horizontal line", np.array([1, line_row], dtype=int))
+
+        bayer_filters = np.asarray(ie_read_spectra("NikonD1", wave, asset_store=store), dtype=float)
+        sensor_bayer = sensor_create(asset_store=store)
+        sensor_bayer = sensor_set(sensor_bayer, "filter spectra", bayer_filters)
+        sensor_bayer = sensor_set(sensor_bayer, "pixel size constant fill factor", np.array([1.4e-6, 1.4e-6], dtype=float))
+        sensor_bayer = sensor_set(sensor_bayer, "autoexp", 1)
+        sensor_bayer = sensor_set_size_to_fov(sensor_bayer, scene_get(scene, "fov"), oi)
+        sensor_bayer = sensor_compute(sensor_bayer, oi)
+        ip_bayer = ip_compute(ip_create(asset_store=store), sensor_bayer, asset_store=store)
+        bayer_line, _ = ip_plot(ip_bayer, "horizontal line", np.array([1, line_row], dtype=int))
+        bayer_line_values = np.asarray(bayer_line["values"], dtype=float)
+        row_start = (stacked_volts.shape[0] - 24) // 2
+        col_start = (stacked_volts.shape[1] - 24) // 2
+        row_stop = row_start + 24
+        col_stop = col_start + 24
+        stacked_patch = stacked_volts[row_start:row_stop, col_start:col_stop, :]
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "stacked_center_patch_mean": np.mean(stacked_patch, axis=(0, 1), dtype=float),
+                "stacked_center_patch_std": np.std(stacked_patch, axis=(0, 1), dtype=float),
+                "stacked_center_patch_p90": np.percentile(stacked_patch, 90.0, axis=(0, 1)),
+                "stacked_mean_volts": np.mean(stacked_volts, axis=(0, 1), dtype=float),
+                "stacked_std_volts": np.std(stacked_volts, axis=(0, 1), dtype=float),
+                "line_row": float(line_row),
+                "bayer_line_mean": np.mean(bayer_line_values, axis=0, dtype=float),
+                "bayer_line_std": np.std(bayer_line_values, axis=0, dtype=float),
+                "bayer_line_p90": np.percentile(bayer_line_values, 90.0, axis=0),
+            },
+            context={"scene": scene, "oi": oi, "sensor": sensor_foveon, "sensor_bayer": sensor_bayer},
         )
 
     if case_name == "sensor_filter_transmissivities_small":
