@@ -155,11 +155,14 @@ from .sensor import (
     pixel_snr,
     signal_current,
     sensor_color_filter,
+    sensor_compute_array,
     sensor_snr,
     sensor_compute,
     sensor_crop,
+    sensor_create_array,
     sensor_create,
     sensor_create_ideal,
+    sensor_create_split_pixel,
     sensor_get,
     sensor_set,
     sensor_set_size_to_fov,
@@ -398,11 +401,14 @@ __all__ = [
     "scene_get",
     "scene_set",
     "sensorCompute",
+    "sensorComputeArray",
     "sensorCrop",
     "sensorCreate",
+    "sensorCreateArray",
     "sensorDescription",
     "sensorDNGRead",
     "sensorCreateIdeal",
+    "sensorCreateSplitPixel",
     "sensorGet",
     "signalCurrent",
     "signal_current",
@@ -412,9 +418,12 @@ __all__ = [
     "sensorSet",
     "sensorSetSizeToFOV",
     "sensor_compute",
+    "sensor_compute_array",
     "sensor_crop",
     "sensor_create",
+    "sensor_create_array",
     "sensor_create_ideal",
+    "sensor_create_split_pixel",
     "sensor_description",
     "sensor_dng_read",
     "sensor_get",
@@ -572,9 +581,12 @@ zemaxLoad = zemax_load
 zemaxReadHeader = zemax_read_header
 
 sensorCreate = sensor_create
+sensorCreateArray = sensor_create_array
+sensorCreateSplitPixel = sensor_create_split_pixel
 sensorDNGRead = sensor_dng_read
 sensorCreateIdeal = sensor_create_ideal
 sensorCompute = sensor_compute
+sensorComputeArray = sensor_compute_array
 signalCurrent = signal_current
 sensorColorFilter = sensor_color_filter
 sensorCrop = sensor_crop

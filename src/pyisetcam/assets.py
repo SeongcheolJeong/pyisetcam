@@ -130,15 +130,36 @@ class AssetStore:
             return loadmat(path, squeeze_me=True, struct_as_record=False)
         except NotImplementedError:
             with h5py.File(path, "r") as handle:
-                return {key: self._decode_h5(handle[key]) for key in handle.keys()}
+                return {key: self._decode_h5(handle[key], handle=handle) for key in handle.keys()}
 
-    def _decode_h5(self, node: h5py.Dataset | h5py.Group) -> Any:
+    def _decode_h5(
+        self,
+        node: h5py.Dataset | h5py.Group,
+        *,
+        handle: h5py.File | None = None,
+    ) -> Any:
         if isinstance(node, h5py.Dataset):
+            matlab_class = node.attrs.get("MATLAB_class", b"")
+            if isinstance(matlab_class, bytes):
+                matlab_class = matlab_class.decode("utf-8")
             data = node[()]
             if isinstance(data, bytes):
                 return data.decode("utf-8")
+            if matlab_class == "char":
+                char_codes = np.asarray(data, dtype=np.uint16)
+                if char_codes.size == 0:
+                    return ""
+                return "".join(chr(int(code)) for code in char_codes.reshape(-1, order="F") if int(code) != 0)
+            if isinstance(data, np.ndarray) and data.dtype == object and handle is not None:
+                resolved = np.empty(data.shape, dtype=object)
+                for index, value in np.ndenumerate(data):
+                    if isinstance(value, h5py.Reference):
+                        resolved[index] = self._decode_h5(handle[value], handle=handle)
+                    else:
+                        resolved[index] = value
+                return resolved
             return data
-        return {key: self._decode_h5(node[key]) for key in node.keys()}
+        return {key: self._decode_h5(node[key], handle=handle) for key in node.keys()}
 
     def load_reflectances(
         self,
@@ -362,6 +383,20 @@ def ie_read_spectra(
     return np.asarray(spectra, dtype=float)
 
 
+def _normalize_filter_names(raw_names: Any, n_filters: int) -> list[str]:
+    if raw_names is None:
+        return [chr(ord("a") + index) for index in range(n_filters)]
+
+    if isinstance(raw_names, str):
+        normalized = [raw_names]
+    else:
+        normalized = [str(value) for value in np.ravel(np.asarray(raw_names, dtype=object), order="F")]
+    normalized = [name for name in normalized if name and name.lower() != "none"]
+    if len(normalized) != n_filters:
+        return [chr(ord("a") + index) for index in range(n_filters)]
+    return normalized
+
+
 def _resolve_color_filter_path(
     filter_name: str | Path,
     *,
@@ -415,6 +450,10 @@ def ie_read_color_filter(
     data = np.asarray(file_data["data"], dtype=float)
     if data.ndim == 1:
         data = data.reshape(-1, 1)
+    elif data.shape[0] != wavelengths.size and data.shape[1] == wavelengths.size:
+        data = data.T
+    if data.shape[0] != wavelengths.size:
+        raise ValueError(f"Color filter data shape {data.shape} does not align with wavelength axis {wavelengths.shape}.")
     if wave is not None:
         data = interp_spectra(wavelengths, data, wave)
     if data.size:
@@ -424,5 +463,5 @@ def ie_read_color_filter(
             raise ValueError(f"Color filter data contains negative values: {filter_name}")
         if data_max > 1.0:
             data = data / data_max
-    filter_names = [str(value) for value in np.atleast_1d(file_data.get("filterNames", []))]
+    filter_names = _normalize_filter_names(file_data.get("filterNames"), int(data.shape[1]))
     return np.asarray(data, dtype=float), filter_names, file_data

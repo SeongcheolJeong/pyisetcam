@@ -46,7 +46,17 @@ from .optics import (
 )
 from .plotting import oi_plot, sensor_plot, sensor_plot_line, wvf_plot
 from .scene import scene_adjust_illuminant, scene_adjust_luminance, scene_create, scene_get, scene_set
-from .sensor import sensor_color_filter, sensor_compute, sensor_create, sensor_create_ideal, sensor_crop, sensor_get, sensor_set
+from .sensor import (
+    sensor_color_filter,
+    sensor_compute,
+    sensor_compute_array,
+    sensor_create,
+    sensor_create_array,
+    sensor_create_ideal,
+    sensor_crop,
+    sensor_get,
+    sensor_set,
+)
 from .sensor import sensor_snr
 from .sensor import sensor_set_size_to_fov
 from .sensor import signal_current
@@ -2227,6 +2237,45 @@ def run_python_case_with_context(
                 "mean_current": float(np.mean(current)),
             },
             context={"scene": scene, "oi": oi, "sensor": sensor},
+        )
+
+    if case_name == "sensor_split_pixel_ovt_saturated_small":
+        scene = scene_create("uniform ee", np.array([32, 48], dtype=int), asset_store=store)
+        scene = scene_set(scene, "fov", 8.0)
+        photons = np.asarray(scene_get(scene, "photons"), dtype=float).copy()
+        levels = np.array([1.0, 10.0, 100.0, 1000.0], dtype=float)
+        band_width = photons.shape[1] // levels.size
+        for index, level in enumerate(levels):
+            start = index * band_width
+            stop = photons.shape[1] if index == (levels.size - 1) else (index + 1) * band_width
+            photons[:, start:stop, :] *= level
+        scene.data["photons"] = photons
+        oi = oi_create("wvf", asset_store=store)
+        oi = oi_compute(oi, scene, "crop", True)
+
+        sensor_array = sensor_create_array(
+            "array type",
+            "ovt",
+            "exp time",
+            0.1,
+            "size",
+            np.array([32, 48], dtype=int),
+            "noise flag",
+            0,
+            asset_store=store,
+        )
+        combined, captures = sensor_compute_array(sensor_array, oi, "method", "saturated")
+        saturated = np.asarray(combined.metadata["saturated"], dtype=bool)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "combined_volts": np.asarray(sensor_get(combined, "volts"), dtype=float),
+                "sensor_max_volts": np.array([float(np.max(np.asarray(sensor_get(sensor, "volts"), dtype=float))) for sensor in captures], dtype=float),
+                "saturated_counts": np.sum(saturated, axis=(0, 1), dtype=int),
+                "sensor_names": np.asarray([str(sensor_get(sensor, "name")) for sensor in captures], dtype=object),
+            },
+            context={"scene": scene, "oi": oi, "sensor": combined},
         )
 
     if case_name == "sensor_filter_transmissivities_small":

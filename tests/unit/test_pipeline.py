@@ -58,9 +58,11 @@ from pyisetcam import (
     scene_set,
     signal_current,
     sensor_compute,
+    sensor_compute_array,
     sensor_color_filter,
     sensor_crop,
     sensor_create,
+    sensor_create_array,
     sensor_dng_read,
     sensor_get,
     sensor_set_size_to_fov,
@@ -4774,6 +4776,64 @@ def test_run_python_case_supports_sensor_signal_current_uniform_parity_case(asse
 
     assert case.payload["current_center"].shape == (40, 40)
     assert float(case.payload["mean_current"]) > 0.0
+
+
+def test_ie_read_color_filter_handles_ovt_hdf_orientation(asset_store) -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+
+    filters, names, _ = ie_read_color_filter(
+        wave,
+        "data/sensor/colorfilters/OVT/ovt-large.mat",
+        asset_store=asset_store,
+    )
+
+    assert filters.shape == (wave.size, 3)
+    assert names == ["r", "g", "b"]
+    assert np.all(filters >= 0.0)
+
+
+def test_sensor_compute_array_supports_ovt_saturated_flow(asset_store) -> None:
+    scene = scene_create("uniform ee", np.array([32, 48], dtype=int), asset_store=asset_store)
+    scene = scene_set(scene, "fov", 8.0)
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float).copy()
+    levels = np.array([1.0, 10.0, 100.0, 1000.0], dtype=float)
+    band_width = photons.shape[1] // levels.size
+    for index, level in enumerate(levels):
+        start = index * band_width
+        stop = photons.shape[1] if index == (levels.size - 1) else (index + 1) * band_width
+        photons[:, start:stop, :] *= level
+    scene.data["photons"] = photons
+
+    oi = oi_compute(oi_create("wvf", asset_store=asset_store), scene, "crop", True)
+    sensor_array = sensor_create_array(
+        "array type",
+        "ovt",
+        "exp time",
+        0.1,
+        "size",
+        np.array([32, 48], dtype=int),
+        "noise flag",
+        0,
+        asset_store=asset_store,
+    )
+
+    combined, captures = sensor_compute_array(sensor_array, oi, "method", "saturated")
+    saturated = np.asarray(combined.metadata["saturated"], dtype=bool)
+
+    assert len(captures) == 3
+    assert tuple(sensor_get(combined, "size")) == (32, 48)
+    assert np.asarray(sensor_get(combined, "volts"), dtype=float).shape == (32, 48)
+    assert saturated.shape == (32, 48, 3)
+    assert np.any(np.sum(saturated, axis=(0, 1)) > 0)
+
+
+def test_run_python_case_supports_sensor_split_pixel_ovt_saturated_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_split_pixel_ovt_saturated_small", asset_store=asset_store)
+
+    assert case.payload["combined_volts"].shape == (32, 48)
+    assert case.payload["sensor_max_volts"].shape == (3,)
+    assert case.payload["saturated_counts"].shape == (3,)
+    assert list(case.payload["sensor_names"]) == ["ovt-LPDLCG", "ovt-LPDHCG", "ovt-SPDLCG"]
 
 
 def test_run_python_case_supports_sensor_filter_transmissivities_parity_case(asset_store) -> None:

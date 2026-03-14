@@ -10,7 +10,7 @@ from scipy.interpolate import RegularGridInterpolator
 from scipy.ndimage import gaussian_filter, map_coordinates
 from scipy.signal import convolve2d
 
-from .assets import AssetStore
+from .assets import AssetStore, ie_read_color_filter
 from .color import luminance_from_photons, xyz_color_matching
 from .exceptions import UnsupportedOptionError
 from .optics import DEFAULT_FOCAL_LENGTH_M
@@ -1370,6 +1370,79 @@ def _sensor_vendor_imx363(*, asset_store: AssetStore) -> Sensor:
     return _sensor_from_upstream_model("data/sensor/sony/imx363.mat", asset_store=asset_store)
 
 
+def _matlab_kv_pairs(args: tuple[Any, ...], *, function_name: str) -> list[tuple[str, Any]]:
+    if len(args) % 2 != 0:
+        raise ValueError(f"{function_name} expects MATLAB-style key/value pairs.")
+    return [(param_format(str(args[index])), args[index + 1]) for index in range(0, len(args), 2)]
+
+
+def _apply_sensor_settings(sensor: Sensor, settings: list[tuple[str, Any]]) -> Sensor:
+    updated = sensor
+    for parameter, value in settings:
+        updated = sensor_set(updated, parameter, value)
+    return updated
+
+
+def _sensor_create_ovt_large_pair(*, asset_store: AssetStore) -> tuple[Sensor, Sensor]:
+    common_settings = [
+        ("size", np.array([968, 1288], dtype=int)),
+        ("pixel size same fill factor", 2.8e-6),
+        ("pixel voltage swing", 22000.0 * 49e-6),
+        ("pixel conversion gain", 49e-6),
+        ("pixel fill factor", 1.0),
+        ("pixel read noise electrons", 3.05),
+        ("pixel dark voltage", 25.6 * 49e-6),
+        ("analog gain", 1.0),
+        ("quantization", "12 bit"),
+        ("bits", 12),
+        ("name", "ovt-LPDLCG"),
+    ]
+    filter_spectra, filter_names, _ = ie_read_color_filter(
+        DEFAULT_WAVE,
+        "data/sensor/colorfilters/OVT/ovt-large.mat",
+        asset_store=asset_store,
+    )
+    common_settings.extend(
+        [
+            ("filter spectra", filter_spectra),
+            ("filter names", filter_names),
+        ]
+    )
+    lpd_lcg = _apply_sensor_settings(sensor_create(asset_store=asset_store), common_settings)
+    lpd_hcg = _apply_sensor_settings(
+        lpd_lcg.clone(),
+        [
+            ("pixel read noise electrons", 0.83),
+            ("analog gain", 49.0 / 200.0),
+            ("name", "ovt-LPDHCG"),
+        ],
+    )
+    return lpd_lcg, lpd_hcg
+
+
+def _sensor_create_ovt_small(*, asset_store: AssetStore) -> Sensor:
+    filter_spectra, filter_names, _ = ie_read_color_filter(
+        DEFAULT_WAVE,
+        "data/sensor/colorfilters/OVT/ovt-large.mat",
+        asset_store=asset_store,
+    )
+    settings = [
+        ("size", np.array([968, 1288], dtype=int)),
+        ("pixel size same fill factor", 2.8e-6),
+        ("pixel voltage swing", 7900.0 * 49e-6),
+        ("pixel conversion gain", 49e-6),
+        ("pixel fill factor", 1e-2),
+        ("pixel read noise electrons", 0.83),
+        ("pixel dark voltage", 4.2 * 49e-6),
+        ("quantization", "12 bit"),
+        ("bits", 12),
+        ("name", "ovt-SPDLCG"),
+        ("filter spectra", filter_spectra),
+        ("filter names", filter_names),
+    ]
+    return _apply_sensor_settings(sensor_create(asset_store=asset_store), settings)
+
+
 def sensor_create(
     sensor_type: str = "default",
     pixel: dict[str, Any] | None = None,
@@ -1521,6 +1594,150 @@ def sensor_create_ideal(
         return track_session_object(session, sensor)
 
     raise UnsupportedOptionError("sensorCreateIdeal", ideal_type)
+
+
+def sensor_create_split_pixel(
+    *args: Any,
+    asset_store: AssetStore | None = None,
+) -> list[Sensor]:
+    """Create a MATLAB-style split-pixel sensor array."""
+
+    store = _store(asset_store)
+    settings = _matlab_kv_pairs(args, function_name="sensorCreateSplitPixel")
+    array_type = "ovt"
+    shared_settings: list[tuple[str, Any]] = []
+    for parameter, value in settings:
+        if parameter == "arraytype":
+            array_type = str(value)
+            continue
+        shared_settings.append((parameter, value))
+
+    normalized_array_type = param_format(array_type)
+    if normalized_array_type != "ovt":
+        raise UnsupportedOptionError("sensorCreateSplitPixel", array_type)
+
+    large_lcg, large_hcg = _sensor_create_ovt_large_pair(asset_store=store)
+    small_lcg = _sensor_create_ovt_small(asset_store=store)
+    return [_apply_sensor_settings(sensor.clone(), shared_settings) for sensor in (large_lcg, large_hcg, small_lcg)]
+
+
+def sensor_create_array(
+    *args: Any,
+    asset_store: AssetStore | None = None,
+) -> list[Sensor]:
+    """Create a MATLAB-style coordinated sensor array."""
+
+    settings = _matlab_kv_pairs(args, function_name="sensorCreateArray")
+    array_type = "ovt"
+    forward_args: list[Any] = []
+    for parameter, value in settings:
+        if parameter == "arraytype":
+            array_type = str(value)
+        forward_args.extend((parameter, value))
+
+    normalized_array_type = param_format(array_type)
+    if normalized_array_type == "ovt":
+        return sensor_create_split_pixel(*forward_args, asset_store=asset_store)
+    raise UnsupportedOptionError("sensorCreateArray", array_type)
+
+
+def sensor_compute_array(
+    sensor_array: list[Sensor] | tuple[Sensor, ...],
+    oi: OpticalImage,
+    *args: Any,
+    seed: int | None = None,
+    session: SessionContext | None = None,
+) -> tuple[Sensor, list[Sensor]]:
+    """Compute a split-pixel sensor array and its combined response."""
+
+    settings = _matlab_kv_pairs(args, function_name="sensorComputeArray")
+    method = "saturated"
+    saturated_fraction = 0.95
+    for parameter, value in settings:
+        if parameter == "method":
+            method = str(value)
+        elif parameter == "saturated":
+            saturated_fraction = float(value)
+        else:
+            raise UnsupportedOptionError("sensorComputeArray", parameter)
+
+    computed_sensors = [
+        sensor_compute(sensor, oi, seed=None if seed is None else int(seed) + index)
+        for index, sensor in enumerate(sensor_array)
+    ]
+    if not computed_sensors:
+        raise ValueError("sensorComputeArray requires at least one sensor.")
+
+    design_name = str(sensor_get(computed_sensors[0], "name"))
+    if not param_format(design_name).startswith("ovt"):
+        raise UnsupportedOptionError("sensorComputeArray", design_name)
+
+    reference_shape = tuple(int(value) for value in sensor_get(computed_sensors[0], "size"))
+    input_referred = np.zeros(reference_shape + (len(computed_sensors),), dtype=float)
+    saturated_mask = np.zeros(reference_shape + (len(computed_sensors),), dtype=bool)
+    voltage_swings = np.zeros(len(computed_sensors), dtype=float)
+
+    for index, sensor in enumerate(computed_sensors):
+        volts = np.asarray(sensor_get(sensor, "volts"), dtype=float)
+        voltage_swings[index] = float(sensor_get(sensor, "pixel voltage swing"))
+        saturated_mask[:, :, index] = volts >= (saturated_fraction * voltage_swings[index])
+        if index == 0:
+            input_referred[:, :, index] = volts
+        elif index == 1:
+            input_referred[:, :, index] = volts * float(sensor_get(sensor, "analog gain"))
+        elif index == 2:
+            input_referred[:, :, index] = volts / max(float(sensor.fields["pixel"]["fill_factor"]), 1e-12)
+        else:
+            raise UnsupportedOptionError("sensorComputeArray", "OVT arrays beyond 3 captures")
+
+    combined = computed_sensors[0].clone()
+    normalized_method = param_format(method)
+    if normalized_method == "saturated":
+        combined_volts = np.zeros(reference_shape, dtype=float)
+        good_first = ~saturated_mask[:, :, 0]
+        good_second = ~saturated_mask[:, :, 1]
+        both_good = good_first & good_second
+        combined_volts[both_good] = 0.5 * (input_referred[:, :, 0][both_good] + input_referred[:, :, 1][both_good])
+        first_only = good_first & ~good_second
+        combined_volts[first_only] = input_referred[:, :, 0][first_only]
+        neither = ~good_first & ~good_second
+        combined_volts[neither] = input_referred[:, :, 2][neither]
+
+        target_swing = float(sensor_get(combined, "pixel voltage swing"))
+        max_value = float(np.max(combined_volts))
+        if max_value > 0.0:
+            combined_volts = combined_volts * (target_swing / max_value)
+        combined = sensor_set(combined, "quantization method", "analog")
+        combined = sensor_set(combined, "volts", combined_volts)
+        combined = sensor_set(combined, "analog gain", 1.0)
+        combined = sensor_set(combined, "analog offset", 0.0)
+        combined.metadata["saturated"] = saturated_mask
+    elif normalized_method == "bestsnr":
+        electrons = []
+        for sensor in computed_sensors:
+            signal = np.asarray(sensor_get(sensor, "electrons"), dtype=float)
+            well_capacity = float(sensor_get(sensor, "pixel well capacity"))
+            electrons.append(np.where(signal < well_capacity, signal, 0.0))
+        electron_stack = np.stack(electrons, axis=2)
+        best_pixel = np.argmax(electron_stack, axis=2) + 1
+        best_signal = np.max(electron_stack, axis=2)
+        combined_volts = best_signal * float(sensor_get(combined, "pixel conversion gain"))
+        combined = sensor_set(combined, "quantization method", "analog")
+        combined = sensor_set(combined, "volts", combined_volts)
+        combined = sensor_set(combined, "analog gain", 1.0)
+        combined = sensor_set(combined, "analog offset", 0.0)
+        combined.metadata["bestPixel"] = best_pixel.astype(int)
+    else:
+        raise UnsupportedOptionError("sensorComputeArray", method)
+
+    design_root = design_name.split("-", 1)[0]
+    combined = sensor_set(combined, "name", f"{design_root}-{normalized_method}")
+    return track_session_object(session, combined), computed_sensors
+
+
+sensorCreateSplitPixel = sensor_create_split_pixel
+sensorCreateArray = sensor_create_array
+sensorComputeArray = sensor_compute_array
 
 
 def _snr_voltage_levels(pixel: dict[str, Any], volts: Any | None) -> np.ndarray:

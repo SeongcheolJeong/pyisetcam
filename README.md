@@ -155,7 +155,11 @@ curated parity for the `s_sensorSNR.m` sensor-noise component curves
 returned by `sensorSNR(...)`, plus direct curated parity for the
 `s_sensorExposureBracket.m` stacked multi-exposure sensor workflow, plus
 direct curated parity for the CFA-matched exposure-duration workflow from
-`s_sensorExposureCFA.m`.
+`s_sensorExposureCFA.m`, plus headless `sensor_create_array` /
+`sensorCreateArray`, `sensor_create_split_pixel` / `sensorCreateSplitPixel`,
+and `sensor_compute_array` / `sensorComputeArray` coverage for the
+OVT split-pixel saturated-combine workflow that underlies
+`s_sensorSplitPixel.m`.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit

@@ -871,6 +871,18 @@
       "atol": 1e-08
     },
     {
+      "name": "sensor_split_pixel_ovt_saturated_small",
+      "matlab_function": "sensorCreateArray/sensorComputeArray (OVT saturated)",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "combined_volts": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.0002
+        }
+      }
+    },
+    {
       "name": "sensor_filter_transmissivities_small",
       "matlab_function": "sensorGet/sensorSet",
       "rtol": 1e-05,

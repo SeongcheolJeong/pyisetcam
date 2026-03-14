@@ -1455,6 +1455,37 @@ switch case_name
         payload.current_center = current(start:stop, start:stop);
         payload.mean_current = mean(current(:));
 
+    case 'sensor_split_pixel_ovt_saturated_small'
+        scene = sceneCreate('uniform ee', [32 48]);
+        scene = sceneSet(scene, 'fov', 8);
+        photons = sceneGet(scene, 'photons');
+        levels = [1 10 100 1000];
+        bandWidth = floor(size(photons, 2) / numel(levels));
+        for ii = 1:numel(levels)
+            startCol = (ii - 1) * bandWidth + 1;
+            if ii == numel(levels)
+                stopCol = size(photons, 2);
+            else
+                stopCol = ii * bandWidth;
+            end
+            photons(:, startCol:stopCol, :) = photons(:, startCol:stopCol, :) * levels(ii);
+        end
+        scene = sceneSet(scene, 'photons', photons);
+        oi = oiCreate('wvf');
+        oi = oiCompute(oi, scene, 'crop', true);
+
+        sensorArray = local_sensor_create_array_ovt(0.1, [32 48], 0, upstream_root);
+        [combined, captures] = sensorComputeArray(sensorArray, oi, 'method', 'saturated');
+
+        payload.combined_volts = sensorGet(combined, 'volts');
+        payload.sensor_max_volts = zeros(numel(captures), 1);
+        payload.sensor_names = cell(numel(captures), 1);
+        for ii = 1:numel(captures)
+            payload.sensor_max_volts(ii) = max(sensorGet(captures(ii), 'volts')(:));
+            payload.sensor_names{ii} = sensorGet(captures(ii), 'name');
+        end
+        payload.saturated_counts = squeeze(sum(sum(combined.metadata.saturated, 1), 2));
+
     case 'sensor_filter_transmissivities_small'
         sensor = sensorCreate();
         filters = sensorGet(sensor, 'filter transmissivities');
@@ -2087,4 +2118,74 @@ for ii = 1:n_filters
         means(ii) = mean(channel);
     end
 end
+end
+
+function sensorArray = local_sensor_create_array_ovt(expTime, sz, noiseFlag, upstream_root)
+[lpdLCG, lpdHCG] = local_sensor_create_ovt_large_pair(upstream_root);
+spdLCG = local_sensor_create_ovt_small(upstream_root);
+sensorArray = [lpdLCG lpdHCG spdLCG];
+for ii = 1:numel(sensorArray)
+    sensorArray(ii) = sensorSet(sensorArray(ii), 'exp time', expTime);
+    sensorArray(ii) = sensorSet(sensorArray(ii), 'size', sz);
+    sensorArray(ii) = sensorSet(sensorArray(ii), 'noise flag', noiseFlag);
+end
+end
+
+function [sensorLCG, sensorHCG] = local_sensor_create_ovt_large_pair(upstream_root)
+sensorLCG = local_sensor_create_ovt_base(upstream_root);
+sensorLCG = sensorSet(sensorLCG, 'size', [968 1288]);
+sensorLCG = sensorSet(sensorLCG, 'pixel size same fill factor', 2.8e-6);
+sensorLCG = sensorSet(sensorLCG, 'pixel voltage swing', 22000 * 49e-6);
+sensorLCG = sensorSet(sensorLCG, 'pixel conversion gain', 49e-6);
+sensorLCG = sensorSet(sensorLCG, 'pixel fill factor', 1);
+sensorLCG = sensorSet(sensorLCG, 'pixel read noise electrons', 3.05);
+sensorLCG = sensorSet(sensorLCG, 'pixel dark voltage', 25.6 * 49e-6);
+sensorLCG = sensorSet(sensorLCG, 'analog gain', 1);
+sensorLCG = sensorSet(sensorLCG, 'quantization', '12 bit');
+sensorLCG = sensorSet(sensorLCG, 'name', 'ovt-LPDLCG');
+
+sensorHCG = sensorLCG;
+sensorHCG = sensorSet(sensorHCG, 'pixel read noise electrons', 0.83);
+sensorHCG = sensorSet(sensorHCG, 'analog gain', 49 / 200);
+sensorHCG = sensorSet(sensorHCG, 'name', 'ovt-LPDHCG');
+end
+
+function sensor = local_sensor_create_ovt_small(upstream_root)
+sensor = local_sensor_create_ovt_base(upstream_root);
+sensor = sensorSet(sensor, 'size', [968 1288]);
+sensor = sensorSet(sensor, 'pixel size same fill factor', 2.8e-6);
+sensor = sensorSet(sensor, 'pixel voltage swing', 7900 * 49e-6);
+sensor = sensorSet(sensor, 'pixel conversion gain', 49e-6);
+sensor = sensorSet(sensor, 'pixel fill factor', 1e-2);
+sensor = sensorSet(sensor, 'pixel read noise electrons', 0.83);
+sensor = sensorSet(sensor, 'pixel dark voltage', 4.2 * 49e-6);
+sensor = sensorSet(sensor, 'quantization', '12 bit');
+sensor = sensorSet(sensor, 'name', 'ovt-SPDLCG');
+end
+
+function sensor = local_sensor_create_ovt_base(upstream_root)
+sensor = sensorCreate();
+wave = sensorGet(sensor, 'wave');
+[filterData, filterNames] = local_read_ovt_color_filters(wave, upstream_root);
+sensor = sensorSet(sensor, 'filter spectra', filterData);
+sensor = sensorSet(sensor, 'filter names', filterNames);
+end
+
+function [filterData, filterNames] = local_read_ovt_color_filters(wave, upstream_root)
+fileName = fullfile(upstream_root, 'data', 'sensor', 'colorfilters', 'OVT', 'ovt-large.mat');
+raw = load(fileName, 'wavelength', 'data');
+rawWave = double(raw.wavelength(:));
+rawData = double(raw.data);
+if size(rawData, 1) ~= numel(rawWave) && size(rawData, 2) == numel(rawWave)
+    rawData = rawData';
+end
+filterData = interp1(rawWave, rawData, wave(:), 'linear');
+if size(filterData, 1) ~= numel(wave)
+    filterData = filterData';
+end
+filterData = max(filterData, 0);
+if max(filterData(:)) > 1
+    filterData = filterData ./ max(filterData(:));
+end
+filterNames = {'r', 'g', 'b'};
 end
