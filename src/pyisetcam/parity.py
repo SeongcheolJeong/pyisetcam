@@ -1270,6 +1270,57 @@ def run_python_case_with_context(
             context={"scene": scene, "wvf": wvf, "oi": oi},
         )
 
+    if case_name == "wvf_astigmatism_small":
+        max_um = 20.0
+        base_wvf = wvf_create()
+        base_wvf = wvf_set(base_wvf, "lcaMethod", "human")
+        base_wvf = wvf_compute(base_wvf)
+
+        z4 = np.arange(-0.5, 1.0, 0.5, dtype=float)
+        z5 = np.arange(-0.5, 1.0, 0.5, dtype=float)
+        z4_grid, z5_grid = np.meshgrid(z4, z5, indexing="xy")
+        zvals = np.column_stack((z4_grid.reshape(-1, order="F"), z5_grid.reshape(-1, order="F")))
+
+        x_support_um: np.ndarray | None = None
+        row_profiles: list[np.ndarray] = []
+        col_profiles: list[np.ndarray] = []
+        centers: list[float] = []
+        current = base_wvf
+        for pair in zvals:
+            current = wvf_set(current, "zcoeffs", np.asarray(pair, dtype=float), ["defocus", "vertical_astigmatism"])
+            current = wvf_set(current, "lcaMethod", "human")
+            current = wvf_compute(current)
+            udata, _ = wvf_plot(
+                current,
+                "psf normalized",
+                "unit",
+                "um",
+                "wave",
+                550.0,
+                "plot range",
+                max_um,
+                "window",
+                False,
+            )
+            psf = np.asarray(udata["z"], dtype=float)
+            if x_support_um is None:
+                x_support_um = np.asarray(udata["x"], dtype=float)
+            row_profiles.append(np.asarray(psf[psf.shape[0] // 2, :], dtype=float))
+            col_profiles.append(np.asarray(psf[:, psf.shape[1] // 2], dtype=float))
+            centers.append(float(psf[psf.shape[0] // 2, psf.shape[1] // 2]))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "zvals": zvals,
+                "x": np.asarray(x_support_um, dtype=float),
+                "psf_mid_rows": np.vstack(row_profiles),
+                "psf_mid_cols": np.vstack(col_profiles),
+                "psf_centers": np.asarray(centers, dtype=float),
+            },
+            context={"wvf": current},
+        )
+
     if case_name == "wvf_spatial_sampling_small":
         wvf = wvf_create(wave=np.array([550.0], dtype=float))
         this_wave = float(np.asarray(wvf_get(wvf, "wave"), dtype=float).reshape(-1)[0])

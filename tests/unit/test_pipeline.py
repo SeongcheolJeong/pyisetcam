@@ -96,6 +96,7 @@ from pyisetcam import (
     wvf_load_thibos_virtual_eyes,
     wvf_osa_index_to_zernike_nm,
     wvf_pupil_function,
+    wvf_plot,
     wvf_set,
     wvf_to_oi,
     wvf_zernike_nm_to_osa_index,
@@ -4216,6 +4217,54 @@ def test_run_python_case_supports_wvf_script_defocus_oi_parity_case(asset_store)
     assert np.isclose(float(case.payload["defocus_zcoeff"]), 1.5)
     assert np.isclose(float(case.payload["pupil_diameter_mm"]), 3.0)
     assert case.payload["f_number"] > 0.0
+
+
+def test_wvf_astigmatism_workflow_supports_defocus_astigmatism_grid() -> None:
+    max_um = 20.0
+    wvf = wvf_create()
+    wvf = wvf_set(wvf, "lcaMethod", "human")
+    wvf = wvf_compute(wvf)
+
+    z4 = np.arange(-0.5, 1.0, 0.5, dtype=float)
+    z5 = np.arange(-0.5, 1.0, 0.5, dtype=float)
+    z4_grid, z5_grid = np.meshgrid(z4, z5, indexing="xy")
+    zvals = np.column_stack((z4_grid.reshape(-1, order="F"), z5_grid.reshape(-1, order="F")))
+
+    profiles = []
+    for pair in zvals:
+        wvf = wvf_set(wvf, "zcoeffs", np.asarray(pair, dtype=float), ["defocus", "vertical_astigmatism"])
+        wvf = wvf_set(wvf, "lcaMethod", "human")
+        wvf = wvf_compute(wvf)
+        udata, handle = wvf_plot(
+            wvf,
+            "psf normalized",
+            "unit",
+            "um",
+            "wave",
+            550.0,
+            "plot range",
+            max_um,
+            "window",
+            False,
+        )
+        psf = np.asarray(udata["z"], dtype=float)
+        profiles.append(np.asarray(psf[psf.shape[0] // 2, :], dtype=float))
+        assert handle is None
+        assert np.isclose(float(np.max(psf)), 1.0)
+
+    assert len(profiles) == 9
+    assert profiles[0].shape == np.asarray(udata["x"], dtype=float).shape
+
+
+def test_run_python_case_supports_wvf_astigmatism_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("wvf_astigmatism_small", asset_store=asset_store)
+
+    assert case.payload["zvals"].shape == (9, 2)
+    assert case.payload["x"].ndim == 1
+    assert case.payload["psf_mid_rows"].shape == (9, case.payload["x"].size)
+    assert case.payload["psf_mid_cols"].shape == (9, case.payload["x"].size)
+    assert case.payload["psf_centers"].shape == (9,)
+    assert np.allclose(case.payload["psf_centers"], 1.0)
 
 
 def test_run_python_case_supports_wvf_spatial_sampling_parity_case(asset_store) -> None:

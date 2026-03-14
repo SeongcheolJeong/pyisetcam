@@ -331,6 +331,10 @@ coefficient set.
 The same WVF surface now also supports the `s_wvfPSFSpacing.m` numeric
 path through `wvfSet(..., 'psf sample spacing', ...)`, with direct Octave
 parity on the resulting field-size and sampling relationship.
+That same script-driven WVF surface now also has direct Octave parity on
+the defocus/vertical-astigmatism sweep from `s_wvfAstigmatism.m`,
+comparing the returned normalized PSF center rows and columns at 550 nm
+across the full 3x3 Zernike grid.
 That same script-driven WVF helper surface now also includes
 `wvfOSAIndexToZernikeNM` / `wvfZernikeNMToOSAIndex`, with direct Octave
 parity on the OSA index round-trip used by `s_wvfWavefronts.m`.

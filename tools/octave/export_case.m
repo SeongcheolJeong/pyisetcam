@@ -231,6 +231,45 @@ switch case_name
         payload.psf_sample_spacing_arcmin = wvfGet(wvf, 'psf sample spacing');
         payload.ref_psf_sample_interval_arcmin = wvfGet(wvf, 'ref psf sample interval');
 
+    case 'wvf_astigmatism_small'
+        maxUM = 20;
+        wvfP = wvfCreate;
+        wvfP = wvfSet(wvfP, 'lcaMethod', 'human');
+        wvfParams = wvfCompute(wvfP);
+
+        z4 = -0.5:0.5:0.5;
+        z5 = -0.5:0.5:0.5;
+        [Z4, Z5] = meshgrid(z4, z5);
+        Zvals = [Z4(:), Z5(:)];
+
+        xSupport = [];
+        rowProfiles = [];
+        colProfiles = [];
+        centers = zeros(size(Zvals, 1), 1);
+        for ii = 1:size(Zvals, 1)
+            wvfParams = wvfSet(wvfParams, 'zcoeffs', Zvals(ii, :), {'defocus' 'vertical_astigmatism'});
+            wvfParams = wvfSet(wvfParams, 'lcaMethod', 'human');
+            wvfParams = wvfCompute(wvfParams);
+            uData = wvfPlot(wvfParams, 'psf normalized', 'unit', 'um', 'wave', 550, 'plot range', maxUM, 'window', false);
+            psf = double(uData.z);
+            middleRow = floor(size(psf, 1) / 2) + 1;
+            middleCol = floor(size(psf, 2) / 2) + 1;
+            if isempty(xSupport)
+                xSupport = double(uData.x(:));
+                rowProfiles = zeros(size(Zvals, 1), numel(xSupport));
+                colProfiles = zeros(size(Zvals, 1), numel(xSupport));
+            end
+            rowProfiles(ii, :) = psf(middleRow, :);
+            colProfiles(ii, :) = psf(:, middleCol)';
+            centers(ii) = psf(middleRow, middleCol);
+        end
+
+        payload.zvals = double(Zvals);
+        payload.x = xSupport(:);
+        payload.psf_mid_rows = rowProfiles;
+        payload.psf_mid_cols = colProfiles;
+        payload.psf_centers = centers(:);
+
     case 'wvf_osa_index_conversion_small'
         indices = [0 1 2 5 15 20 35];
         [n, m] = wvfOSAIndexToZernikeNM(indices);
