@@ -923,6 +923,12 @@
       }
     },
     {
+      "name": "sensor_microlens_etendue_small",
+      "matlab_function": "s_sensorMicrolens",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "sensor_filter_transmissivities_small",
       "matlab_function": "sensorGet/sensorSet",
       "rtol": 1e-05,

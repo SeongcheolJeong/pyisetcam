@@ -164,7 +164,13 @@ sensor-array `sensor_compute(...)` support together with
 `ie_read_spectra('Foveon'/'NikonD1')` sensor-color-filter asset loading,
 covering the stacked monochrome-plane and triple-well image-processing
 workflow from `s_sensorStackedPixels.m` with curated parity on the stable
-stacked-plane and Bayer-comparison summaries.
+stacked-plane and Bayer-comparison summaries. That same Phase 1 sensor
+wave now also includes direct `mlensCreate` / `mlensSet` / `mlensGet` /
+`mlRadiance` / `mlAnalyzeArrayEtendue` coverage for the array-efficiency
+and optimal-offset workflow from `s_sensorMicrolens.m`, with curated
+Octave parity on the no-microlens/centered/optimal etendue maps, the
+optimal-offset curve and offset maps, and the single-pixel irradiance
+midlines used in the script’s chief-ray-angle illustration.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit

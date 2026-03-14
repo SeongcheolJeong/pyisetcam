@@ -4909,6 +4909,23 @@ def test_run_python_case_supports_sensor_stacked_pixels_foveon_parity_case(asset
     assert case.payload["bayer_line_p90"].shape == (3,)
 
 
+def test_run_python_case_supports_sensor_microlens_etendue_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_microlens_etendue_small", asset_store=asset_store)
+
+    assert case.payload["no_microlens_etendue"].ndim == 2
+    assert case.payload["centered_etendue"].shape == case.payload["no_microlens_etendue"].shape
+    assert case.payload["optimal_etendue"].shape == case.payload["no_microlens_etendue"].shape
+    assert case.payload["ray_angles_deg"].shape == (10,)
+    assert case.payload["optimal_offset_curve_um"].shape == (10,)
+    assert case.payload["optimal_offsets_default_um"].shape == case.payload["no_microlens_etendue"].shape
+    assert case.payload["optimal_offsets_half_fnumber_um"].shape == case.payload["no_microlens_etendue"].shape
+    assert case.payload["optimal_offsets_source_f4_um"].shape == case.payload["no_microlens_etendue"].shape
+    assert case.payload["optimal_offsets_source_f16_um"].shape == case.payload["no_microlens_etendue"].shape
+    assert case.payload["radiance_midline_neg10"].shape == (255,)
+    assert case.payload["radiance_midline_0"].shape == (255,)
+    assert case.payload["radiance_midline_10"].shape == (255,)
+
+
 def test_run_python_case_supports_sensor_filter_transmissivities_parity_case(asset_store) -> None:
     case = run_python_case_with_context("sensor_filter_transmissivities_small", asset_store=asset_store)
 

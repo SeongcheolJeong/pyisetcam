@@ -152,6 +152,11 @@ from .scene import (
     scene_set,
 )
 from .sensor import (
+    ml_analyze_array_etendue,
+    ml_radiance,
+    mlens_create,
+    mlens_get,
+    mlens_set,
     pixel_snr,
     signal_current,
     sensor_color_filter,
@@ -400,6 +405,16 @@ __all__ = [
     "scene_from_file",
     "scene_get",
     "scene_set",
+    "mlAnalyzeArrayEtendue",
+    "mlRadiance",
+    "mlensCreate",
+    "mlensGet",
+    "mlensSet",
+    "ml_analyze_array_etendue",
+    "ml_radiance",
+    "mlens_create",
+    "mlens_get",
+    "mlens_set",
     "sensorCompute",
     "sensorComputeArray",
     "sensorCrop",
@@ -585,6 +600,11 @@ sensorCreateArray = sensor_create_array
 sensorCreateSplitPixel = sensor_create_split_pixel
 sensorDNGRead = sensor_dng_read
 sensorCreateIdeal = sensor_create_ideal
+mlensCreate = mlens_create
+mlensSet = mlens_set
+mlensGet = mlens_get
+mlRadiance = ml_radiance
+mlAnalyzeArrayEtendue = ml_analyze_array_etendue
 sensorCompute = sensor_compute
 sensorComputeArray = sensor_compute_array
 signalCurrent = signal_current

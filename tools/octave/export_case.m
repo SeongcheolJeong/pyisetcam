@@ -1566,6 +1566,61 @@ switch case_name
         payload.bayer_line_std = squeeze(std(bayerLine, 0, 1));
         payload.bayer_line_p90 = squeeze(prctile(bayerLine, 90, 1));
 
+    case 'sensor_microlens_etendue_small'
+        oi = oiCreate;
+        sensor = sensorCreate;
+        ml = mlensCreate(sensor, oi);
+        sensor = sensorSet(sensor, 'microlens', ml);
+        sensor = sensorSetSizeToFOV(sensor, 4, oi);
+        ieAddObject(oi);
+        ieAddObject(sensor);
+
+        sensorNoML = mlAnalyzeArrayEtendue(sensor, 'no microlens');
+        sensorCentered = mlAnalyzeArrayEtendue(sensor, 'centered');
+        sensorOptimal = mlAnalyzeArrayEtendue(sensor, 'optimal');
+
+        cra = sensorGet(sensorOptimal, 'cra degrees');
+        rayAngles = linspace(0, max(cra(:)), 10);
+        optimalML = sensorGet(sensorOptimal, 'microlens');
+        offsetCurve = zeros(size(rayAngles));
+        for ii = 1:numel(rayAngles)
+            workingML = mlensSet(optimalML, 'chief ray angle', rayAngles(ii));
+            offsetCurve(ii) = local_ml_optimal_offset(workingML, sensorOptimal, 'microns');
+        end
+
+        halfFNumberML = mlensSet(optimalML, 'ml fnumber', 0.5 * mlensGet(optimalML, 'ml fnumber'));
+        sourceF4ML = mlensSet(optimalML, 'source fnumber', 4);
+        sourceF16ML = mlensSet(optimalML, 'source fnumber', 16);
+
+        payload.no_microlens_etendue = sensorGet(sensorNoML, 'etendue');
+        payload.centered_etendue = sensorGet(sensorCentered, 'etendue');
+        payload.optimal_etendue = sensorGet(sensorOptimal, 'etendue');
+        payload.ray_angles_deg = rayAngles(:)';
+        payload.optimal_offset_curve_um = offsetCurve(:)';
+        payload.optimal_offsets_default_um = local_ml_optimal_offsets(optimalML, sensorOptimal);
+        payload.optimal_offsets_half_fnumber_um = local_ml_optimal_offsets(halfFNumberML, sensorOptimal);
+        payload.optimal_offsets_source_f4_um = local_ml_optimal_offsets(sourceF4ML, sensorOptimal);
+        payload.optimal_offsets_source_f16_um = local_ml_optimal_offsets(sourceF16ML, sensorOptimal);
+
+        displaySensor = sensorCreate;
+        displayML = mlensCreate(displaySensor, oi);
+        displayML = mlensSet(displayML, 'ml fnumber', 8);
+        chiefRays = [-10 0 10];
+        for ii = 1:numel(chiefRays)
+            displayML = mlensSet(displayML, 'chief ray angle', chiefRays(ii));
+            displayML = mlRadiance(displayML, displaySensor);
+            irradiance = mlensGet(displayML, 'pixel irradiance');
+            centerRow = floor(size(irradiance, 1) / 2) + 1;
+            switch ii
+                case 1
+                    payload.radiance_midline_neg10 = irradiance(centerRow, :);
+                case 2
+                    payload.radiance_midline_0 = irradiance(centerRow, :);
+                otherwise
+                    payload.radiance_midline_10 = irradiance(centerRow, :);
+            end
+        end
+
     case 'sensor_filter_transmissivities_small'
         sensor = sensorCreate();
         filters = sensorGet(sensor, 'filter transmissivities');
@@ -2268,4 +2323,31 @@ if max(filterData(:)) > 1
     filterData = filterData ./ max(filterData(:));
 end
 filterNames = {'r', 'g', 'b'};
+end
+
+function value = local_ml_optimal_offset(ml, sensor, unitName)
+cra = mlensGet(ml, 'chief ray angle radians');
+zStack = sensorGet(sensor, 'pixel layer thicknesses', unitName);
+nStack = sensorGet(sensor, 'pixel refractive indices');
+if numel(nStack) >= 3
+    nStack = nStack(2:(end - 1));
+end
+value = 0;
+for ii = 1:length(zStack)
+    value = value + zStack(ii) * tan(asin(sin(cra) / nStack(ii)));
+end
+end
+
+function optimalOffsets = local_ml_optimal_offsets(ml, sensor)
+n2 = mlensGet(ml, 'ml refractive index');
+mlFL = mlensGet(ml, 'ml focal length', 'microns');
+sourceFL = mlensGet(ml, 'source focal length', 'microns');
+pixWidth = mlensGet(ml, 'diameter', 'meters');
+
+sensorAdjusted = sensorSet(sensor, 'pixel width', pixWidth);
+sensorAdjusted = sensorSet(sensorAdjusted, 'pixel height', pixWidth);
+sSupport = sensorGet(sensorAdjusted, 'spatial support', 'um');
+[X, Y] = meshgrid(sSupport.x, sSupport.y);
+cra = atan(sqrt(X .^ 2 + Y .^ 2) / sourceFL);
+optimalOffsets = mlFL * tan(asin(sin(cra) / n2));
 end

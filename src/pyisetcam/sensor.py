@@ -24,8 +24,8 @@ _DEFAULT_PIXEL = {
     "type": "pixel",
     "size_m": np.array([2.8e-6, 2.8e-6], dtype=float),
     "fill_factor": 0.75,
-    "layer_thickness_m": np.array([], dtype=float),
-    "refractive_indices": np.array([], dtype=float),
+    "layer_thickness_m": np.array([2.0e-6, 5.0e-6], dtype=float),
+    "refractive_indices": np.array([1.0, 2.0, 1.46, 3.5], dtype=float),
     "spectrum": {},
     "conversion_gain_v_per_electron": 1.0e-4,
     "voltage_swing": 1.0,
@@ -198,6 +198,12 @@ def _time_unit_scale(unit: Any) -> float:
     if unit is None:
         return 1.0
     return _TIME_UNIT_SCALE.get(param_format(unit), 1.0)
+
+
+def _matlab_round_to_int(values: Any) -> np.ndarray:
+    array = np.asarray(values, dtype=float)
+    rounded = np.where(array >= 0.0, np.floor(array + 0.5), np.ceil(array - 0.5))
+    return rounded.astype(int)
 
 
 def _pixel_size_m(pixel: dict[str, Any]) -> np.ndarray:
@@ -2098,6 +2104,23 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         if not np.isclose(scale, 1.0):
             support = {axis: values * scale for axis, values in support.items()}
         return support
+    if key in {"chiefrayangle", "cra", "chiefrayangleradians", "craradians", "craradian", "chiefrayangleradian"}:
+        support = sensor_get(sensor, "spatial support")
+        x, y = np.meshgrid(np.asarray(support["x"], dtype=float), np.asarray(support["y"], dtype=float))
+        if args:
+            source_focal_length = float(args[0])
+        else:
+            microlens = _sensor_microlens(sensor)
+            source_focal_length = (
+                float(microlens.get("sourceFocalLength", DEFAULT_FOCAL_LENGTH_M))
+                if isinstance(microlens, dict)
+                else DEFAULT_FOCAL_LENGTH_M
+            )
+        return np.arctan(np.sqrt(np.square(x) + np.square(y)) / max(source_focal_length, 1e-12))
+    if key in {"chiefrayangledegrees", "cradegrees", "cradegree", "chiefrayangledegree"}:
+        if args:
+            return np.rad2deg(np.asarray(sensor_get(sensor, "cra", args[0]), dtype=float))
+        return np.rad2deg(np.asarray(sensor_get(sensor, "cra"), dtype=float))
     if key == "filtercolorletters":
         return _sensor_filter_color_letters(sensor)
     if key == "filtercolorletterscell":
@@ -2880,6 +2903,470 @@ def sensor_set_size_to_fov(sensor: Sensor, fov: float | tuple[float, float], oi:
     sensor = sensor_set(sensor, "rows", rows)
     sensor = sensor_set(sensor, "cols", cols)
     return sensor
+
+
+def _mlens_sensor_and_unit(args: tuple[Any, ...]) -> tuple[Sensor | None, Any | None]:
+    if not args:
+        return None, None
+    if isinstance(args[0], Sensor):
+        return args[0], args[1] if len(args) > 1 else None
+    return None, args[0]
+
+
+def _mlens_spatial_value_to_meters(value: Any, unit: Any | None) -> float:
+    scale = _spatial_unit_scale(unit)
+    return float(value) / max(scale, 1e-30)
+
+
+def _mlens_offset_to_microns(value: Any, unit: Any | None) -> float:
+    if unit is None:
+        return float(value)
+    return float(value) * (1e6 / max(_spatial_unit_scale(unit), 1e-30))
+
+
+def _ffndgrid_average_2d(
+    x_coords: np.ndarray,
+    u_coords: np.ndarray,
+    values: np.ndarray,
+    x_axis: np.ndarray,
+    u_axis: np.ndarray,
+) -> np.ndarray:
+    x_axis = np.asarray(x_axis, dtype=float).reshape(-1)
+    u_axis = np.asarray(u_axis, dtype=float).reshape(-1)
+    x_coords = np.asarray(x_coords, dtype=float).reshape(-1)
+    u_coords = np.asarray(u_coords, dtype=float).reshape(-1)
+    samples = np.asarray(values, dtype=float).reshape(-1)
+
+    if x_axis.size == 0 or u_axis.size == 0:
+        return np.zeros((u_axis.size, x_axis.size), dtype=float)
+    dx = 1.0 if x_axis.size == 1 else float((x_axis[-1] - x_axis[0]) / max(x_axis.size - 1, 1))
+    du = 1.0 if u_axis.size == 1 else float((u_axis[-1] - u_axis[0]) / max(u_axis.size - 1, 1))
+
+    x_index = _matlab_round_to_int((x_coords - float(x_axis[0])) / max(dx, 1e-30))
+    u_index = _matlab_round_to_int((u_coords - float(u_axis[0])) / max(du, 1e-30))
+    valid = (
+        (x_index >= 0)
+        & (x_index < x_axis.size)
+        & (u_index >= 0)
+        & (u_index < u_axis.size)
+        & np.isfinite(samples)
+    )
+
+    binned = np.zeros((u_axis.size, x_axis.size), dtype=float)
+    counts = np.zeros((u_axis.size, x_axis.size), dtype=float)
+    if np.any(valid):
+        np.add.at(binned, (u_index[valid], x_index[valid]), samples[valid])
+        np.add.at(counts, (u_index[valid], x_index[valid]), 1.0)
+    nonzero = counts > 0.0
+    binned[nonzero] /= counts[nonzero]
+    return binned
+
+
+def _ml_coordinates(x1: float, x2: float, n: float, _lambda_um: float) -> tuple[np.ndarray, np.ndarray]:
+    n_points = 255
+    x = np.linspace(float(x1), float(x2), n_points, dtype=float)
+    u = np.linspace(-float(n) * 0.99, float(n) * 0.99, n_points, dtype=float)
+    return np.meshgrid(x, u)
+
+
+def _ml_source(
+    x1: float,
+    x2: float,
+    u1: float,
+    u2: float,
+    X: np.ndarray,
+    U: np.ndarray,
+) -> np.ndarray:
+    x = np.asarray(X[0, :], dtype=float)
+    u = np.asarray(U[:, 0], dtype=float)
+    dx = 0.5 * float(np.mean(np.diff(x))) if x.size > 1 else 0.0
+    du = 0.5 * float(np.mean(np.diff(u))) if u.size > 1 else 0.0
+    W = np.zeros_like(X, dtype=float)
+
+    x_equal = np.isclose(x1, x2)
+    u_equal = np.isclose(u1, u2)
+    if x_equal:
+        x_mask = np.abs(x - float(x1)) < max(dx, 1e-12)
+    else:
+        x_mask = (x > float(x1)) & (x < float(x2))
+    if u_equal:
+        u_mask = np.abs(u - float(u1)) < max(du, 1e-12)
+    else:
+        u_mask = (u > float(u1)) & (u < float(u2))
+    if np.any(x_mask) and np.any(u_mask):
+        W[np.ix_(u_mask, x_mask)] = 1.0
+    return W
+
+
+def _ml_lens(
+    focal_length_um: float,
+    W_in: np.ndarray,
+    X: np.ndarray,
+    U: np.ndarray,
+    *,
+    propagation_type: str = "non-paraxial",
+) -> np.ndarray:
+    x = np.asarray(X[0, :], dtype=float)
+    u = np.asarray(U[:, 0], dtype=float)
+    if param_format(propagation_type) == "paraxial":
+        new_u = U + (X / max(float(focal_length_um), 1e-30))
+    else:
+        new_u = U + np.sin(np.arctan2(X, max(float(focal_length_um), 1e-30)))
+    return _ffndgrid_average_2d(X, new_u, W_in, x, u)
+
+
+def _ml_displacement(
+    displacement_um: float,
+    W_in: np.ndarray,
+    X: np.ndarray,
+    U: np.ndarray,
+) -> np.ndarray:
+    x = np.asarray(X[0, :], dtype=float)
+    u = np.asarray(U[:, 0], dtype=float)
+    return _ffndgrid_average_2d(X + float(displacement_um), U, W_in, x, u)
+
+
+def _ml_propagate(
+    distance_um: float,
+    refractive_index: float,
+    W_in: np.ndarray,
+    X: np.ndarray,
+    U: np.ndarray,
+    *,
+    propagation_type: str = "non-paraxial",
+) -> np.ndarray:
+    x = np.asarray(X[0, :], dtype=float)
+    u = np.asarray(U[:, 0], dtype=float)
+    if param_format(propagation_type) == "paraxial":
+        new_x = X - (float(distance_um) / max(float(refractive_index), 1e-30)) * U
+    else:
+        argument = np.clip(U / max(float(refractive_index), 1e-30), -1.0, 1.0)
+        new_x = X - float(distance_um) * np.tan(np.arcsin(argument))
+    return _ffndgrid_average_2d(new_x, U, W_in, x, u)
+
+
+def mlens_create(
+    sensor: Sensor | None = None,
+    oi: OpticalImage | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> dict[str, Any]:
+    if sensor is None:
+        sensor = sensor_create(asset_store=asset_store)
+    if oi is None:
+        from .optics import oi_create
+
+        oi = oi_create(asset_store=asset_store)
+
+    focal_length_m = float(oi_get(oi, "optics focal length"))
+    source_f_number = float(oi_get(oi, "optics fnumber"))
+    pixel_depth_m = float(sensor_get(sensor, "pixel depth"))
+    pixel_width_m = float(sensor_get(sensor, "pixel width"))
+    microlens = {
+        "name": "default",
+        "type": "microlens",
+        "rayAngle": 0.0,
+        "wavelength": 500.0,
+        "sourceFNumber": source_f_number,
+        "sourceFocalLength": focal_length_m,
+        "focalLength": pixel_depth_m,
+        "fnumber": pixel_depth_m / max(pixel_width_m, 1e-30),
+        "offset": 0.0,
+        "refractiveIndex": 1.5,
+    }
+    return copy.deepcopy(microlens)
+
+
+def mlens_set(mlens: dict[str, Any], parameter: str, value: Any, *args: Any) -> dict[str, Any]:
+    microlens = _microlens_struct_from_value(mlens)
+    key = param_format(parameter)
+    if key in {"name", "title"}:
+        microlens["name"] = str(value)
+        return microlens
+    if key in {"wavelength", "sourcewavelength"}:
+        microlens["wavelength"] = float(value)
+        return microlens
+    if key in {"chiefrayangle", "rayangle", "chiefray", "chiefrayangledegrees"}:
+        microlens["rayAngle"] = float(value)
+        return microlens
+    if key in {"sourcefnumber", "sfnumber"}:
+        microlens["sourceFNumber"] = float(value)
+        return microlens
+    if key in {"sourcefocallength", "sourceflength"}:
+        microlens["sourceFocalLength"] = _mlens_spatial_value_to_meters(value, args[0] if args else None)
+        return microlens
+    if key == "sourceirradiance":
+        microlens["sourceIrradiance"] = np.asarray(value, dtype=float).copy()
+        return microlens
+    if key in {"mlfnumber", "fnumber", "microlensfnumber"}:
+        microlens["fnumber"] = float(value)
+        return microlens
+    if key in {"mlfocallength", "mlflength", "microlensfocallength"}:
+        microlens["focalLength"] = _mlens_spatial_value_to_meters(value, args[0] if args else None)
+        return microlens
+    if key in {"mloffset", "microlensoffset", "offset", "microlensoffsetmicrons"}:
+        microlens["offset"] = _mlens_offset_to_microns(value, args[0] if args else None)
+        return microlens
+    if key in {"mlrefractiveindex", "microlensrefractiveindex", "mlrefindx"}:
+        microlens["refractiveIndex"] = float(value)
+        return microlens
+    if key in {"xcoordinate", "spacecoordinate"}:
+        microlens["x"] = np.asarray(value, dtype=float).copy()
+        return microlens
+    if key in {"anglecoordinate", "pcoordinate"}:
+        microlens["p"] = np.asarray(value, dtype=float).copy()
+        return microlens
+    if key in {"pixelirradiance", "irradiance", "pirradiance"}:
+        microlens["pixelIrradiance"] = np.asarray(value, dtype=float).copy()
+        return microlens
+    if key == "etendue":
+        microlens["E"] = float(value)
+        return microlens
+    raise UnsupportedOptionError("mlensSet", parameter)
+
+
+def mlens_get(mlens: dict[str, Any], parameter: str, *args: Any) -> Any:
+    microlens = _microlens_struct_from_value(mlens)
+    key = param_format(parameter)
+    sensor_arg, unit = _mlens_sensor_and_unit(args)
+
+    if key in {"name", "title"}:
+        return str(microlens.get("name", ""))
+    if key == "type":
+        return str(microlens.get("type", "microlens"))
+    if key == "wavelength":
+        wavelength_nm = float(microlens.get("wavelength", 500.0))
+        if unit is None:
+            return wavelength_nm
+        return wavelength_nm * 1e-9 * _spatial_unit_scale(unit)
+    if key in {"chiefrayangle", "rayangle", "chiefray", "chiefrayangledegrees"}:
+        return float(microlens.get("rayAngle", 0.0))
+    if key == "chiefrayangleradians":
+        return float(np.deg2rad(float(microlens.get("rayAngle", 0.0))))
+    if key in {"mlfocallength", "microlensfocallength", "mlflength", "focallength"}:
+        focal_length_m = float(microlens.get("focalLength", 0.0))
+        if unit is None:
+            return focal_length_m
+        return focal_length_m * _spatial_unit_scale(unit)
+    if key in {"mlfnumber", "fnumber", "microlensfnumber"}:
+        return float(microlens.get("fnumber", 0.0))
+    if key in {"mldiameter", "diameter"}:
+        diameter_m = float(microlens.get("focalLength", 0.0)) / max(float(microlens.get("fnumber", 1.0)), 1e-30)
+        if unit is None:
+            return diameter_m
+        return diameter_m * _spatial_unit_scale(unit)
+    if key in {"microlensrefractiveindex", "mlrefindx", "mlrefractiveindex"}:
+        return float(microlens.get("refractiveIndex", 1.5))
+    if key in {"microlensoffset", "mloffset", "offset"}:
+        value_um = float(microlens.get("offset", 0.0))
+        if unit is None or param_format(unit) in {"micron", "microns", "um"}:
+            return value_um
+        return value_um / 1e6 * _spatial_unit_scale(unit)
+    if key in {"sourcefocallength", "sourceflength"}:
+        source_focal_length_m = float(microlens.get("sourceFocalLength", DEFAULT_FOCAL_LENGTH_M))
+        if unit is None:
+            return source_focal_length_m
+        return source_focal_length_m * _spatial_unit_scale(unit)
+    if key in {"sourcefnumber", "sfnumber"}:
+        return float(microlens.get("sourceFNumber", 4.0))
+    if key == "sourcediameter":
+        diameter_m = float(microlens.get("sourceFocalLength", DEFAULT_FOCAL_LENGTH_M)) / max(
+            float(microlens.get("sourceFNumber", 4.0)),
+            1e-30,
+        )
+        if unit is None:
+            return diameter_m
+        return diameter_m * _spatial_unit_scale(unit)
+    if key == "sourceirradiance":
+        value = microlens.get("sourceIrradiance")
+        return None if value is None else np.asarray(value, dtype=float).copy()
+    if key in {"optimaloffset", "microoptimaloffsetpixel", "microoptimaloffset"}:
+        if sensor_arg is None:
+            raise ValueError("mlensGet(..., 'optimal offset') requires an explicit sensor in the Python backend.")
+        unit_name = unit or "microns"
+        cra = float(mlens_get(microlens, "chief ray angle radians"))
+        z_stack = np.asarray(sensor_get(sensor_arg, "pixel layer thicknesses", unit_name), dtype=float).reshape(-1)
+        n_stack = np.asarray(sensor_get(sensor_arg, "pixel refractive indices"), dtype=float).reshape(-1)
+        working_n = n_stack[1:-1] if n_stack.size >= 3 else n_stack
+        if working_n.size == 0:
+            return 0.0
+        if working_n.size < z_stack.size:
+            working_n = np.pad(working_n, (0, z_stack.size - working_n.size), mode="edge")
+        value = 0.0
+        for thickness, refractive_index in zip(z_stack, working_n[: z_stack.size], strict=False):
+            argument = np.clip(np.sin(cra) / max(float(refractive_index), 1e-30), -1.0, 1.0)
+            value += float(thickness) * np.tan(np.arcsin(argument))
+        return float(value)
+    if key in {"optimaloffsets", "microoptimaloffsetarray", "microoptimaloffsets"}:
+        if sensor_arg is None:
+            raise ValueError("mlensGet(..., 'optimal offsets') requires an explicit sensor in the Python backend.")
+        sensor_for_offsets = sensor_arg.clone()
+        pixel_width_m = float(mlens_get(microlens, "diameter", "meters"))
+        sensor_for_offsets = sensor_set(sensor_for_offsets, "pixel width", pixel_width_m)
+        sensor_for_offsets = sensor_set(sensor_for_offsets, "pixel height", pixel_width_m)
+        support_um = sensor_get(sensor_for_offsets, "spatial support", "um")
+        x, y = np.meshgrid(np.asarray(support_um["x"], dtype=float), np.asarray(support_um["y"], dtype=float))
+        source_focal_length_um = float(mlens_get(microlens, "source focal length", "microns"))
+        cra = np.arctan(np.sqrt(np.square(x) + np.square(y)) / max(source_focal_length_um, 1e-12))
+        ml_focal_length_um = float(mlens_get(microlens, "ml focal length", "microns"))
+        refractive_index = float(mlens_get(microlens, "ml refractive index"))
+        argument = np.clip(np.sin(cra) / max(refractive_index, 1e-30), -1.0, 1.0)
+        return ml_focal_length_um * np.tan(np.arcsin(argument))
+    if key in {"pixelirradiance", "irradiance", "pirradiance"}:
+        value = microlens.get("pixelIrradiance")
+        return None if value is None else np.asarray(value, dtype=float).copy()
+    if key in {"xcoordinate", "spacecoordinate"}:
+        value = microlens.get("x")
+        return None if value is None else np.asarray(value, dtype=float).copy()
+    if key in {"anglecoordinate", "pcoordinate"}:
+        value = microlens.get("p")
+        return None if value is None else np.asarray(value, dtype=float).copy()
+    if key == "etendue":
+        return float(microlens.get("E", 0.0))
+    if key == "pixeldistance":
+        value_m = float(microlens.get("sourceFocalLength", DEFAULT_FOCAL_LENGTH_M)) * np.tan(
+            float(mlens_get(microlens, "chief ray angle radians"))
+        )
+        if unit is None:
+            return value_m
+        return value_m * _spatial_unit_scale(unit)
+    if key in {"pixelposition", "pixelrowcol"}:
+        if sensor_arg is None:
+            raise ValueError("mlensGet(..., 'pixel position') requires an explicit sensor in the Python backend.")
+        distance_um = float(mlens_get(microlens, "pixel distance", "um"))
+        pixel_size_um = float(sensor_get(sensor_arg, "pixel width", "um"))
+        return {
+            "hPix": int(_matlab_round_to_int(distance_um / max(pixel_size_um, 1e-30)).reshape(-1)[0]),
+            "dPix": int(_matlab_round_to_int(distance_um / max(pixel_size_um * np.sqrt(2.0), 1e-30)).reshape(-1)[0]),
+        }
+    raise UnsupportedOptionError("mlensGet", parameter)
+
+
+def ml_radiance(
+    mlens: dict[str, Any] | None = None,
+    sensor: Sensor | None = None,
+    ml_flag: int | bool = 1,
+    *,
+    asset_store: AssetStore | None = None,
+) -> dict[str, Any]:
+    if sensor is None:
+        sensor = sensor_create(asset_store=asset_store)
+    if mlens is None:
+        mlens = mlens_create(sensor, asset_store=asset_store)
+    microlens = _microlens_struct_from_value(mlens)
+
+    source_f_number = float(mlens_get(microlens, "source fnumber"))
+    ml_aperture_um = float(mlens_get(microlens, "ml diameter", "micron"))
+    pixel_width_um = float(sensor_get(sensor, "pixel width", "micron"))
+    pd_width_um = float(sensor_get(sensor, "pixel photodetector width", "micron"))
+    d_stack_um = np.asarray(sensor_get(sensor, "pixel layer thicknesses", "micron"), dtype=float).reshape(-1)
+    n_stack = np.asarray(sensor_get(sensor, "pixel refractive indices"), dtype=float).reshape(-1)
+
+    n_source = 1.0
+    width_ps_um = 2.0 * ml_aperture_um
+    r_stack = 1.52
+    focal_length_um = float(mlens_get(microlens, "ml focal length", "micron")) / max(r_stack, 1e-30)
+    lens_offset_um = float(mlens_get(microlens, "offset"))
+    lambda_um = float(mlens_get(microlens, "wavelength", "um"))
+    chief_ray_angle_deg = float(mlens_get(microlens, "chief ray"))
+
+    X, P = _ml_coordinates(-width_ps_um, width_ps_um, n_source, lambda_um)
+    x = np.asarray(X[0, :], dtype=float)
+    p = np.asarray(P[:, 0], dtype=float)
+
+    source_na = n_source * np.sin(np.arctan(1.0 / max(2.0 * source_f_number, 1e-30)))
+    W_source = _ml_source(
+        -ml_aperture_um / 2.0,
+        ml_aperture_um / 2.0,
+        np.sin(np.deg2rad(chief_ray_angle_deg)) - source_na,
+        np.sin(np.deg2rad(chief_ray_angle_deg)) + source_na,
+        X,
+        P,
+    )
+
+    if bool(ml_flag):
+        W_lens = _ml_lens(focal_length_um, W_source, X, P)
+        W_lens_offset = _ml_displacement(lens_offset_um, W_lens, X, P)
+    else:
+        W_lens_offset = W_source
+
+    W_stack = np.asarray(W_lens_offset, dtype=float)
+    for index, distance_um in enumerate(d_stack_um):
+        if n_stack.size >= index + 2:
+            refractive_index = float(n_stack[index + 1])
+        elif n_stack.size > 0:
+            refractive_index = float(n_stack[min(index, n_stack.size - 1)])
+        else:
+            refractive_index = 1.0
+        W_stack = _ml_propagate(float(distance_um), refractive_index, W_stack, X, P)
+
+    W_detector = W_stack
+    projected = np.sum(W_detector, axis=0)
+    projected_max = float(np.max(projected))
+    if projected_max > 0.0:
+        projected = projected / projected_max
+    else:
+        projected = np.zeros_like(projected, dtype=float)
+    pixel_irradiance = projected[:, None] * projected[None, :]
+
+    irradiance_in = np.sum(W_source, axis=0)
+    etendue_in = float(np.sum(irradiance_in[np.abs(x) < (pixel_width_um / 2.0)]))
+    irradiance_out = np.sum(W_detector, axis=0)
+    etendue_out = float(np.sum(irradiance_out[np.abs(x) < (pd_width_um / 2.0)]))
+    etendue = etendue_out / max(etendue_in, 1e-30)
+
+    microlens["pixelIrradiance"] = np.asarray(pixel_irradiance, dtype=float)
+    microlens["E"] = float(etendue)
+    microlens["sourceIrradiance"] = np.asarray(W_source, dtype=float)
+    microlens["x"] = x.copy()
+    microlens["p"] = p.copy()
+    return microlens
+
+
+def ml_analyze_array_etendue(
+    sensor: Sensor,
+    method: str = "centered",
+    n_angles: int = 5,
+    *,
+    asset_store: AssetStore | None = None,
+) -> Sensor:
+    microlens = sensor_get(sensor, "ml")
+    if microlens is None:
+        microlens = mlens_create(sensor, asset_store=asset_store)
+
+    source_focal_length = float(mlens_get(microlens, "source focal length"))
+    sensor_cra_deg = np.asarray(sensor_get(sensor, "cra degrees", source_focal_length), dtype=float)
+    sampled_angles = np.linspace(0.0, float(np.max(sensor_cra_deg)), int(n_angles) + 1, dtype=float)
+    sampled_etendue = np.zeros(sampled_angles.shape, dtype=float)
+    normalized_method = param_format(method)
+
+    for index, ray_angle_deg in enumerate(sampled_angles):
+        working_microlens = mlens_set(microlens, "chief ray angle", float(ray_angle_deg))
+        if normalized_method == "centered":
+            working_microlens = mlens_set(working_microlens, "offset", 0.0)
+            working_microlens = ml_radiance(working_microlens, sensor, 1)
+        elif normalized_method in {"optimized", "optimal"}:
+            optimal_offset_um = float(mlens_get(working_microlens, "optimal offset", sensor, "microns"))
+            working_microlens = mlens_set(working_microlens, "offset", optimal_offset_um)
+            working_microlens = ml_radiance(working_microlens, sensor, 1)
+        elif normalized_method in {"nomicrolens", "bare"}:
+            working_microlens = ml_radiance(working_microlens, sensor, 0)
+        else:
+            raise UnsupportedOptionError("mlAnalyzeArrayEtendue", method)
+        sampled_etendue[index] = float(mlens_get(working_microlens, "etendue"))
+        microlens = working_microlens
+
+    interpolated = np.interp(sensor_cra_deg.reshape(-1), sampled_angles, sampled_etendue).reshape(sensor_cra_deg.shape)
+    analyzed = sensor_set(sensor.clone(), "etendue", interpolated)
+    analyzed = sensor_set(analyzed, "ml", microlens)
+    return analyzed
+
+
+mlensCreate = mlens_create
+mlensSet = mlens_set
+mlensGet = mlens_get
+mlRadiance = ml_radiance
+mlAnalyzeArrayEtendue = ml_analyze_array_etendue
 
 
 def _scene_distance_m(scene_or_distance: Scene | OpticalImage | float | None) -> float:

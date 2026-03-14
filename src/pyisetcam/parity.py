@@ -47,6 +47,11 @@ from .optics import (
 from .plotting import ip_plot, oi_plot, sensor_plot, sensor_plot_line, wvf_plot
 from .scene import scene_adjust_illuminant, scene_adjust_luminance, scene_create, scene_get, scene_set
 from .sensor import (
+    ml_analyze_array_etendue,
+    ml_radiance,
+    mlens_create,
+    mlens_get,
+    mlens_set,
     sensor_color_filter,
     sensor_compute,
     sensor_compute_array,
@@ -2348,6 +2353,67 @@ def run_python_case_with_context(
                 "bayer_line_p90": np.percentile(bayer_line_values, 90.0, axis=0),
             },
             context={"scene": scene, "oi": oi, "sensor": sensor_foveon, "sensor_bayer": sensor_bayer},
+        )
+
+    if case_name == "sensor_microlens_etendue_small":
+        oi = oi_create(asset_store=store)
+        sensor = sensor_create(asset_store=store)
+        microlens = mlens_create(sensor, oi, asset_store=store)
+        sensor = sensor_set(sensor, "microlens", microlens)
+        sensor = sensor_set_size_to_fov(sensor, 4.0, oi)
+
+        no_microlens = ml_analyze_array_etendue(sensor.clone(), "no microlens", asset_store=store)
+        centered = ml_analyze_array_etendue(sensor.clone(), "centered", asset_store=store)
+        optimal = ml_analyze_array_etendue(sensor.clone(), "optimal", asset_store=store)
+
+        cra_deg = np.asarray(sensor_get(optimal, "cra degrees"), dtype=float)
+        ray_angles_deg = np.linspace(0.0, float(np.max(cra_deg)), 10, dtype=float)
+        optimal_microlens = sensor_get(optimal, "microlens")
+        optimal_offset_curve_um = np.array(
+            [
+                float(
+                    mlens_get(
+                        mlens_set(optimal_microlens, "chief ray angle", float(ray_angle_deg)),
+                        "optimal offset",
+                        optimal,
+                        "microns",
+                    )
+                )
+                for ray_angle_deg in ray_angles_deg
+            ],
+            dtype=float,
+        )
+
+        ml_fnumber = float(mlens_get(optimal_microlens, "ml fnumber"))
+        half_fnumber_microlens = mlens_set(optimal_microlens, "ml fnumber", 0.5 * ml_fnumber)
+        source_f4_microlens = mlens_set(optimal_microlens, "source fnumber", 4.0)
+        source_f16_microlens = mlens_set(optimal_microlens, "source fnumber", 16.0)
+
+        display_microlens = mlens_set(mlens_create(asset_store=store), "ml fnumber", 8.0)
+        radiance_midlines: list[np.ndarray] = []
+        for chief_ray_angle_deg in (-10.0, 0.0, 10.0):
+            display_microlens = mlens_set(display_microlens, "chief ray angle", chief_ray_angle_deg)
+            display_microlens = ml_radiance(display_microlens, sensor_create(asset_store=store), asset_store=store)
+            irradiance = np.asarray(mlens_get(display_microlens, "pixel irradiance"), dtype=float)
+            radiance_midlines.append(np.asarray(irradiance[irradiance.shape[0] // 2, :], dtype=float))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "no_microlens_etendue": np.asarray(sensor_get(no_microlens, "etendue"), dtype=float),
+                "centered_etendue": np.asarray(sensor_get(centered, "etendue"), dtype=float),
+                "optimal_etendue": np.asarray(sensor_get(optimal, "etendue"), dtype=float),
+                "ray_angles_deg": ray_angles_deg,
+                "optimal_offset_curve_um": optimal_offset_curve_um,
+                "optimal_offsets_default_um": np.asarray(mlens_get(optimal_microlens, "optimal offsets", optimal), dtype=float),
+                "optimal_offsets_half_fnumber_um": np.asarray(mlens_get(half_fnumber_microlens, "optimal offsets", optimal), dtype=float),
+                "optimal_offsets_source_f4_um": np.asarray(mlens_get(source_f4_microlens, "optimal offsets", optimal), dtype=float),
+                "optimal_offsets_source_f16_um": np.asarray(mlens_get(source_f16_microlens, "optimal offsets", optimal), dtype=float),
+                "radiance_midline_neg10": radiance_midlines[0],
+                "radiance_midline_0": radiance_midlines[1],
+                "radiance_midline_10": radiance_midlines[2],
+            },
+            context={"oi": oi, "sensor": optimal},
         )
 
     if case_name == "sensor_filter_transmissivities_small":
