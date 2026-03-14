@@ -1908,6 +1908,59 @@ switch case_name
         ];
         payload.best_pixel_counts = bestPixelCounts;
 
+    case 'sensor_hdr_pixel_size_small'
+        fileName = fullfile(upstream_root, 'data', 'images', 'multispectral', 'Feng_Office-hdrs.mat');
+        scene = sceneFromFile(fileName, 'multispectral', 200);
+        oi = oiCreate;
+        oi = oiCompute(oi, scene);
+
+        pSize = [1 2 4];
+        dyeSizeMicrons = 512;
+        baseSensor = sensorCreate('monochrome');
+        baseSensor = sensorSet(baseSensor, 'exp time', 0.003);
+
+        sensorSizes = zeros(numel(pSize), 2);
+        meanVolts = zeros(numel(pSize), 1);
+        p95Volts = zeros(numel(pSize), 1);
+        meanElectrons = zeros(numel(pSize), 1);
+        resultSizes = zeros(numel(pSize), 3);
+        resultMeanGray = zeros(numel(pSize), 1);
+        resultP95Gray = zeros(numel(pSize), 1);
+
+        for ii = 1:numel(pSize)
+            sensor = sensorSet(baseSensor, 'pixel size constant fill factor', [pSize(ii) pSize(ii)] * 1e-6);
+            sensor = sensorSet(sensor, 'rows', round(dyeSizeMicrons / pSize(ii)));
+            sensor = sensorSet(sensor, 'cols', round(dyeSizeMicrons / pSize(ii)));
+            sensor = sensorCompute(sensor, oi);
+
+            volts = sensorGet(sensor, 'volts');
+            electrons = sensorGet(sensor, 'electrons');
+            ip = ipCreate;
+            ip = ipCompute(ip, sensor);
+            result = ipGet(ip, 'result');
+            gray = result(:, :, 1);
+
+            sensorSizes(ii, :) = sensorGet(sensor, 'size');
+            meanVolts(ii) = mean(volts(:));
+            p95Volts(ii) = prctile(volts(:), 95);
+            meanElectrons(ii) = mean(electrons(:));
+            resultSizes(ii, :) = [size(result, 1), size(result, 2), size(result, 3)];
+            resultMeanGray(ii) = mean(gray(:));
+            resultP95Gray(ii) = prctile(gray(:), 95);
+        end
+
+        payload.scene_size = sceneGet(scene, 'size');
+        payload.oi_size = oiGet(oi, 'size');
+        payload.wave = sceneGet(scene, 'wave');
+        payload.pixel_sizes_um = pSize(:);
+        payload.sensor_sizes = sensorSizes;
+        payload.mean_volts = meanVolts;
+        payload.p95_volts = p95Volts;
+        payload.mean_electrons = meanElectrons;
+        payload.result_sizes = resultSizes;
+        payload.result_mean_gray = resultMeanGray;
+        payload.result_p95_gray = resultP95Gray;
+
     case 'sensor_filter_transmissivities_small'
         sensor = sensorCreate();
         filters = sensorGet(sensor, 'filter transmissivities');

@@ -31,6 +31,25 @@ def test_scene_adjust_illuminant_preserves_mean(asset_store) -> None:
     )
 
 
+def test_scene_from_file_supports_multispectral_mat_files(asset_store) -> None:
+    scene = scene_from_file(
+        asset_store.resolve("data/images/multispectral/Feng_Office-hdrs.mat"),
+        "multispectral",
+        200.0,
+        asset_store=asset_store,
+    )
+
+    photons = scene_get(scene, "photons")
+    wave = scene_get(scene, "wave")
+    illuminant = scene_get(scene, "illuminant photons")
+
+    assert photons.shape == (506, 759, 31)
+    assert wave.shape == (31,)
+    assert illuminant.shape == photons.shape
+    assert scene_get(scene, "illuminant format") == "spatial spectral"
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 200.0, rtol=5e-2)
+
+
 def test_supported_pattern_scenes(asset_store) -> None:
     checkerboard = scene_create("checkerboard", 8, 4, asset_store=asset_store)
     slanted_bar = scene_create("slanted bar", 64, 0.6, 3.0, asset_store=asset_store)

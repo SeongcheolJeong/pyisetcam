@@ -16,7 +16,7 @@ from .exceptions import UnsupportedOptionError
 from .metrics import chromaticity_xy, xyz_from_energy
 from .session import track_session_object
 from .types import Scene, SessionContext
-from .utils import DEFAULT_WAVE, blackbody, energy_to_quanta, param_format, quanta_to_energy
+from .utils import DEFAULT_WAVE, blackbody, energy_to_quanta, interp_spectra, param_format, quanta_to_energy
 
 DEFAULT_DISTANCE_M = 1.2
 DEFAULT_FOV_DEG = 10.0
@@ -51,6 +51,117 @@ def _scene_image_input(input_data: Any) -> tuple[np.ndarray, str, str]:
         return image, str(path), path.stem
     image = np.asarray(input_data, dtype=float)
     return image, "numerical", "numerical"
+
+
+def _mat_struct_field(structure: Any, field: str, default: Any = None) -> Any:
+    if structure is None:
+        return default
+    return getattr(structure, field, default)
+
+
+def _resample_wave_last(values: np.ndarray, source_wave_nm: np.ndarray, target_wave_nm: np.ndarray) -> np.ndarray:
+    wave_first = np.moveaxis(np.asarray(values, dtype=float), -1, 0)
+    resampled = interp_spectra(np.asarray(source_wave_nm, dtype=float), wave_first, np.asarray(target_wave_nm, dtype=float))
+    return np.moveaxis(np.asarray(resampled, dtype=float), 0, -1)
+
+
+def _multispectral_scene_input(
+    input_data: Any,
+    wave: np.ndarray | None,
+    *,
+    asset_store: AssetStore,
+) -> dict[str, Any]:
+    if not isinstance(input_data, (str, Path)):
+        raise ValueError("scene_from_file(..., 'multispectral', ...) requires a MAT file path.")
+
+    path = asset_store.resolve(Path(input_data).expanduser())
+    data = asset_store.load_mat(path)
+    target_wave = None if wave is None else np.asarray(wave, dtype=float).reshape(-1)
+
+    if "mcCOEF" in data:
+        basis_struct = data["basis"]
+        source_wave = np.asarray(_mat_struct_field(basis_struct, "wave"), dtype=float).reshape(-1)
+        basis_matrix = np.asarray(_mat_struct_field(basis_struct, "basis"), dtype=float)
+        if basis_matrix.shape[0] != source_wave.size and basis_matrix.shape[1] == source_wave.size:
+            basis_matrix = basis_matrix.T
+        wave_nm = source_wave if target_wave is None else target_wave
+        if target_wave is not None and not np.array_equal(source_wave, target_wave):
+            basis_matrix = interp_spectra(source_wave, basis_matrix, target_wave)
+        photons = np.tensordot(np.asarray(data["mcCOEF"], dtype=float), np.asarray(basis_matrix, dtype=float).T, axes=([2], [0]))
+        if "imgMean" in data:
+            image_mean = np.asarray(data["imgMean"], dtype=float).reshape(-1)
+            if image_mean.size != source_wave.size:
+                raise ValueError("imgMean wavelength length does not match basis wavelength samples.")
+            if target_wave is not None and not np.array_equal(source_wave, target_wave):
+                image_mean = interp_spectra(source_wave, image_mean, target_wave).reshape(-1)
+            photons = photons + image_mean.reshape(1, 1, -1)
+    else:
+        if "photons" in data:
+            photons = np.asarray(data["photons"], dtype=float)
+        elif "data" in data:
+            photons = np.asarray(data["data"], dtype=float)
+        else:
+            raise ValueError("Multispectral MAT file must contain either 'mcCOEF', 'photons', or 'data'.")
+        if "wave" in data:
+            source_wave = np.asarray(data["wave"], dtype=float).reshape(-1)
+        elif "wavelength" in data:
+            source_wave = np.asarray(data["wavelength"], dtype=float).reshape(-1)
+        else:
+            raise ValueError("Multispectral MAT file is missing wavelength samples.")
+        if photons.ndim == 3 and photons.shape[-1] != source_wave.size and photons.shape[0] == source_wave.size:
+            photons = np.moveaxis(photons, 0, -1)
+        wave_nm = source_wave if target_wave is None else target_wave
+        if target_wave is not None and not np.array_equal(source_wave, target_wave):
+            photons = _resample_wave_last(photons, source_wave, target_wave)
+
+    illuminant = data.get("illuminant")
+    illuminant_photons: np.ndarray | None = None
+    illuminant_energy: np.ndarray | None = None
+    illuminant_format = "spectral"
+    if illuminant is not None:
+        spectrum_struct = _mat_struct_field(illuminant, "spectrum")
+        illuminant_wave = np.asarray(_mat_struct_field(spectrum_struct, "wave", wave_nm), dtype=float).reshape(-1)
+        illuminant_data = _mat_struct_field(illuminant, "data")
+        stored_photons = _mat_struct_field(illuminant_data, "photons")
+        if stored_photons is not None:
+            illuminant_photons = np.asarray(stored_photons, dtype=float)
+            if illuminant_photons.ndim == 3 and illuminant_photons.shape[-1] != illuminant_wave.size and illuminant_photons.shape[0] == illuminant_wave.size:
+                illuminant_photons = np.moveaxis(illuminant_photons, 0, -1)
+            if not np.array_equal(illuminant_wave, wave_nm):
+                if illuminant_photons.ndim == 1:
+                    illuminant_photons = interp_spectra(illuminant_wave, illuminant_photons, wave_nm).reshape(-1)
+                else:
+                    illuminant_photons = _resample_wave_last(illuminant_photons, illuminant_wave, wave_nm)
+            illuminant_format = "spatial spectral" if illuminant_photons.ndim == 3 else "spectral"
+            illuminant_energy = quanta_to_energy(illuminant_photons, wave_nm)
+            if np.asarray(illuminant_energy).ndim == 3:
+                illuminant_energy = np.mean(np.asarray(illuminant_energy, dtype=float), axis=(0, 1))
+
+    if illuminant_photons is None:
+        illuminant_photons = np.maximum(np.mean(np.asarray(photons, dtype=float), axis=(0, 1)), 1e-12)
+        illuminant_energy = quanta_to_energy(illuminant_photons, wave_nm)
+        illuminant_format = "spectral"
+
+    comment = data.get("comment")
+    if comment is None:
+        illuminant_comment = path.name
+    elif hasattr(comment, "_fieldnames"):
+        illuminant_comment = path.name
+    else:
+        illuminant_comment = str(comment)
+
+    return {
+        "photons": np.maximum(np.asarray(photons, dtype=float), 0.0),
+        "wave": np.asarray(wave_nm, dtype=float).reshape(-1),
+        "illuminant_photons": np.asarray(illuminant_photons, dtype=float),
+        "illuminant_energy": np.asarray(illuminant_energy, dtype=float),
+        "illuminant_format": illuminant_format,
+        "illuminant_comment": illuminant_comment,
+        "filename": str(path),
+        "source_name": path.stem,
+        "distance_m": float(np.asarray(data.get("dist", DEFAULT_DISTANCE_M), dtype=float).reshape(-1)[0]),
+        "fov_deg": float(np.asarray(data.get("fov", DEFAULT_FOV_DEG), dtype=float).reshape(-1)[0]),
+    }
 
 
 def _scene_display(display: Any, wave: np.ndarray | None, *, asset_store: AssetStore) -> Any:
@@ -1444,15 +1555,34 @@ def scene_from_file(
     asset_store: AssetStore | None = None,
     session: SessionContext | None = None,
 ) -> Scene:
-    """Create a scene from RGB or monochrome image data and a display model."""
+    """Create a scene from RGB, monochrome, or multispectral image data."""
 
-    del scale_reflectance
     store = _store(asset_store)
     normalized_type = param_format(im_type)
-    if normalized_type not in {"rgb", "monochrome", "unispectral"}:
+    if normalized_type not in {"rgb", "monochrome", "unispectral", "spectral", "multispectral", "hyperspectral"}:
         raise UnsupportedOptionError("sceneFromFile", im_type)
 
     requested_wave = None if wave is None else _wave_or_default(wave)
+
+    if normalized_type in {"spectral", "multispectral", "hyperspectral"}:
+        multispectral = _multispectral_scene_input(input_data, requested_wave, asset_store=store)
+        scene = Scene(name=str(multispectral["source_name"]))
+        scene.fields["wave"] = np.asarray(multispectral["wave"], dtype=float)
+        scene.fields["illuminant_format"] = str(multispectral["illuminant_format"])
+        scene.fields["illuminant_energy"] = np.asarray(multispectral["illuminant_energy"], dtype=float)
+        scene.fields["illuminant_photons"] = np.asarray(multispectral["illuminant_photons"], dtype=float)
+        scene.fields["illuminant_comment"] = str(multispectral["illuminant_comment"])
+        scene.fields["distance_m"] = float(multispectral["distance_m"])
+        scene.fields["fov_deg"] = float(multispectral["fov_deg"])
+        scene.fields["filename"] = str(multispectral["filename"])
+        scene.fields["source_type"] = "multispectral"
+        scene.data["photons"] = np.asarray(multispectral["photons"], dtype=float)
+        _update_scene_geometry(scene)
+        if mean_luminance is not None:
+            scene = scene_adjust_luminance(scene, float(mean_luminance), asset_store=store)
+        return track_session_object(session, scene)
+
+    del scale_reflectance
     current_display = _scene_display(display, requested_wave, asset_store=store)
 
     from .display import display_get

@@ -57,6 +57,7 @@ from pyisetcam import (
     run_python_case,
     scene_combine,
     scene_create,
+    scene_from_file,
     scene_adjust_luminance,
     scene_get,
     scene_rotate,
@@ -5145,6 +5146,59 @@ def test_run_python_case_supports_sensor_imx490_uniform_small_parity_case(asset_
     assert case.payload["combined_volts_stats"].shape == (4,)
     assert case.payload["best_pixel_counts"].shape == (4,)
     assert int(np.sum(case.payload["best_pixel_counts"])) == int(np.prod(case.payload["oi_size"]))
+
+
+def test_scene_from_file_multispectral_supports_hdr_pixel_size_workflow(asset_store) -> None:
+    scene = scene_from_file(
+        asset_store.resolve("data/images/multispectral/Feng_Office-hdrs.mat"),
+        "multispectral",
+        200.0,
+        asset_store=asset_store,
+    )
+    oi = oi_compute(oi_create(asset_store=asset_store), scene)
+
+    pixel_sizes_um = np.array([1.0, 2.0, 4.0], dtype=float)
+    dye_size_um = 512.0
+    base_sensor = sensor_create("monochrome", asset_store=asset_store)
+    base_sensor = sensor_set(base_sensor, "exp time", 0.003)
+
+    volt_means: list[float] = []
+    sensor_sizes: list[tuple[int, int]] = []
+    result_shapes: list[tuple[int, int, int]] = []
+
+    for pixel_size_um in pixel_sizes_um:
+        sensor = sensor_set(base_sensor.clone(), "pixel size constant fill factor", np.array([pixel_size_um, pixel_size_um], dtype=float) * 1.0e-6)
+        sensor = sensor_set(sensor, "rows", int(np.rint(dye_size_um / pixel_size_um)))
+        sensor = sensor_set(sensor, "cols", int(np.rint(dye_size_um / pixel_size_um)))
+        sensor = sensor_compute(sensor, oi)
+        ip = ip_compute(ip_create(asset_store=asset_store), sensor, asset_store=asset_store)
+
+        sensor_sizes.append(tuple(int(value) for value in sensor_get(sensor, "size")))
+        result_shapes.append(tuple(int(value) for value in np.asarray(ip_get(ip, "result"), dtype=float).shape))
+        volt_means.append(float(np.mean(np.asarray(sensor_get(sensor, "volts"), dtype=float))))
+
+    assert tuple(scene_get(scene, "size")) == (506, 759)
+    assert np.asarray(scene_get(scene, "illuminant photons"), dtype=float).shape == (506, 759, 31)
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 200.0, rtol=5e-2)
+    assert sensor_sizes == [(512, 512), (256, 256), (128, 128)]
+    assert result_shapes == [(512, 512, 3), (256, 256, 3), (128, 128, 3)]
+    assert volt_means[0] < volt_means[1] < volt_means[2]
+
+
+def test_run_python_case_supports_sensor_hdr_pixel_size_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_hdr_pixel_size_small", asset_store=asset_store)
+
+    assert tuple(case.payload["scene_size"]) == (506, 759)
+    assert case.payload["wave"].shape == (31,)
+    assert np.array_equal(case.payload["pixel_sizes_um"], np.array([1.0, 2.0, 4.0], dtype=float))
+    assert case.payload["sensor_sizes"].shape == (3, 2)
+    assert np.array_equal(case.payload["sensor_sizes"], np.array([[512, 512], [256, 256], [128, 128]], dtype=int))
+    assert case.payload["mean_volts"].shape == (3,)
+    assert case.payload["p95_volts"].shape == (3,)
+    assert case.payload["mean_electrons"].shape == (3,)
+    assert case.payload["result_sizes"].shape == (3, 3)
+    assert case.payload["result_mean_gray"].shape == (3,)
+    assert case.payload["result_p95_gray"].shape == (3,)
 
 
 def test_run_python_case_supports_sensor_filter_transmissivities_parity_case(asset_store) -> None:

@@ -48,7 +48,7 @@ from .optics import (
     si_synthetic,
 )
 from .plotting import ip_plot, oi_plot, sensor_plot, sensor_plot_line, wvf_plot
-from .scene import scene_adjust_illuminant, scene_adjust_luminance, scene_combine, scene_create, scene_get, scene_rotate, scene_set
+from .scene import scene_adjust_illuminant, scene_adjust_luminance, scene_combine, scene_create, scene_from_file, scene_get, scene_rotate, scene_set
 from .sensor import (
     imx490_compute,
     ml_analyze_array_etendue,
@@ -2764,6 +2764,63 @@ def run_python_case_with_context(
                 "best_pixel_counts": best_pixel_counts,
             },
             context={"scene": scene, "oi": oi, "sensor": combined},
+        )
+
+    if case_name == "sensor_hdr_pixel_size_small":
+        scene = scene_from_file(
+            store.resolve("data/images/multispectral/Feng_Office-hdrs.mat"),
+            "multispectral",
+            200.0,
+            asset_store=store,
+        )
+        oi = oi_compute(oi_create(asset_store=store), scene)
+
+        pixel_sizes_um = np.array([1.0, 2.0, 4.0], dtype=float)
+        dye_size_um = 512.0
+        base_sensor = sensor_create("monochrome", asset_store=store)
+        base_sensor = sensor_set(base_sensor, "exp time", 0.003)
+
+        sensor_sizes = np.zeros((pixel_sizes_um.size, 2), dtype=int)
+        mean_volts = np.zeros(pixel_sizes_um.size, dtype=float)
+        p95_volts = np.zeros(pixel_sizes_um.size, dtype=float)
+        mean_electrons = np.zeros(pixel_sizes_um.size, dtype=float)
+        result_sizes = np.zeros((pixel_sizes_um.size, 3), dtype=int)
+        result_mean_gray = np.zeros(pixel_sizes_um.size, dtype=float)
+        result_p95_gray = np.zeros(pixel_sizes_um.size, dtype=float)
+
+        for index, pixel_size_um in enumerate(pixel_sizes_um):
+            sensor = sensor_set(base_sensor.clone(), "pixel size constant fill factor", np.array([pixel_size_um, pixel_size_um], dtype=float) * 1.0e-6)
+            sensor = sensor_set(sensor, "rows", int(np.rint(dye_size_um / pixel_size_um)))
+            sensor = sensor_set(sensor, "cols", int(np.rint(dye_size_um / pixel_size_um)))
+            sensor = sensor_compute(sensor, oi)
+            ip = ip_compute(ip_create(asset_store=store), sensor, asset_store=store)
+            result = np.asarray(ip_get(ip, "result"), dtype=float)
+            gray = result[:, :, 0] if result.ndim == 3 else result
+
+            sensor_sizes[index, :] = np.asarray(sensor_get(sensor, "size"), dtype=int)
+            mean_volts[index] = float(np.mean(np.asarray(sensor_get(sensor, "volts"), dtype=float)))
+            p95_volts[index] = float(np.percentile(np.asarray(sensor_get(sensor, "volts"), dtype=float), 95.0))
+            mean_electrons[index] = float(np.mean(np.asarray(sensor_get(sensor, "electrons"), dtype=float)))
+            result_sizes[index, :] = np.asarray(result.shape, dtype=int)
+            result_mean_gray[index] = float(np.mean(gray))
+            result_p95_gray[index] = float(np.percentile(gray, 95.0))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "oi_size": np.asarray(oi_get(oi, "size"), dtype=int),
+                "wave": np.asarray(scene_get(scene, "wave"), dtype=float),
+                "pixel_sizes_um": pixel_sizes_um,
+                "sensor_sizes": sensor_sizes,
+                "mean_volts": mean_volts,
+                "p95_volts": p95_volts,
+                "mean_electrons": mean_electrons,
+                "result_sizes": result_sizes,
+                "result_mean_gray": result_mean_gray,
+                "result_p95_gray": result_p95_gray,
+            },
+            context={"scene": scene, "oi": oi},
         )
 
     if case_name == "sensor_filter_transmissivities_small":

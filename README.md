@@ -190,7 +190,13 @@ sensor wave now also includes `sensorCreate('imx490-large')`,
 the HDR four-capture combine workflow from `s_sensorIMX490.m`, with
 curated Octave parity on the deterministic uniform-field best-SNR path,
 including capture names, capture mean electrons/volts/DV, combined-volts
-summaries, and selected pixel-source counts.
+summaries, and selected pixel-source counts. That same Phase 1 sensor
+wave now also includes `sceneFromFile(..., 'multispectral', ...)`
+support for basis-coded HDR scene assets plus the mixed pixel-size
+monochrome workflow from `s_sensorHDR_PixelSize.m`, with curated Octave
+parity on the Feng Office HDR scene path, comparing the three sensor
+sizes, mean/p95 volts, mean electrons, and grayscale output summaries
+for the 1/2/4 micron pixel-size sweep.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit
