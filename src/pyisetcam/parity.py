@@ -29,6 +29,7 @@ from .optics import (
     oi_crop,
     oi_create,
     oi_get,
+    oi_spatial_resample,
     psf_to_zcoeff_error,
     wvf_compute,
     wvf_aperture,
@@ -49,6 +50,7 @@ from .optics import (
 from .plotting import ip_plot, oi_plot, sensor_plot, sensor_plot_line, wvf_plot
 from .scene import scene_adjust_illuminant, scene_adjust_luminance, scene_combine, scene_create, scene_get, scene_rotate, scene_set
 from .sensor import (
+    imx490_compute,
     ml_analyze_array_etendue,
     ml_radiance,
     mlens_create,
@@ -2713,6 +2715,55 @@ def run_python_case_with_context(
                 "result_p95_rgb_norm": _channel_normalize(np.percentile(result_flat, 95.0, axis=0)),
             },
             context={"scene": scene, "sensor": final_sensor, "ip": ip},
+        )
+
+    if case_name == "sensor_imx490_uniform_small":
+        scene = scene_create("uniform", 256, asset_store=store)
+        oi = oi_compute(oi_create(asset_store=store), scene)
+        oi = oi_crop(oi, "border")
+        oi = oi_spatial_resample(oi, 3.0e-6)
+
+        combined, metadata = imx490_compute(
+            oi,
+            "method",
+            "best snr",
+            "exp time",
+            0.1,
+            "noise flag",
+            0,
+            asset_store=store,
+        )
+        captures = list(metadata["sensorArray"])
+
+        capture_mean_electrons = np.array(
+            [float(np.mean(np.asarray(sensor_get(sensor, "electrons"), dtype=float))) for sensor in captures],
+            dtype=float,
+        )
+        capture_mean_volts = np.array(
+            [float(np.mean(np.asarray(sensor_get(sensor, "volts"), dtype=float))) for sensor in captures],
+            dtype=float,
+        )
+        capture_mean_dv = np.array(
+            [float(np.mean(np.asarray(sensor_get(sensor, "dv"), dtype=float))) for sensor in captures],
+            dtype=float,
+        )
+        best_pixel = np.asarray(combined.metadata["bestPixel"], dtype=int)
+        best_pixel_counts = np.array([int(np.sum(best_pixel == (index + 1))) for index in range(len(captures))], dtype=int)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "oi_size": np.asarray(oi_get(oi, "size"), dtype=int),
+                "capture_names": np.asarray([str(sensor_get(sensor, "name")) for sensor in captures], dtype=object),
+                "capture_mean_electrons": capture_mean_electrons,
+                "capture_mean_volts": capture_mean_volts,
+                "capture_mean_dv": capture_mean_dv,
+                "large_gain_ratio": float(capture_mean_volts[1] / max(capture_mean_volts[0], 1.0e-12)),
+                "small_area_ratio": float(capture_mean_electrons[2] / max(capture_mean_electrons[0], 1.0e-12)),
+                "combined_volts_stats": _stats_vector(np.asarray(sensor_get(combined, "volts"), dtype=float)),
+                "best_pixel_counts": best_pixel_counts,
+            },
+            context={"scene": scene, "oi": oi, "sensor": combined},
         )
 
     if case_name == "sensor_filter_transmissivities_small":

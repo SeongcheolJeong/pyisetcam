@@ -5612,7 +5612,27 @@ def oi_compute(
 
 
 def oi_crop(oi: OpticalImage, rect: Any) -> OpticalImage:
-    rect_array = np.rint(np.asarray(rect, dtype=float).reshape(-1)).astype(int)
+    if isinstance(rect, str):
+        normalized = param_format(rect)
+        if normalized != "border":
+            raise UnsupportedOptionError("oiCrop", rect)
+        size = np.asarray(oi_get(oi, "size"), dtype=float).reshape(-1)
+        if size.size != 2:
+            raise ValueError("oiCrop(..., 'border') requires a 2-D optical image.")
+        rect_array = np.ceil(
+            [
+                size[1] * 0.1 + 1.0,
+                size[0] * 0.1 + 1.0,
+                size[1] * 0.8 - 1.0,
+                size[0] * 0.8 - 1.0,
+            ],
+        ).astype(int)
+        if ((rect_array[2] - rect_array[0]) % 2) != 0:
+            rect_array[2] -= 1
+        if ((rect_array[3] - rect_array[1]) % 2) != 0:
+            rect_array[3] -= 1
+    else:
+        rect_array = np.rint(np.asarray(rect, dtype=float).reshape(-1)).astype(int)
     if rect_array.size != 4:
         raise ValueError("oi_crop expects [col, row, width, height].")
 
@@ -5642,6 +5662,19 @@ def oi_crop(oi: OpticalImage, rect: Any) -> OpticalImage:
     new_wangular = float(np.rad2deg(2.0 * np.arctan2((cropped_cols * sample_spacing[1]) / 2.0, focal_length)))
     cropped = oi_set(cropped, "wangular", new_wangular)
     return cropped
+
+
+def oi_spatial_resample(
+    oi: OpticalImage,
+    sample_spacing: float,
+    units: str | None = "m",
+    *,
+    method: str = "linear",
+) -> OpticalImage:
+    sample_spacing_m = float(sample_spacing) / max(_spatial_unit_scale(units), 1.0e-30)
+    if sample_spacing_m <= 0.0:
+        raise ValueError("oi_spatial_resample requires a positive sample spacing.")
+    return _oi_spatial_resample(oi, sample_spacing_m, method=method)
 
 
 def _oi_shape(oi: OpticalImage) -> tuple[int, int]:

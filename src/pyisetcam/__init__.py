@@ -52,6 +52,7 @@ from .optics import (
     oi_crop,
     oi_create,
     oi_get,
+    oi_spatial_resample,
     oi_set,
     optics_psf_to_otf,
     psf_to_zcoeff_error,
@@ -155,6 +156,7 @@ from .scene import (
     scene_set,
 )
 from .sensor import (
+    imx490_compute,
     ml_analyze_array_etendue,
     ml_radiance,
     mlens_create,
@@ -305,6 +307,7 @@ __all__ = [
     "oiCreate",
     "oiCrop",
     "oiGet",
+    "oiSpatialResample",
     "oiSet",
     "oi_calculate_illuminance",
     "oi_diffuser",
@@ -313,6 +316,7 @@ __all__ = [
     "oi_create",
     "oi_get",
     "oi_plot",
+    "oi_spatial_resample",
     "oi_set",
     "optics_psf_to_otf",
     "param_format",
@@ -421,6 +425,8 @@ __all__ = [
     "mlensCreate",
     "mlensGet",
     "mlensSet",
+    "imx490Compute",
+    "imx490_compute",
     "ml_analyze_array_etendue",
     "ml_radiance",
     "mlens_create",
@@ -561,6 +567,7 @@ oiCreate = oi_create
 oiCompute = oi_compute
 oiCrop = oi_crop
 oiGet = oi_get
+oiSpatialResample = oi_spatial_resample
 oiSet = oi_set
 oiCalculateIlluminance = oi_calculate_illuminance
 oiDiffuser = oi_diffuser
@@ -626,6 +633,7 @@ mlAnalyzeArrayEtendue = ml_analyze_array_etendue
 sensorCompute = sensor_compute
 sensorComputeArray = sensor_compute_array
 sensorComputeSamples = sensor_compute_samples
+imx490Compute = imx490_compute
 sensorCCM = sensor_ccm
 signalCurrent = signal_current
 sensorColorFilter = sensor_color_filter

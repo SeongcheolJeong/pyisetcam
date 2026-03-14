@@ -1057,6 +1057,38 @@
       }
     },
     {
+      "name": "sensor_imx490_uniform_small",
+      "matlab_function": "s_sensorIMX490/imx490Compute",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "capture_mean_electrons": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "capture_mean_volts": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "capture_mean_dv": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "large_gain_ratio": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "small_area_ratio": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "combined_volts_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        }
+      }
+    },
+    {
       "name": "sensor_filter_transmissivities_small",
       "matlab_function": "sensorGet/sensorSet",
       "rtol": 1e-05,

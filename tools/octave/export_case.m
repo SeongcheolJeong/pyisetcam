@@ -1863,6 +1863,51 @@ switch case_name
         payload.result_mean_rgb_norm = local_channel_normalize(squeeze(mean(mean(result, 1), 2)));
         payload.result_p95_rgb_norm = local_channel_normalize(prctile(reshape(result, [], size(result, 3)), 95, 1));
 
+    case 'sensor_imx490_uniform_small'
+        scene = sceneCreate('uniform', 256);
+        oi = oiCreate;
+        oi = oiCompute(oi, scene);
+        oi = oiCrop(oi, 'border');
+        oi = oiSpatialResample(oi, 3e-6);
+
+        [sensor, metadata] = local_imx490_compute(oi, 'best snr', 0.1, 0, upstream_root);
+        sArray = metadata.sensorArray;
+        nCaptures = numel(sArray);
+
+        captureNames = cell(nCaptures, 1);
+        captureMeanElectrons = zeros(nCaptures, 1);
+        captureMeanVolts = zeros(nCaptures, 1);
+        captureMeanDV = zeros(nCaptures, 1);
+        for ii = 1:nCaptures
+            capture = sArray{ii};
+            captureNames{ii} = sensorGet(capture, 'name');
+            captureMeanElectrons(ii) = mean(sensorGet(capture, 'electrons')(:));
+            captureMeanVolts(ii) = mean(sensorGet(capture, 'volts')(:));
+            captureMeanDV(ii) = mean(sensorGet(capture, 'dv')(:));
+        end
+
+        bestPixel = sensor.metadata.bestPixel;
+        bestPixelCounts = zeros(nCaptures, 1);
+        for ii = 1:nCaptures
+            bestPixelCounts(ii) = sum(bestPixel(:) == ii);
+        end
+
+        combinedVolts = sensorGet(sensor, 'volts');
+        payload.oi_size = oiGet(oi, 'size');
+        payload.capture_names = captureNames;
+        payload.capture_mean_electrons = captureMeanElectrons;
+        payload.capture_mean_volts = captureMeanVolts;
+        payload.capture_mean_dv = captureMeanDV;
+        payload.large_gain_ratio = captureMeanVolts(2) / max(captureMeanVolts(1), eps);
+        payload.small_area_ratio = captureMeanElectrons(3) / max(captureMeanElectrons(1), eps);
+        payload.combined_volts_stats = [
+            mean(combinedVolts(:))
+            std(combinedVolts(:))
+            prctile(combinedVolts(:), 5)
+            prctile(combinedVolts(:), 95)
+        ];
+        payload.best_pixel_counts = bestPixelCounts;
+
     case 'sensor_filter_transmissivities_small'
         sensor = sensorCreate();
         filters = sensorGet(sensor, 'filter transmissivities');
@@ -2565,6 +2610,213 @@ if max(filterData(:)) > 1
     filterData = filterData ./ max(filterData(:));
 end
 filterNames = {'r', 'g', 'b'};
+end
+
+function [sensorCombined, metadata] = local_imx490_compute(oi, method, expTime, noiseFlag, upstream_root)
+gains = [1 4 1 4];
+isetGains = 1 ./ gains;
+method = ieParamFormat(method);
+
+sensorLarge = local_sensor_create_imx490_variant('large', upstream_root);
+sensorSmall = local_sensor_create_imx490_variant('small', upstream_root);
+
+sensorLarge = sensorSet(sensorLarge, 'match oi', oi);
+sensorSmall = sensorSet(sensorSmall, 'match oi', oi);
+sensorLarge = sensorSet(sensorLarge, 'noise flag', noiseFlag);
+sensorSmall = sensorSet(sensorSmall, 'noise flag', noiseFlag);
+sensorLarge = sensorSet(sensorLarge, 'exp time', expTime);
+sensorSmall = sensorSet(sensorSmall, 'exp time', expTime);
+
+oiSpacing = oiGet(oi, 'spatial resolution', 'um');
+sensorSpacing = sensorGet(sensorLarge, 'pixel size', 'um');
+assert(max(abs(oiSpacing(:) - sensorSpacing(:))) < 1e-3);
+
+oiSize = oiGet(oi, 'size');
+sensorLarge = sensorSet(sensorLarge, 'size', oiSize);
+sensorSmall = sensorSet(sensorSmall, 'size', oiSize);
+
+sensorArray = cell(1, 4);
+
+sensorArray{1} = sensorSet(sensorLarge, 'analog gain', isetGains(1));
+sensorArray{1} = sensorSet(sensorArray{1}, 'name', sprintf('large-%1dx', gains(1)));
+sensorArray{1} = sensorCompute(sensorArray{1}, oi);
+
+sensorArray{2} = sensorSet(sensorLarge, 'analog gain', isetGains(2));
+sensorArray{2} = sensorSet(sensorArray{2}, 'name', sprintf('large-%1dx', gains(2)));
+sensorArray{2} = sensorCompute(sensorArray{2}, oi);
+
+sensorArray{3} = sensorSet(sensorSmall, 'analog gain', isetGains(3));
+sensorArray{3} = sensorSet(sensorArray{3}, 'name', sprintf('small-%1dx', gains(3)));
+sensorArray{3} = sensorCompute(sensorArray{3}, oi);
+
+sensorArray{4} = sensorSet(sensorSmall, 'analog gain', isetGains(4));
+sensorArray{4} = sensorSet(sensorArray{4}, 'name', sprintf('small-%1dx', gains(4)));
+sensorArray{4} = sensorCompute(sensorArray{4}, oi);
+
+sensorCombined = sensorLarge;
+
+switch method
+    case 'average'
+        v1 = sensorGet(sensorArray{1}, 'volts');
+        v2 = sensorGet(sensorArray{2}, 'volts');
+        v3 = sensorGet(sensorArray{3}, 'volts');
+        v4 = sensorGet(sensorArray{4}, 'volts');
+
+        vSwingL = sensorGet(sensorLarge, 'pixel voltage swing');
+        vSwingS = sensorGet(sensorSmall, 'pixel voltage swing');
+
+        idx1 = (v1 < vSwingL);
+        idx2 = (v2 < vSwingL);
+        idx3 = (v3 < vSwingS);
+        idx4 = (v4 < vSwingS);
+        N = idx1 + idx2 + idx3 + idx4;
+
+        in1 = sensorGet(sensorArray{1}, 'electrons per area', 'um');
+        in2 = sensorGet(sensorArray{2}, 'electrons per area', 'um');
+        in3 = sensorGet(sensorArray{3}, 'electrons per area', 'um');
+        in4 = sensorGet(sensorArray{4}, 'electrons per area', 'um');
+
+        cg = sensorGet(sensorLarge, 'pixel conversion gain');
+        volts = zeros(size(in1));
+        valid = (N > 0);
+        volts(valid) = cg .* ((in1(valid) + in2(valid) + in3(valid) + in4(valid)) ./ N(valid));
+        volts(~valid) = 1;
+
+        vSwing = sensorGet(sensorLarge, 'pixel voltage swing');
+        volts = vSwing * local_scale_to_peak(volts);
+
+        sensorCombined = sensorSet(sensorCombined, 'volts', volts);
+        sensorCombined = sensorSet(sensorCombined, 'analog gain', 1);
+        sensorCombined = sensorSet(sensorCombined, 'analog offset', 0);
+        sensorCombined.metadata.npixels = N;
+
+    case 'bestsnr'
+        e1 = sensorGet(sensorArray{1}, 'electrons');
+        e2 = sensorGet(sensorArray{2}, 'electrons');
+        e3 = sensorGet(sensorArray{3}, 'electrons');
+        e4 = sensorGet(sensorArray{4}, 'electrons');
+
+        wcL = sensorGet(sensorLarge, 'pixel well capacity');
+        wcS = sensorGet(sensorSmall, 'pixel well capacity');
+        idx1 = (e1 < wcL);
+        idx2 = (e2 < wcL);
+        idx3 = (e3 < wcS);
+        idx4 = (e4 < wcS);
+        e1(~idx1) = 0;
+        e2(~idx2) = 0;
+        e3(~idx3) = 0;
+        e4(~idx4) = 0;
+
+        [val, bestPixel] = max([e1(:), e2(:), e3(:), e4(:)], [], 2);
+        val = reshape(val, size(e1));
+        bestPixel = reshape(bestPixel, size(e1));
+
+        cg = sensorGet(sensorLarge, 'pixel conversion gain');
+        volts = val .* cg;
+        sensorCombined = sensorSet(sensorCombined, 'volts', volts);
+        sensorCombined.metadata.bestPixel = bestPixel;
+
+    otherwise
+        error('Unknown IMX490 method %s', method);
+end
+
+nbits = sensorGet(sensorCombined, 'nbits');
+if isempty(nbits)
+    nbits = 12;
+end
+dv = (2 ^ nbits) * local_scale_to_peak(volts);
+sensorCombined = sensorSet(sensorCombined, 'dv', dv);
+sensorCombined = sensorSet(sensorCombined, 'name', sprintf('Combined-%s', method));
+
+metadata.sensorArray = sensorArray;
+metadata.method = method;
+end
+
+function sensor = local_sensor_create_imx490_variant(variant, upstream_root)
+variant = ieParamFormat(variant);
+isLarge = strcmp(variant, 'large');
+wave = (390:10:710)';
+sensor = sensorCreate('bayer-rggb');
+sensor = sensorSet(sensor, 'wave', wave);
+sensor = sensorSet(sensor, 'size', [600 800]);
+sensor = sensorSet(sensor, 'pixel size same fill factor', 3.0e-6);
+
+voltageSwing = 4096 * 0.25e-3;
+if isLarge
+    wellCapacity = 120000;
+    fillFactor = 0.9;
+    sensorName = 'imx490-large';
+else
+    wellCapacity = 60000;
+    fillFactor = 0.1;
+    sensorName = 'imx490-small';
+end
+
+sensor = sensorSet(sensor, 'pixel conversion gain', voltageSwing / wellCapacity);
+sensor = sensorSet(sensor, 'pixel voltage swing', voltageSwing);
+sensor = sensorSet(sensor, 'pixel dark voltage', 0);
+sensor = sensorSet(sensor, 'pixel read noise electrons', 1);
+sensor = sensorSet(sensor, 'pixel fill factor', fillFactor);
+sensor = sensorSet(sensor, 'dsnu level', 0);
+sensor = sensorSet(sensor, 'prnu level', 0.7);
+sensor = sensorSet(sensor, 'analog gain', 1);
+sensor = sensorSet(sensor, 'analog offset', 0);
+sensor = sensorSet(sensor, 'exp time', 1 / 60);
+sensor = sensorSet(sensor, 'black level', 0);
+sensor = sensorSet(sensor, 'quantization', '12 bit');
+
+[filterData, filterNames] = local_read_imx490_color_filters(wave, upstream_root);
+sensor = sensorSet(sensor, 'filter spectra', filterData);
+sensor = sensorSet(sensor, 'filter names', filterNames);
+
+irFilter = local_read_interpolated_spectrum( ...
+    fullfile(upstream_root, 'data', 'sensor', 'irfilters', 'ircf_public.mat'), ...
+    wave);
+sensor = sensorSet(sensor, 'ir filter', irFilter);
+sensor = sensorSet(sensor, 'name', sensorName);
+end
+
+function [filterData, filterNames] = local_read_imx490_color_filters(wave, upstream_root)
+fileName = fullfile(upstream_root, 'data', 'sensor', 'colorfilters', 'auto', 'SONY', 'cf_imx490.mat');
+raw = load(fileName, 'wavelength', 'data');
+rawWave = double(raw.wavelength(:));
+rawData = double(raw.data);
+if size(rawData, 1) ~= numel(rawWave) && size(rawData, 2) == numel(rawWave)
+    rawData = rawData';
+end
+filterData = interp1(rawWave, rawData, wave(:), 'linear');
+if size(filterData, 1) ~= numel(wave)
+    filterData = filterData';
+end
+filterData(isnan(filterData)) = 0;
+filterData = max(filterData, 0);
+if max(filterData(:)) > 1
+    filterData = filterData ./ max(filterData(:));
+end
+filterNames = {'a', 'b', 'c'};
+end
+
+function data = local_read_interpolated_spectrum(fileName, wave)
+raw = load(fileName, 'wavelength', 'data');
+rawWave = double(raw.wavelength(:));
+rawData = double(raw.data);
+if size(rawData, 1) ~= numel(rawWave) && size(rawData, 2) == numel(rawWave)
+    rawData = rawData';
+end
+data = interp1(rawWave, rawData, wave(:), 'linear');
+if size(data, 1) ~= numel(wave)
+    data = data';
+end
+data(isnan(data)) = 0;
+end
+
+function values = local_scale_to_peak(values)
+peak = max(values(:));
+if peak > 0
+    values = values ./ peak;
+else
+    values = zeros(size(values));
+end
 end
 
 function value = local_ml_optimal_offset(ml, sensor, unitName)

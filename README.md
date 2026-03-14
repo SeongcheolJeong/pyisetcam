@@ -183,7 +183,14 @@ RNG-matched captures. That same Phase 1 sensor wave now also includes
 public `sceneRotate(...)` / `oiCrop(...)` support for the deterministic
 rolling-shutter assembly path from `s_sensorRollingShutter.m`, with
 curated Octave parity on the per-frame mean-voltage trace, final
-row summaries, and normalized final RGB summaries.
+row summaries, and normalized final RGB summaries. That same Phase 1
+sensor wave now also includes `sensorCreate('imx490-large')`,
+`sensorCreate('imx490-small')`, `oiCrop(..., 'border')`,
+`oiSpatialResample(...)`, and headless `imx490Compute(...)` coverage for
+the HDR four-capture combine workflow from `s_sensorIMX490.m`, with
+curated Octave parity on the deterministic uniform-field best-SNR path,
+including capture names, capture mean electrons/volts/DV, combined-volts
+summaries, and selected pixel-source counts.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit

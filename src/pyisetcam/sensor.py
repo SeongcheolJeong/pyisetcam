@@ -10,7 +10,7 @@ from scipy.interpolate import RegularGridInterpolator
 from scipy.ndimage import gaussian_filter, map_coordinates
 from scipy.signal import convolve2d
 
-from .assets import AssetStore, ie_read_color_filter
+from .assets import AssetStore, ie_read_color_filter, ie_read_spectra
 from .color import luminance_from_photons, xyz_color_matching
 from .exceptions import UnsupportedOptionError
 from .metrics import xyz_from_energy
@@ -1489,6 +1489,55 @@ def _sensor_vendor_imx363(*, asset_store: AssetStore) -> Sensor:
     return _sensor_from_upstream_model("data/sensor/sony/imx363.mat", asset_store=asset_store)
 
 
+def _sensor_vendor_imx490(variant: str, *, asset_store: AssetStore) -> Sensor:
+    normalized = param_format(variant)
+    if normalized not in {"large", "small", "imx490large", "imx490small"}:
+        raise UnsupportedOptionError("sensorCreate", f"IMX490/{variant}")
+
+    is_large = "large" in normalized
+    wave = np.arange(390.0, 711.0, 10.0, dtype=float)
+    sensor = sensor_create("bayer-rggb", asset_store=asset_store)
+    sensor = sensor_set(sensor, "wave", wave)
+    sensor = sensor_set(sensor, "rows", 600)
+    sensor = sensor_set(sensor, "cols", 800)
+    sensor = sensor_set(sensor, "pixel size same fill factor", 3.0e-6)
+
+    voltage_swing = 4096.0 * 0.25e-3
+    well_capacity = 120000.0 if is_large else 60000.0
+    fill_factor = 0.9 if is_large else 0.1
+
+    sensor = sensor_set(sensor, "pixel conversion gain", voltage_swing / well_capacity)
+    sensor = sensor_set(sensor, "pixel voltage swing", voltage_swing)
+    sensor = sensor_set(sensor, "pixel dark voltage", 0.0)
+    sensor = sensor_set(sensor, "pixel read noise electrons", 1.0)
+    sensor = sensor_set(sensor, "pixel fill factor", fill_factor)
+    sensor = sensor_set(sensor, "dsnu level", 0.0)
+    sensor = sensor_set(sensor, "prnu level", 0.7)
+    sensor = sensor_set(sensor, "analog gain", 1.0)
+    sensor = sensor_set(sensor, "analog offset", 0.0)
+    sensor = sensor_set(sensor, "exp time", 1.0 / 60.0)
+    sensor = sensor_set(sensor, "black level", 0.0)
+    sensor = sensor_set(sensor, "quantization method", "12 bit")
+    sensor = sensor_set(sensor, "bits", 12)
+
+    filter_spectra, filter_names, _ = ie_read_color_filter(
+        wave,
+        "data/sensor/colorfilters/auto/SONY/cf_imx490.mat",
+        asset_store=asset_store,
+    )
+    sensor = sensor_set(sensor, "filter spectra", filter_spectra)
+    sensor = sensor_set(sensor, "filter names", filter_names)
+
+    ir_filter = ie_read_spectra(
+        "data/sensor/irfilters/ircf_public.mat",
+        wave,
+        asset_store=asset_store,
+    ).reshape(-1)
+    sensor = sensor_set(sensor, "ir filter", ir_filter)
+    sensor = sensor_set(sensor, "name", f"imx490-{'large' if is_large else 'small'}")
+    return sensor
+
+
 def _matlab_kv_pairs(args: tuple[Any, ...], *, function_name: str) -> list[tuple[str, Any]]:
     if len(args) % 2 != 0:
         raise ValueError(f"{function_name} expects MATLAB-style key/value pairs.")
@@ -1664,6 +1713,12 @@ def sensor_create(
                     continue
                 sensor = sensor_set(sensor, parameter, value)
         return track_session_object(session, sensor)
+
+    if normalized in {"imx490large", "imx490-large"}:
+        return track_session_object(session, _sensor_vendor_imx490("large", asset_store=store))
+
+    if normalized in {"imx490small", "imx490-small"}:
+        return track_session_object(session, _sensor_vendor_imx490("small", asset_store=store))
 
     if normalized == "ideal":
         return sensor_create_ideal("xyz", None, asset_store=store, session=session)
@@ -1863,6 +1918,150 @@ def sensor_compute_array(
 sensorCreateSplitPixel = sensor_create_split_pixel
 sensorCreateArray = sensor_create_array
 sensorComputeArray = sensor_compute_array
+
+
+def imx490_compute(
+    oi: OpticalImage,
+    *args: Any,
+    asset_store: AssetStore | None = None,
+    seed: int | None = None,
+    session: SessionContext | None = None,
+) -> tuple[Sensor, dict[str, Any]]:
+    """Mirror the stable headless `imx490Compute(...)` workflow."""
+
+    store = _store(asset_store)
+    settings = _matlab_kv_pairs(args, function_name="imx490Compute")
+
+    gains = np.array([1.0, 4.0, 1.0, 4.0], dtype=float)
+    noise_flag = 2
+    exp_time = 1.0 / 60.0
+    method = "average"
+    for parameter, value in settings:
+        if parameter == "gain":
+            gains = np.asarray(value, dtype=float).reshape(-1)
+            if gains.size != 4:
+                raise ValueError("imx490Compute gain must contain four multiplicative gains.")
+        elif parameter == "noiseflag":
+            noise_flag = int(value)
+        elif parameter in {"exptime", "exposuretime", "integrationtime"}:
+            exp_time = float(value)
+        elif parameter == "method":
+            method = str(value)
+        else:
+            raise UnsupportedOptionError("imx490Compute", parameter)
+
+    large = sensor_create("imx490-large", asset_store=store)
+    large = sensor_set(large, "match oi", oi)
+    large = sensor_set(large, "noise flag", noise_flag)
+    large = sensor_set(large, "exp time", exp_time)
+
+    small = sensor_create("imx490-small", asset_store=store)
+    small = sensor_set(small, "match oi", oi)
+    small = sensor_set(small, "noise flag", noise_flag)
+    small = sensor_set(small, "exp time", exp_time)
+
+    oi_spacing_m = float(np.asarray(oi_get(oi, "spatial resolution"), dtype=float).reshape(-1)[0])
+    sensor_spacing_m = float(np.asarray(sensor_get(large, "pixel size"), dtype=float).reshape(-1)[0])
+    if abs(oi_spacing_m - sensor_spacing_m) > 1.0e-9:
+        raise ValueError("imx490Compute requires an optical image sampled at the IMX490 pixel size.")
+
+    oi_size = np.asarray(oi_get(oi, "size"), dtype=int).reshape(-1)
+    if oi_size.size != 2:
+        raise ValueError("imx490Compute requires a 2-D optical image.")
+    large = sensor_set(large, "size", oi_size)
+    small = sensor_set(small, "size", oi_size)
+
+    iset_gains = 1.0 / np.maximum(gains, 1.0e-12)
+    capture_specs = (
+        ("large-1x", large, float(iset_gains[0])),
+        ("large-4x", large, float(iset_gains[1])),
+        ("small-1x", small, float(iset_gains[2])),
+        ("small-4x", small, float(iset_gains[3])),
+    )
+    captures: list[Sensor] = []
+    for index, (name, template, analog_gain) in enumerate(capture_specs):
+        capture = sensor_set(template.clone(), "analog gain", analog_gain)
+        capture = sensor_set(capture, "name", name)
+        capture = sensor_compute(capture, oi, seed=None if seed is None else int(seed) + index)
+        captures.append(capture)
+
+    normalized_method = param_format(method)
+    if normalized_method not in {"average", "bestsnr"}:
+        raise UnsupportedOptionError("imx490Compute", method)
+
+    combined = large.clone()
+    if normalized_method == "average":
+        v1 = np.asarray(sensor_get(captures[0], "volts"), dtype=float)
+        v2 = np.asarray(sensor_get(captures[1], "volts"), dtype=float)
+        v3 = np.asarray(sensor_get(captures[2], "volts"), dtype=float)
+        v4 = np.asarray(sensor_get(captures[3], "volts"), dtype=float)
+
+        v_swing_large = float(sensor_get(large, "pixel voltage swing"))
+        v_swing_small = float(sensor_get(small, "pixel voltage swing"))
+        idx1 = v1 < v_swing_large
+        idx2 = v2 < v_swing_large
+        idx3 = v3 < v_swing_small
+        idx4 = v4 < v_swing_small
+        contributing = idx1.astype(int) + idx2.astype(int) + idx3.astype(int) + idx4.astype(int)
+
+        in1 = np.asarray(sensor_get(captures[0], "electrons per area", "um"), dtype=float)
+        in2 = np.asarray(sensor_get(captures[1], "electrons per area", "um"), dtype=float)
+        in3 = np.asarray(sensor_get(captures[2], "electrons per area", "um"), dtype=float)
+        in4 = np.asarray(sensor_get(captures[3], "electrons per area", "um"), dtype=float)
+
+        conversion_gain = float(sensor_get(large, "pixel conversion gain"))
+        safe_contributing = np.maximum(contributing, 1)
+        combined_volts = conversion_gain * ((in1 + in2 + in3 + in4) / safe_contributing)
+        combined_volts[contributing == 0] = 1.0
+
+        voltage_swing = float(sensor_get(large, "pixel voltage swing"))
+        max_value = float(np.max(combined_volts))
+        if max_value > 0.0:
+            combined_volts = voltage_swing * (combined_volts / max_value)
+
+        combined = sensor_set(combined, "quantization method", "analog")
+        combined = sensor_set(combined, "volts", combined_volts)
+        combined = sensor_set(combined, "analog gain", 1.0)
+        combined = sensor_set(combined, "analog offset", 0.0)
+        combined.metadata["npixels"] = contributing.astype(int)
+    else:
+        e1 = np.asarray(sensor_get(captures[0], "electrons"), dtype=float)
+        e2 = np.asarray(sensor_get(captures[1], "electrons"), dtype=float)
+        e3 = np.asarray(sensor_get(captures[2], "electrons"), dtype=float)
+        e4 = np.asarray(sensor_get(captures[3], "electrons"), dtype=float)
+
+        well_large = float(sensor_get(large, "pixel well capacity"))
+        well_small = float(sensor_get(small, "pixel well capacity"))
+        e1 = np.where(e1 < well_large, e1, 0.0)
+        e2 = np.where(e2 < well_large, e2, 0.0)
+        e3 = np.where(e3 < well_small, e3, 0.0)
+        e4 = np.where(e4 < well_small, e4, 0.0)
+
+        electron_stack = np.stack([e1, e2, e3, e4], axis=2)
+        best_pixel = np.argmax(electron_stack, axis=2) + 1
+        best_signal = np.max(electron_stack, axis=2)
+
+        combined_volts = best_signal * float(sensor_get(large, "pixel conversion gain"))
+        combined = sensor_set(combined, "quantization method", "analog")
+        combined = sensor_set(combined, "volts", combined_volts)
+        combined = sensor_set(combined, "analog gain", 1.0)
+        combined = sensor_set(combined, "analog offset", 0.0)
+        combined.metadata["bestPixel"] = best_pixel.astype(int)
+
+    nbits = int(sensor_get(large, "nbits"))
+    voltage_swing = max(float(sensor_get(combined, "pixel voltage swing")), 1.0e-12)
+    dv = (2**nbits) * (np.asarray(sensor_get(combined, "volts"), dtype=float) / voltage_swing)
+    combined = sensor_set(combined, "dv", dv)
+    combined = sensor_set(combined, "name", f"Combined-{normalized_method}")
+
+    metadata = {
+        "sensorArray": captures,
+        "method": normalized_method,
+    }
+    return track_session_object(session, combined), metadata
+
+
+imx490Compute = imx490_compute
 
 
 def _snr_voltage_levels(pixel: dict[str, Any], volts: Any | None) -> np.ndarray:

@@ -31,6 +31,7 @@ from pyisetcam import (
     oi_crop,
     oi_create,
     oi_get,
+    oi_spatial_resample,
     oi_set,
     psf_to_zcoeff_error,
     rt_angle_lut,
@@ -61,6 +62,7 @@ from pyisetcam import (
     scene_rotate,
     scene_set,
     signal_current,
+    imx490_compute,
     sensor_compute,
     sensor_compute_array,
     sensor_compute_samples,
@@ -5100,6 +5102,49 @@ def test_run_python_case_supports_sensor_rolling_shutter_small_parity_case(asset
     assert case.payload["sampled_row_stats"].shape == (3, 4)
     assert case.payload["result_mean_rgb_norm"].shape == (3,)
     assert case.payload["result_p95_rgb_norm"].shape == (3,)
+
+
+def test_oi_crop_border_and_imx490_compute_support_uniform_hdr_workflow(asset_store) -> None:
+    scene = scene_create("uniform", 256, asset_store=asset_store)
+    oi = oi_compute(oi_create(asset_store=asset_store), scene)
+    cropped = oi_crop(oi, "border")
+    resampled = oi_spatial_resample(cropped, 3.0, "um")
+
+    assert tuple(oi_get(cropped, "size"))[0] == tuple(oi_get(cropped, "size"))[1]
+    assert np.isclose(float(np.asarray(oi_get(resampled, "distance per sample"), dtype=float)[0]), 3.0e-6, rtol=1e-4)
+
+    sensor, metadata = imx490_compute(
+        resampled,
+        "method",
+        "best snr",
+        "exp time",
+        0.1,
+        "noise flag",
+        0,
+        asset_store=asset_store,
+    )
+    captures = metadata["sensorArray"]
+
+    assert len(captures) == 4
+    assert [str(sensor_get(capture, "name")) for capture in captures] == ["large-1x", "large-4x", "small-1x", "small-4x"]
+    assert tuple(sensor_get(sensor, "size")) == tuple(oi_get(resampled, "size"))
+    assert np.asarray(sensor_get(sensor, "volts"), dtype=float).shape == tuple(oi_get(resampled, "size"))
+    assert np.asarray(sensor.metadata["bestPixel"], dtype=int).shape == tuple(oi_get(resampled, "size"))
+
+
+def test_run_python_case_supports_sensor_imx490_uniform_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_imx490_uniform_small", asset_store=asset_store)
+
+    assert tuple(case.payload["oi_size"])[0] == tuple(case.payload["oi_size"])[1]
+    assert list(case.payload["capture_names"]) == ["large-1x", "large-4x", "small-1x", "small-4x"]
+    assert case.payload["capture_mean_electrons"].shape == (4,)
+    assert case.payload["capture_mean_volts"].shape == (4,)
+    assert case.payload["capture_mean_dv"].shape == (4,)
+    assert float(case.payload["large_gain_ratio"]) > 1.0
+    assert float(case.payload["small_area_ratio"]) < 1.0
+    assert case.payload["combined_volts_stats"].shape == (4,)
+    assert case.payload["best_pixel_counts"].shape == (4,)
+    assert int(np.sum(case.payload["best_pixel_counts"])) == int(np.prod(case.payload["oi_size"]))
 
 
 def test_run_python_case_supports_sensor_filter_transmissivities_parity_case(asset_store) -> None:
