@@ -1297,6 +1297,34 @@
       "atol": 1e-08
     },
     {
+      "name": "sensor_spectral_radiometer_small",
+      "matlab_function": "s_spectralRadiometer.m",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "noise_free_line": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        },
+        "shot_sd_line": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        },
+        "noisy_line_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.1
+        },
+        "noisy_full_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "noise_free_full_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        }
+      }
+    },
+    {
       "name": "sensor_spectral_estimation_small",
       "matlab_function": "s_sensorSpectralEstimation",
       "rtol": 1e-05,

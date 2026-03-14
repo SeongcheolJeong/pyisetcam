@@ -3262,6 +3262,53 @@ def run_python_case_with_context(
             context={"sensor": sensor},
         )
 
+    if case_name == "sensor_spectral_radiometer_small":
+        scene = scene_create("uniform d65", asset_store=store)
+        oi = oi_compute(oi_create(asset_store=store), scene)
+
+        wave = np.arange(400.0, 701.0, 1.0, dtype=float)
+        filter_spectra, filter_names, _ = ie_read_color_filter(wave, "radiometer", asset_store=store)
+        w_samples = np.array([float(name) for name in filter_names], dtype=float)
+        pattern = np.arange(1, filter_spectra.shape[1] + 1, dtype=int).reshape(1, -1)
+
+        sensor = sensor_create("monochrome", asset_store=store)
+        sensor = sensor_set(sensor, "wave", wave)
+        sensor = sensor_set(sensor, "filter spectra", filter_spectra)
+        sensor = sensor_set(sensor, "filter names", filter_names)
+        sensor = sensor_set(sensor, "pattern", pattern)
+        sensor = sensor_set(sensor, "size", np.array([10, filter_spectra.shape[1]], dtype=int))
+        sensor = sensor_set(sensor, "pixel fill factor", 1.0)
+        sensor = sensor_set(sensor, "pixel size same fill factor", np.array([1.5e-6, 1.5e-6], dtype=float))
+        sensor = sensor_set(sensor, "exposure time", 1.0 / 100.0)
+
+        sensor_noisy = sensor_set(sensor.clone(), "noise flag", -2)
+        sensor_noisy = sensor_compute(sensor_noisy, oi)
+        electrons_noisy = np.asarray(sensor_get(sensor_noisy, "electrons"), dtype=float)
+
+        sensor_noise_free = sensor_set(sensor.clone(), "noise flag", -1)
+        sensor_noise_free = sensor_compute(sensor_noise_free, oi)
+        electrons_noise_free = np.asarray(sensor_get(sensor_noise_free, "electrons"), dtype=float)
+
+        noisy_line = electrons_noisy[4, :]
+        noise_free_line = electrons_noise_free[4, :]
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "w_samples": w_samples,
+                "filter_pattern": pattern,
+                "sensor_size": np.asarray(sensor_get(sensor_noise_free, "size"), dtype=int),
+                "filter_spectra": np.asarray(sensor_get(sensor_noise_free, "filter spectra"), dtype=float),
+                "noise_free_line": noise_free_line,
+                "shot_sd_line": np.sqrt(np.maximum(noise_free_line, 0.0)),
+                "noisy_line_stats": _stats_vector(noisy_line),
+                "noisy_full_stats": _stats_vector(electrons_noisy),
+                "noise_free_full_stats": _stats_vector(electrons_noise_free),
+            },
+            context={"scene": scene, "oi": oi, "sensor": sensor_noise_free},
+        )
+
     if case_name == "sensor_spectral_estimation_small":
         scene = scene_create("uniform ee", asset_store=store)
         wave = np.asarray(scene_get(scene, "wave"), dtype=float)

@@ -2317,6 +2317,51 @@ switch case_name
         payload.estimated_weights = estimatedWeights';
         payload.estimated_illuminant = estimatedIlluminant;
 
+    case 'sensor_spectral_radiometer_small'
+        scene = sceneCreate('uniformD65');
+        oi = oiCreate;
+        oi = oiCompute(oi, scene);
+
+        wave = (400:700)';
+        [data, filterNames] = ieReadColorFilter(wave, 'radiometer');
+        nFilters = size(data, 2);
+        filterOrder = 1:nFilters;
+        filterFile = fullfile(upstream_root, 'data', 'sensor', 'colorfilters', 'radiometer.mat');
+        wSamples = zeros(1, numel(filterNames));
+        for ii = 1:numel(filterNames)
+            wSamples(ii) = str2double(filterNames{ii});
+        end
+
+        pixel = pixelCreate('default', wave);
+        pixel = pixelSet(pixel, 'fill factor', 1);
+        pixel = pixelSet(pixel, 'size same fill factor', [1.5 1.5] * 1e-6);
+
+        sensorRadiometer = sensorCreate('custom', pixel, filterOrder, filterFile, [], wave);
+        sensorRadiometer = sensorSet(sensorRadiometer, 'size', [10 nFilters]);
+
+        sensorRadiometer = sensorSet(sensorRadiometer, 'exposure time', 1/100);
+        sensorRadiometer = sensorSet(sensorRadiometer, 'noise flag', -2);
+        sensorRadiometer = sensorCompute(sensorRadiometer, oi);
+        electrons = sensorGet(sensorRadiometer, 'electrons');
+
+        sensorRadiometer = sensorSet(sensorRadiometer, 'noise flag', -1);
+        sensorRadiometer = sensorCompute(sensorRadiometer, oi);
+        electronsNoNoise = sensorGet(sensorRadiometer, 'electrons');
+
+        noisyLine = electrons(5, :);
+        noiseFreeLine = electronsNoNoise(5, :);
+
+        payload.wave = wave;
+        payload.w_samples = wSamples;
+        payload.filter_pattern = sensorGet(sensorRadiometer, 'pattern');
+        payload.sensor_size = sensorGet(sensorRadiometer, 'size');
+        payload.filter_spectra = sensorGet(sensorRadiometer, 'filter spectra');
+        payload.noise_free_line = noiseFreeLine;
+        payload.shot_sd_line = sqrt(max(noiseFreeLine, 0));
+        payload.noisy_line_stats = [mean(noisyLine(:)) std(noisyLine(:)) prctile(noisyLine(:), [5 95])];
+        payload.noisy_full_stats = [mean(electrons(:)) std(electrons(:)) prctile(electrons(:), [5 95])];
+        payload.noise_free_full_stats = [mean(electronsNoNoise(:)) std(electronsNoNoise(:)) prctile(electronsNoNoise(:), [5 95])];
+
     case 'sensor_spectral_estimation_small'
         scene = sceneCreate('uniform ee');
         wave = sceneGet(scene, 'wave');

@@ -212,7 +212,11 @@ sensor captures for the sharp and anti-aliased large-pixel paths. That
 same Phase 1 sensor wave now also includes the asset-driven DUT setup
 workflow from `s_sensorExternalAnalysis.m`, with curated Octave parity on
 the configured wave/filter/QE payload, CFA pattern, pixel metadata, and
-imported `dutData.mat` voltage summaries.
+imported `dutData.mat` voltage summaries. That same Phase 1 sensor wave
+now also includes the spectral-radiometer workflow from
+`s_spectralRadiometer.m`, with curated Octave parity on the radiometer
+filter geometry, deterministic noise-free electron line, theoretical
+shot-noise curve, and stable photon-noise summary statistics.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit

@@ -5706,6 +5706,53 @@ def test_run_python_case_supports_sensor_macbeth_daylight_estimate_small_parity_
     assert case.payload["estimated_illuminant"].shape == (31,)
 
 
+def test_sensor_spectral_radiometer_script_contract(asset_store) -> None:
+    scene = scene_create("uniform d65", asset_store=asset_store)
+    oi = oi_compute(oi_create(asset_store=asset_store), scene)
+
+    wave = np.arange(400.0, 701.0, 1.0, dtype=float)
+    filter_spectra, filter_names, _ = ie_read_color_filter(wave, "radiometer", asset_store=asset_store)
+    sensor = sensor_create("monochrome", asset_store=asset_store)
+    sensor = sensor_set(sensor, "wave", wave)
+    sensor = sensor_set(sensor, "filter spectra", filter_spectra)
+    sensor = sensor_set(sensor, "filter names", filter_names)
+    sensor = sensor_set(sensor, "pattern", np.arange(1, filter_spectra.shape[1] + 1, dtype=int).reshape(1, -1))
+    sensor = sensor_set(sensor, "size", [10, filter_spectra.shape[1]])
+    sensor = sensor_set(sensor, "pixel fill factor", 1.0)
+    sensor = sensor_set(sensor, "pixel size same fill factor", np.array([1.5e-6, 1.5e-6], dtype=float))
+    sensor = sensor_set(sensor, "exposure time", 1.0 / 100.0)
+
+    sensor_noisy = sensor_set(sensor.clone(), "noise flag", -2)
+    sensor_noisy = sensor_compute(sensor_noisy, oi, seed=0)
+    noisy_electrons = np.asarray(sensor_get(sensor_noisy, "electrons"), dtype=float)
+
+    sensor_noise_free = sensor_set(sensor.clone(), "noise flag", -1)
+    sensor_noise_free = sensor_compute(sensor_noise_free, oi)
+    noise_free_electrons = np.asarray(sensor_get(sensor_noise_free, "electrons"), dtype=float)
+
+    assert noisy_electrons.shape == (10, filter_spectra.shape[1])
+    assert noise_free_electrons.shape == (10, filter_spectra.shape[1])
+    assert np.array_equal(np.asarray(sensor_get(sensor_noise_free, "pattern"), dtype=int), np.arange(1, filter_spectra.shape[1] + 1, dtype=int).reshape(1, -1))
+    assert float(np.mean(noise_free_electrons)) > 0.0
+    assert np.all(np.sqrt(np.maximum(noise_free_electrons[4, :], 0.0)) >= 0.0)
+    assert abs(float(np.mean(noisy_electrons[4, :])) - float(np.mean(noise_free_electrons[4, :]))) / float(np.mean(noise_free_electrons[4, :])) < 0.15
+
+
+def test_run_python_case_supports_sensor_spectral_radiometer_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_spectral_radiometer_small", asset_store=asset_store)
+
+    assert case.payload["wave"].shape == (301,)
+    assert case.payload["w_samples"].shape == (76,)
+    assert case.payload["filter_pattern"].shape == (1, 76)
+    assert tuple(case.payload["sensor_size"]) == (10, 76)
+    assert case.payload["filter_spectra"].shape == (301, 76)
+    assert case.payload["noise_free_line"].shape == (76,)
+    assert case.payload["shot_sd_line"].shape == (76,)
+    assert case.payload["noisy_line_stats"].shape == (4,)
+    assert case.payload["noisy_full_stats"].shape == (4,)
+    assert case.payload["noise_free_full_stats"].shape == (4,)
+
+
 def test_run_python_case_supports_sensor_spectral_estimation_small_parity_case(asset_store) -> None:
     case = run_python_case_with_context("sensor_spectral_estimation_small", asset_store=asset_store)
 
