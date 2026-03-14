@@ -382,6 +382,39 @@ switch case_name
         payload.wave = oiGet(oi, 'wave');
         payload.photons = oiGet(oi, 'photons');
 
+    case 'oi_cos4th_small'
+        scene = sceneCreate('uniform d65', 512);
+        scene = sceneSet(scene, 'fov', 80);
+
+        oi = oiCreate('shift invariant');
+        focal_length_default_m = oiGet(oi, 'optics focal length');
+        oi = oiCompute(oi, scene);
+        size_default = oiGet(oi, 'size');
+        pos_default = oiSpatialSupport(oi, 'um');
+        illuminance_default = real(oiGet(oi, 'illuminance'));
+        center_row = round(size_default(2) / 2);
+
+        oi = oiSet(oi, 'optics focal length', 4 * focal_length_default_m);
+        focal_length_long_m = oiGet(oi, 'optics focal length');
+        oi = oiCompute(oi, scene);
+        size_long = oiGet(oi, 'size');
+        pos_long = oiSpatialSupport(oi, 'um');
+        illuminance_long = real(oiGet(oi, 'illuminance'));
+
+        payload.focal_length_default_m = focal_length_default_m;
+        payload.focal_length_long_m = focal_length_long_m;
+        payload.size_default = size_default;
+        payload.size_long = size_long;
+        payload.center_row = center_row;
+        payload.edge_row = 20;
+        payload.pos_default_um = pos_default.x;
+        payload.center_line_default_lux = real(illuminance_default(center_row, :));
+        payload.mean_illuminance_default_lux = real(mean(illuminance_default(:)));
+        payload.pos_long_um = pos_long.x;
+        payload.center_line_long_lux = real(illuminance_long(center_row, :));
+        payload.edge_line_long_lux = real(illuminance_long(20, :));
+        payload.mean_illuminance_long_lux = real(mean(illuminance_long(:)));
+
     case 'oi_psf_default_small'
         scene = sceneCreate('checkerboard', 8, 4);
         oi = oiCreate('psf');

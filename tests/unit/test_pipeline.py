@@ -33,6 +33,7 @@ from pyisetcam import (
     oi_crop,
     oi_create,
     oi_get,
+    oi_plot,
     oi_spatial_resample,
     oi_set,
     psf_to_zcoeff_error,
@@ -4566,6 +4567,47 @@ def test_run_python_case_supports_irradiance_hline_diffraction_lineep_parity_cas
     assert case.payload["wave"].ndim == 1
     assert case.payload["data"].shape == (case.payload["wave"].size, case.payload["pos"].size)
     assert np.all(case.payload["data"] >= 0.0)
+
+
+def test_oi_cos4th_script_smoke(asset_store) -> None:
+    scene = scene_create("uniform d65", 512, asset_store=asset_store)
+    scene = scene_set(scene, "fov", 80)
+
+    oi = oi_create("shift invariant", asset_store=asset_store)
+    focal_length = float(oi_get(oi, "optics focal length"))
+    oi = oi_compute(oi, scene)
+    size = np.asarray(oi_get(oi, "size"), dtype=int).reshape(-1)
+    center_locator = np.array([1, size[1] / 2.0], dtype=float)
+    default_line, _ = oi_plot(oi, "illuminance hline", center_locator)
+
+    oi = oi_set(oi, "optics focal length", 4.0 * focal_length)
+    oi = oi_compute(oi, scene)
+    long_center_line, _ = oi_plot(oi, "illuminance hline", center_locator)
+    long_edge_line, _ = oi_plot(oi, "illuminance hline", np.array([1, 20], dtype=float))
+
+    assert default_line["pos"].ndim == 1
+    assert default_line["data"].shape == default_line["pos"].shape
+    assert long_center_line["data"].shape == long_center_line["pos"].shape
+    assert long_edge_line["data"].shape == long_edge_line["pos"].shape
+    assert np.isclose(float(oi_get(oi, "optics focal length")), 4.0 * focal_length)
+    assert float(np.max(long_center_line["data"])) > 0.0
+    assert not np.allclose(long_center_line["data"], long_edge_line["data"])
+
+
+def test_run_python_case_supports_oi_cos4th_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("oi_cos4th_small", asset_store=asset_store)
+
+    assert np.isclose(float(case.payload["focal_length_long_m"]), 4.0 * float(case.payload["focal_length_default_m"]))
+    assert case.payload["size_default"].shape == (2,)
+    assert case.payload["size_long"].shape == (2,)
+    assert int(case.payload["center_row"]) > 0
+    assert int(case.payload["edge_row"]) == 20
+    assert case.payload["pos_default_um"].ndim == 1
+    assert case.payload["center_line_default_lux"].shape == case.payload["pos_default_um"].shape
+    assert case.payload["pos_long_um"].shape == case.payload["center_line_long_lux"].shape
+    assert case.payload["edge_line_long_lux"].shape == case.payload["pos_long_um"].shape
+    assert float(case.payload["mean_illuminance_default_lux"]) > 0.0
+    assert float(case.payload["mean_illuminance_long_lux"]) > 0.0
 
 
 def test_run_python_case_supports_psf550_diffraction_parity_case(asset_store) -> None:

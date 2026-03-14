@@ -835,6 +835,30 @@
       "atol": 1e-06
     },
     {
+      "name": "oi_cos4th_small",
+      "matlab_function": "s_opticsCos4th",
+      "rtol": 1e-05,
+      "atol": 1e-06,
+      "field_overrides": {
+        "pos_default_um": {
+          "mode": "mean_rel",
+          "max_mean_rel": 2e-06
+        },
+        "pos_long_um": {
+          "mode": "mean_rel",
+          "max_mean_rel": 2e-06
+        },
+        "center_line_default_lux": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 1e-05
+        },
+        "center_line_long_lux": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 1e-05
+        }
+      }
+    },
+    {
       "name": "oi_wvf_small_scene",
       "matlab_function": "oiCompute",
       "rtol": 1e-04,

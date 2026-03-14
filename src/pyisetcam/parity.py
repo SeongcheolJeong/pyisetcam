@@ -2159,6 +2159,46 @@ def run_python_case_with_context(
             context={"scene": scene, "oi": oi},
         )
 
+    if case_name == "oi_cos4th_small":
+        scene = scene_create("uniform d65", 512, asset_store=store)
+        scene = scene_set(scene, "fov", 80)
+
+        oi = oi_create("shift invariant", asset_store=store)
+        focal_length_default_m = float(oi_get(oi, "optics focal length"))
+        oi = oi_compute(oi, scene)
+        size_default = np.asarray(oi_get(oi, "size"), dtype=int).reshape(-1)
+        support_default = dict(oi_get(oi, "spatial support linear", "um"))
+        illuminance_default = np.asarray(oi_get(oi, "illuminance"), dtype=float)
+        mean_illuminance_default = float(np.mean(illuminance_default))
+        center_row = int(np.rint(size_default[1] / 2.0))
+
+        oi = oi_set(oi, "optics focal length", 4.0 * focal_length_default_m)
+        focal_length_long_m = float(oi_get(oi, "optics focal length"))
+        oi = oi_compute(oi, scene)
+        size_long = np.asarray(oi_get(oi, "size"), dtype=int).reshape(-1)
+        support_long = dict(oi_get(oi, "spatial support linear", "um"))
+        illuminance_long = np.asarray(oi_get(oi, "illuminance"), dtype=float)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "focal_length_default_m": focal_length_default_m,
+                "focal_length_long_m": focal_length_long_m,
+                "size_default": size_default,
+                "size_long": size_long,
+                "center_row": center_row,
+                "edge_row": 20,
+                "pos_default_um": np.asarray(support_default["x"], dtype=float),
+                "center_line_default_lux": np.asarray(illuminance_default[center_row - 1, :], dtype=float),
+                "mean_illuminance_default_lux": mean_illuminance_default,
+                "pos_long_um": np.asarray(support_long["x"], dtype=float),
+                "center_line_long_lux": np.asarray(illuminance_long[center_row - 1, :], dtype=float),
+                "edge_line_long_lux": np.asarray(illuminance_long[20 - 1, :], dtype=float),
+                "mean_illuminance_long_lux": float(np.mean(illuminance_long)),
+            },
+            context={"scene": scene, "oi": oi},
+        )
+
     if case_name == "oi_wvf_small_scene":
         scene = scene_create("checkerboard", 8, 4, asset_store=store)
         oi_seed = oi_create("wvf")

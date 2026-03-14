@@ -221,6 +221,10 @@ Phase 2 optics coverage now also includes direct `optics_coc` /
 `opticsCoC` support for the thin-lens circle-of-confusion workflow from
 `s_opticsCoC.m`, with curated Octave parity on the 50 mm F/2 and F/8
 diameter-versus-distance sweeps at 0.5 m and 3 m focus.
+That same Phase 2 optics wave now also includes the wide-field
+`s_opticsCos4th.m` vignetting workflow, with curated Octave parity on the
+default and 4x-focal-length illuminance hline profiles and their mean
+illuminance summaries for a uniform D65 scene at 80 degrees FOV.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit
