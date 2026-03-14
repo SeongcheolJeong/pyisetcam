@@ -223,6 +223,12 @@
       "atol": 1e-06
     },
     {
+      "name": "oi_psf_plot_diffraction_small",
+      "matlab_function": "s_opticsPSFPlot.m",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "oi_psfxaxis_wvf_small",
       "matlab_function": "wvf2oi/oiGet/wvfGet",
       "rtol": 1e-05,

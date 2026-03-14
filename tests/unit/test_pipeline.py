@@ -27,6 +27,7 @@ from pyisetcam import (
     optics_dof,
     optics_psf_to_otf,
     optics_ray_trace,
+    airy_disk,
     oi_calculate_illuminance,
     oi_diffuser,
     oi_compute,
@@ -2450,6 +2451,23 @@ def test_optics_gaussian_psf_point_array_script_flow(asset_store) -> None:
     assert np.max(oi.data["photons"]) > 0.0
 
 
+def test_optics_psf_plot_script_flow() -> None:
+    oi = oi_create("diffraction limited")
+    optics = dict(oi.fields["optics"])
+    optics["f_number"] = 12.0
+    oi.fields["optics"] = optics
+
+    psf_data = oi_get(oi, "psf data", 600.0, "um", 100)
+    xy = np.asarray(psf_data["xy"], dtype=float)
+    psf = np.asarray(psf_data["psf"], dtype=float)
+
+    assert psf.shape == (200, 200)
+    assert xy.shape == (200, 200, 2)
+    assert np.all(psf >= 0.0)
+    assert float(psf[psf.shape[0] // 2, psf.shape[1] // 2]) == pytest.approx(float(np.max(psf)))
+    assert float(airy_disk(600.0, float(oi_get(oi, "fnumber")), "units", "um")) == pytest.approx(8.784)
+
+
 def test_si_synthetic_lorentzian_applies_to_grid_lines_scene(asset_store) -> None:
     scene = scene_create("grid lines", [64, 64], 16, "ee", 2, asset_store=asset_store)
     scene = scene_set(scene, "fov", 2.0)
@@ -4675,6 +4693,16 @@ def test_run_python_case_supports_psfyaxis_diffraction_parity_case(asset_store) 
     assert case.payload["data"].shape == case.payload["samp"].shape
     assert np.isclose(float(case.payload["wave"]), 550.0)
     assert np.all(case.payload["data"] >= 0.0)
+
+
+def test_run_python_case_supports_psf_plot_diffraction_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("oi_psf_plot_diffraction_small", asset_store=asset_store)
+
+    assert case.payload["x"].shape == (200, 200)
+    assert case.payload["y"].shape == (200, 200)
+    assert case.payload["psf"].shape == (200, 200)
+    assert np.all(case.payload["psf"] >= 0.0)
+    assert float(case.payload["airy_disk_radius_um"]) == pytest.approx(8.784)
 
 
 def test_run_python_case_supports_psfxaxis_wvf_parity_case(asset_store) -> None:

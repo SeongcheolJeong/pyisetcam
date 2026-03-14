@@ -767,6 +767,28 @@ def run_python_case_with_context(
             context={"oi": oi},
         )
 
+    if case_name == "oi_psf_plot_diffraction_small":
+        oi = oi_create("diffraction limited")
+        optics = dict(oi.fields["optics"])
+        optics["f_number"] = 12.0
+        oi.fields["optics"] = optics
+        this_wave = 600.0
+        units = "um"
+        n_samp = 100
+        psf_data = dict(oi_get(oi, "psf data", this_wave, units, n_samp))
+        xy = np.asarray(psf_data["xy"], dtype=float)
+        psf = np.asarray(psf_data["psf"], dtype=float)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "x": xy[:, :, 0].copy(),
+                "y": xy[:, :, 1].copy(),
+                "psf": psf,
+                "airy_disk_radius_um": float(airy_disk(this_wave, float(oi_get(oi, "fnumber")), "units", units)),
+            },
+            context={"oi": oi},
+        )
+
     if case_name == "oi_psfxaxis_wvf_small":
         wvf = wvf_create(wave=np.array([550.0], dtype=float))
         this_wave = 550.0

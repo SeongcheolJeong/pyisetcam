@@ -455,6 +455,17 @@ switch case_name
         payload.data = uData.data;
         payload.wave = 550;
 
+    case 'oi_psf_plot_diffraction_small'
+        oi = oiCreate('diffraction limited');
+        optics = oiGet(oi, 'optics');
+        optics = opticsSet(optics, 'fnumber', 12);
+        oi = oiSet(oi, 'optics', optics);
+        psfData = opticsGet(oiGet(oi, 'optics'), 'psf data', 600, 'um', 100);
+        payload.x = psfData.xy(:, :, 1);
+        payload.y = psfData.xy(:, :, 2);
+        payload.psf = psfData.psf;
+        payload.airy_disk_radius_um = airyDisk(600, oiGet(oi, 'fnumber'), 'units', 'um');
+
     case 'oi_psfxaxis_wvf_small'
         wvf = wvfCreate('wave', 550);
         thisWave = 550;

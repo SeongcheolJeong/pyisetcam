@@ -230,6 +230,10 @@ That same optics wave now also includes MATLAB-style
 `sceneSet(..., 'wave', ...)`, plus curated parity for the
 `s_opticsGaussianPSF.m` point-array workflow on the normalized blurred
 center row and column profiles across 450 nm, 550 nm, and 650 nm.
+That same Phase 2 optics wave now also includes the diffraction-limited
+`s_opticsPSFPlot.m` workflow, with curated parity on the 600 nm, `f/#=12`,
+`nSamp=100` PSF surface and Airy-disk radius returned by the underlying
+headless PSF data contract.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit
