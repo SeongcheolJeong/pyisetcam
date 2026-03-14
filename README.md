@@ -234,6 +234,10 @@ That same Phase 2 optics wave now also includes the diffraction-limited
 `s_opticsPSFPlot.m` workflow, with curated parity on the 600 nm, `f/#=12`,
 `nSamp=100` PSF surface and Airy-disk radius returned by the underlying
 headless PSF data contract.
+That same optics wave now also includes the `s_opticsPadCrop.m` workflow,
+with curated parity on the padded OI size, MATLAB crop rectangle, cropped
+OI geometry, and the deterministic sensor line-profile outputs for both
+the scene-FOV crop path and the expanded padded-FOV path.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit

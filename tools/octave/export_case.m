@@ -415,6 +415,48 @@ switch case_name
         payload.edge_line_long_lux = real(illuminance_long(20, :));
         payload.mean_illuminance_long_lux = real(mean(illuminance_long(:)));
 
+    case 'oi_pad_crop_small'
+        scene = sceneCreate('sweep frequency');
+        oi = oiCreate;
+        oi = oiCompute(oi, scene);
+        paddedSize = oiGet(oi, 'size');
+        originalSize = paddedSize / 1.25;
+        offset = (paddedSize - originalSize) / 2;
+        rect = [offset(2) + 1, offset(1) + 1, originalSize(2) - 1, originalSize(1) - 1];
+        oiCropped = oiCrop(oi, rect);
+
+        sensorScene = sensorCreate;
+        sensorScene = sensorSet(sensorScene, 'noise flag', 0);
+        sensorScene = sensorSet(sensorScene, 'fov', sceneGet(scene, 'fov'), oi);
+        sensorFromPadded = sensorCompute(sensorScene, oi);
+        sensorFromCropped = sensorCompute(sensorScene, oiCropped);
+        paddedVolts = sensorGet(sensorFromPadded, 'volts');
+        croppedVolts = sensorGet(sensorFromCropped, 'volts');
+        rowIndex = floor(size(paddedVolts, 1) / 2) + 1;
+        sensorSupport = sensorGet(sensorScene, 'spatial support', 'um');
+
+        sensorPadded = sensorSetSizeToFOV(sensorScene, oiGet(oi, 'fov'), oi);
+        sensorPadded = sensorCompute(sensorPadded, oi);
+        paddedSupport = sensorGet(sensorPadded, 'spatial support', 'um');
+        paddedSensorVolts = sensorGet(sensorPadded, 'volts');
+        paddedRowIndex = floor(size(paddedSensorVolts, 1) / 2) + 1;
+
+        payload.scene_size = sceneGet(scene, 'size');
+        payload.oi_padded_size = paddedSize(:);
+        payload.crop_rect = round(rect(:));
+        payload.oi_cropped_size = oiGet(oiCropped, 'size')(:);
+        payload.scene_fov_deg = sceneGet(scene, 'fov');
+        payload.oi_padded_fov_deg = oiGet(oi, 'fov');
+        payload.oi_cropped_fov_deg = oiGet(oiCropped, 'fov');
+        payload.sensor_scene_fov_size = sensorGet(sensorScene, 'size');
+        payload.sensor_scene_fov_pos_um = sensorSupport.x(:);
+        payload.sensor_scene_fov_padded_row = paddedVolts(rowIndex, :)';
+        payload.sensor_scene_fov_cropped_row = croppedVolts(rowIndex, :)';
+        payload.sensor_scene_fov_normalized_mae = mean(abs(paddedVolts(:) - croppedVolts(:))) / max(mean(abs(croppedVolts(:))), 1e-12);
+        payload.sensor_padded_size = sensorGet(sensorPadded, 'size');
+        payload.sensor_padded_pos_um = paddedSupport.x(:);
+        payload.sensor_padded_row = paddedSensorVolts(paddedRowIndex, :)';
+
     case 'oi_psf_default_small'
         scene = sceneCreate('checkerboard', 8, 4);
         oi = oiCreate('psf');

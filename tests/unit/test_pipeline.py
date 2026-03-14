@@ -4668,6 +4668,23 @@ def test_run_python_case_supports_oi_cos4th_small_parity_case(asset_store) -> No
     assert float(case.payload["mean_illuminance_long_lux"]) > 0.0
 
 
+def test_run_python_case_supports_oi_pad_crop_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("oi_pad_crop_small", asset_store=asset_store)
+
+    assert tuple(case.payload["scene_size"]) == (128, 128)
+    assert tuple(case.payload["oi_padded_size"]) == (160, 160)
+    assert tuple(case.payload["crop_rect"]) == (17, 17, 127, 127)
+    assert tuple(case.payload["oi_cropped_size"]) == (128, 128)
+    assert float(case.payload["scene_fov_deg"]) == pytest.approx(10.0)
+    assert float(case.payload["oi_cropped_fov_deg"]) > float(case.payload["scene_fov_deg"])
+    assert float(case.payload["oi_cropped_fov_deg"]) < float(case.payload["oi_padded_fov_deg"])
+    assert case.payload["sensor_scene_fov_pos_um"].shape == case.payload["sensor_scene_fov_padded_row"].shape
+    assert case.payload["sensor_scene_fov_cropped_row"].shape == case.payload["sensor_scene_fov_pos_um"].shape
+    assert float(case.payload["sensor_scene_fov_normalized_mae"]) < 0.02
+    assert case.payload["sensor_padded_pos_um"].shape == case.payload["sensor_padded_row"].shape
+    assert tuple(case.payload["sensor_padded_size"])[0] > tuple(case.payload["sensor_scene_fov_size"])[0]
+
+
 def test_run_python_case_supports_psf550_diffraction_parity_case(asset_store) -> None:
     case = run_python_case_with_context("oi_psf550_diffraction_small", asset_store=asset_store)
 
@@ -5278,6 +5295,37 @@ def test_oi_crop_border_and_imx490_compute_support_uniform_hdr_workflow(asset_st
     assert tuple(sensor_get(sensor, "size")) == tuple(oi_get(resampled, "size"))
     assert np.asarray(sensor_get(sensor, "volts"), dtype=float).shape == tuple(oi_get(resampled, "size"))
     assert np.asarray(sensor.metadata["bestPixel"], dtype=int).shape == tuple(oi_get(resampled, "size"))
+
+
+def test_oi_pad_crop_supports_script_geometry_and_sensor_fov_flow(asset_store) -> None:
+    scene = scene_create("sweep frequency", asset_store=asset_store)
+    oi = oi_compute(oi_create(asset_store=asset_store), scene)
+
+    padded_size = np.asarray(oi_get(oi, "size"), dtype=float)
+    original_size = padded_size / 1.25
+    offset = (padded_size - original_size) / 2.0
+    rect = np.array([offset[1] + 1.0, offset[0] + 1.0, original_size[1] - 1.0, original_size[0] - 1.0], dtype=float)
+    oi_cropped = oi_crop(oi, rect)
+
+    assert tuple(np.rint(rect).astype(int)) == (17, 17, 127, 127)
+    assert tuple(oi_get(oi_cropped, "size")) == tuple(scene_get(scene, "size"))
+    assert float(oi_get(oi_cropped, "fov")) > float(scene_get(scene, "fov"))
+    assert float(oi_get(oi_cropped, "fov")) < float(oi_get(oi, "fov"))
+
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "noise flag", 0)
+    sensor = sensor_set(sensor, "fov", scene_get(scene, "fov"), oi)
+    sensor_from_padded = sensor_compute(sensor, oi, seed=0)
+    sensor_from_cropped = sensor_compute(sensor, oi_cropped, seed=0)
+    volts_padded = np.asarray(sensor_get(sensor_from_padded, "volts"), dtype=float)
+    volts_cropped = np.asarray(sensor_get(sensor_from_cropped, "volts"), dtype=float)
+    normalized_mae = float(np.mean(np.abs(volts_padded - volts_cropped))) / max(float(np.mean(np.abs(volts_cropped))), 1e-12)
+
+    assert normalized_mae < 0.02
+
+    sensor_padded = sensor_set_size_to_fov(sensor.clone(), oi_get(oi, "fov"), oi)
+    sensor_padded = sensor_compute(sensor_padded, oi, seed=0)
+    assert tuple(sensor_get(sensor_padded, "size"))[0] > tuple(sensor_get(sensor, "size"))[0]
 
 
 def test_run_python_case_supports_sensor_imx490_uniform_small_parity_case(asset_store) -> None:

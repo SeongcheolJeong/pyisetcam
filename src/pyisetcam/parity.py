@@ -2262,6 +2262,54 @@ def run_python_case_with_context(
             context={"scene": scene, "oi": oi},
         )
 
+    if case_name == "oi_pad_crop_small":
+        scene = scene_create("sweep frequency", asset_store=store)
+        oi = oi_compute(oi_create(), scene)
+        padded_size = np.asarray(oi_get(oi, "size"), dtype=float).reshape(-1)
+        original_size = padded_size / 1.25
+        offset = (padded_size - original_size) / 2.0
+        rect = np.array([offset[1] + 1.0, offset[0] + 1.0, original_size[1] - 1.0, original_size[0] - 1.0], dtype=float)
+        oi_cropped = oi_crop(oi, rect)
+
+        sensor_scene_fov = sensor_create(asset_store=store)
+        sensor_scene_fov = sensor_set(sensor_scene_fov, "noise flag", 0)
+        sensor_scene_fov = sensor_set(sensor_scene_fov, "fov", float(scene_get(scene, "fov")), oi)
+        sensor_from_padded = sensor_compute(sensor_scene_fov, oi, seed=0)
+        sensor_from_cropped = sensor_compute(sensor_scene_fov, oi_cropped, seed=0)
+        padded_volts = np.asarray(sensor_get(sensor_from_padded, "volts"), dtype=float)
+        cropped_volts = np.asarray(sensor_get(sensor_from_cropped, "volts"), dtype=float)
+        row_index = padded_volts.shape[0] // 2
+        sensor_support = sensor_get(sensor_scene_fov, "spatial support", "um")
+        normalized_mae = float(np.mean(np.abs(padded_volts - cropped_volts))) / max(float(np.mean(np.abs(cropped_volts))), 1e-12)
+
+        sensor_padded = sensor_set_size_to_fov(sensor_scene_fov.clone(), float(oi_get(oi, "fov")), oi)
+        sensor_padded = sensor_compute(sensor_padded, oi, seed=0)
+        padded_support = sensor_get(sensor_padded, "spatial support", "um")
+        padded_sensor_volts = np.asarray(sensor_get(sensor_padded, "volts"), dtype=float)
+        padded_row_index = padded_sensor_volts.shape[0] // 2
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "oi_padded_size": np.asarray(oi_get(oi, "size"), dtype=int),
+                "crop_rect": np.rint(rect).astype(int),
+                "oi_cropped_size": np.asarray(oi_get(oi_cropped, "size"), dtype=int),
+                "scene_fov_deg": float(scene_get(scene, "fov")),
+                "oi_padded_fov_deg": float(oi_get(oi, "fov")),
+                "oi_cropped_fov_deg": float(oi_get(oi_cropped, "fov")),
+                "sensor_scene_fov_size": np.asarray(sensor_get(sensor_scene_fov, "size"), dtype=int),
+                "sensor_scene_fov_pos_um": np.asarray(sensor_support["x"], dtype=float),
+                "sensor_scene_fov_padded_row": np.asarray(padded_volts[row_index, :], dtype=float),
+                "sensor_scene_fov_cropped_row": np.asarray(cropped_volts[row_index, :], dtype=float),
+                "sensor_scene_fov_normalized_mae": normalized_mae,
+                "sensor_padded_size": np.asarray(sensor_get(sensor_padded, "size"), dtype=int),
+                "sensor_padded_pos_um": np.asarray(padded_support["x"], dtype=float),
+                "sensor_padded_row": np.asarray(padded_sensor_volts[padded_row_index, :], dtype=float),
+            },
+            context={"scene": scene, "oi": oi, "oi_cropped": oi_cropped},
+        )
+
     if case_name == "oi_wvf_small_scene":
         scene = scene_create("checkerboard", 8, 4, asset_store=store)
         oi_seed = oi_create("wvf")
