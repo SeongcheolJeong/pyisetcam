@@ -1321,6 +1321,145 @@ def run_python_case_with_context(
             context={"wvf": current},
         )
 
+    if case_name == "wvf_diffraction_small":
+        flength_mm = 6.0
+        flength_m = flength_mm * 1e-3
+        f_number = 3.0
+        this_wave = 550.0
+        canonical_samples = 41
+
+        def _canonical_profile(values: np.ndarray) -> np.ndarray:
+            profile = np.asarray(values, dtype=float)
+            if profile.ndim == 1:
+                support = np.linspace(-1.0, 1.0, profile.size, dtype=float)
+                query = np.linspace(-1.0, 1.0, canonical_samples, dtype=float)
+                return np.interp(query, support, profile)
+            if profile.ndim == 2:
+                return np.vstack([_canonical_profile(row) for row in profile])
+            raise ValueError("Expected a vector or row-stacked matrix.")
+
+        wvf = wvf_create()
+        wvf = wvf_set(wvf, "calc pupil diameter", flength_mm / f_number)
+        wvf = wvf_set(wvf, "focal length", flength_m)
+        wvf = wvf_compute(wvf)
+
+        _, _ = wvf_plot(
+            wvf,
+            "psf",
+            "unit",
+            "um",
+            "wave",
+            this_wave,
+            "plot range",
+            10.0,
+            "airy disk",
+            True,
+            "window",
+            False,
+        )
+
+        oi = wvf_to_oi(wvf)
+        oi_psfx_udata, _ = oi_plot(oi, "psfxaxis", None, this_wave, "um")
+
+        pupil_mm = np.linspace(1.5, 8.0, 4, dtype=float)
+        pupil_550_airy: list[float] = []
+        current = wvf
+        for pupil in pupil_mm:
+            current = wvf_set(current, "calc pupil diameter", float(pupil))
+            current = wvf_compute(current)
+            udata, _ = wvf_plot(
+                current,
+                "image psf",
+                "unit",
+                "um",
+                "wave",
+                this_wave,
+                "plot range",
+                5.0,
+                "airy disk",
+                True,
+                "window",
+                False,
+            )
+            pupil_550_airy.append(float(airy_disk(this_wave, float(wvf_get(current, "fnumber")), "units", "um", "diameter", True)))
+
+        this_wave = 400.0
+        current = wvf_set(current, "calc wave", this_wave)
+        pupil_400_airy: list[float] = []
+        for pupil in pupil_mm:
+            current = wvf_set(current, "calc pupil diameter", float(pupil))
+            current = wvf_compute(current)
+            udata, _ = wvf_plot(
+                current,
+                "image psf",
+                "unit",
+                "um",
+                "wave",
+                this_wave,
+                "plot range",
+                5.0,
+                "airy disk",
+                True,
+                "window",
+                False,
+            )
+            pupil_400_airy.append(float(airy_disk(this_wave, float(wvf_get(current, "fnumber")), "units", "um", "diameter", True)))
+
+        current = wvf_set(current, "calc pupil diameter", 3.0)
+        current = wvf_set(current, "calc wave", 550.0)
+        wavelength_list = np.linspace(400.0, 700.0, 4, dtype=float)
+        lca_rows: list[np.ndarray] = []
+        lca_airy: list[float] = []
+        for wavelength in wavelength_list:
+            current = wvf_set(current, "calc wave", float(wavelength))
+            current = wvf_set(current, "lcaMethod", "human")
+            current = wvf_compute(current)
+            udata, _ = wvf_plot(
+                current,
+                "image psf",
+                "unit",
+                "um",
+                "wave",
+                float(wavelength),
+                "plot range",
+                20.0,
+                "airy disk",
+                True,
+                "window",
+                False,
+            )
+            z = np.asarray(udata["z"], dtype=float)
+            lca_rows.append(np.asarray(z[z.shape[0] // 2, :], dtype=float))
+            lca_airy.append(float(airy_disk(float(wavelength), float(wvf_get(current, "fnumber")), "units", "um", "diameter", True)))
+
+        base_flength_m = 7e-3
+        base_fnumber = 4.0
+        diffraction_wvf = wvf_create()
+        diffraction_wvf = wvf_set(diffraction_wvf, "calc pupil diameter", (base_flength_m * 1e3) / base_fnumber)
+        diffraction_wvf = wvf_set(diffraction_wvf, "focal length", base_flength_m)
+        diffraction_wvf = wvf_compute(diffraction_wvf)
+
+        focal_length_sweep_m = np.array([base_flength_m / 2.0, base_flength_m, base_flength_m * 2.0], dtype=float)
+        focal_length_um_per_degree = focal_length_sweep_m * 1e6 * (2.0 * np.tan(np.deg2rad(0.5)))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "base_fnumber_ratio_oi_wvf": float(oi_get(oi, "optics fnumber")) / max(float(wvf_get(wvf, "fnumber")), 1e-12),
+                "base_airy_diameter_um": float(airy_disk(550.0, f_number, "units", "um", "diameter", True)),
+                "base_oi_psfx_data": np.asarray(oi_psfx_udata["data"], dtype=float),
+                "pupil_mm": pupil_mm,
+                "pupil_550_airy_diameter_um": np.asarray(pupil_550_airy, dtype=float),
+                "pupil_400_airy_diameter_um": np.asarray(pupil_400_airy, dtype=float),
+                "lca_wavelength_nm": wavelength_list,
+                "lca_airy_diameter_um": np.asarray(lca_airy, dtype=float),
+                "lca_mid_rows": _canonical_profile(np.vstack(lca_rows)),
+                "focal_length_sweep_mm": focal_length_sweep_m * 1e3,
+                "focal_length_um_per_degree": np.asarray(focal_length_um_per_degree, dtype=float),
+            },
+            context={"wvf": diffraction_wvf, "oi": oi},
+        )
+
     if case_name == "wvf_spatial_sampling_small":
         wvf = wvf_create(wave=np.array([550.0], dtype=float))
         this_wave = float(np.asarray(wvf_get(wvf, "wave"), dtype=float).reshape(-1)[0])

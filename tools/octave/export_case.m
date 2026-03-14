@@ -270,6 +270,80 @@ switch case_name
         payload.psf_mid_cols = colProfiles;
         payload.psf_centers = centers(:);
 
+    case 'wvf_diffraction_small'
+        flengthMM = 6;
+        flengthM = flengthMM*1e-3;
+        fNumber = 3;
+        thisWave = 550;
+
+        wvf = wvfCreate;
+        wvf = wvfSet(wvf, 'calc pupil diameter', flengthMM/fNumber);
+        wvf = wvfSet(wvf, 'focal length', flengthM);
+        wvf = wvfCompute(wvf);
+        baseWvf = wvf;
+
+        wvfPlot(wvf, 'psf', 'unit', 'um', 'wave', thisWave, 'plot range', 10, 'airy disk', true, 'window', false);
+
+        oi = wvf2oi(wvf);
+        oiPsfx = oiGet(oi, 'optics psf xaxis', thisWave, 'um');
+
+        pupilMM = linspace(1.5, 8, 4);
+        pupil550Airy = zeros(size(pupilMM));
+        for ii = 1:numel(pupilMM)
+            wvf = wvfSet(wvf, 'calc pupil diameter', pupilMM(ii));
+            wvf = wvfCompute(wvf);
+            uData = wvfPlot(wvf, 'image psf', 'unit', 'um', 'wave', thisWave, 'plot range', 5, 'airy disk', true, 'window', false);
+            pupil550Airy(ii) = airyDisk(thisWave, flengthMM / pupilMM(ii), 'units', 'um', 'diameter', true);
+        end
+
+        thisWave = 400;
+        wvf = wvfSet(wvf, 'calc wave', thisWave);
+        pupil400Airy = zeros(size(pupilMM));
+        for ii = 1:numel(pupilMM)
+            wvf = wvfSet(wvf, 'calc pupil diameter', pupilMM(ii));
+            wvf = wvfCompute(wvf);
+            uData = wvfPlot(wvf, 'image psf', 'unit', 'um', 'wave', thisWave, 'plot range', 5, 'airy disk', true, 'window', false);
+            pupil400Airy(ii) = airyDisk(thisWave, flengthMM / pupilMM(ii), 'units', 'um', 'diameter', true);
+        end
+
+        wvf = wvfSet(wvf, 'calc pupil diameter', 3);
+        wvf = wvfSet(wvf, 'calc wave', 550);
+        wList = linspace(400,700,4);
+        lcaRows = [];
+        lcaAiry = zeros(size(wList));
+        for ii = 1:numel(wList)
+            ww = wList(ii);
+            wvf = wvfSet(wvf, 'calc wave', ww);
+            wvf = wvfSet(wvf, 'lcaMethod', 'human');
+            wvf = wvfCompute(wvf);
+            uData = wvfPlot(wvf, 'image psf', 'unit', 'um', 'wave', ww, 'plot range', 20, 'airy disk', true, 'window', false);
+            z = double(uData.z);
+            lcaRows(ii, :) = z(floor(size(z, 1) / 2) + 1, :);
+            lcaAiry(ii) = airyDisk(ww, flengthMM / 3, 'units', 'um', 'diameter', true);
+        end
+
+        wvf = wvfCreate;
+        baseFLengthM = 7e-3;
+        baseFNumber = 4;
+        wvf = wvfSet(wvf, 'calc pupil diameter', (baseFLengthM*1e3)/baseFNumber);
+        wvf = wvfSet(wvf, 'focal length', baseFLengthM);
+        wvf = wvfCompute(wvf);
+
+        focalSweepM = [baseFLengthM/2, baseFLengthM, baseFLengthM*2];
+        focalUmPerDegree = focalSweepM * 1e6 * (2 * tan(pi/360));
+
+        payload.base_fnumber_ratio_oi_wvf = oiGet(oi, 'optics fnumber') / max(wvfGet(baseWvf, 'fnumber'), 1e-12);
+        payload.base_airy_diameter_um = airyDisk(550, fNumber, 'units', 'um', 'diameter', true);
+        payload.base_oi_psfx_data = double(oiPsfx.data(:));
+        payload.pupil_mm = double(pupilMM(:));
+        payload.pupil_550_airy_diameter_um = double(pupil550Airy(:));
+        payload.pupil_400_airy_diameter_um = double(pupil400Airy(:));
+        payload.lca_wavelength_nm = double(wList(:));
+        payload.lca_airy_diameter_um = double(lcaAiry(:));
+        payload.lca_mid_rows = local_canonical_profile(lcaRows, 41);
+        payload.focal_length_sweep_mm = double((focalSweepM(:))*1e3);
+        payload.focal_length_um_per_degree = double(focalUmPerDegree(:));
+
     case 'wvf_osa_index_conversion_small'
         indices = [0 1 2 5 15 20 35];
         [n, m] = wvfOSAIndexToZernikeNM(indices);
@@ -3358,4 +3432,27 @@ end
 function values = local_channel_normalize(values)
 values = double(values(:))';
 values = values / max(max(abs(values)), eps);
+end
+
+function values = local_canonical_profile(values, nSamples)
+if nargin < 2
+    nSamples = 41;
+end
+
+values = double(values);
+query = linspace(-1, 1, nSamples);
+if isvector(values)
+    row = double(values(:))';
+    support = linspace(-1, 1, numel(row));
+    values = interp1(support, row, query, 'linear')';
+    return;
+end
+
+out = zeros(size(values, 1), nSamples);
+for ii = 1:size(values, 1)
+    row = double(values(ii, :));
+    support = linspace(-1, 1, numel(row));
+    out(ii, :) = interp1(support, row, query, 'linear');
+end
+values = out;
 end

@@ -4267,6 +4267,80 @@ def test_run_python_case_supports_wvf_astigmatism_parity_case(asset_store) -> No
     assert np.allclose(case.payload["psf_centers"], 1.0)
 
 
+def test_wvf_diffraction_workflow_supports_script_sweeps() -> None:
+    flength_mm = 6.0
+    flength_m = flength_mm * 1e-3
+    f_number = 3.0
+    this_wave = 550.0
+
+    wvf = wvf_create()
+    wvf = wvf_set(wvf, "calc pupil diameter", flength_mm / f_number)
+    wvf = wvf_set(wvf, "focal length", flength_m)
+    wvf = wvf_compute(wvf)
+
+    psf_udata, _ = wvf_plot(
+        wvf,
+        "psf",
+        "unit",
+        "um",
+        "wave",
+        this_wave,
+        "plot range",
+        10.0,
+        "airy disk",
+        True,
+        "window",
+        False,
+    )
+    oi = wvf_to_oi(wvf)
+    oi_udata, _ = oi_plot(oi, "psfxaxis", None, this_wave, "um")
+
+    assert np.isclose(float(wvf_get(wvf, "fnumber")), float(oi_get(oi, "optics fnumber")))
+    assert float(psf_udata["airyDiskDiameter"]) == pytest.approx(float(airy_disk(this_wave, f_number, "units", "um", "diameter", True)))
+    assert np.asarray(oi_udata["samp"], dtype=float).ndim == 1
+    assert np.asarray(oi_udata["data"], dtype=float).shape == np.asarray(oi_udata["samp"], dtype=float).shape
+
+    pupil_mm = np.linspace(1.5, 8.0, 4, dtype=float)
+    pupil_airy = []
+    for pupil in pupil_mm:
+        wvf = wvf_set(wvf, "calc pupil diameter", float(pupil))
+        wvf = wvf_compute(wvf)
+        udata, _ = wvf_plot(
+            wvf,
+            "image psf",
+            "unit",
+            "um",
+            "wave",
+            this_wave,
+            "plot range",
+            5.0,
+            "airy disk",
+            True,
+            "window",
+            False,
+        )
+        pupil_airy.append(float(udata["airyDiskDiameter"]))
+
+    assert len(pupil_airy) == 4
+    assert pupil_airy[0] > pupil_airy[-1]
+
+
+def test_run_python_case_supports_wvf_diffraction_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("wvf_diffraction_small", asset_store=asset_store)
+
+    assert np.isclose(float(case.payload["base_fnumber_ratio_oi_wvf"]), 1.0)
+    assert float(case.payload["base_airy_diameter_um"]) > 0.0
+    assert case.payload["base_oi_psfx_data"].ndim == 1
+    assert case.payload["pupil_mm"].shape == (4,)
+    assert case.payload["pupil_550_airy_diameter_um"].shape == (4,)
+    assert case.payload["pupil_400_airy_diameter_um"].shape == (4,)
+    assert case.payload["lca_wavelength_nm"].shape == (4,)
+    assert case.payload["lca_airy_diameter_um"].shape == (4,)
+    assert case.payload["lca_mid_rows"].shape == (4, 41)
+    assert case.payload["focal_length_sweep_mm"].shape == (3,)
+    assert case.payload["focal_length_um_per_degree"].shape == (3,)
+
+
 def test_run_python_case_supports_wvf_spatial_sampling_parity_case(asset_store) -> None:
     case = run_python_case_with_context("wvf_spatial_sampling_small", asset_store=asset_store)
 

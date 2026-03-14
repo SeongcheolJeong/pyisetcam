@@ -335,6 +335,11 @@ That same script-driven WVF surface now also has direct Octave parity on
 the defocus/vertical-astigmatism sweep from `s_wvfAstigmatism.m`,
 comparing the returned normalized PSF center rows and columns at 550 nm
 across the full 3x3 Zernike grid.
+That same script-driven WVF surface now also has direct Octave parity on
+the diffraction workflow from `s_wvfDiffraction.m`, comparing the initial
+Airy-disk match and `wvf2oi` f-number handoff, the pupil-size sweeps at
+550 nm and 400 nm, the human-LCA wavelength sweep, and the focal-length
+`um per degree` scaling.
 That same script-driven WVF helper surface now also includes
 `wvfOSAIndexToZernikeNM` / `wvfZernikeNMToOSAIndex`, with direct Octave
 parity on the OSA index round-trip used by `s_wvfWavefronts.m`.

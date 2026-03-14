@@ -447,6 +447,18 @@
       }
     },
     {
+      "name": "wvf_diffraction_small",
+      "matlab_function": "s_wvfDiffraction",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "lca_mid_rows": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.04
+        }
+      }
+    },
+    {
       "name": "wvf_spatial_sampling_small",
       "matlab_function": "wvfGet/wvfCompute",
       "rtol": 3e-05,
