@@ -171,6 +171,7 @@ from .sensor import (
     sensor_snr,
     sensor_compute,
     sensor_crop,
+    sensor_dr,
     sensor_create_array,
     sensor_create,
     sensor_create_ideal,
@@ -439,6 +440,7 @@ __all__ = [
     "sensorCreate",
     "sensorCreateArray",
     "sensorDescription",
+    "sensorDR",
     "sensorDNGRead",
     "sensorCreateIdeal",
     "sensorCreateSplitPixel",
@@ -460,6 +462,7 @@ __all__ = [
     "sensor_create_array",
     "sensor_create_ideal",
     "sensor_create_split_pixel",
+    "sensor_dr",
     "sensor_description",
     "sensor_dng_read",
     "sensor_get",
@@ -635,6 +638,7 @@ sensorComputeArray = sensor_compute_array
 sensorComputeSamples = sensor_compute_samples
 imx490Compute = imx490_compute
 sensorCCM = sensor_ccm
+sensorDR = sensor_dr
 signalCurrent = signal_current
 sensorColorFilter = sensor_color_filter
 sensorCrop = sensor_crop

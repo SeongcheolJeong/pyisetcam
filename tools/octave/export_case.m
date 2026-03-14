@@ -1961,6 +1961,58 @@ switch case_name
         payload.result_mean_gray = resultMeanGray;
         payload.result_p95_gray = resultP95Gray;
 
+    case 'sensor_log_ar0132at_small'
+        dynamicRange = 2^16;
+        scene = sceneCreate('exponential intensity ramp', 256, dynamicRange);
+        scene = sceneSet(scene, 'fov', 60);
+
+        oi = oiCreate;
+        oi = oiSet(oi, 'optics fnumber', 2.8);
+        oi = oiCompute(oi, scene);
+
+        sensor = sensorCreate;
+        sensor = sensorSet(sensor, 'response type', 'log');
+        sensor = sensorSet(sensor, 'size', [960 1280]);
+        sensor = sensorSet(sensor, 'pixel size same fill factor', 3.751e-6);
+
+        colorFilterFile = fullfile(upstream_root, 'data', 'sensor', 'colorfilters', 'auto', 'ar0132at.mat');
+        wave = sceneGet(scene, 'wave');
+        [filterSpectra, filterNames] = ieReadColorFilter(wave, colorFilterFile);
+        sensor = sensorSet(sensor, 'filter spectra', filterSpectra);
+        sensor = sensorSet(sensor, 'filter names', filterNames);
+        sensor = sensorSet(sensor, 'pixel read noise volts', 1e-3);
+        sensor = sensorSet(sensor, 'pixel voltage swing', 2.8);
+        sensor = sensorSet(sensor, 'pixel dark voltage', 1e-3);
+        sensor = sensorSet(sensor, 'pixel conversion gain', 110e-6);
+        sensor = sensorSet(sensor, 'exp time', 0.003);
+        sensor = sensorSet(sensor, 'noise flag', 0);
+        sensor = sensorCompute(sensor, oi);
+
+        % Upstream sensorCompute currently leaves the deprecated log branch dormant,
+        % so export the intended script contract explicitly here.
+        volts = sensorGet(sensor, 'volts');
+        readNoise = sensorGet(sensor, 'pixel read noise volts');
+        if readNoise == 0
+            readNoise = sensorGet(sensor, 'pixel voltage swing') / (2^16);
+        end
+        volts = log10(max(volts, 0) + readNoise) - log10(readNoise);
+
+        sampledCols = round(linspace(1, size(volts, 2), 33));
+        row15 = volts(15, :);
+        row114 = volts(114, :);
+
+        payload.scene_size = sceneGet(scene, 'size');
+        payload.oi_size = oiGet(oi, 'size');
+        payload.sensor_size = sensorGet(sensor, 'size');
+        payload.wave = wave(:);
+        payload.dr_at_1s = sensorDR(sensor, 1);
+        payload.volts_stats = [mean(volts(:)) std(volts(:)) prctile(volts(:), [5 95])];
+        payload.sampled_cols = sampledCols(:);
+        payload.row15_stats = [mean(row15(:)) std(row15(:)) prctile(row15(:), [5 95])];
+        payload.row114_stats = [mean(row114(:)) std(row114(:)) prctile(row114(:), [5 95])];
+        payload.row15_profile_norm = local_channel_normalize(row15(sampledCols));
+        payload.row114_profile_norm = local_channel_normalize(row114(sampledCols));
+
     case 'sensor_filter_transmissivities_small'
         sensor = sensorCreate();
         filters = sensorGet(sensor, 'filter transmissivities');

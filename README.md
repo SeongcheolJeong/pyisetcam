@@ -196,7 +196,13 @@ support for basis-coded HDR scene assets plus the mixed pixel-size
 monochrome workflow from `s_sensorHDR_PixelSize.m`, with curated Octave
 parity on the Feng Office HDR scene path, comparing the three sensor
 sizes, mean/p95 volts, mean electrons, and grayscale output summaries
-for the 1/2/4 micron pixel-size sweep.
+for the 1/2/4 micron pixel-size sweep. That same Phase 1 sensor wave now
+also includes `sceneCreate('linear intensity ramp')`,
+`sceneCreate('exponential intensity ramp')`, public `sensor_dr` /
+`sensorDR`, and headless log-response sensor compute support for
+`s_sensorLogAR0132AT.m`, with curated Octave parity on the stable
+noise-free log-response line-shape workflow and the script’s 1-second
+dynamic-range check.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit

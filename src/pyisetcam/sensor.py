@@ -363,6 +363,19 @@ def _sensor_dynamic_range(sensor: Sensor, integration_time: Any = None) -> Any:
     return dr
 
 
+def _apply_sensor_response_type(sensor: Sensor, volts: np.ndarray) -> np.ndarray:
+    response_type = param_format(sensor.fields.get("response_type", "linear"))
+    if response_type == "linear":
+        return np.asarray(volts, dtype=float)
+    if response_type != "log":
+        raise UnsupportedOptionError("sensorCompute", f"response type {response_type}")
+
+    read_noise = float(sensor.fields["pixel"]["read_noise_v"])
+    if np.isclose(read_noise, 0.0):
+        read_noise = float(sensor.fields["pixel"]["voltage_swing"]) / float(2**16)
+    return np.log10(np.maximum(np.asarray(volts, dtype=float), 0.0) + read_noise) - np.log10(read_noise)
+
+
 def _pixel_dynamic_range(sensor: Sensor, integration_time: Any = None) -> Any:
     if integration_time is None:
         integration_time = sensor_get(sensor, "integration time")
@@ -4197,6 +4210,9 @@ def sensor_compute(
         elif noise_flag not in {0, -1}:
             raise UnsupportedOptionError("sensorCompute", f"noise flag {noise_flag}")
 
+        volts = _apply_sensor_response_type(computed, volts)
+        if channel_volts is not None:
+            channel_volts = _apply_sensor_response_type(computed, channel_volts)
         volts = np.clip((volts + analog_offset) / max(analog_gain, 1e-12), 0.0, voltage_swing)
         computed.data["volts"] = np.asarray(volts, dtype=float).copy()
         computed.data["channel_volts"] = None if channel_volts is None else np.asarray(channel_volts, dtype=float).copy()
@@ -4232,6 +4248,9 @@ def sensor_compute(
         elif noise_flag not in {0, -1}:
             raise UnsupportedOptionError("sensorCompute", f"noise flag {noise_flag}")
 
+        volts = _apply_sensor_response_type(computed, volts)
+        if channel_volts is not None:
+            channel_volts = _apply_sensor_response_type(computed, channel_volts)
         volts = np.clip((volts + analog_offset) / max(analog_gain, 1e-12), 0.0, voltage_swing)
         volts_captures.append(np.asarray(volts, dtype=float).copy())
         if channel_volts is not None:
@@ -4317,6 +4336,12 @@ def sensor_compute_samples(
     return np.stack(samples, axis=base.ndim)
 
 
+def sensor_dr(sensor: Sensor, integration_time: Any = None) -> Any:
+    """Return the MATLAB-style sensor dynamic range in dB."""
+
+    return _sensor_dynamic_range(sensor, integration_time)
+
+
 def sensor_ccm(
     sensor: Sensor,
     ccm_method: str | None = None,
@@ -4354,4 +4379,5 @@ def sensor_ccm(
 
 
 sensorComputeSamples = sensor_compute_samples
+sensorDR = sensor_dr
 sensorCCM = sensor_ccm

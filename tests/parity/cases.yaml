@@ -1123,6 +1123,34 @@
       }
     },
     {
+      "name": "sensor_log_ar0132at_small",
+      "matlab_function": "s_sensorLogAR0132AT.m",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "volts_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.001
+        },
+        "row15_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.003
+        },
+        "row114_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.001
+        },
+        "row15_profile_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.0001
+        },
+        "row114_profile_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.0001
+        }
+      }
+    },
+    {
       "name": "sensor_color_filter_gaussian_roundtrip_small",
       "matlab_function": "sensorColorFilter/ieSaveColorFilter/ieReadColorFilter",
       "rtol": 1e-05,

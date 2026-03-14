@@ -71,6 +71,7 @@ from pyisetcam import (
     sensor_crop,
     sensor_create,
     sensor_create_array,
+    sensor_dr,
     sensor_dng_read,
     sensor_get,
     sensor_set_size_to_fov,
@@ -5199,6 +5200,57 @@ def test_run_python_case_supports_sensor_hdr_pixel_size_small_parity_case(asset_
     assert case.payload["result_sizes"].shape == (3, 3)
     assert case.payload["result_mean_gray"].shape == (3,)
     assert case.payload["result_p95_gray"].shape == (3,)
+
+
+def test_sensor_log_ar0132at_workflow_matches_script_contract(asset_store) -> None:
+    linear_scene = scene_create("linear intensity ramp", 64, 2**8, asset_store=asset_store)
+    exp_scene = scene_create("exponential intensity ramp", 256, 2**16, asset_store=asset_store)
+    exp_scene = scene_set(exp_scene, "fov", 60.0)
+
+    oi = oi_create(asset_store=asset_store)
+    oi = oi_set(oi, "optics fnumber", 2.8)
+    oi = oi_compute(oi, exp_scene)
+
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "response type", "log")
+    sensor = sensor_set(sensor, "size", np.array([960, 1280], dtype=int))
+    sensor = sensor_set(sensor, "pixel size same fill factor", 3.751e-6)
+
+    wave = np.asarray(scene_get(exp_scene, "wave"), dtype=float)
+    filter_spectra, filter_names, _ = ie_read_color_filter(wave, asset_store.resolve("data/sensor/colorfilters/auto/ar0132at.mat"))
+    sensor = sensor_set(sensor, "filter spectra", filter_spectra)
+    sensor = sensor_set(sensor, "filter names", filter_names)
+    sensor = sensor_set(sensor, "pixel read noise volts", 1.0e-3)
+    sensor = sensor_set(sensor, "pixel voltage swing", 2.8)
+    sensor = sensor_set(sensor, "pixel dark voltage", 1.0e-3)
+    sensor = sensor_set(sensor, "pixel conversion gain", 110.0e-6)
+    sensor = sensor_set(sensor, "exp time", 0.003)
+    sensor = sensor_compute(sensor, oi)
+
+    volts = np.asarray(sensor_get(sensor, "volts"), dtype=float)
+    assert tuple(scene_get(linear_scene, "size")) == (64, 64)
+    assert tuple(scene_get(exp_scene, "size")) == (256, 256)
+    assert tuple(sensor_get(sensor, "size")) == (960, 1280)
+    assert volts.shape == (960, 1280)
+    assert np.isclose(sensor_dr(sensor, 1.0), 34.243414090728336, atol=1e-9)
+    assert np.all(np.isfinite(volts))
+    assert float(np.max(volts)) <= 2.8 + 1e-12
+    assert float(np.mean(volts[14, :])) < float(np.mean(volts[113, :]))
+
+
+def test_run_python_case_supports_sensor_log_ar0132at_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_log_ar0132at_small", asset_store=asset_store)
+
+    assert tuple(case.payload["scene_size"]) == (256, 256)
+    assert tuple(case.payload["sensor_size"]) == (960, 1280)
+    assert case.payload["wave"].shape == (31,)
+    assert np.isclose(case.payload["dr_at_1s"], 34.243414090728336, atol=1e-9)
+    assert case.payload["volts_stats"].shape == (4,)
+    assert case.payload["sampled_cols"].shape == (33,)
+    assert case.payload["row15_stats"].shape == (4,)
+    assert case.payload["row114_stats"].shape == (4,)
+    assert case.payload["row15_profile_norm"].shape == (33,)
+    assert case.payload["row114_profile_norm"].shape == (33,)
 
 
 def test_run_python_case_supports_sensor_filter_transmissivities_parity_case(asset_store) -> None:

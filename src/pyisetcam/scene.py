@@ -1085,6 +1085,28 @@ def _sweep_frequency_image(
     return image / max(float(np.max(image)), 1e-12)
 
 
+def _linear_intensity_ramp_image(size: Any, dynamic_range: float) -> np.ndarray:
+    rows, cols = _scene_size_2d(size, default=128)
+    max_column = _matlab_round_scalar(cols / 2.0)
+    min_column = -(max_column - 1)
+    x_image = np.arange(min_column, min_column + cols, dtype=float)
+    y_contrast = np.arange(rows, 0, -1, dtype=float) / max(rows, 1)
+    image = (y_contrast[:, None] * x_image[None, :]) + 0.5
+    image = _scale_range(image, 1.0, max(float(dynamic_range), 1.0))
+    return image / max(float(np.max(image)), 1e-12)
+
+
+def _exponential_intensity_ramp_image(size: Any, dynamic_range: float) -> np.ndarray:
+    rows, cols = _scene_size_2d(size, default=128)
+    if float(dynamic_range) <= 1.0:
+        ramp = np.ones(cols, dtype=float)
+    else:
+        ramp = np.logspace(0.0, np.log10(float(dynamic_range)), cols, dtype=float)
+    image = np.tile(ramp.reshape(1, -1), (rows, 1))
+    image = _scale_range(image, 1.0, max(float(dynamic_range), 1.0))
+    return image / max(float(np.max(image)), 1e-12)
+
+
 def _equal_photon_pattern_scene(
     name: str,
     image: np.ndarray,
@@ -1467,6 +1489,26 @@ def scene_create(
             "wave": wave.copy(),
         }
         return track_session_object(session, scene)
+
+    if name in {"linearintensityramp", "linearramp"}:
+        size = args[0] if len(args) > 0 else 128
+        dynamic_range = float(args[1]) if len(args) > 1 else 256.0
+        wave = _wave_or_default(args[2] if len(args) > 2 else None)
+        image = _linear_intensity_ramp_image(size, dynamic_range)
+        return track_session_object(
+            session,
+            _equal_photon_pattern_scene("linearRamp", image, wave, fov_deg=DEFAULT_FOV_DEG, asset_store=store),
+        )
+
+    if name in {"exponentialintensityramp", "expintensityramp", "expramp"}:
+        size = args[0] if len(args) > 0 else 128
+        dynamic_range = float(args[1]) if len(args) > 1 else 256.0
+        wave = _wave_or_default(args[2] if len(args) > 2 else None)
+        image = _exponential_intensity_ramp_image(size, dynamic_range)
+        return track_session_object(
+            session,
+            _equal_photon_pattern_scene("expRamp", image, wave, fov_deg=DEFAULT_FOV_DEG, asset_store=store),
+        )
 
     if name in {"starpattern", "radiallines"}:
         image_size = int(args[0]) if len(args) > 0 else 256

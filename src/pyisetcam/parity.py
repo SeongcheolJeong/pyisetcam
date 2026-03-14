@@ -65,6 +65,7 @@ from .sensor import (
     sensor_create_array,
     sensor_create_ideal,
     sensor_crop,
+    sensor_dr,
     sensor_get,
     sensor_set,
 )
@@ -2821,6 +2822,56 @@ def run_python_case_with_context(
                 "result_p95_gray": result_p95_gray,
             },
             context={"scene": scene, "oi": oi},
+        )
+
+    if case_name == "sensor_log_ar0132at_small":
+        dynamic_range = float(2**16)
+        scene = scene_create("exponential intensity ramp", 256, dynamic_range, asset_store=store)
+        scene = scene_set(scene, "fov", 60.0)
+
+        oi = oi_create(asset_store=store)
+        oi = oi_set(oi, "optics fnumber", 2.8)
+        oi = oi_compute(oi, scene)
+
+        sensor = sensor_create(asset_store=store)
+        sensor = sensor_set(sensor, "response type", "log")
+        sensor = sensor_set(sensor, "size", np.array([960, 1280], dtype=int))
+        sensor = sensor_set(sensor, "pixel size same fill factor", 3.751e-6)
+
+        color_filter_file = store.resolve("data/sensor/colorfilters/auto/ar0132at.mat")
+        wave = np.asarray(scene_get(scene, "wave"), dtype=float)
+        filter_spectra, filter_names, _ = ie_read_color_filter(wave, color_filter_file)
+        sensor = sensor_set(sensor, "filter spectra", filter_spectra)
+        sensor = sensor_set(sensor, "filter names", filter_names)
+        sensor = sensor_set(sensor, "pixel read noise volts", 1.0e-3)
+        sensor = sensor_set(sensor, "pixel voltage swing", 2.8)
+        sensor = sensor_set(sensor, "pixel dark voltage", 1.0e-3)
+        sensor = sensor_set(sensor, "pixel conversion gain", 110.0e-6)
+        sensor = sensor_set(sensor, "exp time", 0.003)
+        sensor = sensor_set(sensor, "noise flag", 0)
+        sensor = sensor_compute(sensor, oi)
+
+        volts = np.asarray(sensor_get(sensor, "volts"), dtype=float)
+        sampled_cols = np.rint(np.linspace(0.0, volts.shape[1] - 1.0, 33)).astype(int)
+        row_15 = np.asarray(volts[14, :], dtype=float)
+        row_114 = np.asarray(volts[113, :], dtype=float)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "oi_size": np.asarray(oi_get(oi, "size"), dtype=int),
+                "sensor_size": np.asarray(sensor_get(sensor, "size"), dtype=int),
+                "wave": wave,
+                "dr_at_1s": float(sensor_dr(sensor, 1.0)),
+                "volts_stats": _stats_vector(volts),
+                "sampled_cols": sampled_cols + 1,
+                "row15_stats": _stats_vector(row_15),
+                "row114_stats": _stats_vector(row_114),
+                "row15_profile_norm": _channel_normalize(row_15[sampled_cols]),
+                "row114_profile_norm": _channel_normalize(row_114[sampled_cols]),
+            },
+            context={"scene": scene, "oi": oi, "sensor": sensor},
         )
 
     if case_name == "sensor_filter_transmissivities_small":
