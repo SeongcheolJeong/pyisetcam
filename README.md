@@ -206,7 +206,11 @@ dynamic-range check. That same Phase 1 sensor wave now also includes the
 full `s_sensorAliasing.m` workflow, with curated Octave parity on the
 noise-free sweep-frequency aliasing line profiles for the fine-pixel,
 coarse-pixel, and blurred-lens cases plus canonicalized slanted-bar
-sensor captures for the sharp and anti-aliased large-pixel paths.
+sensor captures for the sharp and anti-aliased large-pixel paths. That
+same Phase 1 sensor wave now also includes the asset-driven DUT setup
+workflow from `s_sensorExternalAnalysis.m`, with curated Octave parity on
+the configured wave/filter/QE payload, CFA pattern, pixel metadata, and
+imported `dutData.mat` voltage summaries.
 The optics expansion now also includes script-driven
 `oi_create('psf')` / `oiCreate('psf')` support for shift-invariant PSF optics,
 including a MATLAB-style default synthetic PSF constructor and explicit

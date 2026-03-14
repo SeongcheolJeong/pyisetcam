@@ -2082,6 +2082,39 @@ switch case_name
         payload.slanted_sharp_stats = [mean(slantedSharp(:)) std(slantedSharp(:)) prctile(slantedSharp(:), [5 95])];
         payload.slanted_blur_stats = [mean(slantedBlur(:)) std(slantedBlur(:)) prctile(slantedBlur(:), [5 95])];
 
+    case 'sensor_external_analysis_small'
+        dut = sensorCreate;
+        dut = sensorSet(dut, 'name', 'My Sensor');
+
+        wave = 400:10:700;
+        dut = sensorSet(dut, 'wave', wave);
+        dut = sensorSet(dut, 'colorFilters', ieReadSpectra(fullfile(upstream_root, 'data', 'sensor', 'colorfilters', 'RGB.mat'), wave));
+        dut = sensorSet(dut, 'irFilter', ieReadSpectra(fullfile(upstream_root, 'data', 'sensor', 'irfilters', 'infrared2.mat'), wave));
+        dut = sensorSet(dut, 'cfapattern', [2 1; 3 2]);
+        dut = sensorSet(dut, 'size', [144 176]);
+        dut = sensorSet(dut, 'pixel name', 'My Pixel');
+        dut = sensorSet(dut, 'pixel size constant fill factor', [2e-6 2e-6]);
+        dut = sensorSet(dut, 'pixel spectral qe', ieReadSpectra(fullfile(upstream_root, 'data', 'sensor', 'photodetectors', 'photodetector.mat'), wave));
+        dut = sensorSet(dut, 'pixel voltage swing', 1.5);
+
+        tmp = load(fullfile(upstream_root, 'scripts', 'sensor', 'dutData.mat'), 'volts');
+        dut = sensorSet(dut, 'volts', tmp.volts);
+        volts = sensorGet(dut, 'volts');
+        pixel = sensorGet(dut, 'pixel');
+
+        payload.sensor_name = sensorGet(dut, 'name');
+        payload.wave = sensorGet(dut, 'wave');
+        payload.filter_spectra = sensorGet(dut, 'filter spectra');
+        payload.ir_filter = sensorGet(dut, 'ir filter');
+        payload.cfa_pattern = sensorGet(dut, 'cfapattern');
+        payload.sensor_size = sensorGet(dut, 'size');
+        payload.pixel_name = pixel.name;
+        payload.pixel_size_m = sensorGet(dut, 'pixel size');
+        payload.pixel_qe = sensorGet(dut, 'pixel spectral qe');
+        payload.pixel_voltage_swing = sensorGet(dut, 'pixel voltage swing');
+        payload.volts = volts;
+        payload.volts_stats = [mean(volts(:)) std(volts(:)) prctile(volts(:), [5 95])];
+
     case 'sensor_filter_transmissivities_small'
         sensor = sensorCreate();
         filters = sensorGet(sensor, 'filter transmissivities');

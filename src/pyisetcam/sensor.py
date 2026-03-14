@@ -2946,7 +2946,7 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any, *args: Any) -> Sensor
         sensor.fields["etendue"] = None
         _sensor_clear_data(sensor)
         return sensor
-    if key == "pattern":
+    if key in {"cfapattern", "pattern"}:
         sensor.fields["pattern"] = np.asarray(value, dtype=int)
         return sensor
     if key in {"patternandsize", "patternsize", "cfapatternandsize"}:

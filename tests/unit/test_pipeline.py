@@ -5330,6 +5330,57 @@ def test_run_python_case_supports_sensor_aliasing_small_parity_case(asset_store)
     assert case.payload["slanted_blur_stats"].shape == (4,)
 
 
+def test_sensor_external_analysis_workflow_matches_script_contract(asset_store) -> None:
+    from scipy.io import loadmat
+
+    dut = sensor_create(asset_store=asset_store)
+    dut = sensor_set(dut, "name", "My Sensor")
+
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    dut = sensor_set(dut, "wave", wave)
+    dut = sensor_set(dut, "colorFilters", ie_read_spectra("RGB.mat", wave, asset_store=asset_store))
+    dut = sensor_set(dut, "irFilter", ie_read_spectra("infrared2.mat", wave, asset_store=asset_store))
+    dut = sensor_set(dut, "cfapattern", np.array([[2, 1], [3, 2]], dtype=int))
+    dut = sensor_set(dut, "size", [144, 176])
+    dut = sensor_set(dut, "pixel name", "My Pixel")
+    dut = sensor_set(dut, "pixel size constant fill factor", [2.0e-6, 2.0e-6])
+    dut = sensor_set(dut, "pixel spectral qe", ie_read_spectra("photodetector.mat", wave, asset_store=asset_store))
+    dut = sensor_set(dut, "pixel voltage swing", 1.5)
+
+    volts = loadmat(asset_store.resolve("scripts/sensor/dutData.mat"), squeeze_me=True, struct_as_record=False)["volts"]
+    dut = sensor_set(dut, "volts", volts)
+
+    assert sensor_get(dut, "name") == "My Sensor"
+    assert np.array_equal(sensor_get(dut, "wave"), wave)
+    assert np.array_equal(sensor_get(dut, "cfapattern"), np.array([[2, 1], [3, 2]], dtype=int))
+    assert tuple(sensor_get(dut, "size")) == (144, 176)
+    assert sensor_get(dut, "pixel name") == "My Pixel"
+    assert np.allclose(np.asarray(sensor_get(dut, "pixel size"), dtype=float), np.array([2.0e-6, 2.0e-6], dtype=float))
+    assert np.isclose(sensor_get(dut, "pixel voltage swing"), 1.5)
+    assert np.asarray(sensor_get(dut, "filter spectra"), dtype=float).shape == (31, 3)
+    assert np.asarray(sensor_get(dut, "ir filter"), dtype=float).shape == (31,)
+    assert np.asarray(sensor_get(dut, "pixel spectral qe"), dtype=float).shape == (31,)
+    assert np.asarray(sensor_get(dut, "volts"), dtype=float).shape == (144, 176)
+    assert np.isclose(float(np.max(np.asarray(sensor_get(dut, "volts"), dtype=float))), 0.9585338252565363)
+
+
+def test_run_python_case_supports_sensor_external_analysis_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_external_analysis_small", asset_store=asset_store)
+
+    assert case.payload["sensor_name"] == "My Sensor"
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["filter_spectra"].shape == (31, 3)
+    assert case.payload["ir_filter"].shape == (31,)
+    assert np.array_equal(case.payload["cfa_pattern"], np.array([[2, 1], [3, 2]], dtype=int))
+    assert tuple(case.payload["sensor_size"]) == (144, 176)
+    assert case.payload["pixel_name"] == "My Pixel"
+    assert case.payload["pixel_size_m"].shape == (2,)
+    assert case.payload["pixel_qe"].shape == (31,)
+    assert np.isclose(case.payload["pixel_voltage_swing"], 1.5)
+    assert case.payload["volts"].shape == (144, 176)
+    assert case.payload["volts_stats"].shape == (4,)
+
+
 def test_run_python_case_supports_sensor_filter_transmissivities_parity_case(asset_store) -> None:
     case = run_python_case_with_context("sensor_filter_transmissivities_small", asset_store=asset_store)
 

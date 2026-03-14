@@ -1203,6 +1203,18 @@
       }
     },
     {
+      "name": "sensor_external_analysis_small",
+      "matlab_function": "s_sensorExternalAnalysis.m",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "volts_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.0001
+        }
+      }
+    },
+    {
       "name": "sensor_color_filter_gaussian_roundtrip_small",
       "matlab_function": "sensorColorFilter/ieSaveColorFilter/ieReadColorFilter",
       "rtol": 1e-05,

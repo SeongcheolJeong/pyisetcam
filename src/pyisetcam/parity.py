@@ -2951,6 +2951,43 @@ def run_python_case_with_context(
             context={"scene": slanted_scene, "oi": oi_slanted_blur, "sensor": sensor_slanted_blur},
         )
 
+    if case_name == "sensor_external_analysis_small":
+        dut = sensor_create(asset_store=store)
+        dut = sensor_set(dut, "name", "My Sensor")
+
+        wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+        dut = sensor_set(dut, "wave", wave)
+        dut = sensor_set(dut, "colorFilters", ie_read_spectra("RGB.mat", wave, asset_store=store))
+        dut = sensor_set(dut, "irFilter", ie_read_spectra("infrared2.mat", wave, asset_store=store))
+        dut = sensor_set(dut, "cfapattern", np.array([[2, 1], [3, 2]], dtype=int))
+        dut = sensor_set(dut, "size", np.array([144, 176], dtype=int))
+        dut = sensor_set(dut, "pixel name", "My Pixel")
+        dut = sensor_set(dut, "pixel size constant fill factor", np.array([2.0e-6, 2.0e-6], dtype=float))
+        dut = sensor_set(dut, "pixel spectral qe", ie_read_spectra("photodetector.mat", wave, asset_store=store))
+        dut = sensor_set(dut, "pixel voltage swing", 1.5)
+
+        volts = np.asarray(store.load_mat("scripts/sensor/dutData.mat")["volts"], dtype=float)
+        dut = sensor_set(dut, "volts", volts)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "sensor_name": str(sensor_get(dut, "name")),
+                "wave": np.asarray(sensor_get(dut, "wave"), dtype=float),
+                "filter_spectra": np.asarray(sensor_get(dut, "filter spectra"), dtype=float),
+                "ir_filter": np.asarray(sensor_get(dut, "ir filter"), dtype=float),
+                "cfa_pattern": np.asarray(sensor_get(dut, "cfapattern"), dtype=int),
+                "sensor_size": np.asarray(sensor_get(dut, "size"), dtype=int),
+                "pixel_name": str(sensor_get(dut, "pixel name")),
+                "pixel_size_m": np.asarray(sensor_get(dut, "pixel size"), dtype=float),
+                "pixel_qe": np.asarray(sensor_get(dut, "pixel spectral qe"), dtype=float),
+                "pixel_voltage_swing": float(sensor_get(dut, "pixel voltage swing")),
+                "volts": np.asarray(sensor_get(dut, "volts"), dtype=float),
+                "volts_stats": _stats_vector(np.asarray(sensor_get(dut, "volts"), dtype=float)),
+            },
+            context={"sensor": dut},
+        )
+
     if case_name == "sensor_filter_transmissivities_small":
         sensor = sensor_create(asset_store=store)
         filters = np.asarray(sensor_get(sensor, "filter transmissivities"), dtype=float)
