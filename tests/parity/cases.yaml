@@ -491,6 +491,26 @@
       "atol": 1e-08
     },
     {
+      "name": "wvf_plot_script_sequence_small",
+      "matlab_function": "s_wvfPlot",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "line_550_um_x": {
+          "mode": "mean_rel",
+          "max_mean_rel": 3e-05
+        },
+        "line_550_mm_x": {
+          "mode": "mean_rel",
+          "max_mean_rel": 3e-05
+        },
+        "psf_angle_460_x": {
+          "mode": "mean_rel",
+          "max_mean_rel": 3e-05
+        }
+      }
+    },
+    {
       "name": "wvf_diffraction_small",
       "matlab_function": "s_wvfDiffraction",
       "rtol": 1e-05,

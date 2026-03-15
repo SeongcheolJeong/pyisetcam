@@ -363,6 +363,10 @@ That same Phase 2 wavefront block now also has direct Octave parity on
 Zernike coefficient vector at the target field height and the normalized
 center-row PSFs for Zernike-space interpolation, ground truth, and the
 script's direct space-interpolation path.
+That same script-driven WVF plotting block now also has direct Octave
+parity on the end-to-end sequence in `s_wvfPlot.m`, comparing the 550 nm
+mixed-unit 1D PSF payloads and the recalculated 460 nm PSF-angle /
+pupil-phase payloads after `wvfSet(..., 'wave', 460)` and `wvfCompute(...)`.
 for script-driven synthetic aperture generation, including deterministic
 clean polygon support used by the upstream flare scripts and direct
 Octave parity on that clean-aperture path.

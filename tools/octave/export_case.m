@@ -356,6 +356,42 @@ switch case_name
         payload.psf_gt_peak = max(psfGT(:));
         payload.psf_interp_space_peak = max(psfInterpSpace(:));
 
+    case 'wvf_plot_script_sequence_small'
+        wave550 = 550;
+        wave460 = 460;
+        wvf = wvfCreate;
+        wvf = wvfSet(wvf, 'wave', wave550);
+        wvf = wvfSet(wvf, 'spatial samples', 401);
+        wvf = wvfCompute(wvf);
+
+        uData550UM = wvfPlot(wvf, '1d psf', 'unit', 'um', 'wave', wave550, 'window', false);
+        uData550MM = wvfPlot(wvf, '1d psf', 'unit', 'mm', 'wave', wave550, 'window', false);
+        uData550Norm = wvfPlot(wvf, '1d psf normalized', 'unit', 'mm', 'wave', wave550, 'window', false);
+
+        wvf = wvfSet(wvf, 'wave', wave460);
+        wvf = wvfCompute(wvf);
+
+        uData460Angle = wvfPlot(wvf, 'image psf angle', 'unit', 'min', 'wave', wave460, 'plot range', 1, 'window', false);
+        psfAngle = double(uData460Angle.z);
+        uData460Phase = wvfPlot(wvf, 'image pupil phase', 'unit', 'mm', 'wave', wave460, 'plot range', 2, 'window', false);
+        pupilPhase = double(uData460Phase.z);
+
+        middleRowAngle = floor(size(psfAngle, 1) / 2) + 1;
+        middleRowPhase = floor(size(pupilPhase, 1) / 2) + 1;
+        payload.wave_550_nm = wave550;
+        payload.wave_460_nm = wave460;
+        payload.line_550_um_x = double(uData550UM.x(:));
+        payload.line_550_um_y_norm = local_channel_normalize(uData550UM.y(:));
+        payload.line_550_mm_x = double(uData550MM.x(:));
+        payload.line_550_mm_y_norm = local_channel_normalize(uData550MM.y(:));
+        payload.line_550_mm_norm_y = double(uData550Norm.y(:));
+        payload.psf_angle_460_x = double(uData460Angle.x(:));
+        payload.psf_angle_460_mid_row_norm = local_channel_normalize(psfAngle(middleRowAngle, :));
+        payload.psf_angle_460_center = psfAngle(middleRowAngle, floor(size(psfAngle, 2) / 2) + 1);
+        payload.pupil_phase_460_x = double(uData460Phase.x(:));
+        payload.pupil_phase_460_mid_row = double(pupilPhase(middleRowPhase, :));
+        payload.pupil_phase_460_center = pupilPhase(middleRowPhase, floor(size(pupilPhase, 2) / 2) + 1);
+
     case 'wvf_pupil_size_human_small'
         measuredPupilMM = 7.5;
         calcPupilMM = 3.0;

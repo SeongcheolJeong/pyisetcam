@@ -1647,6 +1647,69 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "wvf_plot_script_sequence_small":
+        wave_550 = 550.0
+        wave_460 = 460.0
+
+        wvf = wvf_create()
+        wvf = wvf_set(wvf, "wave", wave_550)
+        wvf = wvf_set(wvf, "spatial samples", 401)
+        wvf = wvf_compute(wvf)
+
+        udata_550_um, _ = wvf_plot(wvf, "1d psf", "unit", "um", "wave", wave_550, "window", False)
+        udata_550_mm, _ = wvf_plot(wvf, "1d psf", "unit", "mm", "wave", wave_550, "window", False)
+        udata_550_norm, _ = wvf_plot(wvf, "1d psf normalized", "unit", "mm", "wave", wave_550, "window", False)
+
+        wvf = wvf_set(wvf, "wave", wave_460)
+        wvf = wvf_compute(wvf)
+
+        udata_460_angle, _ = wvf_plot(
+            wvf,
+            "image psf angle",
+            "unit",
+            "min",
+            "wave",
+            wave_460,
+            "plot range",
+            1.0,
+            "window",
+            False,
+        )
+        psf_angle = np.asarray(udata_460_angle["z"], dtype=float)
+        udata_460_phase, _ = wvf_plot(
+            wvf,
+            "image pupil phase",
+            "unit",
+            "mm",
+            "wave",
+            wave_460,
+            "plot range",
+            2.0,
+            "window",
+            False,
+        )
+        pupil_phase = np.asarray(udata_460_phase["z"], dtype=float)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave_550_nm": wave_550,
+                "wave_460_nm": wave_460,
+                "line_550_um_x": np.asarray(udata_550_um["x"], dtype=float),
+                "line_550_um_y_norm": _channel_normalize(np.asarray(udata_550_um["y"], dtype=float)),
+                "line_550_mm_x": np.asarray(udata_550_mm["x"], dtype=float),
+                "line_550_mm_y_norm": _channel_normalize(np.asarray(udata_550_mm["y"], dtype=float)),
+                "line_550_mm_norm_y": np.asarray(udata_550_norm["y"], dtype=float),
+                "psf_angle_460_x": np.asarray(udata_460_angle["x"], dtype=float),
+                "psf_angle_460_mid_row_norm": _channel_normalize(psf_angle[psf_angle.shape[0] // 2, :]),
+                "psf_angle_460_center": float(psf_angle[psf_angle.shape[0] // 2, psf_angle.shape[1] // 2]),
+                "pupil_phase_460_x": np.asarray(udata_460_phase["x"], dtype=float),
+                "pupil_phase_460_mid_row": np.asarray(pupil_phase[pupil_phase.shape[0] // 2, :], dtype=float),
+                "pupil_phase_460_center": float(pupil_phase[pupil_phase.shape[0] // 2, pupil_phase.shape[1] // 2]),
+            },
+            context={"wvf": wvf},
+        )
+
     if case_name == "wvf_diffraction_small":
         flength_mm = 6.0
         flength_m = flength_mm * 1e-3

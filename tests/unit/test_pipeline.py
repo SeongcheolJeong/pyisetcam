@@ -4514,6 +4514,61 @@ def test_run_python_case_supports_zernike_interpolation_parity_case(asset_store)
     assert float(case.payload["psf_interp_space_peak"]) > 0.0
 
 
+def test_wvf_plot_script_sequence_supports_wave_switch_and_mixed_units() -> None:
+    wave_550 = 550.0
+    wave_460 = 460.0
+
+    wvf = wvf_create()
+    wvf = wvf_set(wvf, "wave", wave_550)
+    wvf = wvf_set(wvf, "spatial samples", 401)
+    wvf = wvf_compute(wvf)
+
+    udata_550_um, handle_550_um = wvf_plot(wvf, "1d psf", "unit", "um", "wave", wave_550, "window", False)
+    udata_550_mm, handle_550_mm = wvf_plot(wvf, "1d psf", "unit", "mm", "wave", wave_550, "window", False)
+    udata_550_norm, handle_550_norm = wvf_plot(wvf, "1d psf normalized", "unit", "mm", "wave", wave_550, "window", False)
+
+    assert handle_550_um is None
+    assert handle_550_mm is None
+    assert handle_550_norm is None
+    assert np.asarray(udata_550_um["x"], dtype=float).ndim == 1
+    assert np.asarray(udata_550_mm["x"], dtype=float).ndim == 1
+    assert np.isclose(float(np.max(np.asarray(udata_550_norm["y"], dtype=float))), 1.0)
+
+    wvf = wvf_set(wvf, "wave", wave_460)
+    wvf = wvf_compute(wvf)
+
+    udata_460_angle, handle_460_angle = wvf_plot(
+        wvf, "image psf angle", "unit", "min", "wave", wave_460, "plot range", 1.0, "window", False
+    )
+    udata_460_phase, handle_460_phase = wvf_plot(
+        wvf, "image pupil phase", "unit", "mm", "wave", wave_460, "plot range", 2.0, "window", False
+    )
+
+    assert handle_460_angle is None
+    assert handle_460_phase is None
+    assert np.asarray(udata_460_angle["z"], dtype=float).ndim == 2
+    assert np.asarray(udata_460_phase["z"], dtype=float).ndim == 2
+    assert np.isclose(float(np.asarray(wvf_get(wvf, "wave"), dtype=float)[0]), wave_460)
+
+
+def test_run_python_case_supports_wvf_plot_script_sequence_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("wvf_plot_script_sequence_small", asset_store=asset_store)
+
+    assert np.isclose(float(case.payload["wave_550_nm"]), 550.0)
+    assert np.isclose(float(case.payload["wave_460_nm"]), 460.0)
+    assert case.payload["line_550_um_x"].ndim == 1
+    assert case.payload["line_550_um_y_norm"].shape == case.payload["line_550_um_x"].shape
+    assert case.payload["line_550_mm_x"].ndim == 1
+    assert case.payload["line_550_mm_y_norm"].shape == case.payload["line_550_mm_x"].shape
+    assert np.isclose(float(np.max(np.asarray(case.payload["line_550_mm_norm_y"], dtype=float))), 1.0)
+    assert case.payload["psf_angle_460_x"].ndim == 1
+    assert case.payload["psf_angle_460_mid_row_norm"].shape == case.payload["psf_angle_460_x"].shape
+    assert float(case.payload["psf_angle_460_center"]) > 0.0
+    assert case.payload["pupil_phase_460_x"].ndim == 1
+    assert case.payload["pupil_phase_460_mid_row"].shape == case.payload["pupil_phase_460_x"].shape
+    assert np.isfinite(float(case.payload["pupil_phase_460_center"]))
+
+
 def test_wvf_diffraction_workflow_supports_script_sweeps() -> None:
     flength_mm = 6.0
     flength_m = flength_mm * 1e-3
