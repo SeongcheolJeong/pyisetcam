@@ -128,6 +128,56 @@ def _channel_normalize(values: Any) -> np.ndarray:
     return vector / max(float(np.max(np.abs(vector))), 1e-12)
 
 
+def _find_nearest_two(array: Any, number: float) -> np.ndarray:
+    values = np.asarray(array, dtype=float).reshape(-1)
+    order = np.argsort(np.abs(values - float(number)), kind="mergesort")
+    return values[order[:2]]
+
+
+def _circle_mask(radius: float, img_size: tuple[int, int]) -> np.ndarray:
+    rows, cols = int(img_size[0]), int(img_size[1])
+    x, y = np.meshgrid(np.arange(1, cols + 1, dtype=float), np.arange(1, rows + 1, dtype=float))
+    center_x = cols / 2.0
+    center_y = rows / 2.0
+    dist = np.sqrt((x - center_x) ** 2 + (y - center_y) ** 2)
+    return dist <= float(radius)
+
+
+def _generate_fringe_psf(zernike_coeffs: Any, *, grid_size: int = 512) -> tuple[np.ndarray, np.ndarray]:
+    coeffs = np.asarray(zernike_coeffs, dtype=float).reshape(-1)
+    x, y = np.meshgrid(np.linspace(-1.0, 1.0, grid_size, dtype=float), np.linspace(-1.0, 1.0, grid_size, dtype=float))
+    rho = np.sqrt(x**2 + y**2)
+    theta = np.arctan2(y, x)
+
+    zernike_terms = [
+        lambda r, t: np.ones_like(r, dtype=float),
+        lambda r, t: r * np.cos(t),
+        lambda r, t: r * np.sin(t),
+        lambda r, t: -1.0 + 2.0 * r**2,
+        lambda r, t: r**2 * np.cos(2.0 * t),
+        lambda r, t: r**2 * np.sin(2.0 * t),
+        lambda r, t: (-2.0 * r + 3.0 * r**3) * np.cos(t),
+        lambda r, t: (-2.0 * r + 3.0 * r**3) * np.sin(t),
+        lambda r, t: 1.0 - 6.0 * r**2 + 6.0 * r**4,
+        lambda r, t: r**3 * np.cos(3.0 * t),
+        lambda r, t: r**3 * np.sin(3.0 * t),
+        lambda r, t: (-3.0 * r**2 + 4.0 * r**4) * np.cos(2.0 * t),
+        lambda r, t: (-3.0 * r**2 + 4.0 * r**4) * np.sin(2.0 * t),
+        lambda r, t: (3.0 * r - 12.0 * r**3 + 10.0 * r**5) * np.cos(t),
+        lambda r, t: (3.0 * r - 12.0 * r**3 + 10.0 * r**5) * np.sin(t),
+    ]
+
+    wavefront = np.zeros_like(rho, dtype=float)
+    for index, coefficient in enumerate(coeffs):
+        wavefront = wavefront + float(coefficient) * zernike_terms[index](rho, theta)
+
+    aperture_mask = _circle_mask(round(grid_size / 2.0), (grid_size, grid_size)).astype(float)
+    pupil_phase = np.exp(-1j * 2.0 * np.pi * wavefront)
+    amplitude = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(pupil_phase * aperture_mask)))
+    intensity = np.real(amplitude * np.conj(amplitude))
+    return intensity, wavefront
+
+
 def run_python_case_with_context(
     case_name: str,
     *,
@@ -1534,6 +1584,67 @@ def run_python_case_with_context(
                 "calc_pupil_mm": 2.0,
             },
             context={"wvf": current_wvf},
+        )
+
+    if case_name == "zernike_interpolation_small":
+        raw = store.load_mat("data/optics/zernike_doubleGauss.mat")
+        data = raw["data"]
+        wavelengths = np.asarray(data.wavelengths, dtype=float).reshape(-1)
+        image_heights = np.asarray(data.image_heights, dtype=float).reshape(-1)
+        zcoeffs = data.zernikeCoefficients
+
+        image_height_indices = np.arange(1, 22, 4, dtype=int)
+        this_wave_index = 3
+        test_index = 6
+        wavelength_nm = float(wavelengths[this_wave_index - 1])
+        image_heights_test = image_heights[image_height_indices - 1]
+        zernike_coeff_matrix = np.vstack(
+            [
+                np.asarray(getattr(zcoeffs, f"wave_{this_wave_index}_field_{int(index)}"), dtype=float).reshape(-1)
+                for index in image_height_indices
+            ]
+        )
+        nearest_indices = np.asarray(_find_nearest_two(image_height_indices, test_index), dtype=int)
+        test_height = float(image_heights[test_index - 1])
+        zernike_gt = np.asarray(getattr(zcoeffs, f"wave_{this_wave_index}_field_{test_index}"), dtype=float).reshape(-1)
+        zernike_interpolated = np.array(
+            [np.interp(test_height, image_heights_test, zernike_coeff_matrix[:, column]) for column in range(zernike_coeff_matrix.shape[1])],
+            dtype=float,
+        )
+        validation = zernike_interpolated - zernike_gt
+
+        psf_interpolated, _ = _generate_fringe_psf(zernike_interpolated)
+        psf_gt, _ = _generate_fringe_psf(zernike_gt)
+        psf_1, _ = _generate_fringe_psf(np.asarray(getattr(zcoeffs, f"wave_{this_wave_index}_field_{int(nearest_indices[0])}"), dtype=float))
+        psf_2, _ = _generate_fringe_psf(np.asarray(getattr(zcoeffs, f"wave_{this_wave_index}_field_{int(nearest_indices[1])}"), dtype=float))
+        psf_interp_space = (
+            psf_1 * (test_height - float(image_heights[int(nearest_indices[0]) - 1])) / float(nearest_indices[1] - nearest_indices[0])
+            + psf_2 * (float(nearest_indices[1]) - test_height) / float(nearest_indices[1] - nearest_indices[0])
+        )
+
+        middle_row = psf_gt.shape[0] // 2
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "this_wave_index": this_wave_index,
+                "wavelength_nm": wavelength_nm,
+                "image_height_indices": image_height_indices,
+                "image_heights_test": image_heights_test,
+                "test_index": test_index,
+                "test_height": test_height,
+                "nearest_indices": nearest_indices,
+                "zernike_gt": zernike_gt,
+                "zernike_interpolated": zernike_interpolated,
+                "validation": validation,
+                "validation_rmse": float(np.sqrt(np.mean(validation**2))),
+                "psf_interpolated_mid_row_norm": _channel_normalize(psf_interpolated[middle_row, :]),
+                "psf_gt_mid_row_norm": _channel_normalize(psf_gt[middle_row, :]),
+                "psf_interp_space_mid_row_norm": _channel_normalize(psf_interp_space[middle_row, :]),
+                "psf_interpolated_peak": float(np.max(psf_interpolated)),
+                "psf_gt_peak": float(np.max(psf_gt)),
+                "psf_interp_space_peak": float(np.max(psf_interp_space)),
+            },
+            context={},
         )
 
     if case_name == "wvf_diffraction_small":

@@ -485,6 +485,12 @@
       }
     },
     {
+      "name": "zernike_interpolation_small",
+      "matlab_function": "s_zernikeInterpolation",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "wvf_diffraction_small",
       "matlab_function": "s_wvfDiffraction",
       "rtol": 1e-05,

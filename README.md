@@ -358,6 +358,11 @@ the 16-coefficient OSA-index sweep from `s_wvfWavefronts.m`, comparing
 the returned spatial support axis, normalized wavefront center rows and
 columns, and peak absolute wavefront amplitude for indices 1:16 at a
 2 mm pupil.
+That same Phase 2 wavefront block now also has direct Octave parity on
+`s_zernikeInterpolation.m`, comparing the interpolated-vs-ground-truth
+Zernike coefficient vector at the target field height and the normalized
+center-row PSFs for Zernike-space interpolation, ground truth, and the
+script's direct space-interpolation path.
 for script-driven synthetic aperture generation, including deterministic
 clean polygon support used by the upstream flare scripts and direct
 Octave parity on that clean-aperture path.

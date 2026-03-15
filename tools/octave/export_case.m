@@ -306,6 +306,56 @@ switch case_name
         payload.measured_pupil_mm = 2;
         payload.calc_pupil_mm = 2;
 
+    case 'zernike_interpolation_small'
+        raw = load(fullfile(isetRootPath, 'data', 'optics', 'zernike_doubleGauss.mat'), 'data');
+        data = raw.data;
+        wavelengths = double(data.wavelengths(:));
+        imageHeights = double(data.image_heights(:));
+        zCoeffs = data.zernikeCoefficients;
+
+        imageHeightIndices = 1:4:21;
+        thisWaveIndex = 3;
+        testIndex = 6;
+        wavelengthNM = wavelengths(thisWaveIndex);
+        imageHeightsTest = imageHeights(imageHeightIndices);
+        zernikeCoeffMatrix = zeros(numel(imageHeightIndices), numel(zCoeffs.(sprintf('wave_%d_field_%d', thisWaveIndex, imageHeightIndices(1)))));
+        for ii = 1:numel(imageHeightIndices)
+            zernikeCoeffMatrix(ii, :) = double(zCoeffs.(sprintf('wave_%d_field_%d', thisWaveIndex, imageHeightIndices(ii))))(:)';
+        end
+
+        nearestIndices = local_find_nearest_two(imageHeightIndices, testIndex);
+        testHeight = imageHeights(testIndex);
+        zernikeGT = double(zCoeffs.(sprintf('wave_%d_field_%d', thisWaveIndex, testIndex))(:));
+        zernikeInterpolated = interp1(imageHeightsTest, zernikeCoeffMatrix, testHeight, 'linear')';
+        validation = zernikeInterpolated - zernikeGT;
+
+        [psfInterpolated, ~] = local_generate_fringe_psf(zernikeInterpolated);
+        [psfGT, ~] = local_generate_fringe_psf(zernikeGT);
+        [psf1, ~] = local_generate_fringe_psf(double(zCoeffs.(sprintf('wave_%d_field_%d', thisWaveIndex, nearestIndices(1)))));
+        [psf2, ~] = local_generate_fringe_psf(double(zCoeffs.(sprintf('wave_%d_field_%d', thisWaveIndex, nearestIndices(2)))));
+        psfInterpSpace = ...
+            psf1 * (testHeight - imageHeights(nearestIndices(1))) / (nearestIndices(2) - nearestIndices(1)) + ...
+            psf2 * (nearestIndices(2) - testHeight) / (nearestIndices(2) - nearestIndices(1));
+
+        middleRow = floor(size(psfGT, 1) / 2) + 1;
+        payload.this_wave_index = thisWaveIndex;
+        payload.wavelength_nm = wavelengthNM;
+        payload.image_height_indices = double(imageHeightIndices(:));
+        payload.image_heights_test = double(imageHeightsTest(:));
+        payload.test_index = testIndex;
+        payload.test_height = testHeight;
+        payload.nearest_indices = double(nearestIndices(:));
+        payload.zernike_gt = double(zernikeGT(:));
+        payload.zernike_interpolated = double(zernikeInterpolated(:));
+        payload.validation = double(validation(:));
+        payload.validation_rmse = sqrt(mean(validation(:) .^ 2));
+        payload.psf_interpolated_mid_row_norm = local_channel_normalize(psfInterpolated(middleRow, :));
+        payload.psf_gt_mid_row_norm = local_channel_normalize(psfGT(middleRow, :));
+        payload.psf_interp_space_mid_row_norm = local_channel_normalize(psfInterpSpace(middleRow, :));
+        payload.psf_interpolated_peak = max(psfInterpolated(:));
+        payload.psf_gt_peak = max(psfGT(:));
+        payload.psf_interp_space_peak = max(psfInterpSpace(:));
+
     case 'wvf_pupil_size_human_small'
         measuredPupilMM = 7.5;
         calcPupilMM = 3.0;
@@ -3568,6 +3618,57 @@ value = 0;
 for ii = 1:length(zStack)
     value = value + zStack(ii) * tan(asin(sin(cra) / nStack(ii)));
 end
+end
+
+function nearestTwo = local_find_nearest_two(array, number)
+differences = abs(double(array(:)) - double(number));
+[~, sortedIndices] = sort(differences);
+nearestTwo = double(array(sortedIndices(1:2)));
+end
+
+function mask = local_create_circle_mask(radius, imgSize)
+[X, Y] = meshgrid(1:imgSize(2), 1:imgSize(1));
+centerX = imgSize(2) / 2;
+centerY = imgSize(1) / 2;
+distFromCenter = sqrt((X - centerX) .^ 2 + (Y - centerY) .^ 2);
+mask = distFromCenter <= radius;
+end
+
+function [psf, wavefront] = local_generate_fringe_psf(zernikeCoeffs)
+gridSize = 512;
+[x, y] = meshgrid(linspace(-1, 1, gridSize));
+rho = sqrt(x .^ 2 + y .^ 2);
+theta = atan2(y, x);
+zernikeCoeffs = double(zernikeCoeffs(:));
+
+zernikeTerms = {
+    @(rho, theta) 1, ...
+    @(rho, theta) rho .* cos(theta), ...
+    @(rho, theta) rho .* sin(theta), ...
+    @(rho, theta) -1 + 2 * rho .^ 2, ...
+    @(rho, theta) rho .^ 2 .* cos(2 * theta), ...
+    @(rho, theta) rho .^ 2 .* sin(2 * theta), ...
+    @(rho, theta) (-2 * rho + 3 * rho .^ 3) .* cos(theta), ...
+    @(rho, theta) (-2 * rho + 3 * rho .^ 3) .* sin(theta), ...
+    @(rho, theta) 1 - 6 * rho .^ 2 + 6 * rho .^ 4, ...
+    @(rho, theta) rho .^ 3 .* cos(3 * theta), ...
+    @(rho, theta) rho .^ 3 .* sin(3 * theta), ...
+    @(rho, theta) (-3 * rho .^ 2 + 4 * rho .^ 4) .* cos(2 * theta), ...
+    @(rho, theta) (-3 * rho .^ 2 + 4 * rho .^ 4) .* sin(2 * theta), ...
+    @(rho, theta) (3 * rho - 12 * rho .^ 3 + 10 * rho .^ 5) .* cos(theta), ...
+    @(rho, theta) (3 * rho - 12 * rho .^ 3 + 10 * rho .^ 5) .* sin(theta)
+};
+
+wavefront = zeros(size(rho));
+for ii = 1:numel(zernikeCoeffs)
+    wavefront = wavefront + zernikeCoeffs(ii) .* zernikeTerms{ii}(rho, theta);
+end
+
+apertureMask = double(local_create_circle_mask(round(gridSize / 2), [gridSize, gridSize]));
+pupilFuncPhase = exp(-1i * 2 * pi * wavefront);
+amp = fftshift(fft2(ifftshift(pupilFuncPhase .* apertureMask)));
+inten = amp .* conj(amp);
+psf = real(inten);
 end
 
 function optimalOffsets = local_ml_optimal_offsets(ml, sensor)

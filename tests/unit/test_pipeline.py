@@ -4455,6 +4455,65 @@ def test_run_python_case_supports_wvf_wavefronts_parity_case(asset_store) -> Non
     assert np.isclose(float(case.payload["calc_pupil_mm"]), 2.0)
 
 
+def test_zernike_interpolation_workflow_supports_field_height_psf_comparison(asset_store) -> None:
+    raw = asset_store.load_mat("data/optics/zernike_doubleGauss.mat")
+    data = raw["data"]
+    wavelengths = np.asarray(data.wavelengths, dtype=float).reshape(-1)
+    image_heights = np.asarray(data.image_heights, dtype=float).reshape(-1)
+    zcoeffs = data.zernikeCoefficients
+
+    image_height_indices = np.arange(1, 22, 4, dtype=int)
+    this_wave_index = 3
+    test_index = 6
+    image_heights_test = image_heights[image_height_indices - 1]
+    coeff_matrix = np.vstack(
+        [
+            np.asarray(getattr(zcoeffs, f"wave_{this_wave_index}_field_{int(index)}"), dtype=float).reshape(-1)
+            for index in image_height_indices
+        ]
+    )
+    test_height = float(image_heights[test_index - 1])
+    zernike_interpolated = np.array(
+        [np.interp(test_height, image_heights_test, coeff_matrix[:, column]) for column in range(coeff_matrix.shape[1])],
+        dtype=float,
+    )
+    zernike_gt = np.asarray(getattr(zcoeffs, f"wave_{this_wave_index}_field_{test_index}"), dtype=float).reshape(-1)
+    validation = zernike_interpolated - zernike_gt
+
+    case = run_python_case_with_context("zernike_interpolation_small", asset_store=asset_store)
+
+    assert np.isclose(float(case.payload["wavelength_nm"]), float(wavelengths[this_wave_index - 1]))
+    assert np.array_equal(case.payload["image_height_indices"], image_height_indices)
+    assert np.array_equal(case.payload["nearest_indices"], np.array([5, 9], dtype=int))
+    assert np.allclose(case.payload["zernike_gt"], zernike_gt)
+    assert np.allclose(case.payload["zernike_interpolated"], zernike_interpolated)
+    assert np.allclose(case.payload["validation"], validation)
+    assert case.payload["psf_interpolated_mid_row_norm"].shape == (512,)
+    assert case.payload["psf_gt_mid_row_norm"].shape == (512,)
+    assert case.payload["psf_interp_space_mid_row_norm"].shape == (512,)
+
+
+def test_run_python_case_supports_zernike_interpolation_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("zernike_interpolation_small", asset_store=asset_store)
+
+    assert int(case.payload["this_wave_index"]) == 3
+    assert np.isclose(float(case.payload["wavelength_nm"]), 621.95)
+    assert np.array_equal(case.payload["image_height_indices"], np.array([1, 5, 9, 13, 17, 21], dtype=int))
+    assert case.payload["image_heights_test"].shape == (6,)
+    assert int(case.payload["test_index"]) == 6
+    assert np.array_equal(case.payload["nearest_indices"], np.array([5, 9], dtype=int))
+    assert case.payload["zernike_gt"].shape == (15,)
+    assert case.payload["zernike_interpolated"].shape == (15,)
+    assert case.payload["validation"].shape == (15,)
+    assert np.isfinite(float(case.payload["validation_rmse"]))
+    assert case.payload["psf_interpolated_mid_row_norm"].shape == (512,)
+    assert case.payload["psf_gt_mid_row_norm"].shape == (512,)
+    assert case.payload["psf_interp_space_mid_row_norm"].shape == (512,)
+    assert float(case.payload["psf_interpolated_peak"]) > 0.0
+    assert float(case.payload["psf_gt_peak"]) > 0.0
+    assert float(case.payload["psf_interp_space_peak"]) > 0.0
+
+
 def test_wvf_diffraction_workflow_supports_script_sweeps() -> None:
     flength_mm = 6.0
     flength_m = flength_mm * 1e-3
