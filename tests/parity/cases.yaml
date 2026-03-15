@@ -387,6 +387,86 @@
       "atol": 1e-08
     },
     {
+      "name": "scene_render_small",
+      "matlab_function": "s_sceneRender",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "daylight_srgb_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.15
+        },
+        "daylight_srgb_channel_means": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.15
+        },
+        "daylight_srgb_center_rgb": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.15
+        },
+        "daylight_srgb_center_row_luma_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.03
+        },
+        "hdr_render_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.1
+        },
+        "hdr_srgb_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.15
+        },
+        "hdr_srgb_channel_means": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.15
+        },
+        "hdr_render_channel_means": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.1
+        },
+        "hdr_render_center_rgb": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.15
+        },
+        "hdr_render_center_row_luma_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.1
+        },
+        "hdr_render_delta_mean_abs": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "standard_render_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.1
+        },
+        "standard_srgb_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.15
+        },
+        "standard_srgb_channel_means": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.15
+        },
+        "standard_render_channel_means": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.1
+        },
+        "standard_render_center_rgb": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.15
+        },
+        "standard_render_center_row_luma_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.1
+        },
+        "standard_render_delta_mean_abs": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        }
+      }
+    },
+    {
       "name": "display_create_lcd_example",
       "matlab_function": "displayCreate",
       "rtol": 1e-05,

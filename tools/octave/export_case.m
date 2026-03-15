@@ -1317,6 +1317,66 @@ switch case_name
         payload.source_aspect_ratio = sourceSize(2) / sourceSize(1);
         payload.final_aspect_ratio = double(sceneGet(sceneStep3, 'cols')) / double(sceneGet(sceneStep3, 'rows'));
 
+    case 'scene_render_small'
+        wList = (400:10:700)';
+        stuffedFile = fullfile(isetRootPath, 'data', 'images', 'multispectral', 'StuffedAnimals_tungsten-hdrs.mat');
+        hdrFile = fullfile(isetRootPath, 'data', 'images', 'multispectral', 'Feng_Office-hdrs.mat');
+
+        daylightScene = sceneFromFile(stuffedFile, 'multispectral', [], [], wList);
+        daylightEnergy = ieReadSpectra('D75.mat', sceneGet(daylightScene, 'wave'));
+        daylightScene = sceneAdjustIlluminant(daylightScene, daylightEnergy);
+        daylightScene = sceneSet(daylightScene, 'illuminantComment', 'Daylight (D75) illuminant');
+        daylightRender = double(sceneShowImage(daylightScene, -1));
+        daylightIlluminantPhotons = double(sceneGet(daylightScene, 'illuminant photons'));
+        daylightLuma = max(daylightRender, [], 3);
+        centerRow = floor(size(daylightRender, 1) / 2) + 1;
+        centerCol = floor(size(daylightRender, 2) / 2) + 1;
+
+        hdrScene = sceneFromFile(hdrFile, 'multispectral');
+        hdrSrgb = double(sceneShowImage(hdrScene, -1));
+        hdrRes = double(hdrRender(hdrSrgb));
+        hdrLuma = max(hdrRes, [], 3);
+        hdrCenterRow = floor(size(hdrRes, 1) / 2) + 1;
+        hdrCenterCol = floor(size(hdrRes, 2) / 2) + 1;
+
+        standardScene = sceneFromFile(stuffedFile, 'multispectral');
+        standardSrgb = double(sceneShowImage(standardScene, -1));
+        standardRes = double(hdrRender(standardSrgb));
+        standardLuma = max(standardRes, [], 3);
+        standardCenterRow = floor(size(standardRes, 1) / 2) + 1;
+        standardCenterCol = floor(size(standardRes, 2) / 2) + 1;
+
+        payload.daylight_scene_size = double(sceneGet(daylightScene, 'size')(:));
+        payload.daylight_wave = double(sceneGet(daylightScene, 'wave')(:));
+        payload.daylight_mean_luminance = double(sceneGet(daylightScene, 'mean luminance'));
+        payload.daylight_illuminant_photons_norm = local_channel_normalize(daylightIlluminantPhotons(:));
+        payload.daylight_srgb_stats = local_stats_vector(daylightRender);
+        payload.daylight_srgb_channel_means = squeeze(mean(mean(daylightRender, 1), 2));
+        payload.daylight_srgb_center_rgb = squeeze(daylightRender(centerRow, centerCol, :));
+        payload.daylight_srgb_center_row_luma_norm = local_canonical_profile(local_channel_normalize(daylightLuma(centerRow, :)), 129);
+
+        payload.hdr_scene_size = double(sceneGet(hdrScene, 'size')(:));
+        payload.hdr_wave = double(sceneGet(hdrScene, 'wave')(:));
+        payload.hdr_mean_luminance = double(sceneGet(hdrScene, 'mean luminance'));
+        payload.hdr_srgb_stats = local_stats_vector(hdrSrgb);
+        payload.hdr_srgb_channel_means = squeeze(mean(mean(hdrSrgb, 1), 2));
+        payload.hdr_render_stats = local_stats_vector(hdrRes);
+        payload.hdr_render_channel_means = squeeze(mean(mean(hdrRes, 1), 2));
+        payload.hdr_render_center_rgb = squeeze(hdrRes(hdrCenterRow, hdrCenterCol, :));
+        payload.hdr_render_center_row_luma_norm = local_canonical_profile(local_channel_normalize(hdrLuma(hdrCenterRow, :)), 129);
+        payload.hdr_render_delta_mean_abs = mean(abs(hdrRes(:) - hdrSrgb(:)));
+
+        payload.standard_scene_size = double(sceneGet(standardScene, 'size')(:));
+        payload.standard_wave = double(sceneGet(standardScene, 'wave')(:));
+        payload.standard_mean_luminance = double(sceneGet(standardScene, 'mean luminance'));
+        payload.standard_srgb_stats = local_stats_vector(standardSrgb);
+        payload.standard_srgb_channel_means = squeeze(mean(mean(standardSrgb, 1), 2));
+        payload.standard_render_stats = local_stats_vector(standardRes);
+        payload.standard_render_channel_means = squeeze(mean(mean(standardRes, 1), 2));
+        payload.standard_render_center_rgb = squeeze(standardRes(standardCenterRow, standardCenterCol, :));
+        payload.standard_render_center_row_luma_norm = local_canonical_profile(local_channel_normalize(standardLuma(standardCenterRow, :)), 129);
+        payload.standard_render_delta_mean_abs = mean(abs(standardRes(:) - standardSrgb(:)));
+
     case 'display_create_lcd_example'
         d = displayCreate('lcdExample.mat');
         payload.wave = displayGet(d, 'wave');

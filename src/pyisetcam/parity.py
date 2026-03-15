@@ -61,6 +61,7 @@ from .optics import (
 )
 from .plotting import ip_plot, oi_plot, sensor_plot, sensor_plot_line, wvf_plot
 from .scene import (
+    hdr_render,
     ie_reflectance_samples,
     scene_adjust_illuminant,
     scene_adjust_luminance,
@@ -71,6 +72,7 @@ from .scene import (
     scene_illuminant_ss,
     scene_interpolate_w,
     scene_rotate,
+    scene_show_image,
     scene_set,
 )
 from .sensor import (
@@ -1672,6 +1674,88 @@ def run_python_case_with_context(
                 "step3_replay_max_abs": float(np.max(np.abs(step3_photons[::3, :, :] - step2_photons))),
                 "source_aspect_ratio": float(source_size[1] / source_size[0]),
                 "final_aspect_ratio": float(step3_size[1] / step3_size[0]),
+            },
+            context={},
+        )
+
+    if case_name == "scene_render_small":
+        def _canonical_profile(values: np.ndarray, samples: int = 129) -> np.ndarray:
+            row = np.asarray(values, dtype=float).reshape(-1)
+            support = np.linspace(-1.0, 1.0, row.size, dtype=float)
+            query = np.linspace(-1.0, 1.0, samples, dtype=float)
+            return np.interp(query, support, row).astype(float)
+
+        def _render_summary(image: np.ndarray) -> dict[str, Any]:
+            image = np.asarray(image, dtype=float)
+            center_row = image.shape[0] // 2
+            center_col = image.shape[1] // 2
+            luma = np.max(image, axis=2)
+            return {
+                "stats": _stats_vector(image),
+                "channel_means": np.mean(image, axis=(0, 1), dtype=float).reshape(-1),
+                "center_rgb": image[center_row, center_col, :].reshape(-1),
+                "center_row_luma_norm": _canonical_profile(_channel_normalize(luma[center_row, :])),
+            }
+
+        wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+        stuffed_path = store.resolve("data/images/multispectral/StuffedAnimals_tungsten-hdrs.mat")
+        hdr_path = store.resolve("data/images/multispectral/Feng_Office-hdrs.mat")
+
+        daylight_scene = scene_from_file(stuffed_path, "multispectral", None, None, wave, asset_store=store)
+        daylight_energy = ie_read_spectra("D75.mat", np.asarray(scene_get(daylight_scene, "wave"), dtype=float), asset_store=store)
+        daylight_scene = scene_adjust_illuminant(daylight_scene, daylight_energy, asset_store=store)
+        daylight_scene = scene_set(daylight_scene, "illuminantComment", "Daylight (D75) illuminant")
+        daylight_render = scene_show_image(daylight_scene, 0, asset_store=store)
+        daylight_illuminant = np.asarray(scene_get(daylight_scene, "illuminant photons"), dtype=float)
+        if daylight_illuminant.ndim == 3:
+            daylight_illuminant = np.mean(daylight_illuminant, axis=(0, 1), dtype=float)
+        daylight_illuminant = daylight_illuminant.reshape(-1)
+
+        hdr_scene = scene_from_file(hdr_path, "multispectral", asset_store=store)
+        hdr_srgb = scene_show_image(hdr_scene, 0, asset_store=store)
+        hdr_res = hdr_render(hdr_srgb)
+
+        standard_scene = scene_from_file(stuffed_path, "multispectral", asset_store=store)
+        standard_srgb = scene_show_image(standard_scene, 0, asset_store=store)
+        standard_res = hdr_render(standard_srgb)
+
+        daylight_summary = _render_summary(daylight_render)
+        hdr_srgb_summary = _render_summary(hdr_srgb)
+        hdr_res_summary = _render_summary(hdr_res)
+        standard_srgb_summary = _render_summary(standard_srgb)
+        standard_res_summary = _render_summary(standard_res)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "daylight_scene_size": np.asarray(scene_get(daylight_scene, "size"), dtype=int).reshape(-1),
+                "daylight_wave": np.asarray(scene_get(daylight_scene, "wave"), dtype=float).reshape(-1),
+                "daylight_mean_luminance": float(scene_get(daylight_scene, "mean luminance", asset_store=store)),
+                "daylight_illuminant_photons_norm": _channel_normalize(daylight_illuminant),
+                "daylight_srgb_stats": daylight_summary["stats"],
+                "daylight_srgb_channel_means": daylight_summary["channel_means"],
+                "daylight_srgb_center_rgb": daylight_summary["center_rgb"],
+                "daylight_srgb_center_row_luma_norm": daylight_summary["center_row_luma_norm"],
+                "hdr_scene_size": np.asarray(scene_get(hdr_scene, "size"), dtype=int).reshape(-1),
+                "hdr_wave": np.asarray(scene_get(hdr_scene, "wave"), dtype=float).reshape(-1),
+                "hdr_mean_luminance": float(scene_get(hdr_scene, "mean luminance", asset_store=store)),
+                "hdr_srgb_stats": hdr_srgb_summary["stats"],
+                "hdr_srgb_channel_means": hdr_srgb_summary["channel_means"],
+                "hdr_render_stats": hdr_res_summary["stats"],
+                "hdr_render_channel_means": hdr_res_summary["channel_means"],
+                "hdr_render_center_rgb": hdr_res_summary["center_rgb"],
+                "hdr_render_center_row_luma_norm": hdr_res_summary["center_row_luma_norm"],
+                "hdr_render_delta_mean_abs": float(np.mean(np.abs(hdr_res - hdr_srgb))),
+                "standard_scene_size": np.asarray(scene_get(standard_scene, "size"), dtype=int).reshape(-1),
+                "standard_wave": np.asarray(scene_get(standard_scene, "wave"), dtype=float).reshape(-1),
+                "standard_mean_luminance": float(scene_get(standard_scene, "mean luminance", asset_store=store)),
+                "standard_srgb_stats": standard_srgb_summary["stats"],
+                "standard_srgb_channel_means": standard_srgb_summary["channel_means"],
+                "standard_render_stats": standard_res_summary["stats"],
+                "standard_render_channel_means": standard_res_summary["channel_means"],
+                "standard_render_center_rgb": standard_res_summary["center_rgb"],
+                "standard_render_center_row_luma_norm": standard_res_summary["center_row_luma_norm"],
+                "standard_render_delta_mean_abs": float(np.mean(np.abs(standard_res - standard_srgb))),
             },
             context={},
         )

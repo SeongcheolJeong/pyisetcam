@@ -79,6 +79,7 @@ from pyisetcam import (
     rgb_to_xw_format,
     si_synthetic,
     run_python_case,
+    hdr_render,
     scene_adjust_illuminant,
     scene_combine,
     scene_create,
@@ -88,6 +89,7 @@ from pyisetcam import (
     scene_illuminant_ss,
     scene_interpolate_w,
     scene_rotate,
+    scene_show_image,
     scene_set,
     signal_current,
     imx490_compute,
@@ -5034,6 +5036,70 @@ def test_scene_increase_size_script_workflow(asset_store) -> None:
         float(scene_get(scene, "cols")) / float(scene_get(scene, "rows")),
         float(scene_get(scene_step3, "cols")) / float(scene_get(scene_step3, "rows")),
     )
+
+
+def test_run_python_case_supports_scene_render_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_render_small", asset_store=asset_store)
+
+    assert tuple(case.payload["daylight_scene_size"]) == (506, 759)
+    assert case.payload["daylight_wave"].shape == (31,)
+    assert case.payload["daylight_illuminant_photons_norm"].shape == (31,)
+    assert case.payload["daylight_srgb_stats"].shape == (4,)
+    assert case.payload["daylight_srgb_channel_means"].shape == (3,)
+    assert case.payload["daylight_srgb_center_rgb"].shape == (3,)
+    assert case.payload["daylight_srgb_center_row_luma_norm"].shape == (129,)
+    assert case.payload["hdr_scene_size"].shape == (2,)
+    assert case.payload["hdr_wave"].ndim == 1
+    assert case.payload["hdr_srgb_stats"].shape == (4,)
+    assert case.payload["hdr_render_stats"].shape == (4,)
+    assert case.payload["hdr_render_channel_means"].shape == (3,)
+    assert case.payload["hdr_render_center_rgb"].shape == (3,)
+    assert case.payload["hdr_render_center_row_luma_norm"].shape == (129,)
+    assert float(case.payload["hdr_render_delta_mean_abs"]) > 0.0
+    assert case.payload["standard_scene_size"].shape == (2,)
+    assert case.payload["standard_wave"].ndim == 1
+    assert case.payload["standard_srgb_stats"].shape == (4,)
+    assert case.payload["standard_render_stats"].shape == (4,)
+    assert case.payload["standard_render_channel_means"].shape == (3,)
+    assert case.payload["standard_render_center_rgb"].shape == (3,)
+    assert case.payload["standard_render_center_row_luma_norm"].shape == (129,)
+    assert float(case.payload["standard_render_delta_mean_abs"]) > 0.0
+
+
+def test_scene_render_script_workflow(asset_store) -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    stuffed_path = asset_store.resolve("data/images/multispectral/StuffedAnimals_tungsten-hdrs.mat")
+    hdr_path = asset_store.resolve("data/images/multispectral/Feng_Office-hdrs.mat")
+
+    daylight_scene = scene_from_file(stuffed_path, "multispectral", None, None, wave, asset_store=asset_store)
+    daylight_scene = scene_adjust_illuminant(
+        daylight_scene,
+        ie_read_spectra("D75.mat", np.asarray(scene_get(daylight_scene, "wave"), dtype=float), asset_store=asset_store),
+        asset_store=asset_store,
+    )
+    daylight_srgb = np.asarray(scene_show_image(daylight_scene, 0, asset_store=asset_store), dtype=float)
+
+    hdr_scene = scene_from_file(hdr_path, "multispectral", asset_store=asset_store)
+    hdr_srgb = np.asarray(scene_show_image(hdr_scene, 0, asset_store=asset_store), dtype=float)
+    hdr_res = np.asarray(hdr_render(hdr_srgb), dtype=float)
+
+    standard_scene = scene_from_file(stuffed_path, "multispectral", asset_store=asset_store)
+    standard_srgb = np.asarray(scene_show_image(standard_scene, 0, asset_store=asset_store), dtype=float)
+    standard_res = np.asarray(hdr_render(standard_srgb), dtype=float)
+
+    assert daylight_srgb.shape == (506, 759, 3)
+    assert np.all(daylight_srgb >= 0.0)
+    assert np.all(daylight_srgb <= 1.0)
+    assert hdr_srgb.shape == hdr_res.shape
+    assert standard_srgb.shape == standard_res.shape
+    assert np.all(hdr_res >= 0.0)
+    assert np.all(hdr_res <= 1.0)
+    assert np.all(standard_res >= 0.0)
+    assert np.all(standard_res <= 1.0)
+    assert float(np.mean(np.abs(hdr_res - hdr_srgb))) > 0.0
+    assert float(np.mean(np.abs(standard_res - standard_srgb))) > 0.0
+    assert tuple(scene_get(daylight_scene, "size")) == (506, 759)
+    assert tuple(scene_get(standard_scene, "size")) == (506, 759)
 
 
 def test_run_python_case_supports_frequency_orientation_scene_parity_case(asset_store) -> None:

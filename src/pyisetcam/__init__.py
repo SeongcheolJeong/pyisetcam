@@ -154,6 +154,7 @@ from .session import (
     vc_select_figure,
 )
 from .scene import (
+    hdr_render,
     scene_adjust_illuminant,
     scene_adjust_luminance,
     scene_calculate_luminance,
@@ -167,6 +168,7 @@ from .scene import (
     scene_interpolate_w,
     ie_reflectance_samples,
     scene_rotate,
+    scene_show_image,
     scene_set,
 )
 from .sensor import (
@@ -465,6 +467,8 @@ __all__ = [
     "wvf_compute_psf",
     "run_python_case",
     "run_python_case_with_context",
+    "hdrRender",
+    "hdr_render",
     "sceneAdjustIlluminant",
     "sceneAdjustLuminance",
     "sceneCalculateLuminance",
@@ -477,6 +481,7 @@ __all__ = [
     "sceneIlluminantSS",
     "sceneInterpolateW",
     "sceneRotate",
+    "sceneShowImage",
     "sceneSet",
     "scene_combine",
     "scene_adjust_illuminant",
@@ -490,6 +495,7 @@ __all__ = [
     "scene_illuminant_ss",
     "scene_interpolate_w",
     "scene_rotate",
+    "scene_show_image",
     "scene_set",
     "mlAnalyzeArrayEtendue",
     "mlRadiance",
@@ -627,7 +633,9 @@ sceneIlluminantPattern = scene_illuminant_pattern
 sceneIlluminantSS = scene_illuminant_ss
 sceneInterpolateW = scene_interpolate_w
 sceneRotate = scene_rotate
+sceneShowImage = scene_show_image
 sceneSet = scene_set
+hdrRender = hdr_render
 sceneCombine = scene_combine
 sceneAdjustIlluminant = scene_adjust_illuminant
 sceneAdjustLuminance = scene_adjust_luminance

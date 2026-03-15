@@ -2173,10 +2173,280 @@ def scene_calculate_luminance(scene: Scene, *, asset_store: AssetStore | None = 
     return luminance
 
 
-def _scene_rgb_render(scene: Scene, *, asset_store: AssetStore | None = None) -> np.ndarray:
-    xyz = np.asarray(scene_get(scene, "xyz", asset_store=asset_store), dtype=float)
+def _minmax_normalize(values: np.ndarray) -> np.ndarray:
+    array = np.asarray(values, dtype=float)
+    if array.size == 0:
+        return array.copy()
+    minimum = float(np.min(array))
+    maximum = float(np.max(array))
+    if maximum <= minimum:
+        return np.zeros_like(array, dtype=float)
+    return (array - minimum) / (maximum - minimum)
+
+
+def _hist_equalize_global(values: np.ndarray, bins: int = 255) -> np.ndarray:
+    array = np.asarray(values, dtype=float)
+    flat = array.reshape(-1)
+    if flat.size == 0:
+        return array.copy()
+    normalized = _minmax_normalize(flat)
+    if float(np.max(normalized)) <= 0.0:
+        return np.zeros_like(array, dtype=float)
+    hist, edges = np.histogram(normalized, bins=int(bins), range=(0.0, 1.0))
+    cdf = np.cumsum(hist, dtype=float)
+    if cdf[-1] <= 0.0:
+        return np.zeros_like(array, dtype=float)
+    cdf /= cdf[-1]
+    centers = 0.5 * (edges[:-1] + edges[1:])
+    equalized = np.interp(normalized, centers, cdf, left=0.0, right=1.0)
+    return equalized.reshape(array.shape)
+
+
+def _pad_reflect(image: np.ndarray, xsize: int, ysize: int | None = None) -> np.ndarray:
+    if ysize is None:
+        ysize = xsize
+    xsize = int(xsize)
+    ysize = int(ysize)
+    if xsize <= 0 and ysize <= 0:
+        return np.asarray(image, dtype=float).copy()
+    return np.pad(np.asarray(image, dtype=float), ((ysize, ysize), (xsize, xsize)), mode="reflect")
+
+
+def _pad_reflect_neg(image: np.ndarray, xsize: int, ysize: int | None = None, hor_neg: int = 0, ver_neg: int = 0) -> np.ndarray:
+    if ysize is None:
+        ysize = xsize
+    image = np.asarray(image, dtype=float)
+    xsize = int(xsize)
+    ysize = int(ysize)
+    if xsize <= 0 and ysize <= 0:
+        return image.copy()
+
+    top = image[1 : ysize + 1, :][::-1, :]
+    bottom = image[-ysize - 1 : -1, :][::-1, :]
+    left = image[:, 1 : xsize + 1][:, ::-1]
+    right = image[:, -xsize - 1 : -1][:, ::-1]
+    top_left = image[1 : ysize + 1, 1 : xsize + 1][::-1, ::-1]
+    top_right = image[1 : ysize + 1, -xsize - 1 : -1][::-1, ::-1]
+    bottom_left = image[-ysize - 1 : -1, 1 : xsize + 1][::-1, ::-1]
+    bottom_right = image[-ysize - 1 : -1, -xsize - 1 : -1][::-1, ::-1]
+
+    if hor_neg == 1 and ver_neg == 0:
+        signs = ((-1, 1, -1), (-1, 1, -1), (-1, 1, -1))
+    elif hor_neg == 0 and ver_neg == 1:
+        signs = ((-1, -1, -1), (1, 1, 1), (-1, -1, -1))
+    elif hor_neg == 1 and ver_neg == 1:
+        signs = ((1, -1, 1), (-1, 1, -1), (1, -1, 1))
+    else:
+        signs = ((1, 1, 1), (1, 1, 1), (1, 1, 1))
+
+    return np.block(
+        [
+            [signs[0][0] * top_left, signs[0][1] * top, signs[0][2] * top_right],
+            [signs[1][0] * left, signs[1][1] * image, signs[1][2] * right],
+            [signs[2][0] * bottom_left, signs[2][1] * bottom, signs[2][2] * bottom_right],
+        ]
+    )
+
+
+def _gaussian_row(width: int, sigma: float) -> np.ndarray:
+    center = (float(width) + 1.0) / 2.0
+    coords = np.arange(1, width + 1, dtype=float)
+    kernel = np.exp(-np.square(coords - center) / (2.0 * sigma * sigma))
+    kernel_sum = float(np.sum(kernel))
+    if kernel_sum <= 0.0:
+        return np.zeros(width, dtype=float)
+    return kernel / kernel_sum
+
+
+def _haar_pyramid(image: np.ndarray, nlevels: int) -> np.ndarray:
+    image = np.asarray(image, dtype=float)
+    height, width = image.shape
+    pyramid = np.zeros((height, width, 3 * nlevels + 1), dtype=float)
+    lowpass_prev = image
+    band = 0
+
+    for level in range(1, nlevels + 1):
+        extend_space = max(1, 2 ** (level - 2))
+        step = 2 ** (level - 1)
+        extended = _pad_reflect(lowpass_prev, extend_space)
+        if level > 1:
+            shift_1 = extended[0:height, 0:width]
+            shift_2 = extended[0:height, step : width + step]
+            shift_3 = extended[step : height + step, 0:width]
+            shift_4 = extended[step : height + step, step : width + step]
+        else:
+            shift_1 = extended[1 : height + 1, 1 : width + 1]
+            shift_2 = extended[1 : height + 1, 1 + step : width + 1 + step]
+            shift_3 = extended[1 + step : height + 1 + step, 1 : width + 1]
+            shift_4 = extended[1 + step : height + 1 + step, 1 + step : width + 1 + step]
+
+        lowpass_prev = (shift_1 + shift_2 + shift_3 + shift_4) / 4.0
+        pyramid[:, :, band] = (shift_1 + shift_2 - shift_3 - shift_4) / 4.0
+        pyramid[:, :, band + 1] = (shift_1 - shift_2 + shift_3 - shift_4) / 4.0
+        pyramid[:, :, band + 2] = (shift_1 - shift_2 - shift_3 + shift_4) / 4.0
+        band += 3
+
+    pyramid[:, :, band] = lowpass_prev
+    return pyramid
+
+
+def _recons_haar_pyramid(pyramid: np.ndarray) -> np.ndarray:
+    pyramid = np.asarray(pyramid, dtype=float)
+    height, width, nbands = pyramid.shape
+    band_idx = nbands - 2
+    lowpass_prev = pyramid[:, :, nbands - 1]
+    nlevels = nbands // 3
+
+    for level in range(nlevels, 0, -1):
+        step = 2 ** (level - 1)
+        extend_space = 1 if level == 1 else step // 2
+        extend_low = _pad_reflect(lowpass_prev, extend_space)
+        extend_3 = _pad_reflect_neg(pyramid[:, :, band_idx], extend_space, extend_space, 1, 1)
+        band_idx -= 1
+        extend_2 = _pad_reflect_neg(pyramid[:, :, band_idx], extend_space, extend_space, 1, 0)
+        band_idx -= 1
+        extend_1 = _pad_reflect_neg(pyramid[:, :, band_idx], extend_space, extend_space, 0, 1)
+        band_idx -= 1
+
+        row_1 = slice(0, height)
+        col_1 = slice(0, width)
+        col_2 = slice(step, width + step)
+        row_3 = slice(step, height + step)
+
+        lowpass = (
+            extend_low[row_1, col_1]
+            + extend_low[row_1, col_2]
+            + extend_low[row_3, col_1]
+            + extend_low[row_3, col_2]
+        )
+        band_1 = (
+            -extend_1[row_1, col_1]
+            - extend_1[row_1, col_2]
+            + extend_1[row_3, col_1]
+            + extend_1[row_3, col_2]
+        )
+        band_2 = (
+            -extend_2[row_1, col_1]
+            + extend_2[row_1, col_2]
+            - extend_2[row_3, col_1]
+            + extend_2[row_3, col_2]
+        )
+        band_3 = (
+            extend_3[row_1, col_1]
+            - extend_3[row_1, col_2]
+            - extend_3[row_3, col_1]
+            + extend_3[row_3, col_2]
+        )
+        lowpass_prev = (lowpass + band_1 + band_2 + band_3) / 4.0
+
+    return lowpass_prev
+
+
+def _range_compression_lum(
+    image: np.ndarray,
+    filt_type: str = "haar",
+    beta: float = 0.6,
+    alpha_a: float = 0.2,
+    ifsharp: int = 0,
+) -> np.ndarray:
+    if param_format(filt_type) != "haar":
+        raise UnsupportedOptionError("hdrRender currently supports only filt_type='haar'.")
+
+    image = np.asarray(image, dtype=float)
+    if image.ndim != 2:
+        raise ValueError("range compression requires a 2-D luminance image.")
+    if image.size == 0 or float(np.mean(image)) <= 0.0:
+        return np.zeros_like(image, dtype=float)
+
+    epsilon = 0.002
+    log_image = np.log((image / float(np.mean(image))) + 1e-6)
+    log_image = log_image - float(np.min(log_image))
+
+    nlevels = int(np.floor(np.log2(float(min(log_image.shape))))) - 3
+    if nlevels < 1:
+        return np.exp(log_image)
+
+    pyramid = _haar_pyramid(log_image, nlevels)
+    _, _, pyr_layers = pyramid.shape
+    lowpass = pyramid[:, :, pyr_layers - 1]
+
+    width = 65
+    gauss = _gaussian_row(width, width / 2.0)
+    gauss2d = np.outer(gauss, gauss)
+    extend = _pad_reflect(np.abs(lowpass), width // 2)
+    lowpass_blur = convolve2d(extend, gauss2d, mode="valid")
+
+    height, width_px = lowpass.shape
+    band_blur_sum = np.zeros((height, width_px, nlevels), dtype=float)
+    band_blur_sum_sum = np.zeros((height, width_px), dtype=float)
+    width_init = 4
+    filt_num = 3
+
+    for level in range(1, nlevels + 1):
+        kernel_width = width_init * (2 ** (level - 1)) + 1
+        extend_space = int(round((kernel_width - 1) / 2))
+        gauss = _gaussian_row(kernel_width, kernel_width / 2.0)
+        gauss2d = np.outer(gauss, gauss)
+        temp = np.zeros((height + 2 * extend_space, width_px + 2 * extend_space), dtype=float)
+        for band in range(filt_num):
+            band_idx = (level - 1) * filt_num + band
+            temp += _pad_reflect(np.abs(pyramid[:, :, band_idx]), extend_space)
+        band_blur = convolve2d(temp, gauss2d, mode="valid") / float(filt_num)
+        band_blur_sum[:, :, level - 1] = band_blur
+        band_blur_sum_sum += band_blur
+
+    band_blur_sum_sum = (band_blur_sum_sum + lowpass_blur) / float(nlevels + 1)
+    alpha = float(np.median(band_blur_sum_sum)) * float(alpha_a)
+    gain = np.power(band_blur_sum_sum + epsilon, beta - 1.0) * (alpha ** (1.0 - beta))
+
+    endrate = 0.4 if int(ifsharp) == 1 else 0.6
+    for index in range(pyr_layers):
+        level_here = (index // filt_num) + 1
+        gain_amount = max(1.0 - (level_here - 1) * 0.15, endrate)
+        pyramid[:, :, index] = pyramid[:, :, index] * gain * gain_amount
+
+    result = np.exp(_recons_haar_pyramid(np.real(pyramid)))
+    return np.asarray(result, dtype=float)
+
+
+def hdr_render(
+    image: np.ndarray,
+    filt_type: str = "haar",
+    s_sat: float = 0.7,
+    bbeta: float = 0.6,
+    aalpha: float = 0.2,
+    ifsharp: int = 0,
+) -> np.ndarray:
+    image = np.asarray(image, dtype=float)
+    if image.ndim == 2 or (image.ndim == 3 and image.shape[2] == 1):
+        result = _range_compression_lum(np.squeeze(image), filt_type=filt_type, beta=bbeta, alpha_a=aalpha, ifsharp=ifsharp)
+    else:
+        if image.ndim != 3 or image.shape[2] != 3:
+            raise ValueError("hdr_render expects a grayscale image or an RGB image.")
+        luminance = np.max(image, axis=2)
+        ratios = image / (luminance[:, :, np.newaxis] + 1e-9)
+        result_luminance = _range_compression_lum(luminance, filt_type=filt_type, beta=bbeta, alpha_a=aalpha, ifsharp=ifsharp)
+        result_luminance = _minmax_normalize(result_luminance)
+        result = np.empty_like(image, dtype=float)
+        result[:, :, 0] = result_luminance * np.power(ratios[:, :, 0], float(s_sat))
+        result[:, :, 1] = result_luminance * np.power(ratios[:, :, 1], float(s_sat))
+        result[:, :, 2] = result_luminance * np.power(ratios[:, :, 2], float(s_sat))
+
+    low_end = float(np.percentile(result, 2.0))
+    high_end = float(np.percentile(result, 99.0))
+    if high_end > low_end:
+        result = (result - low_end) / (high_end - low_end)
+    else:
+        result = np.zeros_like(result, dtype=float)
+    result = np.clip(result, 0.0, 1.0)
+    result = _minmax_normalize(np.asarray(result, dtype=float) + 0.15 * _hist_equalize_global(np.real(result)))
+    return np.clip(result, 0.0, 1.0)
+
+
+def _scene_rgb_from_xyz(xyz: np.ndarray) -> np.ndarray:
+    xyz = np.asarray(xyz, dtype=float)
     if xyz.ndim != 3 or xyz.shape[2] != 3:
-        raise ValueError("sceneGet(..., 'rgb') requires an XYZ image cube.")
+        raise ValueError("scene RGB rendering requires an XYZ image cube.")
 
     scaled_xyz = xyz.copy()
     max_y = float(np.max(scaled_xyz[:, :, 1])) if scaled_xyz.size else 1.0
@@ -2187,6 +2457,48 @@ def _scene_rgb_render(scene: Scene, *, asset_store: AssetStore | None = None) ->
 
     linear_rgb = xyz_to_linear_srgb(scaled_xyz)
     return linear_to_srgb(np.clip(linear_rgb, 0.0, 1.0))
+
+
+def _scene_rgb_render(scene: Scene, *, asset_store: AssetStore | None = None) -> np.ndarray:
+    xyz = np.asarray(scene_get(scene, "xyz", asset_store=asset_store), dtype=float)
+    return _scene_rgb_from_xyz(xyz)
+
+
+def scene_show_image(
+    scene: Scene,
+    render_flag: int = 1,
+    gam: float = 1.0,
+    app: Any | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> np.ndarray:
+    del app
+    method = abs(int(render_flag))
+    clip_level = 90.0 if method == 5 else 99.5
+    if method == 5:
+        method = 4
+
+    if method in {0, 1}:
+        rgb = _scene_rgb_render(scene, asset_store=asset_store)
+    elif method == 2:
+        photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+        gray = np.mean(photons, axis=2, dtype=float)
+        rgb = np.repeat(_minmax_normalize(gray)[:, :, np.newaxis], 3, axis=2)
+    elif method == 3:
+        rgb = hdr_render(_scene_rgb_render(scene, asset_store=asset_store))
+    elif method == 4:
+        xyz = np.asarray(scene_get(scene, "xyz", asset_store=asset_store), dtype=float)
+        y_channel = xyz[:, :, 1]
+        y_clip = float(np.percentile(y_channel, clip_level))
+        xyz = np.clip(xyz, 0.0, y_clip)
+        rgb = hdr_render(_scene_rgb_from_xyz(xyz))
+    else:
+        raise UnsupportedOptionError(f"sceneShowImage renderFlag={render_flag} is not supported.")
+
+    if float(gam) != 1.0:
+        rgb = np.power(np.clip(np.asarray(rgb, dtype=float), 0.0, None), float(gam))
+    return np.asarray(rgb, dtype=float)
+
 
 
 def scene_adjust_luminance(
@@ -2388,11 +2700,16 @@ def scene_adjust_illuminant(
     wave = np.asarray(scene.fields["wave"], dtype=float)
     original_mean = float(scene_get(scene, "mean luminance", asset_store=store))
     new_energy, comment = _resolve_illuminant_input(ill_energy, wave, asset_store=store)
+    new_energy = np.asarray(new_energy, dtype=float)
+    if new_energy.ndim == 2 and 1 in new_energy.shape and new_energy.size == wave.size:
+        new_energy = new_energy.reshape(-1)
     new_photons = energy_to_quanta(new_energy, wave)
     current_illuminant = np.asarray(
         scene.fields.get("illuminant_photons", np.ones_like(new_photons)),
         dtype=float,
     )
+    if current_illuminant.ndim == 2 and 1 in current_illuminant.shape and current_illuminant.size == wave.size:
+        current_illuminant = current_illuminant.reshape(-1)
     factor = new_photons / np.maximum(current_illuminant, 1e-12)
     scene.data["photons"] = np.asarray(scene.data["photons"], dtype=float) * factor
     scene = _set_scene_illuminant_energy(scene, new_energy)
