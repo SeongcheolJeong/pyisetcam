@@ -14,7 +14,7 @@ from tifffile import TiffFile
 from .exceptions import UnsupportedOptionError
 from .session import ie_add_object, session_add_object, session_replace_object
 from .types import BaseISETObject, Camera, Display, ImageProcessor, OpticalImage, Scene, Sensor, SessionContext
-from .utils import param_format
+from .utils import param_format, quanta_to_energy
 
 _SAVE_KEY_BY_TYPE = {
     "scene": "scene",
@@ -253,6 +253,75 @@ def ie_save_si_data_file(
 
 
 ieSaveSIDataFile = ie_save_si_data_file
+
+
+def ie_save_multispectral_image(
+    full_name: str | Path | None,
+    mc_coef: Any,
+    basis: Mapping[str, Any],
+    comment: str | None = None,
+    img_mean: Any | None = None,
+    illuminant: Mapping[str, Any] | None = None,
+    fov: float = 10.0,
+    dist: float = 1.2,
+    name: str | None = None,
+) -> str:
+    """Write MATLAB-style basis-coded multispectral image data."""
+
+    if mc_coef is None:
+        raise ValueError("Coefficients required.")
+    if basis is None:
+        raise ValueError("Basis function required.")
+    if illuminant is None:
+        raise ValueError("Illuminant required.")
+
+    path = _normalize_save_path(full_name or (Path.cwd() / "multispectralImage.mat"))
+    basis_wave = np.asarray(basis["wave"], dtype=float).reshape(-1)
+    basis_matrix = np.asarray(basis["basis"], dtype=float)
+    if basis_matrix.shape[0] != basis_wave.size and basis_matrix.shape[1] == basis_wave.size:
+        basis_matrix = basis_matrix.T
+    if basis_matrix.shape[0] != basis_wave.size:
+        raise ValueError("Basis matrix must align with the basis wavelength samples.")
+
+    illuminant_wave = None
+    illuminant_data = None
+    if "wave" in illuminant:
+        illuminant_wave = np.asarray(illuminant["wave"], dtype=float).reshape(-1)
+    elif "wavelength" in illuminant:
+        illuminant_wave = np.asarray(illuminant["wavelength"], dtype=float).reshape(-1)
+    if "data" in illuminant:
+        illuminant_data = np.asarray(illuminant["data"], dtype=float)
+    elif "energy" in illuminant:
+        illuminant_data = np.asarray(illuminant["energy"], dtype=float)
+    elif "photons" in illuminant:
+        source_wave = illuminant_wave if illuminant_wave is not None else basis_wave
+        illuminant_data = quanta_to_energy(np.asarray(illuminant["photons"], dtype=float), source_wave)
+    if illuminant_wave is None or illuminant_data is None:
+        raise ValueError("Illuminant must provide wave and data/energy/photons fields.")
+
+    payload: dict[str, Any] = {
+        "mcCOEF": np.asarray(mc_coef, dtype=float),
+        "basis": {
+            "basis": basis_matrix,
+            "wave": basis_wave,
+        },
+        "comment": str(comment or f"Date: {datetime.now().strftime('%Y-%m-%d')}"),
+        "illuminant": {
+            "wave": illuminant_wave,
+            "data": illuminant_data,
+        },
+        "fov": float(fov),
+        "dist": float(dist),
+        "name": str(name or path.stem),
+    }
+    if img_mean is not None:
+        payload["imgMean"] = np.asarray(img_mean, dtype=float).reshape(-1)
+
+    savemat(path, payload, do_compression=True)
+    return str(path)
+
+
+ieSaveMultiSpectralImage = ie_save_multispectral_image
 
 
 def ie_save_color_filter(

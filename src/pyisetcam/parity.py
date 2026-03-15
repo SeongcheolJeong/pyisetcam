@@ -14,7 +14,7 @@ from .camera import camera_compute, camera_create, camera_get, camera_set
 from .color import daylight, luminance_from_energy, luminance_from_photons
 from .description import sensor_description
 from .display import display_create
-from .fileio import ie_save_color_filter, ie_save_si_data_file
+from .fileio import ie_save_color_filter, ie_save_multispectral_image, ie_save_si_data_file
 from .fileio import sensor_dng_read
 from .illuminant import illuminant_create, illuminant_get, illuminant_set
 from .metrics import chromaticity_xy, cct_from_uv, delta_e_ab, metrics_spd, spd_to_cct, xyz_from_energy, xyz_to_lab, xyz_to_luv, xyz_to_uv
@@ -1549,6 +1549,81 @@ def run_python_case_with_context(
                 "narrow_mean_luminance": float(scene_get(narrow_scene, "mean luminance", asset_store=store)),
                 "narrow_mean_scene_spd_norm": _channel_normalize(narrow_mean),
                 "narrow_center_scene_spd_norm": _channel_normalize(narrow_center),
+            },
+            context={},
+        )
+
+    if case_name == "scene_hc_compress_small":
+        canonical_name = lambda value: (
+            param_format(value).replace("(", "").replace(")", "").replace("_", "").replace("-", "")
+        )
+        scene_path = store.resolve("data/images/multispectral/StuffedAnimals_tungsten-hdrs.mat")
+        scene = scene_from_file(scene_path, "multispectral", asset_store=store)
+        photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+        wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+        illuminant = scene_get(scene, "illuminant")
+        comment = "Compressed using hcBasis with imgMean)"
+        w_list = np.arange(400.0, 701.0, 5.0, dtype=float)
+
+        def _scene_spd_payload(current_scene: Any) -> tuple[np.ndarray, np.ndarray]:
+            current_photons = np.asarray(scene_get(current_scene, "photons"), dtype=float)
+            center = current_photons[current_photons.shape[0] // 2, current_photons.shape[1] // 2, :]
+            mean_spd = np.mean(current_photons, axis=(0, 1), dtype=float)
+            return _channel_normalize(mean_spd), _channel_normalize(center)
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output_path = f"{tmp_dir}/hc_compress.mat"
+
+            img_mean_95, img_basis_95, coef_95, _ = hc_basis(photons, 0.95)
+            ie_save_multispectral_image(
+                output_path,
+                coef_95,
+                {"basis": img_basis_95, "wave": wave},
+                comment,
+                img_mean_95,
+                illuminant,
+                float(scene_get(scene, "fov")),
+                float(scene_get(scene, "distance")),
+                "hcCompress95",
+            )
+            scene_95 = scene_from_file(output_path, "multispectral", None, None, w_list, asset_store=store)
+
+            img_mean_99, img_basis_99, coef_99, _ = hc_basis(photons, 0.99)
+            ie_save_multispectral_image(
+                output_path,
+                coef_99,
+                {"basis": img_basis_99, "wave": wave},
+                comment,
+                img_mean_99,
+                illuminant,
+                float(scene_get(scene, "fov")),
+                float(scene_get(scene, "distance")),
+                "hcCompress99",
+            )
+            scene_99 = scene_from_file(output_path, "multispectral", None, None, w_list, asset_store=store)
+
+        mean_95, center_95 = _scene_spd_payload(scene_95)
+        mean_99, center_99 = _scene_spd_payload(scene_99)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "source_name": canonical_name(scene.name),
+                "source_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "source_wave": wave,
+                "source_mean_luminance": float(scene_get(scene, "mean luminance", asset_store=store)),
+                "basis_count_95": int(img_basis_95.shape[1]),
+                "scene95_size": np.asarray(scene_get(scene_95, "size"), dtype=int),
+                "scene95_wave": np.asarray(scene_get(scene_95, "wave"), dtype=float).reshape(-1),
+                "scene95_mean_luminance": float(scene_get(scene_95, "mean luminance", asset_store=store)),
+                "scene95_mean_scene_spd_norm": mean_95,
+                "scene95_center_scene_spd_norm": center_95,
+                "basis_count_99": int(img_basis_99.shape[1]),
+                "scene99_size": np.asarray(scene_get(scene_99, "size"), dtype=int),
+                "scene99_wave": np.asarray(scene_get(scene_99, "wave"), dtype=float).reshape(-1),
+                "scene99_mean_luminance": float(scene_get(scene_99, "mean luminance", asset_store=store)),
+                "scene99_mean_scene_spd_norm": mean_99,
+                "scene99_center_scene_spd_norm": center_99,
             },
             context={},
         )

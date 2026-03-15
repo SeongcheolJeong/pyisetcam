@@ -20,6 +20,7 @@
 - and now also curated Octave parity on the `s_sceneRoi.m` workflow, covering ROI photons/energy/illuminant/reflectance extraction on the default scene, the returned ROI-mean spectra, and exact manual-versus-direct reflectance agreement
 - and now also curated Octave parity on the `s_sceneRotate.m` workflow, covering the default star-pattern rotation movie through selected rotated-frame sizes, luminance summaries, and canonicalized center-row/center-column luminance profiles
 - and now also curated Octave parity on the `s_sceneWavelength.m` workflow, covering default-scene wavelength resampling through `sceneSet(..., 'wave', ...)`, preserved geometry/luminance at 10 nm, 5 nm, and 2 nm narrowband supports, and the normalized mean/center spectral radiance trends across those three scene states
+- and now also headless `ie_save_multispectral_image(...)` / `ieSaveMultiSpectralImage(...)` plus curated Octave parity on the `s_sceneHCCompress.m` workflow, covering `hcBasis(...)`-driven 95% and 99% basis compression of `StuffedAnimals_tungsten-hdrs`, the save/reload roundtrip through basis-coded multispectral MAT files, preserved scene geometry, and the reconstructed 5 nm mean/center spectral trends
 
 ## Status
 

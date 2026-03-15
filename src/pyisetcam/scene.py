@@ -92,19 +92,27 @@ def _multispectral_scene_input(
         basis_struct = data["basis"]
         source_wave = np.asarray(_mat_struct_field(basis_struct, "wave"), dtype=float).reshape(-1)
         basis_matrix = np.asarray(_mat_struct_field(basis_struct, "basis"), dtype=float)
+        if basis_matrix.ndim == 1:
+            basis_matrix = basis_matrix.reshape(-1, 1)
         if basis_matrix.shape[0] != source_wave.size and basis_matrix.shape[1] == source_wave.size:
             basis_matrix = basis_matrix.T
         wave_nm = source_wave if target_wave is None else target_wave
         if target_wave is not None and not np.array_equal(source_wave, target_wave):
             basis_matrix = interp_spectra(source_wave, basis_matrix, target_wave)
-        photons = np.tensordot(np.asarray(data["mcCOEF"], dtype=float), np.asarray(basis_matrix, dtype=float).T, axes=([2], [0]))
+        mc_coef = np.asarray(data["mcCOEF"], dtype=float)
+        if mc_coef.ndim == 2:
+            mc_coef = mc_coef[:, :, np.newaxis]
+        photons = np.tensordot(mc_coef, np.asarray(basis_matrix, dtype=float).T, axes=([2], [0]))
         if "imgMean" in data:
             image_mean = np.asarray(data["imgMean"], dtype=float).reshape(-1)
-            if image_mean.size != source_wave.size:
+            if image_mean.size == 0:
+                image_mean = np.array([], dtype=float)
+            elif image_mean.size != source_wave.size:
                 raise ValueError("imgMean wavelength length does not match basis wavelength samples.")
-            if target_wave is not None and not np.array_equal(source_wave, target_wave):
+            if image_mean.size > 0 and target_wave is not None and not np.array_equal(source_wave, target_wave):
                 image_mean = interp_spectra(source_wave, image_mean, target_wave).reshape(-1)
-            photons = photons + image_mean.reshape(1, 1, -1)
+            if image_mean.size > 0:
+                photons = photons + image_mean.reshape(1, 1, -1)
     else:
         if "photons" in data:
             photons = np.asarray(data["photons"], dtype=float)
@@ -130,9 +138,22 @@ def _multispectral_scene_input(
     illuminant_format = "spectral"
     if illuminant is not None:
         spectrum_struct = _mat_struct_field(illuminant, "spectrum")
-        illuminant_wave = np.asarray(_mat_struct_field(spectrum_struct, "wave", wave_nm), dtype=float).reshape(-1)
+        if spectrum_struct is not None:
+            illuminant_wave = np.asarray(_mat_struct_field(spectrum_struct, "wave", wave_nm), dtype=float).reshape(-1)
+        else:
+            illuminant_wave = np.asarray(
+                _mat_struct_field(illuminant, "wave", _mat_struct_field(illuminant, "wavelength", wave_nm)),
+                dtype=float,
+            ).reshape(-1)
         illuminant_data = _mat_struct_field(illuminant, "data")
         stored_photons = _mat_struct_field(illuminant_data, "photons")
+        stored_energy = _mat_struct_field(illuminant_data, "energy")
+        if stored_energy is None and isinstance(illuminant_data, np.ndarray):
+            stored_energy = illuminant_data
+        if stored_energy is None:
+            stored_energy = _mat_struct_field(illuminant, "data")
+        if stored_energy is None:
+            stored_energy = _mat_struct_field(illuminant, "energy")
         if stored_photons is not None:
             illuminant_photons = np.asarray(stored_photons, dtype=float)
             if illuminant_photons.ndim == 3 and illuminant_photons.shape[-1] != illuminant_wave.size and illuminant_photons.shape[0] == illuminant_wave.size:
@@ -144,6 +165,19 @@ def _multispectral_scene_input(
                     illuminant_photons = _resample_wave_last(illuminant_photons, illuminant_wave, wave_nm)
             illuminant_format = "spatial spectral" if illuminant_photons.ndim == 3 else "spectral"
             illuminant_energy = quanta_to_energy(illuminant_photons, wave_nm)
+            if np.asarray(illuminant_energy).ndim == 3:
+                illuminant_energy = np.mean(np.asarray(illuminant_energy, dtype=float), axis=(0, 1))
+        elif stored_energy is not None:
+            illuminant_energy = np.asarray(stored_energy, dtype=float)
+            if illuminant_energy.ndim == 3 and illuminant_energy.shape[-1] != illuminant_wave.size and illuminant_energy.shape[0] == illuminant_wave.size:
+                illuminant_energy = np.moveaxis(illuminant_energy, 0, -1)
+            if not np.array_equal(illuminant_wave, wave_nm):
+                if illuminant_energy.ndim == 1:
+                    illuminant_energy = interp_spectra(illuminant_wave, illuminant_energy, wave_nm).reshape(-1)
+                else:
+                    illuminant_energy = _resample_wave_last(illuminant_energy, illuminant_wave, wave_nm)
+            illuminant_format = "spatial spectral" if illuminant_energy.ndim == 3 else "spectral"
+            illuminant_photons = energy_to_quanta(illuminant_energy, wave_nm)
             if np.asarray(illuminant_energy).ndim == 3:
                 illuminant_energy = np.mean(np.asarray(illuminant_energy, dtype=float), axis=(0, 1))
 
@@ -168,7 +202,7 @@ def _multispectral_scene_input(
         "illuminant_format": illuminant_format,
         "illuminant_comment": illuminant_comment,
         "filename": str(path),
-        "source_name": path.stem,
+        "source_name": str(data.get("name", path.stem)),
         "distance_m": float(np.asarray(data.get("dist", DEFAULT_DISTANCE_M), dtype=float).reshape(-1)[0]),
         "fov_deg": float(np.asarray(data.get("fov", DEFAULT_FOV_DEG), dtype=float).reshape(-1)[0]),
     }
@@ -2465,6 +2499,14 @@ def scene_get(scene: Scene, parameter: str, *args: Any, asset_store: AssetStore 
         return scene.fields.get("illuminant_format", "spectral")
     if key == "illuminantcomment":
         return scene.fields.get("illuminant_comment")
+    if key == "illuminant":
+        return {
+            "wave": np.asarray(scene.fields["wave"], dtype=float).reshape(-1),
+            "data": np.asarray(scene.fields["illuminant_energy"], dtype=float),
+            "energy": np.asarray(scene.fields["illuminant_energy"], dtype=float),
+            "photons": np.asarray(scene.fields["illuminant_photons"], dtype=float),
+            "comment": scene.fields.get("illuminant_comment"),
+        }
     if key == "reflectance":
         photons = np.asarray(scene.data["photons"], dtype=float)
         illuminant = np.asarray(scene.fields["illuminant_photons"], dtype=float)

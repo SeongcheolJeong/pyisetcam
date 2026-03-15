@@ -1232,6 +1232,53 @@ switch case_name
         payload.narrow_mean_scene_spd_norm = local_channel_normalize(narrowMean);
         payload.narrow_center_scene_spd_norm = local_channel_normalize(narrowCenter);
 
+    case 'scene_hc_compress_small'
+        fileName = fullfile(isetRootPath, 'data', 'images', 'multispectral', 'StuffedAnimals_tungsten-hdrs');
+        scene = sceneFromFile(fileName, 'multispectral');
+        photons = sceneGet(scene, 'photons');
+        wave = double(sceneGet(scene, 'wave'));
+        illuminant = sceneGet(scene, 'illuminant');
+        comment = 'Compressed using hcBasis with imgMean)';
+        wList = (400:5:700)';
+        oFile = [tempname '.mat'];
+
+        [imgMean95, imgBasis95, coef95] = hcBasis(photons, 0.95);
+        basis.wave = wave;
+        basis.basis = imgBasis95;
+        ieSaveMultiSpectralImage(oFile, coef95, basis, comment, imgMean95, illuminant, sceneGet(scene, 'fov'), sceneGet(scene, 'distance'), 'hcCompress95');
+        scene95 = sceneFromFile(oFile, 'multispectral', [], [], wList);
+
+        [imgMean99, imgBasis99, coef99] = hcBasis(photons, 0.99);
+        basis.wave = wave;
+        basis.basis = imgBasis99;
+        ieSaveMultiSpectralImage(oFile, coef99, basis, comment, imgMean99, illuminant, sceneGet(scene, 'fov'), sceneGet(scene, 'distance'), 'hcCompress99');
+        scene99 = sceneFromFile(oFile, 'multispectral', [], [], wList);
+        if exist(oFile, 'file'), delete(oFile); end
+
+        photons95 = double(sceneGet(scene95, 'photons'));
+        photons99 = double(sceneGet(scene99, 'photons'));
+        mean95 = squeeze(mean(mean(photons95, 1), 2));
+        mean99 = squeeze(mean(mean(photons99, 1), 2));
+        center95 = squeeze(photons95(floor(size(photons95, 1) / 2) + 1, floor(size(photons95, 2) / 2) + 1, :));
+        center99 = squeeze(photons99(floor(size(photons99, 1) / 2) + 1, floor(size(photons99, 2) / 2) + 1, :));
+
+        payload.source_name = strrep(strrep(strrep(strrep(ieParamFormat(sceneGet(scene, 'name')), '(', ''), ')', ''), '_', ''), '-', '');
+        payload.source_size = double(sceneGet(scene, 'size')(:));
+        payload.source_wave = wave(:);
+        payload.source_mean_luminance = double(sceneGet(scene, 'mean luminance'));
+        payload.basis_count_95 = size(imgBasis95, 2);
+        payload.scene95_size = double(sceneGet(scene95, 'size')(:));
+        payload.scene95_wave = double(sceneGet(scene95, 'wave')(:));
+        payload.scene95_mean_luminance = double(sceneGet(scene95, 'mean luminance'));
+        payload.scene95_mean_scene_spd_norm = local_channel_normalize(mean95);
+        payload.scene95_center_scene_spd_norm = local_channel_normalize(center95);
+        payload.basis_count_99 = size(imgBasis99, 2);
+        payload.scene99_size = double(sceneGet(scene99, 'size')(:));
+        payload.scene99_wave = double(sceneGet(scene99, 'wave')(:));
+        payload.scene99_mean_luminance = double(sceneGet(scene99, 'mean luminance'));
+        payload.scene99_mean_scene_spd_norm = local_channel_normalize(mean99);
+        payload.scene99_center_scene_spd_norm = local_channel_normalize(center99);
+
     case 'display_create_lcd_example'
         d = displayCreate('lcdExample.mat');
         payload.wave = displayGet(d, 'wave');

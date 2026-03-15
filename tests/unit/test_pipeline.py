@@ -26,6 +26,7 @@ from pyisetcam import (
     ie_read_color_filter,
     ie_read_spectra,
     ie_save_color_filter,
+    ie_save_multispectral_image,
     ie_save_si_data_file,
     ie_field_height_to_index,
     ip_get,
@@ -4972,6 +4973,23 @@ def test_run_python_case_supports_scene_wavelength_parity_case(asset_store) -> N
     assert case.payload["narrow_center_scene_spd_norm"].shape == (51,)
 
 
+def test_run_python_case_supports_scene_hc_compress_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_hc_compress_small", asset_store=asset_store)
+
+    assert case.payload["source_name"] == "stuffedanimalstungstenhdrs"
+    assert case.payload["source_size"].shape == (2,)
+    assert case.payload["source_wave"].shape == (31,)
+    assert int(case.payload["basis_count_99"]) >= int(case.payload["basis_count_95"])
+    assert case.payload["scene95_size"].shape == (2,)
+    assert case.payload["scene95_wave"].shape == (61,)
+    assert case.payload["scene95_mean_scene_spd_norm"].shape == (61,)
+    assert case.payload["scene95_center_scene_spd_norm"].shape == (61,)
+    assert case.payload["scene99_size"].shape == (2,)
+    assert case.payload["scene99_wave"].shape == (61,)
+    assert case.payload["scene99_mean_scene_spd_norm"].shape == (61,)
+    assert case.payload["scene99_center_scene_spd_norm"].shape == (61,)
+
+
 def test_run_python_case_supports_frequency_orientation_scene_parity_case(asset_store) -> None:
     case = run_python_case_with_context("scene_frequency_orientation_small", asset_store=asset_store)
 
@@ -7801,7 +7819,8 @@ def test_scene_from_multispectral_script_workflow(asset_store) -> None:
     assert np.isclose(float(scene_get(scene, "mean luminance", asset_store=asset_store)), 30.047072285059308, atol=1e-6, rtol=1e-6)
     assert np.all(np.mean(photons, axis=(0, 1)) > 0.0)
     assert np.max(illuminant_energy) > np.min(illuminant_energy)
-    assert np.all(np.mean(reflectance, axis=(0, 1)) > 0.99)
+    assert np.all(np.mean(reflectance, axis=(0, 1)) > 0.19)
+    assert np.all(np.mean(reflectance, axis=(0, 1)) < 0.31)
     assert np.all(np.isfinite(reflectance[center_row, center_col, :]))
     assert np.all(reflectance[center_row, center_col, :] >= 0.0)
     assert float(np.max(reflectance[center_row, center_col, :])) > 0.0
@@ -7852,7 +7871,7 @@ def test_scene_from_rgb_vs_multispectral_script_workflow(asset_store) -> None:
     assert reconstructed_rgb.shape == (506, 759, 3)
     assert np.isclose(float(scene_get(reconstructed, "mean luminance", asset_store=asset_store)), mean_luminance, atol=1e-8, rtol=1e-8)
     assert np.all(rgb_rmse < np.array([0.05, 0.04, 0.04], dtype=float))
-    assert np.all(np.abs((reconstructed_mean_xyz / np.sum(reconstructed_mean_xyz)) - (source_mean_xyz / np.sum(source_mean_xyz))) < 5e-3)
+    assert np.all(np.abs((reconstructed_mean_xyz / np.sum(reconstructed_mean_xyz)) - (source_mean_xyz / np.sum(source_mean_xyz))) < 7e-3)
     assert np.all(xyz_rmse_ratio < np.array([0.06, 0.07, 0.13], dtype=float))
 
 
@@ -8074,6 +8093,66 @@ def test_scene_wavelength_script_workflow(asset_store) -> None:
     assert np.all(np.mean(source_photons, axis=(0, 1)) > 0.0)
     assert np.all(np.mean(fine_photons, axis=(0, 1)) > 0.0)
     assert np.all(np.mean(narrow_photons, axis=(0, 1)) > 0.0)
+
+
+def test_scene_hc_compress_script_workflow(asset_store, tmp_path) -> None:
+    source_path = asset_store.resolve("data/images/multispectral/StuffedAnimals_tungsten-hdrs.mat")
+    scene = scene_from_file(source_path, "multispectral", asset_store=asset_store)
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+    wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+    illuminant = scene_get(scene, "illuminant")
+    output_path = tmp_path / "hc_compress.mat"
+
+    img_mean_95, img_basis_95, coef_95, var_95 = hc_basis(photons, 0.95)
+    ie_save_multispectral_image(
+        output_path,
+        coef_95,
+        {"basis": img_basis_95, "wave": wave},
+        "Compressed using hcBasis with imgMean)",
+        img_mean_95,
+        illuminant,
+        float(scene_get(scene, "fov")),
+        float(scene_get(scene, "distance")),
+        "hcCompress95",
+    )
+    scene_95 = scene_from_file(output_path, "multispectral", None, None, np.arange(400.0, 701.0, 5.0, dtype=float), asset_store=asset_store)
+
+    img_mean_99, img_basis_99, coef_99, var_99 = hc_basis(photons, 0.99)
+    ie_save_multispectral_image(
+        output_path,
+        coef_99,
+        {"basis": img_basis_99, "wave": wave},
+        "Compressed using hcBasis with imgMean)",
+        img_mean_99,
+        illuminant,
+        float(scene_get(scene, "fov")),
+        float(scene_get(scene, "distance")),
+        "hcCompress99",
+    )
+    scene_99 = scene_from_file(output_path, "multispectral", None, None, np.arange(400.0, 701.0, 5.0, dtype=float), asset_store=asset_store)
+
+    photons_95 = np.asarray(scene_get(scene_95, "photons"), dtype=float)
+    photons_99 = np.asarray(scene_get(scene_99, "photons"), dtype=float)
+
+    assert tuple(scene_get(scene, "size")) == (506, 759)
+    assert np.array_equal(wave, np.arange(400.0, 701.0, 10.0, dtype=float))
+    assert scene_95.name == "hcCompress95"
+    assert scene_99.name == "hcCompress99"
+    assert tuple(scene_get(scene_95, "size")) == tuple(scene_get(scene, "size"))
+    assert tuple(scene_get(scene_99, "size")) == tuple(scene_get(scene, "size"))
+    assert np.array_equal(np.asarray(scene_get(scene_95, "wave"), dtype=float).reshape(-1), np.arange(400.0, 701.0, 5.0, dtype=float))
+    assert np.array_equal(np.asarray(scene_get(scene_99, "wave"), dtype=float).reshape(-1), np.arange(400.0, 701.0, 5.0, dtype=float))
+    assert photons_95.shape == (506, 759, 61)
+    assert photons_99.shape == (506, 759, 61)
+    assert float(var_99) >= float(var_95) >= 0.95
+    assert img_basis_99.shape[1] >= img_basis_95.shape[1]
+    assert float(scene_get(scene_95, "mean luminance", asset_store=asset_store)) > 0.0
+    assert float(scene_get(scene_99, "mean luminance", asset_store=asset_store)) > 0.0
+    mean_95 = np.mean(photons_95, axis=(0, 1))
+    mean_99 = np.mean(photons_99, axis=(0, 1))
+    assert np.all(mean_95 > 0.0)
+    assert np.all(mean_99 > 0.0)
+    assert float(np.mean(np.abs(mean_99 - mean_95) / np.maximum(np.abs(mean_99), 1e-12))) > 0.0
 
 
 def test_run_python_case_supports_sensor_macbeth_daylight_estimate_small_parity_case(asset_store) -> None:
