@@ -479,6 +479,12 @@
       "atol": 1e-12
     },
     {
+      "name": "optics_dof_small",
+      "matlab_function": "s_opticsDoF",
+      "rtol": 1e-08,
+      "atol": 1e-12
+    },
+    {
       "name": "wvf_astigmatism_small",
       "matlab_function": "s_wvfAstigmatism",
       "rtol": 1e-05,

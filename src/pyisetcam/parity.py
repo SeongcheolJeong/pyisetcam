@@ -27,6 +27,7 @@ from .optics import (
     airy_disk,
     optics_coc,
     optics_defocus_displacement,
+    optics_dof,
     oi_compute,
     oi_crop,
     oi_create,
@@ -1507,6 +1508,55 @@ def run_python_case_with_context(
                 "ratio_delta_diopters": ratio_delta_diopters,
                 "ratio_displacement_m": ratio_displacement_m,
                 "displacement_to_focal_length_ratio": displacement_focal_length_ratio,
+            },
+            context={},
+        )
+
+    if case_name == "optics_dof_small":
+        f_number = 2.0
+        focal_length_m = 0.100
+        object_distance_m = 2.0
+        coc_diameter_m = 50e-6
+
+        oi = oi_create()
+        optics = dict(oi.fields["optics"])
+        optics["f_number"] = f_number
+        optics["focal_length_m"] = focal_length_m
+
+        dof_formula_m = float(optics_dof(optics, object_distance_m, coc_diameter_m))
+        coc_curve_m, x_dist_m = optics_coc(optics, object_distance_m, "nsamples", 200)
+        idx1 = int(np.argmin(np.abs(coc_curve_m[:100] - coc_diameter_m)))
+        idx2 = int(np.argmin(np.abs(coc_curve_m[100:] - coc_diameter_m))) + 100
+        coc_dof_m = float(x_dist_m[idx2] - x_dist_m[idx1])
+
+        object_distances_m = np.arange(0.5, 20.0 + 1e-12, 0.25, dtype=float)
+        f_numbers = np.arange(2.0, 12.0 + 1e-12, 0.25, dtype=float)
+        dof_surface_m = np.zeros((object_distances_m.size, f_numbers.size), dtype=float)
+        optics_sweep = dict(optics)
+        for column_index, sweep_f_number in enumerate(f_numbers):
+            optics_sweep["f_number"] = float(sweep_f_number)
+            dof_surface_m[:, column_index] = np.asarray(
+                optics_dof(optics_sweep, object_distances_m, 20e-6),
+                dtype=float,
+            )
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "f_number": f_number,
+                "focal_length_m": focal_length_m,
+                "object_distance_m": object_distance_m,
+                "coc_diameter_m": coc_diameter_m,
+                "dof_formula_m": dof_formula_m,
+                "coc_xdist_m": np.asarray(x_dist_m, dtype=float),
+                "coc_curve_m": np.asarray(coc_curve_m, dtype=float),
+                "coc_idx1": idx1,
+                "coc_idx2": idx2,
+                "coc_dof_m": coc_dof_m,
+                "object_distances_m": object_distances_m,
+                "f_numbers": f_numbers,
+                "sweep_coc_diameter_m": 20e-6,
+                "dof_surface_m": dof_surface_m,
             },
             context={},
         )

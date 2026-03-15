@@ -387,6 +387,10 @@ That same focus/DoF optics block now also includes public
 Octave parity on `s_opticsDefocusDisplacement.m` for the base-power sweep,
 image-plane displacement curves, and constant displacement-to-focal-length
 ratio check.
+That same focus/DoF optics block now also has direct Octave parity on
+`s_opticsDoF.m`, comparing the 100 mm F/2 thin-lens DOF formula result,
+the CoC-derived DOF crossing estimate, and the object-distance by f-number
+DOF sweep surface.
 The adjacent diffraction-limited optics plotting surface now also includes
 headless `oiPlot(..., 'ls wavelength'/'lswavelength'/'otf wavelength'/'mtf wavelength')`
 support for the script-driven line-spread and OTF-by-wavelength workflows

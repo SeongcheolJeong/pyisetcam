@@ -2675,6 +2675,41 @@ def test_optics_defocus_displacement_matches_lens_power_formula() -> None:
     assert np.allclose(ratio_displacement * ratio_base_diopters, np.full(ratio_base_diopters.shape, 1.0 / 11.0))
 
 
+def test_optics_dof_script_workflow_matches_coc_crossings() -> None:
+    oi = oi_create()
+    optics = dict(oi.fields["optics"])
+    optics["f_number"] = 2.0
+    optics["focal_length_m"] = 0.100
+
+    object_distance_m = 2.0
+    coc_diameter_m = 50e-6
+
+    dof_formula_m = float(optics_dof(optics, object_distance_m, coc_diameter_m))
+    coc_curve_m, x_dist_m = optics_coc(optics, object_distance_m, "nsamples", 200)
+    idx1 = int(np.argmin(np.abs(coc_curve_m[:100] - coc_diameter_m)))
+    idx2 = int(np.argmin(np.abs(coc_curve_m[100:] - coc_diameter_m))) + 100
+    coc_dof_m = float(x_dist_m[idx2] - x_dist_m[idx1])
+
+    object_distances_m = np.arange(0.5, 20.0 + 1e-12, 0.25, dtype=float)
+    f_numbers = np.arange(2.0, 12.0 + 1e-12, 0.25, dtype=float)
+    dof_surface_m = np.zeros((object_distances_m.size, f_numbers.size), dtype=float)
+    optics_sweep = dict(optics)
+    for column_index, f_number in enumerate(f_numbers):
+        optics_sweep["f_number"] = float(f_number)
+        dof_surface_m[:, column_index] = np.asarray(optics_dof(optics_sweep, object_distances_m, 20e-6), dtype=float)
+
+    assert np.isclose(dof_formula_m, 0.08)
+    assert x_dist_m.shape == (200,)
+    assert coc_curve_m.shape == (200,)
+    assert 0 <= idx1 < 100
+    assert 100 <= idx2 < 200
+    assert coc_dof_m > 0.0
+    assert np.isclose(coc_dof_m / dof_formula_m, 1.0, rtol=0.2)
+    assert dof_surface_m.shape == (79, 41)
+    assert dof_surface_m[-1, 0] > dof_surface_m[0, 0]
+    assert dof_surface_m[0, -1] > dof_surface_m[0, 0]
+
+
 def test_optics_coc_small_parity_case(asset_store) -> None:
     payload = run_python_case("optics_coc_small", asset_store=asset_store)
 
@@ -2701,6 +2736,25 @@ def test_optics_defocus_displacement_small_parity_case(asset_store) -> None:
     assert np.array_equal(payload["ratio_delta_diopters"], payload["ratio_base_diopters"] / 10.0)
     assert payload["ratio_displacement_m"].shape == (6,)
     assert np.allclose(payload["displacement_to_focal_length_ratio"], np.full(6, 1.0 / 11.0))
+
+
+def test_optics_dof_small_parity_case(asset_store) -> None:
+    payload = run_python_case("optics_dof_small", asset_store=asset_store)
+
+    assert np.isclose(float(payload["f_number"]), 2.0)
+    assert np.isclose(float(payload["focal_length_m"]), 0.100)
+    assert np.isclose(float(payload["object_distance_m"]), 2.0)
+    assert np.isclose(float(payload["coc_diameter_m"]), 50e-6)
+    assert np.isclose(float(payload["dof_formula_m"]), 0.08)
+    assert payload["coc_xdist_m"].shape == (200,)
+    assert payload["coc_curve_m"].shape == (200,)
+    assert int(payload["coc_idx1"]) < 100
+    assert int(payload["coc_idx2"]) >= 100
+    assert float(payload["coc_dof_m"]) > 0.0
+    assert np.array_equal(payload["object_distances_m"], np.arange(0.5, 20.0 + 1e-12, 0.25, dtype=float))
+    assert np.array_equal(payload["f_numbers"], np.arange(2.0, 12.0 + 1e-12, 0.25, dtype=float))
+    assert np.isclose(float(payload["sweep_coc_diameter_m"]), 20e-6)
+    assert payload["dof_surface_m"].shape == (79, 41)
 
 
 def test_si_synthetic_custom_loads_psf_mat_file(tmp_path, asset_store) -> None:

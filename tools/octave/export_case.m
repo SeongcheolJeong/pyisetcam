@@ -1284,6 +1284,49 @@ switch case_name
         payload.ratio_displacement_m = double(ratioDisplacement(:));
         payload.displacement_to_focal_length_ratio = double(ratioScaled(:));
 
+    case 'optics_dof_small'
+        fN = 2;
+        fL = 0.100;
+        oDist = 2;
+        cocDiam = 50e-6;
+
+        optics = opticsCreate;
+        optics = opticsSet(optics, 'fnumber', fN);
+        optics = opticsSet(optics, 'focal length', fL);
+
+        dofFormula = opticsDoF(optics, oDist, cocDiam);
+        [coc, xDist] = opticsCoC(optics, oDist, 'nsamples', 200);
+        [~, idx1] = min(abs(coc(1:100) - cocDiam));
+        [~, idx2] = min(abs(coc(101:end) - cocDiam));
+        idx2 = idx2 + 100;
+        cocDOF = xDist(idx2) - xDist(idx1);
+
+        oDistSweep = 0.5:0.25:20;
+        fnumberSweep = 2:0.25:12;
+        sweepCoC = 20e-6;
+        dofSweep = zeros(numel(oDistSweep), numel(fnumberSweep));
+        for ii = 1:numel(oDistSweep)
+            for jj = 1:numel(fnumberSweep)
+                optics = opticsSet(optics, 'fnumber', fnumberSweep(jj));
+                dofSweep(ii, jj) = opticsDoF(optics, oDistSweep(ii), sweepCoC);
+            end
+        end
+
+        payload.f_number = double(fN);
+        payload.focal_length_m = double(fL);
+        payload.object_distance_m = double(oDist);
+        payload.coc_diameter_m = double(cocDiam);
+        payload.dof_formula_m = double(dofFormula);
+        payload.coc_xdist_m = double(xDist(:));
+        payload.coc_curve_m = double(coc(:));
+        payload.coc_idx1 = double(idx1 - 1);
+        payload.coc_idx2 = double(idx2 - 1);
+        payload.coc_dof_m = double(cocDOF);
+        payload.object_distances_m = double(oDistSweep(:));
+        payload.f_numbers = double(fnumberSweep(:));
+        payload.sweep_coc_diameter_m = double(sweepCoC);
+        payload.dof_surface_m = double(dofSweep);
+
     case 'wvf_spatial_sampling_small'
         wvf = wvfCreate('wave', 550);
         thisWave = wvfGet(wvf, 'wave');
