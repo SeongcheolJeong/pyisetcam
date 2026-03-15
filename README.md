@@ -613,6 +613,11 @@ The underlying filtered-block support helper is now public too as
 `rt_filtered_block_support` / `rtFilteredBlockSupport`.
 `rt_synthetic` / `rtSynthetic` is now available as a synthetic ray-trace
 optics generator for testing and controlled local experiments.
+That same ray-trace block now also has direct Octave parity on
+`s_opticsRTSynthetic.m`, comparing the synthetic geometry and relative
+illumination curves, normalized 550 nm center/edge PSF slices, and the
+resulting point-array OI summary outputs from the synthetic increasing-Gaussian
+ray-trace workflow.
 The shared MATLAB field-height lookup rule is now exposed too as
 `ie_field_height_to_index` / `ieFieldHeight2Index`, and the ray-trace
 block-size logic now uses that public helper directly.

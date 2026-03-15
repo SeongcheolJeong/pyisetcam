@@ -1292,6 +1292,61 @@ switch case_name
         payload.explicit_vs_oi_method_oi_center_row_550_normalized_mae = ...
             mean(abs(explicitOiCanonical(:) - oiMethodDefocusOiCanonical(:))) / max(mean(abs(explicitOiCanonical(:))), 1e-12);
 
+    case 'optics_rt_synthetic_small'
+        scene = sceneCreate('point array', 256);
+        scene = sceneSet(scene, 'h fov', 3);
+        scene = sceneInterpolateW(scene, 550:100:650);
+
+        oi = oiCreate('ray trace');
+        spreadLimits = [1, 3];
+        xyRatio = 1.6;
+        optics = rtSynthetic(oi, [], spreadLimits, xyRatio);
+        oi = oiSet(oi, 'optics', optics);
+        scene = sceneSet(scene, 'distance', oiGet(oi, 'optics rtObjectDistance', 'm'));
+        ieAddObject(scene);
+        oi = oiCompute(oi, scene);
+
+        optics = oiGet(oi, 'optics');
+        rayTrace = opticsGet(optics, 'ray trace');
+        psf = opticsGet(optics, 'rt psf');
+        geometry = opticsGet(optics, 'rt geometry');
+        relIllum = opticsGet(optics, 'rt relillum');
+
+        fieldHeightMM = double(psf.fieldHeight(:));
+        raytraceWave = double(psf.wavelength(:));
+        [~, waveIndex550] = min(abs(raytraceWave - 550));
+        centerFieldIndex = 1;
+        edgeFieldIndex = size(psf.function, 3);
+
+        centerPsf = double(psf.function(:, :, centerFieldIndex, waveIndex550));
+        edgePsf = double(psf.function(:, :, edgeFieldIndex, waveIndex550));
+        centerPsfRow = local_channel_normalize(centerPsf(floor(size(centerPsf, 1) / 2) + 1, :));
+        edgePsfRow = local_channel_normalize(edgePsf(floor(size(edgePsf, 1) / 2) + 1, :));
+
+        photons = double(oiGet(oi, 'photons'));
+        oiWave = double(oiGet(oi, 'wave')(:));
+        [~, oiWaveIndex550] = min(abs(oiWave - 550));
+        oiCenterRow = local_channel_normalize(squeeze(photons(floor(size(photons, 1) / 2) + 1, :, oiWaveIndex550)));
+
+        payload.scene_wave = double(sceneGet(scene, 'wave')(:));
+        payload.scene_fov_deg = double(sceneGet(scene, 'fov'));
+        payload.spread_limits = double(spreadLimits(:));
+        payload.xy_ratio = double(xyRatio);
+        payload.raytrace_field_height_mm = fieldHeightMM;
+        payload.raytrace_wave = raytraceWave;
+        payload.geometry_550 = double(geometry.function(:, waveIndex550));
+        payload.relative_illumination_550 = double(relIllum.function(:, waveIndex550));
+        payload.center_psf_sum_550 = double(sum(centerPsf(:)));
+        payload.edge_psf_sum_550 = double(sum(edgePsf(:)));
+        payload.center_psf_mid_row_550_norm = centerPsfRow;
+        payload.edge_psf_mid_row_550_norm = edgePsfRow;
+        payload.oi_wave = oiWave;
+        payload.oi_photons_shape = double(size(photons));
+        payload.oi_mean_photons_by_wave = squeeze(mean(mean(photons, 1), 2));
+        payload.oi_p95_photons_by_wave = prctile(reshape(photons, [], size(photons, 3)), 95, 1)';
+        payload.oi_max_photons_by_wave = squeeze(max(max(photons, [], 1), [], 2));
+        payload.oi_center_row_550_norm = local_canonical_profile(oiCenterRow, 129);
+
     case 'optics_defocus_small'
         scene = sceneCreate('disk array', 256, 32, [2, 2]);
         scene = sceneSet(scene, 'fov', 0.5);

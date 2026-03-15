@@ -1611,6 +1611,37 @@ def test_rt_otf_runs_with_rt_synthetic_optics(asset_store) -> None:
     assert np.sum(result) > 0.0
 
 
+def test_optics_rt_synthetic_script_workflow(asset_store) -> None:
+    scene = scene_create("point array", 256, asset_store=asset_store)
+    scene = scene_set(scene, "h fov", 3.0)
+    scene = scene_interpolate_w(scene, np.arange(550.0, 651.0, 100.0, dtype=float))
+
+    oi = oi_create("ray trace", asset_store=asset_store)
+    optics = rt_synthetic(oi, spread_limits=(1.0, 3.0), xy_ratio=1.6)
+    oi = oi_set(oi, "optics", optics)
+    scene = scene_set(scene, "distance", oi_get(oi, "optics rtObjectDistance", "m"))
+    oi = oi_compute(oi, scene)
+
+    raytrace = oi.fields["optics"]["raytrace"]
+    psf = np.asarray(raytrace["psf"]["function"], dtype=float)
+    center_psf = psf[:, :, 0, 1]
+    edge_psf = psf[:, :, -1, 1]
+    coords = np.arange(psf.shape[1], dtype=float) - (psf.shape[1] // 2)
+    center_row = center_psf[center_psf.shape[0] // 2, :]
+    edge_row = edge_psf[edge_psf.shape[0] // 2, :]
+    center_variance = float(np.sum((coords**2) * center_row) / np.sum(center_row))
+    edge_variance = float(np.sum((coords**2) * edge_row) / np.sum(edge_row))
+
+    photons = np.asarray(oi_get(oi, "photons"), dtype=float)
+    assert np.array_equal(np.asarray(scene_get(scene, "wave"), dtype=float), np.array([550.0, 650.0], dtype=float))
+    assert oi_get(oi, "raytrace optics name") == "Synthetic Gaussian"
+    assert photons.shape == (312, 312, 2)
+    assert center_variance < edge_variance
+    assert np.allclose(np.sum(psf[:, :, 0, 1]), 1.0)
+    assert np.allclose(np.sum(psf[:, :, -1, 1]), 1.0)
+    assert float(np.max(photons[:, :, 0])) > 0.0
+
+
 def test_rt_file_names_matches_zemax_naming(tmp_path) -> None:
     di_name, ri_name, psf_name_list, cra_name = rt_file_names(
         "CookeLens.ZMX",
@@ -2898,6 +2929,29 @@ def test_optics_defocus_wvf_small_parity_case(asset_store) -> None:
     assert payload["explicit_defocus_oi_center_row_550_norm"].shape == payload["oi_method_defocus_oi_center_row_550_norm"].shape
     assert float(payload["explicit_vs_oi_method_psf_center_row_550_normalized_mae"]) < 1e-8
     assert float(payload["explicit_vs_oi_method_oi_center_row_550_normalized_mae"]) < 1e-8
+
+
+def test_optics_rt_synthetic_small_parity_case(asset_store) -> None:
+    payload = run_python_case("optics_rt_synthetic_small", asset_store=asset_store)
+
+    assert np.array_equal(payload["scene_wave"], np.array([550.0, 650.0], dtype=float))
+    assert np.isclose(float(payload["scene_fov_deg"]), 3.0)
+    assert np.array_equal(payload["spread_limits"], np.array([1.0, 3.0], dtype=float))
+    assert np.isclose(float(payload["xy_ratio"]), 1.6)
+    assert payload["raytrace_field_height_mm"].shape == (21,)
+    assert np.array_equal(payload["raytrace_wave"], np.array([450.0, 550.0, 650.0], dtype=float))
+    assert payload["geometry_550"].shape == (21,)
+    assert payload["relative_illumination_550"].shape == (21,)
+    assert np.isclose(float(payload["center_psf_sum_550"]), 1.0)
+    assert np.isclose(float(payload["edge_psf_sum_550"]), 1.0)
+    assert payload["center_psf_mid_row_550_norm"].shape == (128,)
+    assert payload["edge_psf_mid_row_550_norm"].shape == (128,)
+    assert np.array_equal(payload["oi_wave"], np.array([550.0, 650.0], dtype=float))
+    assert np.array_equal(payload["oi_photons_shape"], np.array([312.0, 312.0, 2.0], dtype=float))
+    assert payload["oi_mean_photons_by_wave"].shape == (2,)
+    assert payload["oi_p95_photons_by_wave"].shape == (2,)
+    assert payload["oi_max_photons_by_wave"].shape == (2,)
+    assert payload["oi_center_row_550_norm"].shape == (129,)
 
 
 def test_optics_defocus_scene_small_parity_case(asset_store) -> None:

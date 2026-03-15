@@ -52,6 +52,7 @@ from .optics import (
     optics_psf_to_otf,
     oi_set,
     si_synthetic,
+    rt_synthetic,
 )
 from .plotting import ip_plot, oi_plot, sensor_plot, sensor_plot_line, wvf_plot
 from .scene import (
@@ -1503,6 +1504,67 @@ def run_python_case_with_context(
                 ),
             },
             context={"scene": scene, "wvf0": wvf0, "wvf1": wvf1, "oi0": oi0, "oi1": oi1, "oi_method_base": oi_method_base, "oi": oi},
+        )
+
+    if case_name == "optics_rt_synthetic_small":
+        scene = scene_create("point array", 256, asset_store=store)
+        scene = scene_set(scene, "h fov", 3.0)
+        scene = scene_interpolate_w(scene, np.arange(550.0, 651.0, 100.0, dtype=float))
+
+        def _canonical_profile(values: np.ndarray, samples: int = 129) -> np.ndarray:
+            profile = np.asarray(values, dtype=float).reshape(-1)
+            support = np.linspace(-1.0, 1.0, profile.size, dtype=float)
+            query = np.linspace(-1.0, 1.0, samples, dtype=float)
+            return np.interp(query, support, profile)
+
+        oi = oi_create("ray trace", asset_store=store)
+        spread_limits = np.array([1.0, 3.0], dtype=float)
+        xy_ratio = 1.6
+        optics = rt_synthetic(oi, spread_limits=(float(spread_limits[0]), float(spread_limits[1])), xy_ratio=xy_ratio)
+        oi = oi_set(oi, "optics", optics)
+        scene = scene_set(scene, "distance", oi_get(oi, "optics rtObjectDistance", "m"))
+        oi = oi_compute(oi, scene)
+
+        raytrace = oi.fields["optics"]["raytrace"]
+        psf = np.asarray(raytrace["psf"]["function"], dtype=float)
+        field_height_mm = np.asarray(raytrace["psf"]["field_height_mm"], dtype=float).reshape(-1)
+        raytrace_wave = np.asarray(raytrace["psf"]["wavelength_nm"], dtype=float).reshape(-1)
+        wave_index_550 = int(np.argmin(np.abs(raytrace_wave - 550.0)))
+        center_field_index = 0
+        edge_field_index = psf.shape[2] - 1
+        center_psf = psf[:, :, center_field_index, wave_index_550]
+        edge_psf = psf[:, :, edge_field_index, wave_index_550]
+        center_psf_row = _channel_normalize(center_psf[center_psf.shape[0] // 2, :])
+        edge_psf_row = _channel_normalize(edge_psf[edge_psf.shape[0] // 2, :])
+
+        photons = np.asarray(oi_get(oi, "photons"), dtype=float)
+        oi_wave = np.asarray(oi_get(oi, "wave"), dtype=float).reshape(-1)
+        oi_wave_index_550 = int(np.argmin(np.abs(oi_wave - 550.0)))
+        oi_center_row = _channel_normalize(photons[photons.shape[0] // 2, :, oi_wave_index_550])
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_wave": np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1),
+                "scene_fov_deg": float(scene_get(scene, "fov")),
+                "spread_limits": spread_limits,
+                "xy_ratio": float(xy_ratio),
+                "raytrace_field_height_mm": field_height_mm,
+                "raytrace_wave": raytrace_wave,
+                "geometry_550": np.asarray(raytrace["geometry"]["function"], dtype=float)[:, wave_index_550],
+                "relative_illumination_550": np.asarray(raytrace["relative_illumination"]["function"], dtype=float)[:, wave_index_550],
+                "center_psf_sum_550": float(np.sum(center_psf)),
+                "edge_psf_sum_550": float(np.sum(edge_psf)),
+                "center_psf_mid_row_550_norm": center_psf_row,
+                "edge_psf_mid_row_550_norm": edge_psf_row,
+                "oi_wave": oi_wave,
+                "oi_photons_shape": np.asarray(photons.shape, dtype=float),
+                "oi_mean_photons_by_wave": np.mean(photons, axis=(0, 1)),
+                "oi_p95_photons_by_wave": np.percentile(photons.reshape(-1, photons.shape[2]), 95, axis=0),
+                "oi_max_photons_by_wave": np.max(photons, axis=(0, 1)),
+                "oi_center_row_550_norm": _canonical_profile(oi_center_row),
+            },
+            context={"scene": scene, "oi": oi},
         )
 
     if case_name == "optics_defocus_small":

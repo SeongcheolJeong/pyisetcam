@@ -485,6 +485,38 @@
       }
     },
     {
+      "name": "optics_rt_synthetic_small",
+      "matlab_function": "s_opticsRTSynthetic",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "center_psf_mid_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.04
+        },
+        "edge_psf_mid_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.04
+        },
+        "oi_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.08
+        },
+        "oi_mean_photons_by_wave": {
+          "mode": "scale_invariant",
+          "max_mean_rel": 1e-06
+        },
+        "oi_p95_photons_by_wave": {
+          "mode": "scale_invariant",
+          "max_mean_rel": 1e-06
+        },
+        "oi_max_photons_by_wave": {
+          "mode": "scale_invariant",
+          "max_mean_rel": 1e-06
+        }
+      }
+    },
+    {
       "name": "optics_defocus_small",
       "matlab_function": "s_opticsDefocus",
       "rtol": 1e-05,
