@@ -9,6 +9,7 @@ from pyisetcam.exceptions import UnsupportedOptionError
 from pyisetcam.parity import run_python_case_with_context
 from pyisetcam.utils import energy_to_quanta, tile_pattern
 from pyisetcam import (
+    blackbody,
     camera_compute,
     camera_create,
     camera_get,
@@ -92,6 +93,7 @@ from pyisetcam import (
     sensor_plot,
     sensor_set_size_to_fov,
     sensor_set,
+    spd_to_cct,
     wvf_aperture,
     wvf_compute,
     wvf_compute_psf,
@@ -4741,6 +4743,18 @@ def test_run_python_case_supports_uniform_bb_scene_parity_case(asset_store) -> N
     assert case.payload["mean_luminance"] > 0.0
 
 
+def test_run_python_case_supports_scene_cct_blackbody_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_cct_blackbody_small", asset_store=asset_store)
+
+    assert case.payload["wave"].shape == (65,)
+    assert case.payload["single_temperatures_k"].shape == (3,)
+    assert case.payload["spd_3500"].shape == (65,)
+    assert case.payload["estimated_single_k"].shape == (3,)
+    assert case.payload["multi_temperatures_k"].shape == (5,)
+    assert case.payload["spd_multi"].shape == (65, 5)
+    assert case.payload["estimated_multi_k"].shape == (5,)
+
+
 def test_run_python_case_supports_frequency_orientation_scene_parity_case(asset_store) -> None:
     case = run_python_case_with_context("scene_frequency_orientation_small", asset_store=asset_store)
 
@@ -7256,6 +7270,31 @@ def test_sensor_macbeth_daylight_estimate_script_contract(asset_store) -> None:
     assert camera_data.shape == (3, 24)
     assert design_matrix.shape == (72, 3)
     assert np.allclose(estimated_weights, true_weights, atol=1e-10, rtol=1e-10)
+
+
+def test_scene_cct_script_workflow(asset_store) -> None:
+    wave = np.arange(400.0, 721.0, 5.0, dtype=float)
+    single_temperatures = np.array([3500.0, 6500.0, 8500.0], dtype=float)
+    estimated_single = np.array(
+        [
+            float(
+                spd_to_cct(
+                    wave,
+                    np.asarray(blackbody(wave, temperature_k, kind="energy"), dtype=float).reshape(-1),
+                    asset_store=asset_store,
+                )
+            )
+            for temperature_k in single_temperatures
+        ],
+        dtype=float,
+    )
+    multi_temperatures = np.arange(4500.0, 8501.0, 1000.0, dtype=float)
+    spd_multi = np.asarray(blackbody(wave, multi_temperatures, kind="energy"), dtype=float)
+    estimated_multi = np.asarray(spd_to_cct(wave, spd_multi, asset_store=asset_store), dtype=float).reshape(-1)
+
+    assert spd_multi.shape == (wave.size, multi_temperatures.size)
+    assert np.allclose(estimated_single, single_temperatures, atol=25.0, rtol=5e-3)
+    assert np.allclose(estimated_multi, multi_temperatures, atol=25.0, rtol=5e-3)
 
 
 def test_run_python_case_supports_sensor_macbeth_daylight_estimate_small_parity_case(asset_store) -> None:

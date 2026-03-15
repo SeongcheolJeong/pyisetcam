@@ -733,6 +733,28 @@ switch case_name
         payload.preserve_photons = sceneGet(scene_preserve, 'photons');
         payload.no_preserve_photons = sceneGet(scene_no_preserve, 'photons');
 
+    case 'scene_cct_blackbody_small'
+        wave = (400:5:720)';
+        single_temperatures = [3500 6500 8500];
+        spd_3500 = blackbody(wave, single_temperatures(1), 'energy');
+        estimated_single = zeros(size(single_temperatures));
+        for ii = 1:numel(single_temperatures)
+            estimated_single(ii) = spd2cct(wave, blackbody(wave, single_temperatures(ii), 'energy'));
+        end
+        multi_temperatures = 4500:1000:8500;
+        spd_multi = blackbody(wave, multi_temperatures, 'energy');
+        estimated_multi = zeros(size(multi_temperatures));
+        for ii = 1:numel(multi_temperatures)
+            estimated_multi(ii) = spd2cct(wave, spd_multi(:, ii));
+        end
+        payload.wave = wave;
+        payload.single_temperatures_k = single_temperatures;
+        payload.spd_3500 = spd_3500;
+        payload.estimated_single_k = estimated_single;
+        payload.multi_temperatures_k = multi_temperatures;
+        payload.spd_multi = spd_multi;
+        payload.estimated_multi_k = estimated_multi;
+
     case 'display_create_lcd_example'
         d = displayCreate('lcdExample.mat');
         payload.wave = displayGet(d, 'wave');

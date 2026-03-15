@@ -199,6 +199,12 @@
       "atol": 1e-08
     },
     {
+      "name": "scene_cct_blackbody_small",
+      "matlab_function": "s_sceneCCT",
+      "rtol": 1e-04,
+      "atol": 1e-04
+    },
+    {
       "name": "display_create_lcd_example",
       "matlab_function": "displayCreate",
       "rtol": 1e-05,

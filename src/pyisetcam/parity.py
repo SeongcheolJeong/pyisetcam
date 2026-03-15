@@ -15,7 +15,7 @@ from .description import sensor_description
 from .display import display_create
 from .fileio import ie_save_color_filter, ie_save_si_data_file
 from .fileio import sensor_dng_read
-from .metrics import cct_from_uv, delta_e_ab, metrics_spd, xyz_from_energy, xyz_to_lab, xyz_to_luv, xyz_to_uv
+from .metrics import cct_from_uv, delta_e_ab, metrics_spd, spd_to_cct, xyz_from_energy, xyz_to_lab, xyz_to_luv, xyz_to_uv
 from .ip import ip_compute, ip_create, ip_get, ip_set
 from .optics import (
     _cos4th_factor,
@@ -838,6 +838,40 @@ def run_python_case_with_context(
                 "preserve_scene": preserve,
                 "no_preserve_scene": no_preserve,
             },
+        )
+
+    if case_name == "scene_cct_blackbody_small":
+        wave = np.arange(400.0, 721.0, 5.0, dtype=float)
+        single_temperatures = np.array([3500.0, 6500.0, 8500.0], dtype=float)
+        spd_3500 = np.asarray(blackbody(wave, single_temperatures[0], kind="energy"), dtype=float).reshape(-1)
+        estimated_single = np.array(
+            [
+                float(
+                    spd_to_cct(
+                        wave,
+                        np.asarray(blackbody(wave, temperature_k, kind="energy"), dtype=float).reshape(-1),
+                        asset_store=store,
+                    )
+                )
+                for temperature_k in single_temperatures
+            ],
+            dtype=float,
+        )
+        multi_temperatures = np.arange(4500.0, 8501.0, 1000.0, dtype=float)
+        spd_multi = np.asarray(blackbody(wave, multi_temperatures, kind="energy"), dtype=float)
+        estimated_multi = np.asarray(spd_to_cct(wave, spd_multi, asset_store=store), dtype=float).reshape(-1)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "single_temperatures_k": single_temperatures,
+                "spd_3500": spd_3500,
+                "estimated_single_k": estimated_single,
+                "multi_temperatures_k": multi_temperatures,
+                "spd_multi": spd_multi,
+                "estimated_multi_k": estimated_multi,
+            },
+            context={},
         )
 
     if case_name == "display_create_lcd_example":

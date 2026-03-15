@@ -37,6 +37,7 @@ from .metrics import (
     mired_difference,
     peak_signal_to_noise_ratio,
     root_mean_squared_error,
+    spd_to_cct,
     xyz_from_energy,
     xyz_to_lab,
     xyz_to_luv,
@@ -309,6 +310,8 @@ __all__ = [
     "metricsSPD",
     "metrics_spd",
     "mired_difference",
+    "spd2cct",
+    "spd_to_cct",
     "opticsBuild2Dotf",
     "opticsCoC",
     "opticsDefocusCore",
@@ -682,6 +685,7 @@ metricsSPD = metrics_spd
 deltaEab = delta_e_ab
 xyz2luv = xyz_to_luv
 cct = cct_from_uv
+spd2cct = spd_to_cct
 
 ieAddObject = ie_add_object
 ieAppGet = ie_app_get

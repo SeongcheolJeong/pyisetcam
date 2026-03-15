@@ -188,6 +188,34 @@ def correlated_color_temperature(
     return float(cct) if np.ndim(cct) == 0 else cct
 
 
+def spd_to_cct(
+    wave_nm: Any,
+    spd: Any,
+    *,
+    asset_store: AssetStore | None = None,
+) -> float | NDArray[np.float64]:
+    """Estimate correlated color temperature from spectral power distributions."""
+
+    wave = _vector(wave_nm, name="wave_nm")
+    spd_array = np.asarray(spd, dtype=float)
+    if spd_array.ndim == 0:
+        raise ValueError("spd must not be scalar.")
+    if spd_array.ndim == 1:
+        if spd_array.size != wave.size:
+            raise ValueError("spd must match wave_nm length.")
+        xyz = xyz_from_energy(spd_array, wave, asset_store=asset_store)
+        return correlated_color_temperature(xyz, asset_store=asset_store)
+    if spd_array.shape[0] == wave.size:
+        spectra = np.moveaxis(spd_array, 0, -1)
+    elif spd_array.shape[-1] == wave.size:
+        spectra = spd_array
+    else:
+        raise ValueError("spd must have a spectral dimension matching wave_nm.")
+    xyz = xyz_from_energy(spectra, wave, asset_store=asset_store)
+    cct = correlated_color_temperature(xyz, asset_store=asset_store)
+    return float(cct) if np.ndim(cct) == 0 else np.asarray(cct, dtype=float)
+
+
 def mired_difference(cct1_k: float, cct2_k: float) -> float:
     """Compute the absolute mired difference between two color temperatures."""
 
@@ -323,3 +351,4 @@ xyz2luv = xyz_to_luv
 deltaEab = delta_e_ab
 iePSNR = peak_signal_to_noise_ratio
 metricsSPD = metrics_spd
+spd2cct = spd_to_cct
