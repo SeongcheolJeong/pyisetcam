@@ -14,6 +14,7 @@ from pyisetcam import (
     camera_create,
     camera_get,
     camera_set,
+    daylight,
     ie_read_color_filter,
     ie_read_spectra,
     ie_save_color_filter,
@@ -25,6 +26,8 @@ from pyisetcam import (
     ip_compute,
     ip_create,
     ie_mvnrnd,
+    luminance_from_energy,
+    luminance_from_photons,
     optics_build_2d_otf,
     optics_coc,
     optics_defocus_core,
@@ -4755,6 +4758,22 @@ def test_run_python_case_supports_scene_cct_blackbody_parity_case(asset_store) -
     assert case.payload["estimated_multi_k"].shape == (5,)
 
 
+def test_run_python_case_supports_scene_daylight_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_daylight_small", asset_store=asset_store)
+
+    assert case.payload["wave"].shape == (371,)
+    assert case.payload["cct_k"].shape == (7,)
+    assert case.payload["photons"].shape == (371, 7)
+    assert case.payload["lum_photons"].shape == (7,)
+    assert case.payload["photons_scaled"].shape == (371, 7)
+    assert case.payload["energy"].shape == (371, 7)
+    assert case.payload["lum_energy"].shape == (7,)
+    assert case.payload["energy_scaled"].shape == (371, 7)
+    assert case.payload["day_basis"].shape == (371, 3)
+    assert case.payload["basis_weights"].shape == (3, 3)
+    assert case.payload["basis_examples"].shape == (371, 3)
+
+
 def test_run_python_case_supports_frequency_orientation_scene_parity_case(asset_store) -> None:
     case = run_python_case_with_context("scene_frequency_orientation_small", asset_store=asset_store)
 
@@ -7295,6 +7314,41 @@ def test_scene_cct_script_workflow(asset_store) -> None:
     assert spd_multi.shape == (wave.size, multi_temperatures.size)
     assert np.allclose(estimated_single, single_temperatures, atol=25.0, rtol=5e-3)
     assert np.allclose(estimated_multi, multi_temperatures, atol=25.0, rtol=5e-3)
+
+
+def test_scene_daylight_script_workflow(asset_store) -> None:
+    wave = np.arange(400.0, 771.0, 1.0, dtype=float)
+    cct = np.arange(4000.0, 10001.0, 1000.0, dtype=float)
+    photons = np.asarray(daylight(wave, cct, "photons", asset_store=asset_store), dtype=float)
+    lum_photons = np.asarray(luminance_from_photons(photons.T, wave, asset_store=asset_store), dtype=float).reshape(-1)
+    photons_scaled = photons * (100.0 / np.maximum(lum_photons, 1e-12)).reshape(1, -1)
+
+    energy = np.asarray(daylight(wave, cct, "energy", asset_store=asset_store), dtype=float)
+    lum_energy = np.asarray(luminance_from_energy(energy.T, wave, asset_store=asset_store), dtype=float).reshape(-1)
+    energy_scaled = energy * (100.0 / np.maximum(lum_energy, 1e-12)).reshape(1, -1)
+
+    day_basis = np.asarray(ie_read_spectra("cieDaylightBasis.mat", wave, asset_store=asset_store), dtype=float)
+    basis_weights = np.array([[1.0, 1.0, 1.0], [0.0, 1.0, -1.0], [0.0, 0.0, 0.0]], dtype=float)
+    basis_examples = day_basis @ basis_weights
+
+    assert photons.shape == (wave.size, cct.size)
+    assert energy.shape == (wave.size, cct.size)
+    assert np.isclose(lum_photons[0], 100.0, atol=1e-6, rtol=1e-6)
+    assert np.isclose(lum_energy[0], 100.0, atol=1e-6, rtol=1e-6)
+    assert np.allclose(
+        np.asarray(luminance_from_photons(photons_scaled.T, wave, asset_store=asset_store), dtype=float).reshape(-1),
+        np.full(cct.size, 100.0, dtype=float),
+        atol=1e-6,
+        rtol=1e-6,
+    )
+    assert np.allclose(
+        np.asarray(luminance_from_energy(energy_scaled.T, wave, asset_store=asset_store), dtype=float).reshape(-1),
+        np.full(cct.size, 100.0, dtype=float),
+        atol=1e-6,
+        rtol=1e-6,
+    )
+    assert day_basis.shape == (wave.size, 3)
+    assert basis_examples.shape == (wave.size, 3)
 
 
 def test_run_python_case_supports_sensor_macbeth_daylight_estimate_small_parity_case(asset_store) -> None:

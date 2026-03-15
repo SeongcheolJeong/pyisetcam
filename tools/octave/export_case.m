@@ -755,6 +755,30 @@ switch case_name
         payload.spd_multi = spd_multi;
         payload.estimated_multi_k = estimated_multi;
 
+    case 'scene_daylight_small'
+        wave = (400:770)';
+        cct = 4000:1000:10000;
+        photons = daylight(wave, cct, 'photons');
+        lum_photons = ieLuminanceFromPhotons(photons', wave(:));
+        photons_scaled = photons * diag(100 ./ lum_photons);
+        energy = daylight(wave, cct, 'energy');
+        lum_energy = ieLuminanceFromEnergy(energy', wave(:));
+        energy_scaled = energy * diag(100 ./ lum_energy);
+        dayBasis = ieReadSpectra('cieDaylightBasis', wave);
+        basis_weights = [1 0 0; 1 1 0; 1 -1 0]';
+        basis_examples = dayBasis * basis_weights;
+        payload.wave = wave;
+        payload.cct_k = cct;
+        payload.photons = photons;
+        payload.lum_photons = lum_photons;
+        payload.photons_scaled = photons_scaled;
+        payload.energy = energy;
+        payload.lum_energy = lum_energy;
+        payload.energy_scaled = energy_scaled;
+        payload.day_basis = dayBasis;
+        payload.basis_weights = basis_weights;
+        payload.basis_examples = basis_examples;
+
     case 'display_create_lcd_example'
         d = displayCreate('lcdExample.mat');
         payload.wave = displayGet(d, 'wave');

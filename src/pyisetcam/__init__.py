@@ -9,6 +9,7 @@ from .assets import (
     ie_read_spectra,
 )
 from .camera import camera_compute, camera_create, camera_get, camera_set
+from .color import daylight, luminance_from_energy, luminance_from_photons
 from .description import HeadlessDescriptionHandle, sensor_description
 from .display import display_create, display_get, display_set
 from .fileio import (
@@ -216,6 +217,7 @@ __all__ = [
     "camera_set",
     "cct",
     "cct_from_uv",
+    "daylight",
     "HeadlessDescriptionHandle",
     "displayCreate",
     "displayGet",
@@ -237,6 +239,8 @@ __all__ = [
     "ieEquivalentObjtype",
     "ieFieldHeight2Index",
     "ieFitLine",
+    "ieLuminanceFromEnergy",
+    "ieLuminanceFromPhotons",
     "ieMvnrnd",
     "ieFindObjectByName",
     "ieLocs2Rect",
@@ -305,6 +309,8 @@ __all__ = [
     "ip_get",
     "ip_plot",
     "ip_set",
+    "luminance_from_energy",
+    "luminance_from_photons",
     "mean_absolute_error",
     "mean_relative_error",
     "metricsSPD",
@@ -686,6 +692,8 @@ deltaEab = delta_e_ab
 xyz2luv = xyz_to_luv
 cct = cct_from_uv
 spd2cct = spd_to_cct
+ieLuminanceFromEnergy = luminance_from_energy
+ieLuminanceFromPhotons = luminance_from_photons
 
 ieAddObject = ie_add_object
 ieAppGet = ie_app_get

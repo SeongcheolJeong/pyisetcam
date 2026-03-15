@@ -34,10 +34,87 @@ def luminance_from_photons(
     *,
     asset_store: AssetStore | None = None,
 ) -> NDArray[np.float64]:
-    xyz_energy = xyz_color_matching(wave_nm, energy=True, asset_store=asset_store)
     energy = quanta_to_energy(np.asarray(photons, dtype=float), np.asarray(wave_nm, dtype=float))
+    return luminance_from_energy(energy, wave_nm, asset_store=asset_store)
+
+
+def luminance_from_energy(
+    energy: NDArray[np.float64],
+    wave_nm: NDArray[np.float64],
+    *,
+    asset_store: AssetStore | None = None,
+) -> NDArray[np.float64]:
+    xyz_energy = xyz_color_matching(wave_nm, energy=True, asset_store=asset_store)
     y_bar = xyz_energy[:, 1]
-    return 683.0 * np.tensordot(energy, y_bar * spectral_step(np.asarray(wave_nm, dtype=float)), axes=([2], [0]))
+    return 683.0 * np.tensordot(
+        np.asarray(energy, dtype=float),
+        y_bar * spectral_step(np.asarray(wave_nm, dtype=float)),
+        axes=([-1], [0]),
+    )
+
+
+def daylight(
+    wave_nm: NDArray[np.float64],
+    cct_k: float | NDArray[np.float64] = 6500.0,
+    units: str = "energy",
+    *,
+    return_xyz: bool = False,
+    asset_store: AssetStore | None = None,
+) -> NDArray[np.float64] | tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Generate CIE daylight spectra from correlated color temperature."""
+
+    wave = np.asarray(wave_nm, dtype=float).reshape(-1)
+    cct = np.asarray(cct_k, dtype=float).reshape(-1)
+    if wave.size == 0:
+        raise ValueError("wave_nm must not be empty.")
+    if cct.size == 0:
+        raise ValueError("cct_k must not be empty.")
+    if np.any((cct < 4000.0) | (cct >= 30000.0)):
+        raise ValueError("daylight supports 4000 K <= cct_k < 30000 K.")
+
+    lower_mask = (cct >= 4000.0) & (cct < 7000.0)
+    upper_mask = cct >= 7000.0
+    xdt = np.empty((2, cct.size), dtype=float)
+    xdt[0, :] = (-4.6070e9 / cct**3) + (2.9678e6 / cct**2) + (0.09911e3 / cct) + 0.244063
+    xdt[1, :] = (-2.0064e9 / cct**3) + (1.9018e6 / cct**2) + (0.24748e3 / cct) + 0.237040
+    xd = lower_mask.astype(float) * xdt[0, :] + upper_mask.astype(float) * xdt[1, :]
+    yd = (-3.0 * xd**2) + (2.87 * xd) - 0.275
+
+    denominator = 0.0241 + (0.2562 * xd) - (0.7341 * yd)
+    weights = np.empty((2, cct.size), dtype=float)
+    weights[0, :] = (-1.3515 - (1.7703 * xd) + (5.9114 * yd)) / denominator
+    weights[1, :] = (0.03 - (31.4424 * xd) + (30.0717 * yd)) / denominator
+
+    store = asset_store or AssetStore.default()
+    _, day_basis = store.load_spectra("cieDaylightBasis.mat", wave_nm=wave)
+    basis = np.asarray(day_basis, dtype=float)
+    if basis.ndim == 1:
+        basis = basis.reshape(-1, 1)
+    energy = basis[:, [0]] + basis[:, 1:3] @ weights
+
+    normalized_units = param_format(units)
+    if normalized_units in {"photons", "quanta"}:
+        spectra = np.asarray(energy_to_quanta(energy, wave), dtype=float)
+        first_luminance = float(luminance_from_photons(spectra[:, 0], wave, asset_store=store))
+    elif normalized_units in {"energy", "watts"}:
+        spectra = energy
+        first_luminance = float(luminance_from_energy(spectra[:, 0], wave, asset_store=store))
+    else:
+        raise UnsupportedOptionError("daylight", units)
+    spectra = (spectra / max(first_luminance, 1e-12)) * 100.0
+
+    if not return_xyz:
+        return spectra[:, 0] if cct.size == 1 else spectra
+
+    xyz_energy = xyz_color_matching(wave, energy=True, asset_store=store)
+    xyz = 683.0 * np.tensordot(
+        np.asarray(spectra, dtype=float).T,
+        xyz_energy * spectral_step(wave),
+        axes=([-1], [0]),
+    )
+    if cct.size == 1:
+        return spectra[:, 0], np.asarray(xyz, dtype=float).reshape(3)
+    return spectra, np.asarray(xyz, dtype=float)
 
 
 def _surface_reflectances(

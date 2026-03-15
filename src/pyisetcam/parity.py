@@ -11,6 +11,7 @@ import numpy as np
 
 from .assets import AssetStore, ie_read_color_filter, ie_read_spectra
 from .camera import camera_compute, camera_create, camera_get, camera_set
+from .color import daylight, luminance_from_energy, luminance_from_photons
 from .description import sensor_description
 from .display import display_create
 from .fileio import ie_save_color_filter, ie_save_si_data_file
@@ -870,6 +871,38 @@ def run_python_case_with_context(
                 "multi_temperatures_k": multi_temperatures,
                 "spd_multi": spd_multi,
                 "estimated_multi_k": estimated_multi,
+            },
+            context={},
+        )
+
+    if case_name == "scene_daylight_small":
+        wave = np.arange(400.0, 771.0, 1.0, dtype=float)
+        cct = np.arange(4000.0, 10001.0, 1000.0, dtype=float)
+        photons = np.asarray(daylight(wave, cct, "photons", asset_store=store), dtype=float)
+        lum_photons = np.asarray(luminance_from_photons(photons.T, wave, asset_store=store), dtype=float).reshape(-1)
+        photons_scaled = photons * (100.0 / np.maximum(lum_photons, 1e-12)).reshape(1, -1)
+
+        energy = np.asarray(daylight(wave, cct, "energy", asset_store=store), dtype=float)
+        lum_energy = np.asarray(luminance_from_energy(energy.T, wave, asset_store=store), dtype=float).reshape(-1)
+        energy_scaled = energy * (100.0 / np.maximum(lum_energy, 1e-12)).reshape(1, -1)
+
+        day_basis = np.asarray(ie_read_spectra("cieDaylightBasis.mat", wave, asset_store=store), dtype=float)
+        basis_weights = np.array([[1.0, 1.0, 1.0], [0.0, 1.0, -1.0], [0.0, 0.0, 0.0]], dtype=float)
+        basis_examples = day_basis @ basis_weights
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "cct_k": cct,
+                "photons": photons,
+                "lum_photons": lum_photons,
+                "photons_scaled": photons_scaled,
+                "energy": energy,
+                "lum_energy": lum_energy,
+                "energy_scaled": energy_scaled,
+                "day_basis": day_basis,
+                "basis_weights": basis_weights,
+                "basis_examples": basis_examples,
             },
             context={},
         )
