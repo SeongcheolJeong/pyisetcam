@@ -102,6 +102,7 @@ from .utils import (
     hc_basis,
     ie_fit_line,
     ie_mvnrnd,
+    image_increase_image_rgb_size,
     param_format,
     quanta_to_energy,
     rgb_to_xw_format,
@@ -1624,6 +1625,53 @@ def run_python_case_with_context(
                 "scene99_mean_luminance": float(scene_get(scene_99, "mean luminance", asset_store=store)),
                 "scene99_mean_scene_spd_norm": mean_99,
                 "scene99_center_scene_spd_norm": center_99,
+            },
+            context={},
+        )
+
+    if case_name == "scene_increase_size_small":
+        source_scene = scene_create(asset_store=store)
+        source_wave = np.asarray(scene_get(source_scene, "wave"), dtype=float).reshape(-1)
+        source_photons = np.asarray(scene_get(source_scene, "photons"), dtype=float)
+        source_size = np.asarray(scene_get(source_scene, "size"), dtype=int).reshape(-1)
+        source_mean_spd = np.mean(source_photons, axis=(0, 1), dtype=float)
+
+        step1_photons = image_increase_image_rgb_size(source_photons, [2, 3])
+        scene_step1 = scene_set(source_scene.clone(), "photons", step1_photons)
+        step1_size = np.asarray(scene_get(scene_step1, "size"), dtype=int).reshape(-1)
+        step1_mean_spd = np.mean(step1_photons, axis=(0, 1), dtype=float)
+
+        step2_photons = image_increase_image_rgb_size(step1_photons, [1, 2])
+        scene_step2 = scene_set(scene_step1.clone(), "photons", step2_photons)
+        step2_size = np.asarray(scene_get(scene_step2, "size"), dtype=int).reshape(-1)
+        step2_mean_spd = np.mean(step2_photons, axis=(0, 1), dtype=float)
+
+        step3_photons = image_increase_image_rgb_size(step2_photons, [3, 1])
+        scene_step3 = scene_set(scene_step2.clone(), "photons", step3_photons)
+        step3_size = np.asarray(scene_get(scene_step3, "size"), dtype=int).reshape(-1)
+        step3_mean_spd = np.mean(step3_photons, axis=(0, 1), dtype=float)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": source_wave,
+                "source_size": source_size,
+                "source_mean_luminance": float(scene_get(source_scene, "mean luminance", asset_store=store)),
+                "source_mean_scene_spd_norm": _channel_normalize(source_mean_spd),
+                "step1_size": step1_size,
+                "step1_mean_luminance": float(scene_get(scene_step1, "mean luminance", asset_store=store)),
+                "step1_mean_scene_spd_norm": _channel_normalize(step1_mean_spd),
+                "step1_replay_max_abs": float(np.max(np.abs(step1_photons[::2, ::3, :] - source_photons))),
+                "step2_size": step2_size,
+                "step2_mean_luminance": float(scene_get(scene_step2, "mean luminance", asset_store=store)),
+                "step2_mean_scene_spd_norm": _channel_normalize(step2_mean_spd),
+                "step2_replay_max_abs": float(np.max(np.abs(step2_photons[:, ::2, :] - step1_photons))),
+                "step3_size": step3_size,
+                "step3_mean_luminance": float(scene_get(scene_step3, "mean luminance", asset_store=store)),
+                "step3_mean_scene_spd_norm": _channel_normalize(step3_mean_spd),
+                "step3_replay_max_abs": float(np.max(np.abs(step3_photons[::3, :, :] - step2_photons))),
+                "source_aspect_ratio": float(source_size[1] / source_size[0]),
+                "final_aspect_ratio": float(step3_size[1] / step3_size[0]),
             },
             context={},
         )

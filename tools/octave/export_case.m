@@ -1279,6 +1279,44 @@ switch case_name
         payload.scene99_mean_scene_spd_norm = local_channel_normalize(mean99);
         payload.scene99_center_scene_spd_norm = local_channel_normalize(center99);
 
+    case 'scene_increase_size_small'
+        sourceScene = sceneCreate;
+        sourceWave = double(sceneGet(sourceScene, 'wave'));
+        sourcePhotons = double(sceneGet(sourceScene, 'photons'));
+        sourceSize = double(sceneGet(sourceScene, 'size'));
+        sourceMean = squeeze(mean(mean(sourcePhotons, 1), 2));
+
+        step1Photons = imageIncreaseImageRGBSize(sourcePhotons, [2, 3]);
+        sceneStep1 = sceneSet(sourceScene, 'photons', step1Photons);
+        step1Mean = squeeze(mean(mean(step1Photons, 1), 2));
+
+        step2Photons = imageIncreaseImageRGBSize(step1Photons, [1, 2]);
+        sceneStep2 = sceneSet(sceneStep1, 'photons', step2Photons);
+        step2Mean = squeeze(mean(mean(step2Photons, 1), 2));
+
+        step3Photons = imageIncreaseImageRGBSize(step2Photons, [3, 1]);
+        sceneStep3 = sceneSet(sceneStep2, 'photons', step3Photons);
+        step3Mean = squeeze(mean(mean(step3Photons, 1), 2));
+
+        payload.wave = sourceWave(:);
+        payload.source_size = sourceSize(:);
+        payload.source_mean_luminance = double(sceneGet(sourceScene, 'mean luminance'));
+        payload.source_mean_scene_spd_norm = local_channel_normalize(sourceMean);
+        payload.step1_size = double(sceneGet(sceneStep1, 'size')(:));
+        payload.step1_mean_luminance = double(sceneGet(sceneStep1, 'mean luminance'));
+        payload.step1_mean_scene_spd_norm = local_channel_normalize(step1Mean);
+        payload.step1_replay_max_abs = max(abs(step1Photons(1:2:end, 1:3:end, :)(:) - sourcePhotons(:)));
+        payload.step2_size = double(sceneGet(sceneStep2, 'size')(:));
+        payload.step2_mean_luminance = double(sceneGet(sceneStep2, 'mean luminance'));
+        payload.step2_mean_scene_spd_norm = local_channel_normalize(step2Mean);
+        payload.step2_replay_max_abs = max(abs(step2Photons(:, 1:2:end, :)(:) - step1Photons(:)));
+        payload.step3_size = double(sceneGet(sceneStep3, 'size')(:));
+        payload.step3_mean_luminance = double(sceneGet(sceneStep3, 'mean luminance'));
+        payload.step3_mean_scene_spd_norm = local_channel_normalize(step3Mean);
+        payload.step3_replay_max_abs = max(abs(step3Photons(1:3:end, :, :)(:) - step2Photons(:)));
+        payload.source_aspect_ratio = sourceSize(2) / sourceSize(1);
+        payload.final_aspect_ratio = double(sceneGet(sceneStep3, 'cols')) / double(sceneGet(sceneStep3, 'rows'));
+
     case 'display_create_lcd_example'
         d = displayCreate('lcdExample.mat');
         payload.wave = displayGet(d, 'wave');

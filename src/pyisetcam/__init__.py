@@ -201,6 +201,7 @@ from .utils import (
     hc_basis,
     ie_fit_line,
     ie_mvnrnd,
+    image_increase_image_rgb_size,
     ie_parameter_otype,
     param_format,
     rgb_to_xw_format,
@@ -275,6 +276,8 @@ __all__ = [
     "ieReadColorFilter",
     "ieSaveColorFilter",
     "ieSaveMultiSpectralImage",
+    "imageIncreaseImageRGBSize",
+    "image_increase_image_rgb_size",
     "ieRect2Locs",
     "ieRect2Vertices",
     "ieRoi2Locs",
@@ -735,6 +738,7 @@ spd2cct = spd_to_cct
 RGB2XWFormat = rgb_to_xw_format
 XW2RGBFormat = xw_to_rgb_format
 hcBasis = hc_basis
+imageIncreaseImageRGBSize = image_increase_image_rgb_size
 ieLuminanceFromEnergy = luminance_from_energy
 ieLuminanceFromPhotons = luminance_from_photons
 

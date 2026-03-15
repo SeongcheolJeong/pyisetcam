@@ -941,6 +941,25 @@ def xw_to_rgb_format(im_xw: Any, rows: int, cols: int) -> NDArray[np.float64]:
     return np.reshape(array, (int(rows), int(cols), int(array.shape[1])), order="F")
 
 
+def image_increase_image_rgb_size(im: Any, s: Any) -> NDArray[np.float64]:
+    """Increase an image/cube by MATLAB-style pixel replication."""
+
+    array = np.asarray(im, dtype=float)
+    if array.ndim not in {2, 3}:
+        raise ValueError("Unexpected input matrix dimension.")
+
+    scale = np.asarray(s, dtype=float).reshape(-1)
+    if scale.size == 0:
+        raise ValueError("Scale factor required.")
+    if scale.size == 1:
+        scale = np.repeat(scale, 2)
+    row_scale = max(int(np.rint(scale[0])), 1)
+    col_scale = max(int(np.rint(scale[1])), 1)
+
+    expanded = np.repeat(np.repeat(array, row_scale, axis=0), col_scale, axis=1)
+    return np.asarray(expanded, dtype=float)
+
+
 def hc_basis(
     hc: Any,
     b_type: float | int = 0.995,
@@ -984,6 +1003,9 @@ def hc_basis(
     coefficients = xw_to_rgb_format(coefficients_xw, rows, cols)
     var_explained = float(relative_variance[n_bases - 1]) if n_bases > 0 else 0.0
     return np.asarray(img_mean, dtype=float), basis, coefficients, var_explained
+
+
+imageIncreaseImageRGBSize = image_increase_image_rgb_size
 
 
 def xyz_to_linear_srgb(xyz: NDArray[np.float64]) -> NDArray[np.float64]:

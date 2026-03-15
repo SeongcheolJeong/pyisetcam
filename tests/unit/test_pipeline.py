@@ -19,6 +19,7 @@ from pyisetcam import (
     display_create,
     display_get,
     hc_basis,
+    image_increase_image_rgb_size,
     illuminant_create,
     illuminant_get,
     illuminant_set,
@@ -4988,6 +4989,51 @@ def test_run_python_case_supports_scene_hc_compress_parity_case(asset_store) -> 
     assert case.payload["scene99_wave"].shape == (61,)
     assert case.payload["scene99_mean_scene_spd_norm"].shape == (61,)
     assert case.payload["scene99_center_scene_spd_norm"].shape == (61,)
+
+
+def test_run_python_case_supports_scene_increase_size_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_increase_size_small", asset_store=asset_store)
+
+    assert case.payload["wave"].shape == (31,)
+    assert tuple(case.payload["source_size"]) == (64, 96)
+    assert case.payload["source_mean_scene_spd_norm"].shape == (31,)
+    assert tuple(case.payload["step1_size"]) == (128, 288)
+    assert case.payload["step1_mean_scene_spd_norm"].shape == (31,)
+    assert float(case.payload["step1_replay_max_abs"]) == 0.0
+    assert tuple(case.payload["step2_size"]) == (128, 576)
+    assert case.payload["step2_mean_scene_spd_norm"].shape == (31,)
+    assert float(case.payload["step2_replay_max_abs"]) == 0.0
+    assert tuple(case.payload["step3_size"]) == (384, 576)
+    assert case.payload["step3_mean_scene_spd_norm"].shape == (31,)
+    assert float(case.payload["step3_replay_max_abs"]) == 0.0
+    assert np.isclose(float(case.payload["source_aspect_ratio"]), float(case.payload["final_aspect_ratio"]))
+
+
+def test_scene_increase_size_script_workflow(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    source_photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+
+    step1_photons = image_increase_image_rgb_size(source_photons, [2, 3])
+    scene_step1 = scene_set(scene.clone(), "photons", step1_photons)
+    step2_photons = image_increase_image_rgb_size(step1_photons, [1, 2])
+    scene_step2 = scene_set(scene_step1.clone(), "photons", step2_photons)
+    step3_photons = image_increase_image_rgb_size(step2_photons, [3, 1])
+    scene_step3 = scene_set(scene_step2.clone(), "photons", step3_photons)
+
+    assert source_photons.shape == (64, 96, 31)
+    assert step1_photons.shape == (128, 288, 31)
+    assert step2_photons.shape == (128, 576, 31)
+    assert step3_photons.shape == (384, 576, 31)
+    assert np.array_equal(step1_photons[::2, ::3, :], source_photons)
+    assert np.array_equal(step2_photons[:, ::2, :], step1_photons)
+    assert np.array_equal(step3_photons[::3, :, :], step2_photons)
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), scene_get(scene_step1, "mean luminance", asset_store=asset_store))
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), scene_get(scene_step2, "mean luminance", asset_store=asset_store))
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), scene_get(scene_step3, "mean luminance", asset_store=asset_store))
+    assert np.isclose(
+        float(scene_get(scene, "cols")) / float(scene_get(scene, "rows")),
+        float(scene_get(scene_step3, "cols")) / float(scene_get(scene_step3, "rows")),
+    )
 
 
 def test_run_python_case_supports_frequency_orientation_scene_parity_case(asset_store) -> None:
