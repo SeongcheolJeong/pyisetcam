@@ -16,6 +16,7 @@ from .description import sensor_description
 from .display import display_create
 from .fileio import ie_save_color_filter, ie_save_si_data_file
 from .fileio import sensor_dng_read
+from .illuminant import illuminant_create, illuminant_get, illuminant_set
 from .metrics import cct_from_uv, delta_e_ab, metrics_spd, spd_to_cct, xyz_from_energy, xyz_to_lab, xyz_to_luv, xyz_to_uv
 from .ip import ip_compute, ip_create, ip_get, ip_set
 from .optics import (
@@ -903,6 +904,55 @@ def run_python_case_with_context(
                 "day_basis": day_basis,
                 "basis_weights": basis_weights,
                 "basis_examples": basis_examples,
+            },
+            context={},
+        )
+
+    if case_name == "scene_illuminant_small":
+        default_blackbody = illuminant_create("blackbody", asset_store=store)
+        wave_3000 = np.arange(400.0, 701.0, 1.0, dtype=float)
+        blackbody_3000 = illuminant_create("blackbody", wave_3000, 3000.0, asset_store=store)
+        d65_200 = illuminant_create("d65", None, 200.0, asset_store=store)
+        equal_energy = illuminant_create("equal energy", None, 200.0, asset_store=store)
+        equal_photons = illuminant_create("equal photons", None, 200.0, asset_store=store)
+        illuminant_c = illuminant_create("illuminant C", None, 200.0, asset_store=store)
+        mono_555 = illuminant_create("555 nm", None, 200.0, asset_store=store)
+        d65_sparse = illuminant_create("d65", np.arange(400.0, 601.0, 2.0, dtype=float), 200.0, asset_store=store)
+        d65_resampled = illuminant_set(d65_sparse, "wave", np.arange(400.0, 701.0, 5.0, dtype=float), asset_store=store)
+        fluorescent = illuminant_create("fluorescent", np.arange(400.0, 701.0, 5.0, dtype=float), 10.0, asset_store=store)
+        tungsten = illuminant_create("tungsten", None, 300.0, asset_store=store)
+        mono_photons = np.asarray(illuminant_get(mono_555, "photons"), dtype=float).reshape(-1)
+        mono_idx = int(np.argmax(mono_photons))
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "default_blackbody_wave": np.asarray(illuminant_get(default_blackbody, "wave"), dtype=float).reshape(-1),
+                "default_blackbody_photons": np.asarray(illuminant_get(default_blackbody, "photons"), dtype=float).reshape(-1),
+                "default_blackbody_luminance": float(illuminant_get(default_blackbody, "luminance", asset_store=store)),
+                "blackbody_3000_wave": np.asarray(illuminant_get(blackbody_3000, "wave"), dtype=float).reshape(-1),
+                "blackbody_3000_photons": np.asarray(illuminant_get(blackbody_3000, "photons"), dtype=float).reshape(-1),
+                "d65_200_wave": np.asarray(illuminant_get(d65_200, "wave"), dtype=float).reshape(-1),
+                "d65_200_photons": np.asarray(illuminant_get(d65_200, "photons"), dtype=float).reshape(-1),
+                "d65_200_luminance": float(illuminant_get(d65_200, "luminance", asset_store=store)),
+                "equal_energy_wave": np.asarray(illuminant_get(equal_energy, "wave"), dtype=float).reshape(-1),
+                "equal_energy_energy": np.asarray(illuminant_get(equal_energy, "energy"), dtype=float).reshape(-1),
+                "equal_energy_mean": float(np.mean(np.asarray(illuminant_get(equal_energy, "energy"), dtype=float))),
+                "equal_photons_wave": np.asarray(illuminant_get(equal_photons, "wave"), dtype=float).reshape(-1),
+                "equal_photons_photons": np.asarray(illuminant_get(equal_photons, "photons"), dtype=float).reshape(-1),
+                "equal_photons_energy": np.asarray(illuminant_get(equal_photons, "energy"), dtype=float).reshape(-1),
+                "illuminant_c_photons": np.asarray(illuminant_get(illuminant_c, "photons"), dtype=float).reshape(-1),
+                "mono_555_wave": np.asarray(illuminant_get(mono_555, "wave"), dtype=float).reshape(-1),
+                "mono_555_photons": mono_photons,
+                "mono_555_nonzero_index": mono_idx + 1,
+                "mono_555_nonzero_wave_nm": float(np.asarray(illuminant_get(mono_555, "wave"), dtype=float).reshape(-1)[mono_idx]),
+                "d65_sparse_wave": np.asarray(illuminant_get(d65_sparse, "wave"), dtype=float).reshape(-1),
+                "d65_sparse_energy": np.asarray(illuminant_get(d65_sparse, "energy"), dtype=float).reshape(-1),
+                "d65_resampled_wave": np.asarray(illuminant_get(d65_resampled, "wave"), dtype=float).reshape(-1),
+                "d65_resampled_energy": np.asarray(illuminant_get(d65_resampled, "energy"), dtype=float).reshape(-1),
+                "fluorescent_wave": np.asarray(illuminant_get(fluorescent, "wave"), dtype=float).reshape(-1),
+                "fluorescent_photons": np.asarray(illuminant_get(fluorescent, "photons"), dtype=float).reshape(-1),
+                "tungsten_wave": np.asarray(illuminant_get(tungsten, "wave"), dtype=float).reshape(-1),
+                "tungsten_photons": np.asarray(illuminant_get(tungsten, "photons"), dtype=float).reshape(-1),
             },
             context={},
         )

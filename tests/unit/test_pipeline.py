@@ -15,6 +15,9 @@ from pyisetcam import (
     camera_get,
     camera_set,
     daylight,
+    illuminant_create,
+    illuminant_get,
+    illuminant_set,
     ie_read_color_filter,
     ie_read_spectra,
     ie_save_color_filter,
@@ -4774,6 +4777,28 @@ def test_run_python_case_supports_scene_daylight_parity_case(asset_store) -> Non
     assert case.payload["basis_examples"].shape == (371, 3)
 
 
+def test_run_python_case_supports_scene_illuminant_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_illuminant_small", asset_store=asset_store)
+
+    assert case.payload["default_blackbody_wave"].shape == (31,)
+    assert case.payload["default_blackbody_photons"].shape == (31,)
+    assert case.payload["blackbody_3000_wave"].shape == (301,)
+    assert case.payload["blackbody_3000_photons"].shape == (301,)
+    assert case.payload["d65_200_wave"].shape == (31,)
+    assert case.payload["d65_200_photons"].shape == (31,)
+    assert case.payload["equal_energy_wave"].shape == (31,)
+    assert case.payload["equal_energy_energy"].shape == (31,)
+    assert case.payload["equal_photons_wave"].shape == (31,)
+    assert case.payload["equal_photons_photons"].shape == (31,)
+    assert case.payload["illuminant_c_photons"].shape == (31,)
+    assert case.payload["mono_555_wave"].shape == (31,)
+    assert case.payload["mono_555_photons"].shape == (31,)
+    assert case.payload["d65_sparse_wave"].shape == (101,)
+    assert case.payload["d65_resampled_wave"].shape == (61,)
+    assert case.payload["fluorescent_wave"].shape == (61,)
+    assert case.payload["tungsten_wave"].shape == (31,)
+
+
 def test_run_python_case_supports_frequency_orientation_scene_parity_case(asset_store) -> None:
     case = run_python_case_with_context("scene_frequency_orientation_small", asset_store=asset_store)
 
@@ -7349,6 +7374,39 @@ def test_scene_daylight_script_workflow(asset_store) -> None:
     )
     assert day_basis.shape == (wave.size, 3)
     assert basis_examples.shape == (wave.size, 3)
+
+
+def test_scene_illuminant_script_workflow(asset_store) -> None:
+    default_blackbody = illuminant_create("blackbody", asset_store=asset_store)
+    blackbody_3000 = illuminant_create("blackbody", np.arange(400.0, 701.0, 1.0, dtype=float), 3000.0, asset_store=asset_store)
+    d65_200 = illuminant_create("d65", None, 200.0, asset_store=asset_store)
+    equal_energy = illuminant_create("equal energy", None, 200.0, asset_store=asset_store)
+    equal_photons = illuminant_create("equal photons", None, 200.0, asset_store=asset_store)
+    illuminant_c = illuminant_create("illuminant C", None, 200.0, asset_store=asset_store)
+    mono_555 = illuminant_create("555 nm", None, 200.0, asset_store=asset_store)
+    d65_sparse = illuminant_create("d65", np.arange(400.0, 601.0, 2.0, dtype=float), 200.0, asset_store=asset_store)
+    d65_resampled = illuminant_set(d65_sparse, "wave", np.arange(400.0, 701.0, 5.0, dtype=float), asset_store=asset_store)
+    fluorescent = illuminant_create("fluorescent", np.arange(400.0, 701.0, 5.0, dtype=float), 10.0, asset_store=asset_store)
+    tungsten = illuminant_create("tungsten", None, 300.0, asset_store=asset_store)
+
+    default_wave = np.asarray(illuminant_get(default_blackbody, "wave"), dtype=float).reshape(-1)
+    mono_wave = np.asarray(illuminant_get(mono_555, "wave"), dtype=float).reshape(-1)
+    mono_photons = np.asarray(illuminant_get(mono_555, "photons"), dtype=float).reshape(-1)
+
+    assert default_wave.shape == (31,)
+    assert np.isclose(float(illuminant_get(default_blackbody, "luminance", asset_store=asset_store)), 100.0, atol=1e-6, rtol=1e-6)
+    assert np.asarray(illuminant_get(blackbody_3000, "photons"), dtype=float).shape == (301,)
+    assert np.isclose(float(illuminant_get(d65_200, "luminance", asset_store=asset_store)), 200.0, atol=1e-6, rtol=1e-6)
+    assert np.std(np.asarray(illuminant_get(equal_energy, "energy"), dtype=float)) < 1e-12
+    equal_photons_values = np.asarray(illuminant_get(equal_photons, "photons"), dtype=float).reshape(-1)
+    assert np.allclose(equal_photons_values, equal_photons_values[0], atol=1e-6, rtol=1e-12)
+    assert np.asarray(illuminant_get(illuminant_c, "photons"), dtype=float).shape == (31,)
+    assert int(np.count_nonzero(mono_photons > 0.0)) == 1
+    assert np.isclose(mono_wave[int(np.argmax(mono_photons))], 550.0, atol=5.0)
+    assert np.asarray(illuminant_get(d65_sparse, "energy"), dtype=float).shape == (101,)
+    assert np.asarray(illuminant_get(d65_resampled, "energy"), dtype=float).shape == (61,)
+    assert np.asarray(illuminant_get(fluorescent, "photons"), dtype=float).shape == (61,)
+    assert np.asarray(illuminant_get(tungsten, "photons"), dtype=float).shape == (31,)
 
 
 def test_run_python_case_supports_sensor_macbeth_daylight_estimate_small_parity_case(asset_store) -> None:

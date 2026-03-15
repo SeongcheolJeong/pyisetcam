@@ -8,6 +8,7 @@
 - with the broad-parity expansion now started by adding post-core scene-family cases, utility-helper cases for `unitFrequencyList`, `Energy2Quanta/Quanta2Energy` in vector and matrix form, `blackbody` energy/quanta, and `ieParamFormat`, plus initial metrics-family cases for `ieXYZFromEnergy`, `xyz2luv`, `ieXYZ2LAB`, `xyz2uv`, `cct`, `deltaEab` (1976), and `metricsSPD` angle/CIELAB/mired
 - with Phase 3 scene-script coverage now started by adding MATLAB-style `spd_to_cct` / `spd2cct` plus curated Octave parity on the `s_sceneCCT.m` blackbody-CCT workflow
 - and now also MATLAB-style `daylight(...)` plus curated Octave parity on the `s_sceneDaylight.m` daylight-SPD and daylight-basis workflow
+- and now also headless `illuminantCreate/Get/Set` plus curated Octave parity on the `s_sceneIlluminant.m` illuminant-structure workflow
 
 ## Status
 

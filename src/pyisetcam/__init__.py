@@ -22,6 +22,7 @@ from .fileio import (
     vc_load_object,
     vc_save_object,
 )
+from .illuminant import illuminant_create, illuminant_get, illuminant_set
 from .ip import image_data_xyz, ip_compute, ip_create, ip_get, ip_set
 from .metrics import (
     cct_from_uv,
@@ -299,6 +300,12 @@ __all__ = [
     "ie_select_object",
     "ieXYZ2LAB",
     "ieXYZFromEnergy",
+    "illuminantCreate",
+    "illuminantGet",
+    "illuminantSet",
+    "illuminant_create",
+    "illuminant_get",
+    "illuminant_set",
     "ipCompute",
     "ipCreate",
     "ipGet",
@@ -593,6 +600,9 @@ sceneAdjustIlluminant = scene_adjust_illuminant
 sceneAdjustLuminance = scene_adjust_luminance
 sceneCalculateLuminance = scene_calculate_luminance
 sceneClearData = scene_clear_data
+illuminantCreate = illuminant_create
+illuminantGet = illuminant_get
+illuminantSet = illuminant_set
 
 displayCreate = display_create
 displayGet = display_get

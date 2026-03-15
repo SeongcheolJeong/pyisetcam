@@ -779,6 +779,49 @@ switch case_name
         payload.basis_weights = basis_weights;
         payload.basis_examples = basis_examples;
 
+    case 'scene_illuminant_small'
+        default_blackbody = illuminantCreate('blackbody');
+        blackbody_3000 = illuminantCreate('blackbody', 400:700, 3000);
+        d65_200 = illuminantCreate('d65', [], 200);
+        equal_energy = illuminantCreate('equal energy', [], 200);
+        equal_photons = illuminantCreate('equal photons', [], 200);
+        illuminant_c = illuminantCreate('illuminant C', [], 200);
+        mono_555 = illuminantCreate('555 nm', [], 200);
+        d65_sparse = illuminantCreate('d65', 400:2:600, 200);
+        d65_resampled = illuminantSet(d65_sparse, 'wave', 400:5:700);
+        fluorescent = illuminantCreate('fluorescent', 400:5:700, 10);
+        tungsten = illuminantCreate('tungsten', [], 300);
+        mono_photons = illuminantGet(mono_555, 'photons');
+        [~, mono_idx] = max(mono_photons);
+        mono_wave = illuminantGet(mono_555, 'wave');
+        payload.default_blackbody_wave = illuminantGet(default_blackbody, 'wave');
+        payload.default_blackbody_photons = illuminantGet(default_blackbody, 'photons');
+        payload.default_blackbody_luminance = illuminantGet(default_blackbody, 'luminance');
+        payload.blackbody_3000_wave = illuminantGet(blackbody_3000, 'wave');
+        payload.blackbody_3000_photons = illuminantGet(blackbody_3000, 'photons');
+        payload.d65_200_wave = illuminantGet(d65_200, 'wave');
+        payload.d65_200_photons = illuminantGet(d65_200, 'photons');
+        payload.d65_200_luminance = illuminantGet(d65_200, 'luminance');
+        payload.equal_energy_wave = illuminantGet(equal_energy, 'wave');
+        payload.equal_energy_energy = illuminantGet(equal_energy, 'energy');
+        payload.equal_energy_mean = mean(payload.equal_energy_energy(:));
+        payload.equal_photons_wave = illuminantGet(equal_photons, 'wave');
+        payload.equal_photons_photons = illuminantGet(equal_photons, 'photons');
+        payload.equal_photons_energy = illuminantGet(equal_photons, 'energy');
+        payload.illuminant_c_photons = illuminantGet(illuminant_c, 'photons');
+        payload.mono_555_wave = mono_wave;
+        payload.mono_555_photons = mono_photons;
+        payload.mono_555_nonzero_index = mono_idx;
+        payload.mono_555_nonzero_wave_nm = mono_wave(mono_idx);
+        payload.d65_sparse_wave = illuminantGet(d65_sparse, 'wave');
+        payload.d65_sparse_energy = illuminantGet(d65_sparse, 'energy');
+        payload.d65_resampled_wave = illuminantGet(d65_resampled, 'wave');
+        payload.d65_resampled_energy = illuminantGet(d65_resampled, 'energy');
+        payload.fluorescent_wave = illuminantGet(fluorescent, 'wave');
+        payload.fluorescent_photons = illuminantGet(fluorescent, 'photons');
+        payload.tungsten_wave = illuminantGet(tungsten, 'wave');
+        payload.tungsten_photons = illuminantGet(tungsten, 'photons');
+
     case 'display_create_lcd_example'
         d = displayCreate('lcdExample.mat');
         payload.wave = displayGet(d, 'wave');
