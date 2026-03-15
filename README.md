@@ -392,6 +392,12 @@ That same focus/DoF optics block now also has direct Octave parity on
 the CoC-derived DOF crossing estimate, and the object-distance by f-number
 DOF sweep surface.
 That same focus/DoF optics block now also includes public
+`optics_depth_defocus` / `opticsDepthDefocus`, with direct Octave parity
+on `s_opticsDepthDefocus.m` for the default-lens object-distance sweep,
+the focal-plane and 1.1x-focal-length defocus curves, the in-focus object
+distance for the shifted image plane, and the pupil-scaled Hopkins `w20`
+surface.
+That same focus/DoF optics block now also includes public
 `optics_defocus_core` / `opticsDefocusCore` and
 `optics_build_2d_otf` / `opticsBuild2Dotf`, with direct Octave parity on
 `s_opticsDefocusScene.m` for the multispectral D65-adjusted defocus-image

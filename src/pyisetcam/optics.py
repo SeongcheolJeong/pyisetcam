@@ -258,6 +258,44 @@ def optics_dof(
     return np.asarray(dof, dtype=float)
 
 
+def optics_depth_defocus(
+    obj_dist: Any,
+    optics: OpticalImage | dict[str, Any],
+    img_plane_dist: Any | None = None,
+) -> tuple[float | np.ndarray, float | np.ndarray]:
+    """Return thin-lens defocus in diopters and the in-focus image distance."""
+
+    current = _coerce_optics_struct(optics)
+    focal_length_m = _optics_scalar_value(
+        current,
+        "focal_length_m",
+        "nominal_focal_length_m",
+        "focalLength",
+        "nominalFocalLength",
+        default=DEFAULT_FOCAL_LENGTH_M,
+    )
+    if focal_length_m <= 0.0:
+        raise ValueError("Optics focal length must be positive.")
+
+    object_distance_m = np.asarray(obj_dist, dtype=float)
+    if np.any(object_distance_m <= focal_length_m):
+        raise ValueError("obj_dist must be greater than the focal length.")
+
+    if img_plane_dist is None:
+        image_plane_distance_m = np.asarray(focal_length_m, dtype=float)
+    else:
+        image_plane_distance_m = np.asarray(img_plane_dist, dtype=float)
+    if np.any(image_plane_distance_m < focal_length_m):
+        raise ValueError("img_plane_dist must be at least the focal length.")
+
+    image_distance_m = 1.0 / ((1.0 / focal_length_m) - (1.0 / object_distance_m))
+    defocus_diopters = (1.0 / image_distance_m) - (1.0 / image_plane_distance_m)
+
+    if defocus_diopters.ndim == 0:
+        return float(defocus_diopters), float(image_distance_m)
+    return np.asarray(defocus_diopters, dtype=float), np.asarray(image_distance_m, dtype=float)
+
+
 def optics_defocus_displacement(base_power_diopters: Any, delta_power_diopters: Any) -> float | np.ndarray:
     """Return the image-plane displacement in meters for a change in lens power."""
 

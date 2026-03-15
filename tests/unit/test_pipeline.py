@@ -27,6 +27,7 @@ from pyisetcam import (
     optics_build_2d_otf,
     optics_coc,
     optics_defocus_core,
+    optics_depth_defocus,
     optics_defocus_displacement,
     optics_dof,
     optics_psf_to_otf,
@@ -2713,6 +2714,48 @@ def test_optics_dof_script_workflow_matches_coc_crossings() -> None:
     assert dof_surface_m[0, -1] > dof_surface_m[0, 0]
 
 
+def test_optics_depth_defocus_matches_thin_lens_script_workflow() -> None:
+    optics = dict(oi_create().fields["optics"])
+    focal_length_m = float(optics["focal_length_m"])
+    lens_power_diopters = 1.0 / focal_length_m
+    object_distance_m = np.linspace(focal_length_m * 1.5, 100.0 * focal_length_m, 500, dtype=float)
+
+    defocus_diopters, image_distance_m = optics_depth_defocus(object_distance_m, optics)
+    defocus_diopters = np.asarray(defocus_diopters, dtype=float)
+    image_distance_m = np.asarray(image_distance_m, dtype=float)
+
+    expected_image_distance_m = (focal_length_m * object_distance_m) / (object_distance_m - focal_length_m)
+    expected_defocus_diopters = (1.0 / expected_image_distance_m) - (1.0 / focal_length_m)
+
+    shifted_scale = 1.1
+    shifted_defocus_diopters, shifted_image_distance_m = optics_depth_defocus(
+        object_distance_m,
+        optics,
+        shifted_scale * focal_length_m,
+    )
+    shifted_defocus_diopters = np.asarray(shifted_defocus_diopters, dtype=float)
+    shifted_image_distance_m = np.asarray(shifted_image_distance_m, dtype=float)
+    focus_index = int(np.argmin(np.abs(shifted_defocus_diopters)))
+
+    pupil_radius_m = focal_length_m / (2.0 * float(optics["f_number"]))
+    pupil_radius_scales = np.array([0.5, 1.5, 3.0], dtype=float)
+    w20 = ((pupil_radius_scales[None, :] * pupil_radius_m) ** 2 / 2.0) * (
+        lens_power_diopters * shifted_defocus_diopters[:, None]
+    ) / (lens_power_diopters + shifted_defocus_diopters[:, None])
+
+    assert np.allclose(image_distance_m, expected_image_distance_m)
+    assert np.allclose(defocus_diopters, expected_defocus_diopters)
+    assert np.allclose(shifted_image_distance_m, expected_image_distance_m)
+    assert np.all(image_distance_m > focal_length_m)
+    assert np.all(defocus_diopters < 0.0)
+    assert np.all(np.diff(defocus_diopters) >= 0.0)
+    assert np.any(shifted_defocus_diopters < 0.0)
+    assert np.any(shifted_defocus_diopters > 0.0)
+    assert np.isclose(object_distance_m[focus_index] / focal_length_m, 11.0, atol=0.05)
+    assert w20.shape == (500, 3)
+    assert np.isclose(w20[focus_index, 0], 0.0, atol=1e-8)
+
+
 def test_optics_defocus_core_and_build_2d_otf_support_shift_invariant_bundle() -> None:
     oi = oi_create()
     optics = dict(oi.fields["optics"])
@@ -2819,6 +2862,23 @@ def test_optics_dof_small_parity_case(asset_store) -> None:
     assert np.array_equal(payload["f_numbers"], np.arange(2.0, 12.0 + 1e-12, 0.25, dtype=float))
     assert np.isclose(float(payload["sweep_coc_diameter_m"]), 20e-6)
     assert payload["dof_surface_m"].shape == (79, 41)
+
+
+def test_optics_depth_defocus_small_parity_case(asset_store) -> None:
+    payload = run_python_case("optics_depth_defocus_small", asset_store=asset_store)
+
+    assert float(payload["focal_length_m"]) > 0.0
+    assert np.isclose(float(payload["lens_power_diopters"]), 1.0 / float(payload["focal_length_m"]))
+    assert payload["object_distance_m"].shape == (500,)
+    assert payload["focal_plane_relative_defocus"].shape == (500,)
+    assert payload["image_distance_m"].shape == (500,)
+    assert np.isclose(float(payload["shifted_image_plane_scale"]), 1.1)
+    assert payload["shifted_defocus_diopters"].shape == (500,)
+    assert float(payload["shifted_focus_object_distance_m"]) > float(payload["focal_length_m"])
+    assert np.isclose(float(payload["shifted_focus_object_distance_focal_lengths"]), 11.0, atol=0.05)
+    assert np.isclose(float(payload["pupil_radius_m"]), float(payload["focal_length_m"]) / 8.0)
+    assert np.array_equal(payload["pupil_radius_scales"], np.array([0.5, 1.5, 3.0], dtype=float))
+    assert payload["w20"].shape == (500, 3)
 
 
 def test_optics_defocus_scene_small_parity_case(asset_store) -> None:

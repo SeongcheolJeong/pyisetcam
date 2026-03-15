@@ -1327,6 +1327,38 @@ switch case_name
         payload.sweep_coc_diameter_m = double(sweepCoC);
         payload.dof_surface_m = double(dofSweep);
 
+    case 'optics_depth_defocus_small'
+        optics = opticsCreate;
+        fLength = opticsGet(optics, 'focal length', 'm');
+        D0 = opticsGet(optics, 'power');
+        objDist = linspace(fLength * 1.5, 100 * fLength, 500);
+
+        [D, imgDist] = opticsDepthDefocus(objDist, optics);
+
+        s = 1.1;
+        shiftedD = opticsDepthDefocus(objDist, optics, s * fLength);
+        [~, ii] = min(abs(shiftedD));
+
+        p = opticsGet(optics, 'pupil radius');
+        pupilScales = [0.5 1.5 3];
+        w20 = zeros(numel(shiftedD), numel(pupilScales));
+        for jj = 1:numel(pupilScales)
+            w20(:, jj) = ((pupilScales(jj) * p) .^ 2 / 2) .* ((D0 .* shiftedD) ./ (D0 + shiftedD));
+        end
+
+        payload.focal_length_m = double(fLength);
+        payload.lens_power_diopters = double(D0);
+        payload.object_distance_m = double(objDist(:));
+        payload.focal_plane_relative_defocus = double((D(:)) / D0);
+        payload.image_distance_m = double(imgDist(:));
+        payload.shifted_image_plane_scale = double(s);
+        payload.shifted_defocus_diopters = double(shiftedD(:));
+        payload.shifted_focus_object_distance_m = double(objDist(ii));
+        payload.shifted_focus_object_distance_focal_lengths = double(objDist(ii) / fLength);
+        payload.pupil_radius_m = double(p);
+        payload.pupil_radius_scales = double(pupilScales(:));
+        payload.w20 = double(w20);
+
     case 'optics_defocus_scene_small'
         wave = (400:10:700)';
         fullFileName = fullfile(isetRootPath, 'data', 'images', 'multispectral', 'StuffedAnimals_tungsten-hdrs');

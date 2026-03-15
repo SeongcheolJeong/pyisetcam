@@ -485,6 +485,12 @@
       "atol": 1e-12
     },
     {
+      "name": "optics_depth_defocus_small",
+      "matlab_function": "s_opticsDepthDefocus",
+      "rtol": 1e-08,
+      "atol": 1e-12
+    },
+    {
       "name": "optics_defocus_scene_small",
       "matlab_function": "s_opticsDefocusScene",
       "rtol": 1e-05,

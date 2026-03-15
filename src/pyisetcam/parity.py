@@ -28,6 +28,7 @@ from .optics import (
     optics_build_2d_otf,
     optics_coc,
     optics_defocus_core,
+    optics_depth_defocus,
     optics_defocus_displacement,
     optics_dof,
     oi_compute,
@@ -1559,6 +1560,48 @@ def run_python_case_with_context(
                 "f_numbers": f_numbers,
                 "sweep_coc_diameter_m": 20e-6,
                 "dof_surface_m": dof_surface_m,
+            },
+            context={},
+        )
+
+    if case_name == "optics_depth_defocus_small":
+        oi = oi_create()
+        optics = dict(oi.fields["optics"])
+        focal_length_m = float(optics["focal_length_m"])
+        lens_power_diopters = 1.0 / focal_length_m
+        object_distance_m = np.linspace(focal_length_m * 1.5, 100.0 * focal_length_m, 500, dtype=float)
+
+        focal_plane_defocus_diopters, image_distance_m = optics_depth_defocus(object_distance_m, optics)
+        focal_plane_defocus_diopters = np.asarray(focal_plane_defocus_diopters, dtype=float)
+        image_distance_m = np.asarray(image_distance_m, dtype=float)
+
+        shifted_image_plane_scale = 1.1
+        shifted_image_plane_m = shifted_image_plane_scale * focal_length_m
+        shifted_defocus_diopters, _ = optics_depth_defocus(object_distance_m, optics, shifted_image_plane_m)
+        shifted_defocus_diopters = np.asarray(shifted_defocus_diopters, dtype=float)
+        focus_index = int(np.argmin(np.abs(shifted_defocus_diopters)))
+
+        pupil_radius_m = focal_length_m / (2.0 * float(optics["f_number"]))
+        pupil_radius_scales = np.array([0.5, 1.5, 3.0], dtype=float)
+        w20 = ((pupil_radius_scales[None, :] * pupil_radius_m) ** 2 / 2.0) * (
+            lens_power_diopters * shifted_defocus_diopters[:, None]
+        ) / (lens_power_diopters + shifted_defocus_diopters[:, None])
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "focal_length_m": focal_length_m,
+                "lens_power_diopters": lens_power_diopters,
+                "object_distance_m": object_distance_m,
+                "focal_plane_relative_defocus": focal_plane_defocus_diopters / lens_power_diopters,
+                "image_distance_m": image_distance_m,
+                "shifted_image_plane_scale": shifted_image_plane_scale,
+                "shifted_defocus_diopters": shifted_defocus_diopters,
+                "shifted_focus_object_distance_m": float(object_distance_m[focus_index]),
+                "shifted_focus_object_distance_focal_lengths": float(object_distance_m[focus_index] / focal_length_m),
+                "pupil_radius_m": pupil_radius_m,
+                "pupil_radius_scales": pupil_radius_scales,
+                "w20": np.asarray(w20, dtype=float),
             },
             context={},
         )

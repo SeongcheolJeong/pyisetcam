@@ -48,6 +48,7 @@ from .optics import (
     optics_build_2d_otf,
     optics_coc,
     optics_defocus_core,
+    optics_depth_defocus,
     optics_defocus_displacement,
     optics_dof,
     optics_ray_trace,
@@ -311,11 +312,13 @@ __all__ = [
     "opticsBuild2Dotf",
     "opticsCoC",
     "opticsDefocusCore",
+    "opticsDepthDefocus",
     "opticsDefocusDisplacement",
     "opticsDoF",
     "optics_build_2d_otf",
     "optics_coc",
     "optics_defocus_core",
+    "optics_depth_defocus",
     "optics_defocus_displacement",
     "optics_dof",
     "opticsRayTrace",
@@ -608,6 +611,7 @@ airyDisk = airy_disk
 opticsBuild2Dotf = optics_build_2d_otf
 opticsCoC = optics_coc
 opticsDefocusCore = optics_defocus_core
+opticsDepthDefocus = optics_depth_defocus
 opticsDefocusDisplacement = optics_defocus_displacement
 opticsDoF = optics_dof
 opticsRayTrace = optics_ray_trace
