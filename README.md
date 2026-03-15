@@ -9,6 +9,7 @@
 - with Phase 3 scene-script coverage now started by adding MATLAB-style `spd_to_cct` / `spd2cct` plus curated Octave parity on the `s_sceneCCT.m` blackbody-CCT workflow
 - and now also MATLAB-style `daylight(...)` plus curated Octave parity on the `s_sceneDaylight.m` daylight-SPD and daylight-basis workflow
 - and now also headless `illuminantCreate/Get/Set` plus curated Octave parity on the `s_sceneIlluminant.m` illuminant-structure workflow
+- and now also headless `sceneIlluminantSS(...)`, spatial-spectral `sceneAdjustIlluminant(...)`, and `sceneCreate('macbeth tungsten')` coverage plus curated Octave parity on the `s_sceneIlluminantMixtures.m` mixed-illuminant workflow
 
 ## Status
 

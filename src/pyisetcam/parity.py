@@ -67,6 +67,7 @@ from .scene import (
     scene_create,
     scene_from_file,
     scene_get,
+    scene_illuminant_ss,
     scene_interpolate_w,
     scene_rotate,
     scene_set,
@@ -953,6 +954,45 @@ def run_python_case_with_context(
                 "fluorescent_photons": np.asarray(illuminant_get(fluorescent, "photons"), dtype=float).reshape(-1),
                 "tungsten_wave": np.asarray(illuminant_get(tungsten, "wave"), dtype=float).reshape(-1),
                 "tungsten_photons": np.asarray(illuminant_get(tungsten, "photons"), dtype=float).reshape(-1),
+            },
+            context={},
+        )
+
+    if case_name == "scene_illuminant_mixtures_small":
+        tungsten_scene = scene_illuminant_ss(scene_create("macbeth tungsten", asset_store=store))
+        daylight_scene = scene_illuminant_ss(scene_create(asset_store=store))
+        tungsten_energy = np.asarray(scene_get(tungsten_scene, "illuminant energy"), dtype=float)
+        daylight_energy = np.asarray(scene_get(daylight_scene, "illuminant energy"), dtype=float)
+        rows, cols = scene_get(tungsten_scene, "size")
+        split_row = int(np.rint(rows / 2.0))
+        mixed_energy = tungsten_energy.copy()
+        mixed_energy[:split_row, :, :] = daylight_energy[:split_row, :, :]
+        mixed_scene = scene_adjust_illuminant(tungsten_scene.clone(), mixed_energy, asset_store=store)
+        mixed_scene = scene_set(mixed_scene, "name", "Mixed illuminant")
+
+        band_rows = max(1, rows // 4)
+        top_slice = slice(0, band_rows)
+        bottom_slice = slice(rows - band_rows, rows)
+        mixed_illuminant = np.asarray(scene_get(mixed_scene, "illuminant energy"), dtype=float)
+        source_reflectance = np.asarray(scene_get(tungsten_scene, "reflectance"), dtype=float)
+        mixed_reflectance = np.asarray(scene_get(mixed_scene, "reflectance"), dtype=float)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": np.asarray(scene_get(mixed_scene, "wave"), dtype=float).reshape(-1),
+                "scene_size": np.array([rows, cols], dtype=int),
+                "split_row": split_row,
+                "mixed_illuminant_format": str(scene_get(mixed_scene, "illuminant format")),
+                "top_mixed_illuminant_energy": np.mean(mixed_illuminant[top_slice, :, :], axis=(0, 1)),
+                "bottom_mixed_illuminant_energy": np.mean(mixed_illuminant[bottom_slice, :, :], axis=(0, 1)),
+                "top_source_d65_illuminant_energy": np.mean(daylight_energy[top_slice, :, :], axis=(0, 1)),
+                "bottom_source_tungsten_illuminant_energy": np.mean(tungsten_energy[bottom_slice, :, :], axis=(0, 1)),
+                "top_mixed_reflectance": np.mean(mixed_reflectance[top_slice, :, :], axis=(0, 1)),
+                "bottom_mixed_reflectance": np.mean(mixed_reflectance[bottom_slice, :, :], axis=(0, 1)),
+                "top_source_reflectance": np.mean(source_reflectance[top_slice, :, :], axis=(0, 1)),
+                "bottom_source_reflectance": np.mean(source_reflectance[bottom_slice, :, :], axis=(0, 1)),
+                "mixed_mean_luminance": float(scene_get(mixed_scene, "mean luminance", asset_store=store)),
             },
             context={},
         )

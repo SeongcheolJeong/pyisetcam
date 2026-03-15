@@ -822,6 +822,44 @@ switch case_name
         payload.tungsten_wave = illuminantGet(tungsten, 'wave');
         payload.tungsten_photons = illuminantGet(tungsten, 'photons');
 
+    case 'scene_illuminant_mixtures_small'
+        s1 = sceneCreate('macbeth tungsten');
+        s1 = sceneIlluminantSS(s1);
+        illT = sceneGet(s1, 'illuminant energy');
+
+        s2 = sceneCreate();
+        s2 = sceneIlluminantSS(s2);
+        illD65 = sceneGet(s2, 'illuminant energy');
+
+        sz = sceneGet(s1, 'size');
+        split_row = round(sz(1) / 2);
+        ill = illT;
+        ill(1:split_row, :, :) = illD65(1:split_row, :, :);
+
+        s = sceneAdjustIlluminant(s1, ill);
+        s = sceneSet(s, 'name', 'Mixed illuminant');
+
+        band_rows = max(1, floor(sz(1) / 4));
+        top_rows = 1:band_rows;
+        bottom_rows = (sz(1) - band_rows + 1):sz(1);
+        mixed_ill = sceneGet(s, 'illuminant energy');
+        source_reflectance = sceneGet(s1, 'reflectance');
+        mixed_reflectance = sceneGet(s, 'reflectance');
+
+        payload.wave = sceneGet(s, 'wave');
+        payload.scene_size = sz;
+        payload.split_row = split_row;
+        payload.mixed_illuminant_format = sceneGet(s, 'illuminant format');
+        payload.top_mixed_illuminant_energy = squeeze(mean(mean(mixed_ill(top_rows, :, :), 1), 2));
+        payload.bottom_mixed_illuminant_energy = squeeze(mean(mean(mixed_ill(bottom_rows, :, :), 1), 2));
+        payload.top_source_d65_illuminant_energy = squeeze(mean(mean(illD65(top_rows, :, :), 1), 2));
+        payload.bottom_source_tungsten_illuminant_energy = squeeze(mean(mean(illT(bottom_rows, :, :), 1), 2));
+        payload.top_mixed_reflectance = squeeze(mean(mean(mixed_reflectance(top_rows, :, :), 1), 2));
+        payload.bottom_mixed_reflectance = squeeze(mean(mean(mixed_reflectance(bottom_rows, :, :), 1), 2));
+        payload.top_source_reflectance = squeeze(mean(mean(source_reflectance(top_rows, :, :), 1), 2));
+        payload.bottom_source_reflectance = squeeze(mean(mean(source_reflectance(bottom_rows, :, :), 1), 2));
+        payload.mixed_mean_luminance = sceneGet(s, 'mean luminance');
+
     case 'display_create_lcd_example'
         d = displayCreate('lcdExample.mat');
         payload.wave = displayGet(d, 'wave');

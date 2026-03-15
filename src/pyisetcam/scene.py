@@ -395,6 +395,80 @@ def scene_combine(scene1: Scene, scene2: Scene, *args: Any) -> Scene:
     raise ValueError(f"Unsupported scene_combine direction: {direction}")
 
 
+def _normalize_scene_illuminant_array(value: Any, wave: np.ndarray) -> tuple[np.ndarray, str]:
+    array = np.asarray(value, dtype=float)
+    if array.ndim == 1:
+        if array.size != wave.size:
+            raise ValueError("Scene illuminant spectra must match the scene wavelength samples.")
+        return array.reshape(-1), "spectral"
+    if array.ndim == 3:
+        if array.shape[-1] != wave.size and array.shape[0] == wave.size:
+            array = np.moveaxis(array, 0, -1)
+        if array.shape[-1] != wave.size:
+            raise ValueError("Spatial-spectral illuminant cubes must use the scene wavelength samples.")
+        return array, "spatial spectral"
+    raise ValueError("Scene illuminants must be either a 1D spectrum or a 3D spatial-spectral cube.")
+
+
+def _set_scene_illuminant_photons(scene: Scene, value: Any) -> Scene:
+    wave = np.asarray(scene.fields["wave"], dtype=float)
+    illuminant, illuminant_format = _normalize_scene_illuminant_array(value, wave)
+    if illuminant.ndim == 3 and tuple(illuminant.shape[:2]) != tuple(scene_get(scene, "size")):
+        raise ValueError("Spatial-spectral illuminant photons must match the scene size.")
+    scene.fields["illuminant_photons"] = np.asarray(illuminant, dtype=float)
+    scene.fields["illuminant_energy"] = np.asarray(quanta_to_energy(illuminant, wave), dtype=float)
+    scene.fields["illuminant_format"] = illuminant_format
+    _invalidate_scene_caches(scene)
+    return scene
+
+
+def _set_scene_illuminant_energy(scene: Scene, value: Any) -> Scene:
+    wave = np.asarray(scene.fields["wave"], dtype=float)
+    illuminant, illuminant_format = _normalize_scene_illuminant_array(value, wave)
+    if illuminant.ndim == 3 and tuple(illuminant.shape[:2]) != tuple(scene_get(scene, "size")):
+        raise ValueError("Spatial-spectral illuminant energy must match the scene size.")
+    scene.fields["illuminant_energy"] = np.asarray(illuminant, dtype=float)
+    scene.fields["illuminant_photons"] = np.asarray(energy_to_quanta(illuminant, wave), dtype=float)
+    scene.fields["illuminant_format"] = illuminant_format
+    _invalidate_scene_caches(scene)
+    return scene
+
+
+def _resize_scene_pattern(pattern: Any, size: tuple[int, int]) -> np.ndarray:
+    array = np.asarray(pattern, dtype=float)
+    if array.ndim != 2:
+        raise ValueError("Illuminant spatial patterns must be 2D arrays.")
+    if array.shape != tuple(size):
+        return _scene_resize_array(array, int(size[0]), int(size[1]))
+    return array
+
+
+def scene_illuminant_ss(scene: Scene, pattern: Any | None = None) -> Scene:
+    normalized = param_format(scene_get(scene, "illuminant format"))
+    current = scene
+    if normalized == "spectral":
+        rows, cols = scene_get(scene, "size")
+        illuminant = np.asarray(scene_get(scene, "illuminant photons"), dtype=float).reshape(1, 1, -1)
+        current = scene_set(current, "illuminant photons", np.broadcast_to(illuminant, (rows, cols, illuminant.shape[2])).copy())
+    elif normalized != "spatialspectral":
+        raise ValueError(f"Unknown illuminant format: {scene_get(scene, 'illuminant format')}")
+
+    if pattern is None or np.asarray(pattern).size == 0:
+        return current
+    return scene_illuminant_pattern(current, pattern)
+
+
+def scene_illuminant_pattern(scene: Scene, pattern: Any) -> Scene:
+    current = scene if param_format(scene_get(scene, "illuminant format")) == "spatialspectral" else scene_illuminant_ss(scene)
+    rows, cols = scene_get(current, "size")
+    pattern_array = _resize_scene_pattern(pattern, (rows, cols))
+    photons = np.asarray(scene_get(current, "photons"), dtype=float) * pattern_array[:, :, None]
+    illuminant = np.asarray(scene_get(current, "illuminant photons"), dtype=float) * pattern_array[:, :, None]
+    current = scene_set(current, "photons", photons)
+    current = scene_set(current, "illuminant photons", illuminant)
+    return current
+
+
 def _scene_rotation_degrees(value: Any) -> float:
     if isinstance(value, str):
         normalized = param_format(value)
@@ -556,18 +630,30 @@ def _create_macbeth_scene(
     wave: np.ndarray,
     surface_file: str,
     black_border: bool,
+    illuminant_type: str = "d65",
     *,
     asset_store: AssetStore,
 ) -> Scene:
     _, reflectances = asset_store.load_reflectances(surface_file, wave_nm=wave)
-    _, illuminant_energy = _load_d65(wave, asset_store)
+    illuminant_key = param_format(illuminant_type)
+    if illuminant_key == "d65":
+        _, illuminant_energy = _load_d65(wave, asset_store)
+        scene_name = "Macbeth D65"
+        illuminant_comment = "D65.mat"
+    else:
+        from .illuminant import illuminant_create, illuminant_get
+
+        illuminant = illuminant_create(illuminant_type, wave, 100.0, asset_store=asset_store)
+        illuminant_energy = np.asarray(illuminant_get(illuminant, "energy"), dtype=float).reshape(-1)
+        scene_name = f"Macbeth {illuminant_type}"
+        illuminant_comment = str(illuminant_get(illuminant, "name"))
     illuminant_photons = energy_to_quanta(illuminant_energy, wave)
-    scene = Scene(name="Macbeth D65")
+    scene = Scene(name=scene_name)
     scene.fields["wave"] = wave
     scene.fields["illuminant_format"] = "spectral"
     scene.fields["illuminant_energy"] = illuminant_energy
     scene.fields["illuminant_photons"] = illuminant_photons
-    scene.fields["illuminant_comment"] = "D65.mat"
+    scene.fields["illuminant_comment"] = illuminant_comment
     scene.fields["distance_m"] = DEFAULT_DISTANCE_M
     scene.fields["fov_deg"] = DEFAULT_FOV_DEG
     scene.data["photons"] = _macbeth_cube(
@@ -1573,6 +1659,23 @@ def scene_create(
             _create_macbeth_scene(patch_size, wave, surface_file, black_border, asset_store=store),
         )
 
+    if name in {"macbethtungsten", "macbethtung"}:
+        patch_size = int(args[0]) if len(args) > 0 else 16
+        wave = _wave_or_default(args[1] if len(args) > 1 else None)
+        surface_file = str(args[2]) if len(args) > 2 else "macbethChart.mat"
+        black_border = bool(args[3]) if len(args) > 3 else False
+        return track_session_object(
+            session,
+            _create_macbeth_scene(
+                patch_size,
+                wave,
+                surface_file,
+                black_border,
+                illuminant_type="tungsten",
+                asset_store=store,
+            ),
+        )
+
     if name == "empty":
         scene = _create_macbeth_scene(16, _wave_or_default(None), "macbethChart.mat", False, asset_store=store)
         return track_session_object(session, scene_clear_data(scene))
@@ -1974,18 +2077,13 @@ def scene_interpolate_w(
         else:
             resampled_illuminant = _resample_wave_last(illuminant_array, source_wave, target_wave)
         scene.fields["illuminant_photons"] = resampled_illuminant
-        energy = np.asarray(quanta_to_energy(resampled_illuminant, target_wave), dtype=float)
-        if energy.ndim == 3:
-            energy = np.mean(energy, axis=(0, 1))
-        scene.fields["illuminant_energy"] = energy
+        scene.fields["illuminant_energy"] = np.asarray(quanta_to_energy(resampled_illuminant, target_wave), dtype=float)
     elif illuminant_energy is not None:
         illuminant_array = np.asarray(illuminant_energy, dtype=float)
         if illuminant_array.ndim == 1:
             resampled_energy = np.asarray(interp_spectra(source_wave, illuminant_array, target_wave), dtype=float).reshape(-1)
         else:
             resampled_energy = _resample_wave_last(illuminant_array, source_wave, target_wave)
-            if resampled_energy.ndim == 3:
-                resampled_energy = np.mean(resampled_energy, axis=(0, 1))
         scene.fields["illuminant_energy"] = np.asarray(resampled_energy, dtype=float)
         scene.fields["illuminant_photons"] = np.asarray(energy_to_quanta(resampled_energy, target_wave), dtype=float)
 
@@ -2042,16 +2140,19 @@ def _scene_line_profile(
     wave = np.asarray(scene.fields["wave"], dtype=float)
     support = _scene_spatial_support_linear(scene, unit)
     line_index = _line_index(line_arg, orientation)
+    rows, cols = scene_get(scene, "size")
     if data_type == "photons":
         data = np.asarray(scene.data["photons"], dtype=float)
     elif data_type == "illuminant_photons":
-        illuminant = np.asarray(scene_get(scene, "illuminant photons", asset_store=asset_store), dtype=float).reshape(1, 1, -1)
-        rows, cols = scene_get(scene, "size")
-        data = np.broadcast_to(illuminant, (rows, cols, illuminant.shape[2])).copy()
+        illuminant = np.asarray(scene_get(scene, "illuminant photons", asset_store=asset_store), dtype=float)
+        if illuminant.ndim == 1:
+            illuminant = np.broadcast_to(illuminant.reshape(1, 1, -1), (rows, cols, illuminant.size)).copy()
+        data = illuminant
     elif data_type == "illuminant_energy":
-        illuminant = np.asarray(scene_get(scene, "illuminant energy", asset_store=asset_store), dtype=float).reshape(1, 1, -1)
-        rows, cols = scene_get(scene, "size")
-        data = np.broadcast_to(illuminant, (rows, cols, illuminant.shape[2])).copy()
+        illuminant = np.asarray(scene_get(scene, "illuminant energy", asset_store=asset_store), dtype=float)
+        if illuminant.ndim == 1:
+            illuminant = np.broadcast_to(illuminant.reshape(1, 1, -1), (rows, cols, illuminant.size)).copy()
+        data = illuminant
     elif data_type == "luminance":
         data = np.asarray(scene_get(scene, "luminance", asset_store=asset_store), dtype=float)
     else:
@@ -2092,14 +2193,20 @@ def _resolve_illuminant_input(
             except MissingAssetError:
                 data = asset_store.load_mat(ill_energy)
                 name = path.name
-        energy = np.asarray(data["data"], dtype=float).reshape(-1)
+        energy = np.asarray(data["data"], dtype=float)
         source_wave = np.asarray(data["wavelength"], dtype=float).reshape(-1)
-        return np.interp(wave, source_wave, energy, left=0.0, right=0.0), name
+        if energy.ndim == 1:
+            return np.interp(wave, source_wave, energy.reshape(-1), left=0.0, right=0.0), name
+        if energy.shape[-1] != source_wave.size and energy.shape[0] == source_wave.size:
+            energy = np.moveaxis(energy, 0, -1)
+        if np.array_equal(source_wave, wave):
+            return energy, name
+        return _resample_wave_last(energy, source_wave, wave), name
     if isinstance(ill_energy, dict) and "energy" in ill_energy:
-        return np.asarray(ill_energy["energy"], dtype=float).reshape(-1), str(ill_energy.get("name", "custom"))
+        return np.asarray(ill_energy["energy"], dtype=float), str(ill_energy.get("name", "custom"))
     if ill_energy is None:
         return blackbody(wave, 6500.0, kind="energy"), "blackbody-6500K"
-    return np.asarray(ill_energy, dtype=float).reshape(-1), "custom"
+    return np.asarray(ill_energy, dtype=float), "custom"
 
 
 def scene_adjust_illuminant(
@@ -2119,11 +2226,9 @@ def scene_adjust_illuminant(
         dtype=float,
     )
     factor = new_photons / np.maximum(current_illuminant, 1e-12)
-    scene.data["photons"] = np.asarray(scene.data["photons"], dtype=float) * factor.reshape(1, 1, -1)
-    scene.fields["illuminant_energy"] = new_energy
-    scene.fields["illuminant_photons"] = new_photons
+    scene.data["photons"] = np.asarray(scene.data["photons"], dtype=float) * factor
+    scene = _set_scene_illuminant_energy(scene, new_energy)
     scene.fields["illuminant_comment"] = comment
-    _invalidate_scene_caches(scene)
     if preserve_mean:
         scene_adjust_luminance(scene, original_mean, asset_store=store)
     return scene
@@ -2151,6 +2256,8 @@ def scene_get(scene: Scene, parameter: str, *args: Any, asset_store: AssetStore 
         return scene.metadata
     if key == "wave":
         return np.asarray(scene.fields["wave"], dtype=float)
+    if key == "nwave":
+        return int(np.asarray(scene.fields["wave"], dtype=float).size)
     if key == "photons":
         return np.asarray(scene.data["photons"], dtype=float)
     if key == "data":
@@ -2224,6 +2331,12 @@ def scene_get(scene: Scene, parameter: str, *args: Any, asset_store: AssetStore 
         return scene.fields.get("illuminant_format", "spectral")
     if key == "illuminantcomment":
         return scene.fields.get("illuminant_comment")
+    if key == "reflectance":
+        photons = np.asarray(scene.data["photons"], dtype=float)
+        illuminant = np.asarray(scene.fields["illuminant_photons"], dtype=float)
+        if illuminant.ndim == 1:
+            illuminant = np.broadcast_to(illuminant.reshape(1, 1, -1), photons.shape).copy()
+        return np.divide(photons, illuminant, out=np.zeros_like(photons), where=illuminant > 0.0)
     if key == "chartparameters":
         return scene.fields.get("chart_parameters")
     if key == "illuminantphotons":
@@ -2385,15 +2498,11 @@ def scene_set(scene: Scene, parameter: str, value: Any) -> Scene:
     if key in {"meanluminance", "luminancemean"}:
         return scene_adjust_luminance(scene, float(value))
     if key == "illuminantenergy":
-        wave = np.asarray(scene.fields["wave"], dtype=float)
-        energy = np.asarray(value, dtype=float).reshape(-1)
-        scene.fields["illuminant_energy"] = energy
-        scene.fields["illuminant_photons"] = energy_to_quanta(energy, wave)
-        _invalidate_scene_caches(scene)
-        return scene
+        return _set_scene_illuminant_energy(scene, value)
     if key == "illuminantphotons":
-        scene.fields["illuminant_photons"] = np.asarray(value, dtype=float)
-        _invalidate_scene_caches(scene)
+        return _set_scene_illuminant_photons(scene, value)
+    if key == "illuminantcomment":
+        scene.fields["illuminant_comment"] = str(value)
         return scene
     if key == "chartparameters":
         scene.fields["chart_parameters"] = dict(value)

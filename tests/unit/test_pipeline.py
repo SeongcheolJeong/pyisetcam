@@ -77,6 +77,7 @@ from pyisetcam import (
     scene_from_file,
     scene_adjust_luminance,
     scene_get,
+    scene_illuminant_ss,
     scene_interpolate_w,
     scene_rotate,
     scene_set,
@@ -4799,6 +4800,19 @@ def test_run_python_case_supports_scene_illuminant_parity_case(asset_store) -> N
     assert case.payload["tungsten_wave"].shape == (31,)
 
 
+def test_run_python_case_supports_scene_illuminant_mixtures_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_illuminant_mixtures_small", asset_store=asset_store)
+
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["scene_size"].shape == (2,)
+    assert int(case.payload["split_row"]) > 0
+    assert case.payload["mixed_illuminant_format"] == "spatial spectral"
+    assert case.payload["top_mixed_illuminant_energy"].shape == (31,)
+    assert case.payload["bottom_mixed_illuminant_energy"].shape == (31,)
+    assert case.payload["top_mixed_reflectance"].shape == (31,)
+    assert case.payload["bottom_mixed_reflectance"].shape == (31,)
+
+
 def test_run_python_case_supports_frequency_orientation_scene_parity_case(asset_store) -> None:
     case = run_python_case_with_context("scene_frequency_orientation_small", asset_store=asset_store)
 
@@ -7407,6 +7421,68 @@ def test_scene_illuminant_script_workflow(asset_store) -> None:
     assert np.asarray(illuminant_get(d65_resampled, "energy"), dtype=float).shape == (61,)
     assert np.asarray(illuminant_get(fluorescent, "photons"), dtype=float).shape == (61,)
     assert np.asarray(illuminant_get(tungsten, "photons"), dtype=float).shape == (31,)
+
+
+def test_scene_illuminant_mixtures_script_workflow(asset_store) -> None:
+    tungsten_scene = scene_illuminant_ss(scene_create("macbeth tungsten", asset_store=asset_store))
+    daylight_scene = scene_illuminant_ss(scene_create(asset_store=asset_store))
+    tungsten_energy = np.asarray(scene_get(tungsten_scene, "illuminant energy"), dtype=float)
+    daylight_energy = np.asarray(scene_get(daylight_scene, "illuminant energy"), dtype=float)
+
+    rows, cols = scene_get(tungsten_scene, "size")
+    split_row = int(np.rint(rows / 2.0))
+    mixed_energy = tungsten_energy.copy()
+    mixed_energy[:split_row, :, :] = daylight_energy[:split_row, :, :]
+
+    mixed_scene = scene_adjust_illuminant(tungsten_scene.clone(), mixed_energy, asset_store=asset_store)
+    mixed_scene = scene_set(mixed_scene, "name", "Mixed illuminant")
+
+    band_rows = max(1, rows // 4)
+    top_slice = slice(0, band_rows)
+    bottom_slice = slice(rows - band_rows, rows)
+    mixed_illuminant = np.asarray(scene_get(mixed_scene, "illuminant energy"), dtype=float)
+    source_reflectance = np.asarray(scene_get(tungsten_scene, "reflectance"), dtype=float)
+    mixed_reflectance = np.asarray(scene_get(mixed_scene, "reflectance"), dtype=float)
+    top_mixed = np.mean(mixed_illuminant[top_slice, :, :], axis=(0, 1))
+    bottom_mixed = np.mean(mixed_illuminant[bottom_slice, :, :], axis=(0, 1))
+    top_d65 = np.mean(daylight_energy[top_slice, :, :], axis=(0, 1))
+    bottom_tungsten = np.mean(tungsten_energy[bottom_slice, :, :], axis=(0, 1))
+
+    assert tuple(scene_get(mixed_scene, "size")) == (rows, cols)
+    assert tuple(scene_get(daylight_scene, "size")) == (rows, cols)
+    assert scene_get(mixed_scene, "illuminant format") == "spatial spectral"
+    assert mixed_illuminant.shape == np.asarray(scene_get(mixed_scene, "photons"), dtype=float).shape
+    assert np.allclose(
+        top_mixed / np.max(top_mixed),
+        top_d65 / np.max(top_d65),
+        atol=1e-6,
+        rtol=1e-6,
+    )
+    assert np.allclose(
+        bottom_mixed / np.max(bottom_mixed),
+        bottom_tungsten / np.max(bottom_tungsten),
+        atol=1e-6,
+        rtol=1e-6,
+    )
+    assert np.allclose(
+        np.mean(mixed_reflectance[top_slice, :, :], axis=(0, 1)),
+        np.mean(source_reflectance[top_slice, :, :], axis=(0, 1)),
+        atol=1e-6,
+        rtol=1e-6,
+    )
+    assert np.allclose(
+        np.mean(mixed_reflectance[bottom_slice, :, :], axis=(0, 1)),
+        np.mean(source_reflectance[bottom_slice, :, :], axis=(0, 1)),
+        atol=1e-6,
+        rtol=1e-6,
+    )
+    assert np.isclose(
+        float(scene_get(mixed_scene, "mean luminance", asset_store=asset_store)),
+        float(scene_get(tungsten_scene, "mean luminance", asset_store=asset_store)),
+        atol=1e-6,
+        rtol=1e-6,
+    )
+    assert np.isfinite(float(scene_get(mixed_scene, "mean luminance", asset_store=asset_store)))
 
 
 def test_run_python_case_supports_sensor_macbeth_daylight_estimate_small_parity_case(asset_store) -> None:

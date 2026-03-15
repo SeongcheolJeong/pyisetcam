@@ -161,6 +161,8 @@ from .scene import (
     scene_create,
     scene_from_file,
     scene_get,
+    scene_illuminant_pattern,
+    scene_illuminant_ss,
     scene_interpolate_w,
     scene_rotate,
     scene_set,
@@ -446,6 +448,8 @@ __all__ = [
     "sceneCreate",
     "sceneFromFile",
     "sceneGet",
+    "sceneIlluminantPattern",
+    "sceneIlluminantSS",
     "sceneInterpolateW",
     "sceneRotate",
     "sceneSet",
@@ -457,6 +461,8 @@ __all__ = [
     "scene_create",
     "scene_from_file",
     "scene_get",
+    "scene_illuminant_pattern",
+    "scene_illuminant_ss",
     "scene_interpolate_w",
     "scene_rotate",
     "scene_set",
@@ -592,6 +598,8 @@ __version__ = "0.1.0"
 sceneCreate = scene_create
 sceneFromFile = scene_from_file
 sceneGet = scene_get
+sceneIlluminantPattern = scene_illuminant_pattern
+sceneIlluminantSS = scene_illuminant_ss
 sceneInterpolateW = scene_interpolate_w
 sceneRotate = scene_rotate
 sceneSet = scene_set
