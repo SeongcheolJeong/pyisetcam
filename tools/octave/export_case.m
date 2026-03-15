@@ -1204,6 +1204,94 @@ switch case_name
         payload.pupil_diameter_mm = wvfGet(wvf, 'pupil diameter', 'mm');
         payload.f_number = oiGet(oi, 'f number');
 
+    case 'optics_defocus_wvf_small'
+        scene = sceneCreate('point array', [512 512], 128);
+        scene = sceneSet(scene, 'fov', 1.5);
+
+        wvf0 = wvfCreate('wave', sceneGet(scene, 'wave'));
+        wvf0 = wvfSet(wvf0, 'focal length', 8, 'mm');
+        wvf0 = wvfSet(wvf0, 'pupil diameter', 3, 'mm');
+        wvf0 = wvfCompute(wvf0);
+        oi0 = wvf2oi(wvf0);
+        psf0 = double(wvfGet(wvf0, 'psf', 550));
+        dlPsfX = double(wvfGet(wvf0, 'psf spatial samples', 'um', 550));
+        dlPsfCenterRow = local_channel_normalize(squeeze(psf0(floor(size(psf0, 1) / 2) + 1, :)));
+        oi0 = oiCompute(oi0, scene, 'crop', true);
+        photons0 = double(oiGet(oi0, 'photons'));
+        wave0 = double(oiGet(oi0, 'wave')(:));
+        [~, waveIndex550] = min(abs(wave0 - 550));
+        dlOiCenterRow = local_channel_normalize(squeeze(photons0(floor(size(photons0, 1) / 2) + 1, :, waveIndex550)));
+
+        diopters = 1.5;
+        wvf1 = wvfCreate('wave', sceneGet(scene, 'wave'));
+        wvf1 = wvfSet(wvf1, 'zcoeffs', diopters, 'defocus');
+        wvf1 = wvfCompute(wvf1);
+        oi1 = wvf2oi(wvf1);
+        psf1 = double(wvfGet(wvf1, 'psf', 550));
+        explicitPsfX = double(wvfGet(wvf1, 'psf spatial samples', 'um', 550));
+        explicitPsfCenterRow = local_channel_normalize(squeeze(psf1(floor(size(psf1, 1) / 2) + 1, :)));
+        oi1 = oiCompute(oi1, scene, 'crop', true);
+        photons1 = double(oiGet(oi1, 'photons'));
+        explicitOiCenterRow = local_channel_normalize(squeeze(photons1(floor(size(photons1, 1) / 2) + 1, :, waveIndex550)));
+
+        wvf = wvfCreate('wave', sceneGet(scene, 'wave'));
+        oi = oiCreate('wvf', wvf);
+        oi = oiCompute(oi, scene, 'crop', true);
+        currentWvf = oiGet(oi, 'wvf');
+        currentWvf = wvfCompute(currentWvf);
+        psfBase = double(wvfGet(currentWvf, 'psf', 550));
+        oiMethodBasePsfXRaw = double(wvfGet(currentWvf, 'psf spatial samples', 'um', 550));
+        oiMethodBasePsfCenterRowRaw = squeeze(psfBase(floor(size(psfBase, 1) / 2) + 1, :));
+        oiMethodBasePsfX = explicitPsfX;
+        oiMethodBasePsfCenterRow = local_channel_normalize(interp1(oiMethodBasePsfXRaw(:), double(oiMethodBasePsfCenterRowRaw(:)), explicitPsfX(:), 'linear', 'extrap'));
+        photonsBase = double(oiGet(oi, 'photons'));
+        oiMethodBaseOiCenterRow = local_channel_normalize(squeeze(photonsBase(floor(size(photonsBase, 1) / 2) + 1, :, waveIndex550)));
+        oiMethodBaseFNumber = oiGet(oi, 'f number');
+
+        currentWvf = wvfSet(currentWvf, 'zcoeffs', diopters, 'defocus');
+        currentWvf = wvfCompute(currentWvf);
+        oi = oiSet(oi, 'optics wvf', currentWvf);
+        psfDefocus = double(wvfGet(currentWvf, 'psf', 550));
+        oiMethodDefocusPsfXRaw = double(wvfGet(currentWvf, 'psf spatial samples', 'um', 550));
+        oiMethodDefocusPsfCenterRowRaw = squeeze(psfDefocus(floor(size(psfDefocus, 1) / 2) + 1, :));
+        oiMethodDefocusPsfX = explicitPsfX;
+        oiMethodDefocusPsfCenterRow = local_channel_normalize(interp1(oiMethodDefocusPsfXRaw(:), double(oiMethodDefocusPsfCenterRowRaw(:)), explicitPsfX(:), 'linear', 'extrap'));
+        oi = oiCompute(oi, scene, 'crop', true);
+        photonsDefocus = double(oiGet(oi, 'photons'));
+        oiMethodDefocusOiCenterRow = local_channel_normalize(squeeze(photonsDefocus(floor(size(photonsDefocus, 1) / 2) + 1, :, waveIndex550)));
+
+        payload.wave = wave0;
+        payload.scene_fov_deg = double(sceneGet(scene, 'fov'));
+        payload.diffraction_limited_focal_length_mm = double(wvfGet(wvf0, 'focal length', 'mm'));
+        payload.diffraction_limited_pupil_diameter_mm = double(wvfGet(wvf0, 'pupil diameter', 'mm'));
+        payload.diffraction_limited_f_number = double(oiGet(oi0, 'f number'));
+        payload.diffraction_limited_psf_x_um = dlPsfX;
+        payload.diffraction_limited_psf_center_row_550_norm = dlPsfCenterRow;
+        payload.diffraction_limited_oi_center_row_550_norm = dlOiCenterRow;
+        payload.defocus_diopters = double(diopters);
+        payload.explicit_defocus_f_number = double(oiGet(oi1, 'f number'));
+        payload.explicit_defocus_zcoeff = double(oiGet(oi1, 'wvf', 'zcoeffs', 'defocus'));
+        payload.explicit_defocus_psf_x_um = explicitPsfX;
+        payload.explicit_defocus_psf_center_row_550_norm = explicitPsfCenterRow;
+        payload.explicit_defocus_oi_center_row_550_norm = explicitOiCenterRow;
+        payload.oi_method_base_f_number = double(oiMethodBaseFNumber);
+        payload.oi_method_base_psf_x_um = oiMethodBasePsfX;
+        payload.oi_method_base_psf_center_row_550_norm = oiMethodBasePsfCenterRow;
+        payload.oi_method_base_oi_center_row_550_norm = oiMethodBaseOiCenterRow;
+        payload.oi_method_defocus_f_number = double(oiGet(oi, 'f number'));
+        payload.oi_method_defocus_zcoeff = double(oiGet(oi, 'wvf', 'zcoeffs', 'defocus'));
+        payload.oi_method_defocus_psf_x_um = oiMethodDefocusPsfX;
+        payload.oi_method_defocus_psf_center_row_550_norm = oiMethodDefocusPsfCenterRow;
+        payload.oi_method_defocus_oi_center_row_550_norm = oiMethodDefocusOiCenterRow;
+        explicitPsfCanonical = local_canonical_profile(explicitPsfCenterRow, 201);
+        oiMethodDefocusPsfCanonical = local_canonical_profile(oiMethodDefocusPsfCenterRow, 201);
+        explicitOiCanonical = local_canonical_profile(explicitOiCenterRow, 201);
+        oiMethodDefocusOiCanonical = local_canonical_profile(oiMethodDefocusOiCenterRow, 201);
+        payload.explicit_vs_oi_method_psf_center_row_550_normalized_mae = ...
+            mean(abs(explicitPsfCanonical(:) - oiMethodDefocusPsfCanonical(:))) / max(mean(abs(explicitPsfCanonical(:))), 1e-12);
+        payload.explicit_vs_oi_method_oi_center_row_550_normalized_mae = ...
+            mean(abs(explicitOiCanonical(:) - oiMethodDefocusOiCanonical(:))) / max(mean(abs(explicitOiCanonical(:))), 1e-12);
+
     case 'optics_defocus_small'
         scene = sceneCreate('disk array', 256, 32, [2, 2]);
         scene = sceneSet(scene, 'fov', 0.5);

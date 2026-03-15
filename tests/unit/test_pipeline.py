@@ -2881,6 +2881,25 @@ def test_optics_depth_defocus_small_parity_case(asset_store) -> None:
     assert payload["w20"].shape == (500, 3)
 
 
+def test_optics_defocus_wvf_small_parity_case(asset_store) -> None:
+    payload = run_python_case("optics_defocus_wvf_small", asset_store=asset_store)
+
+    assert payload["wave"].shape == (31,)
+    assert np.isclose(float(payload["scene_fov_deg"]), 1.5)
+    assert np.isclose(float(payload["diffraction_limited_focal_length_mm"]), 8.0)
+    assert np.isclose(float(payload["diffraction_limited_pupil_diameter_mm"]), 3.0)
+    assert np.isclose(float(payload["diffraction_limited_f_number"]), 8.0 / 3.0)
+    assert np.isclose(float(payload["defocus_diopters"]), 1.5)
+    assert np.isclose(float(payload["explicit_defocus_zcoeff"]), 1.5)
+    assert np.isclose(float(payload["oi_method_defocus_zcoeff"]), 1.5)
+    assert payload["diffraction_limited_psf_x_um"].shape == payload["diffraction_limited_psf_center_row_550_norm"].shape
+    assert payload["explicit_defocus_psf_x_um"].shape == payload["explicit_defocus_psf_center_row_550_norm"].shape
+    assert payload["oi_method_defocus_psf_x_um"].shape == payload["oi_method_defocus_psf_center_row_550_norm"].shape
+    assert payload["explicit_defocus_oi_center_row_550_norm"].shape == payload["oi_method_defocus_oi_center_row_550_norm"].shape
+    assert float(payload["explicit_vs_oi_method_psf_center_row_550_normalized_mae"]) < 1e-8
+    assert float(payload["explicit_vs_oi_method_oi_center_row_550_normalized_mae"]) < 1e-8
+
+
 def test_optics_defocus_scene_small_parity_case(asset_store) -> None:
     payload = run_python_case("optics_defocus_scene_small", asset_store=asset_store)
 
@@ -4505,6 +4524,56 @@ def test_run_python_case_supports_wvf_script_defocus_oi_parity_case(asset_store)
     assert np.isclose(float(case.payload["defocus_zcoeff"]), 1.5)
     assert np.isclose(float(case.payload["pupil_diameter_mm"]), 3.0)
     assert case.payload["f_number"] > 0.0
+
+
+def test_optics_defocus_wvf_script_workflow_matches_explicit_and_oi_methods(asset_store) -> None:
+    scene = scene_create("point array", np.array([512, 512], dtype=int), 128, asset_store=asset_store)
+    scene = scene_set(scene, "fov", 1.5)
+    wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+
+    def _psf_center_row_norm(current_oi) -> np.ndarray:
+        psf_data = oi_get(current_oi, "psf data", 550.0, "um")
+        psf = np.asarray(psf_data["psf"], dtype=float)
+        center_row = psf[psf.shape[0] // 2, :]
+        return center_row / max(float(np.max(np.abs(center_row))), 1e-12)
+
+    def _oi_center_row_norm(current_oi) -> np.ndarray:
+        photons = np.asarray(oi_get(current_oi, "photons"), dtype=float)
+        oi_wave = np.asarray(oi_get(current_oi, "wave"), dtype=float).reshape(-1)
+        wave_index = int(np.argmin(np.abs(oi_wave - 550.0)))
+        center_row = photons[photons.shape[0] // 2, :, wave_index]
+        return center_row / max(float(np.max(np.abs(center_row))), 1e-12)
+
+    wvf0 = wvf_create(wave=wave)
+    wvf0 = wvf_set(wvf0, "focal length", 8.0, "mm")
+    wvf0 = wvf_set(wvf0, "pupil diameter", 3.0, "mm")
+    wvf0 = wvf_compute(wvf0)
+    oi0 = oi_compute(wvf_to_oi(wvf0), scene, crop=True)
+
+    diopters = 1.5
+    wvf1 = wvf_create(wave=wave)
+    wvf1 = wvf_set(wvf1, "zcoeffs", diopters, "defocus")
+    wvf1 = wvf_compute(wvf1)
+    oi1 = oi_compute(wvf_to_oi(wvf1), scene, crop=True)
+
+    oi = oi_compute(oi_create("wvf", wvf_create(wave=wave)), scene, crop=True)
+    current_wvf = wvf_set(oi_get(oi, "optics wvf"), "zcoeffs", diopters, "defocus")
+    oi = oi_compute(oi_set(oi, "optics wvf", current_wvf), scene, crop=True)
+
+    diffraction_limited_psf = _psf_center_row_norm(oi0)
+    explicit_defocus_psf = _psf_center_row_norm(oi1)
+    explicit_defocus_oi = _oi_center_row_norm(oi1)
+    oi_method_defocus_psf = _psf_center_row_norm(oi)
+    oi_method_defocus_oi = _oi_center_row_norm(oi)
+
+    assert np.isclose(float(oi_get(oi0, "fnumber")), 8.0 / 3.0)
+    assert np.isclose(float(oi_get(oi1, "wvf", "zcoeffs", "defocus")), diopters)
+    assert np.isclose(float(oi_get(oi, "wvf", "zcoeffs", "defocus")), diopters)
+    assert diffraction_limited_psf.shape == explicit_defocus_psf.shape
+    assert explicit_defocus_oi.shape == oi_method_defocus_oi.shape
+    assert np.max(np.abs(diffraction_limited_psf - explicit_defocus_psf)) > 0.05
+    assert np.allclose(explicit_defocus_psf, oi_method_defocus_psf, atol=1e-8)
+    assert np.allclose(explicit_defocus_oi, oi_method_defocus_oi, atol=1e-8)
 
 
 def test_optics_defocus_workflow_supports_wvf_blur_astigmatism_and_pupil_reset(asset_store) -> None:

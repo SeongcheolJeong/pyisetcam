@@ -1410,6 +1410,101 @@ def run_python_case_with_context(
             context={"scene": scene, "wvf": wvf, "oi": oi},
         )
 
+    if case_name == "optics_defocus_wvf_small":
+        scene = scene_create("point array", np.array([512, 512], dtype=int), 128, asset_store=store)
+        scene = scene_set(scene, "fov", 1.5)
+
+        def _psf_center_row_norm(current_wvf: dict[str, Any]) -> tuple[np.ndarray, np.ndarray]:
+            psf = np.asarray(wvf_get(current_wvf, "psf", 550.0), dtype=float)
+            x_axis = np.asarray(wvf_get(current_wvf, "psf spatial samples", "um", 550.0), dtype=float).reshape(-1)
+            center_row = psf[psf.shape[0] // 2, :]
+            return x_axis, _channel_normalize(center_row)
+
+        def _oi_center_row_norm(current_oi: OpticalImage) -> np.ndarray:
+            photons = np.asarray(oi_get(current_oi, "photons"), dtype=float)
+            oi_wave = np.asarray(oi_get(current_oi, "wave"), dtype=float).reshape(-1)
+            wave_index = int(np.argmin(np.abs(oi_wave - 550.0)))
+            return _channel_normalize(photons[photons.shape[0] // 2, :, wave_index])
+
+        def _normalized_mae(reference: np.ndarray, current: np.ndarray) -> float:
+            ref = np.asarray(reference, dtype=float)
+            cur = np.asarray(current, dtype=float)
+            return float(np.mean(np.abs(cur - ref)) / max(float(np.mean(np.abs(ref))), 1e-12))
+
+        wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+
+        wvf0 = wvf_create(wave=wave)
+        wvf0 = wvf_set(wvf0, "focal length", 8.0, "mm")
+        wvf0 = wvf_set(wvf0, "pupil diameter", 3.0, "mm")
+        wvf0 = wvf_compute(wvf0)
+        oi0 = wvf_to_oi(wvf0)
+        dl_psf_x_um, dl_psf_center_row = _psf_center_row_norm(wvf0)
+        oi0 = oi_compute(oi0, scene, crop=True)
+        dl_oi_center_row = _oi_center_row_norm(oi0)
+
+        diopters = 1.5
+        wvf1 = wvf_create(wave=wave)
+        wvf1 = wvf_set(wvf1, "zcoeffs", diopters, "defocus")
+        wvf1 = wvf_compute(wvf1)
+        oi1 = wvf_to_oi(wvf1)
+        explicit_psf_x_um, explicit_defocus_psf_center_row = _psf_center_row_norm(wvf1)
+        oi1 = oi_compute(oi1, scene, crop=True)
+        explicit_defocus_oi_center_row = _oi_center_row_norm(oi1)
+
+        wvf = wvf_create(wave=wave)
+        oi = oi_create("wvf", wvf)
+        oi = oi_compute(oi, scene, crop=True)
+        oi_method_base = oi
+        oi_method_base_wvf = wvf_compute(oi_get(oi, "optics wvf"))
+        oi_method_base_psf_x_um, oi_method_base_psf_center_row = _psf_center_row_norm(oi_method_base_wvf)
+        oi_method_base_oi_center_row = _oi_center_row_norm(oi)
+
+        updated_wvf = oi_method_base_wvf
+        updated_wvf = wvf_set(updated_wvf, "zcoeffs", diopters, "defocus")
+        updated_wvf = wvf_compute(updated_wvf)
+        oi = oi_set(oi, "optics wvf", updated_wvf)
+        oi_method_defocus_psf_x_um, oi_method_defocus_psf_center_row = _psf_center_row_norm(updated_wvf)
+        oi = oi_compute(oi, scene, crop=True)
+        oi_method_defocus_oi_center_row = _oi_center_row_norm(oi)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "scene_fov_deg": float(scene_get(scene, "fov")),
+                "diffraction_limited_focal_length_mm": float(wvf_get(wvf0, "focal length", "mm")),
+                "diffraction_limited_pupil_diameter_mm": float(wvf_get(wvf0, "pupil diameter", "mm")),
+                "diffraction_limited_f_number": float(oi_get(oi0, "fnumber")),
+                "diffraction_limited_psf_x_um": dl_psf_x_um,
+                "diffraction_limited_psf_center_row_550_norm": dl_psf_center_row,
+                "diffraction_limited_oi_center_row_550_norm": dl_oi_center_row,
+                "defocus_diopters": float(diopters),
+                "explicit_defocus_f_number": float(oi_get(oi1, "fnumber")),
+                "explicit_defocus_zcoeff": float(oi_get(oi1, "wvf", "zcoeffs", "defocus")),
+                "explicit_defocus_psf_x_um": explicit_psf_x_um,
+                "explicit_defocus_psf_center_row_550_norm": explicit_defocus_psf_center_row,
+                "explicit_defocus_oi_center_row_550_norm": explicit_defocus_oi_center_row,
+                "oi_method_base_f_number": float(oi_get(oi_method_base, "fnumber")),
+                "oi_method_base_psf_x_um": oi_method_base_psf_x_um,
+                "oi_method_base_psf_center_row_550_norm": oi_method_base_psf_center_row,
+                "oi_method_base_oi_center_row_550_norm": oi_method_base_oi_center_row,
+                "oi_method_defocus_f_number": float(oi_get(oi, "fnumber")),
+                "oi_method_defocus_zcoeff": float(oi_get(oi, "wvf", "zcoeffs", "defocus")),
+                "oi_method_defocus_psf_x_um": oi_method_defocus_psf_x_um,
+                "oi_method_defocus_psf_center_row_550_norm": oi_method_defocus_psf_center_row,
+                "oi_method_defocus_oi_center_row_550_norm": oi_method_defocus_oi_center_row,
+                "explicit_vs_oi_method_psf_center_row_550_normalized_mae": _normalized_mae(
+                    explicit_defocus_psf_center_row,
+                    oi_method_defocus_psf_center_row,
+                ),
+                "explicit_vs_oi_method_oi_center_row_550_normalized_mae": _normalized_mae(
+                    explicit_defocus_oi_center_row,
+                    oi_method_defocus_oi_center_row,
+                ),
+            },
+            context={"scene": scene, "wvf0": wvf0, "wvf1": wvf1, "oi0": oi0, "oi1": oi1, "oi_method_base": oi_method_base, "oi": oi},
+        )
+
     if case_name == "optics_defocus_small":
         scene = scene_create("disk array", 256, 32, np.array([2, 2], dtype=int), asset_store=store)
         scene = scene_set(scene, "fov", 0.5)

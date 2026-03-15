@@ -404,6 +404,11 @@ That same focus/DoF optics block now also includes public
 workflow, the derived 10 um and 40 um sensor-plane defocus values, and
 the normalized 550 nm center-row blur states for the focused and defocused
 OI outputs.
+That same focus/DoF optics block now also includes direct Octave parity on
+`s_opticsDefocusWVF.m`, comparing the explicit diffraction-limited and
+1.5-diopter WVF branches with the alternate `oiCreate('wvf')` update path
+through their returned f-numbers, defocus coefficients, and normalized
+550 nm PSF / OI center rows.
 The adjacent diffraction-limited optics plotting surface now also includes
 headless `oiPlot(..., 'ls wavelength'/'lswavelength'/'otf wavelength'/'mtf wavelength')`
 support for the script-driven line-spread and OTF-by-wavelength workflows

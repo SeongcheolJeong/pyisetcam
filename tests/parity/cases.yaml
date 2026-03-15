@@ -441,6 +441,50 @@
       }
     },
     {
+      "name": "optics_defocus_wvf_small",
+      "matlab_function": "s_opticsDefocusWVF",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "diffraction_limited_psf_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.04
+        },
+        "diffraction_limited_oi_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.04
+        },
+        "explicit_defocus_psf_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.04
+        },
+        "explicit_defocus_oi_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.04
+        },
+        "oi_method_base_psf_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.04
+        },
+        "oi_method_base_oi_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.04
+        },
+        "oi_method_defocus_psf_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.04
+        },
+        "oi_method_defocus_oi_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.04
+        },
+        "explicit_vs_oi_method_psf_center_row_550_normalized_mae": {
+          "mode": "mean_rel",
+          "max_mean_rel": 1.0
+        }
+      }
+    },
+    {
       "name": "optics_defocus_small",
       "matlab_function": "s_opticsDefocus",
       "rtol": 1e-05,
