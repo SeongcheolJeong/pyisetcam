@@ -469,6 +469,22 @@
       }
     },
     {
+      "name": "wvf_wavefronts_small",
+      "matlab_function": "s_wvfWavefronts",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "wavefront_mid_rows_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 1e-05
+        },
+        "wavefront_mid_cols_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 1e-05
+        }
+      }
+    },
+    {
       "name": "wvf_diffraction_small",
       "matlab_function": "s_wvfDiffraction",
       "rtol": 1e-05,

@@ -1482,6 +1482,60 @@ def run_python_case_with_context(
             context={"scene": scene, "wvf": current_wvf, "oi": last_oi},
         )
 
+    if case_name == "wvf_wavefronts_small":
+        indices = np.arange(1, 17, dtype=int)
+        n_values, m_values = wvf_osa_index_to_zernike_nm(indices)
+        x_support_mm: np.ndarray | None = None
+        row_profiles: list[np.ndarray] = []
+        col_profiles: list[np.ndarray] = []
+        peak_abs_values: list[float] = []
+        current_wvf = None
+
+        for index in indices:
+            current_wvf = wvf_create()
+            current_wvf = wvf_set(current_wvf, "npixels", 801)
+            current_wvf = wvf_set(current_wvf, "measured pupil size", 2.0)
+            current_wvf = wvf_set(current_wvf, "calc pupil size", 2.0)
+            current_wvf = wvf_set(current_wvf, "zcoeff", 1.0, int(index))
+            current_wvf = wvf_compute(current_wvf)
+            udata, _ = wvf_plot(
+                current_wvf,
+                "image wavefront aberrations",
+                "unit",
+                "mm",
+                "wave",
+                550.0,
+                "plot range",
+                1.0,
+                "window",
+                False,
+            )
+            wavefront = np.asarray(udata["z"], dtype=float)
+            if x_support_mm is None:
+                x_support_mm = np.asarray(udata["x"], dtype=float).reshape(-1)
+            peak_abs = max(float(np.max(np.abs(wavefront))), 1e-12)
+            normalized_wavefront = wavefront / peak_abs
+            row_profiles.append(np.asarray(normalized_wavefront[normalized_wavefront.shape[0] // 2, :], dtype=float))
+            col_profiles.append(np.asarray(normalized_wavefront[:, normalized_wavefront.shape[1] // 2], dtype=float))
+            peak_abs_values.append(peak_abs)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "indices": indices,
+                "n": np.asarray(n_values, dtype=int),
+                "m": np.asarray(m_values, dtype=int),
+                "x": np.asarray(x_support_mm, dtype=float),
+                "wavefront_mid_rows_norm": np.vstack(row_profiles),
+                "wavefront_mid_cols_norm": np.vstack(col_profiles),
+                "wavefront_peak_abs": np.asarray(peak_abs_values, dtype=float),
+                "npixels": 801,
+                "measured_pupil_mm": 2.0,
+                "calc_pupil_mm": 2.0,
+            },
+            context={"wvf": current_wvf},
+        )
+
     if case_name == "wvf_diffraction_small":
         flength_mm = 6.0
         flength_m = flength_mm * 1e-3

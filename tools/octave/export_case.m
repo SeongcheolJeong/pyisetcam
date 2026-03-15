@@ -261,6 +261,51 @@ switch case_name
         payload.oi_center_rows_550 = double(oiCenterRows550);
         payload.oi_peak_photons_550 = double(oiPeakPhotons550(:));
 
+    case 'wvf_wavefronts_small'
+        indices = 1:16;
+        nVals = zeros(numel(indices), 1);
+        mVals = zeros(numel(indices), 1);
+        wavefrontMidRows = [];
+        wavefrontMidCols = [];
+        wavefrontPeakAbs = zeros(numel(indices), 1);
+        xSupport = [];
+
+        for ii = 1:numel(indices)
+            wvf = wvfCreate;
+            wvf = wvfSet(wvf, 'npixels', 801);
+            wvf = wvfSet(wvf, 'measured pupil size', 2);
+            wvf = wvfSet(wvf, 'calc pupil size', 2);
+            wvf = wvfSet(wvf, 'zcoeff', 1, indices(ii));
+            wvf = wvfCompute(wvf);
+            [nVals(ii), mVals(ii)] = wvfOSAIndexToZernikeNM(indices(ii));
+            uData = wvfPlot(wvf, 'image wavefront aberrations', 'unit', 'mm', 'wave', 550, 'plot range', 1, 'window', false);
+            wavefront = double(uData.z);
+            if isempty(xSupport)
+                xSupport = double(uData.x(:)');
+            end
+            peakAbs = max(abs(wavefront(:)));
+            if peakAbs <= 0
+                peakAbs = 1;
+            end
+            normalizedWavefront = wavefront / peakAbs;
+            middleRow = floor(size(wavefront, 1) / 2) + 1;
+            middleCol = floor(size(wavefront, 2) / 2) + 1;
+            wavefrontMidRows(ii, :) = normalizedWavefront(middleRow, :);
+            wavefrontMidCols(ii, :) = normalizedWavefront(:, middleCol);
+            wavefrontPeakAbs(ii) = peakAbs;
+        end
+
+        payload.indices = double(indices(:));
+        payload.n = double(nVals(:));
+        payload.m = double(mVals(:));
+        payload.x = xSupport;
+        payload.wavefront_mid_rows_norm = double(wavefrontMidRows);
+        payload.wavefront_mid_cols_norm = double(wavefrontMidCols);
+        payload.wavefront_peak_abs = double(wavefrontPeakAbs(:));
+        payload.npixels = 801;
+        payload.measured_pupil_mm = 2;
+        payload.calc_pupil_mm = 2;
+
     case 'wvf_pupil_size_human_small'
         measuredPupilMM = 7.5;
         calcPupilMM = 3.0;

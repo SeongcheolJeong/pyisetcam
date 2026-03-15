@@ -353,6 +353,11 @@ Airy-disk match and `wvf2oi` f-number handoff, the pupil-size sweeps at
 That same script-driven WVF helper surface now also includes
 `wvfOSAIndexToZernikeNM` / `wvfZernikeNMToOSAIndex`, with direct Octave
 parity on the OSA index round-trip used by `s_wvfWavefronts.m`.
+That same script-driven WVF surface now also has direct Octave parity on
+the 16-coefficient OSA-index sweep from `s_wvfWavefronts.m`, comparing
+the returned spatial support axis, normalized wavefront center rows and
+columns, and peak absolute wavefront amplitude for indices 1:16 at a
+2 mm pupil.
 for script-driven synthetic aperture generation, including deterministic
 clean polygon support used by the upstream flare scripts and direct
 Octave parity on that clean-aperture path.

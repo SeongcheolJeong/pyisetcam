@@ -4399,6 +4399,62 @@ def test_run_python_case_supports_wvf_zernike_set_parity_case(asset_store) -> No
     assert case.payload["oi_peak_photons_550"].shape == (3,)
 
 
+def test_wvf_wavefronts_workflow_supports_osa_index_sweep() -> None:
+    indices = np.arange(1, 17, dtype=int)
+    n_values, m_values = wvf_osa_index_to_zernike_nm(indices)
+    row_profiles = []
+    col_profiles = []
+    peak_abs_values = []
+
+    for index in indices:
+        wvf = wvf_create()
+        wvf = wvf_set(wvf, "npixels", 801)
+        wvf = wvf_set(wvf, "measured pupil size", 2.0)
+        wvf = wvf_set(wvf, "calc pupil size", 2.0)
+        wvf = wvf_set(wvf, "zcoeff", 1.0, int(index))
+        wvf = wvf_compute(wvf)
+        udata, handle = wvf_plot(
+            wvf,
+            "image wavefront aberrations",
+            "unit",
+            "mm",
+            "wave",
+            550.0,
+            "plot range",
+            1.0,
+            "window",
+            False,
+        )
+        wavefront = np.asarray(udata["z"], dtype=float)
+        row_profiles.append(wavefront[wavefront.shape[0] // 2, :])
+        col_profiles.append(wavefront[:, wavefront.shape[1] // 2])
+        peak_abs_values.append(float(np.max(np.abs(wavefront))))
+
+        assert handle is None
+        assert np.isclose(float(wvf_get(wvf, "zcoeffs", int(index))), 1.0)
+
+    assert np.array_equal(n_values, np.array([1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5], dtype=int))
+    assert np.array_equal(m_values, np.array([-1, 1, -2, 0, 2, -3, -1, 1, 3, -4, -2, 0, 2, 4, -5, -3], dtype=int))
+    assert len(row_profiles) == 16
+    assert len(col_profiles) == 16
+    assert all(profile.shape == row_profiles[0].shape for profile in row_profiles)
+    assert all(profile.shape == col_profiles[0].shape for profile in col_profiles)
+    assert np.all(np.asarray(peak_abs_values, dtype=float) > 0.0)
+
+
+def test_run_python_case_supports_wvf_wavefronts_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("wvf_wavefronts_small", asset_store=asset_store)
+
+    assert np.array_equal(case.payload["indices"], np.arange(1, 17, dtype=int))
+    assert case.payload["x"].ndim == 1
+    assert case.payload["wavefront_mid_rows_norm"].shape == (16, case.payload["x"].size)
+    assert case.payload["wavefront_mid_cols_norm"].shape == (16, case.payload["x"].size)
+    assert case.payload["wavefront_peak_abs"].shape == (16,)
+    assert int(case.payload["npixels"]) == 801
+    assert np.isclose(float(case.payload["measured_pupil_mm"]), 2.0)
+    assert np.isclose(float(case.payload["calc_pupil_mm"]), 2.0)
+
+
 def test_wvf_diffraction_workflow_supports_script_sweeps() -> None:
     flength_mm = 6.0
     flength_m = flength_mm * 1e-3
