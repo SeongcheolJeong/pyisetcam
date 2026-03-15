@@ -25,7 +25,9 @@ from .optics import (
     _shift_invariant_custom_otf,
     _wvf_psf_stack,
     airy_disk,
+    optics_build_2d_otf,
     optics_coc,
+    optics_defocus_core,
     optics_defocus_displacement,
     optics_dof,
     oi_compute,
@@ -1559,6 +1561,83 @@ def run_python_case_with_context(
                 "dof_surface_m": dof_surface_m,
             },
             context={},
+        )
+
+    if case_name == "optics_defocus_scene_small":
+        wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+        scene_path = store.resolve("data/images/multispectral/StuffedAnimals_tungsten-hdrs.mat")
+        scene = scene_from_file(scene_path, "multispectral", None, None, wave, asset_store=store)
+        scene = scene_set(scene, "fov", 5.0)
+        max_sf = float(scene_get(scene, "max freq res", "cpd", asset_store=store))
+        n_steps = min(int(np.ceil(max_sf)), 70)
+        sample_sf = np.linspace(0.0, max_sf, n_steps, dtype=float)
+        scene = scene_adjust_illuminant(scene, "D65.mat", asset_store=store)
+
+        base_oi = oi_create()
+        base_optics = dict(oi_get(base_oi, "optics"))
+        base_optics["model"] = "shiftinvariant"
+
+        def _build_oi(defocus_diopters: np.ndarray) -> tuple[OpticalImage, np.ndarray]:
+            otf_rows, sample_sf_mm = optics_defocus_core(base_optics, sample_sf, defocus_diopters)
+            defocused_optics = optics_build_2d_otf(base_optics, otf_rows, sample_sf_mm)
+            current_oi = oi_set(oi_create(), "optics", defocused_optics)
+            current_oi = oi_compute(current_oi, scene)
+            return current_oi, np.asarray(sample_sf_mm, dtype=float)
+
+        optics_wave = np.asarray(base_optics.get("transmittance", {}).get("wave", wave), dtype=float).reshape(-1)
+
+        def _center_row_norm_550(current_oi: OpticalImage) -> np.ndarray:
+            photons = np.asarray(oi_get(current_oi, "photons"), dtype=float)
+            oi_wave = np.asarray(oi_get(current_oi, "wave"), dtype=float).reshape(-1)
+            wave_index = int(np.argmin(np.abs(oi_wave - 550.0)))
+            center_row = photons[photons.shape[0] // 2, :, wave_index]
+            return _channel_normalize(center_row)
+
+        def _peak_550(current_oi: OpticalImage) -> float:
+            photons = np.asarray(oi_get(current_oi, "photons"), dtype=float)
+            oi_wave = np.asarray(oi_get(current_oi, "wave"), dtype=float).reshape(-1)
+            wave_index = int(np.argmin(np.abs(oi_wave - 550.0)))
+            return float(np.max(photons[:, :, wave_index]))
+
+        defocus5 = np.full(optics_wave.shape, 5.0, dtype=float)
+        oi_defocus5, sample_sf_mm = _build_oi(defocus5)
+
+        focused = np.zeros(optics_wave.shape, dtype=float)
+        oi_focus, _ = _build_oi(focused)
+
+        focal_length_m = float(base_optics.get("focal_length_m", base_optics.get("focalLength", 0.0)))
+        lens_power_diopters = 1.0 / max(focal_length_m, 1e-12)
+
+        delta_distance_10_m = 10e-6
+        actual_power_10 = 1.0 / max(focal_length_m - delta_distance_10_m, 1e-12)
+        defocus_10_diopters = actual_power_10 - lens_power_diopters
+        oi_miss10, _ = _build_oi(np.full(optics_wave.shape, defocus_10_diopters, dtype=float))
+
+        delta_distance_40_m = 40e-6
+        actual_power_40 = 1.0 / max(focal_length_m - delta_distance_40_m, 1e-12)
+        defocus_40_diopters = actual_power_40 - lens_power_diopters
+        oi_miss40, _ = _build_oi(np.full(optics_wave.shape, defocus_40_diopters, dtype=float))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": optics_wave,
+                "max_sf_cpd": max_sf,
+                "sample_sf_cpd": sample_sf,
+                "sample_sf_mm": sample_sf_mm,
+                "defocus_5_diopters": 5.0,
+                "defocus_10um_diopters": float(defocus_10_diopters),
+                "defocus_40um_diopters": float(defocus_40_diopters),
+                "focus_center_row_550_norm": _center_row_norm_550(oi_focus),
+                "defocus5_center_row_550_norm": _center_row_norm_550(oi_defocus5),
+                "miss10_center_row_550_norm": _center_row_norm_550(oi_miss10),
+                "miss40_center_row_550_norm": _center_row_norm_550(oi_miss40),
+                "focus_peak_550": _peak_550(oi_focus),
+                "defocus5_peak_550": _peak_550(oi_defocus5),
+                "miss10_peak_550": _peak_550(oi_miss10),
+                "miss40_peak_550": _peak_550(oi_miss40),
+            },
+            context={"scene": scene, "oi_focus": oi_focus, "oi_defocus5": oi_defocus5, "oi_miss10": oi_miss10, "oi_miss40": oi_miss40},
         )
 
     if case_name == "wvf_astigmatism_small":

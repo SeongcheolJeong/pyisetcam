@@ -45,7 +45,9 @@ from .metrics import (
 from .optics import (
     airy_disk,
     ie_field_height_to_index,
+    optics_build_2d_otf,
     optics_coc,
+    optics_defocus_core,
     optics_defocus_displacement,
     optics_dof,
     optics_ray_trace,
@@ -306,10 +308,14 @@ __all__ = [
     "metricsSPD",
     "metrics_spd",
     "mired_difference",
+    "opticsBuild2Dotf",
     "opticsCoC",
+    "opticsDefocusCore",
     "opticsDefocusDisplacement",
     "opticsDoF",
+    "optics_build_2d_otf",
     "optics_coc",
+    "optics_defocus_core",
     "optics_defocus_displacement",
     "optics_dof",
     "opticsRayTrace",
@@ -599,7 +605,9 @@ plotSensorFFT = sensor_plot_fft
 sensorPlotLine = sensor_plot_line
 wvfPlot = wvf_plot
 airyDisk = airy_disk
+opticsBuild2Dotf = optics_build_2d_otf
 opticsCoC = optics_coc
+opticsDefocusCore = optics_defocus_core
 opticsDefocusDisplacement = optics_defocus_displacement
 opticsDoF = optics_dof
 opticsRayTrace = optics_ray_trace

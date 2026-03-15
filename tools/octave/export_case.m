@@ -1327,6 +1327,81 @@ switch case_name
         payload.sweep_coc_diameter_m = double(sweepCoC);
         payload.dof_surface_m = double(dofSweep);
 
+    case 'optics_defocus_scene_small'
+        wave = (400:10:700)';
+        fullFileName = fullfile(isetRootPath, 'data', 'images', 'multispectral', 'StuffedAnimals_tungsten-hdrs');
+        scene = sceneFromFile(fullFileName, 'multispectral', [], [], wave);
+        scene = sceneSet(scene, 'fov', 5);
+        maxSF = sceneGet(scene, 'max freq res', 'cpd');
+        nSteps = min(ceil(maxSF), 70);
+        sampleSF = linspace(0, maxSF, nSteps);
+        scene = sceneAdjustIlluminant(scene, 'D65.mat');
+
+        baseOI = oiCreate;
+        baseOptics = oiGet(baseOI, 'optics');
+        baseOptics = opticsSet(baseOptics, 'model', 'shift invariant');
+        opticsWave = double(opticsGet(baseOptics, 'wave')(:));
+
+        defocus = zeros(size(opticsWave));
+        defocus(:) = 5;
+        [otf, sampleSFmm] = opticsDefocusCore(baseOptics, sampleSF, defocus);
+        optics = opticsBuild2Dotf(baseOptics, otf, sampleSFmm);
+        oi = oiSet(baseOI, 'optics', optics);
+        oi = oiCompute(oi, scene);
+        defocus5Photons = double(oiGet(oi, 'photons'));
+
+        defocus = zeros(size(opticsWave));
+        [otf, sampleSFmm] = opticsDefocusCore(baseOptics, sampleSF, defocus);
+        optics = opticsBuild2Dotf(baseOptics, otf, sampleSFmm);
+        oi = oiSet(baseOI, 'optics', optics);
+        oi = oiCompute(oi, scene);
+        focusPhotons = double(oiGet(oi, 'photons'));
+
+        fLength = opticsGet(baseOptics, 'focal length');
+        lensPower = opticsGet(baseOptics, 'diopters');
+
+        deltaDistance = 10e-6;
+        actualPower = 1 / (fLength - deltaDistance);
+        D10 = actualPower - lensPower;
+        defocus = zeros(size(opticsWave)) + D10;
+        [otf, sampleSFmm] = opticsDefocusCore(baseOptics, sampleSF, defocus);
+        optics = opticsBuild2Dotf(baseOptics, otf, sampleSFmm);
+        oi = oiSet(baseOI, 'optics', optics);
+        oi = oiCompute(oi, scene);
+        miss10Photons = double(oiGet(oi, 'photons'));
+
+        deltaDistance = 40e-6;
+        actualPower = 1 / (fLength - deltaDistance);
+        D40 = actualPower - lensPower;
+        defocus = zeros(size(opticsWave)) + D40;
+        [otf, sampleSFmm] = opticsDefocusCore(baseOptics, sampleSF, defocus);
+        optics = opticsBuild2Dotf(baseOptics, otf, sampleSFmm);
+        oi = oiSet(baseOI, 'optics', optics);
+        oi = oiCompute(oi, scene);
+        miss40Photons = double(oiGet(oi, 'photons'));
+
+        [~, waveIndex550] = min(abs(wave - 550));
+        focusCenterRow = squeeze(focusPhotons(floor(size(focusPhotons, 1) / 2) + 1, :, waveIndex550));
+        defocus5CenterRow = squeeze(defocus5Photons(floor(size(defocus5Photons, 1) / 2) + 1, :, waveIndex550));
+        miss10CenterRow = squeeze(miss10Photons(floor(size(miss10Photons, 1) / 2) + 1, :, waveIndex550));
+        miss40CenterRow = squeeze(miss40Photons(floor(size(miss40Photons, 1) / 2) + 1, :, waveIndex550));
+
+        payload.wave = double(opticsWave(:));
+        payload.max_sf_cpd = double(maxSF);
+        payload.sample_sf_cpd = double(sampleSF(:));
+        payload.sample_sf_mm = double(sampleSFmm(:));
+        payload.defocus_5_diopters = 5;
+        payload.defocus_10um_diopters = double(D10);
+        payload.defocus_40um_diopters = double(D40);
+        payload.focus_center_row_550_norm = local_channel_normalize(focusCenterRow);
+        payload.defocus5_center_row_550_norm = local_channel_normalize(defocus5CenterRow);
+        payload.miss10_center_row_550_norm = local_channel_normalize(miss10CenterRow);
+        payload.miss40_center_row_550_norm = local_channel_normalize(miss40CenterRow);
+        payload.focus_peak_550 = double(max(max(focusPhotons(:, :, waveIndex550))));
+        payload.defocus5_peak_550 = double(max(max(defocus5Photons(:, :, waveIndex550))));
+        payload.miss10_peak_550 = double(max(max(miss10Photons(:, :, waveIndex550))));
+        payload.miss40_peak_550 = double(max(max(miss40Photons(:, :, waveIndex550))));
+
     case 'wvf_spatial_sampling_small'
         wvf = wvfCreate('wave', 550);
         thisWave = wvfGet(wvf, 'wave');

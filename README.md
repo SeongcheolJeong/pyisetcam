@@ -391,6 +391,13 @@ That same focus/DoF optics block now also has direct Octave parity on
 `s_opticsDoF.m`, comparing the 100 mm F/2 thin-lens DOF formula result,
 the CoC-derived DOF crossing estimate, and the object-distance by f-number
 DOF sweep surface.
+That same focus/DoF optics block now also includes public
+`optics_defocus_core` / `opticsDefocusCore` and
+`optics_build_2d_otf` / `opticsBuild2Dotf`, with direct Octave parity on
+`s_opticsDefocusScene.m` for the multispectral D65-adjusted defocus-image
+workflow, the derived 10 um and 40 um sensor-plane defocus values, and
+the normalized 550 nm center-row blur states for the focused and defocused
+OI outputs.
 The adjacent diffraction-limited optics plotting surface now also includes
 headless `oiPlot(..., 'ls wavelength'/'lswavelength'/'otf wavelength'/'mtf wavelength')`
 support for the script-driven line-spread and OTF-by-wavelength workflows

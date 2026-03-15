@@ -12,11 +12,11 @@ from scipy.signal import convolve2d
 
 from .assets import AssetStore
 from .color import luminance_from_photons
-from .exceptions import UnsupportedOptionError
+from .exceptions import MissingAssetError, UnsupportedOptionError
 from .metrics import chromaticity_xy, xyz_from_energy
 from .session import track_session_object
 from .types import Scene, SessionContext
-from .utils import DEFAULT_WAVE, blackbody, energy_to_quanta, interp_spectra, param_format, quanta_to_energy
+from .utils import DEFAULT_WAVE, blackbody, energy_to_quanta, interp_spectra, param_format, quanta_to_energy, unit_frequency_list
 
 DEFAULT_DISTANCE_M = 1.2
 DEFAULT_FOV_DEG = 10.0
@@ -238,6 +238,42 @@ def _spatial_unit_scale(unit: Any) -> float:
     if unit is None:
         return 1.0
     return _SPATIAL_UNIT_SCALE.get(param_format(unit), 1.0)
+
+
+def _scene_frequency_support(scene: Scene, unit: Any = "cyclesPerDegree") -> dict[str, np.ndarray]:
+    normalized_unit = param_format(unit or "cyclesPerDegree")
+    rows = int(scene.fields.get("rows", 0))
+    cols = int(scene.fields.get("cols", 0))
+    fov_width = float(scene.fields.get("fov_deg", DEFAULT_FOV_DEG))
+    fov_height = float(scene.fields.get("vfov_deg", DEFAULT_FOV_DEG))
+
+    if cols <= 0 or rows <= 0:
+        cols = 128
+        rows = 128
+    if fov_width <= 0.0 or fov_height <= 0.0:
+        fov_width = 30.0
+        fov_height = 30.0
+
+    max_frequency_cpd = np.array(
+        [
+            (cols / 2.0) / fov_width,
+            (rows / 2.0) / fov_height,
+        ],
+        dtype=float,
+    )
+
+    if normalized_unit in {"cyclesperdegree", "cycperdeg", "cpd"}:
+        max_frequency = max_frequency_cpd
+    elif normalized_unit in _SPATIAL_UNIT_SCALE:
+        deg_per_dist = float(scene_get(scene, "deg per dist", normalized_unit))
+        max_frequency = max_frequency_cpd * deg_per_dist
+    else:
+        raise ValueError(f"Unknown scene spatial frequency units: {unit}")
+
+    return {
+        "fx": unit_frequency_list(cols) * max_frequency[0],
+        "fy": unit_frequency_list(rows) * max_frequency[1],
+    }
 
 
 def _update_scene_geometry(scene: Scene) -> Scene:
@@ -1909,12 +1945,14 @@ def _resolve_illuminant_input(
         if path.exists():
             data = asset_store.load_mat(path)
             name = path.name
-        elif ill_energy.upper() == "D65":
-            _, data_values = asset_store.load_illuminant("D65.mat", wave_nm=wave)
-            return data_values, "D65.mat"
         else:
-            data = asset_store.load_mat(ill_energy)
-            name = ill_energy
+            try:
+                _, data_values = asset_store.load_illuminant(ill_energy, wave_nm=wave)
+                name = path.name if path.suffix else f"{ill_energy}.mat"
+                return data_values, name
+            except MissingAssetError:
+                data = asset_store.load_mat(ill_energy)
+                name = path.name
         energy = np.asarray(data["data"], dtype=float).reshape(-1)
         source_wave = np.asarray(data["wavelength"], dtype=float).reshape(-1)
         return np.interp(wave, source_wave, energy, left=0.0, right=0.0), name
@@ -2007,12 +2045,42 @@ def scene_get(scene: Scene, parameter: str, *args: Any, asset_store: AssetStore 
         return float(scene.fields["width_m"])
     if key == "height":
         return float(scene.fields["height_m"])
+    if key in {"distperdeg", "distanceperdegree"}:
+        scale = _spatial_unit_scale(args[0] if args else None)
+        return float(scene.fields["width_m"]) / max(float(scene.fields["fov_deg"]), 1e-12) * scale
+    if key in {"degreesperdistance", "degperdist"}:
+        scale = _spatial_unit_scale(args[0] if args else None)
+        return float(scene.fields["fov_deg"]) / max(float(scene.fields["width_m"]), 1e-12) / max(scale, 1e-12)
+    if key in {"degreepersample", "degpersamp", "degreespersample"}:
+        return float(scene.fields["fov_deg"]) / max(int(scene.fields["cols"]), 1)
     if key == "spatialsupportlinear":
         return _scene_spatial_support_linear(scene, args[0] if args else None)
     if key == "spatialsupport":
         support = _scene_spatial_support_linear(scene, args[0] if args else None)
         xx, yy = np.meshgrid(support["x"], support["y"])
         return np.stack((xx, yy), axis=2)
+    if key in {"frequencyresolution", "freqres"}:
+        units = args[0] if args else "cyclesPerDegree"
+        return _scene_frequency_support(scene, units)
+    if key in {"maxfrequencyresolution", "maxfreqres"}:
+        units = args[0] if args else "cyclesPerDegree"
+        frequency_resolution = _scene_frequency_support(scene, units)
+        return float(max(np.max(frequency_resolution["fx"]), np.max(frequency_resolution["fy"])))
+    if key in {"frequencysupport", "fsupportxy", "fsupport2d", "fsupport"}:
+        units = args[0] if args else "cyclesPerDegree"
+        frequency_resolution = _scene_frequency_support(scene, units)
+        xx, yy = np.meshgrid(frequency_resolution["fx"], frequency_resolution["fy"])
+        return np.stack((xx, yy), axis=2)
+    if key in {"frequencysupportcol", "fsupportx"}:
+        units = args[0] if args else "cyclesPerDegree"
+        fx = np.asarray(_scene_frequency_support(scene, units)["fx"], dtype=float)
+        zero_index = int(np.argmin(np.abs(fx)))
+        return fx[zero_index:].copy()
+    if key in {"frequencysupportrow", "fsupporty"}:
+        units = args[0] if args else "cyclesPerDegree"
+        fy = np.asarray(_scene_frequency_support(scene, units)["fy"], dtype=float)
+        zero_index = int(np.argmin(np.abs(fy)))
+        return fy[zero_index:].copy()
     if key == "illuminantformat":
         return scene.fields.get("illuminant_format", "spectral")
     if key == "illuminantcomment":

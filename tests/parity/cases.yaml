@@ -485,6 +485,46 @@
       "atol": 1e-12
     },
     {
+      "name": "optics_defocus_scene_small",
+      "matlab_function": "s_opticsDefocusScene",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "focus_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.06
+        },
+        "defocus5_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.06
+        },
+        "miss10_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.06
+        },
+        "miss40_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.06
+        },
+        "focus_peak_550": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.04
+        },
+        "defocus5_peak_550": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.04
+        },
+        "miss10_peak_550": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.04
+        },
+        "miss40_peak_550": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.04
+        }
+      }
+    },
+    {
       "name": "wvf_astigmatism_small",
       "matlab_function": "s_wvfAstigmatism",
       "rtol": 1e-05,

@@ -24,7 +24,9 @@ from pyisetcam import (
     ip_compute,
     ip_create,
     ie_mvnrnd,
+    optics_build_2d_otf,
     optics_coc,
+    optics_defocus_core,
     optics_defocus_displacement,
     optics_dof,
     optics_psf_to_otf,
@@ -61,6 +63,7 @@ from pyisetcam import (
     rt_synthetic,
     si_synthetic,
     run_python_case,
+    scene_adjust_illuminant,
     scene_combine,
     scene_create,
     scene_from_file,
@@ -2710,6 +2713,67 @@ def test_optics_dof_script_workflow_matches_coc_crossings() -> None:
     assert dof_surface_m[0, -1] > dof_surface_m[0, 0]
 
 
+def test_optics_defocus_core_and_build_2d_otf_support_shift_invariant_bundle() -> None:
+    oi = oi_create()
+    optics = dict(oi.fields["optics"])
+    optics["model"] = "shiftinvariant"
+    wave = np.asarray(optics["transmittance"]["wave"], dtype=float).reshape(-1)
+    sample_sf = np.linspace(0.0, 40.0, 25, dtype=float)
+    defocus = np.full(wave.shape, 5.0, dtype=float)
+
+    otf_rows, sample_sf_mm = optics_defocus_core(optics, sample_sf, defocus)
+    updated = optics_build_2d_otf(optics, otf_rows, sample_sf_mm)
+
+    assert otf_rows.shape == (wave.size, sample_sf.size)
+    assert sample_sf_mm.shape == sample_sf.shape
+    assert np.all(np.isfinite(otf_rows))
+    assert np.all(np.diff(sample_sf_mm) >= 0.0)
+    assert updated["model"] == "shiftinvariant"
+    assert updated["compute_method"] == "opticsotf"
+    assert np.asarray(updated["otf_data"]).shape[2] == wave.size
+    assert np.isclose(float(np.real(updated["otf_data"][0, 0, 0])), 1.0)
+
+
+def test_optics_defocus_scene_workflow_supports_defocus_otf_bundle(asset_store) -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    scene_path = asset_store.resolve("data/images/multispectral/StuffedAnimals_tungsten-hdrs.mat")
+    scene = scene_from_file(scene_path, "multispectral", None, None, wave, asset_store=asset_store)
+    scene = scene_set(scene, "fov", 5.0)
+    max_sf = float(scene_get(scene, "max freq res", "cpd"))
+    sample_sf = np.linspace(0.0, max_sf, min(int(np.ceil(max_sf)), 70), dtype=float)
+    scene = scene_adjust_illuminant(scene, "D65.mat", asset_store=asset_store)
+
+    base_optics = dict(oi_get(oi_create(), "optics"))
+    base_optics["model"] = "shiftinvariant"
+    optics_wave = np.asarray(base_optics["transmittance"]["wave"], dtype=float).reshape(-1)
+
+    def _build_oi(defocus_diopters: float) -> tuple[object, float]:
+        otf_rows, sample_sf_mm = optics_defocus_core(base_optics, sample_sf, np.full(optics_wave.shape, defocus_diopters, dtype=float))
+        current_optics = optics_build_2d_otf(base_optics, otf_rows, sample_sf_mm)
+        oi = oi_set(oi_create(), "optics", current_optics)
+        oi = oi_compute(oi, scene)
+        photons = np.asarray(oi_get(oi, "photons"), dtype=float)
+        wave_index = int(np.argmin(np.abs(np.asarray(oi_get(oi, "wave"), dtype=float).reshape(-1) - 550.0)))
+        peak = float(np.max(photons[:, :, wave_index]))
+        return oi, peak
+
+    oi_focus, peak_focus = _build_oi(0.0)
+    oi_defocus5, peak_defocus5 = _build_oi(5.0)
+
+    focal_length_m = float(base_optics.get("focal_length_m", base_optics.get("focalLength", 0.0)))
+    lens_power = 1.0 / focal_length_m
+    d10 = (1.0 / (focal_length_m - 10e-6)) - lens_power
+    d40 = (1.0 / (focal_length_m - 40e-6)) - lens_power
+    _, peak_10 = _build_oi(float(d10))
+    _, peak_40 = _build_oi(float(d40))
+
+    assert np.asarray(oi_get(oi_focus, "wave")).shape == wave.shape
+    assert np.asarray(oi_get(oi_defocus5, "photons")).shape == np.asarray(oi_get(oi_focus, "photons")).shape
+    assert d40 > d10 > 0.0
+    assert peak_focus > peak_10 > peak_40
+    assert peak_focus > peak_defocus5
+
+
 def test_optics_coc_small_parity_case(asset_store) -> None:
     payload = run_python_case("optics_coc_small", asset_store=asset_store)
 
@@ -2755,6 +2819,20 @@ def test_optics_dof_small_parity_case(asset_store) -> None:
     assert np.array_equal(payload["f_numbers"], np.arange(2.0, 12.0 + 1e-12, 0.25, dtype=float))
     assert np.isclose(float(payload["sweep_coc_diameter_m"]), 20e-6)
     assert payload["dof_surface_m"].shape == (79, 41)
+
+
+def test_optics_defocus_scene_small_parity_case(asset_store) -> None:
+    payload = run_python_case("optics_defocus_scene_small", asset_store=asset_store)
+
+    assert payload["wave"].shape == (31,)
+    assert float(payload["max_sf_cpd"]) > 0.0
+    assert payload["sample_sf_cpd"].ndim == 1
+    assert payload["sample_sf_mm"].shape == payload["sample_sf_cpd"].shape
+    assert np.isclose(float(payload["defocus_5_diopters"]), 5.0)
+    assert float(payload["defocus_40um_diopters"]) > float(payload["defocus_10um_diopters"]) > 0.0
+    assert payload["focus_center_row_550_norm"].shape == payload["defocus5_center_row_550_norm"].shape
+    assert payload["focus_center_row_550_norm"].shape == payload["miss10_center_row_550_norm"].shape
+    assert float(payload["focus_peak_550"]) > float(payload["miss10_peak_550"]) > float(payload["miss40_peak_550"])
 
 
 def test_si_synthetic_custom_loads_psf_mat_file(tmp_path, asset_store) -> None:

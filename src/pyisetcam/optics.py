@@ -12,6 +12,7 @@ import numpy as np
 from scipy.io import loadmat
 from scipy.ndimage import map_coordinates, rotate, uniform_filter
 from scipy.signal import fftconvolve
+from scipy.special import jv
 from skimage.draw import polygon2mask
 
 from .assets import AssetStore
@@ -271,6 +272,221 @@ def optics_defocus_displacement(base_power_diopters: Any, delta_power_diopters: 
     if displacement.ndim == 0:
         return float(displacement)
     return np.asarray(displacement, dtype=float)
+
+
+def _optics_wave_values(optics: dict[str, Any]) -> np.ndarray:
+    transmittance = optics.get("transmittance")
+    if isinstance(transmittance, dict) and transmittance.get("wave") is not None:
+        wave = np.asarray(transmittance.get("wave"), dtype=float).reshape(-1)
+        if wave.size > 0:
+            return wave
+    wave = optics.get("otf_wave")
+    if wave is not None:
+        wave_values = np.asarray(wave, dtype=float).reshape(-1)
+        if wave_values.size > 0:
+            return wave_values
+    return np.asarray(DEFAULT_WAVE, dtype=float).reshape(-1)
+
+
+def _optics_scalar_value(optics: dict[str, Any], *keys: str, default: float) -> float:
+    for key in keys:
+        value = optics.get(key)
+        if value is None:
+            continue
+        array = np.asarray(value, dtype=float).reshape(-1)
+        if array.size > 0:
+            return float(array[0])
+    return float(default)
+
+
+def _optics_defocused_mtf(reduced_spatial_frequency: Any, alpha: Any) -> np.ndarray:
+    reduced = np.asarray(reduced_spatial_frequency, dtype=float)
+    alpha_array = np.asarray(alpha, dtype=float)
+    nf = np.abs(reduced) / 2.0
+    beta = np.sqrt(np.clip(1.0 - np.square(nf), 0.0, None))
+
+    otf = np.zeros_like(nf, dtype=float)
+    focused = np.isclose(alpha_array, 0.0)
+    if np.any(focused):
+        otf[focused] = (2.0 / np.pi) * (np.arccos(np.clip(nf[focused], -1.0, 1.0)) - (nf[focused] * beta[focused]))
+
+    defocused = ~focused
+    if np.any(defocused):
+        alpha_values = alpha_array[defocused]
+        beta_values = beta[defocused]
+        nf_values = nf[defocused]
+        h1 = (
+            beta_values * jv(1, alpha_values)
+            + 0.5 * np.sin(2.0 * beta_values) * (jv(1, alpha_values) - jv(3, alpha_values))
+            - 0.25 * np.sin(4.0 * beta_values) * (jv(3, alpha_values) - jv(5, alpha_values))
+        )
+        h2 = (
+            np.sin(beta_values) * (jv(0, alpha_values) - jv(2, alpha_values))
+            + (1.0 / 3.0) * np.sin(3.0 * beta_values) * (jv(2, alpha_values) - jv(4, alpha_values))
+            - (1.0 / 5.0) * np.sin(5.0 * beta_values) * (jv(4, alpha_values) - jv(6, alpha_values))
+        )
+        scale = 4.0 / (np.pi * alpha_values)
+        otf[defocused] = (scale * np.cos(alpha_values * nf_values) * h1) - (scale * np.sin(alpha_values * nf_values) * h2)
+
+    otf[nf > 1.0] = 0.0
+    dc = float(np.ravel(otf)[0]) if otf.size else 1.0
+    if not np.isclose(dc, 0.0):
+        otf = otf / dc
+    return np.asarray(otf, dtype=float)
+
+
+def optics_defocus_core(
+    optics: OpticalImage | dict[str, Any],
+    sample_sf_cpd: Any,
+    defocus_diopters: Any,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return the wavelength-by-frequency defocus OTF rows and support in cyc/mm."""
+
+    current = _coerce_optics_struct(optics)
+    sample_sf = np.asarray(sample_sf_cpd, dtype=float).reshape(-1)
+    if sample_sf.size == 0:
+        raise ValueError("sample_sf_cpd must contain at least one sample.")
+
+    wave = _optics_wave_values(current)
+    defocus = np.asarray(defocus_diopters, dtype=float).reshape(-1)
+    if defocus.size == 1:
+        defocus = np.full(wave.size, float(defocus[0]), dtype=float)
+    if defocus.size != wave.size:
+        raise ValueError("defocus_diopters must be scalar or match the optics wavelength count.")
+
+    focal_length_m = _optics_scalar_value(
+        current,
+        "focal_length_m",
+        "nominal_focal_length_m",
+        "focalLength",
+        "nominalFocalLength",
+        default=DEFAULT_FOCAL_LENGTH_M,
+    )
+    f_number = _optics_scalar_value(current, "f_number", "fNumber", default=4.0)
+    if focal_length_m <= 0.0 or f_number <= 0.0:
+        raise ValueError("Optics focal length and f-number must be positive.")
+
+    diopters = 1.0 / focal_length_m
+    pupil_radius_m = focal_length_m / (2.0 * f_number)
+    w20 = ((pupil_radius_m**2) / 2.0) * (diopters * defocus) / np.maximum(diopters + defocus, 1e-12)
+    deg_per_meter = diopters / np.tan(np.deg2rad(1.0))
+    cycles_per_meter = sample_sf * deg_per_meter
+    if np.any(np.isclose(cycles_per_meter, 0.0)):
+        nonzero = cycles_per_meter[~np.isclose(cycles_per_meter, 0.0)]
+        if nonzero.size > 0:
+            cycles_per_meter = cycles_per_meter.copy()
+            cycles_per_meter[np.isclose(cycles_per_meter, 0.0)] = np.min(np.abs(nonzero)) * 1e-12
+
+    wavelengths_m = wave * 1e-9
+    otf = np.zeros((wave.size, sample_sf.size), dtype=float)
+    for band_index, wavelength_m in enumerate(wavelengths_m):
+        reduced_sf = (wavelength_m / max(diopters * pupil_radius_m, 1e-12)) * cycles_per_meter
+        alpha = (4.0 * np.pi / max(wavelength_m, 1e-12)) * w20[band_index] * np.abs(reduced_sf)
+        otf[band_index, :] = _optics_defocused_mtf(reduced_sf, np.abs(alpha))
+
+    sample_sf_mm = sample_sf * (deg_per_meter / 1000.0)
+    return np.asarray(otf, dtype=float), np.asarray(sample_sf_mm, dtype=float)
+
+
+def optics_build_2d_otf(
+    optics: OpticalImage | dict[str, Any],
+    otf: Any,
+    sample_sf_mm: Any,
+) -> dict[str, Any]:
+    """Build and store a circularly symmetric 2-D OTF bundle on an optics struct."""
+
+    current = _coerce_optics_struct(optics)
+    sample_support = np.asarray(sample_sf_mm, dtype=float).reshape(-1)
+    if sample_support.size == 0:
+        raise ValueError("sample_sf_mm must contain at least one sample.")
+
+    otf_rows = np.asarray(otf, dtype=float)
+    if otf_rows.ndim == 1:
+        otf_rows = otf_rows.reshape(1, -1)
+    if otf_rows.shape[1] != sample_support.size:
+        raise ValueError("OTF rows must have the same frequency count as sample_sf_mm.")
+
+    wave = _optics_wave_values(current)
+    if otf_rows.shape[0] == 1 and wave.size > 1:
+        otf_rows = np.repeat(otf_rows, wave.size, axis=0)
+    if otf_rows.shape[0] != wave.size:
+        raise ValueError("OTF row count must match the optics wavelength count.")
+
+    max_sample = float(np.max(np.abs(sample_support)))
+    max_frequency = max(int(np.ceil(np.sqrt(max_sample**2 + max_sample**2))), 1)
+    f_support = unit_frequency_list(max_frequency) * max_frequency
+    fx, fy = np.meshgrid(f_support, f_support, indexing="xy")
+    effective_sf = np.sqrt(np.square(fx) + np.square(fy))
+    outside = effective_sf > max_frequency
+
+    otf_data = np.zeros((f_support.size, f_support.size, wave.size), dtype=complex)
+    for band_index in range(wave.size):
+        plane = np.interp(
+            effective_sf.reshape(-1),
+            sample_support,
+            np.abs(otf_rows[band_index, :]),
+            left=0.0,
+            right=0.0,
+        ).reshape(effective_sf.shape)
+        plane[outside] = 0.0
+        shifted = np.fft.ifftshift(plane)
+        dc = shifted[0, 0]
+        if not np.isclose(dc, 0.0):
+            shifted = shifted / dc
+        otf_data[:, :, band_index] = np.asarray(shifted, dtype=complex)
+
+    focal_length_m = _optics_scalar_value(
+        current,
+        "focal_length_m",
+        "nominal_focal_length_m",
+        "focalLength",
+        "nominalFocalLength",
+        default=DEFAULT_FOCAL_LENGTH_M,
+    )
+    nominal_focal_length_m = _optics_scalar_value(
+        current,
+        "nominal_focal_length_m",
+        "focalLength",
+        "nominalFocalLength",
+        "focal_length_m",
+        default=focal_length_m,
+    )
+    f_number = _optics_scalar_value(current, "f_number", "fNumber", default=4.0)
+    transmittance = dict(current.get("transmittance", {}))
+    transmittance_wave = np.asarray(transmittance.get("wave", wave), dtype=float).reshape(-1)
+    transmittance_scale = np.asarray(
+        transmittance.get("scale", np.ones(transmittance_wave.size, dtype=float)),
+        dtype=float,
+    ).reshape(-1)
+    if transmittance_scale.size == 1 and transmittance_wave.size > 1:
+        transmittance_scale = np.full(transmittance_wave.size, float(transmittance_scale[0]), dtype=float)
+    if transmittance_scale.size != transmittance_wave.size:
+        transmittance_scale = np.ones(transmittance_wave.size, dtype=float)
+
+    updated = {
+        "name": str(current.get("name", "")),
+        "model": "shiftinvariant",
+        "f_number": f_number,
+        "focal_length_m": focal_length_m,
+        "nominal_focal_length_m": nominal_focal_length_m,
+        "compute_method": "opticsotf",
+        "aberration_scale": float(current.get("aberration_scale", current.get("aberrationScale", 0.0))),
+        "offaxis_method": str(
+            current.get("offaxis_method", current.get("offaxisMethod", current.get("offaxis", "skip")))
+        ),
+        "transmittance": {
+            "wave": transmittance_wave.copy(),
+            "scale": transmittance_scale.copy(),
+        },
+        "otf_data": otf_data,
+        "otf_fx": np.asarray(f_support, dtype=float),
+        "otf_fy": np.asarray(f_support, dtype=float),
+        "otf_wave": wave.copy(),
+        "otf_function": "custom",
+    }
+    if "wavefront" in current:
+        updated["wavefront"] = dict(current["wavefront"])
+    return updated
 
 
 def _normalize_shift_invariant_psf_data(value: Any) -> dict[str, Any]:
