@@ -1160,6 +1160,38 @@ switch case_name
         payload.roi_mean_reflectance_direct = roiMeanReflectanceDirect(:);
         payload.roi_reflectance_manual_vs_direct_max_abs = max(abs(roiReflectanceManual(:) - roiReflectanceDirect(:)));
 
+    case 'scene_rotate_small'
+        scene = sceneCreate('star pattern');
+        frameAngles = [1; 10; 25; 50];
+        rotatedSizes = zeros(numel(frameAngles), 2);
+        meanLuminance = zeros(numel(frameAngles), 1);
+        maxLuminance = zeros(numel(frameAngles), 1);
+        centerLuminance = zeros(numel(frameAngles), 1);
+        centerRows = zeros(numel(frameAngles), 129);
+        centerCols = zeros(numel(frameAngles), 129);
+
+        for ii = 1:numel(frameAngles)
+            s = sceneRotate(scene, frameAngles(ii));
+            luminance = double(sceneGet(s, 'luminance'));
+            centerRow = floor(size(luminance, 1) / 2) + 1;
+            centerCol = floor(size(luminance, 2) / 2) + 1;
+            rotatedSizes(ii, :) = double(sceneGet(s, 'size'));
+            meanLuminance(ii) = mean(luminance(:));
+            maxLuminance(ii) = max(luminance(:));
+            centerLuminance(ii) = luminance(centerRow, centerCol);
+            centerRows(ii, :) = local_canonical_profile(local_channel_normalize(luminance(centerRow, :)), 129);
+            centerCols(ii, :) = local_canonical_profile(local_channel_normalize(luminance(:, centerCol)'), 129);
+        end
+
+        payload.frame_angles_deg = frameAngles(:);
+        payload.source_size = double(sceneGet(scene, 'size')(:));
+        payload.rotated_sizes = rotatedSizes;
+        payload.mean_luminance = meanLuminance(:);
+        payload.max_luminance = maxLuminance(:);
+        payload.center_luminance = centerLuminance(:);
+        payload.center_rows_norm = centerRows;
+        payload.center_cols_norm = centerCols;
+
     case 'display_create_lcd_example'
         d = displayCreate('lcdExample.mat');
         payload.wave = displayGet(d, 'wave');

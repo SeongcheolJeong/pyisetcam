@@ -363,6 +363,12 @@
       }
     },
     {
+      "name": "scene_rotate_small",
+      "matlab_function": "s_sceneRotate",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "display_create_lcd_example",
       "matlab_function": "displayCreate",
       "rtol": 1e-05,

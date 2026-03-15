@@ -7,7 +7,7 @@ from typing import Any
 
 import imageio.v3 as iio
 import numpy as np
-from scipy.ndimage import rotate, zoom
+from scipy.ndimage import map_coordinates, zoom
 from scipy.signal import convolve2d
 
 from .assets import AssetStore
@@ -490,6 +490,73 @@ def _scene_rotation_degrees(value: Any) -> float:
     return float(np.asarray(value, dtype=float).reshape(-1)[0])
 
 
+def _rotate_image_loose(image: np.ndarray, angle_deg: float) -> np.ndarray:
+    array = np.asarray(image, dtype=float)
+    squeeze_channel = False
+    if array.ndim == 2:
+        array = array[:, :, np.newaxis]
+        squeeze_channel = True
+    if array.ndim != 3:
+        raise ValueError("Loose scene rotation expects a 2-D image or 3-D image cube.")
+    if abs(angle_deg) < np.finfo(float).eps:
+        return image.copy()
+
+    rows, cols, channels = array.shape
+    cx = (cols + 1.0) / 2.0
+    cy = (rows + 1.0) / 2.0
+    theta = np.deg2rad(float(angle_deg))
+    rotation = np.array(
+        [
+            [np.cos(theta), -np.sin(theta)],
+            [np.sin(theta), np.cos(theta)],
+        ],
+        dtype=float,
+    )
+    corners = np.array(
+        [
+            [1.0, 1.0],
+            [float(cols), 1.0],
+            [float(cols), float(rows)],
+            [1.0, float(rows)],
+        ],
+        dtype=float,
+    )
+    centered = corners - np.array([cx, cy], dtype=float)
+    rotated_corners = centered @ rotation.T
+    rotated_corners = rotated_corners + np.array([cx, cy], dtype=float)
+
+    x_min = int(np.floor(np.min(rotated_corners[:, 0])))
+    x_max = int(np.ceil(np.max(rotated_corners[:, 0])))
+    y_min = int(np.floor(np.min(rotated_corners[:, 1])))
+    y_max = int(np.ceil(np.max(rotated_corners[:, 1])))
+
+    x_out, y_out = np.meshgrid(
+        np.arange(x_min, x_max + 1, dtype=float),
+        np.arange(y_min, y_max + 1, dtype=float),
+    )
+    x_shift = x_out - cx
+    y_shift = y_out - cy
+
+    x_in = np.cos(theta) * x_shift + np.sin(theta) * y_shift + cx
+    y_in = -np.sin(theta) * x_shift + np.cos(theta) * y_shift + cy
+    sample_coords = np.vstack(((y_in - 1.0).reshape(1, -1), (x_in - 1.0).reshape(1, -1)))
+
+    rotated = np.empty((y_out.shape[0], x_out.shape[1], channels), dtype=float)
+    for channel in range(channels):
+        rotated[:, :, channel] = map_coordinates(
+            array[:, :, channel],
+            sample_coords,
+            order=1,
+            mode="constant",
+            cval=0.0,
+            prefilter=False,
+        ).reshape(y_out.shape)
+
+    if squeeze_channel:
+        return rotated[:, :, 0]
+    return rotated
+
+
 def scene_rotate(scene: Scene, degrees: Any) -> Scene:
     angle_deg = _scene_rotation_degrees(degrees)
     photons = np.asarray(scene_get(scene, "photons"), dtype=float)
@@ -497,32 +564,14 @@ def scene_rotate(scene: Scene, degrees: Any) -> Scene:
         raise ValueError("scene_rotate requires a scene photons cube.")
 
     rotated = scene.clone()
-    rotated_photons = rotate(
-        photons,
-        angle_deg,
-        axes=(1, 0),
-        reshape=True,
-        order=1,
-        mode="constant",
-        cval=0.0,
-        prefilter=False,
-    )
+    rotated_photons = _rotate_image_loose(photons, angle_deg)
     rotated = scene_set(rotated, "photons", rotated_photons)
 
     if param_format(scene_get(scene, "illuminant format")) == "spatialspectral":
         illuminant = np.asarray(scene_get(scene, "illuminant photons"), dtype=float)
         if illuminant.ndim < 2:
             raise ValueError("Spatial-spectral illuminant photons must be at least 2-D.")
-        rotated.fields["illuminant_photons"] = rotate(
-            illuminant,
-            angle_deg,
-            axes=(1, 0),
-            reshape=True,
-            order=1,
-            mode="constant",
-            cval=0.0,
-            prefilter=False,
-        )
+        rotated.fields["illuminant_photons"] = _rotate_image_loose(illuminant, angle_deg)
         _invalidate_scene_caches(rotated)
 
     return rotated

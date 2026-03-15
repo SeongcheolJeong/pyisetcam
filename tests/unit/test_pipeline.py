@@ -4939,6 +4939,19 @@ def test_run_python_case_supports_scene_roi_parity_case(asset_store) -> None:
     assert float(case.payload["roi_reflectance_manual_vs_direct_max_abs"]) <= 1e-12
 
 
+def test_run_python_case_supports_scene_rotate_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_rotate_small", asset_store=asset_store)
+
+    assert case.payload["frame_angles_deg"].shape == (4,)
+    assert case.payload["source_size"].shape == (2,)
+    assert case.payload["rotated_sizes"].shape == (4, 2)
+    assert case.payload["mean_luminance"].shape == (4,)
+    assert case.payload["max_luminance"].shape == (4,)
+    assert case.payload["center_luminance"].shape == (4,)
+    assert case.payload["center_rows_norm"].shape == (4, 129)
+    assert case.payload["center_cols_norm"].shape == (4, 129)
+
+
 def test_run_python_case_supports_frequency_orientation_scene_parity_case(asset_store) -> None:
     case = run_python_case_with_context("scene_frequency_orientation_small", asset_store=asset_store)
 
@@ -7969,6 +7982,39 @@ def test_scene_roi_script_workflow(asset_store) -> None:
     assert np.allclose(mean_illuminant_photons, np.mean(illuminant_photons, axis=0), atol=1e-12, rtol=1e-12)
     assert np.allclose(reflectance_direct, reflectance_manual, atol=1e-12, rtol=1e-12)
     assert np.allclose(mean_reflectance_direct, np.mean(reflectance_direct, axis=0), atol=1e-12, rtol=1e-12)
+
+
+def test_scene_rotate_script_workflow(asset_store) -> None:
+    scene = scene_create("star pattern", asset_store=asset_store)
+    original_size = np.asarray(scene_get(scene, "size"), dtype=int).reshape(-1)
+    rate = 1.0
+    n_frames = 50
+
+    rotated_sizes = np.zeros((n_frames, 2), dtype=int)
+    mean_luminance = np.zeros(n_frames, dtype=float)
+    max_luminance = np.zeros(n_frames, dtype=float)
+    center_luminance = np.zeros(n_frames, dtype=float)
+
+    for frame_index in range(n_frames):
+        rotated = scene_rotate(scene, (frame_index + 1) * rate)
+        luminance = np.asarray(scene_get(rotated, "luminance", asset_store=asset_store), dtype=float)
+        center_row = luminance.shape[0] // 2
+        center_col = luminance.shape[1] // 2
+        rotated_sizes[frame_index, :] = np.asarray(scene_get(rotated, "size"), dtype=int).reshape(-1)
+        mean_luminance[frame_index] = float(np.mean(luminance))
+        max_luminance[frame_index] = float(np.max(luminance))
+        center_luminance[frame_index] = float(luminance[center_row, center_col])
+
+    assert tuple(original_size) == (256, 256)
+    assert np.all(rotated_sizes >= original_size.reshape(1, 2))
+    assert np.array_equal(rotated_sizes[:, 0], rotated_sizes[:, 1])
+    assert np.all(np.diff(rotated_sizes[:40, 0]) >= 0)
+    assert int(np.max(rotated_sizes[:, 0])) == 362
+    assert int(rotated_sizes[-1, 0]) == 362
+    assert np.all(mean_luminance > 0.0)
+    assert mean_luminance[-1] < mean_luminance[0]
+    assert np.allclose(max_luminance, center_luminance, atol=1e-9, rtol=1e-9)
+    assert np.allclose(max_luminance, max_luminance[0], atol=1e-9, rtol=1e-9)
 
 
 def test_run_python_case_supports_sensor_macbeth_daylight_estimate_small_parity_case(asset_store) -> None:

@@ -1462,6 +1462,50 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "scene_rotate_small":
+        scene = scene_create("star pattern", asset_store=store)
+        frame_angles_deg = np.array([1.0, 10.0, 25.0, 50.0], dtype=float)
+
+        def _canonical_profile(values: np.ndarray, samples: int = 129) -> np.ndarray:
+            row = np.asarray(values, dtype=float).reshape(-1)
+            support = np.linspace(-1.0, 1.0, row.size, dtype=float)
+            query = np.linspace(-1.0, 1.0, samples, dtype=float)
+            return np.interp(query, support, row).astype(float)
+
+        rotated_sizes = np.zeros((frame_angles_deg.size, 2), dtype=int)
+        mean_luminance = np.zeros(frame_angles_deg.size, dtype=float)
+        max_luminance = np.zeros(frame_angles_deg.size, dtype=float)
+        center_luminance = np.zeros(frame_angles_deg.size, dtype=float)
+        center_rows_norm = np.zeros((frame_angles_deg.size, 129), dtype=float)
+        center_cols_norm = np.zeros((frame_angles_deg.size, 129), dtype=float)
+
+        for index, angle_deg in enumerate(frame_angles_deg):
+            rotated_scene = scene_rotate(scene, angle_deg)
+            luminance = np.asarray(scene_get(rotated_scene, "luminance", asset_store=store), dtype=float)
+            center_row = luminance.shape[0] // 2
+            center_col = luminance.shape[1] // 2
+            rotated_sizes[index, :] = np.asarray(scene_get(rotated_scene, "size"), dtype=int).reshape(-1)
+            mean_luminance[index] = float(np.mean(luminance))
+            max_luminance[index] = float(np.max(luminance))
+            center_luminance[index] = float(luminance[center_row, center_col])
+            center_rows_norm[index, :] = _canonical_profile(_channel_normalize(luminance[center_row, :]))
+            center_cols_norm[index, :] = _canonical_profile(_channel_normalize(luminance[:, center_col]))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "frame_angles_deg": frame_angles_deg,
+                "source_size": np.array(scene_get(scene, "size"), dtype=int),
+                "rotated_sizes": rotated_sizes,
+                "mean_luminance": mean_luminance,
+                "max_luminance": max_luminance,
+                "center_luminance": center_luminance,
+                "center_rows_norm": center_rows_norm,
+                "center_cols_norm": center_cols_norm,
+            },
+            context={},
+        )
+
     if case_name == "display_create_lcd_example":
         display = display_create("lcdExample.mat", asset_store=store)
         return ParityCaseResult(
