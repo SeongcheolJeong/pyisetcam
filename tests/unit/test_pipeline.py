@@ -1642,6 +1642,54 @@ def test_optics_rt_synthetic_script_workflow(asset_store) -> None:
     assert float(np.max(photons[:, :, 0])) > 0.0
 
 
+def test_optics_rt_gridlines_script_workflow(asset_store) -> None:
+    scene = scene_create("grid lines", [384, 384], 48, asset_store=asset_store)
+    scene = scene_interpolate_w(scene, np.arange(550.0, 651.0, 100.0, dtype=float))
+    scene = scene_set(scene, "hfov", 45.0)
+    scene = scene_set(scene, "name", "rtDemo-Large-grid")
+
+    oi = oi_create("ray trace", asset_store.resolve("data/optics/zmWideAngle.mat"), asset_store=asset_store)
+    oi = oi_set(oi, "wangular", scene_get(scene, "wangular"))
+    oi = oi_set(oi, "wave", scene_get(scene, "wave"))
+    scene = scene_set(scene, "distance", 2.0)
+    oi = oi_set(oi, "optics rtObjectDistance", scene_get(scene, "distance", "mm"))
+
+    raytrace_fov = float(oi_get(oi, "optics rt fov"))
+    target_diagonal_fov = max(raytrace_fov - 1.0, 0.1)
+    adjusted_hfov = float(
+        np.rad2deg(2.0 * np.arctan(np.tan(np.deg2rad(target_diagonal_fov) / 2.0) / np.sqrt(2.0)))
+    )
+    scene = scene_set(scene, "hfov", adjusted_hfov)
+
+    geometry_oi = rt_geometry(oi, scene)
+    psf_struct = rt_precompute_psf(geometry_oi, angle_step_deg=20.0)
+    stepwise_oi = oi_set(geometry_oi, "psf struct", psf_struct)
+    stepwise_oi = rt_precompute_psf_apply(stepwise_oi, angle_step_deg=20.0)
+
+    automated_rt = oi_compute(oi_set(oi.clone(), "optics model", "ray trace"), scene)
+    diffraction_oi = oi_set(automated_rt.clone(), "optics model", "diffraction limited")
+    diffraction_oi = oi_set(diffraction_oi, "optics fnumber", oi_get(automated_rt, "rtfnumber"))
+    diffraction_oi = oi_compute(diffraction_oi, scene)
+
+    scene_small = scene_set(scene.clone(), "name", "rt-Small-Grid")
+    scene_small = scene_set(scene_small, "fov", 20.0)
+    rt_small = oi_compute(automated_rt.clone(), scene_small)
+    dl_small = oi_compute(diffraction_oi.clone(), scene_small)
+
+    assert np.array_equal(np.asarray(scene_get(scene, "wave"), dtype=float), np.array([550.0, 650.0], dtype=float))
+    assert np.isclose(raytrace_fov, float(oi_get(oi, "optics rt fov")))
+    assert adjusted_hfov < 45.0
+    assert np.array_equal(np.asarray(oi_get(geometry_oi, "size"), dtype=int), np.array([384, 384], dtype=int))
+    assert np.asarray(psf_struct["imgHeight"], dtype=float).shape == (6,)
+    assert np.asarray(psf_struct["sampAngles"], dtype=float).shape == (19,)
+    assert np.array_equal(np.asarray(oi_get(stepwise_oi, "size"), dtype=int), np.array([436, 436], dtype=int))
+    assert np.array_equal(np.asarray(oi_get(automated_rt, "size"), dtype=int), np.array([436, 436], dtype=int))
+    assert np.array_equal(np.asarray(oi_get(diffraction_oi, "size"), dtype=int), np.array([480, 480], dtype=int))
+    assert np.isclose(float(scene_get(scene_small, "fov")), 20.0)
+    assert np.array_equal(np.asarray(oi_get(rt_small, "size"), dtype=int), np.array([484, 484], dtype=int))
+    assert np.array_equal(np.asarray(oi_get(dl_small, "size"), dtype=int), np.array([480, 480], dtype=int))
+
+
 def test_rt_file_names_matches_zemax_naming(tmp_path) -> None:
     di_name, ri_name, psf_name_list, cra_name = rt_file_names(
         "CookeLens.ZMX",
@@ -2952,6 +3000,34 @@ def test_optics_rt_synthetic_small_parity_case(asset_store) -> None:
     assert payload["oi_p95_photons_by_wave"].shape == (2,)
     assert payload["oi_max_photons_by_wave"].shape == (2,)
     assert payload["oi_center_row_550_norm"].shape == (129,)
+
+
+def test_optics_rt_gridlines_small_parity_case(asset_store) -> None:
+    payload = run_python_case("optics_rt_gridlines_small", asset_store=asset_store)
+
+    assert np.array_equal(payload["scene_wave"], np.array([550.0, 650.0], dtype=float))
+    assert np.isclose(float(payload["requested_scene_hfov_deg"]), 45.0)
+    assert float(payload["adjusted_scene_hfov_deg"]) < 45.0
+    assert float(payload["raytrace_fov_deg"]) > 0.0
+    assert float(payload["raytrace_f_number"]) > 0.0
+    assert float(payload["raytrace_effective_focal_length_mm"]) > 0.0
+    assert np.array_equal(payload["geometry_only_size"], np.array([384, 384], dtype=int))
+    assert payload["geometry_center_row_550_norm"].shape == (129,)
+    assert payload["psf_struct_sample_angles"].shape == (19,)
+    assert payload["psf_struct_img_height_mm"].shape == (6,)
+    assert np.array_equal(payload["psf_struct_wavelength"], np.array([550.0, 650.0], dtype=float))
+    assert np.array_equal(payload["stepwise_rt_size"], np.array([436, 436], dtype=int))
+    assert np.array_equal(payload["stepwise_rt_center_row_550_widths"], np.array([82, 82, 95], dtype=int))
+    assert np.array_equal(payload["automated_rt_size"], np.array([436, 436], dtype=int))
+    assert np.array_equal(payload["automated_rt_center_row_550_widths"], np.array([95, 95], dtype=int))
+    assert np.array_equal(payload["diffraction_large_size"], np.array([480, 480], dtype=int))
+    assert np.array_equal(payload["diffraction_large_center_row_550_widths"], np.array([78, 91, 91], dtype=int))
+    assert np.isclose(float(payload["small_scene_fov_deg"]), 20.0)
+    assert np.array_equal(payload["rt_small_size"], np.array([484, 484], dtype=int))
+    assert payload["rt_small_center_row_550_norm"].shape == (129,)
+    assert np.array_equal(payload["rt_small_center_row_550_widths"], np.array([89, 89, 91], dtype=int))
+    assert np.array_equal(payload["dl_small_size"], np.array([480, 480], dtype=int))
+    assert np.array_equal(payload["dl_small_center_row_550_widths"], np.array([78, 91, 93], dtype=int))
 
 
 def test_optics_defocus_scene_small_parity_case(asset_store) -> None:

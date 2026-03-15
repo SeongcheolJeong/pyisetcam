@@ -517,6 +517,50 @@
       }
     },
     {
+      "name": "optics_rt_gridlines_small",
+      "matlab_function": "s_opticsRTGridLines",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "geometry_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.08
+        },
+        "stepwise_rt_center_row_550_widths": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.03
+        },
+        "stepwise_rt_size": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "automated_rt_center_row_550_widths": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "automated_rt_size": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "diffraction_large_center_row_550_widths": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        },
+        "rt_small_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.15
+        },
+        "rt_small_center_row_550_widths": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        },
+        "dl_small_center_row_550_widths": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.03
+        }
+      }
+    },
+    {
       "name": "optics_defocus_small",
       "matlab_function": "s_opticsDefocus",
       "rtol": 1e-05,

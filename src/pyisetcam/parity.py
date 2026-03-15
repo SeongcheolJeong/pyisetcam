@@ -51,6 +51,9 @@ from .optics import (
     wvf_zernike_nm_to_osa_index,
     optics_psf_to_otf,
     oi_set,
+    rt_geometry,
+    rt_precompute_psf,
+    rt_precompute_psf_apply,
     si_synthetic,
     rt_synthetic,
 )
@@ -1565,6 +1568,106 @@ def run_python_case_with_context(
                 "oi_center_row_550_norm": _canonical_profile(oi_center_row),
             },
             context={"scene": scene, "oi": oi},
+        )
+
+    if case_name == "optics_rt_gridlines_small":
+        scene = scene_create("grid lines", [384, 384], 48, asset_store=store)
+        scene = scene_interpolate_w(scene, np.arange(550.0, 651.0, 100.0, dtype=float))
+        scene = scene_set(scene, "hfov", 45.0)
+        scene = scene_set(scene, "name", "rtDemo-Large-grid")
+
+        def _canonical_profile(values: np.ndarray, samples: int = 129) -> np.ndarray:
+            profile = np.asarray(values, dtype=float).reshape(-1)
+            support = np.linspace(-1.0, 1.0, profile.size, dtype=float)
+            query = np.linspace(-1.0, 1.0, samples, dtype=float)
+            return np.interp(query, support, profile)
+
+        def _center_row_550_norm(current_oi: OpticalImage) -> np.ndarray:
+            photons = np.asarray(oi_get(current_oi, "photons"), dtype=float)
+            oi_wave = np.asarray(oi_get(current_oi, "wave"), dtype=float).reshape(-1)
+            wave_index = int(np.argmin(np.abs(oi_wave - 550.0)))
+            center_row = photons[photons.shape[0] // 2, :, wave_index]
+            return _canonical_profile(_channel_normalize(center_row))
+
+        def _profile_widths(values: np.ndarray, thresholds: tuple[float, ...]) -> np.ndarray:
+            profile = np.asarray(values, dtype=float).reshape(-1)
+            peak = max(float(np.max(profile)), 1e-12)
+            widths = []
+            for threshold in thresholds:
+                active = np.flatnonzero(profile >= (threshold * peak))
+                widths.append(int(active[-1] - active[0] + 1) if active.size else 0)
+            return np.asarray(widths, dtype=int)
+
+        oi = oi_create("ray trace", store.resolve("data/optics/zmWideAngle.mat"), asset_store=store)
+        oi = oi_set(oi, "wangular", scene_get(scene, "wangular"))
+        oi = oi_set(oi, "wave", scene_get(scene, "wave"))
+        scene = scene_set(scene, "distance", 2.0)
+        oi = oi_set(oi, "optics rtObjectDistance", scene_get(scene, "distance", "mm"))
+
+        raytrace_fov = float(oi_get(oi, "optics rt fov"))
+        target_diagonal_fov = max(raytrace_fov - 1.0, 0.1)
+        adjusted_hfov = float(
+            np.rad2deg(2.0 * np.arctan(np.tan(np.deg2rad(target_diagonal_fov) / 2.0) / np.sqrt(2.0)))
+        )
+        scene = scene_set(scene, "hfov", adjusted_hfov)
+
+        geometry_oi = rt_geometry(oi, scene)
+        psf_struct = rt_precompute_psf(geometry_oi, angle_step_deg=20.0)
+        stepwise_oi = oi_set(geometry_oi, "psf struct", psf_struct)
+        stepwise_oi = rt_precompute_psf_apply(stepwise_oi, angle_step_deg=20.0)
+
+        automated_rt = oi_set(oi.clone(), "optics model", "ray trace")
+        automated_rt = oi_compute(automated_rt, scene)
+
+        diffraction_oi = oi_set(automated_rt.clone(), "optics model", "diffraction limited")
+        diffraction_oi = oi_set(diffraction_oi, "optics fnumber", oi_get(automated_rt, "rtfnumber"))
+        diffraction_oi = oi_compute(diffraction_oi, scene)
+
+        scene_small = scene_set(scene.clone(), "name", "rt-Small-Grid")
+        scene_small = scene_set(scene_small, "fov", 20.0)
+        rt_small = oi_compute(automated_rt.clone(), scene_small)
+        dl_small = oi_compute(diffraction_oi.clone(), scene_small)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_wave": np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1),
+                "requested_scene_hfov_deg": 45.0,
+                "adjusted_scene_hfov_deg": float(scene_get(scene, "fov")),
+                "raytrace_fov_deg": raytrace_fov,
+                "raytrace_f_number": float(oi_get(oi, "rtfnumber")),
+                "raytrace_effective_focal_length_mm": float(oi_get(oi, "rtefl", "mm")),
+                "geometry_only_size": np.asarray(oi_get(geometry_oi, "size"), dtype=int),
+                "geometry_center_row_550_norm": _center_row_550_norm(geometry_oi),
+                "psf_struct_sample_angles": np.asarray(psf_struct["sampAngles"], dtype=float).reshape(-1),
+                "psf_struct_img_height_mm": np.asarray(psf_struct["imgHeight"], dtype=float).reshape(-1),
+                "psf_struct_wavelength": np.asarray(psf_struct["wavelength"], dtype=float).reshape(-1),
+                "stepwise_rt_size": np.asarray(oi_get(stepwise_oi, "size"), dtype=int),
+                "stepwise_rt_center_row_550_widths": _profile_widths(_center_row_550_norm(stepwise_oi), (0.25, 0.10, 0.01)),
+                "automated_rt_size": np.asarray(oi_get(automated_rt, "size"), dtype=int),
+                "automated_rt_center_row_550_widths": _profile_widths(_center_row_550_norm(automated_rt), (0.05, 0.01)),
+                "diffraction_large_size": np.asarray(oi_get(diffraction_oi, "size"), dtype=int),
+                "diffraction_large_center_row_550_widths": _profile_widths(
+                    _center_row_550_norm(diffraction_oi),
+                    (0.50, 0.10, 0.01),
+                ),
+                "small_scene_fov_deg": float(scene_get(scene_small, "fov")),
+                "rt_small_size": np.asarray(oi_get(rt_small, "size"), dtype=int),
+                "rt_small_center_row_550_norm": _center_row_550_norm(rt_small),
+                "rt_small_center_row_550_widths": _profile_widths(_center_row_550_norm(rt_small), (0.50, 0.10, 0.01)),
+                "dl_small_size": np.asarray(oi_get(dl_small, "size"), dtype=int),
+                "dl_small_center_row_550_widths": _profile_widths(_center_row_550_norm(dl_small), (0.50, 0.10, 0.01)),
+            },
+            context={
+                "scene": scene,
+                "geometry_oi": geometry_oi,
+                "stepwise_oi": stepwise_oi,
+                "automated_rt": automated_rt,
+                "diffraction_oi": diffraction_oi,
+                "scene_small": scene_small,
+                "rt_small": rt_small,
+                "dl_small": dl_small,
+            },
         )
 
     if case_name == "optics_defocus_small":

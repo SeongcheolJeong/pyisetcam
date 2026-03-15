@@ -1347,6 +1347,87 @@ switch case_name
         payload.oi_max_photons_by_wave = squeeze(max(max(photons, [], 1), [], 2));
         payload.oi_center_row_550_norm = local_canonical_profile(oiCenterRow, 129);
 
+    case 'optics_rt_gridlines_small'
+        scene = sceneCreate('gridlines', [384, 384], 48);
+        scene = sceneInterpolateW(scene, 550:100:650);
+        scene = sceneSet(scene, 'h fov', 45);
+        scene = sceneSet(scene, 'name', 'rtDemo-Large-grid');
+
+        oi = oiCreate;
+        opticsData = load(fullfile(isetRootPath, 'data', 'optics', 'zmWideAngle.mat'), 'optics');
+        oi = oiSet(oi, 'optics', opticsData.optics);
+        oi = oiSet(oi, 'wangular', sceneGet(scene, 'wangular'));
+        oi = oiSet(oi, 'wavelength', sceneGet(scene, 'wave'));
+        scene = sceneSet(scene, 'distance', 2);
+        oi = oiSet(oi, 'optics rtObjectDistance', sceneGet(scene, 'distance', 'mm'));
+
+        optics = oiGet(oi, 'optics');
+        rayTrace = opticsGet(optics, 'ray trace');
+        raytraceFOV = double(rayTrace.maxfov);
+        targetDiagonalFOV = max(raytraceFOV - 1, 0.1);
+        adjustedHFOV = (180 / pi) * (2 * atan(tan((targetDiagonalFOV * pi / 180) / 2) / sqrt(2)));
+        scene = sceneSet(scene, 'h fov', adjustedHFOV);
+
+        ieAddObject(scene);
+        geometryOi = rtGeometry(oi, scene);
+        svPSF = rtPrecomputePSF(geometryOi, 20);
+        stepwiseOi = oiSet(geometryOi, 'psf struct', svPSF);
+        stepwiseOi = rtPrecomputePSFApply(stepwiseOi, 20);
+
+        automatedOi = oiSet(oi, 'optics model', 'ray trace');
+        ieAddObject(scene);
+        automatedOi = oiCompute(automatedOi, scene);
+
+        diffractionOi = oiSet(automatedOi, 'optics model', 'diffraction limited');
+        diffractionOi = oiSet(diffractionOi, 'optics fnumber', double(rayTrace.fNumber));
+        diffractionOi = oiCompute(diffractionOi, scene);
+
+        sceneSmall = sceneSet(scene, 'name', 'rt-Small-Grid');
+        sceneSmall = sceneSet(sceneSmall, 'fov', 20);
+        ieAddObject(sceneSmall);
+        rtSmall = oiCompute(automatedOi, sceneSmall);
+        dlSmall = oiCompute(diffractionOi, sceneSmall);
+
+        geometryPhotons = double(oiGet(geometryOi, 'photons'));
+        stepwisePhotons = double(oiGet(stepwiseOi, 'photons'));
+        automatedPhotons = double(oiGet(automatedOi, 'photons'));
+        diffractionPhotons = double(oiGet(diffractionOi, 'photons'));
+        rtSmallPhotons = double(oiGet(rtSmall, 'photons'));
+        dlSmallPhotons = double(oiGet(dlSmall, 'photons'));
+        oiWave = double(oiGet(geometryOi, 'wave')(:));
+        [~, waveIndex550] = min(abs(oiWave - 550));
+
+        geometryCenterRow = local_channel_normalize(squeeze(geometryPhotons(floor(size(geometryPhotons, 1) / 2) + 1, :, waveIndex550)));
+        stepwiseCenterRow = local_channel_normalize(squeeze(stepwisePhotons(floor(size(stepwisePhotons, 1) / 2) + 1, :, waveIndex550)));
+        automatedCenterRow = local_channel_normalize(squeeze(automatedPhotons(floor(size(automatedPhotons, 1) / 2) + 1, :, waveIndex550)));
+        diffractionCenterRow = local_channel_normalize(squeeze(diffractionPhotons(floor(size(diffractionPhotons, 1) / 2) + 1, :, waveIndex550)));
+        rtSmallCenterRow = local_channel_normalize(squeeze(rtSmallPhotons(floor(size(rtSmallPhotons, 1) / 2) + 1, :, waveIndex550)));
+        dlSmallCenterRow = local_channel_normalize(squeeze(dlSmallPhotons(floor(size(dlSmallPhotons, 1) / 2) + 1, :, waveIndex550)));
+
+        payload.scene_wave = double(sceneGet(scene, 'wave')(:));
+        payload.requested_scene_hfov_deg = 45;
+        payload.adjusted_scene_hfov_deg = double(sceneGet(scene, 'fov'));
+        payload.raytrace_fov_deg = raytraceFOV;
+        payload.raytrace_f_number = double(rayTrace.fNumber);
+        payload.raytrace_effective_focal_length_mm = double(rayTrace.effectiveFocalLength);
+        payload.geometry_only_size = double(oiGet(geometryOi, 'size'));
+        payload.geometry_center_row_550_norm = local_canonical_profile(geometryCenterRow, 129);
+        payload.psf_struct_sample_angles = double(svPSF.sampAngles(:));
+        payload.psf_struct_img_height_mm = double(svPSF.imgHeight(:));
+        payload.psf_struct_wavelength = double(svPSF.wavelength(:));
+        payload.stepwise_rt_size = double(oiGet(stepwiseOi, 'size'));
+        payload.stepwise_rt_center_row_550_widths = local_profile_widths(local_canonical_profile(stepwiseCenterRow, 129), [0.25 0.10 0.01]);
+        payload.automated_rt_size = double(oiGet(automatedOi, 'size'));
+        payload.automated_rt_center_row_550_widths = local_profile_widths(local_canonical_profile(automatedCenterRow, 129), [0.05 0.01]);
+        payload.diffraction_large_size = double(oiGet(diffractionOi, 'size'));
+        payload.diffraction_large_center_row_550_widths = local_profile_widths(local_canonical_profile(diffractionCenterRow, 129), [0.50 0.10 0.01]);
+        payload.small_scene_fov_deg = double(sceneGet(sceneSmall, 'fov'));
+        payload.rt_small_size = double(oiGet(rtSmall, 'size'));
+        payload.rt_small_center_row_550_norm = local_canonical_profile(rtSmallCenterRow, 129);
+        payload.rt_small_center_row_550_widths = local_profile_widths(payload.rt_small_center_row_550_norm, [0.50 0.10 0.01]);
+        payload.dl_small_size = double(oiGet(dlSmall, 'size'));
+        payload.dl_small_center_row_550_widths = local_profile_widths(local_canonical_profile(dlSmallCenterRow, 129), [0.50 0.10 0.01]);
+
     case 'optics_defocus_small'
         scene = sceneCreate('disk array', 256, 32, [2, 2]);
         scene = sceneSet(scene, 'fov', 0.5);
@@ -4188,4 +4269,23 @@ for ii = 1:size(values, 1)
     out(ii, :) = interp1(support, row, query, 'linear');
 end
 values = out;
+end
+
+function widths = local_profile_widths(values, thresholds)
+profile = double(values(:))';
+peak = max(profile(:));
+if peak <= 0
+    widths = zeros(numel(thresholds), 1);
+    return;
+end
+
+widths = zeros(numel(thresholds), 1);
+for ii = 1:numel(thresholds)
+    active = find(profile >= (thresholds(ii) * peak));
+    if isempty(active)
+        widths(ii) = 0;
+    else
+        widths(ii) = active(end) - active(1) + 1;
+    end
+end
 end
