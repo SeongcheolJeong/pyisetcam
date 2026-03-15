@@ -291,6 +291,12 @@
       }
     },
     {
+      "name": "scene_from_multispectral_stuffed_animals_small",
+      "matlab_function": "s_sceneFromMultispectral",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "display_create_lcd_example",
       "matlab_function": "displayCreate",
       "rtol": 1e-05,

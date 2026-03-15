@@ -994,6 +994,24 @@ switch case_name
         payload.adjusted_illuminant_energy_norm = adjustedIlluminant(:) / max(adjustedIlluminant(:));
         payload.roi_mean_reflectance = mean(roiReflectance, 1)';
 
+    case 'scene_from_multispectral_stuffed_animals_small'
+        wave = (400:10:700)';
+        fullFileName = fullfile(isetRootPath, 'data', 'images', 'multispectral', 'StuffedAnimals_tungsten-hdrs');
+        scene = sceneFromFile(fullFileName, 'multispectral', [], [], wave);
+        photons = double(sceneGet(scene, 'photons'));
+        r = size(photons, 1);
+        c = size(photons, 2);
+        centerRow = round(r / 2);
+        centerCol = round(c / 2);
+        meanSceneSpd = squeeze(mean(mean(photons, 1), 2));
+        centerSceneSpd = squeeze(photons(centerRow, centerCol, :));
+
+        payload.scene_size = sceneGet(scene, 'size');
+        payload.wave = sceneGet(scene, 'wave');
+        payload.mean_luminance = sceneGet(scene, 'mean luminance');
+        payload.mean_scene_spd_norm = meanSceneSpd(:) / max(meanSceneSpd(:));
+        payload.center_scene_spd_norm = centerSceneSpd(:) / max(centerSceneSpd(:));
+
     case 'display_create_lcd_example'
         d = displayCreate('lcdExample.mat');
         payload.wave = displayGet(d, 'wave');

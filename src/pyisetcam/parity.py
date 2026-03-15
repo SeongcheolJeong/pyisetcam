@@ -1171,6 +1171,34 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "scene_from_multispectral_stuffed_animals_small":
+        wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+        scene = scene_from_file(
+            store.resolve("data/images/multispectral/StuffedAnimals_tungsten-hdrs.mat"),
+            "multispectral",
+            None,
+            None,
+            wave,
+            asset_store=store,
+        )
+        photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+        center_row = (photons.shape[0] - 1) // 2
+        center_col = (photons.shape[1] - 1) // 2
+        mean_scene_spd = np.mean(photons, axis=(0, 1))
+        center_scene_spd = photons[center_row, center_col, :]
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.array(scene_get(scene, "size"), dtype=int),
+                "wave": np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1),
+                "mean_luminance": float(scene_get(scene, "mean luminance", asset_store=store)),
+                "mean_scene_spd_norm": mean_scene_spd / max(float(np.max(mean_scene_spd)), 1e-12),
+                "center_scene_spd_norm": center_scene_spd / max(float(np.max(center_scene_spd)), 1e-12),
+            },
+            context={},
+        )
+
     if case_name == "display_create_lcd_example":
         display = display_create("lcdExample.mat", asset_store=store)
         return ParityCaseResult(

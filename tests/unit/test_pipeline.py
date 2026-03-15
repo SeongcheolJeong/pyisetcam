@@ -4864,6 +4864,15 @@ def test_run_python_case_supports_scene_from_rgb_lcd_apple_parity_case(asset_sto
     assert case.payload["roi_mean_reflectance"].shape == (101,)
 
 
+def test_run_python_case_supports_scene_from_multispectral_stuffed_animals_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_from_multispectral_stuffed_animals_small", asset_store=asset_store)
+
+    assert case.payload["scene_size"].shape == (2,)
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["mean_scene_spd_norm"].shape == (31,)
+    assert case.payload["center_scene_spd_norm"].shape == (31,)
+
+
 def test_run_python_case_supports_frequency_orientation_scene_parity_case(asset_store) -> None:
     case = run_python_case_with_context("scene_frequency_orientation_small", asset_store=asset_store)
 
@@ -7667,6 +7676,36 @@ def test_scene_from_rgb_script_workflow(asset_store) -> None:
     assert roi_mean_reflectance.shape == (101,)
     assert float(np.max(roi_mean_reflectance)) < 0.5
     assert float(np.min(roi_mean_reflectance)) > 0.0
+
+
+def test_scene_from_multispectral_script_workflow(asset_store) -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    scene = scene_from_file(
+        asset_store.resolve("data/images/multispectral/StuffedAnimals_tungsten-hdrs.mat"),
+        "multispectral",
+        None,
+        None,
+        wave,
+        asset_store=asset_store,
+    )
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+    illuminant_energy = np.asarray(scene_get(scene, "illuminant energy"), dtype=float).reshape(-1)
+    reflectance = np.asarray(scene_get(scene, "reflectance"), dtype=float)
+    center_row = (photons.shape[0] - 1) // 2
+    center_col = (photons.shape[1] - 1) // 2
+
+    assert tuple(scene_get(scene, "size")) == (506, 759)
+    assert np.array_equal(np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1), wave)
+    assert photons.shape == (506, 759, 31)
+    assert illuminant_energy.shape == (31,)
+    assert scene_get(scene, "illuminant format") == "spectral"
+    assert np.isclose(float(scene_get(scene, "mean luminance", asset_store=asset_store)), 30.047072285059308, atol=1e-6, rtol=1e-6)
+    assert np.all(np.mean(photons, axis=(0, 1)) > 0.0)
+    assert np.max(illuminant_energy) > np.min(illuminant_energy)
+    assert np.all(np.mean(reflectance, axis=(0, 1)) > 0.99)
+    assert np.all(np.isfinite(reflectance[center_row, center_col, :]))
+    assert np.all(reflectance[center_row, center_col, :] >= 0.0)
+    assert float(np.max(reflectance[center_row, center_col, :])) > 0.0
 
 
 def test_run_python_case_supports_sensor_macbeth_daylight_estimate_small_parity_case(asset_store) -> None:
