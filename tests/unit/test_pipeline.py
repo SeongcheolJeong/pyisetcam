@@ -3017,6 +3017,36 @@ def test_optics_flare_small_parity_case(asset_store) -> None:
     assert np.isclose(float(payload["defocus_hdr_mean_photons_550_ratio"]), 1.0, rtol=1e-3)
 
 
+def test_optics_flare2_small_parity_case(asset_store) -> None:
+    payload = run_python_case("optics_flare2_small", asset_store=asset_store)
+
+    assert np.isclose(float(payload["pupil_diameter_mm"]), 3.0)
+    assert np.isclose(float(payload["focal_length_mm"]), 7.0)
+    assert np.isclose(float(payload["f_number"]), 7.0 / 3.0)
+    assert np.isclose(float(payload["point_scene_fov_deg"]), 1.0)
+    assert np.isclose(float(payload["hdr_scene_fov_deg"]), 3.0)
+    assert int(payload["seed_initial"]) == 4
+    assert int(payload["seed_five"]) == 5
+    assert int(payload["seed_defocus"]) == 6
+    assert int(payload["initial_nsides"]) == 6
+    assert int(payload["five_nsides"]) == 5
+    assert np.isclose(float(payload["defocus_zcoeff"]), 1.5)
+    assert int(payload["defocus_nsides"]) == 3
+    assert float(payload["initial_aperture_sum"]) > 0.0
+    assert float(payload["five_aperture_sum"]) > 0.0
+    assert float(payload["defocus_aperture_sum"]) > 0.0
+    assert payload["initial_point_oi_size"].shape == (2,)
+    assert payload["initial_point_oi_center_row_550_widths"].shape == (3,)
+    assert payload["five_point_oi_size"].shape == (2,)
+    assert payload["five_point_oi_center_row_550_widths"].shape == (3,)
+    assert payload["initial_hdr_oi_size"].shape == (2,)
+    assert payload["five_hdr_oi_size"].shape == (2,)
+    assert payload["defocus_hdr_oi_size"].shape == (2,)
+    assert np.isclose(float(payload["initial_hdr_mean_photons_550_ratio"]), 1.0)
+    assert float(payload["five_hdr_mean_photons_550_ratio"]) > 1.0
+    assert np.isclose(float(payload["defocus_hdr_mean_photons_550_ratio"]), 1.0, rtol=1e-3)
+
+
 def test_optics_defocus_displacement_small_parity_case(asset_store) -> None:
     payload = run_python_case("optics_defocus_displacement_small", asset_store=asset_store)
 
@@ -5850,6 +5880,107 @@ def test_optics_flare_script_workflow(asset_store) -> None:
     assert np.isclose(float(scene_get(hdr_scene, "fov")), 1.0)
     assert np.isclose(float(wvf_get(base_wvf, "fnumber")), 7.0 / 3.0)
     assert int(params_initial["nsides"]) == 3
+    assert int(params_five["nsides"]) == 5
+    assert int(params_defocus["nsides"]) == 3
+    assert psf_initial.shape == psf_five.shape == psf_defocus.shape
+    assert not np.allclose(psf_initial, psf_five)
+    assert not np.allclose(psf_five, psf_defocus)
+    assert np.asarray(oi_get(oi_initial_point, "size"), dtype=int).shape == (2,)
+    assert np.asarray(oi_get(oi_initial_hdr, "size"), dtype=int).shape == (2,)
+    assert np.asarray(oi_get(oi_five_point, "size"), dtype=int).shape == (2,)
+    assert np.asarray(oi_get(oi_five_hdr, "size"), dtype=int).shape == (2,)
+    assert np.asarray(oi_get(oi_defocus_hdr, "size"), dtype=int).shape == (2,)
+
+
+def test_optics_flare2_script_workflow(asset_store) -> None:
+    point_scene = scene_create("point array", 384, 128, asset_store=asset_store)
+    point_scene = scene_set(point_scene, "fov", 1.0)
+    hdr_scene = scene_create("hdr", asset_store=asset_store)
+    hdr_scene = scene_set(hdr_scene, "fov", 3.0)
+
+    base_wvf = wvf_create()
+    base_wvf = wvf_set(base_wvf, "calc pupil diameter", 3.0)
+    base_wvf = wvf_set(base_wvf, "focal length", 7e-3)
+
+    aperture_initial, params_initial = wvf_aperture(
+        base_wvf,
+        "nsides",
+        6,
+        "dot mean",
+        20,
+        "dot sd",
+        3,
+        "dot opacity",
+        0.5,
+        "line mean",
+        20,
+        "line sd",
+        2,
+        "line opacity",
+        0.5,
+        "seed",
+        4,
+    )
+    wvf_initial = wvf_pupil_function(base_wvf, "aperture function", aperture_initial)
+    wvf_initial = wvf_compute(wvf_initial)
+    psf_initial = np.asarray(wvf_get(wvf_initial, "psf", 550.0), dtype=float)
+    oi_initial_point = oi_crop(oi_compute(wvf_initial, point_scene), "border")
+    oi_initial_hdr = oi_compute(wvf_initial, hdr_scene)
+
+    aperture_five, params_five = wvf_aperture(
+        wvf_initial,
+        "nsides",
+        5,
+        "dot mean",
+        20,
+        "dot sd",
+        3,
+        "dot opacity",
+        0.5,
+        "line mean",
+        20,
+        "line sd",
+        2,
+        "line opacity",
+        0.5,
+        "seed",
+        5,
+    )
+    wvf_five = wvf_pupil_function(wvf_initial, "aperture function", aperture_five)
+    wvf_five = wvf_compute_psf(wvf_five)
+    psf_five = np.asarray(wvf_get(wvf_five, "psf", 550.0), dtype=float)
+    oi_five_point = oi_crop(oi_compute(wvf_five, point_scene), "border")
+    oi_five_hdr = oi_crop(oi_compute(wvf_five, hdr_scene), "border")
+
+    defocus_wvf = wvf_set(wvf_five, "zcoeffs", 1.5, "defocus")
+    aperture_defocus, params_defocus = wvf_aperture(
+        defocus_wvf,
+        "nsides",
+        3,
+        "dot mean",
+        20,
+        "dot sd",
+        3,
+        "dot opacity",
+        0.5,
+        "line mean",
+        20,
+        "line sd",
+        2,
+        "line opacity",
+        0.5,
+        "seed",
+        6,
+    )
+    defocus_wvf = wvf_pupil_function(defocus_wvf, "aperture function", aperture_defocus)
+    defocus_wvf = wvf_compute_psf(defocus_wvf)
+    psf_defocus = np.asarray(wvf_get(defocus_wvf, "psf", 550.0), dtype=float)
+    oi_defocus_hdr = oi_compute(defocus_wvf, hdr_scene)
+
+    assert np.isclose(float(scene_get(point_scene, "fov")), 1.0)
+    assert np.isclose(float(scene_get(hdr_scene, "fov")), 3.0)
+    assert np.isclose(float(wvf_get(base_wvf, "fnumber")), 7.0 / 3.0)
+    assert int(params_initial["nsides"]) == 6
     assert int(params_five["nsides"]) == 5
     assert int(params_defocus["nsides"]) == 3
     assert psf_initial.shape == psf_five.shape == psf_defocus.shape

@@ -3756,6 +3756,183 @@ def run_python_case_with_context(
             },
         )
 
+    if case_name == "optics_flare2_small":
+        def _canonical_profile(values: np.ndarray, samples: int = 129) -> np.ndarray:
+            profile = np.asarray(values, dtype=float).reshape(-1)
+            support = np.linspace(-1.0, 1.0, profile.size, dtype=float)
+            query = np.linspace(-1.0, 1.0, samples, dtype=float)
+            return np.interp(query, support, profile)
+
+        def _profile_widths(values: np.ndarray, thresholds: tuple[float, ...]) -> np.ndarray:
+            profile = np.asarray(values, dtype=float).reshape(-1)
+            peak = max(float(np.max(profile)), 1e-12)
+            widths: list[int] = []
+            for threshold in thresholds:
+                active = np.flatnonzero(profile >= (threshold * peak))
+                widths.append(int(active[-1] - active[0] + 1) if active.size else 0)
+            return np.asarray(widths, dtype=int)
+
+        def _aperture_stats(aperture: np.ndarray) -> tuple[float, float, float]:
+            image = np.asarray(aperture, dtype=float)
+            return float(np.sum(image)), float(np.mean(image)), float(np.mean(image < 0.95))
+
+        def _wvf_psf_payload(current_wvf: dict[str, Any]) -> tuple[np.ndarray, np.ndarray]:
+            psf = np.asarray(wvf_get(current_wvf, "psf", 550.0), dtype=float)
+            row = _canonical_profile(_channel_normalize(psf[psf.shape[0] // 2, :]))
+            return row, _profile_widths(row, (0.50, 0.10, 0.01))
+
+        def _oi_center_row_widths(current_oi: OpticalImage) -> np.ndarray:
+            photons = np.asarray(oi_get(current_oi, "photons"), dtype=float)
+            wave = np.asarray(oi_get(current_oi, "wave"), dtype=float).reshape(-1)
+            wave_index = int(np.argmin(np.abs(wave - 550.0)))
+            row = _canonical_profile(_channel_normalize(photons[photons.shape[0] // 2, :, wave_index]))
+            return _profile_widths(row, (0.50, 0.10, 0.01))
+
+        def _oi_mean_550(current_oi: OpticalImage) -> float:
+            photons = np.asarray(oi_get(current_oi, "photons"), dtype=float)
+            wave = np.asarray(oi_get(current_oi, "wave"), dtype=float).reshape(-1)
+            wave_index = int(np.argmin(np.abs(wave - 550.0)))
+            return float(np.mean(photons[:, :, wave_index]))
+
+        seed_initial = 4
+        seed_five = 5
+        seed_defocus = 6
+
+        point_scene = scene_create("point array", 384, 128, asset_store=store)
+        point_scene = scene_set(point_scene, "fov", 1.0)
+        hdr_scene = scene_create("hdr", asset_store=store)
+        hdr_scene = scene_set(hdr_scene, "fov", 3.0)
+
+        base_wvf = wvf_create()
+        base_wvf = wvf_set(base_wvf, "calc pupil diameter", 3.0)
+        base_wvf = wvf_set(base_wvf, "focal length", 7e-3)
+
+        aperture_initial, params_initial = wvf_aperture(
+            base_wvf,
+            "nsides",
+            6,
+            "dot mean",
+            20,
+            "dot sd",
+            3,
+            "dot opacity",
+            0.5,
+            "line mean",
+            20,
+            "line sd",
+            2,
+            "line opacity",
+            0.5,
+            "seed",
+            seed_initial,
+        )
+        wvf_initial = wvf_pupil_function(base_wvf, "aperture function", aperture_initial)
+        wvf_initial = wvf_compute(wvf_initial)
+        initial_psf_row, initial_psf_widths = _wvf_psf_payload(wvf_initial)
+        initial_point_oi = oi_crop(oi_compute(wvf_initial, point_scene), "border")
+        initial_hdr_oi = oi_compute(wvf_initial, hdr_scene)
+
+        aperture_five, params_five = wvf_aperture(
+            wvf_initial,
+            "nsides",
+            5,
+            "dot mean",
+            20,
+            "dot sd",
+            3,
+            "dot opacity",
+            0.5,
+            "line mean",
+            20,
+            "line sd",
+            2,
+            "line opacity",
+            0.5,
+            "seed",
+            seed_five,
+        )
+        wvf_five = wvf_pupil_function(wvf_initial, "aperture function", aperture_five)
+        wvf_five = wvf_compute_psf(wvf_five)
+        five_psf_row, five_psf_widths = _wvf_psf_payload(wvf_five)
+        five_point_oi = oi_crop(oi_compute(wvf_five, point_scene), "border")
+        five_hdr_oi = oi_crop(oi_compute(wvf_five, hdr_scene), "border")
+
+        defocus_wvf = wvf_set(wvf_five, "zcoeffs", 1.5, "defocus")
+        aperture_defocus, params_defocus = wvf_aperture(
+            defocus_wvf,
+            "nsides",
+            3,
+            "dot mean",
+            20,
+            "dot sd",
+            3,
+            "dot opacity",
+            0.5,
+            "line mean",
+            20,
+            "line sd",
+            2,
+            "line opacity",
+            0.5,
+            "seed",
+            seed_defocus,
+        )
+        defocus_wvf = wvf_pupil_function(defocus_wvf, "aperture function", aperture_defocus)
+        defocus_wvf = wvf_compute_psf(defocus_wvf)
+        defocus_psf_row, defocus_psf_widths = _wvf_psf_payload(defocus_wvf)
+        defocus_hdr_oi = oi_compute(defocus_wvf, hdr_scene)
+
+        initial_aperture_sum, initial_aperture_mean, initial_dark_fraction = _aperture_stats(aperture_initial)
+        five_aperture_sum, five_aperture_mean, five_dark_fraction = _aperture_stats(aperture_five)
+        defocus_aperture_sum, defocus_aperture_mean, defocus_dark_fraction = _aperture_stats(aperture_defocus)
+        initial_hdr_mean_550 = _oi_mean_550(initial_hdr_oi)
+        five_hdr_mean_550 = _oi_mean_550(five_hdr_oi)
+        defocus_hdr_mean_550 = _oi_mean_550(defocus_hdr_oi)
+        hdr_mean_denominator = max(initial_hdr_mean_550, 1e-12)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "pupil_diameter_mm": float(wvf_get(base_wvf, "calc pupil diameter", "mm")),
+                "focal_length_mm": float(wvf_get(base_wvf, "focal length", "mm")),
+                "f_number": float(wvf_get(base_wvf, "fnumber")),
+                "point_scene_fov_deg": float(scene_get(point_scene, "fov")),
+                "hdr_scene_fov_deg": float(scene_get(hdr_scene, "fov")),
+                "seed_initial": seed_initial,
+                "seed_five": seed_five,
+                "seed_defocus": seed_defocus,
+                "initial_nsides": int(params_initial["nsides"]),
+                "initial_aperture_sum": initial_aperture_sum,
+                "initial_point_oi_size": np.asarray(oi_get(initial_point_oi, "size"), dtype=int),
+                "initial_point_oi_center_row_550_widths": _oi_center_row_widths(initial_point_oi),
+                "initial_hdr_oi_size": np.asarray(oi_get(initial_hdr_oi, "size"), dtype=int),
+                "initial_hdr_mean_photons_550_ratio": initial_hdr_mean_550 / hdr_mean_denominator,
+                "five_nsides": int(params_five["nsides"]),
+                "five_aperture_sum": five_aperture_sum,
+                "five_point_oi_size": np.asarray(oi_get(five_point_oi, "size"), dtype=int),
+                "five_point_oi_center_row_550_widths": _oi_center_row_widths(five_point_oi),
+                "five_hdr_oi_size": np.asarray(oi_get(five_hdr_oi, "size"), dtype=int),
+                "five_hdr_mean_photons_550_ratio": five_hdr_mean_550 / hdr_mean_denominator,
+                "defocus_zcoeff": float(wvf_get(defocus_wvf, "zcoeffs", "defocus")),
+                "defocus_nsides": int(params_defocus["nsides"]),
+                "defocus_aperture_sum": defocus_aperture_sum,
+                "defocus_hdr_oi_size": np.asarray(oi_get(defocus_hdr_oi, "size"), dtype=int),
+                "defocus_hdr_mean_photons_550_ratio": defocus_hdr_mean_550 / hdr_mean_denominator,
+            },
+            context={
+                "point_scene": point_scene,
+                "hdr_scene": hdr_scene,
+                "wvf_initial": wvf_initial,
+                "wvf_five": wvf_five,
+                "defocus_wvf": defocus_wvf,
+                "initial_point_oi": initial_point_oi,
+                "initial_hdr_oi": initial_hdr_oi,
+                "five_point_oi": five_point_oi,
+                "five_hdr_oi": five_hdr_oi,
+                "defocus_hdr_oi": defocus_hdr_oi,
+            },
+        )
+
     if case_name == "oi_pad_crop_small":
         scene = scene_create("sweep frequency", asset_store=store)
         oi = oi_compute(oi_create(), scene)

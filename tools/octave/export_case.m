@@ -966,6 +966,117 @@ switch case_name
         payload.defocus_hdr_oi_size = double(oiGet(oiDefocusHDR, 'size')(:));
         payload.defocus_hdr_mean_photons_550_ratio = double(defocusHDRMean550 / hdrMeanDenominator);
 
+    case 'optics_flare2_small'
+        pupilMM = 3;
+        flengthM = 7e-3;
+
+        scenePoint = sceneCreate('point array', 384, 128);
+        scenePoint = sceneSet(scenePoint, 'fov', 1);
+        sceneHDR = sceneCreate('hdr');
+        sceneHDR = sceneSet(sceneHDR, 'fov', 3);
+
+        wvfBase = wvfCreate;
+        wvfBase = wvfSet(wvfBase, 'calc pupil diameter', pupilMM);
+        wvfBase = wvfSet(wvfBase, 'focal length', flengthM);
+
+        rand('seed', 4);
+        randn('seed', 4);
+        [apertureInitial, paramsInitial] = wvfAperture(wvfBase, ...
+            'nsides', 6, ...
+            'dot mean', 20, 'dot sd', 3, 'dot opacity', 0.5, ...
+            'line mean', 20, 'line sd', 2, 'line opacity', 0.5);
+        wvfInitial = wvfPupilFunction(wvfBase, 'aperture function', apertureInitial);
+        wvfInitial = wvfCompute(wvfInitial);
+        initialPSF = double(wvfGet(wvfInitial, 'psf', 550));
+        initialPSFRow = local_canonical_profile(local_channel_normalize(initialPSF(floor(size(initialPSF, 1) / 2) + 1, :)), 129);
+        oiInitialPoint = oiCompute(wvfInitial, scenePoint);
+        oiInitialPoint = oiCrop(oiInitialPoint, 'border');
+        oiInitialHDR = oiCompute(wvfInitial, sceneHDR);
+        photonsInitialPoint = double(oiGet(oiInitialPoint, 'photons'));
+        photonsInitialHDR = double(oiGet(oiInitialHDR, 'photons'));
+
+        rand('seed', 5);
+        randn('seed', 5);
+        [apertureFive, paramsFive] = wvfAperture(wvfInitial, ...
+            'nsides', 5, ...
+            'dot mean', 20, 'dot sd', 3, 'dot opacity', 0.5, ...
+            'line mean', 20, 'line sd', 2, 'line opacity', 0.5);
+        wvfFive = wvfPupilFunction(wvfInitial, 'aperture function', apertureFive);
+        wvfFive = wvfComputePSF(wvfFive);
+        fivePSF = double(wvfGet(wvfFive, 'psf', 550));
+        fivePSFRow = local_canonical_profile(local_channel_normalize(fivePSF(floor(size(fivePSF, 1) / 2) + 1, :)), 129);
+        oiFivePoint = oiCompute(wvfFive, scenePoint);
+        oiFivePoint = oiCrop(oiFivePoint, 'border');
+        oiFiveHDR = oiCompute(wvfFive, sceneHDR);
+        oiFiveHDR = oiCrop(oiFiveHDR, 'border');
+        photonsFivePoint = double(oiGet(oiFivePoint, 'photons'));
+        photonsFiveHDR = double(oiGet(oiFiveHDR, 'photons'));
+
+        defocusWVF = wvfSet(wvfFive, 'zcoeffs', 1.5, {'defocus'});
+        rand('seed', 6);
+        randn('seed', 6);
+        [apertureDefocus, paramsDefocus] = wvfAperture(defocusWVF, ...
+            'nsides', 3, ...
+            'dot mean', 20, 'dot sd', 3, 'dot opacity', 0.5, ...
+            'line mean', 20, 'line sd', 2, 'line opacity', 0.5);
+        defocusWVF = wvfPupilFunction(defocusWVF, 'aperture function', apertureDefocus);
+        defocusWVF = wvfComputePSF(defocusWVF);
+        defocusPSF = double(wvfGet(defocusWVF, 'psf', 550));
+        defocusPSFRow = local_canonical_profile(local_channel_normalize(defocusPSF(floor(size(defocusPSF, 1) / 2) + 1, :)), 129);
+        oiDefocusHDR = oiCompute(defocusWVF, sceneHDR);
+        photonsDefocusHDR = double(oiGet(oiDefocusHDR, 'photons'));
+
+        oiWaveInitialPoint = double(oiGet(oiInitialPoint, 'wave')(:));
+        [~, waveIndex550InitialPoint] = min(abs(oiWaveInitialPoint - 550));
+        initialPointRow = local_canonical_profile(local_channel_normalize(squeeze(photonsInitialPoint(floor(size(photonsInitialPoint, 1) / 2) + 1, :, waveIndex550InitialPoint))), 129);
+
+        oiWaveFivePoint = double(oiGet(oiFivePoint, 'wave')(:));
+        [~, waveIndex550FivePoint] = min(abs(oiWaveFivePoint - 550));
+        fivePointRow = local_canonical_profile(local_channel_normalize(squeeze(photonsFivePoint(floor(size(photonsFivePoint, 1) / 2) + 1, :, waveIndex550FivePoint))), 129);
+
+        oiWaveInitialHDR = double(oiGet(oiInitialHDR, 'wave')(:));
+        [~, waveIndex550InitialHDR] = min(abs(oiWaveInitialHDR - 550));
+        oiWaveFiveHDR = double(oiGet(oiFiveHDR, 'wave')(:));
+        [~, waveIndex550FiveHDR] = min(abs(oiWaveFiveHDR - 550));
+        oiWaveDefocusHDR = double(oiGet(oiDefocusHDR, 'wave')(:));
+        [~, waveIndex550DefocusHDR] = min(abs(oiWaveDefocusHDR - 550));
+        initialHDR550 = photonsInitialHDR(:, :, waveIndex550InitialHDR);
+        fiveHDR550 = photonsFiveHDR(:, :, waveIndex550FiveHDR);
+        defocusHDR550 = photonsDefocusHDR(:, :, waveIndex550DefocusHDR);
+        initialHDRMean550 = double(real(mean(initialHDR550(:))));
+        fiveHDRMean550 = double(real(mean(fiveHDR550(:))));
+        defocusHDRMean550 = double(real(mean(defocusHDR550(:))));
+        hdrMeanDenominator = max(initialHDRMean550, 1e-12);
+
+        payload.pupil_diameter_mm = double(pupilMM);
+        payload.focal_length_mm = double(flengthM * 1e3);
+        payload.f_number = double(flengthM / (pupilMM * 1e-3));
+        payload.point_scene_fov_deg = double(sceneGet(scenePoint, 'fov'));
+        payload.hdr_scene_fov_deg = double(sceneGet(sceneHDR, 'fov'));
+        payload.seed_initial = 4;
+        payload.seed_five = 5;
+        payload.seed_defocus = 6;
+
+        payload.initial_nsides = double(paramsInitial.nsides);
+        payload.initial_aperture_sum = double(sum(apertureInitial(:)));
+        payload.initial_point_oi_size = double(oiGet(oiInitialPoint, 'size')(:));
+        payload.initial_point_oi_center_row_550_widths = local_profile_widths(initialPointRow, [0.50 0.10 0.01]);
+        payload.initial_hdr_oi_size = double(oiGet(oiInitialHDR, 'size')(:));
+        payload.initial_hdr_mean_photons_550_ratio = double(initialHDRMean550 / hdrMeanDenominator);
+
+        payload.five_nsides = double(paramsFive.nsides);
+        payload.five_aperture_sum = double(sum(apertureFive(:)));
+        payload.five_point_oi_size = double(oiGet(oiFivePoint, 'size')(:));
+        payload.five_point_oi_center_row_550_widths = local_profile_widths(fivePointRow, [0.50 0.10 0.01]);
+        payload.five_hdr_oi_size = double(oiGet(oiFiveHDR, 'size')(:));
+        payload.five_hdr_mean_photons_550_ratio = double(fiveHDRMean550 / hdrMeanDenominator);
+
+        payload.defocus_zcoeff = double(wvfGet(defocusWVF, 'zcoeffs', 'defocus'));
+        payload.defocus_nsides = double(paramsDefocus.nsides);
+        payload.defocus_aperture_sum = double(sum(apertureDefocus(:)));
+        payload.defocus_hdr_oi_size = double(oiGet(oiDefocusHDR, 'size')(:));
+        payload.defocus_hdr_mean_photons_550_ratio = double(defocusHDRMean550 / hdrMeanDenominator);
+
     case 'oi_pad_crop_small'
         scene = sceneCreate('sweep frequency');
         oi = oiCreate;

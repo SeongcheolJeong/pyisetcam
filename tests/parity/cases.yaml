@@ -1337,6 +1337,34 @@
       }
     },
     {
+      "name": "optics_flare2_small",
+      "matlab_function": "s_opticsFlare2",
+      "rtol": 1e-04,
+      "atol": 1e-06,
+      "field_overrides": {
+        "initial_aperture_sum": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "five_aperture_sum": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "five_hdr_mean_photons_550_ratio": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.0001
+        },
+        "defocus_aperture_sum": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.06
+        },
+        "defocus_hdr_mean_photons_550_ratio": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.001
+        }
+      }
+    },
+    {
       "name": "oi_pad_crop_small",
       "matlab_function": "s_opticsPadCrop",
       "rtol": 1e-05,
