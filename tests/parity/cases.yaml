@@ -339,6 +339,30 @@
       }
     },
     {
+      "name": "scene_roi_small",
+      "matlab_function": "s_sceneRoi",
+      "rtol": 1e-05,
+      "atol": 1e-07,
+      "field_overrides": {
+        "roi_photons_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 5e-05
+        },
+        "roi_energy_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 5e-05
+        },
+        "roi_illuminant_photons_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 5e-05
+        },
+        "roi_reflectance_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 5e-05
+        }
+      }
+    },
+    {
       "name": "display_create_lcd_example",
       "matlab_function": "displayCreate",
       "rtol": 1e-05,

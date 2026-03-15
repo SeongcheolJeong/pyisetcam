@@ -1415,6 +1415,53 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "scene_roi_small":
+        scene = scene_create(asset_store=store)
+        wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+        scene_size = np.asarray(scene_get(scene, "size"), dtype=int).reshape(-1)
+        roi = np.rint(np.array([scene_size[0] / 2.0, scene_size[1], 10.0, 10.0], dtype=float)).astype(int)
+
+        roi_photons = np.asarray(scene_get(scene, "roi photons", roi), dtype=float)
+        roi_mean_photons = np.asarray(scene_get(scene, "roi mean photons", roi), dtype=float).reshape(-1)
+        roi_energy = np.asarray(scene_get(scene, "roi energy", roi), dtype=float)
+        roi_mean_energy = np.asarray(scene_get(scene, "roi mean energy", roi), dtype=float).reshape(-1)
+        roi_illuminant_photons = np.asarray(scene_get(scene, "roi illuminant photons", roi), dtype=float)
+        roi_mean_illuminant_photons = np.asarray(
+            scene_get(scene, "roi mean illuminant photons", roi),
+            dtype=float,
+        ).reshape(-1)
+        roi_reflectance_manual = np.divide(
+            roi_photons,
+            roi_illuminant_photons,
+            out=np.zeros_like(roi_photons),
+            where=roi_illuminant_photons > 0.0,
+        )
+        roi_reflectance_direct = np.asarray(scene_get(scene, "roi reflectance", roi), dtype=float)
+        roi_mean_reflectance_direct = np.asarray(scene_get(scene, "roi mean reflectance", roi), dtype=float).reshape(-1)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "scene_size": scene_size,
+                "roi_rect": roi,
+                "roi_point_count": int(roi_photons.shape[0]),
+                "roi_photons_stats": _stats_vector(roi_photons),
+                "roi_mean_photons": roi_mean_photons,
+                "roi_energy_stats": _stats_vector(roi_energy),
+                "roi_mean_energy": roi_mean_energy,
+                "roi_illuminant_photons_stats": _stats_vector(roi_illuminant_photons),
+                "roi_mean_illuminant_photons": roi_mean_illuminant_photons,
+                "roi_reflectance_stats": _stats_vector(roi_reflectance_direct),
+                "roi_reflectance_mean_manual": np.mean(roi_reflectance_manual, axis=0, dtype=float).reshape(-1),
+                "roi_mean_reflectance_direct": roi_mean_reflectance_direct,
+                "roi_reflectance_manual_vs_direct_max_abs": float(
+                    np.max(np.abs(roi_reflectance_manual - roi_reflectance_direct))
+                ),
+            },
+            context={},
+        )
+
     if case_name == "display_create_lcd_example":
         display = display_create("lcdExample.mat", asset_store=store)
         return ParityCaseResult(

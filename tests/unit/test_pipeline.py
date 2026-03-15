@@ -4920,6 +4920,25 @@ def test_run_python_case_supports_scene_reflectance_chart_basis_functions_parity
     assert case.payload["coef_stats_5"].shape == (4,)
 
 
+def test_run_python_case_supports_scene_roi_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_roi_small", asset_store=asset_store)
+
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["scene_size"].shape == (2,)
+    assert case.payload["roi_rect"].shape == (4,)
+    assert int(case.payload["roi_point_count"]) > 0
+    assert case.payload["roi_photons_stats"].shape == (4,)
+    assert case.payload["roi_mean_photons"].shape == (31,)
+    assert case.payload["roi_energy_stats"].shape == (4,)
+    assert case.payload["roi_mean_energy"].shape == (31,)
+    assert case.payload["roi_illuminant_photons_stats"].shape == (4,)
+    assert case.payload["roi_mean_illuminant_photons"].shape == (31,)
+    assert case.payload["roi_reflectance_stats"].shape == (4,)
+    assert case.payload["roi_reflectance_mean_manual"].shape == (31,)
+    assert case.payload["roi_mean_reflectance_direct"].shape == (31,)
+    assert float(case.payload["roi_reflectance_manual_vs_direct_max_abs"]) <= 1e-12
+
+
 def test_run_python_case_supports_frequency_orientation_scene_parity_case(asset_store) -> None:
     case = run_python_case_with_context("scene_frequency_orientation_small", asset_store=asset_store)
 
@@ -7908,6 +7927,48 @@ def test_scene_reflectance_chart_basis_functions_script_workflow(asset_store) ->
     assert cols == reflectance.shape[1]
     assert float(np.mean(relative_rmse_5)) < 0.07
     assert float(np.max(relative_rmse_5)) < 0.21
+
+
+def test_scene_roi_script_workflow(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+    scene_size = np.asarray(scene_get(scene, "size"), dtype=int).reshape(-1)
+    roi = np.rint(np.array([scene_size[0] / 2.0, scene_size[1], 10.0, 10.0], dtype=float)).astype(int)
+
+    photons = np.asarray(scene_get(scene, "roi photons", roi), dtype=float)
+    mean_photons = np.asarray(scene_get(scene, "roi mean photons", roi), dtype=float).reshape(-1)
+    energy = np.asarray(scene_get(scene, "roi energy", roi), dtype=float)
+    mean_energy = np.asarray(scene_get(scene, "roi mean energy", roi), dtype=float).reshape(-1)
+    illuminant_photons = np.asarray(scene_get(scene, "roi illuminant photons", roi), dtype=float)
+    mean_illuminant_photons = np.asarray(
+        scene_get(scene, "roi mean illuminant photons", roi),
+        dtype=float,
+    ).reshape(-1)
+    reflectance_manual = np.divide(
+        photons,
+        illuminant_photons,
+        out=np.zeros_like(photons),
+        where=illuminant_photons > 0.0,
+    )
+    reflectance_direct = np.asarray(scene_get(scene, "roi reflectance", roi), dtype=float)
+    mean_reflectance_direct = np.asarray(scene_get(scene, "roi mean reflectance", roi), dtype=float).reshape(-1)
+
+    assert wave.shape == (31,)
+    assert scene_size.shape == (2,)
+    assert roi.shape == (4,)
+    assert photons.ndim == 2
+    assert photons.shape[1] == wave.size
+    assert photons.shape == energy.shape == illuminant_photons.shape == reflectance_direct.shape
+    assert photons.shape[0] == 121
+    assert mean_photons.shape == (wave.size,)
+    assert mean_energy.shape == (wave.size,)
+    assert mean_illuminant_photons.shape == (wave.size,)
+    assert mean_reflectance_direct.shape == (wave.size,)
+    assert np.allclose(mean_photons, np.mean(photons, axis=0), atol=1e-12, rtol=1e-12)
+    assert np.allclose(mean_energy, np.mean(energy, axis=0), atol=1e-12, rtol=1e-12)
+    assert np.allclose(mean_illuminant_photons, np.mean(illuminant_photons, axis=0), atol=1e-12, rtol=1e-12)
+    assert np.allclose(reflectance_direct, reflectance_manual, atol=1e-12, rtol=1e-12)
+    assert np.allclose(mean_reflectance_direct, np.mean(reflectance_direct, axis=0), atol=1e-12, rtol=1e-12)
 
 
 def test_run_python_case_supports_sensor_macbeth_daylight_estimate_small_parity_case(asset_store) -> None:

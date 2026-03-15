@@ -1129,6 +1129,37 @@ switch case_name
         payload.basis_projector_5 = basis5 * basis5';
         payload.coef_stats_5 = local_stats_vector(coef5);
 
+    case 'scene_roi_small'
+        scene = sceneCreate;
+        wave = double(sceneGet(scene, 'wave'));
+        sceneSize = double(sceneGet(scene, 'size'));
+        roi = round([sceneSize(1) / 2, sceneSize(2), 10, 10]);
+
+        roiPhotons = double(sceneGet(scene, 'roi photons', roi));
+        roiMeanPhotons = double(sceneGet(scene, 'roi mean photons', roi));
+        roiEnergy = double(sceneGet(scene, 'roi energy', roi));
+        roiMeanEnergy = double(sceneGet(scene, 'roi mean energy', roi));
+        roiIlluminantPhotons = double(sceneGet(scene, 'roi illuminant photons', roi));
+        roiMeanIlluminantPhotons = double(sceneGet(scene, 'roi mean illuminant photons', roi));
+        roiReflectanceManual = roiPhotons ./ roiIlluminantPhotons;
+        roiReflectanceDirect = double(sceneGet(scene, 'roi reflectance', roi));
+        roiMeanReflectanceDirect = double(sceneGet(scene, 'roi mean reflectance', roi));
+
+        payload.wave = wave(:);
+        payload.scene_size = sceneSize(:);
+        payload.roi_rect = double(roi(:));
+        payload.roi_point_count = size(roiPhotons, 1);
+        payload.roi_photons_stats = local_stats_vector(roiPhotons);
+        payload.roi_mean_photons = roiMeanPhotons(:);
+        payload.roi_energy_stats = local_stats_vector(roiEnergy);
+        payload.roi_mean_energy = roiMeanEnergy(:);
+        payload.roi_illuminant_photons_stats = local_stats_vector(roiIlluminantPhotons);
+        payload.roi_mean_illuminant_photons = roiMeanIlluminantPhotons(:);
+        payload.roi_reflectance_stats = local_stats_vector(roiReflectanceDirect);
+        payload.roi_reflectance_mean_manual = mean(roiReflectanceManual, 1)(:);
+        payload.roi_mean_reflectance_direct = roiMeanReflectanceDirect(:);
+        payload.roi_reflectance_manual_vs_direct_max_abs = max(abs(roiReflectanceManual(:) - roiReflectanceDirect(:)));
+
     case 'display_create_lcd_example'
         d = displayCreate('lcdExample.mat');
         payload.wave = displayGet(d, 'wave');
