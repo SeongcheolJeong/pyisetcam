@@ -382,6 +382,11 @@ That same focus/DoF optics block now also has direct Octave parity on
 `s_opticsDefocus.m`, comparing the blur/astigmatism/pupil-diameter WVF
 sequence through mean-photon conservation, recovered Zernike coefficients,
 pupil-diameter changes, and normalized 550 nm center-row irradiance slices.
+That same focus/DoF optics block now also includes public
+`optics_defocus_displacement` / `opticsDefocusDisplacement`, with direct
+Octave parity on `s_opticsDefocusDisplacement.m` for the base-power sweep,
+image-plane displacement curves, and constant displacement-to-focal-length
+ratio check.
 The adjacent diffraction-limited optics plotting surface now also includes
 headless `oiPlot(..., 'ls wavelength'/'lswavelength'/'otf wavelength'/'mtf wavelength')`
 support for the script-driven line-spread and OTF-by-wavelength workflows

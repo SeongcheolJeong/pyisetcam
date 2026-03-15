@@ -1263,6 +1263,27 @@ switch case_name
         payload.initial_reset_ratio = baseMean / max(resetMean, 1e-12);
         payload.initial_final_ratio = baseMean / max(finalMean, 1e-12);
 
+    case 'optics_defocus_displacement_small'
+        baseD = 50:100:350;
+        deltaD = 1:15;
+        displacementCurves = zeros(numel(baseD), numel(deltaD));
+        for ii = 1:numel(baseD)
+            displacementCurves(ii, :) = (1 / baseD(ii)) - (1 ./ (baseD(ii) + deltaD));
+        end
+
+        ratioBaseD = 50:50:300;
+        ratioDeltaD = ratioBaseD / 10;
+        ratioDisplacement = (1 ./ ratioBaseD) - (1 ./ (ratioBaseD + ratioDeltaD));
+        ratioScaled = ratioDisplacement .* ratioBaseD;
+
+        payload.base_diopters = double(baseD(:));
+        payload.delta_diopters = double(deltaD(:));
+        payload.displacement_curves_m = double(displacementCurves);
+        payload.ratio_base_diopters = double(ratioBaseD(:));
+        payload.ratio_delta_diopters = double(ratioDeltaD(:));
+        payload.ratio_displacement_m = double(ratioDisplacement(:));
+        payload.displacement_to_focal_length_ratio = double(ratioScaled(:));
+
     case 'wvf_spatial_sampling_small'
         wvf = wvfCreate('wave', 550);
         thisWave = wvfGet(wvf, 'wave');

@@ -473,6 +473,12 @@
       }
     },
     {
+      "name": "optics_defocus_displacement_small",
+      "matlab_function": "s_opticsDefocusDisplacement",
+      "rtol": 1e-08,
+      "atol": 1e-12
+    },
+    {
       "name": "wvf_astigmatism_small",
       "matlab_function": "s_wvfAstigmatism",
       "rtol": 1e-05,

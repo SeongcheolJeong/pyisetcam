@@ -257,6 +257,22 @@ def optics_dof(
     return np.asarray(dof, dtype=float)
 
 
+def optics_defocus_displacement(base_power_diopters: Any, delta_power_diopters: Any) -> float | np.ndarray:
+    """Return the image-plane displacement in meters for a change in lens power."""
+
+    base_power = np.asarray(base_power_diopters, dtype=float)
+    delta_power = np.asarray(delta_power_diopters, dtype=float)
+    if np.any(base_power <= 0.0):
+        raise ValueError("base_power_diopters must be positive.")
+    if np.any(base_power + delta_power <= 0.0):
+        raise ValueError("base_power_diopters + delta_power_diopters must be positive.")
+
+    displacement = (1.0 / base_power) - (1.0 / (base_power + delta_power))
+    if displacement.ndim == 0:
+        return float(displacement)
+    return np.asarray(displacement, dtype=float)
+
+
 def _normalize_shift_invariant_psf_data(value: Any) -> dict[str, Any]:
     current = dict(value)
     psf = np.asarray(current.get("psf"), dtype=float)

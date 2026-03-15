@@ -25,6 +25,7 @@ from pyisetcam import (
     ip_create,
     ie_mvnrnd,
     optics_coc,
+    optics_defocus_displacement,
     optics_dof,
     optics_psf_to_otf,
     optics_ray_trace,
@@ -2653,6 +2654,27 @@ def test_optics_coc_matches_thin_lens_formula() -> None:
     assert np.isclose(float(optics_dof(optics, 0.5, 20e-6)), expected_dof)
 
 
+def test_optics_defocus_displacement_matches_lens_power_formula() -> None:
+    base_diopters = np.array([50.0, 150.0, 250.0, 350.0], dtype=float)
+    delta_diopters = np.arange(1.0, 16.0, dtype=float)
+
+    displacement = np.asarray(
+        optics_defocus_displacement(base_diopters[:, None], delta_diopters[None, :]),
+        dtype=float,
+    )
+    expected = (1.0 / base_diopters[:, None]) - (1.0 / (base_diopters[:, None] + delta_diopters[None, :]))
+
+    ratio_base_diopters = np.arange(50.0, 301.0, 50.0, dtype=float)
+    ratio_displacement = np.asarray(
+        optics_defocus_displacement(ratio_base_diopters, ratio_base_diopters / 10.0),
+        dtype=float,
+    )
+
+    assert displacement.shape == (4, 15)
+    assert np.allclose(displacement, expected)
+    assert np.allclose(ratio_displacement * ratio_base_diopters, np.full(ratio_base_diopters.shape, 1.0 / 11.0))
+
+
 def test_optics_coc_small_parity_case(asset_store) -> None:
     payload = run_python_case("optics_coc_small", asset_store=asset_store)
 
@@ -2667,6 +2689,18 @@ def test_optics_coc_small_parity_case(asset_store) -> None:
     assert payload["circ_f8_focus_3_mm"].shape == (50,)
     assert np.all(payload["circ_f2_focus_0_5_mm"] >= 0.0)
     assert np.all(payload["circ_f8_focus_3_mm"] >= 0.0)
+
+
+def test_optics_defocus_displacement_small_parity_case(asset_store) -> None:
+    payload = run_python_case("optics_defocus_displacement_small", asset_store=asset_store)
+
+    assert np.array_equal(payload["base_diopters"], np.array([50.0, 150.0, 250.0, 350.0], dtype=float))
+    assert np.array_equal(payload["delta_diopters"], np.arange(1.0, 16.0, dtype=float))
+    assert payload["displacement_curves_m"].shape == (4, 15)
+    assert np.array_equal(payload["ratio_base_diopters"], np.arange(50.0, 301.0, 50.0, dtype=float))
+    assert np.array_equal(payload["ratio_delta_diopters"], payload["ratio_base_diopters"] / 10.0)
+    assert payload["ratio_displacement_m"].shape == (6,)
+    assert np.allclose(payload["displacement_to_focal_length_ratio"], np.full(6, 1.0 / 11.0))
 
 
 def test_si_synthetic_custom_loads_psf_mat_file(tmp_path, asset_store) -> None:

@@ -46,6 +46,7 @@ from .optics import (
     airy_disk,
     ie_field_height_to_index,
     optics_coc,
+    optics_defocus_displacement,
     optics_dof,
     optics_ray_trace,
     oi_calculate_illuminance,
@@ -306,8 +307,10 @@ __all__ = [
     "metrics_spd",
     "mired_difference",
     "opticsCoC",
+    "opticsDefocusDisplacement",
     "opticsDoF",
     "optics_coc",
+    "optics_defocus_displacement",
     "optics_dof",
     "opticsRayTrace",
     "optics_ray_trace",
@@ -597,6 +600,7 @@ sensorPlotLine = sensor_plot_line
 wvfPlot = wvf_plot
 airyDisk = airy_disk
 opticsCoC = optics_coc
+opticsDefocusDisplacement = optics_defocus_displacement
 opticsDoF = optics_dof
 opticsRayTrace = optics_ray_trace
 ieFieldHeight2Index = ie_field_height_to_index

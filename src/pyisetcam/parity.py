@@ -26,6 +26,7 @@ from .optics import (
     _wvf_psf_stack,
     airy_disk,
     optics_coc,
+    optics_defocus_displacement,
     oi_compute,
     oi_crop,
     oi_create,
@@ -1478,6 +1479,36 @@ def run_python_case_with_context(
                 "initial_final_ratio": base_mean / max(final_mean, 1e-12),
             },
             context={"scene": scene, "oi": oi},
+        )
+
+    if case_name == "optics_defocus_displacement_small":
+        base_diopters = np.arange(50.0, 351.0, 100.0, dtype=float)
+        delta_diopters = np.arange(1.0, 16.0, dtype=float)
+        displacement_curves_m = np.asarray(
+            optics_defocus_displacement(base_diopters[:, None], delta_diopters[None, :]),
+            dtype=float,
+        )
+
+        ratio_base_diopters = np.arange(50.0, 301.0, 50.0, dtype=float)
+        ratio_delta_diopters = ratio_base_diopters / 10.0
+        ratio_displacement_m = np.asarray(
+            optics_defocus_displacement(ratio_base_diopters, ratio_delta_diopters),
+            dtype=float,
+        )
+        displacement_focal_length_ratio = ratio_displacement_m * ratio_base_diopters
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "base_diopters": base_diopters,
+                "delta_diopters": delta_diopters,
+                "displacement_curves_m": displacement_curves_m,
+                "ratio_base_diopters": ratio_base_diopters,
+                "ratio_delta_diopters": ratio_delta_diopters,
+                "ratio_displacement_m": ratio_displacement_m,
+                "displacement_to_focal_length_ratio": displacement_focal_length_ratio,
+            },
+            context={},
         )
 
     if case_name == "wvf_astigmatism_small":
