@@ -56,6 +56,7 @@ DEFAULT_WVF_APERTURE_PARAMS = {
     "segmentlength": 600.0,
     "texfile": None,
     "imagerotate": None,
+    "seed": None,
 }
 _SPATIAL_UNIT_SCALE = {
     "meters": 1.0,
@@ -3935,6 +3936,9 @@ def _normalize_wvf_aperture_options(args: tuple[Any, ...]) -> dict[str, Any]:
         elif key in {"imagerotate"}:
             array = np.asarray(value, dtype=float).reshape(-1)
             options["imagerotate"] = None if array.size == 0 else float(array[0])
+        elif key in {"seed", "randomseed"}:
+            array = np.asarray(value, dtype=float).reshape(-1)
+            options["seed"] = None if array.size == 0 else int(array[0])
         else:
             raise KeyError(f"Unsupported wvfAperture parameter: {key}")
     return options
@@ -4015,7 +4019,8 @@ def wvf_aperture(
     options = _normalize_wvf_aperture_options(args)
     image_size = int(wvf_get(wvf, "spatial samples"))
     image = np.ones((image_size, image_size), dtype=float)
-    rng = np.random.default_rng()
+    seed = options.get("seed")
+    rng = np.random.default_rng(None if seed is None else int(seed))
 
     shape = param_format(options["shape"])
     aspect_ratio = np.asarray(options["aspectratio"], dtype=float).reshape(2)

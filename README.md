@@ -242,6 +242,12 @@ That same Phase 2 optics wave now also includes the `s_opticsMicrolens.m`
 workflow, with curated parity on the microlens getter/setter contract,
 default 30-degree sensor FOV setup, and the radiance-generated source and
 pixel irradiance center-line outputs plus etendue.
+That same Phase 2 optics wave now also includes the
+`s_opticsFlare.m` workflow, with upstream-style `sceneCreate('hdr')`
+support via the HDR-lights scene family, deterministic seeded flare
+apertures for the Python parity path, and curated Octave parity on the
+dirty-aperture summaries, normalized 550 nm PSF rows, blur-width
+statistics, and HDR/point-scene OI geometry returned by the script.
 That same Phase 2 wavefront block now also includes `ie_mvnrnd` /
 `ieMvnrnd` together with the `s_wvfThibosModel.m` workflow, with curated
 Octave parity on deterministic virtual-eye coefficient draws, the

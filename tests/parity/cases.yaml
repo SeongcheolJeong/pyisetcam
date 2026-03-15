@@ -1269,6 +1269,74 @@
       "atol": 1e-06
     },
     {
+      "name": "optics_flare_small",
+      "matlab_function": "s_opticsFlare",
+      "rtol": 1e-04,
+      "atol": 1e-06,
+      "field_overrides": {
+        "initial_aperture_dark_fraction": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "initial_aperture_mean": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.08
+        },
+        "initial_aperture_sum": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.08
+        },
+        "initial_psf_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.04
+        },
+        "initial_psf_widths": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.03
+        },
+        "five_aperture_dark_fraction": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "five_aperture_mean": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.07
+        },
+        "five_aperture_sum": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.07
+        },
+        "five_psf_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.02
+        },
+        "five_hdr_mean_photons_550_ratio": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.0002
+        },
+        "defocus_aperture_dark_fraction": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.03
+        },
+        "defocus_aperture_mean": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.06
+        },
+        "defocus_aperture_sum": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.06
+        },
+        "defocus_psf_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.09
+        },
+        "defocus_psf_widths": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.12
+        }
+      }
+    },
+    {
       "name": "oi_pad_crop_small",
       "matlab_function": "s_opticsPadCrop",
       "rtol": 1e-05,

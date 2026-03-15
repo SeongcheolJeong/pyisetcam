@@ -977,6 +977,141 @@ def _white_noise_scene(
     return scene
 
 
+_HDR_LIGHTS_COLOR_MAP = {
+    "white": np.array([1.0, 1.0, 1.0], dtype=float),
+    "green": np.array([0.0, 1.0, 0.0], dtype=float),
+    "blue": np.array([0.0, 0.0, 1.0], dtype=float),
+    "yellow": np.array([1.0, 1.0, 0.0], dtype=float),
+    "magenta": np.array([1.0, 0.0, 1.0], dtype=float),
+    "red": np.array([1.0, 0.0, 0.0], dtype=float),
+    "cyan": np.array([0.0, 1.0, 1.0], dtype=float),
+    "black": np.array([0.0, 0.0, 0.0], dtype=float),
+}
+
+
+def _hdr_light_color(name: Any) -> np.ndarray:
+    normalized = param_format(name)
+    return _HDR_LIGHTS_COLOR_MAP.get(normalized, _HDR_LIGHTS_COLOR_MAP["white"]).copy()
+
+
+def _draw_filled_circle(image: np.ndarray, center_x: float, center_y: float, radius_px: float, color: np.ndarray) -> None:
+    rows, cols = image.shape[:2]
+    yy, xx = np.ogrid[:rows, :cols]
+    mask = (xx - float(center_x)) ** 2 + (yy - float(center_y)) ** 2 <= float(radius_px) ** 2
+    image[mask] = color.reshape(1, 3)
+
+
+def _draw_filled_rectangle(
+    image: np.ndarray,
+    left: float,
+    top: float,
+    width: float,
+    height: float,
+    color: np.ndarray,
+) -> None:
+    rows, cols = image.shape[:2]
+    x0 = int(np.clip(np.rint(left), 0, cols))
+    y0 = int(np.clip(np.rint(top), 0, rows))
+    x1 = int(np.clip(np.rint(left + width), 0, cols))
+    y1 = int(np.clip(np.rint(top + height), 0, rows))
+    if x1 <= x0:
+        x1 = min(x0 + 1, cols)
+    if y1 <= y0:
+        y1 = min(y0 + 1, rows)
+    image[y0:y1, x0:x1, :] = color.reshape(1, 1, 3)
+
+
+def _hdr_lights_parameters(value: Any | None) -> dict[str, Any]:
+    normalized = _normalized_parameter_dict(value)
+    return {
+        "imagesize": max(int(np.rint(normalized.get("imagesize", 384))), 1),
+        "ncircles": max(int(np.rint(normalized.get("ncircles", 4))), 1),
+        "radius": np.asarray(normalized.get("radius", [0.01, 0.035, 0.07, 0.1]), dtype=float).reshape(-1),
+        "circlecolors": list(normalized.get("circlecolors", ["white", "green", "blue", "yellow", "magenta", "white"])),
+        "nlines": max(int(np.rint(normalized.get("nlines", 4))), 1),
+        "linelength": float(normalized.get("linelength", 0.02)),
+        "linecolors": list(normalized.get("linecolors", ["white", "green", "blue", "yellow", "magenta", "white"])),
+    }
+
+
+def _hdr_lights_scene(params: dict[str, Any], *, asset_store: AssetStore) -> Scene:
+    im_size = int(params["imagesize"])
+    image = np.zeros((im_size, im_size, 3), dtype=float)
+
+    n_circles = int(params["ncircles"])
+    radii = np.asarray(params["radius"], dtype=float).reshape(-1)
+    if radii.size == 1:
+        radii = np.repeat(radii, n_circles)
+    elif radii.size < n_circles:
+        radii = np.pad(radii, (0, n_circles - radii.size), mode="edge")
+    y_circle = int(np.rint(im_size * 0.25))
+    x_circle = np.rint(np.linspace(0.2, 0.8, n_circles) * im_size).astype(int)
+    for index, x_value in enumerate(x_circle):
+        color_index = (index + 1) % max(len(params["circlecolors"]), 1)
+        _draw_filled_circle(
+            image,
+            float(x_value),
+            float(y_circle),
+            float(radii[index] * im_size),
+            _hdr_light_color(params["circlecolors"][color_index]),
+        )
+
+    n_lines = int(params["nlines"])
+    line_length = int(np.rint(float(params["linelength"]) * im_size))
+    hw = np.rint(
+        np.array(
+            [
+                [1.0, 7.0 * line_length],
+                [1.0, 3.0 * line_length],
+                [3.0 * line_length, 1.0],
+                [8.0 * line_length, 1.0],
+            ],
+            dtype=float,
+        )
+    ).astype(int)
+    if n_lines > hw.shape[0]:
+        hw = np.vstack((hw, np.repeat(hw[-1:, :], n_lines - hw.shape[0], axis=0)))
+    y_line = int(np.rint(im_size * 0.5))
+    x_line = np.rint(np.linspace(0.1, 0.8, n_lines) * im_size).astype(int)
+    for index, x_value in enumerate(x_line):
+        color_index = (index + 1) % max(len(params["linecolors"]), 1)
+        _draw_filled_rectangle(
+            image,
+            float(x_value),
+            float(y_line),
+            float(hw[index, 0]),
+            float(hw[index, 1]),
+            _hdr_light_color(params["linecolors"][color_index]),
+        )
+
+    y_square = int(np.rint(im_size * 0.75))
+    x_square = np.rint(np.linspace(0.1, 0.7, 3) * im_size).astype(int)
+    square_edge = float(im_size) / 64.0
+    square_sizes = np.array([[2.0, 2.0], [5.0, 5.0], [9.0, 9.0]], dtype=float) * square_edge
+    for index, x_value in enumerate(x_square):
+        _draw_filled_rectangle(
+            image,
+            float(x_value),
+            float(y_square),
+            float(square_sizes[index, 0]),
+            float(square_sizes[index, 1]),
+            _HDR_LIGHTS_COLOR_MAP["white"],
+        )
+
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    scene = scene_from_file(image, "rgb", 1.0e5, None, wave, asset_store=asset_store)
+    background = scene_create("uniform", im_size, wave, asset_store=asset_store)
+    background = scene_adjust_luminance(background, 1.0e-2, asset_store=asset_store)
+    scene = scene_set(
+        scene,
+        "photons",
+        np.asarray(scene_get(scene, "photons"), dtype=float) + np.asarray(scene_get(background, "photons"), dtype=float),
+    )
+    scene.name = "hdr lights"
+    scene.fields["illuminant_comment"] = "hdr lights"
+    return scene
+
+
 def _normalized_parameter_dict(value: Any) -> dict[str, Any]:
     if value is None:
         return {}
@@ -1493,6 +1628,10 @@ def scene_create(
         wavelength = args[0] if len(args) > 0 else 500.0
         size = args[1] if len(args) > 1 else 128
         return track_session_object(session, _uniform_monochromatic_scene(size, wavelength, asset_store=store))
+
+    if name in {"hdrlights", "highdynamicrange", "hdr"}:
+        params = _hdr_lights_parameters(args[0] if len(args) > 0 else None)
+        return track_session_object(session, _hdr_lights_scene(params, asset_store=store))
 
     if name in {"reflectancechart", "reflectance"}:
         if args and isinstance(args[0], dict):
