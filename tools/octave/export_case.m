@@ -860,6 +860,79 @@ switch case_name
         payload.bottom_source_reflectance = squeeze(mean(mean(source_reflectance(bottom_rows, :, :), 1), 2));
         payload.mixed_mean_luminance = sceneGet(s, 'mean luminance');
 
+    case 'scene_illuminant_space_small'
+        scene = sceneCreate('frequency orientation');
+        wave = sceneGet(scene, 'wave');
+        illP = sceneGet(scene, 'illuminant photons');
+        scene = sceneIlluminantSS(scene);
+
+        illPhotons = sceneGet(scene, 'illuminant photons');
+        [r, c, w] = size(illPhotons);
+        cTemp = linspace(6500, 3000, r);
+        spd = blackbody(wave, cTemp, 'photons');
+
+        for rr = 1:r
+            illPhotons(rr, :, :) = squeeze(illPhotons(rr, :, :)) * diag((spd(:, rr) ./ illP(:)));
+        end
+
+        source_reflectance = sceneGet(scene, 'reflectance');
+        row_scene = sceneSet(scene, 'photons', source_reflectance .* illPhotons);
+        row_scene = sceneSet(row_scene, 'illuminant photons', illPhotons);
+        row_energy = sceneGet(row_scene, 'illuminant energy');
+        row_reflectance = sceneGet(row_scene, 'reflectance');
+
+        cc = 1:c;
+        col_scale = 1 + 0.5 * sin(2 * pi * (cc / c));
+        col_illuminant = sceneGet(row_scene, 'illuminant photons');
+        for col_idx = 1:c
+            col_illuminant(:, col_idx, :) = squeeze(col_illuminant(:, col_idx, :)) * col_scale(col_idx);
+        end
+
+        col_scene = sceneSet(row_scene, 'photons', row_reflectance .* col_illuminant);
+        col_scene = sceneSet(col_scene, 'illuminant photons', col_illuminant);
+        col_energy = sceneGet(col_scene, 'illuminant energy');
+        col_reflectance = sceneGet(col_scene, 'reflectance');
+
+        rr = 1:r;
+        row_scale = 1 + 0.5 * sin(2 * pi * (rr / r));
+        row_bug_scale = row_scale(c);
+        final_illuminant = sceneGet(col_scene, 'illuminant photons') * row_bug_scale;
+        final_scene = sceneSet(col_scene, 'illuminant photons', final_illuminant);
+        final_scene = sceneSet(final_scene, 'photons', col_reflectance .* final_illuminant);
+        final_energy = sceneGet(final_scene, 'illuminant energy');
+
+        top_count = max(1, floor(r / 8));
+        top_rows = 1:top_count;
+        mid_start = max(1, floor(r / 2 - floor(r / 16)));
+        mid_stop = min(r, mid_start + top_count - 1);
+        mid_rows = mid_start:mid_stop;
+        bottom_rows = (r - top_count + 1):r;
+        [~, center_wave_idx] = min(abs(wave - 550));
+
+        col_profile = squeeze(mean(col_energy(:, :, center_wave_idx), 1));
+        col_profile_norm = col_profile / max(col_profile(:));
+        col_scale_norm = col_scale(:) / max(col_scale(:));
+        final_profile = squeeze(mean(final_energy(:, :, center_wave_idx), 1));
+        final_profile_norm = final_profile / max(final_profile(:));
+
+        payload.wave = wave;
+        payload.scene_size = [r, c];
+        payload.initial_illuminant_photons = illP;
+        payload.spatial_spectral_shape = [r, c, w];
+        payload.row_cct_k = cTemp(:);
+        payload.row_top_illuminant_energy = squeeze(mean(mean(row_energy(top_rows, :, :), 1), 2));
+        payload.row_mid_illuminant_energy = squeeze(mean(mean(row_energy(mid_rows, :, :), 1), 2));
+        payload.row_bottom_illuminant_energy = squeeze(mean(mean(row_energy(bottom_rows, :, :), 1), 2));
+        payload.source_mean_reflectance = squeeze(mean(mean(source_reflectance, 1), 2));
+        payload.row_mean_reflectance = squeeze(mean(mean(row_reflectance, 1), 2));
+        payload.col_scale = col_scale(:);
+        payload.col_scale_norm = col_scale_norm;
+        payload.col_center_wave_profile_norm = col_profile_norm(:);
+        payload.col_mean_reflectance = squeeze(mean(mean(col_reflectance, 1), 2));
+        payload.row_bug_scale = row_bug_scale;
+        payload.final_center_wave_profile_norm = final_profile_norm(:);
+        payload.final_mean_luminance = sceneGet(final_scene, 'mean luminance');
+
     case 'display_create_lcd_example'
         d = displayCreate('lcdExample.mat');
         payload.wave = displayGet(d, 'wave');

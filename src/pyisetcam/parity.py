@@ -997,6 +997,81 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "scene_illuminant_space_small":
+        scene = scene_create("frequency orientation", asset_store=store)
+        wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+        illuminant_photons_1d = np.asarray(scene_get(scene, "illuminant photons"), dtype=float).reshape(-1)
+        scene = scene_illuminant_ss(scene)
+
+        illuminant_photons = np.asarray(scene_get(scene, "illuminant photons"), dtype=float)
+        rows, cols, nwave = illuminant_photons.shape
+        c_temp = np.linspace(6500.0, 3000.0, rows, dtype=float)
+        spd = np.asarray(blackbody(wave, c_temp, kind="quanta"), dtype=float)
+        row_ratio = (spd.T / np.maximum(illuminant_photons_1d.reshape(1, nwave), 1e-12)).reshape(rows, 1, nwave)
+        row_illuminant = illuminant_photons * row_ratio
+        source_reflectance = np.asarray(scene_get(scene, "reflectance"), dtype=float)
+
+        row_scene = scene.clone()
+        row_scene = scene_set(row_scene, "photons", source_reflectance * row_illuminant)
+        row_scene = scene_set(row_scene, "illuminant photons", row_illuminant)
+        row_energy = np.asarray(scene_get(row_scene, "illuminant energy"), dtype=float)
+        row_reflectance = np.asarray(scene_get(row_scene, "reflectance"), dtype=float)
+
+        col_indices = np.arange(1.0, cols + 1.0, dtype=float)
+        col_scale = 1.0 + 0.5 * np.sin(2.0 * np.pi * (col_indices / cols))
+        col_illuminant = np.asarray(scene_get(row_scene, "illuminant photons"), dtype=float) * col_scale.reshape(1, cols, 1)
+        col_scene = row_scene.clone()
+        col_scene = scene_set(col_scene, "photons", row_reflectance * col_illuminant)
+        col_scene = scene_set(col_scene, "illuminant photons", col_illuminant)
+        col_energy = np.asarray(scene_get(col_scene, "illuminant energy"), dtype=float)
+        col_reflectance = np.asarray(scene_get(col_scene, "reflectance"), dtype=float)
+
+        row_indices = np.arange(1.0, rows + 1.0, dtype=float)
+        row_scale = 1.0 + 0.5 * np.sin(2.0 * np.pi * (row_indices / rows))
+        row_bug_scale = float(row_scale[cols - 1])
+        final_illuminant = np.asarray(scene_get(col_scene, "illuminant photons"), dtype=float) * row_bug_scale
+        final_scene = col_scene.clone()
+        final_scene = scene_set(final_scene, "illuminant photons", final_illuminant)
+        final_scene = scene_set(final_scene, "photons", col_reflectance * final_illuminant)
+        final_energy = np.asarray(scene_get(final_scene, "illuminant energy"), dtype=float)
+
+        top_band = slice(0, max(1, rows // 8))
+        mid_start = max(0, rows // 2 - max(1, rows // 16))
+        mid_stop = min(rows, mid_start + max(1, rows // 8))
+        mid_band = slice(mid_start, mid_stop)
+        bottom_band = slice(rows - max(1, rows // 8), rows)
+        center_wave_idx = int(np.argmin(np.abs(wave - 550.0)))
+
+        col_profile = np.mean(col_energy[:, :, center_wave_idx], axis=0)
+        final_profile = np.mean(final_energy[:, :, center_wave_idx], axis=0)
+        col_profile_norm = col_profile / max(float(np.max(col_profile)), 1e-12)
+        final_profile_norm = final_profile / max(float(np.max(final_profile)), 1e-12)
+        col_scale_norm = col_scale / max(float(np.max(col_scale)), 1e-12)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "scene_size": np.array([rows, cols], dtype=int),
+                "initial_illuminant_photons": illuminant_photons_1d,
+                "spatial_spectral_shape": np.array([rows, cols, nwave], dtype=int),
+                "row_cct_k": c_temp,
+                "row_top_illuminant_energy": np.mean(row_energy[top_band, :, :], axis=(0, 1)),
+                "row_mid_illuminant_energy": np.mean(row_energy[mid_band, :, :], axis=(0, 1)),
+                "row_bottom_illuminant_energy": np.mean(row_energy[bottom_band, :, :], axis=(0, 1)),
+                "source_mean_reflectance": np.mean(source_reflectance, axis=(0, 1)),
+                "row_mean_reflectance": np.mean(row_reflectance, axis=(0, 1)),
+                "col_scale": col_scale,
+                "col_scale_norm": col_scale_norm,
+                "col_center_wave_profile_norm": col_profile_norm,
+                "col_mean_reflectance": np.mean(col_reflectance, axis=(0, 1)),
+                "row_bug_scale": row_bug_scale,
+                "final_center_wave_profile_norm": final_profile_norm,
+                "final_mean_luminance": float(scene_get(final_scene, "mean luminance", asset_store=store)),
+            },
+            context={},
+        )
+
     if case_name == "display_create_lcd_example":
         display = display_create("lcdExample.mat", asset_store=store)
         return ParityCaseResult(

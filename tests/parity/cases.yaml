@@ -223,6 +223,30 @@
       "atol": 1e-08
     },
     {
+      "name": "scene_illuminant_space_small",
+      "matlab_function": "s_sceneIlluminantSpace",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "source_mean_reflectance": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        },
+        "row_mid_illuminant_energy": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.005
+        },
+        "row_mean_reflectance": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        },
+        "col_mean_reflectance": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        }
+      }
+    },
+    {
       "name": "display_create_lcd_example",
       "matlab_function": "displayCreate",
       "rtol": 1e-05,

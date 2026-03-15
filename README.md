@@ -10,6 +10,7 @@
 - and now also MATLAB-style `daylight(...)` plus curated Octave parity on the `s_sceneDaylight.m` daylight-SPD and daylight-basis workflow
 - and now also headless `illuminantCreate/Get/Set` plus curated Octave parity on the `s_sceneIlluminant.m` illuminant-structure workflow
 - and now also headless `sceneIlluminantSS(...)`, spatial-spectral `sceneAdjustIlluminant(...)`, and `sceneCreate('macbeth tungsten')` coverage plus curated Octave parity on the `s_sceneIlluminantMixtures.m` mixed-illuminant workflow
+- and now also curated Octave parity on the `s_sceneIlluminantSpace.m` spatial-spectral illuminant workflow, covering the row-temperature gradient and the column-harmonic illuminant modulation path
 
 ## Status
 
