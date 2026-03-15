@@ -779,6 +779,69 @@ switch case_name
         payload.edge_line_long_lux = real(illuminance_long(20, :));
         payload.mean_illuminance_long_lux = real(mean(illuminance_long(:)));
 
+    case 'optics_diffraction_small'
+        scene = sceneCreate('point array');
+        scene = sceneSet(scene, 'h fov', 1);
+
+        oi = oiCreate;
+        oi = oiCompute(oi, scene);
+        defaultFNumber = double(oiGet(oi, 'optics f number'));
+        defaultSize = double(oiGet(oi, 'size'));
+
+        oi = oiSet(oi, 'name', 'Default f/#');
+        oi = oiSet(oi, 'optics fnumber', 12);
+        oi = oiSet(oi, 'name', 'Large f/#');
+        oi = oiCompute(oi, scene);
+
+        psfData = opticsGet(oiGet(oi, 'optics'), 'psf data', 550, 'um');
+        optics = oiGet(oi, 'optics');
+        units = 'um';
+        wavelength = opticsGet(optics, 'wavelength');
+        inCutoff = opticsGet(optics, 'inCutoff', units);
+        peakF = 3 * max(inCutoff);
+        middleSamps = 40;
+        deltaSpace = 1 / (2 * peakF);
+        nSamp = 100;
+        fSamp = (-nSamp:(nSamp - 1)) / nSamp;
+        [fX, fY] = meshgrid(fSamp, fSamp);
+        fSupport(:, :, 1) = fX * peakF;
+        fSupport(:, :, 2) = fY * peakF;
+        otf = dlMTF(oi, fSupport, wavelength, units);
+        tmp = otf(1, :, 1);
+        lsf = fftshift(ifft(tmp));
+        lsTemplate = getMiddleMatrix(lsf, middleSamps);
+        lsWave = zeros(numel(wavelength), numel(lsTemplate));
+        lsWave(1, :) = lsTemplate;
+        for ii = 2:numel(wavelength)
+            tmp = otf(1, :, ii);
+            lsf = fftshift(ifft(tmp));
+            lsWave(ii, :) = getMiddleMatrix(lsf, middleSamps);
+        end
+        lsWave = abs(lsWave);
+        X = (-nSamp:(nSamp - 1)) * deltaSpace;
+        X = getMiddleMatrix(X, middleSamps);
+        photons = double(oiGet(oi, 'photons'));
+        oiWave = double(oiGet(oi, 'wave')(:));
+        [~, waveIndex550] = min(abs(oiWave - 550));
+        centerRow = local_channel_normalize(squeeze(photons(floor(size(photons, 1) / 2) + 1, :, waveIndex550)));
+
+        payload.scene_wave = double(sceneGet(scene, 'wave')(:));
+        payload.scene_fov_deg = double(sceneGet(scene, 'fov'));
+        payload.default_f_number = defaultFNumber;
+        payload.default_oi_size = double(defaultSize(:));
+        payload.large_f_number = double(oiGet(oi, 'optics f number'));
+        payload.large_oi_size = double(oiGet(oi, 'size')(:));
+        payload.focal_length_mm = double(oiGet(oi, 'optics focal length', 'mm'));
+        payload.pupil_diameter_mm = double(oiGet(oi, 'optics pupil diameter', 'mm'));
+        payload.focal_to_pupil_ratio = double(payload.focal_length_mm / payload.pupil_diameter_mm);
+        payload.psf_x = double(psfData.xy(:, :, 1));
+        payload.psf_y = double(psfData.xy(:, :, 2));
+        payload.psf_550 = double(psfData.psf);
+        payload.ls_x_um = double(X(:));
+        payload.ls_wavelength = double(wavelength(:));
+        payload.ls_wave = double(lsWave);
+        payload.oi_center_row_550_widths = local_profile_widths(centerRow, [0.50 0.10 0.01]);
+
     case 'oi_pad_crop_small'
         scene = sceneCreate('sweep frequency');
         oi = oiCreate;

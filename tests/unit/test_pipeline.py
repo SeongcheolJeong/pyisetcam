@@ -2964,6 +2964,25 @@ def test_optics_coc_small_parity_case(asset_store) -> None:
     assert np.all(payload["circ_f8_focus_3_mm"] >= 0.0)
 
 
+def test_optics_diffraction_small_parity_case(asset_store) -> None:
+    payload = run_python_case("optics_diffraction_small", asset_store=asset_store)
+
+    assert np.array_equal(payload["scene_wave"], np.arange(400.0, 701.0, 10.0, dtype=float))
+    assert np.isclose(float(payload["scene_fov_deg"]), 1.0)
+    assert np.isclose(float(payload["default_f_number"]), 4.0)
+    assert np.array_equal(payload["default_oi_size"], np.array([160, 160], dtype=int))
+    assert np.isclose(float(payload["large_f_number"]), 12.0)
+    assert np.array_equal(payload["large_oi_size"], np.array([160, 160], dtype=int))
+    assert float(payload["focal_length_mm"]) > 0.0
+    assert float(payload["pupil_diameter_mm"]) > 0.0
+    assert np.isclose(float(payload["focal_to_pupil_ratio"]), 12.0)
+    assert payload["psf_550"].shape == payload["psf_x"].shape == payload["psf_y"].shape
+    assert payload["ls_x_um"].shape == (41,)
+    assert np.array_equal(payload["ls_wavelength"], np.arange(400.0, 701.0, 10.0, dtype=float))
+    assert payload["ls_wave"].shape == (31, 41)
+    assert payload["oi_center_row_550_widths"].shape == (3,)
+
+
 def test_optics_defocus_displacement_small_parity_case(asset_store) -> None:
     payload = run_python_case("optics_defocus_displacement_small", asset_store=asset_store)
 
@@ -5674,6 +5693,34 @@ def test_run_python_case_supports_oi_cos4th_small_parity_case(asset_store) -> No
     assert case.payload["edge_line_long_lux"].shape == case.payload["pos_long_um"].shape
     assert float(case.payload["mean_illuminance_default_lux"]) > 0.0
     assert float(case.payload["mean_illuminance_long_lux"]) > 0.0
+
+
+def test_optics_diffraction_script_workflow(asset_store) -> None:
+    scene = scene_create("point array", asset_store=asset_store)
+    scene = scene_set(scene, "h fov", 1.0)
+
+    oi = oi_create(asset_store=asset_store)
+    oi = oi_compute(oi, scene)
+
+    assert np.isclose(float(scene_get(scene, "fov")), 1.0)
+    assert np.isclose(float(oi_get(oi, "optics f number")), 4.0)
+    assert np.array_equal(np.asarray(oi_get(oi, "size"), dtype=int), np.array([160, 160], dtype=int))
+
+    oi = oi_set(oi, "optics fnumber", 12.0)
+    oi = oi_compute(oi, scene)
+
+    psf_udata, _ = oi_plot(oi, "psf 550")
+    ls_udata, _ = oi_plot(oi, "ls wavelength")
+    focal_length_mm = float(oi_get(oi, "optics focal length", "mm"))
+    pupil_diameter_mm = float(oi_get(oi, "optics pupil diameter", "mm"))
+
+    assert np.isclose(float(oi_get(oi, "optics f number")), 12.0)
+    assert np.array_equal(np.asarray(oi_get(oi, "size"), dtype=int), np.array([160, 160], dtype=int))
+    assert np.isclose(focal_length_mm / pupil_diameter_mm, 12.0)
+    assert np.asarray(psf_udata["psf"]).shape == np.asarray(psf_udata["x"]).shape == np.asarray(psf_udata["y"]).shape
+    assert np.asarray(ls_udata["x"]).shape == (41,)
+    assert np.asarray(ls_udata["wavelength"]).shape == (31,)
+    assert np.asarray(ls_udata["lsWave"]).shape == (31, 41)
 
 
 def test_run_python_case_supports_oi_pad_crop_small_parity_case(asset_store) -> None:

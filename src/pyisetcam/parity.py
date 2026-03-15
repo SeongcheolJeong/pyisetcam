@@ -3511,6 +3511,58 @@ def run_python_case_with_context(
             context={"scene": scene, "oi": oi},
         )
 
+    if case_name == "optics_diffraction_small":
+        scene = scene_create("point array", asset_store=store)
+        scene = scene_set(scene, "h fov", 1.0)
+
+        oi = oi_create(asset_store=store)
+        oi = oi_compute(oi, scene)
+        default_f_number = float(oi_get(oi, "optics f number"))
+        default_size = np.asarray(oi_get(oi, "size"), dtype=int).reshape(-1)
+
+        oi = oi_set(oi, "name", "Default f/#")
+        oi = oi_set(oi, "optics fnumber", 12.0)
+        oi = oi_set(oi, "name", "Large f/#")
+        oi = oi_compute(oi, scene)
+
+        psf_udata, _ = oi_plot(oi, "psf 550")
+        ls_udata, _ = oi_plot(oi, "ls wavelength")
+        photons = np.asarray(oi_get(oi, "photons"), dtype=float)
+        wave = np.asarray(oi_get(oi, "wave"), dtype=float).reshape(-1)
+        wave_index_550 = int(np.argmin(np.abs(wave - 550.0)))
+        center_row = _channel_normalize(photons[photons.shape[0] // 2, :, wave_index_550])
+        peak = max(float(np.max(center_row)), 1e-12)
+        oi_center_row_550_widths = []
+        for threshold in (0.50, 0.10, 0.01):
+            active = np.flatnonzero(center_row >= (threshold * peak))
+            oi_center_row_550_widths.append(int(active[-1] - active[0] + 1) if active.size else 0)
+
+        focal_length_mm = float(oi_get(oi, "optics focal length", "mm"))
+        pupil_diameter_mm = float(oi_get(oi, "optics pupil diameter", "mm"))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_wave": np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1),
+                "scene_fov_deg": float(scene_get(scene, "fov")),
+                "default_f_number": default_f_number,
+                "default_oi_size": default_size,
+                "large_f_number": float(oi_get(oi, "optics f number")),
+                "large_oi_size": np.asarray(oi_get(oi, "size"), dtype=int).reshape(-1),
+                "focal_length_mm": focal_length_mm,
+                "pupil_diameter_mm": pupil_diameter_mm,
+                "focal_to_pupil_ratio": focal_length_mm / max(pupil_diameter_mm, 1e-12),
+                "psf_x": np.asarray(psf_udata["x"], dtype=float),
+                "psf_y": np.asarray(psf_udata["y"], dtype=float),
+                "psf_550": np.asarray(psf_udata["psf"], dtype=float),
+                "ls_x_um": np.asarray(ls_udata["x"], dtype=float),
+                "ls_wavelength": np.asarray(ls_udata["wavelength"], dtype=float),
+                "ls_wave": np.asarray(ls_udata["lsWave"], dtype=float),
+                "oi_center_row_550_widths": np.asarray(oi_center_row_550_widths, dtype=int),
+            },
+            context={"scene": scene, "oi": oi},
+        )
+
     if case_name == "oi_pad_crop_small":
         scene = scene_create("sweep frequency", asset_store=store)
         oi = oi_compute(oi_create(), scene)

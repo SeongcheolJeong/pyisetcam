@@ -1263,6 +1263,12 @@
       }
     },
     {
+      "name": "optics_diffraction_small",
+      "matlab_function": "s_opticsDiffraction",
+      "rtol": 1e-04,
+      "atol": 1e-06
+    },
+    {
       "name": "oi_pad_crop_small",
       "matlab_function": "s_opticsPadCrop",
       "rtol": 1e-05,

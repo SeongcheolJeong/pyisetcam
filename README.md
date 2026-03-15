@@ -432,6 +432,12 @@ line scene.
 That same diffraction plotting surface now also includes direct
 `oiPlot(..., 'psf', [], 550)` parity coverage for the upstream
 `s_opticsDLPsf.m` workflow.
+That same diffraction plotting surface now also includes the script-level
+`s_opticsDiffraction.m` workflow, with direct Octave parity on the
+default-to-`f/12` diffraction-limited point-array path, including the
+unit-aware `oiGet(..., 'optics focal length'/'optics pupil diameter',
+...)` parameter checks, the returned `psf 550` surface, the
+`ls wavelength` payload, and stable 550 nm image-blur width summaries.
 That same diffraction plotting surface now also includes direct
 `oiPlot(..., 'psf xaxis', [], 550, 'um')` parity coverage for the
 upstream diffraction and WVF spatial scripts.

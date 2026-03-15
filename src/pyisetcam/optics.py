@@ -6423,11 +6423,16 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
     if key == "optics":
         return _export_optics(oi.fields["optics"])
     if key in {"focallength", "opticsfocallength"}:
-        return float(oi.fields["optics"]["focal_length_m"])
+        return float(oi.fields["optics"]["focal_length_m"]) * _spatial_unit_scale(args[0] if args else None)
     if key in {"fnumber", "opticsfnumber"}:
         if param_format(oi.fields["optics"].get("model", "")) == "raytrace":
             return float(oi.fields["optics"].get("raytrace", {}).get("f_number", oi.fields["optics"]["f_number"]))
         return float(oi.fields["optics"]["f_number"])
+    if key in {"pupildiameter", "pupilsize", "pdiameter", "opticspupildiameter", "opticspupilsize", "opticspdiameter"}:
+        optics = oi.fields["optics"]
+        f_number = float(oi_get(oi, "fnumber"))
+        pupil_m = float(optics["focal_length_m"]) / max(f_number, 1.0e-12)
+        return pupil_m * _spatial_unit_scale(args[0] if args else None)
     if key in {"aperturediameter", "opticsaperturediameter"}:
         optics = oi.fields["optics"]
         f_number = float(oi_get(oi, "fnumber"))
