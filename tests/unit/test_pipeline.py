@@ -1723,6 +1723,25 @@ def test_optics_rt_psf_script_workflow(asset_store) -> None:
     assert np.isclose(float(oi_get(oi_dl, "fnumber")), 3.9999784)
 
 
+def test_optics_rt_psf_view_script_workflow(asset_store) -> None:
+    scene = scene_create("point array", 384, asset_store=asset_store)
+    scene = scene_set(scene, "h fov", 4.0)
+    scene = scene_interpolate_w(scene, np.arange(550.0, 651.0, 100.0, dtype=float))
+
+    oi = oi_create(asset_store=asset_store)
+    oi = oi_set(oi, "optics", rt_synthetic(oi, spread_limits=(1.0, 5.0), xy_ratio=1.6))
+    oi = oi_compute(oi, scene)
+
+    sampled_rt_psf = np.asarray(oi_get(oi, "sampledRTpsf"), dtype=object)
+    assert np.array_equal(np.asarray(scene_get(scene, "wave"), dtype=float), np.array([550.0, 650.0], dtype=float))
+    assert np.isclose(float(scene_get(scene, "fov")), 4.0)
+    assert np.array_equal(np.asarray(oi_get(oi, "size"), dtype=int), np.array([448, 448], dtype=int))
+    assert np.array_equal(np.asarray(oi_get(oi, "psf sample angles"), dtype=float), np.arange(0.0, 361.0, 10.0))
+    assert np.allclose(np.asarray(oi_get(oi, "psf image heights", "mm"), dtype=float), np.array([0.0, 0.05, 0.1, 0.15], dtype=float))
+    assert np.array_equal(np.asarray(oi_get(oi, "psf wavelength"), dtype=float), np.array([550.0, 650.0], dtype=float))
+    assert sampled_rt_psf.shape == (37, 4, 2)
+
+
 def test_rt_file_names_matches_zemax_naming(tmp_path) -> None:
     di_name, ri_name, psf_name_list, cra_name = rt_file_names(
         "CookeLens.ZMX",
@@ -3085,6 +3104,27 @@ def test_optics_rt_psf_small_parity_case(asset_store) -> None:
     assert payload["dl_mean_photons_by_wave"].shape == (3,)
     assert payload["dl_max_photons_by_wave"].shape == (3,)
     assert np.array_equal(payload["dl_center_row_550_widths"], np.array([100, 111, 129], dtype=int))
+
+
+def test_optics_rt_psf_view_small_parity_case(asset_store) -> None:
+    payload = run_python_case("optics_rt_psf_view_small", asset_store=asset_store)
+
+    assert np.array_equal(payload["scene_wave"], np.array([550.0, 650.0], dtype=float))
+    assert np.isclose(float(payload["scene_fov_deg"]), 4.0)
+    assert np.array_equal(payload["oi_size"], np.array([448, 448], dtype=int))
+    assert np.array_equal(payload["psf_sample_angles_deg"], np.arange(0.0, 361.0, 10.0))
+    assert np.allclose(payload["psf_image_heights_mm"], np.array([0.0, 0.05, 0.1, 0.15], dtype=float))
+    assert np.array_equal(payload["psf_wavelength"], np.array([550.0, 650.0], dtype=float))
+    assert np.array_equal(payload["sampled_rt_psf_shape"], np.array([37, 4, 2], dtype=int))
+    assert payload["field_height_psf_mid_rows_550_norm"].shape == (4, 129)
+    assert np.array_equal(payload["field_height_psf_widths_10pct"], np.array([18, 22, 24, 28], dtype=int))
+    assert payload["angle_sweep_edge_psf_mid_rows_550_norm"].shape == (37, 129)
+    assert np.array_equal(
+        np.unique(payload["angle_sweep_edge_psf_widths_10pct"]),
+        np.array([28, 30, 31, 34, 37, 41, 45, 46, 50, 52], dtype=int),
+    )
+    assert payload["center_rtplot_psf_mid_row_550_norm"].shape == (129,)
+    assert payload["edge_rtplot_psf_mid_row_550_norm"].shape == (129,)
 
 
 def test_optics_defocus_scene_small_parity_case(asset_store) -> None:

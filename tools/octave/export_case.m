@@ -1487,6 +1487,57 @@ switch case_name
         payload.dl_max_photons_by_wave = squeeze(max(max(dlPhotons, [], 1), [], 2));
         payload.dl_center_row_550_widths = local_profile_widths(local_canonical_profile(dlCenterRow, 129), [0.50 0.10 0.01]);
 
+    case 'optics_rt_psf_view_small'
+        scene = sceneCreate('point array', 384);
+        scene = sceneSet(scene, 'h fov', 4);
+        scene = sceneInterpolateW(scene, 550:100:650);
+
+        oi = oiCreate;
+        rtOptics = [];
+        spreadLimits = [1 5];
+        xyRatio = 1.6;
+        rtOptics = rtSynthetic(oi, rtOptics, spreadLimits, xyRatio);
+        oi = oiSet(oi, 'optics', rtOptics);
+        scene = sceneSet(scene, 'distance', oiGet(oi, 'optics rtObjectDistance', 'm'));
+        ieAddObject(scene);
+        oi = oiCompute(oi, scene);
+
+        svPSF = oiGet(oi, 'psf struct');
+        sampledRTpsf = oiGet(oi, 'sampledRTpsf');
+        fieldHeightRows = zeros(size(sampledRTpsf, 2), 129);
+        fieldHeightWidths = zeros(size(sampledRTpsf, 2), 1);
+        for ii = 1:size(sampledRTpsf, 2)
+            psf = double(sampledRTpsf{1, ii, 1});
+            row = local_channel_normalize(psf(floor(size(psf, 1) / 2) + 1, :));
+            canonical = local_canonical_profile(row, 129);
+            fieldHeightRows(ii, :) = canonical(:)';
+            fieldHeightWidths(ii) = sum(canonical >= (0.10 * max(canonical(:))));
+        end
+
+        angleRows = zeros(size(sampledRTpsf, 1), 129);
+        angleWidths = zeros(size(sampledRTpsf, 1), 1);
+        for ii = 1:size(sampledRTpsf, 1)
+            psf = double(sampledRTpsf{ii, end, 1});
+            row = local_channel_normalize(psf(floor(size(psf, 1) / 2) + 1, :));
+            canonical = local_canonical_profile(row, 129);
+            angleRows(ii, :) = canonical(:)';
+            angleWidths(ii) = sum(canonical >= (0.10 * max(canonical(:))));
+        end
+
+        payload.scene_wave = double(sceneGet(scene, 'wave')(:));
+        payload.scene_fov_deg = double(sceneGet(scene, 'fov'));
+        payload.oi_size = double(oiGet(oi, 'size'));
+        payload.psf_sample_angles_deg = double(oiGet(oi, 'psf sample angles')(:));
+        payload.psf_image_heights_mm = double(oiGet(oi, 'psf image heights', 'mm')(:));
+        payload.psf_wavelength = double(oiGet(oi, 'psf wavelength')(:));
+        payload.sampled_rt_psf_shape = double(size(sampledRTpsf));
+        payload.field_height_psf_mid_rows_550_norm = fieldHeightRows;
+        payload.field_height_psf_widths_10pct = fieldHeightWidths;
+        payload.angle_sweep_edge_psf_mid_rows_550_norm = angleRows;
+        payload.angle_sweep_edge_psf_widths_10pct = angleWidths;
+        payload.center_rtplot_psf_mid_row_550_norm = fieldHeightRows(1, :)';
+        payload.edge_rtplot_psf_mid_row_550_norm = fieldHeightRows(end, :)';
+
     case 'optics_defocus_small'
         scene = sceneCreate('disk array', 256, 32, [2, 2]);
         scene = sceneSet(scene, 'fov', 0.5);

@@ -601,6 +601,38 @@
       }
     },
     {
+      "name": "optics_rt_psf_view_small",
+      "matlab_function": "s_opticsRTPSFView",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "field_height_psf_mid_rows_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.18
+        },
+        "field_height_psf_widths_10pct": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.02
+        },
+        "angle_sweep_edge_psf_mid_rows_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.1
+        },
+        "angle_sweep_edge_psf_widths_10pct": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.02
+        },
+        "center_rtplot_psf_mid_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.22
+        },
+        "edge_rtplot_psf_mid_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.14
+        }
+      }
+    },
+    {
       "name": "optics_defocus_small",
       "matlab_function": "s_opticsDefocus",
       "rtol": 1e-05,

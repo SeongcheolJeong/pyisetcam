@@ -1746,6 +1746,62 @@ def run_python_case_with_context(
             context={"scene": scene, "oi": oi, "oi_dl": oi_dl},
         )
 
+    if case_name == "optics_rt_psf_view_small":
+        scene = scene_create("point array", 384, asset_store=store)
+        scene = scene_set(scene, "h fov", 4.0)
+        scene = scene_interpolate_w(scene, np.arange(550.0, 651.0, 100.0, dtype=float))
+
+        def _canonical_profile(values: np.ndarray, samples: int = 129) -> np.ndarray:
+            profile = np.asarray(values, dtype=float).reshape(-1)
+            support = np.linspace(-1.0, 1.0, profile.size, dtype=float)
+            query = np.linspace(-1.0, 1.0, samples, dtype=float)
+            return np.interp(query, support, profile)
+
+        oi = oi_create(asset_store=store)
+        rt_optics = rt_synthetic(oi, spread_limits=(1.0, 5.0), xy_ratio=1.6)
+        oi = oi_set(oi, "optics", rt_optics)
+        scene = scene_set(scene, "distance", oi_get(oi, "optics rtObjectDistance", "m"))
+        oi = oi_compute(oi, scene)
+
+        sampled_rt_psf = np.asarray(oi_get(oi, "sampledRTpsf"), dtype=object)
+        field_height_rows = []
+        field_height_widths = []
+        for height_index in range(sampled_rt_psf.shape[1]):
+            psf = np.asarray(sampled_rt_psf[0, height_index, 0], dtype=float)
+            row = _channel_normalize(psf[psf.shape[0] // 2, :])
+            canonical = _canonical_profile(row)
+            field_height_rows.append(canonical)
+            field_height_widths.append(int(np.count_nonzero(canonical >= (0.10 * max(float(np.max(canonical)), 1e-12)))))
+
+        angle_rows = []
+        angle_widths = []
+        for angle_index in range(sampled_rt_psf.shape[0]):
+            psf = np.asarray(sampled_rt_psf[angle_index, -1, 0], dtype=float)
+            row = _channel_normalize(psf[psf.shape[0] // 2, :])
+            canonical = _canonical_profile(row)
+            angle_rows.append(canonical)
+            angle_widths.append(int(np.count_nonzero(canonical >= (0.10 * max(float(np.max(canonical)), 1e-12)))))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_wave": np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1),
+                "scene_fov_deg": float(scene_get(scene, "fov")),
+                "oi_size": np.asarray(oi_get(oi, "size"), dtype=int),
+                "psf_sample_angles_deg": np.asarray(oi_get(oi, "psf sample angles"), dtype=float).reshape(-1),
+                "psf_image_heights_mm": np.asarray(oi_get(oi, "psf image heights", "mm"), dtype=float).reshape(-1),
+                "psf_wavelength": np.asarray(oi_get(oi, "psf wavelength"), dtype=float).reshape(-1),
+                "sampled_rt_psf_shape": np.asarray(sampled_rt_psf.shape, dtype=int),
+                "field_height_psf_mid_rows_550_norm": np.asarray(field_height_rows, dtype=float),
+                "field_height_psf_widths_10pct": np.asarray(field_height_widths, dtype=int),
+                "angle_sweep_edge_psf_mid_rows_550_norm": np.asarray(angle_rows, dtype=float),
+                "angle_sweep_edge_psf_widths_10pct": np.asarray(angle_widths, dtype=int),
+                "center_rtplot_psf_mid_row_550_norm": np.asarray(field_height_rows[0], dtype=float),
+                "edge_rtplot_psf_mid_row_550_norm": np.asarray(field_height_rows[-1], dtype=float),
+            },
+            context={"scene": scene, "oi": oi},
+        )
+
     if case_name == "optics_defocus_small":
         scene = scene_create("disk array", 256, 32, np.array([2, 2], dtype=int), asset_store=store)
         scene = scene_set(scene, "fov", 0.5)
