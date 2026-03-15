@@ -69,6 +69,7 @@ from pyisetcam import (
     rt_ri_interp,
     rt_sample_heights,
     rt_synthetic,
+    rgb_to_xw_format,
     si_synthetic,
     run_python_case,
     scene_adjust_illuminant,
@@ -115,6 +116,7 @@ from pyisetcam import (
     wvf_set,
     wvf_to_oi,
     wvf_zernike_nm_to_osa_index,
+    xw_to_rgb_format,
     zemax_load,
     zemax_read_header,
 )
@@ -4832,6 +4834,18 @@ def test_run_python_case_supports_scene_illuminant_space_parity_case(asset_store
     assert case.payload["final_center_wave_profile_norm"].shape == case.payload["col_center_wave_profile_norm"].shape
 
 
+def test_run_python_case_supports_scene_xyz_illuminant_transforms_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_xyz_illuminant_transforms_small", asset_store=asset_store)
+
+    assert case.payload["scene_size"].shape == (2,)
+    assert case.payload["xyz_d65_mean_norm"].shape == (3,)
+    assert case.payload["xyz_tungsten_mean_norm"].shape == (3,)
+    assert case.payload["full_transform"].shape == (3, 3)
+    assert case.payload["diagonal_transform"].shape == (3, 3)
+    assert case.payload["predicted_full_rmse_ratio"].shape == (3,)
+    assert case.payload["predicted_diagonal_rmse_ratio"].shape == (3,)
+
+
 def test_run_python_case_supports_frequency_orientation_scene_parity_case(asset_store) -> None:
     case = run_python_case_with_context("scene_frequency_orientation_small", asset_store=asset_store)
 
@@ -7556,6 +7570,40 @@ def test_scene_illuminant_space_script_workflow(asset_store) -> None:
     assert np.isclose(row_bug_scale, 1.0, atol=1e-12, rtol=1e-12)
     assert np.allclose(final_profile_norm, col_profile_norm, atol=1e-6, rtol=1e-6)
     assert np.isfinite(float(scene_get(final_scene, "mean luminance", asset_store=asset_store)))
+
+
+def test_scene_xyz_illuminant_transforms_script_workflow(asset_store) -> None:
+    scene = scene_create("reflectance chart", asset_store=asset_store)
+    scene_d65 = scene_adjust_illuminant(scene.clone(), "D65.mat", asset_store=asset_store)
+    scene_tungsten = scene_adjust_illuminant(scene.clone(), "Tungsten.mat", asset_store=asset_store)
+
+    xyz_d65 = np.asarray(scene_get(scene_d65, "xyz", asset_store=asset_store), dtype=float)
+    xyz_tungsten = np.asarray(scene_get(scene_tungsten, "xyz", asset_store=asset_store), dtype=float)
+    xyz_d65_xw, rows, cols, channels = rgb_to_xw_format(xyz_d65)
+    xyz_tungsten_xw, rows_t, cols_t, channels_t = rgb_to_xw_format(xyz_tungsten)
+
+    full_transform, _, _, _ = np.linalg.lstsq(xyz_tungsten_xw, xyz_d65_xw, rcond=None)
+    diagonal_transform = np.zeros((3, 3), dtype=float)
+    for channel in range(3):
+        diagonal_transform[channel, channel] = np.linalg.lstsq(
+            xyz_tungsten_xw[:, [channel]],
+            xyz_d65_xw[:, channel],
+            rcond=None,
+        )[0][0]
+
+    predicted_full = xyz_tungsten_xw @ full_transform
+    predicted_diagonal = xyz_tungsten_xw @ diagonal_transform
+    reconstructed_xyz = xw_to_rgb_format(xyz_d65_xw, rows, cols)
+
+    assert xyz_d65.shape[-1] == 3
+    assert xyz_tungsten.shape == xyz_d65.shape
+    assert (rows, cols, channels) == xyz_d65.shape
+    assert (rows_t, cols_t, channels_t) == xyz_tungsten.shape
+    assert reconstructed_xyz.shape == xyz_d65.shape
+    assert np.allclose(reconstructed_xyz, xyz_d65, atol=1e-10, rtol=1e-10)
+    assert full_transform.shape == (3, 3)
+    assert diagonal_transform.shape == (3, 3)
+    assert np.all(np.sqrt(np.mean(np.square(predicted_full - xyz_d65_xw), axis=0)) < np.sqrt(np.mean(np.square(predicted_diagonal - xyz_d65_xw), axis=0)))
 
 
 def test_run_python_case_supports_sensor_macbeth_daylight_estimate_small_parity_case(asset_store) -> None:

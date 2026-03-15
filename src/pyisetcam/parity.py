@@ -95,7 +95,16 @@ from .sensor import (
 from .sensor import sensor_snr
 from .sensor import sensor_set_size_to_fov
 from .sensor import signal_current
-from .utils import blackbody, energy_to_quanta, ie_fit_line, ie_mvnrnd, param_format, quanta_to_energy, unit_frequency_list
+from .utils import (
+    blackbody,
+    energy_to_quanta,
+    ie_fit_line,
+    ie_mvnrnd,
+    param_format,
+    quanta_to_energy,
+    rgb_to_xw_format,
+    unit_frequency_list,
+)
 
 
 @dataclass
@@ -1068,6 +1077,46 @@ def run_python_case_with_context(
                 "row_bug_scale": row_bug_scale,
                 "final_center_wave_profile_norm": final_profile_norm,
                 "final_mean_luminance": float(scene_get(final_scene, "mean luminance", asset_store=store)),
+            },
+            context={},
+        )
+
+    if case_name == "scene_xyz_illuminant_transforms_small":
+        scene = scene_create("reflectance chart", asset_store=store)
+        scene_d65 = scene_adjust_illuminant(scene.clone(), "D65.mat", asset_store=store)
+        scene_tungsten = scene_adjust_illuminant(scene.clone(), "Tungsten.mat", asset_store=store)
+
+        xyz_d65 = np.asarray(scene_get(scene_d65, "xyz", asset_store=store), dtype=float)
+        xyz_tungsten = np.asarray(scene_get(scene_tungsten, "xyz", asset_store=store), dtype=float)
+        xyz_d65_xw, rows, cols, _ = rgb_to_xw_format(xyz_d65)
+        xyz_tungsten_xw, _, _, _ = rgb_to_xw_format(xyz_tungsten)
+        xyz_d65_mean = np.mean(xyz_d65_xw, axis=0)
+        xyz_tungsten_mean = np.mean(xyz_tungsten_xw, axis=0)
+
+        full_transform, _, _, _ = np.linalg.lstsq(xyz_tungsten_xw, xyz_d65_xw, rcond=None)
+        diagonal_transform = np.zeros((3, 3), dtype=float)
+        for channel in range(3):
+            diagonal_transform[channel, channel] = np.linalg.lstsq(
+                xyz_tungsten_xw[:, [channel]],
+                xyz_d65_xw[:, channel],
+                rcond=None,
+            )[0][0]
+
+        predicted_full = xyz_tungsten_xw @ full_transform
+        predicted_diagonal = xyz_tungsten_xw @ diagonal_transform
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.array([rows, cols], dtype=int),
+                "xyz_d65_mean_norm": xyz_d65_mean / max(float(np.sum(xyz_d65_mean)), 1e-12),
+                "xyz_tungsten_mean_norm": xyz_tungsten_mean / max(float(np.sum(xyz_tungsten_mean)), 1e-12),
+                "full_transform": full_transform,
+                "diagonal_transform": diagonal_transform,
+                "predicted_full_rmse_ratio": np.sqrt(np.mean(np.square(predicted_full - xyz_d65_xw), axis=0))
+                / np.maximum(xyz_d65_mean, 1e-12),
+                "predicted_diagonal_rmse_ratio": np.sqrt(np.mean(np.square(predicted_diagonal - xyz_d65_xw), axis=0))
+                / np.maximum(xyz_d65_mean, 1e-12),
             },
             context={},
         )

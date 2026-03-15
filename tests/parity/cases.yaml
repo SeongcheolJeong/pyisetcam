@@ -247,6 +247,38 @@
       }
     },
     {
+      "name": "scene_xyz_illuminant_transforms_small",
+      "matlab_function": "s_sceneXYZilluminantTransforms",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "xyz_d65_mean_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.07
+        },
+        "xyz_tungsten_mean_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.07
+        },
+        "full_transform": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "diagonal_transform": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        },
+        "predicted_full_rmse_ratio": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.15
+        },
+        "predicted_diagonal_rmse_ratio": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.08
+        }
+      }
+    },
+    {
       "name": "display_create_lcd_example",
       "matlab_function": "displayCreate",
       "rtol": 1e-05,

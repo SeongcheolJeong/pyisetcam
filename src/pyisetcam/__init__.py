@@ -193,7 +193,16 @@ from .sensor import (
     sensor_set_size_to_fov,
 )
 from .types import Camera, Display, ImageProcessor, OpticalImage, Scene, Sensor, SessionContext
-from .utils import DEFAULT_WAVE, blackbody, ie_fit_line, ie_mvnrnd, ie_parameter_otype, param_format
+from .utils import (
+    DEFAULT_WAVE,
+    blackbody,
+    ie_fit_line,
+    ie_mvnrnd,
+    ie_parameter_otype,
+    param_format,
+    rgb_to_xw_format,
+    xw_to_rgb_format,
+)
 
 __all__ = [
     "AssetStore",
@@ -325,8 +334,12 @@ __all__ = [
     "metricsSPD",
     "metrics_spd",
     "mired_difference",
+    "RGB2XWFormat",
+    "rgb_to_xw_format",
     "spd2cct",
     "spd_to_cct",
+    "XW2RGBFormat",
+    "xw_to_rgb_format",
     "opticsBuild2Dotf",
     "opticsCoC",
     "opticsDefocusCore",
@@ -710,6 +723,8 @@ deltaEab = delta_e_ab
 xyz2luv = xyz_to_luv
 cct = cct_from_uv
 spd2cct = spd_to_cct
+RGB2XWFormat = rgb_to_xw_format
+XW2RGBFormat = xw_to_rgb_format
 ieLuminanceFromEnergy = luminance_from_energy
 ieLuminanceFromPhotons = luminance_from_photons
 

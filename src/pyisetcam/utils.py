@@ -911,6 +911,36 @@ def least_squares_matrix(
     return matrix
 
 
+def rgb_to_xw_format(im_rgb: Any) -> tuple[NDArray[np.float64], int, int, int]:
+    """Convert an image cube from RGB/r,c,w format to XW/space,w format."""
+
+    array = np.asarray(im_rgb, dtype=float)
+    shape = list(array.shape)
+    if array.ndim < 2:
+        raise ValueError("RGB2XWFormat expects at least a 2D array.")
+    if array.ndim < 3:
+        shape.append(1)
+    if array.ndim > 4:
+        raise ValueError("RGB2XWFormat supports up to 4D inputs.")
+    rows, cols, waves = int(shape[0]), int(shape[1]), int(shape[2])
+    if array.ndim < 4:
+        xw = np.reshape(array, (rows * cols, waves), order="F")
+    else:
+        xw = np.reshape(array, (rows * cols, waves, int(shape[3])), order="F")
+    return np.asarray(xw, dtype=float), rows, cols, waves
+
+
+def xw_to_rgb_format(im_xw: Any, rows: int, cols: int) -> NDArray[np.float64]:
+    """Convert XW/space,w data back to RGB/r,c,w format."""
+
+    array = np.asarray(im_xw, dtype=float)
+    if array.ndim != 2:
+        raise ValueError("XW2RGBFormat expects a 2D XW array.")
+    if int(rows) * int(cols) != int(array.shape[0]):
+        raise ValueError("XW2RGBFormat row/col values do not match the number of samples.")
+    return np.reshape(array, (int(rows), int(cols), int(array.shape[1])), order="F")
+
+
 def xyz_to_linear_srgb(xyz: NDArray[np.float64]) -> NDArray[np.float64]:
     """Convert CIE XYZ to linear sRGB."""
 

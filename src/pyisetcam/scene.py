@@ -2443,6 +2443,11 @@ def scene_get(scene: Scene, parameter: str, *args: Any, asset_store: AssetStore 
         if not args:
             raise ValueError("ROI required for sceneGet(..., 'roi mean luminance').")
         return float(np.mean(np.asarray(scene_get(scene, "roi luminance", args[0], asset_store=asset_store), dtype=float)))
+    if key == "xyz":
+        wave = np.asarray(scene.fields["wave"], dtype=float)
+        photons = np.asarray(scene.data["photons"], dtype=float)
+        energy = quanta_to_energy(photons, wave)
+        return xyz_from_energy(energy, wave, asset_store=_store(asset_store))
     if key in {"chromaticity", "roichromaticity"}:
         roi_locs = args[0] if args else None
         return chromaticity_xy(_scene_roi_xyz(scene, roi_locs, asset_store=asset_store))

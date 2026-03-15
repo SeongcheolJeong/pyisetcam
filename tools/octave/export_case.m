@@ -933,6 +933,35 @@ switch case_name
         payload.final_center_wave_profile_norm = final_profile_norm(:);
         payload.final_mean_luminance = sceneGet(final_scene, 'mean luminance');
 
+    case 'scene_xyz_illuminant_transforms_small'
+        scene = sceneCreate('reflectance chart');
+        sceneD65 = sceneAdjustIlluminant(scene, 'D65.mat');
+        sceneT = sceneAdjustIlluminant(scene, 'Tungsten.mat');
+
+        xyz1 = sceneGet(sceneD65, 'xyz');
+        xyz2 = sceneGet(sceneT, 'xyz');
+        [xyz1_xw, rows, cols] = RGB2XWFormat(xyz1);
+        xyz2_xw = RGB2XWFormat(xyz2);
+        xyz1_mean = mean(xyz1_xw, 1);
+        xyz2_mean = mean(xyz2_xw, 1);
+
+        L = xyz2_xw \ xyz1_xw;
+        D = zeros(3, 3);
+        for ii = 1:3
+            D(ii, ii) = xyz2_xw(:, ii) \ xyz1_xw(:, ii);
+        end
+
+        pred_full = xyz2_xw * L;
+        pred_diag = xyz2_xw * D;
+
+        payload.scene_size = [rows cols];
+        payload.xyz_d65_mean_norm = xyz1_mean / max(sum(xyz1_mean), 1e-12);
+        payload.xyz_tungsten_mean_norm = xyz2_mean / max(sum(xyz2_mean), 1e-12);
+        payload.full_transform = L;
+        payload.diagonal_transform = D;
+        payload.predicted_full_rmse_ratio = sqrt(mean((pred_full - xyz1_xw) .^ 2, 1)) ./ max(xyz1_mean, 1e-12);
+        payload.predicted_diagonal_rmse_ratio = sqrt(mean((pred_diag - xyz1_xw) .^ 2, 1)) ./ max(xyz1_mean, 1e-12);
+
     case 'display_create_lcd_example'
         d = displayCreate('lcdExample.mat');
         payload.wave = displayGet(d, 'wave');
