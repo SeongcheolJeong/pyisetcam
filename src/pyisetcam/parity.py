@@ -61,6 +61,7 @@ from .optics import (
 )
 from .plotting import ip_plot, oi_plot, sensor_plot, sensor_plot_line, wvf_plot
 from .scene import (
+    ie_reflectance_samples,
     scene_adjust_illuminant,
     scene_adjust_luminance,
     scene_combine,
@@ -147,6 +148,17 @@ def _deterministic_normal_samples(n_rows: int, n_cols: int) -> np.ndarray:
 def _channel_normalize(values: Any) -> np.ndarray:
     vector = np.asarray(values, dtype=float).reshape(-1)
     return vector / max(float(np.max(np.abs(vector))), 1e-12)
+
+
+def _reflectance_sample_statistics(reflectances: Any) -> tuple[np.ndarray, np.ndarray]:
+    matrix = np.asarray(reflectances, dtype=float)
+    if matrix.ndim != 2:
+        raise ValueError("Reflectance statistics expect a 2D wavelength-by-sample matrix.")
+    norms = np.sqrt(np.maximum(np.sum(np.square(matrix), axis=0, dtype=float), 1e-12))
+    normalized = matrix / norms.reshape(1, -1)
+    mean_reflectance = np.mean(normalized, axis=1, dtype=float)
+    singular_values = np.linalg.svd(normalized - mean_reflectance.reshape(-1, 1), compute_uv=False)
+    return mean_reflectance, singular_values
 
 
 def _find_nearest_two(array: Any, number: float) -> np.ndarray:
@@ -1271,6 +1283,77 @@ def run_python_case_with_context(
                 "reconstructed_illuminant_xy": reconstructed_illuminant_xy,
                 "rgb_channel_corr": rgb_channel_corr,
                 "xyz_channel_corr": xyz_channel_corr,
+            },
+            context={},
+        )
+
+    if case_name == "scene_reflectance_samples_small":
+        wave = np.arange(400.0, 701.0, 5.0, dtype=float)
+        random_sources = [
+            "MunsellSamples_Vhrel.mat",
+            "Food_Vhrel.mat",
+            "DupontPaintChip_Vhrel.mat",
+            "skin/HyspexSkinReflectance.mat",
+        ]
+        random_counts = np.array([24, 24, 24, 24], dtype=int)
+        random_reflectances, sampled_lists, sampled_wave = ie_reflectance_samples(
+            random_sources,
+            random_counts,
+            wave,
+            "no replacement",
+            asset_store=store,
+        )
+        random_reflectances_replay, _, _ = ie_reflectance_samples(
+            random_sources,
+            sampled_lists,
+            wave,
+            "no replacement",
+            asset_store=store,
+        )
+
+        explicit_sources = [
+            "MunsellSamples_Vhrel.mat",
+            "DupontPaintChip_Vhrel.mat",
+        ]
+        explicit_lists = [
+            np.arange(1, 61, dtype=int),
+            np.arange(1, 61, dtype=int),
+        ]
+        explicit_reflectances, stored_lists, _ = ie_reflectance_samples(
+            explicit_sources,
+            explicit_lists,
+            wave,
+            asset_store=store,
+        )
+        explicit_reflectances_replay, _, _ = ie_reflectance_samples(
+            explicit_sources,
+            stored_lists,
+            wave,
+            asset_store=store,
+        )
+        mean_reflectance, singular_values = _reflectance_sample_statistics(explicit_reflectances)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": sampled_wave,
+                "no_replacement_shape": np.array(random_reflectances.shape, dtype=int),
+                "no_replacement_sample_sizes": np.array([sample.size for sample in sampled_lists], dtype=int),
+                "no_replacement_unique_sizes": np.array([np.unique(sample).size for sample in sampled_lists], dtype=int),
+                "no_replacement_replay_max_abs": float(
+                    np.max(np.abs(random_reflectances_replay - random_reflectances))
+                ),
+                "explicit_shape": np.array(explicit_reflectances.shape, dtype=int),
+                "explicit_sample_sizes": np.array([sample.size for sample in stored_lists], dtype=int),
+                "explicit_sample_first_last": np.array(
+                    [[int(sample[0]), int(sample[-1])] for sample in stored_lists],
+                    dtype=int,
+                ),
+                "explicit_mean_reflectance_norm": _channel_normalize(mean_reflectance),
+                "explicit_singular_values_norm": _channel_normalize(singular_values),
+                "explicit_replay_max_abs": float(
+                    np.max(np.abs(explicit_reflectances_replay - explicit_reflectances))
+                ),
             },
             context={},
         )

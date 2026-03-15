@@ -313,6 +313,12 @@
       }
     },
     {
+      "name": "scene_reflectance_samples_small",
+      "matlab_function": "s_sceneReflectanceSamples",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "display_create_lcd_example",
       "matlab_function": "displayCreate",
       "rtol": 1e-05,

@@ -164,6 +164,7 @@ from .scene import (
     scene_illuminant_pattern,
     scene_illuminant_ss,
     scene_interpolate_w,
+    ie_reflectance_samples,
     scene_rotate,
     scene_set,
 )
@@ -254,6 +255,7 @@ __all__ = [
     "ieLuminanceFromEnergy",
     "ieLuminanceFromPhotons",
     "ieMvnrnd",
+    "ieReflectanceSamples",
     "ieFindObjectByName",
     "ieLocs2Rect",
     "ieParameterOtype",
@@ -284,6 +286,7 @@ __all__ = [
     "ie_equivalent_objtype",
     "ie_fit_line",
     "ie_mvnrnd",
+    "ie_reflectance_samples",
     "ie_read_spectra",
     "ie_read_color_filter",
     "ie_save_color_filter",
@@ -735,6 +738,7 @@ ieEquivalentObjtype = ie_equivalent_objtype
 ieFindObjectByName = ie_find_object_by_name
 ieFitLine = ie_fit_line
 ieMvnrnd = ie_mvnrnd
+ieReflectanceSamples = ie_reflectance_samples
 ieReadColorFilter = ie_read_color_filter
 ieReadSpectra = ie_read_spectra
 ieLocs2Rect = ie_locs2_rect

@@ -1052,6 +1052,46 @@ switch case_name
         payload.rgb_channel_corr = rgbChannelCorr(:);
         payload.xyz_channel_corr = xyzChannelCorr(:);
 
+    case 'scene_reflectance_samples_small'
+        wave = (400:5:700)';
+        randomFiles = {
+            which('MunsellSamples_Vhrel.mat')
+            which('Food_Vhrel.mat')
+            which('DupontPaintChip_Vhrel.mat')
+            which('HyspexSkinReflectance.mat')
+        };
+        randomCounts = [24, 24, 24, 24];
+        [randomReflectances, sampledLists, sampledWave] = ieReflectanceSamples(randomFiles, randomCounts, wave, 'no replacement');
+        [randomReplay, ~] = ieReflectanceSamples(randomFiles, sampledLists, wave, 'no replacement');
+
+        explicitFiles = {
+            which('MunsellSamples_Vhrel.mat')
+            which('DupontPaintChip_Vhrel.mat')
+        };
+        explicitLists = {
+            1:60
+            1:60
+        };
+        [explicitReflectances, storedLists] = ieReflectanceSamples(explicitFiles, explicitLists, wave);
+        [explicitReplay, ~] = ieReflectanceSamples(explicitFiles, storedLists, wave);
+
+        columnNorms = sqrt(max(sum(explicitReflectances .^ 2, 1), 1e-12));
+        normalizedReflectances = explicitReflectances * diag(1 ./ columnNorms);
+        meanReflectance = mean(normalizedReflectances, 2);
+        singularValues = svd(normalizedReflectances - repmat(meanReflectance, 1, size(normalizedReflectances, 2)));
+
+        payload.wave = sampledWave(:);
+        payload.no_replacement_shape = size(randomReflectances);
+        payload.no_replacement_sample_sizes = cellfun(@numel, sampledLists(:));
+        payload.no_replacement_unique_sizes = cellfun(@(x) numel(unique(x(:))), sampledLists(:));
+        payload.no_replacement_replay_max_abs = max(abs(randomReplay(:) - randomReflectances(:)));
+        payload.explicit_shape = size(explicitReflectances);
+        payload.explicit_sample_sizes = cellfun(@numel, storedLists(:));
+        payload.explicit_sample_first_last = cell2mat(cellfun(@(x) [x(1), x(end)], storedLists(:), 'UniformOutput', false));
+        payload.explicit_mean_reflectance_norm = local_channel_normalize(meanReflectance);
+        payload.explicit_singular_values_norm = local_channel_normalize(singularValues);
+        payload.explicit_replay_max_abs = max(abs(explicitReplay(:) - explicitReflectances(:)));
+
     case 'display_create_lcd_example'
         d = displayCreate('lcdExample.mat');
         payload.wave = displayGet(d, 'wave');

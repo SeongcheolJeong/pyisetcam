@@ -21,6 +21,7 @@ from pyisetcam import (
     illuminant_create,
     illuminant_get,
     illuminant_set,
+    ie_reflectance_samples,
     ie_read_color_filter,
     ie_read_spectra,
     ie_save_color_filter,
@@ -4886,6 +4887,22 @@ def test_run_python_case_supports_scene_from_rgb_vs_multispectral_stuffed_animal
     assert case.payload["xyz_channel_corr"].shape == (3,)
 
 
+def test_run_python_case_supports_scene_reflectance_samples_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_reflectance_samples_small", asset_store=asset_store)
+
+    assert case.payload["wave"].shape == (61,)
+    assert case.payload["no_replacement_shape"].shape == (2,)
+    assert tuple(case.payload["no_replacement_shape"]) == (61, 96)
+    assert np.array_equal(case.payload["no_replacement_sample_sizes"], np.array([24, 24, 24, 24], dtype=int))
+    assert np.array_equal(case.payload["no_replacement_unique_sizes"], case.payload["no_replacement_sample_sizes"])
+    assert case.payload["explicit_shape"].shape == (2,)
+    assert tuple(case.payload["explicit_shape"]) == (61, 120)
+    assert np.array_equal(case.payload["explicit_sample_sizes"], np.array([60, 60], dtype=int))
+    assert case.payload["explicit_sample_first_last"].shape == (2, 2)
+    assert case.payload["explicit_mean_reflectance_norm"].shape == (61,)
+    assert case.payload["explicit_singular_values_norm"].shape == (61,)
+
+
 def test_run_python_case_supports_frequency_orientation_scene_parity_case(asset_store) -> None:
     case = run_python_case_with_context("scene_frequency_orientation_small", asset_store=asset_store)
 
@@ -7768,6 +7785,72 @@ def test_scene_from_rgb_vs_multispectral_script_workflow(asset_store) -> None:
     assert np.all(rgb_rmse < np.array([0.05, 0.04, 0.04], dtype=float))
     assert np.all(np.abs((reconstructed_mean_xyz / np.sum(reconstructed_mean_xyz)) - (source_mean_xyz / np.sum(source_mean_xyz))) < 5e-3)
     assert np.all(xyz_rmse_ratio < np.array([0.06, 0.07, 0.13], dtype=float))
+
+
+def test_scene_reflectance_samples_script_workflow(asset_store) -> None:
+    wave = np.arange(400.0, 701.0, 5.0, dtype=float)
+    random_sources = [
+        "MunsellSamples_Vhrel.mat",
+        "Food_Vhrel.mat",
+        "DupontPaintChip_Vhrel.mat",
+        "skin/HyspexSkinReflectance.mat",
+    ]
+    random_counts = np.array([24, 24, 24, 24], dtype=int)
+    reflectances, sampled_lists, sampled_wave = ie_reflectance_samples(
+        random_sources,
+        random_counts,
+        wave,
+        "no replacement",
+        asset_store=asset_store,
+    )
+    replay_reflectances, replay_lists, replay_wave = ie_reflectance_samples(
+        random_sources,
+        sampled_lists,
+        wave,
+        "no replacement",
+        asset_store=asset_store,
+    )
+
+    assert reflectances.shape == (61, 96)
+    assert np.array_equal(sampled_wave, wave)
+    assert np.array_equal(replay_wave, wave)
+    assert [sample.size for sample in sampled_lists] == [24, 24, 24, 24]
+    assert [np.unique(sample).size for sample in sampled_lists] == [24, 24, 24, 24]
+    assert np.array_equal(reflectances, replay_reflectances)
+    assert all(np.array_equal(first, second) for first, second in zip(sampled_lists, replay_lists, strict=True))
+    assert float(np.min(reflectances)) >= 0.0
+    assert float(np.max(reflectances)) <= 1.0
+
+    norms = np.sqrt(np.maximum(np.sum(np.square(reflectances), axis=0, dtype=float), 1e-12))
+    normalized = reflectances / norms.reshape(1, -1)
+    singular_values = np.linalg.svd(normalized - np.mean(normalized, axis=1, keepdims=True), compute_uv=False)
+    assert singular_values.shape == (61,)
+    assert np.all(singular_values[:-1] >= singular_values[1:] - 1e-12)
+
+    explicit_sources = [
+        "MunsellSamples_Vhrel.mat",
+        "DupontPaintChip_Vhrel.mat",
+    ]
+    explicit_lists = [
+        np.arange(1, 61, dtype=int),
+        np.arange(1, 61, dtype=int),
+    ]
+    explicit_reflectances, stored_lists, _ = ie_reflectance_samples(
+        explicit_sources,
+        explicit_lists,
+        wave,
+        asset_store=asset_store,
+    )
+    explicit_replay, _, _ = ie_reflectance_samples(
+        explicit_sources,
+        stored_lists,
+        wave,
+        asset_store=asset_store,
+    )
+
+    assert explicit_reflectances.shape == (61, 120)
+    assert all(np.array_equal(expected, current) for expected, current in zip(explicit_lists, stored_lists, strict=True))
+    assert np.array_equal(explicit_reflectances, explicit_replay)
 
 
 def test_run_python_case_supports_sensor_macbeth_daylight_estimate_small_parity_case(asset_store) -> None:

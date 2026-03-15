@@ -1461,6 +1461,15 @@ def _default_reflectance_chart_files() -> list[str]:
     ]
 
 
+def _default_reflectance_sample_files() -> list[str]:
+    return [
+        "MunsellSamples_Vhrel.mat",
+        "Food_Vhrel.mat",
+        "DupontPaintChip_Vhrel.mat",
+        "skin/HyspexSkinReflectance.mat",
+    ]
+
+
 def _reflectance_chart_sources(value: Any | None) -> list[Any]:
     if value is None:
         return _default_reflectance_chart_files()
@@ -1550,6 +1559,56 @@ def _reflectance_sample_lists(
             perm = rng.permutation(n_reflectances)[:count]
             sample_lists.append(np.asarray(perm + 1, dtype=int))
     return sample_lists
+
+
+def ie_reflectance_samples(
+    s_files: Any | None = None,
+    s_samples: Any | None = None,
+    wave: Any | None = None,
+    sampling: str | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[np.ndarray, list[np.ndarray], np.ndarray]:
+    """Return sampled surface reflectances following MATLAB's ieReflectanceSamples()."""
+
+    store = _store(asset_store)
+    if s_files is None or (isinstance(s_files, (list, tuple)) and len(s_files) == 0):
+        source_files = _default_reflectance_sample_files()
+        if s_samples is None:
+            sample_spec = np.array([24, 24, 24, 24], dtype=int)
+        else:
+            sample_spec = s_samples
+    else:
+        source_files = _reflectance_chart_sources(s_files)
+        if s_samples is None:
+            sample_spec = np.zeros(len(source_files), dtype=int)
+        else:
+            sample_spec = s_samples
+
+    if len(source_files) == 0:
+        raise ValueError("ie_reflectance_samples requires at least one reflectance source.")
+
+    sample_wave = np.arange(400.0, 701.0, 10.0, dtype=float) if wave is None else np.asarray(wave, dtype=float).reshape(-1)
+    if sample_wave.size == 0:
+        raise ValueError("ie_reflectance_samples wavelength sampling must not be empty.")
+    sampling_mode = "r" if sampling is None else str(sampling)
+
+    reflectance_sets = [_load_reflectance_source(source, sample_wave, asset_store=store) for source in source_files]
+    sample_lists = _reflectance_sample_lists(reflectance_sets, sample_spec, sampling_mode)
+
+    total_samples = int(sum(sample_list.size for sample_list in sample_lists))
+    reflectances = np.zeros((sample_wave.size, total_samples), dtype=float)
+    last = 0
+    for reflectance_set, sample_list in zip(reflectance_sets, sample_lists, strict=True):
+        if sample_list.size == 0:
+            continue
+        this_count = int(sample_list.size)
+        reflectances[:, last : last + this_count] = reflectance_set[:, sample_list.astype(int) - 1]
+        last += this_count
+
+    if reflectances.size and float(np.max(reflectances)) > 1.0:
+        raise ValueError("Reflectance samples must not exceed 1.0.")
+    return reflectances, [np.asarray(item, dtype=int).copy() for item in sample_lists], sample_wave.copy()
 
 
 def _reflectance_chart_parameters(

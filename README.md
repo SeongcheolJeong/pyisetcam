@@ -15,6 +15,7 @@
 - and now also curated Octave parity on the `s_sceneFromRGB.m` display-calibrated RGB-image workflow, covering `displayCreate('LCD-Apple.mat')`, the display white point, `sceneFromFile(..., 'rgb', ..., 'LCD-Apple.mat')`, the 6500 K illuminant swap, and the beak ROI reflectance contract
 - and now also curated Octave parity on the `s_sceneFromMultispectral.m` multispectral-file workflow, covering `sceneFromFile(..., 'multispectral', ..., 400:10:700)` on `StuffedAnimals_tungsten-hdrs`, the loaded scene geometry and mean luminance, and normalized mean/center scene spectra
 - and now also headless `sceneGet(..., 'rgb')` plus curated Octave parity on the `s_sceneFromRGBvsMultispectral.m` roundtrip workflow, covering the `StuffedAnimals_tungsten-hdrs` multispectral scene rendered to RGB and reconstructed through `LCD-Apple.mat`, with preserved geometry/luminance, preserved 6500 K illuminant chromaticity, and strong per-channel RGB/XYZ roundtrip correlations
+- and now also headless `ie_reflectance_samples(...)` / `ieReflectanceSamples(...)` plus curated Octave parity on the `s_sceneReflectanceSamples.m` workflow, covering no-replacement reflectance sampling, exact sample-list replay, and the deterministic normalized-mean / singular-value statistics on explicit reflectance lists
 
 ## Status
 
