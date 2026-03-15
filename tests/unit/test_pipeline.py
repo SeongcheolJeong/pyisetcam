@@ -1690,6 +1690,39 @@ def test_optics_rt_gridlines_script_workflow(asset_store) -> None:
     assert np.array_equal(np.asarray(oi_get(dl_small, "size"), dtype=int), np.array([480, 480], dtype=int))
 
 
+def test_optics_rt_psf_script_workflow(asset_store) -> None:
+    scene = scene_create("point array", 512, 32, asset_store=asset_store)
+    scene = scene_interpolate_w(scene, np.arange(450.0, 651.0, 100.0, dtype=float))
+    scene = scene_set(scene, "hfov", 10.0)
+    scene = scene_set(scene, "name", "psf Point Array")
+
+    oi = oi_create("ray trace", asset_store.resolve("data/optics/rtZemaxExample.mat"), asset_store=asset_store)
+    scene = scene_set(scene, "distance", oi_get(oi, "optics rtObjectDistance", "m"))
+    oi = oi_set(oi, "name", "ray trace case")
+    oi = oi_set(oi, "optics model", "ray trace")
+    oi = oi_compute(oi, scene)
+
+    sampled_rt_psf = np.asarray(oi_get(oi, "sampledRTpsf"), dtype=object)
+    assert np.array_equal(np.asarray(scene_get(scene, "wave"), dtype=float), np.array([450.0, 550.0, 650.0], dtype=float))
+    assert np.isclose(float(scene_get(scene, "fov")), 10.0)
+    assert np.array_equal(np.asarray(oi_get(oi, "size"), dtype=int), np.array([564, 564], dtype=int))
+    assert np.isclose(float(oi_get(oi, "rtfnumber")), 4.999973)
+    assert oi_get(oi, "rtname") == "Asphere 2mm"
+    assert np.array_equal(np.asarray(oi_get(oi, "psf sample angles"), dtype=float), np.arange(0.0, 361.0, 10.0))
+    assert np.asarray(oi_get(oi, "psf image heights", "mm"), dtype=float).shape == (6,)
+    assert np.array_equal(np.asarray(oi_get(oi, "psf wavelength"), dtype=float), np.array([450.0, 550.0, 650.0], dtype=float))
+    assert sampled_rt_psf.shape == (37, 6, 3)
+
+    oi_dl = oi_set(oi.clone(), "name", "diffraction case")
+    optics = oi_get(oi_dl, "optics")
+    oi_dl = oi_set(oi_dl, "optics fnumber", float(optics["rayTrace"]["fNumber"]) * 0.8)
+    oi_dl = oi_set(oi_dl, "optics model", "diffraction limited")
+    oi_dl = oi_compute(oi_dl, scene)
+
+    assert np.array_equal(np.asarray(oi_get(oi_dl, "size"), dtype=int), np.array([640, 640], dtype=int))
+    assert np.isclose(float(oi_get(oi_dl, "fnumber")), 3.9999784)
+
+
 def test_rt_file_names_matches_zemax_naming(tmp_path) -> None:
     di_name, ri_name, psf_name_list, cra_name = rt_file_names(
         "CookeLens.ZMX",
@@ -3028,6 +3061,30 @@ def test_optics_rt_gridlines_small_parity_case(asset_store) -> None:
     assert np.array_equal(payload["rt_small_center_row_550_widths"], np.array([89, 89, 91], dtype=int))
     assert np.array_equal(payload["dl_small_size"], np.array([480, 480], dtype=int))
     assert np.array_equal(payload["dl_small_center_row_550_widths"], np.array([78, 91, 93], dtype=int))
+
+
+def test_optics_rt_psf_small_parity_case(asset_store) -> None:
+    payload = run_python_case("optics_rt_psf_small", asset_store=asset_store)
+
+    assert np.array_equal(payload["scene_wave"], np.array([450.0, 550.0, 650.0], dtype=float))
+    assert np.isclose(float(payload["scene_fov_deg"]), 10.0)
+    assert np.array_equal(payload["rt_size"], np.array([564, 564], dtype=int))
+    assert np.isclose(float(payload["rt_f_number"]), 4.999973)
+    assert payload["rt_optics_name"] == "Asphere 2mm"
+    assert np.array_equal(payload["rt_psf_sample_angles_deg"], np.arange(0.0, 361.0, 10.0))
+    assert payload["rt_psf_image_heights_mm"].shape == (6,)
+    assert np.array_equal(payload["rt_psf_wavelength"], np.array([450.0, 550.0, 650.0], dtype=float))
+    assert np.array_equal(payload["rt_sampled_psf_shape"], np.array([37, 6, 3], dtype=int))
+    assert payload["rt_center_psf_mid_row_550_norm"].shape == (129,)
+    assert payload["rt_edge_psf_mid_row_550_norm"].shape == (129,)
+    assert payload["rt_mean_photons_by_wave"].shape == (3,)
+    assert payload["rt_max_photons_by_wave"].shape == (3,)
+    assert np.array_equal(payload["rt_center_row_550_widths"], np.array([111, 117, 119], dtype=int))
+    assert np.array_equal(payload["dl_size"], np.array([640, 640], dtype=int))
+    assert np.isclose(float(payload["dl_f_number"]), 3.9999784)
+    assert payload["dl_mean_photons_by_wave"].shape == (3,)
+    assert payload["dl_max_photons_by_wave"].shape == (3,)
+    assert np.array_equal(payload["dl_center_row_550_widths"], np.array([100, 111, 129], dtype=int))
 
 
 def test_optics_defocus_scene_small_parity_case(asset_store) -> None:

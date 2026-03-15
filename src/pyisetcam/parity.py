@@ -1670,6 +1670,82 @@ def run_python_case_with_context(
             },
         )
 
+    if case_name == "optics_rt_psf_small":
+        scene = scene_create("point array", 512, 32, asset_store=store)
+        scene = scene_interpolate_w(scene, np.arange(450.0, 651.0, 100.0, dtype=float))
+        scene = scene_set(scene, "hfov", 10.0)
+        scene = scene_set(scene, "name", "psf Point Array")
+
+        def _canonical_profile(values: np.ndarray, samples: int = 129) -> np.ndarray:
+            profile = np.asarray(values, dtype=float).reshape(-1)
+            support = np.linspace(-1.0, 1.0, profile.size, dtype=float)
+            query = np.linspace(-1.0, 1.0, samples, dtype=float)
+            return np.interp(query, support, profile)
+
+        def _center_row_550_widths(current_oi: OpticalImage, thresholds: tuple[float, ...]) -> np.ndarray:
+            photons = np.asarray(oi_get(current_oi, "photons"), dtype=float)
+            oi_wave = np.asarray(oi_get(current_oi, "wave"), dtype=float).reshape(-1)
+            wave_index = int(np.argmin(np.abs(oi_wave - 550.0)))
+            center_row = _canonical_profile(_channel_normalize(photons[photons.shape[0] // 2, :, wave_index]))
+            peak = max(float(np.max(center_row)), 1e-12)
+            widths = []
+            for threshold in thresholds:
+                active = np.flatnonzero(center_row >= (threshold * peak))
+                widths.append(int(active[-1] - active[0] + 1) if active.size else 0)
+            return np.asarray(widths, dtype=int)
+
+        oi = oi_create("ray trace", store.resolve("data/optics/rtZemaxExample.mat"), asset_store=store)
+        scene = scene_set(scene, "distance", oi_get(oi, "optics rtObjectDistance", "m"))
+        oi = oi_set(oi, "name", "ray trace case")
+        oi = oi_set(oi, "optics model", "ray trace")
+        oi = oi_compute(oi, scene)
+
+        sampled_rt_psf = np.asarray(oi_get(oi, "sampledRTpsf"), dtype=object)
+        psf_wave = np.asarray(oi_get(oi, "psf wavelength"), dtype=float).reshape(-1)
+        wave_index_550 = int(np.argmin(np.abs(psf_wave - 550.0)))
+        center_psf = np.asarray(sampled_rt_psf[0, 0, wave_index_550], dtype=float)
+        edge_psf = np.asarray(sampled_rt_psf[0, -1, wave_index_550], dtype=float)
+
+        oi_dl = oi_set(oi.clone(), "name", "diffraction case")
+        optics = oi_get(oi_dl, "optics")
+        f_number = float(optics["rayTrace"]["fNumber"])
+        oi_dl = oi_set(oi_dl, "optics fnumber", f_number * 0.8)
+        oi_dl = oi_set(oi_dl, "optics model", "diffraction limited")
+        oi_dl = oi_compute(oi_dl, scene)
+
+        rt_photons = np.asarray(oi_get(oi, "photons"), dtype=float)
+        dl_photons = np.asarray(oi_get(oi_dl, "photons"), dtype=float)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_wave": np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1),
+                "scene_fov_deg": float(scene_get(scene, "fov")),
+                "rt_size": np.asarray(oi_get(oi, "size"), dtype=int),
+                "rt_f_number": float(oi_get(oi, "rtfnumber")),
+                "rt_optics_name": str(oi_get(oi, "rtname")),
+                "rt_psf_sample_angles_deg": np.asarray(oi_get(oi, "psf sample angles"), dtype=float).reshape(-1),
+                "rt_psf_image_heights_mm": np.asarray(oi_get(oi, "psf image heights", "mm"), dtype=float).reshape(-1),
+                "rt_psf_wavelength": psf_wave,
+                "rt_sampled_psf_shape": np.asarray(sampled_rt_psf.shape, dtype=int),
+                "rt_center_psf_mid_row_550_norm": _canonical_profile(
+                    _channel_normalize(center_psf[center_psf.shape[0] // 2, :])
+                ),
+                "rt_edge_psf_mid_row_550_norm": _canonical_profile(
+                    _channel_normalize(edge_psf[edge_psf.shape[0] // 2, :])
+                ),
+                "rt_mean_photons_by_wave": np.mean(rt_photons, axis=(0, 1)),
+                "rt_max_photons_by_wave": np.max(rt_photons, axis=(0, 1)),
+                "rt_center_row_550_widths": _center_row_550_widths(oi, (0.50, 0.10, 0.01)),
+                "dl_size": np.asarray(oi_get(oi_dl, "size"), dtype=int),
+                "dl_f_number": float(oi_get(oi_dl, "fnumber")),
+                "dl_mean_photons_by_wave": np.mean(dl_photons, axis=(0, 1)),
+                "dl_max_photons_by_wave": np.max(dl_photons, axis=(0, 1)),
+                "dl_center_row_550_widths": _center_row_550_widths(oi_dl, (0.50, 0.10, 0.01)),
+            },
+            context={"scene": scene, "oi": oi, "oi_dl": oi_dl},
+        )
+
     if case_name == "optics_defocus_small":
         scene = scene_create("disk array", 256, 32, np.array([2, 2], dtype=int), asset_store=store)
         scene = scene_set(scene, "fov", 0.5)

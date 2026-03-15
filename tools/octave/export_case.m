@@ -1428,6 +1428,65 @@ switch case_name
         payload.dl_small_size = double(oiGet(dlSmall, 'size'));
         payload.dl_small_center_row_550_widths = local_profile_widths(local_canonical_profile(dlSmallCenterRow, 129), [0.50 0.10 0.01]);
 
+    case 'optics_rt_psf_small'
+        scene = sceneCreate('pointArray', 512, 32);
+        scene = sceneInterpolateW(scene, 450:100:650);
+        scene = sceneSet(scene, 'h fov', 10);
+        scene = sceneSet(scene, 'name', 'psf Point Array');
+
+        oi = oiCreate('ray trace');
+        opticsData = load(fullfile(isetRootPath, 'data', 'optics', 'rtZemaxExample.mat'), 'optics');
+        scene = sceneSet(scene, 'distance', oiGet(oi, 'optics rtObjectDistance', 'm'));
+        oi = oiSet(oi, 'name', 'ray trace case');
+        oi = oiSet(oi, 'optics', opticsData.optics);
+        oi = oiSet(oi, 'optics model', 'ray trace');
+        ieAddObject(scene);
+        oi = oiCompute(oi, scene);
+
+        svPSF = oiGet(oi, 'psf struct');
+        sampledRTpsf = oiGet(oi, 'sampledRTpsf');
+        psfWave = double(oiGet(oi, 'psf wavelength')(:));
+        [~, waveIndex550] = min(abs(psfWave - 550));
+        centerPsf = double(sampledRTpsf{1, 1, waveIndex550});
+        edgePsf = double(sampledRTpsf{1, end, waveIndex550});
+        centerPsfRow = local_channel_normalize(centerPsf(floor(size(centerPsf, 1) / 2) + 1, :));
+        edgePsfRow = local_channel_normalize(edgePsf(floor(size(edgePsf, 1) / 2) + 1, :));
+
+        oiDL = oiSet(oi, 'name', 'diffraction case');
+        optics = oiGet(oiDL, 'optics');
+        rayTrace = opticsGet(optics, 'ray trace');
+        fNumber = double(rayTrace.fNumber);
+        oiDL = oiSet(oiDL, 'optics fnumber', fNumber * 0.8);
+        oiDL = oiSet(oiDL, 'optics model', 'diffraction limited');
+        oiDL = oiCompute(oiDL, scene);
+
+        rtPhotons = double(oiGet(oi, 'photons'));
+        dlPhotons = double(oiGet(oiDL, 'photons'));
+        rtWave = double(oiGet(oi, 'wave')(:));
+        [~, oiWaveIndex550] = min(abs(rtWave - 550));
+        rtCenterRow = local_channel_normalize(squeeze(rtPhotons(floor(size(rtPhotons, 1) / 2) + 1, :, oiWaveIndex550)));
+        dlCenterRow = local_channel_normalize(squeeze(dlPhotons(floor(size(dlPhotons, 1) / 2) + 1, :, oiWaveIndex550)));
+
+        payload.scene_wave = double(sceneGet(scene, 'wave')(:));
+        payload.scene_fov_deg = double(sceneGet(scene, 'fov'));
+        payload.rt_size = double(oiGet(oi, 'size'));
+        payload.rt_f_number = fNumber;
+        payload.rt_optics_name = char(oiGet(oi, 'rtname'));
+        payload.rt_psf_sample_angles_deg = double(oiGet(oi, 'psf sample angles')(:));
+        payload.rt_psf_image_heights_mm = double(oiGet(oi, 'psf image heights', 'mm')(:));
+        payload.rt_psf_wavelength = psfWave;
+        payload.rt_sampled_psf_shape = double(size(sampledRTpsf));
+        payload.rt_center_psf_mid_row_550_norm = local_canonical_profile(centerPsfRow, 129);
+        payload.rt_edge_psf_mid_row_550_norm = local_canonical_profile(edgePsfRow, 129);
+        payload.rt_mean_photons_by_wave = squeeze(mean(mean(rtPhotons, 1), 2));
+        payload.rt_max_photons_by_wave = squeeze(max(max(rtPhotons, [], 1), [], 2));
+        payload.rt_center_row_550_widths = local_profile_widths(local_canonical_profile(rtCenterRow, 129), [0.50 0.10 0.01]);
+        payload.dl_size = double(oiGet(oiDL, 'size'));
+        payload.dl_f_number = double(oiGet(oiDL, 'fnumber'));
+        payload.dl_mean_photons_by_wave = squeeze(mean(mean(dlPhotons, 1), 2));
+        payload.dl_max_photons_by_wave = squeeze(max(max(dlPhotons, [], 1), [], 2));
+        payload.dl_center_row_550_widths = local_profile_widths(local_canonical_profile(dlCenterRow, 129), [0.50 0.10 0.01]);
+
     case 'optics_defocus_small'
         scene = sceneCreate('disk array', 256, 32, [2, 2]);
         scene = sceneSet(scene, 'fov', 0.5);

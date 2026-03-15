@@ -624,6 +624,11 @@ That same ray-trace block now also has direct Octave parity on
 ray-trace and matched diffraction-limited outputs through the returned
 gridline image sizes, sampled PSF support metadata, and normalized 550 nm
 center-row image slices for the wide-field and reduced-FOV branches.
+That same ray-trace block now also has direct Octave parity on
+`s_opticsRTPSF.m`, comparing the stored sampled ray-trace PSF metadata,
+normalized 550 nm center/edge PSF slices from the computed `sampledRTpsf`
+cache, and the rendered point-array ray-trace versus diffraction-limited
+image summaries used by the upstream PSF comparison workflow.
 The shared MATLAB field-height lookup rule is now exposed too as
 `ie_field_height_to_index` / `ieFieldHeight2Index`, and the ray-trace
 block-size logic now uses that public helper directly.
