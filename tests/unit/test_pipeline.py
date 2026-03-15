@@ -4952,6 +4952,26 @@ def test_run_python_case_supports_scene_rotate_parity_case(asset_store) -> None:
     assert case.payload["center_cols_norm"].shape == (4, 129)
 
 
+def test_run_python_case_supports_scene_wavelength_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_wavelength_small", asset_store=asset_store)
+
+    assert case.payload["source_name"] == "macbethd65"
+    assert case.payload["source_size"].shape == (2,)
+    assert case.payload["source_wave"].shape == (31,)
+    assert case.payload["source_mean_scene_spd_norm"].shape == (31,)
+    assert case.payload["source_center_scene_spd_norm"].shape == (31,)
+    assert case.payload["five_nm_name"] == "5nmspacing"
+    assert case.payload["five_nm_size"].shape == (2,)
+    assert case.payload["five_nm_wave"].shape == (61,)
+    assert case.payload["five_nm_mean_scene_spd_norm"].shape == (61,)
+    assert case.payload["five_nm_center_scene_spd_norm"].shape == (61,)
+    assert case.payload["narrow_name"] == "2nmnarrowbandspacing"
+    assert case.payload["narrow_size"].shape == (2,)
+    assert case.payload["narrow_wave"].shape == (51,)
+    assert case.payload["narrow_mean_scene_spd_norm"].shape == (51,)
+    assert case.payload["narrow_center_scene_spd_norm"].shape == (51,)
+
+
 def test_run_python_case_supports_frequency_orientation_scene_parity_case(asset_store) -> None:
     case = run_python_case_with_context("scene_frequency_orientation_small", asset_store=asset_store)
 
@@ -8015,6 +8035,45 @@ def test_scene_rotate_script_workflow(asset_store) -> None:
     assert mean_luminance[-1] < mean_luminance[0]
     assert np.allclose(max_luminance, center_luminance, atol=1e-9, rtol=1e-9)
     assert np.allclose(max_luminance, max_luminance[0], atol=1e-9, rtol=1e-9)
+
+
+def test_scene_wavelength_script_workflow(asset_store) -> None:
+    source_scene = scene_create(asset_store=asset_store)
+    source_wave = np.asarray(scene_get(source_scene, "wave"), dtype=float).reshape(-1)
+    source_mean_luminance = float(scene_get(source_scene, "mean luminance", asset_store=asset_store))
+
+    fine_scene = scene_set(source_scene.clone(), "wave", np.arange(400.0, 701.0, 5.0, dtype=float))
+    fine_scene = scene_set(fine_scene, "name", "5 nm spacing")
+    fine_wave = np.asarray(scene_get(fine_scene, "wave"), dtype=float).reshape(-1)
+    fine_mean_luminance = float(scene_get(fine_scene, "mean luminance", asset_store=asset_store))
+
+    narrow_scene = scene_set(fine_scene.clone(), "wave", np.arange(500.0, 601.0, 2.0, dtype=float))
+    narrow_scene = scene_set(narrow_scene, "name", "2 nm narrow band spacing")
+    narrow_wave = np.asarray(scene_get(narrow_scene, "wave"), dtype=float).reshape(-1)
+    narrow_mean_luminance = float(scene_get(narrow_scene, "mean luminance", asset_store=asset_store))
+
+    source_photons = np.asarray(scene_get(source_scene, "photons"), dtype=float)
+    fine_photons = np.asarray(scene_get(fine_scene, "photons"), dtype=float)
+    narrow_photons = np.asarray(scene_get(narrow_scene, "photons"), dtype=float)
+
+    assert source_scene.name == "Macbeth D65"
+    assert tuple(scene_get(source_scene, "size")) == (64, 96)
+    assert np.array_equal(source_wave, np.arange(400.0, 701.0, 10.0, dtype=float))
+    assert fine_scene.name == "5 nm spacing"
+    assert tuple(scene_get(fine_scene, "size")) == (64, 96)
+    assert np.array_equal(fine_wave, np.arange(400.0, 701.0, 5.0, dtype=float))
+    assert narrow_scene.name == "2 nm narrow band spacing"
+    assert tuple(scene_get(narrow_scene, "size")) == (64, 96)
+    assert np.array_equal(narrow_wave, np.arange(500.0, 601.0, 2.0, dtype=float))
+    assert source_photons.shape == (64, 96, 31)
+    assert fine_photons.shape == (64, 96, 61)
+    assert narrow_photons.shape == (64, 96, 51)
+    assert source_mean_luminance == pytest.approx(100.0, rel=1e-10, abs=1e-10)
+    assert fine_mean_luminance == pytest.approx(source_mean_luminance, rel=1e-10, abs=1e-10)
+    assert narrow_mean_luminance == pytest.approx(source_mean_luminance, rel=1e-10, abs=1e-10)
+    assert np.all(np.mean(source_photons, axis=(0, 1)) > 0.0)
+    assert np.all(np.mean(fine_photons, axis=(0, 1)) > 0.0)
+    assert np.all(np.mean(narrow_photons, axis=(0, 1)) > 0.0)
 
 
 def test_run_python_case_supports_sensor_macbeth_daylight_estimate_small_parity_case(asset_store) -> None:

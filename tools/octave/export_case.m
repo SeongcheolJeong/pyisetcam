@@ -1192,6 +1192,46 @@ switch case_name
         payload.center_rows_norm = centerRows;
         payload.center_cols_norm = centerCols;
 
+    case 'scene_wavelength_small'
+        sourceScene = sceneCreate;
+        sourceWave = double(sceneGet(sourceScene, 'wave'));
+        sourcePhotons = double(sceneGet(sourceScene, 'photons'));
+        sourceCenter = squeeze(sourcePhotons(floor(size(sourcePhotons, 1) / 2) + 1, floor(size(sourcePhotons, 2) / 2) + 1, :));
+        sourceMean = squeeze(mean(mean(sourcePhotons, 1), 2));
+
+        fineScene = sceneSet(sourceScene, 'wave', 400:5:700);
+        fineScene = sceneSet(fineScene, 'name', '5 nm spacing');
+        fineWave = double(sceneGet(fineScene, 'wave'));
+        finePhotons = double(sceneGet(fineScene, 'photons'));
+        fineCenter = squeeze(finePhotons(floor(size(finePhotons, 1) / 2) + 1, floor(size(finePhotons, 2) / 2) + 1, :));
+        fineMean = squeeze(mean(mean(finePhotons, 1), 2));
+
+        narrowScene = sceneSet(fineScene, 'wave', 500:2:600);
+        narrowScene = sceneSet(narrowScene, 'name', '2 nm narrow band spacing');
+        narrowWave = double(sceneGet(narrowScene, 'wave'));
+        narrowPhotons = double(sceneGet(narrowScene, 'photons'));
+        narrowCenter = squeeze(narrowPhotons(floor(size(narrowPhotons, 1) / 2) + 1, floor(size(narrowPhotons, 2) / 2) + 1, :));
+        narrowMean = squeeze(mean(mean(narrowPhotons, 1), 2));
+
+        payload.source_name = strrep(strrep(ieParamFormat(sceneGet(sourceScene, 'name')), '(', ''), ')', '');
+        payload.source_size = double(sceneGet(sourceScene, 'size')(:));
+        payload.source_wave = sourceWave(:);
+        payload.source_mean_luminance = double(sceneGet(sourceScene, 'mean luminance'));
+        payload.source_mean_scene_spd_norm = local_channel_normalize(sourceMean);
+        payload.source_center_scene_spd_norm = local_channel_normalize(sourceCenter);
+        payload.five_nm_name = strrep(strrep(ieParamFormat(sceneGet(fineScene, 'name')), '(', ''), ')', '');
+        payload.five_nm_size = double(sceneGet(fineScene, 'size')(:));
+        payload.five_nm_wave = fineWave(:);
+        payload.five_nm_mean_luminance = double(sceneGet(fineScene, 'mean luminance'));
+        payload.five_nm_mean_scene_spd_norm = local_channel_normalize(fineMean);
+        payload.five_nm_center_scene_spd_norm = local_channel_normalize(fineCenter);
+        payload.narrow_name = strrep(strrep(ieParamFormat(sceneGet(narrowScene, 'name')), '(', ''), ')', '');
+        payload.narrow_size = double(sceneGet(narrowScene, 'size')(:));
+        payload.narrow_wave = narrowWave(:);
+        payload.narrow_mean_luminance = double(sceneGet(narrowScene, 'mean luminance'));
+        payload.narrow_mean_scene_spd_norm = local_channel_normalize(narrowMean);
+        payload.narrow_center_scene_spd_norm = local_channel_normalize(narrowCenter);
+
     case 'display_create_lcd_example'
         d = displayCreate('lcdExample.mat');
         payload.wave = displayGet(d, 'wave');

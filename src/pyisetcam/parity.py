@@ -1506,6 +1506,53 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "scene_wavelength_small":
+        source_scene = scene_create(asset_store=store)
+        canonical_name = lambda value: param_format(value).replace("(", "").replace(")", "")
+        source_wave = np.asarray(scene_get(source_scene, "wave"), dtype=float).reshape(-1)
+        source_photons = np.asarray(scene_get(source_scene, "photons"), dtype=float)
+        source_center = source_photons[source_photons.shape[0] // 2, source_photons.shape[1] // 2, :]
+        source_mean = np.mean(source_photons, axis=(0, 1), dtype=float)
+
+        fine_scene = scene_set(source_scene.clone(), "wave", np.arange(400.0, 701.0, 5.0, dtype=float))
+        fine_scene = scene_set(fine_scene, "name", "5 nm spacing")
+        fine_wave = np.asarray(scene_get(fine_scene, "wave"), dtype=float).reshape(-1)
+        fine_photons = np.asarray(scene_get(fine_scene, "photons"), dtype=float)
+        fine_center = fine_photons[fine_photons.shape[0] // 2, fine_photons.shape[1] // 2, :]
+        fine_mean = np.mean(fine_photons, axis=(0, 1), dtype=float)
+
+        narrow_scene = scene_set(fine_scene.clone(), "wave", np.arange(500.0, 601.0, 2.0, dtype=float))
+        narrow_scene = scene_set(narrow_scene, "name", "2 nm narrow band spacing")
+        narrow_wave = np.asarray(scene_get(narrow_scene, "wave"), dtype=float).reshape(-1)
+        narrow_photons = np.asarray(scene_get(narrow_scene, "photons"), dtype=float)
+        narrow_center = narrow_photons[narrow_photons.shape[0] // 2, narrow_photons.shape[1] // 2, :]
+        narrow_mean = np.mean(narrow_photons, axis=(0, 1), dtype=float)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "source_name": canonical_name(source_scene.name),
+                "source_size": np.asarray(scene_get(source_scene, "size"), dtype=int),
+                "source_wave": source_wave,
+                "source_mean_luminance": float(scene_get(source_scene, "mean luminance", asset_store=store)),
+                "source_mean_scene_spd_norm": _channel_normalize(source_mean),
+                "source_center_scene_spd_norm": _channel_normalize(source_center),
+                "five_nm_name": canonical_name(fine_scene.name),
+                "five_nm_size": np.asarray(scene_get(fine_scene, "size"), dtype=int),
+                "five_nm_wave": fine_wave,
+                "five_nm_mean_luminance": float(scene_get(fine_scene, "mean luminance", asset_store=store)),
+                "five_nm_mean_scene_spd_norm": _channel_normalize(fine_mean),
+                "five_nm_center_scene_spd_norm": _channel_normalize(fine_center),
+                "narrow_name": canonical_name(narrow_scene.name),
+                "narrow_size": np.asarray(scene_get(narrow_scene, "size"), dtype=int),
+                "narrow_wave": narrow_wave,
+                "narrow_mean_luminance": float(scene_get(narrow_scene, "mean luminance", asset_store=store)),
+                "narrow_mean_scene_spd_norm": _channel_normalize(narrow_mean),
+                "narrow_center_scene_spd_norm": _channel_normalize(narrow_center),
+            },
+            context={},
+        )
+
     if case_name == "display_create_lcd_example":
         display = display_create("lcdExample.mat", asset_store=store)
         return ParityCaseResult(
