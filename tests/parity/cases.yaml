@@ -319,6 +319,26 @@
       "atol": 1e-08
     },
     {
+      "name": "scene_reflectance_chart_basis_functions_small",
+      "matlab_function": "s_sceneReflectanceChartBasisFunctions",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "basis_projector_999": {
+          "mode": "mean_rel",
+          "max_mean_rel": 1e-05
+        },
+        "coef_stats_999": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        },
+        "coef_stats_95": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        }
+      }
+    },
+    {
       "name": "display_create_lcd_example",
       "matlab_function": "displayCreate",
       "rtol": 1e-05,

@@ -16,6 +16,7 @@
 - and now also curated Octave parity on the `s_sceneFromMultispectral.m` multispectral-file workflow, covering `sceneFromFile(..., 'multispectral', ..., 400:10:700)` on `StuffedAnimals_tungsten-hdrs`, the loaded scene geometry and mean luminance, and normalized mean/center scene spectra
 - and now also headless `sceneGet(..., 'rgb')` plus curated Octave parity on the `s_sceneFromRGBvsMultispectral.m` roundtrip workflow, covering the `StuffedAnimals_tungsten-hdrs` multispectral scene rendered to RGB and reconstructed through `LCD-Apple.mat`, with preserved geometry/luminance, preserved 6500 K illuminant chromaticity, and strong per-channel RGB/XYZ roundtrip correlations
 - and now also headless `ie_reflectance_samples(...)` / `ieReflectanceSamples(...)` plus curated Octave parity on the `s_sceneReflectanceSamples.m` workflow, covering no-replacement reflectance sampling, exact sample-list replay, and the deterministic normalized-mean / singular-value statistics on explicit reflectance lists
+- and now also headless `hc_basis(...)` / `hcBasis(...)` plus curated Octave parity on the `s_sceneReflectanceChartBasisFunctions.m` workflow, covering canonical reflectance-chart basis extraction at `bType=0.999`, `0.95`, and `5`, with parity on the selected basis counts, variance explained, sign-canonicalized basis functions, and coefficient summary statistics
 
 ## Status
 

@@ -197,6 +197,7 @@ from .types import Camera, Display, ImageProcessor, OpticalImage, Scene, Sensor,
 from .utils import (
     DEFAULT_WAVE,
     blackbody,
+    hc_basis,
     ie_fit_line,
     ie_mvnrnd,
     ie_parameter_otype,
@@ -232,6 +233,8 @@ __all__ = [
     "cct_from_uv",
     "daylight",
     "HeadlessDescriptionHandle",
+    "hcBasis",
+    "hc_basis",
     "displayCreate",
     "displayGet",
     "displaySet",
@@ -728,6 +731,7 @@ cct = cct_from_uv
 spd2cct = spd_to_cct
 RGB2XWFormat = rgb_to_xw_format
 XW2RGBFormat = xw_to_rgb_format
+hcBasis = hc_basis
 ieLuminanceFromEnergy = luminance_from_energy
 ieLuminanceFromPhotons = luminance_from_photons
 

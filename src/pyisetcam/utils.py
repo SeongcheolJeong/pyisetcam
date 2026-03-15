@@ -941,6 +941,51 @@ def xw_to_rgb_format(im_xw: Any, rows: int, cols: int) -> NDArray[np.float64]:
     return np.reshape(array, (int(rows), int(cols), int(array.shape[1])), order="F")
 
 
+def hc_basis(
+    hc: Any,
+    b_type: float | int = 0.995,
+    m_type: str = "canonical",
+) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], float]:
+    """Approximate a hypercube with spectral bases following MATLAB's hcBasis()."""
+
+    cube = np.asarray(hc, dtype=float)
+    if cube.ndim == 3:
+        xw, rows, cols, _ = rgb_to_xw_format(cube)
+    elif cube.ndim == 2:
+        xw = cube
+        rows = int(cube.shape[0])
+        cols = 1
+    else:
+        raise ValueError("hc_basis expects a 2D XW array or a 3D hypercube.")
+
+    normalized_mean_type = param_format(m_type)
+    if normalized_mean_type not in {"canonical", "meansvd"}:
+        raise ValueError(f"Unknown hc_basis method '{m_type}'.")
+
+    if normalized_mean_type == "meansvd":
+        img_mean = np.mean(xw, axis=0, dtype=float)
+        svd_input = xw - img_mean.reshape(1, -1)
+    else:
+        img_mean = np.array([], dtype=float)
+        svd_input = xw
+
+    _, singular_values, right_vectors_t = np.linalg.svd(svd_input, full_matrices=False)
+    variance = np.square(singular_values)
+    relative_variance = np.cumsum(variance, dtype=float) / max(float(np.sum(variance, dtype=float)), 1e-12)
+
+    if float(b_type) < 1.0:
+        matches = np.flatnonzero(relative_variance > float(b_type))
+        n_bases = int(matches[0] + 1) if matches.size else int(relative_variance.size)
+    else:
+        n_bases = min(int(np.rint(float(b_type))), int(relative_variance.size))
+
+    basis = np.asarray(right_vectors_t.T[:, :n_bases], dtype=float)
+    coefficients_xw = np.asarray(svd_input @ basis, dtype=float)
+    coefficients = xw_to_rgb_format(coefficients_xw, rows, cols)
+    var_explained = float(relative_variance[n_bases - 1]) if n_bases > 0 else 0.0
+    return np.asarray(img_mean, dtype=float), basis, coefficients, var_explained
+
+
 def xyz_to_linear_srgb(xyz: NDArray[np.float64]) -> NDArray[np.float64]:
     """Convert CIE XYZ to linear sRGB."""
 

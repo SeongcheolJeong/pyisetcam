@@ -1092,6 +1092,43 @@ switch case_name
         payload.explicit_singular_values_norm = local_channel_normalize(singularValues);
         payload.explicit_replay_max_abs = max(abs(explicitReplay(:) - explicitReflectances(:)));
 
+    case 'scene_reflectance_chart_basis_functions_small'
+        sFiles = {
+            which('MunsellSamples_Vhrel.mat')
+            which('Food_Vhrel.mat')
+            which('HyspexSkinReflectance.mat')
+        };
+        sSamples = {
+            1:50
+            [1:27, 1:13]
+            1:10
+        };
+        scene = sceneCreate('reflectance chart', 24, sSamples, sFiles, [], true, 'without replacement');
+        wave = sceneGet(scene, 'wave');
+        reflectance = sceneGet(scene, 'reflectance');
+        [~, basis999, coef999, var999] = hcBasis(reflectance, 0.999, 'canonical');
+        [~, basis95, coef95, var95] = hcBasis(reflectance, 0.95, 'canonical');
+        [~, basis5, coef5, var5] = hcBasis(reflectance, 5, 'canonical');
+
+        payload.wave = wave(:);
+        payload.scene_size = sceneGet(scene, 'size');
+        payload.reflectance_shape = size(reflectance);
+        payload.basis_count_999 = size(basis999, 2);
+        payload.var_explained_999 = var999;
+        basis999 = local_canonicalize_basis_columns(basis999);
+        payload.basis_projector_999 = basis999 * basis999';
+        payload.coef_stats_999 = local_stats_vector(coef999);
+        payload.basis_count_95 = size(basis95, 2);
+        payload.var_explained_95 = var95;
+        basis95 = local_canonicalize_basis_columns(basis95);
+        payload.basis_projector_95 = basis95 * basis95';
+        payload.coef_stats_95 = local_stats_vector(coef95);
+        payload.basis_count_5 = size(basis5, 2);
+        payload.var_explained_5 = var5;
+        basis5 = local_canonicalize_basis_columns(basis5);
+        payload.basis_projector_5 = basis5 * basis5';
+        payload.coef_stats_5 = local_stats_vector(coef5);
+
     case 'display_create_lcd_example'
         d = displayCreate('lcdExample.mat');
         payload.wave = displayGet(d, 'wave');
@@ -4955,6 +4992,16 @@ end
 function values = local_channel_normalize(values)
 values = double(values(:))';
 values = values / max(max(abs(values)), eps);
+end
+
+function basis = local_canonicalize_basis_columns(basis)
+basis = double(basis);
+for ii = 1:size(basis, 2)
+    [~, idx] = max(abs(basis(:, ii)));
+    if basis(idx, ii) < 0
+        basis(:, ii) = -basis(:, ii);
+    end
+end
 end
 
 function samples = local_deterministic_normal_samples(nRows, nCols)

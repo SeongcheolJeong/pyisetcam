@@ -18,6 +18,7 @@ from pyisetcam import (
     daylight,
     display_create,
     display_get,
+    hc_basis,
     illuminant_create,
     illuminant_get,
     illuminant_set,
@@ -4903,6 +4904,22 @@ def test_run_python_case_supports_scene_reflectance_samples_parity_case(asset_st
     assert case.payload["explicit_singular_values_norm"].shape == (61,)
 
 
+def test_run_python_case_supports_scene_reflectance_chart_basis_functions_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_reflectance_chart_basis_functions_small", asset_store=asset_store)
+
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["scene_size"].shape == (2,)
+    assert case.payload["reflectance_shape"].shape == (3,)
+    assert int(case.payload["basis_count_999"]) >= int(case.payload["basis_count_95"])
+    assert int(case.payload["basis_count_5"]) == 5
+    assert case.payload["basis_projector_999"].shape == (31, 31)
+    assert case.payload["basis_projector_95"].shape == (31, 31)
+    assert case.payload["basis_projector_5"].shape == (31, 31)
+    assert case.payload["coef_stats_999"].shape == (4,)
+    assert case.payload["coef_stats_95"].shape == (4,)
+    assert case.payload["coef_stats_5"].shape == (4,)
+
+
 def test_run_python_case_supports_frequency_orientation_scene_parity_case(asset_store) -> None:
     case = run_python_case_with_context("scene_frequency_orientation_small", asset_store=asset_store)
 
@@ -7851,6 +7868,46 @@ def test_scene_reflectance_samples_script_workflow(asset_store) -> None:
     assert explicit_reflectances.shape == (61, 120)
     assert all(np.array_equal(expected, current) for expected, current in zip(explicit_lists, stored_lists, strict=True))
     assert np.array_equal(explicit_reflectances, explicit_replay)
+
+
+def test_scene_reflectance_chart_basis_functions_script_workflow(asset_store) -> None:
+    scene = scene_create("reflectance chart", asset_store=asset_store)
+    wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+    reflectance = np.asarray(scene_get(scene, "reflectance"), dtype=float)
+
+    img_mean_999, basis_999, coef_999, var_999 = hc_basis(reflectance, 0.999, "canonical")
+    img_mean_95, basis_95, coef_95, var_95 = hc_basis(reflectance, 0.95, "canonical")
+    img_mean_5, basis_5, coef_5, var_5 = hc_basis(reflectance, 5, "canonical")
+
+    assert tuple(scene_get(scene, "size")) == tuple(reflectance.shape[:2])
+    assert np.array_equal(wave, np.arange(400.0, 701.0, 10.0, dtype=float))
+    assert reflectance.shape[2] == wave.size
+    assert img_mean_999.size == 0
+    assert img_mean_95.size == 0
+    assert img_mean_5.size == 0
+    assert basis_999.shape[0] == wave.size
+    assert basis_95.shape[0] == wave.size
+    assert basis_5.shape == (wave.size, 5)
+    assert coef_999.shape[:2] == reflectance.shape[:2]
+    assert coef_95.shape[:2] == reflectance.shape[:2]
+    assert coef_5.shape == (reflectance.shape[0], reflectance.shape[1], 5)
+    assert basis_999.shape[1] >= basis_95.shape[1]
+    assert var_999 >= 0.999
+    assert var_95 >= 0.95
+    assert var_999 >= var_5 >= var_95
+    assert np.allclose(basis_5.T @ basis_5, np.eye(5), atol=1e-8, rtol=1e-8)
+
+    reflectance_xw, rows, cols, _ = rgb_to_xw_format(reflectance)
+    reconstructed_5 = rgb_to_xw_format(coef_5)[0] @ basis_5.T
+    relative_rmse_5 = np.sqrt(np.mean(np.square(reconstructed_5 - reflectance_xw), axis=0)) / np.maximum(
+        np.mean(np.abs(reflectance_xw), axis=0),
+        1e-12,
+    )
+
+    assert rows == reflectance.shape[0]
+    assert cols == reflectance.shape[1]
+    assert float(np.mean(relative_rmse_5)) < 0.07
+    assert float(np.max(relative_rmse_5)) < 0.21
 
 
 def test_run_python_case_supports_sensor_macbeth_daylight_estimate_small_parity_case(asset_store) -> None:

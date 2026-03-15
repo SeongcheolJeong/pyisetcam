@@ -99,6 +99,7 @@ from .sensor import signal_current
 from .utils import (
     blackbody,
     energy_to_quanta,
+    hc_basis,
     ie_fit_line,
     ie_mvnrnd,
     param_format,
@@ -159,6 +160,17 @@ def _reflectance_sample_statistics(reflectances: Any) -> tuple[np.ndarray, np.nd
     mean_reflectance = np.mean(normalized, axis=1, dtype=float)
     singular_values = np.linalg.svd(normalized - mean_reflectance.reshape(-1, 1), compute_uv=False)
     return mean_reflectance, singular_values
+
+
+def _canonicalize_basis_columns(basis: Any) -> np.ndarray:
+    matrix = np.asarray(basis, dtype=float).copy()
+    if matrix.ndim != 2:
+        raise ValueError("Basis canonicalization expects a 2D basis matrix.")
+    for column in range(matrix.shape[1]):
+        anchor = int(np.argmax(np.abs(matrix[:, column])))
+        if matrix[anchor, column] < 0.0:
+            matrix[:, column] = -matrix[:, column]
+    return matrix
 
 
 def _find_nearest_two(array: Any, number: float) -> np.ndarray:
@@ -1354,6 +1366,51 @@ def run_python_case_with_context(
                 "explicit_replay_max_abs": float(
                     np.max(np.abs(explicit_reflectances_replay - explicit_reflectances))
                 ),
+            },
+            context={},
+        )
+
+    if case_name == "scene_reflectance_chart_basis_functions_small":
+        params = {
+            "sfiles": [
+                "MunsellSamples_Vhrel.mat",
+                "Food_Vhrel.mat",
+                "skin/HyspexSkinReflectance.mat",
+            ],
+            "ssamples": [
+                np.arange(1, 51, dtype=int),
+                np.concatenate((np.arange(1, 28, dtype=int), np.arange(1, 14, dtype=int))),
+                np.arange(1, 11, dtype=int),
+            ],
+            "psize": 24,
+            "grayflag": True,
+            "sampling": "without replacement",
+        }
+        scene = scene_create("reflectance chart", params, asset_store=store)
+        wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+        reflectance = np.asarray(scene_get(scene, "reflectance"), dtype=float)
+        _, basis_999, coef_999, var_999 = hc_basis(reflectance, 0.999, "canonical")
+        _, basis_95, coef_95, var_95 = hc_basis(reflectance, 0.95, "canonical")
+        _, basis_5, coef_5, var_5 = hc_basis(reflectance, 5, "canonical")
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "scene_size": np.array(scene_get(scene, "size"), dtype=int),
+                "reflectance_shape": np.array(reflectance.shape, dtype=int),
+                "basis_count_999": int(basis_999.shape[1]),
+                "var_explained_999": float(var_999),
+                "basis_projector_999": _canonicalize_basis_columns(basis_999) @ _canonicalize_basis_columns(basis_999).T,
+                "coef_stats_999": _stats_vector(coef_999),
+                "basis_count_95": int(basis_95.shape[1]),
+                "var_explained_95": float(var_95),
+                "basis_projector_95": _canonicalize_basis_columns(basis_95) @ _canonicalize_basis_columns(basis_95).T,
+                "coef_stats_95": _stats_vector(coef_95),
+                "basis_count_5": int(basis_5.shape[1]),
+                "var_explained_5": float(var_5),
+                "basis_projector_5": _canonicalize_basis_columns(basis_5) @ _canonicalize_basis_columns(basis_5).T,
+                "coef_stats_5": _stats_vector(coef_5),
             },
             context={},
         )
