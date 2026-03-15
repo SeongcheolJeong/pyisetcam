@@ -17,7 +17,7 @@ from .display import display_create
 from .fileio import ie_save_color_filter, ie_save_si_data_file
 from .fileio import sensor_dng_read
 from .illuminant import illuminant_create, illuminant_get, illuminant_set
-from .metrics import cct_from_uv, delta_e_ab, metrics_spd, spd_to_cct, xyz_from_energy, xyz_to_lab, xyz_to_luv, xyz_to_uv
+from .metrics import chromaticity_xy, cct_from_uv, delta_e_ab, metrics_spd, spd_to_cct, xyz_from_energy, xyz_to_lab, xyz_to_luv, xyz_to_uv
 from .ip import ip_compute, ip_create, ip_get, ip_set
 from .optics import (
     _cos4th_factor,
@@ -1117,6 +1117,56 @@ def run_python_case_with_context(
                 / np.maximum(xyz_d65_mean, 1e-12),
                 "predicted_diagonal_rmse_ratio": np.sqrt(np.mean(np.square(predicted_diagonal - xyz_d65_xw), axis=0))
                 / np.maximum(xyz_d65_mean, 1e-12),
+            },
+            context={},
+        )
+
+    if case_name == "scene_from_rgb_lcd_apple_small":
+        display = display_create("LCD-Apple.mat", asset_store=store)
+        display_wave = np.asarray(display.fields["wave"], dtype=float).reshape(-1)
+        display_spd = np.asarray(display.fields["spd"], dtype=float)
+        white_spd = np.sum(display_spd, axis=1)
+        white_xy = np.asarray(
+            chromaticity_xy(xyz_from_energy(white_spd, display_wave, asset_store=store)),
+            dtype=float,
+        ).reshape(-1)
+
+        rgb_path = store.resolve("data/images/rgb/eagle.jpg")
+        scene = scene_from_file(rgb_path, "rgb", None, "LCD-Apple.mat", asset_store=store)
+        scene_wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+        scene_photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+        scene_mean_photons = np.mean(scene_photons, axis=(0, 1))
+
+        adjusted_scene = scene_adjust_illuminant(
+            scene.clone(),
+            blackbody(scene_wave, 6500.0, kind="energy"),
+            asset_store=store,
+        )
+        rect = [144, 198, 27, 18]
+        roi_mean_reflectance = np.asarray(
+            scene_get(adjusted_scene, "roi mean reflectance", rect, asset_store=store),
+            dtype=float,
+        ).reshape(-1)
+        adjusted_illuminant_energy = np.asarray(
+            scene_get(adjusted_scene, "illuminant energy"),
+            dtype=float,
+        ).reshape(-1)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "display_wave": display_wave,
+                "display_spd": display_spd,
+                "white_spd": white_spd,
+                "white_xy": white_xy,
+                "scene_size": np.array(scene_get(scene, "size"), dtype=int),
+                "scene_wave": scene_wave,
+                "scene_mean_luminance": float(scene_get(scene, "mean luminance", asset_store=store)),
+                "scene_mean_photons_norm": scene_mean_photons / max(float(np.mean(scene_mean_photons)), 1e-12),
+                "adjusted_mean_luminance": float(scene_get(adjusted_scene, "mean luminance", asset_store=store)),
+                "adjusted_illuminant_energy_norm": adjusted_illuminant_energy
+                / max(float(np.max(adjusted_illuminant_energy)), 1e-12),
+                "roi_mean_reflectance": roi_mean_reflectance,
             },
             context={},
         )

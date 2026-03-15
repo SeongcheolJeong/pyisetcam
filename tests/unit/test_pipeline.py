@@ -14,7 +14,10 @@ from pyisetcam import (
     camera_create,
     camera_get,
     camera_set,
+    chromaticity_xy,
     daylight,
+    display_create,
+    display_get,
     illuminant_create,
     illuminant_get,
     illuminant_set,
@@ -117,6 +120,7 @@ from pyisetcam import (
     wvf_to_oi,
     wvf_zernike_nm_to_osa_index,
     xw_to_rgb_format,
+    xyz_from_energy,
     zemax_load,
     zemax_read_header,
 )
@@ -4846,6 +4850,20 @@ def test_run_python_case_supports_scene_xyz_illuminant_transforms_parity_case(as
     assert case.payload["predicted_diagonal_rmse_ratio"].shape == (3,)
 
 
+def test_run_python_case_supports_scene_from_rgb_lcd_apple_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_from_rgb_lcd_apple_small", asset_store=asset_store)
+
+    assert case.payload["display_wave"].shape == (101,)
+    assert case.payload["display_spd"].shape == (101, 3)
+    assert case.payload["white_spd"].shape == (101,)
+    assert case.payload["white_xy"].shape == (2,)
+    assert case.payload["scene_size"].shape == (2,)
+    assert case.payload["scene_wave"].shape == (101,)
+    assert case.payload["scene_mean_photons_norm"].shape == (101,)
+    assert case.payload["adjusted_illuminant_energy_norm"].shape == (101,)
+    assert case.payload["roi_mean_reflectance"].shape == (101,)
+
+
 def test_run_python_case_supports_frequency_orientation_scene_parity_case(asset_store) -> None:
     case = run_python_case_with_context("scene_frequency_orientation_small", asset_store=asset_store)
 
@@ -7604,6 +7622,51 @@ def test_scene_xyz_illuminant_transforms_script_workflow(asset_store) -> None:
     assert full_transform.shape == (3, 3)
     assert diagonal_transform.shape == (3, 3)
     assert np.all(np.sqrt(np.mean(np.square(predicted_full - xyz_d65_xw), axis=0)) < np.sqrt(np.mean(np.square(predicted_diagonal - xyz_d65_xw), axis=0)))
+
+
+def test_scene_from_rgb_script_workflow(asset_store) -> None:
+    display = display_create("LCD-Apple.mat", asset_store=asset_store)
+    wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)
+    spd = np.asarray(display_get(display, "spd"), dtype=float)
+    white_spd = np.asarray(display_get(display, "white spd"), dtype=float).reshape(-1)
+    white_xy = np.asarray(
+        chromaticity_xy(xyz_from_energy(white_spd, wave, asset_store=asset_store)),
+        dtype=float,
+    ).reshape(-1)
+
+    scene = scene_from_file(
+        asset_store.resolve("data/images/rgb/eagle.jpg"),
+        "rgb",
+        None,
+        "LCD-Apple.mat",
+        asset_store=asset_store,
+    )
+    initial_mean_luminance = float(scene_get(scene, "mean luminance", asset_store=asset_store))
+    mean_photons = np.mean(np.asarray(scene_get(scene, "photons"), dtype=float), axis=(0, 1))
+
+    adjusted_scene = scene_adjust_illuminant(
+        scene.clone(),
+        blackbody(scene_get(scene, "wave"), 6500.0, kind="energy"),
+        asset_store=asset_store,
+    )
+    adjusted_mean_luminance = float(scene_get(adjusted_scene, "mean luminance", asset_store=asset_store))
+    roi_mean_reflectance = np.asarray(
+        scene_get(adjusted_scene, "roi mean reflectance", [144, 198, 27, 18], asset_store=asset_store),
+        dtype=float,
+    ).reshape(-1)
+
+    assert spd.shape == (101, 3)
+    assert white_spd.shape == (101,)
+    assert white_xy.shape == (2,)
+    assert tuple(scene_get(scene, "size")) == (336, 512)
+    assert tuple(np.asarray(scene_get(scene, "photons"), dtype=float).shape) == (336, 512, 101)
+    assert scene.fields["display_name"] == "LCD-Apple"
+    assert scene.fields["illuminant_comment"] == "LCD-Apple"
+    assert np.isclose(initial_mean_luminance, adjusted_mean_luminance, atol=1e-8, rtol=1e-8)
+    assert np.all(mean_photons > 0.0)
+    assert roi_mean_reflectance.shape == (101,)
+    assert float(np.max(roi_mean_reflectance)) < 0.5
+    assert float(np.min(roi_mean_reflectance)) > 0.0
 
 
 def test_run_python_case_supports_sensor_macbeth_daylight_estimate_small_parity_case(asset_store) -> None:

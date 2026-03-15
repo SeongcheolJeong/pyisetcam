@@ -962,6 +962,38 @@ switch case_name
         payload.predicted_full_rmse_ratio = sqrt(mean((pred_full - xyz1_xw) .^ 2, 1)) ./ max(xyz1_mean, 1e-12);
         payload.predicted_diagonal_rmse_ratio = sqrt(mean((pred_diag - xyz1_xw) .^ 2, 1)) ./ max(xyz1_mean, 1e-12);
 
+    case 'scene_from_rgb_lcd_apple_small'
+        displayCalFile = 'LCD-Apple.mat';
+        d = displayCreate(displayCalFile);
+        wave = displayGet(d, 'wave');
+        spd = displayGet(d, 'spd');
+        whiteSPD = displayGet(d, 'white spd');
+        whiteXYZ = ieXYZFromEnergy(whiteSPD', wave);
+        whiteXY = chromaticity(whiteXYZ);
+
+        rgbFile = fullfile(isetRootPath, 'data', 'images', 'rgb', 'eagle.jpg');
+        scene = sceneFromFile(rgbFile, 'rgb', [], displayCalFile);
+        scenePhotons = sceneGet(scene, 'photons');
+        sceneMeanPhotons = mean(RGB2XWFormat(scenePhotons), 1);
+
+        bb = blackbody(sceneGet(scene, 'wave'), 6500, 'energy');
+        sceneAdj = sceneAdjustIlluminant(scene, bb);
+        rect = [144 198 27 18];
+        roiReflectance = sceneGet(sceneAdj, 'roi reflectance', rect);
+        adjustedIlluminant = sceneGet(sceneAdj, 'illuminant energy');
+
+        payload.display_wave = wave;
+        payload.display_spd = spd;
+        payload.white_spd = whiteSPD;
+        payload.white_xy = whiteXY(:);
+        payload.scene_size = sceneGet(scene, 'size');
+        payload.scene_wave = sceneGet(scene, 'wave');
+        payload.scene_mean_luminance = sceneGet(scene, 'mean luminance');
+        payload.scene_mean_photons_norm = sceneMeanPhotons(:) / max(mean(sceneMeanPhotons(:)), 1e-12);
+        payload.adjusted_mean_luminance = sceneGet(sceneAdj, 'mean luminance');
+        payload.adjusted_illuminant_energy_norm = adjustedIlluminant(:) / max(adjustedIlluminant(:));
+        payload.roi_mean_reflectance = mean(roiReflectance, 1)';
+
     case 'display_create_lcd_example'
         d = displayCreate('lcdExample.mat');
         payload.wave = displayGet(d, 'wave');

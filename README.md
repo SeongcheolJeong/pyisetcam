@@ -12,6 +12,7 @@
 - and now also headless `sceneIlluminantSS(...)`, spatial-spectral `sceneAdjustIlluminant(...)`, and `sceneCreate('macbeth tungsten')` coverage plus curated Octave parity on the `s_sceneIlluminantMixtures.m` mixed-illuminant workflow
 - and now also curated Octave parity on the `s_sceneIlluminantSpace.m` spatial-spectral illuminant workflow, covering the row-temperature gradient and the column-harmonic illuminant modulation path
 - and now also `sceneGet(..., 'xyz')` plus MATLAB-style `RGB2XWFormat` / `XW2RGBFormat` coverage with curated Octave parity on the `s_sceneXYZilluminantTransforms.m` illuminant-transfer workflow, locking down normalized XYZ balance plus the fitted transfer matrices and relative error trend
+- and now also curated Octave parity on the `s_sceneFromRGB.m` display-calibrated RGB-image workflow, covering `displayCreate('LCD-Apple.mat')`, the display white point, `sceneFromFile(..., 'rgb', ..., 'LCD-Apple.mat')`, the 6500 K illuminant swap, and the beak ROI reflectance contract
 
 ## Status
 
