@@ -4281,6 +4281,63 @@ def test_run_python_case_supports_wvf_script_defocus_oi_parity_case(asset_store)
     assert case.payload["f_number"] > 0.0
 
 
+def test_optics_defocus_workflow_supports_wvf_blur_astigmatism_and_pupil_reset(asset_store) -> None:
+    scene = scene_create("disk array", 256, 32, np.array([2, 2], dtype=int), asset_store=asset_store)
+    scene = scene_set(scene, "fov", 0.5)
+
+    wvf = wvf_create(wave=scene_get(scene, "wave"))
+    oi = oi_compute(oi_create("wvf", wvf), scene)
+
+    initial_mean = float(np.mean(np.asarray(oi_get(oi, "photons"), dtype=float)))
+
+    oi = oi_set(oi, "wvf zcoeffs", 2.5, "defocus")
+    oi = oi_compute(oi, scene)
+    assert np.isclose(float(oi_get(oi, "wvf", "zcoeffs", "defocus")), 2.5)
+
+    oi = oi_set(oi, "wvf zcoeffs", 1.0, "vertical_astigmatism")
+    oi = oi_compute(oi, scene)
+    assert np.isclose(float(oi_get(oi, "wvf", "zcoeffs", "vertical_astigmatism")), 1.0)
+
+    oi = oi_set(oi, "wvf zcoeffs", 0.0, "vertical_astigmatism")
+    oi = oi_compute(oi, scene)
+    oi = oi_set(oi, "wvf zcoeffs", 0.0, "defocus")
+    oi = oi_compute(oi, scene)
+    ending_mean = float(np.mean(np.asarray(oi_get(oi, "photons"), dtype=float)))
+    assert np.isclose(initial_mean / ending_mean, 1.0, atol=1e-6)
+
+    current_wvf = oi_get(oi, "wvf")
+    pupil_diameter_mm = float(wvf_get(current_wvf, "calc pupil diameter", "mm"))
+    current_wvf = wvf_set(current_wvf, "calc pupil diameter", 2.0 * pupil_diameter_mm, "mm")
+    oi = oi_set(oi, "optics wvf", current_wvf)
+    oi = oi_compute(oi, scene)
+    large_pupil_peak = float(np.max(np.asarray(oi_get(oi, "photons"), dtype=float)))
+
+    restored_wvf = wvf_set(oi_get(oi, "wvf"), "calc pupil diameter", pupil_diameter_mm, "mm")
+    oi = oi_set(oi, "optics wvf", restored_wvf)
+    oi = oi_compute(oi, scene)
+    final_mean = float(np.mean(np.asarray(oi_get(oi, "photons"), dtype=float)))
+    final_peak = float(np.max(np.asarray(oi_get(oi, "photons"), dtype=float)))
+
+    assert np.isclose(initial_mean / final_mean, 1.0, atol=1e-6)
+    assert large_pupil_peak > final_peak
+
+
+def test_run_python_case_supports_optics_defocus_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("optics_defocus_small", asset_store=asset_store)
+
+    assert case.payload["wave"].ndim == 1
+    assert np.isclose(float(case.payload["defocus_coeff"]), 2.5)
+    assert np.isclose(float(case.payload["vertical_astigmatism_coeff"]), 1.0)
+    assert np.isclose(float(case.payload["final_defocus_coeff"]), 0.0)
+    assert np.isclose(float(case.payload["final_vertical_astigmatism_coeff"]), 0.0)
+    assert np.isclose(float(case.payload["initial_reset_ratio"]), 1.0, atol=1e-6)
+    assert np.isclose(float(case.payload["initial_final_ratio"]), 1.0, atol=1e-6)
+    assert float(case.payload["doubled_pupil_diameter_mm"]) > float(case.payload["pupil_diameter_mm"])
+    assert case.payload["base_center_row_550_norm"].ndim == 1
+    assert case.payload["defocus_center_row_550_norm"].shape == case.payload["base_center_row_550_norm"].shape
+    assert case.payload["large_pupil_center_row_550_norm"].shape == case.payload["base_center_row_550_norm"].shape
+
+
 def test_wvf_astigmatism_workflow_supports_defocus_astigmatism_grid() -> None:
     max_um = 20.0
     wvf = wvf_create()

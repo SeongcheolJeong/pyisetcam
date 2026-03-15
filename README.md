@@ -378,6 +378,10 @@ The same script-driven optics surface now also includes headless
 `oiPlot(..., 'psf'/'psf550'/'psfxaxis'/'psfyaxis')` support, backed by
 computed `oiGet(..., 'psf data'/'psf xaxis'/'psf yaxis')` access for
 diffraction-limited, custom-PSF, and computed WVF shift-invariant optics.
+That same focus/DoF optics block now also has direct Octave parity on
+`s_opticsDefocus.m`, comparing the blur/astigmatism/pupil-diameter WVF
+sequence through mean-photon conservation, recovered Zernike coefficients,
+pupil-diameter changes, and normalized 550 nm center-row irradiance slices.
 The adjacent diffraction-limited optics plotting surface now also includes
 headless `oiPlot(..., 'ls wavelength'/'lswavelength'/'otf wavelength'/'mtf wavelength')`
 support for the script-driven line-spread and OTF-by-wavelength workflows

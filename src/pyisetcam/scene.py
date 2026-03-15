@@ -769,6 +769,62 @@ def _point_array_scene(
     return scene
 
 
+def _disk_array_scene(
+    size: Any,
+    radius: int,
+    array_size: Any,
+    wave: np.ndarray,
+    *,
+    asset_store: AssetStore,
+) -> Scene:
+    rows, cols = _scene_size_2d(size, default=128)
+    array_values = np.asarray(array_size if array_size is not None else [1, 1], dtype=int).reshape(-1)
+    if array_values.size == 0:
+        array_rows, array_cols = 1, 1
+    elif array_values.size == 1:
+        array_rows = array_cols = max(int(array_values[0]), 1)
+    else:
+        array_rows = max(int(array_values[0]), 1)
+        array_cols = max(int(array_values[1]), 1)
+    disk_radius = max(int(radius), 1)
+
+    pattern = np.zeros((rows, cols), dtype=float)
+    yy, xx = np.meshgrid(
+        np.arange(-disk_radius, disk_radius + 1, dtype=float),
+        np.arange(-disk_radius, disk_radius + 1, dtype=float),
+        indexing="ij",
+    )
+    disk = (np.sqrt(xx**2 + yy**2) < float(disk_radius)).astype(float)
+
+    delta_row = max(_matlab_round_scalar(rows / float(array_rows + 1)), 1)
+    delta_col = max(_matlab_round_scalar(cols / float(array_cols + 1)), 1)
+    row_centers = np.arange(delta_row - 1, rows - (delta_row - 1), delta_row, dtype=int)
+    col_centers = np.arange(delta_col - 1, cols - (delta_col - 1), delta_col, dtype=int)
+
+    for row_center in row_centers:
+        for col_center in col_centers:
+            row_start = int(row_center - _matlab_round_scalar(disk_radius))
+            col_start = int(col_center - _matlab_round_scalar(disk_radius))
+            row_end = row_start + disk.shape[0]
+            col_end = col_start + disk.shape[1]
+            if row_start < 0 or col_start < 0 or row_end > rows or col_end > cols:
+                continue
+            pattern[row_start:row_end, col_start:col_end] = disk
+
+    illuminant_energy, illuminant_photons = _spectral_illuminant("ep", wave, asset_store=asset_store)
+    photons = pattern[:, :, None] * illuminant_photons.reshape(1, 1, -1)
+    scene = Scene(name="Disk Array")
+    scene.fields["wave"] = wave
+    scene.fields["illuminant_format"] = "spectral"
+    scene.fields["illuminant_energy"] = illuminant_energy
+    scene.fields["illuminant_photons"] = illuminant_photons
+    scene.fields["distance_m"] = DEFAULT_DISTANCE_M
+    scene.fields["fov_deg"] = 40.0
+    scene.data["photons"] = photons
+    _update_scene_geometry(scene)
+    return scene
+
+
 def _grid_lines_scene(
     size: Any,
     spacing: int,
@@ -1541,6 +1597,16 @@ def scene_create(
         return track_session_object(
             session,
             _point_array_scene(size, spacing, spectral_type, point_size, wave, asset_store=store),
+        )
+
+    if name in {"diskarray", "disk array".replace(" ", "")}:
+        size = args[0] if len(args) > 0 else 128
+        radius = int(args[1]) if len(args) > 1 else 16
+        array_size = args[2] if len(args) > 2 else np.array([1, 1], dtype=int)
+        wave = _wave_or_default(args[3] if len(args) > 3 else None)
+        return track_session_object(
+            session,
+            _disk_array_scene(size, radius, array_size, wave, asset_store=store),
         )
 
     if name in {"gridlines", "distortiongrid", "grid lines".replace(" ", "")}:

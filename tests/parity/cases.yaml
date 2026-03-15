@@ -441,6 +441,38 @@
       }
     },
     {
+      "name": "optics_defocus_small",
+      "matlab_function": "s_opticsDefocus",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "base_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.04
+        },
+        "defocus_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.04
+        },
+        "astig_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.04
+        },
+        "reset_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.04
+        },
+        "large_pupil_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.04
+        },
+        "final_center_row_550_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.04
+        }
+      }
+    },
+    {
       "name": "wvf_astigmatism_small",
       "matlab_function": "s_wvfAstigmatism",
       "rtol": 1e-05,

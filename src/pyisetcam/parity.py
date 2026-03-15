@@ -1405,6 +1405,81 @@ def run_python_case_with_context(
             context={"scene": scene, "wvf": wvf, "oi": oi},
         )
 
+    if case_name == "optics_defocus_small":
+        scene = scene_create("disk array", 256, 32, np.array([2, 2], dtype=int), asset_store=store)
+        scene = scene_set(scene, "fov", 0.5)
+
+        wvf = wvf_create(wave=scene_get(scene, "wave"))
+        oi = oi_create("wvf", wvf)
+        oi = oi_compute(oi, scene)
+
+        wave = np.asarray(oi_get(oi, "wave"), dtype=float).reshape(-1)
+        wave_index_550 = int(np.argmin(np.abs(wave - 550.0)))
+
+        def _mean_photons(current_oi: Any) -> float:
+            return float(np.mean(np.asarray(oi_get(current_oi, "photons"), dtype=float)))
+
+        def _center_row_norm_550(current_oi: Any) -> np.ndarray:
+            photons = np.asarray(oi_get(current_oi, "photons"), dtype=float)
+            center_row = photons[photons.shape[0] // 2, :, wave_index_550]
+            return _channel_normalize(center_row)
+
+        base_mean = _mean_photons(oi)
+        base_center_row_550 = _center_row_norm_550(oi)
+
+        oi = oi_set(oi, "wvf zcoeffs", 2.5, "defocus")
+        oi = oi_compute(oi, scene)
+        defocus_center_row_550 = _center_row_norm_550(oi)
+        defocus_coeff = float(oi_get(oi, "wvf", "zcoeffs", "defocus"))
+
+        oi = oi_set(oi, "wvf zcoeffs", 1.0, "vertical_astigmatism")
+        oi = oi_compute(oi, scene)
+        astig_center_row_550 = _center_row_norm_550(oi)
+        astig_coeff = float(oi_get(oi, "wvf", "zcoeffs", "vertical_astigmatism"))
+
+        oi = oi_set(oi, "wvf zcoeffs", 0.0, "vertical_astigmatism")
+        oi = oi_compute(oi, scene)
+
+        oi = oi_set(oi, "wvf zcoeffs", 0.0, "defocus")
+        oi = oi_compute(oi, scene)
+        reset_mean = _mean_photons(oi)
+        reset_center_row_550 = _center_row_norm_550(oi)
+
+        current_wvf = oi_get(oi, "wvf")
+        pupil_diameter_mm = float(wvf_get(current_wvf, "calc pupil diameter", "mm"))
+        updated_wvf = wvf_set(current_wvf, "calc pupil diameter", 2.0 * pupil_diameter_mm, "mm")
+        oi = oi_set(oi, "optics wvf", updated_wvf)
+        oi = oi_compute(oi, scene)
+        large_pupil_center_row_550 = _center_row_norm_550(oi)
+
+        restored_wvf = wvf_set(oi_get(oi, "wvf"), "calc pupil diameter", pupil_diameter_mm, "mm")
+        oi = oi_set(oi, "optics wvf", restored_wvf)
+        oi = oi_compute(oi, scene)
+        final_mean = _mean_photons(oi)
+        final_center_row_550 = _center_row_norm_550(oi)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "base_center_row_550_norm": base_center_row_550,
+                "defocus_center_row_550_norm": defocus_center_row_550,
+                "astig_center_row_550_norm": astig_center_row_550,
+                "reset_center_row_550_norm": reset_center_row_550,
+                "large_pupil_center_row_550_norm": large_pupil_center_row_550,
+                "final_center_row_550_norm": final_center_row_550,
+                "defocus_coeff": defocus_coeff,
+                "vertical_astigmatism_coeff": astig_coeff,
+                "final_defocus_coeff": float(oi_get(oi, "wvf", "zcoeffs", "defocus")),
+                "final_vertical_astigmatism_coeff": float(oi_get(oi, "wvf", "zcoeffs", "vertical_astigmatism")),
+                "pupil_diameter_mm": pupil_diameter_mm,
+                "doubled_pupil_diameter_mm": 2.0 * pupil_diameter_mm,
+                "initial_reset_ratio": base_mean / max(reset_mean, 1e-12),
+                "initial_final_ratio": base_mean / max(final_mean, 1e-12),
+            },
+            context={"scene": scene, "oi": oi},
+        )
+
     if case_name == "wvf_astigmatism_small":
         max_um = 20.0
         base_wvf = wvf_create()

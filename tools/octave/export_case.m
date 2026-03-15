@@ -1204,6 +1204,65 @@ switch case_name
         payload.pupil_diameter_mm = wvfGet(wvf, 'pupil diameter', 'mm');
         payload.f_number = oiGet(oi, 'f number');
 
+    case 'optics_defocus_small'
+        scene = sceneCreate('disk array', 256, 32, [2, 2]);
+        scene = sceneSet(scene, 'fov', 0.5);
+
+        wvf = wvfCreate('wave', sceneGet(scene, 'wave'));
+        oi = oiCreate('wvf', wvf);
+        oi = oiCompute(oi, scene);
+
+        wave = double(oiGet(oi, 'wave')(:));
+        [~, waveIndex550] = min(abs(wave - 550));
+
+        basePhotons = double(oiGet(oi, 'photons'));
+        baseMean = real(mean(real(basePhotons(:))));
+        payload.wave = wave;
+        payload.base_center_row_550_norm = local_channel_normalize(squeeze(basePhotons(floor(size(basePhotons, 1) / 2) + 1, :, waveIndex550)));
+
+        oi = oiSet(oi, 'wvf zcoeffs', 2.5, 'defocus');
+        oi = oiCompute(oi, scene);
+        defocusPhotons = double(oiGet(oi, 'photons'));
+        payload.defocus_center_row_550_norm = local_channel_normalize(squeeze(defocusPhotons(floor(size(defocusPhotons, 1) / 2) + 1, :, waveIndex550)));
+        payload.defocus_coeff = oiGet(oi, 'wvf', 'zcoeffs', 'defocus');
+
+        oi = oiSet(oi, 'wvf zcoeffs', 1, 'vertical_astigmatism');
+        oi = oiCompute(oi, scene);
+        astigPhotons = double(oiGet(oi, 'photons'));
+        payload.astig_center_row_550_norm = local_channel_normalize(squeeze(astigPhotons(floor(size(astigPhotons, 1) / 2) + 1, :, waveIndex550)));
+        payload.vertical_astigmatism_coeff = oiGet(oi, 'wvf', 'zcoeffs', 'vertical_astigmatism');
+
+        oi = oiSet(oi, 'wvf zcoeffs', 0, 'vertical_astigmatism');
+        oi = oiCompute(oi, scene);
+
+        oi = oiSet(oi, 'wvf zcoeffs', 0, 'defocus');
+        oi = oiCompute(oi, scene);
+        resetPhotons = double(oiGet(oi, 'photons'));
+        resetMean = real(mean(real(resetPhotons(:))));
+        payload.reset_center_row_550_norm = local_channel_normalize(squeeze(resetPhotons(floor(size(resetPhotons, 1) / 2) + 1, :, waveIndex550)));
+
+        currentWvf = oiGet(oi, 'wvf');
+        pupilDiameterMM = wvfGet(currentWvf, 'calc pupil diameter', 'mm');
+        currentWvf = wvfSet(currentWvf, 'calc pupil diameter', 2 * pupilDiameterMM, 'mm');
+        oi = oiSet(oi, 'optics wvf', currentWvf);
+        oi = oiCompute(oi, scene);
+        largePupilPhotons = double(oiGet(oi, 'photons'));
+        payload.large_pupil_center_row_550_norm = local_channel_normalize(squeeze(largePupilPhotons(floor(size(largePupilPhotons, 1) / 2) + 1, :, waveIndex550)));
+        payload.pupil_diameter_mm = pupilDiameterMM;
+        payload.doubled_pupil_diameter_mm = 2 * pupilDiameterMM;
+
+        currentWvf = oiGet(oi, 'wvf');
+        currentWvf = wvfSet(currentWvf, 'calc pupil diameter', pupilDiameterMM, 'mm');
+        oi = oiSet(oi, 'optics wvf', currentWvf);
+        oi = oiCompute(oi, scene);
+        finalPhotons = double(oiGet(oi, 'photons'));
+        finalMean = real(mean(real(finalPhotons(:))));
+        payload.final_center_row_550_norm = local_channel_normalize(squeeze(finalPhotons(floor(size(finalPhotons, 1) / 2) + 1, :, waveIndex550)));
+        payload.final_defocus_coeff = oiGet(oi, 'wvf', 'zcoeffs', 'defocus');
+        payload.final_vertical_astigmatism_coeff = oiGet(oi, 'wvf', 'zcoeffs', 'vertical_astigmatism');
+        payload.initial_reset_ratio = baseMean / max(resetMean, 1e-12);
+        payload.initial_final_ratio = baseMean / max(finalMean, 1e-12);
+
     case 'wvf_spatial_sampling_small'
         wvf = wvfCreate('wave', 550);
         thisWave = wvfGet(wvf, 'wave');
