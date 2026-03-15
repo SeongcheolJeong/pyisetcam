@@ -14,6 +14,7 @@
 - and now also `sceneGet(..., 'xyz')` plus MATLAB-style `RGB2XWFormat` / `XW2RGBFormat` coverage with curated Octave parity on the `s_sceneXYZilluminantTransforms.m` illuminant-transfer workflow, locking down normalized XYZ balance plus the fitted transfer matrices and relative error trend
 - and now also curated Octave parity on the `s_sceneFromRGB.m` display-calibrated RGB-image workflow, covering `displayCreate('LCD-Apple.mat')`, the display white point, `sceneFromFile(..., 'rgb', ..., 'LCD-Apple.mat')`, the 6500 K illuminant swap, and the beak ROI reflectance contract
 - and now also curated Octave parity on the `s_sceneFromMultispectral.m` multispectral-file workflow, covering `sceneFromFile(..., 'multispectral', ..., 400:10:700)` on `StuffedAnimals_tungsten-hdrs`, the loaded scene geometry and mean luminance, and normalized mean/center scene spectra
+- and now also headless `sceneGet(..., 'rgb')` plus curated Octave parity on the `s_sceneFromRGBvsMultispectral.m` roundtrip workflow, covering the `StuffedAnimals_tungsten-hdrs` multispectral scene rendered to RGB and reconstructed through `LCD-Apple.mat`, with preserved geometry/luminance, preserved 6500 K illuminant chromaticity, and strong per-channel RGB/XYZ roundtrip correlations
 
 ## Status
 

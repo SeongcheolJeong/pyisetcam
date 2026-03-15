@@ -16,7 +16,17 @@ from .exceptions import MissingAssetError, UnsupportedOptionError
 from .metrics import chromaticity_xy, xyz_from_energy
 from .session import track_session_object
 from .types import Scene, SessionContext
-from .utils import DEFAULT_WAVE, blackbody, energy_to_quanta, interp_spectra, param_format, quanta_to_energy, unit_frequency_list
+from .utils import (
+    DEFAULT_WAVE,
+    blackbody,
+    energy_to_quanta,
+    interp_spectra,
+    linear_to_srgb,
+    param_format,
+    quanta_to_energy,
+    unit_frequency_list,
+    xyz_to_linear_srgb,
+)
 
 DEFAULT_DISTANCE_M = 1.2
 DEFAULT_FOV_DEG = 10.0
@@ -2021,6 +2031,22 @@ def scene_calculate_luminance(scene: Scene, *, asset_store: AssetStore | None = 
     return luminance
 
 
+def _scene_rgb_render(scene: Scene, *, asset_store: AssetStore | None = None) -> np.ndarray:
+    xyz = np.asarray(scene_get(scene, "xyz", asset_store=asset_store), dtype=float)
+    if xyz.ndim != 3 or xyz.shape[2] != 3:
+        raise ValueError("sceneGet(..., 'rgb') requires an XYZ image cube.")
+
+    scaled_xyz = xyz.copy()
+    max_y = float(np.max(scaled_xyz[:, :, 1])) if scaled_xyz.size else 1.0
+    if max_y > 1.0:
+        scaled_xyz = scaled_xyz / max_y
+    if float(np.min(scaled_xyz)) < 0.0:
+        scaled_xyz = np.clip(scaled_xyz, 0.0, 1.0)
+
+    linear_rgb = xyz_to_linear_srgb(scaled_xyz)
+    return linear_to_srgb(np.clip(linear_rgb, 0.0, 1.0))
+
+
 def scene_adjust_luminance(
     scene: Scene,
     target_luminance: float,
@@ -2448,6 +2474,8 @@ def scene_get(scene: Scene, parameter: str, *args: Any, asset_store: AssetStore 
         photons = np.asarray(scene.data["photons"], dtype=float)
         energy = quanta_to_energy(photons, wave)
         return xyz_from_energy(energy, wave, asset_store=_store(asset_store))
+    if key in {"rgb", "rgbimage", "srgb"}:
+        return _scene_rgb_render(scene, asset_store=asset_store)
     if key in {"chromaticity", "roichromaticity"}:
         roi_locs = args[0] if args else None
         return chromaticity_xy(_scene_roi_xyz(scene, roi_locs, asset_store=asset_store))

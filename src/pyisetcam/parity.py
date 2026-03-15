@@ -1199,6 +1199,82 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "scene_from_rgb_vs_multispectral_stuffed_animals_small":
+        wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+        scene = scene_from_file(
+            store.resolve("data/images/multispectral/StuffedAnimals_tungsten-hdrs.mat"),
+            "multispectral",
+            None,
+            None,
+            wave,
+            asset_store=store,
+        )
+        scene = scene_adjust_illuminant(
+            scene,
+            blackbody(np.asarray(scene_get(scene, "wave"), dtype=float), 6500.0, kind="energy"),
+            asset_store=store,
+        )
+        source_rgb = np.asarray(scene_get(scene, "rgb", asset_store=store), dtype=float)
+        source_xyz = np.asarray(scene_get(scene, "xyz", asset_store=store), dtype=float)
+        source_illuminant_energy = np.asarray(scene_get(scene, "illuminant energy"), dtype=float).reshape(-1)
+        source_wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+        source_illuminant_xy = np.asarray(
+            chromaticity_xy(xyz_from_energy(source_illuminant_energy, source_wave, asset_store=store)),
+            dtype=float,
+        ).reshape(-1)
+
+        display = display_create("LCD-Apple.mat", asset_store=store)
+        mean_luminance = float(scene_get(scene, "mean luminance", asset_store=store))
+        reconstructed = scene_from_file(source_rgb, "rgb", mean_luminance, display, asset_store=store)
+        reconstructed = scene_adjust_illuminant(
+            reconstructed,
+            blackbody(np.asarray(scene_get(reconstructed, "wave"), dtype=float), 6500.0, kind="energy"),
+            asset_store=store,
+        )
+        reconstructed = scene_adjust_luminance(reconstructed, mean_luminance, asset_store=store)
+
+        reconstructed_rgb = np.asarray(scene_get(reconstructed, "rgb", asset_store=store), dtype=float)
+        reconstructed_xyz = np.asarray(scene_get(reconstructed, "xyz", asset_store=store), dtype=float)
+        reconstructed_illuminant_energy = np.asarray(scene_get(reconstructed, "illuminant energy"), dtype=float).reshape(-1)
+        reconstructed_wave = np.asarray(scene_get(reconstructed, "wave"), dtype=float).reshape(-1)
+        reconstructed_illuminant_xy = np.asarray(
+            chromaticity_xy(
+                xyz_from_energy(reconstructed_illuminant_energy, reconstructed_wave, asset_store=store),
+            ),
+            dtype=float,
+        ).reshape(-1)
+        rgb_channel_corr = np.array(
+            [
+                np.corrcoef(source_rgb[:, :, channel].reshape(-1), reconstructed_rgb[:, :, channel].reshape(-1))[0, 1]
+                for channel in range(source_rgb.shape[2])
+            ],
+            dtype=float,
+        )
+        xyz_channel_corr = np.array(
+            [
+                np.corrcoef(source_xyz[:, :, channel].reshape(-1), reconstructed_xyz[:, :, channel].reshape(-1))[0, 1]
+                for channel in range(source_xyz.shape[2])
+            ],
+            dtype=float,
+        )
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "source_size": np.array(scene_get(scene, "size"), dtype=int),
+                "source_wave": source_wave,
+                "source_mean_luminance": mean_luminance,
+                "source_illuminant_xy": source_illuminant_xy,
+                "reconstructed_size": np.array(scene_get(reconstructed, "size"), dtype=int),
+                "reconstructed_wave": reconstructed_wave,
+                "reconstructed_mean_luminance": float(scene_get(reconstructed, "mean luminance", asset_store=store)),
+                "reconstructed_illuminant_xy": reconstructed_illuminant_xy,
+                "rgb_channel_corr": rgb_channel_corr,
+                "xyz_channel_corr": xyz_channel_corr,
+            },
+            context={},
+        )
+
     if case_name == "display_create_lcd_example":
         display = display_create("lcdExample.mat", asset_store=store)
         return ParityCaseResult(

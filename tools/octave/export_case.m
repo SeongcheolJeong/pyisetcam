@@ -1012,6 +1012,46 @@ switch case_name
         payload.mean_scene_spd_norm = meanSceneSpd(:) / max(meanSceneSpd(:));
         payload.center_scene_spd_norm = centerSceneSpd(:) / max(centerSceneSpd(:));
 
+    case 'scene_from_rgb_vs_multispectral_stuffed_animals_small'
+        wave = (400:10:700)';
+        fullFileName = fullfile(isetRootPath, 'data', 'images', 'multispectral', 'StuffedAnimals_tungsten-hdrs');
+        scene = sceneFromFile(fullFileName, 'multispectral', [], [], wave);
+        bb = blackbody(sceneGet(scene, 'wave'), 6500, 'energy');
+        scene = sceneAdjustIlluminant(scene, bb);
+        rgb = double(sceneGet(scene, 'rgb'));
+        sourceXYZ = double(sceneGet(scene, 'xyz'));
+        sourceIlluminantEnergy = double(sceneGet(scene, 'illuminant energy'));
+
+        load('LCD-Apple.mat', 'd');
+        meanL = sceneGet(scene, 'mean luminance');
+        sceneRGB = sceneFromFile(rgb, 'rgb', meanL, d);
+        bb = blackbody(sceneGet(sceneRGB, 'wave'), 6500);
+        sceneRGB = sceneAdjustIlluminant(sceneRGB, bb);
+        sceneRGB = sceneAdjustLuminance(sceneRGB, meanL);
+
+        reconstructedRGB = double(sceneGet(sceneRGB, 'rgb'));
+        reconstructedXYZ = double(sceneGet(sceneRGB, 'xyz'));
+        reconstructedIlluminantEnergy = double(sceneGet(sceneRGB, 'illuminant energy'));
+        rgbChannelCorr = zeros(3, 1);
+        xyzChannelCorr = zeros(3, 1);
+        for channel = 1:3
+            rgbCorr = corrcoef(rgb(:, :, channel)(:), reconstructedRGB(:, :, channel)(:));
+            xyzCorr = corrcoef(sourceXYZ(:, :, channel)(:), reconstructedXYZ(:, :, channel)(:));
+            rgbChannelCorr(channel) = rgbCorr(1, 2);
+            xyzChannelCorr(channel) = xyzCorr(1, 2);
+        end
+
+        payload.source_size = sceneGet(scene, 'size');
+        payload.source_wave = sceneGet(scene, 'wave');
+        payload.source_mean_luminance = meanL;
+        payload.source_illuminant_xy = chromaticity(sceneGet(scene, 'illuminant xyz'))';
+        payload.reconstructed_size = sceneGet(sceneRGB, 'size');
+        payload.reconstructed_wave = sceneGet(sceneRGB, 'wave');
+        payload.reconstructed_mean_luminance = sceneGet(sceneRGB, 'mean luminance');
+        payload.reconstructed_illuminant_xy = chromaticity(sceneGet(sceneRGB, 'illuminant xyz'))';
+        payload.rgb_channel_corr = rgbChannelCorr(:);
+        payload.xyz_channel_corr = xyzChannelCorr(:);
+
     case 'display_create_lcd_example'
         d = displayCreate('lcdExample.mat');
         payload.wave = displayGet(d, 'wave');

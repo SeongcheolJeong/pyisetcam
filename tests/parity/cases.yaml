@@ -297,6 +297,22 @@
       "atol": 1e-08
     },
     {
+      "name": "scene_from_rgb_vs_multispectral_stuffed_animals_small",
+      "matlab_function": "s_sceneFromRGBvsMultispectral",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "rgb_channel_corr": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.002
+        },
+        "xyz_channel_corr": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.002
+        }
+      }
+    },
+    {
       "name": "display_create_lcd_example",
       "matlab_function": "displayCreate",
       "rtol": 1e-05,

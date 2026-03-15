@@ -4873,6 +4873,19 @@ def test_run_python_case_supports_scene_from_multispectral_stuffed_animals_parit
     assert case.payload["center_scene_spd_norm"].shape == (31,)
 
 
+def test_run_python_case_supports_scene_from_rgb_vs_multispectral_stuffed_animals_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_from_rgb_vs_multispectral_stuffed_animals_small", asset_store=asset_store)
+
+    assert case.payload["source_size"].shape == (2,)
+    assert case.payload["source_wave"].shape == (31,)
+    assert case.payload["source_illuminant_xy"].shape == (2,)
+    assert case.payload["reconstructed_size"].shape == (2,)
+    assert case.payload["reconstructed_wave"].shape == (101,)
+    assert case.payload["reconstructed_illuminant_xy"].shape == (2,)
+    assert case.payload["rgb_channel_corr"].shape == (3,)
+    assert case.payload["xyz_channel_corr"].shape == (3,)
+
+
 def test_run_python_case_supports_frequency_orientation_scene_parity_case(asset_store) -> None:
     case = run_python_case_with_context("scene_frequency_orientation_small", asset_store=asset_store)
 
@@ -7706,6 +7719,55 @@ def test_scene_from_multispectral_script_workflow(asset_store) -> None:
     assert np.all(np.isfinite(reflectance[center_row, center_col, :]))
     assert np.all(reflectance[center_row, center_col, :] >= 0.0)
     assert float(np.max(reflectance[center_row, center_col, :])) > 0.0
+
+
+def test_scene_from_rgb_vs_multispectral_script_workflow(asset_store) -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    scene = scene_from_file(
+        asset_store.resolve("data/images/multispectral/StuffedAnimals_tungsten-hdrs.mat"),
+        "multispectral",
+        None,
+        None,
+        wave,
+        asset_store=asset_store,
+    )
+    scene = scene_adjust_illuminant(
+        scene,
+        blackbody(np.asarray(scene_get(scene, "wave"), dtype=float), 6500.0, kind="energy"),
+        asset_store=asset_store,
+    )
+    source_rgb = np.asarray(scene_get(scene, "rgb", asset_store=asset_store), dtype=float)
+    source_xyz = np.asarray(scene_get(scene, "xyz", asset_store=asset_store), dtype=float)
+    mean_luminance = float(scene_get(scene, "mean luminance", asset_store=asset_store))
+
+    display = display_create("LCD-Apple.mat", asset_store=asset_store)
+    reconstructed = scene_from_file(source_rgb, "rgb", mean_luminance, display, asset_store=asset_store)
+    reconstructed = scene_adjust_illuminant(
+        reconstructed,
+        blackbody(np.asarray(scene_get(reconstructed, "wave"), dtype=float), 6500.0, kind="energy"),
+        asset_store=asset_store,
+    )
+    reconstructed = scene_adjust_luminance(reconstructed, mean_luminance, asset_store=asset_store)
+    reconstructed_rgb = np.asarray(scene_get(reconstructed, "rgb", asset_store=asset_store), dtype=float)
+    reconstructed_xyz = np.asarray(scene_get(reconstructed, "xyz", asset_store=asset_store), dtype=float)
+
+    source_mean_xyz = np.mean(source_xyz, axis=(0, 1))
+    reconstructed_mean_xyz = np.mean(reconstructed_xyz, axis=(0, 1))
+    rgb_rmse = np.sqrt(np.mean(np.square(reconstructed_rgb - source_rgb), axis=(0, 1)))
+    xyz_rmse_ratio = np.sqrt(np.mean(np.square(reconstructed_xyz - source_xyz), axis=(0, 1))) / np.maximum(source_mean_xyz, 1e-12)
+
+    assert tuple(scene_get(scene, "size")) == (506, 759)
+    assert source_rgb.shape == (506, 759, 3)
+    assert np.all(source_rgb >= 0.0)
+    assert np.all(source_rgb <= 1.0)
+    assert np.isclose(mean_luminance, 30.047072285059308, atol=1e-6, rtol=1e-6)
+    assert tuple(scene_get(reconstructed, "size")) == (506, 759)
+    assert np.asarray(scene_get(reconstructed, "wave"), dtype=float).reshape(-1).shape == (101,)
+    assert reconstructed_rgb.shape == (506, 759, 3)
+    assert np.isclose(float(scene_get(reconstructed, "mean luminance", asset_store=asset_store)), mean_luminance, atol=1e-8, rtol=1e-8)
+    assert np.all(rgb_rmse < np.array([0.05, 0.04, 0.04], dtype=float))
+    assert np.all(np.abs((reconstructed_mean_xyz / np.sum(reconstructed_mean_xyz)) - (source_mean_xyz / np.sum(source_mean_xyz))) < 5e-3)
+    assert np.all(xyz_rmse_ratio < np.array([0.06, 0.07, 0.13], dtype=float))
 
 
 def test_run_python_case_supports_sensor_macbeth_daylight_estimate_small_parity_case(asset_store) -> None:
