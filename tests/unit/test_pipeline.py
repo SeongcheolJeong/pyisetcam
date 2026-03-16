@@ -7024,6 +7024,60 @@ def test_run_python_case_supports_metrics_scielab_patches_small_parity_case(asse
     assert np.isclose(float(np.sum(np.asarray(case.payload["quantized_scielab_counts"], dtype=float))), 49.0)
 
 
+def test_metrics_scielab_masking_script_workflow(asset_store) -> None:
+    f_list = np.array([2.0, 4.0, 8.0, 16.0, 32.0], dtype=float)
+    t_list = np.arange(0.05, 0.2001, 0.05, dtype=float)
+    mask_contrast = 0.8
+
+    params = {"ph": 0.0, "ang": 0.0, "row": 128, "col": 128, "GaborFlag": 0.0, "freq": float(f_list[1]), "contrast": mask_contrast}
+    mask = scene_create("harmonic", params, asset_store=asset_store)
+    mask = scene_set(mask, "fov", 1.0)
+
+    white_xyz = 2.0 * np.asarray(scene_get(mask, "illuminant xyz", asset_store=asset_store), dtype=float)
+    delta_e = np.zeros(t_list.size, dtype=float)
+    scielab_delta_e = np.zeros(t_list.size, dtype=float)
+
+    xyz1 = np.maximum(np.asarray(scene_get(mask, "xyz", asset_store=asset_store), dtype=float), 0.0)
+    for idx, contrast in enumerate(t_list):
+        target_params = dict(params)
+        target_params["contrast"] = float(contrast)
+        target = scene_create("harmonic", target_params, asset_store=asset_store)
+        target = scene_set(target, "fov", 1.0)
+        combined = scene_add(mask, target, "remove spatial mean")
+
+        xyz2 = np.maximum(np.asarray(scene_get(combined, "xyz", asset_store=asset_store), dtype=float), 0.0)
+        delta_e[idx] = float(np.mean(delta_e_ab(xyz1, xyz2, white_xyz, "2000"), dtype=float))
+        error_image, _, _, _ = scielab(xyz1, xyz2, white_xyz, sc_params())
+        scielab_delta_e[idx] = float(np.mean(np.asarray(error_image, dtype=float), dtype=float))
+
+    assert tuple(scene_get(mask, "size")) == (128, 128)
+    assert np.isclose(float(scene_get(mask, "fov")), 1.0)
+    assert white_xyz.shape == (3,)
+    assert delta_e.shape == (4,)
+    assert scielab_delta_e.shape == (4,)
+    assert np.all(delta_e > 0.0)
+    assert np.all(scielab_delta_e > delta_e)
+
+
+def test_run_python_case_supports_metrics_scielab_masking_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_scielab_masking_small", asset_store=asset_store)
+
+    assert case.payload["frequencies_cpd"].shape == (5,)
+    assert np.isclose(float(case.payload["mask_frequency_cpd"]), 4.0)
+    assert np.isclose(float(case.payload["mask_contrast"]), 0.8)
+    assert case.payload["target_contrasts"].shape == (4,)
+    assert tuple(case.payload["mask_scene_size"]) == (128, 128)
+    assert np.isclose(float(case.payload["mask_fov_deg"]), 1.0)
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["white_xyz"].shape == (3,)
+    assert case.payload["illuminant_energy_norm"].shape == (31,)
+    assert case.payload["delta_e"].shape == (4,)
+    assert case.payload["scielab_delta_e"].shape == (4,)
+    assert case.payload["scielab_over_delta_e"].shape == (4,)
+    assert np.all(np.asarray(case.payload["delta_e"], dtype=float) > 0.0)
+    assert np.all(np.asarray(case.payload["scielab_delta_e"], dtype=float) > np.asarray(case.payload["delta_e"], dtype=float))
+
+
 def test_metrics_edge2mtf_script_workflow(asset_store) -> None:
     scene = scene_create("slanted bar", 512, 7.0 / 3.0, asset_store=asset_store)
     scene = scene_adjust_luminance(scene, 100.0, asset_store=asset_store)

@@ -1041,6 +1041,58 @@ switch case_name
         payload.quantized_scielab_levels = double(quantizedLevels(:));
         payload.quantized_scielab_counts = double(quantizedCounts(:));
 
+    case 'metrics_scielab_masking_small'
+        fList = [2, 4, 8, 16, 32];
+        tList = 0.05:0.05:0.2;
+        maskContrast = 0.8;
+
+        parms.ph = 0;
+        parms.ang = 0;
+        parms.row = 128;
+        parms.col = 128;
+        parms.GaborFlag = 0;
+        parms.freq = fList(2);
+        parms.contrast = maskContrast;
+
+        Mask = sceneCreate('harmonic', parms);
+        Mask = sceneSet(Mask, 'fov', 1);
+
+        whiteXYZ = 2 * sceneGet(Mask, 'illuminant xyz');
+        illuminantE = sceneGet(Mask, 'illuminant energy');
+        wave = sceneGet(Mask, 'wave');
+
+        xyz1 = sceneGet(Mask, 'xyz');
+        xyz1(xyz1 < 0) = 0;
+        dE = zeros(numel(tList), 1);
+        dES = zeros(numel(tList), 1);
+        for ii = 1:numel(tList)
+            parms.contrast = tList(ii);
+            Target = sceneCreate('harmonic', parms);
+            Target = sceneSet(Target, 'fov', 1);
+            uTarget = sceneAdd(Mask, Target, 'remove spatial mean');
+
+            xyz2 = sceneGet(uTarget, 'xyz');
+            xyz2(xyz2 < 0) = 0;
+            tmp = deltaEab(xyz1, xyz2, whiteXYZ, '2000');
+            dE(ii) = mean(double(tmp(:)));
+
+            tmp = scielab(xyz1, xyz2, whiteXYZ, scParams);
+            dES(ii) = mean(double(tmp(:)));
+        end
+
+        payload.frequencies_cpd = double(fList(:));
+        payload.mask_frequency_cpd = double(parms.freq);
+        payload.mask_contrast = double(maskContrast);
+        payload.target_contrasts = double(tList(:));
+        payload.mask_scene_size = double(sceneGet(Mask, 'size')(:));
+        payload.mask_fov_deg = double(sceneGet(Mask, 'fov'));
+        payload.wave = double(wave(:));
+        payload.white_xyz = double(whiteXYZ(:));
+        payload.illuminant_energy_norm = local_channel_normalize(double(illuminantE(:)));
+        payload.delta_e = double(dE(:));
+        payload.scielab_delta_e = double(dES(:));
+        payload.scielab_over_delta_e = double(dES(:) ./ max(dE(:), eps));
+
     case 'metrics_edge2mtf_small'
         scene = sceneCreate('slanted bar', 512, 7/3);
         scene = sceneAdjustLuminance(scene, 100);

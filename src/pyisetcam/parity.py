@@ -1299,6 +1299,61 @@ def run_python_case_with_context(
             context={"scene": u_standard},
         )
 
+    if case_name == "metrics_scielab_masking_small":
+        f_list = np.array([2.0, 4.0, 8.0, 16.0, 32.0], dtype=float)
+        target_contrasts = np.arange(0.05, 0.2001, 0.05, dtype=float)
+        mask_contrast = 0.8
+        params = {
+            "ph": 0.0,
+            "ang": 0.0,
+            "row": 128,
+            "col": 128,
+            "GaborFlag": 0.0,
+            "freq": float(f_list[1]),
+            "contrast": float(mask_contrast),
+        }
+
+        mask_scene = scene_create("harmonic", params, asset_store=store)
+        mask_scene = scene_set(mask_scene, "fov", 1.0)
+
+        white_xyz = 2.0 * np.asarray(scene_get(mask_scene, "illuminant xyz", asset_store=store), dtype=float).reshape(3)
+        illuminant_energy = np.asarray(scene_get(mask_scene, "illuminant energy", asset_store=store), dtype=float).reshape(-1)
+        wave = np.asarray(scene_get(mask_scene, "wave"), dtype=float).reshape(-1)
+
+        xyz1 = np.maximum(np.asarray(scene_get(mask_scene, "xyz", asset_store=store), dtype=float), 0.0)
+        delta_e = np.zeros(target_contrasts.size, dtype=float)
+        scielab_delta_e = np.zeros(target_contrasts.size, dtype=float)
+        for idx, contrast in enumerate(target_contrasts):
+            target_params = dict(params)
+            target_params["contrast"] = float(contrast)
+            target_scene = scene_create("harmonic", target_params, asset_store=store)
+            target_scene = scene_set(target_scene, "fov", 1.0)
+            combined_scene = scene_add(mask_scene, target_scene, "remove spatial mean")
+
+            xyz2 = np.maximum(np.asarray(scene_get(combined_scene, "xyz", asset_store=store), dtype=float), 0.0)
+            delta_e[idx] = float(np.mean(delta_e_ab(xyz1, xyz2, white_xyz, "2000"), dtype=float))
+            error_image, _, _, _ = scielab(xyz1, xyz2, white_xyz, sc_params())
+            scielab_delta_e[idx] = float(np.mean(np.asarray(error_image, dtype=float), dtype=float))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "frequencies_cpd": f_list,
+                "mask_frequency_cpd": float(params["freq"]),
+                "mask_contrast": float(mask_contrast),
+                "target_contrasts": target_contrasts,
+                "mask_scene_size": np.asarray(scene_get(mask_scene, "size"), dtype=int),
+                "mask_fov_deg": float(scene_get(mask_scene, "fov")),
+                "wave": wave,
+                "white_xyz": white_xyz,
+                "illuminant_energy_norm": _channel_normalize(illuminant_energy),
+                "delta_e": delta_e,
+                "scielab_delta_e": scielab_delta_e,
+                "scielab_over_delta_e": np.asarray(scielab_delta_e / np.maximum(delta_e, 1.0e-12), dtype=float),
+            },
+            context={"scene": mask_scene},
+        )
+
     if case_name == "metrics_edge2mtf_small":
         def _canonical_profile(values: Any, samples: int = 65) -> np.ndarray:
             profile = np.asarray(values, dtype=float).reshape(-1)
