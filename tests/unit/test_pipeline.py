@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 import pyisetcam.optics as optics_module
+import imageio.v3 as iio
 from scipy.io import savemat
 
 from pyisetcam.exceptions import UnsupportedOptionError
@@ -18,6 +19,7 @@ from pyisetcam import (
     camera_mtf,
     camera_set,
     camera_vsnr,
+    dac_to_rgb,
     macbeth_color_error,
     chromaticity_xy,
     cpiq_csf,
@@ -28,6 +30,7 @@ from pyisetcam import (
     hc_basis,
     image_flip,
     image_increase_image_rgb_size,
+    image_linear_transform,
     illuminant_create,
     illuminant_get,
     illuminant_set,
@@ -92,6 +95,7 @@ from pyisetcam import (
     rt_sample_heights,
     rt_synthetic,
     rgb_to_xw_format,
+    scielab,
     scielab_rgb,
     si_synthetic,
     run_python_case,
@@ -6786,6 +6790,64 @@ def test_run_python_case_supports_metrics_rgb2scielab_small_parity_case(asset_st
     assert np.isclose(float(case.payload["mean_delta_e_above2"]), 2.8235651171190823, atol=1e-12, rtol=1e-12)
     assert np.isclose(float(case.payload["percent_above2"]), 21.754545079770786, atol=1e-12, rtol=1e-12)
     assert case.payload["error_center_row_norm"].shape == (129,)
+
+
+def test_metrics_scielab_example_script_workflow(asset_store) -> None:
+    root = asset_store.ensure()
+    hats = dac_to_rgb(iio.imread(root / "data" / "images" / "rgb" / "hats.jpg").astype(float) / 255.0)
+    hats_c = dac_to_rgb(iio.imread(root / "data" / "images" / "rgb" / "hatsC.jpg").astype(float) / 255.0)
+    dsp = display_create(str(root / "data" / "displays" / "crt.mat"), asset_store=asset_store)
+
+    rgb2xyz = np.asarray(display_get(dsp, "rgb2xyz"), dtype=float)
+    white_xyz = np.asarray(display_get(dsp, "white point"), dtype=float)
+    img1_xyz = image_linear_transform(hats, rgb2xyz)
+    img2_xyz = image_linear_transform(hats_c, rgb2xyz)
+
+    img_width = hats.shape[1] * float(display_get(dsp, "meters per dot"))
+    fov = float(np.rad2deg(2.0 * np.arctan2(img_width / 2.0, 0.3)))
+    samp_per_deg = hats.shape[1] / fov
+    params = {
+        "deltaEversion": "2000",
+        "sampPerDeg": samp_per_deg,
+        "imageFormat": "xyz",
+        "filterSize": samp_per_deg,
+        "filters": [],
+    }
+    error_image, params_out, _, _ = scielab(img1_xyz, img2_xyz, white_xyz, params)
+
+    mask = np.asarray(error_image, dtype=float) > 2.0
+    mean_above2 = float(np.mean(np.asarray(error_image, dtype=float)[mask], dtype=float))
+    percent_above2 = float(np.count_nonzero(mask)) / float(np.asarray(error_image).size) * 100.0
+
+    assert hats.shape == (128, 192, 3)
+    assert hats_c.shape == (128, 192, 3)
+    assert rgb2xyz.shape == (3, 3)
+    assert white_xyz.shape == (3,)
+    assert np.isclose(fov, 8.783389963820218, atol=1e-12, rtol=1e-12)
+    assert tuple(np.asarray(error_image).shape) == (127, 191)
+    assert np.isclose(float(np.mean(error_image, dtype=float)), 1.8293812098678626, atol=1e-12, rtol=1e-12)
+    assert np.isclose(mean_above2, 2.9118542384189685, atol=1e-12, rtol=1e-12)
+    assert np.isclose(percent_above2, 35.96487611823391, atol=1e-12, rtol=1e-12)
+    assert np.array_equal(np.asarray(params_out["filters"][0]).shape, np.array([21, 21], dtype=int))
+    assert np.asarray(params_out["support"]).shape == (21,)
+
+
+def test_run_python_case_supports_metrics_scielab_example_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_scielab_example_small", asset_store=asset_store)
+
+    assert tuple(case.payload["scene1_size"]) == (128, 192)
+    assert tuple(case.payload["scene2_size"]) == (128, 192)
+    assert np.isclose(float(case.payload["fov_deg"]), 8.783389963820218, atol=1e-12, rtol=1e-12)
+    assert case.payload["display_white_point"].shape == (3,)
+    assert np.isclose(float(case.payload["scielab_rgb_mean_delta_e"]), 1.5116844348691976, atol=1e-12, rtol=1e-12)
+    assert tuple(case.payload["explicit_error_size"]) == (127, 191)
+    assert np.isclose(float(case.payload["explicit_mean_delta_e"]), 1.8293812098678626, atol=1e-12, rtol=1e-12)
+    assert np.isclose(float(case.payload["explicit_mean_delta_e_above2"]), 2.9118542384189685, atol=1e-12, rtol=1e-12)
+    assert np.isclose(float(case.payload["explicit_percent_above2"]), 35.96487611823391, atol=1e-12, rtol=1e-12)
+    assert case.payload["filter_support"].shape == (21,)
+    assert case.payload["filter_peaks"].shape == (3,)
+    assert case.payload["filter_center_rows_norm"].shape == (3, 65)
+    assert case.payload["explicit_error_center_row_norm"].shape == (129,)
 
 
 def test_metrics_edge2mtf_script_workflow(asset_store) -> None:

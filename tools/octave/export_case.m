@@ -821,6 +821,54 @@ switch case_name
         payload.percent_above2 = double(numel(above2)) / max(double(numel(errorImage)), 1) * 100;
         payload.error_center_row_norm = local_canonical_profile(centerRow, 129);
 
+    case 'metrics_scielab_example_small'
+        file1 = fullfile(isetRootPath, 'data', 'images', 'rgb', 'hats.jpg');
+        file2 = fullfile(isetRootPath, 'data', 'images', 'rgb', 'hatsC.jpg');
+        [eImage, scene1, scene2, display] = scielabRGB(file1, file2, 'crt.mat', 0.3);
+
+        hats = dac2rgb(double(imread(file1)) / 255);
+        hatsC = dac2rgb(double(imread(file2)) / 255);
+        dsp = displayCreate(fullfile(isetRootPath, 'data', 'displays', 'crt'));
+        rgb2xyz = displayGet(dsp, 'rgb2xyz');
+        whiteXYZ = displayGet(dsp, 'white point');
+        img1XYZ = imageLinearTransform(hats, rgb2xyz);
+        img2XYZ = imageLinearTransform(hatsC, rgb2xyz);
+
+        imgWidth = size(hats, 2) * displayGet(dsp, 'meters per dot');
+        fov = rad2deg(2 * atan2(imgWidth / 2, 0.3));
+        sampPerDeg = size(hats, 2) / fov;
+
+        params.deltaEversion = '2000';
+        params.sampPerDeg = sampPerDeg;
+        params.imageFormat = 'xyz';
+        params.filterSize = sampPerDeg;
+        params.filters = [];
+        [errorImage, params] = scielab(img1XYZ, img2XYZ, whiteXYZ, params);
+
+        above2 = double(errorImage(errorImage > 2));
+        filterCenterRows = zeros(3, 65);
+        filterPeaks = zeros(3, 1);
+        for ii = 1:3
+            filterPeaks(ii) = max(double(params.filters{ii}(:)));
+            centerRow = local_channel_normalize(double(params.filters{ii}(floor(size(params.filters{ii}, 1) / 2) + 1, :)));
+            filterCenterRows(ii, :) = local_canonical_profile(centerRow, 65);
+        end
+
+        payload.scene1_size = double(sceneGet(scene1, 'size')(:));
+        payload.scene2_size = double(sceneGet(scene2, 'size')(:));
+        payload.fov_deg = double(fov);
+        payload.display_white_point = double(whiteXYZ(:));
+        payload.scielab_rgb_mean_delta_e = mean(double(eImage(:)));
+        payload.explicit_error_size = double(size(errorImage(:,:)))';
+        payload.explicit_mean_delta_e = mean(double(errorImage(:)));
+        payload.explicit_mean_delta_e_above2 = mean(above2);
+        payload.explicit_percent_above2 = double(numel(above2)) / max(double(numel(errorImage)), 1) * 100;
+        payload.filter_support = double(params.support(:));
+        payload.filter_peaks = double(filterPeaks(:));
+        payload.filter_center_rows_norm = double(filterCenterRows);
+        payload.explicit_error_center_row_norm = local_canonical_profile( ...
+            local_channel_normalize(double(errorImage(floor(size(errorImage, 1) / 2) + 1, :))), 129);
+
     case 'metrics_edge2mtf_small'
         scene = sceneCreate('slanted bar', 512, 7/3);
         scene = sceneAdjustLuminance(scene, 100);

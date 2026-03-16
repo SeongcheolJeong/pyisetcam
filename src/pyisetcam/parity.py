@@ -72,7 +72,7 @@ from .optics import (
     rt_synthetic,
 )
 from .plotting import ip_plot, oi_plot, sensor_plot, sensor_plot_line, wvf_plot
-from .scielab import scielab_rgb
+from .scielab import scielab, scielab_rgb
 from .scene import (
     hdr_render,
     ie_reflectance_samples,
@@ -117,10 +117,12 @@ from .sensor import sensor_set_size_to_fov
 from .sensor import signal_current
 from .utils import (
     blackbody,
+    dac_to_rgb,
     energy_to_quanta,
     hc_basis,
     ie_fit_line,
     ie_mvnrnd,
+    image_linear_transform,
     image_flip,
     image_increase_image_rgb_size,
     linear_to_srgb,
@@ -1033,6 +1035,75 @@ def run_python_case_with_context(
                 "mean_delta_e_above2": mean_above2,
                 "percent_above2": percent_above2,
                 "error_center_row_norm": _canonical_profile(_channel_normalize(center_row)),
+            },
+            context={"scene1": scene1, "scene2": scene2, "display": display},
+        )
+
+    if case_name == "metrics_scielab_example_small":
+        def _canonical_profile(values: Any, samples: int = 65) -> np.ndarray:
+            profile = np.asarray(values, dtype=float).reshape(-1)
+            support = np.linspace(-1.0, 1.0, profile.size, dtype=float)
+            query = np.linspace(-1.0, 1.0, samples, dtype=float)
+            return np.interp(query, support, profile).astype(float)
+
+        error_rgb, scene1, scene2, display = scielab_rgb(
+            "hats.jpg",
+            "hatsC.jpg",
+            "crt.mat",
+            0.3,
+            asset_store=store,
+        )
+        snapshot_root = store.ensure()
+        hats = dac_to_rgb(iio.imread(snapshot_root / "data" / "images" / "rgb" / "hats.jpg").astype(float) / 255.0)
+        hats_c = dac_to_rgb(iio.imread(snapshot_root / "data" / "images" / "rgb" / "hatsC.jpg").astype(float) / 255.0)
+        dsp = display_create(str(snapshot_root / "data" / "displays" / "crt.mat"), asset_store=store)
+        rgb2xyz = np.asarray(display_get(dsp, "rgb2xyz"), dtype=float)
+        white_xyz = np.asarray(display_get(dsp, "white point"), dtype=float)
+        img1_xyz = image_linear_transform(hats, rgb2xyz)
+        img2_xyz = image_linear_transform(hats_c, rgb2xyz)
+
+        img_width = hats.shape[1] * float(display_get(dsp, "meters per dot"))
+        fov = float(np.rad2deg(2.0 * np.arctan2(img_width / 2.0, 0.3)))
+        samp_per_deg = hats.shape[1] / max(fov, 1.0e-12)
+        params = {
+            "deltaEversion": "2000",
+            "sampPerDeg": samp_per_deg,
+            "imageFormat": "xyz",
+            "filterSize": samp_per_deg,
+            "filters": [],
+        }
+        error_explicit, params_out, _, _ = scielab(img1_xyz, img2_xyz, white_xyz, params)
+        error_explicit = np.asarray(error_explicit, dtype=float)
+        above2 = error_explicit > 2.0
+
+        filters = [np.asarray(kernel, dtype=float) for kernel in params_out["filters"]]
+        filter_center_rows = np.vstack(
+            [
+                _canonical_profile(_channel_normalize(kernel[kernel.shape[0] // 2, :]), 65)
+                for kernel in filters
+            ]
+        )
+        filter_peaks = np.array([float(np.max(kernel)) for kernel in filters], dtype=float)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene1_size": np.asarray(scene_get(scene1, "size"), dtype=int),
+                "scene2_size": np.asarray(scene_get(scene2, "size"), dtype=int),
+                "fov_deg": fov,
+                "display_white_point": white_xyz.reshape(3),
+                "scielab_rgb_mean_delta_e": float(np.mean(np.asarray(error_rgb, dtype=float), dtype=float)),
+                "explicit_error_size": np.asarray(error_explicit.shape, dtype=int),
+                "explicit_mean_delta_e": float(np.mean(error_explicit, dtype=float)),
+                "explicit_mean_delta_e_above2": float(np.mean(error_explicit[above2], dtype=float)),
+                "explicit_percent_above2": float(np.count_nonzero(above2)) / max(float(error_explicit.size), 1.0) * 100.0,
+                "filter_support": np.asarray(params_out["support"], dtype=float).reshape(-1),
+                "filter_peaks": filter_peaks,
+                "filter_center_rows_norm": filter_center_rows,
+                "explicit_error_center_row_norm": _canonical_profile(
+                    _channel_normalize(error_explicit[error_explicit.shape[0] // 2, :]),
+                    129,
+                ),
             },
             context={"scene1": scene1, "scene2": scene2, "display": display},
         )

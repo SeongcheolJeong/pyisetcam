@@ -941,6 +941,58 @@ def xw_to_rgb_format(im_xw: Any, rows: int, cols: int) -> NDArray[np.float64]:
     return np.reshape(array, (int(rows), int(cols), int(array.shape[1])), order="F")
 
 
+def image_linear_transform(image: Any, transform: Any) -> NDArray[np.float64]:
+    """Apply a linear color transform to an image cube."""
+
+    array = np.asarray(image, dtype=float)
+    if array.ndim != 3:
+        raise ValueError("imageLinearTransform expects a 3D image cube.")
+    rows, cols, channels = array.shape
+    xw = array.reshape(rows * cols, channels)
+    transformed = xw @ np.asarray(transform, dtype=float)
+    return np.asarray(transformed, dtype=float).reshape(rows, cols, -1)
+
+
+def dac_to_rgb(dac: Any, gamma_table: Any = 2.2) -> NDArray[np.float64]:
+    """Convert DAC values to linear RGB using MATLAB dac2rgb() semantics."""
+
+    array = np.asarray(dac, dtype=float)
+    if array.ndim == 2:
+        data = array
+        rgb_format = False
+        rows = cols = 0
+    elif array.ndim == 3:
+        data, rows, cols, _ = rgb_to_xw_format(array)
+        rgb_format = True
+    else:
+        raise ValueError("dac2rgb expects XW or RGB-format data.")
+
+    output = np.zeros_like(data, dtype=float)
+    gamma_array = np.asarray(gamma_table, dtype=float)
+
+    if gamma_array.ndim == 0:
+        output = np.power(data, float(gamma_array))
+    elif gamma_array.ndim == 1 and gamma_array.size == 3:
+        for channel in range(min(int(data.shape[1]), 3)):
+            output[:, channel] = np.power(data[:, channel], float(gamma_array[channel]))
+    elif gamma_array.ndim == 2:
+        lookup = gamma_array
+        if lookup.shape[1] == 1:
+            lookup = np.repeat(lookup, data.shape[1], axis=1)
+        indices = data
+        if float(np.max(indices)) <= 1.0:
+            indices = np.floor(indices * float(lookup.shape[0] - 1) + 0.5) + 1.0
+        indices = np.clip(indices.astype(int) - 1, 0, lookup.shape[0] - 1)
+        for channel in range(min(int(data.shape[1]), lookup.shape[1])):
+            output[:, channel] = lookup[indices[:, channel], channel]
+    else:
+        raise ValueError("Could not parse GammaTable.")
+
+    if rgb_format:
+        return xw_to_rgb_format(output, rows, cols)
+    return output
+
+
 def image_flip(im: Any, flip_type: Any = "l") -> NDArray[np.float64]:
     """Flip RGB-format image data using MATLAB imageFlip() semantics."""
 
