@@ -869,6 +869,80 @@ switch case_name
         payload.explicit_error_center_row_norm = local_canonical_profile( ...
             local_channel_normalize(double(errorImage(floor(size(errorImage, 1) / 2) + 1, :))), 129);
 
+    case 'metrics_scielab_filters_small'
+        scP = scParams;
+        scP.sampPerDeg = 101;
+        scP.filterSize = 101;
+        [filtersInitial, supportInitial, scPInitial] = scPrepareFilters(scP);
+
+        initialFilterPeaks = zeros(1, 3);
+        initialFilterSums = zeros(1, 3);
+        initialFilterCenterRows = zeros(3, 129);
+        for ii = 1:3
+            initialFilterPeaks(ii) = max(double(filtersInitial{ii}(:)));
+            initialFilterSums(ii) = sum(double(filtersInitial{ii}(:)));
+            initialFilterCenterRows(ii, :) = local_canonical_profile( ...
+                local_channel_normalize(double(filtersInitial{ii}(floor(size(filtersInitial{ii}, 1) / 2) + 1, :))), 129);
+        end
+
+        scP = scParams;
+        scP.sampPerDeg = 512;
+        scP.filterSize = 512;
+        [filtersMtf, ~, scPMtf] = scPrepareFilters(scP);
+        mtfPeaks = zeros(1, 3);
+        mtfCenterRows = zeros(3, 129);
+        for ii = 1:3
+            ps = fftshift(double(filtersMtf{ii}));
+            tFilter = fftshift(abs(fft2(ps)));
+            mtfPeaks(ii) = max(tFilter(:));
+            mtfCenterRows(ii, :) = local_canonical_profile( ...
+                local_channel_normalize(double(tFilter(floor(size(tFilter, 1) / 2) + 1, :))), 129);
+        end
+
+        versions = {'distribution', 'original', 'hires'};
+        versionFilterSizes = zeros(1, numel(versions));
+        versionFilterPeaks = zeros(numel(versions), 3);
+        versionMtfPeaks = zeros(numel(versions), 3);
+        versionFilterCenterRows = zeros(numel(versions), 3, 129);
+        versionMtfCenterRows = zeros(numel(versions), 3, 129);
+        versionSupport = [];
+        for vv = 1:numel(versions)
+            scP = scParams;
+            scP.sampPerDeg = 350;
+            scP.filterSize = 200;
+            scP.filterversion = versions{vv};
+            [filtersVersion, supportVersion, scPVersion] = scPrepareFilters(scP);
+            if isempty(versionSupport)
+                versionSupport = double(supportVersion(:));
+            end
+            versionFilterSizes(vv) = double(scPVersion.filterSize);
+            for ii = 1:3
+                versionFilterPeaks(vv, ii) = max(double(filtersVersion{ii}(:)));
+                versionFilterCenterRows(vv, ii, :) = local_canonical_profile( ...
+                    local_channel_normalize(double(filtersVersion{ii}(floor(size(filtersVersion{ii}, 1) / 2) + 1, :))), 129);
+                ps = fftshift(double(filtersVersion{ii}));
+                tFilter = fftshift(abs(fft2(ps)));
+                versionMtfPeaks(vv, ii) = max(tFilter(:));
+                versionMtfCenterRows(vv, ii, :) = local_canonical_profile( ...
+                    local_channel_normalize(double(tFilter(floor(size(tFilter, 1) / 2) + 1, :))), 129);
+            end
+        end
+
+        payload.initial_filter_size = double(scPInitial.filterSize);
+        payload.initial_support = double(supportInitial(:));
+        payload.initial_filter_peaks = double(initialFilterPeaks(:));
+        payload.initial_filter_sums = double(initialFilterSums(:));
+        payload.initial_filter_center_rows_norm = double(initialFilterCenterRows);
+        payload.mtf_filter_size = double(scPMtf.filterSize);
+        payload.mtf_filter_peaks = double(mtfPeaks(:));
+        payload.mtf_filter_center_rows_norm = double(mtfCenterRows);
+        payload.version_filter_sizes = double(versionFilterSizes(:));
+        payload.version_support = double(versionSupport(:));
+        payload.version_filter_peaks = double(versionFilterPeaks);
+        payload.version_filter_center_rows_norm = double(versionFilterCenterRows);
+        payload.version_mtf_peaks = double(versionMtfPeaks);
+        payload.version_mtf_center_rows_norm = double(versionMtfCenterRows);
+
     case 'metrics_edge2mtf_small'
         scene = sceneCreate('slanted bar', 512, 7/3);
         scene = sceneAdjustLuminance(scene, 100);

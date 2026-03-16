@@ -38,6 +38,7 @@
 - and now also headless `scielabRGB(...)` / `scielab(...)` in a new `scielab.py`, plus MATLAB-style display `rgb2xyz` / `white point` support, with curated Octave parity on `t_metricsScielab.m` covering the `hats.jpg` versus `hatsC.jpg` LCD-Apple tutorial workflow, returned scene geometry, display white point, and the stable S-CIELAB error-map summaries
 - and now also curated Octave parity on `s_rgb2scielab.m`, covering the `crt.mat` S-CIELAB script path for `hats.jpg` versus `hatsC.jpg`, including the mean Delta E, the mean/percent above the script’s `Delta E > 2` threshold, scene geometry, display white point, and a normalized error-profile slice
 - and now also headless `dac2rgb(...)` / `imageLinearTransform(...)`, with curated Octave parity on `s_scielabExample.m` covering both the script’s `scielabRGB(...)` branch and its explicit `dac2rgb -> displayGet('rgb2xyz') -> imageLinearTransform -> scielab(...)` walkthrough on `hats.jpg` versus `hatsC.jpg`, including the returned scene geometry, white point, mean Delta E summaries, and canonicalized filter/error profiles
+- and now also headless `scPrepareFilters(...)` / `sc_prepare_filters(...)`, with curated Octave parity on `s_scielabFilters.m` covering the 101-sample point-spread filters, the 512-sample MTF branch, and the `distribution` / `original` / `hires` Gaussian-parameter variants through normalized center-row and peak summaries
 
 ## Status
 

@@ -72,7 +72,7 @@ from .optics import (
     rt_synthetic,
 )
 from .plotting import ip_plot, oi_plot, sensor_plot, sensor_plot_line, wvf_plot
-from .scielab import scielab, scielab_rgb
+from .scielab import sc_prepare_filters, scielab, scielab_rgb
 from .scene import (
     hdr_render,
     ie_reflectance_samples,
@@ -1106,6 +1106,90 @@ def run_python_case_with_context(
                 ),
             },
             context={"scene1": scene1, "scene2": scene2, "display": display},
+        )
+
+    if case_name == "metrics_scielab_filters_small":
+        def _canonical_profile(values: Any, samples: int = 129) -> np.ndarray:
+            profile = np.asarray(values, dtype=float).reshape(-1)
+            support = np.linspace(-1.0, 1.0, profile.size, dtype=float)
+            query = np.linspace(-1.0, 1.0, samples, dtype=float)
+            return np.interp(query, support, profile).astype(float)
+
+        def _row_stack(filters: list[np.ndarray], samples: int = 129) -> np.ndarray:
+            return np.vstack(
+                [
+                    _canonical_profile(_channel_normalize(kernel[kernel.shape[0] // 2, :]), samples)
+                    for kernel in filters
+                ]
+            )
+
+        def _mtf_stack(filters: list[np.ndarray], samples: int = 129) -> tuple[np.ndarray, np.ndarray]:
+            rows: list[np.ndarray] = []
+            peaks: list[float] = []
+            for kernel in filters:
+                mtf = np.fft.fftshift(np.abs(np.fft.fft2(np.fft.fftshift(kernel))))
+                rows.append(_canonical_profile(_channel_normalize(mtf[mtf.shape[0] // 2, :]), samples))
+                peaks.append(float(np.max(mtf)))
+            return np.vstack(rows), np.asarray(peaks, dtype=float)
+
+        scp_initial = {
+            "sampPerDeg": 101.0,
+            "filterSize": 101.0,
+        }
+        initial_filters, initial_support, initial_params = sc_prepare_filters(scp_initial)
+        initial_filters = [np.asarray(kernel, dtype=float) for kernel in initial_filters]
+
+        scp_mtf = {
+            "sampPerDeg": 512.0,
+            "filterSize": 512.0,
+        }
+        mtf_filters, _, mtf_params = sc_prepare_filters(scp_mtf)
+        mtf_filters = [np.asarray(kernel, dtype=float) for kernel in mtf_filters]
+        mtf_rows, mtf_peaks = _mtf_stack(mtf_filters)
+
+        versions = ("distribution", "original", "hires")
+        version_filter_rows = np.zeros((len(versions), 3, 129), dtype=float)
+        version_mtf_rows = np.zeros((len(versions), 3, 129), dtype=float)
+        version_filter_peaks = np.zeros((len(versions), 3), dtype=float)
+        version_mtf_peaks = np.zeros((len(versions), 3), dtype=float)
+        version_filter_sizes = np.zeros(len(versions), dtype=int)
+        version_support = None
+        for idx, version in enumerate(versions):
+            scp_version = {
+                "sampPerDeg": 350.0,
+                "filterSize": 200.0,
+                "filterversion": version,
+            }
+            version_filters, current_support, version_params = sc_prepare_filters(scp_version)
+            version_filters = [np.asarray(kernel, dtype=float) for kernel in version_filters]
+            if version_support is None:
+                version_support = np.asarray(current_support, dtype=float).reshape(-1)
+            version_filter_sizes[idx] = int(round(float(version_params["filterSize"])))
+            version_filter_rows[idx, :, :] = _row_stack(version_filters)
+            version_filter_peaks[idx, :] = np.asarray([float(np.max(kernel)) for kernel in version_filters], dtype=float)
+            current_mtf_rows, current_mtf_peaks = _mtf_stack(version_filters)
+            version_mtf_rows[idx, :, :] = current_mtf_rows
+            version_mtf_peaks[idx, :] = current_mtf_peaks
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "initial_filter_size": int(round(float(initial_params["filterSize"]))),
+                "initial_support": np.asarray(initial_support, dtype=float).reshape(-1),
+                "initial_filter_peaks": np.asarray([float(np.max(kernel)) for kernel in initial_filters], dtype=float),
+                "initial_filter_sums": np.asarray([float(np.sum(kernel, dtype=float)) for kernel in initial_filters], dtype=float),
+                "initial_filter_center_rows_norm": _row_stack(initial_filters),
+                "mtf_filter_size": int(round(float(mtf_params["filterSize"]))),
+                "mtf_filter_peaks": mtf_peaks,
+                "mtf_filter_center_rows_norm": mtf_rows,
+                "version_filter_sizes": version_filter_sizes,
+                "version_support": np.asarray(version_support, dtype=float).reshape(-1),
+                "version_filter_peaks": version_filter_peaks,
+                "version_filter_center_rows_norm": version_filter_rows,
+                "version_mtf_peaks": version_mtf_peaks,
+                "version_mtf_center_rows_norm": version_mtf_rows,
+            },
+            context={},
         )
 
     if case_name == "metrics_edge2mtf_small":

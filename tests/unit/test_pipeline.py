@@ -95,6 +95,7 @@ from pyisetcam import (
     rt_sample_heights,
     rt_synthetic,
     rgb_to_xw_format,
+    sc_prepare_filters,
     scielab,
     scielab_rgb,
     si_synthetic,
@@ -6848,6 +6849,54 @@ def test_run_python_case_supports_metrics_scielab_example_small_parity_case(asse
     assert case.payload["filter_peaks"].shape == (3,)
     assert case.payload["filter_center_rows_norm"].shape == (3, 65)
     assert case.payload["explicit_error_center_row_norm"].shape == (129,)
+
+
+def test_metrics_scielab_filters_script_workflow() -> None:
+    filters_initial, support_initial, params_initial = sc_prepare_filters({"sampPerDeg": 101.0, "filterSize": 101.0})
+
+    assert int(round(float(params_initial["filterSize"]))) == 101
+    assert np.asarray(support_initial).shape == (101,)
+    assert np.isclose(float(np.asarray(support_initial)[0]), -50.0 / 101.0, atol=1e-12, rtol=1e-12)
+    assert np.isclose(float(np.asarray(support_initial)[-1]), 50.0 / 101.0, atol=1e-12, rtol=1e-12)
+    for kernel in filters_initial:
+        array = np.asarray(kernel, dtype=float)
+        assert array.shape == (101, 101)
+        assert np.isclose(float(np.sum(array, dtype=float)), 1.0, atol=1e-12, rtol=1e-12)
+
+    filters_mtf, _, params_mtf = sc_prepare_filters({"sampPerDeg": 512.0, "filterSize": 512.0})
+    assert int(round(float(params_mtf["filterSize"]))) == 511
+    mtf_peaks = []
+    for kernel in filters_mtf:
+        mtf = np.fft.fftshift(np.abs(np.fft.fft2(np.fft.fftshift(np.asarray(kernel, dtype=float)))))
+        mtf_peaks.append(float(np.max(mtf)))
+    assert np.all(np.asarray(mtf_peaks, dtype=float) > 0.99)
+
+    for version in ("distribution", "original", "hires"):
+        version_filters, version_support, version_params = sc_prepare_filters(
+            {"sampPerDeg": 350.0, "filterSize": 200.0, "filterversion": version}
+        )
+        assert int(round(float(version_params["filterSize"]))) == 199
+        assert np.asarray(version_support).shape == (199,)
+        for kernel in version_filters:
+            array = np.asarray(kernel, dtype=float)
+            assert array.shape == (199, 199)
+            assert np.isclose(float(np.sum(array, dtype=float)), 1.0, atol=1e-12, rtol=1e-12)
+
+
+def test_run_python_case_supports_metrics_scielab_filters_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_scielab_filters_small", asset_store=asset_store)
+
+    assert int(case.payload["initial_filter_size"]) == 101
+    assert case.payload["initial_support"].shape == (101,)
+    assert case.payload["initial_filter_center_rows_norm"].shape == (3, 129)
+    assert np.allclose(np.asarray(case.payload["initial_filter_sums"], dtype=float), np.ones(3, dtype=float), atol=1e-12, rtol=1e-12)
+    assert int(case.payload["mtf_filter_size"]) == 511
+    assert case.payload["mtf_filter_center_rows_norm"].shape == (3, 129)
+    assert np.all(np.asarray(case.payload["mtf_filter_peaks"], dtype=float) > 0.99)
+    assert np.array_equal(np.asarray(case.payload["version_filter_sizes"], dtype=int), np.array([199, 199, 199], dtype=int))
+    assert case.payload["version_support"].shape == (199,)
+    assert case.payload["version_filter_center_rows_norm"].shape == (3, 3, 129)
+    assert case.payload["version_mtf_center_rows_norm"].shape == (3, 3, 129)
 
 
 def test_metrics_edge2mtf_script_workflow(asset_store) -> None:

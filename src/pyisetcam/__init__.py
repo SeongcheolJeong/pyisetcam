@@ -125,7 +125,7 @@ from .parity import run_python_case, run_python_case_with_context
 from .plotting import ip_plot, oi_plot, scene_plot, sensor_plot, sensor_plot_fft, sensor_plot_line, wvf_plot
 from .ptable import IEPTable, ie_p_table
 from .roi import ie_locs2_rect, ie_rect2_locs, ie_rect2_vertices, ie_roi2_locs, vc_get_roi_data, vc_rect2_locs
-from .scielab import sc_params, scielab, scielab_rgb
+from .scielab import sc_params, sc_prepare_filters, scielab, scielab_rgb
 from .session import (
     ie_app_get,
     ie_add_object,
@@ -410,9 +410,11 @@ __all__ = [
     "mired_difference",
     "edge_to_mtf",
     "scParams",
+    "scPrepareFilters",
     "scielab",
     "scielabRGB",
     "sc_params",
+    "sc_prepare_filters",
     "scielab_rgb",
     "RGB2XWFormat",
     "rgb_to_xw_format",
@@ -814,6 +816,7 @@ sensorSetSizeToFOV = sensor_set_size_to_fov
 metricsSPD = metrics_spd
 deltaEab = delta_e_ab
 scParams = sc_params
+scPrepareFilters = sc_prepare_filters
 scielabRGB = scielab_rgb
 xyz2luv = xyz_to_luv
 cct = cct_from_uv
