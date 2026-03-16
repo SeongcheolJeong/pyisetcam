@@ -199,6 +199,17 @@
       "atol": 1e-08
     },
     {
+      "name": "metrics_vsnr_small",
+      "matlab_function": "s_metricsVSNR.m",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "vsnr_norm": {"mode": "mean_rel", "max_mean_rel": 0.006},
+        "delta_e_norm": {"mode": "mean_rel", "max_mean_rel": 0.006},
+        "result_channel_means_norm": {"mode": "mean_rel", "max_mean_rel": 0.003}
+      }
+    },
+    {
       "name": "metrics_edge2mtf_small",
       "matlab_function": "s_metricsEdge2MTF",
       "rtol": 1e-05,

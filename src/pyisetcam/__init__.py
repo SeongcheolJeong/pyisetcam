@@ -10,6 +10,7 @@ from .assets import (
 )
 from .camera import (
     CameraMTFResult,
+    CameraVSNRResult,
     camera_acutance,
     camera_color_accuracy,
     camera_compute,
@@ -17,6 +18,7 @@ from .camera import (
     camera_get,
     camera_mtf,
     camera_set,
+    camera_vsnr,
     macbeth_color_error,
     macbeth_compare_ideal,
 )
@@ -255,12 +257,15 @@ __all__ = [
     "cameraGet",
     "cameraMTF",
     "cameraSet",
+    "cameraVSNR",
+    "CameraVSNRResult",
     "camera_acutance",
     "camera_color_accuracy",
     "camera_compute",
     "camera_create",
     "camera_get",
     "camera_mtf",
+    "camera_vsnr",
     "macbethColorError",
     "macbeth_color_error",
     "macbethCompareIdeal",
@@ -853,6 +858,7 @@ cameraGet = camera_get
 cameraMTF = camera_mtf
 cameraAcutance = camera_acutance
 cameraColorAccuracy = camera_color_accuracy
+cameraVSNR = camera_vsnr
 cameraSet = camera_set
 macbethColorError = macbeth_color_error
 macbethCompareIdeal = macbeth_compare_ideal

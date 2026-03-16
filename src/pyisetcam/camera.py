@@ -9,10 +9,11 @@ import numpy as np
 from numpy.typing import NDArray
 
 from .assets import AssetStore
+from .display import display_get
 from .exceptions import UnsupportedOptionError
 from .ip import ip_compute, ip_create, ip_get, ip_set
 from .iso import iso12233, iso_find_slanted_bar
-from .metrics import delta_e_ab, iso_acutance, xyz_to_lab
+from .metrics import delta_e_ab, iso_acutance, xyz_from_energy, xyz_to_lab
 from .optics import oi_compute, oi_create, oi_get, oi_set
 from .scene import Scene, scene_adjust_luminance, scene_create, scene_set
 from .session import track_camera_session_state, track_session_object
@@ -51,6 +52,19 @@ class CameraMTFResult:
     esf: NDArray[np.float64] | None = None
     fitme: NDArray[np.float64] | None = None
     win: None = None
+
+
+@dataclass
+class CameraVSNRResult:
+    """Headless payload returned by camera_vsnr()."""
+
+    lightLevels: NDArray[np.float64]
+    vSNR: NDArray[np.float64]
+    eTime: NDArray[np.float64]
+    rect: NDArray[np.int_]
+    ip: list[ImageProcessor]
+    oi: OpticalImage
+    sensor: Sensor
 
 
 def _pixel_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
@@ -365,6 +379,63 @@ def _chart_rects_data(
     return mean_values
 
 
+def _display_white_xyz(ip: ImageProcessor, *, asset_store: AssetStore) -> np.ndarray:
+    display = ip.fields["display"]
+    wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)
+    white_spd = np.asarray(display_get(display, "white spd"), dtype=float).reshape(-1)
+    white_xyz = np.asarray(xyz_from_energy(white_spd, wave, asset_store=asset_store), dtype=float).reshape(-1)
+    return 100.0 * (white_xyz / max(float(white_xyz[1]), 1.0e-12))
+
+
+def _middle_matrix(m: Any, sz: Any) -> np.ndarray:
+    data = np.asarray(m, dtype=float)
+    target = np.asarray(sz, dtype=float).reshape(-1)
+    if target.size == 1:
+        target = np.repeat(target, 2)
+    half = np.asarray([_matlab_round_scalar(float(value) / 2.0) for value in target[:2]], dtype=int)
+    center = np.asarray([_matlab_round_scalar(float(value) / 2.0) for value in data.shape[:2]], dtype=int)
+
+    row_min = max(1, int(center[0] - half[0]))
+    row_max = min(int(data.shape[0]), int(center[0] + half[0]))
+    col_min = max(1, int(center[1] - half[1]))
+    col_max = min(int(data.shape[1]), int(center[1] + half[1]))
+    return np.asarray(data[row_min - 1 : row_max, col_min - 1 : col_max, ...], dtype=float)
+
+
+def _default_vsnr_rect(ip: ImageProcessor) -> np.ndarray:
+    size = np.asarray(ip_get(ip, "size"), dtype=int).reshape(-1)
+    border = np.asarray([_matlab_round_scalar(0.1 * float(value)) for value in size[:2]], dtype=int)
+    return np.array(
+        [
+            int(border[1]),
+            int(border[0]),
+            int(size[1] - (2 * border[1])),
+            int(size[0] - (2 * border[0])),
+        ],
+        dtype=int,
+    )
+
+
+def _ip_vsnr(
+    ip: ImageProcessor,
+    rect: Any,
+    *,
+    asset_store: AssetStore,
+) -> float:
+    rect_array = np.asarray(rect, dtype=int).reshape(-1)
+    roi_xyz = np.asarray(ip_get(ip, "roixyz", rect_array), dtype=float)
+    rows = int(rect_array[3]) + 1
+    cols = int(rect_array[2]) + 1
+    roi_xyz = xw_to_rgb_format(roi_xyz, rows, cols)
+
+    white_xyz = _display_white_xyz(ip, asset_store=asset_store)
+    lab = np.asarray(xyz_to_lab(roi_xyz, white_xyz), dtype=float)
+    lab = _middle_matrix(lab, 0.8 * np.asarray(lab.shape[:2], dtype=float))
+    channels = lab.reshape(-1, 3)
+    variance = np.var(channels, axis=0, ddof=1, dtype=float)
+    return 1.0 / max(float(np.sqrt(np.sum(variance, dtype=float))), 1.0e-12)
+
+
 def _linear_srgb_to_xyz(rgb: Any) -> np.ndarray:
     rgb_array = np.clip(np.asarray(rgb, dtype=float), 0.0, 1.0)
     if rgb_array.ndim == 2:
@@ -631,6 +702,65 @@ def camera_acutance(
     return iso_acutance(cpd, luminance_mtf)
 
 
+def camera_vsnr(
+    camera: Camera,
+    light_levels: Any | None = None,
+    exposure_time: float = 0.01,
+    *,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> CameraVSNRResult:
+    """Run the headless VSNR workflow from `s_metricsVSNR.m`."""
+
+    store = _store(asset_store)
+    levels = (
+        np.asarray([1.0, 10.0, 100.0], dtype=float)
+        if light_levels is None
+        else np.asarray(light_levels, dtype=float).reshape(-1)
+    )
+    vsnr = np.full(levels.shape, np.nan, dtype=float)
+    e_time = np.zeros(levels.shape, dtype=float)
+    rect: np.ndarray | None = None
+    ip_results: list[ImageProcessor] = []
+
+    for index, level in enumerate(levels):
+        scene = scene_create("uniform d65", asset_store=store, session=session)
+        scene = scene_set(scene, "fov", 5.0)
+        scene = scene_adjust_luminance(scene, float(level), asset_store=store)
+
+        working_camera = camera_set(camera.clone(), "sensor exp time", float(exposure_time), session=session)
+        working_camera = camera_compute(working_camera, scene, asset_store=store, session=session)
+
+        ip = camera_get(working_camera, "ip")
+        result = np.asarray(ip_get(ip, "result"), dtype=float)
+        result_max = float(np.max(result)) if result.size else 0.0
+        sensor_max = float(ip_get(ip, "sensormax"))
+
+        if (sensor_max - result_max) < (10.0 * np.finfo(float).eps):
+            ip_results.append(ip)
+            continue
+
+        scaled_ip = ip_set(ip.clone(), "result", result * (sensor_max / max(result_max, 1.0e-12)), session=session)
+        if rect is None:
+            rect = _default_vsnr_rect(scaled_ip)
+        vsnr[index] = _ip_vsnr(scaled_ip, rect, asset_store=store)
+        ip_results.append(scaled_ip)
+
+    if rect is None:
+        rect = np.zeros(4, dtype=int)
+
+    return CameraVSNRResult(
+        lightLevels=levels,
+        vSNR=vsnr,
+        eTime=e_time,
+        rect=np.asarray(rect, dtype=int),
+        ip=ip_results,
+        oi=camera_get(camera, "oi"),
+        sensor=camera_get(camera, "sensor"),
+    )
+
+
 cameraColorAccuracy = camera_color_accuracy
+cameraVSNR = camera_vsnr
 macbethColorError = macbeth_color_error
 macbethCompareIdeal = macbeth_compare_ideal

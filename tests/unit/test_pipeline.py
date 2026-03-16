@@ -17,6 +17,7 @@ from pyisetcam import (
     camera_get,
     camera_mtf,
     camera_set,
+    camera_vsnr,
     macbeth_color_error,
     chromaticity_xy,
     cpiq_csf,
@@ -6683,6 +6684,32 @@ def test_run_python_case_supports_metrics_spd_daylight_sweep_parity_case(asset_s
     assert case.payload["d6500_mired"].shape == (7,)
     assert np.isclose(float(case.payload["d4000_mired"][-1]), 114.3814, atol=1.0e-4)
     assert np.isclose(float(case.payload["d6500_mired"][-1]), 12.0726, atol=1.0e-4)
+
+
+def test_metrics_vsnr_script_workflow(asset_store) -> None:
+    levels = np.asarray(np.logspace(1.5, 3.0, 3), dtype=float)
+    result = camera_vsnr(camera_create(asset_store=asset_store), levels, asset_store=asset_store)
+
+    valid = np.asarray(result.vSNR, dtype=float)[np.isfinite(result.vSNR)]
+    assert result.lightLevels.shape == (3,)
+    assert result.eTime.shape == (3,)
+    assert result.rect.shape == (4,)
+    assert len(result.ip) == 3
+    assert np.all(result.eTime == 0.0)
+    assert valid.size == 3
+    assert np.all(valid > 0.0)
+    assert np.all(np.diff(valid) > 0.0)
+
+
+def test_run_python_case_supports_metrics_vsnr_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_vsnr_small", asset_store=asset_store)
+
+    assert case.payload["light_levels"].shape == (3,)
+    assert case.payload["rect"].shape == (4,)
+    assert case.payload["saturation_mask"].shape == (3,)
+    assert case.payload["vsnr_norm"].shape == (3,)
+    assert case.payload["delta_e_norm"].shape == (3,)
+    assert case.payload["result_channel_means_norm"].shape == (3, 3)
 
 
 def test_metrics_edge2mtf_script_workflow(asset_store) -> None:

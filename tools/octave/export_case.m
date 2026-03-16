@@ -760,6 +760,27 @@ switch case_name
         payload.d6500_delta_e = deval6500;
         payload.d6500_mired = miredval6500;
 
+    case 'metrics_vsnr_small'
+        camera = cameraCreate;
+        levels = logspace(1.5, 3, 3);
+        cVSNR = cameraVSNR(camera, levels);
+
+        nLevels = numel(levels);
+        resultChannelMeans = zeros(nLevels, 3);
+        for ii = 1:nLevels
+            result = double(ipGet(cVSNR.ip(ii), 'result'));
+            resultChannelMeans(ii, :) = local_channel_normalize(squeeze(mean(mean(result, 1), 2)))';
+        end
+
+        vSNR = double(cVSNR.vSNR(:));
+        deltaE = 1 ./ max(vSNR, 1e-12);
+        payload.light_levels = double(cVSNR.lightLevels(:));
+        payload.rect = double(cVSNR.rect(:));
+        payload.saturation_mask = double(isnan(vSNR));
+        payload.vsnr_norm = double(vSNR / max(vSNR(find(isfinite(vSNR), 1, 'first')), 1e-12));
+        payload.delta_e_norm = double(deltaE / max(deltaE(find(isfinite(deltaE), 1, 'first')), 1e-12));
+        payload.result_channel_means_norm = double(resultChannelMeans);
+
     case 'metrics_edge2mtf_small'
         scene = sceneCreate('slanted bar', 512, 7/3);
         scene = sceneAdjustLuminance(scene, 100);

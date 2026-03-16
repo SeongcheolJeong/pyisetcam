@@ -18,6 +18,7 @@ from .camera import (
     camera_get,
     camera_mtf,
     camera_set,
+    camera_vsnr,
     macbeth_color_error,
     macbeth_compare_ideal,
 )
@@ -923,6 +924,36 @@ def run_python_case_with_context(
                 "d6500_angle": d6500_angle,
                 "d6500_delta_e": d6500_delta_e,
                 "d6500_mired": d6500_mired,
+            },
+            context={},
+        )
+
+    if case_name == "metrics_vsnr_small":
+        levels = np.asarray(np.logspace(1.5, 3.0, 3), dtype=float)
+        result = camera_vsnr(camera_create(asset_store=store), levels, asset_store=store)
+
+        vsnr = np.asarray(result.vSNR, dtype=float).reshape(-1)
+        finite = np.isfinite(vsnr)
+        delta_e = np.full(vsnr.shape, np.nan, dtype=float)
+        delta_e[finite] = 1.0 / np.maximum(vsnr[finite], 1.0e-12)
+        ip_channel_means = np.vstack(
+            [
+                _channel_normalize(np.mean(np.asarray(ip_get(ip, "result"), dtype=float).reshape(-1, 3), axis=0, dtype=float))
+                for ip in result.ip
+            ]
+        )
+        scale = float(vsnr[np.flatnonzero(finite)[0]]) if np.any(finite) else 1.0
+        delta_scale = float(delta_e[np.flatnonzero(finite)[0]]) if np.any(finite) else 1.0
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "light_levels": np.asarray(result.lightLevels, dtype=float),
+                "rect": np.asarray(result.rect, dtype=int),
+                "saturation_mask": np.asarray(~finite, dtype=bool),
+                "vsnr_norm": np.asarray(vsnr / max(scale, 1.0e-12), dtype=float),
+                "delta_e_norm": np.asarray(delta_e / max(delta_scale, 1.0e-12), dtype=float),
+                "result_channel_means_norm": np.asarray(ip_channel_means, dtype=float),
             },
             context={},
         )
