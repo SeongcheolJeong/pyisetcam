@@ -1168,6 +1168,78 @@ switch case_name
         payload.result_lab_channel_means = squeeze(mean(mean(double(result), 1), 2));
         payload.result_l_center_row_norm = local_canonical_profile(local_channel_normalize(resultL(floor(size(resultL, 1) / 2) + 1, :)), 129);
 
+    case 'metrics_scielab_harmonic_experiments_small'
+        sz = 512;
+        maxF = sz / 64;
+        scene = sceneCreate('Sweep Frequency', sz, maxF);
+        scene = sceneSet(scene, 'fov', 8);
+
+        oi = oiCreate;
+        oi = oiSet(oi, 'Diffuser Method', 'blur');
+        oi = oiSet(oi, 'Diffuser blur', 1.5e-6);
+        oi = oiCompute(oi, scene);
+
+        sensor = sensorCreate;
+        sensor = sensorSetSizeToFOV(sensor, sceneGet(scene, 'fov') * 0.95, oi);
+        sensor = sensorCompute(sensor, oi);
+
+        ip = ipCreate;
+        ip = ipSet(ip, 'correction method illuminant', 'gray world');
+        ip = ipCompute(ip, sensor);
+
+        img = double(ipGet(ip, 'result'));
+        imgXYZ = srgb2xyz(img);
+        imgOpp = imageLinearTransform(imgXYZ, colorTransformMatrix('xyz2opp', 10));
+        opponentMeans = mean(double(RGB2XWFormat(imgOpp)), 1);
+
+        scP = scParams;
+        scP.sampPerDeg = 100;
+        whiteXYZ = squeeze(srgb2xyz(ones(1, 1, 3)));
+
+        sFactor = [
+            1.0, 0.5, 1.0;
+            1.0, 1.0, 0.5;
+            0.75, 1.0, 1.0
+        ];
+        alteredRenderMeans = zeros(size(sFactor, 1), 3);
+        alteredOppMeans = zeros(size(sFactor, 1), 3);
+        errorStats = zeros(size(sFactor, 1), 4);
+        errorCenterRows = zeros(size(sFactor, 1), 129);
+
+        paddedImg = padarray(img, [16 16 0]);
+        for jj = 1:size(sFactor, 1)
+            imgOpp2 = zeros(size(imgOpp));
+            for ii = 1:3
+                imgOpp2(:, :, ii) = (imgOpp(:, :, ii) - opponentMeans(ii)) * sFactor(jj, ii) + opponentMeans(ii);
+            end
+
+            img2 = xyz2srgb(imageLinearTransform(imgOpp2, colorTransformMatrix('opp2xyz', 10)));
+            alteredRenderMeans(jj, :) = local_channel_normalize(mean(reshape(double(img2), [], 3), 1));
+            alteredOppMeans(jj, :) = mean(double(RGB2XWFormat(imgOpp2)), 1);
+
+            errorImage = scielab(paddedImg, padarray(img2, [16 16 0]), whiteXYZ, scP);
+            errorStats(jj, :) = local_stats_vector(double(errorImage(:)));
+            centerRow = local_channel_normalize(double(errorImage(floor(size(errorImage, 1) / 2) + 1, :)));
+            errorCenterRows(jj, :) = local_canonical_profile(centerRow, 129);
+        end
+
+        payload.scene_size = double(sceneGet(scene, 'size')(:));
+        payload.scene_fov_deg = double(sceneGet(scene, 'fov'));
+        payload.sweep_max_frequency_cpd = double(maxF);
+        payload.oi_size = double(oiGet(oi, 'size')(:));
+        payload.oi_diffuser_blur_m = double(oiGet(oi, 'diffuser blur'));
+        payload.sensor_size = double(sensorGet(sensor, 'size')(:));
+        payload.ip_result_size = double(size(img));
+        payload.white_xyz = double(whiteXYZ(:));
+        payload.samp_per_deg = double(scP.sampPerDeg);
+        payload.scale_factors = double(sFactor);
+        payload.original_render_mean_rgb_norm = local_channel_normalize(mean(reshape(img, [], 3), 1));
+        payload.original_opp_channel_means = double(opponentMeans(:));
+        payload.altered_render_mean_rgb_norm = double(alteredRenderMeans);
+        payload.altered_opp_channel_means = double(alteredOppMeans);
+        payload.error_stats = double(errorStats);
+        payload.error_center_row_norm = double(errorCenterRows);
+
     case 'metrics_edge2mtf_small'
         scene = sceneCreate('slanted bar', 512, 7/3);
         scene = sceneAdjustLuminance(scene, 100);

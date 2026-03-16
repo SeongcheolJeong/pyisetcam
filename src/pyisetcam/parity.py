@@ -1441,6 +1441,104 @@ def run_python_case_with_context(
             context={"scene": scene, "oi": oi, "sensor": sensor, "ip": ip},
         )
 
+    if case_name == "metrics_scielab_harmonic_experiments_small":
+        def _canonical_profile(values: Any, samples: int = 129) -> np.ndarray:
+            profile = np.asarray(values, dtype=float).reshape(-1)
+            support = np.linspace(-1.0, 1.0, profile.size, dtype=float)
+            query = np.linspace(-1.0, 1.0, samples, dtype=float)
+            return np.interp(query, support, profile).astype(float)
+
+        size = 512
+        max_frequency = float(size) / 64.0
+        scene = scene_create("sweep frequency", size, max_frequency, asset_store=store)
+        scene = scene_set(scene, "fov", 8.0)
+
+        oi = oi_create(asset_store=store)
+        oi = oi_set(oi, "diffuser method", "blur")
+        oi = oi_set(oi, "diffuser blur", 1.5e-6)
+        oi = oi_compute(oi, scene)
+
+        sensor = sensor_create(asset_store=store)
+        sensor = sensor_set_size_to_fov(sensor, 0.95 * float(scene_get(scene, "fov")), oi)
+        sensor = sensor_compute(sensor, oi)
+
+        ip = ip_set(ip_create(asset_store=store), "correction method illuminant", "gray world")
+        ip = ip_compute(ip, sensor)
+
+        img = np.asarray(ip_get(ip, "result"), dtype=float)
+        img_xyz = srgb_to_xyz(img)
+        img_opp = image_linear_transform(img_xyz, color_transform_matrix("xyz2opp", 10))
+        img_opp_xw, _, _, _ = rgb_to_xw_format(img_opp)
+        opponent_means = np.mean(np.asarray(img_opp_xw, dtype=float), axis=0)
+
+        white_xyz = srgb_to_xyz(np.ones((1, 1, 3), dtype=float)).reshape(3)
+        params = sc_params()
+        params["sampPerDeg"] = 100.0
+
+        scale_factors = np.array(
+            [
+                [1.0, 0.5, 1.0],
+                [1.0, 1.0, 0.5],
+                [0.75, 1.0, 1.0],
+            ],
+            dtype=float,
+        )
+        altered_render_means = np.zeros((scale_factors.shape[0], 3), dtype=float)
+        altered_opp_means = np.zeros((scale_factors.shape[0], 3), dtype=float)
+        error_stats = np.zeros((scale_factors.shape[0], 4), dtype=float)
+        error_center_rows = np.zeros((scale_factors.shape[0], 129), dtype=float)
+
+        padded_img = np.pad(img, ((16, 16), (16, 16), (0, 0)), mode="constant")
+        for index, scale in enumerate(scale_factors):
+            adjusted_opp = np.zeros_like(img_opp, dtype=float)
+            for channel_index in range(3):
+                adjusted_opp[:, :, channel_index] = (
+                    (img_opp[:, :, channel_index] - float(opponent_means[channel_index])) * float(scale[channel_index])
+                    + float(opponent_means[channel_index])
+                )
+
+            adjusted_xyz = image_linear_transform(adjusted_opp, color_transform_matrix("opp2xyz", 10))
+            adjusted_rgb = xyz_to_srgb(adjusted_xyz)
+            altered_render_means[index, :] = _channel_normalize(np.mean(adjusted_rgb.reshape(-1, 3), axis=0))
+            adjusted_opp_xw, _, _, _ = rgb_to_xw_format(adjusted_opp)
+            altered_opp_means[index, :] = np.mean(np.asarray(adjusted_opp_xw, dtype=float), axis=0)
+
+            error_image, _, _, _ = scielab(
+                padded_img,
+                np.pad(adjusted_rgb, ((16, 16), (16, 16), (0, 0)), mode="constant"),
+                white_xyz,
+                params,
+            )
+            error_array = np.asarray(error_image, dtype=float)
+            error_stats[index, :] = _stats_vector(error_array)
+            error_center_rows[index, :] = _canonical_profile(
+                _channel_normalize(error_array[error_array.shape[0] // 2, :]),
+                129,
+            )
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "scene_fov_deg": float(scene_get(scene, "fov")),
+                "sweep_max_frequency_cpd": float(max_frequency),
+                "oi_size": np.asarray(oi_get(oi, "size"), dtype=int),
+                "oi_diffuser_blur_m": float(oi_get(oi, "diffuser blur")),
+                "sensor_size": np.asarray(sensor_get(sensor, "size"), dtype=int),
+                "ip_result_size": np.asarray(img.shape, dtype=int),
+                "white_xyz": white_xyz,
+                "samp_per_deg": float(params["sampPerDeg"]),
+                "scale_factors": scale_factors,
+                "original_render_mean_rgb_norm": _channel_normalize(np.mean(img.reshape(-1, 3), axis=0)),
+                "original_opp_channel_means": np.asarray(opponent_means, dtype=float),
+                "altered_render_mean_rgb_norm": altered_render_means,
+                "altered_opp_channel_means": altered_opp_means,
+                "error_stats": error_stats,
+                "error_center_row_norm": error_center_rows,
+            },
+            context={"scene": scene, "oi": oi, "sensor": sensor, "ip": ip},
+        )
+
     if case_name == "metrics_edge2mtf_small":
         def _canonical_profile(values: Any, samples: int = 65) -> np.ndarray:
             profile = np.asarray(values, dtype=float).reshape(-1)

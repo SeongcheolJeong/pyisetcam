@@ -303,6 +303,34 @@
       }
     },
     {
+      "name": "metrics_scielab_harmonic_experiments_small",
+      "matlab_function": "s_scielabHarmonicExperiments.m",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "original_opp_channel_means": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "altered_opp_channel_means": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "altered_render_mean_rgb_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.001
+        },
+        "error_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        },
+        "error_center_row_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.04
+        }
+      }
+    },
+    {
       "name": "metrics_edge2mtf_small",
       "matlab_function": "s_metricsEdge2MTF",
       "rtol": 1e-05,

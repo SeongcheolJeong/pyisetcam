@@ -43,6 +43,7 @@
 - and now also curated Octave parity on `s_scielabPatches.m`, covering the 7x7 uniform-patch illuminant-perturbation sweep, the returned illuminant XYZ/SPD setup for `sceneCreate('uniform')`, and the paired CIELAB / S-CIELAB Delta E surfaces together with the script’s quantized S-CIELAB summary vector
 - and now also curated Octave parity on `s_scielabMasking.m`, covering the fixed `4 cpd` / `0.8` harmonic-mask setup, the `remove spatial mean` target-combination path, the doubled white-point convention from the script, and the returned CIELAB / S-CIELAB target-contrast curves
 - and now also headless `colorTransformMatrix(...)` / `scOpponentFilter(...)` / `scComputeSCIELAB(...)` plus `srgb2xyz(...)`, with curated Octave parity on `s_scielabTutorial.m` covering the multispectral Stuffed Animals scene through OI/sensor/IP, the Gray World rendered RGB handoff, the 50 samples-per-degree SCIELAB filter setup, the opponent/filtered-image summaries, and the final SCIELAB LAB output
+- and now also curated Octave parity on `s_scielabHarmonicExperiments.m`, covering the sweep-frequency scene through diffuser-blurred OI, gray-world IP rendering, the script’s three opponent-channel scaling branches, and the resulting padded S-CIELAB error-surface summaries
 
 ## Status
 

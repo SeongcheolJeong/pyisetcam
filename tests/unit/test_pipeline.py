@@ -7153,6 +7153,98 @@ def test_run_python_case_supports_metrics_scielab_tutorial_small_parity_case(ass
     assert case.payload["result_l_center_row_norm"].shape == (129,)
 
 
+def test_metrics_scielab_harmonic_experiments_script_workflow(asset_store) -> None:
+    size = 512
+    max_frequency = float(size) / 64.0
+
+    scene = scene_create("sweep frequency", size, max_frequency, asset_store=asset_store)
+    scene = scene_set(scene, "fov", 8.0)
+
+    oi = oi_create(asset_store=asset_store)
+    oi = oi_set(oi, "diffuser method", "blur")
+    oi = oi_set(oi, "diffuser blur", 1.5e-6)
+    oi = oi_compute(oi, scene)
+
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set_size_to_fov(sensor, 0.95 * float(scene_get(scene, "fov")), oi)
+    sensor = sensor_compute(sensor, oi)
+
+    ip = ip_set(ip_create(asset_store=asset_store), "correction method illuminant", "gray world")
+    ip = ip_compute(ip, sensor)
+
+    img = np.asarray(ip_get(ip, "result"), dtype=float)
+    img_xyz = srgb2xyz(img)
+    img_opp = image_linear_transform(img_xyz, colorTransformMatrix("xyz2opp", 10))
+    img_opp_xw, _, _, _ = rgb_to_xw_format(img_opp)
+    opponent_means = np.mean(np.asarray(img_opp_xw, dtype=float), axis=0)
+
+    params = sc_params()
+    params["sampPerDeg"] = 100.0
+    white_xyz = srgb2xyz(np.ones((1, 1, 3), dtype=float)).reshape(3)
+    scale_factors = np.array([[1.0, 0.5, 1.0], [1.0, 1.0, 0.5], [0.75, 1.0, 1.0]], dtype=float)
+
+    padded_img = np.pad(img, ((16, 16), (16, 16), (0, 0)), mode="constant")
+    error_stats = np.zeros((scale_factors.shape[0], 4), dtype=float)
+    for index, scale in enumerate(scale_factors):
+        adjusted_opp = np.zeros_like(img_opp, dtype=float)
+        for channel_index in range(3):
+            adjusted_opp[:, :, channel_index] = (
+                (img_opp[:, :, channel_index] - float(opponent_means[channel_index])) * float(scale[channel_index])
+                + float(opponent_means[channel_index])
+            )
+
+        adjusted_rgb = xyz_to_srgb(image_linear_transform(adjusted_opp, colorTransformMatrix("opp2xyz", 10)))
+        error_image, _, _, _ = scielab(
+            padded_img,
+            np.pad(adjusted_rgb, ((16, 16), (16, 16), (0, 0)), mode="constant"),
+            white_xyz,
+            params,
+        )
+        error_stats[index, :] = np.array(
+            [
+                float(np.mean(error_image)),
+                float(np.std(error_image)),
+                float(np.percentile(error_image, 5)),
+                float(np.percentile(error_image, 95)),
+            ],
+            dtype=float,
+        )
+
+    assert tuple(scene_get(scene, "size")) == (512, 512)
+    assert np.isclose(float(scene_get(scene, "fov")), 8.0)
+    assert tuple(oi_get(oi, "size")) == (640, 640)
+    assert np.isclose(float(oi_get(oi, "diffuser blur")), 1.5e-6)
+    assert tuple(sensor_get(sensor, "size")) == (150, 184)
+    assert tuple(img.shape) == (150, 184, 3)
+    assert white_xyz.shape == (3,)
+    assert img_opp.shape == img_xyz.shape
+    assert opponent_means.shape == (3,)
+    assert error_stats.shape == (3, 4)
+    assert np.all(error_stats[:, 0] > 0.0)
+
+
+def test_run_python_case_supports_metrics_scielab_harmonic_experiments_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_scielab_harmonic_experiments_small", asset_store=asset_store)
+
+    assert tuple(case.payload["scene_size"]) == (512, 512)
+    assert np.isclose(float(case.payload["scene_fov_deg"]), 8.0)
+    assert np.isclose(float(case.payload["sweep_max_frequency_cpd"]), 8.0)
+    assert tuple(case.payload["oi_size"]) == (640, 640)
+    assert np.isclose(float(case.payload["oi_diffuser_blur_m"]), 1.5e-6)
+    assert tuple(case.payload["sensor_size"]) == (150, 184)
+    assert tuple(case.payload["ip_result_size"]) == (150, 184, 3)
+    assert case.payload["white_xyz"].shape == (3,)
+    assert np.isclose(float(case.payload["samp_per_deg"]), 100.0)
+    assert case.payload["scale_factors"].shape == (3, 3)
+    assert case.payload["original_render_mean_rgb_norm"].shape == (3,)
+    assert case.payload["original_opp_channel_means"].shape == (3,)
+    assert case.payload["altered_render_mean_rgb_norm"].shape == (3, 3)
+    assert case.payload["altered_opp_channel_means"].shape == (3, 3)
+    assert case.payload["error_stats"].shape == (3, 4)
+    assert case.payload["error_center_row_norm"].shape == (3, 129)
+    assert np.all(np.asarray(case.payload["error_stats"], dtype=float)[:, 0] > 0.0)
+
+
 def test_metrics_edge2mtf_script_workflow(asset_store) -> None:
     scene = scene_create("slanted bar", 512, 7.0 / 3.0, asset_store=asset_store)
     scene = scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
