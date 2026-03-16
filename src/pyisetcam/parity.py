@@ -5790,7 +5790,7 @@ def run_python_case_with_context(
         )
 
     if case_name == "optics_diffraction_small":
-        scene = scene_create("point array", asset_store=store)
+        scene = scene_create("point array", 128, 16, "d65", 1, asset_store=store)
         scene = scene_set(scene, "h fov", 1.0)
 
         oi = oi_create(asset_store=store)
@@ -7819,6 +7819,65 @@ def run_python_case_with_context(
                 "quarter_megapixels": np.asarray(ie_n_to_megapixel(quarter_rows * quarter_cols), dtype=float),
             },
             context={},
+        )
+
+    if case_name == "sensor_cfa_point_spread_small":
+        scene = scene_create("point array", 128, 16, "d65", 1, asset_store=store)
+        wave = np.asarray(scene_get(scene, "wave"), dtype=float)
+        scene = scene_adjust_illuminant(scene, blackbody(wave, 8000.0), asset_store=store)
+        scene = scene_set(scene, "fov", 2.0)
+
+        oi = oi_create("diffraction limited", asset_store=store)
+        pixel_size_m = np.array([1.4e-6, 1.4e-6], dtype=float)
+        sensor = sensor_create(asset_store=store)
+        sensor = sensor_set(sensor, "pixel size constant fill factor", pixel_size_m)
+        sensor = sensor_set(sensor, "auto exposure", True)
+
+        rect = np.array([32, 24, 11, 11], dtype=int)
+        ff_numbers = np.array([2.0, 4.0, 8.0, 12.0], dtype=float)
+        x_um = np.arange(rect[2] + 1, dtype=float) * pixel_size_m[0]
+        x_um = (x_um - float(np.mean(x_um))) * 1.0e6
+
+        crop_mean_rgb = np.zeros((ff_numbers.size, 3), dtype=float)
+        crop_peak_rgb = np.zeros((ff_numbers.size, 3), dtype=float)
+        green_row_width_30_um = np.zeros(ff_numbers.size, dtype=float)
+        green_row_width_50_um = np.zeros(ff_numbers.size, dtype=float)
+        green_row_width_90_um = np.zeros(ff_numbers.size, dtype=float)
+        red_center_cols_norm = np.zeros((ff_numbers.size, rect[3] + 1), dtype=float)
+
+        row_slice = slice(rect[1] - 1, rect[1] + rect[3])
+        col_slice = slice(rect[0] - 1, rect[0] + rect[2])
+        for index, f_number in enumerate(ff_numbers):
+            oi_ff = oi_set(oi, "optics fnumber", float(f_number))
+            oi_ff = oi_compute(oi_ff, scene)
+            sensor_ff = sensor_compute(sensor, oi_ff)
+            image = np.asarray(sensor_get(sensor_ff, "rgb"), dtype=float)
+            crop = image[row_slice, col_slice, :]
+            crop_mean_rgb[index, :] = np.mean(crop, axis=(0, 1))
+            crop_peak_rgb[index, :] = np.max(crop, axis=(0, 1))
+            center_row = _channel_normalize(crop[(crop.shape[0] - 1) // 2, :, 1])
+            center_col = crop[:, (crop.shape[1] - 1) // 2, 0]
+            dx_um = abs(float(x_um[1] - x_um[0])) if x_um.size > 1 else 0.0
+            green_row_width_30_um[index] = np.count_nonzero(center_row >= 0.3) * dx_um
+            green_row_width_50_um[index] = np.count_nonzero(center_row >= 0.5) * dx_um
+            green_row_width_90_um[index] = np.count_nonzero(center_row >= 0.9) * dx_um
+            red_center_cols_norm[index, :] = _channel_normalize(center_col)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "ff_numbers": ff_numbers,
+                "pixel_size_um": pixel_size_m * 1.0e6,
+                "rect": rect,
+                "x_um": x_um,
+                "crop_mean_rgb": crop_mean_rgb,
+                "crop_peak_rgb": crop_peak_rgb,
+                "green_row_width_30_um": green_row_width_30_um,
+                "green_row_width_50_um": green_row_width_50_um,
+                "green_row_width_90_um": green_row_width_90_um,
+                "red_center_cols_norm": red_center_cols_norm,
+            },
+            context={"scene": scene, "oi": oi, "sensor": sensor},
         )
 
     if case_name == "sensor_spatial_resolution_small":

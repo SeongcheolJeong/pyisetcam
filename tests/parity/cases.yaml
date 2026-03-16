@@ -2672,6 +2672,22 @@
       "atol": 1e-08
     },
     {
+      "name": "sensor_cfa_point_spread_small",
+      "matlab_function": "s_sensorCFAPointSpread.m",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "crop_mean_rgb": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.03
+        },
+        "crop_peak_rgb": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        }
+      }
+    },
+    {
       "name": "sensor_fpn_noise_modes_small",
       "matlab_function": "sensorCompute/sensorPlot",
       "rtol": 1e-05,

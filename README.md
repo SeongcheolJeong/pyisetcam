@@ -193,6 +193,10 @@ estimation coverage for `s_sensorSpatialNoiseDSNU.m`, plus the
 `oiGet(..., 'optics aperture diameter', unit)` support, plus headless
 `sensor_formats` / `sensorFormats` and `ie_n_to_megapixel` /
 `ieN2MegaPixel` coverage for `s_sensorSizeResolution.m`, plus direct
+curated parity on the cropped CFA point-image workflow from
+`s_sensorCFAPointSpread.m`, comparing the 12x12 CFA-image crops,
+rendered RGB summaries, and canonical center-line profiles across the
+`f/#` sweep, plus direct
 curated parity for the `s_sensorSNR.m` sensor-noise component curves
 returned by `sensorSNR(...)`, plus direct curated parity for the
 `s_sensorExposureBracket.m` stacked multi-exposure sensor workflow, plus

@@ -6176,7 +6176,7 @@ def test_run_python_case_supports_oi_cos4th_small_parity_case(asset_store) -> No
 
 
 def test_optics_diffraction_script_workflow(asset_store) -> None:
-    scene = scene_create("point array", asset_store=asset_store)
+    scene = scene_create("point array", 128, 16, "d65", 1, asset_store=asset_store)
     scene = scene_set(scene, "h fov", 1.0)
 
     oi = oi_create(asset_store=asset_store)
@@ -8684,6 +8684,54 @@ def test_run_python_case_supports_sensor_size_resolution_small_parity_case(asset
     assert case.payload["quarter_megapixels"].shape == (12,)
     assert np.all(np.diff(case.payload["half_megapixels"]) < 0.0)
     assert np.all(np.diff(case.payload["quarter_megapixels"]) < 0.0)
+
+
+def test_sensor_cfa_point_spread_script_workflow(asset_store) -> None:
+    scene = scene_create("point array", asset_store=asset_store)
+    wave = np.asarray(scene_get(scene, "wave"), dtype=float)
+    scene = scene_adjust_illuminant(scene, blackbody(wave, 8000.0), asset_store=asset_store)
+    scene = scene_set(scene, "fov", 2.0)
+
+    oi = oi_create("diffraction limited", asset_store=asset_store)
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "pixel size constant fill factor", np.array([1.4e-6, 1.4e-6], dtype=float))
+    sensor = sensor_set(sensor, "auto exposure", True)
+
+    rect = np.array([32, 24, 11, 11], dtype=int)
+    crop_stack = []
+    for ff in (2.0, 4.0, 8.0, 12.0):
+        oi_ff = oi_set(oi, "optics fnumber", ff)
+        oi_ff = oi_compute(oi_ff, scene)
+        sensor_ff = sensor_compute(sensor, oi_ff)
+        img = np.asarray(sensor_get(sensor_ff, "rgb"), dtype=float)
+        crop = img[rect[1] - 1 : rect[1] + rect[3], rect[0] - 1 : rect[0] + rect[2], :]
+        crop_stack.append(crop)
+
+    crop_stack = np.stack(crop_stack, axis=3)
+    x_um = np.arange(rect[2] + 1, dtype=float) * 1.4
+    x_um = x_um - np.mean(x_um)
+
+    assert crop_stack.shape == (12, 12, 3, 4)
+    assert np.all(np.isfinite(crop_stack))
+    assert np.allclose(x_um, -x_um[::-1], atol=1e-12)
+    assert np.all(np.mean(crop_stack, axis=(0, 1, 3))[1] > 0.0)
+    assert np.all(np.max(crop_stack, axis=(0, 1, 3)) > 0.0)
+
+
+def test_run_python_case_supports_sensor_cfa_point_spread_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_cfa_point_spread_small", asset_store=asset_store)
+
+    assert np.array_equal(case.payload["ff_numbers"], np.array([2.0, 4.0, 8.0, 12.0], dtype=float))
+    assert np.array_equal(case.payload["pixel_size_um"], np.array([1.4, 1.4], dtype=float))
+    assert np.array_equal(case.payload["rect"], np.array([32, 24, 11, 11], dtype=int))
+    assert case.payload["x_um"].shape == (12,)
+    assert case.payload["crop_mean_rgb"].shape == (4, 3)
+    assert case.payload["crop_peak_rgb"].shape == (4, 3)
+    assert case.payload["green_row_width_30_um"].shape == (4,)
+    assert case.payload["green_row_width_50_um"].shape == (4,)
+    assert case.payload["green_row_width_90_um"].shape == (4,)
+    assert case.payload["red_center_cols_norm"].shape == (4, 12)
+    assert np.all(np.isfinite(case.payload["crop_mean_rgb"]))
 
 
 def test_run_python_case_supports_sensor_spatial_resolution_small_parity_case(asset_store) -> None:

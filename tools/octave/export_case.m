@@ -5755,6 +5755,61 @@ switch case_name
         payload.quarter_cols = quarterCols;
         payload.quarter_megapixels = ieN2MegaPixel(quarterRows .* quarterCols);
 
+    case 'sensor_cfa_point_spread_small'
+        scene = sceneCreate('point array');
+        wave = sceneGet(scene, 'wave');
+        scene = sceneAdjustIlluminant(scene, blackbody(wave, 8000));
+        scene = sceneSet(scene, 'fov', 2);
+
+        oi = oiCreate('diffraction limited');
+
+        pSize = [1.4 1.4] * 1e-6;
+        sensor = sensorCreate();
+        sensor = sensorSet(sensor, 'pixel size constant fill factor', pSize);
+        sensor = sensorSet(sensor, 'auto exposure', true);
+
+        rect = [32 24 11 11];
+        ffNumbers = [2 4 8 12];
+        x = [0:rect(3)] * pSize(1);
+        x = x - mean(x(:));
+        x = x * 1e6;
+
+        cropMeanRGB = zeros(numel(ffNumbers), 3);
+        cropPeakRGB = zeros(numel(ffNumbers), 3);
+        greenRowWidth30 = zeros(numel(ffNumbers), 1);
+        greenRowWidth50 = zeros(numel(ffNumbers), 1);
+        greenRowWidth90 = zeros(numel(ffNumbers), 1);
+        redCenterColsNorm = zeros(numel(ffNumbers), rect(4) + 1);
+        dx = abs(x(2) - x(1));
+
+        for ii = 1:numel(ffNumbers)
+            oi = oiSet(oi, 'optics fnumber', ffNumbers(ii));
+            oi = oiCompute(oi, scene);
+            sensor = sensorCompute(sensor, oi);
+            img = sensorData2Image(sensor);
+            crop = imcrop(img, rect);
+            cropMeanRGB(ii, :) = reshape(mean(mean(crop, 1), 2), 1, []);
+            cropPeakRGB(ii, :) = reshape(max(max(crop, [], 1), [], 2), 1, []);
+            centerRow = squeeze(crop(round(size(crop, 1) / 2), :, 2));
+            centerRow = centerRow(:)' / max(max(abs(centerRow(:))), eps);
+            centerCol = squeeze(crop(:, round(size(crop, 2) / 2), 1));
+            greenRowWidth30(ii) = sum(centerRow >= 0.3) * dx;
+            greenRowWidth50(ii) = sum(centerRow >= 0.5) * dx;
+            greenRowWidth90(ii) = sum(centerRow >= 0.9) * dx;
+            redCenterColsNorm(ii, :) = centerCol(:)' / max(max(abs(centerCol(:))), eps);
+        end
+
+        payload.ff_numbers = ffNumbers(:);
+        payload.pixel_size_um = pSize(:) * 1e6;
+        payload.rect = rect(:);
+        payload.x_um = x(:);
+        payload.crop_mean_rgb = cropMeanRGB;
+        payload.crop_peak_rgb = cropPeakRGB;
+        payload.green_row_width_30_um = greenRowWidth30;
+        payload.green_row_width_50_um = greenRowWidth50;
+        payload.green_row_width_90_um = greenRowWidth90;
+        payload.red_center_cols_norm = redCenterColsNorm;
+
     case 'sensor_spatial_resolution_small'
         scene = sceneCreate('sweepFrequency');
         scene = sceneSet(scene, 'fov', 1);
