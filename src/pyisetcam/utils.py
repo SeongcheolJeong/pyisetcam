@@ -941,6 +941,21 @@ def xw_to_rgb_format(im_xw: Any, rows: int, cols: int) -> NDArray[np.float64]:
     return np.reshape(array, (int(rows), int(cols), int(array.shape[1])), order="F")
 
 
+def image_flip(im: Any, flip_type: Any = "l") -> NDArray[np.float64]:
+    """Flip RGB-format image data using MATLAB imageFlip() semantics."""
+
+    array = np.asarray(im, dtype=float)
+    if array.ndim != 3:
+        raise ValueError("Input must be rgb image (row x col x w).")
+
+    key = str(flip_type).strip().lower()[:1] if str(flip_type).strip() else "l"
+    if key == "u":
+        return np.flip(array, axis=0).astype(float, copy=False)
+    if key == "l":
+        return np.flip(array, axis=1).astype(float, copy=False)
+    raise ValueError(f"Unsupported image flip type '{flip_type}'.")
+
+
 def image_increase_image_rgb_size(im: Any, s: Any) -> NDArray[np.float64]:
     """Increase an image/cube by MATLAB-style pixel replication."""
 
@@ -1005,6 +1020,7 @@ def hc_basis(
     return np.asarray(img_mean, dtype=float), basis, coefficients, var_explained
 
 
+imageFlip = image_flip
 imageIncreaseImageRGBSize = image_increase_image_rgb_size
 
 
@@ -1035,6 +1051,27 @@ def linear_to_srgb(linear_rgb: NDArray[np.float64]) -> NDArray[np.float64]:
         1.055 * np.power(linear_rgb, 1.0 / 2.4) - 0.055,
     )
     return np.clip(srgb, 0.0, 1.0)
+
+
+def xyz_to_srgb(xyz: NDArray[np.float64]) -> NDArray[np.float64]:
+    """Convert CIE XYZ to sRGB using MATLAB xyz2srgb() scaling rules."""
+
+    xyz_array = np.asarray(xyz, dtype=float)
+    if xyz_array.ndim != 3 or xyz_array.shape[2] != 3:
+        raise ValueError("xyz2srgb expects an RGB-format XYZ image.")
+
+    scaled_xyz = xyz_array.copy()
+    max_y = float(np.max(scaled_xyz[:, :, 1])) if scaled_xyz.size else 1.0
+    if max_y > 1.0:
+        scaled_xyz = scaled_xyz / max_y
+    if float(np.min(scaled_xyz)) < 0.0:
+        scaled_xyz = np.clip(scaled_xyz, 0.0, 1.0)
+
+    linear_rgb = xyz_to_linear_srgb(scaled_xyz)
+    return linear_to_srgb(np.clip(linear_rgb, 0.0, 1.0))
+
+
+xyz2srgb = xyz_to_srgb
 
 
 def invert_gamma_table(linear_rgb: NDArray[np.float64], gamma_table: NDArray[np.float64]) -> NDArray[np.float64]:

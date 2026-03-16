@@ -19,6 +19,7 @@ from pyisetcam import (
     display_create,
     display_get,
     hc_basis,
+    image_flip,
     image_increase_image_rgb_size,
     illuminant_create,
     illuminant_get,
@@ -38,6 +39,7 @@ from pyisetcam import (
     ie_mvnrnd,
     luminance_from_energy,
     luminance_from_photons,
+    macbeth_read_reflectance,
     optics_build_2d_otf,
     optics_coc,
     optics_defocus_core,
@@ -127,6 +129,7 @@ from pyisetcam import (
     wvf_zernike_nm_to_osa_index,
     xw_to_rgb_format,
     xyz_from_energy,
+    xyz_to_srgb,
     zemax_load,
     zemax_read_header,
 )
@@ -8054,6 +8057,64 @@ def test_scene_from_rgb_vs_multispectral_script_workflow(asset_store) -> None:
     assert np.all(xyz_rmse_ratio < np.array([0.06, 0.07, 0.13], dtype=float))
 
 
+def test_scene_surface_models_tutorial_workflow(asset_store) -> None:
+    def _render_surface_model(
+        xyz: np.ndarray,
+        illuminant: np.ndarray,
+        basis: np.ndarray,
+        weights: np.ndarray,
+        n_dims: int | None,
+    ) -> np.ndarray:
+        current_basis = basis if n_dims is None else basis[:, :n_dims]
+        current_weights = weights if n_dims is None else weights[:n_dims, :]
+        mcc_xyz = xyz.T @ (illuminant.reshape(-1, 1) * current_basis) @ current_weights
+        mcc_xyz = 100.0 * (mcc_xyz / max(float(np.max(mcc_xyz[1, :])), 1e-12))
+        rendered = xyz_to_srgb(xw_to_rgb_format(mcc_xyz.T, 4, 6))
+        return image_flip(image_flip(rendered, "updown"), "leftright")
+
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    reflectance = macbeth_read_reflectance(wave, asset_store=asset_store)
+    subset = macbeth_read_reflectance(wave, [1, 24], asset_store=asset_store)
+    xyz = np.asarray(ie_read_spectra("XYZ", wave, asset_store=asset_store), dtype=float)
+    d65 = np.asarray(ie_read_spectra("D65", wave, asset_store=asset_store), dtype=float).reshape(-1)
+    u, singular_values, vh = np.linalg.svd(reflectance, full_matrices=False)
+    weights = np.diag(singular_values) @ vh
+
+    render_1 = _render_surface_model(xyz, d65, u, weights, 1)
+    render_4 = _render_surface_model(xyz, d65, u, weights, 4)
+    render_full = _render_surface_model(xyz, d65, u, weights, None)
+    approx_rmse = np.array(
+        [
+            float(np.sqrt(np.mean(np.square(u[:, :n_dims] @ weights[:n_dims, :] - reflectance), dtype=float)))
+            for n_dims in range(1, 5)
+        ],
+        dtype=float,
+    )
+
+    probe = np.arange(24, dtype=float).reshape(2, 3, 4)
+
+    assert reflectance.shape == (31, 24)
+    assert np.allclose(subset, reflectance[:, [0, 23]], atol=1e-12, rtol=1e-12)
+    assert xyz.shape == (31, 3)
+    assert d65.shape == (31,)
+    assert u[:, :4].shape == (31, 4)
+    assert singular_values.shape == (24,)
+    assert np.all(singular_values[:-1] >= singular_values[1:] - 1e-12)
+    assert approx_rmse.shape == (4,)
+    assert np.all(approx_rmse[:-1] >= approx_rmse[1:] - 1e-12)
+    assert np.array_equal(image_flip(probe, "updown"), probe[::-1, :, :])
+    assert np.array_equal(image_flip(probe, "leftright"), probe[:, ::-1, :])
+
+    for rendered in (render_1, render_4, render_full):
+        assert rendered.shape == (4, 6, 3)
+        assert np.all(np.isfinite(rendered))
+        assert np.all(rendered >= 0.0)
+        assert np.all(rendered <= 1.0)
+
+    assert float(np.mean(np.abs(render_full - render_1))) > 0.01
+    assert float(np.mean(np.abs(render_full - render_4))) > 1e-4
+
+
 def test_scene_reflectance_samples_script_workflow(asset_store) -> None:
     wave = np.arange(400.0, 701.0, 5.0, dtype=float)
     random_sources = [
@@ -8158,6 +8219,21 @@ def test_scene_reflectance_chart_basis_functions_script_workflow(asset_store) ->
     assert cols == reflectance.shape[1]
     assert float(np.mean(relative_rmse_5)) < 0.07
     assert float(np.max(relative_rmse_5)) < 0.21
+
+
+def test_run_python_case_supports_scene_surface_models_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_surface_models_small", asset_store=asset_store)
+    payload = case.payload
+
+    assert np.array_equal(payload["wave"], np.arange(400.0, 701.0, 10.0, dtype=float))
+    assert tuple(payload["reflectance_shape"]) == (31, 24)
+    assert payload["basis_first4"].shape == (31, 4)
+    assert payload["singular_values_first6"].shape == (6,)
+    assert payload["approx_rmse_1to4"].shape == (4,)
+    assert np.all(payload["approx_rmse_1to4"][:-1] >= payload["approx_rmse_1to4"][1:] - 1e-12)
+    assert payload["render_full_center_rgb"].shape == (3,)
+    assert np.all(payload["render_full_center_rgb"] >= 0.0)
+    assert np.all(payload["render_full_center_rgb"] <= 1.0)
 
 
 def test_scene_roi_script_workflow(asset_store) -> None:

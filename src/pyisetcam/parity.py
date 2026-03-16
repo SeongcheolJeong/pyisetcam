@@ -63,6 +63,7 @@ from .plotting import ip_plot, oi_plot, sensor_plot, sensor_plot_line, wvf_plot
 from .scene import (
     hdr_render,
     ie_reflectance_samples,
+    macbeth_read_reflectance,
     scene_adjust_illuminant,
     scene_adjust_luminance,
     scene_combine,
@@ -104,11 +105,14 @@ from .utils import (
     hc_basis,
     ie_fit_line,
     ie_mvnrnd,
+    image_flip,
     image_increase_image_rgb_size,
     param_format,
     quanta_to_energy,
     rgb_to_xw_format,
+    xw_to_rgb_format,
     unit_frequency_list,
+    xyz_to_srgb,
 )
 
 
@@ -1835,6 +1839,72 @@ def run_python_case_with_context(
                 "crt_illuminant_energy_norm": crt["illuminant_energy_norm"],
                 "crt_rgb_stats": crt["rgb_stats"],
                 "crt_rgb_channel_means": crt["rgb_channel_means"],
+            },
+            context={},
+        )
+
+    if case_name == "scene_surface_models_small":
+        def _render_surface_model(n_dims: int | None) -> dict[str, Any]:
+            basis = u if n_dims is None else u[:, :n_dims]
+            weights = w if n_dims is None else w[:n_dims, :]
+            mcc_xyz = xyz_cmfs.T @ (d65_spd.reshape(-1, 1) * basis) @ weights
+            max_y = max(float(np.max(mcc_xyz[1, :])), 1e-12)
+            mcc_xyz = 100.0 * (mcc_xyz / max_y)
+            rendered = xyz_to_srgb(xw_to_rgb_format(mcc_xyz.T, 4, 6))
+            rendered = image_flip(image_flip(rendered, "updown"), "leftright")
+            center = rendered[rendered.shape[0] // 2, rendered.shape[1] // 2, :]
+            return {
+                "rgb_stats": _stats_vector(rendered),
+                "rgb_channel_means": np.mean(rendered, axis=(0, 1), dtype=float).reshape(-1),
+                "center_rgb": np.asarray(center, dtype=float).reshape(-1),
+            }
+
+        wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+        reflectance = macbeth_read_reflectance(wave, asset_store=store)
+        u, singular_values, vh = np.linalg.svd(reflectance, full_matrices=False)
+        w = np.diag(singular_values) @ vh
+        xyz_cmfs = np.asarray(ie_read_spectra("XYZ", wave, asset_store=store), dtype=float)
+        d65_spd = np.asarray(ie_read_spectra("D65", wave, asset_store=store), dtype=float).reshape(-1)
+
+        approx_rmse = np.array(
+            [
+                float(np.sqrt(np.mean(np.square(u[:, :n_dims] @ w[:n_dims, :] - reflectance), dtype=float)))
+                for n_dims in range(1, 5)
+            ],
+            dtype=float,
+        )
+
+        render_1 = _render_surface_model(1)
+        render_2 = _render_surface_model(2)
+        render_3 = _render_surface_model(3)
+        render_4 = _render_surface_model(4)
+        render_full = _render_surface_model(None)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "reflectance_shape": np.array(reflectance.shape, dtype=int),
+                "reflectance_stats": _stats_vector(reflectance),
+                "basis_first4": _canonicalize_basis_columns(u[:, :4]),
+                "singular_values_first6": singular_values[:6].astype(float),
+                "approx_rmse_1to4": approx_rmse,
+                "d65_spd_norm": _channel_normalize(d65_spd),
+                "render_1_rgb_stats": render_1["rgb_stats"],
+                "render_1_channel_means": render_1["rgb_channel_means"],
+                "render_1_center_rgb": render_1["center_rgb"],
+                "render_2_rgb_stats": render_2["rgb_stats"],
+                "render_2_channel_means": render_2["rgb_channel_means"],
+                "render_2_center_rgb": render_2["center_rgb"],
+                "render_3_rgb_stats": render_3["rgb_stats"],
+                "render_3_channel_means": render_3["rgb_channel_means"],
+                "render_3_center_rgb": render_3["center_rgb"],
+                "render_4_rgb_stats": render_4["rgb_stats"],
+                "render_4_channel_means": render_4["rgb_channel_means"],
+                "render_4_center_rgb": render_4["center_rgb"],
+                "render_full_rgb_stats": render_full["rgb_stats"],
+                "render_full_channel_means": render_full["rgb_channel_means"],
+                "render_full_center_rgb": render_full["center_rgb"],
             },
             context={},
         )

@@ -499,6 +499,78 @@
       }
     },
     {
+      "name": "scene_surface_models_small",
+      "matlab_function": "t_sceneSurfaceModels",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "reflectance_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.002
+        },
+        "render_1_rgb_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "render_1_channel_means": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "render_1_center_rgb": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "render_2_rgb_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "render_2_channel_means": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "render_2_center_rgb": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "render_3_rgb_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "render_3_channel_means": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "render_3_center_rgb": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "render_4_rgb_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "render_4_channel_means": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "render_4_center_rgb": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "render_full_rgb_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "render_full_channel_means": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        },
+        "render_full_center_rgb": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        }
+      }
+    },
+    {
       "name": "display_create_lcd_example",
       "matlab_function": "displayCreate",
       "rtol": 1e-05,

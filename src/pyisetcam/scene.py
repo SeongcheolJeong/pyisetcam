@@ -10,7 +10,7 @@ import numpy as np
 from scipy.ndimage import map_coordinates, zoom
 from scipy.signal import convolve2d
 
-from .assets import AssetStore
+from .assets import AssetStore, ie_read_spectra
 from .color import luminance_from_photons
 from .exceptions import MissingAssetError, UnsupportedOptionError
 from .metrics import chromaticity_xy, xyz_from_energy
@@ -21,11 +21,10 @@ from .utils import (
     blackbody,
     energy_to_quanta,
     interp_spectra,
-    linear_to_srgb,
     param_format,
     quanta_to_energy,
     unit_frequency_list,
-    xyz_to_linear_srgb,
+    xyz_to_srgb,
 )
 
 DEFAULT_DISTANCE_M = 1.2
@@ -670,6 +669,29 @@ def _macbeth_cube(
 def _load_d65(wave: np.ndarray, asset_store: AssetStore) -> tuple[np.ndarray, np.ndarray]:
     wave_nm, energy = asset_store.load_illuminant("D65.mat", wave_nm=wave)
     return wave_nm, energy
+
+
+def macbeth_read_reflectance(
+    wave: Any | None = None,
+    patch_list: Any | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> np.ndarray:
+    """Read Macbeth chart reflectances using MATLAB macbethReadReflectance() semantics."""
+
+    wave_nm = np.arange(400.0, 701.0, 1.0, dtype=float) if wave is None else np.asarray(wave, dtype=float).reshape(-1)
+    reflectance = np.asarray(ie_read_spectra("macbethChart.mat", wave_nm, asset_store=_store(asset_store)), dtype=float)
+    if patch_list is None:
+        return reflectance
+
+    patch_array = np.asarray(patch_list, dtype=int).reshape(-1)
+    if patch_array.size == 0:
+        return reflectance[:, :0]
+    if np.min(patch_array) >= 1:
+        patch_array = patch_array - 1
+    if np.min(patch_array) < 0 or np.max(patch_array) >= reflectance.shape[1]:
+        raise IndexError("Macbeth patch indices are out of range.")
+    return reflectance[:, patch_array]
 
 
 def _scale_energy_to_luminance(
@@ -2467,16 +2489,7 @@ def _scene_rgb_from_xyz(xyz: np.ndarray) -> np.ndarray:
     xyz = np.asarray(xyz, dtype=float)
     if xyz.ndim != 3 or xyz.shape[2] != 3:
         raise ValueError("scene RGB rendering requires an XYZ image cube.")
-
-    scaled_xyz = xyz.copy()
-    max_y = float(np.max(scaled_xyz[:, :, 1])) if scaled_xyz.size else 1.0
-    if max_y > 1.0:
-        scaled_xyz = scaled_xyz / max_y
-    if float(np.min(scaled_xyz)) < 0.0:
-        scaled_xyz = np.clip(scaled_xyz, 0.0, 1.0)
-
-    linear_rgb = xyz_to_linear_srgb(scaled_xyz)
-    return linear_to_srgb(np.clip(linear_rgb, 0.0, 1.0))
+    return xyz_to_srgb(xyz)
 
 
 def _scene_rgb_render(scene: Scene, *, asset_store: AssetStore | None = None) -> np.ndarray:

@@ -1415,6 +1415,49 @@ switch case_name
         payload.crt_rgb_stats = crtPayload.rgb_stats;
         payload.crt_rgb_channel_means = crtPayload.rgb_channel_means;
 
+    case 'scene_surface_models_small'
+        wave = (400:10:700)';
+        reflectance = macbethReadReflectance(wave);
+        [u, s, v] = svd(reflectance);
+        w = s * v';
+        xyz = ieReadSpectra('XYZ', wave);
+        d65 = ieReadSpectra('D65', wave);
+
+        approxRmse = zeros(1, 4);
+        for nDims = 1:4
+            approxRef = u(:, 1:nDims) * w(1:nDims, :);
+            approxRmse(nDims) = sqrt(mean((approxRef(:) - reflectance(:)) .^ 2));
+        end
+
+        render1 = local_surface_model_render(xyz, d65, u, w, 1);
+        render2 = local_surface_model_render(xyz, d65, u, w, 2);
+        render3 = local_surface_model_render(xyz, d65, u, w, 3);
+        render4 = local_surface_model_render(xyz, d65, u, w, 4);
+        renderFull = local_surface_model_render(xyz, d65, u, w, []);
+
+        payload.wave = wave;
+        payload.reflectance_shape = double(size(reflectance));
+        payload.reflectance_stats = local_stats_vector(reflectance);
+        payload.basis_first4 = local_canonicalize_basis_columns(u(:, 1:4));
+        payload.singular_values_first6 = diag(s(1:6, 1:6))';
+        payload.approx_rmse_1to4 = approxRmse;
+        payload.d65_spd_norm = local_channel_normalize(d65);
+        payload.render_1_rgb_stats = render1.rgb_stats;
+        payload.render_1_channel_means = render1.rgb_channel_means;
+        payload.render_1_center_rgb = render1.center_rgb;
+        payload.render_2_rgb_stats = render2.rgb_stats;
+        payload.render_2_channel_means = render2.rgb_channel_means;
+        payload.render_2_center_rgb = render2.center_rgb;
+        payload.render_3_rgb_stats = render3.rgb_stats;
+        payload.render_3_channel_means = render3.rgb_channel_means;
+        payload.render_3_center_rgb = render3.center_rgb;
+        payload.render_4_rgb_stats = render4.rgb_stats;
+        payload.render_4_channel_means = render4.rgb_channel_means;
+        payload.render_4_center_rgb = render4.center_rgb;
+        payload.render_full_rgb_stats = renderFull.rgb_stats;
+        payload.render_full_channel_means = renderFull.rgb_channel_means;
+        payload.render_full_center_rgb = renderFull.center_rgb;
+
     case 'display_create_lcd_example'
         d = displayCreate('lcdExample.mat');
         payload.wave = displayGet(d, 'wave');
@@ -5298,6 +5341,29 @@ payload.mean_scene_spd_norm = local_channel_normalize(meanSceneSpd);
 payload.illuminant_energy_norm = local_channel_normalize(double(sceneGet(scene, 'illuminant energy')));
 payload.rgb_stats = local_stats_vector(renderedRgb);
 payload.rgb_channel_means = squeeze(mean(mean(renderedRgb, 1), 2));
+end
+
+function payload = local_surface_model_render(xyz, illuminant, basis, weights, nDims)
+if isempty(nDims)
+    currentBasis = basis;
+    currentWeights = weights;
+else
+    currentBasis = basis(:, 1:nDims);
+    currentWeights = weights(1:nDims, :);
+end
+
+mccXYZ = xyz' * diag(illuminant) * currentBasis * currentWeights;
+mx = max(mccXYZ(2, :));
+mccXYZ = 100 * (mccXYZ / max(mx, eps));
+imRGB = xyz2srgb(XW2RGBFormat(mccXYZ', 4, 6));
+imRGB = imageFlip(imRGB, 'updown');
+imRGB = imageFlip(imRGB, 'leftright');
+centerRow = floor(size(imRGB, 1) / 2) + 1;
+centerCol = floor(size(imRGB, 2) / 2) + 1;
+
+payload.rgb_stats = local_stats_vector(imRGB);
+payload.rgb_channel_means = squeeze(mean(mean(imRGB, 1), 2));
+payload.center_rgb = squeeze(imRGB(centerRow, centerCol, :));
 end
 
 function stats = local_stats_vector(values)

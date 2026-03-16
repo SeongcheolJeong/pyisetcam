@@ -155,6 +155,7 @@ from .session import (
 )
 from .scene import (
     hdr_render,
+    macbeth_read_reflectance,
     scene_adjust_illuminant,
     scene_adjust_luminance,
     scene_calculate_luminance,
@@ -203,11 +204,13 @@ from .utils import (
     hc_basis,
     ie_fit_line,
     ie_mvnrnd,
+    image_flip,
     image_increase_image_rgb_size,
     ie_parameter_otype,
     param_format,
     rgb_to_xw_format,
     xw_to_rgb_format,
+    xyz_to_srgb,
 )
 
 __all__ = [
@@ -278,7 +281,9 @@ __all__ = [
     "ieReadColorFilter",
     "ieSaveColorFilter",
     "ieSaveMultiSpectralImage",
+    "imageFlip",
     "imageIncreaseImageRGBSize",
+    "image_flip",
     "image_increase_image_rgb_size",
     "ieRect2Locs",
     "ieRect2Vertices",
@@ -331,6 +336,8 @@ __all__ = [
     "illuminant_create",
     "illuminant_get",
     "illuminant_set",
+    "macbethReadReflectance",
+    "macbeth_read_reflectance",
     "ipCompute",
     "ipCreate",
     "ipGet",
@@ -354,6 +361,8 @@ __all__ = [
     "spd_to_cct",
     "XW2RGBFormat",
     "xw_to_rgb_format",
+    "xyz2srgb",
+    "xyz_to_srgb",
     "opticsBuild2Dotf",
     "opticsCoC",
     "opticsDefocusCore",
@@ -632,6 +641,7 @@ sceneGet = scene_get
 sceneIlluminantPattern = scene_illuminant_pattern
 sceneIlluminantSS = scene_illuminant_ss
 sceneInterpolateW = scene_interpolate_w
+macbethReadReflectance = macbeth_read_reflectance
 sceneRotate = scene_rotate
 sceneShowImage = scene_show_image
 sceneSet = scene_set
@@ -746,7 +756,9 @@ spd2cct = spd_to_cct
 RGB2XWFormat = rgb_to_xw_format
 XW2RGBFormat = xw_to_rgb_format
 hcBasis = hc_basis
+imageFlip = image_flip
 imageIncreaseImageRGBSize = image_increase_image_rgb_size
+xyz2srgb = xyz_to_srgb
 ieLuminanceFromEnergy = luminance_from_energy
 ieLuminanceFromPhotons = luminance_from_photons
 
