@@ -781,6 +781,27 @@ switch case_name
         payload.delta_e_norm = double(deltaE / max(deltaE(find(isfinite(deltaE), 1, 'first')), 1e-12));
         payload.result_channel_means_norm = double(resultChannelMeans);
 
+    case 'metrics_scielab_rgb_small'
+        file1 = fullfile(isetRootPath, 'data', 'images', 'rgb', 'hats.jpg');
+        file2 = fullfile(isetRootPath, 'data', 'images', 'rgb', 'hatsC.jpg');
+        [errorImage, scene1, scene2, display] = scielabRGB(file1, file2, 'LCD-Apple.mat', 0.3);
+        centerRow = local_channel_normalize(double(errorImage(floor(size(errorImage, 1) / 2) + 1, :)));
+
+        payload.error_size = double(size(errorImage(:,:)))';
+        payload.scene1_size = double(sceneGet(scene1, 'size')(:));
+        payload.scene2_size = double(sceneGet(scene2, 'size')(:));
+        payload.fov_deg = double(sceneGet(scene1, 'fov'));
+        payload.display_white_point = double(displayGet(display, 'white point')(:));
+        payload.scene1_mean_luminance = double(sceneGet(scene1, 'mean luminance'));
+        payload.scene2_mean_luminance = double(sceneGet(scene2, 'mean luminance'));
+        payload.error_stats = [
+            mean(double(errorImage(:)));
+            median(double(errorImage(:)));
+            prctile(double(errorImage(:)), 95);
+            max(double(errorImage(:)))
+        ];
+        payload.error_center_row_norm = local_canonical_profile(centerRow, 129);
+
     case 'metrics_edge2mtf_small'
         scene = sceneCreate('slanted bar', 512, 7/3);
         scene = sceneAdjustLuminance(scene, 100);

@@ -7,10 +7,11 @@ from typing import Any
 import numpy as np
 
 from .assets import AssetStore
+from .color import xyz_color_matching
 from .exceptions import UnsupportedOptionError
 from .session import track_session_object
 from .types import Display, SessionContext
-from .utils import interp_spectra, invert_gamma_table, param_format
+from .utils import interp_spectra, invert_gamma_table, param_format, spectral_step
 
 
 def _store(asset_store: AssetStore | None) -> AssetStore:
@@ -76,6 +77,13 @@ def _display_ambient(display: Display) -> np.ndarray:
     if ambient is None:
         return np.zeros(wave.shape, dtype=float)
     return np.asarray(ambient, dtype=float).reshape(wave.shape)
+
+
+def _display_rgb2xyz(display: Display) -> np.ndarray:
+    wave = np.asarray(display.fields["wave"], dtype=float).reshape(-1)
+    spd = np.asarray(display_get(display, "rgb spd"), dtype=float)
+    xyz_energy = xyz_color_matching(wave, energy=True)
+    return np.asarray(spd.T @ (xyz_energy * float(spectral_step(wave)) * 683.0), dtype=float)
 
 
 def _display_size_m(display: Display) -> np.ndarray | None:
@@ -183,9 +191,19 @@ def display_get(display: Display, parameter: str, *args: Any) -> Any:
     if key == "rgbspd":
         spd = np.asarray(display_get(display, "spd", *(args[:1] if args else ())), dtype=float)
         return spd[:, : min(3, spd.shape[1])]
+    if key == "rgb2xyz":
+        return _display_rgb2xyz(display)
+    if key == "xyz2rgb":
+        return np.linalg.inv(np.asarray(display_get(display, "rgb2xyz"), dtype=float))
     if key == "whitespd":
         spd = np.asarray(display_get(display, "spd", *(args[:1] if args else ())), dtype=float)
         return np.sum(spd, axis=1)
+    if key in {"whitepoint", "whitexyz"}:
+        white_xyz = np.sum(np.asarray(display_get(display, "rgb2xyz"), dtype=float), axis=0, dtype=float)
+        return np.asarray(white_xyz, dtype=float).reshape(3)
+    if key in {"whitexy", "whitechromaticity"}:
+        white_xyz = np.asarray(display_get(display, "white point"), dtype=float).reshape(3)
+        return np.asarray(white_xyz[:2] / max(float(np.sum(white_xyz)), 1e-12), dtype=float)
     if key in {"blackspd", "ambientspd"}:
         ambient = _display_ambient(display)
         if args:

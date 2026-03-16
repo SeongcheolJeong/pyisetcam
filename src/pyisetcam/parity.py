@@ -72,6 +72,7 @@ from .optics import (
     rt_synthetic,
 )
 from .plotting import ip_plot, oi_plot, sensor_plot, sensor_plot_line, wvf_plot
+from .scielab import scielab_rgb
 from .scene import (
     hdr_render,
     ie_reflectance_samples,
@@ -956,6 +957,46 @@ def run_python_case_with_context(
                 "result_channel_means_norm": np.asarray(ip_channel_means, dtype=float),
             },
             context={},
+        )
+
+    if case_name == "metrics_scielab_rgb_small":
+        def _canonical_profile(values: Any, samples: int = 129) -> np.ndarray:
+            profile = np.asarray(values, dtype=float).reshape(-1)
+            support = np.linspace(-1.0, 1.0, profile.size, dtype=float)
+            query = np.linspace(-1.0, 1.0, samples, dtype=float)
+            return np.interp(query, support, profile).astype(float)
+
+        error_image, scene1, scene2, display = scielab_rgb(
+            "hats.jpg",
+            "hatsC.jpg",
+            "LCD-Apple.mat",
+            0.3,
+            asset_store=store,
+        )
+        center_row = np.asarray(error_image[error_image.shape[0] // 2, :], dtype=float)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "error_size": np.asarray(error_image.shape, dtype=int),
+                "scene1_size": np.asarray(scene_get(scene1, "size"), dtype=int),
+                "scene2_size": np.asarray(scene_get(scene2, "size"), dtype=int),
+                "fov_deg": float(scene_get(scene1, "fov")),
+                "display_white_point": np.asarray(display_get(display, "white point"), dtype=float).reshape(3),
+                "scene1_mean_luminance": float(scene_get(scene1, "mean luminance", asset_store=store)),
+                "scene2_mean_luminance": float(scene_get(scene2, "mean luminance", asset_store=store)),
+                "error_stats": np.array(
+                    [
+                        float(np.mean(error_image, dtype=float)),
+                        float(np.median(error_image)),
+                        float(np.percentile(error_image, 95.0)),
+                        float(np.max(error_image)),
+                    ],
+                    dtype=float,
+                ),
+                "error_center_row_norm": _canonical_profile(_channel_normalize(center_row)),
+            },
+            context={"scene1": scene1, "scene2": scene2, "display": display},
         )
 
     if case_name == "metrics_edge2mtf_small":

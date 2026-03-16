@@ -92,6 +92,7 @@ from pyisetcam import (
     rt_sample_heights,
     rt_synthetic,
     rgb_to_xw_format,
+    scielab_rgb,
     si_synthetic,
     run_python_case,
     hdr_render,
@@ -6710,6 +6711,44 @@ def test_run_python_case_supports_metrics_vsnr_parity_case(asset_store) -> None:
     assert case.payload["vsnr_norm"].shape == (3,)
     assert case.payload["delta_e_norm"].shape == (3,)
     assert case.payload["result_channel_means_norm"].shape == (3, 3)
+
+
+def test_scielab_rgb_tutorial_workflow(asset_store) -> None:
+    error_image, scene1, scene2, display = scielab_rgb(
+        "hats.jpg",
+        "hatsC.jpg",
+        "LCD-Apple.mat",
+        0.3,
+        asset_store=asset_store,
+    )
+
+    scene1_size = np.asarray(scene_get(scene1, "size"), dtype=int)
+    scene2_size = np.asarray(scene_get(scene2, "size"), dtype=int)
+    white_point = np.asarray(display_get(display, "white point"), dtype=float)
+
+    assert np.array_equal(scene1_size, np.array([128, 192], dtype=int))
+    assert np.array_equal(scene1_size, scene2_size)
+    assert error_image.ndim == 2
+    assert abs(error_image.shape[0] - int(scene1_size[0])) <= 1
+    assert abs(error_image.shape[1] - int(scene1_size[1])) <= 1
+    assert np.isclose(float(scene_get(scene1, "fov")), float(scene_get(scene2, "fov")), atol=1e-12, rtol=1e-12)
+    assert white_point.shape == (3,)
+    assert np.all(white_point > 0.0)
+    assert np.isclose(float(scene_get(scene1, "fov")), 9.679001581355232, atol=1e-12, rtol=1e-12)
+    assert float(np.mean(error_image, dtype=float)) > 0.0
+    assert float(np.max(error_image)) > float(np.mean(error_image, dtype=float))
+
+
+def test_run_python_case_supports_metrics_scielab_rgb_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_scielab_rgb_small", asset_store=asset_store)
+
+    assert tuple(case.payload["error_size"]) == (127, 191)
+    assert tuple(case.payload["scene1_size"]) == (128, 192)
+    assert tuple(case.payload["scene2_size"]) == (128, 192)
+    assert np.isclose(float(case.payload["fov_deg"]), 9.679001581355232, atol=1e-12, rtol=1e-12)
+    assert case.payload["display_white_point"].shape == (3,)
+    assert case.payload["error_stats"].shape == (4,)
+    assert case.payload["error_center_row_norm"].shape == (129,)
 
 
 def test_metrics_edge2mtf_script_workflow(asset_store) -> None:

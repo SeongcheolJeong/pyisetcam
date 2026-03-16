@@ -6,6 +6,7 @@ from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
+from skimage.color import deltaE_ciede2000, deltaE_ciede94
 
 from .assets import AssetStore
 from .color import xyz_color_matching
@@ -155,13 +156,25 @@ def cct_from_uv(
     return float(cct) if np.ndim(cct) == 0 else cct
 
 
-def delta_e_ab(xyz1: Any, xyz2: Any, white_point: Any) -> NDArray[np.float64]:
-    """Compute the CIELAB 1976 Delta E between XYZ values."""
+def delta_e_ab(
+    xyz1: Any,
+    xyz2: Any,
+    white_point: Any,
+    delta_e_version: str = "1976",
+) -> NDArray[np.float64]:
+    """Compute CIELAB Delta E between XYZ values."""
 
     xyz1_array, xyz2_array = _paired_arrays(xyz1, xyz2)
     lab1 = xyz_to_lab(xyz1_array, white_point)
     lab2 = xyz_to_lab(xyz2_array, white_point)
-    return np.linalg.norm(lab1 - lab2, axis=-1)
+    normalized_version = param_format(delta_e_version)
+    if normalized_version in {"1976", "76", "cie1976"}:
+        return np.linalg.norm(lab1 - lab2, axis=-1)
+    if normalized_version in {"1994", "94", "cie1994"}:
+        return np.asarray(deltaE_ciede94(lab1, lab2), dtype=float)
+    if normalized_version in {"2000", "00", "cie2000", "ciede2000"}:
+        return np.asarray(deltaE_ciede2000(lab1, lab2), dtype=float)
+    raise UnsupportedOptionError("deltaEab", delta_e_version)
 
 
 def spectral_angle(spd1: Any, spd2: Any, *, degrees: bool = True) -> float:
