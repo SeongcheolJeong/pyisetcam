@@ -26,6 +26,7 @@
 - and now also MATLAB-style upstream RGB asset lookup in `scene_from_file(..., 'rgb', ...)` plus curated Octave parity on the `t_sceneRGB2Radiance.m` workflow, covering `sceneFromFile('macbeth.tif', 'rgb', ..., display)` across `OLED-Sony`, `LCD-Apple`, and `CRT-Dell`, together with the three display white points, primary chromaticities, scene luminance/SPD summaries, and display-dependent rendered RGB means
 - and now also headless `macbeth_read_reflectance(...)` / `macbethReadReflectance(...)`, `xyz_to_srgb(...)` / `xyz2srgb(...)`, and `image_flip(...)` / `imageFlip(...)` plus curated Octave parity on the `t_sceneSurfaceModels.m` tutorial, covering Macbeth SVD basis extraction, low-rank reflectance reconstruction error, the normalized D65 render path, and the rendered 4x6 chart RGB summaries for the 1-D, 2-D, 3-D, 4-D, and full-basis cases
 - and now also Phase 4 metrics coverage has started with new `iso.py`, headless `ISOFindSlantedBar(...)` / `ieCXcorr(...)` / `edge_to_mtf(...)`, curated Octave parity on `s_metricsEdge2MTF.m`, and a MATLAB-faithful odd-sized `sceneCreate('slanted bar', ...)` generator that matches the upstream edge orientation and geometry
+- and now also headless `ISO12233(...)` / `ieISO12233(...)` in `iso.py`, with curated Octave parity on `s_metricsMTFSlantedBar.m` covering the direct RGB slanted-bar path, the `ieISO12233(ip, sensor, ...)` sensor-space path, the monochrome direct path, and their stable ESF/LSF/MTF50/aliasing contracts under case-scoped parity tolerances
 
 ## Status
 

@@ -24,7 +24,7 @@ from .fileio import (
     vc_save_object,
 )
 from .illuminant import illuminant_create, illuminant_get, illuminant_set
-from .iso import ISOFindSlantedBar, edge_to_mtf, ieCXcorr, ie_cxcorr, iso_find_slanted_bar
+from .iso import ISO12233, ISOFindSlantedBar, edge_to_mtf, ieCXcorr, ieISO12233, ie_cxcorr, ie_iso12233, iso12233, iso_find_slanted_bar
 from .ip import image_data_xyz, ip_compute, ip_create, ip_get, ip_set
 from .metrics import (
     cct_from_uv,
@@ -339,8 +339,12 @@ __all__ = [
     "illuminant_create",
     "illuminant_get",
     "illuminant_set",
+    "ISO12233",
     "ISOFindSlantedBar",
+    "ieISO12233",
+    "ie_iso12233",
     "iso_find_slanted_bar",
+    "iso12233",
     "macbethReadReflectance",
     "macbeth_read_reflectance",
     "ipCompute",

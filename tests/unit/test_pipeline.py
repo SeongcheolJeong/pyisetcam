@@ -32,6 +32,7 @@ from pyisetcam import (
     ie_save_multispectral_image,
     ie_save_si_data_file,
     ie_cxcorr,
+    ie_iso12233,
     ie_field_height_to_index,
     ip_get,
     ip_plot,
@@ -40,6 +41,7 @@ from pyisetcam import (
     ip_create,
     ie_mvnrnd,
     iso_find_slanted_bar,
+    iso12233,
     luminance_from_energy,
     luminance_from_photons,
     macbeth_read_reflectance,
@@ -6668,6 +6670,80 @@ def test_run_python_case_supports_metrics_edge2mtf_small_parity_case(asset_store
     assert case.payload["lsf_norm"].shape == (65,)
     assert case.payload["mtf_norm"].shape == (65,)
     assert np.isclose(float(case.payload["mtf_norm"][0]), 1.0, atol=1e-10, rtol=1e-10)
+
+
+def test_metrics_mtf_slanted_bar_script_workflow(asset_store) -> None:
+    scene = scene_create("slanted bar", 512, 7.0 / 3.0, asset_store=asset_store)
+    scene = scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
+    scene = scene_set(scene, "distance", 1.0)
+    scene = scene_set(scene, "fov", 5.0)
+
+    oi = oi_create(asset_store=asset_store)
+    oi = oi_set(oi, "optics fnumber", 2.0)
+    oi = oi_compute(oi, scene)
+
+    sensor_color = sensor_create(asset_store=asset_store)
+    sensor_color = sensor_set(sensor_color, "autoExposure", 1)
+    sensor_color = sensor_compute(sensor_color, oi)
+    ip_color = ip_compute(ip_create(asset_store=asset_store), sensor_color)
+
+    rect = iso_find_slanted_bar(ip_color)
+    result_color = np.asarray(ip_get(ip_color, "result"), dtype=float)
+    col_min, row_min, width, height = np.asarray(rect, dtype=int).reshape(-1)
+    color_bar = result_color[row_min - 1 : row_min + height, col_min - 1 : col_min + width, :]
+    color_direct = iso12233(color_bar, float(sensor_get(sensor_color, "pixel width", "mm")), plot_options="none")
+    color_ie = ie_iso12233(ip_color, sensor_color, plot_options="none", master_rect=rect)
+
+    sensor_mono = sensor_create("monochrome", asset_store=asset_store)
+    sensor_mono = sensor_set(sensor_mono, "autoExposure", 1)
+    sensor_mono = sensor_compute(sensor_mono, oi)
+    ip_mono = ip_compute(ip_create(asset_store=asset_store), sensor_mono)
+    result_mono = np.asarray(ip_get(ip_mono, "result"), dtype=float)
+    mono_bar = result_mono[row_min - 1 : row_min + height, col_min - 1 : col_min + width, :]
+    mono_direct = iso12233(mono_bar, float(sensor_get(sensor_mono, "pixel width", "mm")), plot_options="none")
+
+    assert tuple(scene_get(scene, "size")) == (513, 513)
+    assert tuple(oi_get(oi, "size")) == (641, 641)
+    assert tuple(sensor_get(sensor_color, "size")) == (72, 88)
+    assert tuple(sensor_get(sensor_mono, "size")) == (72, 88)
+    assert np.array_equal(np.asarray(rect, dtype=int), np.array([32, 18, 24, 36], dtype=int))
+    assert color_bar.shape == (37, 25, 3)
+    assert mono_bar.shape == (37, 25, 3)
+    assert color_direct.esf is not None and color_direct.esf.ndim == 2 and color_direct.esf.shape[1] == 4
+    assert color_ie.esf is not None and color_ie.esf.ndim == 2 and color_ie.esf.shape[1] == 4
+    assert mono_direct.esf is not None and mono_direct.esf.ndim == 2 and mono_direct.esf.shape[1] == 4
+    assert color_direct.freq.shape[0] == color_direct.mtf.shape[0]
+    assert color_ie.freq.shape[0] == color_ie.mtf.shape[0]
+    assert mono_direct.freq.shape[0] == mono_direct.mtf.shape[0]
+    assert np.isclose(float(color_direct.mtf[0, -1]), 1.0, atol=1e-10, rtol=1e-10)
+    assert np.isclose(float(color_ie.mtf[0, -1]), 1.0, atol=1e-10, rtol=1e-10)
+    assert np.isclose(float(mono_direct.mtf[0, -1]), 1.0, atol=1e-10, rtol=1e-10)
+    assert np.isclose(float(color_direct.nyquistf), float(color_ie.nyquistf), rtol=1e-10, atol=1e-12)
+    assert np.isfinite(float(color_ie.mtf50))
+    assert np.isfinite(float(mono_direct.mtf50))
+
+
+def test_run_python_case_supports_metrics_mtf_slanted_bar_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_mtf_slanted_bar_small", asset_store=asset_store)
+
+    assert tuple(case.payload["scene_size"]) == (513, 513)
+    assert tuple(case.payload["oi_size"]) == (641, 641)
+    assert tuple(case.payload["color_sensor_size"]) == (72, 88)
+    assert tuple(case.payload["mono_sensor_size"]) == (72, 88)
+    assert np.array_equal(case.payload["master_rect"], np.array([32, 18, 24, 36], dtype=int))
+    assert np.isclose(float(case.payload["color_dx_mm"]), float(case.payload["mono_dx_mm"]), rtol=1e-10, atol=1e-12)
+    assert case.payload["color_direct_esf_norm"].shape == (129,)
+    assert case.payload["color_direct_lsf_norm"].shape == (129,)
+    assert case.payload["color_direct_mtf_norm"].shape == (129,)
+    assert case.payload["ie_color_esf_norm"].shape == (129,)
+    assert case.payload["ie_color_lsf_norm"].shape == (129,)
+    assert case.payload["ie_color_mtf_norm"].shape == (129,)
+    assert case.payload["mono_direct_esf_norm"].shape == (129,)
+    assert case.payload["mono_direct_lsf_norm"].shape == (129,)
+    assert case.payload["mono_direct_mtf_norm"].shape == (129,)
+    assert float(case.payload["color_direct_nyquistf"]) > 0.0
+    assert float(case.payload["ie_color_nyquistf"]) > 0.0
+    assert float(case.payload["mono_direct_nyquistf"]) > 0.0
 
 
 def test_run_python_case_supports_sensor_imx363_crop_parity_case(asset_store) -> None:

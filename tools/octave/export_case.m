@@ -760,6 +760,65 @@ switch case_name
         payload.lsf_norm = local_canonical_profile(local_channel_normalize(mtfPayload.lsf), 65);
         payload.mtf_norm = local_canonical_profile(mtfNormalized, 65);
 
+    case 'metrics_mtf_slanted_bar_small'
+        scene = sceneCreate('slanted bar', 512, 7/3);
+        scene = sceneAdjustLuminance(scene, 100);
+        scene = sceneSet(scene, 'distance', 1);
+        scene = sceneSet(scene, 'fov', 5);
+
+        oi = oiCreate;
+        oi = oiSet(oi, 'optics fnumber', 2);
+        oi = oiCompute(oi, scene);
+
+        sensorColor = sensorCreate;
+        sensorColor = sensorSet(sensorColor, 'autoExposure', 1);
+        sensorColor = sensorCompute(sensorColor, oi);
+        ipColor = ipCompute(ipCreate, sensorColor);
+
+        masterRect = ISOFindSlantedBar(ipColor);
+        colorBar = vcGetROIData(ipColor, masterRect, 'results');
+        c = masterRect(3) + 1;
+        r = masterRect(4) + 1;
+        colorBar = reshape(colorBar, r, c, 3);
+        colorDx = sensorGet(sensorColor, 'pixel width', 'mm');
+        [colorDirect, ~, colorDirectEsf] = ISO12233(colorBar, colorDx, [], 'none');
+        colorIe = ieISO12233(ipColor, sensorColor, 'none', masterRect);
+
+        sensorMono = sensorCreate('monochrome');
+        sensorMono = sensorSet(sensorMono, 'autoExposure', 1);
+        sensorMono = sensorCompute(sensorMono, oi);
+        ipMono = ipCompute(ipCreate, sensorMono);
+        monoBar = vcGetROIData(ipMono, masterRect, 'results');
+        monoBar = reshape(monoBar, r, c, 3);
+        monoDx = sensorGet(sensorMono, 'pixel width', 'mm');
+        [monoDirect, ~, monoDirectEsf] = ISO12233(monoBar, monoDx, [], 'none');
+
+        payload.scene_size = double(sceneGet(scene, 'size')(:));
+        payload.oi_size = double(oiGet(oi, 'size')(:));
+        payload.color_sensor_size = double(sensorGet(sensorColor, 'size')(:));
+        payload.mono_sensor_size = double(sensorGet(sensorMono, 'size')(:));
+        payload.master_rect = double(masterRect(:));
+        payload.color_dx_mm = double(colorDx);
+        payload.mono_dx_mm = double(monoDx);
+        payload.color_direct_esf_norm = local_canonical_profile(local_channel_normalize(colorDirectEsf(:, end)), 129);
+        payload.color_direct_lsf_norm = local_canonical_profile(local_channel_normalize(colorDirect.lsf(:)), 129);
+        payload.color_direct_mtf_norm = local_canonical_profile(double(colorDirect.mtf(:, end)) / max(double(colorDirect.mtf(1, end)), 1e-12), 129);
+        payload.color_direct_nyquistf = double(colorDirect.nyquistf);
+        payload.color_direct_mtf50 = double(colorDirect.mtf50);
+        payload.color_direct_aliasing_percentage = double(colorDirect.aliasingPercentage);
+        payload.ie_color_esf_norm = local_canonical_profile(local_channel_normalize(colorIe.esf(:, end)), 129);
+        payload.ie_color_lsf_norm = local_canonical_profile(local_channel_normalize(colorIe.lsf(:)), 129);
+        payload.ie_color_mtf_norm = local_canonical_profile(double(colorIe.mtf(:, end)) / max(double(colorIe.mtf(1, end)), 1e-12), 129);
+        payload.ie_color_nyquistf = double(colorIe.nyquistf);
+        payload.ie_color_mtf50 = double(colorIe.mtf50);
+        payload.ie_color_aliasing_percentage = double(colorIe.aliasingPercentage);
+        payload.mono_direct_esf_norm = local_canonical_profile(local_channel_normalize(monoDirectEsf(:, end)), 129);
+        payload.mono_direct_lsf_norm = local_canonical_profile(local_channel_normalize(monoDirect.lsf(:)), 129);
+        payload.mono_direct_mtf_norm = local_canonical_profile(double(monoDirect.mtf(:, end)) / max(double(monoDirect.mtf(1, end)), 1e-12), 129);
+        payload.mono_direct_nyquistf = double(monoDirect.nyquistf);
+        payload.mono_direct_mtf50 = double(monoDirect.mtf50);
+        payload.mono_direct_aliasing_percentage = double(monoDirect.aliasingPercentage);
+
     case 'scene_illuminant_change'
         scene = sceneCreate();
         bb = blackbody(sceneGet(scene, 'wave'), 3000, 'energy');

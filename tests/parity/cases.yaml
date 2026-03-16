@@ -217,6 +217,29 @@
       }
     },
     {
+      "name": "metrics_mtf_slanted_bar_small",
+      "matlab_function": "s_metricsMTFSlantedBar.m",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "color_direct_aliasing_percentage": {"mode": "mean_rel", "max_mean_rel": 0.2},
+        "color_direct_esf_norm": {"mode": "normalized_mae", "max_normalized_mae": 0.03},
+        "color_direct_lsf_norm": {"mode": "normalized_mae", "max_normalized_mae": 0.28},
+        "color_direct_mtf50": {"mode": "mean_rel", "max_mean_rel": 0.05},
+        "color_direct_mtf_norm": {"mode": "normalized_mae", "max_normalized_mae": 0.13},
+        "ie_color_aliasing_percentage": {"mode": "mean_rel", "max_mean_rel": 0.11},
+        "ie_color_esf_norm": {"mode": "normalized_mae", "max_normalized_mae": 0.03},
+        "ie_color_lsf_norm": {"mode": "normalized_mae", "max_normalized_mae": 0.22},
+        "ie_color_mtf50": {"mode": "mean_rel", "max_mean_rel": 0.03},
+        "ie_color_mtf_norm": {"mode": "normalized_mae", "max_normalized_mae": 0.1},
+        "mono_direct_aliasing_percentage": {"mode": "mean_rel", "max_mean_rel": 0.05},
+        "mono_direct_esf_norm": {"mode": "normalized_mae", "max_normalized_mae": 0.01},
+        "mono_direct_lsf_norm": {"mode": "normalized_mae", "max_normalized_mae": 0.2},
+        "mono_direct_mtf50": {"mode": "mean_rel", "max_mean_rel": 0.02},
+        "mono_direct_mtf_norm": {"mode": "normalized_mae", "max_normalized_mae": 0.03}
+      }
+    },
+    {
       "name": "scene_illuminant_change",
       "matlab_function": "sceneAdjustIlluminant",
       "rtol": 1e-05,

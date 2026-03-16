@@ -17,7 +17,7 @@ from .display import display_create, display_get
 from .fileio import ie_save_color_filter, ie_save_multispectral_image, ie_save_si_data_file
 from .fileio import sensor_dng_read
 from .illuminant import illuminant_create, illuminant_get, illuminant_set
-from .iso import edge_to_mtf, iso_find_slanted_bar
+from .iso import edge_to_mtf, ie_iso12233, iso12233, iso_find_slanted_bar
 from .metrics import chromaticity_xy, cct_from_uv, delta_e_ab, metrics_spd, spd_to_cct, xyz_from_energy, xyz_to_lab, xyz_to_luv, xyz_to_uv
 from .ip import ip_compute, ip_create, ip_get, ip_set
 from .optics import (
@@ -906,6 +906,98 @@ def run_python_case_with_context(
                 "mtf_norm": _canonical_profile(mtf / max(float(mtf[0]), 1.0e-12)),
             },
             context={"scene": scene, "oi": oi, "sensor": sensor, "ip": ip},
+        )
+
+    if case_name == "metrics_mtf_slanted_bar_small":
+        def _canonical_profile(values: Any, samples: int = 129) -> np.ndarray:
+            profile = np.asarray(values, dtype=float).reshape(-1)
+            support = np.linspace(-1.0, 1.0, profile.size, dtype=float)
+            query = np.linspace(-1.0, 1.0, samples, dtype=float)
+            return np.interp(query, support, profile).astype(float)
+
+        scene = scene_create("slanted bar", 512, 7.0 / 3.0, asset_store=store)
+        scene = scene_adjust_luminance(scene, 100.0, asset_store=store)
+        scene = scene_set(scene, "distance", 1.0)
+        scene = scene_set(scene, "fov", 5.0)
+
+        oi = oi_create(asset_store=store)
+        oi = oi_set(oi, "optics fnumber", 2.0)
+        oi = oi_compute(oi, scene)
+
+        sensor_color = sensor_create(asset_store=store)
+        sensor_color = sensor_set(sensor_color, "autoExposure", 1)
+        sensor_color = sensor_compute(sensor_color, oi)
+        ip_color = ip_compute(ip_create(asset_store=store), sensor_color)
+
+        rect = np.asarray(iso_find_slanted_bar(ip_color), dtype=int).reshape(-1)
+        col_min, row_min, width, height = rect
+        color_result = np.asarray(ip_get(ip_color, "result"), dtype=float)
+        color_bar = np.asarray(color_result[row_min - 1 : row_min + height, col_min - 1 : col_min + width, :], dtype=float)
+        color_dx = float(sensor_get(sensor_color, "pixel width", "mm"))
+        color_direct = iso12233(color_bar, delta_x=color_dx, plot_options="none")
+        color_ie = ie_iso12233(ip_color, sensor_color, plot_options="none", master_rect=rect)
+
+        sensor_mono = sensor_create("monochrome", asset_store=store)
+        sensor_mono = sensor_set(sensor_mono, "autoExposure", 1)
+        sensor_mono = sensor_compute(sensor_mono, oi)
+        ip_mono = ip_compute(ip_create(asset_store=store), sensor_mono)
+        mono_result = np.asarray(ip_get(ip_mono, "result"), dtype=float)
+        mono_bar = np.asarray(mono_result[row_min - 1 : row_min + height, col_min - 1 : col_min + width, :], dtype=float)
+        mono_dx = float(sensor_get(sensor_mono, "pixel width", "mm"))
+        mono_direct = iso12233(mono_bar, delta_x=mono_dx, plot_options="none")
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "oi_size": np.asarray(oi_get(oi, "size"), dtype=int),
+                "color_sensor_size": np.asarray(sensor_get(sensor_color, "size"), dtype=int),
+                "mono_sensor_size": np.asarray(sensor_get(sensor_mono, "size"), dtype=int),
+                "master_rect": rect,
+                "color_dx_mm": color_dx,
+                "mono_dx_mm": mono_dx,
+                "color_direct_esf_norm": _canonical_profile(
+                    _channel_normalize(np.asarray(color_direct.esf, dtype=float)[:, -1])
+                ),
+                "color_direct_lsf_norm": _canonical_profile(_channel_normalize(np.asarray(color_direct.lsf, dtype=float))),
+                "color_direct_mtf_norm": _canonical_profile(
+                    np.asarray(color_direct.mtf, dtype=float)[:, -1]
+                    / max(float(np.asarray(color_direct.mtf, dtype=float)[0, -1]), 1.0e-12)
+                ),
+                "color_direct_nyquistf": float(color_direct.nyquistf),
+                "color_direct_mtf50": float(color_direct.mtf50),
+                "color_direct_aliasing_percentage": float(color_direct.aliasingPercentage),
+                "ie_color_esf_norm": _canonical_profile(
+                    _channel_normalize(np.asarray(color_ie.esf, dtype=float)[:, -1])
+                ),
+                "ie_color_lsf_norm": _canonical_profile(_channel_normalize(np.asarray(color_ie.lsf, dtype=float))),
+                "ie_color_mtf_norm": _canonical_profile(
+                    np.asarray(color_ie.mtf, dtype=float)[:, -1]
+                    / max(float(np.asarray(color_ie.mtf, dtype=float)[0, -1]), 1.0e-12)
+                ),
+                "ie_color_nyquistf": float(color_ie.nyquistf),
+                "ie_color_mtf50": float(color_ie.mtf50),
+                "ie_color_aliasing_percentage": float(color_ie.aliasingPercentage),
+                "mono_direct_esf_norm": _canonical_profile(
+                    _channel_normalize(np.asarray(mono_direct.esf, dtype=float)[:, -1])
+                ),
+                "mono_direct_lsf_norm": _canonical_profile(_channel_normalize(np.asarray(mono_direct.lsf, dtype=float))),
+                "mono_direct_mtf_norm": _canonical_profile(
+                    np.asarray(mono_direct.mtf, dtype=float)[:, -1]
+                    / max(float(np.asarray(mono_direct.mtf, dtype=float)[0, -1]), 1.0e-12)
+                ),
+                "mono_direct_nyquistf": float(mono_direct.nyquistf),
+                "mono_direct_mtf50": float(mono_direct.mtf50),
+                "mono_direct_aliasing_percentage": float(mono_direct.aliasingPercentage),
+            },
+            context={
+                "scene": scene,
+                "oi": oi,
+                "color_sensor": sensor_color,
+                "mono_sensor": sensor_mono,
+                "color_ip": ip_color,
+                "mono_ip": ip_mono,
+            },
         )
 
     if case_name == "scene_illuminant_change":
