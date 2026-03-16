@@ -203,6 +203,11 @@ def _canonicalize_basis_columns(basis: Any) -> np.ndarray:
     return matrix
 
 
+def _unit_length(values: Any) -> np.ndarray:
+    vector = np.asarray(values, dtype=float).reshape(-1)
+    return vector / max(float(np.linalg.norm(vector)), 1.0e-12)
+
+
 def _find_nearest_two(array: Any, number: float) -> np.ndarray:
     values = np.asarray(array, dtype=float).reshape(-1)
     order = np.argsort(np.abs(values - float(number)), kind="mergesort")
@@ -2357,6 +2362,63 @@ def run_python_case_with_context(
                 / np.maximum(xyz_d65_mean, 1e-12),
                 "predicted_diagonal_rmse_ratio": np.sqrt(np.mean(np.square(predicted_diagonal - xyz_d65_xw), axis=0))
                 / np.maximum(xyz_d65_mean, 1e-12),
+            },
+            context={},
+        )
+
+    if case_name == "color_illuminant_transforms_small":
+        scene = scene_create("reflectance chart", asset_store=store)
+        wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+        bb_range = np.arange(3500.0, 8000.0 + 0.1, 500.0, dtype=float)
+        nbb = bb_range.size
+
+        transform_list = np.zeros((9, nbb * nbb), dtype=float)
+        column = 0
+        for source_temp in bb_range:
+            source_scene = scene_adjust_illuminant(scene.clone(), blackbody(wave, source_temp), asset_store=store)
+            xyz_source = np.asarray(scene_get(source_scene, "xyz", asset_store=store), dtype=float)
+            xyz_source_xw, rows, cols, _ = rgb_to_xw_format(xyz_source)
+            for target_temp in bb_range:
+                target_scene = scene_adjust_illuminant(scene.clone(), blackbody(wave, target_temp), asset_store=store)
+                xyz_target = np.asarray(scene_get(target_scene, "xyz", asset_store=store), dtype=float)
+                xyz_target_xw, _, _, _ = rgb_to_xw_format(xyz_target)
+                transform, _, _, _ = np.linalg.lstsq(xyz_source_xw, xyz_target_xw, rcond=None)
+                transform_list[:, column] = _unit_length(transform)
+                column += 1
+
+        buddha = _unit_length(
+            np.array(
+                [
+                    [0.9245, 0.0241, -0.0649],
+                    [0.2679, 0.9485, 0.1341],
+                    [-0.1693, 0.0306, 0.9078],
+                ],
+                dtype=float,
+            )
+        )
+        flower = _unit_length(
+            np.array(
+                [
+                    [0.9570, -0.0727, -0.0347],
+                    [0.0588, 0.9682, -0.1848],
+                    [0.0423, 0.1489, 1.2323],
+                ],
+                dtype=float,
+            )
+        )
+
+        transform_diagonal_terms = transform_list[[0, 4, 8], :]
+        buddha_similarity = (transform_list.T @ buddha).reshape(nbb, nbb, order="F")
+        flower_similarity = (transform_list.T @ flower).reshape(nbb, nbb, order="F")
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "bb_range": bb_range,
+                "scene_size": np.array([rows, cols], dtype=int),
+                "transform_diagonal_terms": transform_diagonal_terms,
+                "buddha_similarity": buddha_similarity,
+                "flower_similarity": flower_similarity,
             },
             context={},
         )

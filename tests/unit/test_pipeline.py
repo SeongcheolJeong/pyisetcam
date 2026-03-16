@@ -9127,6 +9127,75 @@ def test_scene_xyz_illuminant_transforms_script_workflow(asset_store) -> None:
     assert np.all(np.sqrt(np.mean(np.square(predicted_full - xyz_d65_xw), axis=0)) < np.sqrt(np.mean(np.square(predicted_diagonal - xyz_d65_xw), axis=0)))
 
 
+def test_color_illuminant_transforms_script_workflow(asset_store) -> None:
+    def _unit_length(values: np.ndarray) -> np.ndarray:
+        vector = np.asarray(values, dtype=float).reshape(-1)
+        return vector / max(float(np.linalg.norm(vector)), 1.0e-12)
+
+    scene = scene_create("reflectance chart", asset_store=asset_store)
+    wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+    bb_range = np.arange(3500.0, 8000.0 + 0.1, 500.0, dtype=float)
+    nbb = bb_range.size
+
+    transform_list = np.zeros((9, nbb * nbb), dtype=float)
+    column = 0
+    for source_temp in bb_range:
+        source_scene = scene_adjust_illuminant(scene.clone(), blackbody(wave, source_temp), asset_store=asset_store)
+        xyz_source = np.asarray(scene_get(source_scene, "xyz", asset_store=asset_store), dtype=float)
+        xyz_source_xw, rows, cols, channels = rgb_to_xw_format(xyz_source)
+        for target_temp in bb_range:
+            target_scene = scene_adjust_illuminant(scene.clone(), blackbody(wave, target_temp), asset_store=asset_store)
+            xyz_target = np.asarray(scene_get(target_scene, "xyz", asset_store=asset_store), dtype=float)
+            xyz_target_xw, rows_t, cols_t, channels_t = rgb_to_xw_format(xyz_target)
+            transform, _, _, _ = np.linalg.lstsq(xyz_source_xw, xyz_target_xw, rcond=None)
+            transform_list[:, column] = _unit_length(transform)
+            column += 1
+
+    buddha = _unit_length(
+        np.array(
+            [
+                [0.9245, 0.0241, -0.0649],
+                [0.2679, 0.9485, 0.1341],
+                [-0.1693, 0.0306, 0.9078],
+            ],
+            dtype=float,
+        )
+    )
+    flower = _unit_length(
+        np.array(
+            [
+                [0.9570, -0.0727, -0.0347],
+                [0.0588, 0.9682, -0.1848],
+                [0.0423, 0.1489, 1.2323],
+            ],
+            dtype=float,
+        )
+    )
+    buddha_similarity = (transform_list.T @ buddha).reshape(nbb, nbb, order="F")
+    flower_similarity = (transform_list.T @ flower).reshape(nbb, nbb, order="F")
+    transform_diagonal_terms = transform_list[[0, 4, 8], :]
+
+    assert bb_range.shape == (10,)
+    assert transform_list.shape == (9, 100)
+    assert transform_diagonal_terms.shape == (3, 100)
+    assert np.allclose(np.sqrt(np.sum(np.square(transform_list), axis=0)), np.ones(100), atol=1e-10, rtol=1e-10)
+    assert buddha_similarity.shape == (10, 10)
+    assert flower_similarity.shape == (10, 10)
+    assert (rows, cols, channels) == (rows_t, cols_t, channels_t)
+    assert np.max(buddha_similarity) <= 1.0 + 1e-12
+    assert np.max(flower_similarity) <= 1.0 + 1e-12
+
+
+def test_run_python_case_supports_color_illuminant_transforms_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("color_illuminant_transforms_small", asset_store=asset_store)
+
+    assert np.array_equal(case.payload["bb_range"], np.arange(3500.0, 8000.0 + 0.1, 500.0, dtype=float))
+    assert tuple(case.payload["scene_size"]) == (240, 264)
+    assert case.payload["transform_diagonal_terms"].shape == (3, 100)
+    assert case.payload["buddha_similarity"].shape == (10, 10)
+    assert case.payload["flower_similarity"].shape == (10, 10)
+
+
 def test_scene_from_rgb_script_workflow(asset_store) -> None:
     display = display_create("LCD-Apple.mat", asset_store=asset_store)
     wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)

@@ -606,6 +606,26 @@
       }
     },
     {
+      "name": "color_illuminant_transforms_small",
+      "matlab_function": "s_colorIlluminantTransforms",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "transform_diagonal_terms": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.005
+        },
+        "buddha_similarity": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.003
+        },
+        "flower_similarity": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.003
+        }
+      }
+    },
+    {
       "name": "scene_roi_small",
       "matlab_function": "s_sceneRoi",
       "rtol": 1e-05,

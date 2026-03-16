@@ -1916,6 +1916,45 @@ switch case_name
         payload.predicted_full_rmse_ratio = sqrt(mean((pred_full - xyz1_xw) .^ 2, 1)) ./ max(xyz1_mean, 1e-12);
         payload.predicted_diagonal_rmse_ratio = sqrt(mean((pred_diag - xyz1_xw) .^ 2, 1)) ./ max(xyz1_mean, 1e-12);
 
+    case 'color_illuminant_transforms_small'
+        scene = sceneCreate('reflectance chart');
+        wave = sceneGet(scene, 'wave');
+        bbRange = (3500:500:8000)';
+        nbb = numel(bbRange);
+        T = cell(nbb, nbb);
+
+        for jj = 1:nbb
+            s1 = sceneAdjustIlluminant(scene, blackbody(wave, bbRange(jj)));
+            xyz1 = sceneGet(s1, 'xyz');
+            [xyz1_xw, rows, cols] = RGB2XWFormat(xyz1);
+            for ii = 1:nbb
+                s2 = sceneAdjustIlluminant(scene, blackbody(wave, bbRange(ii)));
+                xyz2 = sceneGet(s2, 'xyz');
+                xyz2_xw = RGB2XWFormat(xyz2);
+                T{jj, ii} = xyz2_xw \ xyz1_xw;
+            end
+        end
+
+        transformList = zeros(9, nbb * nbb);
+        for ii = 1:(nbb * nbb)
+            vec = T{ii}(:);
+            transformList(:, ii) = vec / max(norm(vec), 1e-12);
+        end
+
+        B = [0.9245 0.0241 -0.0649; 0.2679 0.9485 0.1341; -0.1693 0.0306 0.9078];
+        B = B(:) / max(norm(B(:)), 1e-12);
+        Cb = reshape(transformList' * B(:), nbb, nbb);
+
+        F = [0.9570 -0.0727 -0.0347; 0.0588 0.9682 -0.1848; 0.0423 0.1489 1.2323];
+        F = F(:) / max(norm(F(:)), 1e-12);
+        Cf = reshape(transformList' * F(:), nbb, nbb);
+
+        payload.bb_range = bbRange;
+        payload.scene_size = [rows cols];
+        payload.transform_diagonal_terms = transformList([1 5 9], :);
+        payload.buddha_similarity = Cb;
+        payload.flower_similarity = Cf;
+
     case 'scene_from_rgb_lcd_apple_small'
         displayCalFile = 'LCD-Apple.mat';
         d = displayCreate(displayCalFile);
