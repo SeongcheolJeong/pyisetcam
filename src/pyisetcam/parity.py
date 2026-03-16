@@ -3118,6 +3118,50 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "color_reflectance_basis_small":
+        snapshot_root = store.ensure()
+        reflectance_dirs = [
+            snapshot_root / "data/surfaces/reflectances",
+            snapshot_root / "data/surfaces/charts/esser/reflectance",
+        ]
+        filenames: list[str] = []
+        for directory in reflectance_dirs:
+            filenames.extend(sorted(path.name for path in directory.glob("*.mat")))
+
+        selected_indices = np.array([5, 12], dtype=int)
+        selected_filenames = [filenames[index - 1] for index in selected_indices]
+        wave = np.arange(400.0, 701.0, 5.0, dtype=float)
+
+        reflectances = np.empty((wave.size, 0), dtype=float)
+        for filename in selected_filenames:
+            current = np.asarray(ie_read_spectra(filename, wave, asset_store=store), dtype=float)
+            reflectances = np.concatenate((current, reflectances), axis=1)
+
+        u, singular_values, vh = np.linalg.svd(reflectances, full_matrices=False)
+        dim = 8
+        basis = u[:, :dim]
+        weights = (np.diag(singular_values) @ vh)[:dim, :]
+        approx = basis @ weights
+        approx_rmse = float(np.sqrt(np.mean(np.square(approx - reflectances), dtype=float)))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "file_count": int(len(filenames)),
+                "selected_indices": selected_indices,
+                "selected_filenames": np.asarray(selected_filenames, dtype=object),
+                "wave": wave,
+                "reflectance_shape": np.array(reflectances.shape, dtype=int),
+                "reflectance_stats": _stats_vector(reflectances),
+                "singular_values_first8": singular_values[:8].astype(float),
+                "basis_first4": _canonicalize_basis_columns(u[:, :4]),
+                "basis_projector_8": basis @ basis.T,
+                "approx_rmse": approx_rmse,
+                "approx_stats": _stats_vector(approx),
+            },
+            context={},
+        )
+
     if case_name == "display_create_lcd_example":
         display = display_create("lcdExample.mat", asset_store=store)
         return ParityCaseResult(

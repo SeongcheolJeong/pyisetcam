@@ -9357,6 +9357,57 @@ def test_scene_surface_models_tutorial_workflow(asset_store) -> None:
     assert float(np.mean(np.abs(render_full - render_4))) > 1e-4
 
 
+def test_color_reflectance_basis_script_workflow(asset_store) -> None:
+    snapshot_root = asset_store.ensure()
+    reflectance_dirs = [
+        snapshot_root / "data/surfaces/reflectances",
+        snapshot_root / "data/surfaces/charts/esser/reflectance",
+    ]
+    filenames = []
+    for directory in reflectance_dirs:
+        filenames.extend(sorted(path.name for path in directory.glob("*.mat")))
+
+    wave = np.arange(400.0, 701.0, 5.0, dtype=float)
+    selected = [filenames[index - 1] for index in (5, 12)]
+    reflectances = np.empty((wave.size, 0), dtype=float)
+    for filename in selected:
+        current = np.asarray(ie_read_spectra(filename, wave, asset_store=asset_store), dtype=float)
+        reflectances = np.concatenate((current, reflectances), axis=1)
+
+    u, singular_values, vh = np.linalg.svd(reflectances, full_matrices=False)
+    basis = u[:, :8]
+    weights = (np.diag(singular_values) @ vh)[:8, :]
+    approx = basis @ weights
+    approx_rmse = float(np.sqrt(np.mean(np.square(approx - reflectances), dtype=float)))
+
+    assert len(filenames) >= 12
+    assert selected == ["MiniatureMacbethChart.mat", "munsell_matte.mat"]
+    assert reflectances.shape == (61, 1293)
+    assert basis.shape == (61, 8)
+    assert singular_values.shape[0] == min(reflectances.shape)
+    assert np.all(singular_values[:-1] >= singular_values[1:] - 1e-12)
+    assert approx.shape == reflectances.shape
+    assert approx_rmse < 0.05
+
+
+def test_run_python_case_supports_color_reflectance_basis_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("color_reflectance_basis_small", asset_store=asset_store)
+
+    assert int(case.payload["file_count"]) >= 12
+    assert np.array_equal(case.payload["selected_indices"], np.array([5, 12], dtype=int))
+    assert list(np.asarray(case.payload["selected_filenames"], dtype=object).reshape(-1)) == [
+        "MiniatureMacbethChart.mat",
+        "munsell_matte.mat",
+    ]
+    assert case.payload["wave"].shape == (61,)
+    assert np.array_equal(case.payload["reflectance_shape"], np.array([61, 1293], dtype=int))
+    assert case.payload["singular_values_first8"].shape == (8,)
+    assert case.payload["basis_first4"].shape == (61, 4)
+    assert case.payload["basis_projector_8"].shape == (61, 61)
+    assert np.isscalar(case.payload["approx_rmse"])
+    assert case.payload["approx_stats"].shape == (4,)
+
+
 def test_scene_reflectance_samples_script_workflow(asset_store) -> None:
     wave = np.arange(400.0, 701.0, 5.0, dtype=float)
     random_sources = [

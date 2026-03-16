@@ -248,6 +248,8 @@ class AssetStore:
         spectra = np.asarray(data["data"], dtype=float)
         if spectra.ndim == 1:
             spectra = spectra.reshape(-1, 1)
+        elif spectra.ndim == 2 and spectra.shape[0] != wavelengths.size and spectra.shape[1] == wavelengths.size:
+            spectra = spectra.T
         if wave_nm is not None:
             spectra = interp_spectra(wavelengths, spectra, np.asarray(wave_nm, dtype=float))
             wavelengths = np.asarray(wave_nm, dtype=float).reshape(-1)

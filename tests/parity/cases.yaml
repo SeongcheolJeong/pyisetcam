@@ -838,6 +838,22 @@
       }
     },
     {
+      "name": "color_reflectance_basis_small",
+      "matlab_function": "s_reflectanceBasis",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "reflectance_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 1e-05
+        },
+        "approx_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 1e-05
+        }
+      }
+    },
+    {
       "name": "display_create_lcd_example",
       "matlab_function": "displayCreate",
       "rtol": 1e-05,

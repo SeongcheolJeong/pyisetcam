@@ -2412,6 +2412,51 @@ switch case_name
         payload.render_full_channel_means = renderFull.rgb_channel_means;
         payload.render_full_center_rgb = renderFull.center_rgb;
 
+    case 'color_reflectance_basis_small'
+        reflDirCollect = {
+            fullfile(isetRootPath, 'data', 'surfaces', 'reflectances'), ...
+            fullfile(isetRootPath, 'data', 'surfaces', 'charts', 'esser', 'reflectance')
+        };
+        rFilenames = {};
+        for kk = 1:numel(reflDirCollect)
+            rFiles = dir(fullfile(reflDirCollect{kk}, '*.mat'));
+            curFilenames = cell(numel(rFiles), 1);
+            for ii = 1:numel(rFiles)
+                curFilenames{ii} = rFiles(ii).name;
+            end
+            rFilenames = [rFilenames; curFilenames];
+        end
+
+        wave = (400:5:700)';
+        rr = [5, 12];
+        reflectances = [];
+        selectedNames = cell(numel(rr), 1);
+        for jj = 1:numel(rr)
+            selectedNames{jj} = rFilenames{rr(jj)};
+            tmp = ieReadSpectra(selectedNames{jj}, wave);
+            reflectances = cat(2, tmp, reflectances);
+        end
+
+        dim = 8;
+        [Basis, S, V] = svd(reflectances);
+        basisFirst4 = local_canonicalize_basis_columns(Basis(:, 1:4));
+        weights = (S * V');
+        weights = weights(1:dim, :);
+        approx = Basis(:, 1:dim) * weights;
+        approxRmse = sqrt(mean((approx(:) - reflectances(:)) .^ 2));
+
+        payload.file_count = int32(numel(rFilenames));
+        payload.selected_indices = rr(:);
+        payload.selected_filenames = selectedNames(:);
+        payload.wave = wave;
+        payload.reflectance_shape = int32([size(reflectances, 1), size(reflectances, 2)]);
+        payload.reflectance_stats = local_stats_vector(reflectances);
+        payload.singular_values_first8 = diag(S(1:8, 1:8));
+        payload.basis_first4 = basisFirst4;
+        payload.basis_projector_8 = Basis(:, 1:dim) * Basis(:, 1:dim)';
+        payload.approx_rmse = approxRmse;
+        payload.approx_stats = local_stats_vector(approx);
+
     case 'display_create_lcd_example'
         d = displayCreate('lcdExample.mat');
         payload.wave = displayGet(d, 'wave');
