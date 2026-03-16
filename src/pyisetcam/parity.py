@@ -17,6 +17,7 @@ from .display import display_create, display_get
 from .fileio import ie_save_color_filter, ie_save_multispectral_image, ie_save_si_data_file
 from .fileio import sensor_dng_read
 from .illuminant import illuminant_create, illuminant_get, illuminant_set
+from .iso import edge_to_mtf, iso_find_slanted_bar
 from .metrics import chromaticity_xy, cct_from_uv, delta_e_ab, metrics_spd, spd_to_cct, xyz_from_energy, xyz_to_lab, xyz_to_luv, xyz_to_uv
 from .ip import ip_compute, ip_create, ip_get, ip_set
 from .optics import (
@@ -861,6 +862,50 @@ def run_python_case_with_context(
                 "cct_k": np.asarray(params["cct_k"], dtype=float),
             },
             context={},
+        )
+
+    if case_name == "metrics_edge2mtf_small":
+        def _canonical_profile(values: Any, samples: int = 65) -> np.ndarray:
+            profile = np.asarray(values, dtype=float).reshape(-1)
+            support = np.linspace(-1.0, 1.0, profile.size, dtype=float)
+            query = np.linspace(-1.0, 1.0, samples, dtype=float)
+            return np.interp(query, support, profile).astype(float)
+
+        scene = scene_create("slanted bar", 512, 7.0 / 3.0, asset_store=store)
+        scene = scene_adjust_luminance(scene, 100.0, asset_store=store)
+        scene = scene_set(scene, "distance", 1.0)
+        scene = scene_set(scene, "fov", 5.0)
+
+        oi = oi_create(asset_store=store)
+        oi = oi_set(oi, "optics fnumber", 2.8)
+        oi = oi_compute(oi, scene)
+
+        sensor = sensor_create(asset_store=store)
+        sensor = sensor_set(sensor, "autoExposure", 1)
+        sensor = sensor_compute(sensor, oi)
+
+        ip = ip_compute(ip_create(asset_store=store), sensor)
+        rect = np.asarray(iso_find_slanted_bar(ip), dtype=int).reshape(-1)
+        col_min, row_min, width, height = rect
+        result = np.asarray(ip_get(ip, "result"), dtype=float)
+        bar_image = result[row_min - 1 : row_min + height, col_min - 1 : col_min + width, :]
+        mtf_data = edge_to_mtf(bar_image, channel=2, fixed_row=20)
+        green_profile = np.mean(np.asarray(bar_image[:, :, 1], dtype=float), axis=0, dtype=float)
+        mtf = np.asarray(mtf_data["mtf"], dtype=float)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "sensor_size": np.asarray(sensor_get(sensor, "size"), dtype=int),
+                "ip_size": np.asarray(ip_get(ip, "size"), dtype=int),
+                "roi_aspect_ratio": float(bar_image.shape[0]) / max(float(bar_image.shape[1]), 1.0),
+                "roi_fill_fraction": float(np.prod(bar_image.shape[:2])) / max(float(np.prod(result.shape[:2])), 1.0),
+                "bar_green_mean_profile_norm": _canonical_profile(_channel_normalize(green_profile)),
+                "lag_stats": _stats_vector(np.asarray(mtf_data["lags"], dtype=float)),
+                "lsf_norm": _canonical_profile(_channel_normalize(np.asarray(mtf_data["lsf"], dtype=float))),
+                "mtf_norm": _canonical_profile(mtf / max(float(mtf[0]), 1.0e-12)),
+            },
+            context={"scene": scene, "oi": oi, "sensor": sensor, "ip": ip},
         )
 
     if case_name == "scene_illuminant_change":
@@ -5834,6 +5879,12 @@ def run_python_case_with_context(
         )
 
     if case_name == "sensor_aliasing_small":
+        def _canonical_profile(values: np.ndarray, samples: int = 129) -> np.ndarray:
+            profile = np.asarray(values, dtype=float).reshape(-1)
+            support = np.linspace(-1.0, 1.0, profile.size, dtype=float)
+            query = np.linspace(-1.0, 1.0, samples, dtype=float)
+            return np.interp(query, support, profile)
+
         fov = 5.0
         sweep_scene = scene_create("sweep frequency", 768, 30.0, asset_store=store)
         sweep_scene = scene_set(sweep_scene, "fov", fov)
@@ -5880,8 +5931,6 @@ def run_python_case_with_context(
         oi_slanted_blur = oi_compute(oi_slanted_blur, slanted_scene)
         sensor_slanted_blur = sensor_compute(sensor_slanted.clone(), oi_slanted_blur)
         slanted_blur = np.asarray(sensor_get(sensor_slanted_blur, "electrons"), dtype=float)
-        slanted_sharp = np.flipud(np.fliplr(slanted_sharp))
-        slanted_blur = np.flipud(np.fliplr(slanted_blur))
 
         return ParityCaseResult(
             payload={
@@ -5902,8 +5951,10 @@ def run_python_case_with_context(
                 "blur_line_stats": _stats_vector(blur_data),
                 "slanted_scene_size": np.asarray(scene_get(slanted_scene, "size"), dtype=int),
                 "slanted_sensor_size": np.asarray(sensor_get(sensor_slanted, "size"), dtype=int),
-                "slanted_sharp_norm": slanted_sharp / max(float(np.max(slanted_sharp)), 1.0e-12),
-                "slanted_blur_norm": slanted_blur / max(float(np.max(slanted_blur)), 1.0e-12),
+                "slanted_sharp_center_row_norm": _canonical_profile(_channel_normalize(slanted_sharp[slanted_sharp.shape[0] // 2, :])),
+                "slanted_sharp_center_col_norm": _canonical_profile(_channel_normalize(slanted_sharp[:, slanted_sharp.shape[1] // 2])),
+                "slanted_blur_center_row_norm": _canonical_profile(_channel_normalize(slanted_blur[slanted_blur.shape[0] // 2, :])),
+                "slanted_blur_center_col_norm": _canonical_profile(_channel_normalize(slanted_blur[:, slanted_blur.shape[1] // 2])),
                 "slanted_sharp_stats": _stats_vector(slanted_sharp),
                 "slanted_blur_stats": _stats_vector(slanted_blur),
             },

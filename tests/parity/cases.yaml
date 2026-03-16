@@ -193,6 +193,30 @@
       "atol": 1e-08
     },
     {
+      "name": "metrics_edge2mtf_small",
+      "matlab_function": "s_metricsEdge2MTF",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "bar_green_mean_profile_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "lag_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "lsf_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.05
+        },
+        "mtf_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        }
+      }
+    },
+    {
       "name": "scene_illuminant_change",
       "matlab_function": "sceneAdjustIlluminant",
       "rtol": 1e-05,
@@ -2088,13 +2112,21 @@
           "mode": "mean_rel",
           "max_mean_rel": 0.05
         },
-        "slanted_sharp_norm": {
+        "slanted_sharp_center_row_norm": {
           "mode": "normalized_mae",
           "max_normalized_mae": 0.05
         },
-        "slanted_blur_norm": {
+        "slanted_sharp_center_col_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.07
+        },
+        "slanted_blur_center_row_norm": {
           "mode": "normalized_mae",
           "max_normalized_mae": 0.05
+        },
+        "slanted_blur_center_col_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.07
         },
         "slanted_scene_size": {
           "mode": "mean_rel",

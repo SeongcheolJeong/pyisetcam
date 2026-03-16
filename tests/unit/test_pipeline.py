@@ -18,6 +18,7 @@ from pyisetcam import (
     daylight,
     display_create,
     display_get,
+    edge_to_mtf,
     hc_basis,
     image_flip,
     image_increase_image_rgb_size,
@@ -30,6 +31,7 @@ from pyisetcam import (
     ie_save_color_filter,
     ie_save_multispectral_image,
     ie_save_si_data_file,
+    ie_cxcorr,
     ie_field_height_to_index,
     ip_get,
     ip_plot,
@@ -37,6 +39,7 @@ from pyisetcam import (
     ip_compute,
     ip_create,
     ie_mvnrnd,
+    iso_find_slanted_bar,
     luminance_from_energy,
     luminance_from_photons,
     macbeth_read_reflectance,
@@ -6611,6 +6614,62 @@ def test_run_python_case_supports_metrics_spd_mired_parity_case(asset_store) -> 
     assert case.payload["cct_k"].shape == (2,)
 
 
+def test_metrics_edge2mtf_script_workflow(asset_store) -> None:
+    scene = scene_create("slanted bar", 512, 7.0 / 3.0, asset_store=asset_store)
+    scene = scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
+    scene = scene_set(scene, "distance", 1.0)
+    scene = scene_set(scene, "fov", 5.0)
+
+    oi = oi_create(asset_store=asset_store)
+    oi = oi_set(oi, "optics fnumber", 2.8)
+    oi = oi_compute(oi, scene)
+
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "autoExposure", 1)
+    sensor = sensor_compute(sensor, oi)
+
+    ip = ip_compute(ip_create(asset_store=asset_store), sensor)
+    rect = iso_find_slanted_bar(ip)
+    result = np.asarray(ip_get(ip, "result"), dtype=float)
+    col_min, row_min, width, height = np.asarray(rect, dtype=int).reshape(-1)
+    bar_image = result[row_min - 1 : row_min + height, col_min - 1 : col_min + width, :]
+    mtf_data = edge_to_mtf(bar_image, channel=2, fixed_row=20)
+
+    corr, lags = ie_cxcorr(np.arange(1.0, 11.0, dtype=float), np.roll(np.arange(1.0, 11.0, dtype=float), -3))
+
+    assert tuple(scene_get(scene, "size")) == (513, 513)
+    assert tuple(oi_get(oi, "size")) == (641, 641)
+    assert tuple(sensor_get(sensor, "size")) == (72, 88)
+    assert tuple(ip_get(ip, "size")) == (72, 88, 3)
+    assert rect.shape == (4,)
+    assert width > 5 and height > 5
+    assert bar_image.shape == (height + 1, width + 1, 3)
+    assert mtf_data["dimg"].shape == (height + 1, width)
+    assert mtf_data["aligned"].shape == mtf_data["dimg"].shape
+    assert mtf_data["lags"].shape == (height + 1,)
+    assert mtf_data["lsf"].shape == (width,)
+    assert mtf_data["mtf"].shape == (int(np.floor(width / 2.0 + 0.5)),)
+    assert np.isclose(float(np.sum(mtf_data["lsf"])), 1.0, atol=1e-10, rtol=1e-10)
+    assert np.isclose(float(mtf_data["mtf"][0]), 1.0, atol=1e-10, rtol=1e-10)
+    assert np.all(np.asarray(mtf_data["mtf"], dtype=float) >= 0.0)
+    assert int(np.argmax(corr)) == 3
+    assert np.array_equal(lags, np.arange(10, dtype=int))
+
+
+def test_run_python_case_supports_metrics_edge2mtf_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_edge2mtf_small", asset_store=asset_store)
+
+    assert tuple(case.payload["sensor_size"]) == (72, 88)
+    assert tuple(case.payload["ip_size"]) == (72, 88, 3)
+    assert float(case.payload["roi_aspect_ratio"]) > 1.0
+    assert 0.0 < float(case.payload["roi_fill_fraction"]) < 1.0
+    assert case.payload["bar_green_mean_profile_norm"].shape == (65,)
+    assert case.payload["lag_stats"].shape == (4,)
+    assert case.payload["lsf_norm"].shape == (65,)
+    assert case.payload["mtf_norm"].shape == (65,)
+    assert np.isclose(float(case.payload["mtf_norm"][0]), 1.0, atol=1e-10, rtol=1e-10)
+
+
 def test_run_python_case_supports_sensor_imx363_crop_parity_case(asset_store) -> None:
     case = run_python_case_with_context("sensor_imx363_crop_small", asset_store=asset_store)
 
@@ -7276,10 +7335,12 @@ def test_run_python_case_supports_sensor_aliasing_small_parity_case(asset_store)
     assert case.payload["small_line_stats"].shape == (4,)
     assert case.payload["large_line_stats"].shape == (4,)
     assert case.payload["blur_line_stats"].shape == (4,)
-    assert tuple(case.payload["slanted_scene_size"]) == (1024, 1024)
+    assert tuple(case.payload["slanted_scene_size"]) == (1025, 1025)
     assert tuple(case.payload["slanted_sensor_size"]) == (46, 56)
-    assert case.payload["slanted_sharp_norm"].shape == (46, 56)
-    assert case.payload["slanted_blur_norm"].shape == (46, 56)
+    assert case.payload["slanted_sharp_center_row_norm"].shape == (129,)
+    assert case.payload["slanted_sharp_center_col_norm"].shape == (129,)
+    assert case.payload["slanted_blur_center_row_norm"].shape == (129,)
+    assert case.payload["slanted_blur_center_col_norm"].shape == (129,)
     assert case.payload["slanted_sharp_stats"].shape == (4,)
     assert case.payload["slanted_blur_stats"].shape == (4,)
 

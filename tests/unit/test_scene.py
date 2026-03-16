@@ -63,7 +63,7 @@ def test_supported_pattern_scenes(asset_store) -> None:
     grid_lines = scene_create("grid lines", 64, 16, "ee", 2, asset_store=asset_store)
     white_noise = scene_create("white noise", 32, 20, asset_store=asset_store)
     assert scene_get(checkerboard, "photons").shape[:2] == (64, 64)
-    assert scene_get(slanted_bar, "photons").shape[:2] == (64, 64)
+    assert scene_get(slanted_bar, "photons").shape[:2] == (65, 65)
     assert scene_get(freq_orient, "photons").shape[:2] == (256, 256)
     assert scene_get(harmonic, "photons").shape[:2] == (65, 65)
     assert scene_get(sweep, "photons").shape[:2] == (128, 128)

@@ -24,6 +24,7 @@ from .fileio import (
     vc_save_object,
 )
 from .illuminant import illuminant_create, illuminant_get, illuminant_set
+from .iso import ISOFindSlantedBar, edge_to_mtf, ieCXcorr, ie_cxcorr, iso_find_slanted_bar
 from .ip import image_data_xyz, ip_compute, ip_create, ip_get, ip_set
 from .metrics import (
     cct_from_uv,
@@ -262,6 +263,7 @@ __all__ = [
     "ieEquivalentObjtype",
     "ieFieldHeight2Index",
     "ieFitLine",
+    "ieCXcorr",
     "ieLuminanceFromEnergy",
     "ieLuminanceFromPhotons",
     "ieMvnrnd",
@@ -300,6 +302,7 @@ __all__ = [
     "ie_delete_object",
     "ie_equivalent_objtype",
     "ie_fit_line",
+    "ie_cxcorr",
     "ie_mvnrnd",
     "ie_reflectance_samples",
     "ie_read_spectra",
@@ -336,6 +339,8 @@ __all__ = [
     "illuminant_create",
     "illuminant_get",
     "illuminant_set",
+    "ISOFindSlantedBar",
+    "iso_find_slanted_bar",
     "macbethReadReflectance",
     "macbeth_read_reflectance",
     "ipCompute",
@@ -355,6 +360,7 @@ __all__ = [
     "metricsSPD",
     "metrics_spd",
     "mired_difference",
+    "edge_to_mtf",
     "RGB2XWFormat",
     "rgb_to_xw_format",
     "spd2cct",

@@ -884,10 +884,10 @@ def _slanted_bar_scene(
     *,
     asset_store: AssetStore,
 ) -> Scene:
-    yy, xx = np.mgrid[0:image_size, 0:image_size]
-    center = image_size / 2.0
-    threshold = center + edge_slope * (yy - center)
-    bar = np.where(xx >= threshold, 1.0, dark_level)
+    half_size = int(np.rint(float(image_size) / 2.0))
+    sample = np.arange(-half_size, half_size + 1, dtype=float)
+    xx, yy = np.meshgrid(sample, sample, indexing="xy")
+    bar = np.where(yy > float(edge_slope) * xx, 1.0, max(float(dark_level), 1.0e-6))
     illuminant_energy = _scale_energy_to_luminance(
         np.ones(wave.size, dtype=float),
         wave,

@@ -723,6 +723,43 @@ switch case_name
         payload.uv = params.uv;
         payload.cct_k = params.cTemps;
 
+    case 'metrics_edge2mtf_small'
+        scene = sceneCreate('slanted bar', 512, 7/3);
+        scene = sceneAdjustLuminance(scene, 100);
+        scene = sceneSet(scene, 'distance', 1);
+        scene = sceneSet(scene, 'fov', 5);
+
+        oi = oiCreate;
+        oi = oiSet(oi, 'optics fnumber', 2.8);
+        oi = oiCompute(oi, scene);
+
+        sensor = sensorCreate;
+        sensor = sensorSet(sensor, 'autoExposure', 1);
+        sensor = sensorCompute(sensor, oi);
+
+        ip = ipCreate;
+        ip = ipCompute(ip, sensor);
+
+        masterRect = ISOFindSlantedBar(ip);
+        barImage = vcGetROIData(ip, masterRect, 'results');
+        c = masterRect(3) + 1;
+        r = masterRect(4) + 1;
+        barImage = reshape(barImage, r, c, 3);
+        mtfPayload = local_edge_to_mtf_payload(barImage);
+        greenProfile = mean(double(barImage(:, :, 2)), 1);
+        mtfNormalized = double(mtfPayload.mtf(:)) / max(double(mtfPayload.mtf(1)), 1e-12);
+        ipResult = ipGet(ip, 'result');
+
+        payload.sensor_size = double(sensorGet(sensor, 'size')(:));
+        payload.ip_size = double(ipGet(ip, 'size')(:));
+        payload.roi_aspect_ratio = double(size(barImage, 1)) / max(double(size(barImage, 2)), 1);
+        payload.roi_fill_fraction = double(size(barImage, 1) * size(barImage, 2)) / ...
+            max(double(size(ipResult, 1) * size(ipResult, 2)), 1);
+        payload.bar_green_mean_profile_norm = local_canonical_profile(local_channel_normalize(greenProfile), 65);
+        payload.lag_stats = local_stats_vector(mtfPayload.lags);
+        payload.lsf_norm = local_canonical_profile(local_channel_normalize(mtfPayload.lsf), 65);
+        payload.mtf_norm = local_canonical_profile(mtfNormalized, 65);
+
     case 'scene_illuminant_change'
         scene = sceneCreate();
         bb = blackbody(sceneGet(scene, 'wave'), 3000, 'energy');
@@ -4197,8 +4234,14 @@ switch case_name
         payload.blur_line_stats = [mean(blurData(:)) std(blurData(:)) prctile(blurData(:), [5 95])];
         payload.slanted_scene_size = sceneGet(slantedScene, 'size');
         payload.slanted_sensor_size = sensorGet(sensorSlanted, 'size');
-        payload.slanted_sharp_norm = slantedSharp / max(slantedSharp(:));
-        payload.slanted_blur_norm = slantedBlur / max(slantedBlur(:));
+        payload.slanted_sharp_center_row_norm = local_canonical_profile( ...
+            local_channel_normalize(slantedSharp(floor(size(slantedSharp, 1) / 2) + 1, :)), 129);
+        payload.slanted_sharp_center_col_norm = local_canonical_profile( ...
+            local_channel_normalize(slantedSharp(:, floor(size(slantedSharp, 2) / 2) + 1)), 129);
+        payload.slanted_blur_center_row_norm = local_canonical_profile( ...
+            local_channel_normalize(slantedBlur(floor(size(slantedBlur, 1) / 2) + 1, :)), 129);
+        payload.slanted_blur_center_col_norm = local_canonical_profile( ...
+            local_channel_normalize(slantedBlur(:, floor(size(slantedBlur, 2) / 2) + 1)), 129);
         payload.slanted_sharp_stats = [mean(slantedSharp(:)) std(slantedSharp(:)) prctile(slantedSharp(:), [5 95])];
         payload.slanted_blur_stats = [mean(slantedBlur(:)) std(slantedBlur(:)) prctile(slantedBlur(:), [5 95])];
 
@@ -5306,6 +5349,34 @@ sSupport = sensorGet(sensorAdjusted, 'spatial support', 'um');
 [X, Y] = meshgrid(sSupport.x, sSupport.y);
 cra = atan(sqrt(X .^ 2 + Y .^ 2) / sourceFL);
 optimalOffsets = mlFL * tan(asin(sin(cra) / n2));
+end
+
+function payload = local_edge_to_mtf_payload(barImage)
+img = double(barImage(:, :, 2));
+dimg = abs(diff(img, 1, 2));
+[row, col] = size(dimg);
+dimgS = zeros(size(dimg));
+lagsOut = zeros(row, 1);
+fixed = dimg(20, :);
+
+for rr = 1:row
+    [c, lags] = ieCXcorr(fixed, dimg(rr, :));
+    [~, ii] = max(c);
+    dimgS(rr, :) = circshift(dimg(rr, :)', lags(ii))';
+    lagsOut(rr) = lags(ii);
+end
+
+mn = mean(dimgS);
+mn = mn / max(sum(mn), eps);
+mtf = abs(fft(mn));
+freq = ((1:round((col / 2))) - 1)';
+
+payload.dimg = dimg;
+payload.aligned = dimgS;
+payload.lsf = mn(:);
+payload.mtf = mtf(1:length(freq))';
+payload.freq = freq;
+payload.lags = lagsOut;
 end
 
 function payload = local_display_scene_payload(displayName)
