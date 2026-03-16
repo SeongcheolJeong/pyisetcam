@@ -1000,6 +1000,85 @@ def run_python_case_with_context(
             },
         )
 
+    if case_name == "metrics_mtf_pixel_size_small":
+        def _canonical_profile(values: Any, samples: int = 129) -> np.ndarray:
+            profile = np.asarray(values, dtype=float).reshape(-1)
+            support = np.linspace(-1.0, 1.0, profile.size, dtype=float)
+            query = np.linspace(-1.0, 1.0, samples, dtype=float)
+            return np.interp(query, support, profile).astype(float)
+
+        def _matlab_round_array(values: Any) -> np.ndarray:
+            return np.floor(np.asarray(values, dtype=float) + 0.5).astype(int)
+
+        scene = scene_create("slanted bar", 512, 7.0 / 3.0, asset_store=store)
+        scene = scene_adjust_luminance(scene, 100.0, asset_store=store)
+        scene = scene_set(scene, "distance", 1.0)
+        scene = scene_set(scene, "fov", 5.0)
+
+        oi = oi_create(asset_store=store)
+        oi = oi_set(oi, "optics fnumber", 4.0)
+        oi = oi_compute(oi, scene)
+
+        base_sensor = sensor_create("monochrome", asset_store=store)
+        base_sensor = sensor_set(base_sensor, "autoExposure", 1)
+        base_ip = ip_create(asset_store=store)
+
+        master_rect = np.array([199, 168, 101, 167], dtype=int)
+        pixel_sizes_um = np.array([2.0, 3.0, 5.0, 9.0], dtype=float)
+        sensor_sizes = []
+        rects = []
+        bar_sizes = []
+        nyquist = []
+        mtf50 = []
+        mtf_profiles = []
+
+        for pixel_size_um in pixel_sizes_um:
+            sensor = sensor_set(
+                base_sensor,
+                "pixel size constant fill factor",
+                np.array([pixel_size_um, pixel_size_um], dtype=float) * 1.0e-6,
+            )
+            sensor = sensor_set(sensor, "rows", round(512.0 / float(pixel_size_um)))
+            sensor = sensor_set(sensor, "cols", round(512.0 / float(pixel_size_um)))
+            sensor = sensor_compute(sensor, oi)
+            ip = ip_compute(base_ip, sensor)
+
+            rect = _matlab_round_array(master_rect.astype(float) / float(pixel_size_um))
+            col_min, row_min, width, height = rect
+            bar = np.asarray(ip_get(ip, "result"), dtype=float)[row_min - 1 : row_min + height, col_min - 1 : col_min + width, :]
+            mtf_data = iso12233(bar, float(sensor_get(sensor, "pixel width", "mm")), plot_options="none")
+
+            sensor_sizes.append(np.asarray(sensor_get(sensor, "size"), dtype=int))
+            rects.append(rect)
+            bar_sizes.append(np.asarray(bar.shape, dtype=int))
+            nyquist.append(float(mtf_data.nyquistf))
+            mtf50.append(float(mtf_data.mtf50))
+            mtf_profiles.append(
+                _canonical_profile(
+                    np.asarray(mtf_data.mtf, dtype=float)[:, -1]
+                    / max(float(np.asarray(mtf_data.mtf, dtype=float)[0, -1]), 1.0e-12)
+                )
+            )
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "oi_size": np.asarray(oi_get(oi, "size"), dtype=int),
+                "pixel_sizes_um": pixel_sizes_um,
+                "sensor_sizes": np.asarray(sensor_sizes, dtype=int),
+                "rects": np.asarray(rects, dtype=int),
+                "bar_sizes": np.asarray(bar_sizes, dtype=int),
+                "nyquistf": np.asarray(nyquist, dtype=float),
+                "mtf50": np.asarray(mtf50, dtype=float),
+                "mtf_profiles_norm": np.asarray(mtf_profiles, dtype=float),
+            },
+            context={
+                "scene": scene,
+                "oi": oi,
+            },
+        )
+
     if case_name == "scene_illuminant_change":
         scene = scene_create(asset_store=store)
         wave = scene_get(scene, "wave")

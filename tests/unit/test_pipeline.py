@@ -6746,6 +6746,71 @@ def test_run_python_case_supports_metrics_mtf_slanted_bar_small_parity_case(asse
     assert float(case.payload["mono_direct_nyquistf"]) > 0.0
 
 
+def test_metrics_mtf_pixel_size_script_workflow(asset_store) -> None:
+    scene = scene_create("slanted bar", 512, 7.0 / 3.0, asset_store=asset_store)
+    scene = scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
+    scene = scene_set(scene, "distance", 1.0)
+    scene = scene_set(scene, "fov", 5.0)
+
+    oi = oi_create(asset_store=asset_store)
+    oi = oi_set(oi, "optics fnumber", 4.0)
+    oi = oi_compute(oi, scene)
+
+    sensor = sensor_create("monochrome", asset_store=asset_store)
+    sensor = sensor_set(sensor, "autoExposure", 1)
+    ip = ip_create(asset_store=asset_store)
+    master_rect = np.array([199, 168, 101, 167], dtype=int)
+
+    sensor_sizes = []
+    rects = []
+    mtf50 = []
+    for pixel_size_um in [2.0, 3.0, 5.0, 9.0]:
+        sensor1 = sensor_set(
+            sensor,
+            "pixel size constant fill factor",
+            np.array([pixel_size_um, pixel_size_um], dtype=float) * 1.0e-6,
+        )
+        sensor1 = sensor_set(sensor1, "rows", round(512.0 / pixel_size_um))
+        sensor1 = sensor_set(sensor1, "cols", round(512.0 / pixel_size_um))
+        sensor1 = sensor_compute(sensor1, oi)
+        ip1 = ip_compute(ip, sensor1)
+
+        rect = np.floor((master_rect.astype(float) / pixel_size_um) + 0.5).astype(int)
+        col_min, row_min, width, height = rect
+        bar = np.asarray(ip_get(ip1, "result"), dtype=float)[row_min - 1 : row_min + height, col_min - 1 : col_min + width, :]
+        mtf_data = iso12233(bar, float(sensor_get(sensor1, "pixel width", "mm")), plot_options="none")
+
+        sensor_sizes.append(tuple(sensor_get(sensor1, "size")))
+        rects.append(rect)
+        mtf50.append(float(mtf_data.mtf50))
+        assert bar.ndim == 3 and bar.shape[2] == 3
+        assert np.asarray(mtf_data.mtf, dtype=float).shape[1] == 4
+        assert np.isclose(float(np.asarray(mtf_data.mtf, dtype=float)[0, -1]), 1.0, atol=1e-10, rtol=1e-10)
+
+    assert tuple(scene_get(scene, "size")) == (513, 513)
+    assert tuple(oi_get(oi, "size")) == (641, 641)
+    assert sensor_sizes == [(256, 256), (171, 171), (102, 102), (57, 57)]
+    assert np.array_equal(rects[0], np.array([100, 84, 51, 84], dtype=int))
+    assert np.array_equal(rects[1], np.array([66, 56, 34, 56], dtype=int))
+    assert np.array_equal(rects[2], np.array([40, 34, 20, 33], dtype=int))
+    assert np.array_equal(rects[3], np.array([22, 19, 11, 19], dtype=int))
+    assert mtf50[0] > mtf50[-1]
+
+
+def test_run_python_case_supports_metrics_mtf_pixel_size_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_mtf_pixel_size_small", asset_store=asset_store)
+
+    assert tuple(case.payload["scene_size"]) == (513, 513)
+    assert tuple(case.payload["oi_size"]) == (641, 641)
+    assert np.array_equal(case.payload["pixel_sizes_um"], np.array([2.0, 3.0, 5.0, 9.0], dtype=float))
+    assert np.array_equal(case.payload["sensor_sizes"], np.array([[256, 256], [171, 171], [102, 102], [57, 57]], dtype=int))
+    assert np.array_equal(case.payload["rects"][0], np.array([100, 84, 51, 84], dtype=int))
+    assert np.array_equal(case.payload["bar_sizes"], np.array([[85, 52, 3], [57, 35, 3], [34, 21, 3], [20, 12, 3]], dtype=int))
+    assert case.payload["mtf_profiles_norm"].shape == (4, 129)
+    assert np.all(np.asarray(case.payload["nyquistf"], dtype=float) > 0.0)
+    assert np.all(np.asarray(case.payload["mtf50"], dtype=float) > 0.0)
+
+
 def test_run_python_case_supports_sensor_imx363_crop_parity_case(asset_store) -> None:
     case = run_python_case_with_context("sensor_imx363_crop_small", asset_store=asset_store)
 

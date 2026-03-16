@@ -819,6 +819,62 @@ switch case_name
         payload.mono_direct_mtf50 = double(monoDirect.mtf50);
         payload.mono_direct_aliasing_percentage = double(monoDirect.aliasingPercentage);
 
+    case 'metrics_mtf_pixel_size_small'
+        scene = sceneCreate('slanted bar', 512, 7/3);
+        scene = sceneAdjustLuminance(scene, 100);
+        scene = sceneSet(scene, 'distance', 1);
+        scene = sceneSet(scene, 'fov', 5);
+
+        oi = oiCreate;
+        oi = oiSet(oi, 'optics fnumber', 4);
+        oi = oiCompute(oi, scene);
+
+        sensor = sensorCreate('monochrome');
+        sensor = sensorSet(sensor, 'autoExposure', 1);
+        ip = ipCreate;
+
+        masterRect = [199 168 101 167];
+        pixelSizesUM = [2 3 5 9];
+        sensorSizes = zeros(numel(pixelSizesUM), 2);
+        rects = zeros(numel(pixelSizesUM), 4);
+        barSizes = zeros(numel(pixelSizesUM), 3);
+        nyquistf = zeros(numel(pixelSizesUM), 1);
+        mtf50 = zeros(numel(pixelSizesUM), 1);
+        mtfProfiles = zeros(numel(pixelSizesUM), 129);
+
+        for ii = 1:numel(pixelSizesUM)
+            sensor = sensorSet(sensor, 'pixel size constant fill factor', [pixelSizesUM(ii), pixelSizesUM(ii)] * 1e-6);
+            sensor = sensorSet(sensor, 'rows', round(512 / pixelSizesUM(ii)));
+            sensor = sensorSet(sensor, 'cols', round(512 / pixelSizesUM(ii)));
+            sensor = sensorCompute(sensor, oi);
+            ip = ipCompute(ip, sensor);
+
+            rect = round(masterRect / pixelSizesUM(ii));
+            roiLocs = ieRect2Locs(rect);
+            barImage = vcGetROIData(ip, roiLocs, 'results');
+            c = rect(3) + 1;
+            r = rect(4) + 1;
+            barImage = reshape(barImage, r, c, 3);
+            mtfData = ISO12233(barImage, sensorGet(sensor, 'pixel width', 'mm'), [], 'none');
+
+            sensorSizes(ii, :) = double(sensorGet(sensor, 'size'));
+            rects(ii, :) = double(rect);
+            barSizes(ii, :) = double(size(barImage));
+            nyquistf(ii) = double(mtfData.nyquistf);
+            mtf50(ii) = double(mtfData.mtf50);
+            mtfProfiles(ii, :) = local_canonical_profile(double(mtfData.mtf(:, end)) / max(double(mtfData.mtf(1, end)), 1e-12), 129);
+        end
+
+        payload.scene_size = double(sceneGet(scene, 'size')(:));
+        payload.oi_size = double(oiGet(oi, 'size')(:));
+        payload.pixel_sizes_um = double(pixelSizesUM(:));
+        payload.sensor_sizes = double(sensorSizes);
+        payload.rects = double(rects);
+        payload.bar_sizes = double(barSizes);
+        payload.nyquistf = double(nyquistf);
+        payload.mtf50 = double(mtf50);
+        payload.mtf_profiles_norm = double(mtfProfiles);
+
     case 'scene_illuminant_change'
         scene = sceneCreate();
         bb = blackbody(sceneGet(scene, 'wave'), 3000, 'energy');

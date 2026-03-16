@@ -240,6 +240,16 @@
       }
     },
     {
+      "name": "metrics_mtf_pixel_size_small",
+      "matlab_function": "s_metricsMTFPixelSize.m",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "mtf50": {"mode": "mean_rel", "max_mean_rel": 0.02},
+        "mtf_profiles_norm": {"mode": "normalized_mae", "max_normalized_mae": 0.06}
+      }
+    },
+    {
       "name": "scene_illuminant_change",
       "matlab_function": "sceneAdjustIlluminant",
       "rtol": 1e-05,
