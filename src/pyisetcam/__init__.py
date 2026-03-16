@@ -125,7 +125,7 @@ from .parity import run_python_case, run_python_case_with_context
 from .plotting import ip_plot, oi_plot, scene_plot, sensor_plot, sensor_plot_fft, sensor_plot_line, wvf_plot
 from .ptable import IEPTable, ie_p_table
 from .roi import ie_locs2_rect, ie_rect2_locs, ie_rect2_vertices, ie_roi2_locs, vc_get_roi_data, vc_rect2_locs
-from .scielab import sc_params, sc_prepare_filters, scielab, scielab_rgb
+from .scielab import color_transform_matrix, sc_compute_scielab, sc_opponent_filter, sc_params, sc_prepare_filters, scielab, scielab_rgb
 from .session import (
     ie_app_get,
     ie_add_object,
@@ -233,6 +233,8 @@ from .utils import (
     ie_parameter_otype,
     param_format,
     rgb_to_xw_format,
+    srgb_to_linear,
+    srgb_to_xyz,
     xw_to_rgb_format,
     xyz_to_srgb,
 )
@@ -411,7 +413,13 @@ __all__ = [
     "mired_difference",
     "edge_to_mtf",
     "scParams",
+    "scComputeSCIELAB",
+    "scOpponentFilter",
     "scPrepareFilters",
+    "colorTransformMatrix",
+    "color_transform_matrix",
+    "sc_compute_scielab",
+    "sc_opponent_filter",
     "scielab",
     "scielabRGB",
     "sc_params",
@@ -423,6 +431,9 @@ __all__ = [
     "spd_to_cct",
     "XW2RGBFormat",
     "xw_to_rgb_format",
+    "srgb2xyz",
+    "srgb_to_linear",
+    "srgb_to_xyz",
     "xyz2srgb",
     "xyz_to_srgb",
     "opticsBuild2Dotf",
@@ -820,7 +831,10 @@ sensorSetSizeToFOV = sensor_set_size_to_fov
 metricsSPD = metrics_spd
 deltaEab = delta_e_ab
 scParams = sc_params
+scComputeSCIELAB = sc_compute_scielab
+scOpponentFilter = sc_opponent_filter
 scPrepareFilters = sc_prepare_filters
+colorTransformMatrix = color_transform_matrix
 scielabRGB = scielab_rgb
 xyz2luv = xyz_to_luv
 cct = cct_from_uv
@@ -832,6 +846,7 @@ dac2rgb = dac_to_rgb
 imageLinearTransform = image_linear_transform
 imageFlip = image_flip
 imageIncreaseImageRGBSize = image_increase_image_rgb_size
+srgb2xyz = srgb_to_xyz
 xyz2srgb = xyz_to_srgb
 ieLuminanceFromEnergy = luminance_from_energy
 ieLuminanceFromPhotons = luminance_from_photons

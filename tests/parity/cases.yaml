@@ -259,6 +259,50 @@
       "atol": 1e-08
     },
     {
+      "name": "metrics_scielab_tutorial_small",
+      "matlab_function": "s_scielabTutorial.m",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "img_opp_channel_means": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.07
+        },
+        "filtered_opp_channel_means": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.07
+        },
+        "original_render_center_row_luma_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.08
+        },
+        "filtered_render_center_row_luma_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.04
+        },
+        "result_l_center_row_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.03
+        },
+        "filtered_xyz_delta_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.25
+        },
+        "result_lab_channel_means": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.03
+        },
+        "filtered_render_mean_rgb_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.002
+        },
+        "original_render_mean_rgb_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.001
+        }
+      }
+    },
+    {
       "name": "metrics_edge2mtf_small",
       "matlab_function": "s_metricsEdge2MTF",
       "rtol": 1e-05,

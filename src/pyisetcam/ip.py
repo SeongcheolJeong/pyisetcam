@@ -8,7 +8,7 @@ from typing import Any
 import numpy as np
 from scipy.signal import convolve2d
 
-from .assets import AssetStore
+from .assets import AssetStore, ie_read_spectra
 from .color import internal_to_display_matrix, sensor_to_target_matrix, xyz_color_matching
 from .display import Display, display_create, display_get, display_set
 from .exceptions import UnsupportedOptionError
@@ -16,7 +16,14 @@ from .metrics import chromaticity_xy, xyz_from_energy
 from .session import track_ip_session_state, track_session_object
 from .sensor import sensor_get
 from .types import ImageProcessor, Sensor, SessionContext
-from .utils import invert_gamma_table, linear_to_srgb, param_format, split_prefixed_parameter, tile_pattern
+from .utils import (
+    image_linear_transform,
+    invert_gamma_table,
+    linear_to_srgb,
+    param_format,
+    split_prefixed_parameter,
+    tile_pattern,
+)
 
 
 def _store(asset_store: AssetStore | None) -> AssetStore:
@@ -206,6 +213,103 @@ def _sensor_to_internal(
     return internal, transform
 
 
+def _illuminant_white_ratio(
+    ip: ImageProcessor,
+    channels: int,
+    *,
+    asset_store: AssetStore,
+) -> np.ndarray:
+    internal_cmf = ip_get(ip, "internal cmf")
+    if internal_cmf is None:
+        return np.ones(int(channels), dtype=float)
+
+    wave = np.asarray(ip_get(ip, "wave"), dtype=float).reshape(-1)
+    target = np.asarray(ie_read_spectra("D65", wave, asset_store=asset_store), dtype=float).reshape(-1)
+    white_ratio = np.asarray(internal_cmf, dtype=float).T @ target
+    max_value = float(np.max(white_ratio))
+    if max_value <= 0.0:
+        return np.ones(int(channels), dtype=float)
+    return np.asarray(white_ratio / max_value, dtype=float).reshape(-1)
+
+
+def _gray_world_transform(
+    internal_image: np.ndarray,
+    ip: ImageProcessor,
+    *,
+    asset_store: AssetStore,
+) -> np.ndarray:
+    data = np.nan_to_num(np.asarray(internal_image, dtype=float), nan=0.0)
+    channels = int(data.shape[2])
+    averages = np.mean(data, axis=(0, 1))
+    white_ratio = _illuminant_white_ratio(ip, channels, asset_store=asset_store)
+    reference = max(float(white_ratio[0]), np.finfo(float).tiny)
+    white_ratio = white_ratio / reference
+    base_average = max(float(averages[0]), np.finfo(float).tiny)
+    scale = np.zeros(channels, dtype=float)
+    for channel_index in range(channels):
+        average = max(float(averages[channel_index]), np.finfo(float).tiny)
+        scale[channel_index] = float(white_ratio[channel_index]) * (base_average / average)
+    return np.diag(scale)
+
+
+def _white_world_transform(
+    internal_image: np.ndarray,
+    ip: ImageProcessor,
+    *,
+    asset_store: AssetStore,
+) -> np.ndarray:
+    data = np.nan_to_num(np.asarray(internal_image, dtype=float), nan=0.0)
+    channels = int(data.shape[2])
+    maxima = np.max(data, axis=(0, 1))
+    brightest_channel = int(np.argmax(maxima))
+    brightest_plane = data[:, :, brightest_channel]
+    max_brightness = max(float(maxima[brightest_channel]), np.finfo(float).tiny)
+    criterion = 0.7
+    white_ratio = _illuminant_white_ratio(ip, channels, asset_store=asset_store)
+    reference = max(float(white_ratio[0]), np.finfo(float).tiny)
+    white_ratio = white_ratio / reference
+
+    bright_values = np.zeros(channels, dtype=float)
+    mask = brightest_plane >= (criterion * max_brightness)
+    for channel_index in range(channels):
+        channel_data = data[:, :, channel_index][mask]
+        if channel_data.size == 0:
+            bright_values[channel_index] = np.finfo(float).tiny
+        else:
+            bright_values[channel_index] = max(float(np.mean(channel_data)), np.finfo(float).tiny)
+
+    base_value = max(float(bright_values[0]), np.finfo(float).tiny)
+    scale = np.zeros(channels, dtype=float)
+    for channel_index in range(channels):
+        scale[channel_index] = float(white_ratio[channel_index]) * (base_value / float(bright_values[channel_index]))
+    return np.diag(scale)
+
+
+def _illuminant_correct_internal(
+    internal_image: np.ndarray,
+    ip: ImageProcessor,
+    *,
+    asset_store: AssetStore,
+) -> tuple[np.ndarray, np.ndarray]:
+    method = param_format(ip.fields.get("illuminant_correction_method", "none"))
+    channels = int(np.asarray(internal_image, dtype=float).shape[2])
+
+    if method in {"none"}:
+        transform = np.eye(channels, dtype=float)
+        return np.asarray(internal_image, dtype=float), transform
+    if method in {"grayworld"}:
+        transform = _gray_world_transform(internal_image, ip, asset_store=asset_store)
+        return image_linear_transform(internal_image, transform), transform
+    if method in {"whiteworld"}:
+        transform = _white_world_transform(internal_image, ip, asset_store=asset_store)
+        return image_linear_transform(internal_image, transform), transform
+    if method in {"manualmatrixentry", "manual"}:
+        transform = _ip_transform(ip, 1)
+        return image_linear_transform(internal_image, transform), transform
+
+    raise UnsupportedOptionError("imageIlluminantCorrection", method)
+
+
 def _display_render(
     internal_image: np.ndarray,
     ip: ImageProcessor,
@@ -264,7 +368,8 @@ def ip_compute(
     computed.data["input"] = sensor.data.get("dv", sensor.data.get("volts"))
     sensor_space = _sensor_space(sensor)
     internal_image, sensor_transform = _sensor_to_internal(sensor_space, computed, sensor, asset_store=store)
-    display_linear, display_transform = _display_render(internal_image, computed, sensor, asset_store=store)
+    corrected_internal, illuminant_transform = _illuminant_correct_internal(internal_image, computed, asset_store=store)
+    display_linear, display_transform = _display_render(corrected_internal, computed, sensor, asset_store=store)
 
     if hdr_white:
         max_channel = np.max(display_linear, axis=2, keepdims=True)
@@ -277,7 +382,7 @@ def ip_compute(
     srgb = linear_to_srgb(clamped_display)
 
     computed.fields["sensor_conversion_matrix"] = sensor_transform
-    computed.fields["illuminant_correction_matrix"] = _identity_transform()
+    computed.fields["illuminant_correction_matrix"] = illuminant_transform
     computed.fields["ics2display"] = display_transform
     computed.data["transforms"] = [
         np.asarray(sensor_transform, dtype=float),
@@ -286,7 +391,7 @@ def ip_compute(
     ]
     computed.data["sensorspace"] = sensor_space
     computed.data["xyz"] = internal_image
-    computed.data["ics"] = internal_image
+    computed.data["ics"] = corrected_internal
     computed.data["display_rgb"] = display_rgb
     computed.data["srgb"] = srgb
     computed.data["result"] = display_linear

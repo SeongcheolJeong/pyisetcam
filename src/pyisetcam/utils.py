@@ -1081,9 +1081,9 @@ def xyz_to_linear_srgb(xyz: NDArray[np.float64]) -> NDArray[np.float64]:
 
     transform = np.array(
         [
-            [3.2404542, -1.5371385, -0.4985314],
-            [-0.9692660, 1.8760108, 0.0415560],
-            [0.0556434, -0.2040259, 1.0572252],
+            [3.2410, -1.5374, -0.4986],
+            [-0.9692, 1.8760, 0.0416],
+            [0.0556, -0.2040, 1.0570],
         ],
         dtype=float,
     )
@@ -1105,6 +1105,19 @@ def linear_to_srgb(linear_rgb: NDArray[np.float64]) -> NDArray[np.float64]:
     return np.clip(srgb, 0.0, 1.0)
 
 
+def srgb_to_linear(srgb: NDArray[np.float64]) -> NDArray[np.float64]:
+    """Apply the inverse sRGB transfer curve."""
+
+    srgb = np.clip(np.asarray(srgb, dtype=float), 0.0, 1.0)
+    threshold = 0.04045
+    linear = np.where(
+        srgb <= threshold,
+        srgb / 12.92,
+        np.power((srgb + 0.055) / 1.055, 2.4),
+    )
+    return np.clip(linear, 0.0, 1.0)
+
+
 def xyz_to_srgb(xyz: NDArray[np.float64]) -> NDArray[np.float64]:
     """Convert CIE XYZ to sRGB using MATLAB xyz2srgb() scaling rules."""
 
@@ -1124,6 +1137,32 @@ def xyz_to_srgb(xyz: NDArray[np.float64]) -> NDArray[np.float64]:
 
 
 xyz2srgb = xyz_to_srgb
+
+
+def srgb_to_xyz(srgb: NDArray[np.float64]) -> NDArray[np.float64]:
+    """Convert sRGB to CIE XYZ."""
+
+    srgb_array = np.asarray(srgb, dtype=float)
+    if srgb_array.ndim != 3 or srgb_array.shape[2] != 3:
+        raise ValueError("srgb2xyz expects an RGB-format sRGB image.")
+
+    linear_rgb = srgb_to_linear(srgb_array)
+    transform = np.linalg.inv(
+        np.array(
+            [
+                [3.2410, -1.5374, -0.4986],
+                [-0.9692, 1.8760, 0.0416],
+                [0.0556, -0.2040, 1.0570],
+            ],
+            dtype=float,
+        )
+    )
+    reshaped = linear_rgb.reshape(-1, 3)
+    xyz = reshaped @ transform.T
+    return xyz.reshape(srgb_array.shape)
+
+
+srgb2xyz = srgb_to_xyz
 
 
 def invert_gamma_table(linear_rgb: NDArray[np.float64], gamma_table: NDArray[np.float64]) -> NDArray[np.float64]:

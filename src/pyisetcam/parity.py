@@ -72,7 +72,7 @@ from .optics import (
     rt_synthetic,
 )
 from .plotting import ip_plot, oi_plot, sensor_plot, sensor_plot_line, wvf_plot
-from .scielab import sc_params, sc_prepare_filters, scielab, scielab_rgb
+from .scielab import color_transform_matrix, sc_compute_scielab, sc_opponent_filter, sc_params, sc_prepare_filters, scielab, scielab_rgb
 from .scene import (
     hdr_render,
     ie_reflectance_samples,
@@ -130,6 +130,7 @@ from .utils import (
     param_format,
     quanta_to_energy,
     rgb_to_xw_format,
+    srgb_to_xyz,
     xw_to_rgb_format,
     unit_frequency_list,
     xyz_to_srgb,
@@ -1352,6 +1353,92 @@ def run_python_case_with_context(
                 "scielab_over_delta_e": np.asarray(scielab_delta_e / np.maximum(delta_e, 1.0e-12), dtype=float),
             },
             context={"scene": mask_scene},
+        )
+
+    if case_name == "metrics_scielab_tutorial_small":
+        def _canonical_profile(values: Any, samples: int = 129) -> np.ndarray:
+            profile = np.asarray(values, dtype=float).reshape(-1)
+            support = np.linspace(-1.0, 1.0, profile.size, dtype=float)
+            query = np.linspace(-1.0, 1.0, samples, dtype=float)
+            return np.interp(query, support, profile).astype(float)
+
+        snapshot_root = store.ensure()
+        scene_path = snapshot_root / "data" / "images" / "multispectral" / "StuffedAnimals_tungsten-hdrs.mat"
+        scene = scene_from_file(scene_path, "multispectral", asset_store=store)
+        scene = scene_set(scene, "fov", 8.0)
+
+        oi = oi_compute(oi_create(asset_store=store), scene)
+        sensor = sensor_set_size_to_fov(sensor_create(asset_store=store), 1.1 * float(scene_get(scene, "fov")), oi)
+        sensor = sensor_compute(sensor, oi)
+
+        ip = ip_set(ip_create(asset_store=store), "correction method illuminant", "gray world")
+        ip = ip_compute(ip, sensor)
+
+        srgb = np.asarray(ip_get(ip, "result"), dtype=float)
+        img_xyz = srgb_to_xyz(srgb)
+        white_xyz = srgb_to_xyz(np.ones((1, 1, 3), dtype=float)).reshape(3)
+
+        params = sc_params()
+        params["sampPerDeg"] = 50.0
+        params["filterSize"] = 50.0
+        requested_filter_size = float(params["filterSize"])
+
+        img_opp = image_linear_transform(img_xyz, color_transform_matrix("xyz2opp", 10))
+        filters, support, params = sc_prepare_filters(params)
+        img_filtered_xyz, img_filtered_opp = sc_opponent_filter(img_xyz, params)
+        filtered_rgb = xyz_to_srgb(img_filtered_xyz)
+        result, white_pt = sc_compute_scielab(img_xyz, white_xyz, params)
+
+        filter_center_rows = np.vstack(
+            [
+                _canonical_profile(_channel_normalize(kernel[kernel.shape[0] // 2, :]), 65)
+                for kernel in [np.asarray(kernel, dtype=float) for kernel in filters]
+            ]
+        )
+        filter_peaks = np.array([float(np.max(np.asarray(kernel, dtype=float))) for kernel in filters], dtype=float)
+
+        filtered_rows = min(img_filtered_xyz.shape[0], img_xyz.shape[0])
+        filtered_cols = min(img_filtered_xyz.shape[1], img_xyz.shape[1])
+        filtered_xyz_delta = np.asarray(
+            img_filtered_xyz[:filtered_rows, :filtered_cols, :] - img_xyz[:filtered_rows, :filtered_cols, :],
+            dtype=float,
+        )
+
+        original_y = np.asarray(img_xyz[:, :, 1], dtype=float)
+        filtered_y = np.asarray(img_filtered_xyz[:, :, 1], dtype=float)
+        result_l = np.asarray(result[:, :, 0], dtype=float)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "scene_fov_deg": float(scene_get(scene, "fov")),
+                "sensor_size": np.asarray(sensor_get(sensor, "size"), dtype=int),
+                "ip_result_size": np.asarray(srgb.shape, dtype=int),
+                "white_xyz": white_xyz,
+                "samp_per_deg": float(params["sampPerDeg"]),
+                "filter_size": requested_filter_size,
+                "image_height_deg": float(srgb.shape[0]) / max(float(params["sampPerDeg"]), 1.0e-12),
+                "original_render_mean_rgb_norm": _channel_normalize(np.mean(srgb.reshape(-1, 3), axis=0, dtype=float)),
+                "original_render_center_row_luma_norm": _canonical_profile(_channel_normalize(original_y[original_y.shape[0] // 2, :])),
+                "img_opp_channel_means": np.mean(img_opp.reshape(-1, 3), axis=0, dtype=float),
+                "filter_support": np.asarray(support, dtype=float).reshape(-1),
+                "filter_peaks": filter_peaks,
+                "filter_center_rows_norm": filter_center_rows,
+                "filtered_xyz_size": np.asarray(img_filtered_xyz.shape, dtype=int),
+                "filtered_xyz_delta_stats": np.array(
+                    [float(np.mean(np.abs(filtered_xyz_delta), dtype=float)), float(np.max(np.abs(filtered_xyz_delta)))],
+                    dtype=float,
+                ),
+                "filtered_opp_channel_means": np.mean(img_filtered_opp.reshape(-1, 3), axis=0, dtype=float),
+                "filtered_render_mean_rgb_norm": _channel_normalize(np.mean(filtered_rgb.reshape(-1, 3), axis=0, dtype=float)),
+                "filtered_render_center_row_luma_norm": _canonical_profile(_channel_normalize(filtered_y[filtered_y.shape[0] // 2, :])),
+                "result_size": np.asarray(result.shape, dtype=int),
+                "result_white_point": np.asarray(white_pt, dtype=float).reshape(3),
+                "result_lab_channel_means": np.mean(result.reshape(-1, 3), axis=0, dtype=float),
+                "result_l_center_row_norm": _canonical_profile(_channel_normalize(result_l[result_l.shape[0] // 2, :])),
+            },
+            context={"scene": scene, "oi": oi, "sensor": sensor, "ip": ip},
         )
 
     if case_name == "metrics_edge2mtf_small":

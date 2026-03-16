@@ -1093,6 +1093,81 @@ switch case_name
         payload.scielab_delta_e = double(dES(:));
         payload.scielab_over_delta_e = double(dES(:) ./ max(dE(:), eps));
 
+    case 'metrics_scielab_tutorial_small'
+        fName = fullfile(isetRootPath, 'data', 'images', 'multispectral', 'StuffedAnimals_tungsten-hdrs.mat');
+        scene = sceneFromFile(fName, 'multispectral');
+        scene = sceneSet(scene, 'fov', 8);
+
+        oi = oiCreate;
+        oi = oiCompute(oi, scene);
+
+        sensor = sensorCreate;
+        sensor = sensorSetSizeToFOV(sensor, 1.1 * sceneGet(scene, 'fov'), oi);
+        sensor = sensorCompute(sensor, oi);
+
+        ip = ipCreate;
+        ip = ipSet(ip, 'correction method illuminant', 'gray world');
+        ip = ipCompute(ip, sensor);
+
+        srgb = double(ipGet(ip, 'result'));
+        imgXYZ = srgb2xyz(srgb);
+        whiteXYZ = squeeze(srgb2xyz(ones(1, 1, 3)));
+
+        scP = scParams;
+        scP.sampPerDeg = 50;
+        scP.filterSize = 50;
+
+        imgOpp = imageLinearTransform(imgXYZ, colorTransformMatrix('xyz2opp', 10));
+        [scP.filters, scP.support] = scPrepareFilters(scP);
+        [imgFilteredXYZ, imgFilteredOpp] = scOpponentFilter(imgXYZ, scP);
+        filteredRGB = xyz2srgb(imgFilteredXYZ);
+        [result, whitePt] = scComputeSCIELAB(imgXYZ, whiteXYZ, scP);
+        if iscell(whitePt)
+            whitePt = whitePt{1};
+        end
+
+        nFilters = numel(scP.filters);
+        filterCenterRows = zeros(nFilters, 65);
+        filterPeaks = zeros(nFilters, 1);
+        for ii = 1:nFilters
+            kernel = double(scP.filters{ii});
+            filterPeaks(ii) = max(kernel(:));
+            centerRow = kernel(floor(size(kernel, 1) / 2) + 1, :);
+            filterCenterRows(ii, :) = local_canonical_profile(local_channel_normalize(centerRow), 65);
+        end
+
+        rows = min(size(imgFilteredXYZ, 1), size(imgXYZ, 1));
+        cols = min(size(imgFilteredXYZ, 2), size(imgXYZ, 2));
+        filteredXYZDelta = double(imgFilteredXYZ(1:rows, 1:cols, :) - imgXYZ(1:rows, 1:cols, :));
+
+        originalY = double(imgXYZ(:, :, 2));
+        filteredY = double(imgFilteredXYZ(:, :, 2));
+        resultL = double(result(:, :, 1));
+
+        payload.scene_size = double(sceneGet(scene, 'size')(:));
+        payload.scene_fov_deg = double(sceneGet(scene, 'fov'));
+        payload.sensor_size = double(sensorGet(sensor, 'size')(:));
+        payload.ip_result_size = double(size(srgb));
+        payload.white_xyz = double(whiteXYZ(:));
+        payload.samp_per_deg = double(scP.sampPerDeg);
+        payload.filter_size = double(scP.filterSize);
+        payload.image_height_deg = double(size(srgb, 1)) / max(double(scP.sampPerDeg), eps);
+        payload.original_render_mean_rgb_norm = local_channel_normalize(mean(reshape(srgb, [], 3), 1));
+        payload.original_render_center_row_luma_norm = local_canonical_profile(local_channel_normalize(originalY(floor(size(originalY, 1) / 2) + 1, :)), 129);
+        payload.img_opp_channel_means = squeeze(mean(mean(double(imgOpp), 1), 2));
+        payload.filter_support = double(scP.support(:));
+        payload.filter_peaks = double(filterPeaks(:));
+        payload.filter_center_rows_norm = double(filterCenterRows);
+        payload.filtered_xyz_size = double(size(imgFilteredXYZ));
+        payload.filtered_xyz_delta_stats = double([mean(abs(filteredXYZDelta(:))); max(abs(filteredXYZDelta(:)))]);
+        payload.filtered_opp_channel_means = squeeze(mean(mean(double(imgFilteredOpp), 1), 2));
+        payload.filtered_render_mean_rgb_norm = local_channel_normalize(mean(reshape(double(filteredRGB), [], 3), 1));
+        payload.filtered_render_center_row_luma_norm = local_canonical_profile(local_channel_normalize(filteredY(floor(size(filteredY, 1) / 2) + 1, :)), 129);
+        payload.result_size = double(size(result));
+        payload.result_white_point = double(whitePt(:));
+        payload.result_lab_channel_means = squeeze(mean(mean(double(result), 1), 2));
+        payload.result_l_center_row_norm = local_canonical_profile(local_channel_normalize(resultL(floor(size(resultL, 1) / 2) + 1, :)), 129);
+
     case 'metrics_edge2mtf_small'
         scene = sceneCreate('slanted bar', 512, 7/3);
         scene = sceneAdjustLuminance(scene, 100);

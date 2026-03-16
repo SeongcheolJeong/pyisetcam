@@ -96,6 +96,9 @@ from pyisetcam import (
     rt_sample_heights,
     rt_synthetic,
     rgb_to_xw_format,
+    colorTransformMatrix,
+    scComputeSCIELAB,
+    scOpponentFilter,
     sc_params,
     sc_prepare_filters,
     scielab,
@@ -116,6 +119,7 @@ from pyisetcam import (
     scene_show_image,
     scene_set,
     signal_current,
+    srgb2xyz,
     imx490_compute,
     ml_radiance,
     mlens_create,
@@ -7076,6 +7080,77 @@ def test_run_python_case_supports_metrics_scielab_masking_small_parity_case(asse
     assert case.payload["scielab_over_delta_e"].shape == (4,)
     assert np.all(np.asarray(case.payload["delta_e"], dtype=float) > 0.0)
     assert np.all(np.asarray(case.payload["scielab_delta_e"], dtype=float) > np.asarray(case.payload["delta_e"], dtype=float))
+
+
+def test_metrics_scielab_tutorial_script_workflow(asset_store) -> None:
+    root = asset_store.ensure()
+    scene_path = root / "data" / "images" / "multispectral" / "StuffedAnimals_tungsten-hdrs.mat"
+
+    scene = scene_from_file(scene_path, "multispectral", asset_store=asset_store)
+    scene = scene_set(scene, "fov", 8.0)
+
+    oi = oi_compute(oi_create(asset_store=asset_store), scene)
+    sensor = sensor_set_size_to_fov(sensor_create(asset_store=asset_store), 1.1 * float(scene_get(scene, "fov")), oi)
+    sensor = sensor_compute(sensor, oi)
+
+    ip = ip_set(ip_create(asset_store=asset_store), "correction method illuminant", "gray world")
+    ip = ip_compute(ip, sensor)
+
+    srgb = np.asarray(ip_get(ip, "result"), dtype=float)
+    img_xyz = srgb2xyz(srgb)
+    white_xyz = srgb2xyz(np.ones((1, 1, 3), dtype=float)).reshape(3)
+
+    params = sc_params()
+    params["sampPerDeg"] = 50.0
+    params["filterSize"] = 50.0
+
+    img_opp = image_linear_transform(img_xyz, colorTransformMatrix("xyz2opp", 10))
+    filters, support, params = sc_prepare_filters(params)
+    img_filtered_xyz, img_filtered_opp = scOpponentFilter(img_xyz, params)
+    result, white_pt = scComputeSCIELAB(img_xyz, white_xyz, params)
+
+    assert tuple(scene_get(scene, "size")) == (506, 759)
+    assert tuple(sensor_get(sensor, "size")) == (174, 212)
+    assert tuple(srgb.shape) == (174, 212, 3)
+    assert white_xyz.shape == (3,)
+    assert np.all(white_xyz > 0.0)
+    assert np.isclose(float(params["sampPerDeg"]), 50.0)
+    assert np.isclose(float(params["filterSize"]), 49.0)
+    assert img_opp.shape == img_xyz.shape
+    assert tuple(np.asarray(support).shape) == (49,)
+    assert len(filters) == 3
+    assert tuple(np.asarray(img_filtered_xyz).shape) == (173, 211, 3)
+    assert tuple(np.asarray(img_filtered_opp).shape) == (173, 211, 3)
+    assert tuple(np.asarray(result).shape) == (173, 211, 3)
+    assert np.all(np.asarray(white_pt, dtype=float) > 0.0)
+
+
+def test_run_python_case_supports_metrics_scielab_tutorial_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_scielab_tutorial_small", asset_store=asset_store)
+
+    assert tuple(case.payload["scene_size"]) == (506, 759)
+    assert np.isclose(float(case.payload["scene_fov_deg"]), 8.0)
+    assert tuple(case.payload["sensor_size"]) == (174, 212)
+    assert tuple(case.payload["ip_result_size"]) == (174, 212, 3)
+    assert case.payload["white_xyz"].shape == (3,)
+    assert np.isclose(float(case.payload["samp_per_deg"]), 50.0)
+    assert np.isclose(float(case.payload["filter_size"]), 50.0)
+    assert np.isclose(float(case.payload["image_height_deg"]), 3.48)
+    assert case.payload["original_render_mean_rgb_norm"].shape == (3,)
+    assert case.payload["original_render_center_row_luma_norm"].shape == (129,)
+    assert case.payload["img_opp_channel_means"].shape == (3,)
+    assert case.payload["filter_support"].shape == (49,)
+    assert case.payload["filter_peaks"].shape == (3,)
+    assert case.payload["filter_center_rows_norm"].shape == (3, 65)
+    assert tuple(case.payload["filtered_xyz_size"]) == (173, 211, 3)
+    assert case.payload["filtered_xyz_delta_stats"].shape == (2,)
+    assert case.payload["filtered_opp_channel_means"].shape == (3,)
+    assert case.payload["filtered_render_mean_rgb_norm"].shape == (3,)
+    assert case.payload["filtered_render_center_row_luma_norm"].shape == (129,)
+    assert tuple(case.payload["result_size"]) == (173, 211, 3)
+    assert case.payload["result_white_point"].shape == (3,)
+    assert case.payload["result_lab_channel_means"].shape == (3,)
+    assert case.payload["result_l_center_row_norm"].shape == (129,)
 
 
 def test_metrics_edge2mtf_script_workflow(asset_store) -> None:

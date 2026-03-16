@@ -146,6 +146,10 @@ def _color_transform_matrix(matrix_type: str, space_type: int = 10) -> NDArray[n
     raise UnsupportedOptionError("colorTransformMatrix", matrix_type)
 
 
+def color_transform_matrix(matrix_type: str, space_type: int = 10) -> NDArray[np.float64]:
+    return _color_transform_matrix(matrix_type, space_type)
+
+
 def _normalize_params(params: Mapping[str, Any] | None) -> dict[str, Any]:
     normalized: dict[str, Any] = {}
     if params is not None:
