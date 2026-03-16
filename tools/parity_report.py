@@ -178,6 +178,18 @@ def _compare(
             overall = overall and bool(field_report["pass"])
         return {"pass": overall, "fields": fields}
 
+    if _is_string_like_array(normalized_reference) or _is_string_like_array(normalized_actual):
+        reference_array = np.asarray(normalized_reference)
+        actual_array = np.asarray(normalized_actual)
+        expected_values = _string_array_payload(reference_array)
+        actual_values = _string_array_payload(actual_array)
+        return {
+            "pass": bool(reference_array.shape == actual_array.shape and expected_values == actual_values),
+            "shape": list(reference_array.shape),
+            "expected_values": expected_values,
+            "actual_values": actual_values,
+        }
+
     if isinstance(normalized_reference, (str, bytes)) or isinstance(normalized_actual, (str, bytes)):
         passed = normalized_actual == normalized_reference
         return {
@@ -279,18 +291,6 @@ def _compare(
             return result
         passed = bool(np.isclose(actual_scalar, reference_scalar, rtol=rtol, atol=atol))
         return {"pass": passed, **base}
-
-    if _is_string_like_array(normalized_reference) or _is_string_like_array(normalized_actual):
-        reference_array = np.asarray(normalized_reference)
-        actual_array = np.asarray(normalized_actual)
-        expected_values = _string_array_payload(reference_array)
-        actual_values = _string_array_payload(actual_array)
-        return {
-            "pass": bool(reference_array.shape == actual_array.shape and expected_values == actual_values),
-            "shape": list(reference_array.shape),
-            "expected_values": expected_values,
-            "actual_values": actual_values,
-        }
 
     metrics = _array_metrics(normalized_reference, normalized_actual)
     if rule and rule.get("mode") == "mean_rel":

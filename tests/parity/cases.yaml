@@ -262,6 +262,22 @@
       }
     },
     {
+      "name": "metrics_mtf_slanted_bar_infrared_small",
+      "matlab_function": "s_metricsMTFSlantedBarInfrared.m",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "filter_spectra_stats": {"mode": "mean_rel", "max_mean_rel": 0.001},
+        "fixed_esf_norm": {"mode": "normalized_mae", "max_normalized_mae": 0.01},
+        "fixed_lsf_norm": {"mode": "normalized_mae", "max_normalized_mae": 0.24},
+        "fixed_mtf50": {"mode": "mean_rel", "max_mean_rel": 0.03},
+        "fixed_mtf_norm": {"mode": "normalized_mae", "max_normalized_mae": 0.07},
+        "blocked_lsf_norm": {"mode": "normalized_mae", "max_normalized_mae": 0.3},
+        "blocked_mtf50": {"mode": "mean_rel", "max_mean_rel": 0.01},
+        "blocked_mtf_norm": {"mode": "normalized_mae", "max_normalized_mae": 0.02}
+      }
+    },
+    {
       "name": "scene_illuminant_change",
       "matlab_function": "sceneAdjustIlluminant",
       "rtol": 1e-05,

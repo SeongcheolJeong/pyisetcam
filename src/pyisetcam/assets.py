@@ -422,11 +422,15 @@ def _resolve_color_filter_path(
 
     snapshot_root = asset_store.ensure()
     color_filter_root = snapshot_root / "data" / "sensor" / "colorfilters"
+    ir_filter_root = snapshot_root / "data" / "sensor" / "irfilters"
     for candidate in list(candidates):
         if candidate.is_absolute():
             continue
         add(Path("data/sensor/colorfilters") / candidate)
         for match in color_filter_root.rglob(candidate.name):
+            add(match)
+        add(Path("data/sensor/irfilters") / candidate)
+        for match in ir_filter_root.rglob(candidate.name):
             add(match)
 
     for candidate in candidates:

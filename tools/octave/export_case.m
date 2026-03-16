@@ -930,6 +930,75 @@ switch case_name
         payload.luxsec_saturation = double(luxsecSaturation);
         payload.mean_volts = double(meanVolts);
 
+    case 'metrics_mtf_slanted_bar_infrared_small'
+        wave = (400:4:1068)';
+        scene = sceneCreate('slantedBar', 512, 7/3, 5, wave);
+        scene = sceneAdjustLuminance(scene, 100);
+        scene = sceneSet(scene, 'distance', 1);
+        scene = sceneSet(scene, 'fov', 5);
+
+        oi = oiCreate('diffraction limited');
+        oi = oiSet(oi, 'optics fnumber', 4);
+        oi = oiCompute(oi, scene);
+
+        sensor = sensorCreate;
+        [filterSpectra, filterNames] = ieReadColorFilter(wave, 'NikonD200IR.mat');
+        sensor = sensorSet(sensor, 'wave', wave);
+        sensor = sensorSet(sensor, 'filterSpectra', filterSpectra);
+        sensor = sensorSet(sensor, 'filterNames', filterNames);
+        sensor = sensorSet(sensor, 'ir filter', ones(size(wave)));
+        pixel = sensorGet(sensor, 'pixel');
+        pixel = pixelSet(pixel, 'pd spectral qe', ones(size(wave)));
+        sensor = sensorSet(sensor, 'pixel', pixel);
+        sensor = sensorSetSizeToFOV(sensor, sceneGet(scene, 'fov'), oi);
+        sensor = sensorCompute(sensor, oi);
+
+        ip = ipCreate;
+        ip = ipSet(ip, 'scale display', 1);
+        ip = ipSet(ip, 'render Gamma', 0.6);
+        ip = ipSet(ip, 'conversion method sensor ', 'MCC Optimized');
+        ip = ipSet(ip, 'correction method illuminant ', 'Gray World');
+        ip = ipSet(ip, 'internal CS', 'XYZ');
+        ip = ipCompute(ip, sensor);
+
+        fixedRect = [39 25 51 65];
+        roiLocs = ieRect2Locs(fixedRect);
+        fixedBar = vcGetROIData(ip, roiLocs, 'results');
+        c = fixedRect(3) + 1;
+        r = fixedRect(4) + 1;
+        fixedBar = reshape(fixedBar, r, c, 3);
+        [fixedMTF, ~, fixedEsf] = ISO12233(fixedBar, sensorGet(sensor, 'pixel width', 'mm'), [], 'none');
+
+        [irFilter, irFilterNames] = ieReadColorFilter(wave, 'IRBlocking');
+        sensorBlocked = sensorSet(sensor, 'ir filter', irFilter);
+        sensorBlocked = sensorCompute(sensorBlocked, oi);
+        ipBlocked = ipCompute(ip, sensorBlocked);
+        blockedMTF = ieISO12233(ipBlocked, sensorBlocked, 'none');
+
+        fixedMTFNorm = double(fixedMTF.mtf(:, end)) / max(double(fixedMTF.mtf(1, end)), 1e-12);
+        blockedMTFNorm = double(blockedMTF.mtf(:, end)) / max(double(blockedMTF.mtf(1, end)), 1e-12);
+
+        payload.wave = double(wave);
+        payload.scene_size = double(sceneGet(scene, 'size')(:));
+        payload.oi_size = double(oiGet(oi, 'size')(:));
+        payload.sensor_size = double(sensorGet(sensor, 'size')(:));
+        payload.filter_names = filterNames(:);
+        payload.ir_filter_names = irFilterNames(:);
+        payload.filter_spectra_stats = local_stats_vector(double(filterSpectra(:)));
+        payload.fixed_rect = double(fixedRect(:));
+        payload.fixed_bar_size = double(size(fixedBar));
+        payload.fixed_mtf50 = double(fixedMTF.mtf50);
+        payload.fixed_nyquistf = double(fixedMTF.nyquistf);
+        payload.fixed_esf_norm = local_canonical_profile(local_channel_normalize(double(fixedEsf(:, end))), 129);
+        payload.fixed_lsf_norm = local_canonical_profile(local_channel_normalize(double(fixedMTF.lsf(:))), 129);
+        payload.fixed_mtf_norm = local_canonical_profile(fixedMTFNorm, 129);
+        payload.blocked_rect = double(blockedMTF.rect(:));
+        payload.blocked_mtf50 = double(blockedMTF.mtf50);
+        payload.blocked_nyquistf = double(blockedMTF.nyquistf);
+        payload.blocked_lsf_um = local_canonical_profile(double(blockedMTF.lsfx(:)) * 1000, 129);
+        payload.blocked_lsf_norm = local_canonical_profile(local_channel_normalize(double(blockedMTF.lsf(:))), 129);
+        payload.blocked_mtf_norm = local_canonical_profile(blockedMTFNorm, 129);
+
     case 'scene_illuminant_change'
         scene = sceneCreate();
         bb = blackbody(sceneGet(scene, 'wave'), 3000, 'energy');

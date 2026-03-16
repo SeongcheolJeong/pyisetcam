@@ -1148,6 +1148,91 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "metrics_mtf_slanted_bar_infrared_small":
+        def _canonical_profile(values: Any, samples: int = 129) -> np.ndarray:
+            profile = np.asarray(values, dtype=float).reshape(-1)
+            support = np.linspace(-1.0, 1.0, profile.size, dtype=float)
+            query = np.linspace(-1.0, 1.0, samples, dtype=float)
+            return np.interp(query, support, profile).astype(float)
+
+        wave = np.arange(400.0, 1068.0 + 0.1, 4.0, dtype=float)
+        scene = scene_create("slanted bar", 512, 7.0 / 3.0, 5.0, wave, asset_store=store)
+        scene = scene_adjust_luminance(scene, 100.0, asset_store=store)
+        scene = scene_set(scene, "distance", 1.0)
+        scene = scene_set(scene, "fov", 5.0)
+
+        oi = oi_create("diffraction limited", asset_store=store)
+        oi = oi_set(oi, "optics fnumber", 4.0)
+        oi = oi_compute(oi, scene)
+
+        sensor = sensor_create(asset_store=store)
+        filter_spectra, filter_names, _ = ie_read_color_filter(wave, "NikonD200IR.mat", asset_store=store)
+        sensor = sensor_set(sensor, "wave", wave)
+        sensor = sensor_set(sensor, "filterSpectra", filter_spectra)
+        sensor = sensor_set(sensor, "filterNames", filter_names)
+        sensor = sensor_set(sensor, "ir filter", np.ones_like(wave))
+        sensor = sensor_set(sensor, "pixel spectral qe", np.ones_like(wave))
+        sensor = sensor_set_size_to_fov(sensor, float(scene_get(scene, "fov")), oi)
+        sensor = sensor_compute(sensor, oi)
+
+        ip = ip_create(asset_store=store)
+        ip = ip_set(ip, "scale display", 1)
+        ip = ip_set(ip, "render Gamma", 0.6)
+        ip = ip_set(ip, "conversion method sensor ", "MCC Optimized")
+        ip = ip_set(ip, "correction method illuminant ", "Gray World")
+        ip = ip_set(ip, "internal CS", "XYZ")
+        ip = ip_compute(ip, sensor)
+
+        fixed_rect = np.array([39, 25, 51, 65], dtype=int)
+        col_min, row_min, width, height = fixed_rect
+        fixed_bar = np.asarray(ip_get(ip, "result"), dtype=float)[row_min - 1 : row_min + height, col_min - 1 : col_min + width, :]
+        fixed_mtf = iso12233(fixed_bar, float(sensor_get(sensor, "pixel width", "mm")), plot_options="none")
+
+        ir_filter, ir_filter_names, _ = ie_read_color_filter(wave, "IRBlocking", asset_store=store)
+        blocked_sensor = sensor_set(sensor, "ir filter", np.asarray(ir_filter, dtype=float).reshape(-1))
+        blocked_sensor = sensor_compute(blocked_sensor, oi)
+        blocked_ip = ip_compute(ip, blocked_sensor)
+        blocked_mtf = ie_iso12233(blocked_ip, blocked_sensor, "none")
+
+        fixed_mtf_norm = np.asarray(fixed_mtf.mtf, dtype=float)[:, -1]
+        fixed_mtf_norm = fixed_mtf_norm / max(float(fixed_mtf_norm[0]), 1.0e-12)
+        blocked_mtf_norm = np.asarray(blocked_mtf.mtf, dtype=float)[:, -1]
+        blocked_mtf_norm = blocked_mtf_norm / max(float(blocked_mtf_norm[0]), 1.0e-12)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "oi_size": np.asarray(oi_get(oi, "size"), dtype=int),
+                "sensor_size": np.asarray(sensor_get(sensor, "size"), dtype=int),
+                "filter_names": np.asarray(filter_names, dtype=object),
+                "ir_filter_names": np.asarray(ir_filter_names, dtype=object),
+                "filter_spectra_stats": _stats_vector(np.asarray(filter_spectra, dtype=float)),
+                "fixed_rect": fixed_rect,
+                "fixed_bar_size": np.asarray(fixed_bar.shape, dtype=int),
+                "fixed_mtf50": float(fixed_mtf.mtf50),
+                "fixed_nyquistf": float(fixed_mtf.nyquistf),
+                "fixed_esf_norm": _canonical_profile(_channel_normalize(np.asarray(fixed_mtf.esf, dtype=float)[:, -1])),
+                "fixed_lsf_norm": _canonical_profile(_channel_normalize(np.asarray(fixed_mtf.lsf, dtype=float))),
+                "fixed_mtf_norm": _canonical_profile(fixed_mtf_norm),
+                "blocked_rect": np.asarray(blocked_mtf.rect, dtype=int),
+                "blocked_mtf50": float(blocked_mtf.mtf50),
+                "blocked_nyquistf": float(blocked_mtf.nyquistf),
+                "blocked_lsf_um": _canonical_profile(np.asarray(blocked_mtf.lsfx, dtype=float) * 1000.0),
+                "blocked_lsf_norm": _canonical_profile(_channel_normalize(np.asarray(blocked_mtf.lsf, dtype=float))),
+                "blocked_mtf_norm": _canonical_profile(blocked_mtf_norm),
+            },
+            context={
+                "scene": scene,
+                "oi": oi,
+                "sensor": sensor,
+                "ip": ip,
+                "blocked_sensor": blocked_sensor,
+                "blocked_ip": blocked_ip,
+            },
+        )
+
     if case_name == "scene_illuminant_change":
         scene = scene_create(asset_store=store)
         wave = scene_get(scene, "wave")

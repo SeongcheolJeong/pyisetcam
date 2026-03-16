@@ -6888,6 +6888,79 @@ def test_run_python_case_supports_metrics_snr_pixel_size_luxsec_small_parity_cas
     assert np.all(np.asarray(case.payload["luxsec_saturation"], dtype=float) > 0.0)
 
 
+def test_metrics_mtf_slanted_bar_infrared_script(asset_store) -> None:
+    wave = np.arange(400.0, 1068.0 + 0.1, 4.0, dtype=float)
+    scene = scene_create("slanted bar", 512, 7.0 / 3.0, 5.0, wave, asset_store=asset_store)
+    scene = scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
+    scene = scene_set(scene, "distance", 1.0)
+    scene = scene_set(scene, "fov", 5.0)
+
+    oi = oi_create("diffraction limited", asset_store=asset_store)
+    oi = oi_set(oi, "optics fnumber", 4.0)
+    oi = oi_compute(oi, scene)
+
+    sensor = sensor_create(asset_store=asset_store)
+    filter_spectra, filter_names, _ = ie_read_color_filter(wave, "NikonD200IR.mat", asset_store=asset_store)
+    sensor = sensor_set(sensor, "wave", wave)
+    sensor = sensor_set(sensor, "filterSpectra", filter_spectra)
+    sensor = sensor_set(sensor, "filterNames", filter_names)
+    sensor = sensor_set(sensor, "ir filter", np.ones_like(wave))
+    sensor = sensor_set(sensor, "pixel spectral qe", np.ones_like(wave))
+    sensor = sensor_set_size_to_fov(sensor, float(scene_get(scene, "fov")), oi)
+    sensor = sensor_compute(sensor, oi)
+
+    ip = ip_create(asset_store=asset_store)
+    ip = ip_set(ip, "scale display", 1)
+    ip = ip_set(ip, "render Gamma", 0.6)
+    ip = ip_set(ip, "conversion method sensor ", "MCC Optimized")
+    ip = ip_set(ip, "correction method illuminant ", "Gray World")
+    ip = ip_set(ip, "internal CS", "XYZ")
+    ip = ip_compute(ip, sensor)
+
+    fixed_rect = np.array([39, 25, 51, 65], dtype=int)
+    col_min, row_min, width, height = fixed_rect
+    fixed_bar = np.asarray(ip_get(ip, "result"), dtype=float)[row_min - 1 : row_min + height, col_min - 1 : col_min + width, :]
+    fixed_mtf = iso12233(fixed_bar, float(sensor_get(sensor, "pixel width", "mm")), plot_options="none")
+
+    ir_filter, ir_filter_names, _ = ie_read_color_filter(wave, "IRBlocking", asset_store=asset_store)
+    blocked_sensor = sensor_set(sensor, "ir filter", np.asarray(ir_filter, dtype=float).reshape(-1))
+    blocked_sensor = sensor_compute(blocked_sensor, oi)
+    blocked_ip = ip_compute(ip, blocked_sensor)
+    blocked_mtf = ie_iso12233(blocked_ip, blocked_sensor, "none")
+
+    assert tuple(scene_get(scene, "size")) == (513, 513)
+    assert tuple(oi_get(oi, "size")) == (641, 641)
+    assert list(filter_names) == ["r_custom_", "g_custom_", "b_custom_"]
+    assert list(ir_filter_names) == ["ir"]
+    assert tuple(sensor_get(sensor, "size")) == (100, 120)
+    assert int(sensor_get(sensor, "nfilters")) == 3
+    assert fixed_bar.shape == (66, 52, 3)
+    assert fixed_mtf.mtf50 > blocked_mtf.mtf50
+    assert abs(float(blocked_mtf.mtf50) - 77.0) <= 3.0
+    assert np.array_equal(np.asarray(blocked_mtf.rect, dtype=int), np.array([42, 23, 36, 54], dtype=int))
+
+
+def test_run_python_case_supports_metrics_mtf_slanted_bar_infrared_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_mtf_slanted_bar_infrared_small", asset_store=asset_store)
+
+    assert case.payload["wave"].shape == (168,)
+    assert tuple(case.payload["scene_size"]) == (513, 513)
+    assert tuple(case.payload["oi_size"]) == (641, 641)
+    assert tuple(case.payload["sensor_size"]) == (100, 120)
+    assert list(case.payload["filter_names"]) == ["r_custom_", "g_custom_", "b_custom_"]
+    assert list(case.payload["ir_filter_names"]) == ["ir"]
+    assert np.array_equal(case.payload["fixed_rect"], np.array([39, 25, 51, 65], dtype=int))
+    assert np.array_equal(case.payload["fixed_bar_size"], np.array([66, 52, 3], dtype=int))
+    assert case.payload["fixed_esf_norm"].shape == (129,)
+    assert case.payload["fixed_lsf_norm"].shape == (129,)
+    assert case.payload["fixed_mtf_norm"].shape == (129,)
+    assert case.payload["blocked_rect"].shape == (4,)
+    assert case.payload["blocked_lsf_um"].shape == (129,)
+    assert case.payload["blocked_lsf_norm"].shape == (129,)
+    assert case.payload["blocked_mtf_norm"].shape == (129,)
+    assert case.payload["fixed_mtf50"] > case.payload["blocked_mtf50"]
+
+
 def test_run_python_case_supports_sensor_imx363_crop_parity_case(asset_store) -> None:
     case = run_python_case_with_context("sensor_imx363_crop_small", asset_store=asset_store)
 
