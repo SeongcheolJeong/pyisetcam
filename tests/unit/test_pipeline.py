@@ -42,6 +42,7 @@ from pyisetcam import (
     ie_save_multispectral_image,
     ie_save_si_data_file,
     ie_cxcorr,
+    ie_n_to_megapixel,
     ie_iso12233,
     ie_field_height_to_index,
     ip_get,
@@ -138,6 +139,7 @@ from pyisetcam import (
     sensor_create_array,
     sensor_dr,
     sensor_dng_read,
+    sensor_formats,
     sensor_get,
     sensor_plot,
     sensor_set_size_to_fov,
@@ -8641,6 +8643,47 @@ def test_run_python_case_supports_sensor_dsnu_estimate_small_parity_case(asset_s
     assert float(case.payload["mean_offset_mean"]) > 0.0
     assert float(case.payload["mean_offset_std"]) > 0.0
     assert case.payload["mean_offset_percentiles"].shape == (3,)
+
+
+def test_sensor_size_resolution_script_workflow() -> None:
+    pixel_size_um = np.arange(0.8, 3.0 + 1.0e-9, 0.2, dtype=float)
+    pixel_size_m = pixel_size_um * 1.0e-6
+    half_inch_size_m = np.asarray(sensor_formats("half inch"), dtype=float)
+    quarter_inch_size_m = np.asarray(sensor_formats("quarter inch"), dtype=float)
+
+    half_rows = half_inch_size_m[0] / pixel_size_m
+    half_cols = half_inch_size_m[1] / pixel_size_m
+    quarter_rows = quarter_inch_size_m[0] / pixel_size_m
+    quarter_cols = quarter_inch_size_m[1] / pixel_size_m
+    half_megapixels = np.asarray(ie_n_to_megapixel(half_rows * half_cols), dtype=float)
+    quarter_megapixels = np.asarray(ie_n_to_megapixel(quarter_rows * quarter_cols), dtype=float)
+
+    assert np.array_equal(np.asarray(sensor_formats("qcif"), dtype=float), np.array([144.0, 176.0], dtype=float))
+    assert half_inch_size_m.shape == (2,)
+    assert quarter_inch_size_m.shape == (2,)
+    assert half_megapixels.shape == pixel_size_um.shape
+    assert quarter_megapixels.shape == pixel_size_um.shape
+    assert np.all(np.diff(half_megapixels) < 0.0)
+    assert np.all(np.diff(quarter_megapixels) < 0.0)
+    assert np.allclose(half_inch_size_m / quarter_inch_size_m, np.array([2.0, 2.0], dtype=float), atol=1e-12)
+    assert np.allclose(half_rows / quarter_rows, np.full(pixel_size_um.shape, 2.0, dtype=float), atol=1e-12)
+    assert np.allclose(half_cols / quarter_cols, np.full(pixel_size_um.shape, 2.0, dtype=float), atol=1e-12)
+
+
+def test_run_python_case_supports_sensor_size_resolution_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_size_resolution_small", asset_store=asset_store)
+
+    assert case.payload["pixel_size_um"].shape == (12,)
+    assert np.array_equal(case.payload["half_inch_size_m"], np.array([0.0048, 0.0064], dtype=float))
+    assert np.array_equal(case.payload["quarter_inch_size_m"], np.array([0.0024, 0.0032], dtype=float))
+    assert case.payload["half_rows"].shape == (12,)
+    assert case.payload["half_cols"].shape == (12,)
+    assert case.payload["half_megapixels"].shape == (12,)
+    assert case.payload["quarter_rows"].shape == (12,)
+    assert case.payload["quarter_cols"].shape == (12,)
+    assert case.payload["quarter_megapixels"].shape == (12,)
+    assert np.all(np.diff(case.payload["half_megapixels"]) < 0.0)
+    assert np.all(np.diff(case.payload["quarter_megapixels"]) < 0.0)
 
 
 def test_run_python_case_supports_sensor_spatial_resolution_small_parity_case(asset_store) -> None:

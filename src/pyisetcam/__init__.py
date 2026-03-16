@@ -215,6 +215,7 @@ from .sensor import (
     sensor_create,
     sensor_create_ideal,
     sensor_create_split_pixel,
+    sensor_formats,
     sensor_get,
     sensor_set,
     sensor_set_size_to_fov,
@@ -227,6 +228,7 @@ from .utils import (
     hc_basis,
     ie_fit_line,
     ie_mvnrnd,
+    ie_n_to_megapixel,
     image_linear_transform,
     image_flip,
     image_increase_image_rgb_size,
@@ -311,6 +313,7 @@ __all__ = [
     "ieLuminanceFromEnergy",
     "ieLuminanceFromPhotons",
     "ieMvnrnd",
+    "ieN2MegaPixel",
     "ieReflectanceSamples",
     "ieFindObjectByName",
     "ieLocs2Rect",
@@ -350,6 +353,7 @@ __all__ = [
     "ie_fit_line",
     "ie_cxcorr",
     "ie_mvnrnd",
+    "ie_n_to_megapixel",
     "ie_reflectance_samples",
     "ie_read_spectra",
     "ie_read_color_filter",
@@ -606,6 +610,7 @@ __all__ = [
     "sensorDNGRead",
     "sensorCreateIdeal",
     "sensorCreateSplitPixel",
+    "sensorFormats",
     "sensorGet",
     "sensorCCM",
     "signalCurrent",
@@ -627,6 +632,7 @@ __all__ = [
     "sensor_dr",
     "sensor_description",
     "sensor_dng_read",
+    "sensor_formats",
     "sensor_get",
     "pixelSNR",
     "sensor_set",
@@ -806,6 +812,7 @@ sensorCreateArray = sensor_create_array
 sensorCreateSplitPixel = sensor_create_split_pixel
 sensorDNGRead = sensor_dng_read
 sensorCreateIdeal = sensor_create_ideal
+sensorFormats = sensor_formats
 mlensCreate = mlens_create
 mlensSet = mlens_set
 mlensGet = mlens_get
@@ -858,6 +865,7 @@ ieEquivalentObjtype = ie_equivalent_objtype
 ieFindObjectByName = ie_find_object_by_name
 ieFitLine = ie_fit_line
 ieMvnrnd = ie_mvnrnd
+ieN2MegaPixel = ie_n_to_megapixel
 ieReflectanceSamples = ie_reflectance_samples
 ieReadColorFilter = ie_read_color_filter
 ieReadSpectra = ie_read_spectra

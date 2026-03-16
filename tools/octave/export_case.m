@@ -5735,6 +5735,26 @@ switch case_name
         payload.mean_offset_std = std(meanOffset);
         payload.mean_offset_percentiles = prctile(meanOffset, [10 50 90])';
 
+    case 'sensor_size_resolution_small'
+        pSize = (0.8:0.2:3)' * 1e-6;
+        halfSize = sensorFormats('half inch');
+        quarterSize = sensorFormats('quarter inch');
+
+        halfRows = halfSize(1) ./ pSize;
+        halfCols = halfSize(2) ./ pSize;
+        quarterRows = quarterSize(1) ./ pSize;
+        quarterCols = quarterSize(2) ./ pSize;
+
+        payload.pixel_size_um = pSize * 1e6;
+        payload.half_inch_size_m = halfSize(:);
+        payload.quarter_inch_size_m = quarterSize(:);
+        payload.half_rows = halfRows;
+        payload.half_cols = halfCols;
+        payload.half_megapixels = ieN2MegaPixel(halfRows .* halfCols);
+        payload.quarter_rows = quarterRows;
+        payload.quarter_cols = quarterCols;
+        payload.quarter_megapixels = ieN2MegaPixel(quarterRows .* quarterCols);
+
     case 'sensor_spatial_resolution_small'
         scene = sceneCreate('sweepFrequency');
         scene = sceneSet(scene, 'fov', 1);

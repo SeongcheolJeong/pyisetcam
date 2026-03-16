@@ -190,7 +190,9 @@ estimation coverage for `s_sensorSpatialNoiseDSNU.m`, plus the
 `s_sensorCountingPhotons.m` workflow with MATLAB-style
 `sceneCreate('uniform equal photon', [rows cols])`,
 `sceneSet(..., 'mean luminance', ...)`, and
-`oiGet(..., 'optics aperture diameter', unit)` support, plus direct
+`oiGet(..., 'optics aperture diameter', unit)` support, plus headless
+`sensor_formats` / `sensorFormats` and `ie_n_to_megapixel` /
+`ieN2MegaPixel` coverage for `s_sensorSizeResolution.m`, plus direct
 curated parity for the `s_sensorSNR.m` sensor-noise component curves
 returned by `sensorSNR(...)`, plus direct curated parity for the
 `s_sensorExposureBracket.m` stacked multi-exposure sensor workflow, plus

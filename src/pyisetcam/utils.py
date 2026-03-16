@@ -741,6 +741,18 @@ def ie_mvnrnd(
     return np.asarray(standard_normal, dtype=float) @ upper + mu_array
 
 
+def ie_n_to_megapixel(n: Any, precision: int = 1) -> float | NDArray[np.float64]:
+    """Convert a sample count into megapixels using MATLAB ieN2MegaPixel() rounding."""
+
+    values = np.asarray(n, dtype=float)
+    scale = 10.0 ** int(precision)
+    scaled = values * 1.0e-6 * scale
+    rounded = np.where(scaled >= 0.0, np.floor(scaled + 0.5), np.ceil(scaled - 0.5)) / scale
+    if rounded.ndim == 0:
+        return float(rounded)
+    return np.asarray(rounded, dtype=float)
+
+
 def interp_spectra(
     source_wave_nm: NDArray[np.float64],
     values: NDArray[np.float64],

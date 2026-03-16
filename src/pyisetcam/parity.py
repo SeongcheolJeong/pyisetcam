@@ -110,6 +110,7 @@ from .sensor import (
     sensor_create_ideal,
     sensor_crop,
     sensor_dr,
+    sensor_formats,
     sensor_get,
     sensor_set,
 )
@@ -123,6 +124,7 @@ from .utils import (
     hc_basis,
     ie_fit_line,
     ie_mvnrnd,
+    ie_n_to_megapixel,
     image_linear_transform,
     image_flip,
     image_increase_image_rgb_size,
@@ -7790,6 +7792,33 @@ def run_python_case_with_context(
                 "mean_offset_percentiles": np.percentile(mean_offset, [10.0, 50.0, 90.0]),
             },
             context={"scene": dark_scene, "oi": dark_oi, "sensor": sensor},
+        )
+
+    if case_name == "sensor_size_resolution_small":
+        pixel_size_um = np.arange(0.8, 3.0 + 1.0e-9, 0.2, dtype=float)
+        pixel_size_m = pixel_size_um * 1.0e-6
+        half_inch_size_m = np.asarray(sensor_formats("half inch"), dtype=float).reshape(-1)
+        quarter_inch_size_m = np.asarray(sensor_formats("quarter inch"), dtype=float).reshape(-1)
+
+        half_rows = half_inch_size_m[0] / pixel_size_m
+        half_cols = half_inch_size_m[1] / pixel_size_m
+        quarter_rows = quarter_inch_size_m[0] / pixel_size_m
+        quarter_cols = quarter_inch_size_m[1] / pixel_size_m
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "pixel_size_um": pixel_size_um,
+                "half_inch_size_m": half_inch_size_m,
+                "quarter_inch_size_m": quarter_inch_size_m,
+                "half_rows": half_rows,
+                "half_cols": half_cols,
+                "half_megapixels": np.asarray(ie_n_to_megapixel(half_rows * half_cols), dtype=float),
+                "quarter_rows": quarter_rows,
+                "quarter_cols": quarter_cols,
+                "quarter_megapixels": np.asarray(ie_n_to_megapixel(quarter_rows * quarter_cols), dtype=float),
+            },
+            context={},
         )
 
     if case_name == "sensor_spatial_resolution_small":

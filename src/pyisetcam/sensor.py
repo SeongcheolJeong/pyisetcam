@@ -70,10 +70,58 @@ _TIME_UNIT_SCALE = {
     "nanosecond": 1e9,
     "nanoseconds": 1e9,
 }
+_SENSOR_FORMATS = {
+    "qqcif": np.array([72.0, 88.0], dtype=float),
+    "qcif": np.array([144.0, 176.0], dtype=float),
+    "qqvga": np.array([120.0, 160.0], dtype=float),
+    "qvga": np.array([240.0, 320.0], dtype=float),
+    "cif": np.array([288.0, 352.0], dtype=float),
+    "vga": np.array([480.0, 640.0], dtype=float),
+    "svga": np.array([600.0, 800.0], dtype=float),
+    "xvga": np.array([768.0, 1024.0], dtype=float),
+    "uvga": np.array([1024.0, 1280.0], dtype=float),
+    "uxvga": np.array([1200.0, 1600.0], dtype=float),
+    "halfinch": np.array([0.0048, 0.0064], dtype=float),
+    "quarterinch": np.array([0.0024, 0.0032], dtype=float),
+    "sixteenthinch": np.array([0.0012, 0.0016], dtype=float),
+}
+_SENSOR_FORMAT_ALIASES = {
+    "qqcif": "qqcif",
+    "qcif": "qcif",
+    "qqvga": "qqvga",
+    "qvga": "qvga",
+    "cif": "cif",
+    "vga": "vga",
+    "svga": "svga",
+    "xvga": "xvga",
+    "uvga": "uvga",
+    "uxvga": "uxvga",
+    "halfinch": "halfinch",
+    "half": "halfinch",
+    "quarterinch": "quarterinch",
+    "quarter": "quarterinch",
+    "sixteenthinch": "sixteenthinch",
+    "sixteenth": "sixteenthinch",
+}
 
 
 def _store(asset_store: AssetStore | None) -> AssetStore:
     return asset_store or AssetStore.default()
+
+
+def sensor_formats(format_name: str | None = None) -> dict[str, np.ndarray] | np.ndarray:
+    """Return MATLAB-style row/column sensor formats or physical sensor sizes."""
+
+    if format_name is None or str(format_name).strip() == "":
+        return {name: values.copy() for name, values in _SENSOR_FORMATS.items()}
+
+    canonical = _SENSOR_FORMAT_ALIASES.get(param_format(format_name))
+    if canonical is None:
+        return {name: values.copy() for name, values in _SENSOR_FORMATS.items()}
+    return _SENSOR_FORMATS[canonical].copy()
+
+
+sensorFormats = sensor_formats
 
 
 def sensor_color_filter(
