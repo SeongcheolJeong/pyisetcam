@@ -6961,6 +6961,69 @@ def test_run_python_case_supports_metrics_scielab_mtf_small_parity_case(asset_st
     assert np.all(np.asarray(case.payload["scielab_delta_e"], dtype=float) > 0.0)
 
 
+def test_metrics_scielab_patches_script_workflow(asset_store) -> None:
+    u_standard = scene_create("uniform", asset_store=asset_store)
+
+    white_xyz = np.asarray(scene_get(u_standard, "illuminant xyz", asset_store=asset_store), dtype=float)
+    illuminant_energy = np.asarray(scene_get(u_standard, "illuminant energy", asset_store=asset_store), dtype=float)
+    wave = np.asarray(scene_get(u_standard, "wave"), dtype=float)
+    n_wave = int(scene_get(u_standard, "nwave"))
+    lam = np.arange(1, n_wave + 1, dtype=float) / float(n_wave)
+
+    w1_grid, w2_grid = np.meshgrid(
+        np.arange(-0.3, 0.3 + 0.0001, 0.1, dtype=float),
+        np.arange(-0.3, 0.3 + 0.0001, 0.1, dtype=float),
+    )
+    weights = np.column_stack((w1_grid.reshape(-1, order="F"), w2_grid.reshape(-1, order="F")))
+    delta_e = np.ones(weights.shape[0], dtype=float)
+    scielab_delta_e = np.ones(weights.shape[0], dtype=float)
+
+    xyz1 = np.asarray(scene_get(u_standard, "xyz", asset_store=asset_store), dtype=float)
+    for idx, (w1, w2) in enumerate(weights):
+        e_adjust1 = float(w1) * np.sin(2.0 * np.pi * lam)
+        e_adjust2 = float(w2) * np.cos(2.0 * np.pi * lam)
+        new_illuminant = illuminant_energy * (float(w1) * e_adjust1 + float(w2) * e_adjust2 + 1.0)
+        u_test = scene_adjust_illuminant(u_standard, new_illuminant)
+
+        xyz2 = np.asarray(scene_get(u_test, "xyz", asset_store=asset_store), dtype=float)
+        delta_e[idx] = float(np.mean(delta_e_ab(xyz1, xyz2, white_xyz, "2000"), dtype=float))
+        error_image, _, _, _ = scielab(xyz1, xyz2, white_xyz, sc_params())
+        scielab_delta_e[idx] = float(np.mean(np.asarray(error_image, dtype=float), dtype=float))
+
+    quantized = 2.0 * np.round(scielab_delta_e / 2.0)
+
+    assert tuple(scene_get(u_standard, "size")) == (32, 32)
+    assert white_xyz.shape == (3,)
+    assert illuminant_energy.shape == wave.shape == (31,)
+    assert weights.shape == (49, 2)
+    assert delta_e.shape == (49,)
+    assert scielab_delta_e.shape == (49,)
+    assert np.array_equal(quantized.shape, (49,))
+    assert np.all(delta_e >= 0.0)
+    assert np.all(scielab_delta_e >= 0.0)
+
+
+def test_run_python_case_supports_metrics_scielab_patches_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_scielab_patches_small", asset_store=asset_store)
+
+    assert case.payload["weights"].shape == (49, 2)
+    assert tuple(case.payload["standard_scene_size"]) == (32, 32)
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["white_xyz"].shape == (3,)
+    assert case.payload["illuminant_energy_norm"].shape == (31,)
+    assert case.payload["delta_e"].shape == (49,)
+    assert case.payload["scielab_delta_e"].shape == (49,)
+    assert case.payload["delta_gap"].shape == (49,)
+    assert case.payload["delta_gap_stats"].shape == (2,)
+    assert case.payload["quantized_scielab_delta_e"].shape == (49,)
+    assert case.payload["quantized_scielab_delta_e_sorted"].shape == (49,)
+    assert case.payload["quantized_scielab_levels"].shape == (6,)
+    assert case.payload["quantized_scielab_counts"].shape == (6,)
+    assert np.all(np.asarray(case.payload["delta_e"], dtype=float) >= 0.0)
+    assert np.all(np.asarray(case.payload["scielab_delta_e"], dtype=float) >= 0.0)
+    assert np.isclose(float(np.sum(np.asarray(case.payload["quantized_scielab_counts"], dtype=float))), 49.0)
+
+
 def test_metrics_edge2mtf_script_workflow(asset_store) -> None:
     scene = scene_create("slanted bar", 512, 7.0 / 3.0, asset_store=asset_store)
     scene = scene_adjust_luminance(scene, 100.0, asset_store=asset_store)

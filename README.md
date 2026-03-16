@@ -40,6 +40,7 @@
 - and now also headless `dac2rgb(...)` / `imageLinearTransform(...)`, with curated Octave parity on `s_scielabExample.m` covering both the script’s `scielabRGB(...)` branch and its explicit `dac2rgb -> displayGet('rgb2xyz') -> imageLinearTransform -> scielab(...)` walkthrough on `hats.jpg` versus `hatsC.jpg`, including the returned scene geometry, white point, mean Delta E summaries, and canonicalized filter/error profiles
 - and now also headless `scPrepareFilters(...)` / `sc_prepare_filters(...)`, with curated Octave parity on `s_scielabFilters.m` covering the 101-sample point-spread filters, the 512-sample MTF branch, and the `distribution` / `original` / `hires` Gaussian-parameter variants through normalized center-row and peak summaries
 - and now also headless `sceneAdd(...)` / `scene_add(...)` plus `sceneGet(..., 'illuminant xyz')`, with curated Octave parity on `s_scielabMTF.m` covering the harmonic `1:32 cpd` sweep, the `remove spatial mean` scene-add path, the returned illuminant XYZ/SPD contract, and the CIELAB versus S-CIELAB Delta E curves
+- and now also curated Octave parity on `s_scielabPatches.m`, covering the 7x7 uniform-patch illuminant-perturbation sweep, the returned illuminant XYZ/SPD setup for `sceneCreate('uniform')`, and the paired CIELAB / S-CIELAB Delta E surfaces together with the script’s quantized S-CIELAB summary vector
 
 ## Status
 

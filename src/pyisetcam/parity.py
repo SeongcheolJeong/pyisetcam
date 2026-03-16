@@ -1243,6 +1243,62 @@ def run_python_case_with_context(
             context={"scene": standard_scene},
         )
 
+    if case_name == "metrics_scielab_patches_small":
+        u_standard = scene_create("uniform", asset_store=store)
+
+        white_xyz = np.asarray(scene_get(u_standard, "illuminant xyz", asset_store=store), dtype=float).reshape(3)
+        illuminant_energy = np.asarray(scene_get(u_standard, "illuminant energy", asset_store=store), dtype=float).reshape(-1)
+        wave = np.asarray(scene_get(u_standard, "wave"), dtype=float).reshape(-1)
+        n_wave = int(scene_get(u_standard, "nwave"))
+        lam = np.arange(1, n_wave + 1, dtype=float) / max(float(n_wave), 1.0)
+
+        w1_grid, w2_grid = np.meshgrid(
+            np.arange(-0.3, 0.3 + 0.0001, 0.1, dtype=float),
+            np.arange(-0.3, 0.3 + 0.0001, 0.1, dtype=float),
+        )
+        weights = np.column_stack((w1_grid.reshape(-1, order="F"), w2_grid.reshape(-1, order="F")))
+        delta_e = np.ones(weights.shape[0], dtype=float)
+        scielab_delta_e = np.ones(weights.shape[0], dtype=float)
+
+        xyz1 = np.asarray(scene_get(u_standard, "xyz", asset_store=store), dtype=float)
+        for idx, (w1, w2) in enumerate(weights):
+            e_adjust1 = float(w1) * np.sin(2.0 * np.pi * lam)
+            e_adjust2 = float(w2) * np.cos(2.0 * np.pi * lam)
+            new_illuminant = illuminant_energy * (float(w1) * e_adjust1 + float(w2) * e_adjust2 + 1.0)
+            u_test = scene_adjust_illuminant(u_standard, new_illuminant)
+
+            xyz2 = np.asarray(scene_get(u_test, "xyz", asset_store=store), dtype=float)
+            delta_e[idx] = float(np.mean(delta_e_ab(xyz1, xyz2, white_xyz, "2000"), dtype=float))
+            error_image, _, _, _ = scielab(xyz1, xyz2, white_xyz, sc_params())
+            scielab_delta_e[idx] = float(np.mean(np.asarray(error_image, dtype=float), dtype=float))
+
+        quantized_scielab = 2.0 * np.round(scielab_delta_e / 2.0)
+        delta_gap = np.asarray(scielab_delta_e - delta_e, dtype=float)
+        quantized_levels, quantized_counts = np.unique(quantized_scielab, return_counts=True)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "weights": weights,
+                "standard_scene_size": np.asarray(scene_get(u_standard, "size"), dtype=int),
+                "wave": wave,
+                "white_xyz": white_xyz,
+                "illuminant_energy_norm": _channel_normalize(illuminant_energy),
+                "delta_e": delta_e,
+                "scielab_delta_e": scielab_delta_e,
+                "delta_gap": delta_gap,
+                "delta_gap_stats": np.asarray(
+                    [np.max(np.abs(delta_gap)), np.mean(np.abs(delta_gap))],
+                    dtype=float,
+                ),
+                "quantized_scielab_delta_e": quantized_scielab,
+                "quantized_scielab_delta_e_sorted": np.sort(quantized_scielab.astype(float)),
+                "quantized_scielab_levels": np.asarray(quantized_levels, dtype=float),
+                "quantized_scielab_counts": np.asarray(quantized_counts, dtype=float),
+            },
+            context={"scene": u_standard},
+        )
+
     if case_name == "metrics_edge2mtf_small":
         def _canonical_profile(values: Any, samples: int = 65) -> np.ndarray:
             profile = np.asarray(values, dtype=float).reshape(-1)
