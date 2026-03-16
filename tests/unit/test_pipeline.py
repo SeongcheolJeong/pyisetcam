@@ -11,6 +11,7 @@ from pyisetcam.utils import energy_to_quanta, tile_pattern
 from pyisetcam import (
     blackbody,
     camera_acutance,
+    camera_color_accuracy,
     camera_compute,
     camera_create,
     camera_get,
@@ -49,6 +50,7 @@ from pyisetcam import (
     luminance_from_energy,
     luminance_from_photons,
     macbeth_read_reflectance,
+    macbeth_compare_ideal,
     optics_build_2d_otf,
     optics_coc,
     optics_defocus_core,
@@ -7007,6 +7009,66 @@ def test_run_python_case_supports_metrics_acutance_small_parity_case(asset_store
     assert np.isfinite(float(case.payload["acutance"]))
     assert float(case.payload["acutance"]) > 0.0
     assert float(case.payload["camera_acutance"]) == pytest.approx(float(case.payload["acutance"]), rel=1e-10, abs=1e-12)
+
+
+def test_metrics_color_accuracy_script_workflow(asset_store) -> None:
+    camera = camera_create(asset_store=asset_store)
+    camera = camera_set(camera, "sensor auto exposure", True)
+    color_accuracy, camera = camera_color_accuracy(camera, asset_store=asset_store)
+
+    ip = camera_get(camera, "ip")
+    embedded_rgb, compare_patch_srgb, patch_size = macbeth_compare_ideal(ip, asset_store=asset_store)
+    ip_size = np.asarray(ip_get(ip, "size"), dtype=int)
+    corner_points = np.asarray(ip_get(ip, "chart corner points"), dtype=float)
+
+    assert np.asarray(camera_get(camera, "sensor size"), dtype=int).shape == (2,)
+    assert ip_size.shape == (3,)
+    assert np.array_equal(
+        corner_points,
+        np.array(
+            [
+                [1.0, float(ip_size[0])],
+                [float(ip_size[1]), float(ip_size[0])],
+                [float(ip_size[1]), 1.0],
+                [1.0, 1.0],
+            ],
+            dtype=float,
+        ),
+    )
+    assert np.asarray(color_accuracy["macbethLAB"], dtype=float).shape == (24, 3)
+    assert np.asarray(color_accuracy["macbethXYZ"], dtype=float).shape == (24, 3)
+    assert np.asarray(color_accuracy["deltaE"], dtype=float).shape == (24,)
+    assert np.asarray(color_accuracy["whiteXYZ"], dtype=float).shape == (3,)
+    assert np.asarray(color_accuracy["idealWhiteXYZ"], dtype=float).shape == (3,)
+    assert np.all(np.asarray(color_accuracy["deltaE"], dtype=float) >= 0.0)
+    assert np.isfinite(float(np.mean(np.asarray(color_accuracy["deltaE"], dtype=float), dtype=float)))
+    assert compare_patch_srgb.shape == (4, 6, 3)
+    assert embedded_rgb.ndim == 3 and embedded_rgb.shape[2] == 3
+    assert np.asarray(patch_size, dtype=int).shape == (2,)
+    assert np.all(np.asarray(compare_patch_srgb, dtype=float) >= 0.0)
+    assert np.all(np.asarray(compare_patch_srgb, dtype=float) <= 1.0)
+    assert np.all(np.asarray(embedded_rgb, dtype=float) >= 0.0)
+    assert np.all(np.asarray(embedded_rgb, dtype=float) <= 1.0)
+
+
+def test_run_python_case_supports_metrics_color_accuracy_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_color_accuracy_small", asset_store=asset_store)
+
+    assert case.payload["sensor_size"].shape == (2,)
+    assert case.payload["ip_size"].shape == (3,)
+    assert case.payload["corner_points"].shape == (4, 2)
+    assert case.payload["white_xyz_norm"].shape == (3,)
+    assert case.payload["ideal_white_xyz_norm"].shape == (3,)
+    assert case.payload["delta_e"].shape == (24,)
+    assert case.payload["delta_e_stats"].shape == (3,)
+    assert case.payload["macbeth_lab"].shape == (24, 3)
+    assert case.payload["compare_patch_srgb"].shape == (4, 6, 3)
+    assert case.payload["ideal_patch_srgb"].shape == (4, 6, 3)
+    assert case.payload["embedded_channel_means"].shape == (3,)
+    assert case.payload["patch_size"].shape == (2,)
+    assert np.all(np.asarray(case.payload["delta_e"], dtype=float) >= 0.0)
+    assert np.all(np.asarray(case.payload["compare_patch_srgb"], dtype=float) >= 0.0)
+    assert np.all(np.asarray(case.payload["compare_patch_srgb"], dtype=float) <= 1.0)
 
 
 def test_run_python_case_supports_sensor_imx363_crop_parity_case(asset_store) -> None:

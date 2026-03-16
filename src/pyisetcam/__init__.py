@@ -8,7 +8,17 @@ from .assets import (
     ie_read_color_filter,
     ie_read_spectra,
 )
-from .camera import CameraMTFResult, camera_acutance, camera_compute, camera_create, camera_get, camera_mtf, camera_set
+from .camera import (
+    CameraMTFResult,
+    camera_acutance,
+    camera_color_accuracy,
+    camera_compute,
+    camera_create,
+    camera_get,
+    camera_mtf,
+    camera_set,
+    macbeth_compare_ideal,
+)
 from .color import daylight, luminance_from_energy, luminance_from_photons
 from .description import HeadlessDescriptionHandle, sensor_description
 from .display import display_create, display_get, display_set
@@ -239,15 +249,19 @@ __all__ = [
     "ISOAcutance",
     "cameraCompute",
     "cameraAcutance",
+    "cameraColorAccuracy",
     "cameraCreate",
     "cameraGet",
     "cameraMTF",
     "cameraSet",
     "camera_acutance",
+    "camera_color_accuracy",
     "camera_compute",
     "camera_create",
     "camera_get",
     "camera_mtf",
+    "macbethCompareIdeal",
+    "macbeth_compare_ideal",
     "camera_set",
     "cct",
     "cct_from_uv",
@@ -835,7 +849,9 @@ cameraCompute = camera_compute
 cameraGet = camera_get
 cameraMTF = camera_mtf
 cameraAcutance = camera_acutance
+cameraColorAccuracy = camera_color_accuracy
 cameraSet = camera_set
+macbethCompareIdeal = macbeth_compare_ideal
 
 vcAddAndSelectObject = session_add_and_select_object
 vcAddObject = session_add_object

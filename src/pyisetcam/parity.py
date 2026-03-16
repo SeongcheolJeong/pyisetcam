@@ -10,7 +10,16 @@ import imageio.v3 as iio
 import numpy as np
 
 from .assets import AssetStore, ie_read_color_filter, ie_read_spectra
-from .camera import camera_acutance, camera_compute, camera_create, camera_get, camera_mtf, camera_set
+from .camera import (
+    camera_acutance,
+    camera_color_accuracy,
+    camera_compute,
+    camera_create,
+    camera_get,
+    camera_mtf,
+    camera_set,
+    macbeth_compare_ideal,
+)
 from .color import daylight, luminance_from_energy, luminance_from_photons
 from .description import sensor_description
 from .display import display_create, display_get
@@ -78,6 +87,7 @@ from .scene import (
     scene_set,
 )
 from .sensor import (
+    _macbeth_ideal_linear_rgb,
     imx490_compute,
     ml_analyze_array_etendue,
     ml_radiance,
@@ -110,6 +120,7 @@ from .utils import (
     ie_mvnrnd,
     image_flip,
     image_increase_image_rgb_size,
+    linear_to_srgb,
     param_format,
     quanta_to_energy,
     rgb_to_xw_format,
@@ -1277,6 +1288,49 @@ def run_python_case_with_context(
                 "camera": camera,
                 "oi": oi,
                 "ip": cmtf.vci,
+            },
+        )
+
+    if case_name == "metrics_color_accuracy_small":
+        camera = camera_create(asset_store=store)
+        camera = camera_set(camera, "sensor auto exposure", True)
+        color_accuracy, camera = camera_color_accuracy(camera, asset_store=store)
+        ip = camera_get(camera, "ip")
+        embedded_rgb, compare_patch_srgb, patch_size = macbeth_compare_ideal(ip, asset_store=store)
+
+        white_xyz = np.asarray(color_accuracy["whiteXYZ"], dtype=float).reshape(-1)
+        ideal_white_xyz = np.asarray(color_accuracy["idealWhiteXYZ"], dtype=float).reshape(-1)
+        delta_e = np.asarray(color_accuracy["deltaE"], dtype=float).reshape(-1)
+        macbeth_lab = np.asarray(color_accuracy["macbethLAB"], dtype=float)
+        ideal_patch_linear = xw_to_rgb_format(
+            _macbeth_ideal_linear_rgb(np.asarray(ip_get(ip, "wave"), dtype=float), asset_store=store),
+            4,
+            6,
+        )
+        ideal_patch_srgb = linear_to_srgb(ideal_patch_linear / max(float(np.max(ideal_patch_linear)), 1.0e-12))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "sensor_size": np.asarray(camera_get(camera, "sensor size"), dtype=int),
+                "ip_size": np.asarray(ip_get(ip, "size"), dtype=int),
+                "corner_points": np.asarray(color_accuracy["cornerPoints"], dtype=float),
+                "white_xyz_norm": white_xyz / max(float(white_xyz[1]), 1.0e-12),
+                "ideal_white_xyz_norm": ideal_white_xyz / max(float(ideal_white_xyz[1]), 1.0e-12),
+                "delta_e": delta_e,
+                "delta_e_stats": np.array(
+                    [float(np.mean(delta_e)), float(np.max(delta_e)), float(np.std(delta_e, dtype=float))],
+                    dtype=float,
+                ),
+                "macbeth_lab": macbeth_lab,
+                "compare_patch_srgb": np.asarray(compare_patch_srgb, dtype=float),
+                "ideal_patch_srgb": np.asarray(ideal_patch_srgb, dtype=float),
+                "embedded_channel_means": np.mean(np.asarray(embedded_rgb, dtype=float), axis=(0, 1), dtype=float).reshape(-1),
+                "patch_size": np.asarray(patch_size, dtype=int).reshape(-1),
+            },
+            context={
+                "camera": camera,
+                "ip": ip,
             },
         )
 

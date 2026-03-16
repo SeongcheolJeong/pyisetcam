@@ -1043,6 +1043,64 @@ switch case_name
         payload.acutance = double(acutance);
         payload.camera_acutance = double(acutance);
 
+    case 'metrics_color_accuracy_small'
+        camera = cameraCreate;
+        camera = cameraSet(camera, 'sensor auto exposure', true);
+        oi = cameraGet(camera, 'oi');
+        sensor = cameraGet(camera, 'sensor');
+        sDist = 1000;
+        fov = sensorGet(sensor, 'fov', sDist, oi);
+        mcc = sceneCreate;
+        mcc = sceneAdjustLuminance(mcc, 100);
+        mcc = sceneSet(mcc, 'fov', fov);
+        mcc = sceneSet(mcc, 'distance', sDist);
+        camera = cameraCompute(camera, mcc);
+        ip = cameraGet(camera, 'ip');
+        cp = chartCornerpoints(ip, true);
+        ip = ipSet(ip, 'chart corner points', cp);
+        [macbethXYZ, whiteXYZ] = ipMCCXYZ(ip, cp, 'sRGB');
+        idealXYZ = double(macbethIdealColor('d65', 'xyz'));
+        idealWhiteXYZ = double(idealXYZ(4, :));
+        macbethXYZ = double(macbethXYZ) * (idealWhiteXYZ(2) / max(double(whiteXYZ(2)), 1e-12));
+        macbethLAB = double(ieXYZ2LAB(macbethXYZ, idealWhiteXYZ));
+        deltaE = double(deltaEab(macbethXYZ, idealXYZ, idealWhiteXYZ));
+        camera = cameraSet(camera, 'ip chart corner points', cp);
+        [~, mLocs, pSize] = chartRectangles(cp, 4, 6, 0.5);
+        mRGB = chartRectsData(ip, mLocs, 0.6 * pSize(1));
+        if ismatrix(mRGB)
+            mRGB = XW2RGBFormat(mRGB, 4, 6);
+        end
+
+        idealPatchRGB = XW2RGBFormat(macbethIdealColor('d65', 'lrgb'), 4, 6);
+        mRGB = ieScale(mRGB, 1);
+        idealPatchRGB = ieScale(idealPatchRGB, 1);
+        embRGB = imageIncreaseImageRGBSize(idealPatchRGB, pSize);
+        w = pSize(1) + round(-pSize(1) / 3:0);
+        for ii = 1:4
+            rows = (ii - 1) * pSize(1) + w;
+            for jj = 1:6
+                cols = (jj - 1) * pSize(1) + w;
+                for kk = 1:3
+                    embRGB(rows, cols, kk) = mRGB(ii, jj, kk);
+                end
+            end
+        end
+        mRGB = lrgb2srgb(mRGB);
+        embRGB = lrgb2srgb(embRGB);
+
+        payload.sensor_size = double(cameraGet(camera, 'sensor size')(:));
+        payload.ip_size = double(ipGet(ip, 'size')(:));
+        payload.corner_points = double(ipGet(ip, 'chart corner points'));
+        payload.white_xyz_norm = double(macbethXYZ(4, :) ./ max(macbethXYZ(4, 2), 1e-12));
+        payload.ideal_white_xyz_norm = double(idealWhiteXYZ ./ max(idealWhiteXYZ(2), 1e-12));
+        payload.delta_e = double(deltaE(:));
+        payload.delta_e_stats = double([mean(deltaE(:)); max(deltaE(:)); std(deltaE(:), 1)]);
+        payload.macbeth_lab = double(macbethLAB);
+        payload.compare_patch_srgb = double(mRGB);
+        payload.ideal_patch_srgb = double(lrgb2srgb(idealPatchRGB));
+        payload.embedded_channel_means = squeeze(mean(mean(double(embRGB), 1), 2));
+        payload.patch_size = double(pSize(:));
+
     case 'scene_illuminant_change'
         scene = sceneCreate();
         bb = blackbody(sceneGet(scene, 'wave'), 3000, 'energy');

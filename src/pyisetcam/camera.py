@@ -12,13 +12,23 @@ from .assets import AssetStore
 from .exceptions import UnsupportedOptionError
 from .ip import ip_compute, ip_create, ip_get, ip_set
 from .iso import iso12233, iso_find_slanted_bar
-from .metrics import iso_acutance
+from .metrics import delta_e_ab, iso_acutance, xyz_to_lab
 from .optics import oi_compute, oi_create, oi_get, oi_set
 from .scene import Scene, scene_adjust_luminance, scene_create, scene_set
 from .session import track_camera_session_state, track_session_object
-from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_get, sensor_set, sensor_set_size_to_fov
+from .sensor import (
+    _chart_rectangles,
+    _chart_roi,
+    _macbeth_ideal_linear_rgb,
+    sensor_compute,
+    sensor_create,
+    sensor_create_ideal,
+    sensor_get,
+    sensor_set,
+    sensor_set_size_to_fov,
+)
 from .types import Camera, ImageProcessor, OpticalImage, Sensor, SessionContext
-from .utils import param_format, split_prefixed_parameter
+from .utils import image_increase_image_rgb_size, linear_to_srgb, param_format, rgb_to_xw_format, split_prefixed_parameter, xw_to_rgb_format
 
 
 def _store(asset_store: AssetStore | None) -> AssetStore:
@@ -307,6 +317,228 @@ def camera_compute(
     return track_camera_session_state(session, camera)
 
 
+def _matlab_round_scalar(value: float) -> int:
+    value = float(value)
+    if value >= 0.0:
+        return int(np.floor(value + 0.5))
+    return int(np.ceil(value - 0.5))
+
+
+def _whole_chart_corner_points(rows: int, cols: int) -> np.ndarray:
+    return np.array(
+        [
+            [1.0, float(rows)],
+            [float(cols), float(rows)],
+            [float(cols), 1.0],
+            [1.0, 1.0],
+        ],
+        dtype=float,
+    )
+
+
+def _chart_rects_data(
+    obj: ImageProcessor | Sensor,
+    m_locs: Any,
+    delta: Any,
+    *,
+    full_data: bool = False,
+    data_type: str = "result",
+) -> np.ndarray | list[np.ndarray]:
+    from .roi import vc_get_roi_data
+
+    locs = np.asarray(m_locs, dtype=float)
+    if locs.ndim != 2 or locs.shape[0] != 2:
+        raise ValueError("Chart midpoint locations must be a 2xN array in [row; col] order.")
+
+    patch_data: list[np.ndarray] = []
+    for index in range(locs.shape[1]):
+        roi_locs, _ = _chart_roi(locs[:, index], delta)
+        patch_data.append(np.asarray(vc_get_roi_data(obj, roi_locs, data_type), dtype=float))
+
+    if full_data:
+        return patch_data
+
+    n_channels = int(patch_data[0].shape[1]) if patch_data else 0
+    mean_values = np.zeros((locs.shape[1], n_channels), dtype=float)
+    for index, data in enumerate(patch_data):
+        mean_values[index, :] = np.mean(np.asarray(data, dtype=float), axis=0, dtype=float)
+    return mean_values
+
+
+def _linear_srgb_to_xyz(rgb: Any) -> np.ndarray:
+    rgb_array = np.clip(np.asarray(rgb, dtype=float), 0.0, 1.0)
+    if rgb_array.ndim == 2:
+        xw = rgb_array.reshape(-1, 3)
+        rows = cols = None
+    elif rgb_array.ndim == 3 and rgb_array.shape[2] == 3:
+        xw, rows, cols, _ = rgb_to_xw_format(rgb_array)
+    else:
+        raise ValueError("RGB data must be XW Nx3 or RGB-format rows x cols x 3.")
+
+    transform = np.array(
+        [
+            [0.4124564, 0.3575761, 0.1804375],
+            [0.2126729, 0.7151522, 0.0721750],
+            [0.0193339, 0.1191920, 0.9503041],
+        ],
+        dtype=float,
+    )
+    xyz = np.asarray(xw @ transform.T, dtype=float)
+    if rows is None or cols is None:
+        return xyz
+    return xw_to_rgb_format(xyz, rows, cols)
+
+
+def _macbeth_ideal_xyz(
+    wave_nm: Any,
+    illuminant_name: str = "D65",
+    *,
+    asset_store: AssetStore,
+) -> np.ndarray:
+    from .metrics import xyz_from_energy
+
+    wave = np.asarray(wave_nm, dtype=float).reshape(-1)
+    _, reflectances = asset_store.load_reflectances("macbethChart.mat", wave_nm=wave)
+    _, illuminant = asset_store.load_illuminant(illuminant_name, wave_nm=wave)
+    color_signal = np.asarray(reflectances, dtype=float) * np.asarray(illuminant, dtype=float).reshape(-1, 1)
+    macbeth_xyz = np.asarray(xyz_from_energy(color_signal.T, wave, asset_store=asset_store), dtype=float)
+    return 100.0 * (macbeth_xyz / max(float(np.max(macbeth_xyz[:, 1])), 1.0e-12))
+
+
+def _macbeth_color_error(
+    ip: ImageProcessor,
+    illuminant_name: str = "D65",
+    corner_points: Any | None = None,
+    *,
+    asset_store: AssetStore,
+) -> dict[str, Any]:
+    if corner_points is None:
+        corner_points = ip_get(ip, "chart corner points")
+    if corner_points is None or np.asarray(corner_points).size == 0:
+        rows, cols = np.asarray(ip_get(ip, "size"), dtype=int)[:2]
+        corner_points = _whole_chart_corner_points(int(rows), int(cols))
+
+    corner_points_array = np.asarray(corner_points, dtype=float).reshape(4, 2)
+    rects, m_locs, p_size = _chart_rectangles(corner_points_array, 4, 6, 0.3)
+    rgb_data = np.asarray(_chart_rects_data(ip, m_locs, float(p_size[0]), full_data=False, data_type="result"), dtype=float)
+    macbeth_xyz = np.asarray(_linear_srgb_to_xyz(xw_to_rgb_format(rgb_data, 4, 6)), dtype=float)
+    macbeth_xyz_xw, _, _, _ = rgb_to_xw_format(macbeth_xyz)
+
+    ideal_xyz = _macbeth_ideal_xyz(np.asarray(ip_get(ip, "wave"), dtype=float), illuminant_name, asset_store=asset_store)
+    white_xyz = np.asarray(macbeth_xyz_xw[3, :], dtype=float).reshape(-1)
+    white_ideal_xyz = np.asarray(ideal_xyz[3, :], dtype=float).reshape(-1)
+    scale = float(white_ideal_xyz[1]) / max(float(white_xyz[1]), 1.0e-12)
+    macbeth_xyz_xw = macbeth_xyz_xw * scale
+    macbeth_lab = np.asarray(xyz_to_lab(macbeth_xyz_xw, white_ideal_xyz), dtype=float)
+    delta_e = np.asarray(delta_e_ab(macbeth_xyz_xw, ideal_xyz, white_ideal_xyz), dtype=float).reshape(-1)
+
+    return {
+        "macbethLAB": macbeth_lab,
+        "macbethXYZ": macbeth_xyz_xw,
+        "deltaE": delta_e,
+        "idealXYZ": np.asarray(ideal_xyz, dtype=float),
+        "whiteXYZ": np.asarray(macbeth_xyz_xw[3, :], dtype=float),
+        "idealWhiteXYZ": white_ideal_xyz,
+        "cornerPoints": corner_points_array,
+        "rects": np.asarray(rects, dtype=int),
+        "mLocs": np.asarray(m_locs, dtype=int),
+        "pSize": np.asarray(p_size, dtype=int),
+        "vci": ip,
+    }
+
+
+def macbeth_compare_ideal(
+    ip: ImageProcessor,
+    m_rgb: Any | None = None,
+    illuminant_name: str = "d65",
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return the headless Macbeth comparison image used by the MATLAB script."""
+
+    store = _store(asset_store)
+    current_ip = ip
+
+    patch_size: np.ndarray
+    if m_rgb is None or np.asarray(m_rgb).size == 0:
+        corner_points = ip_get(current_ip, "chart corner points")
+        if corner_points is None or np.asarray(corner_points).size == 0:
+            rows, cols = np.asarray(ip_get(current_ip, "size"), dtype=int)[:2]
+            corner_points = _whole_chart_corner_points(int(rows), int(cols))
+            current_ip = ip_set(current_ip, "chart corner points", corner_points)
+        rects, m_locs, patch_size = _chart_rectangles(corner_points, 4, 6, 0.5)
+        current_ip = ip_set(current_ip, "chart rectangles", rects)
+        m_rgb = _chart_rects_data(current_ip, m_locs, 0.6 * float(patch_size[0]), full_data=False, data_type="result")
+    else:
+        size = np.asarray(ip_get(current_ip, "size"), dtype=int)
+        patch_scalar = _matlab_round_scalar((float(size[0]) / 4.0) * 0.6)
+        patch_size = np.array([patch_scalar, patch_scalar], dtype=int)
+
+    patch_rgb = np.asarray(m_rgb, dtype=float)
+    if patch_rgb.ndim == 2:
+        patch_rgb = xw_to_rgb_format(patch_rgb, 4, 6)
+    patch_rgb = patch_rgb / max(float(np.max(patch_rgb)), 1.0e-12)
+
+    ideal_patch = xw_to_rgb_format(
+        _macbeth_ideal_linear_rgb(np.asarray(ip_get(current_ip, "wave"), dtype=float), asset_store=store),
+        4,
+        6,
+    )
+    ideal_patch = ideal_patch / max(float(np.max(ideal_patch)), 1.0e-12)
+    full_ideal_rgb = image_increase_image_rgb_size(ideal_patch, patch_size)
+    embedded_rgb = np.asarray(full_ideal_rgb, dtype=float).copy()
+
+    patch_extent = int(np.asarray(patch_size, dtype=int).reshape(-1)[0])
+    window = patch_extent + np.array(
+        [_matlab_round_scalar(value) for value in np.arange(-patch_extent / 3.0, 1.0, 1.0)],
+        dtype=int,
+    )
+    for row_index in range(4):
+        rows = (row_index * patch_extent) + window - 1
+        for col_index in range(6):
+            cols = (col_index * patch_extent) + window - 1
+            embedded_rgb[np.ix_(rows, cols, np.arange(3))] = patch_rgb[row_index, col_index, :]
+
+    return (
+        linear_to_srgb(embedded_rgb),
+        linear_to_srgb(patch_rgb),
+        np.asarray(patch_size, dtype=int).reshape(-1),
+    )
+
+
+def camera_color_accuracy(
+    camera: Camera,
+    *,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> tuple[dict[str, Any], Camera]:
+    """Run the headless Macbeth color-accuracy workflow from `s_metricsColorAccuracy.m`."""
+
+    store = _store(asset_store)
+
+    scene_distance_m = 1000.0
+    oi = camera_get(camera, "oi")
+    sensor = camera_get(camera, "sensor")
+    scene_fov = float(sensor_get(sensor, "fov", scene_distance_m, oi))
+
+    macbeth_scene = scene_create("macbeth d65", asset_store=store, session=session)
+    macbeth_scene = scene_adjust_luminance(macbeth_scene, 100.0, asset_store=store)
+    macbeth_scene = scene_set(macbeth_scene, "distance", scene_distance_m)
+    macbeth_scene = scene_set(macbeth_scene, "fov", scene_fov)
+    camera = camera_compute(camera, macbeth_scene, asset_store=store, session=session)
+
+    ip = camera_get(camera, "ip")
+    rows, cols = np.asarray(ip_get(ip, "size"), dtype=int)[:2]
+    corner_points = _whole_chart_corner_points(int(rows), int(cols))
+    ip = ip_set(ip, "chart corner points", corner_points, session=session)
+    color_accuracy = _macbeth_color_error(ip, "D65", corner_points, asset_store=store)
+
+    camera = camera_set(camera, "ip", ip, session=session)
+    camera = camera_set(camera, "ip chart corner points", corner_points, session=session)
+    color_accuracy["vci"] = camera_get(camera, "ip")
+    return color_accuracy, camera
+
+
 def camera_mtf(
     camera: Camera,
     *,
@@ -374,3 +606,7 @@ def camera_acutance(
     deg_per_mm = float(camera_get(camera, "sensor h deg per distance", "mm", None, oi))
     cpd = np.asarray(cmtf.freq, dtype=float) / max(deg_per_mm, 1.0e-12)
     return iso_acutance(cpd, luminance_mtf)
+
+
+cameraColorAccuracy = camera_color_accuracy
+macbethCompareIdeal = macbeth_compare_ideal

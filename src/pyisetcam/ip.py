@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from typing import Any
 
 import numpy as np
@@ -20,6 +21,18 @@ from .utils import invert_gamma_table, linear_to_srgb, param_format, split_prefi
 
 def _store(asset_store: AssetStore | None) -> AssetStore:
     return asset_store or AssetStore.default()
+
+
+def _copy_metadata_value(value: Any) -> Any:
+    return copy.deepcopy(value)
+
+
+def _ip_chart_parameters(ip: ImageProcessor) -> dict[str, Any]:
+    chart = ip.fields.get("chartP")
+    if not isinstance(chart, dict):
+        chart = {}
+        ip.fields["chartP"] = chart
+    return chart
 
 
 def _identity_transform() -> np.ndarray:
@@ -380,6 +393,21 @@ def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
         return ip.fields["demosaic"]
     if key in {"demosaicmethod"}:
         return ip.fields["demosaic"].get("method", "none")
+    if key == "chartparameters":
+        return copy.deepcopy(_ip_chart_parameters(ip))
+    if key in {"cornerpoints", "chartcornerpoints", "chartcorners"}:
+        value = _ip_chart_parameters(ip).get("cornerPoints")
+        return None if value is None else np.asarray(value).copy()
+    if key == "mcccornerpoints":
+        return ip_get(ip, "chart corner points")
+    if key in {"chartrects", "chartrectangles"}:
+        value = _ip_chart_parameters(ip).get("rects")
+        return None if value is None else np.asarray(value).copy()
+    if key in {"currentrect", "chartcurrentrect"}:
+        value = _ip_chart_parameters(ip).get("currentRect")
+        return None if value is None else np.asarray(value).copy()
+    if key == "mccrecthandles":
+        return _copy_metadata_value(ip.fields.get("mccRectHandles"))
     if key in {"sensorconversion", "conversionsensor"}:
         return ip.fields["sensor_correction"]
     if key in {"sensorconversionmethod", "conversionmethodsensor"}:
@@ -476,6 +504,29 @@ def ip_set(
         return track_ip_session_state(session, ip)
     if key == "name":
         ip.name = str(value)
+        return track_ip_session_state(session, ip)
+    if key == "chartparameters":
+        chart = _ip_chart_parameters(ip)
+        chart.update(dict(value))
+        return track_ip_session_state(session, ip)
+    if key in {"chartcornerpoints", "cornerpoints", "chartcorners"}:
+        chart = _ip_chart_parameters(ip)
+        chart["cornerPoints"] = np.asarray(value).copy()
+        return track_ip_session_state(session, ip)
+    if key == "mcccornerpoints":
+        chart = _ip_chart_parameters(ip)
+        chart["cornerPoints"] = np.asarray(value).copy()
+        return track_ip_session_state(session, ip)
+    if key in {"chartrects", "chartrectangles"}:
+        chart = _ip_chart_parameters(ip)
+        chart["rects"] = np.asarray(value).copy()
+        return track_ip_session_state(session, ip)
+    if key in {"currentrect", "chartcurrentrect"}:
+        chart = _ip_chart_parameters(ip)
+        chart["currentRect"] = np.asarray(value).copy()
+        return track_ip_session_state(session, ip)
+    if key == "mccrecthandles":
+        ip.fields["mccRectHandles"] = _copy_metadata_value(value)
         return track_ip_session_state(session, ip)
     if key in {"spectrum"}:
         ip.fields["spectrum"] = dict(value)
