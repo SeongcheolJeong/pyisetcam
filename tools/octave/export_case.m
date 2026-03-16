@@ -1101,6 +1101,65 @@ switch case_name
         payload.embedded_channel_means = squeeze(mean(mean(double(embRGB), 1), 2));
         payload.patch_size = double(pSize(:));
 
+    case 'metrics_macbeth_delta_e_small'
+        scene = sceneCreate;
+        scene = sceneAdjustLuminance(scene, 75);
+        scene = sceneSet(scene, 'fov', 2.64);
+        scene = sceneSet(scene, 'distance', 10);
+
+        oi = oiCreate;
+        optics = oiGet(oi, 'optics');
+        optics = opticsSet(optics, 'fnumber', 4);
+        optics = opticsSet(optics, 'focallength', 20e-3);
+        optics = opticsSet(optics, 'off axis method', 'skip');
+        oi = oiSet(oi, 'optics', optics);
+        oi = oiCompute(oi, scene);
+
+        sensor = sensorCreate;
+        sensor = sensorSetSizeToFOV(sensor, sceneGet(scene, 'fov'), oi);
+        sensor = sensorCompute(sensor, oi);
+
+        cp = [1 244; 328 246; 329 28; 2 27];
+        sensor = sensorSet(sensor, 'chart corner points', cp);
+        [~, mLocs, pSize] = chartRectangles(cp, 4, 6, 0.5);
+        delta = round(pSize(1) * 0.5);
+        rgb = chartRectsData(sensor, mLocs, delta, false, 'volts');
+        idealRGB = macbethIdealColor('d65', 'lrgb');
+        L = pinv(rgb) * idealRGB;
+        sensorLocs = double(cp);
+
+        vci = ipCreate;
+        vci = ipSet(vci, 'scale display', 1);
+        vci = ipSet(vci, 'conversion matrix sensor', L);
+        vci = ipSet(vci, 'correction matrix illuminant', []);
+        vci = ipSet(vci, 'internal cs 2 display space', []);
+        vci = ipSet(vci, 'conversion method sensor', 'Current matrix');
+        vci = ipSet(vci, 'internalCS', 'Sensor');
+        vci = ipCompute(vci, sensor);
+
+        pointLoc = [4 246; 328 243; 327 26; 3 27];
+        [macbethXYZ, whiteXYZ] = ipMCCXYZ(vci, pointLoc, 'sRGB');
+        idealXYZ = double(macbethIdealColor('d65', 'xyz'));
+        idealWhiteXYZ = double(idealXYZ(4, :));
+        macbethXYZ = double(macbethXYZ) * (idealWhiteXYZ(2) / max(double(whiteXYZ(2)), 1e-12));
+        macbethLAB = double(ieXYZ2LAB(macbethXYZ, idealWhiteXYZ));
+        deltaE = double(deltaEab(macbethXYZ, idealXYZ, idealWhiteXYZ));
+        result = double(ipGet(vci, 'result'));
+
+        payload.scene_size = double(sceneGet(scene, 'size')(:));
+        payload.oi_size = double(oiGet(oi, 'size')(:));
+        payload.sensor_size = double(sensorGet(sensor, 'size')(:));
+        payload.ip_size = double(ipGet(vci, 'size')(:));
+        payload.ccm_matrix = double(L);
+        payload.sensor_locs = double(sensorLocs);
+        payload.point_loc = double(pointLoc);
+        payload.white_xyz_norm = double(macbethXYZ(4, :) ./ max(macbethXYZ(4, 2), 1e-12));
+        payload.delta_e = double(deltaE(:));
+        payload.delta_e_stats = double([mean(deltaE(:)); max(deltaE(:)); std(deltaE(:), 1)]);
+        payload.macbeth_lab = double(macbethLAB);
+        payload.result_channel_means_norm = local_channel_normalize(squeeze(mean(mean(result, 1), 2)));
+        payload.result_channel_p95_norm = local_channel_normalize(prctile(reshape(result, [], 3), 95, 1)');
+
     case 'scene_illuminant_change'
         scene = sceneCreate();
         bb = blackbody(sceneGet(scene, 'wave'), 3000, 'energy');

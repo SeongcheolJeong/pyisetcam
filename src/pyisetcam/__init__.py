@@ -17,6 +17,7 @@ from .camera import (
     camera_get,
     camera_mtf,
     camera_set,
+    macbeth_color_error,
     macbeth_compare_ideal,
 )
 from .color import daylight, luminance_from_energy, luminance_from_photons
@@ -260,6 +261,8 @@ __all__ = [
     "camera_create",
     "camera_get",
     "camera_mtf",
+    "macbethColorError",
+    "macbeth_color_error",
     "macbethCompareIdeal",
     "macbeth_compare_ideal",
     "camera_set",
@@ -851,6 +854,7 @@ cameraMTF = camera_mtf
 cameraAcutance = camera_acutance
 cameraColorAccuracy = camera_color_accuracy
 cameraSet = camera_set
+macbethColorError = macbeth_color_error
 macbethCompareIdeal = macbeth_compare_ideal
 
 vcAddAndSelectObject = session_add_and_select_object

@@ -17,6 +17,7 @@ from pyisetcam import (
     camera_get,
     camera_mtf,
     camera_set,
+    macbeth_color_error,
     chromaticity_xy,
     cpiq_csf,
     daylight,
@@ -112,6 +113,7 @@ from pyisetcam import (
     mlens_set,
     pixel_snr_luxsec,
     pixel_v_per_lux_sec,
+    sensor_ccm,
     sensor_compute,
     sensor_compute_array,
     sensor_compute_samples,
@@ -7069,6 +7071,74 @@ def test_run_python_case_supports_metrics_color_accuracy_small_parity_case(asset
     assert np.all(np.asarray(case.payload["delta_e"], dtype=float) >= 0.0)
     assert np.all(np.asarray(case.payload["compare_patch_srgb"], dtype=float) >= 0.0)
     assert np.all(np.asarray(case.payload["compare_patch_srgb"], dtype=float) <= 1.0)
+
+
+def test_metrics_macbeth_delta_e_script_workflow(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    scene = scene_adjust_luminance(scene, 75.0, asset_store=asset_store)
+    scene = scene_set(scene, "fov", 2.64)
+    scene = scene_set(scene, "distance", 10.0)
+
+    oi = oi_create(asset_store=asset_store)
+    oi = oi_set(oi, "optics fnumber", 4.0)
+    oi = oi_set(oi, "optics focal length", 20.0e-3)
+    oi = oi_set(oi, "optics off axis method", "skip")
+    oi = oi_compute(oi, scene)
+
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set_size_to_fov(sensor, float(scene_get(scene, "fov")), oi)
+    sensor = sensor_compute(sensor, oi)
+
+    corner_points = np.array([[1.0, 244.0], [328.0, 246.0], [329.0, 28.0], [2.0, 27.0]], dtype=float)
+    sensor = sensor_set(sensor, "chart corner points", corner_points)
+    ccm_matrix, sensor_locs = sensor_ccm(sensor, "macbeth", asset_store=asset_store)
+
+    ip = ip_create(asset_store=asset_store)
+    ip = ip_set(ip, "scale display", 1)
+    ip = ip_set(ip, "conversion matrix sensor", ccm_matrix)
+    ip = ip_set(ip, "correction matrix illuminant", np.array([], dtype=float))
+    ip = ip_set(ip, "internal cs 2 display space", np.array([], dtype=float))
+    ip = ip_set(ip, "conversion method sensor", "Current matrix")
+    ip = ip_set(ip, "internalCS", "Sensor")
+    ip = ip_compute(ip, sensor, asset_store=asset_store)
+
+    point_loc = np.array([[4.0, 246.0], [328.0, 243.0], [327.0, 26.0], [3.0, 27.0]], dtype=float)
+    macbeth_lab, macbeth_xyz, delta_e, _ = macbeth_color_error(ip, "D65", point_loc, asset_store=asset_store)
+
+    result = np.asarray(ip_get(ip, "result"), dtype=float)
+    assert tuple(scene_get(scene, "size")) == (64, 96)
+    assert tuple(oi_get(oi, "size")) == (80, 120)
+    assert tuple(sensor_get(sensor, "size")) == (270, 330)
+    assert tuple(ip_get(ip, "size")) == (270, 330, 3)
+    assert ccm_matrix.shape == (3, 3)
+    assert np.array_equal(sensor_locs, corner_points)
+    assert macbeth_lab.shape == (24, 3)
+    assert macbeth_xyz.shape == (24, 3)
+    assert delta_e.shape == (24,)
+    assert np.all(delta_e >= 0.0)
+    assert np.all(np.isfinite(delta_e))
+    assert np.all(np.isfinite(macbeth_lab))
+    assert result.shape == (270, 330, 3)
+    assert np.all(result >= 0.0)
+
+
+def test_run_python_case_supports_metrics_macbeth_delta_e_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_macbeth_delta_e_small", asset_store=asset_store)
+
+    assert tuple(case.payload["scene_size"]) == (64, 96)
+    assert tuple(case.payload["oi_size"]) == (80, 120)
+    assert tuple(case.payload["sensor_size"]) == (270, 330)
+    assert tuple(case.payload["ip_size"]) == (270, 330, 3)
+    assert case.payload["ccm_matrix"].shape == (3, 3)
+    assert case.payload["sensor_locs"].shape == (4, 2)
+    assert case.payload["point_loc"].shape == (4, 2)
+    assert case.payload["white_xyz_norm"].shape == (3,)
+    assert case.payload["delta_e"].shape == (24,)
+    assert case.payload["delta_e_stats"].shape == (3,)
+    assert case.payload["macbeth_lab"].shape == (24, 3)
+    assert case.payload["result_channel_means_norm"].shape == (3,)
+    assert case.payload["result_channel_p95_norm"].shape == (3,)
+    assert np.all(np.asarray(case.payload["delta_e"], dtype=float) >= 0.0)
 
 
 def test_run_python_case_supports_sensor_imx363_crop_parity_case(asset_store) -> None:

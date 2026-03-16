@@ -447,6 +447,29 @@ def _macbeth_color_error(
     }
 
 
+def macbeth_color_error(
+    ip: ImageProcessor,
+    illuminant_name: str = "D65",
+    corner_points: Any | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, ImageProcessor]:
+    """Headless MATLAB-style `macbethColorError` wrapper."""
+
+    result = _macbeth_color_error(
+        ip,
+        illuminant_name,
+        corner_points,
+        asset_store=_store(asset_store),
+    )
+    return (
+        np.asarray(result["macbethLAB"], dtype=float),
+        np.asarray(result["macbethXYZ"], dtype=float),
+        np.asarray(result["deltaE"], dtype=float),
+        result["vci"],
+    )
+
+
 def macbeth_compare_ideal(
     ip: ImageProcessor,
     m_rgb: Any | None = None,
@@ -609,4 +632,5 @@ def camera_acutance(
 
 
 cameraColorAccuracy = camera_color_accuracy
+macbethColorError = macbeth_color_error
 macbethCompareIdeal = macbeth_compare_ideal

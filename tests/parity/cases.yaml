@@ -307,6 +307,21 @@
       }
     },
     {
+      "name": "metrics_macbeth_delta_e_small",
+      "matlab_function": "s_metricsMacbethDeltaE.m",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "ccm_matrix": {"mode": "mean_rel", "max_mean_rel": 0.01},
+        "white_xyz_norm": {"mode": "mean_rel", "max_mean_rel": 0.001},
+        "delta_e": {"mode": "normalized_mae", "max_normalized_mae": 0.7},
+        "delta_e_stats": {"mode": "normalized_mae", "max_normalized_mae": 1.2},
+        "macbeth_lab": {"mode": "normalized_mae", "max_normalized_mae": 0.02},
+        "result_channel_means_norm": {"mode": "mean_rel", "max_mean_rel": 0.003},
+        "result_channel_p95_norm": {"mode": "mean_rel", "max_mean_rel": 0.001}
+      }
+    },
+    {
       "name": "scene_illuminant_change",
       "matlab_function": "sceneAdjustIlluminant",
       "rtol": 1e-05,

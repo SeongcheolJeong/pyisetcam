@@ -18,6 +18,7 @@ from .camera import (
     camera_get,
     camera_mtf,
     camera_set,
+    macbeth_color_error,
     macbeth_compare_ideal,
 )
 from .color import daylight, luminance_from_energy, luminance_from_photons
@@ -1330,6 +1331,80 @@ def run_python_case_with_context(
             },
             context={
                 "camera": camera,
+                "ip": ip,
+            },
+        )
+
+    if case_name == "metrics_macbeth_delta_e_small":
+        scene = scene_create(asset_store=store)
+        scene = scene_adjust_luminance(scene, 75.0, asset_store=store)
+        scene = scene_set(scene, "fov", 2.64)
+        scene = scene_set(scene, "distance", 10.0)
+
+        oi = oi_create(asset_store=store)
+        oi = oi_set(oi, "optics fnumber", 4.0)
+        oi = oi_set(oi, "optics focal length", 20.0e-3)
+        oi = oi_set(oi, "optics off axis method", "skip")
+        oi = oi_compute(oi, scene)
+
+        sensor = sensor_create(asset_store=store)
+        sensor = sensor_set_size_to_fov(sensor, float(scene_get(scene, "fov")), oi)
+        sensor = sensor_compute(sensor, oi)
+
+        sensor_corner_points = np.array(
+            [[1.0, 244.0], [328.0, 246.0], [329.0, 28.0], [2.0, 27.0]],
+            dtype=float,
+        )
+        sensor = sensor_set(sensor, "chart corner points", sensor_corner_points)
+        ccm_matrix, sensor_locs = sensor_ccm(sensor, "macbeth", None, True, asset_store=store)
+
+        ip = ip_create(asset_store=store)
+        ip = ip_set(ip, "scale display", 1)
+        ip = ip_set(ip, "conversion matrix sensor", ccm_matrix)
+        ip = ip_set(ip, "correction matrix illuminant", np.array([], dtype=float))
+        ip = ip_set(ip, "internal cs 2 display space", np.array([], dtype=float))
+        ip = ip_set(ip, "conversion method sensor", "Current matrix")
+        ip = ip_set(ip, "internalCS", "Sensor")
+        ip = ip_compute(ip, sensor, asset_store=store)
+
+        point_loc = np.array(
+            [[4.0, 246.0], [328.0, 243.0], [327.0, 26.0], [3.0, 27.0]],
+            dtype=float,
+        )
+        macbeth_lab, macbeth_xyz, delta_e, _ = macbeth_color_error(ip, "D65", point_loc, asset_store=store)
+
+        result = np.asarray(ip_get(ip, "result"), dtype=float)
+        result_flat = result.reshape(-1, result.shape[2])
+        white_xyz = np.asarray(macbeth_xyz, dtype=float)[3, :].reshape(-1)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "oi_size": np.asarray(oi_get(oi, "size"), dtype=int),
+                "sensor_size": np.asarray(sensor_get(sensor, "size"), dtype=int),
+                "ip_size": np.asarray(ip_get(ip, "size"), dtype=int),
+                "ccm_matrix": np.asarray(ccm_matrix, dtype=float),
+                "sensor_locs": np.asarray(sensor_locs, dtype=float),
+                "point_loc": np.asarray(point_loc, dtype=float),
+                "white_xyz_norm": white_xyz / max(float(white_xyz[1]), 1.0e-12),
+                "delta_e": np.asarray(delta_e, dtype=float).reshape(-1),
+                "delta_e_stats": np.array(
+                    [
+                        float(np.mean(delta_e, dtype=float)),
+                        float(np.max(delta_e)),
+                        float(np.std(delta_e, dtype=float)),
+                    ],
+                    dtype=float,
+                ),
+                "macbeth_lab": np.asarray(macbeth_lab, dtype=float),
+                "result_channel_means_norm": _channel_normalize(np.mean(result_flat, axis=0, dtype=float)),
+                "result_channel_p95_norm": _channel_normalize(np.percentile(result_flat, 95.0, axis=0)),
+            },
+            context={
+                "scene": scene,
+                "oi": oi,
+                "sensor": sensor,
                 "ip": ip,
             },
         )
