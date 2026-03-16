@@ -999,6 +999,44 @@ def run_python_case_with_context(
             context={"scene1": scene1, "scene2": scene2, "display": display},
         )
 
+    if case_name == "metrics_rgb2scielab_small":
+        def _canonical_profile(values: Any, samples: int = 129) -> np.ndarray:
+            profile = np.asarray(values, dtype=float).reshape(-1)
+            support = np.linspace(-1.0, 1.0, profile.size, dtype=float)
+            query = np.linspace(-1.0, 1.0, samples, dtype=float)
+            return np.interp(query, support, profile).astype(float)
+
+        error_image, scene1, scene2, display = scielab_rgb(
+            "hats.jpg",
+            "hatsC.jpg",
+            "crt.mat",
+            0.3,
+            asset_store=store,
+        )
+        error_array = np.asarray(error_image, dtype=float)
+        mask = error_array > 2.0
+        mean_above2 = float(np.mean(error_array[mask], dtype=float)) if np.any(mask) else 0.0
+        percent_above2 = float(np.count_nonzero(mask)) / max(float(error_array.size), 1.0) * 100.0
+        center_row = np.asarray(error_array[error_array.shape[0] // 2, :], dtype=float)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "error_size": np.asarray(error_array.shape, dtype=int),
+                "scene1_size": np.asarray(scene_get(scene1, "size"), dtype=int),
+                "scene2_size": np.asarray(scene_get(scene2, "size"), dtype=int),
+                "fov_deg": float(scene_get(scene1, "fov")),
+                "display_white_point": np.asarray(display_get(display, "white point"), dtype=float).reshape(3),
+                "scene1_mean_luminance": float(scene_get(scene1, "mean luminance", asset_store=store)),
+                "scene2_mean_luminance": float(scene_get(scene2, "mean luminance", asset_store=store)),
+                "mean_delta_e": float(np.mean(error_array, dtype=float)),
+                "mean_delta_e_above2": mean_above2,
+                "percent_above2": percent_above2,
+                "error_center_row_norm": _canonical_profile(_channel_normalize(center_row)),
+            },
+            context={"scene1": scene1, "scene2": scene2, "display": display},
+        )
+
     if case_name == "metrics_edge2mtf_small":
         def _canonical_profile(values: Any, samples: int = 65) -> np.ndarray:
             profile = np.asarray(values, dtype=float).reshape(-1)

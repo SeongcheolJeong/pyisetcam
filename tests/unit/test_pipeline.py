@@ -6751,6 +6751,43 @@ def test_run_python_case_supports_metrics_scielab_rgb_small_parity_case(asset_st
     assert case.payload["error_center_row_norm"].shape == (129,)
 
 
+def test_metrics_rgb2scielab_script_workflow(asset_store) -> None:
+    error_image, scene1, scene2, display = scielab_rgb(
+        "hats.jpg",
+        "hatsC.jpg",
+        "crt.mat",
+        0.3,
+        asset_store=asset_store,
+    )
+
+    mask = np.asarray(error_image, dtype=float) > 2.0
+    mean_above2 = float(np.mean(np.asarray(error_image, dtype=float)[mask], dtype=float))
+    percent_above2 = float(np.count_nonzero(mask)) / float(np.asarray(error_image).size) * 100.0
+
+    assert tuple(scene_get(scene1, "size")) == (128, 192)
+    assert tuple(scene_get(scene2, "size")) == (128, 192)
+    assert tuple(np.asarray(error_image).shape) == (127, 191)
+    assert np.isclose(float(scene_get(scene1, "fov")), 8.783389963820218, atol=1e-12, rtol=1e-12)
+    assert np.isclose(float(np.mean(error_image, dtype=float)), 1.5116844348691976, atol=1e-12, rtol=1e-12)
+    assert np.isclose(mean_above2, 2.8235651171190823, atol=1e-12, rtol=1e-12)
+    assert np.isclose(percent_above2, 21.754545079770786, atol=1e-12, rtol=1e-12)
+    assert np.all(np.asarray(display_get(display, "white point"), dtype=float) > 0.0)
+
+
+def test_run_python_case_supports_metrics_rgb2scielab_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_rgb2scielab_small", asset_store=asset_store)
+
+    assert tuple(case.payload["error_size"]) == (127, 191)
+    assert tuple(case.payload["scene1_size"]) == (128, 192)
+    assert tuple(case.payload["scene2_size"]) == (128, 192)
+    assert np.isclose(float(case.payload["fov_deg"]), 8.783389963820218, atol=1e-12, rtol=1e-12)
+    assert case.payload["display_white_point"].shape == (3,)
+    assert np.isclose(float(case.payload["mean_delta_e"]), 1.5116844348691976, atol=1e-12, rtol=1e-12)
+    assert np.isclose(float(case.payload["mean_delta_e_above2"]), 2.8235651171190823, atol=1e-12, rtol=1e-12)
+    assert np.isclose(float(case.payload["percent_above2"]), 21.754545079770786, atol=1e-12, rtol=1e-12)
+    assert case.payload["error_center_row_norm"].shape == (129,)
+
+
 def test_metrics_edge2mtf_script_workflow(asset_store) -> None:
     scene = scene_create("slanted bar", 512, 7.0 / 3.0, asset_store=asset_store)
     scene = scene_adjust_luminance(scene, 100.0, asset_store=asset_store)

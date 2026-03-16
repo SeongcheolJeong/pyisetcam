@@ -220,6 +220,15 @@
       }
     },
     {
+      "name": "metrics_rgb2scielab_small",
+      "matlab_function": "s_rgb2scielab.m",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "error_center_row_norm": {"mode": "mean_rel", "max_mean_rel": 0.00002}
+      }
+    },
+    {
       "name": "metrics_edge2mtf_small",
       "matlab_function": "s_metricsEdge2MTF",
       "rtol": 1e-05,

@@ -802,6 +802,25 @@ switch case_name
         ];
         payload.error_center_row_norm = local_canonical_profile(centerRow, 129);
 
+    case 'metrics_rgb2scielab_small'
+        file1 = fullfile(isetRootPath, 'data', 'images', 'rgb', 'hats.jpg');
+        file2 = fullfile(isetRootPath, 'data', 'images', 'rgb', 'hatsC.jpg');
+        [errorImage, scene1, scene2, display] = scielabRGB(file1, file2, 'crt.mat', 0.3);
+        centerRow = local_channel_normalize(double(errorImage(floor(size(errorImage, 1) / 2) + 1, :)));
+        above2 = double(errorImage(errorImage > 2));
+
+        payload.error_size = double(size(errorImage(:,:)))';
+        payload.scene1_size = double(sceneGet(scene1, 'size')(:));
+        payload.scene2_size = double(sceneGet(scene2, 'size')(:));
+        payload.fov_deg = double(sceneGet(scene1, 'fov'));
+        payload.display_white_point = double(displayGet(display, 'white point')(:));
+        payload.scene1_mean_luminance = double(sceneGet(scene1, 'mean luminance'));
+        payload.scene2_mean_luminance = double(sceneGet(scene2, 'mean luminance'));
+        payload.mean_delta_e = mean(double(errorImage(:)));
+        payload.mean_delta_e_above2 = mean(above2);
+        payload.percent_above2 = double(numel(above2)) / max(double(numel(errorImage)), 1) * 100;
+        payload.error_center_row_norm = local_canonical_profile(centerRow, 129);
+
     case 'metrics_edge2mtf_small'
         scene = sceneCreate('slanted bar', 512, 7/3);
         scene = sceneAdjustLuminance(scene, 100);

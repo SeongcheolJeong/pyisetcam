@@ -36,6 +36,7 @@
 - and now also curated Octave parity on `s_metricsSPD.m`, covering the daylight `4000:500:7000 K` comparison sweep for both the D4000-reference and fixed-D65-white-point branches, including the returned angle, CIELAB Delta E, and mired curves
 - and now also headless `cameraVSNR(...)`, with curated Octave parity on `s_metricsVSNR.m` covering the default camera uniform-field sweep, the stable ROI geometry, normalized VSNR / reciprocal-Delta-E curves across the three light levels, and processed-image RGB summary statistics
 - and now also headless `scielabRGB(...)` / `scielab(...)` in a new `scielab.py`, plus MATLAB-style display `rgb2xyz` / `white point` support, with curated Octave parity on `t_metricsScielab.m` covering the `hats.jpg` versus `hatsC.jpg` LCD-Apple tutorial workflow, returned scene geometry, display white point, and the stable S-CIELAB error-map summaries
+- and now also curated Octave parity on `s_rgb2scielab.m`, covering the `crt.mat` S-CIELAB script path for `hats.jpg` versus `hatsC.jpg`, including the mean Delta E, the mean/percent above the script’s `Delta E > 2` threshold, scene geometry, display white point, and a normalized error-profile slice
 
 ## Status
 
