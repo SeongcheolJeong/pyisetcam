@@ -875,6 +875,61 @@ switch case_name
         payload.mtf50 = double(mtf50);
         payload.mtf_profiles_norm = double(mtfProfiles);
 
+    case 'metrics_snr_pixel_size_luxsec_small'
+        integrationTime = 0.010;
+        pixelSizesUM = [2 4 6 9 10];
+        readNoiseMV = [5 4 3 2 1];
+        voltageSwingV = [0.7 1.2 1.5 2 3];
+        darkVoltageMVPerSec = [1 1 1 1 1];
+
+        sensor = sensorCreate('monochrome');
+        sensor = sensorSet(sensor, 'integrationTime', integrationTime);
+
+        snrDB = zeros(numel(pixelSizesUM), 50);
+        luxsecCurves = zeros(numel(pixelSizesUM), 50);
+        snrShotDB = zeros(numel(pixelSizesUM), 50);
+        snrReadDB = zeros(numel(pixelSizesUM), 50);
+        voltsPerLuxSecValues = zeros(numel(pixelSizesUM), 1);
+        luxsecSaturation = zeros(numel(pixelSizesUM), 1);
+        meanVolts = zeros(numel(pixelSizesUM), 1);
+
+        for ii = 1:numel(pixelSizesUM)
+            pixel = sensorGet(sensor, 'pixel');
+            pixel = pixelSet(pixel, 'size constant fill factor', [pixelSizesUM(ii), pixelSizesUM(ii)] * 1e-6);
+            pixel = pixelSet(pixel, 'readNoiseSTDvolts', readNoiseMV(ii) * 1e-3);
+            pixel = pixelSet(pixel, 'voltageSwing', voltageSwingV(ii));
+            pixel = pixelSet(pixel, 'darkVoltage', darkVoltageMVPerSec(ii) * 1e-3);
+            sensor = sensorSet(sensor, 'pixel', pixel);
+
+            [snr, luxsec, snrShot, snrRead] = pixelSNRluxsec(sensor);
+            [voltsPerLuxSec, saturationLuxsec, meanVoltage] = pixelVperLuxSec(sensor);
+
+            if isscalar(snrRead)
+                snrRead = repmat(snrRead, size(snr));
+            end
+
+            snrDB(ii, :) = double(snr(:)');
+            luxsecCurves(ii, :) = double(luxsec(:, 1)');
+            snrShotDB(ii, :) = double(snrShot(:)');
+            snrReadDB(ii, :) = double(snrRead(:)');
+            voltsPerLuxSecValues(ii) = double(voltsPerLuxSec(1));
+            luxsecSaturation(ii) = double(saturationLuxsec);
+            meanVolts(ii) = double(meanVoltage(1));
+        end
+
+        payload.integration_time_s = double(integrationTime);
+        payload.pixel_sizes_um = double(pixelSizesUM(:));
+        payload.read_noise_mv = double(readNoiseMV(:));
+        payload.voltage_swing_v = double(voltageSwingV(:));
+        payload.dark_voltage_mv_per_sec = double(darkVoltageMVPerSec(:));
+        payload.snr_db = double(snrDB);
+        payload.luxsec_curves = double(luxsecCurves);
+        payload.snr_shot_db = double(snrShotDB);
+        payload.snr_read_db = double(snrReadDB);
+        payload.volts_per_lux_sec = double(voltsPerLuxSecValues);
+        payload.luxsec_saturation = double(luxsecSaturation);
+        payload.mean_volts = double(meanVolts);
+
     case 'scene_illuminant_change'
         scene = sceneCreate();
         bb = blackbody(sceneGet(scene, 'wave'), 3000, 'energy');

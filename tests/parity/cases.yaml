@@ -250,6 +250,18 @@
       }
     },
     {
+      "name": "metrics_snr_pixel_size_luxsec_small",
+      "matlab_function": "s_metricsSNRPixelSizeLuxsec.m",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "luxsec_curves": {"mode": "mean_rel", "max_mean_rel": 0.06},
+        "volts_per_lux_sec": {"mode": "mean_rel", "max_mean_rel": 0.06},
+        "luxsec_saturation": {"mode": "mean_rel", "max_mean_rel": 0.06},
+        "mean_volts": {"mode": "mean_rel", "max_mean_rel": 0.001}
+      }
+    },
+    {
       "name": "scene_illuminant_change",
       "matlab_function": "sceneAdjustIlluminant",
       "rtol": 1e-05,

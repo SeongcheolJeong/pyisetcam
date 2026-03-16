@@ -2109,6 +2109,80 @@ def pixel_snr(sensor: Sensor, volts: Any | None = None) -> tuple[np.ndarray, np.
     return snr, np.asarray(voltage_levels, dtype=float), snr_shot, snr_read
 
 
+def pixel_v_per_lux_sec(
+    sensor: Sensor,
+    light_type: str = "ee",
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[np.ndarray, float, np.ndarray, np.ndarray, float]:
+    """Compute MATLAB-style pixel photometric sensitivity in volts per lux-second."""
+
+    from .optics import oi_calculate_illuminance, oi_compute, oi_create
+    from .scene import scene_create
+
+    store = _store(asset_store)
+    normalized_light = param_format(light_type or "ee")
+    scene_name = "uniform d65" if normalized_light == "d65" else "uniform"
+    wave = np.asarray(sensor_get(sensor, "wave"), dtype=float).reshape(-1)
+
+    scene = scene_create(scene_name, 32, wave, asset_store=store)
+    oi = oi_create("pinhole", wave, asset_store=store)
+    oi = oi_compute(oi, scene)
+    _, lux, anti_lux = oi_calculate_illuminance(oi)
+
+    saturation_exposure_time = float(_auto_exposure_default(sensor, oi))
+    signal_sensor = sensor_set(sensor, "integration time", saturation_exposure_time)
+    signal_sensor = sensor_compute(signal_sensor, oi, seed=0)
+
+    n_colors = int(sensor_get(signal_sensor, "ncolors"))
+    mean_volts = np.zeros(n_colors, dtype=float)
+    for color_index in range(1, n_colors + 1):
+        mean_volts[color_index - 1] = float(np.mean(np.asarray(sensor_get(signal_sensor, "volts", color_index), dtype=float)))
+
+    luxsec = float(lux) * saturation_exposure_time
+    anti_luxsec = float(anti_lux) * saturation_exposure_time
+    volts_per_lux_sec = np.divide(
+        mean_volts,
+        luxsec,
+        out=np.full_like(mean_volts, np.inf),
+        where=not np.isclose(luxsec, 0.0),
+    )
+    volts_per_anti_lux_sec = np.divide(
+        mean_volts,
+        anti_luxsec,
+        out=np.full_like(mean_volts, np.inf),
+        where=not np.isclose(anti_luxsec, 0.0),
+    )
+    return volts_per_lux_sec, luxsec, mean_volts, volts_per_anti_lux_sec, anti_luxsec
+
+
+def pixel_snr_luxsec(
+    sensor: Sensor,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, float | np.ndarray, np.ndarray]:
+    """Compute MATLAB-style pixel SNR curves in dB over lux-second levels."""
+
+    snr, volts, snr_shot, snr_read = pixel_snr(sensor)
+    volts_per_lux_sec, _, _, volts_per_anti_lux_sec, _ = pixel_v_per_lux_sec(sensor, asset_store=asset_store)
+
+    volts_column = np.asarray(volts, dtype=float).reshape(-1, 1)
+    luxsec = np.divide(
+        volts_column,
+        np.asarray(volts_per_lux_sec, dtype=float).reshape(1, -1),
+        out=np.zeros((volts_column.shape[0], np.asarray(volts_per_lux_sec).size), dtype=float),
+        where=~np.isclose(np.asarray(volts_per_lux_sec, dtype=float).reshape(1, -1), 0.0),
+    )
+    anti_luxsec = np.divide(
+        volts_column,
+        np.asarray(volts_per_anti_lux_sec, dtype=float).reshape(1, -1),
+        out=np.zeros((volts_column.shape[0], np.asarray(volts_per_anti_lux_sec).size), dtype=float),
+        where=np.isfinite(np.asarray(volts_per_anti_lux_sec, dtype=float).reshape(1, -1))
+        & ~np.isclose(np.asarray(volts_per_anti_lux_sec, dtype=float).reshape(1, -1), 0.0),
+    )
+    return snr, luxsec, snr_shot, snr_read, anti_luxsec
+
+
 def sensor_snr(
     sensor: Sensor,
     volts: Any | None = None,

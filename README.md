@@ -28,6 +28,7 @@
 - and now also Phase 4 metrics coverage has started with new `iso.py`, headless `ISOFindSlantedBar(...)` / `ieCXcorr(...)` / `edge_to_mtf(...)`, curated Octave parity on `s_metricsEdge2MTF.m`, and a MATLAB-faithful odd-sized `sceneCreate('slanted bar', ...)` generator that matches the upstream edge orientation and geometry
 - and now also headless `ISO12233(...)` / `ieISO12233(...)` in `iso.py`, with curated Octave parity on `s_metricsMTFSlantedBar.m` covering the direct RGB slanted-bar path, the `ieISO12233(ip, sensor, ...)` sensor-space path, the monochrome direct path, and their stable ESF/LSF/MTF50/aliasing contracts under case-scoped parity tolerances
 - and now also curated Octave parity on `s_metricsMTFPixelSize.m`, covering the fixed-die-size monochrome slanted-bar sweep across 2/3/5/9 um pixels, the per-pixel-size sensor geometry and ROI replay, Nyquist and MTF50 trends, and the normalized luminance MTF profiles under case-scoped parity tolerances
+- and now also headless `pixelVperLuxSec(...)` / `pixelSNRluxsec(...)` in `sensor.py`, with curated Octave parity on `s_metricsSNRPixelSizeLuxsec.m` covering the monochrome 2/4/6/9/10 um pixel sweep, its lux-sec sensitivity curves, and the returned SNR/read-noise/shot-noise summaries
 
 ## Status
 

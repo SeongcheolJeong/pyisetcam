@@ -181,6 +181,8 @@ from .sensor import (
     mlens_get,
     mlens_set,
     pixel_snr,
+    pixel_snr_luxsec,
+    pixel_v_per_lux_sec,
     signal_current,
     sensor_ccm,
     sensor_color_filter,
@@ -413,6 +415,8 @@ __all__ = [
     "root_mean_squared_error",
     "scene_plot",
     "pixel_snr",
+    "pixel_snr_luxsec",
+    "pixel_v_per_lux_sec",
     "sensor_snr",
     "sensor_plot",
     "sensor_plot_fft",
@@ -755,6 +759,8 @@ sensorCrop = sensor_crop
 sensorGet = sensor_get
 sensorSNR = sensor_snr
 pixelSNR = pixel_snr
+pixelSNRluxsec = pixel_snr_luxsec
+pixelVperLuxSec = pixel_v_per_lux_sec
 sensorSet = sensor_set
 sensorSetSizeToFOV = sensor_set_size_to_fov
 

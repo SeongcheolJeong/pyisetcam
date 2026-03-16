@@ -104,6 +104,8 @@ from pyisetcam import (
     mlens_create,
     mlens_get,
     mlens_set,
+    pixel_snr_luxsec,
+    pixel_v_per_lux_sec,
     sensor_compute,
     sensor_compute_array,
     sensor_compute_samples,
@@ -6809,6 +6811,81 @@ def test_run_python_case_supports_metrics_mtf_pixel_size_small_parity_case(asset
     assert case.payload["mtf_profiles_norm"].shape == (4, 129)
     assert np.all(np.asarray(case.payload["nyquistf"], dtype=float) > 0.0)
     assert np.all(np.asarray(case.payload["mtf50"], dtype=float) > 0.0)
+
+
+def test_metrics_snr_pixel_size_luxsec_script(asset_store) -> None:
+    integration_time = 0.010
+    pixel_sizes_um = np.array([2.0, 4.0, 6.0, 9.0, 10.0], dtype=float)
+    read_noise_mv = np.array([5.0, 4.0, 3.0, 2.0, 1.0], dtype=float)
+    voltage_swing_v = np.array([0.7, 1.2, 1.5, 2.0, 3.0], dtype=float)
+    dark_voltage_mv_per_sec = np.array([1.0, 1.0, 1.0, 1.0, 1.0], dtype=float)
+
+    sensor = sensor_create("monochrome", asset_store=asset_store)
+    sensor = sensor_set(sensor, "integration time", integration_time)
+
+    luxsec_saturation = []
+    volts_per_lux_sec = []
+    terminal_snr = []
+    for pixel_size_um, read_noise_mv_value, voltage_swing_value, dark_voltage_mv_value in zip(
+        pixel_sizes_um,
+        read_noise_mv,
+        voltage_swing_v,
+        dark_voltage_mv_per_sec,
+        strict=False,
+    ):
+        sensor1 = sensor_set(
+            sensor,
+            "pixel size constant fill factor",
+            np.array([pixel_size_um, pixel_size_um], dtype=float) * 1.0e-6,
+        )
+        sensor1 = sensor_set(sensor1, "readNoiseSTDvolts", float(read_noise_mv_value) * 1.0e-3)
+        sensor1 = sensor_set(sensor1, "voltageSwing", float(voltage_swing_value))
+        sensor1 = sensor_set(sensor1, "darkVoltage", float(dark_voltage_mv_value) * 1.0e-3)
+
+        snr, luxsec, snr_shot, snr_read, anti_luxsec = pixel_snr_luxsec(sensor1, asset_store=asset_store)
+        vp_luxsec, sat_luxsec, mean_volts, vp_anti_luxsec, anti_sat_luxsec = pixel_v_per_lux_sec(
+            sensor1,
+            asset_store=asset_store,
+        )
+
+        assert snr.shape == (50,)
+        assert luxsec.shape == (50, 1)
+        assert snr_shot.shape == (50,)
+        assert anti_luxsec.shape == (50, 1)
+        assert np.all(np.diff(snr) > 0.0)
+        assert np.all(np.diff(luxsec[:, 0]) > 0.0)
+        assert float(vp_luxsec[0]) > 0.0
+        assert float(sat_luxsec) > 0.0
+        assert 0.0 < float(mean_volts[0]) < float(voltage_swing_value)
+        assert np.isinf(float(vp_anti_luxsec[0])) or float(vp_anti_luxsec[0]) >= 0.0
+        assert float(anti_sat_luxsec) >= 0.0
+        if np.isscalar(snr_read):
+            assert np.isfinite(float(snr_read)) or np.isinf(float(snr_read))
+        else:
+            assert np.asarray(snr_read, dtype=float).shape == (50,)
+
+        luxsec_saturation.append(float(sat_luxsec))
+        volts_per_lux_sec.append(float(vp_luxsec[0]))
+        terminal_snr.append(float(snr[-1]))
+
+    assert luxsec_saturation[0] > luxsec_saturation[-1]
+    assert volts_per_lux_sec[0] < volts_per_lux_sec[-1]
+    assert terminal_snr[0] < terminal_snr[-1]
+
+
+def test_run_python_case_supports_metrics_snr_pixel_size_luxsec_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_snr_pixel_size_luxsec_small", asset_store=asset_store)
+
+    assert np.array_equal(case.payload["pixel_sizes_um"], np.array([2.0, 4.0, 6.0, 9.0, 10.0], dtype=float))
+    assert np.array_equal(case.payload["read_noise_mv"], np.array([5.0, 4.0, 3.0, 2.0, 1.0], dtype=float))
+    assert case.payload["snr_db"].shape == (5, 50)
+    assert case.payload["luxsec_curves"].shape == (5, 50)
+    assert case.payload["snr_shot_db"].shape == (5, 50)
+    assert case.payload["snr_read_db"].shape == (5, 50)
+    assert np.all(np.diff(case.payload["snr_db"], axis=1) > 0.0)
+    assert np.all(np.diff(case.payload["luxsec_curves"], axis=1) > 0.0)
+    assert np.all(np.asarray(case.payload["volts_per_lux_sec"], dtype=float) > 0.0)
+    assert np.all(np.asarray(case.payload["luxsec_saturation"], dtype=float) > 0.0)
 
 
 def test_run_python_case_supports_sensor_imx363_crop_parity_case(asset_store) -> None:

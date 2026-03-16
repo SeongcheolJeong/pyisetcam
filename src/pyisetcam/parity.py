@@ -84,6 +84,8 @@ from .sensor import (
     mlens_create,
     mlens_get,
     mlens_set,
+    pixel_snr_luxsec,
+    pixel_v_per_lux_sec,
     sensor_color_filter,
     sensor_ccm,
     sensor_compute,
@@ -1077,6 +1079,73 @@ def run_python_case_with_context(
                 "scene": scene,
                 "oi": oi,
             },
+        )
+
+    if case_name == "metrics_snr_pixel_size_luxsec_small":
+        integration_time = 0.010
+        pixel_sizes_um = np.array([2.0, 4.0, 6.0, 9.0, 10.0], dtype=float)
+        read_noise_mv = np.array([5.0, 4.0, 3.0, 2.0, 1.0], dtype=float)
+        voltage_swing_v = np.array([0.7, 1.2, 1.5, 2.0, 3.0], dtype=float)
+        dark_voltage_mv_per_sec = np.array([1.0, 1.0, 1.0, 1.0, 1.0], dtype=float)
+
+        sensor = sensor_create("monochrome", asset_store=store)
+        sensor = sensor_set(sensor, "integration time", integration_time)
+
+        snr_curves = []
+        luxsec_curves = []
+        volts_per_lux_sec = []
+        luxsec_saturation = []
+        mean_volts = []
+        snr_read = []
+        snr_shot = []
+
+        for pixel_size_um, read_noise_mv_value, voltage_swing_value, dark_voltage_mv_value in zip(
+            pixel_sizes_um,
+            read_noise_mv,
+            voltage_swing_v,
+            dark_voltage_mv_per_sec,
+            strict=False,
+        ):
+            pixel_sensor = sensor_set(
+                sensor,
+                "pixel size constant fill factor",
+                np.array([pixel_size_um, pixel_size_um], dtype=float) * 1.0e-6,
+            )
+            pixel_sensor = sensor_set(pixel_sensor, "readNoiseSTDvolts", float(read_noise_mv_value) * 1.0e-3)
+            pixel_sensor = sensor_set(pixel_sensor, "voltageSwing", float(voltage_swing_value))
+            pixel_sensor = sensor_set(pixel_sensor, "darkVoltage", float(dark_voltage_mv_value) * 1.0e-3)
+
+            snr, luxsec, snr_shot_curve, snr_read_curve, _ = pixel_snr_luxsec(pixel_sensor, asset_store=store)
+            volts_per_lux, saturation_luxsec, mean_voltage, _, _ = pixel_v_per_lux_sec(pixel_sensor, asset_store=store)
+
+            snr_curves.append(np.asarray(snr, dtype=float).reshape(-1))
+            luxsec_curves.append(np.asarray(luxsec, dtype=float)[:, 0])
+            volts_per_lux_sec.append(float(np.asarray(volts_per_lux, dtype=float)[0]))
+            luxsec_saturation.append(float(saturation_luxsec))
+            mean_volts.append(float(np.asarray(mean_voltage, dtype=float)[0]))
+            snr_shot.append(np.asarray(snr_shot_curve, dtype=float).reshape(-1))
+            if np.isscalar(snr_read_curve):
+                snr_read.append(np.full(np.asarray(snr, dtype=float).shape, float(snr_read_curve), dtype=float))
+            else:
+                snr_read.append(np.asarray(snr_read_curve, dtype=float).reshape(-1))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "integration_time_s": float(integration_time),
+                "pixel_sizes_um": pixel_sizes_um,
+                "read_noise_mv": read_noise_mv,
+                "voltage_swing_v": voltage_swing_v,
+                "dark_voltage_mv_per_sec": dark_voltage_mv_per_sec,
+                "snr_db": np.asarray(snr_curves, dtype=float),
+                "luxsec_curves": np.asarray(luxsec_curves, dtype=float),
+                "snr_shot_db": np.asarray(snr_shot, dtype=float),
+                "snr_read_db": np.asarray(snr_read, dtype=float),
+                "volts_per_lux_sec": np.asarray(volts_per_lux_sec, dtype=float),
+                "luxsec_saturation": np.asarray(luxsec_saturation, dtype=float),
+                "mean_volts": np.asarray(mean_volts, dtype=float),
+            },
+            context={},
         )
 
     if case_name == "scene_illuminant_change":
