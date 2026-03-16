@@ -467,6 +467,38 @@
       }
     },
     {
+      "name": "scene_rgb2radiance_displays_small",
+      "matlab_function": "t_sceneRGB2Radiance",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "oled_rgb_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.1
+        },
+        "oled_rgb_channel_means": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.1
+        },
+        "lcd_rgb_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.1
+        },
+        "lcd_rgb_channel_means": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.1
+        },
+        "crt_rgb_stats": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.1
+        },
+        "crt_rgb_channel_means": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.1
+        }
+      }
+    },
+    {
       "name": "display_create_lcd_example",
       "matlab_function": "displayCreate",
       "rtol": 1e-05,

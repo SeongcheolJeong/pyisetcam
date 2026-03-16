@@ -54,9 +54,29 @@ def _wave_or_default(wave: Any | None) -> np.ndarray:
     return np.asarray(wave, dtype=float).reshape(-1)
 
 
-def _scene_image_input(input_data: Any) -> tuple[np.ndarray, str, str]:
+def _scene_image_input(input_data: Any, *, asset_store: AssetStore | None = None) -> tuple[np.ndarray, str, str]:
     if isinstance(input_data, (str, Path)):
         path = Path(input_data).expanduser()
+        if not path.exists() and asset_store is not None:
+            candidates = [
+                path,
+                Path("data/images/rgb") / path,
+                Path("data/images") / path,
+            ]
+            resolved = None
+            for candidate in candidates:
+                try:
+                    resolved = asset_store.resolve(candidate)
+                    break
+                except MissingAssetError:
+                    continue
+            if resolved is None:
+                snapshot_root = asset_store.ensure()
+                matches = list(snapshot_root.rglob(path.name))
+                if matches:
+                    resolved = matches[0]
+            if resolved is not None:
+                path = resolved
         image = np.asarray(iio.imread(path), dtype=float)
         return image, str(path), path.stem
     image = np.asarray(input_data, dtype=float)
@@ -2129,7 +2149,7 @@ def scene_from_file(
         raise UnsupportedOptionError("sceneFromFile", "reflective display")
 
     wave_nm = np.asarray(display_get(current_display, "wave"), dtype=float).reshape(-1)
-    image, filename, source_name = _scene_image_input(input_data)
+    image, filename, source_name = _scene_image_input(input_data, asset_store=store)
     spd = np.asarray(display_get(current_display, "spd"), dtype=float)
     n_primaries = spd.shape[1]
     prepared = _prepare_display_image(image, normalized_type, n_primaries)

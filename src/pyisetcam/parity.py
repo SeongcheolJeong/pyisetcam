@@ -13,7 +13,7 @@ from .assets import AssetStore, ie_read_color_filter, ie_read_spectra
 from .camera import camera_compute, camera_create, camera_get, camera_set
 from .color import daylight, luminance_from_energy, luminance_from_photons
 from .description import sensor_description
-from .display import display_create
+from .display import display_create, display_get
 from .fileio import ie_save_color_filter, ie_save_multispectral_image, ie_save_si_data_file
 from .fileio import sensor_dng_read
 from .illuminant import illuminant_create, illuminant_get, illuminant_set
@@ -1756,6 +1756,85 @@ def run_python_case_with_context(
                 "standard_render_center_rgb": standard_res_summary["center_rgb"],
                 "standard_render_center_row_luma_norm": standard_res_summary["center_row_luma_norm"],
                 "standard_render_delta_mean_abs": float(np.mean(np.abs(standard_res - standard_srgb))),
+            },
+            context={},
+        )
+
+    if case_name == "scene_rgb2radiance_displays_small":
+        def _display_scene_payload(display_name: str) -> dict[str, Any]:
+            display = display_create(display_name, asset_store=store)
+            wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)
+            spd = np.asarray(display_get(display, "spd"), dtype=float)
+            white_spd = np.asarray(display_get(display, "white spd"), dtype=float).reshape(-1)
+            white_xy = np.asarray(
+                chromaticity_xy(xyz_from_energy(white_spd, wave, asset_store=store)),
+                dtype=float,
+            ).reshape(-1)
+            primary_xy = np.vstack(
+                [
+                    np.asarray(
+                        chromaticity_xy(xyz_from_energy(spd[:, index], wave, asset_store=store)),
+                        dtype=float,
+                    ).reshape(-1)
+                    for index in range(spd.shape[1])
+                ]
+            )
+
+            scene = scene_from_file("macbeth.tif", "rgb", None, display_name, asset_store=store)
+            photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+            mean_scene_spd = np.mean(photons, axis=(0, 1), dtype=float)
+            rendered_rgb = np.asarray(scene_get(scene, "rgb", asset_store=store), dtype=float)
+
+            return {
+                "wave": wave,
+                "spd_shape": np.array(spd.shape, dtype=int),
+                "white_xy": white_xy,
+                "primary_xy": primary_xy,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int).reshape(-1),
+                "mean_luminance": float(scene_get(scene, "mean luminance", asset_store=store)),
+                "mean_scene_spd_norm": _channel_normalize(mean_scene_spd),
+                "illuminant_energy_norm": _channel_normalize(np.asarray(scene_get(scene, "illuminant energy"), dtype=float).reshape(-1)),
+                "rgb_stats": _stats_vector(rendered_rgb),
+                "rgb_channel_means": np.mean(rendered_rgb, axis=(0, 1), dtype=float).reshape(-1),
+            }
+
+        oled = _display_scene_payload("OLED-Sony.mat")
+        lcd = _display_scene_payload("LCD-Apple.mat")
+        crt = _display_scene_payload("CRT-Dell.mat")
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "oled_wave": oled["wave"],
+                "oled_spd_shape": oled["spd_shape"],
+                "oled_white_xy": oled["white_xy"],
+                "oled_primary_xy": oled["primary_xy"],
+                "oled_scene_size": oled["scene_size"],
+                "oled_mean_luminance": oled["mean_luminance"],
+                "oled_mean_scene_spd_norm": oled["mean_scene_spd_norm"],
+                "oled_illuminant_energy_norm": oled["illuminant_energy_norm"],
+                "oled_rgb_stats": oled["rgb_stats"],
+                "oled_rgb_channel_means": oled["rgb_channel_means"],
+                "lcd_wave": lcd["wave"],
+                "lcd_spd_shape": lcd["spd_shape"],
+                "lcd_white_xy": lcd["white_xy"],
+                "lcd_primary_xy": lcd["primary_xy"],
+                "lcd_scene_size": lcd["scene_size"],
+                "lcd_mean_luminance": lcd["mean_luminance"],
+                "lcd_mean_scene_spd_norm": lcd["mean_scene_spd_norm"],
+                "lcd_illuminant_energy_norm": lcd["illuminant_energy_norm"],
+                "lcd_rgb_stats": lcd["rgb_stats"],
+                "lcd_rgb_channel_means": lcd["rgb_channel_means"],
+                "crt_wave": crt["wave"],
+                "crt_spd_shape": crt["spd_shape"],
+                "crt_white_xy": crt["white_xy"],
+                "crt_primary_xy": crt["primary_xy"],
+                "crt_scene_size": crt["scene_size"],
+                "crt_mean_luminance": crt["mean_luminance"],
+                "crt_mean_scene_spd_norm": crt["mean_scene_spd_norm"],
+                "crt_illuminant_energy_norm": crt["illuminant_energy_norm"],
+                "crt_rgb_stats": crt["rgb_stats"],
+                "crt_rgb_channel_means": crt["rgb_channel_means"],
             },
             context={},
         )

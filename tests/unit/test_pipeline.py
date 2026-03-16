@@ -4892,6 +4892,26 @@ def test_run_python_case_supports_scene_from_rgb_vs_multispectral_stuffed_animal
     assert case.payload["xyz_channel_corr"].shape == (3,)
 
 
+def test_run_python_case_supports_scene_rgb2radiance_displays_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_rgb2radiance_displays_small", asset_store=asset_store)
+
+    assert case.payload["oled_wave"].shape == (101,)
+    assert tuple(case.payload["oled_spd_shape"]) == (101, 4)
+    assert case.payload["oled_white_xy"].shape == (2,)
+    assert case.payload["oled_primary_xy"].shape == (4, 2)
+    assert tuple(case.payload["oled_scene_size"]) == (64, 96)
+    assert case.payload["oled_mean_scene_spd_norm"].shape == (101,)
+    assert case.payload["oled_illuminant_energy_norm"].shape == (101,)
+    assert case.payload["oled_rgb_stats"].shape == (4,)
+    assert case.payload["oled_rgb_channel_means"].shape == (3,)
+    assert tuple(case.payload["lcd_spd_shape"]) == (101, 3)
+    assert case.payload["lcd_primary_xy"].shape == (3, 2)
+    assert tuple(case.payload["lcd_scene_size"]) == (64, 96)
+    assert tuple(case.payload["crt_spd_shape"]) == (101, 3)
+    assert case.payload["crt_primary_xy"].shape == (3, 2)
+    assert tuple(case.payload["crt_scene_size"]) == (64, 96)
+
+
 def test_run_python_case_supports_scene_reflectance_samples_parity_case(asset_store) -> None:
     case = run_python_case_with_context("scene_reflectance_samples_small", asset_store=asset_store)
 
@@ -7905,6 +7925,53 @@ def test_scene_from_rgb_script_workflow(asset_store) -> None:
     assert roi_mean_reflectance.shape == (101,)
     assert float(np.max(roi_mean_reflectance)) < 0.5
     assert float(np.min(roi_mean_reflectance)) > 0.0
+
+
+def test_scene_rgb2radiance_tutorial_workflow(asset_store) -> None:
+    display_names = ["OLED-Sony.mat", "LCD-Apple.mat", "CRT-Dell.mat"]
+    payloads: dict[str, dict[str, np.ndarray | float | tuple[int, int]]] = {}
+
+    for name in display_names:
+        display = display_create(name, asset_store=asset_store)
+        wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)
+        spd = np.asarray(display_get(display, "spd"), dtype=float)
+        white_spd = np.asarray(display_get(display, "white spd"), dtype=float).reshape(-1)
+        white_xy = np.asarray(chromaticity_xy(xyz_from_energy(white_spd, wave, asset_store=asset_store)), dtype=float).reshape(-1)
+        primary_xy = np.vstack(
+            [
+                np.asarray(chromaticity_xy(xyz_from_energy(spd[:, idx], wave, asset_store=asset_store)), dtype=float).reshape(-1)
+                for idx in range(spd.shape[1])
+            ]
+        )
+        scene = scene_from_file("macbeth.tif", "rgb", None, name, asset_store=asset_store)
+        rendered_rgb = np.asarray(scene_get(scene, "rgb", asset_store=asset_store), dtype=float)
+
+        payloads[name] = {
+            "spd_shape": tuple(spd.shape),
+            "white_xy": white_xy,
+            "primary_xy": primary_xy,
+            "scene_size": tuple(scene_get(scene, "size")),
+            "mean_luminance": float(scene_get(scene, "mean luminance", asset_store=asset_store)),
+            "rgb_channel_means": np.mean(rendered_rgb, axis=(0, 1), dtype=float).reshape(-1),
+        }
+
+        assert tuple(scene_get(scene, "size")) == (64, 96)
+        assert rendered_rgb.shape == (64, 96, 3)
+        assert np.all(rendered_rgb >= 0.0)
+        assert np.all(rendered_rgb <= 1.0)
+        assert np.all(np.isfinite(white_xy))
+        assert np.all(np.isfinite(primary_xy))
+        assert scene.fields["display_name"] == display.name
+
+    assert payloads["OLED-Sony.mat"]["spd_shape"] == (101, 4)
+    assert payloads["LCD-Apple.mat"]["spd_shape"] == (101, 3)
+    assert payloads["CRT-Dell.mat"]["spd_shape"] == (101, 3)
+    assert payloads["OLED-Sony.mat"]["primary_xy"].shape == (4, 2)
+    assert payloads["LCD-Apple.mat"]["primary_xy"].shape == (3, 2)
+    assert payloads["CRT-Dell.mat"]["primary_xy"].shape == (3, 2)
+    assert payloads["OLED-Sony.mat"]["mean_luminance"] > payloads["LCD-Apple.mat"]["mean_luminance"] > payloads["CRT-Dell.mat"]["mean_luminance"]
+    assert not np.allclose(payloads["OLED-Sony.mat"]["rgb_channel_means"], payloads["LCD-Apple.mat"]["rgb_channel_means"])
+    assert not np.allclose(payloads["LCD-Apple.mat"]["rgb_channel_means"], payloads["CRT-Dell.mat"]["rgb_channel_means"])
 
 
 def test_scene_from_multispectral_script_workflow(asset_store) -> None:

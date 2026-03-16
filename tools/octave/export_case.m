@@ -1377,6 +1377,44 @@ switch case_name
         payload.standard_render_center_row_luma_norm = local_canonical_profile(local_channel_normalize(standardLuma(standardCenterRow, :)), 129);
         payload.standard_render_delta_mean_abs = mean(abs(standardRes(:) - standardSrgb(:)));
 
+    case 'scene_rgb2radiance_displays_small'
+        [oledPayload] = local_display_scene_payload('OLED-Sony.mat');
+        [lcdPayload] = local_display_scene_payload('LCD-Apple.mat');
+        [crtPayload] = local_display_scene_payload('CRT-Dell.mat');
+
+        payload.oled_wave = oledPayload.wave;
+        payload.oled_spd_shape = oledPayload.spd_shape;
+        payload.oled_white_xy = oledPayload.white_xy;
+        payload.oled_primary_xy = oledPayload.primary_xy;
+        payload.oled_scene_size = oledPayload.scene_size;
+        payload.oled_mean_luminance = oledPayload.mean_luminance;
+        payload.oled_mean_scene_spd_norm = oledPayload.mean_scene_spd_norm;
+        payload.oled_illuminant_energy_norm = oledPayload.illuminant_energy_norm;
+        payload.oled_rgb_stats = oledPayload.rgb_stats;
+        payload.oled_rgb_channel_means = oledPayload.rgb_channel_means;
+
+        payload.lcd_wave = lcdPayload.wave;
+        payload.lcd_spd_shape = lcdPayload.spd_shape;
+        payload.lcd_white_xy = lcdPayload.white_xy;
+        payload.lcd_primary_xy = lcdPayload.primary_xy;
+        payload.lcd_scene_size = lcdPayload.scene_size;
+        payload.lcd_mean_luminance = lcdPayload.mean_luminance;
+        payload.lcd_mean_scene_spd_norm = lcdPayload.mean_scene_spd_norm;
+        payload.lcd_illuminant_energy_norm = lcdPayload.illuminant_energy_norm;
+        payload.lcd_rgb_stats = lcdPayload.rgb_stats;
+        payload.lcd_rgb_channel_means = lcdPayload.rgb_channel_means;
+
+        payload.crt_wave = crtPayload.wave;
+        payload.crt_spd_shape = crtPayload.spd_shape;
+        payload.crt_white_xy = crtPayload.white_xy;
+        payload.crt_primary_xy = crtPayload.primary_xy;
+        payload.crt_scene_size = crtPayload.scene_size;
+        payload.crt_mean_luminance = crtPayload.mean_luminance;
+        payload.crt_mean_scene_spd_norm = crtPayload.mean_scene_spd_norm;
+        payload.crt_illuminant_energy_norm = crtPayload.illuminant_energy_norm;
+        payload.crt_rgb_stats = crtPayload.rgb_stats;
+        payload.crt_rgb_channel_means = crtPayload.rgb_channel_means;
+
     case 'display_create_lcd_example'
         d = displayCreate('lcdExample.mat');
         payload.wave = displayGet(d, 'wave');
@@ -5225,6 +5263,41 @@ sSupport = sensorGet(sensorAdjusted, 'spatial support', 'um');
 [X, Y] = meshgrid(sSupport.x, sSupport.y);
 cra = atan(sqrt(X .^ 2 + Y .^ 2) / sourceFL);
 optimalOffsets = mlFL * tan(asin(sin(cra) / n2));
+end
+
+function payload = local_display_scene_payload(displayName)
+d = displayCreate(displayName);
+wave = double(displayGet(d, 'wave'));
+spd = double(displayGet(d, 'spd'));
+whiteSpd = double(displayGet(d, 'white spd'));
+
+whiteXYZ = ieXYZFromEnergy(whiteSpd(:)', wave(:)');
+whiteSum = sum(whiteXYZ);
+whiteXY = whiteXYZ(1:2) ./ max(whiteSum, eps);
+
+primaryXY = zeros(size(spd, 2), 2);
+for ii = 1:size(spd, 2)
+    thisXYZ = ieXYZFromEnergy(spd(:, ii)', wave(:)');
+    thisSum = sum(thisXYZ);
+    primaryXY(ii, :) = thisXYZ(1:2) ./ max(thisSum, eps);
+end
+
+rgbFile = fullfile(isetRootPath, 'data', 'images', 'rgb', 'macbeth.tif');
+scene = sceneFromFile(rgbFile, 'rgb', [], displayName);
+photons = double(sceneGet(scene, 'photons'));
+meanSceneSpd = squeeze(mean(mean(photons, 1), 2));
+renderedRgb = double(sceneGet(scene, 'rgb'));
+
+payload.wave = wave(:);
+payload.spd_shape = double(size(spd));
+payload.white_xy = whiteXY(:);
+payload.primary_xy = primaryXY;
+payload.scene_size = double(sceneGet(scene, 'size')(:));
+payload.mean_luminance = double(sceneGet(scene, 'mean luminance'));
+payload.mean_scene_spd_norm = local_channel_normalize(meanSceneSpd);
+payload.illuminant_energy_norm = local_channel_normalize(double(sceneGet(scene, 'illuminant energy')));
+payload.rgb_stats = local_stats_vector(renderedRgb);
+payload.rgb_channel_means = squeeze(mean(mean(renderedRgb, 1), 2));
 end
 
 function stats = local_stats_vector(values)
