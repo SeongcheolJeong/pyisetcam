@@ -111,6 +111,7 @@ from pyisetcam import (
     mlens_create,
     mlens_get,
     mlens_set,
+    metrics_spd,
     pixel_snr_luxsec,
     pixel_v_per_lux_sec,
     sensor_ccm,
@@ -6624,6 +6625,64 @@ def test_run_python_case_supports_metrics_spd_mired_parity_case(asset_store) -> 
     assert float(case.payload["mired"]) > 0.0
     assert case.payload["uv"].shape == (2, 2)
     assert case.payload["cct_k"].shape == (2,)
+
+
+def test_metrics_spd_script_daylight_sweep_workflow() -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    ctemp = np.arange(4000.0, 7000.0 + 1.0, 500.0, dtype=float)
+
+    standard_4000 = np.asarray(daylight(wave, 4000.0), dtype=float)
+    d4000_angle = np.zeros(ctemp.size, dtype=float)
+    d4000_delta_e = np.zeros(ctemp.size, dtype=float)
+    d4000_mired = np.zeros(ctemp.size, dtype=float)
+    for index, color_temperature in enumerate(ctemp):
+        comparison = np.asarray(daylight(wave, float(color_temperature)), dtype=float)
+        d4000_angle[index] = float(metrics_spd(standard_4000, comparison, metric="angle", wave=wave))
+        d4000_delta_e[index] = float(metrics_spd(standard_4000, comparison, metric="cielab", wave=wave))
+        d4000_mired[index] = float(metrics_spd(standard_4000, comparison, metric="mired", wave=wave))
+
+    assert np.isclose(d4000_mired[-1], 114.3814, atol=1.0e-4)
+    assert np.isclose(d4000_angle[-1], 25.0450, atol=1.0e-4)
+
+    d65_white_point = np.array([94.9409, 100.0, 108.6656], dtype=float)
+    standard_6500 = np.asarray(daylight(wave, 6500.0), dtype=float)
+    d6500_angle = np.zeros(ctemp.size, dtype=float)
+    d6500_delta_e = np.zeros(ctemp.size, dtype=float)
+    d6500_mired = np.zeros(ctemp.size, dtype=float)
+    for index, color_temperature in enumerate(ctemp):
+        comparison = np.asarray(daylight(wave, float(color_temperature)), dtype=float)
+        d6500_angle[index] = float(metrics_spd(standard_6500, comparison, metric="angle", wave=wave))
+        d6500_delta_e[index] = float(
+            metrics_spd(
+                standard_6500,
+                comparison,
+                metric="cielab",
+                wave=wave,
+                white_point=d65_white_point,
+            )
+        )
+        d6500_mired[index] = float(metrics_spd(standard_6500, comparison, metric="mired", wave=wave))
+
+    assert np.isclose(d6500_mired[-1], 12.0726, atol=1.0e-4)
+    assert np.isclose(d6500_angle[-1], 2.6800, atol=1.0e-4)
+    assert np.all(d4000_delta_e >= 0.0)
+    assert np.all(d6500_delta_e >= 0.0)
+
+
+def test_run_python_case_supports_metrics_spd_daylight_sweep_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_spd_daylight_sweep_small", asset_store=asset_store)
+
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["ctemp_k"].shape == (7,)
+    assert case.payload["d65_white_point"].shape == (3,)
+    assert case.payload["d4000_angle"].shape == (7,)
+    assert case.payload["d4000_delta_e"].shape == (7,)
+    assert case.payload["d4000_mired"].shape == (7,)
+    assert case.payload["d6500_angle"].shape == (7,)
+    assert case.payload["d6500_delta_e"].shape == (7,)
+    assert case.payload["d6500_mired"].shape == (7,)
+    assert np.isclose(float(case.payload["d4000_mired"][-1]), 114.3814, atol=1.0e-4)
+    assert np.isclose(float(case.payload["d6500_mired"][-1]), 12.0726, atol=1.0e-4)
 
 
 def test_metrics_edge2mtf_script_workflow(asset_store) -> None:

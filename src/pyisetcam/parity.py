@@ -878,6 +878,55 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "metrics_spd_daylight_sweep_small":
+        wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+        ctemp = np.arange(4000.0, 7000.0 + 1.0, 500.0, dtype=float)
+        d65_white_point = np.array([94.9409, 100.0, 108.6656], dtype=float)
+
+        d4000_angle = np.zeros(ctemp.size, dtype=float)
+        d4000_delta_e = np.zeros(ctemp.size, dtype=float)
+        d4000_mired = np.zeros(ctemp.size, dtype=float)
+        standard_4000 = np.asarray(daylight(wave, 4000.0), dtype=float)
+        for index, color_temperature in enumerate(ctemp):
+            comparison = np.asarray(daylight(wave, float(color_temperature)), dtype=float)
+            d4000_angle[index] = float(metrics_spd(standard_4000, comparison, metric="angle", wave=wave))
+            d4000_delta_e[index] = float(metrics_spd(standard_4000, comparison, metric="cielab", wave=wave))
+            d4000_mired[index] = float(metrics_spd(standard_4000, comparison, metric="mired", wave=wave, asset_store=store))
+
+        d6500_angle = np.zeros(ctemp.size, dtype=float)
+        d6500_delta_e = np.zeros(ctemp.size, dtype=float)
+        d6500_mired = np.zeros(ctemp.size, dtype=float)
+        standard_6500 = np.asarray(daylight(wave, 6500.0), dtype=float)
+        for index, color_temperature in enumerate(ctemp):
+            comparison = np.asarray(daylight(wave, float(color_temperature)), dtype=float)
+            d6500_angle[index] = float(metrics_spd(standard_6500, comparison, metric="angle", wave=wave))
+            d6500_delta_e[index] = float(
+                metrics_spd(
+                    standard_6500,
+                    comparison,
+                    metric="cielab",
+                    wave=wave,
+                    white_point=d65_white_point,
+                )
+            )
+            d6500_mired[index] = float(metrics_spd(standard_6500, comparison, metric="mired", wave=wave, asset_store=store))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "ctemp_k": ctemp,
+                "d65_white_point": d65_white_point,
+                "d4000_angle": d4000_angle,
+                "d4000_delta_e": d4000_delta_e,
+                "d4000_mired": d4000_mired,
+                "d6500_angle": d6500_angle,
+                "d6500_delta_e": d6500_delta_e,
+                "d6500_mired": d6500_mired,
+            },
+            context={},
+        )
+
     if case_name == "metrics_edge2mtf_small":
         def _canonical_profile(values: Any, samples: int = 65) -> np.ndarray:
             profile = np.asarray(values, dtype=float).reshape(-1)

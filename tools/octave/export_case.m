@@ -723,6 +723,43 @@ switch case_name
         payload.uv = params.uv;
         payload.cct_k = params.cTemps;
 
+    case 'metrics_spd_daylight_sweep_small'
+        wave = (400:10:700)';
+        ctemp = (4000:500:7000)';
+        d65WhitePoint = [94.9409 100.0000 108.6656];
+
+        s1 = daylight(wave, 4000);
+        angval4000 = zeros(size(ctemp));
+        deval4000 = zeros(size(ctemp));
+        miredval4000 = zeros(size(ctemp));
+        for ii = 1:numel(ctemp)
+            s2 = daylight(wave, ctemp(ii));
+            angval4000(ii) = metricsSPD(s1, s2, 'metric', 'angle', 'wave', wave);
+            deval4000(ii) = metricsSPD(s1, s2, 'metric', 'cielab', 'wave', wave);
+            miredval4000(ii) = metricsSPD(s1, s2, 'metric', 'mired', 'wave', wave);
+        end
+
+        s1 = daylight(wave, 6500);
+        angval6500 = zeros(size(ctemp));
+        deval6500 = zeros(size(ctemp));
+        miredval6500 = zeros(size(ctemp));
+        for ii = 1:numel(ctemp)
+            s2 = daylight(wave, ctemp(ii));
+            angval6500(ii) = metricsSPD(s1, s2, 'metric', 'angle', 'wave', wave);
+            deval6500(ii) = metricsSPD(s1, s2, 'metric', 'cielab', 'wave', wave, 'white point', d65WhitePoint);
+            miredval6500(ii) = metricsSPD(s1, s2, 'metric', 'mired', 'wave', wave);
+        end
+
+        payload.wave = wave;
+        payload.ctemp_k = ctemp;
+        payload.d65_white_point = d65WhitePoint(:);
+        payload.d4000_angle = angval4000;
+        payload.d4000_delta_e = deval4000;
+        payload.d4000_mired = miredval4000;
+        payload.d6500_angle = angval6500;
+        payload.d6500_delta_e = deval6500;
+        payload.d6500_mired = miredval6500;
+
     case 'metrics_edge2mtf_small'
         scene = sceneCreate('slanted bar', 512, 7/3);
         scene = sceneAdjustLuminance(scene, 100);

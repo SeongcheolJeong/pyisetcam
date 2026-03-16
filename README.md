@@ -33,6 +33,7 @@
 - and now also headless `cameraMTF(...)` / `cameraAcutance(...)` plus `cpiqCSF(...)` / `ISOAcutance(...)`, with curated Octave parity on `s_metricsAcutance.m` covering the default camera slanted-edge workflow, the luminance MTF and CPIQ weighting profiles, the sensor degrees-per-distance conversion, and the final acutance scalar
 - and now also headless `cameraColorAccuracy(...)` plus `macbethCompareIdeal(...)`, with curated Octave parity on `s_metricsColorAccuracy.m` covering the default Macbeth-camera workflow, normalized white-point recovery, per-patch Delta E / LAB results, and the returned sRGB Macbeth comparison patches
 - and now also headless `macbethColorError(...)`, with curated Octave parity on `s_metricsMacbethDeltaE.m` covering the default scene/OI/sensor/IP current-matrix workflow, recovered sensor CCM, normalized white-point recovery, per-patch Delta E / LAB outputs, and processed-image RGB summary statistics
+- and now also curated Octave parity on `s_metricsSPD.m`, covering the daylight `4000:500:7000 K` comparison sweep for both the D4000-reference and fixed-D65-white-point branches, including the returned angle, CIELAB Delta E, and mired curves
 
 ## Status
 

@@ -193,6 +193,12 @@
       "atol": 1e-08
     },
     {
+      "name": "metrics_spd_daylight_sweep_small",
+      "matlab_function": "s_metricsSPD.m",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "metrics_edge2mtf_small",
       "matlab_function": "s_metricsEdge2MTF",
       "rtol": 1e-05,
