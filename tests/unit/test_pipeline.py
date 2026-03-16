@@ -24,6 +24,7 @@ from pyisetcam import (
     chromaticity_xy,
     cpiq_csf,
     daylight,
+    delta_e_ab,
     display_create,
     display_get,
     edge_to_mtf,
@@ -95,6 +96,7 @@ from pyisetcam import (
     rt_sample_heights,
     rt_synthetic,
     rgb_to_xw_format,
+    sc_params,
     sc_prepare_filters,
     scielab,
     scielab_rgb,
@@ -106,6 +108,7 @@ from pyisetcam import (
     scene_create,
     scene_from_file,
     scene_adjust_luminance,
+    scene_add,
     scene_get,
     scene_illuminant_ss,
     scene_interpolate_w,
@@ -6897,6 +6900,65 @@ def test_run_python_case_supports_metrics_scielab_filters_small_parity_case(asse
     assert case.payload["version_support"].shape == (199,)
     assert case.payload["version_filter_center_rows_norm"].shape == (3, 3, 129)
     assert case.payload["version_mtf_center_rows_norm"].shape == (3, 3, 129)
+
+
+def test_metrics_scielab_mtf_script_workflow(asset_store) -> None:
+    f_list = np.array([1.0, 2.0, 4.0, 8.0, 16.0, 32.0], dtype=float)
+    standard_params = {
+        "freq": f_list[0],
+        "contrast": 0.0,
+        "ph": 0.0,
+        "ang": 0.0,
+        "row": 128,
+        "col": 128,
+        "GaborFlag": 0.0,
+    }
+    standard_scene = scene_create("harmonic", standard_params, asset_store=asset_store)
+    standard_scene = scene_set(standard_scene, "fov", 1.0)
+
+    white_xyz = np.asarray(scene_get(standard_scene, "illuminant xyz", asset_store=asset_store), dtype=float)
+    illuminant_energy = np.asarray(scene_get(standard_scene, "illuminant energy", asset_store=asset_store), dtype=float)
+    wave = np.asarray(scene_get(standard_scene, "wave"), dtype=float)
+
+    delta_e = np.zeros(f_list.size, dtype=float)
+    scielab_delta_e = np.zeros(f_list.size, dtype=float)
+    for idx, frequency in enumerate(f_list):
+        test_params = dict(standard_params)
+        test_params["freq"] = float(frequency)
+        test_params["contrast"] = 0.5
+        test_scene = scene_create("harmonic", test_params, asset_store=asset_store)
+        test_scene = scene_set(test_scene, "fov", 1.0)
+        test_scene = scene_add(standard_scene, test_scene, "remove spatial mean")
+
+        xyz1 = np.asarray(scene_get(standard_scene, "xyz", asset_store=asset_store), dtype=float)
+        xyz2 = np.asarray(scene_get(test_scene, "xyz", asset_store=asset_store), dtype=float)
+        delta_e[idx] = float(np.mean(delta_e_ab(xyz1, xyz2, white_xyz, "2000"), dtype=float))
+        error_image, _, _, _ = scielab(xyz1, xyz2, white_xyz, sc_params())
+        scielab_delta_e[idx] = float(np.mean(np.asarray(error_image, dtype=float), dtype=float))
+
+    assert tuple(scene_get(standard_scene, "size")) == (128, 128)
+    assert np.isclose(float(scene_get(standard_scene, "fov")), 1.0, atol=1e-12, rtol=1e-12)
+    assert white_xyz.shape == (3,)
+    assert illuminant_energy.shape == wave.shape
+    assert np.all(delta_e > 0.0)
+    assert np.all(scielab_delta_e > 0.0)
+    assert np.array_equal(f_list, np.array([1.0, 2.0, 4.0, 8.0, 16.0, 32.0], dtype=float))
+
+
+def test_run_python_case_supports_metrics_scielab_mtf_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_scielab_mtf_small", asset_store=asset_store)
+
+    assert np.array_equal(case.payload["frequencies_cpd"], np.array([1.0, 2.0, 4.0, 8.0, 16.0, 32.0], dtype=float))
+    assert tuple(case.payload["standard_scene_size"]) == (128, 128)
+    assert np.isclose(float(case.payload["standard_fov_deg"]), 1.0, atol=1e-12, rtol=1e-12)
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["white_xyz"].shape == (3,)
+    assert case.payload["illuminant_energy_norm"].shape == (31,)
+    assert case.payload["delta_e"].shape == (6,)
+    assert case.payload["scielab_delta_e"].shape == (6,)
+    assert case.payload["scielab_over_delta_e"].shape == (6,)
+    assert np.all(np.asarray(case.payload["delta_e"], dtype=float) > 0.0)
+    assert np.all(np.asarray(case.payload["scielab_delta_e"], dtype=float) > 0.0)
 
 
 def test_metrics_edge2mtf_script_workflow(asset_store) -> None:

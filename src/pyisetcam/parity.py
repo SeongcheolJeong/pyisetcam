@@ -72,11 +72,12 @@ from .optics import (
     rt_synthetic,
 )
 from .plotting import ip_plot, oi_plot, sensor_plot, sensor_plot_line, wvf_plot
-from .scielab import sc_prepare_filters, scielab, scielab_rgb
+from .scielab import sc_params, sc_prepare_filters, scielab, scielab_rgb
 from .scene import (
     hdr_render,
     ie_reflectance_samples,
     macbeth_read_reflectance,
+    scene_add,
     scene_adjust_illuminant,
     scene_adjust_luminance,
     scene_combine,
@@ -1190,6 +1191,56 @@ def run_python_case_with_context(
                 "version_mtf_center_rows_norm": version_mtf_rows,
             },
             context={},
+        )
+
+    if case_name == "metrics_scielab_mtf_small":
+        f_list = np.array([1.0, 2.0, 4.0, 8.0, 16.0, 32.0], dtype=float)
+        standard_params = {
+            "freq": f_list[0],
+            "contrast": 0.0,
+            "ph": 0.0,
+            "ang": 0.0,
+            "row": 128,
+            "col": 128,
+            "GaborFlag": 0.0,
+        }
+        standard_scene = scene_create("harmonic", standard_params, asset_store=store)
+        standard_scene = scene_set(standard_scene, "fov", 1.0)
+
+        white_xyz = np.asarray(scene_get(standard_scene, "illuminant xyz", asset_store=store), dtype=float).reshape(3)
+        illuminant_energy = np.asarray(scene_get(standard_scene, "illuminant energy", asset_store=store), dtype=float).reshape(-1)
+        wave = np.asarray(scene_get(standard_scene, "wave"), dtype=float).reshape(-1)
+
+        delta_e = np.zeros(f_list.size, dtype=float)
+        scielab_delta_e = np.zeros(f_list.size, dtype=float)
+        for idx, frequency in enumerate(f_list):
+            test_params = dict(standard_params)
+            test_params["freq"] = float(frequency)
+            test_params["contrast"] = 0.5
+            test_scene = scene_create("harmonic", test_params, asset_store=store)
+            test_scene = scene_set(test_scene, "fov", 1.0)
+            test_scene = scene_add(standard_scene, test_scene, "remove spatial mean")
+
+            xyz1 = np.asarray(scene_get(standard_scene, "xyz", asset_store=store), dtype=float)
+            xyz2 = np.asarray(scene_get(test_scene, "xyz", asset_store=store), dtype=float)
+            delta_e[idx] = float(np.mean(delta_e_ab(xyz1, xyz2, white_xyz, "2000"), dtype=float))
+            error_image, _, _, _ = scielab(xyz1, xyz2, white_xyz, sc_params())
+            scielab_delta_e[idx] = float(np.mean(np.asarray(error_image, dtype=float), dtype=float))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "frequencies_cpd": f_list,
+                "standard_scene_size": np.asarray(scene_get(standard_scene, "size"), dtype=int),
+                "standard_fov_deg": float(scene_get(standard_scene, "fov")),
+                "wave": wave,
+                "white_xyz": white_xyz,
+                "illuminant_energy_norm": _channel_normalize(illuminant_energy),
+                "delta_e": delta_e,
+                "scielab_delta_e": scielab_delta_e,
+                "scielab_over_delta_e": np.asarray(scielab_delta_e / np.maximum(delta_e, 1.0e-12), dtype=float),
+            },
+            context={"scene": standard_scene},
         )
 
     if case_name == "metrics_edge2mtf_small":

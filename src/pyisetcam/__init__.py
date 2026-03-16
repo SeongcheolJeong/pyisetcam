@@ -175,6 +175,7 @@ from .session import (
 from .scene import (
     hdr_render,
     macbeth_read_reflectance,
+    scene_add,
     scene_adjust_illuminant,
     scene_adjust_luminance,
     scene_calculate_luminance,
@@ -542,6 +543,7 @@ __all__ = [
     "hdrRender",
     "hdr_render",
     "sceneAdjustIlluminant",
+    "sceneAdd",
     "sceneAdjustLuminance",
     "sceneCalculateLuminance",
     "sceneClearData",
@@ -557,6 +559,7 @@ __all__ = [
     "sceneSet",
     "scene_combine",
     "scene_adjust_illuminant",
+    "scene_add",
     "scene_adjust_luminance",
     "scene_calculate_luminance",
     "scene_clear_data",
@@ -709,6 +712,7 @@ sceneRotate = scene_rotate
 sceneShowImage = scene_show_image
 sceneSet = scene_set
 hdrRender = hdr_render
+sceneAdd = scene_add
 sceneCombine = scene_combine
 sceneAdjustIlluminant = scene_adjust_illuminant
 sceneAdjustLuminance = scene_adjust_luminance

@@ -458,6 +458,72 @@ def scene_combine(scene1: Scene, scene2: Scene, *args: Any) -> Scene:
     raise ValueError(f"Unsupported scene_combine direction: {direction}")
 
 
+def _validate_scene_add_pair(scene1: Scene, scene2: Scene) -> tuple[np.ndarray, np.ndarray]:
+    wave1 = np.asarray(scene_get(scene1, "wave"), dtype=float)
+    wave2 = np.asarray(scene_get(scene2, "wave"), dtype=float)
+    if not np.array_equal(wave1, wave2):
+        raise ValueError("scene_add requires matching wavelength samples.")
+
+    photons1 = np.asarray(scene_get(scene1, "photons"), dtype=float)
+    photons2 = np.asarray(scene_get(scene2, "photons"), dtype=float)
+    if photons1.shape != photons2.shape:
+        raise ValueError("scene_add requires matching scene geometry.")
+    return photons1, photons2
+
+
+def _remove_scene_spatial_mean(photons: np.ndarray) -> np.ndarray:
+    centered = np.asarray(photons, dtype=float).copy()
+    centered -= np.mean(centered, axis=(0, 1), keepdims=True, dtype=float)
+    return centered
+
+
+def scene_add(in1: Scene | list[Scene] | tuple[Scene, ...], in2: Scene | Any, add_flag: str = "add") -> Scene:
+    normalized = param_format(add_flag)
+
+    if not isinstance(in1, (list, tuple)):
+        if not isinstance(in2, Scene):
+            raise ValueError("scene_add with a single Scene input requires another Scene.")
+        photons1, photons2 = _validate_scene_add_pair(in1, in2)
+        if normalized == "add":
+            photons = photons1 + photons2
+        elif normalized == "average":
+            photons = (photons1 + photons2) / 2.0
+        elif normalized == "removespatialmean":
+            photons = photons1 + _remove_scene_spatial_mean(photons2)
+        else:
+            raise ValueError(f"Unsupported scene_add flag: {add_flag}")
+        return scene_set(in1.clone(), "photons", photons)
+
+    scenes = list(in1)
+    if not scenes:
+        raise ValueError("scene_add requires at least one input scene.")
+
+    weights = np.asarray(in2, dtype=float).reshape(-1)
+    if weights.size != len(scenes):
+        raise ValueError("scene_add scene-list mode requires one weight per input scene.")
+
+    reference = scenes[0]
+    photon_stack: list[np.ndarray] = []
+    for scene in scenes:
+        photons_ref, photons_current = _validate_scene_add_pair(reference, scene)
+        photon_stack.append(photons_current if scene is not reference else photons_ref)
+
+    if normalized == "add":
+        photons = weights[0] * photon_stack[0]
+        for idx in range(1, len(photon_stack)):
+            photons = photons + weights[idx] * photon_stack[idx]
+    elif normalized == "average":
+        photons = np.mean(np.stack(photon_stack, axis=0), axis=0, dtype=float)
+    elif normalized == "removespatialmean":
+        photons = weights[0] * photon_stack[0]
+        for idx in range(1, len(photon_stack)):
+            photons = photons + weights[idx] * _remove_scene_spatial_mean(photon_stack[idx])
+    else:
+        raise ValueError(f"Unsupported scene_add flag: {add_flag}")
+
+    return scene_set(reference.clone(), "photons", photons)
+
+
 def _normalize_scene_illuminant_array(value: Any, wave: np.ndarray) -> tuple[np.ndarray, str]:
     array = np.asarray(value, dtype=float)
     if array.ndim == 1:
@@ -2853,6 +2919,12 @@ def scene_get(scene: Scene, parameter: str, *args: Any, asset_store: AssetStore 
             "photons": np.asarray(scene.fields["illuminant_photons"], dtype=float),
             "comment": scene.fields.get("illuminant_comment"),
         }
+    if key == "illuminantxyz":
+        return xyz_from_energy(
+            np.asarray(scene.fields["illuminant_energy"], dtype=float),
+            np.asarray(scene.fields["wave"], dtype=float),
+            asset_store=_store(asset_store),
+        )
     if key == "reflectance":
         photons = np.asarray(scene.data["photons"], dtype=float)
         illuminant = np.asarray(scene.fields["illuminant_photons"], dtype=float)

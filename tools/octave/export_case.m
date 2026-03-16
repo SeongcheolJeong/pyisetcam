@@ -943,6 +943,52 @@ switch case_name
         payload.version_mtf_peaks = double(versionMtfPeaks);
         payload.version_mtf_center_rows_norm = double(versionMtfCenterRows);
 
+    case 'metrics_scielab_mtf_small'
+        fList = [1, 2, 4, 8, 16, 32];
+        nFreq = numel(fList);
+
+        parms.freq = fList(1);
+        parms.contrast = 0.0;
+        parms.ph = 0;
+        parms.ang = 0;
+        parms.row = 128;
+        parms.col = 128;
+        parms.GaborFlag = 0;
+        uStandard = sceneCreate('harmonic', parms);
+        uStandard = sceneSet(uStandard, 'fov', 1);
+
+        whiteXYZ = sceneGet(uStandard, 'illuminant xyz');
+        illuminantE = sceneGet(uStandard, 'illuminant energy');
+        wave = sceneGet(uStandard, 'wave');
+
+        dE = zeros(nFreq, 1);
+        dES = zeros(nFreq, 1);
+        for ii = 1:nFreq
+            parms.freq = fList(ii);
+            parms.contrast = 0.5;
+            uTest = sceneCreate('harmonic', parms);
+            uTest = sceneSet(uTest, 'fov', 1);
+            uTest = sceneAdd(uStandard, uTest, 'remove spatial mean');
+
+            xyz1 = sceneGet(uStandard, 'xyz');
+            xyz2 = sceneGet(uTest, 'xyz');
+            tmp = deltaEab(xyz1, xyz2, whiteXYZ, '2000');
+            dE(ii) = mean(double(tmp(:)));
+
+            tmp = scielab(xyz1, xyz2, whiteXYZ, scParams);
+            dES(ii) = mean(double(tmp(:)));
+        end
+
+        payload.frequencies_cpd = double(fList(:));
+        payload.standard_scene_size = double(sceneGet(uStandard, 'size')(:));
+        payload.standard_fov_deg = double(sceneGet(uStandard, 'fov'));
+        payload.wave = double(wave(:));
+        payload.white_xyz = double(whiteXYZ(:));
+        payload.illuminant_energy_norm = local_channel_normalize(double(illuminantE(:)));
+        payload.delta_e = double(dE(:));
+        payload.scielab_delta_e = double(dES(:));
+        payload.scielab_over_delta_e = double(dES(:) ./ max(dE(:), eps));
+
     case 'metrics_edge2mtf_small'
         scene = sceneCreate('slanted bar', 512, 7/3);
         scene = sceneAdjustLuminance(scene, 100);
