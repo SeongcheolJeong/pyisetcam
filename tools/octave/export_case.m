@@ -1955,6 +1955,56 @@ switch case_name
         payload.buddha_similarity = Cb;
         payload.flower_similarity = Cf;
 
+    case 'chromatic_spatial_chart_small'
+        nRows = 256;
+        nCols = 3 * nRows;
+        maxFreq = 30;
+        cWeights = [0.3, 0.7, 1];
+        cFreq = [1, 1.5, 2] * 10;
+        cPhase = [0, 0, 0] * pi;
+
+        rSamples = 0:(nRows - 1);
+        r = cWeights(1) * cos(2 * pi * cFreq(1) * rSamples / nRows + cPhase(1)) + 2;
+        g = cWeights(2) * cos(2 * pi * cFreq(2) * rSamples / nRows + cPhase(2)) + 2;
+        b = cWeights(3) * cos(2 * pi * cFreq(3) * rSamples / nRows + cPhase(3)) + 2;
+
+        img = imgSweep(nCols, maxFreq);
+        img = img / max(img(:)) + 2;
+        img = img(1, :);
+
+        RGB = zeros(nRows, nCols, 3);
+        RGB(:, :, 1) = r(:) * img(:)';
+        RGB(:, :, 2) = g(:) * img(:)';
+        RGB(:, :, 3) = b(:) * img(:)';
+        RGB = RGB / max(RGB(:));
+
+        w = zeros(nRows / 4, 1) + 0.5;
+        W = zeros(nRows / 4, nCols, 3);
+        tmp = w(:) * img(:)';
+        for ii = 1:3
+            W(:, :, ii) = tmp;
+        end
+        W = W / max(W(:));
+        RGB = [W; RGB; W];
+
+        centerRow = floor(size(RGB, 1) / 2) + 1;
+        centerCol = floor(size(RGB, 2) / 2) + 1;
+        scene = sceneFromFile(RGB, 'rgb', 100, 'LCD-Apple');
+        photons = double(sceneGet(scene, 'photons'));
+        luminance = double(sceneGet(scene, 'luminance'));
+        meanPhotons = squeeze(mean(mean(photons, 1), 2));
+
+        payload.source_rgb_size = size(RGB(:, :, 1));
+        payload.source_channel_means = squeeze(mean(mean(RGB, 1), 2));
+        payload.source_center_row_rgb = squeeze(RGB(centerRow, :, :));
+        payload.source_center_col_rgb = squeeze(RGB(:, centerCol, :));
+        payload.scene_size = sceneGet(scene, 'size');
+        payload.scene_wave = sceneGet(scene, 'wave');
+        payload.scene_mean_luminance = sceneGet(scene, 'mean luminance');
+        payload.scene_mean_photons_norm = meanPhotons(:) / max(mean(meanPhotons(:)), 1e-12);
+        payload.scene_center_row_luminance_norm = luminance(centerRow, :)' / max(luminance(centerRow, :));
+        payload.scene_center_col_luminance_norm = luminance(:, centerCol) / max(luminance(:, centerCol));
+
     case 'scene_from_rgb_lcd_apple_small'
         displayCalFile = 'LCD-Apple.mat';
         d = displayCreate(displayCalFile);

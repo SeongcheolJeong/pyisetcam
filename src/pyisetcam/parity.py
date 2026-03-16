@@ -2423,6 +2423,63 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "chromatic_spatial_chart_small":
+        n_rows = 256
+        n_cols = 3 * n_rows
+        max_freq = 30.0
+        c_weights = np.array([0.3, 0.7, 1.0], dtype=float)
+        c_freq = np.array([1.0, 1.5, 2.0], dtype=float) * 10.0
+        r_samples = np.arange(n_rows, dtype=float)
+        x = np.arange(1.0, n_cols + 1.0, dtype=float) / n_cols
+        freq = (x**2) * max_freq
+        img_row = np.sin(2.0 * np.pi * (freq * x))
+        img_row = (img_row - float(np.min(img_row))) / max(float(np.max(img_row) - np.min(img_row)), 1e-12)
+        img_row = img_row * ((256.0 - 1.0) / max(float(np.max(img_row)), 1e-12)) + 1.0
+        img_row = img_row / max(float(np.max(img_row)), 1e-12) + 2.0
+
+        channel_rows = np.stack(
+            [c_weights[idx] * np.cos(2.0 * np.pi * c_freq[idx] * r_samples / n_rows) + 2.0 for idx in range(3)],
+            axis=0,
+        )
+        rgb = np.zeros((n_rows, n_cols, 3), dtype=float)
+        for idx in range(3):
+            rgb[:, :, idx] = channel_rows[idx, :, None] * img_row[None, :]
+        rgb /= max(float(np.max(rgb)), 1e-12)
+
+        border = np.zeros((n_rows // 4, n_cols, 3), dtype=float)
+        border_template = np.full((n_rows // 4, 1), 0.5, dtype=float) @ img_row[None, :]
+        border_template /= max(float(np.max(border_template)), 1e-12)
+        for idx in range(3):
+            border[:, :, idx] = border_template
+        rgb = np.concatenate([border, rgb, border], axis=0)
+
+        center_row = rgb.shape[0] // 2
+        center_col = rgb.shape[1] // 2
+        scene = scene_from_file(rgb, "rgb", 100.0, "LCD-Apple.mat", asset_store=store)
+        scene_wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+        scene_photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+        scene_luminance = np.asarray(scene_get(scene, "luminance", asset_store=store), dtype=float)
+        scene_mean_photons = np.mean(scene_photons, axis=(0, 1))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "source_rgb_size": np.array(rgb.shape[:2], dtype=int),
+                "source_channel_means": np.mean(rgb, axis=(0, 1), dtype=float),
+                "source_center_row_rgb": np.asarray(rgb[center_row, :, :], dtype=float),
+                "source_center_col_rgb": np.asarray(rgb[:, center_col, :], dtype=float),
+                "scene_size": np.array(scene_get(scene, "size"), dtype=int),
+                "scene_wave": scene_wave,
+                "scene_mean_luminance": float(scene_get(scene, "mean luminance", asset_store=store)),
+                "scene_mean_photons_norm": scene_mean_photons / max(float(np.mean(scene_mean_photons)), 1e-12),
+                "scene_center_row_luminance_norm": scene_luminance[center_row, :]
+                / max(float(np.max(scene_luminance[center_row, :])), 1e-12),
+                "scene_center_col_luminance_norm": scene_luminance[:, center_col]
+                / max(float(np.max(scene_luminance[:, center_col])), 1e-12),
+            },
+            context={},
+        )
+
     if case_name == "scene_from_rgb_lcd_apple_small":
         display = display_create("LCD-Apple.mat", asset_store=store)
         display_wave = np.asarray(display.fields["wave"], dtype=float).reshape(-1)

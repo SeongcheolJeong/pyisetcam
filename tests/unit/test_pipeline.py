@@ -9196,6 +9196,72 @@ def test_run_python_case_supports_color_illuminant_transforms_small_parity_case(
     assert case.payload["flower_similarity"].shape == (10, 10)
 
 
+def test_chromatic_spatial_chart_script_workflow(asset_store) -> None:
+    n_rows = 256
+    n_cols = 3 * n_rows
+    max_freq = 30.0
+    c_weights = np.array([0.3, 0.7, 1.0], dtype=float)
+    c_freq = np.array([1.0, 1.5, 2.0], dtype=float) * 10.0
+
+    r_samples = np.arange(n_rows, dtype=float)
+    x = np.arange(1.0, n_cols + 1.0, dtype=float) / n_cols
+    freq = (x**2) * max_freq
+    img_row = np.sin(2.0 * np.pi * (freq * x))
+    img_row = (img_row - float(np.min(img_row))) / max(float(np.max(img_row) - np.min(img_row)), 1e-12)
+    img_row = img_row * 255.0 + 1.0
+    img_row = img_row / max(float(np.max(img_row)), 1e-12) + 2.0
+
+    channel_rows = np.stack(
+        [c_weights[idx] * np.cos(2.0 * np.pi * c_freq[idx] * r_samples / n_rows) + 2.0 for idx in range(3)],
+        axis=0,
+    )
+
+    rgb = np.zeros((n_rows, n_cols, 3), dtype=float)
+    for idx in range(3):
+        rgb[:, :, idx] = channel_rows[idx, :, None] * img_row[None, :]
+    rgb /= np.max(rgb)
+
+    border = np.zeros((n_rows // 4, n_cols, 3), dtype=float)
+    border_template = np.full((n_rows // 4, 1), 0.5, dtype=float) @ img_row[None, :]
+    border_template /= np.max(border_template)
+    for idx in range(3):
+        border[:, :, idx] = border_template
+    rgb = np.concatenate([border, rgb, border], axis=0)
+
+    center_row = rgb.shape[0] // 2
+    center_col = rgb.shape[1] // 2
+    scene = scene_from_file(rgb, "rgb", 100.0, "LCD-Apple.mat", asset_store=asset_store)
+    scene_wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+    scene_luminance = np.asarray(scene_get(scene, "luminance", asset_store=asset_store), dtype=float)
+    scene_photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+
+    assert rgb.shape == (384, 768, 3)
+    assert np.all(rgb >= 0.0)
+    assert np.all(rgb <= 1.0)
+    assert tuple(scene_get(scene, "size")) == (384, 768)
+    assert scene_wave.shape == (101,)
+    assert np.isclose(float(scene_get(scene, "mean luminance", asset_store=asset_store)), 100.0, atol=1e-6, rtol=1e-6)
+    assert scene_luminance.shape == (384, 768)
+    assert scene_photons.shape == (384, 768, 101)
+    assert np.max(scene_luminance[center_row, :]) > 0.0
+    assert np.max(scene_luminance[:, center_col]) > 0.0
+
+
+def test_run_python_case_supports_chromatic_spatial_chart_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("chromatic_spatial_chart_small", asset_store=asset_store)
+
+    assert tuple(case.payload["source_rgb_size"]) == (384, 768)
+    assert case.payload["source_channel_means"].shape == (3,)
+    assert case.payload["source_center_row_rgb"].shape == (768, 3)
+    assert case.payload["source_center_col_rgb"].shape == (384, 3)
+    assert tuple(case.payload["scene_size"]) == (384, 768)
+    assert case.payload["scene_wave"].shape == (101,)
+    assert np.isclose(float(case.payload["scene_mean_luminance"]), 100.0, atol=1e-6, rtol=1e-6)
+    assert case.payload["scene_mean_photons_norm"].shape == (101,)
+    assert case.payload["scene_center_row_luminance_norm"].shape == (768,)
+    assert case.payload["scene_center_col_luminance_norm"].shape == (384,)
+
+
 def test_scene_from_rgb_script_workflow(asset_store) -> None:
     display = display_create("LCD-Apple.mat", asset_store=asset_store)
     wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)
