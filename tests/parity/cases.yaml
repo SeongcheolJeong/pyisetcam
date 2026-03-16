@@ -278,6 +278,20 @@
       }
     },
     {
+      "name": "metrics_acutance_small",
+      "matlab_function": "s_metricsAcutance.m",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "rect": {"mode": "mean_rel", "max_mean_rel": 0.05},
+        "cpd_stats": {"mode": "mean_rel", "max_mean_rel": 0.03},
+        "cpiq_norm": {"mode": "mean_rel", "max_mean_rel": 0.01},
+        "lum_mtf_norm": {"mode": "normalized_mae", "max_normalized_mae": 0.05},
+        "acutance": {"mode": "mean_rel", "max_mean_rel": 0.03},
+        "camera_acutance": {"mode": "mean_rel", "max_mean_rel": 0.03}
+      }
+    },
+    {
       "name": "scene_illuminant_change",
       "matlab_function": "sceneAdjustIlluminant",
       "rtol": 1e-05,

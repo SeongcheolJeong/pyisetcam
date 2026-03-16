@@ -888,17 +888,13 @@ def _slanted_bar_scene(
     sample = np.arange(-half_size, half_size + 1, dtype=float)
     xx, yy = np.meshgrid(sample, sample, indexing="xy")
     bar = np.where(yy > float(edge_slope) * xx, 1.0, max(float(dark_level), 1.0e-6))
-    illuminant_energy = _scale_energy_to_luminance(
-        np.ones(wave.size, dtype=float),
-        wave,
-        asset_store=asset_store,
-    )
-    photons = bar[:, :, None] * energy_to_quanta(illuminant_energy, wave).reshape(1, 1, -1)
+    illuminant_energy, illuminant_photons = _spectral_illuminant("equal energy", wave, asset_store=asset_store)
+    photons = bar[:, :, None] * illuminant_photons.reshape(1, 1, -1)
     scene = Scene(name="Slanted Bar")
     scene.fields["wave"] = wave
     scene.fields["illuminant_format"] = "spectral"
     scene.fields["illuminant_energy"] = illuminant_energy
-    scene.fields["illuminant_photons"] = energy_to_quanta(illuminant_energy, wave)
+    scene.fields["illuminant_photons"] = illuminant_photons
     scene.fields["distance_m"] = DEFAULT_DISTANCE_M
     scene.fields["fov_deg"] = float(fov_deg)
     scene.data["photons"] = photons
@@ -2109,9 +2105,9 @@ def scene_create(
             ),
         )
 
-    if name in {"slantedbar", "slanted bar".replace(" ", "")}:
-        image_size = int(args[0]) if len(args) > 0 else 256
-        edge_slope = float(args[1]) if len(args) > 1 else 0.5
+    if name in {"slantedbar", "slantededge", "iso12233", "slanted bar".replace(" ", ""), "slanted edge".replace(" ", "")}:
+        image_size = int(args[0]) if len(args) > 0 else 384
+        edge_slope = float(args[1]) if len(args) > 1 else 2.6
         fov_deg = float(args[2]) if len(args) > 2 else 2.0
         wave = _wave_or_default(args[3] if len(args) > 3 else None)
         dark_level = float(args[4]) if len(args) > 4 else 0.0

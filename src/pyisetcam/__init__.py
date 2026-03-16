@@ -8,7 +8,7 @@ from .assets import (
     ie_read_color_filter,
     ie_read_spectra,
 )
-from .camera import camera_compute, camera_create, camera_get, camera_set
+from .camera import CameraMTFResult, camera_acutance, camera_compute, camera_create, camera_get, camera_mtf, camera_set
 from .color import daylight, luminance_from_energy, luminance_from_photons
 from .description import HeadlessDescriptionHandle, sensor_description
 from .display import display_create, display_get, display_set
@@ -27,7 +27,10 @@ from .illuminant import illuminant_create, illuminant_get, illuminant_set
 from .iso import ISO12233, ISOFindSlantedBar, edge_to_mtf, ieCXcorr, ieISO12233, ie_cxcorr, ie_iso12233, iso12233, iso_find_slanted_bar
 from .ip import image_data_xyz, ip_compute, ip_create, ip_get, ip_set
 from .metrics import (
+    ISOAcutance,
     cct_from_uv,
+    cpiqCSF,
+    cpiq_csf,
     chromaticity_xy,
     comparison_metrics,
     correlated_color_temperature,
@@ -39,6 +42,7 @@ from .metrics import (
     mean_relative_error,
     metrics_spd,
     mired_difference,
+    iso_acutance,
     peak_signal_to_noise_ratio,
     root_mean_squared_error,
     spd_to_cct,
@@ -220,6 +224,7 @@ __all__ = [
     "AssetStore",
     "airy_disk",
     "Camera",
+    "CameraMTFResult",
     "DEFAULT_UPSTREAM_SHA",
     "DEFAULT_UPSTREAM_TARBALL_SHA256",
     "DEFAULT_WAVE",
@@ -231,16 +236,23 @@ __all__ = [
     "Sensor",
     "SessionContext",
     "blackbody",
+    "ISOAcutance",
     "cameraCompute",
+    "cameraAcutance",
     "cameraCreate",
     "cameraGet",
+    "cameraMTF",
     "cameraSet",
+    "camera_acutance",
     "camera_compute",
     "camera_create",
     "camera_get",
+    "camera_mtf",
     "camera_set",
     "cct",
     "cct_from_uv",
+    "cpiqCSF",
+    "cpiq_csf",
     "daylight",
     "HeadlessDescriptionHandle",
     "hcBasis",
@@ -347,6 +359,7 @@ __all__ = [
     "ie_iso12233",
     "iso_find_slanted_bar",
     "iso12233",
+    "iso_acutance",
     "macbethReadReflectance",
     "macbeth_read_reflectance",
     "ipCompute",
@@ -820,6 +833,8 @@ imageDataXYZ = image_data_xyz
 cameraCreate = camera_create
 cameraCompute = camera_compute
 cameraGet = camera_get
+cameraMTF = camera_mtf
+cameraAcutance = camera_acutance
 cameraSet = camera_set
 
 vcAddAndSelectObject = session_add_and_select_object

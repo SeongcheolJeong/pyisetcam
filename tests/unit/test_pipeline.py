@@ -10,11 +10,14 @@ from pyisetcam.parity import run_python_case_with_context
 from pyisetcam.utils import energy_to_quanta, tile_pattern
 from pyisetcam import (
     blackbody,
+    camera_acutance,
     camera_compute,
     camera_create,
     camera_get,
+    camera_mtf,
     camera_set,
     chromaticity_xy,
+    cpiq_csf,
     daylight,
     display_create,
     display_get,
@@ -41,6 +44,7 @@ from pyisetcam import (
     ip_create,
     ie_mvnrnd,
     iso_find_slanted_bar,
+    iso_acutance,
     iso12233,
     luminance_from_energy,
     luminance_from_photons,
@@ -6959,6 +6963,50 @@ def test_run_python_case_supports_metrics_mtf_slanted_bar_infrared_small_parity_
     assert case.payload["blocked_lsf_norm"].shape == (129,)
     assert case.payload["blocked_mtf_norm"].shape == (129,)
     assert case.payload["fixed_mtf50"] > case.payload["blocked_mtf50"]
+
+
+def test_metrics_acutance_script_workflow(asset_store) -> None:
+    camera = camera_create(asset_store=asset_store)
+    camera = camera_set(camera, "sensor auto exposure", True)
+    camera = camera_set(camera, "optics fnumber", 4.0)
+
+    cmtf = camera_mtf(camera, asset_store=asset_store)
+    oi = camera_get(camera, "oi")
+    deg_per_mm = float(camera_get(camera, "sensor h deg per distance", "mm", None, oi))
+    cpd = np.asarray(cmtf.freq, dtype=float) / deg_per_mm
+    luminance_mtf = np.asarray(cmtf.mtf, dtype=float)[:, -1]
+    cpiq = cpiq_csf(cpd)
+    acutance = iso_acutance(cpd, luminance_mtf)
+
+    assert np.asarray(camera_get(camera, "sensor size"), dtype=int).shape == (2,)
+    assert np.asarray(ip_get(cmtf.vci, "size"), dtype=int).shape == (3,)
+    assert np.asarray(cmtf.rect, dtype=int).shape == (4,)
+    assert cmtf.freq.ndim == 1
+    assert np.asarray(cmtf.mtf, dtype=float).ndim == 2
+    assert np.asarray(cmtf.mtf, dtype=float).shape[0] == cmtf.freq.shape[0]
+    assert np.asarray(cmtf.mtf, dtype=float).shape[1] == 4
+    assert np.isclose(float(luminance_mtf[0]), 1.0, atol=1e-10, rtol=1e-10)
+    assert cpiq.shape == cpd.shape
+    assert np.isclose(float(np.max(cpiq)), 1.0, atol=1e-10, rtol=1e-10)
+    assert deg_per_mm > 0.0
+    assert np.isfinite(acutance)
+    assert acutance > 0.0
+    assert camera_acutance(camera, asset_store=asset_store) == pytest.approx(acutance, rel=1e-10, abs=1e-12)
+
+
+def test_run_python_case_supports_metrics_acutance_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_acutance_small", asset_store=asset_store)
+
+    assert case.payload["sensor_size"].shape == (2,)
+    assert case.payload["ip_size"].shape == (3,)
+    assert case.payload["rect"].shape == (4,)
+    assert case.payload["cpd_stats"].shape == (4,)
+    assert case.payload["cpiq_norm"].shape == (129,)
+    assert case.payload["lum_mtf_norm"].shape == (129,)
+    assert float(case.payload["deg_per_mm"]) > 0.0
+    assert np.isfinite(float(case.payload["acutance"]))
+    assert float(case.payload["acutance"]) > 0.0
+    assert float(case.payload["camera_acutance"]) == pytest.approx(float(case.payload["acutance"]), rel=1e-10, abs=1e-12)
 
 
 def test_run_python_case_supports_sensor_imx363_crop_parity_case(asset_store) -> None:

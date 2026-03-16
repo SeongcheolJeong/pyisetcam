@@ -216,6 +216,37 @@ def spd_to_cct(
     return float(cct) if np.ndim(cct) == 0 else np.asarray(cct, dtype=float)
 
 
+def cpiq_csf(frequency_cpd: Any) -> NDArray[np.float64]:
+    """Return the normalized CPIQ contrast-sensitivity weighting."""
+
+    frequency = np.asarray(frequency_cpd, dtype=float)
+    if np.any(frequency < 0.0):
+        raise ValueError("frequency_cpd must be nonnegative.")
+
+    csf = 75.0 * np.power(frequency, 0.8) * np.exp(-0.2 * frequency) / 34.05
+    scale = float(np.max(csf)) if csf.size else 0.0
+    if scale <= 1.0e-12:
+        return np.zeros_like(frequency, dtype=float)
+    return np.asarray(csf / scale, dtype=float)
+
+
+def iso_acutance(cpd: Any, luminance_mtf: Any) -> float:
+    """Compute ISO acutance from luminance MTF samples in cycles per degree."""
+
+    frequency = _vector(cpd, name="cpd")
+    mtf = _vector(luminance_mtf, name="luminance_mtf")
+    if frequency.size != mtf.size:
+        raise ValueError("cpd and luminance_mtf must have the same length.")
+    if frequency.size < 2:
+        raise ValueError("cpd must contain at least two samples.")
+
+    csf = cpiq_csf(frequency)
+    delta_v = float(frequency[1] - frequency[0])
+    weighted = float(np.sum(mtf * csf, dtype=float) * delta_v)
+    reference = float(np.sum(csf, dtype=float) * delta_v)
+    return weighted / max(reference, 1.0e-12)
+
+
 def mired_difference(cct1_k: float, cct2_k: float) -> float:
     """Compute the absolute mired difference between two color temperatures."""
 
@@ -352,3 +383,5 @@ deltaEab = delta_e_ab
 iePSNR = peak_signal_to_noise_ratio
 metricsSPD = metrics_spd
 spd2cct = spd_to_cct
+cpiqCSF = cpiq_csf
+ISOAcutance = iso_acutance

@@ -2876,6 +2876,20 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         focal_length = _sensor_image_distance_m(scene_or_distance, oi)
         height = float(sensor_get(sensor, "height"))
         return float(np.rad2deg(2.0 * np.arctan2(height / 2.0, focal_length)))
+    if key in {"hdegperdistance", "degperdistance"}:
+        unit = args[0] if args else "m"
+        scene_or_distance = args[1] if len(args) >= 2 else None
+        oi = args[2] if len(args) >= 3 else args[1] if len(args) >= 2 and isinstance(args[1], OpticalImage) else None
+        width = float(sensor_get(sensor, "width", unit))
+        fov = float(sensor_get(sensor, "fov", scene_or_distance, oi))
+        return fov / max(width, 1.0e-12)
+    if key == "vdegperdistance":
+        unit = args[0] if args else "m"
+        scene_or_distance = args[1] if len(args) >= 2 else None
+        oi = args[2] if len(args) >= 3 else args[1] if len(args) >= 2 and isinstance(args[1], OpticalImage) else None
+        height = float(sensor_get(sensor, "height", unit))
+        fov = float(sensor_get(sensor, "vfov", scene_or_distance, oi))
+        return fov / max(height, 1.0e-12)
     raise KeyError(f"Unsupported sensorGet parameter: {parameter}")
 
 

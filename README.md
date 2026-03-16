@@ -30,6 +30,7 @@
 - and now also curated Octave parity on `s_metricsMTFPixelSize.m`, covering the fixed-die-size monochrome slanted-bar sweep across 2/3/5/9 um pixels, the per-pixel-size sensor geometry and ROI replay, Nyquist and MTF50 trends, and the normalized luminance MTF profiles under case-scoped parity tolerances
 - and now also headless `pixelVperLuxSec(...)` / `pixelSNRluxsec(...)` in `sensor.py`, with curated Octave parity on `s_metricsSNRPixelSizeLuxsec.m` covering the monochrome 2/4/6/9/10 um pixel sweep, its lux-sec sensitivity curves, and the returned SNR/read-noise/shot-noise summaries
 - and now also curated Octave parity on `s_metricsMTFSlantedBarInfrared.m`, including `ieReadColorFilter(..., 'IRBlocking')` compatibility, the NikonD200IR multispectral slanted-bar setup, the fixed-ROI direct ISO12233 branch, and the IR-blocked auto-ROI `ieISO12233(...)` line-spread/MTF branch
+- and now also headless `cameraMTF(...)` / `cameraAcutance(...)` plus `cpiqCSF(...)` / `ISOAcutance(...)`, with curated Octave parity on `s_metricsAcutance.m` covering the default camera slanted-edge workflow, the luminance MTF and CPIQ weighting profiles, the sensor degrees-per-distance conversion, and the final acutance scalar
 
 ## Status
 

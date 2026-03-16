@@ -2,18 +2,22 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
+from numpy.typing import NDArray
 
 from .assets import AssetStore
 from .exceptions import UnsupportedOptionError
 from .ip import ip_compute, ip_create, ip_get, ip_set
+from .iso import iso12233, iso_find_slanted_bar
+from .metrics import iso_acutance
 from .optics import oi_compute, oi_create, oi_get, oi_set
+from .scene import Scene, scene_adjust_luminance, scene_create, scene_set
 from .session import track_camera_session_state, track_session_object
-from .scene import Scene
 from .sensor import sensor_compute, sensor_create, sensor_create_ideal, sensor_get, sensor_set, sensor_set_size_to_fov
-from .types import Camera, OpticalImage, Sensor, SessionContext
+from .types import Camera, ImageProcessor, OpticalImage, Sensor, SessionContext
 from .utils import param_format, split_prefixed_parameter
 
 
@@ -21,7 +25,25 @@ def _store(asset_store: AssetStore | None) -> AssetStore:
     return asset_store or AssetStore.default()
 
 
-def _pixel_get(sensor: Sensor, parameter: str) -> Any:
+@dataclass
+class CameraMTFResult:
+    """Headless payload returned by camera_mtf()."""
+
+    freq: NDArray[np.float64]
+    mtf: NDArray[np.float64]
+    nyquistf: float
+    lsf: NDArray[np.float64]
+    lsfx: NDArray[np.float64]
+    mtf50: float
+    aliasingPercentage: float
+    rect: NDArray[np.int_]
+    vci: ImageProcessor
+    esf: NDArray[np.float64] | None = None
+    fitme: NDArray[np.float64] | None = None
+    win: None = None
+
+
+def _pixel_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
     pixel = sensor.fields["pixel"]
     key = param_format(parameter)
     mapping = {
@@ -41,7 +63,7 @@ def _pixel_get(sensor: Sensor, parameter: str) -> Any:
     }
     if key in mapping:
         return mapping[key]
-    raise KeyError(f"Unsupported camera pixel parameter: {parameter}")
+    return sensor_get(sensor, f"pixel {parameter}", *args)
 
 
 def _pixel_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
@@ -136,7 +158,7 @@ def camera_get(camera: Camera, parameter: str, *args: Any) -> Any:
     if prefix == "pixel":
         if not remainder:
             return camera.fields["sensor"].fields["pixel"]
-        return _pixel_get(camera.fields["sensor"], remainder)
+        return _pixel_get(camera.fields["sensor"], remainder, *args)
     if prefix in {"ip", "vci"}:
         if not remainder:
             return camera.fields["ip"]
@@ -283,3 +305,72 @@ def camera_compute(
     camera.fields["ip"] = ip
     camera.data["result"] = ip.data.get("result")
     return track_camera_session_state(session, camera)
+
+
+def camera_mtf(
+    camera: Camera,
+    *,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> CameraMTFResult:
+    """Compute the ISO 12233 camera MTF using the upstream slanted-edge workflow."""
+
+    store = _store(asset_store)
+
+    scene = scene_create("slanted bar", 256, asset_store=store, session=session)
+    scene = scene_adjust_luminance(scene, 100.0, asset_store=store)
+    scene = scene_set(scene, "fov", 5.0)
+
+    oi = camera_get(camera, "oi")
+    sensor = camera_get(camera, "sensor")
+    sensor = sensor_set(sensor, "fov", 5.0, oi)
+    camera = camera_set(camera, "sensor", sensor, session=session)
+    camera = camera_compute(camera, scene, asset_store=store, session=session)
+
+    ip = camera_get(camera, "ip")
+    result = np.clip(np.asarray(ip_get(ip, "result"), dtype=float), 0.0, None)
+    ip = ip_set(ip, "result", result, session=session)
+    camera = camera_set(camera, "ip", ip, session=session)
+
+    rect = np.asarray(iso_find_slanted_bar(ip), dtype=int).reshape(-1)
+    if rect.size != 4:
+        raise ValueError("ISOFindSlantedBar did not return a [col, row, width, height] rect.")
+    col_min, row_min, width, height = rect
+    bar_image = np.asarray(result[row_min - 1 : row_min + height, col_min - 1 : col_min + width, :], dtype=float)
+    delta_x = float(camera_get(camera, "pixel width", "mm"))
+    mtf = iso12233(bar_image, delta_x=delta_x, plot_options="none")
+
+    return CameraMTFResult(
+        freq=np.asarray(mtf.freq, dtype=float),
+        mtf=np.asarray(mtf.mtf, dtype=float),
+        nyquistf=float(mtf.nyquistf),
+        lsf=np.asarray(mtf.lsf, dtype=float),
+        lsfx=np.asarray(mtf.lsfx, dtype=float),
+        mtf50=float(mtf.mtf50),
+        aliasingPercentage=float(mtf.aliasingPercentage),
+        rect=np.asarray(rect, dtype=int),
+        vci=ip,
+        esf=None if mtf.esf is None else np.asarray(mtf.esf, dtype=float),
+        fitme=None if mtf.fitme is None else np.asarray(mtf.fitme, dtype=float),
+        win=mtf.win,
+    )
+
+
+def camera_acutance(
+    camera: Camera,
+    plot_flag: bool = True,
+    *,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> float:
+    """Compute ISO acutance from the camera luminance MTF."""
+
+    del plot_flag
+
+    cmtf = camera_mtf(camera, asset_store=asset_store, session=session)
+    mtf = np.asarray(cmtf.mtf, dtype=float)
+    luminance_mtf = mtf[:, 3] if mtf.ndim == 2 and mtf.shape[1] >= 4 else mtf.reshape(-1)
+    oi = camera_get(camera, "oi")
+    deg_per_mm = float(camera_get(camera, "sensor h deg per distance", "mm", None, oi))
+    cpd = np.asarray(cmtf.freq, dtype=float) / max(deg_per_mm, 1.0e-12)
+    return iso_acutance(cpd, luminance_mtf)

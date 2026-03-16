@@ -999,6 +999,50 @@ switch case_name
         payload.blocked_lsf_norm = local_canonical_profile(local_channel_normalize(double(blockedMTF.lsf(:))), 129);
         payload.blocked_mtf_norm = local_canonical_profile(blockedMTFNorm, 129);
 
+    case 'metrics_acutance_small'
+        camera = cameraCreate;
+        camera = cameraSet(camera, 'sensor auto exposure', true);
+        camera = cameraSet(camera, 'optics fnumber', 4);
+
+        scene = sceneCreate('slanted edge', 256);
+        scene = sceneAdjustLuminance(scene, 100);
+        scene = sceneSet(scene, 'fov', 5);
+        sensor = cameraGet(camera, 'sensor');
+        sensor = sensorSet(sensor, 'fov', 5, cameraGet(camera, 'oi'));
+        camera = cameraSet(camera, 'sensor', sensor);
+        camera = cameraCompute(camera, scene);
+
+        ip = cameraGet(camera, 'vci');
+        result = ipGet(ip, 'result');
+        result(result < 0) = 0;
+        ip = ipSet(ip, 'result', result);
+        rect = ISOFindSlantedBar(ip);
+        roiLocs = ieRect2Locs(rect);
+        barImage = vcGetROIData(ip, roiLocs, 'results');
+        c = rect(3) + 1;
+        r = rect(4) + 1;
+        barImage = reshape(barImage, r, c, 3);
+        dx = cameraGet(camera, 'pixel width', 'mm');
+        [cMTF, ~, cEsf] = ISO12233(barImage, dx, [], 'none');
+
+        lumMTF = double(cMTF.mtf(:, end));
+        oi = cameraGet(camera, 'oi');
+        degPerMM = double(cameraGet(camera, 'sensor h deg per distance', 'mm', [], oi));
+        cpd = double(cMTF.freq(:)) / max(double(degPerMM), 1e-12);
+        cpiq = cpiqCSF(cpd);
+        acutance = ISOAcutance(cpd, lumMTF);
+        ipSize = ipGet(ip, 'size');
+
+        payload.sensor_size = double(cameraGet(camera, 'sensor size')(:));
+        payload.ip_size = double(ipSize(:));
+        payload.rect = double(rect(:));
+        payload.deg_per_mm = double(degPerMM);
+        payload.cpd_stats = double([cpd(1); cpd(end); numel(cpd); mean(diff(cpd))]);
+        payload.cpiq_norm = local_canonical_profile(double(cpiq(:)), 129);
+        payload.lum_mtf_norm = local_canonical_profile(double(lumMTF(:)) / max(double(lumMTF(1)), 1e-12), 129);
+        payload.acutance = double(acutance);
+        payload.camera_acutance = double(acutance);
+
     case 'scene_illuminant_change'
         scene = sceneCreate();
         bb = blackbody(sceneGet(scene, 'wave'), 3000, 'energy');

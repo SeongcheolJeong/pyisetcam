@@ -10,7 +10,7 @@ import imageio.v3 as iio
 import numpy as np
 
 from .assets import AssetStore, ie_read_color_filter, ie_read_spectra
-from .camera import camera_compute, camera_create, camera_get, camera_set
+from .camera import camera_acutance, camera_compute, camera_create, camera_get, camera_mtf, camera_set
 from .color import daylight, luminance_from_energy, luminance_from_photons
 from .description import sensor_description
 from .display import display_create, display_get
@@ -18,7 +18,7 @@ from .fileio import ie_save_color_filter, ie_save_multispectral_image, ie_save_s
 from .fileio import sensor_dng_read
 from .illuminant import illuminant_create, illuminant_get, illuminant_set
 from .iso import edge_to_mtf, ie_iso12233, iso12233, iso_find_slanted_bar
-from .metrics import chromaticity_xy, cct_from_uv, delta_e_ab, metrics_spd, spd_to_cct, xyz_from_energy, xyz_to_lab, xyz_to_luv, xyz_to_uv
+from .metrics import cpiq_csf, chromaticity_xy, cct_from_uv, delta_e_ab, iso_acutance, metrics_spd, spd_to_cct, xyz_from_energy, xyz_to_lab, xyz_to_luv, xyz_to_uv
 from .ip import ip_compute, ip_create, ip_get, ip_set
 from .optics import (
     _cos4th_factor,
@@ -1230,6 +1230,53 @@ def run_python_case_with_context(
                 "ip": ip,
                 "blocked_sensor": blocked_sensor,
                 "blocked_ip": blocked_ip,
+            },
+        )
+
+    if case_name == "metrics_acutance_small":
+        def _canonical_profile(values: Any, samples: int = 129) -> np.ndarray:
+            profile = np.asarray(values, dtype=float).reshape(-1)
+            support = np.linspace(-1.0, 1.0, profile.size, dtype=float)
+            query = np.linspace(-1.0, 1.0, samples, dtype=float)
+            return np.interp(query, support, profile).astype(float)
+
+        camera = camera_create(asset_store=store)
+        camera = camera_set(camera, "sensor auto exposure", True)
+        camera = camera_set(camera, "optics fnumber", 4.0)
+
+        cmtf = camera_mtf(camera, asset_store=store)
+        oi = camera_get(camera, "oi")
+        deg_per_mm = float(camera_get(camera, "sensor h deg per distance", "mm", None, oi))
+        cpd = np.asarray(cmtf.freq, dtype=float) / max(deg_per_mm, 1.0e-12)
+        luminance_mtf = np.asarray(cmtf.mtf, dtype=float)[:, -1]
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "sensor_size": np.asarray(camera_get(camera, "sensor size"), dtype=int),
+                "ip_size": np.asarray(ip_get(cmtf.vci, "size"), dtype=int),
+                "rect": np.asarray(cmtf.rect, dtype=int),
+                "deg_per_mm": float(deg_per_mm),
+                "cpd_stats": np.array(
+                    [
+                        float(cpd[0]),
+                        float(cpd[-1]),
+                        float(cpd.size),
+                        float(np.mean(np.diff(cpd), dtype=float)),
+                    ],
+                    dtype=float,
+                ),
+                "cpiq_norm": _canonical_profile(np.asarray(cpiq_csf(cpd), dtype=float)),
+                "lum_mtf_norm": _canonical_profile(
+                    np.asarray(luminance_mtf, dtype=float) / max(float(luminance_mtf[0]), 1.0e-12)
+                ),
+                "acutance": float(iso_acutance(cpd, luminance_mtf)),
+                "camera_acutance": float(camera_acutance(camera, asset_store=store)),
+            },
+            context={
+                "camera": camera,
+                "oi": oi,
+                "ip": cmtf.vci,
             },
         )
 
