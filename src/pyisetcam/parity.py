@@ -71,7 +71,8 @@ from .optics import (
     si_synthetic,
     rt_synthetic,
 )
-from .plotting import ip_plot, oi_plot, sensor_plot, sensor_plot_line, wvf_plot
+from .plotting import ip_plot, oi_plot, scene_plot, sensor_plot, sensor_plot_line, wvf_plot
+from .roi import ie_rect2_locs, vc_get_roi_data
 from .scielab import color_transform_matrix, sc_compute_scielab, sc_opponent_filter, sc_params, sc_prepare_filters, scielab, scielab_rgb
 from .scene import (
     hdr_render,
@@ -2787,6 +2788,51 @@ def run_python_case_with_context(
                 "horizon_mean_luminance": float(scene_get(horizon_scene, "mean luminance", asset_store=store)),
                 "horizon_illuminant_norm": horizon_illuminant / max(float(np.max(horizon_illuminant)), 1e-12),
                 "horizon_mean_rgb_norm": _channel_normalize(np.mean(horizon_rgb, axis=(0, 1), dtype=float)),
+            },
+            context={},
+        )
+
+    if case_name == "scene_data_extraction_plotting_small":
+        scene = scene_create("macbethd65", asset_store=store)
+        wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+        center_row = int(round(float(scene_get(scene, "rows")) / 2.0))
+        line_data, _ = scene_plot(scene, "luminance hline", [1, center_row], asset_store=store)
+        illuminant_data, _ = scene_plot(scene, "illuminant energy", asset_store=store)
+
+        rect = np.array([51, 35, 10, 11], dtype=int)
+        roi_locs = ie_rect2_locs(rect)
+        energy_plot, _ = scene_plot(scene, "radiance energy roi", roi_locs, asset_store=store)
+        photons_plot, _ = scene_plot(scene, "radiance photons roi", roi_locs, asset_store=store)
+        reflectance_plot, _ = scene_plot(scene, "reflectance", roi_locs, asset_store=store)
+
+        photons_manual = np.mean(np.asarray(vc_get_roi_data(scene, roi_locs, "photons"), dtype=float), axis=0)
+        energy_manual = np.mean(np.asarray(vc_get_roi_data(scene, roi_locs, "energy"), dtype=float), axis=0)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "wave": wave,
+                "center_row": center_row,
+                "luminance_hline_pos_mm": np.asarray(line_data["pos"], dtype=float).reshape(-1),
+                "luminance_hline_norm": _channel_normalize(line_data["data"]),
+                "illuminant_energy_norm": _channel_normalize(illuminant_data["energy"]),
+                "roi_rect": rect,
+                "roi_count": int(roi_locs.shape[0]),
+                "roi_energy_mean": float(np.mean(energy_manual)),
+                "roi_energy_norm": _channel_normalize(energy_plot["energy"]),
+                "roi_energy_manual_norm": _channel_normalize(energy_manual),
+                "roi_energy_plot_manual_max_abs": float(
+                    np.max(np.abs(np.asarray(energy_plot["energy"], dtype=float).reshape(-1) - energy_manual))
+                ),
+                "roi_photons_mean": float(np.mean(photons_manual)),
+                "roi_photons_norm": _channel_normalize(photons_plot["photons"]),
+                "roi_photons_manual_norm": _channel_normalize(photons_manual),
+                "roi_photons_plot_manual_max_abs": float(
+                    np.max(np.abs(np.asarray(photons_plot["photons"], dtype=float).reshape(-1) - photons_manual))
+                ),
+                "roi_reflectance_mean": float(np.mean(np.asarray(reflectance_plot["reflectance"], dtype=float))),
+                "roi_reflectance_norm": _channel_normalize(reflectance_plot["reflectance"]),
             },
             context={},
         )

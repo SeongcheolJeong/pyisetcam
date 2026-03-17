@@ -46,6 +46,7 @@ from pyisetcam import (
     ie_n_to_megapixel,
     ie_iso12233,
     ie_field_height_to_index,
+    ie_rect2_locs,
     ip_get,
     ip_plot,
     ip_set,
@@ -117,6 +118,7 @@ from pyisetcam import (
     scene_get,
     scene_illuminant_ss,
     scene_interpolate_w,
+    scene_plot,
     scene_reflectance_chart,
     scene_rotate,
     scene_show_image,
@@ -124,6 +126,7 @@ from pyisetcam import (
     signal_current,
     srgb2xyz,
     srgb_parameters,
+    vc_get_roi_data,
     imx490_compute,
     ml_radiance,
     mlens_create,
@@ -9639,6 +9642,66 @@ def test_run_python_case_supports_scene_change_illuminant_small_parity_case(asse
     assert case.payload["equal_energy_mean_rgb_norm"].shape == (3,)
     assert case.payload["horizon_illuminant_norm"].shape == (31,)
     assert case.payload["horizon_mean_rgb_norm"].shape == (3,)
+
+
+def test_scene_data_extraction_and_plotting_script_workflow(asset_store) -> None:
+    scene = scene_create("macbethd65", asset_store=asset_store)
+    wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+    center_row = int(round(float(scene_get(scene, "rows")) / 2.0))
+
+    line_data, _ = scene_plot(scene, "luminance hline", [1, center_row], asset_store=asset_store)
+    illuminant_data, _ = scene_plot(scene, "illuminant energy", asset_store=asset_store)
+
+    rect = np.array([51, 35, 10, 11], dtype=int)
+    roi_locs = ie_rect2_locs(rect)
+    energy_plot, _ = scene_plot(scene, "radiance energy roi", roi_locs, asset_store=asset_store)
+    photons_plot, _ = scene_plot(scene, "radiance photons roi", roi_locs, asset_store=asset_store)
+    reflectance_plot, _ = scene_plot(scene, "reflectance", roi_locs, asset_store=asset_store)
+
+    photons_manual = np.mean(np.asarray(vc_get_roi_data(scene, roi_locs, "photons"), dtype=float), axis=0)
+    energy_manual = np.mean(np.asarray(vc_get_roi_data(scene, roi_locs, "energy"), dtype=float), axis=0)
+
+    assert tuple(scene_get(scene, "size")) == (64, 96)
+    assert np.array_equal(wave, np.arange(400.0, 701.0, 10.0, dtype=float))
+    assert center_row == 32
+    assert line_data["unit"] == "mm"
+    assert np.asarray(line_data["pos"]).shape == (96,)
+    assert np.asarray(line_data["data"]).shape == (96,)
+    assert np.all(np.diff(np.asarray(line_data["pos"], dtype=float)) > 0.0)
+    assert illuminant_data["comment"] == "D65.mat"
+    assert np.asarray(illuminant_data["energy"]).shape == (31,)
+    assert np.array_equal(rect, np.array([51, 35, 10, 11], dtype=int))
+    assert roi_locs.shape == (132, 2)
+    assert np.asarray(energy_plot["energy"]).shape == (31,)
+    assert np.asarray(photons_plot["photons"]).shape == (31,)
+    assert np.asarray(reflectance_plot["reflectance"]).shape == (31,)
+    assert np.allclose(np.asarray(photons_plot["photons"]), photons_manual, atol=1e-12, rtol=1e-12)
+    assert np.allclose(np.asarray(energy_plot["energy"]), energy_manual, atol=1e-12, rtol=1e-12)
+    assert float(np.min(np.asarray(reflectance_plot["reflectance"], dtype=float))) > 0.0
+    assert float(np.max(np.asarray(reflectance_plot["reflectance"], dtype=float))) < 1.0
+
+
+def test_run_python_case_supports_scene_data_extraction_plotting_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_data_extraction_plotting_small", asset_store=asset_store)
+
+    assert tuple(case.payload["scene_size"]) == (64, 96)
+    assert np.array_equal(case.payload["wave"], np.arange(400.0, 701.0, 10.0, dtype=float))
+    assert int(case.payload["center_row"]) == 32
+    assert case.payload["luminance_hline_pos_mm"].shape == (96,)
+    assert case.payload["luminance_hline_norm"].shape == (96,)
+    assert case.payload["illuminant_energy_norm"].shape == (31,)
+    assert np.array_equal(case.payload["roi_rect"], np.array([51, 35, 10, 11], dtype=int))
+    assert int(case.payload["roi_count"]) == 132
+    assert np.isfinite(float(case.payload["roi_energy_mean"]))
+    assert case.payload["roi_energy_norm"].shape == (31,)
+    assert case.payload["roi_energy_manual_norm"].shape == (31,)
+    assert np.isclose(float(case.payload["roi_energy_plot_manual_max_abs"]), 0.0, atol=1e-12, rtol=1e-12)
+    assert np.isfinite(float(case.payload["roi_photons_mean"]))
+    assert case.payload["roi_photons_norm"].shape == (31,)
+    assert case.payload["roi_photons_manual_norm"].shape == (31,)
+    assert np.isclose(float(case.payload["roi_photons_plot_manual_max_abs"]), 0.0, atol=1e-12, rtol=1e-12)
+    assert float(case.payload["roi_reflectance_mean"]) > 0.0
+    assert case.payload["roi_reflectance_norm"].shape == (31,)
 
 
 def test_scene_from_rgb_script_workflow(asset_store) -> None:

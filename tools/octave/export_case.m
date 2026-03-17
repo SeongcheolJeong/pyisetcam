@@ -2256,6 +2256,43 @@ switch case_name
         payload.horizon_illuminant_norm = horizonIlluminant(:) / max(max(abs(horizonIlluminant(:))), 1e-12);
         payload.horizon_mean_rgb_norm = horizonMeanRgb(:) / max(max(abs(horizonMeanRgb(:))), 1e-12);
 
+    case 'scene_data_extraction_plotting_small'
+        scene = sceneCreate('macbethd65');
+        wave = double(sceneGet(scene, 'wave'));
+        centerRow = round(sceneGet(scene, 'rows') / 2);
+        luminance = double(sceneGet(scene, 'luminance'));
+        linePos = sceneSpatialSupport(scene, 'mm');
+        lineData = double(luminance(centerRow, :));
+        illuminantEnergy = double(sceneGet(scene, 'illuminant energy'));
+
+        rect = [51, 35, 10, 11];
+        roiLocs = ieRect2Locs(rect);
+        energyMean = double(sceneGet(scene, 'roi mean energy', roiLocs));
+        photonsMean = double(sceneGet(scene, 'roi mean photons', roiLocs));
+        reflectanceMean = double(sceneGet(scene, 'roi mean reflectance', roiLocs));
+
+        photonsManual = mean(double(vcGetROIData(scene, roiLocs, 'photons')), 1);
+        energyManual = mean(double(vcGetROIData(scene, roiLocs, 'energy')), 1);
+
+        payload.scene_size = sceneGet(scene, 'size');
+        payload.wave = wave(:);
+        payload.center_row = centerRow;
+        payload.luminance_hline_pos_mm = double(linePos.x(:));
+        payload.luminance_hline_norm = local_channel_normalize(double(lineData(:)));
+        payload.illuminant_energy_norm = local_channel_normalize(double(illuminantEnergy(:)));
+        payload.roi_rect = rect(:);
+        payload.roi_count = size(roiLocs, 1);
+        payload.roi_energy_mean = mean(energyManual(:));
+        payload.roi_energy_norm = local_channel_normalize(double(energyMean(:)));
+        payload.roi_energy_manual_norm = local_channel_normalize(double(energyManual(:)));
+        payload.roi_energy_plot_manual_max_abs = max(abs(double(energyMean(:)) - double(energyManual(:))));
+        payload.roi_photons_mean = mean(photonsManual(:));
+        payload.roi_photons_norm = local_channel_normalize(double(photonsMean(:)));
+        payload.roi_photons_manual_norm = local_channel_normalize(double(photonsManual(:)));
+        payload.roi_photons_plot_manual_max_abs = max(abs(double(photonsMean(:)) - double(photonsManual(:))));
+        payload.roi_reflectance_mean = mean(double(reflectanceMean(:)));
+        payload.roi_reflectance_norm = local_channel_normalize(double(reflectanceMean(:)));
+
     case 'scene_from_rgb_lcd_apple_small'
         displayCalFile = 'LCD-Apple.mat';
         d = displayCreate(displayCalFile);
