@@ -23,6 +23,7 @@ from pyisetcam import (
     macbeth_color_error,
     chromaticity_xy,
     cpiq_csf,
+    adobergb_parameters,
     daylight,
     delta_e_ab,
     display_create,
@@ -116,11 +117,13 @@ from pyisetcam import (
     scene_get,
     scene_illuminant_ss,
     scene_interpolate_w,
+    scene_reflectance_chart,
     scene_rotate,
     scene_show_image,
     scene_set,
     signal_current,
     srgb2xyz,
+    srgb_parameters,
     imx490_compute,
     ml_radiance,
     mlens_create,
@@ -9374,6 +9377,125 @@ def test_run_python_case_supports_rgb_color_temperature_small_parity_case(asset_
     assert case.payload["d65_srgb_mean_norm"].shape == (3,)
     assert np.array_equal(case.payload["c_table_temps"], np.arange(2500.0, 10501.0, 500.0, dtype=float))
     assert case.payload["c_table_xy"].shape == (17, 2)
+
+
+def test_srgb_gamut_script_workflow(asset_store) -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    srgb_xy = np.asarray(srgb_parameters("chromaticity"), dtype=float)
+    adobergb_xy = np.asarray(adobergb_parameters("chromaticity"), dtype=float)
+
+    natural_files = [
+        "Nature_Vhrel.mat",
+        "Objects_Vhrel.mat",
+        "Food_Vhrel.mat",
+        "Clothes_Vhrel.mat",
+        "Hair_Vhrel.mat",
+    ]
+    natural_samples = [
+        np.arange(1, 80, dtype=int),
+        np.arange(1, 171, dtype=int),
+        np.arange(1, 28, dtype=int),
+        np.arange(1, 42, dtype=int),
+        np.arange(1, 8, dtype=int),
+    ]
+    synthetic_files = [
+        "DupontPaintChip_Vhrel.mat",
+        "MunsellSamples_Vhrel.mat",
+        "esserChart.mat",
+        "gretagDigitalColorSG.mat",
+    ]
+    synthetic_samples = [
+        np.arange(1, 121, dtype=int),
+        np.arange(1, 65, dtype=int),
+        np.arange(1, 114, dtype=int),
+        np.arange(1, 141, dtype=int),
+    ]
+
+    natural_scene, natural_sample_list, natural_reflectances, natural_rc_size = scene_reflectance_chart(
+        natural_files,
+        natural_samples,
+        32,
+        wave,
+        True,
+        asset_store=asset_store,
+    )
+    natural_d65_scene = scene_adjust_illuminant(natural_scene.clone(), "D65.mat", asset_store=asset_store)
+    natural_d65_light = np.asarray(scene_get(natural_d65_scene, "illuminant energy"), dtype=float).reshape(-1)
+    natural_d65_xy = np.asarray(
+        chromaticity_xy(
+            xyz_from_energy((natural_d65_light.reshape(-1, 1) * natural_reflectances).T, wave, asset_store=asset_store)
+        ),
+        dtype=float,
+    )
+
+    natural_yellow_scene = scene_adjust_illuminant(
+        natural_scene.clone(),
+        blackbody(wave, 3000.0, kind="energy"),
+        asset_store=asset_store,
+    )
+    natural_yellow_light = np.asarray(scene_get(natural_yellow_scene, "illuminant energy"), dtype=float).reshape(-1)
+    natural_yellow_xy = np.asarray(
+        chromaticity_xy(
+            xyz_from_energy((natural_yellow_light.reshape(-1, 1) * natural_reflectances).T, wave, asset_store=asset_store)
+        ),
+        dtype=float,
+    )
+
+    synthetic_scene, synthetic_sample_list, synthetic_reflectances, synthetic_rc_size = scene_reflectance_chart(
+        synthetic_files,
+        synthetic_samples,
+        32,
+        wave,
+        True,
+        asset_store=asset_store,
+    )
+    synthetic_d65_scene = scene_adjust_illuminant(synthetic_scene.clone(), "D65.mat", asset_store=asset_store)
+    synthetic_d65_light = np.asarray(scene_get(synthetic_d65_scene, "illuminant energy"), dtype=float).reshape(-1)
+    synthetic_d65_xy = np.asarray(
+        chromaticity_xy(
+            xyz_from_energy((synthetic_d65_light.reshape(-1, 1) * synthetic_reflectances).T, wave, asset_store=asset_store)
+        ),
+        dtype=float,
+    )
+
+    assert srgb_xy.shape == (2, 3)
+    assert adobergb_xy.shape == (2, 3)
+    assert np.allclose(srgb_parameters("xyYwhite"), np.array([0.3127, 0.3290, 1.0]))
+    assert np.allclose(adobergb_parameters("xyzblack"), np.array([0.5282, 0.5557, 0.6052]))
+    assert tuple(scene_get(natural_scene, "size")) == (576, 608)
+    assert tuple(natural_rc_size) == (18, 19)
+    assert natural_reflectances.shape == (31, 342)
+    assert [len(sample_list) for sample_list in natural_sample_list] == [79, 170, 27, 41, 7]
+    assert natural_d65_xy.shape == (342, 2)
+    assert natural_yellow_xy.shape == (342, 2)
+    assert float(np.mean(natural_yellow_xy[:, 0])) > float(np.mean(natural_d65_xy[:, 0]))
+    assert tuple(scene_get(synthetic_scene, "size")) == (672, 704)
+    assert tuple(synthetic_rc_size) == (21, 22)
+    assert synthetic_reflectances.shape == (31, 458)
+    assert [len(sample_list) for sample_list in synthetic_sample_list] == [120, 64, 113, 140]
+    assert synthetic_d65_xy.shape == (458, 2)
+    assert np.all(np.isfinite(natural_d65_xy))
+    assert np.all(np.isfinite(natural_yellow_xy))
+    assert np.all(np.isfinite(synthetic_d65_xy))
+
+
+def test_run_python_case_supports_srgb_gamut_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("srgb_gamut_small", asset_store=asset_store)
+
+    assert np.array_equal(case.payload["wave"], np.arange(400.0, 701.0, 10.0, dtype=float))
+    assert case.payload["srgb_xy_loop"].shape == (2, 4)
+    assert case.payload["adobergb_xy_loop"].shape == (2, 4)
+    assert tuple(case.payload["natural_scene_size"]) == (576, 608)
+    assert tuple(case.payload["natural_rc_size"]) == (18, 19)
+    assert np.array_equal(case.payload["natural_sample_counts"], np.array([79, 170, 27, 41, 7], dtype=int))
+    assert tuple(case.payload["natural_reflectance_size"]) == (31, 342)
+    assert case.payload["natural_d65_xy"].shape == (342, 2)
+    assert case.payload["natural_yellow_xy"].shape == (342, 2)
+    assert tuple(case.payload["synthetic_scene_size"]) == (672, 704)
+    assert tuple(case.payload["synthetic_rc_size"]) == (21, 22)
+    assert np.array_equal(case.payload["synthetic_sample_counts"], np.array([120, 64, 113, 140], dtype=int))
+    assert tuple(case.payload["synthetic_reflectance_size"]) == (31, 458)
+    assert case.payload["synthetic_d65_xy"].shape == (458, 2)
 
 
 def test_scene_from_rgb_script_workflow(asset_store) -> None:

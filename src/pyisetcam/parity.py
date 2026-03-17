@@ -22,7 +22,7 @@ from .camera import (
     macbeth_color_error,
     macbeth_compare_ideal,
 )
-from .color import daylight, luminance_from_energy, luminance_from_photons
+from .color import adobergb_parameters, daylight, luminance_from_energy, luminance_from_photons, srgb_parameters
 from .description import sensor_description
 from .display import display_create, display_get
 from .fileio import ie_save_color_filter, ie_save_multispectral_image, ie_save_si_data_file
@@ -86,6 +86,7 @@ from .scene import (
     scene_get,
     scene_illuminant_ss,
     scene_interpolate_w,
+    scene_reflectance_chart,
     scene_rotate,
     scene_show_image,
     scene_set,
@@ -2570,6 +2571,92 @@ def run_python_case_with_context(
                 "d65_srgb_mean_norm": d65["srgb_mean_norm"],
                 "c_table_temps": d65["c_table"][:, 0],
                 "c_table_xy": d65["c_table"][:, 1:3],
+            },
+            context={},
+        )
+
+    if case_name == "srgb_gamut_small":
+        wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+
+        def _closed_xy(parameters: np.ndarray) -> np.ndarray:
+            xy = np.asarray(parameters, dtype=float)
+            return np.concatenate((xy, xy[:, :1]), axis=1)
+
+        def _xy_payload(
+            files: list[str],
+            samples: list[np.ndarray],
+            illuminant: Any,
+        ) -> dict[str, Any]:
+            scene, sample_lists, reflectances, rc_size = scene_reflectance_chart(
+                files,
+                samples,
+                32,
+                wave,
+                True,
+                asset_store=store,
+            )
+            scene = scene_adjust_illuminant(scene, illuminant, asset_store=store)
+            light = np.asarray(scene_get(scene, "illuminant energy"), dtype=float).reshape(-1)
+            xyz = np.asarray(
+                xyz_from_energy((light.reshape(-1, 1) * reflectances).T, wave, asset_store=store),
+                dtype=float,
+            )
+            return {
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "rc_size": np.asarray(rc_size, dtype=int),
+                "sample_counts": np.asarray([len(sample_list) for sample_list in sample_lists], dtype=int),
+                "reflectance_size": np.asarray(reflectances.shape, dtype=int),
+                "xy": np.asarray(chromaticity_xy(xyz), dtype=float),
+            }
+
+        natural_files = [
+            "Nature_Vhrel.mat",
+            "Objects_Vhrel.mat",
+            "Food_Vhrel.mat",
+            "Clothes_Vhrel.mat",
+            "Hair_Vhrel.mat",
+        ]
+        natural_samples = [
+            np.arange(1, 80, dtype=int),
+            np.arange(1, 171, dtype=int),
+            np.arange(1, 28, dtype=int),
+            np.arange(1, 42, dtype=int),
+            np.arange(1, 8, dtype=int),
+        ]
+        synthetic_files = [
+            "DupontPaintChip_Vhrel.mat",
+            "MunsellSamples_Vhrel.mat",
+            "esserChart.mat",
+            "gretagDigitalColorSG.mat",
+        ]
+        synthetic_samples = [
+            np.arange(1, 121, dtype=int),
+            np.arange(1, 65, dtype=int),
+            np.arange(1, 114, dtype=int),
+            np.arange(1, 141, dtype=int),
+        ]
+
+        natural_d65 = _xy_payload(natural_files, natural_samples, "D65.mat")
+        natural_yellow = _xy_payload(natural_files, natural_samples, blackbody(wave, 3000.0, kind="energy"))
+        synthetic_d65 = _xy_payload(synthetic_files, synthetic_samples, "D65.mat")
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "srgb_xy_loop": _closed_xy(srgb_parameters("chromaticity")),
+                "adobergb_xy_loop": _closed_xy(adobergb_parameters("chromaticity")),
+                "natural_scene_size": natural_d65["scene_size"],
+                "natural_rc_size": natural_d65["rc_size"],
+                "natural_sample_counts": natural_d65["sample_counts"],
+                "natural_reflectance_size": natural_d65["reflectance_size"],
+                "natural_d65_xy": natural_d65["xy"],
+                "natural_yellow_xy": natural_yellow["xy"],
+                "synthetic_scene_size": synthetic_d65["scene_size"],
+                "synthetic_rc_size": synthetic_d65["rc_size"],
+                "synthetic_sample_counts": synthetic_d65["sample_counts"],
+                "synthetic_reflectance_size": synthetic_d65["reflectance_size"],
+                "synthetic_d65_xy": synthetic_d65["xy"],
             },
             context={},
         )

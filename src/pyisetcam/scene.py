@@ -1680,7 +1680,14 @@ def _load_reflectance_source(
         if source_path.exists():
             data = asset_store.load_mat(source_path)
         else:
-            data = asset_store.load_mat(Path("data/surfaces/reflectances") / source_path)
+            try:
+                data = asset_store.load_mat(Path("data/surfaces/reflectances") / source_path)
+            except MissingAssetError:
+                surfaces_root = asset_store.ensure() / "data" / "surfaces"
+                matches = sorted(surfaces_root.rglob(source_path.name))
+                if not matches:
+                    raise
+                data = asset_store.load_mat(matches[0])
         reflectance = np.asarray(data["data"], dtype=float)
         source_wave = np.asarray(data["wavelength"], dtype=float).reshape(-1)
         if reflectance.ndim == 1:
@@ -1830,8 +1837,42 @@ def _reflectance_chart_scene(
     *,
     asset_store: AssetStore,
 ) -> Scene:
-    reflectance_sets = [_load_reflectance_source(source, wave, asset_store=asset_store) for source in source_files]
-    sample_lists = _reflectance_sample_lists(reflectance_sets, sample_spec, sampling)
+    scene, _, _, _ = scene_reflectance_chart(
+        source_files,
+        sample_spec,
+        patch_size,
+        wave,
+        gray_flag,
+        sampling,
+        asset_store=asset_store,
+    )
+    return scene
+
+
+def scene_reflectance_chart(
+    s_files: Any,
+    s_samples: Any,
+    p_size: int | float = 32,
+    wave: Any | None = None,
+    gray_flag: bool = True,
+    sampling: str = "r",
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[Scene, list[np.ndarray], np.ndarray, np.ndarray]:
+    """Create a reflectance chart using MATLAB sceneReflectanceChart() semantics."""
+
+    if s_files is None:
+        raise ValueError("scene_reflectance_chart requires s_files.")
+    if s_samples is None:
+        raise ValueError("scene_reflectance_chart requires s_samples.")
+
+    store = _store(asset_store)
+    source_files = _reflectance_chart_sources(s_files)
+    chart_wave = _wave_or_default(wave)
+    patch_size = max(int(np.rint(p_size)), 1)
+
+    reflectance_sets = [_load_reflectance_source(source, chart_wave, asset_store=store) for source in source_files]
+    sample_lists = _reflectance_sample_lists(reflectance_sets, s_samples, sampling)
     sampled_blocks = []
     for reflectance, sample_list in zip(reflectance_sets, sample_lists, strict=True):
         if sample_list.size == 0:
@@ -1840,19 +1881,19 @@ def _reflectance_chart_scene(
     if sampled_blocks:
         reflectances = np.concatenate(sampled_blocks, axis=1)
     else:
-        reflectances = np.zeros((wave.size, 0), dtype=float)
+        reflectances = np.zeros((chart_wave.size, 0), dtype=float)
 
     n_samples = reflectances.shape[1]
     rows = int(np.ceil(np.sqrt(n_samples))) if n_samples > 0 else 1
     cols = int(np.ceil(n_samples / max(rows, 1))) if n_samples > 0 else 1
     if gray_flag:
-        gray_strip = np.ones((wave.size, rows), dtype=float) * np.logspace(0.0, np.log10(0.05), rows, dtype=float)
+        gray_strip = np.ones((chart_wave.size, rows), dtype=float) * np.logspace(0.0, np.log10(0.05), rows, dtype=float)
         reflectances = np.concatenate((reflectances, gray_strip), axis=1)
         cols += 1
 
-    illuminant_energy, illuminant_photons = _spectral_illuminant("ee", wave, asset_store=asset_store)
+    illuminant_energy, illuminant_photons = _spectral_illuminant("ee", chart_wave, asset_store=store)
     radiance = reflectances * illuminant_photons.reshape(-1, 1)
-    patch_cube = np.zeros((rows, cols, wave.size), dtype=float)
+    patch_cube = np.zeros((rows, cols, chart_wave.size), dtype=float)
     index_map = np.zeros((rows, cols), dtype=int)
     for row in range(rows):
         for col in range(cols):
@@ -1864,14 +1905,14 @@ def _reflectance_chart_scene(
                 patch_cube[row, col, :] = 0.2 * illuminant_photons
 
     xyz = xyz_from_energy(
-        quanta_to_energy(patch_cube.reshape(-1, wave.size), wave),
-        wave,
-        asset_store=asset_store,
+        quanta_to_energy(patch_cube.reshape(-1, chart_wave.size), chart_wave),
+        chart_wave,
+        asset_store=store,
     ).reshape(rows, cols, 3)
 
     photons = np.repeat(np.repeat(patch_cube, patch_size, axis=0), patch_size, axis=1)
     scene = Scene(name="Reflectance Chart (EE)")
-    scene.fields["wave"] = wave
+    scene.fields["wave"] = chart_wave
     scene.fields["illuminant_format"] = "spectral"
     scene.fields["illuminant_energy"] = illuminant_energy
     scene.fields["illuminant_photons"] = illuminant_photons
@@ -1884,14 +1925,19 @@ def _reflectance_chart_scene(
         "grayFlag": bool(gray_flag),
         "sampling": str(sampling),
         "pSize": int(patch_size),
-        "wave": np.asarray(wave, dtype=float).copy(),
+        "wave": np.asarray(chart_wave, dtype=float).copy(),
         "XYZ": xyz.copy(),
         "rowcol": np.array([rows, cols], dtype=int),
         "rIdxMap": np.repeat(np.repeat(index_map, patch_size, axis=0), patch_size, axis=1),
     }
     scene.data["photons"] = photons
     _update_scene_geometry(scene)
-    return scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
+    return (
+        scene_adjust_luminance(scene, 100.0, asset_store=store),
+        [np.asarray(item, dtype=int).copy() for item in sample_lists],
+        np.asarray(reflectances, dtype=float),
+        np.array([rows, cols], dtype=int),
+    )
 
 
 def scene_create(

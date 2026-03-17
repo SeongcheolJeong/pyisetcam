@@ -22,7 +22,7 @@ from .camera import (
     macbeth_color_error,
     macbeth_compare_ideal,
 )
-from .color import daylight, luminance_from_energy, luminance_from_photons
+from .color import adobergb_parameters, daylight, luminance_from_energy, luminance_from_photons, srgb_parameters
 from .description import HeadlessDescriptionHandle, sensor_description
 from .display import display_create, display_get, display_set
 from .fileio import (
@@ -188,6 +188,7 @@ from .scene import (
     scene_illuminant_pattern,
     scene_illuminant_ss,
     scene_interpolate_w,
+    scene_reflectance_chart,
     ie_reflectance_samples,
     scene_rotate,
     scene_show_image,
@@ -280,6 +281,7 @@ __all__ = [
     "macbethCompareIdeal",
     "macbeth_compare_ideal",
     "camera_set",
+    "adobergb_parameters",
     "cct",
     "cct_from_uv",
     "cpiqCSF",
@@ -431,9 +433,12 @@ __all__ = [
     "sc_prepare_filters",
     "scielab_rgb",
     "RGB2XWFormat",
+    "adobergbParameters",
     "rgb_to_xw_format",
     "spd2cct",
     "spd_to_cct",
+    "srgbParameters",
+    "srgb_parameters",
     "srgb2colortemp",
     "srgb_to_color_temp",
     "XW2RGBFormat",
@@ -572,6 +577,7 @@ __all__ = [
     "sceneIlluminantPattern",
     "sceneIlluminantSS",
     "sceneInterpolateW",
+    "sceneReflectanceChart",
     "sceneRotate",
     "sceneShowImage",
     "sceneSet",
@@ -587,6 +593,7 @@ __all__ = [
     "scene_illuminant_pattern",
     "scene_illuminant_ss",
     "scene_interpolate_w",
+    "scene_reflectance_chart",
     "scene_rotate",
     "scene_show_image",
     "scene_set",
@@ -727,6 +734,7 @@ sceneGet = scene_get
 sceneIlluminantPattern = scene_illuminant_pattern
 sceneIlluminantSS = scene_illuminant_ss
 sceneInterpolateW = scene_interpolate_w
+sceneReflectanceChart = scene_reflectance_chart
 macbethReadReflectance = macbeth_read_reflectance
 sceneRotate = scene_rotate
 sceneShowImage = scene_show_image
@@ -840,6 +848,8 @@ sensorSetSizeToFOV = sensor_set_size_to_fov
 
 metricsSPD = metrics_spd
 deltaEab = delta_e_ab
+srgbParameters = srgb_parameters
+adobergbParameters = adobergb_parameters
 scParams = sc_params
 scComputeSCIELAB = sc_compute_scielab
 scOpponentFilter = sc_opponent_filter

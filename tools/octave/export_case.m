@@ -2096,6 +2096,73 @@ switch case_name
         payload.c_table_temps = cTable(:, 1);
         payload.c_table_xy = cTable(:, 2:3);
 
+    case 'srgb_gamut_small'
+        wave = (400:10:700)';
+
+        srgbxy = srgbParameters('val', 'chromaticity');
+        payload.srgb_xy_loop = cat(2, srgbxy, srgbxy(:, 1));
+
+        adobergbxy = adobergbParameters('val', 'chromaticity');
+        payload.adobergb_xy_loop = cat(2, adobergbxy, adobergbxy(:, 1));
+
+        naturalFiles = {
+            which('Nature_Vhrel.mat'),
+            which('Objects_Vhrel.mat'),
+            which('Food_Vhrel.mat'),
+            which('Clothes_Vhrel.mat'),
+            which('Hair_Vhrel.mat')
+        };
+        naturalSamples = {
+            1:79,
+            1:170,
+            1:27,
+            1:41,
+            1:7
+        };
+
+        [scene, sampleList, reflectances, rcSize] = sceneReflectanceChart(naturalFiles, naturalSamples, 32, wave, 1);
+        scene = sceneSet(scene, 'name', 'D65 Natural');
+        scene = sceneAdjustIlluminant(scene, 'D65.mat');
+        light = sceneGet(scene, 'illuminant energy');
+        xyz = ieXYZFromEnergy((diag(light) * reflectances)', wave);
+
+        payload.wave = wave;
+        payload.natural_scene_size = sceneGet(scene, 'size');
+        payload.natural_rc_size = rcSize;
+        payload.natural_sample_counts = cellfun(@numel, sampleList);
+        payload.natural_reflectance_size = size(reflectances);
+        payload.natural_d65_xy = chromaticity(xyz);
+
+        light = blackbody(wave, 3000);
+        scene = sceneAdjustIlluminant(scene, light);
+        xyz = ieXYZFromEnergy((diag(light) * reflectances)', wave);
+        payload.natural_yellow_xy = chromaticity(xyz);
+
+        syntheticFiles = {
+            which('DupontPaintChip_Vhrel.mat'),
+            which('MunsellSamples_Vhrel.mat'),
+            which('esserChart.mat'),
+            which('gretagDigitalColorSG.mat')
+        };
+        syntheticSamples = {
+            1:120,
+            1:64,
+            1:113,
+            1:140
+        };
+
+        [scene, sampleList, reflectances, rcSize] = sceneReflectanceChart(syntheticFiles, syntheticSamples, 32, wave, 1);
+        scene = sceneSet(scene, 'name', 'D65 Synthetic');
+        scene = sceneAdjustIlluminant(scene, 'D65.mat');
+        light = sceneGet(scene, 'illuminant energy');
+        xyz = ieXYZFromEnergy((diag(light) * reflectances)', wave);
+
+        payload.synthetic_scene_size = sceneGet(scene, 'size');
+        payload.synthetic_rc_size = rcSize;
+        payload.synthetic_sample_counts = cellfun(@numel, sampleList);
+        payload.synthetic_reflectance_size = size(reflectances);
+        payload.synthetic_d65_xy = chromaticity(xyz);
+
     case 'scene_from_rgb_lcd_apple_small'
         displayCalFile = 'LCD-Apple.mat';
         d = displayCreate(displayCalFile);

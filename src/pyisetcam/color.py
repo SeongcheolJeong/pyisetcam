@@ -53,6 +53,75 @@ def luminance_from_energy(
     )
 
 
+def _xyy_to_xyz(xyy: NDArray[np.float64]) -> NDArray[np.float64]:
+    values = np.asarray(xyy, dtype=float)
+    reshaped = values.reshape(-1, 3)
+    x = reshaped[:, 0]
+    y = reshaped[:, 1]
+    big_y = reshaped[:, 2]
+    denominator = np.maximum(y, 1e-12)
+    xyz = np.column_stack(
+        [
+            (x * big_y) / denominator,
+            big_y,
+            ((1.0 - x - y) * big_y) / denominator,
+        ]
+    )
+    return xyz.reshape(values.shape)
+
+
+def srgb_parameters(value: str = "all") -> NDArray[np.float64]:
+    """Return sRGB display parameters using MATLAB srgbParameters() semantics."""
+
+    params = np.array(
+        [
+            [0.6400, 0.3000, 0.1500, 0.3127],
+            [0.3300, 0.6000, 0.0600, 0.3290],
+            [0.2126, 0.7152, 0.0722, 1.0000],
+        ],
+        dtype=float,
+    )
+    key = param_format(value)
+    if key == "all":
+        return params.copy()
+    if key == "chromaticity":
+        return params[:2, :3].copy()
+    if key == "luminance":
+        return params[2, :3].copy()
+    if key == "xyywhite":
+        return params[:, 3].copy()
+    if key == "xyzwhite":
+        return _xyy_to_xyz(params[:, 3]).reshape(3)
+    raise UnsupportedOptionError("srgbParameters", value)
+
+
+def adobergb_parameters(value: str = "all") -> NDArray[np.float64]:
+    """Return Adobe RGB display parameters using MATLAB adobergbParameters() semantics."""
+
+    params = np.array(
+        [
+            [0.64, 0.21, 0.15, 0.3127],
+            [0.33, 0.71, 0.06, 0.3290],
+            [47.5744, 100.3776, 12.0320, 160.0],
+        ],
+        dtype=float,
+    )
+    key = param_format(value)
+    if key == "all":
+        return params.copy()
+    if key == "chromaticity":
+        return params[:2, :3].copy()
+    if key == "luminance":
+        return params[2, :3].copy()
+    if key == "xyywhite":
+        return params[:, 3].copy()
+    if key == "xyzwhite":
+        return _xyy_to_xyz(params[:, 3]).reshape(3)
+    if key == "xyzblack":
+        return np.array([0.5282, 0.5557, 0.6052], dtype=float)
+    raise UnsupportedOptionError("adobergbParameters", value)
+
+
 def daylight(
     wave_nm: NDArray[np.float64],
     cct_k: float | NDArray[np.float64] = 6500.0,
