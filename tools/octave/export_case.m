@@ -2163,6 +2163,59 @@ switch case_name
         payload.synthetic_reflectance_size = size(reflectances);
         payload.synthetic_d65_xy = chromaticity(xyz);
 
+    case 'scene_reflectance_charts_small'
+        defaultScene = sceneCreate('reflectance chart');
+        defaultChart = sceneGet(defaultScene, 'chart parameters');
+
+        sFiles = {
+            which('MunsellSamples_Vhrel.mat'),
+            which('Food_Vhrel.mat'),
+            which('DupontPaintChip_Vhrel.mat'),
+            which('HyspexSkinReflectance.mat')
+        };
+        sSamples = [12, 12, 24, 24];
+        pSize = 24;
+
+        customScene = sceneCreate('reflectance chart', pSize, sSamples, sFiles, [], 0, 'no replacement');
+        customChart = sceneGet(customScene, 'chart parameters');
+        wave = sceneGet(customScene, 'wave');
+
+        d65 = ieReadSpectra('D65', wave);
+        d65Scene = sceneAdjustIlluminant(customScene, d65);
+        d65Illuminant = sceneGet(d65Scene, 'illuminant energy');
+
+        [grayScene, ~, grayReflectances, grayRc] = sceneReflectanceChart(sFiles, sSamples, pSize, wave, 1);
+        grayChart = sceneGet(grayScene, 'chart parameters');
+        grayCol = grayChart.rowcol(2);
+        grayPatch = sceneGet(grayScene, 'photons');
+        grayPatch = grayPatch(:, (grayCol - 1) * pSize + 1:grayCol * pSize, :);
+        grayMask = grayChart.rIdxMap(:, (grayCol - 1) * pSize + 1:grayCol * pSize) > 0;
+        grayPatchXW = RGB2XWFormat(grayPatch);
+        grayMeanSPD = mean(grayPatchXW(grayMask(:), :), 1);
+
+        [sceneOriginal, storedSamples] = sceneReflectanceChart(sFiles, sSamples, pSize);
+        [sceneReplica, replicaSamples] = sceneReflectanceChart(sFiles, storedSamples, pSize);
+        originalPhotons = double(sceneGet(sceneOriginal, 'photons'));
+        replicaPhotons = double(sceneGet(sceneReplica, 'photons'));
+
+        payload.default_scene_size = sceneGet(defaultScene, 'size');
+        payload.default_chart_rowcol = defaultChart.rowcol;
+        payload.default_sample_counts = cellfun(@numel, defaultChart.sSamples);
+        payload.default_mean_luminance = sceneGet(defaultScene, 'mean luminance');
+        payload.custom_scene_size = sceneGet(customScene, 'size');
+        payload.custom_chart_rowcol = customChart.rowcol;
+        payload.custom_sample_counts = cellfun(@numel, customChart.sSamples);
+        payload.custom_reflectance_shape = [numel(wave), sum(sSamples)];
+        payload.custom_idx_map_unique = unique(customChart.rIdxMap(:));
+        payload.d65_illuminant_norm = d65Illuminant(:) / max(max(abs(d65Illuminant(:))), 1e-12);
+        payload.d65_mean_luminance = sceneGet(d65Scene, 'mean luminance');
+        payload.gray_scene_size = sceneGet(grayScene, 'size');
+        payload.gray_chart_rowcol = grayRc;
+        payload.gray_reflectance_shape = size(grayReflectances);
+        payload.gray_mean_spd_norm = grayMeanSPD(:) / max(max(abs(grayMeanSPD(:))), 1e-12);
+        payload.stored_sample_counts = cellfun(@numel, storedSamples);
+        payload.replica_photons_nmae = mean(abs(replicaPhotons(:) - originalPhotons(:))) / max(mean(abs(originalPhotons(:))), 1e-12);
+
     case 'scene_from_rgb_lcd_apple_small'
         displayCalFile = 'LCD-Apple.mat';
         d = displayCreate(displayCalFile);

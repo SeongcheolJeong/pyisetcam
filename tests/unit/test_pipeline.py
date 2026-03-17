@@ -9498,6 +9498,89 @@ def test_run_python_case_supports_srgb_gamut_small_parity_case(asset_store) -> N
     assert case.payload["synthetic_d65_xy"].shape == (458, 2)
 
 
+def test_scene_reflectance_charts_script_workflow(asset_store) -> None:
+    default_scene = scene_create("reflectance chart", asset_store=asset_store)
+    default_chart = scene_get(default_scene, "chart parameters")
+
+    s_files = [
+        "MunsellSamples_Vhrel.mat",
+        "Food_Vhrel.mat",
+        "DupontPaintChip_Vhrel.mat",
+        "HyspexSkinReflectance.mat",
+    ]
+    s_samples = [12, 12, 24, 24]
+    p_size = 24
+
+    custom_scene = scene_create("reflectance chart", p_size, s_samples, s_files, None, False, "no replacement", asset_store=asset_store)
+    custom_chart = scene_get(custom_scene, "chart parameters")
+    wave = np.asarray(scene_get(custom_scene, "wave"), dtype=float).reshape(-1)
+
+    d65_scene = scene_adjust_illuminant(custom_scene.clone(), "D65", asset_store=asset_store)
+    d65_illuminant = np.asarray(scene_get(d65_scene, "illuminant energy"), dtype=float).reshape(-1)
+
+    gray_scene, _, gray_reflectances, gray_rc = scene_reflectance_chart(
+        s_files,
+        s_samples,
+        p_size,
+        wave,
+        True,
+        asset_store=asset_store,
+    )
+    gray_chart = scene_get(gray_scene, "chart parameters")
+    gray_col = int(gray_chart["rowcol"][1]) - 1
+    gray_patch = np.asarray(scene_get(gray_scene, "photons"), dtype=float)[:, gray_col * p_size : (gray_col + 1) * p_size, :]
+    gray_mask = np.asarray(gray_chart["rIdxMap"], dtype=int)[:, gray_col * p_size : (gray_col + 1) * p_size] > 0
+    gray_mean_spd = np.mean(gray_patch[gray_mask], axis=0, dtype=float)
+
+    original_scene, stored_samples, _, _ = scene_reflectance_chart(s_files, s_samples, p_size, asset_store=asset_store)
+    replica_scene, replica_samples, _, _ = scene_reflectance_chart(s_files, stored_samples, p_size, asset_store=asset_store)
+    original_photons = np.asarray(scene_get(original_scene, "photons"), dtype=float)
+    replica_photons = np.asarray(scene_get(replica_scene, "photons"), dtype=float)
+
+    assert tuple(scene_get(default_scene, "size")) == (240, 264)
+    assert tuple(default_chart["rowcol"]) == (10, 11)
+    assert [len(item) for item in default_chart["sSamples"]] == [50, 40, 10]
+    assert np.isclose(scene_get(default_scene, "mean luminance", asset_store=asset_store), 100.0, rtol=1e-8, atol=1e-8)
+    assert tuple(scene_get(custom_scene, "size")) == (216, 192)
+    assert tuple(custom_chart["rowcol"]) == (9, 8)
+    assert [len(item) for item in custom_chart["sSamples"]] == [12, 12, 24, 24]
+    assert np.array_equal(np.unique(custom_chart["rIdxMap"]), np.arange(1, 73, dtype=int))
+    assert np.isclose(scene_get(d65_scene, "mean luminance", asset_store=asset_store), 100.0, rtol=1e-8, atol=1e-8)
+    assert d65_illuminant.shape == (31,)
+    assert tuple(scene_get(gray_scene, "size")) == (216, 216)
+    assert tuple(gray_rc) == (9, 9)
+    assert gray_reflectances.shape == (31, 81)
+    assert gray_mean_spd.shape == (31,)
+    assert [len(item) for item in stored_samples] == [12, 12, 24, 24]
+    assert np.array_equal(
+        np.concatenate([np.asarray(item, dtype=int).reshape(-1) for item in stored_samples]),
+        np.concatenate([np.asarray(item, dtype=int).reshape(-1) for item in replica_samples]),
+    )
+    assert np.allclose(replica_photons, original_photons, atol=1e-12, rtol=1e-12)
+
+
+def test_run_python_case_supports_scene_reflectance_charts_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_reflectance_charts_small", asset_store=asset_store)
+
+    assert tuple(case.payload["default_scene_size"]) == (240, 264)
+    assert tuple(case.payload["default_chart_rowcol"]) == (10, 11)
+    assert np.array_equal(case.payload["default_sample_counts"], np.array([50, 40, 10], dtype=int))
+    assert np.isclose(float(case.payload["default_mean_luminance"]), 100.0, rtol=1e-8, atol=1e-8)
+    assert tuple(case.payload["custom_scene_size"]) == (216, 192)
+    assert tuple(case.payload["custom_chart_rowcol"]) == (9, 8)
+    assert np.array_equal(case.payload["custom_sample_counts"], np.array([12, 12, 24, 24], dtype=int))
+    assert tuple(case.payload["custom_reflectance_shape"]) == (31, 72)
+    assert np.array_equal(case.payload["custom_idx_map_unique"], np.arange(1, 73, dtype=int))
+    assert case.payload["d65_illuminant_norm"].shape == (31,)
+    assert np.isclose(float(case.payload["d65_mean_luminance"]), 100.0, rtol=1e-8, atol=1e-8)
+    assert tuple(case.payload["gray_scene_size"]) == (216, 216)
+    assert tuple(case.payload["gray_chart_rowcol"]) == (9, 9)
+    assert tuple(case.payload["gray_reflectance_shape"]) == (31, 81)
+    assert case.payload["gray_mean_spd_norm"].shape == (31,)
+    assert np.array_equal(case.payload["stored_sample_counts"], np.array([12, 12, 24, 24], dtype=int))
+    assert np.isclose(float(case.payload["replica_photons_nmae"]), 0.0, atol=1e-12, rtol=1e-12)
+
+
 def test_scene_from_rgb_script_workflow(asset_store) -> None:
     display = display_create("LCD-Apple.mat", asset_store=asset_store)
     wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)

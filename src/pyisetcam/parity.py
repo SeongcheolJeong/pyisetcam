@@ -2661,6 +2661,89 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "scene_reflectance_charts_small":
+        default_scene = scene_create("reflectance chart", asset_store=store)
+        default_chart = scene_get(default_scene, "chart parameters")
+
+        s_files = [
+            "MunsellSamples_Vhrel.mat",
+            "Food_Vhrel.mat",
+            "DupontPaintChip_Vhrel.mat",
+            "HyspexSkinReflectance.mat",
+        ]
+        s_samples = [12, 12, 24, 24]
+        p_size = 24
+        custom_scene = scene_create("reflectance chart", p_size, s_samples, s_files, None, False, "no replacement", asset_store=store)
+        custom_chart = scene_get(custom_scene, "chart parameters")
+        wave = np.asarray(scene_get(custom_scene, "wave"), dtype=float).reshape(-1)
+
+        d65_scene = scene_adjust_illuminant(custom_scene.clone(), "D65", asset_store=store)
+        d65_illuminant = np.asarray(scene_get(d65_scene, "illuminant energy"), dtype=float).reshape(-1)
+
+        gray_scene, _, gray_reflectances, gray_rc = scene_reflectance_chart(
+            s_files,
+            s_samples,
+            p_size,
+            wave,
+            True,
+            asset_store=store,
+        )
+        gray_chart = scene_get(gray_scene, "chart parameters")
+
+        original_scene, stored_samples, _, _ = scene_reflectance_chart(
+            s_files,
+            s_samples,
+            p_size,
+            None,
+            True,
+            asset_store=store,
+        )
+        replica_scene, _, _, _ = scene_reflectance_chart(
+            s_files,
+            stored_samples,
+            p_size,
+            None,
+            True,
+            asset_store=store,
+        )
+        original_photons = np.asarray(scene_get(original_scene, "photons"), dtype=float)
+        replica_photons = np.asarray(scene_get(replica_scene, "photons"), dtype=float)
+
+        gray_idx_map = np.asarray(gray_chart["rIdxMap"], dtype=int)
+        gray_column = int(gray_chart["rowcol"][1]) - 1
+        gray_mask = gray_idx_map[:, gray_column * p_size : (gray_column + 1) * p_size] > 0
+        gray_patch = np.asarray(scene_get(gray_scene, "photons"), dtype=float)[
+            :,
+            gray_column * p_size : (gray_column + 1) * p_size,
+            :,
+        ]
+        gray_mean_spd = np.mean(gray_patch[gray_mask], axis=0, dtype=float)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "default_scene_size": np.asarray(scene_get(default_scene, "size"), dtype=int),
+                "default_chart_rowcol": np.asarray(default_chart["rowcol"], dtype=int),
+                "default_sample_counts": np.asarray([len(item) for item in default_chart["sSamples"]], dtype=int),
+                "default_mean_luminance": float(scene_get(default_scene, "mean luminance", asset_store=store)),
+                "custom_scene_size": np.asarray(scene_get(custom_scene, "size"), dtype=int),
+                "custom_chart_rowcol": np.asarray(custom_chart["rowcol"], dtype=int),
+                "custom_sample_counts": np.asarray([len(item) for item in custom_chart["sSamples"]], dtype=int),
+                "custom_reflectance_shape": np.asarray((wave.size, sum(s_samples)), dtype=int),
+                "custom_idx_map_unique": np.asarray(np.unique(custom_chart["rIdxMap"]), dtype=int),
+                "d65_illuminant_norm": d65_illuminant / max(float(np.max(d65_illuminant)), 1e-12),
+                "d65_mean_luminance": float(scene_get(d65_scene, "mean luminance", asset_store=store)),
+                "gray_scene_size": np.asarray(scene_get(gray_scene, "size"), dtype=int),
+                "gray_chart_rowcol": np.asarray(gray_rc, dtype=int),
+                "gray_reflectance_shape": np.asarray(gray_reflectances.shape, dtype=int),
+                "gray_mean_spd_norm": gray_mean_spd / max(float(np.max(gray_mean_spd)), 1e-12),
+                "stored_sample_counts": np.asarray([len(item) for item in stored_samples], dtype=int),
+                "replica_photons_nmae": float(np.mean(np.abs(replica_photons - original_photons)))
+                / max(float(np.mean(np.abs(original_photons))), 1e-12),
+            },
+            context={},
+        )
+
     if case_name == "scene_from_rgb_lcd_apple_small":
         display = display_create("LCD-Apple.mat", asset_store=store)
         display_wave = np.asarray(display.fields["wave"], dtype=float).reshape(-1)
