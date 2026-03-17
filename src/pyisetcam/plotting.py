@@ -712,6 +712,13 @@ def scene_plot(
     """Return MATLAB-style `plotScene` user-data without opening a figure."""
 
     key = param_format(p_type)
+
+    def _mean_illuminant(field: str) -> np.ndarray:
+        illuminant = np.asarray(scene_get(scene, field, asset_store=asset_store), dtype=float)
+        if illuminant.ndim == 1:
+            return illuminant.reshape(-1).copy()
+        return np.mean(illuminant.reshape(-1, illuminant.shape[-1]), axis=0, dtype=float).reshape(-1)
+
     if key == "radianceenergyroi":
         roi = _roi_required("scenePlot", p_type, roi_locs)
         energy = np.mean(np.asarray(scene_get(scene, "roi energy", roi, asset_store=asset_store), dtype=float), axis=0).reshape(-1)
@@ -738,10 +745,13 @@ def scene_plot(
         return {"x": data[:, 0].copy(), "y": data[:, 1].copy(), "roiLocs": np.asarray(roi, dtype=int).copy()}, None
     if key in {"illuminantenergyroi", "illuminantenergy"}:
         if "roi" in key:
-            roi = _roi_required("scenePlot", p_type, roi_locs)
-            energy = np.asarray(scene_get(scene, "roi mean illuminant energy", roi, asset_store=asset_store), dtype=float).reshape(-1)
+            if roi_locs is None:
+                energy = _mean_illuminant("illuminant energy")
+            else:
+                roi = _roi_required("scenePlot", p_type, roi_locs)
+                energy = np.asarray(scene_get(scene, "roi mean illuminant energy", roi, asset_store=asset_store), dtype=float).reshape(-1)
         else:
-            energy = np.asarray(scene_get(scene, "illuminant energy", asset_store=asset_store), dtype=float).reshape(-1)
+            energy = _mean_illuminant("illuminant energy")
         return {
             "wave": np.asarray(scene_get(scene, "wave"), dtype=float),
             "energy": energy,
@@ -749,10 +759,13 @@ def scene_plot(
         }, None
     if key in {"illuminantphotonsroi", "illuminantphotons"}:
         if "roi" in key:
-            roi = _roi_required("scenePlot", p_type, roi_locs)
-            photons = np.asarray(scene_get(scene, "roi mean illuminant photons", roi, asset_store=asset_store), dtype=float).reshape(-1)
+            if roi_locs is None:
+                photons = _mean_illuminant("illuminant photons")
+            else:
+                roi = _roi_required("scenePlot", p_type, roi_locs)
+                photons = np.asarray(scene_get(scene, "roi mean illuminant photons", roi, asset_store=asset_store), dtype=float).reshape(-1)
         else:
-            photons = np.asarray(scene_get(scene, "illuminant photons", asset_store=asset_store), dtype=float).reshape(-1)
+            photons = _mean_illuminant("illuminant photons")
         return {
             "wave": np.asarray(scene_get(scene, "wave"), dtype=float),
             "photons": photons,

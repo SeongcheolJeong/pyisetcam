@@ -2329,6 +2329,32 @@ switch case_name
         payload.adjusted_center_spd_norm = local_channel_normalize(adjustedCenterSPD(:));
         payload.adjusted_mean_rgb_norm = local_channel_normalize(mean(reshape(adjustedRgb, [], 3), 1));
 
+    case 'scene_slanted_bar_small'
+        scene = sceneCreate('slantedBar', 256, 2.6, 2);
+        scene = sceneAdjustLuminance(scene, 100);
+        luminance = double(sceneGet(scene, 'luminance'));
+        illuminantEnergy = double(sceneGet(scene, 'illuminant energy'));
+
+        d65Scene = sceneAdjustIlluminant(scene, 'D65.mat');
+        d65IlluminantEnergy = double(sceneGet(d65Scene, 'illuminant energy'));
+
+        altScene = sceneCreate('slantedBar', 128, 3.6, 0.5);
+        altLuminance = double(sceneGet(altScene, 'luminance'));
+
+        payload.scene_size = sceneGet(scene, 'size');
+        payload.wave = double(sceneGet(scene, 'wave'));
+        payload.mean_luminance = sceneGet(scene, 'mean luminance');
+        payload.illuminant_energy_roi_norm = local_channel_normalize(illuminantEnergy(:));
+        payload.center_row_luminance_norm = local_channel_normalize(double(luminance(floor(size(luminance, 1) / 2) + 1, :)));
+        payload.center_col_luminance_norm = local_channel_normalize(double(luminance(:, floor(size(luminance, 2) / 2) + 1)));
+        payload.d65_mean_luminance = sceneGet(d65Scene, 'mean luminance');
+        payload.d65_illuminant_energy_roi_norm = local_channel_normalize(d65IlluminantEnergy(:));
+        payload.alt_scene_size = sceneGet(altScene, 'size');
+        payload.alt_fov_deg = sceneGet(altScene, 'fov');
+        payload.alt_mean_luminance = sceneGet(altScene, 'mean luminance');
+        payload.alt_center_row_luminance_norm = local_channel_normalize(double(altLuminance(floor(size(altLuminance, 1) / 2) + 1, :)));
+        payload.alt_center_col_luminance_norm = local_channel_normalize(double(altLuminance(:, floor(size(altLuminance, 2) / 2) + 1)));
+
     case 'scene_from_rgb_lcd_apple_small'
         displayCalFile = 'LCD-Apple.mat';
         d = displayCreate(displayCalFile);

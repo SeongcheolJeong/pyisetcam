@@ -9763,6 +9763,57 @@ def test_run_python_case_supports_scene_monochrome_small_parity_case(asset_store
     assert case.payload["adjusted_mean_rgb_norm"].shape == (3,)
 
 
+def test_scene_slanted_bar_script_workflow(asset_store) -> None:
+    scene = scene_create("slantedBar", 256, 2.6, 2.0, asset_store=asset_store)
+    scene = scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
+    luminance = np.asarray(scene_get(scene, "luminance", asset_store=asset_store), dtype=float)
+    illuminant_roi, _ = scene_plot(scene, "illuminant energy roi", asset_store=asset_store)
+
+    d65_scene = scene_adjust_illuminant(scene.clone(), "D65.mat", asset_store=asset_store)
+    d65_illuminant_roi, _ = scene_plot(d65_scene, "illuminant energy roi", asset_store=asset_store)
+
+    alt_scene = scene_create("slantedBar", 128, 3.6, 0.5, asset_store=asset_store)
+    alt_luminance = np.asarray(scene_get(alt_scene, "luminance", asset_store=asset_store), dtype=float)
+
+    assert tuple(scene_get(scene, "size")) == (257, 257)
+    assert np.array_equal(np.asarray(scene_get(scene, "wave"), dtype=float), np.arange(400.0, 701.0, 10.0, dtype=float))
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, atol=1e-8, rtol=1e-8)
+    assert illuminant_roi["energy"].shape == (31,)
+    assert illuminant_roi["comment"] is None
+    assert np.allclose(illuminant_roi["energy"], illuminant_roi["energy"][0], atol=1e-12, rtol=1e-12)
+    assert luminance.shape == (257, 257)
+    assert float(np.max(luminance)) > 100.0
+    assert float(np.min(luminance)) < 1e-2
+
+    assert np.isclose(scene_get(d65_scene, "mean luminance", asset_store=asset_store), 100.0, atol=1e-8, rtol=1e-8)
+    assert d65_illuminant_roi["energy"].shape == (31,)
+    assert d65_illuminant_roi["comment"] == "D65.mat"
+    assert not np.allclose(d65_illuminant_roi["energy"], illuminant_roi["energy"])
+
+    assert tuple(scene_get(alt_scene, "size")) == (129, 129)
+    assert np.isclose(scene_get(alt_scene, "fov"), 0.5, atol=1e-12, rtol=1e-12)
+    assert np.isclose(scene_get(alt_scene, "mean luminance", asset_store=asset_store), 100.0, atol=1e-8, rtol=1e-8)
+    assert alt_luminance.shape == (129, 129)
+
+
+def test_run_python_case_supports_scene_slanted_bar_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_slanted_bar_small", asset_store=asset_store)
+
+    assert tuple(case.payload["scene_size"]) == (257, 257)
+    assert case.payload["wave"].shape == (31,)
+    assert np.isclose(float(case.payload["mean_luminance"]), 100.0, atol=1e-8, rtol=1e-8)
+    assert case.payload["illuminant_energy_roi_norm"].shape == (31,)
+    assert case.payload["center_row_luminance_norm"].shape == (257,)
+    assert case.payload["center_col_luminance_norm"].shape == (257,)
+    assert np.isclose(float(case.payload["d65_mean_luminance"]), 100.0, atol=1e-8, rtol=1e-8)
+    assert case.payload["d65_illuminant_energy_roi_norm"].shape == (31,)
+    assert tuple(case.payload["alt_scene_size"]) == (129, 129)
+    assert np.isclose(float(case.payload["alt_fov_deg"]), 0.5, atol=1e-12, rtol=1e-12)
+    assert np.isclose(float(case.payload["alt_mean_luminance"]), 100.0, atol=1e-8, rtol=1e-8)
+    assert case.payload["alt_center_row_luminance_norm"].shape == (129,)
+    assert case.payload["alt_center_col_luminance_norm"].shape == (129,)
+
+
 def test_scene_from_rgb_script_workflow(asset_store) -> None:
     display = display_create("LCD-Apple.mat", asset_store=asset_store)
     wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)

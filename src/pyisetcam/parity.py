@@ -2881,6 +2881,38 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "scene_slanted_bar_small":
+        scene = scene_create("slantedBar", 256, 2.6, 2.0, asset_store=store)
+        scene = scene_adjust_luminance(scene, 100.0, asset_store=store)
+        luminance = np.asarray(scene_get(scene, "luminance", asset_store=store), dtype=float)
+        illuminant_roi, _ = scene_plot(scene, "illuminant energy roi", asset_store=store)
+
+        d65_scene = scene_adjust_illuminant(scene.clone(), "D65.mat", asset_store=store)
+        d65_illuminant_roi, _ = scene_plot(d65_scene, "illuminant energy roi", asset_store=store)
+
+        alt_scene = scene_create("slantedBar", 128, 3.6, 0.5, asset_store=store)
+        alt_luminance = np.asarray(scene_get(alt_scene, "luminance", asset_store=store), dtype=float)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "wave": np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1),
+                "mean_luminance": float(scene_get(scene, "mean luminance", asset_store=store)),
+                "illuminant_energy_roi_norm": _channel_normalize(illuminant_roi["energy"]),
+                "center_row_luminance_norm": _channel_normalize(luminance[luminance.shape[0] // 2, :]),
+                "center_col_luminance_norm": _channel_normalize(luminance[:, luminance.shape[1] // 2]),
+                "d65_mean_luminance": float(scene_get(d65_scene, "mean luminance", asset_store=store)),
+                "d65_illuminant_energy_roi_norm": _channel_normalize(d65_illuminant_roi["energy"]),
+                "alt_scene_size": np.asarray(scene_get(alt_scene, "size"), dtype=int),
+                "alt_fov_deg": float(scene_get(alt_scene, "fov")),
+                "alt_mean_luminance": float(scene_get(alt_scene, "mean luminance", asset_store=store)),
+                "alt_center_row_luminance_norm": _channel_normalize(alt_luminance[alt_luminance.shape[0] // 2, :]),
+                "alt_center_col_luminance_norm": _channel_normalize(alt_luminance[:, alt_luminance.shape[1] // 2]),
+            },
+            context={},
+        )
+
     if case_name == "scene_from_rgb_lcd_apple_small":
         display = display_create("LCD-Apple.mat", asset_store=store)
         display_wave = np.asarray(display.fields["wave"], dtype=float).reshape(-1)
