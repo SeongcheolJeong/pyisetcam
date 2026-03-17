@@ -145,6 +145,7 @@ from pyisetcam import (
     sensor_set_size_to_fov,
     sensor_set,
     spd_to_cct,
+    srgb_to_color_temp,
     wvf_aperture,
     wvf_compute,
     wvf_compute_psf,
@@ -9325,6 +9326,54 @@ def test_run_python_case_supports_color_constancy_small_parity_case(asset_store)
     assert case.payload["uniform_mean_luminance"].shape == (15,)
     assert case.payload["uniform_mean_rgb_norm"].shape == (15, 3)
     assert case.payload["uniform_center_rgb_norm"].shape == (15, 3)
+
+
+def test_rgb_color_temperature_script_workflow(asset_store) -> None:
+    def estimate(scene_name: str) -> tuple[tuple[int, int], tuple[int, int, int], float, np.ndarray, np.ndarray]:
+        scene = scene_create(scene_name, asset_store=asset_store)
+        oi = oi_compute(oi_create(asset_store=asset_store), scene)
+        sensor = sensor_create(asset_store=asset_store)
+        sensor = sensor_set(sensor, "fov", scene_get(scene, "fov"), oi)
+        sensor = sensor_compute(sensor, oi)
+        ip = ip_compute(ip_create(asset_store=asset_store), sensor, asset_store=asset_store)
+        srgb = np.asarray(ip_get(ip, "srgb"), dtype=float)
+        c_temp, c_table = srgb_to_color_temp(srgb, return_table=True, asset_store=asset_store)
+        return tuple(scene_get(scene, "size")), tuple(ip_get(ip, "size")), float(c_temp), np.asarray(c_table, dtype=float), srgb
+
+    tungsten_scene_size, tungsten_ip_size, tungsten_c_temp, tungsten_table, tungsten_srgb = estimate("macbeth tungsten")
+    d65_scene_size, d65_ip_size, d65_c_temp, d65_table, d65_srgb = estimate("macbeth d65")
+
+    assert tungsten_scene_size == (64, 96)
+    assert d65_scene_size == (64, 96)
+    assert tungsten_ip_size == d65_ip_size
+    assert tungsten_ip_size[2] == 3
+    assert tungsten_ip_size[0] > tungsten_scene_size[0]
+    assert tungsten_ip_size[1] > tungsten_scene_size[1]
+    assert tungsten_table.shape == (17, 3)
+    assert np.array_equal(tungsten_table[:, 0], np.arange(2500.0, 10501.0, 500.0, dtype=float))
+    assert np.allclose(d65_table, tungsten_table, atol=1e-10, rtol=1e-10)
+    assert 2500.0 <= tungsten_c_temp <= 10500.0
+    assert 2500.0 <= d65_c_temp <= 10500.0
+    assert d65_c_temp > tungsten_c_temp
+    assert tungsten_srgb.shape == tungsten_ip_size
+    assert d65_srgb.shape == d65_ip_size
+
+
+def test_run_python_case_supports_rgb_color_temperature_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("rgb_color_temperature_small", asset_store=asset_store)
+
+    assert tuple(case.payload["tungsten_scene_size"]) == (64, 96)
+    assert tuple(case.payload["tungsten_ip_size"]) == tuple(case.payload["d65_ip_size"])
+    assert int(case.payload["tungsten_ip_size"][2]) == 3
+    assert int(case.payload["tungsten_ip_size"][0]) > 64
+    assert int(case.payload["tungsten_ip_size"][1]) > 96
+    assert float(case.payload["tungsten_c_temp"]) >= 2500.0
+    assert case.payload["tungsten_srgb_mean_norm"].shape == (3,)
+    assert tuple(case.payload["d65_scene_size"]) == (64, 96)
+    assert float(case.payload["d65_c_temp"]) > float(case.payload["tungsten_c_temp"])
+    assert case.payload["d65_srgb_mean_norm"].shape == (3,)
+    assert np.array_equal(case.payload["c_table_temps"], np.arange(2500.0, 10501.0, 500.0, dtype=float))
+    assert case.payload["c_table_xy"].shape == (17, 2)
 
 
 def test_scene_from_rgb_script_workflow(asset_store) -> None:

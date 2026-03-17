@@ -29,7 +29,7 @@ from .fileio import ie_save_color_filter, ie_save_multispectral_image, ie_save_s
 from .fileio import sensor_dng_read
 from .illuminant import illuminant_create, illuminant_get, illuminant_set
 from .iso import edge_to_mtf, ie_iso12233, iso12233, iso_find_slanted_bar
-from .metrics import cpiq_csf, chromaticity_xy, cct_from_uv, delta_e_ab, iso_acutance, metrics_spd, spd_to_cct, xyz_from_energy, xyz_to_lab, xyz_to_luv, xyz_to_uv
+from .metrics import cpiq_csf, chromaticity_xy, cct_from_uv, delta_e_ab, iso_acutance, metrics_spd, spd_to_cct, srgb_to_color_temp, xyz_from_energy, xyz_to_lab, xyz_to_luv, xyz_to_uv
 from .ip import ip_compute, ip_create, ip_get, ip_set
 from .optics import (
     _cos4th_factor,
@@ -2533,6 +2533,43 @@ def run_python_case_with_context(
                 "uniform_mean_luminance": uniform_mean_luminance,
                 "uniform_mean_rgb_norm": uniform_means,
                 "uniform_center_rgb_norm": uniform_centers,
+            },
+            context={},
+        )
+
+    if case_name == "rgb_color_temperature_small":
+        def _estimate(scene_name: str) -> dict[str, Any]:
+            scene = scene_create(scene_name, asset_store=store)
+            oi = oi_compute(oi_create(asset_store=store), scene)
+            sensor = sensor_create(asset_store=store)
+            sensor = sensor_set(sensor, "fov", float(scene_get(scene, "fov")), oi)
+            sensor = sensor_compute(sensor, oi)
+            ip = ip_compute(ip_create(asset_store=store), sensor, asset_store=store)
+            srgb = np.asarray(ip_get(ip, "srgb"), dtype=float)
+            c_temp, c_table = srgb_to_color_temp(srgb, return_table=True, asset_store=store)
+            return {
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "ip_size": np.asarray(ip_get(ip, "size"), dtype=int),
+                "c_temp": float(c_temp),
+                "srgb_mean_norm": _channel_normalize(np.mean(srgb, axis=(0, 1), dtype=float)),
+                "c_table": np.asarray(c_table, dtype=float),
+            }
+
+        tungsten = _estimate("macbeth tungsten")
+        d65 = _estimate("macbeth d65")
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "tungsten_scene_size": tungsten["scene_size"],
+                "tungsten_ip_size": tungsten["ip_size"],
+                "tungsten_c_temp": tungsten["c_temp"],
+                "tungsten_srgb_mean_norm": tungsten["srgb_mean_norm"],
+                "d65_scene_size": d65["scene_size"],
+                "d65_ip_size": d65["ip_size"],
+                "d65_c_temp": d65["c_temp"],
+                "d65_srgb_mean_norm": d65["srgb_mean_norm"],
+                "c_table_temps": d65["c_table"][:, 0],
+                "c_table_xy": d65["c_table"][:, 1:3],
             },
             context={},
         )

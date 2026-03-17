@@ -656,6 +656,30 @@
       }
     },
     {
+      "name": "rgb_color_temperature_small",
+      "matlab_function": "s_rgbColorTemperature",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "tungsten_c_temp": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.15
+        },
+        "d65_c_temp": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.1
+        },
+        "tungsten_srgb_mean_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.04
+        },
+        "d65_srgb_mean_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.025
+        }
+      }
+    },
+    {
       "name": "scene_roi_small",
       "matlab_function": "s_sceneRoi",
       "rtol": 1e-05,

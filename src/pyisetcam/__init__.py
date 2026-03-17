@@ -59,6 +59,7 @@ from .metrics import (
     peak_signal_to_noise_ratio,
     root_mean_squared_error,
     spd_to_cct,
+    srgb_to_color_temp,
     xyz_from_energy,
     xyz_to_lab,
     xyz_to_luv,
@@ -433,6 +434,8 @@ __all__ = [
     "rgb_to_xw_format",
     "spd2cct",
     "spd_to_cct",
+    "srgb2colortemp",
+    "srgb_to_color_temp",
     "XW2RGBFormat",
     "xw_to_rgb_format",
     "srgb2xyz",
@@ -846,6 +849,7 @@ scielabRGB = scielab_rgb
 xyz2luv = xyz_to_luv
 cct = cct_from_uv
 spd2cct = spd_to_cct
+srgb2colortemp = srgb_to_color_temp
 RGB2XWFormat = rgb_to_xw_format
 XW2RGBFormat = xw_to_rgb_format
 hcBasis = hc_basis

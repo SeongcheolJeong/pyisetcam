@@ -11,7 +11,7 @@ from skimage.color import deltaE_ciede2000, deltaE_ciede94
 from .assets import AssetStore
 from .color import xyz_color_matching
 from .exceptions import UnsupportedOptionError
-from .utils import DEFAULT_WAVE, blackbody, param_format, spectral_step
+from .utils import DEFAULT_WAVE, blackbody, param_format, rgb_to_xw_format, spectral_step, srgb_to_xyz
 
 
 def _vector(value: Any, *, name: str) -> NDArray[np.float64]:
@@ -229,6 +229,57 @@ def spd_to_cct(
     return float(cct) if np.ndim(cct) == 0 else np.asarray(cct, dtype=float)
 
 
+def srgb_to_color_temp(
+    rgb: Any,
+    method: str = "bright",
+    *,
+    return_table: bool = False,
+    asset_store: AssetStore | None = None,
+) -> float | tuple[float, NDArray[np.float64]]:
+    """Estimate color temperature from an sRGB image using the upstream bright-pixel chromaticity heuristic."""
+
+    rgb_input = np.asarray(rgb)
+    if rgb_input.ndim < 3 or rgb_input.shape[-1] != 3:
+        raise ValueError("rgb must have a trailing dimension of size 3.")
+
+    if rgb_input.dtype.kind in {"u", "i"}:
+        info = np.iinfo(rgb_input.dtype)
+        rgb_float = np.asarray(rgb_input, dtype=float) / max(float(info.max), 1.0)
+    else:
+        rgb_float = np.asarray(rgb_input, dtype=float)
+
+    img_xyz = np.asarray(srgb_to_xyz(rgb_float), dtype=float)
+    img_xyz_xw, _, _, _ = rgb_to_xw_format(img_xyz)
+    method_key = param_format(method)
+
+    if method_key in {"bright"}:
+        y_channel = img_xyz_xw[:, 1]
+        top_y = float(np.percentile(y_channel, 98.0))
+        mask = y_channel > top_y
+        if not np.any(mask):
+            mask = y_channel >= top_y
+        top_xy = np.mean(chromaticity_xy(img_xyz_xw[mask, :]), axis=0, dtype=float)
+    elif method_key in {"gray"}:
+        top_xy = np.mean(chromaticity_xy(img_xyz_xw), axis=0, dtype=float)
+    else:
+        raise UnsupportedOptionError("srgb2colortemp", method)
+
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    c_temps = np.arange(2500.0, 10501.0, 500.0, dtype=float)
+    xy = np.vstack(
+        [
+            np.asarray(chromaticity_xy(xyz_from_energy(blackbody(wave, c_temp, kind="energy"), wave, asset_store=asset_store)), dtype=float)
+            for c_temp in c_temps
+        ]
+    )
+    c_table = np.column_stack([c_temps, xy])
+    index = int(np.argmin(np.linalg.norm(xy - top_xy.reshape(1, 2), axis=1)))
+    c_temp = float(c_temps[index])
+    if return_table:
+        return c_temp, c_table
+    return c_temp
+
+
 def cpiq_csf(frequency_cpd: Any) -> NDArray[np.float64]:
     """Return the normalized CPIQ contrast-sensitivity weighting."""
 
@@ -258,6 +309,9 @@ def iso_acutance(cpd: Any, luminance_mtf: Any) -> float:
     weighted = float(np.sum(mtf * csf, dtype=float) * delta_v)
     reference = float(np.sum(csf, dtype=float) * delta_v)
     return weighted / max(reference, 1.0e-12)
+
+
+srgb2colortemp = srgb_to_color_temp
 
 
 def mired_difference(cct1_k: float, cct2_k: float) -> float:

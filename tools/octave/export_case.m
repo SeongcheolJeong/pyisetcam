@@ -2059,6 +2059,43 @@ switch case_name
         payload.uniform_mean_rgb_norm = uniformMeans;
         payload.uniform_center_rgb_norm = uniformCenters;
 
+    case 'rgb_color_temperature_small'
+        scene = sceneCreate('macbeth tungsten');
+        oi = oiCreate;
+        oi = oiCompute(oi, scene);
+        sensor = sensorCreate;
+        sensor = sensorSet(sensor, 'fov', sceneGet(scene, 'fov'), oi);
+        sensor = sensorCompute(sensor, oi);
+        ip = ipCreate;
+        ip = ipCompute(ip, sensor);
+        rgb = double(ipGet(ip, 'srgb'));
+        [tungstenTemp, cTable] = srgb2colortemp(rgb);
+        meanRgb = mean(reshape(rgb, [], 3), 1);
+
+        payload.tungsten_scene_size = sceneGet(scene, 'size');
+        payload.tungsten_ip_size = ipGet(ip, 'size');
+        payload.tungsten_c_temp = tungstenTemp;
+        payload.tungsten_srgb_mean_norm = meanRgb(:) / max(max(abs(meanRgb)), 1e-12);
+
+        scene = sceneCreate('macbeth d65');
+        oi = oiCreate;
+        oi = oiCompute(oi, scene);
+        sensor = sensorCreate;
+        sensor = sensorSet(sensor, 'fov', sceneGet(scene, 'fov'), oi);
+        sensor = sensorCompute(sensor, oi);
+        ip = ipCreate;
+        ip = ipCompute(ip, sensor);
+        rgb = double(ipGet(ip, 'srgb'));
+        [d65Temp, cTable] = srgb2colortemp(rgb);
+        meanRgb = mean(reshape(rgb, [], 3), 1);
+
+        payload.d65_scene_size = sceneGet(scene, 'size');
+        payload.d65_ip_size = ipGet(ip, 'size');
+        payload.d65_c_temp = d65Temp;
+        payload.d65_srgb_mean_norm = meanRgb(:) / max(max(abs(meanRgb)), 1e-12);
+        payload.c_table_temps = cTable(:, 1);
+        payload.c_table_xy = cTable(:, 2:3);
+
     case 'scene_from_rgb_lcd_apple_small'
         displayCalFile = 'LCD-Apple.mat';
         d = displayCreate(displayCalFile);
