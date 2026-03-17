@@ -9262,6 +9262,71 @@ def test_run_python_case_supports_chromatic_spatial_chart_small_parity_case(asse
     assert case.payload["scene_center_col_luminance_norm"].shape == (384,)
 
 
+def test_color_constancy_script_workflow(asset_store) -> None:
+    def normalize(values: np.ndarray) -> np.ndarray:
+        vector = np.asarray(values, dtype=float).reshape(-1)
+        return vector / max(float(np.max(np.abs(vector))), 1e-12)
+
+    c_temps = np.flip(1.0 / np.linspace(1.0 / 7000.0, 1.0 / 3000.0, 15, dtype=float))
+
+    stuffed_scene = scene_from_file(
+        asset_store.resolve("data/images/multispectral/StuffedAnimals_tungsten-hdrs.mat"),
+        "spectral",
+        asset_store=asset_store,
+    )
+    stuffed_wave = np.asarray(scene_get(stuffed_scene, "wave"), dtype=float).reshape(-1)
+    stuffed_means = np.zeros((c_temps.size, 3), dtype=float)
+    stuffed_centers = np.zeros((c_temps.size, 3), dtype=float)
+
+    for index, c_temp in enumerate(c_temps):
+        stuffed_scene = scene_adjust_illuminant(stuffed_scene, blackbody(stuffed_wave, c_temp, kind="energy"), asset_store=asset_store)
+        rgb = np.asarray(scene_get(stuffed_scene, "rgb", asset_store=asset_store), dtype=float)
+        center_row = rgb.shape[0] // 2
+        center_col = rgb.shape[1] // 2
+        stuffed_means[index, :] = normalize(np.mean(rgb, axis=(0, 1), dtype=float))
+        stuffed_centers[index, :] = normalize(rgb[center_row, center_col, :])
+
+    uniform_scene = scene_create("uniform d65", 512, asset_store=asset_store)
+    uniform_wave = np.asarray(scene_get(uniform_scene, "wave"), dtype=float).reshape(-1)
+    uniform_means = np.zeros((c_temps.size, 3), dtype=float)
+    uniform_centers = np.zeros((c_temps.size, 3), dtype=float)
+
+    for index, c_temp in enumerate(c_temps):
+        uniform_scene = scene_adjust_illuminant(uniform_scene, blackbody(uniform_wave, c_temp, kind="energy"), asset_store=asset_store)
+        rgb = np.asarray(scene_get(uniform_scene, "rgb", asset_store=asset_store), dtype=float)
+        center_row = rgb.shape[0] // 2
+        center_col = rgb.shape[1] // 2
+        uniform_means[index, :] = normalize(np.mean(rgb, axis=(0, 1), dtype=float))
+        uniform_centers[index, :] = normalize(rgb[center_row, center_col, :])
+
+    assert np.all(np.diff(c_temps) > 0.0)
+    assert tuple(scene_get(stuffed_scene, "size")) == (506, 759)
+    assert stuffed_wave.shape == (31,)
+    assert stuffed_means.shape == (15, 3)
+    assert stuffed_centers.shape == (15, 3)
+    assert tuple(scene_get(uniform_scene, "size")) == (512, 512)
+    assert uniform_wave.shape == (31,)
+    assert uniform_means.shape == (15, 3)
+    assert uniform_centers.shape == (15, 3)
+
+
+def test_run_python_case_supports_color_constancy_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("color_constancy_small", asset_store=asset_store)
+
+    assert case.payload["c_temps"].shape == (15,)
+    assert np.all(np.diff(np.asarray(case.payload["c_temps"], dtype=float)) > 0.0)
+    assert tuple(case.payload["stuffed_scene_size"]) == (506, 759)
+    assert case.payload["stuffed_wave"].shape == (31,)
+    assert case.payload["stuffed_mean_luminance"].shape == (15,)
+    assert case.payload["stuffed_mean_rgb_norm"].shape == (15, 3)
+    assert case.payload["stuffed_center_rgb_norm"].shape == (15, 3)
+    assert tuple(case.payload["uniform_scene_size"]) == (512, 512)
+    assert case.payload["uniform_wave"].shape == (31,)
+    assert case.payload["uniform_mean_luminance"].shape == (15,)
+    assert case.payload["uniform_mean_rgb_norm"].shape == (15, 3)
+    assert case.payload["uniform_center_rgb_norm"].shape == (15, 3)
+
+
 def test_scene_from_rgb_script_workflow(asset_store) -> None:
     display = display_create("LCD-Apple.mat", asset_store=asset_store)
     wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)

@@ -2480,6 +2480,63 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "color_constancy_small":
+        c_temps = np.flip(1.0 / np.linspace(1.0 / 7000.0, 1.0 / 3000.0, 15, dtype=float))
+
+        stuffed_scene = scene_from_file(
+            store.resolve("data/images/multispectral/StuffedAnimals_tungsten-hdrs.mat"),
+            "spectral",
+            asset_store=store,
+        )
+        stuffed_wave = np.asarray(scene_get(stuffed_scene, "wave"), dtype=float).reshape(-1)
+        stuffed_means = np.zeros((c_temps.size, 3), dtype=float)
+        stuffed_centers = np.zeros((c_temps.size, 3), dtype=float)
+        stuffed_mean_luminance = np.zeros(c_temps.size, dtype=float)
+
+        for index, c_temp in enumerate(c_temps):
+            bb = blackbody(stuffed_wave, c_temp, kind="energy")
+            stuffed_scene = scene_adjust_illuminant(stuffed_scene, bb, asset_store=store)
+            rgb = np.asarray(scene_get(stuffed_scene, "rgb", asset_store=store), dtype=float)
+            center_row = rgb.shape[0] // 2
+            center_col = rgb.shape[1] // 2
+            stuffed_means[index, :] = _channel_normalize(np.mean(rgb, axis=(0, 1), dtype=float))
+            stuffed_centers[index, :] = _channel_normalize(rgb[center_row, center_col, :])
+            stuffed_mean_luminance[index] = float(scene_get(stuffed_scene, "mean luminance", asset_store=store))
+
+        uniform_scene = scene_create("uniform d65", 512, asset_store=store)
+        uniform_wave = np.asarray(scene_get(uniform_scene, "wave"), dtype=float).reshape(-1)
+        uniform_means = np.zeros((c_temps.size, 3), dtype=float)
+        uniform_centers = np.zeros((c_temps.size, 3), dtype=float)
+        uniform_mean_luminance = np.zeros(c_temps.size, dtype=float)
+
+        for index, c_temp in enumerate(c_temps):
+            bb = blackbody(uniform_wave, c_temp, kind="energy")
+            uniform_scene = scene_adjust_illuminant(uniform_scene, bb, asset_store=store)
+            rgb = np.asarray(scene_get(uniform_scene, "rgb", asset_store=store), dtype=float)
+            center_row = rgb.shape[0] // 2
+            center_col = rgb.shape[1] // 2
+            uniform_means[index, :] = _channel_normalize(np.mean(rgb, axis=(0, 1), dtype=float))
+            uniform_centers[index, :] = _channel_normalize(rgb[center_row, center_col, :])
+            uniform_mean_luminance[index] = float(scene_get(uniform_scene, "mean luminance", asset_store=store))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "c_temps": c_temps,
+                "stuffed_scene_size": np.array(scene_get(stuffed_scene, "size"), dtype=int),
+                "stuffed_wave": stuffed_wave,
+                "stuffed_mean_luminance": stuffed_mean_luminance,
+                "stuffed_mean_rgb_norm": stuffed_means,
+                "stuffed_center_rgb_norm": stuffed_centers,
+                "uniform_scene_size": np.array(scene_get(uniform_scene, "size"), dtype=int),
+                "uniform_wave": uniform_wave,
+                "uniform_mean_luminance": uniform_mean_luminance,
+                "uniform_mean_rgb_norm": uniform_means,
+                "uniform_center_rgb_norm": uniform_centers,
+            },
+            context={},
+        )
+
     if case_name == "scene_from_rgb_lcd_apple_small":
         display = display_create("LCD-Apple.mat", asset_store=store)
         display_wave = np.asarray(display.fields["wave"], dtype=float).reshape(-1)

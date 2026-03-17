@@ -632,6 +632,30 @@
       "atol": 1e-08
     },
     {
+      "name": "color_constancy_small",
+      "matlab_function": "s_colorConstancy",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "stuffed_mean_rgb_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.003
+        },
+        "stuffed_center_rgb_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.003
+        },
+        "uniform_mean_rgb_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.012
+        },
+        "uniform_center_rgb_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.012
+        }
+      }
+    },
+    {
       "name": "scene_roi_small",
       "matlab_function": "s_sceneRoi",
       "rtol": 1e-05,

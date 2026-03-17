@@ -2005,6 +2005,60 @@ switch case_name
         payload.scene_center_row_luminance_norm = luminance(centerRow, :)' / max(luminance(centerRow, :));
         payload.scene_center_col_luminance_norm = luminance(:, centerCol) / max(luminance(:, centerCol));
 
+    case 'color_constancy_small'
+        cTemps = linspace(1 / 7000, 1 / 3000, 15);
+        cTemps = fliplr(1 ./ cTemps);
+
+        stuffed = sceneFromFile('StuffedAnimals_tungsten-hdrs', 'spectral');
+        stuffedWave = sceneGet(stuffed, 'wave');
+        stuffedMeans = zeros(numel(cTemps), 3);
+        stuffedCenters = zeros(numel(cTemps), 3);
+        stuffedMeanLuminance = zeros(numel(cTemps), 1);
+
+        for ii = 1:numel(cTemps)
+            bb = blackbody(stuffedWave, cTemps(ii), 'energy');
+            stuffed = sceneAdjustIlluminant(stuffed, bb);
+            rgb = double(sceneGet(stuffed, 'rgb'));
+            centerRow = floor(size(rgb, 1) / 2) + 1;
+            centerCol = floor(size(rgb, 2) / 2) + 1;
+            meanRgb = mean(reshape(rgb, [], 3), 1);
+            centerRgb = squeeze(rgb(centerRow, centerCol, :))';
+            stuffedMeans(ii, :) = meanRgb / max(max(abs(meanRgb)), 1e-12);
+            stuffedCenters(ii, :) = centerRgb / max(max(abs(centerRgb)), 1e-12);
+            stuffedMeanLuminance(ii) = sceneGet(stuffed, 'mean luminance');
+        end
+
+        uniformScene = sceneCreate('uniformD65', 512);
+        uniformWave = sceneGet(uniformScene, 'wave');
+        uniformMeans = zeros(numel(cTemps), 3);
+        uniformCenters = zeros(numel(cTemps), 3);
+        uniformMeanLuminance = zeros(numel(cTemps), 1);
+
+        for ii = 1:numel(cTemps)
+            bb = blackbody(uniformWave, cTemps(ii), 'energy');
+            uniformScene = sceneAdjustIlluminant(uniformScene, bb);
+            rgb = double(sceneGet(uniformScene, 'rgb'));
+            centerRow = floor(size(rgb, 1) / 2) + 1;
+            centerCol = floor(size(rgb, 2) / 2) + 1;
+            meanRgb = mean(reshape(rgb, [], 3), 1);
+            centerRgb = squeeze(rgb(centerRow, centerCol, :))';
+            uniformMeans(ii, :) = meanRgb / max(max(abs(meanRgb)), 1e-12);
+            uniformCenters(ii, :) = centerRgb / max(max(abs(centerRgb)), 1e-12);
+            uniformMeanLuminance(ii) = sceneGet(uniformScene, 'mean luminance');
+        end
+
+        payload.c_temps = cTemps(:);
+        payload.stuffed_scene_size = sceneGet(stuffed, 'size');
+        payload.stuffed_wave = stuffedWave(:);
+        payload.stuffed_mean_luminance = stuffedMeanLuminance;
+        payload.stuffed_mean_rgb_norm = stuffedMeans;
+        payload.stuffed_center_rgb_norm = stuffedCenters;
+        payload.uniform_scene_size = sceneGet(uniformScene, 'size');
+        payload.uniform_wave = uniformWave(:);
+        payload.uniform_mean_luminance = uniformMeanLuminance;
+        payload.uniform_mean_rgb_norm = uniformMeans;
+        payload.uniform_center_rgb_norm = uniformCenters;
+
     case 'scene_from_rgb_lcd_apple_small'
         displayCalFile = 'LCD-Apple.mat';
         d = displayCreate(displayCalFile);
