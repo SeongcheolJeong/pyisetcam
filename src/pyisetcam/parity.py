@@ -2837,6 +2837,50 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "scene_monochrome_small":
+        display = display_create("crt", asset_store=store)
+        display_wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)
+        white_spd = np.asarray(display_get(display, "white spd"), dtype=float).reshape(-1)
+
+        scene = scene_from_file("cameraman.tif", "monochrome", 100.0, "crt", asset_store=store)
+        scene_wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+        photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+        center_row = photons.shape[0] // 2
+        center_col = photons.shape[1] // 2
+        source_mean_spd = np.mean(photons, axis=(0, 1), dtype=float)
+        source_center_spd = photons[center_row, center_col, :]
+
+        adjusted_scene = scene_adjust_illuminant(
+            scene.clone(),
+            blackbody(scene_wave, 6500.0, kind="energy"),
+            asset_store=store,
+        )
+        adjusted_illuminant_energy = np.asarray(scene_get(adjusted_scene, "illuminant energy"), dtype=float).reshape(-1)
+        adjusted_photons = np.asarray(scene_get(adjusted_scene, "photons"), dtype=float)
+        adjusted_mean_spd = np.mean(adjusted_photons, axis=(0, 1), dtype=float)
+        adjusted_center_spd = adjusted_photons[center_row, center_col, :]
+        adjusted_rgb = np.asarray(scene_get(adjusted_scene, "rgb", asset_store=store), dtype=float)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "display_wave": display_wave,
+                "display_white_spd_norm": _channel_normalize(white_spd),
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "scene_wave": scene_wave,
+                "scene_mean_luminance": float(scene_get(scene, "mean luminance", asset_store=store)),
+                "scene_illuminant_energy_norm": _channel_normalize(scene_get(scene, "illuminant energy")),
+                "source_mean_spd_norm": _channel_normalize(source_mean_spd),
+                "source_center_spd_norm": _channel_normalize(source_center_spd),
+                "adjusted_mean_luminance": float(scene_get(adjusted_scene, "mean luminance", asset_store=store)),
+                "adjusted_illuminant_energy_norm": _channel_normalize(adjusted_illuminant_energy),
+                "adjusted_mean_spd_norm": _channel_normalize(adjusted_mean_spd),
+                "adjusted_center_spd_norm": _channel_normalize(adjusted_center_spd),
+                "adjusted_mean_rgb_norm": _channel_normalize(np.mean(adjusted_rgb, axis=(0, 1), dtype=float)),
+            },
+            context={},
+        )
+
     if case_name == "scene_from_rgb_lcd_apple_small":
         display = display_create("LCD-Apple.mat", asset_store=store)
         display_wave = np.asarray(display.fields["wave"], dtype=float).reshape(-1)

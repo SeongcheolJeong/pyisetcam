@@ -2293,6 +2293,42 @@ switch case_name
         payload.roi_reflectance_mean = mean(double(reflectanceMean(:)));
         payload.roi_reflectance_norm = local_channel_normalize(double(reflectanceMean(:)));
 
+    case 'scene_monochrome_small'
+        d = displayCreate('crt');
+        displayWave = double(displayGet(d, 'wave'));
+        whiteSPD = double(displayGet(d, 'white spd'));
+
+        sceneFile = fullfile(isetRootPath, 'data', 'images', 'unispectral', 'cameraman.tif');
+        scene = sceneFromFile(sceneFile, 'monochrome', 100, 'crt');
+        sceneWave = double(sceneGet(scene, 'wave'));
+        photons = double(sceneGet(scene, 'photons'));
+        centerRow = floor(size(photons, 1) / 2) + 1;
+        centerCol = floor(size(photons, 2) / 2) + 1;
+        sourceMeanSPD = squeeze(mean(mean(photons, 1), 2));
+        sourceCenterSPD = squeeze(photons(centerRow, centerCol, :));
+
+        bb = blackbody(sceneWave, 6500, 'energy');
+        adjustedScene = sceneAdjustIlluminant(scene, bb);
+        adjustedIlluminant = double(sceneGet(adjustedScene, 'illuminant energy'));
+        adjustedPhotons = double(sceneGet(adjustedScene, 'photons'));
+        adjustedMeanSPD = squeeze(mean(mean(adjustedPhotons, 1), 2));
+        adjustedCenterSPD = squeeze(adjustedPhotons(centerRow, centerCol, :));
+        adjustedRgb = double(sceneGet(adjustedScene, 'rgb'));
+
+        payload.display_wave = displayWave(:);
+        payload.display_white_spd_norm = local_channel_normalize(whiteSPD(:));
+        payload.scene_size = sceneGet(scene, 'size');
+        payload.scene_wave = sceneWave(:);
+        payload.scene_mean_luminance = sceneGet(scene, 'mean luminance');
+        payload.scene_illuminant_energy_norm = local_channel_normalize(double(sceneGet(scene, 'illuminant energy')));
+        payload.source_mean_spd_norm = local_channel_normalize(sourceMeanSPD(:));
+        payload.source_center_spd_norm = local_channel_normalize(sourceCenterSPD(:));
+        payload.adjusted_mean_luminance = sceneGet(adjustedScene, 'mean luminance');
+        payload.adjusted_illuminant_energy_norm = local_channel_normalize(adjustedIlluminant(:));
+        payload.adjusted_mean_spd_norm = local_channel_normalize(adjustedMeanSPD(:));
+        payload.adjusted_center_spd_norm = local_channel_normalize(adjustedCenterSPD(:));
+        payload.adjusted_mean_rgb_norm = local_channel_normalize(mean(reshape(adjustedRgb, [], 3), 1));
+
     case 'scene_from_rgb_lcd_apple_small'
         displayCalFile = 'LCD-Apple.mat';
         d = displayCreate(displayCalFile);

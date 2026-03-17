@@ -9704,6 +9704,65 @@ def test_run_python_case_supports_scene_data_extraction_plotting_small_parity_ca
     assert case.payload["roi_reflectance_norm"].shape == (31,)
 
 
+def test_scene_monochrome_script_workflow(asset_store) -> None:
+    display = display_create("crt", asset_store=asset_store)
+    display_wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)
+    white_spd = np.asarray(display_get(display, "white spd"), dtype=float).reshape(-1)
+
+    scene = scene_from_file("cameraman.tif", "monochrome", 100.0, "crt", asset_store=asset_store)
+    scene_wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+    scene_illuminant = np.asarray(scene_get(scene, "illuminant energy"), dtype=float).reshape(-1)
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+    center_row = photons.shape[0] // 2
+    center_col = photons.shape[1] // 2
+    source_center_spd = photons[center_row, center_col, :]
+
+    adjusted_scene = scene_adjust_illuminant(
+        scene.clone(),
+        blackbody(scene_wave, 6500.0, kind="energy"),
+        asset_store=asset_store,
+    )
+    adjusted_illuminant = np.asarray(scene_get(adjusted_scene, "illuminant energy"), dtype=float).reshape(-1)
+    adjusted_rgb = np.asarray(scene_get(adjusted_scene, "rgb", asset_store=asset_store), dtype=float)
+
+    assert display_wave.shape == (101,)
+    assert white_spd.shape == (101,)
+    assert tuple(scene_get(scene, "size")) == (256, 256)
+    assert np.array_equal(scene_wave, display_wave)
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, atol=1e-8, rtol=1e-8)
+    assert np.allclose(
+        scene_illuminant / np.max(scene_illuminant),
+        white_spd / np.max(white_spd),
+        atol=1e-12,
+        rtol=1e-12,
+    )
+    assert photons.shape == (256, 256, 101)
+    assert source_center_spd.shape == (101,)
+    assert np.isclose(scene_get(adjusted_scene, "mean luminance", asset_store=asset_store), 100.0, atol=1e-8, rtol=1e-8)
+    assert adjusted_illuminant.shape == (101,)
+    assert adjusted_rgb.shape == (256, 256, 3)
+    assert not np.allclose(adjusted_illuminant, scene_illuminant)
+    assert np.all(np.mean(adjusted_rgb, axis=(0, 1)) > 0.0)
+
+
+def test_run_python_case_supports_scene_monochrome_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_monochrome_small", asset_store=asset_store)
+
+    assert case.payload["display_wave"].shape == (101,)
+    assert case.payload["display_white_spd_norm"].shape == (101,)
+    assert tuple(case.payload["scene_size"]) == (256, 256)
+    assert case.payload["scene_wave"].shape == (101,)
+    assert np.isclose(float(case.payload["scene_mean_luminance"]), 100.0, atol=1e-8, rtol=1e-8)
+    assert case.payload["scene_illuminant_energy_norm"].shape == (101,)
+    assert case.payload["source_mean_spd_norm"].shape == (101,)
+    assert case.payload["source_center_spd_norm"].shape == (101,)
+    assert np.isclose(float(case.payload["adjusted_mean_luminance"]), 100.0, atol=1e-8, rtol=1e-8)
+    assert case.payload["adjusted_illuminant_energy_norm"].shape == (101,)
+    assert case.payload["adjusted_mean_spd_norm"].shape == (101,)
+    assert case.payload["adjusted_center_spd_norm"].shape == (101,)
+    assert case.payload["adjusted_mean_rgb_norm"].shape == (3,)
+
+
 def test_scene_from_rgb_script_workflow(asset_store) -> None:
     display = display_create("LCD-Apple.mat", asset_store=asset_store)
     wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)
