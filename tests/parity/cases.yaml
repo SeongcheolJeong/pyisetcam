@@ -692,6 +692,22 @@
       "atol": 1e-08
     },
     {
+      "name": "scene_change_illuminant_small",
+      "matlab_function": "s_sceneChangeIlluminant",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "equal_energy_mean_rgb_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.002
+        },
+        "horizon_mean_rgb_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.03
+        }
+      }
+    },
+    {
       "name": "scene_roi_small",
       "matlab_function": "s_sceneRoi",
       "rtol": 1e-05,

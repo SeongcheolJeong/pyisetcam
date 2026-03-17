@@ -186,8 +186,7 @@ class AssetStore:
                 name = "D65.mat"
             else:
                 name = f"{name}.mat"
-        relative_path = Path("data/lights") / name
-        data = self.load_mat(relative_path)
+        data = self.load_mat(self._resolve_spectra_path(Path("data/lights") / name))
         wavelengths = np.asarray(data["wavelength"], dtype=float)
         illuminant = np.asarray(data["data"], dtype=float)
         if wave_nm is not None:

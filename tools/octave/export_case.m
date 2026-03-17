@@ -2216,6 +2216,46 @@ switch case_name
         payload.stored_sample_counts = cellfun(@numel, storedSamples);
         payload.replica_photons_nmae = mean(abs(replicaPhotons(:) - originalPhotons(:))) / max(mean(abs(originalPhotons(:))), 1e-12);
 
+    case 'scene_change_illuminant_small'
+        scene = sceneCreate;
+        wave = sceneGet(scene, 'wave');
+        defaultIlluminant = double(sceneGet(scene, 'illuminant photons'));
+
+        tungstenEnergy = ieReadSpectra('Tungsten.mat', wave);
+        tungstenScene = sceneAdjustIlluminant(scene, tungstenEnergy);
+        tungstenScene = sceneSet(tungstenScene, 'illuminantComment', 'Tungsten illuminant');
+        tungstenIlluminant = double(sceneGet(tungstenScene, 'illuminant photons'));
+
+        sceneFile = fullfile(isetRootPath, 'data', 'images', 'multispectral', 'StuffedAnimals_tungsten-hdrs.mat');
+        stuffedScene = sceneFromFile(sceneFile, 'multispectral');
+        stuffedIlluminant = double(sceneGet(stuffedScene, 'illuminant energy'));
+
+        equalEnergyScene = sceneAdjustIlluminant(stuffedScene, 'equalEnergy.mat');
+        equalEnergyIlluminant = double(sceneGet(equalEnergyScene, 'illuminant energy'));
+        equalEnergyRgb = double(sceneGet(equalEnergyScene, 'rgb'));
+        equalEnergyMeanRgb = mean(reshape(equalEnergyRgb, [], 3), 1);
+
+        horizonScene = sceneAdjustIlluminant(stuffedScene, 'illHorizon-20180220.mat');
+        horizonIlluminant = double(sceneGet(horizonScene, 'illuminant energy'));
+        horizonRgb = double(sceneGet(horizonScene, 'rgb'));
+        horizonMeanRgb = mean(reshape(horizonRgb, [], 3), 1);
+
+        payload.default_scene_size = sceneGet(scene, 'size');
+        payload.default_mean_luminance = sceneGet(scene, 'mean luminance');
+        payload.default_illuminant_photons_norm = defaultIlluminant(:) / max(max(abs(defaultIlluminant(:))), 1e-12);
+        payload.tungsten_mean_luminance = sceneGet(tungstenScene, 'mean luminance');
+        payload.tungsten_comment = sceneGet(tungstenScene, 'illuminant comment');
+        payload.tungsten_illuminant_photons_norm = tungstenIlluminant(:) / max(max(abs(tungstenIlluminant(:))), 1e-12);
+        payload.stuffed_scene_size = sceneGet(stuffedScene, 'size');
+        payload.stuffed_mean_luminance = sceneGet(stuffedScene, 'mean luminance');
+        payload.stuffed_illuminant_energy_norm = stuffedIlluminant(:) / max(max(abs(stuffedIlluminant(:))), 1e-12);
+        payload.equal_energy_mean_luminance = sceneGet(equalEnergyScene, 'mean luminance');
+        payload.equal_energy_illuminant_norm = equalEnergyIlluminant(:) / max(max(abs(equalEnergyIlluminant(:))), 1e-12);
+        payload.equal_energy_mean_rgb_norm = equalEnergyMeanRgb(:) / max(max(abs(equalEnergyMeanRgb(:))), 1e-12);
+        payload.horizon_mean_luminance = sceneGet(horizonScene, 'mean luminance');
+        payload.horizon_illuminant_norm = horizonIlluminant(:) / max(max(abs(horizonIlluminant(:))), 1e-12);
+        payload.horizon_mean_rgb_norm = horizonMeanRgb(:) / max(max(abs(horizonMeanRgb(:))), 1e-12);
+
     case 'scene_from_rgb_lcd_apple_small'
         displayCalFile = 'LCD-Apple.mat';
         d = displayCreate(displayCalFile);

@@ -9581,6 +9581,66 @@ def test_run_python_case_supports_scene_reflectance_charts_small_parity_case(ass
     assert np.isclose(float(case.payload["replica_photons_nmae"]), 0.0, atol=1e-12, rtol=1e-12)
 
 
+def test_scene_change_illuminant_script_workflow(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+    default_illuminant = np.asarray(scene_get(scene, "illuminant photons"), dtype=float).reshape(-1)
+
+    tungsten_energy = np.asarray(ie_read_spectra("Tungsten.mat", wave, asset_store=asset_store), dtype=float).reshape(-1)
+    tungsten_scene = scene_adjust_illuminant(scene.clone(), tungsten_energy, asset_store=asset_store)
+    tungsten_scene = scene_set(tungsten_scene, "illuminant comment", "Tungsten illuminant")
+    tungsten_illuminant = np.asarray(scene_get(tungsten_scene, "illuminant photons"), dtype=float).reshape(-1)
+
+    stuffed_scene = scene_from_file(
+        asset_store.resolve("data/images/multispectral/StuffedAnimals_tungsten-hdrs.mat"),
+        "multispectral",
+        asset_store=asset_store,
+    )
+    stuffed_illuminant = np.asarray(scene_get(stuffed_scene, "illuminant energy"), dtype=float).reshape(-1)
+
+    equal_energy_scene = scene_adjust_illuminant(stuffed_scene.clone(), "equalEnergy.mat", asset_store=asset_store)
+    equal_energy_illuminant = np.asarray(scene_get(equal_energy_scene, "illuminant energy"), dtype=float).reshape(-1)
+    equal_energy_rgb = np.asarray(scene_get(equal_energy_scene, "rgb", asset_store=asset_store), dtype=float)
+
+    horizon_scene = scene_adjust_illuminant(stuffed_scene.clone(), "illHorizon-20180220.mat", asset_store=asset_store)
+    horizon_illuminant = np.asarray(scene_get(horizon_scene, "illuminant energy"), dtype=float).reshape(-1)
+    horizon_rgb = np.asarray(scene_get(horizon_scene, "rgb", asset_store=asset_store), dtype=float)
+
+    assert tuple(scene_get(scene, "size")) == (64, 96)
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, atol=1e-8, rtol=1e-8)
+    assert default_illuminant.shape == (31,)
+    assert np.isclose(scene_get(tungsten_scene, "mean luminance", asset_store=asset_store), 100.0, atol=1e-8, rtol=1e-8)
+    assert scene_get(tungsten_scene, "illuminant comment") == "Tungsten illuminant"
+    assert tungsten_illuminant.shape == (31,)
+    assert tuple(scene_get(stuffed_scene, "size")) == (506, 759)
+    assert stuffed_illuminant.shape == (31,)
+    assert np.isclose(scene_get(equal_energy_scene, "mean luminance", asset_store=asset_store), scene_get(stuffed_scene, "mean luminance", asset_store=asset_store), atol=1e-8, rtol=1e-8)
+    assert equal_energy_illuminant.shape == (31,)
+    assert equal_energy_rgb.shape == (506, 759, 3)
+    assert np.isclose(scene_get(horizon_scene, "mean luminance", asset_store=asset_store), scene_get(stuffed_scene, "mean luminance", asset_store=asset_store), atol=1e-8, rtol=1e-8)
+    assert horizon_illuminant.shape == (31,)
+    assert horizon_rgb.shape == (506, 759, 3)
+    assert not np.allclose(equal_energy_illuminant, horizon_illuminant)
+    assert not np.allclose(np.mean(equal_energy_rgb, axis=(0, 1)), np.mean(horizon_rgb, axis=(0, 1)))
+
+
+def test_run_python_case_supports_scene_change_illuminant_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_change_illuminant_small", asset_store=asset_store)
+
+    assert tuple(case.payload["default_scene_size"]) == (64, 96)
+    assert np.isclose(float(case.payload["default_mean_luminance"]), 100.0, atol=1e-8, rtol=1e-8)
+    assert case.payload["default_illuminant_photons_norm"].shape == (31,)
+    assert np.isclose(float(case.payload["tungsten_mean_luminance"]), 100.0, atol=1e-8, rtol=1e-8)
+    assert case.payload["tungsten_comment"] == "Tungsten illuminant"
+    assert case.payload["tungsten_illuminant_photons_norm"].shape == (31,)
+    assert tuple(case.payload["stuffed_scene_size"]) == (506, 759)
+    assert case.payload["stuffed_illuminant_energy_norm"].shape == (31,)
+    assert case.payload["equal_energy_illuminant_norm"].shape == (31,)
+    assert case.payload["equal_energy_mean_rgb_norm"].shape == (3,)
+    assert case.payload["horizon_illuminant_norm"].shape == (31,)
+    assert case.payload["horizon_mean_rgb_norm"].shape == (3,)
+
+
 def test_scene_from_rgb_script_workflow(asset_store) -> None:
     display = display_create("LCD-Apple.mat", asset_store=asset_store)
     wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)

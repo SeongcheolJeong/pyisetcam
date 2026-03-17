@@ -2744,6 +2744,53 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "scene_change_illuminant_small":
+        default_scene = scene_create(asset_store=store)
+        wave = np.asarray(scene_get(default_scene, "wave"), dtype=float).reshape(-1)
+        default_illuminant_photons = np.asarray(scene_get(default_scene, "illuminant photons"), dtype=float).reshape(-1)
+
+        tungsten_energy = np.asarray(ie_read_spectra("Tungsten.mat", wave, asset_store=store), dtype=float).reshape(-1)
+        tungsten_scene = scene_adjust_illuminant(default_scene.clone(), tungsten_energy, asset_store=store)
+        tungsten_scene = scene_set(tungsten_scene, "illuminant comment", "Tungsten illuminant")
+        tungsten_illuminant_photons = np.asarray(scene_get(tungsten_scene, "illuminant photons"), dtype=float).reshape(-1)
+
+        stuffed_scene = scene_from_file(
+            store.resolve("data/images/multispectral/StuffedAnimals_tungsten-hdrs.mat"),
+            "multispectral",
+            asset_store=store,
+        )
+        stuffed_illuminant_energy = np.asarray(scene_get(stuffed_scene, "illuminant energy"), dtype=float).reshape(-1)
+
+        equal_energy_scene = scene_adjust_illuminant(stuffed_scene.clone(), "equalEnergy.mat", asset_store=store)
+        equal_energy_illuminant = np.asarray(scene_get(equal_energy_scene, "illuminant energy"), dtype=float).reshape(-1)
+        equal_energy_rgb = np.asarray(scene_get(equal_energy_scene, "rgb", asset_store=store), dtype=float)
+
+        horizon_scene = scene_adjust_illuminant(stuffed_scene.clone(), "illHorizon-20180220.mat", asset_store=store)
+        horizon_illuminant = np.asarray(scene_get(horizon_scene, "illuminant energy"), dtype=float).reshape(-1)
+        horizon_rgb = np.asarray(scene_get(horizon_scene, "rgb", asset_store=store), dtype=float)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "default_scene_size": np.asarray(scene_get(default_scene, "size"), dtype=int),
+                "default_mean_luminance": float(scene_get(default_scene, "mean luminance", asset_store=store)),
+                "default_illuminant_photons_norm": default_illuminant_photons / max(float(np.max(default_illuminant_photons)), 1e-12),
+                "tungsten_mean_luminance": float(scene_get(tungsten_scene, "mean luminance", asset_store=store)),
+                "tungsten_comment": str(scene_get(tungsten_scene, "illuminant comment")),
+                "tungsten_illuminant_photons_norm": tungsten_illuminant_photons / max(float(np.max(tungsten_illuminant_photons)), 1e-12),
+                "stuffed_scene_size": np.asarray(scene_get(stuffed_scene, "size"), dtype=int),
+                "stuffed_mean_luminance": float(scene_get(stuffed_scene, "mean luminance", asset_store=store)),
+                "stuffed_illuminant_energy_norm": stuffed_illuminant_energy / max(float(np.max(stuffed_illuminant_energy)), 1e-12),
+                "equal_energy_mean_luminance": float(scene_get(equal_energy_scene, "mean luminance", asset_store=store)),
+                "equal_energy_illuminant_norm": equal_energy_illuminant / max(float(np.max(equal_energy_illuminant)), 1e-12),
+                "equal_energy_mean_rgb_norm": _channel_normalize(np.mean(equal_energy_rgb, axis=(0, 1), dtype=float)),
+                "horizon_mean_luminance": float(scene_get(horizon_scene, "mean luminance", asset_store=store)),
+                "horizon_illuminant_norm": horizon_illuminant / max(float(np.max(horizon_illuminant)), 1e-12),
+                "horizon_mean_rgb_norm": _channel_normalize(np.mean(horizon_rgb, axis=(0, 1), dtype=float)),
+            },
+            context={},
+        )
+
     if case_name == "scene_from_rgb_lcd_apple_small":
         display = display_create("LCD-Apple.mat", asset_store=store)
         display_wave = np.asarray(display.fields["wave"], dtype=float).reshape(-1)
