@@ -10376,6 +10376,40 @@ def test_run_python_case_supports_scene_grid_lines_small_parity_case(asset_store
     assert np.array_equal(np.unique(np.diff(full_hi_cols)), np.array([16], dtype=int))
 
 
+def test_scene_white_noise_workflow(asset_store) -> None:
+    scene = scene_create("white noise", 128, 20, asset_store=asset_store)
+    scene_repeat = scene_create("white noise", 128, 20, asset_store=asset_store)
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+    photons_repeat = np.asarray(scene_get(scene_repeat, "photons"), dtype=float)
+    plane = photons[:, :, 0]
+    plane_mean = float(np.mean(plane))
+    normalized_plane = plane / plane_mean
+
+    assert tuple(scene_get(scene, "size")) == (128, 128)
+    assert photons.shape == (128, 128, 31)
+    assert np.array_equal(photons, photons_repeat)
+    assert float(scene_get(scene, "fov")) == pytest.approx(1.0, abs=1e-12)
+    assert float(scene_get(scene, "mean luminance", asset_store=asset_store)) == pytest.approx(100.11593267709446)
+    assert normalized_plane.std() == pytest.approx(0.19899359211447812)
+    assert np.percentile(normalized_plane, 50.0) == pytest.approx(0.9977061714414758)
+
+
+def test_run_python_case_supports_scene_white_noise_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_white_noise_small", asset_store=asset_store)
+
+    assert tuple(case.payload["scene_size"]) == (128, 128)
+    assert case.payload["wave"].shape == (31,)
+    assert tuple(case.payload["photons_shape"]) == (128, 128, 31)
+    assert float(case.payload["fov_deg"]) == pytest.approx(1.0, abs=1e-12)
+    assert float(case.payload["mean_luminance"]) == pytest.approx(100.11593267709446)
+    assert case.payload["pattern_stats_norm"].shape == (3,)
+    assert case.payload["pattern_stats_norm"][1] == pytest.approx(0.19899359211447812)
+    assert case.payload["pattern_percentiles_norm"].shape == (7,)
+    assert case.payload["pattern_percentiles_norm"][3] == pytest.approx(0.9977061714414758)
+    assert case.payload["mean_spectrum_norm"].shape == (31,)
+    assert np.isclose(np.max(case.payload["mean_spectrum_norm"]), 1.0, atol=1e-12, rtol=0.0)
+
+
 def test_surface_munsell_script_workflow(asset_store) -> None:
     munsell = asset_store.load_mat("data/surfaces/charts/munsell.mat")["munsell"]
     xyz = np.asarray(munsell.XYZ, dtype=float)

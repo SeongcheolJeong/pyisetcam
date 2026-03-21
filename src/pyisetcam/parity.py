@@ -397,6 +397,35 @@ def run_python_case_with_context(
             context={"scene": scene},
         )
 
+    if case_name == "scene_white_noise_small":
+        scene = scene_create("white noise", 128, 20, asset_store=store)
+        photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+        plane = photons[:, :, 0]
+        plane_mean = max(float(np.mean(plane)), np.finfo(float).eps)
+        normalized_plane = plane / plane_mean
+        mean_spectrum = np.mean(photons, axis=(0, 1), dtype=float)
+        mean_spectrum = mean_spectrum / max(float(np.max(mean_spectrum)), np.finfo(float).eps)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "wave": scene_get(scene, "wave"),
+                "photons_shape": np.asarray(photons.shape, dtype=int),
+                "fov_deg": float(scene_get(scene, "fov")),
+                "mean_luminance": scene_get(scene, "mean luminance", asset_store=store),
+                "pattern_stats_norm": np.asarray(
+                    [np.min(normalized_plane), np.std(normalized_plane), np.max(normalized_plane)],
+                    dtype=float,
+                ),
+                "pattern_percentiles_norm": np.asarray(
+                    np.percentile(normalized_plane, [1.0, 5.0, 25.0, 50.0, 75.0, 95.0, 99.0]),
+                    dtype=float,
+                ),
+                "mean_spectrum_norm": np.asarray(mean_spectrum, dtype=float),
+            },
+            context={"scene": scene},
+        )
+
     if case_name == "scene_frequency_orientation_small":
         params = {
             "angles": np.linspace(0.0, np.pi / 2.0, 4),

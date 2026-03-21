@@ -61,6 +61,26 @@
       "atol": 1e-08
     },
     {
+      "name": "scene_white_noise_small",
+      "matlab_function": "sceneCreate('white noise')",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "mean_luminance": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.03
+        },
+        "pattern_stats_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.08
+        },
+        "pattern_percentiles_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        }
+      }
+    },
+    {
       "name": "scene_frequency_orientation_small",
       "matlab_function": "sceneCreate",
       "rtol": 1e-05,

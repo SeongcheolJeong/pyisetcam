@@ -86,6 +86,23 @@ switch case_name
         payload.photons = sceneGet(scene, 'photons');
         payload.mean_luminance = sceneGet(scene, 'mean luminance');
 
+    case 'scene_white_noise_small'
+        scene = sceneCreate('white noise', 128, 20);
+        photons = sceneGet(scene, 'photons');
+        plane = photons(:, :, 1);
+        planeMean = max(mean(plane(:)), eps);
+        normalizedPlane = plane ./ planeMean;
+        meanSpectrum = squeeze(mean(mean(photons, 1), 2));
+        meanSpectrum = meanSpectrum ./ max(max(meanSpectrum(:)), eps);
+        payload.scene_size = double(sceneGet(scene, 'size'));
+        payload.wave = sceneGet(scene, 'wave');
+        payload.photons_shape = double(size(photons));
+        payload.fov_deg = sceneGet(scene, 'fov');
+        payload.mean_luminance = sceneGet(scene, 'mean luminance');
+        payload.pattern_stats_norm = [min(normalizedPlane(:)) std(normalizedPlane(:), 1) max(normalizedPlane(:))];
+        payload.pattern_percentiles_norm = prctile(normalizedPlane(:), [1 5 25 50 75 95 99]);
+        payload.mean_spectrum_norm = meanSpectrum;
+
     case 'scene_frequency_orientation_small'
         params = struct();
         params.angles = linspace(0, pi / 2, 4);
