@@ -61,6 +61,12 @@
       "atol": 1e-08
     },
     {
+      "name": "scene_bar_small",
+      "matlab_function": "sceneCreate('bar')",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "utility_unit_frequency_list",
       "matlab_function": "unitFrequencyList",
       "rtol": 1e-05,

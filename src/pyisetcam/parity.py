@@ -428,6 +428,19 @@ def run_python_case_with_context(
             context={"scene": scene},
         )
 
+    if case_name == "scene_bar_small":
+        scene = scene_create("bar", 64, 3, asset_store=store)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": scene_get(scene, "wave"),
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "photons": scene_get(scene, "photons"),
+                "mean_luminance": scene_get(scene, "mean luminance", asset_store=store),
+            },
+            context={"scene": scene},
+        )
+
     if case_name == "utility_unit_frequency_list":
         return ParityCaseResult(
             payload={

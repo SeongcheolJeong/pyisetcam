@@ -10077,6 +10077,33 @@ def test_run_python_case_supports_scene_dead_leaves_small_parity_case(asset_stor
     assert float(np.max(case.payload["photons"])) > float(np.min(case.payload["photons"]))
 
 
+def test_scene_bar_workflow(asset_store) -> None:
+    scene = scene_create("bar", 64, 3, asset_store=asset_store)
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+    luminance = np.asarray(scene_get(scene, "luminance", asset_store=asset_store), dtype=float)
+    center_row = photons.shape[0] // 2
+
+    assert tuple(scene_get(scene, "size")) == (64, 64)
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, atol=1e-8, rtol=1e-8)
+    assert photons.shape == (64, 64, 31)
+    assert np.all(photons[center_row, 31:34, :] > photons[center_row, 0:1, :])
+    assert np.all(photons[center_row, 31:34, :] > photons[center_row, -1:, :])
+    assert np.allclose(luminance[center_row, :31], luminance[center_row, 0], atol=1e-12, rtol=1e-12)
+    assert np.allclose(luminance[center_row, 34:], luminance[center_row, -1], atol=1e-12, rtol=1e-12)
+    assert np.all(luminance[center_row, 31:34] > luminance[center_row, 0])
+
+
+def test_run_python_case_supports_scene_bar_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_bar_small", asset_store=asset_store)
+
+    assert tuple(case.payload["scene_size"]) == (64, 64)
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["photons"].shape == (64, 64, 31)
+    assert np.isclose(float(case.payload["mean_luminance"]), 100.0, atol=1e-8, rtol=1e-8)
+    center_row = case.payload["photons"].shape[0] // 2
+    assert np.all(case.payload["photons"][center_row, 31:34, :] > case.payload["photons"][center_row, 0:1, :])
+
+
 def test_surface_munsell_script_workflow(asset_store) -> None:
     munsell = asset_store.load_mat("data/surfaces/charts/munsell.mat")["munsell"]
     xyz = np.asarray(munsell.XYZ, dtype=float)
