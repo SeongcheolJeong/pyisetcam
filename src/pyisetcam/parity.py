@@ -2980,6 +2980,50 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "surface_munsell_small":
+        munsell = store.load_mat("data/surfaces/charts/munsell.mat")["munsell"]
+        xyz = np.asarray(munsell.XYZ, dtype=float)
+        lab = np.asarray(munsell.LAB, dtype=float)
+        wavelength = np.asarray(munsell.wavelength, dtype=float).reshape(-1)
+        illuminant = np.asarray(munsell.illuminant, dtype=float).reshape(-1)
+        hues = np.asarray(munsell.hue, dtype=object).reshape(-1)
+        values = np.asarray(munsell.value, dtype=float).reshape(-1)
+        angles = np.asarray(munsell.angle, dtype=float).reshape(-1)
+
+        xyz_image = xyz.reshape(261, 9, 3, order="F")
+        srgb = np.asarray(xyz_to_srgb(xyz_image), dtype=float)
+        xy = np.asarray(chromaticity_xy(xyz), dtype=float)
+
+        selected_rgb = np.vstack(
+            [
+                srgb[0, 0, :],
+                srgb[srgb.shape[0] // 2, srgb.shape[1] // 2, :],
+                srgb[-1, -1, :],
+                srgb[44, 4, :],
+            ]
+        )
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "xyz_shape": np.asarray(xyz.shape, dtype=int),
+                "lab_shape": np.asarray(lab.shape, dtype=int),
+                "wavelength": wavelength,
+                "illuminant_norm": _channel_normalize(illuminant),
+                "srgb_grid_shape": np.asarray(srgb.shape, dtype=int),
+                "srgb_mean_rgb": np.mean(srgb, axis=(0, 1), dtype=float),
+                "srgb_selected_rgb": selected_rgb,
+                "xy_mean": np.mean(xy, axis=0, dtype=float),
+                "xy_bounds": np.vstack([np.min(xy, axis=0), np.max(xy, axis=0)]),
+                "lab_mean": np.mean(lab, axis=0, dtype=float),
+                "lab_bounds": np.vstack([np.min(lab, axis=0), np.max(lab, axis=0)]),
+                "first45_hues": np.asarray(hues[:45], dtype=object),
+                "first45_values": values[:45],
+                "first45_angles": angles[:45],
+            },
+            context={},
+        )
+
     if case_name == "scene_from_rgb_lcd_apple_small":
         display = display_create("LCD-Apple.mat", asset_store=store)
         display_wave = np.asarray(display.fields["wave"], dtype=float).reshape(-1)

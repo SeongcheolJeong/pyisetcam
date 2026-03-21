@@ -2408,6 +2408,43 @@ switch case_name
         payload.center_row_luminance_norm = centerRows;
         payload.center_col_luminance_norm = centerCols;
 
+    case 'surface_munsell_small'
+        load(fullfile(isetRootPath, 'data', 'surfaces', 'charts', 'munsell.mat'), 'munsell');
+
+        xyz = double(munsell.XYZ);
+        lab = double(munsell.LAB);
+        xyzImage = reshape(xyz, 261, 9, 3);
+        srgb = double(xyz2srgb(xyzImage));
+        xy = double(chromaticity(xyz));
+
+        selectedRgb = [
+            squeeze(srgb(1, 1, :))';
+            squeeze(srgb(floor(size(srgb, 1) / 2) + 1, floor(size(srgb, 2) / 2) + 1, :))';
+            squeeze(srgb(end, end, :))';
+            squeeze(srgb(45, 5, :))'
+        ];
+
+        payload.xyz_shape = size(xyz);
+        payload.lab_shape = size(lab);
+        payload.wavelength = double(munsell.wavelength(:));
+        payload.illuminant_norm = local_channel_normalize(double(munsell.illuminant(:)));
+        payload.srgb_grid_shape = size(srgb);
+        payload.srgb_mean_rgb = mean(reshape(srgb, [], 3), 1);
+        payload.srgb_selected_rgb = selectedRgb;
+        payload.xy_mean = mean(xy, 1);
+        payload.xy_bounds = [
+            min(xy, [], 1);
+            max(xy, [], 1)
+        ];
+        payload.lab_mean = mean(lab, 1);
+        payload.lab_bounds = [
+            min(lab, [], 1);
+            max(lab, [], 1)
+        ];
+        payload.first45_hues = munsell.hue(1:45);
+        payload.first45_values = double(munsell.value(1:45));
+        payload.first45_angles = double(munsell.angle(1:45));
+
     case 'scene_from_rgb_lcd_apple_small'
         displayCalFile = 'LCD-Apple.mat';
         d = displayCreate(displayCalFile);

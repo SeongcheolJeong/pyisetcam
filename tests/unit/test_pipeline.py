@@ -9885,6 +9885,55 @@ def test_run_python_case_supports_scene_harmonics_script_small_parity_case(asset
     assert case.payload["center_col_luminance_norm"].shape == (4, 128)
 
 
+def test_surface_munsell_script_workflow(asset_store) -> None:
+    munsell = asset_store.load_mat("data/surfaces/charts/munsell.mat")["munsell"]
+    xyz = np.asarray(munsell.XYZ, dtype=float)
+    lab = np.asarray(munsell.LAB, dtype=float)
+    wavelength = np.asarray(munsell.wavelength, dtype=float).reshape(-1)
+    illuminant = np.asarray(munsell.illuminant, dtype=float).reshape(-1)
+    hues = np.asarray(munsell.hue, dtype=object).reshape(-1)
+    values = np.asarray(munsell.value, dtype=float).reshape(-1)
+    angles = np.asarray(munsell.angle, dtype=float).reshape(-1)
+
+    xyz_image = xyz.reshape(261, 9, 3)
+    srgb = np.asarray(xyz_to_srgb(xyz_image), dtype=float)
+    xy = np.asarray(chromaticity_xy(xyz), dtype=float)
+
+    assert xyz.shape == (2349, 3)
+    assert lab.shape == (2349, 3)
+    assert wavelength.shape == (47,)
+    assert illuminant.shape == (47,)
+    assert srgb.shape == (261, 9, 3)
+    assert xy.shape == (2349, 2)
+    assert np.all(np.isfinite(srgb))
+    assert np.all(np.isfinite(xy))
+    assert len(hues[:45]) == 45
+    assert values[:45].shape == (45,)
+    assert angles[:45].shape == (45,)
+    assert hues[0] == ".00R"
+    assert np.isclose(values[0], 1.0)
+    assert np.isclose(angles[0], 0.0)
+
+
+def test_run_python_case_supports_surface_munsell_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("surface_munsell_small", asset_store=asset_store)
+
+    assert tuple(case.payload["xyz_shape"]) == (2349, 3)
+    assert tuple(case.payload["lab_shape"]) == (2349, 3)
+    assert case.payload["wavelength"].shape == (47,)
+    assert case.payload["illuminant_norm"].shape == (47,)
+    assert tuple(case.payload["srgb_grid_shape"]) == (261, 9, 3)
+    assert case.payload["srgb_mean_rgb"].shape == (3,)
+    assert case.payload["srgb_selected_rgb"].shape == (4, 3)
+    assert case.payload["xy_mean"].shape == (2,)
+    assert case.payload["xy_bounds"].shape == (2, 2)
+    assert case.payload["lab_mean"].shape == (3,)
+    assert case.payload["lab_bounds"].shape == (2, 3)
+    assert len(case.payload["first45_hues"]) == 45
+    assert case.payload["first45_values"].shape == (45,)
+    assert case.payload["first45_angles"].shape == (45,)
+
+
 def test_scene_from_rgb_script_workflow(asset_store) -> None:
     display = display_create("LCD-Apple.mat", asset_store=asset_store)
     wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)
