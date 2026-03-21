@@ -1144,6 +1144,58 @@ def _disk_array_scene(
     return scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
 
 
+def _square_array_scene(
+    size: Any,
+    square_size: int,
+    array_size: Any,
+    wave: np.ndarray,
+    *,
+    asset_store: AssetStore,
+) -> Scene:
+    rows, cols = _scene_size_2d(size, default=128)
+    array_values = np.asarray(array_size if array_size is not None else [1, 1], dtype=int).reshape(-1)
+    if array_values.size == 0:
+        array_rows, array_cols = 1, 1
+    elif array_values.size == 1:
+        array_rows = array_cols = max(int(array_values[0]), 1)
+    else:
+        array_rows = max(int(array_values[0]), 1)
+        array_cols = max(int(array_values[1]), 1)
+    square_width = max(int(square_size), 1)
+
+    pattern = np.zeros((rows, cols), dtype=float)
+    square = np.ones((square_width, square_width), dtype=float)
+
+    delta_row = max(_matlab_round_scalar(rows / float(array_rows + 1)), 1)
+    delta_col = max(_matlab_round_scalar(cols / float(array_cols + 1)), 1)
+    row_centers = np.arange(delta_row - 1, rows - (delta_row - 1), delta_row, dtype=int)
+    col_centers = np.arange(delta_col - 1, cols - (delta_col - 1), delta_col, dtype=int)
+    half_width = _matlab_round_scalar(square_width / 2.0)
+
+    for row_center in row_centers:
+        for col_center in col_centers:
+            row_start = int(row_center - half_width)
+            col_start = int(col_center - half_width)
+            row_end = row_start + square.shape[0]
+            col_end = col_start + square.shape[1]
+            if row_start < 0 or col_start < 0 or row_end > rows or col_end > cols:
+                continue
+            pattern[row_start:row_end, col_start:col_end] = square
+
+    illuminant_energy, illuminant_photons = _spectral_illuminant("ep", wave, asset_store=asset_store)
+    photons = pattern[:, :, None] * illuminant_photons.reshape(1, 1, -1)
+    scene = Scene(name="Square Array")
+    scene.fields["wave"] = wave
+    scene.fields["illuminant_format"] = "spectral"
+    scene.fields["illuminant_energy"] = illuminant_energy
+    scene.fields["illuminant_photons"] = illuminant_photons
+    scene.fields["distance_m"] = DEFAULT_DISTANCE_M
+    scene.fields["fov_deg"] = 40.0
+    scene.data["photons"] = photons
+    _update_scene_geometry(scene)
+    return scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
+
+
 def _grid_lines_scene(
     size: Any,
     spacing: int,
@@ -2414,6 +2466,16 @@ def scene_create(
         return track_session_object(
             session,
             _disk_array_scene(size, radius, array_size, wave, asset_store=store),
+        )
+
+    if name in {"squarearray", "square array".replace(" ", "")}:
+        size = args[0] if len(args) > 0 else 128
+        square_size = int(args[1]) if len(args) > 1 else 16
+        array_size = args[2] if len(args) > 2 else np.array([1, 1], dtype=int)
+        wave = _wave_or_default(args[3] if len(args) > 3 else None)
+        return track_session_object(
+            session,
+            _square_array_scene(size, square_size, array_size, wave, asset_store=store),
         )
 
     if name in {"gridlines", "distortiongrid", "grid lines".replace(" ", "")}:
