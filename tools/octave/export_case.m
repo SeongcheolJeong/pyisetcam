@@ -313,6 +313,13 @@ switch case_name
         payload.photons = sceneGet(scene, 'photons');
         payload.mean_luminance = sceneGet(scene, 'mean luminance');
 
+    case 'scene_line_small'
+        scene = sceneCreate('line', [64 64]);
+        payload.wave = sceneGet(scene, 'wave');
+        payload.scene_size = double(sceneGet(scene, 'size'));
+        payload.photons = sceneGet(scene, 'photons');
+        payload.mean_luminance = sceneGet(scene, 'mean luminance');
+
     case 'utility_unit_frequency_list'
         payload.even = unitFrequencyList(50);
         payload.odd = unitFrequencyList(51);
