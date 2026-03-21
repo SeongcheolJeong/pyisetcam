@@ -211,8 +211,8 @@
       "atol": 1e-08
     },
     {
-      "name": "scene_impulse1dee_small",
-      "matlab_function": "sceneCreate('impulse1dee')",
+      "name": "scene_lineee_small",
+      "matlab_function": "sceneCreate('lineee')",
       "rtol": 1e-05,
       "atol": 1e-08
     },

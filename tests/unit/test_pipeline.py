@@ -10187,8 +10187,8 @@ def test_run_python_case_supports_scene_line_ep_small_parity_case(asset_store) -
     assert np.all(case.payload["photons"][:, line_col, :] > case.payload["photons"][:, 0, :])
 
 
-def test_scene_impulse1dee_workflow(asset_store) -> None:
-    scene = scene_create("impulse1dee", 64, 2, asset_store=asset_store)
+def test_scene_lineee_workflow(asset_store) -> None:
+    scene = scene_create("lineee", 64, 2, asset_store=asset_store)
     ee_scene = scene_create("line ee", 64, 2, asset_store=asset_store)
     photons = np.asarray(scene_get(scene, "photons"), dtype=float)
     ee_photons = np.asarray(scene_get(ee_scene, "photons"), dtype=float)
@@ -10205,8 +10205,8 @@ def test_scene_impulse1dee_workflow(asset_store) -> None:
     assert np.allclose(ee_photons, photons, atol=1e-12, rtol=1e-12)
 
 
-def test_run_python_case_supports_scene_impulse1dee_small_parity_case(asset_store) -> None:
-    case = run_python_case_with_context("scene_impulse1dee_small", asset_store=asset_store)
+def test_run_python_case_supports_scene_lineee_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_lineee_small", asset_store=asset_store)
 
     assert tuple(case.payload["scene_size"]) == (64, 64)
     assert case.payload["wave"].shape == (31,)

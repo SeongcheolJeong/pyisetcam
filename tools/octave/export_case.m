@@ -313,8 +313,8 @@ switch case_name
         payload.photons = sceneGet(scene, 'photons');
         payload.mean_luminance = sceneGet(scene, 'mean luminance');
 
-    case 'scene_impulse1dee_small'
-        scene = sceneCreate('impulse1dee', [64 64], 2);
+    case 'scene_lineee_small'
+        scene = sceneCreate('lineee', [64 64], 2);
         payload.wave = sceneGet(scene, 'wave');
         payload.scene_size = double(sceneGet(scene, 'size'));
         payload.photons = sceneGet(scene, 'photons');

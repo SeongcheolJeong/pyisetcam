@@ -750,8 +750,8 @@ def run_python_case_with_context(
             context={"scene": scene},
         )
 
-    if case_name == "scene_impulse1dee_small":
-        scene = scene_create("impulse1dee", [64, 64], 2, asset_store=store)
+    if case_name == "scene_lineee_small":
+        scene = scene_create("lineee", [64, 64], 2, asset_store=store)
         return ParityCaseResult(
             payload={
                 "case_name": case_name,
