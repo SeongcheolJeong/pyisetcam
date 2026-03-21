@@ -9934,6 +9934,55 @@ def test_run_python_case_supports_surface_munsell_small_parity_case(asset_store)
     assert case.payload["first45_angles"].shape == (45,)
 
 
+def test_scene_demo_script_workflow(asset_store) -> None:
+    scene_macbeth = scene_create("macbethd65", asset_store=asset_store)
+    macbeth_wave = np.asarray(scene_get(scene_macbeth, "wave"), dtype=float).reshape(-1)
+    macbeth_luminance = np.asarray(scene_get(scene_macbeth, "luminance", asset_store=asset_store), dtype=float)
+    macbeth_photons = np.asarray(scene_get(scene_macbeth, "photons"), dtype=float)
+    macbeth_mean_photons = np.mean(macbeth_photons, axis=(0, 1), dtype=float)
+    scene_macbeth_fov20 = scene_set(scene_macbeth.clone(), "fov", 20.0)
+
+    assert tuple(scene_get(scene_macbeth, "size")) == macbeth_luminance.shape
+    assert macbeth_photons.shape[:2] == macbeth_luminance.shape
+    assert macbeth_photons.shape[2] == macbeth_wave.size
+    assert np.isclose(np.max(macbeth_photons), 1.3119e16, rtol=1e-4, atol=1e-8)
+    assert np.isclose(np.mean(macbeth_mean_photons), 3.7624e15, rtol=1e-4, atol=1e-8)
+    assert float(scene_get(scene_macbeth_fov20, "fov")) == pytest.approx(20.0, abs=1e-12)
+
+    scene_test = scene_create("freq orient pattern", asset_store=asset_store)
+    scene_test_size = np.asarray(scene_get(scene_test, "size"), dtype=int)
+    scene_test_luminance = np.asarray(scene_get(scene_test, "luminance", asset_store=asset_store), dtype=float)
+    scene_test_support = dict(scene_get(scene_test, "spatial support linear", "mm"))
+    luminance_line, _ = scene_plot(scene_test, "luminance hline", scene_test_size, asset_store=asset_store)
+    rows_half = int(round(float(scene_get(scene_test, "rows")) / 2.0))
+    radiance_line, _ = scene_plot(scene_test, "radiance hline", [1, rows_half], asset_store=asset_store)
+
+    assert tuple(scene_test_size) == scene_test_luminance.shape
+    assert rows_half == 128
+    assert scene_test_support["x"].shape == (scene_test_size[1],)
+    assert np.allclose(luminance_line["data"], scene_test_luminance[-1, :], atol=1e-12, rtol=1e-12)
+    assert np.asarray(radiance_line["data"], dtype=float).shape[-1] == scene_test_size[1]
+
+
+def test_run_python_case_supports_scene_demo_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_demo_small", asset_store=asset_store)
+
+    assert tuple(case.payload["macbeth_scene_size"]) == (64, 96)
+    assert case.payload["macbeth_wave"].shape == (31,)
+    assert np.isclose(case.payload["macbeth_mean_luminance"], 100.0, atol=1e-8, rtol=1e-8)
+    assert case.payload["macbeth_luminance_bounds"].shape == (2,)
+    assert case.payload["macbeth_center_row_luminance_norm"].shape == (96,)
+    assert tuple(case.payload["macbeth_photons_shape"]) == (64, 96, 31)
+    assert np.isclose(case.payload["macbeth_fov_after"], 20.0, atol=1e-12, rtol=0.0)
+    assert tuple(case.payload["freq_scene_size"]) == (256, 256)
+    assert case.payload["freq_scene_wave"].shape == (31,)
+    assert np.isclose(case.payload["freq_scene_mean_luminance"], 100.0, atol=1e-8, rtol=1e-8)
+    assert int(case.payload["freq_scene_rows_half"]) == 128
+    assert case.payload["freq_scene_support_x_mm"].shape == (256,)
+    assert case.payload["freq_scene_bottom_row_luminance_norm"].shape == (256,)
+    assert case.payload["freq_scene_radiance_hline_550_norm"].shape == (256,)
+
+
 def test_scene_from_rgb_script_workflow(asset_store) -> None:
     display = display_create("LCD-Apple.mat", asset_store=asset_store)
     wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)

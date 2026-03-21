@@ -3024,6 +3024,60 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "scene_demo_small":
+        scene_macbeth = scene_create("macbethd65", asset_store=store)
+        macbeth_wave = np.asarray(scene_get(scene_macbeth, "wave"), dtype=float).reshape(-1)
+        macbeth_luminance = np.asarray(scene_get(scene_macbeth, "luminance", asset_store=store), dtype=float)
+        macbeth_photons = np.asarray(scene_get(scene_macbeth, "photons"), dtype=float)
+        macbeth_mean_photons = np.mean(macbeth_photons, axis=(0, 1), dtype=float)
+
+        macbeth_fov_before = float(scene_get(scene_macbeth, "fov"))
+        scene_macbeth_fov20 = scene_set(scene_macbeth.clone(), "fov", 20.0)
+
+        scene_test = scene_create("freq orient pattern", asset_store=store)
+        scene_test_wave = np.asarray(scene_get(scene_test, "wave"), dtype=float).reshape(-1)
+        scene_test_size = np.asarray(scene_get(scene_test, "size"), dtype=int)
+        scene_test_support = dict(scene_get(scene_test, "spatial support linear", "mm"))
+        scene_test_bottom_row, _ = scene_plot(scene_test, "luminance hline", scene_test_size, asset_store=store)
+        rows_half = int(round(float(scene_get(scene_test, "rows")) / 2.0))
+        radiance_line, _ = scene_plot(scene_test, "radiance hline", [1, rows_half], asset_store=store)
+        radiance_data = np.asarray(radiance_line["data"], dtype=float)
+        wave_index_550 = int(np.argmin(np.abs(scene_test_wave - 550.0)))
+        if radiance_data.shape[0] == scene_test_wave.size:
+            radiance_550 = radiance_data[wave_index_550, :]
+        else:
+            radiance_550 = radiance_data[:, wave_index_550]
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "macbeth_scene_size": np.asarray(scene_get(scene_macbeth, "size"), dtype=int),
+                "macbeth_wave": macbeth_wave,
+                "macbeth_mean_luminance": float(scene_get(scene_macbeth, "mean luminance", asset_store=store)),
+                "macbeth_luminance_bounds": np.array(
+                    [float(np.min(macbeth_luminance)), float(np.max(macbeth_luminance))],
+                    dtype=float,
+                ),
+                "macbeth_center_row_luminance_norm": _channel_normalize(
+                    macbeth_luminance[macbeth_luminance.shape[0] // 2, :]
+                ),
+                "macbeth_photons_shape": np.asarray(macbeth_photons.shape, dtype=int),
+                "macbeth_max_photons": float(np.max(macbeth_photons)),
+                "macbeth_mean_mean_photons": float(np.mean(macbeth_mean_photons)),
+                "macbeth_mean_photons_norm": _channel_normalize(macbeth_mean_photons),
+                "macbeth_fov_before": macbeth_fov_before,
+                "macbeth_fov_after": float(scene_get(scene_macbeth_fov20, "fov")),
+                "freq_scene_size": scene_test_size,
+                "freq_scene_wave": scene_test_wave,
+                "freq_scene_mean_luminance": float(scene_get(scene_test, "mean luminance", asset_store=store)),
+                "freq_scene_rows_half": rows_half,
+                "freq_scene_support_x_mm": np.asarray(scene_test_support["x"], dtype=float).reshape(-1),
+                "freq_scene_bottom_row_luminance_norm": _channel_normalize(scene_test_bottom_row["data"]),
+                "freq_scene_radiance_hline_550_norm": _channel_normalize(radiance_550),
+            },
+            context={},
+        )
+
     if case_name == "scene_from_rgb_lcd_apple_small":
         display = display_create("LCD-Apple.mat", asset_store=store)
         display_wave = np.asarray(display.fields["wave"], dtype=float).reshape(-1)

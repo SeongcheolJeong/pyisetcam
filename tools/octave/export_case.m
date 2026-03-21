@@ -2445,6 +2445,49 @@ switch case_name
         payload.first45_values = double(munsell.value(1:45));
         payload.first45_angles = double(munsell.angle(1:45));
 
+    case 'scene_demo_small'
+        sceneMacbeth = sceneCreate('macbethd65');
+        macbethWave = double(sceneGet(sceneMacbeth, 'wave'));
+        macbethLuminance = double(sceneGet(sceneMacbeth, 'luminance'));
+        macbethPhotons = double(sceneGet(sceneMacbeth, 'photons'));
+        macbethMeanPhotons = squeeze(mean(mean(macbethPhotons, 1), 2));
+
+        sceneMacbethFov20 = sceneSet(sceneMacbeth, 'fov', 20);
+
+        sceneTest = sceneCreate('freq orient pattern');
+        sceneTestWave = double(sceneGet(sceneTest, 'wave'));
+        sceneTestSize = sceneGet(sceneTest, 'size');
+        sceneTestLuminance = double(sceneGet(sceneTest, 'luminance'));
+        sceneTestSupport = sceneSpatialSupport(sceneTest, 'mm');
+        sceneTestBottomRow = double(sceneTestLuminance(sceneTestSize(1), :));
+        rowsHalf = round(sceneGet(sceneTest, 'rows') / 2);
+        radianceData = squeeze(double(sceneGet(sceneTest, 'photons')));
+        radianceData = squeeze(radianceData(rowsHalf, :, :))';
+        waveIndex550 = find(sceneTestWave == 550, 1, 'first');
+        if isempty(waveIndex550)
+            [~, waveIndex550] = min(abs(sceneTestWave - 550));
+        end
+        radiance550 = radianceData(waveIndex550, :);
+
+        payload.macbeth_scene_size = sceneGet(sceneMacbeth, 'size');
+        payload.macbeth_wave = macbethWave(:);
+        payload.macbeth_mean_luminance = sceneGet(sceneMacbeth, 'mean luminance');
+        payload.macbeth_luminance_bounds = [min(macbethLuminance(:)); max(macbethLuminance(:))];
+        payload.macbeth_center_row_luminance_norm = local_channel_normalize(double(macbethLuminance(floor(size(macbethLuminance, 1) / 2) + 1, :)));
+        payload.macbeth_photons_shape = size(macbethPhotons);
+        payload.macbeth_max_photons = max(macbethPhotons(:));
+        payload.macbeth_mean_mean_photons = mean(macbethMeanPhotons(:));
+        payload.macbeth_mean_photons_norm = local_channel_normalize(double(macbethMeanPhotons(:)));
+        payload.macbeth_fov_before = sceneGet(sceneMacbeth, 'fov');
+        payload.macbeth_fov_after = sceneGet(sceneMacbethFov20, 'fov');
+        payload.freq_scene_size = sceneTestSize;
+        payload.freq_scene_wave = sceneTestWave(:);
+        payload.freq_scene_mean_luminance = sceneGet(sceneTest, 'mean luminance');
+        payload.freq_scene_rows_half = rowsHalf;
+        payload.freq_scene_support_x_mm = double(sceneTestSupport.x(:));
+        payload.freq_scene_bottom_row_luminance_norm = local_channel_normalize(double(sceneTestBottomRow(:)));
+        payload.freq_scene_radiance_hline_550_norm = local_channel_normalize(double(radiance550(:)));
+
     case 'scene_from_rgb_lcd_apple_small'
         displayCalFile = 'LCD-Apple.mat';
         d = displayCreate(displayCalFile);

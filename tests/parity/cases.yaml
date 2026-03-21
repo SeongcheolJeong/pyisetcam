@@ -744,6 +744,12 @@
       "atol": 1e-08
     },
     {
+      "name": "scene_demo_small",
+      "matlab_function": "s_sceneDemo",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "scene_roi_small",
       "matlab_function": "s_sceneRoi",
       "rtol": 1e-05,
