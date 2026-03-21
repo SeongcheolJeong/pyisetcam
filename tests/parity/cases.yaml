@@ -37,6 +37,12 @@
       "atol": 1e-08
     },
     {
+      "name": "scene_linear_intensity_ramp_small",
+      "matlab_function": "sceneCreate('linear intensity ramp')",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "scene_frequency_orientation_small",
       "matlab_function": "sceneCreate",
       "rtol": 1e-05,
