@@ -10227,6 +10227,31 @@ def test_run_python_case_supports_scene_uniform_d65_small_parity_case(asset_stor
     assert not np.allclose(case.payload["photons"][0, 0, :], case.payload["photons"][0, 0, 0], atol=1e-8, rtol=1e-12)
 
 
+def test_scene_macbeth_tungsten_workflow(asset_store) -> None:
+    scene = scene_create("macbethtungsten", asset_store=asset_store)
+    default_scene = scene_create(asset_store=asset_store)
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+    illuminant_energy = np.asarray(scene_get(scene, "illuminant energy"), dtype=float)
+    default_illuminant_energy = np.asarray(scene_get(default_scene, "illuminant energy"), dtype=float)
+
+    assert tuple(scene_get(scene, "size")) == (64, 96)
+    assert photons.shape == (64, 96, 31)
+    assert np.array_equal(np.asarray(scene_get(scene, "wave"), dtype=float), np.arange(400.0, 701.0, 10.0, dtype=float))
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, atol=1e-8, rtol=1e-8)
+    assert scene_get(scene, "illuminant comment") == "tungsten"
+    assert illuminant_energy.shape == (31,)
+    assert not np.allclose(illuminant_energy, illuminant_energy[0], atol=1e-8, rtol=1e-12)
+    assert not np.allclose(illuminant_energy, default_illuminant_energy, atol=1e-8, rtol=1e-8)
+
+
+def test_run_python_case_supports_scene_macbeth_tungsten_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_macbeth_tungsten", asset_store=asset_store)
+
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["photons"].shape == (64, 96, 31)
+    assert np.isclose(float(case.payload["mean_luminance"]), 100.0, atol=1e-8, rtol=1e-8)
+
+
 def test_scene_empty_workflow(asset_store) -> None:
     scene = scene_create("empty", asset_store=asset_store)
     photons = np.asarray(scene_get(scene, "photons"), dtype=float)

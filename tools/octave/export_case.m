@@ -23,6 +23,12 @@ switch case_name
         payload.photons = sceneGet(scene, 'photons');
         payload.mean_luminance = sceneGet(scene, 'mean luminance');
 
+    case 'scene_macbeth_tungsten'
+        scene = sceneCreate('macbethtungsten');
+        payload.wave = sceneGet(scene, 'wave');
+        payload.photons = sceneGet(scene, 'photons');
+        payload.mean_luminance = sceneGet(scene, 'mean luminance');
+
     case 'scene_checkerboard_small'
         scene = sceneCreate('checkerboard', 8, 4);
         payload.wave = sceneGet(scene, 'wave');
