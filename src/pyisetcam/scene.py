@@ -1533,7 +1533,9 @@ def _hdr_light_color(name: Any) -> np.ndarray:
 def _draw_filled_circle(image: np.ndarray, center_x: float, center_y: float, radius_px: float, color: np.ndarray) -> None:
     rows, cols = image.shape[:2]
     yy, xx = np.ogrid[:rows, :cols]
-    mask = (xx - float(center_x)) ** 2 + (yy - float(center_y)) ** 2 <= float(radius_px) ** 2
+    x_center = float(center_x) - 1.0
+    y_center = float(center_y) - 1.0
+    mask = (xx - x_center) ** 2 + (yy - y_center) ** 2 <= float(radius_px) ** 2
     image[mask] = color.reshape(1, 3)
 
 
@@ -1546,10 +1548,10 @@ def _draw_filled_rectangle(
     color: np.ndarray,
 ) -> None:
     rows, cols = image.shape[:2]
-    x0 = int(np.clip(np.rint(left), 0, cols))
-    y0 = int(np.clip(np.rint(top), 0, rows))
-    x1 = int(np.clip(np.rint(left + width), 0, cols))
-    y1 = int(np.clip(np.rint(top + height), 0, rows))
+    x0 = int(np.clip(np.rint(left - 1.0), 0, cols))
+    y0 = int(np.clip(np.rint(top - 1.0), 0, rows))
+    x1 = int(np.clip(np.rint(left - 1.0 + width), 0, cols))
+    y1 = int(np.clip(np.rint(top - 1.0 + height), 0, rows))
     if x1 <= x0:
         x1 = min(x0 + 1, cols)
     if y1 <= y0:
@@ -1635,7 +1637,14 @@ def _hdr_lights_scene(params: dict[str, Any], *, asset_store: AssetStore) -> Sce
         )
 
     wave = np.arange(400.0, 701.0, 10.0, dtype=float)
-    scene = scene_from_file(image, "rgb", 1.0e5, None, wave, asset_store=asset_store)
+    scene = scene_from_file(
+        image,
+        "rgb",
+        1.0e5,
+        _scene_display("LCD-Apple", wave, asset_store=asset_store),
+        wave,
+        asset_store=asset_store,
+    )
     background = scene_create("uniform", im_size, wave, asset_store=asset_store)
     background = scene_adjust_luminance(background, 1.0e-2, asset_store=asset_store)
     scene = scene_set(
@@ -1643,6 +1652,7 @@ def _hdr_lights_scene(params: dict[str, Any], *, asset_store: AssetStore) -> Sce
         "photons",
         np.asarray(scene_get(scene, "photons"), dtype=float) + np.asarray(scene_get(background, "photons"), dtype=float),
     )
+    scene = scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
     scene.name = "hdr lights"
     scene.fields["illuminant_comment"] = "hdr lights"
     return scene

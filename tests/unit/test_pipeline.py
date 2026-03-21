@@ -10278,6 +10278,33 @@ def test_run_python_case_supports_scene_lstar_small_parity_case(asset_store) -> 
     assert np.isclose(float(np.max(case.payload["center_row_norm"])), 1.0, atol=1e-12, rtol=1e-12)
 
 
+def test_scene_hdr_workflow(asset_store) -> None:
+    scene = scene_create("hdr", asset_store=asset_store)
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+    luminance = np.asarray(scene_get(scene, "luminance", asset_store=asset_store), dtype=float)
+
+    assert tuple(scene_get(scene, "size")) == (384, 384)
+    assert photons.shape == (384, 384, 31)
+    assert np.asarray(scene_get(scene, "wave"), dtype=float).shape == (31,)
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, atol=1e-8, rtol=1e-8)
+    assert np.isclose(float(np.min(luminance)), 1.0e-5, atol=1e-10, rtol=1e-8)
+    assert float(np.max(luminance)) > float(np.mean(luminance))
+
+
+def test_run_python_case_supports_scene_hdr_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_hdr_small", asset_store=asset_store)
+
+    assert tuple(case.payload["scene_size"]) == (384, 384)
+    assert case.payload["wave"].shape == (31,)
+    assert np.isclose(float(case.payload["mean_luminance"]), 100.0, atol=1e-8, rtol=1e-8)
+    assert case.payload["mean_spd_norm"].shape == (31,)
+    assert case.payload["row_profile_summaries"].shape == (3, 6)
+    assert np.isclose(float(np.max(case.payload["mean_spd_norm"])), 1.0, atol=1e-12, rtol=1e-12)
+    assert np.all(case.payload["row_profile_summaries"][:, 2] > 0.0)
+    assert np.all(case.payload["row_profile_summaries"][:, 3] <= case.payload["row_profile_summaries"][:, 4])
+    assert np.all(case.payload["row_profile_summaries"][:, 4] <= case.payload["row_profile_summaries"][:, 5])
+
+
 def test_scene_uniform_ep_workflow(asset_store) -> None:
     scene = scene_create("uniform ep", 24, asset_store=asset_store)
     photons = np.asarray(scene_get(scene, "photons"), dtype=float)

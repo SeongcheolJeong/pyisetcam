@@ -49,6 +49,22 @@
       "atol": 1e-08
     },
     {
+      "name": "scene_hdr_small",
+      "matlab_function": "sceneCreate('hdr')",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "mean_spd_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.01
+        },
+        "row_profile_summaries": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.05
+        }
+      }
+    },
+    {
       "name": "scene_uniform_ep_small",
       "matlab_function": "sceneCreate('uniform equal photon')",
       "rtol": 1e-05,

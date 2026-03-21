@@ -89,6 +89,32 @@ switch case_name
         payload.bar_means_norm = barMeans / max(barMeans(:));
         payload.center_row_norm = centerRow / max(centerRow(:));
 
+    case 'scene_hdr_small'
+        scene = sceneCreate('hdr');
+        luminance = double(sceneGet(scene, 'luminance'));
+        photons = double(sceneGet(scene, 'photons'));
+        imSize = size(luminance, 1);
+        rowIdx = [round(0.25 * imSize), round(0.50 * imSize), round(0.75 * imSize)];
+        rowSummaries = zeros(3, 6);
+        for jj = 1:3
+            row = luminance(rowIdx(jj), :);
+            row = row / max(max(abs(row)), 1e-12);
+            rowSummaries(jj, :) = [
+                mean(row(:)), ...
+                std(row(:)), ...
+                prctile(row(:), 95), ...
+                sum(row(:) > 0.50), ...
+                sum(row(:) > 0.10), ...
+                sum(row(:) > 0.01) ...
+            ];
+        end
+        meanSPD = squeeze(mean(mean(photons, 1), 2));
+        payload.scene_size = double(sceneGet(scene, 'size'));
+        payload.wave = double(sceneGet(scene, 'wave'));
+        payload.mean_luminance = sceneGet(scene, 'mean luminance');
+        payload.mean_spd_norm = meanSPD(:)' / max(max(abs(meanSPD(:))), 1e-12);
+        payload.row_profile_summaries = rowSummaries;
+
     case 'scene_uniform_ep_small'
         scene = sceneCreate('uniform equal photon', 24);
         payload.scene_size = double(sceneGet(scene, 'size'));

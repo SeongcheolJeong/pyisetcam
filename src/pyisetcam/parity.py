@@ -365,6 +365,48 @@ def run_python_case_with_context(
             context={"scene": scene},
         )
 
+    if case_name == "scene_hdr_small":
+        scene = scene_create("hdr", asset_store=store)
+        luminance = np.asarray(scene_get(scene, "luminance", asset_store=store), dtype=float)
+        photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+        image_size = luminance.shape[0]
+        row_indices = np.array(
+            [
+                int(np.rint(0.25 * image_size)),
+                int(np.rint(0.50 * image_size)) - 1,
+                int(np.rint(0.75 * image_size)) - 1,
+            ],
+            dtype=int,
+        )
+        row_summaries = np.vstack(
+            [
+                np.array(
+                    [
+                        float(np.mean(row := _channel_normalize(luminance[row_index, :]))),
+                        float(np.std(row)),
+                        float(np.percentile(row, 95.0)),
+                        float(np.count_nonzero(row > 0.50)),
+                        float(np.count_nonzero(row > 0.10)),
+                        float(np.count_nonzero(row > 0.01)),
+                    ],
+                    dtype=float,
+                )
+                for row_index in row_indices
+            ]
+        )
+        mean_spd = np.mean(photons, axis=(0, 1), dtype=float)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "wave": scene_get(scene, "wave"),
+                "mean_luminance": scene_get(scene, "mean luminance", asset_store=store),
+                "mean_spd_norm": _channel_normalize(mean_spd),
+                "row_profile_summaries": row_summaries,
+            },
+            context={"scene": scene},
+        )
+
     if case_name == "scene_uniform_ep_small":
         scene = scene_create("uniform ep", 24, asset_store=store)
         return ParityCaseResult(
