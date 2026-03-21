@@ -51,6 +51,7 @@ def test_scene_from_file_supports_multispectral_mat_files(asset_store) -> None:
 
 
 def test_supported_pattern_scenes(asset_store) -> None:
+    mackay = scene_create("rings rays", asset_store=asset_store)
     checkerboard = scene_create("checkerboard", 8, 4, asset_store=asset_store)
     slanted_bar = scene_create("slanted bar", 64, 0.6, 3.0, asset_store=asset_store)
     freq_orient = scene_create("frequency orientation", asset_store=asset_store)
@@ -62,6 +63,9 @@ def test_supported_pattern_scenes(asset_store) -> None:
     point_array = scene_create("point array", 64, 16, "ep", 3, asset_store=asset_store)
     grid_lines = scene_create("grid lines", 64, 16, "ee", 2, asset_store=asset_store)
     white_noise = scene_create("white noise", 32, 20, asset_store=asset_store)
+    lstar = scene_create("lstar", [80, 10], 20, 1, asset_store=asset_store)
+    uniform_specify = scene_create("uniformEESpecify", 128, np.arange(380.0, 721.0, 10.0, dtype=float), asset_store=asset_store)
+    assert scene_get(mackay, "photons").shape[:2] == (256, 256)
     assert scene_get(checkerboard, "photons").shape[:2] == (64, 64)
     assert scene_get(slanted_bar, "photons").shape[:2] == (65, 65)
     assert scene_get(freq_orient, "photons").shape[:2] == (256, 256)
@@ -73,16 +77,43 @@ def test_supported_pattern_scenes(asset_store) -> None:
     assert scene_get(point_array, "photons").shape[:2] == (64, 64)
     assert scene_get(grid_lines, "photons").shape[:2] == (64, 64)
     assert scene_get(white_noise, "photons").shape[:2] == (32, 32)
+    assert scene_get(lstar, "photons").shape[:2] == (80, 200)
+    assert scene_get(uniform_specify, "photons").shape[:2] == (128, 128)
     assert np.isclose(scene_get(freq_orient, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
     assert np.isclose(scene_get(harmonic, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
     assert np.isclose(scene_get(sweep, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
     assert np.isclose(scene_get(star, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
+    assert np.isclose(scene_get(mackay, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
+    assert np.isclose(scene_get(lstar, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
+    assert np.isclose(scene_get(uniform_specify, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
     assert np.isclose(scene_get(freq_orient, "fov"), 10.0)
     assert np.isclose(scene_get(harmonic, "fov"), 1.0)
     assert np.isclose(scene_get(sweep, "fov"), 10.0)
+    assert np.isclose(scene_get(mackay, "fov"), 10.0)
     assert np.isclose(scene_get(point_array, "fov"), 40.0)
     assert np.isclose(scene_get(grid_lines, "fov"), 40.0)
     assert np.isclose(scene_get(white_noise, "fov"), 1.0)
+
+
+def test_mackay_scene_has_center_mask_and_radial_alias(asset_store) -> None:
+    rings = scene_create("rings rays", asset_store=asset_store)
+    mackay = scene_create("mackay", asset_store=asset_store)
+
+    rings_plane = scene_get(rings, "photons")[:, :, 0]
+    mackay_plane = scene_get(mackay, "photons")[:, :, 0]
+
+    assert np.array_equal(rings_plane, mackay_plane)
+    assert rings_plane.shape == (256, 256)
+    assert rings_plane[rings_plane.shape[0] // 2, rings_plane.shape[1] // 2] > np.min(rings_plane)
+
+
+def test_lstar_scene_creates_monotonic_bar_steps(asset_store) -> None:
+    scene = scene_create("lstar", [80, 10], 20, 1, asset_store=asset_store)
+    luminance = np.asarray(scene_get(scene, "luminance", asset_store=asset_store), dtype=float)
+    bar_means = np.array([np.mean(luminance[:, start : start + 10]) for start in range(0, 200, 10)], dtype=float)
+
+    assert luminance.shape == (80, 200)
+    assert np.all(np.diff(bar_means) > 0.0)
 
 
 def test_star_pattern_scene_matches_radial_lines_alias(asset_store) -> None:

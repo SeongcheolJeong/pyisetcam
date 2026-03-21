@@ -1234,6 +1234,45 @@ def _star_pattern_scene(
     return scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
 
 
+def _mackay_image(radial_frequency: float, image_size: Any) -> np.ndarray:
+    radial_freq = float(radial_frequency)
+    im_size = max(int(np.asarray(image_size, dtype=float).reshape(-1)[0]), 1)
+
+    mx = _matlab_round_scalar(im_size / 2.0)
+    mn = -(mx - 1)
+    coords = np.arange(mn, mx + 1, dtype=float)
+    if coords.size != im_size:
+        coords = np.linspace(-(im_size - 1.0) / 2.0, (im_size - 1.0) / 2.0, im_size, dtype=float)
+
+    x, y = np.meshgrid(coords, coords)
+    x[x == 0.0] = np.finfo(float).eps
+    image = np.cos(np.arctan(y / x) * 2.0 * radial_freq)
+    image = _scale_range(image, 1.0, 256.0)
+
+    radius = _matlab_round_scalar(2.0 * radial_freq / np.pi)
+    mask_x, mask_y = np.meshgrid(
+        np.arange(1, im_size + 1, dtype=float),
+        np.arange(1, im_size + 1, dtype=float),
+    )
+    mask_x = mask_x - np.mean(mask_x)
+    mask_y = mask_y - np.mean(mask_y)
+    image[np.sqrt(mask_x * mask_x + mask_y * mask_y) < radius] = 128.0
+    return image / 256.0
+
+
+def _mackay_scene(
+    radial_frequency: float,
+    image_size: Any,
+    wave: np.ndarray,
+    *,
+    asset_store: AssetStore,
+) -> Scene:
+    image = _mackay_image(radial_frequency, image_size)
+    scene = _equal_photon_pattern_scene("mackay", image, wave, fov_deg=DEFAULT_FOV_DEG, asset_store=asset_store)
+    scene.name = "mackay"
+    return scene
+
+
 def _white_noise_scene(
     size: Any,
     contrast: float,
@@ -1257,6 +1296,39 @@ def _white_noise_scene(
     scene.fields["fov_deg"] = 1.0
     scene.data["photons"] = photons
     _update_scene_geometry(scene)
+    return scene
+
+
+def _lstar_steps_scene(
+    bar_size: Any,
+    n_bars: int,
+    delta_e: float,
+    wave: np.ndarray,
+    *,
+    asset_store: AssetStore,
+) -> Scene:
+    if np.isscalar(bar_size):
+        bar_height = 128
+        bar_width = max(int(np.rint(bar_size)), 1)
+    else:
+        size_values = np.asarray(bar_size, dtype=float).reshape(-1)
+        if size_values.size != 2:
+            raise ValueError("L* scenes require a scalar bar width or a [height, width] bar size.")
+        bar_height = max(int(np.rint(size_values[0])), 1)
+        bar_width = max(int(np.rint(size_values[1])), 1)
+
+    n_bars = max(int(n_bars), 1)
+    l_values = np.arange(n_bars, dtype=float) * float(delta_e)
+    l_values = l_values + 50.0 - ((n_bars - 1) * float(delta_e) / 2.0)
+    f_y = (l_values + 16.0) / 116.0
+    y_values = np.where(l_values > 8.0, f_y**3, l_values / 903.3)
+    y_values = y_values / max(float(np.max(y_values)), 1.0e-12)
+
+    image = np.repeat(y_values.reshape(1, -1), bar_height, axis=0)
+    image = np.repeat(image, bar_width, axis=1)
+
+    scene = _equal_photon_pattern_scene("L-star", image, wave, fov_deg=DEFAULT_FOV_DEG, asset_store=asset_store)
+    scene.name = f"L-star ({int(np.rint(delta_e))})"
     return scene
 
 
@@ -1978,6 +2050,13 @@ def scene_create(
             ),
         )
 
+    if name == "lstar":
+        bar_size = args[0] if len(args) > 0 else np.array([128, 20], dtype=float)
+        n_bars = int(args[1]) if len(args) > 1 else 10
+        delta_e = float(args[2]) if len(args) > 2 else 10.0
+        wave = _wave_or_default(args[3] if len(args) > 3 else None)
+        return track_session_object(session, _lstar_steps_scene(bar_size, n_bars, delta_e, wave, asset_store=store))
+
     if name == "empty":
         scene = _create_macbeth_scene(16, _wave_or_default(None), "macbethChart.mat", False, asset_store=store)
         return track_session_object(session, scene_clear_data(scene))
@@ -1991,7 +2070,7 @@ def scene_create(
             _uniform_scene("Uniform D65", size, wave, illuminant_energy, illuminant_comment="D65.mat", asset_store=store),
         )
 
-    if name in {"uniform", "uniformee", "uniformequalenergy"}:
+    if name in {"uniform", "uniformee", "uniformequalenergy", "uniformeespecify"}:
         size = args[0] if len(args) > 0 else 32
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
         return track_session_object(
@@ -2005,6 +2084,12 @@ def scene_create(
                 asset_store=store,
             ),
         )
+
+    if name in {"mackay", "rayimage", "ringsrays"}:
+        radial_frequency = 8.0 if len(args) == 0 or args[0] is None else float(np.asarray(args[0], dtype=float).reshape(-1)[0])
+        image_size = 256 if len(args) < 2 or args[1] is None else args[1]
+        wave = _wave_or_default(args[2] if len(args) > 2 else None)
+        return track_session_object(session, _mackay_scene(radial_frequency, image_size, wave, asset_store=store))
 
     if name in {"uniformep", "uniformequalphoton", "uniformequalphotons"}:
         size = args[0] if len(args) > 0 else 32

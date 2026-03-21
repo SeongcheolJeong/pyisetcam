@@ -750,6 +750,22 @@
       "atol": 1e-08
     },
     {
+      "name": "scene_examples_small",
+      "matlab_function": "s_sceneExamples",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "scene_center_row_luminance_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 3e-03
+        },
+        "scene_center_col_luminance_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 3e-03
+        }
+      }
+    },
+    {
       "name": "scene_roi_small",
       "matlab_function": "s_sceneRoi",
       "rtol": 1e-05,

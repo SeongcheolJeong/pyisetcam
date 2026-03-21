@@ -9983,6 +9983,103 @@ def test_run_python_case_supports_scene_demo_small_parity_case(asset_store) -> N
     assert case.payload["freq_scene_radiance_hline_550_norm"].shape == (256,)
 
 
+def test_scene_examples_script_workflow(asset_store) -> None:
+    rings = scene_create("rings rays", asset_store=asset_store)
+    freq_orient = scene_create(
+        "frequency orientation",
+        {
+            "angles": np.linspace(0.0, np.pi / 2.0, 5),
+            "freqs": np.array([1.0, 2.0, 4.0, 8.0, 16.0], dtype=float),
+            "blockSize": 64,
+            "contrast": 0.8,
+        },
+        asset_store=asset_store,
+    )
+    harmonic_a = scene_create(
+        "harmonic",
+        {"freq": 1.0, "contrast": 1.0, "ph": 0.0, "ang": 0.0, "row": 64, "col": 64, "GaborFlag": 0.0},
+        asset_store=asset_store,
+    )
+    harmonic_b = scene_create(
+        "harmonic",
+        {"freq": 1.0, "contrast": 1.0, "ph": 0.0, "ang": 0.0, "row": 64, "col": 64, "GaborFlag": 0.0},
+        asset_store=asset_store,
+    )
+    checkerboard = scene_create("checkerboard", 16, 8, "ep", asset_store=asset_store)
+    line = scene_create("lined65", 128, asset_store=asset_store)
+    slanted = scene_create("slantedBar", 128, 1.3, asset_store=asset_store)
+    grid = scene_create("grid lines", 128, 16, asset_store=asset_store)
+    point = scene_create("point array", 256, 32, asset_store=asset_store)
+    macbeth_a = scene_create("macbeth tungsten", 16, np.arange(380.0, 721.0, 5.0, dtype=float), asset_store=asset_store)
+    reflectance_chart = scene_create("reflectance chart", asset_store=asset_store)
+    macbeth_b = scene_create("macbeth tungsten", 16, np.arange(380.0, 721.0, 5.0, dtype=float), asset_store=asset_store)
+    uniform_specify = scene_create("uniformEESpecify", 128, np.arange(380.0, 721.0, 10.0, dtype=float), asset_store=asset_store)
+    lstar = scene_create("lstar", np.array([80, 10], dtype=int), 20, 1, asset_store=asset_store)
+    exp_ramp = scene_create("exponential intensity ramp", 256, 1024, asset_store=asset_store)
+
+    assert tuple(scene_get(rings, "size")) == (256, 256)
+    assert tuple(scene_get(freq_orient, "size")) == (320, 320)
+    assert tuple(scene_get(harmonic_a, "size")) == (64, 64)
+    assert np.array_equal(np.asarray(scene_get(harmonic_a, "photons"), dtype=float), np.asarray(scene_get(harmonic_b, "photons"), dtype=float))
+    assert tuple(scene_get(checkerboard, "size")) == (256, 256)
+    assert tuple(scene_get(line, "size")) == (128, 128)
+    assert tuple(scene_get(grid, "size")) == (128, 128)
+    assert tuple(scene_get(point, "size")) == (256, 256)
+    assert tuple(scene_get(macbeth_a, "size")) == (64, 96)
+    assert tuple(scene_get(macbeth_b, "size")) == (64, 96)
+    assert np.array_equal(np.asarray(scene_get(macbeth_a, "wave"), dtype=float), np.arange(380.0, 721.0, 5.0, dtype=float))
+    assert tuple(scene_get(uniform_specify, "size")) == (128, 128)
+    assert np.array_equal(np.asarray(scene_get(uniform_specify, "wave"), dtype=float), np.arange(380.0, 721.0, 10.0, dtype=float))
+    assert tuple(scene_get(lstar, "size")) == (80, 200)
+    assert tuple(scene_get(exp_ramp, "size")) == (256, 256)
+    assert tuple(scene_get(slanted, "size"))[0] == tuple(scene_get(slanted, "size"))[1]
+    assert tuple(scene_get(reflectance_chart, "size"))[0] > 0
+    assert tuple(scene_get(reflectance_chart, "size"))[1] > 0
+
+    bar_means = np.array(
+        [
+            np.mean(np.asarray(scene_get(lstar, "luminance", asset_store=asset_store), dtype=float)[:, start : start + 10])
+            for start in range(0, 200, 10)
+        ],
+        dtype=float,
+    )
+    assert np.all(np.diff(bar_means) > 0.0)
+    for scene in [rings, freq_orient, harmonic_a, checkerboard, slanted, macbeth_a, macbeth_b, uniform_specify, lstar, exp_ramp]:
+        assert np.isclose(float(scene_get(scene, "mean luminance", asset_store=asset_store)), 100.0, atol=1e-8, rtol=1e-8)
+    for scene in [line, grid, point, reflectance_chart]:
+        assert np.isfinite(float(scene_get(scene, "mean luminance", asset_store=asset_store)))
+
+
+def test_run_python_case_supports_scene_examples_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_examples_small", asset_store=asset_store)
+
+    assert len(case.payload["scene_labels"]) == 14
+    assert case.payload["scene_sizes"].shape == (14, 2)
+    assert case.payload["scene_wave_counts"].shape == (14,)
+    assert case.payload["scene_mean_luminance_stable"].shape == (10,)
+    assert case.payload["scene_fov_deg_stable"].shape == (12,)
+    assert case.payload["scene_luminance_bounds_stable"].shape == (10, 2)
+    assert case.payload["scene_center_row_luminance_norm"].shape == (14, 41)
+    assert case.payload["scene_center_col_luminance_norm"].shape == (14, 41)
+    assert tuple(case.payload["scene_sizes"][0]) == (256, 256)
+    assert tuple(case.payload["scene_sizes"][1]) == (320, 320)
+    assert tuple(case.payload["scene_sizes"][2]) == (64, 64)
+    assert tuple(case.payload["scene_sizes"][8]) == (256, 256)
+    assert tuple(case.payload["scene_sizes"][9]) == (64, 96)
+    assert tuple(case.payload["scene_sizes"][10]) == (64, 96)
+    assert tuple(case.payload["scene_sizes"][11]) == (128, 128)
+    assert tuple(case.payload["scene_sizes"][12]) == (80, 200)
+    assert tuple(case.payload["scene_sizes"][13]) == (256, 256)
+    assert np.array_equal(case.payload["scene_wave_counts"], np.array([31, 31, 31, 31, 31, 31, 31, 31, 31, 69, 69, 35, 31, 31], dtype=int))
+    assert np.array_equal(case.payload["scene_fov_deg_stable"], np.array([10.0, 10.0, 10.0, 10.0, 2.0, 40.0, 40.0, 10.0, 10.0, 10.0, 10.0, 10.0], dtype=float))
+    assert np.all(np.isfinite(case.payload["scene_mean_luminance_stable"]))
+    assert np.allclose(case.payload["scene_mean_luminance_stable"], 100.0, atol=1e-8, rtol=1e-8)
+    assert np.all(np.isfinite(case.payload["scene_luminance_bounds_stable"]))
+    assert tuple(case.payload["reflectance_chart_size"].shape) == (2,)
+    assert int(case.payload["reflectance_chart_wave_count"]) == 31
+    assert np.isclose(float(case.payload["reflectance_chart_mean_luminance"]), 100.0, atol=1e-8, rtol=1e-8)
+
+
 def test_scene_from_rgb_script_workflow(asset_store) -> None:
     display = display_create("LCD-Apple.mat", asset_store=asset_store)
     wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)

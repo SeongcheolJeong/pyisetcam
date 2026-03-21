@@ -2488,6 +2488,113 @@ switch case_name
         payload.freq_scene_bottom_row_luminance_norm = local_channel_normalize(double(sceneTestBottomRow(:)));
         payload.freq_scene_radiance_hline_550_norm = local_channel_normalize(double(radiance550(:)));
 
+    case 'scene_examples_small'
+        parms.angles = linspace(0, pi/2, 5);
+        parms.freqs = [1, 2, 4, 8, 16];
+        parms.blockSize = 64;
+        parms.contrast = 0.8;
+
+        harmonicParms.freq = 1;
+        harmonicParms.contrast = 1;
+        harmonicParms.ph = 0;
+        harmonicParms.ang = 0;
+        harmonicParms.row = 64;
+        harmonicParms.col = 64;
+        harmonicParms.GaborFlag = 0;
+
+        patchSizePixels = 16;
+        tungstenWave = (380:5:720)';
+        uniformWave = (380:10:720)';
+        lstarScene = sceneCreate('uniformEqualPhoton', [80 200]);
+        lstarWave = double(sceneGet(lstarScene, 'wave'));
+        lstarIllPhotons = double(sceneGet(lstarScene, 'illuminant photons'));
+        lValues = (0:19) + 50 - 19/2;
+        fy = (lValues + 16) / 116;
+        yValues = fy .^ 3;
+        yValues = yValues / max(yValues(:));
+        lstarPhotons = zeros(1, 20, numel(lstarWave));
+        for jj = 1:20
+            lstarPhotons(1, jj, :) = yValues(jj) * lstarIllPhotons(:);
+        end
+        lstarPhotons = imageIncreaseImageRGBSize(lstarPhotons, [80 10]);
+        lstarScene = sceneSet(lstarScene, 'photons', lstarPhotons);
+
+        labels = {
+            'rings_rays',
+            'frequency_orientation',
+            'harmonic_a',
+            'harmonic_b',
+            'checkerboard',
+            'line_d65',
+            'slanted_bar',
+            'grid_lines',
+            'point_array',
+            'macbeth_tungsten_a',
+            'macbeth_tungsten_b',
+            'uniform_ee_specify',
+            'lstar',
+            'exp_ramp'
+        };
+
+        scenes = {
+            sceneCreate('rings rays'),
+            sceneCreate('frequency orientation', parms),
+            sceneCreate('harmonic', harmonicParms),
+            sceneCreate('harmonic', harmonicParms),
+            sceneCreate('checkerboard', 16, 8, 'ep'),
+            sceneCreate('lined65', 128),
+            sceneCreate('slantedBar', 128, 1.3),
+            sceneCreate('grid lines', 128, 16),
+            sceneCreate('point array', 256, 32),
+            sceneCreate('macbeth tungsten', patchSizePixels, tungstenWave),
+            sceneCreate('macbeth tungsten', patchSizePixels, tungstenWave),
+            sceneCreate('uniformEESpecify', 128, uniformWave),
+            lstarScene,
+            sceneCreate('exponential intensity ramp', 256, 1024)
+        };
+
+        stableFovIdx = [1 2 5 6 7 8 9 10 11 12 13 14];
+        stableLuminanceIdx = [1 2 3 4 5 7 10 11 12 14];
+
+        nScenes = numel(scenes);
+        sceneSizes = zeros(nScenes, 2);
+        sceneWaveCounts = zeros(nScenes, 1);
+        sceneMeanLuminance = zeros(nScenes, 1);
+        sceneFovDeg = zeros(nScenes, 1);
+        sceneLuminanceBounds = zeros(nScenes, 2);
+        sceneCenterRows = zeros(nScenes, 41);
+        sceneCenterCols = zeros(nScenes, 41);
+
+        for ii = 1:nScenes
+            currentScene = scenes{ii};
+            luminance = double(sceneGet(currentScene, 'luminance'));
+            centerRow = floor(size(luminance, 1) / 2) + 1;
+            centerCol = floor(size(luminance, 2) / 2) + 1;
+
+            sceneSizes(ii, :) = sceneGet(currentScene, 'size');
+            sceneWaveCounts(ii) = numel(sceneGet(currentScene, 'wave'));
+            sceneMeanLuminance(ii) = sceneGet(currentScene, 'mean luminance');
+            sceneFovDeg(ii) = sceneGet(currentScene, 'fov');
+            sceneLuminanceBounds(ii, :) = [min(luminance(:)), max(luminance(:))];
+            sceneCenterRows(ii, :) = local_canonical_profile(local_channel_normalize(double(luminance(centerRow, :))), 41);
+            sceneCenterCols(ii, :) = local_canonical_profile(local_channel_normalize(double(luminance(:, centerCol))), 41);
+        end
+
+        reflectanceChart = sceneCreate('reflectance chart');
+
+        payload.scene_labels = labels;
+        payload.scene_sizes = sceneSizes;
+        payload.scene_wave_counts = sceneWaveCounts;
+        payload.scene_mean_luminance_stable = sceneMeanLuminance(stableLuminanceIdx);
+        payload.scene_fov_deg_stable = sceneFovDeg(stableFovIdx);
+        payload.scene_luminance_bounds_stable = sceneLuminanceBounds(stableLuminanceIdx, :);
+        payload.scene_center_row_luminance_norm = sceneCenterRows;
+        payload.scene_center_col_luminance_norm = sceneCenterCols;
+        payload.reflectance_chart_size = sceneGet(reflectanceChart, 'size');
+        payload.reflectance_chart_wave_count = numel(sceneGet(reflectanceChart, 'wave'));
+        payload.reflectance_chart_mean_luminance = sceneGet(reflectanceChart, 'mean luminance');
+        payload.reflectance_chart_fov_deg = sceneGet(reflectanceChart, 'fov');
+
     case 'scene_from_rgb_lcd_apple_small'
         displayCalFile = 'LCD-Apple.mat';
         d = displayCreate(displayCalFile);

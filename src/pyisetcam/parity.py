@@ -3078,6 +3078,117 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "scene_examples_small":
+        def _canonical_profile(values: Any, samples: int = 41) -> np.ndarray:
+            row = np.asarray(values, dtype=float).reshape(-1)
+            support = np.linspace(-1.0, 1.0, row.size, dtype=float)
+            query = np.linspace(-1.0, 1.0, samples, dtype=float)
+            return np.interp(query, support, row)
+
+        example_scenes = [
+            ("rings_rays", scene_create("rings rays", asset_store=store)),
+            (
+                "frequency_orientation",
+                scene_create(
+                    "frequency orientation",
+                    {
+                        "angles": np.linspace(0.0, np.pi / 2.0, 5),
+                        "freqs": np.array([1.0, 2.0, 4.0, 8.0, 16.0], dtype=float),
+                        "blockSize": 64,
+                        "contrast": 0.8,
+                    },
+                    asset_store=store,
+                ),
+            ),
+            (
+                "harmonic_a",
+                scene_create(
+                    "harmonic",
+                    {
+                        "freq": 1.0,
+                        "contrast": 1.0,
+                        "ph": 0.0,
+                        "ang": 0.0,
+                        "row": 64,
+                        "col": 64,
+                        "GaborFlag": 0.0,
+                    },
+                    asset_store=store,
+                ),
+            ),
+            (
+                "harmonic_b",
+                scene_create(
+                    "harmonic",
+                    {
+                        "freq": 1.0,
+                        "contrast": 1.0,
+                        "ph": 0.0,
+                        "ang": 0.0,
+                        "row": 64,
+                        "col": 64,
+                        "GaborFlag": 0.0,
+                    },
+                    asset_store=store,
+                ),
+            ),
+            ("checkerboard", scene_create("checkerboard", 16, 8, "ep", asset_store=store)),
+            ("line_d65", scene_create("lined65", 128, asset_store=store)),
+            ("slanted_bar", scene_create("slantedBar", 128, 1.3, asset_store=store)),
+            ("grid_lines", scene_create("grid lines", 128, 16, asset_store=store)),
+            ("point_array", scene_create("point array", 256, 32, asset_store=store)),
+            ("macbeth_tungsten_a", scene_create("macbeth tungsten", 16, np.arange(380.0, 721.0, 5.0), asset_store=store)),
+            ("macbeth_tungsten_b", scene_create("macbeth tungsten", 16, np.arange(380.0, 721.0, 5.0), asset_store=store)),
+            ("uniform_ee_specify", scene_create("uniformEESpecify", 128, np.arange(380.0, 721.0, 10.0), asset_store=store)),
+            ("lstar", scene_create("lstar", np.array([80, 10], dtype=int), 20, 1, asset_store=store)),
+            ("exp_ramp", scene_create("exponential intensity ramp", 256, 1024, asset_store=store)),
+        ]
+
+        stable_fov_indices = np.array([0, 1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], dtype=int)
+        stable_luminance_indices = np.array([0, 1, 2, 3, 4, 6, 9, 10, 11, 13], dtype=int)
+        scene_labels: list[str] = []
+        scene_sizes = np.zeros((len(example_scenes), 2), dtype=int)
+        wave_counts = np.zeros(len(example_scenes), dtype=int)
+        mean_luminance = np.zeros(len(example_scenes), dtype=float)
+        fov_deg = np.zeros(len(example_scenes), dtype=float)
+        luminance_bounds = np.zeros((len(example_scenes), 2), dtype=float)
+        center_rows = np.zeros((len(example_scenes), 41), dtype=float)
+        center_cols = np.zeros((len(example_scenes), 41), dtype=float)
+
+        for index, (label, scene) in enumerate(example_scenes):
+            luminance = np.asarray(scene_get(scene, "luminance", asset_store=store), dtype=float)
+            center_row = luminance[luminance.shape[0] // 2, :]
+            center_col = luminance[:, luminance.shape[1] // 2]
+            scene_labels.append(label)
+            scene_sizes[index, :] = np.asarray(scene_get(scene, "size"), dtype=int)
+            wave_counts[index] = int(np.asarray(scene_get(scene, "wave"), dtype=float).size)
+            mean_luminance[index] = float(scene_get(scene, "mean luminance", asset_store=store))
+            fov_deg[index] = float(scene_get(scene, "fov"))
+            luminance_bounds[index, :] = np.array([float(np.min(luminance)), float(np.max(luminance))], dtype=float)
+            center_rows[index, :] = _canonical_profile(_channel_normalize(center_row))
+            center_cols[index, :] = _canonical_profile(_channel_normalize(center_col))
+
+        reflectance_chart = scene_create("reflectance chart", asset_store=store)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_labels": np.asarray(scene_labels, dtype=object),
+                "scene_sizes": scene_sizes,
+                "scene_wave_counts": wave_counts,
+                "scene_mean_luminance_stable": mean_luminance[stable_luminance_indices],
+                "scene_fov_deg_stable": fov_deg[stable_fov_indices],
+                "scene_luminance_bounds_stable": luminance_bounds[stable_luminance_indices, :],
+                "scene_center_row_luminance_norm": center_rows,
+                "scene_center_col_luminance_norm": center_cols,
+                "reflectance_chart_size": np.asarray(scene_get(reflectance_chart, "size"), dtype=int),
+                "reflectance_chart_wave_count": int(np.asarray(scene_get(reflectance_chart, "wave"), dtype=float).size),
+                "reflectance_chart_mean_luminance": float(scene_get(reflectance_chart, "mean luminance", asset_store=store)),
+                "reflectance_chart_fov_deg": float(scene_get(reflectance_chart, "fov")),
+            },
+            context={},
+        )
+
     if case_name == "scene_from_rgb_lcd_apple_small":
         display = display_create("LCD-Apple.mat", asset_store=store)
         display_wave = np.asarray(display.fields["wave"], dtype=float).reshape(-1)
