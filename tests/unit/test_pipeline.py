@@ -5,6 +5,7 @@ import pytest
 import pyisetcam.optics as optics_module
 import imageio.v3 as iio
 from scipy.io import savemat
+from scipy import ndimage
 
 from pyisetcam.exceptions import UnsupportedOptionError
 from pyisetcam.parity import run_python_case_with_context
@@ -10408,6 +10409,41 @@ def test_run_python_case_supports_scene_white_noise_small_parity_case(asset_stor
     assert case.payload["pattern_percentiles_norm"][3] == pytest.approx(0.9977061714414758)
     assert case.payload["mean_spectrum_norm"].shape == (31,)
     assert np.isclose(np.max(case.payload["mean_spectrum_norm"]), 1.0, atol=1e-12, rtol=0.0)
+
+
+def test_scene_disk_array_workflow(asset_store) -> None:
+    scene = scene_create("disk array", 64, 8, np.array([2, 2], dtype=int), asset_store=asset_store)
+    plane = np.asarray(scene_get(scene, "photons"), dtype=float)[:, :, 0]
+    labels, n_components = ndimage.label(plane > 0.0)
+    centroids = np.asarray(ndimage.center_of_mass(plane > 0.0, labels, range(1, n_components + 1)), dtype=float)
+    areas = np.asarray(ndimage.sum(plane > 0.0, labels, range(1, n_components + 1)), dtype=float)
+
+    assert tuple(scene_get(scene, "size")) == (64, 64)
+    assert plane.shape == (64, 64)
+    assert float(scene_get(scene, "mean luminance", asset_store=asset_store)) == pytest.approx(100.0, abs=1e-8)
+    assert np.unique(plane).size == 2
+    assert np.count_nonzero(plane) == 772
+    assert n_components == 4
+    assert np.array_equal(np.round(centroids).astype(int), np.array([[20, 20], [20, 41], [41, 20], [41, 41]], dtype=int))
+    assert np.array_equal(areas.astype(int), np.array([193, 193, 193, 193], dtype=int))
+
+
+def test_run_python_case_supports_scene_disk_array_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_disk_array_small", asset_store=asset_store)
+    plane = case.payload["photons"][:, :, 0]
+    labels, n_components = ndimage.label(plane > 0.0)
+    centroids = np.asarray(ndimage.center_of_mass(plane > 0.0, labels, range(1, n_components + 1)), dtype=float)
+    areas = np.asarray(ndimage.sum(plane > 0.0, labels, range(1, n_components + 1)), dtype=float)
+
+    assert tuple(case.payload["scene_size"]) == (64, 64)
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["photons"].shape == (64, 64, 31)
+    assert float(case.payload["mean_luminance"]) == pytest.approx(100.0, abs=1e-8)
+    assert np.unique(plane).size == 2
+    assert np.count_nonzero(plane) == 772
+    assert n_components == 4
+    assert np.array_equal(np.round(centroids).astype(int), np.array([[20, 20], [20, 41], [41, 20], [41, 41]], dtype=int))
+    assert np.array_equal(areas.astype(int), np.array([193, 193, 193, 193], dtype=int))
 
 
 def test_surface_munsell_script_workflow(asset_store) -> None:

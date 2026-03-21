@@ -81,6 +81,12 @@
       }
     },
     {
+      "name": "scene_disk_array_small",
+      "matlab_function": "sceneCreate('disk array')",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "scene_frequency_orientation_small",
       "matlab_function": "sceneCreate",
       "rtol": 1e-05,
