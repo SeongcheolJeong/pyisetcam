@@ -10242,6 +10242,35 @@ def test_run_python_case_supports_scene_line_small_parity_case(asset_store) -> N
     assert np.all(case.payload["photons"][:, line_col, :] > case.payload["photons"][:, 0, :])
 
 
+def test_scene_impulse1dd65_workflow(asset_store) -> None:
+    scene = scene_create("impulse1dd65", 64, asset_store=asset_store)
+    d65_scene = scene_create("lined65", 64, asset_store=asset_store)
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+    d65_photons = np.asarray(scene_get(d65_scene, "photons"), dtype=float)
+    luminance = np.asarray(scene_get(scene, "luminance", asset_store=asset_store), dtype=float)
+    line_col = photons.shape[1] // 2 - 1
+
+    assert tuple(scene_get(scene, "size")) == (64, 64)
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, atol=1e-8, rtol=1e-8)
+    assert photons.shape == (64, 64, 31)
+    assert np.all(photons[:, line_col, :] > photons[:, 0, :])
+    assert np.allclose(luminance[:, :line_col], np.repeat(luminance[:, 0:1], line_col, axis=1), atol=1e-12, rtol=1e-12)
+    assert np.allclose(luminance[:, line_col + 1 :], np.repeat(luminance[:, 0:1], photons.shape[1] - line_col - 1, axis=1), atol=1e-12, rtol=1e-12)
+    assert np.all(luminance[:, line_col] > luminance[:, 0])
+    assert np.allclose(d65_photons, photons, atol=1e-12, rtol=1e-12)
+
+
+def test_run_python_case_supports_scene_impulse1dd65_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_impulse1dd65_small", asset_store=asset_store)
+
+    assert tuple(case.payload["scene_size"]) == (64, 64)
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["photons"].shape == (64, 64, 31)
+    assert np.isclose(float(case.payload["mean_luminance"]), 100.0, atol=1e-8, rtol=1e-8)
+    line_col = case.payload["photons"].shape[1] // 2 - 1
+    assert np.all(case.payload["photons"][:, line_col, :] > case.payload["photons"][:, 0, :])
+
+
 def test_scene_uniform_monochromatic_workflow(asset_store) -> None:
     scene = scene_create("uniform monochromatic", 550, 12, asset_store=asset_store)
     photons = np.asarray(scene_get(scene, "photons"), dtype=float)
