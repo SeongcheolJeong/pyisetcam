@@ -75,6 +75,7 @@ from .plotting import ip_plot, oi_plot, scene_plot, sensor_plot, sensor_plot_lin
 from .roi import ie_rect2_locs, vc_get_roi_data
 from .scielab import color_transform_matrix, sc_compute_scielab, sc_opponent_filter, sc_params, sc_prepare_filters, scielab, scielab_rgb
 from .scene import (
+    _dead_leaves_sample_matrix,
     hdr_render,
     ie_reflectance_samples,
     macbeth_read_reflectance,
@@ -396,6 +397,25 @@ def run_python_case_with_context(
 
     if case_name == "scene_zone_plate_small":
         scene = scene_create("zone plate", 96, asset_store=store)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": scene_get(scene, "wave"),
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "scene_fov_deg": float(scene_get(scene, "fov")),
+                "photons": scene_get(scene, "photons"),
+                "mean_luminance": scene_get(scene, "mean luminance", asset_store=store),
+            },
+            context={"scene": scene},
+        )
+
+    if case_name == "scene_dead_leaves_small":
+        options = {
+            "nbr_iter": 1500,
+            "shape": "disk",
+            "random_samples": _dead_leaves_sample_matrix(1500, 4, seed=12345),
+        }
+        scene = scene_create("dead leaves", 96, 3.0, options, asset_store=store)
         return ParityCaseResult(
             payload={
                 "case_name": case_name,

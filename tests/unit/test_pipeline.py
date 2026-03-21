@@ -10047,6 +10047,36 @@ def test_run_python_case_supports_scene_zone_plate_small_parity_case(asset_store
     assert float(np.max(case.payload["photons"])) > float(np.min(case.payload["photons"]))
 
 
+def test_scene_dead_leaves_workflow(asset_store) -> None:
+    scene = scene_create("dead leaves", 96, 3.0, {"seed": 12345, "nbr_iter": 1500}, asset_store=asset_store)
+    display = display_create("OLED-Sony.mat", asset_store=asset_store)
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+    wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+    luminance = np.asarray(scene_get(scene, "luminance", asset_store=asset_store), dtype=float)
+
+    assert tuple(scene_get(scene, "size")) == (96, 96)
+    assert np.isclose(scene_get(scene, "fov"), 10.0, atol=1e-12, rtol=1e-12)
+    assert np.array_equal(wave, np.asarray(display_get(display, "wave"), dtype=float).reshape(-1))
+    assert photons.shape == (96, 96, wave.size)
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, atol=1e-8, rtol=1e-8)
+    assert float(np.min(photons)) >= 0.0
+    assert float(np.max(photons)) > float(np.min(photons))
+    assert 0.0 < float(np.mean(luminance > np.mean(luminance))) < 1.0
+
+
+def test_run_python_case_supports_scene_dead_leaves_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_dead_leaves_small", asset_store=asset_store)
+
+    assert tuple(case.payload["scene_size"]) == (96, 96)
+    assert np.isclose(float(case.payload["scene_fov_deg"]), 10.0, atol=1e-12, rtol=1e-12)
+    assert case.payload["wave"].ndim == 1
+    assert case.payload["photons"].shape[:2] == (96, 96)
+    assert case.payload["photons"].shape[2] == case.payload["wave"].size
+    assert np.isclose(float(case.payload["mean_luminance"]), 100.0, atol=1e-8, rtol=1e-8)
+    assert float(np.min(case.payload["photons"])) >= 0.0
+    assert float(np.max(case.payload["photons"])) > float(np.min(case.payload["photons"]))
+
+
 def test_surface_munsell_script_workflow(asset_store) -> None:
     munsell = asset_store.load_mat("data/surfaces/charts/munsell.mat")["munsell"]
     xyz = np.asarray(munsell.XYZ, dtype=float)

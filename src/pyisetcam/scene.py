@@ -1267,6 +1267,102 @@ def _zone_plate_scene(
     return scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
 
 
+def _dead_leaves_sample_matrix(n_rows: int, n_cols: int, seed: int = 1) -> np.ndarray:
+    modulus = 2147483647
+    multiplier = 16807
+    state = int(seed) % modulus
+    if state <= 0:
+        state = 1
+    samples = np.empty((int(n_rows), int(n_cols)), dtype=float)
+    for row in range(int(n_rows)):
+        for col in range(int(n_cols)):
+            state = (multiplier * state) % modulus
+            samples[row, col] = float(state) / float(modulus)
+    return samples
+
+
+def _dead_leaves_options(value: Any | None) -> dict[str, Any]:
+    normalized = _normalized_parameter_dict(value)
+    options: dict[str, Any] = {
+        "rmin": float(normalized.get("rmin", 0.01)),
+        "rmax": float(normalized.get("rmax", 1.0)),
+        "nbr_iter": max(int(np.rint(normalized.get("nbr_iter", 5000))), 1),
+        "shape": str(normalized.get("shape", "disk")),
+    }
+    if "seed" in normalized:
+        options["seed"] = int(np.rint(normalized["seed"]))
+    if "random_samples" in normalized and normalized["random_samples"] is not None:
+        options["random_samples"] = np.asarray(normalized["random_samples"], dtype=float)
+    return options
+
+
+def _dead_leaves_image(size: Any, sigma: float, options: dict[str, Any] | None = None) -> np.ndarray:
+    rows, cols = _scene_size_2d(size, default=256)
+    config = _dead_leaves_options(options)
+    sigma = float(sigma)
+    shape = param_format(config["shape"])
+    if shape not in {"disk", "square"}:
+        raise UnsupportedOptionError("sceneCreate", f"dead leaves shape={config['shape']}")
+
+    image = np.full((rows, cols), np.inf, dtype=float)
+    x_support = np.linspace(0.0, 1.0, cols, dtype=float)
+    y_support = np.linspace(0.0, 1.0, rows, dtype=float)
+    y_grid, x_grid = np.meshgrid(y_support, x_support, indexing="ij")
+
+    radius_list = np.linspace(config["rmin"], config["rmax"], 200, dtype=float)
+    radius_dist = 1.0 / np.maximum(radius_list, 1.0e-12) ** sigma
+    if sigma > 0.0:
+        radius_dist = radius_dist - 1.0 / (float(config["rmax"]) ** sigma)
+    radius_dist = _scale_range(np.cumsum(radius_dist, dtype=float), 0.0, 1.0)
+
+    sample_matrix = config.get("random_samples")
+    if sample_matrix is None:
+        seed = config.get("seed")
+        rng = np.random.default_rng(None if seed is None else int(seed))
+        sample_matrix = rng.random((int(config["nbr_iter"]), 4), dtype=float)
+    else:
+        sample_matrix = np.asarray(sample_matrix, dtype=float)
+        if sample_matrix.ndim != 2 or sample_matrix.shape[1] < 4:
+            raise ValueError("dead leaves random_samples must be an (n, 4) array.")
+        if sample_matrix.shape[0] < int(config["nbr_iter"]):
+            raise ValueError("dead leaves random_samples does not contain enough rows.")
+
+    remaining = rows * cols
+    for index in range(int(config["nbr_iter"])):
+        radius_u, x_center, y_center, albedo = sample_matrix[index, :4]
+        radius = radius_list[int(np.argmin(np.abs(float(radius_u) - radius_dist)))]
+        if shape == "disk":
+            mask = np.isinf(image) & (((x_grid - float(x_center)) ** 2 + (y_grid - float(y_center)) ** 2) < float(radius) ** 2)
+        else:
+            mask = np.isinf(image) & (np.abs(x_grid - float(x_center)) < float(radius)) & (np.abs(y_grid - float(y_center)) < float(radius))
+        covered = int(np.count_nonzero(mask))
+        if covered <= 0:
+            continue
+        remaining -= covered
+        image[mask] = float(albedo)
+        if remaining <= 0:
+            break
+
+    image[np.isinf(image)] = 0.0
+    return image
+
+
+def _dead_leaves_scene(
+    size: Any,
+    sigma: float,
+    options: dict[str, Any] | None,
+    wave: np.ndarray | None,
+    *,
+    asset_store: AssetStore,
+) -> Scene:
+    display = _scene_display("OLED-Sony.mat", wave, asset_store=asset_store)
+    image = _dead_leaves_image(size, sigma, options)
+    scene = scene_from_file(image, "rgb", 100.0, display, asset_store=asset_store)
+    scene = scene_set(scene, "fov", 10.0)
+    scene = scene_set(scene, "name", "Dead leaves")
+    return scene
+
+
 def _mackay_image(radial_frequency: float, image_size: Any) -> np.ndarray:
     radial_freq = float(radial_frequency)
     im_size = max(int(np.asarray(image_size, dtype=float).reshape(-1)[0]), 1)
@@ -2273,6 +2369,14 @@ def scene_create(
             session,
             _star_pattern_scene(image_size, spectral_type, n_lines, wave, asset_store=store),
         )
+
+    if name == "deadleaves":
+        size = args[0] if len(args) > 0 else 256
+        sigma = float(args[1]) if len(args) > 1 else 2.0
+        options = args[2] if len(args) > 2 and hasattr(args[2], "items") else None
+        wave_arg = args[3] if len(args) > 3 else (args[2] if len(args) > 2 and not hasattr(args[2], "items") else None)
+        wave = None if wave_arg is None else _wave_or_default(wave_arg)
+        return track_session_object(session, _dead_leaves_scene(size, sigma, options, wave, asset_store=store))
 
     if name == "zoneplate":
         size = args[0] if len(args) > 0 else 384

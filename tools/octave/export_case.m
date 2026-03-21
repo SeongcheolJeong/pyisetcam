@@ -99,6 +99,18 @@ switch case_name
         payload.photons = sceneGet(scene, 'photons');
         payload.mean_luminance = sceneGet(scene, 'mean luminance');
 
+    case 'scene_dead_leaves_small'
+        options = struct();
+        options.nbr_iter = 1500;
+        options.shape = 'disk';
+        options.random_samples = local_dead_leaves_sample_matrix(1500, 4, 12345);
+        scene = local_scene_dead_leaves(96, 3, options);
+        payload.wave = sceneGet(scene, 'wave');
+        payload.scene_size = double(sceneGet(scene, 'size'));
+        payload.scene_fov_deg = sceneGet(scene, 'fov');
+        payload.photons = sceneGet(scene, 'photons');
+        payload.mean_luminance = sceneGet(scene, 'mean luminance');
+
     case 'utility_unit_frequency_list'
         payload.even = unitFrequencyList(50);
         payload.odd = unitFrequencyList(51);
@@ -7386,4 +7398,135 @@ for ii = 1:numel(thresholds)
         widths(ii) = active(end) - active(1) + 1;
     end
 end
+end
+
+function values = local_scale_range(values, outMin, outMax)
+values = double(values);
+minValue = min(values(:));
+maxValue = max(values(:));
+if maxValue <= minValue
+    values = zeros(size(values)) + outMin;
+    return;
+end
+values = (values - minValue) / (maxValue - minValue);
+values = values * (outMax - outMin) + outMin;
+end
+
+function samples = local_dead_leaves_sample_matrix(nRows, nCols, seed)
+if nargin < 3 || isempty(seed)
+    seed = 1;
+end
+
+modulus = int64(2147483647);
+multiplier = int64(16807);
+state = mod(int64(seed), modulus);
+if state <= 0
+    state = int64(1);
+end
+
+samples = zeros(nRows, nCols);
+for row = 1:nRows
+    for col = 1:nCols
+        state = mod(multiplier * state, modulus);
+        samples(row, col) = double(state) / double(modulus);
+    end
+end
+end
+
+function image = local_dead_leaves_image(imSize, sigma, options)
+if nargin < 2 || isempty(sigma)
+    sigma = 3;
+end
+if nargin < 3 || isempty(options)
+    options = struct();
+end
+
+if isscalar(imSize)
+    rows = max(round(imSize), 1);
+    cols = rows;
+else
+    rows = max(round(imSize(1)), 1);
+    cols = max(round(imSize(2)), 1);
+end
+
+if isfield(options, 'rmin')
+    rmin = options.rmin;
+else
+    rmin = 0.01;
+end
+if isfield(options, 'rmax')
+    rmax = options.rmax;
+else
+    rmax = 1;
+end
+if isfield(options, 'nbr_iter')
+    nbr_iter = options.nbr_iter;
+else
+    nbr_iter = 5000;
+end
+if isfield(options, 'shape')
+    shape = options.shape;
+else
+    shape = 'disk';
+end
+
+image = Inf(rows, cols);
+x = linspace(0, 1, cols);
+y = linspace(0, 1, rows);
+[Y, X] = meshgrid(y, x);
+X = X';
+Y = Y';
+
+r_list = linspace(rmin, rmax, 200);
+r_dist = 1 ./ (r_list .^ sigma);
+if sigma > 0
+    r_dist = r_dist - (1 / (rmax ^ sigma));
+end
+r_dist = local_scale_range(cumsum(r_dist), 0, 1);
+
+if isfield(options, 'random_samples') && ~isempty(options.random_samples)
+    random_samples = double(options.random_samples);
+else
+    random_samples = rand(nbr_iter, 4);
+end
+
+remaining = rows * cols;
+for ii = 1:nbr_iter
+    radius_u = random_samples(ii, 1);
+    x_center = random_samples(ii, 2);
+    y_center = random_samples(ii, 3);
+    albedo = random_samples(ii, 4);
+
+    [~, idx] = min(abs(radius_u - r_dist));
+    radius = r_list(idx);
+
+    switch lower(shape)
+        case 'disk'
+            mask = isinf(image) & (((X - x_center) .^ 2 + (Y - y_center) .^ 2) < radius ^ 2);
+        case 'square'
+            mask = isinf(image) & (abs(X - x_center) < radius) & (abs(Y - y_center) < radius);
+        otherwise
+            error('Unknown dead leaves shape %s', shape);
+    end
+
+    covered = nnz(mask);
+    if covered == 0
+        continue;
+    end
+
+    remaining = remaining - covered;
+    image(mask) = albedo;
+    if remaining <= 0
+        break;
+    end
+end
+
+image(isinf(image)) = 0;
+end
+
+function scene = local_scene_dead_leaves(imSize, sigma, options)
+image = local_dead_leaves_image(imSize, sigma, options);
+scene = sceneFromFile(image, 'rgb', 100, 'OLED-Sony.mat');
+scene = sceneSet(scene, 'fov', 10);
+scene = sceneSet(scene, 'name', 'Dead leaves');
 end
