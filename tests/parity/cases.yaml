@@ -77,6 +77,12 @@
       "atol": 1e-08
     },
     {
+      "name": "scene_uniformephoton_small",
+      "matlab_function": "sceneCreate('uniformephoton')",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "scene_uniform_ee_small",
       "matlab_function": "sceneCreate('uniform')",
       "rtol": 1e-05,

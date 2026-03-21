@@ -128,6 +128,13 @@ switch case_name
         payload.photons = sceneGet(scene, 'photons');
         payload.mean_luminance = sceneGet(scene, 'mean luminance');
 
+    case 'scene_uniformephoton_small'
+        scene = sceneCreate('uniformephoton', 24);
+        payload.scene_size = double(sceneGet(scene, 'size'));
+        payload.wave = sceneGet(scene, 'wave');
+        payload.photons = sceneGet(scene, 'photons');
+        payload.mean_luminance = sceneGet(scene, 'mean luminance');
+
     case 'scene_uniform_ee_small'
         scene = sceneCreate('uniform', 24);
         payload.scene_size = double(sceneGet(scene, 'size'));

@@ -35,6 +35,7 @@
 - and now also curated Octave parity on `sceneCreate('macbethtungsten')`, covering the `64x96` Macbeth chart under tungsten illumination together with the returned `100 cd/m^2` photon-cube contract
 - and now also curated Octave parity on `sceneCreate('uniform', ...)` / `sceneCreate('uniformEE', ...)`, covering the direct `24x24` equal-energy constructor alias, its flat spatial layout with wavelength-varying photon spectrum, and the same `100 cd/m^2` luminance contract
 - and now also curated Octave parity on `sceneCreate('uniform equal photon', ...)`, covering the `24x24` equal-photon uniform scene, its flat spectral-spatial photon cube, and the same `100 cd/m^2` luminance contract
+- and now also added the missing upstream `sceneCreate('uniformephoton')` alias in Python, with curated Octave parity on the compact equal-photon alias and exact equivalence to `sceneCreate('uniform ep', ...)`
 - and now also curated Octave parity on `sceneCreate('line', ...)`, covering the direct D65 line-scene alias, the shared `64x64` vertical-line photon cube, and its exact equivalence to `sceneCreate('lined65', ...)`
 - and now also curated Octave parity on `sceneCreate('lineee', ...)`, covering the compact equal-energy line alias, the shared `64x64` vertical-line photon cube, and its exact equivalence to `sceneCreate('line ee', ...)`
 - and now also curated Octave parity on `sceneCreate('impulse1dd65', ...)`, covering the impulse-style D65 line alias, the shared `64x64` vertical-line photon cube, and its exact equivalence to `sceneCreate('lined65', ...)`

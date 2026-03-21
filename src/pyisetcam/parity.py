@@ -432,6 +432,19 @@ def run_python_case_with_context(
             context={"scene": scene},
         )
 
+    if case_name == "scene_uniformephoton_small":
+        scene = scene_create("uniformephoton", 24, asset_store=store)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "wave": scene_get(scene, "wave"),
+                "photons": scene_get(scene, "photons"),
+                "mean_luminance": scene_get(scene, "mean luminance", asset_store=store),
+            },
+            context={"scene": scene},
+        )
+
     if case_name == "scene_uniform_ee_small":
         scene = scene_create("uniform", 24, asset_store=store)
         return ParityCaseResult(

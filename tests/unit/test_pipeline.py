@@ -10468,6 +10468,31 @@ def test_run_python_case_supports_scene_uniform_ep_small_parity_case(asset_store
     assert np.allclose(case.payload["photons"][0, 0, :], case.payload["photons"][0, 0, 0], atol=1e-8, rtol=1e-12)
 
 
+def test_scene_uniformephoton_workflow(asset_store) -> None:
+    scene = scene_create("uniformephoton", 24, asset_store=asset_store)
+    ep_scene = scene_create("uniform ep", 24, asset_store=asset_store)
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+    ep_photons = np.asarray(scene_get(ep_scene, "photons"), dtype=float)
+
+    assert tuple(scene_get(scene, "size")) == (24, 24)
+    assert photons.shape == (24, 24, 31)
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, atol=1e-8, rtol=1e-8)
+    assert np.allclose(photons, photons[0:1, 0:1, :], atol=1e-12, rtol=1e-12)
+    assert np.allclose(photons[0, 0, :], photons[0, 0, 0], atol=1e-8, rtol=1e-12)
+    assert np.allclose(ep_photons, photons, atol=1e-12, rtol=1e-12)
+
+
+def test_run_python_case_supports_scene_uniformephoton_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_uniformephoton_small", asset_store=asset_store)
+
+    assert tuple(case.payload["scene_size"]) == (24, 24)
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["photons"].shape == (24, 24, 31)
+    assert np.isclose(float(case.payload["mean_luminance"]), 100.0, atol=1e-8, rtol=1e-8)
+    assert np.allclose(case.payload["photons"], case.payload["photons"][0:1, 0:1, :], atol=1e-12, rtol=1e-12)
+    assert np.allclose(case.payload["photons"][0, 0, :], case.payload["photons"][0, 0, 0], atol=1e-8, rtol=1e-12)
+
+
 def test_scene_uniform_ee_workflow(asset_store) -> None:
     scene = scene_create("uniform", 24, asset_store=asset_store)
     alias_scene = scene_create("uniformEE", 24, asset_store=asset_store)

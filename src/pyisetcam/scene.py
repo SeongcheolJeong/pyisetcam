@@ -2282,7 +2282,7 @@ def scene_create(
         wave = _wave_or_default(args[2] if len(args) > 2 else None)
         return track_session_object(session, _mackay_scene(radial_frequency, image_size, wave, asset_store=store))
 
-    if name in {"uniformep", "uniformequalphoton", "uniformequalphotons"}:
+    if name in {"uniformep", "uniformephoton", "uniformequalphoton", "uniformequalphotons"}:
         size = args[0] if len(args) > 0 else 32
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
         illuminant_photons = np.ones(wave.size, dtype=float)
