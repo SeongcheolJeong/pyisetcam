@@ -10341,6 +10341,41 @@ def test_run_python_case_supports_scene_point_array_small_parity_case(asset_stor
     assert np.array_equal(np.unique(np.diff(unique_y)), np.array([16], dtype=int))
 
 
+def test_scene_grid_lines_workflow(asset_store) -> None:
+    scene = scene_create("grid lines", 64, 16, "ep", 1, asset_store=asset_store)
+    plane = np.asarray(scene_get(scene, "photons"), dtype=float)[:, :, 0]
+    full_hi_rows = np.where(np.all(np.isclose(plane, plane.max()), axis=1))[0]
+    full_hi_cols = np.where(np.all(np.isclose(plane, plane.max()), axis=0))[0]
+
+    assert tuple(scene_get(scene, "size")) == (64, 64)
+    assert plane.shape == (64, 64)
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, atol=1e-8, rtol=1e-8)
+    assert np.unique(plane).size == 2
+    assert np.count_nonzero(np.isclose(plane, plane.max())) == 496
+    assert np.array_equal(full_hi_rows, np.array([7, 23, 39, 55], dtype=int))
+    assert np.array_equal(full_hi_cols, np.array([7, 23, 39, 55], dtype=int))
+    assert np.array_equal(np.unique(np.diff(full_hi_rows)), np.array([16], dtype=int))
+    assert np.array_equal(np.unique(np.diff(full_hi_cols)), np.array([16], dtype=int))
+
+
+def test_run_python_case_supports_scene_grid_lines_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_grid_lines_small", asset_store=asset_store)
+    plane = case.payload["photons"][:, :, 0]
+    full_hi_rows = np.where(np.all(np.isclose(plane, plane.max()), axis=1))[0]
+    full_hi_cols = np.where(np.all(np.isclose(plane, plane.max()), axis=0))[0]
+
+    assert tuple(case.payload["scene_size"]) == (64, 64)
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["photons"].shape == (64, 64, 31)
+    assert np.isclose(float(case.payload["mean_luminance"]), 100.0, atol=1e-8, rtol=1e-8)
+    assert np.unique(plane).size == 2
+    assert np.count_nonzero(np.isclose(plane, plane.max())) == 496
+    assert np.array_equal(full_hi_rows, np.array([7, 23, 39, 55], dtype=int))
+    assert np.array_equal(full_hi_cols, np.array([7, 23, 39, 55], dtype=int))
+    assert np.array_equal(np.unique(np.diff(full_hi_rows)), np.array([16], dtype=int))
+    assert np.array_equal(np.unique(np.diff(full_hi_cols)), np.array([16], dtype=int))
+
+
 def test_surface_munsell_script_workflow(asset_store) -> None:
     munsell = asset_store.load_mat("data/surfaces/charts/munsell.mat")["munsell"]
     xyz = np.asarray(munsell.XYZ, dtype=float)
