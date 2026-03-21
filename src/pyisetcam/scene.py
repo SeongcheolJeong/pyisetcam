@@ -1030,7 +1030,7 @@ def _line_scene(
     scene.fields["fov_deg"] = DEFAULT_FOV_DEG
     scene.data["photons"] = photons
     _update_scene_geometry(scene)
-    return scene
+    return scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
 
 
 def _bar_scene(size: Any, width: int, wave: np.ndarray, *, asset_store: AssetStore) -> Scene:
