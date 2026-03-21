@@ -10203,6 +10203,29 @@ def test_run_python_case_supports_scene_uniform_monochromatic_small_parity_case(
     assert np.allclose(case.payload["photons"], case.payload["photons"][0:1, 0:1, :], atol=1e-12, rtol=1e-12)
 
 
+def test_scene_uniform_ee_specify_workflow(asset_store) -> None:
+    wave = np.arange(380.0, 721.0, 10.0, dtype=float)
+    scene = scene_create("uniformEESpecify", 128, wave, asset_store=asset_store)
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+
+    assert tuple(scene_get(scene, "size")) == (128, 128)
+    assert np.array_equal(np.asarray(scene_get(scene, "wave"), dtype=float), wave)
+    assert photons.shape == (128, 128, wave.size)
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, atol=1e-8, rtol=1e-8)
+    assert np.allclose(photons, photons[0:1, 0:1, :], atol=1e-12, rtol=1e-12)
+
+
+def test_run_python_case_supports_scene_uniform_ee_specify_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_uniform_ee_specify_small", asset_store=asset_store)
+
+    wave = np.arange(380.0, 721.0, 10.0, dtype=float)
+    assert tuple(case.payload["scene_size"]) == (128, 128)
+    assert np.array_equal(np.asarray(case.payload["wave"], dtype=float), wave)
+    assert case.payload["photons"].shape == (128, 128, wave.size)
+    assert np.isclose(float(case.payload["mean_luminance"]), 100.0, atol=1e-8, rtol=1e-8)
+    assert np.allclose(case.payload["photons"], case.payload["photons"][0:1, 0:1, :], atol=1e-12, rtol=1e-12)
+
+
 def test_surface_munsell_script_workflow(asset_store) -> None:
     munsell = asset_store.load_mat("data/surfaces/charts/munsell.mat")["munsell"]
     xyz = np.asarray(munsell.XYZ, dtype=float)

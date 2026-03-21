@@ -318,6 +318,20 @@ def run_python_case_with_context(
             context={"scene": scene},
         )
 
+    if case_name == "scene_uniform_ee_specify_small":
+        wave = np.arange(380.0, 721.0, 10.0, dtype=float)
+        scene = scene_create("uniformEESpecify", 128, wave, asset_store=store)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "wave": scene_get(scene, "wave"),
+                "photons": scene_get(scene, "photons"),
+                "mean_luminance": scene_get(scene, "mean luminance", asset_store=store),
+            },
+            context={"scene": scene},
+        )
+
     if case_name == "scene_frequency_orientation_small":
         params = {
             "angles": np.linspace(0.0, np.pi / 2.0, 4),

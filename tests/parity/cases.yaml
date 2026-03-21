@@ -25,6 +25,12 @@
       "atol": 1e-08
     },
     {
+      "name": "scene_uniform_ee_specify_small",
+      "matlab_function": "sceneCreate('uniformEESpecify')",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "scene_frequency_orientation_small",
       "matlab_function": "sceneCreate",
       "rtol": 1e-05,

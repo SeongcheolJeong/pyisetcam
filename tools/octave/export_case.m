@@ -43,6 +43,14 @@ switch case_name
         payload.photons = sceneGet(scene, 'photons');
         payload.mean_luminance = sceneGet(scene, 'mean luminance');
 
+    case 'scene_uniform_ee_specify_small'
+        wave = (380:10:720)';
+        scene = sceneCreate('uniformEESpecify', 128, wave);
+        payload.scene_size = double(sceneGet(scene, 'size'));
+        payload.wave = sceneGet(scene, 'wave');
+        payload.photons = sceneGet(scene, 'photons');
+        payload.mean_luminance = sceneGet(scene, 'mean luminance');
+
     case 'scene_frequency_orientation_small'
         params = struct();
         params.angles = linspace(0, pi / 2, 4);
