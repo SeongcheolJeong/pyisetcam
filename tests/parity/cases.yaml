@@ -31,6 +31,18 @@
       "atol": 1e-08
     },
     {
+      "name": "scene_empty_small",
+      "matlab_function": "sceneCreate('empty')",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "illuminant_energy": {
+          "mode": "scale_invariant",
+          "max_mean_rel": 1e-05
+        }
+      }
+    },
+    {
       "name": "scene_uniform_ep_small",
       "matlab_function": "sceneCreate('uniform equal photon')",
       "rtol": 1e-05,

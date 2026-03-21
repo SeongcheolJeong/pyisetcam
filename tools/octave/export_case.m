@@ -50,6 +50,19 @@ switch case_name
         payload.photons = sceneGet(scene, 'photons');
         payload.mean_luminance = sceneGet(scene, 'mean luminance');
 
+    case 'scene_empty_small'
+        scene = sceneCreate('empty');
+        photons = sceneGet(scene, 'photons');
+        payload.wave = sceneGet(scene, 'wave');
+        payload.illuminant_energy = sceneGet(scene, 'illuminant energy');
+        payload.mean_luminance = 0;
+        payload.photon_sum = sum(photons(:));
+        if isempty(photons)
+            payload.photon_max = 0;
+        else
+            payload.photon_max = max(photons(:));
+        end
+
     case 'scene_uniform_ep_small'
         scene = sceneCreate('uniform equal photon', 24);
         payload.scene_size = double(sceneGet(scene, 'size'));

@@ -331,6 +331,21 @@ def run_python_case_with_context(
             context={"scene": scene},
         )
 
+    if case_name == "scene_empty_small":
+        scene = scene_create("empty", asset_store=store)
+        photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": scene_get(scene, "wave"),
+                "illuminant_energy": scene_get(scene, "illuminant energy"),
+                "mean_luminance": scene_get(scene, "mean luminance", asset_store=store),
+                "photon_sum": float(np.sum(photons)),
+                "photon_max": float(np.max(photons)) if photons.size else 0.0,
+            },
+            context={"scene": scene},
+        )
+
     if case_name == "scene_uniform_ep_small":
         scene = scene_create("uniform ep", 24, asset_store=store)
         return ParityCaseResult(
