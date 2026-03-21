@@ -208,6 +208,11 @@ estimation coverage for `s_sensorSpatialNoiseDSNU.m`, plus the
 `oiGet(..., 'optics aperture diameter', unit)` support, plus headless
 `sensor_formats` / `sensorFormats` and `ie_n_to_megapixel` /
 `ieN2MegaPixel` coverage for `s_sensorSizeResolution.m`, plus direct
+curated parity on the `s_sensorCFA.m` zebra-scene workflow through the
+default Bayer, explicit Bayer, YCMY, custom 3x3 RGB, RGBW, and quad-CFA
+branches, including MATLAB-style
+`cameraSet(..., 'pixel size constant fill factor', ...)` routing, exact
+pattern/size metadata, and normalized sensor-RGB summaries, plus direct
 curated parity on the cropped CFA point-image workflow from
 `s_sensorCFAPointSpread.m`, comparing the 12x12 CFA-image crops,
 rendered RGB summaries, and canonical center-line profiles across the

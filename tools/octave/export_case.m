@@ -5978,6 +5978,98 @@ switch case_name
         payload.size = sensorGet(sensor, 'size');
         payload.rgb = sensorGet(sensor, 'rgb');
 
+    case 'sensor_cfa_script_small'
+        fov = 20;
+        pSize = [1.4 1.4] * 1e-6;
+
+        rgbFile = fullfile(isetRootPath, 'data', 'images', 'rgb', 'zebra.jpg');
+        scene = sceneFromFile(rgbFile, 'rgb', 300, displayCreate);
+        scene = sceneSet(scene, 'fov', fov);
+        oi = oiCreate;
+        oi = oiCompute(oi, scene);
+
+        labels = {'default', 'bayer', 'ycmy', 'rgb', 'rgbw', 'quad'};
+        sensors = cell(1, numel(labels));
+        defaultSensor = sensorCreate;
+        defaultSensor = sensorSet(defaultSensor, 'pixel size constant fill factor', pSize);
+        defaultSensor = sensorSetSizeToFOV(defaultSensor, [sceneGet(scene, 'fov') sceneGet(scene, 'vfov')], oi);
+        sensors{1} = sensorCompute(defaultSensor, oi);
+
+        bayerSensor = sensorCreate;
+        bayerSensor = sensorSet(bayerSensor, 'fov', fov, oi);
+        bayerSensor = sensorSet(bayerSensor, 'name', 'Bayer');
+        bayerSensor = sensorSet(bayerSensor, 'pixel size constant fill factor', pSize);
+        sensors{2} = sensorCompute(bayerSensor, oi);
+
+        ycmySensor = sensorCreate('ycmy');
+        ycmySensor = sensorSet(ycmySensor, 'fov', fov, oi);
+        ycmySensor = sensorSet(ycmySensor, 'name', 'cmy');
+        ycmySensor = sensorSet(ycmySensor, 'pixel size constant fill factor', pSize);
+        sensors{3} = sensorCompute(ycmySensor, oi);
+
+        rgbSensor = sensorCreate('rgb');
+        rgbSensor = sensorSet(rgbSensor, 'pattern and size', [2 1 2; 3 2 1; 2 3 2]);
+        rgbSensor = sensorSet(rgbSensor, 'fov', fov, oi);
+        rgbSensor = sensorSet(rgbSensor, 'name', '3x3 RGB');
+        rgbSensor = sensorSet(rgbSensor, 'pixel size constant fill factor', pSize);
+        sensors{4} = sensorCompute(rgbSensor, oi);
+
+        rgbwSensor = sensorCreate('rgbw');
+        rgbwSensor = sensorSet(rgbwSensor, 'fov', fov, oi);
+        rgbwSensor = sensorSet(rgbwSensor, 'name', 'rgbw');
+        rgbwSensor = sensorSet(rgbwSensor, 'pixel size constant fill factor', pSize);
+        sensors{5} = sensorCompute(rgbwSensor, oi);
+
+        quadSensor = sensorCreate;
+        quadSensor = sensorSet(quadSensor, 'pattern', [3 3 2 2; 3 3 2 2; 2 2 1 1; 2 2 1 1]);
+        quadSensor = sensorSet(quadSensor, 'fov', fov, oi);
+        quadSensor = sensorSet(quadSensor, 'name', 'quad');
+        quadSensor = sensorSet(quadSensor, 'pixel size constant fill factor', pSize);
+        sensors{6} = sensorCompute(quadSensor, oi);
+
+        nBranches = numel(sensors);
+        branchSizes = zeros(nBranches, 2);
+        branchPatternShapes = zeros(nBranches, 2);
+        branchPatternsPadded = zeros(nBranches, 4, 4);
+        branchMeanRgbNorm = zeros(nBranches, 3);
+        branchCenterRgbNorm = zeros(nBranches, 3);
+        branchCenterRowLumaNorm = zeros(nBranches, 41);
+        branchCenterColLumaNorm = zeros(nBranches, 41);
+        branchCfaNames = cell(1, nBranches);
+        branchFilterLetters = cell(1, nBranches);
+
+        for ii = 1:nBranches
+            sensor = sensors{ii};
+            rgbImage = double(sensorGet(sensor, 'rgb'));
+            luma = mean(rgbImage, 3);
+            centerRow = floor(size(luma, 1) / 2) + 1;
+            centerCol = floor(size(luma, 2) / 2) + 1;
+            pattern = double(sensorGet(sensor, 'pattern'));
+
+            branchSizes(ii, :) = sensorGet(sensor, 'size');
+            branchPatternShapes(ii, :) = size(pattern);
+            branchPatternsPadded(ii, 1:size(pattern, 1), 1:size(pattern, 2)) = pattern;
+            branchCfaNames{ii} = sensorGet(sensor, 'cfaname');
+            branchFilterLetters{ii} = sensorGet(sensor, 'filter color letters');
+            branchMeanRgbNorm(ii, :) = local_channel_normalize(mean(reshape(rgbImage, [], 3), 1));
+            branchCenterRgbNorm(ii, :) = local_channel_normalize(squeeze(rgbImage(centerRow, centerCol, :)));
+            branchCenterRowLumaNorm(ii, :) = local_canonical_profile(local_channel_normalize(luma(centerRow, :)), 41);
+            branchCenterColLumaNorm(ii, :) = local_canonical_profile(local_channel_normalize(luma(:, centerCol)), 41);
+        end
+
+        payload.scene_size = sceneGet(scene, 'size');
+        payload.oi_size = oiGet(oi, 'size');
+        payload.branch_labels = labels;
+        payload.branch_sizes = branchSizes;
+        payload.branch_pattern_shapes = branchPatternShapes;
+        payload.branch_patterns_padded = branchPatternsPadded;
+        payload.branch_cfa_names = branchCfaNames;
+        payload.branch_filter_letters = branchFilterLetters;
+        payload.branch_mean_rgb_norm = branchMeanRgbNorm;
+        payload.branch_center_rgb_norm = branchCenterRgbNorm;
+        payload.branch_center_row_luma_norm = branchCenterRowLumaNorm;
+        payload.branch_center_col_luma_norm = branchCenterColLumaNorm;
+
     case 'sensor_snr_components_small'
         sensor = sensorCreate();
         pixel = sensorGet(sensor, 'pixel');

@@ -8132,6 +8132,113 @@ def run_python_case_with_context(
             context={"sensor": sensor},
         )
 
+    if case_name == "sensor_cfa_script_small":
+        def _canonical_profile(values: Any, samples: int = 41) -> np.ndarray:
+            row = np.asarray(values, dtype=float).reshape(-1)
+            support = np.linspace(-1.0, 1.0, row.size, dtype=float)
+            query = np.linspace(-1.0, 1.0, samples, dtype=float)
+            return np.interp(query, support, row)
+
+        fov = 20.0
+        pixel_size = np.array([1.4e-6, 1.4e-6], dtype=float)
+
+        scene = scene_from_file("zebra.jpg", "rgb", 300, display_create(asset_store=store), asset_store=store)
+        scene = scene_set(scene, "fov", fov)
+        oi = oi_compute(oi_create(asset_store=store), scene)
+
+        default_sensor = sensor_create(asset_store=store)
+        default_sensor = sensor_set(default_sensor, "pixel size constant fill factor", pixel_size)
+        default_sensor = sensor_set_size_to_fov(default_sensor.clone(), (scene.fields["fov_deg"], scene.fields["vfov_deg"]), oi)
+        default_sensor = sensor_compute(default_sensor, oi)
+
+        branch_sensors: list[tuple[str, Sensor]] = [("default", default_sensor)]
+
+        bayer = sensor_create(asset_store=store)
+        bayer = sensor_set(bayer, "fov", fov, oi)
+        bayer = sensor_set(bayer, "name", "Bayer")
+        bayer = sensor_set(bayer, "pixel size constant fill factor", pixel_size)
+        bayer = sensor_compute(bayer, oi)
+        branch_sensors.append(("bayer", bayer))
+
+        ycmy = sensor_create("ycmy", asset_store=store)
+        ycmy = sensor_set(ycmy, "fov", fov, oi)
+        ycmy = sensor_set(ycmy, "name", "cmy")
+        ycmy = sensor_set(ycmy, "pixel size constant fill factor", pixel_size)
+        ycmy = sensor_compute(ycmy, oi)
+        branch_sensors.append(("ycmy", ycmy))
+
+        rgb = sensor_create("rgb", asset_store=store)
+        rgb = sensor_set(rgb, "pattern and size", np.array([[2, 1, 2], [3, 2, 1], [2, 3, 2]], dtype=int))
+        rgb = sensor_set(rgb, "fov", fov, oi)
+        rgb = sensor_set(rgb, "name", "3x3 RGB")
+        rgb = sensor_set(rgb, "pixel size constant fill factor", pixel_size)
+        rgb = sensor_compute(rgb, oi)
+        branch_sensors.append(("rgb", rgb))
+
+        rgbw = sensor_create("rgbw", asset_store=store)
+        rgbw = sensor_set(rgbw, "fov", fov, oi)
+        rgbw = sensor_set(rgbw, "name", "rgbw")
+        rgbw = sensor_set(rgbw, "pixel size constant fill factor", pixel_size)
+        rgbw = sensor_compute(rgbw, oi)
+        branch_sensors.append(("rgbw", rgbw))
+
+        quad = sensor_create(asset_store=store)
+        quad = sensor_set(quad, "pattern", np.array([[3, 3, 2, 2], [3, 3, 2, 2], [2, 2, 1, 1], [2, 2, 1, 1]], dtype=int))
+        quad = sensor_set(quad, "fov", fov, oi)
+        quad = sensor_set(quad, "name", "quad")
+        quad = sensor_set(quad, "pixel size constant fill factor", pixel_size)
+        quad = sensor_compute(quad, oi)
+        branch_sensors.append(("quad", quad))
+
+        branch_labels: list[str] = []
+        branch_sizes = np.zeros((len(branch_sensors), 2), dtype=int)
+        branch_pattern_shapes = np.zeros((len(branch_sensors), 2), dtype=int)
+        branch_patterns_padded = np.zeros((len(branch_sensors), 4, 4), dtype=int)
+        branch_cfa_names: list[str] = []
+        branch_filter_letters: list[str] = []
+        branch_mean_rgb_norm = np.zeros((len(branch_sensors), 3), dtype=float)
+        branch_center_rgb_norm = np.zeros((len(branch_sensors), 3), dtype=float)
+        branch_center_row_luma_norm = np.zeros((len(branch_sensors), 41), dtype=float)
+        branch_center_col_luma_norm = np.zeros((len(branch_sensors), 41), dtype=float)
+
+        for index, (label, sensor) in enumerate(branch_sensors):
+            rgb_image = np.asarray(sensor_get(sensor, "rgb"), dtype=float)
+            luma = np.mean(rgb_image, axis=2)
+            center_row = luma[luma.shape[0] // 2, :]
+            center_col = luma[:, luma.shape[1] // 2]
+            center_rgb = rgb_image[rgb_image.shape[0] // 2, rgb_image.shape[1] // 2, :]
+            pattern = np.asarray(sensor_get(sensor, "pattern"), dtype=int)
+
+            branch_labels.append(label)
+            branch_sizes[index, :] = np.asarray(sensor_get(sensor, "size"), dtype=int)
+            branch_pattern_shapes[index, :] = np.array(pattern.shape, dtype=int)
+            branch_patterns_padded[index, : pattern.shape[0], : pattern.shape[1]] = pattern
+            branch_cfa_names.append(str(sensor_get(sensor, "cfaname")))
+            branch_filter_letters.append(str(sensor_get(sensor, "filter color letters")))
+            branch_mean_rgb_norm[index, :] = _channel_normalize(np.mean(rgb_image.reshape(-1, 3), axis=0))
+            branch_center_rgb_norm[index, :] = _channel_normalize(center_rgb)
+            branch_center_row_luma_norm[index, :] = _canonical_profile(_channel_normalize(center_row))
+            branch_center_col_luma_norm[index, :] = _canonical_profile(_channel_normalize(center_col))
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "oi_size": np.asarray(oi_get(oi, "size"), dtype=int),
+                "branch_labels": np.asarray(branch_labels, dtype=object),
+                "branch_sizes": branch_sizes,
+                "branch_pattern_shapes": branch_pattern_shapes,
+                "branch_patterns_padded": branch_patterns_padded,
+                "branch_cfa_names": np.asarray(branch_cfa_names, dtype=object),
+                "branch_filter_letters": np.asarray(branch_filter_letters, dtype=object),
+                "branch_mean_rgb_norm": branch_mean_rgb_norm,
+                "branch_center_rgb_norm": branch_center_rgb_norm,
+                "branch_center_row_luma_norm": branch_center_row_luma_norm,
+                "branch_center_col_luma_norm": branch_center_col_luma_norm,
+            },
+            context={},
+        )
+
     if case_name == "sensor_snr_components_small":
         sensor = sensor_create(asset_store=store)
         voltage_swing = float(sensor_get(sensor, "pixel voltage swing"))

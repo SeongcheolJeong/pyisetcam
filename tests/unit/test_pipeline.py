@@ -4696,11 +4696,13 @@ def test_camera_get_set_routes_matlab_style_subobjects(asset_store) -> None:
 
     camera = camera_set(camera, "sensor integration time", 0.125)
     camera = camera_set(camera, "pixel voltage swing", 1.5)
+    camera = camera_set(camera, "pixel size constant fill factor", np.array([1.4e-6, 1.6e-6], dtype=float))
     camera = camera_set(camera, "ip display dpi", 110)
     camera = camera_set(camera, "optics f number", 5.6)
 
     assert np.isclose(camera_get(camera, "sensor integration time"), 0.125)
     assert np.isclose(camera_get(camera, "pixel voltage swing"), 1.5)
+    assert np.allclose(np.asarray(camera_get(camera, "pixel size"), dtype=float), np.array([1.4e-6, 1.6e-6], dtype=float))
     assert camera_get(camera, "ip display dpi") == 110
     assert np.isclose(camera_get(camera, "optics f number"), 5.6)
     assert camera_get(camera, "vci type") == "default"
@@ -8569,6 +8571,131 @@ def test_run_python_case_supports_sensor_cfa_pattern_and_size_rgb_small_parity_c
     assert case.payload["pattern"].shape == (3, 3)
     assert tuple(case.payload["size"]) == (6, 9)
     assert case.payload["rgb"].shape == (6, 9, 3)
+
+
+def test_sensor_cfa_script_workflow(asset_store) -> None:
+    camera = camera_create(asset_store=asset_store)
+    fov = 20.0
+    pixel_size = np.array([1.4e-6, 1.4e-6], dtype=float)
+
+    scene = scene_from_file("zebra.jpg", "rgb", 300, display_create(asset_store=asset_store), asset_store=asset_store)
+    scene = scene_set(scene, "fov", fov)
+
+    camera = camera_set(camera, "pixel size constant fill factor", pixel_size)
+    camera = camera_compute(camera, scene, asset_store=asset_store)
+
+    branches = [("default", camera_get(camera, "sensor").clone())]
+
+    bayer = sensor_create(asset_store=asset_store)
+    bayer = sensor_set(bayer, "fov", fov, camera_get(camera, "oi"))
+    bayer = sensor_set(bayer, "name", "Bayer")
+    camera = camera_set(camera, "sensor", bayer)
+    camera = camera_set(camera, "pixel size constant fill factor", pixel_size)
+    camera = camera_compute(camera, "oi", asset_store=asset_store)
+    branches.append(("bayer", camera_get(camera, "sensor").clone()))
+
+    ycmy = sensor_create("ycmy", asset_store=asset_store)
+    ycmy = sensor_set(ycmy, "fov", fov, camera_get(camera, "oi"))
+    ycmy = sensor_set(ycmy, "name", "cmy")
+    camera = camera_set(camera, "sensor", ycmy)
+    camera = camera_set(camera, "pixel size constant fill factor", pixel_size)
+    camera = camera_compute(camera, "oi", asset_store=asset_store)
+    branches.append(("ycmy", camera_get(camera, "sensor").clone()))
+
+    rgb = sensor_create("rgb", asset_store=asset_store)
+    rgb = sensor_set(rgb, "pattern and size", np.array([[2, 1, 2], [3, 2, 1], [2, 3, 2]], dtype=int))
+    rgb = sensor_set(rgb, "fov", fov, camera_get(camera, "oi"))
+    rgb = sensor_set(rgb, "name", "3x3 RGB")
+    rgb = sensor_set(rgb, "pixel size constant fill factor", pixel_size)
+    camera = camera_set(camera, "sensor", rgb)
+    camera = camera_compute(camera, "oi", asset_store=asset_store)
+    branches.append(("rgb", camera_get(camera, "sensor").clone()))
+
+    rgbw = sensor_create("rgbw", asset_store=asset_store)
+    rgbw = sensor_set(rgbw, "fov", fov, camera_get(camera, "oi"))
+    rgbw = sensor_set(rgbw, "name", "rgbw")
+    camera = camera_set(camera, "sensor", rgbw)
+    camera = camera_set(camera, "pixel size constant fill factor", pixel_size)
+    camera = camera_compute(camera, "oi", asset_store=asset_store)
+    branches.append(("rgbw", camera_get(camera, "sensor").clone()))
+
+    quad = sensor_create(asset_store=asset_store)
+    quad = sensor_set(quad, "pattern", np.array([[3, 3, 2, 2], [3, 3, 2, 2], [2, 2, 1, 1], [2, 2, 1, 1]], dtype=int))
+    quad = sensor_set(quad, "fov", fov, camera_get(camera, "oi"))
+    quad = sensor_set(quad, "name", "quad")
+    camera = camera_set(camera, "sensor", quad)
+    camera = camera_set(camera, "pixel size constant fill factor", pixel_size)
+    camera = camera_compute(camera, scene, asset_store=asset_store)
+    branches.append(("quad", camera_get(camera, "sensor").clone()))
+
+    assert tuple(np.asarray(scene_get(scene, "size"), dtype=int)) == (391, 600)
+    assert tuple(np.asarray(oi_get(camera_get(camera, "oi"), "size"), dtype=int)) == (489, 750)
+
+    expected_sizes = {
+        "default": (634, 974),
+        "bayer": (398, 488),
+        "ycmy": (398, 488),
+        "rgb": (390, 489),
+        "rgbw": (398, 488),
+        "quad": (636, 976),
+    }
+    expected_patterns = {
+        "default": np.array([[2, 1], [3, 2]], dtype=int),
+        "bayer": np.array([[2, 1], [3, 2]], dtype=int),
+        "ycmy": np.array([[2, 1], [3, 2]], dtype=int),
+        "rgb": np.array([[2, 1, 2], [3, 2, 1], [2, 3, 2]], dtype=int),
+        "rgbw": np.array([[1, 2], [3, 4]], dtype=int),
+        "quad": np.array([[3, 3, 2, 2], [3, 3, 2, 2], [2, 2, 1, 1], [2, 2, 1, 1]], dtype=int),
+    }
+    expected_cfa_names = {
+        "default": "Bayer RGB",
+        "bayer": "Bayer RGB",
+        "ycmy": "Bayer CMY",
+        "rgb": "Other",
+        "rgbw": "RGBW",
+        "quad": "Other",
+    }
+    expected_filter_letters = {
+        "default": "rgb",
+        "bayer": "rgb",
+        "ycmy": "cym",
+        "rgb": "rgb",
+        "rgbw": "rgbw",
+        "quad": "rgb",
+    }
+
+    for label, sensor in branches:
+        rgb_image = np.asarray(sensor_get(sensor, "rgb"), dtype=float)
+        assert tuple(np.asarray(sensor_get(sensor, "size"), dtype=int)) == expected_sizes[label]
+        assert np.array_equal(np.asarray(sensor_get(sensor, "pattern"), dtype=int), expected_patterns[label])
+        assert str(sensor_get(sensor, "cfaname")) == expected_cfa_names[label]
+        assert str(sensor_get(sensor, "filter color letters")) == expected_filter_letters[label]
+        assert rgb_image.shape == expected_sizes[label] + (3,)
+        assert np.all(np.isfinite(rgb_image))
+        assert float(np.mean(rgb_image)) > 0.0
+
+
+def test_run_python_case_supports_sensor_cfa_script_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("sensor_cfa_script_small", asset_store=asset_store)
+
+    assert tuple(case.payload["scene_size"]) == (391, 600)
+    assert tuple(case.payload["oi_size"]) == (489, 750)
+    assert list(case.payload["branch_labels"]) == ["default", "bayer", "ycmy", "rgb", "rgbw", "quad"]
+    assert case.payload["branch_sizes"].shape == (6, 2)
+    assert case.payload["branch_pattern_shapes"].shape == (6, 2)
+    assert case.payload["branch_patterns_padded"].shape == (6, 4, 4)
+    assert list(case.payload["branch_cfa_names"]) == ["Bayer RGB", "Bayer RGB", "Bayer CMY", "Other", "RGBW", "Other"]
+    assert list(case.payload["branch_filter_letters"]) == ["rgb", "rgb", "cym", "rgb", "rgbw", "rgb"]
+    assert case.payload["branch_mean_rgb_norm"].shape == (6, 3)
+    assert case.payload["branch_center_rgb_norm"].shape == (6, 3)
+    assert case.payload["branch_center_row_luma_norm"].shape == (6, 41)
+    assert case.payload["branch_center_col_luma_norm"].shape == (6, 41)
+    assert np.array_equal(case.payload["branch_sizes"][0], np.array([634, 974], dtype=int))
+    assert np.array_equal(case.payload["branch_sizes"][1], np.array([398, 488], dtype=int))
+    assert np.array_equal(case.payload["branch_sizes"][3], np.array([390, 489], dtype=int))
+    assert np.array_equal(case.payload["branch_sizes"][5], np.array([400, 488], dtype=int))
+    assert np.array_equal(case.payload["branch_pattern_shapes"][4], np.array([2, 2], dtype=int))
+    assert np.array_equal(case.payload["branch_patterns_padded"][5], np.array([[3, 3, 2, 2], [3, 3, 2, 2], [2, 2, 1, 1], [2, 2, 1, 1]], dtype=int))
 
 
 def test_run_python_case_supports_sensor_snr_components_small_parity_case(asset_store) -> None:

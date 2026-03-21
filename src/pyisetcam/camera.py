@@ -119,7 +119,7 @@ def _pixel_set(sensor: Sensor, parameter: str, value: Any) -> Sensor:
     if key == "prnu":
         sensor.fields["pixel"]["prnu_sigma"] = float(value)
         return sensor
-    raise KeyError(f"Unsupported camera pixel parameter: {parameter}")
+    return sensor_set(sensor, f"pixel {parameter}", value)
 
 
 def camera_create(

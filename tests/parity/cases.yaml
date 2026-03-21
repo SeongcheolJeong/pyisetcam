@@ -2604,6 +2604,30 @@
       "atol": 1e-08
     },
     {
+      "name": "sensor_cfa_script_small",
+      "matlab_function": "s_sensorCFA.m",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "branch_center_row_luma_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.06
+        },
+        "branch_center_col_luma_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.06
+        },
+        "branch_mean_rgb_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "branch_center_rgb_norm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.05
+        }
+      }
+    },
+    {
       "name": "sensor_snr_components_small",
       "matlab_function": "sensorSNR",
       "rtol": 1e-05,
