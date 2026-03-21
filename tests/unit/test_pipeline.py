@@ -10226,6 +10226,30 @@ def test_run_python_case_supports_scene_uniform_ee_specify_small_parity_case(ass
     assert np.allclose(case.payload["photons"], case.payload["photons"][0:1, 0:1, :], atol=1e-12, rtol=1e-12)
 
 
+def test_scene_exponential_intensity_ramp_workflow(asset_store) -> None:
+    scene = scene_create("exponential intensity ramp", 64, 256, asset_store=asset_store)
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+
+    assert tuple(scene_get(scene, "size")) == (64, 64)
+    assert photons.shape == (64, 64, 31)
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, atol=1e-8, rtol=1e-8)
+    assert np.allclose(photons[0, :, :], photons[-1, :, :], atol=1e-12, rtol=1e-12)
+    assert np.all(np.diff(photons[0, :, 0]) > 0.0)
+    assert np.isclose(photons[0, -1, 0] / photons[0, 0, 0], 256.0, atol=1e-10, rtol=1e-10)
+
+
+def test_run_python_case_supports_scene_exponential_intensity_ramp_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_exponential_intensity_ramp_small", asset_store=asset_store)
+
+    assert tuple(case.payload["scene_size"]) == (64, 64)
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["photons"].shape == (64, 64, 31)
+    assert np.isclose(float(case.payload["mean_luminance"]), 100.0, atol=1e-8, rtol=1e-8)
+    assert np.allclose(case.payload["photons"][0, :, :], case.payload["photons"][-1, :, :], atol=1e-12, rtol=1e-12)
+    assert np.all(np.diff(case.payload["photons"][0, :, 0]) > 0.0)
+    assert np.isclose(case.payload["photons"][0, -1, 0] / case.payload["photons"][0, 0, 0], 256.0, atol=1e-10, rtol=1e-10)
+
+
 def test_surface_munsell_script_workflow(asset_store) -> None:
     munsell = asset_store.load_mat("data/surfaces/charts/munsell.mat")["munsell"]
     xyz = np.asarray(munsell.XYZ, dtype=float)
