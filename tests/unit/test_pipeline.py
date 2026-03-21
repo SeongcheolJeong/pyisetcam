@@ -10276,6 +10276,34 @@ def test_run_python_case_supports_scene_linear_intensity_ramp_small_parity_case(
     assert np.all(np.diff(case.payload["photons"][:, 0, 0]) > 0.0)
 
 
+def test_scene_rings_rays_workflow(asset_store) -> None:
+    scene = scene_create("rings rays", 8, 64, asset_store=asset_store)
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+    plane = photons[:, :, 0]
+    center = plane.shape[0] // 2
+
+    assert tuple(scene_get(scene, "size")) == (64, 64)
+    assert photons.shape == (64, 64, 31)
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, atol=1e-8, rtol=1e-8)
+    assert np.allclose(plane[center, :], plane[:, center], atol=1e-12, rtol=1e-12)
+    assert np.min(plane) > 0.0
+    assert np.max(plane) > np.min(plane)
+
+
+def test_run_python_case_supports_scene_rings_rays_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_rings_rays_small", asset_store=asset_store)
+    plane = case.payload["photons"][:, :, 0]
+    center = plane.shape[0] // 2
+
+    assert tuple(case.payload["scene_size"]) == (64, 64)
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["photons"].shape == (64, 64, 31)
+    assert np.isclose(float(case.payload["mean_luminance"]), 100.0, atol=1e-8, rtol=1e-8)
+    assert np.allclose(plane[center, :], plane[:, center], atol=1e-12, rtol=1e-12)
+    assert np.min(plane) > 0.0
+    assert np.max(plane) > np.min(plane)
+
+
 def test_surface_munsell_script_workflow(asset_store) -> None:
     munsell = asset_store.load_mat("data/surfaces/charts/munsell.mat")["munsell"]
     xyz = np.asarray(munsell.XYZ, dtype=float)

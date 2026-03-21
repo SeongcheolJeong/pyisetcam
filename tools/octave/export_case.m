@@ -65,6 +65,13 @@ switch case_name
         payload.photons = sceneGet(scene, 'photons');
         payload.mean_luminance = sceneGet(scene, 'mean luminance');
 
+    case 'scene_rings_rays_small'
+        scene = sceneCreate('rings rays', 8, 64);
+        payload.scene_size = double(sceneGet(scene, 'size'));
+        payload.wave = sceneGet(scene, 'wave');
+        payload.photons = sceneGet(scene, 'photons');
+        payload.mean_luminance = sceneGet(scene, 'mean luminance');
+
     case 'scene_frequency_orientation_small'
         params = struct();
         params.angles = linspace(0, pi / 2, 4);
