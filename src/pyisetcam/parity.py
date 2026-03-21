@@ -346,6 +346,25 @@ def run_python_case_with_context(
             context={"scene": scene},
         )
 
+    if case_name == "scene_lstar_small":
+        scene = scene_create("lstar", np.array([80, 10], dtype=int), 20, 1, asset_store=store)
+        luminance = np.asarray(scene_get(scene, "luminance", asset_store=store), dtype=float)
+        bar_means = np.array(
+            [np.mean(luminance[:, start : start + 10]) for start in range(0, luminance.shape[1], 10)],
+            dtype=float,
+        )
+        center_row = np.asarray(luminance[luminance.shape[0] // 2, :], dtype=float)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "wave": scene_get(scene, "wave"),
+                "bar_means_norm": bar_means / max(float(np.max(bar_means)), 1.0e-12),
+                "center_row_norm": center_row / max(float(np.max(center_row)), 1.0e-12),
+            },
+            context={"scene": scene},
+        )
+
     if case_name == "scene_uniform_ep_small":
         scene = scene_create("uniform ep", 24, asset_store=store)
         return ParityCaseResult(

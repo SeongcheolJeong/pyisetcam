@@ -63,6 +63,32 @@ switch case_name
             payload.photon_max = max(photons(:));
         end
 
+    case 'scene_lstar_small'
+        scene = sceneCreate('uniformEqualPhoton', [80 200]);
+        wave = double(sceneGet(scene, 'wave'));
+        illuminantPhotons = double(sceneGet(scene, 'illuminant photons'));
+        lValues = (0:19) + 50 - 19/2;
+        fy = (lValues + 16) / 116;
+        yValues = fy .^ 3;
+        yValues = yValues / max(yValues(:));
+        photons = zeros(1, 20, numel(wave));
+        for jj = 1:20
+            photons(1, jj, :) = yValues(jj) * illuminantPhotons(:);
+        end
+        photons = imageIncreaseImageRGBSize(photons, [80 10]);
+        scene = sceneSet(scene, 'photons', photons);
+        luminance = sceneGet(scene, 'luminance');
+        barMeans = zeros(1, 20);
+        for jj = 1:20
+            startCol = (jj - 1) * 10 + 1;
+            barMeans(jj) = mean(luminance(:, startCol:(startCol + 9)), 'all');
+        end
+        centerRow = luminance(round(size(luminance, 1) / 2), :);
+        payload.scene_size = double([80 200]);
+        payload.wave = wave;
+        payload.bar_means_norm = barMeans / max(barMeans(:));
+        payload.center_row_norm = centerRow / max(centerRow(:));
+
     case 'scene_uniform_ep_small'
         scene = sceneCreate('uniform equal photon', 24);
         payload.scene_size = double(sceneGet(scene, 'size'));

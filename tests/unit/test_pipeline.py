@@ -10252,6 +10252,32 @@ def test_run_python_case_supports_scene_empty_small_parity_case(asset_store) -> 
     assert np.isclose(float(case.payload["photon_max"]), 0.0, atol=0.0, rtol=0.0)
 
 
+def test_scene_lstar_workflow(asset_store) -> None:
+    scene = scene_create("lstar", np.array([80, 10], dtype=int), 20, 1, asset_store=asset_store)
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+    luminance = np.asarray(scene_get(scene, "luminance", asset_store=asset_store), dtype=float)
+    bar_means = np.array([np.mean(luminance[:, start : start + 10]) for start in range(0, 200, 10)], dtype=float)
+
+    assert tuple(scene_get(scene, "size")) == (80, 200)
+    assert photons.shape == (80, 200, 31)
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, atol=1e-8, rtol=1e-8)
+    assert np.all(np.diff(bar_means) > 0.0)
+    assert np.allclose(photons[:, :10, :], photons[:, 0:1, :], atol=1e-12, rtol=1e-12)
+    assert not np.allclose(photons[:, :10, :], photons[:, -10:, :], atol=1e-8, rtol=1e-12)
+
+
+def test_run_python_case_supports_scene_lstar_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_lstar_small", asset_store=asset_store)
+
+    assert tuple(case.payload["scene_size"]) == (80, 200)
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["bar_means_norm"].shape == (20,)
+    assert case.payload["center_row_norm"].shape == (200,)
+    assert np.all(np.diff(case.payload["bar_means_norm"]) > 0.0)
+    assert np.isclose(float(case.payload["bar_means_norm"][-1]), 1.0, atol=1e-12, rtol=1e-12)
+    assert np.isclose(float(np.max(case.payload["center_row_norm"])), 1.0, atol=1e-12, rtol=1e-12)
+
+
 def test_scene_uniform_ep_workflow(asset_store) -> None:
     scene = scene_create("uniform ep", 24, asset_store=asset_store)
     photons = np.asarray(scene_get(scene, "photons"), dtype=float)

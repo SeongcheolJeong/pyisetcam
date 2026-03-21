@@ -43,6 +43,12 @@
       }
     },
     {
+      "name": "scene_lstar_small",
+      "matlab_function": "sceneCreate('lstar')",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "scene_uniform_ep_small",
       "matlab_function": "sceneCreate('uniform equal photon')",
       "rtol": 1e-05,

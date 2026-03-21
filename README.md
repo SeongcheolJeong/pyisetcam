@@ -30,6 +30,7 @@
 - and now also curated Octave parity on `sceneCreate('uniform monochromatic', ...)`, covering the single-wave `550 nm` narrow-band scene, its `12x12` geometry, and the same `100 cd/m^2` luminance contract
 - and now also curated Octave parity on `sceneCreate('uniform d65', ...)`, covering the `24x24` D65 uniform scene, its flat spatial layout with non-flat D65 spectrum, and the same `100 cd/m^2` luminance contract
 - and now also curated Octave parity on `sceneCreate('empty')`, covering the cleared Macbeth-D65 geometry, the preserved illuminant spectrum, the all-zero photon cube, and the `0 cd/m^2` mean-luminance contract
+- and now also curated Octave parity on `sceneCreate('lstar', ...)`, covering the `80x200` stepped L* chart, its monotonically increasing 20-bar luminance sequence, the full photon cube, and the shared `100 cd/m^2` mean-luminance contract
 - and now also curated Octave parity on `sceneCreate('uniform equal photon', ...)`, covering the `24x24` equal-photon uniform scene, its flat spectral-spatial photon cube, and the same `100 cd/m^2` luminance contract
 - and now also curated Octave parity on `sceneCreate('uniformEESpecify', ...)`, covering the explicit `380:10:720 nm` equal-energy uniform scene, its `128x128` geometry, and the same `100 cd/m^2` luminance contract
 - and now also curated Octave parity on `sceneCreate('exponential intensity ramp', ...)`, covering the `64x64` exponential ramp with dynamic range `256`, exact row-uniformity, monotonic column growth, and the same `100 cd/m^2` luminance contract
