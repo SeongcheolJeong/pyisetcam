@@ -2913,6 +2913,73 @@ def run_python_case_with_context(
             context={},
         )
 
+    if case_name == "scene_harmonics_script_small":
+        cases = [
+            {
+                "freq": 1.0,
+                "contrast": 1.0,
+                "ph": 0.0,
+                "ang": 0.0,
+                "row": 128,
+                "col": 128,
+                "GaborFlag": 0.0,
+            },
+            {
+                "freq": np.array([1.0, 5.0], dtype=float),
+                "contrast": np.array([0.2, 0.6], dtype=float),
+                "ang": np.array([0.0, 0.0], dtype=float),
+                "ph": np.array([0.0, np.pi / 3.0], dtype=float),
+                "row": 128,
+                "col": 128,
+                "GaborFlag": 0.0,
+            },
+            {
+                "freq": np.array([2.0, 5.0], dtype=float),
+                "contrast": np.array([0.6, 0.6], dtype=float),
+                "ang": np.array([np.pi / 4.0, -np.pi / 4.0], dtype=float),
+                "ph": np.array([0.0, 0.0], dtype=float),
+                "row": 128,
+                "col": 128,
+                "GaborFlag": 0.0,
+            },
+            {
+                "freq": np.array([5.0, 5.0], dtype=float),
+                "contrast": np.array([0.6, 0.6], dtype=float),
+                "ang": np.array([np.pi / 4.0, -np.pi / 4.0], dtype=float),
+                "ph": np.array([0.0, 0.0], dtype=float),
+                "row": 128,
+                "col": 128,
+                "GaborFlag": 0.0,
+            },
+        ]
+
+        sizes = np.zeros((len(cases), 2), dtype=int)
+        mean_luminance = np.zeros(len(cases), dtype=float)
+        center_rows = np.zeros((len(cases), 128), dtype=float)
+        center_cols = np.zeros((len(cases), 128), dtype=float)
+        wave = None
+        for index, params in enumerate(cases):
+            scene = scene_create("harmonic", params, asset_store=store)
+            luminance = np.asarray(scene_get(scene, "luminance", asset_store=store), dtype=float)
+            sizes[index, :] = np.asarray(scene_get(scene, "size"), dtype=int)
+            mean_luminance[index] = float(scene_get(scene, "mean luminance", asset_store=store))
+            center_rows[index, :] = _channel_normalize(luminance[luminance.shape[0] // 2, :])
+            center_cols[index, :] = _channel_normalize(luminance[:, luminance.shape[1] // 2])
+            if wave is None:
+                wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": wave,
+                "scene_sizes": sizes,
+                "mean_luminance": mean_luminance,
+                "center_row_luminance_norm": center_rows,
+                "center_col_luminance_norm": center_cols,
+            },
+            context={},
+        )
+
     if case_name == "scene_from_rgb_lcd_apple_small":
         display = display_create("LCD-Apple.mat", asset_store=store)
         display_wave = np.asarray(display.fields["wave"], dtype=float).reshape(-1)

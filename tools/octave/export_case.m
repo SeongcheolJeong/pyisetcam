@@ -2355,6 +2355,59 @@ switch case_name
         payload.alt_center_row_luminance_norm = local_channel_normalize(double(altLuminance(floor(size(altLuminance, 1) / 2) + 1, :)));
         payload.alt_center_col_luminance_norm = local_channel_normalize(double(altLuminance(:, floor(size(altLuminance, 2) / 2) + 1)));
 
+    case 'scene_harmonics_script_small'
+        params.freq = 1;
+        params.contrast = 1;
+        params.ph = 0;
+        params.ang = 0;
+        params.row = 128;
+        params.col = 128;
+        params.GaborFlag = 0;
+
+        harmonicCases = cell(4, 1);
+        harmonicCases{1} = params;
+
+        params.freq = [1 5];
+        params.contrast = [0.2 0.6];
+        params.ang = [0 0];
+        params.ph = [0 pi/3];
+        harmonicCases{2} = params;
+
+        params.freq = [2 5];
+        params.contrast = [0.6 0.6];
+        params.ang = [pi/4 -pi/4];
+        params.ph = [0 0];
+        harmonicCases{3} = params;
+
+        params.freq = [5 5];
+        params.contrast = [0.6 0.6];
+        params.ang = [pi/4 -pi/4];
+        params.ph = [0 0];
+        harmonicCases{4} = params;
+
+        sceneSizes = zeros(4, 2);
+        meanLuminance = zeros(4, 1);
+        centerRows = zeros(4, 128);
+        centerCols = zeros(4, 128);
+        wave = [];
+        for ii = 1:4
+            scene = sceneCreate('harmonic', harmonicCases{ii});
+            luminance = double(sceneGet(scene, 'luminance'));
+            sceneSizes(ii, :) = double(sceneGet(scene, 'size')(:))';
+            meanLuminance(ii) = double(sceneGet(scene, 'mean luminance'));
+            centerRows(ii, :) = local_channel_normalize(double(luminance(floor(size(luminance, 1) / 2) + 1, :)));
+            centerCols(ii, :) = local_channel_normalize(double(luminance(:, floor(size(luminance, 2) / 2) + 1)));
+            if isempty(wave)
+                wave = double(sceneGet(scene, 'wave'));
+            end
+        end
+
+        payload.wave = wave(:);
+        payload.scene_sizes = sceneSizes;
+        payload.mean_luminance = meanLuminance;
+        payload.center_row_luminance_norm = centerRows;
+        payload.center_col_luminance_norm = centerCols;
+
     case 'scene_from_rgb_lcd_apple_small'
         displayCalFile = 'LCD-Apple.mat';
         d = displayCreate(displayCalFile);

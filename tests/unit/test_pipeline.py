@@ -9814,6 +9814,77 @@ def test_run_python_case_supports_scene_slanted_bar_small_parity_case(asset_stor
     assert case.payload["alt_center_col_luminance_norm"].shape == (129,)
 
 
+def test_scene_harmonics_script_workflow(asset_store) -> None:
+    cases = [
+        {
+            "freq": 1.0,
+            "contrast": 1.0,
+            "ph": 0.0,
+            "ang": 0.0,
+            "row": 128,
+            "col": 128,
+            "GaborFlag": 0.0,
+        },
+        {
+            "freq": np.array([1.0, 5.0], dtype=float),
+            "contrast": np.array([0.2, 0.6], dtype=float),
+            "ang": np.array([0.0, 0.0], dtype=float),
+            "ph": np.array([0.0, np.pi / 3.0], dtype=float),
+            "row": 128,
+            "col": 128,
+            "GaborFlag": 0.0,
+        },
+        {
+            "freq": np.array([2.0, 5.0], dtype=float),
+            "contrast": np.array([0.6, 0.6], dtype=float),
+            "ang": np.array([np.pi / 4.0, -np.pi / 4.0], dtype=float),
+            "ph": np.array([0.0, 0.0], dtype=float),
+            "row": 128,
+            "col": 128,
+            "GaborFlag": 0.0,
+        },
+        {
+            "freq": np.array([5.0, 5.0], dtype=float),
+            "contrast": np.array([0.6, 0.6], dtype=float),
+            "ang": np.array([np.pi / 4.0, -np.pi / 4.0], dtype=float),
+            "ph": np.array([0.0, 0.0], dtype=float),
+            "row": 128,
+            "col": 128,
+            "GaborFlag": 0.0,
+        },
+    ]
+
+    row_profiles = []
+    col_profiles = []
+    for params in cases:
+        scene = scene_create("harmonic", params, asset_store=asset_store)
+        luminance = np.asarray(scene_get(scene, "luminance", asset_store=asset_store), dtype=float)
+
+        assert tuple(scene_get(scene, "size")) == (128, 128)
+        assert np.array_equal(np.asarray(scene_get(scene, "wave"), dtype=float), np.arange(400.0, 701.0, 10.0, dtype=float))
+        assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, atol=1e-8, rtol=1e-8)
+        assert luminance.shape == (128, 128)
+
+        row_profiles.append(luminance[luminance.shape[0] // 2, :])
+        col_profiles.append(luminance[:, luminance.shape[1] // 2])
+
+    assert not np.allclose(row_profiles[0], row_profiles[1])
+    assert np.allclose(row_profiles[2], col_profiles[2], atol=1e-12, rtol=1e-12)
+    assert np.allclose(row_profiles[3], col_profiles[3], atol=1e-12, rtol=1e-12)
+
+
+def test_run_python_case_supports_scene_harmonics_script_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_harmonics_script_small", asset_store=asset_store)
+
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["scene_sizes"].shape == (4, 2)
+    assert np.array_equal(case.payload["scene_sizes"], np.full((4, 2), 128, dtype=int))
+    assert case.payload["mean_luminance"].shape == (4,)
+    assert np.allclose(case.payload["mean_luminance"], 100.0, atol=1e-8, rtol=1e-8)
+    assert case.payload["center_row_luminance_norm"].shape == (4, 128)
+    assert case.payload["center_col_luminance_norm"].shape == (4, 128)
+
+
 def test_scene_from_rgb_script_workflow(asset_store) -> None:
     display = display_create("LCD-Apple.mat", asset_store=asset_store)
     wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)
