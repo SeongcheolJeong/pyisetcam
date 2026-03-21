@@ -2748,6 +2748,7 @@ def test_si_synthetic_lorentzian_applies_to_grid_lines_scene(asset_store) -> Non
     assert updated.fields["optics"]["model"] == "shiftinvariant"
     assert np.asarray(oi_get(updated, "psfdata")["psf"]).shape[2] == np.asarray(oi_get(oi, "wave")).size
     assert computed.data["photons"].shape[:2] == scene.data["photons"].shape[:2]
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, atol=1e-8, rtol=1e-8)
 
 
 def test_oi_si_lorentzian_small_parity_case(asset_store) -> None:
@@ -10302,6 +10303,42 @@ def test_run_python_case_supports_scene_rings_rays_small_parity_case(asset_store
     assert np.allclose(plane[center, :], plane[:, center], atol=1e-12, rtol=1e-12)
     assert np.min(plane) > 0.0
     assert np.max(plane) > np.min(plane)
+
+
+def test_scene_point_array_workflow(asset_store) -> None:
+    scene = scene_create("point array", 64, 16, "ep", 1, asset_store=asset_store)
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+    plane = photons[:, :, 0]
+    coords = np.argwhere(np.isclose(plane, plane.max()))
+    unique_x = np.unique(coords[:, 1])
+    unique_y = np.unique(coords[:, 0])
+
+    assert tuple(scene_get(scene, "size")) == (64, 64)
+    assert photons.shape == (64, 64, 31)
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, atol=1e-8, rtol=1e-8)
+    assert np.count_nonzero(plane) == 16
+    assert np.array_equal(unique_x, np.array([7, 23, 39, 55], dtype=int))
+    assert np.array_equal(unique_y, np.array([7, 23, 39, 55], dtype=int))
+    assert np.array_equal(np.unique(np.diff(unique_x)), np.array([16], dtype=int))
+    assert np.array_equal(np.unique(np.diff(unique_y)), np.array([16], dtype=int))
+
+
+def test_run_python_case_supports_scene_point_array_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_point_array_small", asset_store=asset_store)
+    plane = case.payload["photons"][:, :, 0]
+    coords = np.argwhere(np.isclose(plane, plane.max()))
+    unique_x = np.unique(coords[:, 1])
+    unique_y = np.unique(coords[:, 0])
+
+    assert tuple(case.payload["scene_size"]) == (64, 64)
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["photons"].shape == (64, 64, 31)
+    assert np.isclose(float(case.payload["mean_luminance"]), 100.0, atol=1e-8, rtol=1e-8)
+    assert np.count_nonzero(plane) == 16
+    assert np.array_equal(unique_x, np.array([7, 23, 39, 55], dtype=int))
+    assert np.array_equal(unique_y, np.array([7, 23, 39, 55], dtype=int))
+    assert np.array_equal(np.unique(np.diff(unique_x)), np.array([16], dtype=int))
+    assert np.array_equal(np.unique(np.diff(unique_y)), np.array([16], dtype=int))
 
 
 def test_surface_munsell_script_workflow(asset_store) -> None:

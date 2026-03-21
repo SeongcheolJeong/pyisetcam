@@ -49,6 +49,12 @@
       "atol": 1e-08
     },
     {
+      "name": "scene_point_array_small",
+      "matlab_function": "sceneCreate('point array')",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "scene_frequency_orientation_small",
       "matlab_function": "sceneCreate",
       "rtol": 1e-05,
@@ -2950,6 +2956,10 @@
         "crop_peak_rgb": {
           "mode": "mean_rel",
           "max_mean_rel": 0.05
+        },
+        "green_row_width_30_um": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.2
         }
       }
     },

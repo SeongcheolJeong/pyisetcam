@@ -371,6 +371,19 @@ def run_python_case_with_context(
             context={"scene": scene},
         )
 
+    if case_name == "scene_point_array_small":
+        scene = scene_create("point array", 64, 16, "ep", 1, asset_store=store)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "wave": scene_get(scene, "wave"),
+                "photons": scene_get(scene, "photons"),
+                "mean_luminance": scene_get(scene, "mean luminance", asset_store=store),
+            },
+            context={"scene": scene},
+        )
+
     if case_name == "scene_frequency_orientation_small":
         params = {
             "angles": np.linspace(0.0, np.pi / 2.0, 4),
@@ -8954,7 +8967,7 @@ def run_python_case_with_context(
         )
 
     if case_name == "sensor_cfa_point_spread_small":
-        scene = scene_create("point array", 128, 16, "d65", 1, asset_store=store)
+        scene = scene_create("point array", asset_store=store)
         wave = np.asarray(scene_get(scene, "wave"), dtype=float)
         scene = scene_adjust_illuminant(scene, blackbody(wave, 8000.0), asset_store=store)
         scene = scene_set(scene, "fov", 2.0)
