@@ -10182,6 +10182,27 @@ def test_run_python_case_supports_scene_line_d65_small_parity_case(asset_store) 
     assert np.all(case.payload["photons"][:, line_col, :] > case.payload["photons"][:, 0, :])
 
 
+def test_scene_uniform_monochromatic_workflow(asset_store) -> None:
+    scene = scene_create("uniform monochromatic", 550, 12, asset_store=asset_store)
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+
+    assert tuple(scene_get(scene, "size")) == (12, 12)
+    assert np.array_equal(np.asarray(scene_get(scene, "wave"), dtype=float), np.array([550.0], dtype=float))
+    assert photons.shape == (12, 12, 1)
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, atol=1e-8, rtol=1e-8)
+    assert np.allclose(photons, photons[0:1, 0:1, :], atol=1e-12, rtol=1e-12)
+
+
+def test_run_python_case_supports_scene_uniform_monochromatic_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_uniform_monochromatic_small", asset_store=asset_store)
+
+    assert tuple(case.payload["scene_size"]) == (12, 12)
+    assert np.array_equal(np.asarray(case.payload["wave"], dtype=float), np.array([550.0], dtype=float))
+    assert case.payload["photons"].shape == (12, 12, 1)
+    assert np.isclose(float(case.payload["mean_luminance"]), 100.0, atol=1e-8, rtol=1e-8)
+    assert np.allclose(case.payload["photons"], case.payload["photons"][0:1, 0:1, :], atol=1e-12, rtol=1e-12)
+
+
 def test_surface_munsell_script_workflow(asset_store) -> None:
     munsell = asset_store.load_mat("data/surfaces/charts/munsell.mat")["munsell"]
     xyz = np.asarray(munsell.XYZ, dtype=float)

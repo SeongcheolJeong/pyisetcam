@@ -31,6 +31,14 @@ switch case_name
 
     case 'scene_uniform_bb_small'
         scene = sceneCreate('uniform bb', 16, 4500);
+        payload.scene_size = double(sceneGet(scene, 'size'));
+        payload.wave = sceneGet(scene, 'wave');
+        payload.photons = sceneGet(scene, 'photons');
+        payload.mean_luminance = sceneGet(scene, 'mean luminance');
+
+    case 'scene_uniform_monochromatic_small'
+        scene = sceneCreate('uniform monochromatic', 550, 12);
+        payload.scene_size = double(sceneGet(scene, 'size'));
         payload.wave = sceneGet(scene, 'wave');
         payload.photons = sceneGet(scene, 'photons');
         payload.mean_luminance = sceneGet(scene, 'mean luminance');

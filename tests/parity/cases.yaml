@@ -19,6 +19,12 @@
       "atol": 1e-08
     },
     {
+      "name": "scene_uniform_monochromatic_small",
+      "matlab_function": "sceneCreate('uniform monochromatic')",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "scene_frequency_orientation_small",
       "matlab_function": "sceneCreate",
       "rtol": 1e-05,
