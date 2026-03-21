@@ -5186,6 +5186,35 @@ def test_run_python_case_supports_harmonic_scene_parity_case(asset_store) -> Non
     assert case.payload["mean_luminance"] > 0.0
 
 
+def test_scene_sinusoid_workflow(asset_store) -> None:
+    params = {
+        "freq": np.array([1.0, 5.0], dtype=float),
+        "contrast": np.array([0.2, 0.6], dtype=float),
+        "ph": np.array([0.0, np.pi / 3.0], dtype=float),
+        "ang": np.array([0.0, 0.0], dtype=float),
+        "row": 64,
+        "col": 64,
+        "GaborFlag": 0.2,
+    }
+    scene = scene_create("sinusoid", params, asset_store=asset_store)
+    harmonic_scene = scene_create("harmonic", params, asset_store=asset_store)
+
+    assert tuple(scene_get(scene, "size")) == (64, 64)
+    assert np.asarray(scene_get(scene, "photons"), dtype=float).shape == (64, 64, 31)
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, atol=1e-8, rtol=1e-8)
+    assert np.array_equal(np.asarray(scene_get(scene, "wave"), dtype=float), np.asarray(scene_get(harmonic_scene, "wave"), dtype=float))
+    assert np.allclose(np.asarray(scene_get(scene, "photons"), dtype=float), np.asarray(scene_get(harmonic_scene, "photons"), dtype=float), atol=1e-12, rtol=1e-12)
+
+
+def test_run_python_case_supports_sinusoid_scene_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_sinusoid_small", asset_store=asset_store)
+
+    assert case.payload["photons"].shape == case.context["scene"].data["photons"].shape
+    assert np.array_equal(case.payload["wave"], case.context["scene"].fields["wave"])
+    assert case.payload["photons"].shape[:2] == (64, 64)
+    assert case.payload["mean_luminance"] > 0.0
+
+
 def test_run_python_case_supports_sweep_frequency_scene_parity_case(asset_store) -> None:
     case = run_python_case_with_context("scene_sweep_frequency_small", asset_store=asset_store)
 

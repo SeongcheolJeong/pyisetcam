@@ -618,6 +618,27 @@ def run_python_case_with_context(
             context={"scene": scene},
         )
 
+    if case_name == "scene_sinusoid_small":
+        params = {
+            "freq": np.array([1.0, 5.0], dtype=float),
+            "contrast": np.array([0.2, 0.6], dtype=float),
+            "ph": np.array([0.0, np.pi / 3.0], dtype=float),
+            "ang": np.array([0.0, 0.0], dtype=float),
+            "row": 64,
+            "col": 64,
+            "GaborFlag": 0.2,
+        }
+        scene = scene_create("sinusoid", params, asset_store=store)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": scene_get(scene, "wave"),
+                "photons": scene_get(scene, "photons"),
+                "mean_luminance": scene_get(scene, "mean luminance", asset_store=store),
+            },
+            context={"scene": scene},
+        )
+
     if case_name == "scene_sweep_frequency_small":
         scene = scene_create("sweep frequency", 64, 12, asset_store=store)
         return ParityCaseResult(

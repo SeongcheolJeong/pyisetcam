@@ -163,6 +163,12 @@
       "atol": 1e-08
     },
     {
+      "name": "scene_sinusoid_small",
+      "matlab_function": "sceneCreate('sinusoid')",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "scene_sweep_frequency_small",
       "matlab_function": "sceneCreate",
       "rtol": 1e-05,
