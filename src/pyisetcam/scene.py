@@ -1234,6 +1234,39 @@ def _star_pattern_scene(
     return scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
 
 
+def _zone_plate_image(size: Any, amplitude: float = 1.0, phase: float = 0.0) -> np.ndarray:
+    rows, cols = _scene_size_2d(size, default=256)
+    origin = (np.array([rows, cols], dtype=float) + 1.0) / 2.0
+    x_ramp, y_ramp = np.meshgrid(
+        np.arange(1.0, float(cols) + 1.0, dtype=float) - origin[1],
+        np.arange(1.0, float(rows) + 1.0, dtype=float) - origin[0],
+    )
+    radial = x_ramp * x_ramp + y_ramp * y_ramp
+    max_size = float(max(rows, cols))
+    return float(amplitude) * np.cos((np.pi / max_size) * radial + float(phase)) + 1.0
+
+
+def _zone_plate_scene(
+    size: Any,
+    wave: np.ndarray,
+    *,
+    asset_store: AssetStore,
+) -> Scene:
+    image = np.clip(_zone_plate_image(size), 1.0e-4, 1.0)
+    illuminant_energy, illuminant_photons = _spectral_illuminant("ep", wave, asset_store=asset_store)
+    scene = Scene(name="zonePlate")
+    scene.fields["wave"] = wave
+    scene.fields["illuminant_format"] = "spectral"
+    scene.fields["illuminant_energy"] = illuminant_energy
+    scene.fields["illuminant_photons"] = illuminant_photons
+    scene.fields["illuminant_comment"] = "equal photons"
+    scene.fields["distance_m"] = DEFAULT_DISTANCE_M
+    scene.fields["fov_deg"] = 4.0
+    scene.data["photons"] = image[:, :, None] * illuminant_photons.reshape(1, 1, -1)
+    _update_scene_geometry(scene)
+    return scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
+
+
 def _mackay_image(radial_frequency: float, image_size: Any) -> np.ndarray:
     radial_freq = float(radial_frequency)
     im_size = max(int(np.asarray(image_size, dtype=float).reshape(-1)[0]), 1)
@@ -2240,6 +2273,11 @@ def scene_create(
             session,
             _star_pattern_scene(image_size, spectral_type, n_lines, wave, asset_store=store),
         )
+
+    if name == "zoneplate":
+        size = args[0] if len(args) > 0 else 384
+        wave = _wave_or_default(args[1] if len(args) > 1 else None)
+        return track_session_object(session, _zone_plate_scene(size, wave, asset_store=store))
 
     if name == "bar":
         size = args[0] if len(args) > 0 else 64

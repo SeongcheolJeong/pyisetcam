@@ -10012,6 +10012,41 @@ def test_run_python_case_supports_scene_harmonics_script_small_parity_case(asset
     assert case.payload["center_col_luminance_norm"].shape == (4, 128)
 
 
+def test_scene_zone_plate_script_workflow(asset_store) -> None:
+    scene = scene_create("zone plate", 96, asset_store=asset_store)
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+    wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+    luminance = np.asarray(scene_get(scene, "luminance", asset_store=asset_store), dtype=float)
+    center_row = luminance[luminance.shape[0] // 2, :]
+    center_col = luminance[:, luminance.shape[1] // 2]
+
+    assert tuple(scene_get(scene, "size")) == (96, 96)
+    assert np.isclose(scene_get(scene, "fov"), 4.0, atol=1e-12, rtol=1e-12)
+    assert photons.shape == (96, 96, 31)
+    assert wave.shape == (31,)
+    assert float(np.min(photons)) > 0.0
+    assert float(np.max(photons)) > float(np.min(photons))
+    assert np.isclose(
+        scene_get(scene, "mean luminance", asset_store=asset_store),
+        100.0,
+        atol=1e-8,
+        rtol=1e-8,
+    )
+    assert np.allclose(center_row, center_col, atol=1e-12, rtol=1e-12)
+
+
+def test_run_python_case_supports_scene_zone_plate_small_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_zone_plate_small", asset_store=asset_store)
+
+    assert tuple(case.payload["scene_size"]) == (96, 96)
+    assert np.isclose(float(case.payload["scene_fov_deg"]), 4.0, atol=1e-12, rtol=1e-12)
+    assert case.payload["wave"].shape == (31,)
+    assert case.payload["photons"].shape == (96, 96, 31)
+    assert np.isclose(float(case.payload["mean_luminance"]), 100.0, atol=1e-8, rtol=1e-8)
+    assert float(np.min(case.payload["photons"])) > 0.0
+    assert float(np.max(case.payload["photons"])) > float(np.min(case.payload["photons"]))
+
+
 def test_surface_munsell_script_workflow(asset_store) -> None:
     munsell = asset_store.load_mat("data/surfaces/charts/munsell.mat")["munsell"]
     xyz = np.asarray(munsell.XYZ, dtype=float)

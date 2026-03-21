@@ -91,6 +91,14 @@ switch case_name
         payload.photons = sceneGet(scene, 'photons');
         payload.mean_luminance = sceneGet(scene, 'mean luminance');
 
+    case 'scene_zone_plate_small'
+        scene = sceneCreate('zone plate', 96);
+        payload.wave = sceneGet(scene, 'wave');
+        payload.scene_size = double(sceneGet(scene, 'size'));
+        payload.scene_fov_deg = sceneGet(scene, 'fov');
+        payload.photons = sceneGet(scene, 'photons');
+        payload.mean_luminance = sceneGet(scene, 'mean luminance');
+
     case 'utility_unit_frequency_list'
         payload.even = unitFrequencyList(50);
         payload.odd = unitFrequencyList(51);
