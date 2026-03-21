@@ -750,6 +750,19 @@ def run_python_case_with_context(
             context={"scene": scene},
         )
 
+    if case_name == "scene_impulse1dee_small":
+        scene = scene_create("impulse1dee", [64, 64], 2, asset_store=store)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": scene_get(scene, "wave"),
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "photons": scene_get(scene, "photons"),
+                "mean_luminance": scene_get(scene, "mean luminance", asset_store=store),
+            },
+            context={"scene": scene},
+        )
+
     if case_name == "scene_line_ep_small":
         scene = scene_create("line ep", [64, 64], 2, asset_store=store)
         return ParityCaseResult(
