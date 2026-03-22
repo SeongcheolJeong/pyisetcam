@@ -230,12 +230,16 @@ from .scene import (
     scene_illuminant_ss,
     scene_interpolate_w,
     scene_energy_from_vector,
+    scene_frequency_support,
+    scene_init_spatial,
     scene_photons_from_vector,
     scene_radiance_from_vector,
     scene_reflectance_chart,
     ie_reflectance_samples,
     scene_rotate,
+    scene_save_image,
     scene_show_image,
+    scene_spatial_support,
     scene_set,
 )
 from .sensor import (
@@ -693,12 +697,16 @@ __all__ = [
     "sceneIlluminantPattern",
     "sceneIlluminantSS",
     "sceneEnergyFromVector",
+    "sceneFrequencySupport",
+    "sceneInitSpatial",
     "sceneInterpolateW",
     "scenePhotonsFromVector",
     "sceneRadianceFromVector",
     "sceneReflectanceChart",
     "sceneRotate",
+    "sceneSaveImage",
     "sceneShowImage",
+    "sceneSpatialSupport",
     "sceneSet",
     "scene_combine",
     "scene_adjust_illuminant",
@@ -708,16 +716,20 @@ __all__ = [
     "scene_clear_data",
     "scene_create",
     "scene_energy_from_vector",
+    "scene_frequency_support",
     "scene_from_file",
     "scene_get",
     "scene_illuminant_pattern",
     "scene_illuminant_ss",
+    "scene_init_spatial",
     "scene_interpolate_w",
     "scene_photons_from_vector",
     "scene_radiance_from_vector",
     "scene_reflectance_chart",
     "scene_rotate",
+    "scene_save_image",
     "scene_show_image",
+    "scene_spatial_support",
     "scene_set",
     "mlAnalyzeArrayEtendue",
     "mlRadiance",
@@ -896,12 +908,16 @@ sceneIlluminantPattern = scene_illuminant_pattern
 sceneIlluminantSS = scene_illuminant_ss
 sceneInterpolateW = scene_interpolate_w
 sceneEnergyFromVector = scene_energy_from_vector
+sceneFrequencySupport = scene_frequency_support
+sceneInitSpatial = scene_init_spatial
 scenePhotonsFromVector = scene_photons_from_vector
 sceneRadianceFromVector = scene_radiance_from_vector
 sceneReflectanceChart = scene_reflectance_chart
 macbethReadReflectance = macbeth_read_reflectance
 sceneRotate = scene_rotate
+sceneSaveImage = scene_save_image
 sceneShowImage = scene_show_image
+sceneSpatialSupport = scene_spatial_support
 sceneSet = scene_set
 hdrRender = hdr_render
 sceneAdd = scene_add

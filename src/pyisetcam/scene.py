@@ -2922,6 +2922,56 @@ def scene_energy_from_vector(energy: Any, row: Any, col: Any) -> np.ndarray:
     return np.broadcast_to(spectral.reshape(1, 1, -1), (rows, cols, spectral.size)).copy()
 
 
+def scene_spatial_support(scene: Scene, units: Any = "meters") -> dict[str, np.ndarray]:
+    """Return the legacy MATLAB sceneSpatialSupport() structure."""
+
+    return {
+        axis: np.asarray(values, dtype=float).copy()
+        for axis, values in _scene_spatial_support_linear(scene, units).items()
+    }
+
+
+def scene_frequency_support(scene: Scene, units: Any = "cyclesPerDegree") -> dict[str, np.ndarray]:
+    """Return the legacy MATLAB sceneFrequencySupport() structure."""
+
+    return {
+        axis: np.asarray(values, dtype=float).copy()
+        for axis, values in _scene_frequency_support(scene, units).items()
+    }
+
+
+def scene_init_spatial(scene: Scene) -> Scene:
+    """Initialize missing scene FOV metadata to the MATLAB default 10 degrees."""
+
+    if scene.fields.get("fov_deg") is not None:
+        return scene
+    scene.fields["fov_deg"] = DEFAULT_FOV_DEG
+    return _update_scene_geometry(scene)
+
+
+def scene_save_image(
+    scene: Scene,
+    f_name: str | Path,
+    *,
+    render_flag: int = 1,
+    gam: float = 1.0,
+    asset_store: AssetStore | None = None,
+) -> str:
+    """Save a rendered scene image to an 8-bit PNG without opening a window."""
+
+    image = np.asarray(scene_show_image(scene, -abs(int(render_flag)), float(gam), asset_store=asset_store), dtype=float)
+    output_path = Path(f_name).expanduser()
+    if output_path.suffix == "":
+        output_path = output_path.with_suffix(".png")
+    if not output_path.is_absolute():
+        output_path = (Path.cwd() / output_path).resolve()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    payload = np.clip(np.round(np.clip(image, 0.0, 1.0) * 255.0), 0.0, 255.0).astype(np.uint8)
+    iio.imwrite(output_path, payload)
+    return str(output_path)
+
+
 def scene_show_image(
     scene: Scene,
     render_flag: int = 1,

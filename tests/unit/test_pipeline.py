@@ -124,18 +124,22 @@ from pyisetcam import (
     scene_combine,
     scene_create,
     sceneEnergyFromVector,
+    sceneFrequencySupport,
     scene_from_file,
     scene_adjust_luminance,
     scene_add,
     scene_get,
     scene_illuminant_ss,
+    sceneInitSpatial,
     scene_interpolate_w,
     scene_plot,
     scenePhotonsFromVector,
     sceneRadianceFromVector,
     scene_reflectance_chart,
     scene_rotate,
+    sceneSaveImage,
     scene_show_image,
+    sceneSpatialSupport,
     scene_set,
     signal_current,
     srgb2xyz,
@@ -11543,6 +11547,31 @@ def test_scene_demo_script_workflow(asset_store) -> None:
     assert scene_test_support["x"].shape == (scene_test_size[1],)
     assert np.allclose(luminance_line["data"], scene_test_luminance[-1, :], atol=1e-12, rtol=1e-12)
     assert np.asarray(radiance_line["data"], dtype=float).shape[-1] == scene_test_size[1]
+
+
+def test_scene_support_wrappers_match_scene_get(asset_store, tmp_path: Path) -> None:
+    scene = scene_create("freq orient pattern", asset_store=asset_store)
+
+    spatial = sceneSpatialSupport(scene, "mm")
+    expected_spatial = scene_get(scene, "spatial support linear", "mm")
+    assert np.allclose(np.asarray(spatial["x"], dtype=float), np.asarray(expected_spatial["x"], dtype=float))
+    assert np.allclose(np.asarray(spatial["y"], dtype=float), np.asarray(expected_spatial["y"], dtype=float))
+
+    frequency = sceneFrequencySupport(scene, "cpd")
+    expected_frequency = scene_get(scene, "frequency resolution", "cpd")
+    assert np.allclose(np.asarray(frequency["fx"], dtype=float), np.asarray(expected_frequency["fx"], dtype=float))
+    assert np.allclose(np.asarray(frequency["fy"], dtype=float), np.asarray(expected_frequency["fy"], dtype=float))
+
+    no_fov = scene.clone()
+    no_fov.fields.pop("fov_deg", None)
+    initialized = sceneInitSpatial(no_fov)
+    assert np.isclose(float(scene_get(initialized, "fov")), 10.0, atol=1e-12, rtol=0.0)
+
+    output = Path(sceneSaveImage(scene, tmp_path / "scene_support_demo"))
+    assert output.name == "scene_support_demo.png"
+    saved = iio.imread(output)
+    assert saved.shape[:2] == tuple(np.asarray(scene_get(scene, "size"), dtype=int))
+    assert saved.shape[2] == 3
 
 
 def test_run_python_case_supports_scene_demo_small_parity_case(asset_store) -> None:
