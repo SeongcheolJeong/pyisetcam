@@ -960,6 +960,10 @@ MATLAB alias for the same computed-payload reset path.
 That same image-processing surface now also exposes
 `image_color_balance(...)` / `imageColorBalance(...)`, matching the
 deprecated MATLAB alias for the same illuminant-correction stage.
+That same image-processing surface now also exposes
+`vcimage_srgb(...)` / `vcimageSRGB(...)`, matching the legacy MATLAB
+scene-to-sRGB convenience pipeline and accepting MATLAB-style
+`colorBalanceMethod` / `colorconversionmethod` IP parameter aliases.
 Scene/OI/IP ROI plotting helpers now expose the matching chromaticity and
 summary getters too: `sceneGet(..., 'chromaticity'/'roi chromaticity mean')`,
 `sceneGet(..., 'roi mean luminance')`, `oiGet(..., 'chromaticity'/'roi chromaticity mean')`,

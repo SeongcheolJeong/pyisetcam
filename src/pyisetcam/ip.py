@@ -17,9 +17,11 @@ from .color import internal_to_display_matrix, sensor_to_target_matrix, xyz_colo
 from .display import Display, display_create, display_get, display_set
 from .exceptions import UnsupportedOptionError
 from .metrics import chromaticity_xy, xyz_from_energy
-from .sensor import sensor_get
+from .optics import oi_compute, oi_create
+from .scene import scene_create
+from .sensor import sensor_compute, sensor_create, sensor_get, sensor_set
 from .session import track_ip_session_state, track_session_object
-from .types import ImageProcessor, Sensor, SessionContext
+from .types import ImageProcessor, OpticalImage, Sensor, SessionContext
 from .utils import (
     energy_to_quanta,
     image_linear_transform,
@@ -178,6 +180,41 @@ def ip_create(
     )
     ip.data["transforms"] = [None, None, None]
     return track_ip_session_state(session, _ensure_ip_state(ip))
+
+
+def vcimage_srgb(
+    scene_name: str = "macbethD65",
+    *,
+    oi: OpticalImage | None = None,
+    sensor: Sensor | None = None,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> ImageProcessor:
+    """Create a MATLAB-style sRGB IP object for a scene using default OI and sensor settings."""
+
+    store = _store(asset_store)
+    scene = scene_create(scene_name, asset_store=store, session=session)
+    working_oi = oi_create(asset_store=store, session=session) if oi is None else oi.clone()
+    working_oi = oi_compute(working_oi, scene, session=session)
+
+    working_sensor = sensor_create(asset_store=store, session=session) if sensor is None else sensor.clone()
+    working_sensor = sensor_set(working_sensor, "size", [256, 256])
+    working_sensor = sensor_set(working_sensor, "pixel size", np.array([3.0e-6, 3.0e-6], dtype=float))
+    wave = np.asarray(sensor_get(working_sensor, "wave"), dtype=float).reshape(-1)
+    working_sensor = sensor_set(
+        working_sensor,
+        "color filters",
+        np.asarray(ie_read_spectra("XYZ", wave, asset_store=store), dtype=float),
+    )
+    working_sensor = sensor_set(working_sensor, "filter names", ["x", "y", "z"])
+    working_sensor = sensor_compute(working_sensor, working_oi)
+
+    ip = ip_create(asset_store=store, session=session)
+    ip = ip_set(ip, "demosaicMethod", "Adaptive Laplacian", session=session)
+    ip = ip_set(ip, "colorBalanceMethod", "Gray World", session=session)
+    ip = ip_set(ip, "internalCS", "XYZ", session=session)
+    ip = ip_set(ip, "colorconversionmethod", "MCC Optimized", session=session)
+    return ip_compute(ip, working_sensor, asset_store=store, session=session)
 
 
 def _ie_bilinear(planes: np.ndarray, cfa_pattern: np.ndarray) -> np.ndarray:
@@ -1500,7 +1537,7 @@ def ip_set(
             ip.fields["sensor_correction"].get("method", "none")
         )
         return track_ip_session_state(session, ip)
-    if key in {"sensorconversionmethod", "conversionmethodsensor"}:
+    if key in {"sensorconversionmethod", "conversionmethodsensor", "colorconversionmethod"}:
         method = "none" if value in {None, ""} else str(value)
         ip.fields["conversion_method_sensor"] = method
         ip.fields["sensor_correction"]["method"] = method
@@ -1514,7 +1551,7 @@ def ip_set(
             ip.fields["illuminant_correction"].get("method", "none")
         )
         return track_ip_session_state(session, ip)
-    if key in {"illuminantcorrectionmethod", "correctionmethodilluminant"}:
+    if key in {"illuminantcorrectionmethod", "correctionmethodilluminant", "colorbalancemethod"}:
         method = "none" if value in {None, ""} else str(value).lower()
         ip.fields["illuminant_correction_method"] = method
         ip.fields["illuminant_correction"]["method"] = method
@@ -1615,3 +1652,4 @@ imageSensorConversion = image_sensor_conversion  # noqa: N816
 imageSensorCorrection = image_sensor_correction  # noqa: N816
 imageIlluminantCorrection = image_illuminant_correction  # noqa: N816
 imageColorBalance = image_color_balance  # noqa: N816
+vcimageSRGB = vcimage_srgb  # noqa: N816

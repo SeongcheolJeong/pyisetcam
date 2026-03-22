@@ -25,11 +25,17 @@ from pyisetcam import (
     ip_set,
     ipClearData,
     ipSaveImage,
+    oi_compute,
+    oi_create,
+    scene_create,
+    sensor_compute,
     vcimageClearData,
+    vcimageSRGB,
     sensor_create,
     sensor_get,
     sensor_set,
 )
+from pyisetcam.assets import ie_read_spectra
 from pyisetcam.color import sensor_to_target_matrix, xyz_color_matching
 from pyisetcam.utils import energy_to_quanta
 
@@ -622,6 +628,38 @@ def test_vcimage_clear_data_matches_ip_clear_data(asset_store) -> None:
     assert ip_get(cleared_by_vcimage, "transforms") == [None, None, None]
     assert ip_get(cleared_by_vcimage, "internal cs") == ip_get(cleared_by_ip, "internal cs")
     assert cleared_by_vcimage.data == cleared_by_ip.data
+
+
+def test_vcimage_srgb_matches_manual_pipeline(asset_store) -> None:
+    generated = vcimageSRGB(asset_store=asset_store)
+
+    scene = scene_create("macbethD65", asset_store=asset_store)
+    oi = oi_compute(oi_create(asset_store=asset_store), scene)
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "size", [256, 256])
+    sensor = sensor_set(sensor, "pixel size", np.array([3.0e-6, 3.0e-6], dtype=float))
+    wave = np.asarray(sensor_get(sensor, "wave"), dtype=float)
+    sensor = sensor_set(sensor, "color filters", ie_read_spectra("XYZ", wave, asset_store=asset_store))
+    sensor = sensor_set(sensor, "filter names", ["x", "y", "z"])
+    sensor = sensor_compute(sensor, oi)
+    manual = ip_create(asset_store=asset_store)
+    manual = ip_set(manual, "demosaicMethod", "Adaptive Laplacian")
+    manual = ip_set(manual, "colorBalanceMethod", "Gray World")
+    manual = ip_set(manual, "internalCS", "XYZ")
+    manual = ip_set(manual, "colorconversionmethod", "MCC Optimized")
+    manual = ip_compute(manual, sensor, asset_store=asset_store)
+
+    assert tuple(np.asarray(ip_get(generated, "result"), dtype=float).shape) == (256, 256, 3)
+    assert np.allclose(np.asarray(ip_get(generated, "result"), dtype=float), np.asarray(ip_get(manual, "result"), dtype=float))
+    assert np.allclose(np.asarray(ip_get(generated, "srgb"), dtype=float), np.asarray(ip_get(manual, "srgb"), dtype=float))
+    assert np.allclose(
+        np.asarray(ip_get(generated, "illuminant correction transform"), dtype=float),
+        np.asarray(ip_get(manual, "illuminant correction transform"), dtype=float),
+    )
+    assert np.allclose(
+        np.asarray(ip_get(generated, "sensor conversion matrix"), dtype=float),
+        np.asarray(ip_get(manual, "sensor conversion matrix"), dtype=float),
+    )
 
 
 def test_ip_save_image_writes_png_and_appends_extension(tmp_path, asset_store) -> None:

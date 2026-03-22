@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-22T14:12:42.223770+00:00",
+  "generated_at": "2026-03-22T14:36:34.755343+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-22T14:12:42.223770+00:00",
+    "generated_at": "2026-03-22T14:36:34.755343+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 74,
       "missing": 40,
       "out_of_scope": 101,
-      "parity": 295,
-      "partial": 911,
+      "parity": 296,
+      "partial": 910,
       "ported": 22
     },
     "kind_counts": {
@@ -22,18 +22,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 454,
+      "P0": 453,
       "P1": 406,
       "P2": 165,
-      "P3": 418
+      "P3": 419
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
         "out_of_scope": 0,
-        "parity": 0,
-        "partial": 0,
+        "parity": 1,
+        "partial": -1,
         "ported": 0
       },
       "kind_counts": {
@@ -45,10 +45,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": 0,
+        "P0": -1,
         "P1": 0,
         "P2": 0,
-        "P3": 0
+        "P3": 1
       }
     },
     "family_summary": {
@@ -276,8 +276,8 @@
       "imgproc": {
         "total": 59,
         "by_status": {
-          "parity": 19,
-          "partial": 40
+          "parity": 20,
+          "partial": 39
         },
         "by_kind": {
           "api": 59
@@ -1011,11 +1011,11 @@
     "top_open_families": [
       {
         "family": "imgproc",
-        "open_entries": 40,
+        "open_entries": 39,
         "highest_open_priority": "P0",
         "by_status": {
-          "parity": 19,
-          "partial": 40
+          "parity": 20,
+          "partial": 39
         }
       },
       {

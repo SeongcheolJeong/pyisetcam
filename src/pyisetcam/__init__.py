@@ -59,6 +59,7 @@ from .ip import (
     ip_get,
     ip_save_image,
     ip_set,
+    vcimage_srgb,
     vcimage_clear_data,
 )
 from .metrics import (
@@ -380,6 +381,8 @@ __all__ = [
     "ip_clear_data",
     "vcimageClearData",
     "vcimage_clear_data",
+    "vcimageSRGB",
+    "vcimage_srgb",
     "ipSaveImage",
     "ip_save_image",
     "imageEsserTransform",
@@ -997,6 +1000,7 @@ ipGet = ip_get
 ipSet = ip_set
 ipClearData = ip_clear_data
 vcimageClearData = vcimage_clear_data
+vcimageSRGB = vcimage_srgb
 ipSaveImage = ip_save_image
 imageMCCTransform = image_mcc_transform
 imageSensorTransform = image_sensor_transform
