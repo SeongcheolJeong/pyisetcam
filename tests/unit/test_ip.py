@@ -3,6 +3,7 @@ from __future__ import annotations
 import imageio.v3 as iio
 import numpy as np
 
+from pyisetcam.camera import _chart_rectangles, _chart_rects_data, _linear_srgb_to_xyz, _whole_chart_corner_points
 from pyisetcam import (
     camera_create,
     camera_mtf,
@@ -20,6 +21,7 @@ from pyisetcam import (
     imageSensorCorrection,
     imageSensorTransform,
     ie_reflectance_samples,
+    ipMCCXYZ,
     ipHDRWhite,
     ip_compute,
     ip_create,
@@ -33,6 +35,7 @@ from pyisetcam import (
     sensor_compute,
     vcimageClearData,
     vcimageISOMTF,
+    vcimageMCCXYZ,
     vcimageSRGB,
     vcimageVSNR,
     sensor_create,
@@ -41,7 +44,7 @@ from pyisetcam import (
 )
 from pyisetcam.assets import ie_read_spectra
 from pyisetcam.color import sensor_to_target_matrix, xyz_color_matching
-from pyisetcam.utils import energy_to_quanta
+from pyisetcam.utils import energy_to_quanta, rgb_to_xw_format, xw_to_rgb_format
 
 
 def test_ip_compute_supports_rgb_bayer_demosaic_methods(asset_store) -> None:
@@ -699,6 +702,39 @@ def test_vcimage_vsnr_replays_same_score_with_returned_rect(asset_store) -> None
     assert vsnr > 0.0
     assert np.array_equal(replay_rect, rect)
     assert np.isclose(replay_vsnr, vsnr, rtol=1.0e-12, atol=1.0e-12)
+
+
+def test_ip_mcc_xyz_matches_manual_srgb_and_custom_methods(asset_store) -> None:
+    ip = vcimageSRGB(asset_store=asset_store)
+    corners = _whole_chart_corner_points(*np.asarray(ip_get(ip, "size"), dtype=int)[:2])
+    _, m_locs, p_size = _chart_rectangles(corners, 4, 6, 0.3)
+    rgb_data = np.asarray(
+        _chart_rects_data(ip, m_locs, float(np.asarray(p_size, dtype=float).reshape(-1)[0]), full_data=False, data_type="result"),
+        dtype=float,
+    )
+    rgb_image = xw_to_rgb_format(rgb_data, 4, 6)
+    expected_srgb, _, _, _ = rgb_to_xw_format(np.asarray(_linear_srgb_to_xyz(rgb_image), dtype=float))
+    expected_custom, _, _, _ = rgb_to_xw_format(
+        np.asarray(imageRGB2XYZ(ip, rgb_image, asset_store=asset_store), dtype=float)
+    )
+
+    srgb_xyz, srgb_white, returned_corners = ipMCCXYZ(ip, "whole chart", asset_store=asset_store)
+    custom_xyz, custom_white, custom_corners = ipMCCXYZ(
+        ip, returned_corners, "custom", asset_store=asset_store
+    )
+    vc_xyz, vc_white, vc_corners = vcimageMCCXYZ(ip, returned_corners, "custom", asset_store=asset_store)
+
+    assert np.array_equal(returned_corners, corners)
+    assert np.array_equal(custom_corners, corners)
+    assert np.array_equal(vc_corners, corners)
+    assert srgb_xyz.shape == (24, 3)
+    assert custom_xyz.shape == (24, 3)
+    assert np.allclose(srgb_xyz, expected_srgb)
+    assert np.allclose(custom_xyz, expected_custom)
+    assert np.allclose(vc_xyz, custom_xyz)
+    assert np.allclose(srgb_white, srgb_xyz[3, :])
+    assert np.allclose(custom_white, custom_xyz[3, :])
+    assert np.allclose(vc_white, custom_white)
 
 
 def test_ip_save_image_writes_png_and_appends_extension(tmp_path, asset_store) -> None:

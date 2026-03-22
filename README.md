@@ -972,6 +972,11 @@ That same image-processing surface now also exposes
 `vcimage_vsnr(...)` / `vcimageVSNR(...)`, matching the legacy MATLAB
 ROI-based visual-SNR convenience wrapper on top of the current headless
 VSNR ROI computation.
+That same image-processing surface now also exposes
+`ip_mcc_xyz(...)` / `ipMCCXYZ(...)` and the legacy alias
+`vcimage_mcc_xyz(...)` / `vcimageMCCXYZ(...)`, matching the Macbeth chart
+patch-XYZ helper for both `sRGB` and display-model (`custom`) conversion
+paths.
 Scene/OI/IP ROI plotting helpers now expose the matching chromaticity and
 summary getters too: `sceneGet(..., 'chromaticity'/'roi chromaticity mean')`,
 `sceneGet(..., 'roi mean luminance')`, `oiGet(..., 'chromaticity'/'roi chromaticity mean')`,

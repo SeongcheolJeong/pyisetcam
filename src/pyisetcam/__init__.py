@@ -57,8 +57,10 @@ from .ip import (
     ip_compute,
     ip_create,
     ip_get,
+    ip_mcc_xyz,
     ip_save_image,
     ip_set,
+    vcimage_mcc_xyz,
     vcimage_iso_mtf,
     vcimage_srgb,
     vcimage_clear_data,
@@ -381,10 +383,14 @@ __all__ = [
     "ip_hdr_white",
     "ipClearData",
     "ip_clear_data",
+    "ipMCCXYZ",
+    "ip_mcc_xyz",
     "vcimageClearData",
     "vcimage_clear_data",
     "vcimageISOMTF",
     "vcimage_iso_mtf",
+    "vcimageMCCXYZ",
+    "vcimage_mcc_xyz",
     "vcimageSRGB",
     "vcimage_srgb",
     "vcimageVSNR",
@@ -1005,8 +1011,10 @@ ipCompute = ip_compute
 ipGet = ip_get
 ipSet = ip_set
 ipClearData = ip_clear_data
+ipMCCXYZ = ip_mcc_xyz
 vcimageClearData = vcimage_clear_data
 vcimageISOMTF = vcimage_iso_mtf
+vcimageMCCXYZ = vcimage_mcc_xyz
 vcimageSRGB = vcimage_srgb
 vcimageVSNR = vcimage_vsnr
 ipSaveImage = ip_save_image

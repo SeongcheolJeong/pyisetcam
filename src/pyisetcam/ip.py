@@ -258,6 +258,60 @@ def vcimage_vsnr(
     return float(_ip_vsnr(ip, rect_array, asset_store=_store(asset_store))), rect_array.copy()
 
 
+def ip_mcc_xyz(
+    ip: ImageProcessor,
+    corner_points: Any | None = None,
+    method: str = "sRGB",
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Estimate Macbeth patch XYZ values and white point from an image processor."""
+
+    from .camera import _chart_rectangles, _chart_rects_data, _linear_srgb_to_xyz, _whole_chart_corner_points
+
+    result_size = np.asarray(ip_get(ip, "size"), dtype=int).reshape(-1)
+    if result_size.size < 2:
+        raise ValueError("ipMCCXYZ requires a computed IP image.")
+
+    if corner_points is None or (
+        isinstance(corner_points, str) and param_format(corner_points) == "wholechart"
+    ):
+        corners = _whole_chart_corner_points(int(result_size[0]), int(result_size[1]))
+    else:
+        corners = np.asarray(corner_points, dtype=float).reshape(4, 2)
+
+    _, m_locs, p_size = _chart_rectangles(corners, 4, 6, 0.3)
+    rgb_data = np.asarray(
+        _chart_rects_data(ip, m_locs, float(np.asarray(p_size, dtype=float).reshape(-1)[0]), full_data=False, data_type="result"),
+        dtype=float,
+    )
+    rgb_image = xw_to_rgb_format(rgb_data, 4, 6)
+
+    normalized_method = param_format(method)
+    if normalized_method == "srgb":
+        macbeth_xyz = np.asarray(_linear_srgb_to_xyz(rgb_image), dtype=float)
+    elif normalized_method == "custom":
+        macbeth_xyz = np.asarray(image_rgb_to_xyz(ip, rgb_image, asset_store=asset_store), dtype=float)
+    else:
+        raise UnsupportedOptionError("ipMCCXYZ", method)
+
+    macbeth_xyz_xw, _, _, _ = rgb_to_xw_format(macbeth_xyz)
+    white_xyz = np.asarray(macbeth_xyz_xw[3, :], dtype=float).reshape(-1)
+    return macbeth_xyz_xw, white_xyz, np.asarray(corners, dtype=float)
+
+
+def vcimage_mcc_xyz(
+    ip: ImageProcessor,
+    corner_points: Any | None = None,
+    method: str = "sRGB",
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Legacy alias for `ipMCCXYZ`."""
+
+    return ip_mcc_xyz(ip, corner_points, method, asset_store=asset_store)
+
+
 def _ie_bilinear(planes: np.ndarray, cfa_pattern: np.ndarray) -> np.ndarray:
     rows, cols, nplanes = planes.shape
     extended = np.pad(planes, ((1, 1), (1, 1), (0, 0)), mode="reflect")
@@ -1696,3 +1750,5 @@ imageColorBalance = image_color_balance  # noqa: N816
 vcimageSRGB = vcimage_srgb  # noqa: N816
 vcimageISOMTF = vcimage_iso_mtf  # noqa: N816
 vcimageVSNR = vcimage_vsnr  # noqa: N816
+ipMCCXYZ = ip_mcc_xyz  # noqa: N816
+vcimageMCCXYZ = vcimage_mcc_xyz  # noqa: N816
