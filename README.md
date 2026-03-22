@@ -785,6 +785,12 @@ for `rt_block_center` / `rtBlockCenter`, `rt_extract_block` /
 OTF path, together with MATLAB-style `rtBlocksPerFieldHeight` control.
 The underlying filtered-block support helper is now public too as
 `rt_filtered_block_support` / `rtFilteredBlockSupport`.
+That same ray-trace helper wave now also includes
+`rt_root_path` / `rtRootPath` and the obsolete but still script-visible
+`rt_image_rotate` / `rtImageRotate`, and the migration audit now treats
+the upstream `rtBlockPartition.m` and `rtImagePSFFieldHeight.m` stubs as
+out of scope because they are diagnostic/nonfunctional rather than usable
+headless APIs.
 `rt_synthetic` / `rtSynthetic` is now available as a synthetic ray-trace
 optics generator for testing and controlled local experiments.
 That same ray-trace block now also has direct Octave parity on

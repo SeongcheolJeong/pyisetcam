@@ -125,6 +125,7 @@ from .optics import (
     rt_extract_block,
     rt_filtered_block_support,
     rt_geometry,
+    rt_image_rotate,
     rt_insert_block,
     rt_import_data,
     rt_otf,
@@ -135,6 +136,7 @@ from .optics import (
     rt_precompute_psf,
     rt_precompute_psf_apply,
     rt_ri_interp,
+    rt_root_path,
     rt_sample_heights,
     rt_synthetic,
     si_synthetic,
@@ -634,6 +636,7 @@ __all__ = [
     "rtExtractBlock",
     "rtFilteredBlockSupport",
     "rtGeometry",
+    "rtImageRotate",
     "rtImportData",
     "rtInsertBlock",
     "rtOTF",
@@ -650,6 +653,7 @@ __all__ = [
     "rt_extract_block",
     "rt_filtered_block_support",
     "rt_geometry",
+    "rt_image_rotate",
     "rt_import_data",
     "rt_insert_block",
     "rt_otf",
@@ -662,6 +666,8 @@ __all__ = [
     "rt_precompute_psf_apply",
     "rtSampleHeights",
     "rt_ri_interp",
+    "rtRootPath",
+    "rt_root_path",
     "rt_sample_heights",
     "rtSynthetic",
     "rt_synthetic",
@@ -946,6 +952,7 @@ rtDIInterp = rt_di_interp
 rtExtractBlock = rt_extract_block
 rtFilteredBlockSupport = rt_filtered_block_support
 rtGeometry = rt_geometry
+rtImageRotate = rt_image_rotate
 rtImportData = rt_import_data
 rtInsertBlock = rt_insert_block
 rtOTF = rt_otf
@@ -956,6 +963,7 @@ rtPSFInterp = rt_psf_interp
 rtPrecomputePSF = rt_precompute_psf
 rtPrecomputePSFApply = rt_precompute_psf_apply
 rtRIInterp = rt_ri_interp
+rtRootPath = rt_root_path
 rtSampleHeights = rt_sample_heights
 rtSynthetic = rt_synthetic
 siSynthetic = si_synthetic

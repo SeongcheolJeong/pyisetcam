@@ -222,6 +222,7 @@
 - An initial public `rt_otf` / `rtOTF` block-wise ray-trace path is now exposed too, along with MATLAB-style `rtBlocksPerFieldHeight` control.
 - The `rtOTF` filtered-block support helper is now public as `rt_filtered_block_support` / `rtFilteredBlockSupport`.
 - The shared MATLAB field-height lookup rule is now public as `ie_field_height_to_index` / `ieFieldHeight2Index`, and `rtChooseBlockSize` now uses it directly.
+- That same ray-trace helper surface now also includes `rt_root_path` / `rtRootPath` and the obsolete legacy helper `rt_image_rotate` / `rtImageRotate`; the audit now also classifies the upstream `rtBlockPartition.m` and `rtImagePSFFieldHeight.m` stubs as out of scope because they are diagnostic/nonfunctional rather than usable headless APIs.
 - `rt_synthetic` / `rtSynthetic` is now exposed as a synthetic ray-trace optics generator to support controlled testing of the expanding ray-trace compute surface.
 - That same ray-trace block now also has direct Octave parity on `s_opticsRTSynthetic.m`, comparing the synthetic geometry and relative-illumination curves, normalized 550 nm center/edge PSF slices, and the resulting point-array OI summary outputs from the increasing-Gaussian synthetic ray-trace workflow.
 - That same ray-trace block now also has direct Octave parity on `s_opticsRTPSFView.m`, comparing the sampled-PSF view metadata, normalized 550 nm field-height and angle-sweep PSF rows, their stable blur-width summaries, and the canonicalized center/edge `rtPlot(..., 'psf', ...)` row profiles from the upstream PSF-view workflow.

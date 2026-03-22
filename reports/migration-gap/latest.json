@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-22T19:03:02.800180+00:00",
+  "generated_at": "2026-03-22T19:38:17.305401+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-22T19:03:02.800180+00:00",
+    "generated_at": "2026-03-22T19:38:17.305401+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 74,
+      "headless_only": 73,
       "missing": 40,
-      "out_of_scope": 103,
-      "parity": 319,
-      "partial": 878,
+      "out_of_scope": 105,
+      "parity": 320,
+      "partial": 876,
       "ported": 29
     },
     "kind_counts": {
@@ -22,18 +22,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 421,
+      "P0": 419,
       "P1": 406,
-      "P2": 165,
-      "P3": 451
+      "P2": 164,
+      "P3": 454
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": 0,
+        "headless_only": -1,
         "missing": 0,
-        "out_of_scope": 0,
-        "parity": 3,
-        "partial": -3,
+        "out_of_scope": 2,
+        "parity": 1,
+        "partial": -2,
         "ported": 0
       },
       "kind_counts": {
@@ -45,9 +45,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -3,
+        "P0": -2,
         "P1": 0,
-        "P2": 0,
+        "P2": -1,
         "P3": 3
       }
     },
@@ -477,7 +477,8 @@
       "opticalimage/raytrace": {
         "total": 28,
         "by_status": {
-          "partial": 28
+          "out_of_scope": 2,
+          "partial": 26
         },
         "by_kind": {
           "api": 28
@@ -963,9 +964,9 @@
       "utility/image": {
         "total": 46,
         "by_status": {
-          "headless_only": 2,
+          "headless_only": 1,
           "out_of_scope": 2,
-          "parity": 5,
+          "parity": 6,
           "partial": 37
         },
         "by_kind": {
@@ -1012,14 +1013,6 @@
     },
     "top_open_families": [
       {
-        "family": "opticalimage/raytrace",
-        "open_entries": 28,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "partial": 28
-        }
-      },
-      {
         "family": "sensor",
         "open_entries": 28,
         "highest_open_priority": "P0",
@@ -1059,6 +1052,15 @@
           "parity": 24,
           "partial": 26,
           "ported": 7
+        }
+      },
+      {
+        "family": "opticalimage/raytrace",
+        "open_entries": 26,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "out_of_scope": 2,
+          "partial": 26
         }
       },
       {

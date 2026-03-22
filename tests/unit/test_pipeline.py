@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 import numpy as np
 import pytest
 import pyisetcam.optics as optics_module
@@ -95,6 +96,7 @@ from pyisetcam import (
     rt_filtered_block_support,
     rt_file_names,
     rt_geometry,
+    rtImageRotate,
     rt_import_data,
     rt_insert_block,
     rt_otf,
@@ -104,6 +106,7 @@ from pyisetcam import (
     rt_precompute_psf,
     rt_precompute_psf_apply,
     rt_ri_interp,
+    rtRootPath,
     rt_sample_heights,
     rt_synthetic,
     rgb_to_xw_format,
@@ -1874,6 +1877,30 @@ def test_rt_file_names_matches_zemax_naming(tmp_path) -> None:
     assert cra_name.endswith("CookeLens_CRA_.dat")
     assert psf_name_list.shape == (2, 2)
     assert str(psf_name_list[1, 1]).endswith("CookeLens_2D_PSF_Fld2_Wave2.dat")
+
+
+def test_rt_root_path_points_at_upstream_raytrace_snapshot() -> None:
+    root = Path(rtRootPath())
+
+    assert root.name == "raytrace"
+    assert (root / "rtImageRotate.m").is_file()
+
+
+def test_rt_image_rotate_matches_legacy_zero_border_behavior() -> None:
+    source = np.arange(1.0, 26.0, dtype=float).reshape(5, 5)
+    rotated = rtImageRotate(source, 0.0)
+    expected = np.zeros_like(source)
+    expected[1:4, 1:4] = source[1:4, 1:4]
+
+    center = np.zeros((5, 5), dtype=float)
+    center[2, 2] = 1.0
+    rotated_center = rtImageRotate(center, 37.0)
+
+    assert np.allclose(rotated, expected)
+    assert np.isclose(float(rotated_center[2, 2]), 1.0)
+    assert np.isclose(float(rotated_center[1, 2]), float(rotated_center[2, 1]))
+    assert np.isclose(float(rotated_center[1, 2]), float(rotated_center[2, 3]))
+    assert np.isclose(float(rotated_center[1, 2]), float(rotated_center[3, 2]))
 
 
 def test_rt_file_names_normalizes_windows_style_lens_paths(tmp_path) -> None:

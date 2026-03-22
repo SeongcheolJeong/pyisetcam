@@ -189,6 +189,16 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "GUI keypress handlers remain outside the headless migration target.",
         "module_hits": [],
     },
+    "opticalimage/raytrace/rtBlockPartition.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a script-style diagnostic prototype with display side effects rather than a reusable headless API surface.",
+        "module_hits": [],
+    },
+    "opticalimage/raytrace/rtImagePSFFieldHeight.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is explicitly marked as not functional yet, so it remains outside the headless migration target.",
+        "module_hits": [],
+    },
 }
 
 

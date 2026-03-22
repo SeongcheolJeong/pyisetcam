@@ -16,7 +16,7 @@ from scipy.signal import fftconvolve
 from scipy.special import jv
 from skimage.draw import polygon2mask
 
-from .assets import AssetStore
+from .assets import AssetStore, ensure_upstream_snapshot
 from .exceptions import UnsupportedOptionError
 from .metrics import chromaticity_xy, xyz_from_energy
 from .scene import scene_get
@@ -1912,6 +1912,38 @@ def rt_file_names(
                 f"{base}_2D_PSF_Fld{height_index + 1:d}_Wave{wave_index + 1:d}.dat"
             )
     return di_name, ri_name, psf_name_list, cra_name
+
+
+def rt_root_path() -> str:
+    return str(ensure_upstream_snapshot() / "opticalimage" / "raytrace")
+
+
+def rt_image_rotate(isource: Any, theta: float) -> np.ndarray:
+    source = np.asarray(isource, dtype=float)
+    if source.ndim != 2:
+        raise ValueError("rtImageRotate expects a 2D source image.")
+
+    rows, cols = source.shape
+    row_center = (rows + 1.0) / 2.0
+    col_center = (cols + 1.0) / 2.0
+    theta_rad = np.deg2rad(float(theta))
+    cos_theta = float(np.cos(theta_rad))
+    sin_theta = float(np.sin(theta_rad))
+
+    rotated_image = np.zeros((rows, cols), dtype=float)
+    for row_index in range(1, rows + 1):
+        for col_index in range(1, cols + 1):
+            source_row = cos_theta * (row_index - row_center) + sin_theta * (col_index - col_center) + row_center
+            source_col = -sin_theta * (row_index - row_center) + cos_theta * (col_index - col_center) + col_center
+            if 1.0 < source_row < rows and 1.0 < source_col < cols:
+                row_floor = int(np.floor(source_row))
+                col_floor = int(np.floor(source_col))
+                row_alpha = source_row - row_floor
+                col_alpha = source_col - col_floor
+                top = source[row_floor - 1, col_floor - 1] * (1.0 - col_alpha) + source[row_floor - 1, col_floor] * col_alpha
+                bottom = source[row_floor, col_floor - 1] * (1.0 - col_alpha) + source[row_floor, col_floor] * col_alpha
+                rotated_image[row_index - 1, col_index - 1] = (1.0 - row_alpha) * top + row_alpha * bottom
+    return rotated_image
 
 
 def zemax_read_header(fname: str | Path) -> tuple[float, float]:
