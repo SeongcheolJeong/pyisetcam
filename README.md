@@ -292,7 +292,10 @@ includes headless `sensor_clear_data(...)` / `sensorClearData(...)`,
 matching the direct MATLAB computed-payload reset path for sensor
 objects, plus headless `sensor_show_image(...)` / `sensorShowImage(...)`
 as a direct wrapper over the existing sensor RGB render path using the
-MATLAB default `dv or volts` selection. That same Phase 1 sensor wave now also includes
+MATLAB default `dv or volts` selection, plus headless
+`sensor_save_image(...)` / `sensorSaveImage(...)` for the direct MATLAB
+PNG-export helper on top of the same rendered sensor RGB path. That same
+Phase 1 sensor wave now also includes
 public `sceneRotate(...)` / `oiCrop(...)` support for the deterministic
 rolling-shutter assembly path from `s_sensorRollingShutter.m`, with
 curated Octave parity on the per-frame mean-voltage trace, final

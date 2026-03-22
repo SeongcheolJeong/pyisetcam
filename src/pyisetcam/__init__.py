@@ -237,6 +237,7 @@ from .sensor import (
     sensor_get,
     sensor_set,
     sensor_set_size_to_fov,
+    sensor_save_image,
     sensor_show_image,
 )
 from .types import Camera, Display, ImageProcessor, OpticalImage, Scene, Sensor, SessionContext
@@ -668,6 +669,7 @@ __all__ = [
     "sensorSNR",
     "sensorSet",
     "sensorSetSizeToFOV",
+    "sensorSaveImage",
     "sensorShowImage",
     "sensor_compute",
     "sensor_compute_array",
@@ -685,6 +687,7 @@ __all__ = [
     "pixelSNR",
     "sensor_set",
     "sensor_set_size_to_fov",
+    "sensor_save_image",
     "sensor_show_image",
     "vcAddAndSelectObject",
     "vcAddObject",
@@ -885,6 +888,7 @@ pixelSNRluxsec = pixel_snr_luxsec
 pixelVperLuxSec = pixel_v_per_lux_sec
 sensorSet = sensor_set
 sensorSetSizeToFOV = sensor_set_size_to_fov
+sensorSaveImage = sensor_save_image
 sensorShowImage = sensor_show_image
 
 metricsSPD = metrics_spd

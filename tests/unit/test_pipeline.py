@@ -150,6 +150,7 @@ from pyisetcam import (
     sensor_formats,
     sensor_get,
     sensor_plot,
+    sensorSaveImage,
     sensorShowImage,
     sensor_set_size_to_fov,
     sensor_set,
@@ -4604,6 +4605,20 @@ def test_sensor_show_image_matches_sensor_rgb_rendering(asset_store) -> None:
     assert rendered is not None
     assert np.allclose(np.asarray(rendered, dtype=float), np.asarray(expected, dtype=float))
     assert np.asarray(rendered, dtype=float).shape == (4, 4, 3)
+
+
+def test_sensor_save_image_appends_png_and_normalizes_rendering(asset_store, tmp_path) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    volts = np.arange(1, 17, dtype=float).reshape(4, 4) / 16.0
+    sensor = sensor_set(sensor, "volts", volts)
+
+    saved_path = sensorSaveImage(sensor, tmp_path / "sensor_capture", "volts", 1.0, False)
+    rendered = np.asarray(sensor_get(sensor, "rgb", "volts", 1.0, False), dtype=float)
+    expected = np.clip(rendered / np.max(rendered), 0.0, 1.0)
+    written = np.asarray(iio.imread(saved_path), dtype=float) / 255.0
+
+    assert saved_path.endswith(".png")
+    assert np.allclose(written, expected, atol=1.0 / 255.0)
 
 
 def test_sensor_set_etendue_scales_noiseless_response(asset_store) -> None:

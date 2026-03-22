@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import copy
+from pathlib import Path
 from typing import Any
 
+import imageio.v3 as iio
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 from scipy.ndimage import gaussian_filter, map_coordinates
@@ -2406,6 +2408,36 @@ def sensor_show_image(
     return _sensor_rgb_image(sensor, "dv or volts", gam, scale_max)
 
 
+def sensor_save_image(
+    sensor: Sensor,
+    full_name: str | Path,
+    data_type: str = "volts",
+    gam: float = 1.0,
+    scale_max: bool = True,
+) -> str:
+    """Save the current sensor rendering to an 8-bit PNG file."""
+
+    image = sensor_get(sensor, "rgb", data_type, gam, scale_max)
+    if image is None:
+        raise ValueError("Sensor has no computed image data to save.")
+
+    rgb = np.clip(np.asarray(image, dtype=float), 0.0, 1.0)
+    max_value = float(np.max(rgb))
+    if max_value > 0.0:
+        rgb = rgb / max_value
+
+    output_path = Path(full_name).expanduser()
+    if output_path.suffix == "":
+        output_path = output_path.with_suffix(".png")
+    if not output_path.is_absolute():
+        output_path = (Path.cwd() / output_path).resolve()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    payload = np.clip(np.round(rgb * 255.0), 0.0, 255.0).astype(np.uint8)
+    iio.imwrite(output_path, payload)
+    return str(output_path)
+
+
 def _sensor_chromaticity(sensor: Sensor, rect_or_locs: Any = None, mode: str = "vec") -> np.ndarray | None:
     from .ip import _sensor_space
 
@@ -4539,3 +4571,4 @@ sensorDR = sensor_dr
 sensorCCM = sensor_ccm
 sensorClearData = sensor_clear_data
 sensorShowImage = sensor_show_image
+sensorSaveImage = sensor_save_image
