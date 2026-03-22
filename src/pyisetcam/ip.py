@@ -46,6 +46,19 @@ def _identity_transform() -> np.ndarray:
     return np.eye(3, dtype=float)
 
 
+def _as_channel_image(data: np.ndarray) -> tuple[np.ndarray, bool]:
+    array = np.asarray(data, dtype=float)
+    if array.ndim == 2:
+        return array[:, :, np.newaxis], True
+    return array, False
+
+
+def _restore_channel_image(data: np.ndarray, squeeze_channel: bool) -> np.ndarray:
+    if squeeze_channel and data.ndim == 3 and data.shape[2] == 1:
+        return data[:, :, 0]
+    return data
+
+
 def _ensure_ip_state(ip: ImageProcessor) -> ImageProcessor:
     wave = np.asarray(
         ip.fields.get("wave", np.arange(400.0, 701.0, 10.0, dtype=float)), dtype=float
@@ -534,6 +547,70 @@ def demosaic(ip: ImageProcessor, sensor: Sensor) -> np.ndarray:
     if sensor_data is None:
         raise ValueError("Sensor has no computed volts.")
     return _sensor_space_from_data(sensor, sensor_data, method)
+
+
+def image_sensor_conversion(
+    sensor: Sensor,
+    cmf: np.ndarray | None = None,
+    surfaces: np.ndarray | str | None = None,
+    illuminant: np.ndarray | str | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Return the linear transform from sensor catch to the desired CMF space."""
+
+    wave = np.asarray(sensor_get(sensor, "wave"), dtype=float).reshape(-1)
+    store = _store(asset_store)
+
+    if cmf is None:
+        cmf_array = np.asarray(ie_read_spectra("XYZ.mat", wave, asset_store=store), dtype=float)
+    else:
+        cmf_array = np.asarray(cmf, dtype=float)
+    if surfaces is None:
+        raise ValueError("Surface reflectances are required.")
+    if illuminant is None:
+        raise ValueError("Illuminant data are required.")
+
+    if isinstance(surfaces, str):
+        _, reflectances = store.load_reflectances(surfaces, wave_nm=wave)
+        surfaces_array = np.asarray(reflectances, dtype=float)
+    else:
+        surfaces_array = np.asarray(surfaces, dtype=float)
+    if isinstance(illuminant, str):
+        _, illuminant_energy = store.load_illuminant(illuminant, wave_nm=wave)
+        illuminant_vector = np.asarray(illuminant_energy, dtype=float).reshape(-1)
+    else:
+        illuminant_vector = np.asarray(illuminant, dtype=float).reshape(-1)
+
+    spectral_qe = np.asarray(sensor_get(sensor, "spectral qe"), dtype=float)
+    weighted_surfaces = illuminant_vector.reshape(-1, 1) * surfaces_array
+    actual = spectral_qe.T @ weighted_surfaces
+    desired = cmf_array.T @ weighted_surfaces
+    transform = desired @ np.linalg.pinv(actual)
+    white_cmf = cmf_array.T @ illuminant_vector
+    return transform, actual, desired, white_cmf
+
+
+def image_sensor_correction(
+    img: np.ndarray,
+    ip: ImageProcessor,
+    sensor: Sensor,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[np.ndarray, ImageProcessor, np.ndarray]:
+    """Convert sensor-space image data into the image processor internal space."""
+
+    corrected_ip = _ensure_ip_state(ip.clone())
+    sensor_space, squeeze_channel = _as_channel_image(np.asarray(img, dtype=float))
+    internal, sensor_transform = _sensor_to_internal(
+        sensor_space, corrected_ip, sensor, asset_store=_store(asset_store)
+    )
+    corrected_ip.data["sensorspace"] = np.asarray(sensor_space, dtype=float)
+    corrected_ip.data["xyz"] = np.asarray(internal, dtype=float)
+    corrected_ip.data["ics"] = np.asarray(internal, dtype=float)
+    corrected_ip.data["transforms"][0] = np.asarray(sensor_transform, dtype=float)
+    corrected_ip.fields["sensor_conversion_matrix"] = np.asarray(sensor_transform, dtype=float)
+    return _restore_channel_image(internal, squeeze_channel), corrected_ip, sensor_transform
 
 
 def _sensor_to_internal(
@@ -1148,5 +1225,7 @@ def ip_set(
     raise KeyError(f"Unsupported ipSet parameter: {parameter}")
 
 
-imageDataXYZ = image_data_xyz
-Demosaic = demosaic
+imageDataXYZ = image_data_xyz  # noqa: N816
+Demosaic = demosaic  # noqa: N816
+imageSensorConversion = image_sensor_conversion  # noqa: N816
+imageSensorCorrection = image_sensor_correction  # noqa: N816

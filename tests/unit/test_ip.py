@@ -2,7 +2,18 @@ from __future__ import annotations
 
 import numpy as np
 
-from pyisetcam import demosaic, ip_compute, ip_create, ip_get, ip_set, sensor_create, sensor_set
+from pyisetcam import (
+    demosaic,
+    imageSensorConversion,
+    imageSensorCorrection,
+    ip_compute,
+    ip_create,
+    ip_get,
+    ip_set,
+    sensor_create,
+    sensor_get,
+    sensor_set,
+)
 
 
 def test_ip_compute_supports_rgb_bayer_demosaic_methods(asset_store) -> None:
@@ -256,3 +267,84 @@ def test_demosaic_returns_monochrome_sensor_plane(asset_store) -> None:
 
     assert result.shape == (3, 4, 1)
     assert np.allclose(result[:, :, 0], volts)
+
+
+def test_image_sensor_conversion_matches_direct_formula(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    wave = np.asarray(sensor_get(sensor, "wave"), dtype=float)
+    spectral_qe = np.asarray(sensor_get(sensor, "spectral qe"), dtype=float)
+
+    cmf = np.column_stack(
+        (
+            np.linspace(0.2, 0.7, wave.size),
+            np.linspace(0.3, 0.9, wave.size),
+            np.linspace(0.8, 0.1, wave.size),
+        )
+    )
+    surfaces = np.column_stack(
+        (
+            np.linspace(0.1, 0.9, wave.size),
+            np.linspace(0.9, 0.2, wave.size),
+            np.linspace(0.3, 0.6, wave.size),
+        )
+    )
+    illuminant = np.linspace(1.0, 2.0, wave.size)
+
+    transform, actual, desired, white_cmf = imageSensorConversion(
+        sensor,
+        cmf,
+        surfaces,
+        illuminant,
+        asset_store=asset_store,
+    )
+
+    weighted_surfaces = illuminant.reshape(-1, 1) * surfaces
+    expected_actual = spectral_qe.T @ weighted_surfaces
+    expected_desired = cmf.T @ weighted_surfaces
+    expected_transform = expected_desired @ np.linalg.pinv(expected_actual)
+    expected_white_cmf = cmf.T @ illuminant
+
+    assert np.allclose(actual, expected_actual)
+    assert np.allclose(desired, expected_desired)
+    assert np.allclose(transform, expected_transform)
+    assert np.allclose(white_cmf, expected_white_cmf)
+
+
+def test_image_sensor_correction_matches_ip_compute_sensor_transform(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "volts", np.arange(1, 37, dtype=float).reshape(6, 6))
+    ip = ip_set(ip_create(asset_store=asset_store), "conversion method sensor", "mcc optimized")
+
+    sensor_space = demosaic(ip, sensor)
+    corrected, corrected_ip, sensor_transform = imageSensorCorrection(
+        sensor_space,
+        ip,
+        sensor,
+        asset_store=asset_store,
+    )
+    computed = ip_compute(ip, sensor, asset_store=asset_store)
+
+    assert np.allclose(corrected, np.asarray(ip_get(computed, "xyz"), dtype=float))
+    assert np.allclose(
+        sensor_transform,
+        np.asarray(ip_get(computed, "conversion transform sensor"), dtype=float),
+    )
+    assert np.allclose(np.asarray(ip_get(corrected_ip, "xyz"), dtype=float), corrected)
+
+
+def test_image_sensor_correction_preserves_2d_monochrome_input(asset_store) -> None:
+    sensor = sensor_create("monochrome", asset_store=asset_store)
+    img = np.arange(1, 13, dtype=float).reshape(3, 4)
+    ip = ip_set(ip_create(asset_store=asset_store), "conversion method sensor", "none")
+
+    corrected, corrected_ip, sensor_transform = imageSensorCorrection(
+        img,
+        ip,
+        sensor,
+        asset_store=asset_store,
+    )
+
+    assert corrected.shape == img.shape
+    assert np.allclose(corrected, img / np.max(img))
+    assert sensor_transform.shape == (1, 1)
+    assert np.allclose(np.asarray(ip_get(corrected_ip, "sensorspace"), dtype=float)[:, :, 0], img)

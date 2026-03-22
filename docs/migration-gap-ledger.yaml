@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-22T06:56:17.321078+00:00",
+  "generated_at": "2026-03-22T07:27:49.626668+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -7,8 +7,8 @@
       "headless_only": 74,
       "missing": 40,
       "out_of_scope": 101,
-      "parity": 273,
-      "partial": 933,
+      "parity": 275,
+      "partial": 931,
       "ported": 22
     },
     "kind_counts": {
@@ -20,18 +20,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 474,
+      "P0": 472,
       "P1": 408,
       "P2": 165,
-      "P3": 396
+      "P3": 398
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
         "out_of_scope": 0,
-        "parity": 0,
-        "partial": 0,
+        "parity": 2,
+        "partial": -2,
         "ported": 0
       },
       "kind_counts": {
@@ -43,10 +43,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": 0,
+        "P0": -2,
         "P1": 0,
         "P2": 0,
-        "P3": 0
+        "P3": 2
       }
     },
     "family_summary": {
@@ -274,8 +274,8 @@
       "imgproc": {
         "total": 59,
         "by_status": {
-          "parity": 6,
-          "partial": 52,
+          "parity": 8,
+          "partial": 50,
           "ported": 1
         },
         "by_kind": {
@@ -1009,11 +1009,11 @@
     "top_open_families": [
       {
         "family": "imgproc",
-        "open_entries": 52,
+        "open_entries": 50,
         "highest_open_priority": "P0",
         "by_status": {
-          "parity": 6,
-          "partial": 52,
+          "parity": 8,
+          "partial": 50,
           "ported": 1
         }
       },
@@ -4154,27 +4154,31 @@
       "upstream_path": "imgproc/imageSensorConversion.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.ip",
+      "status": "parity",
+      "python_surface": "pyisetcam.ip, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/unit/test_ip.py"
+        "tests/unit/test_ip.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/imageSensorCorrection.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.ip",
+      "status": "parity",
+      "python_surface": "pyisetcam.ip, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/unit/test_ip.py"
+        "tests/unit/test_ip.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/imageSensorTransform.m",
@@ -18776,7 +18780,7 @@
       "family": "data/images",
       "kind": "asset",
       "status": "partial",
-      "python_surface": "pyisetcam.parity, pyisetcam.plotting, pyisetcam.scene, pyisetcam.sensor",
+      "python_surface": "pyisetcam.__init__, pyisetcam.ip, pyisetcam.parity, pyisetcam.plotting",
       "tests": [],
       "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
       "priority": "P2"

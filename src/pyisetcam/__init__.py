@@ -38,7 +38,16 @@ from .fileio import (
 )
 from .illuminant import illuminant_create, illuminant_get, illuminant_set
 from .iso import ISO12233, ISOFindSlantedBar, edge_to_mtf, ieCXcorr, ieISO12233, ie_cxcorr, ie_iso12233, iso12233, iso_find_slanted_bar
-from .ip import demosaic, image_data_xyz, ip_compute, ip_create, ip_get, ip_set
+from .ip import (
+    demosaic,
+    image_data_xyz,
+    image_sensor_conversion,
+    image_sensor_correction,
+    ip_compute,
+    ip_create,
+    ip_get,
+    ip_set,
+)
 from .metrics import (
     ISOAcutance,
     cct_from_uv,
@@ -327,6 +336,10 @@ __all__ = [
     "ieInitSession",
     "imageDataXYZ",
     "image_data_xyz",
+    "imageSensorConversion",
+    "image_sensor_conversion",
+    "imageSensorCorrection",
+    "image_sensor_correction",
     "demosaic",
     "Demosaic",
     "imageLinearTransform",
@@ -913,6 +926,8 @@ ipCompute = ip_compute
 ipGet = ip_get
 ipSet = ip_set
 imageDataXYZ = image_data_xyz
+imageSensorConversion = image_sensor_conversion
+imageSensorCorrection = image_sensor_correction
 Demosaic = demosaic
 
 cameraCreate = camera_create
