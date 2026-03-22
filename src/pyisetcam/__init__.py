@@ -41,6 +41,7 @@ from .iso import ISO12233, ISOFindSlantedBar, edge_to_mtf, ieCXcorr, ieISO12233,
 from .ip import (
     demosaic,
     display_render,
+    image_color_balance,
     ie_internal_to_display,
     image_data_xyz,
     image_distort,
@@ -365,6 +366,8 @@ __all__ = [
     "image_rgb_to_xyz",
     "imageIlluminantCorrection",
     "image_illuminant_correction",
+    "imageColorBalance",
+    "image_color_balance",
     "imageSensorConversion",
     "image_sensor_conversion",
     "imageSensorCorrection",
@@ -1005,6 +1008,7 @@ imageDataXYZ = image_data_xyz
 displayRender = display_render
 imageRGB2XYZ = image_rgb_to_xyz
 imageIlluminantCorrection = image_illuminant_correction
+imageColorBalance = image_color_balance
 imageSensorConversion = image_sensor_conversion
 imageSensorCorrection = image_sensor_correction
 Demosaic = demosaic

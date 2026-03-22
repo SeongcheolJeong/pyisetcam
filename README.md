@@ -957,6 +957,9 @@ computed-payload reset path and the `ipSet(..., 'data', [])` behavior.
 That same image-processing surface now also exposes
 `vcimage_clear_data(...)` / `vcimageClearData(...)`, matching the legacy
 MATLAB alias for the same computed-payload reset path.
+That same image-processing surface now also exposes
+`image_color_balance(...)` / `imageColorBalance(...)`, matching the
+deprecated MATLAB alias for the same illuminant-correction stage.
 Scene/OI/IP ROI plotting helpers now expose the matching chromaticity and
 summary getters too: `sceneGet(..., 'chromaticity'/'roi chromaticity mean')`,
 `sceneGet(..., 'roi mean luminance')`, `oiGet(..., 'chromaticity'/'roi chromaticity mean')`,

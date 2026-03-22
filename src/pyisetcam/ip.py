@@ -750,6 +750,17 @@ def image_illuminant_correction(
     return _restore_channel_image(corrected, squeeze_channel), corrected_ip, illuminant_transform
 
 
+def image_color_balance(
+    img: np.ndarray,
+    ip: ImageProcessor,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[np.ndarray, ImageProcessor, np.ndarray]:
+    """Deprecated MATLAB alias for `imageIlluminantCorrection`."""
+
+    return image_illuminant_correction(img, ip, asset_store=asset_store)
+
+
 def image_rgb_to_xyz(
     ip: ImageProcessor,
     rgb: np.ndarray,
@@ -1603,3 +1614,4 @@ Demosaic = demosaic  # noqa: N816
 imageSensorConversion = image_sensor_conversion  # noqa: N816
 imageSensorCorrection = image_sensor_correction  # noqa: N816
 imageIlluminantCorrection = image_illuminant_correction  # noqa: N816
+imageColorBalance = image_color_balance  # noqa: N816

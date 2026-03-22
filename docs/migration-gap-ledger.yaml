@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-22T13:52:10.107665+00:00",
+  "generated_at": "2026-03-22T14:12:42.223770+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -30,8 +30,8 @@
         "headless_only": 0,
         "missing": 0,
         "out_of_scope": 0,
-        "parity": 1,
-        "partial": -1,
+        "parity": 0,
+        "partial": 0,
         "ported": 0
       },
       "kind_counts": {
@@ -43,10 +43,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -1,
+        "P0": 0,
         "P1": 0,
         "P2": 0,
-        "P3": 1
+        "P3": 0
       }
     },
     "family_summary": {

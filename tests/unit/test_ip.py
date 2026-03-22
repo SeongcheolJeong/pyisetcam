@@ -7,6 +7,7 @@ from pyisetcam import (
     demosaic,
     displayRender,
     ieInternal2Display,
+    imageColorBalance,
     imageDataXYZ,
     imageDistort,
     imageEsserTransform,
@@ -435,6 +436,38 @@ def test_image_illuminant_correction_preserves_2d_input(asset_store) -> None:
     assert np.allclose(corrected, img)
     assert illuminant_transform.shape == (1, 1)
     assert np.allclose(np.asarray(ip_get(corrected_ip, "ics"), dtype=float)[:, :, 0], img)
+
+
+def test_image_color_balance_matches_image_illuminant_correction(asset_store) -> None:
+    img = np.array(
+        [
+            [[0.2, 0.4, 0.6], [0.3, 0.5, 0.7]],
+            [[0.8, 0.1, 0.2], [0.9, 0.3, 0.4]],
+        ],
+        dtype=float,
+    )
+    transform = np.diag([1.2, 0.8, 1.1])
+    ip = ip_set(ip_create(asset_store=asset_store), "correction method illuminant", "manual")
+    ip = ip_set(ip, "illuminant correction transform", transform)
+
+    balanced, balanced_ip, balanced_transform = imageColorBalance(
+        img,
+        ip,
+        asset_store=asset_store,
+    )
+    corrected, corrected_ip, corrected_transform = imageIlluminantCorrection(
+        img,
+        ip,
+        asset_store=asset_store,
+    )
+
+    assert np.allclose(balanced, corrected)
+    assert np.allclose(balanced_transform, corrected_transform)
+    assert np.allclose(np.asarray(ip_get(balanced_ip, "ics"), dtype=float), corrected)
+    assert np.allclose(
+        np.asarray(ip_get(balanced_ip, "illuminant correction transform"), dtype=float),
+        np.asarray(ip_get(corrected_ip, "illuminant correction transform"), dtype=float),
+    )
 
 
 def test_image_rgb_to_xyz_preserves_rgb_format(asset_store) -> None:
