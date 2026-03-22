@@ -146,11 +146,13 @@ from pyisetcam import (
     scene_from_file,
     scene_adjust_luminance,
     scene_add,
+    sceneCrop,
     scene_get,
     scene_illuminant_ss,
     sceneInitSpatial,
     scene_interpolate_w,
     scene_plot,
+    sceneExtractWaveband,
     scenePhotonsFromVector,
     sceneRadianceFromVector,
     scene_reflectance_chart,
@@ -159,6 +161,7 @@ from pyisetcam import (
     scene_show_image,
     sceneSpatialSupport,
     scene_set,
+    sceneTranslate,
     signal_current,
     srgb2xyz,
     srgb_to_lrgb,
@@ -11862,6 +11865,54 @@ def test_scene_support_wrappers_match_scene_get(asset_store, tmp_path: Path) -> 
     saved = iio.imread(output)
     assert saved.shape[:2] == tuple(np.asarray(scene_get(scene, "size"), dtype=int))
     assert saved.shape[2] == 3
+
+
+def test_scene_helper_wrappers_match_legacy_contract(asset_store, tmp_path: Path) -> None:
+    scene = scene_create("uniform ee", 4, np.array([500.0, 600.0, 700.0], dtype=float), asset_store=asset_store)
+    photons = np.arange(1, 4 * 5 * 3 + 1, dtype=float).reshape(4, 5, 3)
+    scene = scene_set(scene, "photons", photons)
+    scene = scene_set(scene, "depth map", np.arange(1, 21, dtype=float).reshape(4, 5))
+    illuminant = np.arange(1, 4 * 5 * 3 + 1, dtype=float).reshape(4, 5, 3) / 10.0
+    scene = scene_set(scene, "illuminant photons", illuminant)
+
+    cropped, rect = sceneCrop(scene, [2, 2, 2, 1], asset_store=asset_store)
+    assert np.array_equal(rect, np.array([2, 2, 2, 1], dtype=int))
+    assert np.array_equal(np.asarray(scene_get(cropped, "photons"), dtype=float), photons[1:3, 1:4, :])
+    assert np.array_equal(np.asarray(scene_get(cropped, "depth map"), dtype=float), np.arange(1, 21, dtype=float).reshape(4, 5)[1:3, 1:4])
+    assert np.array_equal(np.asarray(scene_get(cropped, "illuminant photons"), dtype=float), illuminant[1:3, 1:4, :])
+    assert tuple(scene_get(cropped, "size")) == (2, 3)
+    assert np.array_equal(np.asarray(cropped.metadata["rect"], dtype=int), rect)
+    assert np.asarray(scene_get(cropped, "luminance", asset_store=asset_store), dtype=float).shape == (2, 3)
+
+    extracted = sceneExtractWaveband(scene, np.array([550.0, 650.0], dtype=float), asset_store=asset_store)
+    expected_photons = np.stack(
+        [
+            np.interp(np.array([550.0, 650.0], dtype=float), np.array([500.0, 600.0, 700.0], dtype=float), photons[row, col, :])
+            for row in range(photons.shape[0])
+            for col in range(photons.shape[1])
+        ],
+        axis=0,
+    ).reshape(photons.shape[0], photons.shape[1], 2)
+    expected_illuminant = np.stack(
+        [
+            np.interp(np.array([550.0, 650.0], dtype=float), np.array([500.0, 600.0, 700.0], dtype=float), illuminant[row, col, :])
+            for row in range(illuminant.shape[0])
+            for col in range(illuminant.shape[1])
+        ],
+        axis=0,
+    ).reshape(illuminant.shape[0], illuminant.shape[1], 2)
+    assert np.array_equal(np.asarray(scene_get(extracted, "wave"), dtype=float), np.array([550.0, 650.0], dtype=float))
+    assert np.allclose(np.asarray(scene_get(extracted, "photons"), dtype=float), expected_photons)
+    assert np.allclose(np.asarray(scene_get(extracted, "illuminant photons"), dtype=float), expected_illuminant)
+    assert np.array_equal(np.asarray(scene_get(scene, "wave"), dtype=float), np.array([500.0, 600.0, 700.0], dtype=float))
+
+    scene_for_shift = scene_set(scene.clone(), "fov", 5.0)
+    translated = sceneTranslate(scene_for_shift, [1.0, 0.0], 0.5)
+    translated_photons = np.asarray(scene_get(translated, "photons"), dtype=float)
+    expected_translated = np.full_like(photons, 0.5)
+    expected_translated[:, 1:, :] = photons[:, :-1, :]
+    assert np.allclose(translated_photons, expected_translated)
+    assert np.array_equal(np.asarray(scene_get(scene_for_shift, "photons"), dtype=float), photons)
 
 
 def test_run_python_case_supports_scene_demo_small_parity_case(asset_store) -> None:

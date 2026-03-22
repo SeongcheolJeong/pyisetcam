@@ -251,6 +251,8 @@ from .scene import (
     scene_clear_data,
     scene_combine,
     scene_create,
+    scene_crop,
+    scene_extract_waveband,
     scene_from_file,
     scene_get,
     scene_illuminant_pattern,
@@ -268,6 +270,7 @@ from .scene import (
     scene_show_image,
     scene_spatial_support,
     scene_set,
+    scene_translate,
 )
 from .sensor import (
     imx490_compute,
@@ -761,6 +764,8 @@ __all__ = [
     "sceneClearData",
     "sceneCombine",
     "sceneCreate",
+    "sceneCrop",
+    "sceneExtractWaveband",
     "sceneFromFile",
     "sceneGet",
     "sceneIlluminantPattern",
@@ -777,6 +782,7 @@ __all__ = [
     "sceneShowImage",
     "sceneSpatialSupport",
     "sceneSet",
+    "sceneTranslate",
     "scene_combine",
     "scene_adjust_illuminant",
     "scene_add",
@@ -784,6 +790,8 @@ __all__ = [
     "scene_calculate_luminance",
     "scene_clear_data",
     "scene_create",
+    "scene_crop",
+    "scene_extract_waveband",
     "scene_energy_from_vector",
     "scene_frequency_support",
     "scene_from_file",
@@ -800,6 +808,7 @@ __all__ = [
     "scene_show_image",
     "scene_spatial_support",
     "scene_set",
+    "scene_translate",
     "mlAnalyzeArrayEtendue",
     "mlRadiance",
     "mlensCreate",
@@ -977,6 +986,8 @@ __version__ = "0.1.0"
 
 # MATLAB-style aliases.
 sceneCreate = scene_create
+sceneCrop = scene_crop
+sceneExtractWaveband = scene_extract_waveband
 sceneFromFile = scene_from_file
 sceneGet = scene_get
 sceneIlluminantPattern = scene_illuminant_pattern
@@ -994,6 +1005,7 @@ sceneSaveImage = scene_save_image
 sceneShowImage = scene_show_image
 sceneSpatialSupport = scene_spatial_support
 sceneSet = scene_set
+sceneTranslate = scene_translate
 hdrRender = hdr_render
 sceneAdd = scene_add
 sceneCombine = scene_combine

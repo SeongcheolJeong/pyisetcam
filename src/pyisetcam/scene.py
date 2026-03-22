@@ -2922,6 +2922,101 @@ def scene_energy_from_vector(energy: Any, row: Any, col: Any) -> np.ndarray:
     return np.broadcast_to(spectral.reshape(1, 1, -1), (rows, cols, spectral.size)).copy()
 
 
+def scene_crop(
+    scene: Scene,
+    rect: Any,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[Scene, np.ndarray]:
+    """Crop scene data to an ISET rect and return the cropped scene plus rect."""
+
+    rect_array = np.rint(np.asarray(rect, dtype=float).reshape(-1)).astype(int)
+    if rect_array.size != 4:
+        raise ValueError("sceneCrop expects [col, row, width, height].")
+
+    from .roi import ie_rect2_locs, vc_get_roi_data
+
+    roi_locs = ie_rect2_locs(rect_array)
+    cropped_rows = int(rect_array[3]) + 1
+    cropped_cols = int(rect_array[2]) + 1
+    photons = np.asarray(vc_get_roi_data(scene, roi_locs, "photons"), dtype=float).reshape(cropped_rows, cropped_cols, -1)
+
+    cropped = scene_set(scene.clone(), "photons", photons)
+
+    depth_map = scene.fields.get("depth_map_m")
+    if depth_map is not None:
+        depth = np.asarray(depth_map, dtype=float)
+        row_index = np.clip(roi_locs[:, 0] - 1, 0, depth.shape[0] - 1)
+        col_index = np.clip(roi_locs[:, 1] - 1, 0, depth.shape[1] - 1)
+        cropped.fields["depth_map_m"] = depth[row_index, col_index].reshape(cropped_rows, cropped_cols)
+
+    if param_format(scene_get(scene, "illuminant format")) == "spatialspectral":
+        illuminant = np.asarray(vc_get_roi_data(scene, roi_locs, "illuminant photons"), dtype=float).reshape(cropped_rows, cropped_cols, -1)
+        cropped = scene_set(cropped, "illuminant photons", illuminant)
+
+    scene_calculate_luminance(cropped, asset_store=asset_store)
+    cropped.metadata["rect"] = rect_array.copy()
+    cropped.metadata.pop("coordinates", None)
+    return cropped, rect_array.copy()
+
+
+def scene_extract_waveband(
+    scene: Scene,
+    wave_list: Any,
+    *,
+    asset_store: AssetStore | None = None,
+) -> Scene:
+    """Extract or interpolate a scene onto a target wavelength list."""
+
+    target_wave = np.asarray(wave_list, dtype=float).reshape(-1)
+    if target_wave.size == 0:
+        raise ValueError("sceneExtractWaveband requires a non-empty wavelength list.")
+    return scene_interpolate_w(scene.clone(), target_wave, preserve_luminance=False, asset_store=asset_store)
+
+
+def scene_translate(
+    scene: Scene,
+    dxy: Any,
+    fill_values: Any = 0.0,
+) -> Scene:
+    """Translate scene photons by `[x, y]` degrees using MATLAB-style fill semantics."""
+
+    dxy_array = np.asarray(dxy, dtype=float).reshape(-1)
+    if dxy_array.size != 2:
+        raise ValueError("sceneTranslate requires [x, y] displacement in degrees.")
+
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+    deg_per_pixel = float(scene_get(scene, "degree per sample"))
+    if deg_per_pixel <= 0.0:
+        raise ValueError("sceneTranslate requires a positive scene angular sample spacing.")
+
+    row_shift = float(dxy_array[1]) / deg_per_pixel
+    col_shift = float(dxy_array[0]) / deg_per_pixel
+    rows, cols, nwave = photons.shape
+    fill = np.asarray(fill_values, dtype=float).reshape(-1)
+    if fill.size not in {1, nwave}:
+        raise ValueError("sceneTranslate fillValues must be a scalar or match the number of wavelength samples.")
+
+    row_coords, col_coords = np.meshgrid(
+        np.arange(rows, dtype=float) - row_shift,
+        np.arange(cols, dtype=float) - col_shift,
+        indexing="ij",
+    )
+    translated = np.empty_like(photons, dtype=float)
+    for band_index in range(nwave):
+        cval = float(fill[0] if fill.size == 1 else fill[band_index])
+        translated[:, :, band_index] = map_coordinates(
+            photons[:, :, band_index],
+            [row_coords, col_coords],
+            order=1,
+            mode="constant",
+            cval=cval,
+            prefilter=False,
+        )
+
+    return scene_set(scene.clone(), "photons", translated)
+
+
 def scene_spatial_support(scene: Scene, units: Any = "meters") -> dict[str, np.ndarray]:
     """Return the legacy MATLAB sceneSpatialSupport() structure."""
 

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-22T23:10:46.776673+00:00",
+  "generated_at": "2026-03-22T23:36:49.640366+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -7,8 +7,8 @@
       "headless_only": 73,
       "missing": 40,
       "out_of_scope": 106,
-      "parity": 348,
-      "partial": 847,
+      "parity": 351,
+      "partial": 844,
       "ported": 29
     },
     "kind_counts": {
@@ -20,10 +20,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 390,
+      "P0": 387,
       "P1": 406,
       "P2": 164,
-      "P3": 483
+      "P3": 486
     },
     "delta_from_previous": {
       "status_counts": {
@@ -508,8 +508,8 @@
       "scene": {
         "total": 45,
         "by_status": {
-          "parity": 18,
-          "partial": 23,
+          "parity": 21,
+          "partial": 20,
           "ported": 4
         },
         "by_kind": {
@@ -1032,16 +1032,6 @@
         }
       },
       {
-        "family": "scene",
-        "open_entries": 23,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 18,
-          "partial": 23,
-          "ported": 4
-        }
-      },
-      {
         "family": "sensor/pixel",
         "open_entries": 23,
         "highest_open_priority": "P0",
@@ -1091,6 +1081,16 @@
           "parity": 14,
           "partial": 20,
           "ported": 1
+        }
+      },
+      {
+        "family": "scene",
+        "open_entries": 20,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 21,
+          "partial": 20,
+          "ported": 4
         }
       },
       {
@@ -9097,15 +9097,16 @@
       "upstream_path": "scene/sceneCrop.m",
       "family": "scene",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.scene",
+      "status": "parity",
+      "python_surface": "pyisetcam.scene, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_scene.py",
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scene/sceneDescription.m",
@@ -9140,15 +9141,16 @@
       "upstream_path": "scene/sceneExtractWaveband.m",
       "family": "scene",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.scene",
+      "status": "parity",
+      "python_surface": "pyisetcam.scene, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_scene.py",
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scene/sceneFrequencySupport.m",
@@ -9559,15 +9561,16 @@
       "upstream_path": "scene/sceneTranslate.m",
       "family": "scene",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.scene",
+      "status": "parity",
+      "python_surface": "pyisetcam.scene, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_scene.py",
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scene/sceneWBCreate.m",
