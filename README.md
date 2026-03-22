@@ -935,6 +935,11 @@ That same image-processing surface now also exposes
 ICS-to-linear-display entry point on top of the existing IP display-render
 stage.
 That same image-processing surface now also exposes
+`image_sensor_transform(...)` / `imageSensorTransform(...)` and
+`image_esser_transform(...)` / `imageEsserTransform(...)`, matching the
+direct MATLAB sensor-to-target linear transform calculators for the
+multisurface and Esser-optimized training sets.
+That same image-processing surface now also exposes
 `ip_clear_data(...)` / `ipClearData(...)`, matching the direct MATLAB
 computed-payload reset path and the `ipSet(..., 'data', [])` behavior.
 Scene/OI/IP ROI plotting helpers now expose the matching chromaticity and

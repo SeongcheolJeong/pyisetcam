@@ -570,6 +570,99 @@ def demosaic(ip: ImageProcessor, sensor: Sensor) -> np.ndarray:
     return _sensor_space_from_data(sensor, sensor_data, method)
 
 
+def _resolve_transform_reflectances(
+    surfaces: np.ndarray | str,
+    wave: np.ndarray,
+    *,
+    asset_store: AssetStore,
+) -> np.ndarray:
+    if isinstance(surfaces, str):
+        normalized = param_format(surfaces)
+        if normalized in {"mcc", "mccoptimized"}:
+            _, reflectances = asset_store.load_reflectances("macbethChart.mat", wave_nm=wave)
+            return np.asarray(reflectances, dtype=float)
+        if normalized in {"esser", "esseroptimized"}:
+            data = asset_store.load_mat("data/surfaces/charts/esser/reflectance/esserChart.mat")
+            wavelengths = np.asarray(data["wavelength"], dtype=float)
+            reflectances = np.asarray(data["data"], dtype=float)
+            from .utils import interp_spectra
+
+            return np.asarray(interp_spectra(wavelengths, reflectances, wave), dtype=float)
+        if normalized == "multisurface":
+            from .scene import ie_reflectance_samples
+
+            return np.asarray(
+                ie_reflectance_samples(None, None, wave, asset_store=asset_store)[0],
+                dtype=float,
+            )
+        raise UnsupportedOptionError("imageSensorTransform", surfaces)
+    return np.asarray(surfaces, dtype=float)
+
+
+def _resolve_transform_illuminant_quanta(
+    illuminant: str | np.ndarray,
+    wave: np.ndarray,
+    *,
+    asset_store: AssetStore,
+) -> np.ndarray:
+    if isinstance(illuminant, str):
+        _, illuminant_energy = asset_store.load_illuminant(illuminant, wave_nm=wave)
+        illuminant_energy_array = np.asarray(illuminant_energy, dtype=float).reshape(-1)
+    else:
+        illuminant_energy_array = np.asarray(illuminant, dtype=float).reshape(-1)
+    return np.asarray(energy_to_quanta(illuminant_energy_array, wave), dtype=float)
+
+
+def image_sensor_transform(
+    sensor_qe: np.ndarray,
+    target_qe: np.ndarray,
+    illuminant: str | np.ndarray = "D65",
+    wave: np.ndarray | None = None,
+    surfaces: np.ndarray | str = "multisurface",
+    *,
+    asset_store: AssetStore | None = None,
+) -> np.ndarray:
+    """Calculate the linear transform from sensor space to a target QE space."""
+
+    wave_array = (
+        np.arange(400.0, 701.0, 10.0, dtype=float)
+        if wave is None
+        else np.asarray(wave, dtype=float).reshape(-1)
+    )
+    store = _store(asset_store)
+    reflectances = _resolve_transform_reflectances(surfaces, wave_array, asset_store=store)
+    illuminant_quanta = _resolve_transform_illuminant_quanta(
+        illuminant,
+        wave_array,
+        asset_store=store,
+    )
+    weighted_surfaces = np.asarray(reflectances, dtype=float) * illuminant_quanta.reshape(-1, 1)
+    sensor_response = weighted_surfaces.T @ np.asarray(sensor_qe, dtype=float)
+    target_response = weighted_surfaces.T @ np.asarray(target_qe, dtype=float)
+    matrix, _, _, _ = np.linalg.lstsq(sensor_response, target_response, rcond=None)
+    return np.asarray(matrix, dtype=float)
+
+
+def image_esser_transform(
+    sensor_qe: np.ndarray,
+    target_qe: np.ndarray,
+    illuminant: str | np.ndarray = "D65",
+    wave: np.ndarray | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> np.ndarray:
+    """Calculate the Esser-optimized linear transform from sensor to target space."""
+
+    return image_sensor_transform(
+        sensor_qe,
+        target_qe,
+        illuminant,
+        wave,
+        "esser",
+        asset_store=asset_store,
+    )
+
+
 def image_sensor_conversion(
     sensor: Sensor,
     cmf: np.ndarray | None = None,
@@ -1382,6 +1475,8 @@ displayRender = display_render  # noqa: N816
 ipClearData = ip_clear_data  # noqa: N816
 ipSaveImage = ip_save_image  # noqa: N816
 imageMCCTransform = image_mcc_transform  # noqa: N816
+imageSensorTransform = image_sensor_transform  # noqa: N816
+imageEsserTransform = image_esser_transform  # noqa: N816
 Demosaic = demosaic  # noqa: N816
 imageSensorConversion = image_sensor_conversion  # noqa: N816
 imageSensorCorrection = image_sensor_correction  # noqa: N816

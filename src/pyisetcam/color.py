@@ -7,7 +7,7 @@ from numpy.typing import NDArray
 
 from .assets import AssetStore
 from .exceptions import UnsupportedOptionError
-from .utils import energy_to_quanta, param_format, quanta_to_energy, spectral_step
+from .utils import energy_to_quanta, interp_spectra, param_format, quanta_to_energy, spectral_step
 
 
 def xyz_color_matching(
@@ -197,8 +197,13 @@ def _surface_reflectances(
         _, reflectances = asset_store.load_reflectances("macbethChart.mat", wave_nm=np.asarray(wave_nm, dtype=float))
         return np.asarray(reflectances, dtype=float)
     if normalized in {"esser", "esseroptimized"}:
-        _, reflectances = asset_store.load_reflectances("esserChart.mat", wave_nm=np.asarray(wave_nm, dtype=float))
-        return np.asarray(reflectances, dtype=float)
+        data = asset_store.load_mat("data/surfaces/charts/esser/reflectance/esserChart.mat")
+        wavelengths = np.asarray(data["wavelength"], dtype=float)
+        reflectances = np.asarray(data["data"], dtype=float)
+        return np.asarray(
+            interp_spectra(wavelengths, reflectances, np.asarray(wave_nm, dtype=float)),
+            dtype=float,
+        )
     raise UnsupportedOptionError("ieColorTransform", surfaces)
 
 

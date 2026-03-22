@@ -7,11 +7,14 @@ from pyisetcam import (
     demosaic,
     displayRender,
     imageDataXYZ,
+    imageEsserTransform,
     imageIlluminantCorrection,
     imageMCCTransform,
     imageRGB2XYZ,
     imageSensorConversion,
     imageSensorCorrection,
+    imageSensorTransform,
+    ie_reflectance_samples,
     ip_compute,
     ip_create,
     ip_get,
@@ -23,6 +26,7 @@ from pyisetcam import (
     sensor_set,
 )
 from pyisetcam.color import sensor_to_target_matrix, xyz_color_matching
+from pyisetcam.utils import energy_to_quanta
 
 
 def test_ip_compute_supports_rgb_bayer_demosaic_methods(asset_store) -> None:
@@ -638,3 +642,61 @@ def test_image_mcc_transform_accepts_illuminant_vector(asset_store) -> None:
     )
 
     assert np.allclose(from_vector, from_string)
+
+
+def test_image_sensor_transform_supports_multisurface_default(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    wave = np.asarray(sensor_get(sensor, "wave"), dtype=float)
+    sensor_qe = np.asarray(sensor_get(sensor, "spectral qe"), dtype=float)
+    target_qe = np.asarray(
+        xyz_color_matching(wave, quanta=True, asset_store=asset_store),
+        dtype=float,
+    )
+    illuminant_energy = np.asarray(
+        asset_store.load_illuminant("D65", wave_nm=wave)[1],
+        dtype=float,
+    )
+    illuminant_quanta = np.asarray(energy_to_quanta(illuminant_energy, wave), dtype=float)
+    reflectances = np.asarray(
+        ie_reflectance_samples(None, None, wave, asset_store=asset_store)[0],
+        dtype=float,
+    )
+    weighted_surfaces = reflectances * illuminant_quanta.reshape(-1, 1)
+    sensor_response = weighted_surfaces.T @ sensor_qe
+    target_response = weighted_surfaces.T @ target_qe
+    expected, _, _, _ = np.linalg.lstsq(sensor_response, target_response, rcond=None)
+
+    transform = imageSensorTransform(sensor_qe, target_qe, "D65", wave, asset_store=asset_store)
+
+    assert np.allclose(transform, expected)
+
+
+def test_image_esser_transform_matches_direct_sensor_transform(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    wave = np.asarray(sensor_get(sensor, "wave"), dtype=float)
+    sensor_qe = np.asarray(sensor_get(sensor, "spectral qe"), dtype=float)
+    target_qe = np.asarray(
+        xyz_color_matching(wave, quanta=True, asset_store=asset_store),
+        dtype=float,
+    )
+
+    expected = sensor_to_target_matrix(
+        wave,
+        sensor_qe,
+        target_space="xyz",
+        illuminant="D65",
+        surfaces="esser",
+        asset_store=asset_store,
+    )
+    direct = imageSensorTransform(
+        sensor_qe,
+        target_qe,
+        "D65",
+        wave,
+        "esser",
+        asset_store=asset_store,
+    )
+    esser = imageEsserTransform(sensor_qe, target_qe, "D65", wave, asset_store=asset_store)
+
+    assert np.allclose(direct, expected)
+    assert np.allclose(esser, expected)

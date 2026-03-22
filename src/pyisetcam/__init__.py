@@ -42,11 +42,13 @@ from .ip import (
     demosaic,
     display_render,
     image_data_xyz,
+    image_esser_transform,
     image_illuminant_correction,
     image_mcc_transform,
     image_rgb_to_xyz,
     image_sensor_conversion,
     image_sensor_correction,
+    image_sensor_transform,
     ip_clear_data,
     ip_compute,
     ip_create,
@@ -360,10 +362,14 @@ __all__ = [
     "image_sensor_conversion",
     "imageSensorCorrection",
     "image_sensor_correction",
+    "imageSensorTransform",
+    "image_sensor_transform",
     "ipClearData",
     "ip_clear_data",
     "ipSaveImage",
     "ip_save_image",
+    "imageEsserTransform",
+    "image_esser_transform",
     "imageMCCTransform",
     "image_mcc_transform",
     "demosaic",
@@ -978,6 +984,8 @@ ipSet = ip_set
 ipClearData = ip_clear_data
 ipSaveImage = ip_save_image
 imageMCCTransform = image_mcc_transform
+imageSensorTransform = image_sensor_transform
+imageEsserTransform = image_esser_transform
 imageDataXYZ = image_data_xyz
 displayRender = display_render
 imageRGB2XYZ = image_rgb_to_xyz
