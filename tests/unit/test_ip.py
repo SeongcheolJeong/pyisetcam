@@ -4,6 +4,7 @@ import numpy as np
 
 from pyisetcam import (
     demosaic,
+    imageIlluminantCorrection,
     imageSensorConversion,
     imageSensorCorrection,
     ip_compute,
@@ -348,3 +349,73 @@ def test_image_sensor_correction_preserves_2d_monochrome_input(asset_store) -> N
     assert np.allclose(corrected, img / np.max(img))
     assert sensor_transform.shape == (1, 1)
     assert np.allclose(np.asarray(ip_get(corrected_ip, "sensorspace"), dtype=float)[:, :, 0], img)
+
+
+def test_image_illuminant_correction_matches_ip_compute_ics(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "volts", np.arange(1, 37, dtype=float).reshape(6, 6))
+    ip = ip_set(ip_create(asset_store=asset_store), "conversion method sensor", "mcc optimized")
+    ip = ip_set(ip, "correction method illuminant", "gray world")
+
+    sensor_space = demosaic(ip, sensor)
+    internal, corrected_ip, _ = imageSensorCorrection(
+        sensor_space,
+        ip,
+        sensor,
+        asset_store=asset_store,
+    )
+    corrected, illuminant_ip, illuminant_transform = imageIlluminantCorrection(
+        internal,
+        corrected_ip,
+        asset_store=asset_store,
+    )
+    computed = ip_compute(ip, sensor, asset_store=asset_store)
+
+    assert np.allclose(corrected, np.asarray(ip_get(computed, "ics"), dtype=float))
+    assert np.allclose(
+        illuminant_transform,
+        np.asarray(ip_get(computed, "illuminant correction transform"), dtype=float),
+    )
+    assert np.allclose(np.asarray(ip_get(illuminant_ip, "ics"), dtype=float), corrected)
+
+
+def test_image_illuminant_correction_manual_matrix(asset_store) -> None:
+    img = np.array(
+        [
+            [[0.2, 0.4, 0.6], [0.3, 0.5, 0.7]],
+            [[0.8, 0.1, 0.2], [0.9, 0.3, 0.4]],
+        ],
+        dtype=float,
+    )
+    transform = np.diag([1.2, 0.8, 1.1])
+    ip = ip_set(ip_create(asset_store=asset_store), "correction method illuminant", "manual")
+    ip = ip_set(ip, "illuminant correction transform", transform)
+
+    corrected, corrected_ip, returned_transform = imageIlluminantCorrection(
+        img,
+        ip,
+        asset_store=asset_store,
+    )
+
+    assert np.allclose(corrected, img @ transform)
+    assert np.allclose(returned_transform, transform)
+    assert np.allclose(
+        np.asarray(ip_get(corrected_ip, "illuminant correction transform"), dtype=float),
+        transform,
+    )
+
+
+def test_image_illuminant_correction_preserves_2d_input(asset_store) -> None:
+    img = np.arange(1, 13, dtype=float).reshape(3, 4)
+    ip = ip_set(ip_create(asset_store=asset_store), "correction method illuminant", "none")
+
+    corrected, corrected_ip, illuminant_transform = imageIlluminantCorrection(
+        img,
+        ip,
+        asset_store=asset_store,
+    )
+
+    assert corrected.shape == img.shape
+    assert np.allclose(corrected, img)
+    assert illuminant_transform.shape == (1, 1)
+    assert np.allclose(np.asarray(ip_get(corrected_ip, "ics"), dtype=float)[:, :, 0], img)

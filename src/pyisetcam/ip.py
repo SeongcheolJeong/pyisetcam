@@ -613,6 +613,27 @@ def image_sensor_correction(
     return _restore_channel_image(internal, squeeze_channel), corrected_ip, sensor_transform
 
 
+def image_illuminant_correction(
+    img: np.ndarray,
+    ip: ImageProcessor,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[np.ndarray, ImageProcessor, np.ndarray]:
+    """Apply the IP illuminant-correction stage to internal-color-space data."""
+
+    corrected_ip = _ensure_ip_state(ip.clone())
+    internal_image, squeeze_channel = _as_channel_image(np.asarray(img, dtype=float))
+    corrected, illuminant_transform = _illuminant_correct_internal(
+        internal_image, corrected_ip, asset_store=_store(asset_store)
+    )
+    corrected_ip.data["ics"] = np.asarray(corrected, dtype=float)
+    corrected_ip.data["transforms"][1] = np.asarray(illuminant_transform, dtype=float)
+    corrected_ip.fields["illuminant_correction_matrix"] = np.asarray(
+        illuminant_transform, dtype=float
+    )
+    return _restore_channel_image(corrected, squeeze_channel), corrected_ip, illuminant_transform
+
+
 def _sensor_to_internal(
     sensor_space: np.ndarray,
     ip: ImageProcessor,
@@ -946,6 +967,7 @@ def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
         return ip.fields["illuminant_correction"].get("method", "none")
     if key in {
         "illuminantcorrectionmatrix",
+        "illuminantcorrectiontransform",
         "correctiontransformilluminant",
         "correctionmatrixilluminant",
     }:
@@ -1149,8 +1171,8 @@ def ip_set(
     if key in {
         "correctionmatrixilluminant",
         "illuminantcorrectionmatrix",
-        "correctiontransformilluminant",
         "illuminantcorrectiontransform",
+        "correctiontransformilluminant",
     }:
         ip.data["transforms"][1] = np.asarray(value, dtype=float)
         return track_ip_session_state(session, ip)
@@ -1229,3 +1251,4 @@ imageDataXYZ = image_data_xyz  # noqa: N816
 Demosaic = demosaic  # noqa: N816
 imageSensorConversion = image_sensor_conversion  # noqa: N816
 imageSensorCorrection = image_sensor_correction  # noqa: N816
+imageIlluminantCorrection = image_illuminant_correction  # noqa: N816

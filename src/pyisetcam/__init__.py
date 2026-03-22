@@ -41,6 +41,7 @@ from .iso import ISO12233, ISOFindSlantedBar, edge_to_mtf, ieCXcorr, ieISO12233,
 from .ip import (
     demosaic,
     image_data_xyz,
+    image_illuminant_correction,
     image_sensor_conversion,
     image_sensor_correction,
     ip_compute,
@@ -336,6 +337,8 @@ __all__ = [
     "ieInitSession",
     "imageDataXYZ",
     "image_data_xyz",
+    "imageIlluminantCorrection",
+    "image_illuminant_correction",
     "imageSensorConversion",
     "image_sensor_conversion",
     "imageSensorCorrection",
@@ -926,6 +929,7 @@ ipCompute = ip_compute
 ipGet = ip_get
 ipSet = ip_set
 imageDataXYZ = image_data_xyz
+imageIlluminantCorrection = image_illuminant_correction
 imageSensorConversion = image_sensor_conversion
 imageSensorCorrection = image_sensor_correction
 Demosaic = demosaic
