@@ -2290,6 +2290,26 @@ def sensor_snr(
     return snr, np.asarray(voltage_levels, dtype=float), snr_shot, snr_read, snr_dsnu, snr_prnu
 
 
+def sensor_snr_luxsec(
+    sensor: Sensor,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Compute MATLAB-style sensor SNR curves in dB over lux-second levels."""
+
+    snr, volts, *_ = sensor_snr(sensor)
+    volts_per_lux_sec, _, _, _, _ = pixel_v_per_lux_sec(sensor, asset_store=asset_store)
+
+    volts_column = np.asarray(volts, dtype=float).reshape(-1, 1)
+    luxsec = np.divide(
+        volts_column,
+        np.asarray(volts_per_lux_sec, dtype=float).reshape(1, -1),
+        out=np.zeros((volts_column.shape[0], np.asarray(volts_per_lux_sec).size), dtype=float),
+        where=~np.isclose(np.asarray(volts_per_lux_sec, dtype=float).reshape(1, -1), 0.0),
+    )
+    return np.asarray(snr, dtype=float), luxsec
+
+
 def _sensor_line_profile(sensor: Sensor, line_key: str, rc: Any) -> dict[str, list[np.ndarray]] | None:
     from .roi import _sensor_signal_cube
 
@@ -4737,6 +4757,7 @@ sensorClearData = sensor_clear_data
 sensorColorOrder = sensor_color_order
 sensorDetermineCFA = sensor_determine_cfa
 sensorImageColorArray = sensor_image_color_array
+sensorSNRluxsec = sensor_snr_luxsec
 sensorShowCFA = sensor_show_cfa
 sensorShowCFAWeights = sensor_show_cfa_weights
 sensorShowImage = sensor_show_image

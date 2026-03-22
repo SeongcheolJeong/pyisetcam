@@ -154,6 +154,8 @@ from pyisetcam import (
     sensorImageColorArray,
     sensor_plot,
     sensorSaveImage,
+    sensorSNR,
+    sensorSNRluxsec,
     sensorShowCFA,
     sensorShowCFAWeights,
     sensorShowImage,
@@ -4724,6 +4726,22 @@ def test_sensor_show_cfa_weights_matches_legacy_weighted_render(asset_store) -> 
 
     assert np.allclose(np.asarray(weighted_img, dtype=float), expected)
     assert np.allclose(weighted_img[1, 1], expected[1, 1])
+
+
+def test_sensor_snr_luxsec_matches_manual_reparameterization(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+
+    snr, luxsec = sensorSNRluxsec(sensor, asset_store=asset_store)
+    expected_snr, volts, *_ = sensorSNR(sensor)
+    volts_per_lux_sec, *_ = pixel_v_per_lux_sec(sensor, asset_store=asset_store)
+    expected_luxsec = volts.reshape(-1, 1) / np.asarray(volts_per_lux_sec, dtype=float).reshape(1, -1)
+
+    assert snr.shape == expected_snr.shape == (50,)
+    assert luxsec.shape == expected_luxsec.shape
+    assert luxsec.shape[1] == int(sensor_get(sensor, "ncolors"))
+    assert np.allclose(snr, expected_snr)
+    assert np.allclose(luxsec, expected_luxsec)
+    assert np.all(np.diff(luxsec, axis=0) > 0.0)
 
 
 def test_sensor_set_etendue_scales_noiseless_response(asset_store) -> None:

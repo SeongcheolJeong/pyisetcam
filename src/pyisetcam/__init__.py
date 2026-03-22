@@ -238,6 +238,7 @@ from .sensor import (
     sensor_compute_array,
     sensor_compute_samples,
     sensor_snr,
+    sensor_snr_luxsec,
     sensor_compute,
     sensor_crop,
     sensor_dr,
@@ -567,6 +568,7 @@ __all__ = [
     "pixel_snr_luxsec",
     "pixel_v_per_lux_sec",
     "sensor_snr",
+    "sensor_snr_luxsec",
     "sensor_plot",
     "sensor_plot_fft",
     "sensor_plot_line",
@@ -709,6 +711,7 @@ __all__ = [
     "sensorColorFilter",
     "sensor_color_filter",
     "sensorSNR",
+    "sensorSNRluxsec",
     "sensorSet",
     "sensorSetSizeToFOV",
     "sensorSaveImage",
@@ -935,6 +938,7 @@ sensorColorFilter = sensor_color_filter
 sensorCrop = sensor_crop
 sensorGet = sensor_get
 sensorSNR = sensor_snr
+sensorSNRluxsec = sensor_snr_luxsec
 pixelSNR = pixel_snr
 pixelSNRluxsec = pixel_snr_luxsec
 pixelVperLuxSec = pixel_v_per_lux_sec
