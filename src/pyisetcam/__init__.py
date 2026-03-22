@@ -108,9 +108,12 @@ from .optics import (
     oi_clear_data,
     oi_crop,
     oi_create,
+    oi_frequency_resolution,
     oi_get,
     oi_save_image,
     oi_show_image,
+    oi_space,
+    oi_spatial_support,
     oi_spatial_resample,
     oi_set,
     optics_psf_to_otf,
@@ -561,8 +564,11 @@ __all__ = [
     "oiCreate",
     "oiCrop",
     "oiGet",
+    "oiFrequencyResolution",
     "oiSaveImage",
     "oiShowImage",
+    "oiSpace",
+    "oiSpatialSupport",
     "oiSpatialResample",
     "oiSet",
     "oi_calculate_illuminance",
@@ -571,10 +577,13 @@ __all__ = [
     "oi_compute",
     "oi_crop",
     "oi_create",
+    "oi_frequency_resolution",
     "oi_get",
     "oi_plot",
     "oi_save_image",
     "oi_show_image",
+    "oi_space",
+    "oi_spatial_support",
     "oi_spatial_resample",
     "oi_set",
     "optics_psf_to_otf",
@@ -903,8 +912,11 @@ oiCompute = oi_compute
 oiClearData = oi_clear_data
 oiCrop = oi_crop
 oiGet = oi_get
+oiFrequencyResolution = oi_frequency_resolution
 oiSaveImage = oi_save_image
 oiShowImage = oi_show_image
+oiSpace = oi_space
+oiSpatialSupport = oi_spatial_support
 oiSpatialResample = oi_spatial_resample
 oiSet = oi_set
 oiCalculateIlluminance = oi_calculate_illuminance

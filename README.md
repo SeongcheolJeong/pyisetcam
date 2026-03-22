@@ -772,6 +772,11 @@ That same headless OI utility surface now also includes
 `oi_show_image(...)` / `oiShowImage(...)`, and
 `oi_save_image(...)` / `oiSaveImage(...)` for the legacy MATLAB
 computed-payload reset, direct RGB render, and PNG-export helpers.
+That same headless OI utility surface now also includes
+`oi_frequency_resolution(...)` / `oiFrequencyResolution(...)`,
+`oi_spatial_support(...)` / `oiSpatialSupport(...)`, and
+`oi_space(...)` / `oiSpace(...)` for the direct MATLAB OI geometry
+helper mini-family.
 The `rtOTF` groundwork is also starting to land through public helper ports
 for `rt_block_center` / `rtBlockCenter`, `rt_extract_block` /
 `rtExtractBlock`, `rt_insert_block` / `rtInsertBlock`, and

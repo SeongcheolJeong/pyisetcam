@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-22T18:37:19.571020+00:00",
+  "generated_at": "2026-03-22T19:03:02.800180+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-22T18:37:19.571020+00:00",
+    "generated_at": "2026-03-22T19:03:02.800180+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 74,
       "missing": 40,
       "out_of_scope": 103,
-      "parity": 316,
-      "partial": 881,
+      "parity": 319,
+      "partial": 878,
       "ported": 29
     },
     "kind_counts": {
@@ -22,10 +22,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 424,
+      "P0": 421,
       "P1": 406,
       "P2": 165,
-      "P3": 448
+      "P3": 451
     },
     "delta_from_previous": {
       "status_counts": {
@@ -422,8 +422,8 @@
         "total": 37,
         "by_status": {
           "headless_only": 1,
-          "parity": 9,
-          "partial": 27
+          "parity": 12,
+          "partial": 24
         },
         "by_kind": {
           "api": 37
@@ -1012,16 +1012,6 @@
     },
     "top_open_families": [
       {
-        "family": "opticalimage",
-        "open_entries": 28,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "headless_only": 1,
-          "parity": 9,
-          "partial": 27
-        }
-      },
-      {
         "family": "opticalimage/raytrace",
         "open_entries": 28,
         "highest_open_priority": "P0",
@@ -1079,6 +1069,16 @@
           "parity": 21,
           "partial": 26,
           "ported": 2
+        }
+      },
+      {
+        "family": "opticalimage",
+        "open_entries": 25,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "headless_only": 1,
+          "parity": 12,
+          "partial": 24
         }
       },
       {

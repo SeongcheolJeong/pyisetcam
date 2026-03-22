@@ -5115,6 +5115,48 @@ def oi_save_image(
     return str(output_path)
 
 
+def oi_frequency_resolution(
+    oi: OpticalImage,
+    units: str = "cyclesPerDegree",
+) -> dict[str, np.ndarray]:
+    support = oi_get(oi, "frequency resolution", units)
+    return {
+        "fx": np.asarray(support["fx"], dtype=float).copy(),
+        "fy": np.asarray(support["fy"], dtype=float).copy(),
+    }
+
+
+def oi_spatial_support(
+    oi: OpticalImage,
+    units: str = "meters",
+) -> dict[str, np.ndarray]:
+    support = oi_get(oi, "spatial support linear", units)
+    return {
+        "x": np.asarray(support["x"], dtype=float).copy(),
+        "y": np.asarray(support["y"], dtype=float).copy(),
+    }
+
+
+def oi_space(
+    oi: OpticalImage,
+    s_pos: Any,
+    unit: str = "mm",
+) -> np.ndarray:
+    sample_position = np.asarray(s_pos, dtype=float).reshape(-1)
+    if sample_position.size != 2:
+        raise ValueError("oi_space expects [row, col] sample positions.")
+    distance_per_sample = np.asarray(oi_get(oi, "distance per sample", unit), dtype=float).reshape(-1)
+    size = np.asarray(oi_get(oi, "size"), dtype=float).reshape(-1)
+    middle = size / 2.0
+    return np.array(
+        [
+            (middle[0] - sample_position[0]) * distance_per_sample[0],
+            (sample_position[1] - middle[1]) * distance_per_sample[1],
+        ],
+        dtype=float,
+    )
+
+
 def _oi_roi_xyz(oi: OpticalImage, roi_locs: Any | None = None, *, asset_store: AssetStore | None = None) -> np.ndarray:
     store = _store(asset_store)
     wave = np.asarray(oi.fields.get("wave", np.empty(0, dtype=float)), dtype=float).reshape(-1)

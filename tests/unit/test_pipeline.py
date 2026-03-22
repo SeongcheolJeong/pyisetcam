@@ -77,10 +77,13 @@ from pyisetcam import (
     oi_compute,
     oi_crop,
     oi_create,
+    oi_frequency_resolution,
     oi_get,
     oiSaveImage,
     oiShowImage,
     oi_plot,
+    oi_space,
+    oi_spatial_support,
     oi_spatial_resample,
     oi_set,
     psf_to_zcoeff_error,
@@ -580,6 +583,32 @@ def test_oi_get_reports_spatial_and_frequency_support(asset_store) -> None:
     assert freq["fy"].shape == (rows,)
     assert fsupport.shape == (rows, cols, 2)
     assert np.isclose(oi_get(oi, "max frequency resolution", "mm"), max(freq["fx"].max(), freq["fy"].max()))
+
+
+def test_oi_geometry_helpers_match_existing_getters(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    oi = oi_compute(oi_create(), scene, crop=True)
+
+    spatial = oi_spatial_support(oi, "mm")
+    freq = oi_frequency_resolution(oi, "mm")
+    sample_position = np.array([1.0, 1.0], dtype=float)
+    dpos = oi_space(oi, sample_position, "mm")
+
+    assert np.allclose(spatial["x"], np.asarray(oi_get(oi, "spatial support linear", "mm")["x"], dtype=float))
+    assert np.allclose(spatial["y"], np.asarray(oi_get(oi, "spatial support linear", "mm")["y"], dtype=float))
+    assert np.allclose(freq["fx"], np.asarray(oi_get(oi, "frequency resolution", "mm")["fx"], dtype=float))
+    assert np.allclose(freq["fy"], np.asarray(oi_get(oi, "frequency resolution", "mm")["fy"], dtype=float))
+
+    size = np.asarray(oi_get(oi, "size"), dtype=float)
+    spacing = np.asarray(oi_get(oi, "distance per sample", "mm"), dtype=float)
+    expected = np.array(
+        [
+            (size[0] / 2.0 - sample_position[0]) * spacing[0],
+            (sample_position[1] - size[1] / 2.0) * spacing[1],
+        ],
+        dtype=float,
+    )
+    assert np.allclose(dpos, expected)
 
 
 def test_diffraction_otf_matches_oi_frequency_support(asset_store) -> None:
