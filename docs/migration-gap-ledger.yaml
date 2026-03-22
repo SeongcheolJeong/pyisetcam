@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-03-22T15:26:30.068876+00:00",
+  "generated_at": "2026-03-22T15:36:05.085008+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 74,
       "missing": 40,
-      "out_of_scope": 101,
+      "out_of_scope": 103,
       "parity": 300,
-      "partial": 906,
-      "ported": 22
+      "partial": 897,
+      "ported": 29
     },
     "kind_counts": {
       "api": 661,
@@ -20,19 +20,19 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 449,
+      "P0": 440,
       "P1": 406,
       "P2": 165,
-      "P3": 423
+      "P3": 432
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 0,
-        "parity": 2,
-        "partial": -2,
-        "ported": 0
+        "out_of_scope": 2,
+        "parity": 0,
+        "partial": -9,
+        "ported": 7
       },
       "kind_counts": {
         "api": 0,
@@ -43,10 +43,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -2,
+        "P0": -9,
         "P1": 0,
         "P2": 0,
-        "P3": 2
+        "P3": 9
       }
     },
     "family_summary": {
@@ -274,8 +274,10 @@
       "imgproc": {
         "total": 59,
         "by_status": {
+          "out_of_scope": 2,
           "parity": 24,
-          "partial": 35
+          "partial": 26,
+          "ported": 7
         },
         "by_kind": {
           "api": 59
@@ -1008,15 +1010,6 @@
     },
     "top_open_families": [
       {
-        "family": "imgproc",
-        "open_entries": 35,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 24,
-          "partial": 35
-        }
-      },
-      {
         "family": "opticalimage/wavefront",
         "open_entries": 32,
         "highest_open_priority": "P0",
@@ -1073,6 +1066,17 @@
           "parity": 16,
           "partial": 23,
           "ported": 2
+        }
+      },
+      {
+        "family": "imgproc",
+        "open_entries": 26,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "out_of_scope": 2,
+          "parity": 24,
+          "partial": 26,
+          "ported": 7
         }
       },
       {
@@ -3841,14 +3845,14 @@
       "upstream_path": "imgproc/demosaic/bayerIndices.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
+      "status": "ported",
       "python_surface": "pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_ip.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The low-level MATLAB Bayer-index helper is already covered by the shared internal `_bayer_indices` implementation.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/demosaic/demosaicMultichannel.m",
@@ -3945,14 +3949,14 @@
       "upstream_path": "imgproc/demosaic/ieBilinear.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
+      "status": "ported",
       "python_surface": "pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_ip.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The low-level MATLAB bilinear demosaic helper is already covered by the shared internal `_ie_bilinear` implementation.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/demosaic/ieNearestNeighbor.m",
@@ -3986,14 +3990,14 @@
       "upstream_path": "imgproc/demosaic/mosaicConverter.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
+      "status": "ported",
       "python_surface": "pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_ip.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The low-level MATLAB Bayer-pattern conversion helper is already covered by the shared internal `_mosaic_converter` implementation.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/demosaic/shtlin.m",
@@ -4066,14 +4070,14 @@
       "upstream_path": "imgproc/imageColorBalanceDeprecated.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
+      "status": "ported",
       "python_surface": "pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_ip.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The deprecated MATLAB color-balance gateway is already covered by the Python `image_color_balance(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/imageDistort.m",
@@ -4124,14 +4128,14 @@
       "upstream_path": "imgproc/imageIlluminantCorrectionDeprecated.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
+      "status": "ported",
       "python_surface": "pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_ip.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The deprecated MATLAB illuminant-correction file is already covered by the Python `image_illuminant_correction(...)` helper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/imageMCCTransform.m",
@@ -4257,14 +4261,14 @@
       "upstream_path": "imgproc/ipGet.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
+      "status": "ported",
       "python_surface": "pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_ip.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The direct MATLAB image-processor getter surface is already covered by `ip_get(...)` / `ipGet(...)`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/ipHDRWhite.m",
@@ -4285,14 +4289,14 @@
       "upstream_path": "imgproc/ipKeyPress.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_ip.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "GUI keypress handlers remain outside the headless migration target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/ipMCCXYZ.m",
@@ -4328,14 +4332,14 @@
       "upstream_path": "imgproc/ipSet.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
+      "status": "ported",
       "python_surface": "pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_ip.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The direct MATLAB image-processor setter surface is already covered by `ip_set(...)` / `ipSet(...)`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/lightfield/LFAutofocus.m",
@@ -4605,14 +4609,14 @@
       "upstream_path": "imgproc/vcimageKeyPress.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_ip.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "GUI keypress handlers remain outside the headless migration target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/vcimageMCCXYZ.m",

@@ -143,6 +143,54 @@ MID_PRIORITY_FAMILIES = {
     "utility/tablebase",
 }
 
+UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
+    "imgproc/demosaic/bayerIndices.m": {
+        "status": "ported",
+        "note": "The low-level MATLAB Bayer-index helper is already covered by the shared internal `_bayer_indices` implementation.",
+        "module_hits": ["pyisetcam.ip"],
+    },
+    "imgproc/demosaic/ieBilinear.m": {
+        "status": "ported",
+        "note": "The low-level MATLAB bilinear demosaic helper is already covered by the shared internal `_ie_bilinear` implementation.",
+        "module_hits": ["pyisetcam.ip"],
+    },
+    "imgproc/demosaic/mosaicConverter.m": {
+        "status": "ported",
+        "note": "The low-level MATLAB Bayer-pattern conversion helper is already covered by the shared internal `_mosaic_converter` implementation.",
+        "module_hits": ["pyisetcam.ip"],
+    },
+    "imgproc/imageColorBalanceDeprecated.m": {
+        "status": "ported",
+        "note": "The deprecated MATLAB color-balance gateway is already covered by the Python `image_color_balance(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.ip"],
+    },
+    "imgproc/imageIlluminantCorrectionDeprecated.m": {
+        "status": "ported",
+        "note": "The deprecated MATLAB illuminant-correction file is already covered by the Python `image_illuminant_correction(...)` helper.",
+        "module_hits": ["pyisetcam.ip"],
+    },
+    "imgproc/ipGet.m": {
+        "status": "ported",
+        "note": "The direct MATLAB image-processor getter surface is already covered by `ip_get(...)` / `ipGet(...)`.",
+        "module_hits": ["pyisetcam.ip"],
+    },
+    "imgproc/ipKeyPress.m": {
+        "status": "out_of_scope",
+        "note": "GUI keypress handlers remain outside the headless migration target.",
+        "module_hits": [],
+    },
+    "imgproc/ipSet.m": {
+        "status": "ported",
+        "note": "The direct MATLAB image-processor setter surface is already covered by `ip_set(...)` / `ipSet(...)`.",
+        "module_hits": ["pyisetcam.ip"],
+    },
+    "imgproc/vcimageKeyPress.m": {
+        "status": "out_of_scope",
+        "note": "GUI keypress handlers remain outside the headless migration target.",
+        "module_hits": [],
+    },
+}
+
 
 @dataclass(frozen=True)
 class InventoryEntry:
@@ -321,6 +369,14 @@ def _status_and_note(
         or _contains_signal(case_text, stem)
     )
     has_surface = bool(surfaces)
+
+    override = UPSTREAM_STATUS_OVERRIDES.get(entry.upstream_path)
+    if override is not None:
+        return (
+            str(override["status"]),
+            str(override["note"]),
+            list(override.get("module_hits", [])),
+        )
 
     if entry.kind == "gui":
         return (
