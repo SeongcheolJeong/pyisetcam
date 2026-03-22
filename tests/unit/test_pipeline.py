@@ -137,6 +137,7 @@ from pyisetcam import (
     pixel_snr_luxsec,
     pixel_v_per_lux_sec,
     sensor_ccm,
+    sensorClearData,
     sensor_compute,
     sensor_compute_array,
     sensor_compute_samples,
@@ -4568,6 +4569,25 @@ def test_sensor_set_size_respects_cfa_block_and_clears_cached_data(asset_store) 
     sensor = sensor_set(sensor, "cols", 91)
     assert sensor_get(sensor, "rows") == 74
     assert sensor_get(sensor, "cols") == 90
+
+
+def test_sensor_clear_data_clears_computed_payloads(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    volts = np.arange(1, 37, dtype=float).reshape(6, 6) / 36.0
+    dv = np.arange(1, 37, dtype=float).reshape(6, 6)
+    sensor = sensor_set(sensor, "volts", volts)
+    sensor = sensor_set(sensor, "dv", dv)
+
+    cleared = sensorClearData(sensor)
+
+    assert cleared is not sensor
+    assert cleared.data == {}
+    assert tuple(sensor_get(cleared, "size")) == (6, 6)
+    assert np.array_equal(np.asarray(sensor_get(sensor, "volts"), dtype=float), volts)
+    assert np.array_equal(np.asarray(sensor_get(sensor, "dv"), dtype=float), dv)
+    assert sensor_get(cleared, "volts") is None
+    assert sensor_get(cleared, "dv") is None
+    assert np.array_equal(np.asarray(sensor_get(cleared, "wave"), dtype=float), np.asarray(sensor_get(sensor, "wave"), dtype=float))
 
 
 def test_sensor_set_etendue_scales_noiseless_response(asset_store) -> None:

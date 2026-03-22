@@ -221,6 +221,7 @@ from .sensor import (
     pixel_v_per_lux_sec,
     signal_current,
     sensor_ccm,
+    sensor_clear_data,
     sensor_color_filter,
     sensor_compute_array,
     sensor_compute_samples,
@@ -656,9 +657,11 @@ __all__ = [
     "sensorFormats",
     "sensorGet",
     "sensorCCM",
+    "sensorClearData",
     "signalCurrent",
     "signal_current",
     "sensor_ccm",
+    "sensor_clear_data",
     "sensorColorFilter",
     "sensor_color_filter",
     "sensorSNR",
@@ -867,6 +870,7 @@ sensorComputeArray = sensor_compute_array
 sensorComputeSamples = sensor_compute_samples
 imx490Compute = imx490_compute
 sensorCCM = sensor_ccm
+sensorClearData = sensor_clear_data
 sensorDR = sensor_dr
 signalCurrent = signal_current
 sensorColorFilter = sensor_color_filter

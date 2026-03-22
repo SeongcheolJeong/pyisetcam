@@ -2386,6 +2386,14 @@ def sensor_crop(sensor: Sensor, rect: Any) -> Sensor:
     return cropped
 
 
+def sensor_clear_data(sensor: Sensor) -> Sensor:
+    """Clear the computed sensor payload while preserving configuration."""
+
+    cleared = sensor.clone()
+    _sensor_clear_data(cleared)
+    return cleared
+
+
 def _sensor_chromaticity(sensor: Sensor, rect_or_locs: Any = None, mode: str = "vec") -> np.ndarray | None:
     from .ip import _sensor_space
 
@@ -4517,3 +4525,4 @@ def sensor_ccm(
 sensorComputeSamples = sensor_compute_samples
 sensorDR = sensor_dr
 sensorCCM = sensor_ccm
+sensorClearData = sensor_clear_data

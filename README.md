@@ -287,7 +287,10 @@ MT9V024 RCCC, and CYYM small-pixel/large-pixel response summaries. That
 same sensor wave now also includes headless `sensorComputeSamples(...)`
 for the repeated-capture workflow from `s_sensorNoise.m`, with curated
 Octave parity on stable sample-stack noise statistics instead of raw
-RNG-matched captures. That same Phase 1 sensor wave now also includes
+RNG-matched captures. That same sensor compatibility surface now also
+includes headless `sensor_clear_data(...)` / `sensorClearData(...)`,
+matching the direct MATLAB computed-payload reset path for sensor
+objects. That same Phase 1 sensor wave now also includes
 public `sceneRotate(...)` / `oiCrop(...)` support for the deterministic
 rolling-shutter assembly path from `s_sensorRollingShutter.m`, with
 curated Octave parity on the per-frame mean-voltage trace, final
