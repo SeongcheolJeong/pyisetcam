@@ -16,6 +16,7 @@ from pyisetcam import (
     imageSensorCorrection,
     imageSensorTransform,
     ie_reflectance_samples,
+    ipHDRWhite,
     ip_compute,
     ip_create,
     ip_get,
@@ -712,3 +713,41 @@ def test_ie_internal_to_display_matches_direct_display_matrix(asset_store) -> No
     expected = np.linalg.inv(display_spd.T @ internal_cmf)
 
     assert np.allclose(transform, expected)
+
+
+def test_ip_hdr_white_whitens_saturated_pixels_without_blur(asset_store) -> None:
+    ip = ip_create(asset_store=asset_store)
+    ip.data["input"] = np.full((3, 3), 10.0, dtype=float)
+    ip.data["result"] = np.full((3, 3, 3), 0.25, dtype=float)
+
+    whitened_ip, weights = ipHDRWhite(
+        ip,
+        "saturation",
+        10.0,
+        "hdr level",
+        0.5,
+        "wgt blur",
+        0.0,
+    )
+
+    assert np.allclose(weights, np.ones((3, 3), dtype=float))
+    assert np.allclose(np.asarray(ip_get(whitened_ip, "result"), dtype=float), 1.0)
+
+
+def test_ip_hdr_white_uses_input_max_when_saturation_omitted(asset_store) -> None:
+    ip = ip_create(asset_store=asset_store)
+    ip.data["input"] = np.array(
+        [
+            [0.0, 2.5, 5.0],
+            [1.0, 5.0, 2.5],
+            [0.0, 1.0, 5.0],
+        ],
+        dtype=float,
+    )
+    ip.data["result"] = np.zeros((3, 3, 3), dtype=float)
+
+    whitened_ip, weights = ipHDRWhite(ip, "hdr level", 0.5, "wgt blur", 0.0)
+
+    expected_weights = np.clip(ip.data["input"] / 5.0 - 0.5, 0.0, 1.0) / 0.5
+    assert np.allclose(weights, expected_weights)
+    assert np.allclose(np.asarray(ip_get(whitened_ip, "result"), dtype=float), expected_weights[:, :, np.newaxis])

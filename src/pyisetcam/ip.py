@@ -8,6 +8,7 @@ from typing import Any
 
 import imageio.v3 as iio
 import numpy as np
+from scipy.ndimage import gaussian_filter
 from scipy.signal import convolve2d
 
 from .assets import AssetStore, ie_read_spectra
@@ -787,6 +788,54 @@ def ie_internal_to_display(ip: ImageProcessor) -> np.ndarray:
     )
 
 
+def ip_hdr_white(
+    ip: ImageProcessor,
+    *args: Any,
+    saturation: float | None = None,
+    hdr_level: float = 0.95,
+    wgt_blur: float = 1.0,
+) -> tuple[ImageProcessor, np.ndarray]:
+    """Apply the legacy HDR whitening step to the current IP result image."""
+
+    if len(args) % 2 != 0:
+        raise ValueError("ipHDRWhite expects MATLAB-style key/value pairs.")
+    for index in range(0, len(args), 2):
+        key = param_format(str(args[index]))
+        value = args[index + 1]
+        if key == "saturation":
+            saturation = float(value)
+        elif key == "hdrlevel":
+            hdr_level = float(value)
+        elif key == "wgtblur":
+            wgt_blur = float(value)
+        else:
+            raise UnsupportedOptionError("ipHDRWhite", args[index])
+
+    updated = _ensure_ip_state(ip.clone())
+    input_data = updated.data.get("input")
+    if input_data is None:
+        raise ValueError("IP has no input data for ipHDRWhite.")
+    result = updated.data.get("result")
+    if result is None:
+        raise ValueError("IP has no result data for ipHDRWhite.")
+
+    input_array = np.asarray(input_data, dtype=float)
+    result_array = np.asarray(result, dtype=float)
+    saturation_value = float(np.max(input_array)) if saturation is None else float(saturation)
+    if saturation_value <= 0.0:
+        raise ValueError("ipHDRWhite saturation must be positive.")
+
+    weights = (input_array / saturation_value - float(hdr_level)) / max(1e-6, 1.0 - float(hdr_level))
+    weights = np.clip(weights, 0.0, 1.0)
+    sigma = max(float(wgt_blur), 0.0)
+    if sigma > 0.0:
+        weights = gaussian_filter(weights, sigma=sigma, mode="constant", cval=0.0, truncate=2.0)
+
+    whitened = np.ones_like(result_array, dtype=float)
+    updated.data["result"] = whitened * weights[:, :, np.newaxis] + result_array * (1.0 - weights[:, :, np.newaxis])
+    return updated, np.asarray(weights, dtype=float)
+
+
 def display_render(
     ics_image: np.ndarray,
     ip: ImageProcessor,
@@ -1491,6 +1540,7 @@ imageMCCTransform = image_mcc_transform  # noqa: N816
 imageSensorTransform = image_sensor_transform  # noqa: N816
 imageEsserTransform = image_esser_transform  # noqa: N816
 ieInternal2Display = ie_internal_to_display  # noqa: N816
+ipHDRWhite = ip_hdr_white  # noqa: N816
 Demosaic = demosaic  # noqa: N816
 imageSensorConversion = image_sensor_conversion  # noqa: N816
 imageSensorCorrection = image_sensor_correction  # noqa: N816

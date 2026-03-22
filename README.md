@@ -944,6 +944,10 @@ That same image-processing surface now also exposes
 direct MATLAB internal-color-space to linear-display transform helper used
 under `displayRender(...)` and related IP workflows.
 That same image-processing surface now also exposes
+`ip_hdr_white(...)` / `ipHDRWhite(...)`, matching the direct MATLAB HDR
+highlight-whitening helper on top of the current IP `input` and `result`
+payloads.
+That same image-processing surface now also exposes
 `ip_clear_data(...)` / `ipClearData(...)`, matching the direct MATLAB
 computed-payload reset path and the `ipSet(..., 'data', [])` behavior.
 Scene/OI/IP ROI plotting helpers now expose the matching chromaticity and

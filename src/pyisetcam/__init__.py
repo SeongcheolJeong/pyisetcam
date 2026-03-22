@@ -50,6 +50,7 @@ from .ip import (
     image_sensor_conversion,
     image_sensor_correction,
     image_sensor_transform,
+    ip_hdr_white,
     ip_clear_data,
     ip_compute,
     ip_create,
@@ -366,6 +367,8 @@ __all__ = [
     "image_sensor_correction",
     "imageSensorTransform",
     "image_sensor_transform",
+    "ipHDRWhite",
+    "ip_hdr_white",
     "ipClearData",
     "ip_clear_data",
     "ipSaveImage",
@@ -989,6 +992,7 @@ imageMCCTransform = image_mcc_transform
 imageSensorTransform = image_sensor_transform
 imageEsserTransform = image_esser_transform
 ieInternal2Display = ie_internal_to_display
+ipHDRWhite = ip_hdr_white
 imageDataXYZ = image_data_xyz
 displayRender = display_render
 imageRGB2XYZ = image_rgb_to_xyz

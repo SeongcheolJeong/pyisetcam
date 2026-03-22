@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-22T12:55:46.077634+00:00",
+  "generated_at": "2026-03-22T13:12:45.132410+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -7,9 +7,9 @@
       "headless_only": 74,
       "missing": 40,
       "out_of_scope": 101,
-      "parity": 292,
-      "partial": 916,
-      "ported": 20
+      "parity": 293,
+      "partial": 914,
+      "ported": 21
     },
     "kind_counts": {
       "api": 661,
@@ -20,10 +20,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 457,
-      "P1": 408,
+      "P0": 456,
+      "P1": 407,
       "P2": 165,
-      "P3": 413
+      "P3": 415
     },
     "delta_from_previous": {
       "status_counts": {
@@ -31,8 +31,8 @@
         "missing": 0,
         "out_of_scope": 0,
         "parity": 1,
-        "partial": -1,
-        "ported": 0
+        "partial": -2,
+        "ported": 1
       },
       "kind_counts": {
         "api": 0,
@@ -44,9 +44,9 @@
       },
       "priority_counts": {
         "P0": -1,
-        "P1": 0,
+        "P1": -1,
         "P2": 0,
-        "P3": 1
+        "P3": 2
       }
     },
     "family_summary": {
@@ -274,8 +274,8 @@
       "imgproc": {
         "total": 59,
         "by_status": {
-          "parity": 16,
-          "partial": 43
+          "parity": 17,
+          "partial": 42
         },
         "by_kind": {
           "api": 59
@@ -663,7 +663,8 @@
       "scripts/image": {
         "total": 21,
         "by_status": {
-          "partial": 21
+          "partial": 20,
+          "ported": 1
         },
         "by_kind": {
           "script": 21
@@ -1008,11 +1009,11 @@
     "top_open_families": [
       {
         "family": "imgproc",
-        "open_entries": 43,
+        "open_entries": 42,
         "highest_open_priority": "P0",
         "by_status": {
-          "parity": 16,
-          "partial": 43
+          "parity": 17,
+          "partial": 42
         }
       },
       {
@@ -1163,7 +1164,7 @@
         "not_implemented_error_sites": 0
       },
       "ip": {
-        "unsupported_option_error_sites": 6,
+        "unsupported_option_error_sites": 7,
         "not_implemented_error_sites": 0
       },
       "iso": {
@@ -4267,14 +4268,16 @@
       "upstream_path": "imgproc/ipHDRWhite.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.ip",
+      "status": "parity",
+      "python_surface": "pyisetcam.ip, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/unit/test_ip.py"
+        "tests/unit/test_ip.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/ipKeyPress.m",
@@ -10043,14 +10046,14 @@
       "upstream_path": "scripts/image/jpegFiles/truncate.m",
       "family": "scripts/image",
       "kind": "script",
-      "status": "partial",
+      "status": "ported",
       "python_surface": "pyisetcam.ip, pyisetcam.fileio",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "A direct Python implementation surface was detected for this upstream path.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/image/s_ipCircleMTF.m",
