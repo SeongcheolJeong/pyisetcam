@@ -2359,8 +2359,28 @@ def wvf_zernike_nm_to_osa_index(n: Any, m: Any) -> Any:
     return indices
 
 
+def wvf_osa_index_to_vector_index(j_index: Any) -> tuple[Any, Any]:
+    indices = _coerce_wvf_zcoeff_indices(j_index)
+    vector_index = indices + 1
+    if np.isscalar(j_index) or (isinstance(j_index, str) and indices.size == 1):
+        return int(vector_index.reshape(())), int(indices.reshape(()))
+    return vector_index, indices
+
+
+def wvf_wave_to_idx(wvf: dict[str, Any], w_list: Any) -> np.ndarray:
+    wave = np.asarray(wvf_get(wvf, "calc wavelengths"), dtype=float).reshape(-1)
+    rounded_wave = np.round(wave).astype(int)
+    rounded_target = np.round(np.asarray(w_list, dtype=float).reshape(-1)).astype(int)
+    idx = np.flatnonzero(np.isin(rounded_wave, rounded_target)) + 1
+    if idx.size == 0:
+        raise ValueError("wvfWave2idx: No matching wavelength in list")
+    return idx.astype(int)
+
+
 wvfOSAIndexToZernikeNM = wvf_osa_index_to_zernike_nm
 wvfZernikeNMToOSAIndex = wvf_zernike_nm_to_osa_index
+wvfOSAIndexToVectorIndex = wvf_osa_index_to_vector_index
+wvfWave2idx = wvf_wave_to_idx
 
 
 def _human_wave_defocus(wave_nm: Any) -> np.ndarray:
@@ -2849,6 +2869,19 @@ def wvf_compute_psf(
     if compute_pupil_func or not pupil_available:
         current = _wvf_compute_pupil_function_explicit(current)
     return _wvf_compute_psf_from_pupil_function(current, current.get("pupil_function"))
+
+
+def wvf_clear_data(wvf: dict[str, Any]) -> dict[str, Any]:
+    updated = dict(wvf)
+    updated["psf"] = None
+    updated["wavefront_aberrations_um"] = None
+    updated["pupil_function"] = None
+    updated["pupil_amplitude"] = None
+    updated["pupil_phase"] = None
+    updated["areapix"] = None
+    updated["areapixapod"] = None
+    updated["computed"] = False
+    return updated
 
 
 def psf_to_zcoeff_error(

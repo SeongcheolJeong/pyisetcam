@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-22T16:13:54.993306+00:00",
+  "generated_at": "2026-03-22T16:41:38.152239+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -7,8 +7,8 @@
       "headless_only": 74,
       "missing": 40,
       "out_of_scope": 103,
-      "parity": 301,
-      "partial": 896,
+      "parity": 304,
+      "partial": 893,
       "ported": 29
     },
     "kind_counts": {
@@ -20,18 +20,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 439,
+      "P0": 436,
       "P1": 406,
       "P2": 165,
-      "P3": 433
+      "P3": 436
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
         "out_of_scope": 0,
-        "parity": 1,
-        "partial": -1,
+        "parity": 3,
+        "partial": -3,
         "ported": 0
       },
       "kind_counts": {
@@ -43,10 +43,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -1,
+        "P0": -3,
         "P1": 0,
         "P2": 0,
-        "P3": 1
+        "P3": 3
       }
     },
     "family_summary": {
@@ -485,8 +485,8 @@
       "opticalimage/wavefront": {
         "total": 49,
         "by_status": {
-          "parity": 15,
-          "partial": 32,
+          "parity": 18,
+          "partial": 29,
           "ported": 2
         },
         "by_kind": {
@@ -1010,16 +1010,6 @@
     },
     "top_open_families": [
       {
-        "family": "opticalimage/wavefront",
-        "open_entries": 32,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 15,
-          "partial": 32,
-          "ported": 2
-        }
-      },
-      {
         "family": "opticalimage",
         "open_entries": 31,
         "highest_open_priority": "P0",
@@ -1047,6 +1037,16 @@
           "parity": 11,
           "partial": 30,
           "ported": 4
+        }
+      },
+      {
+        "family": "opticalimage/wavefront",
+        "open_entries": 29,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 18,
+          "partial": 29,
+          "ported": 2
         }
       },
       {
@@ -7592,14 +7592,15 @@
       "upstream_path": "opticalimage/wavefront/wvfClearData.m",
       "family": "opticalimage/wavefront",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics",
+      "status": "parity",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/wavefront/wvfCompute.m",
@@ -7806,14 +7807,15 @@
       "upstream_path": "opticalimage/wavefront/wvfOSAIndexToVectorIndex.m",
       "family": "opticalimage/wavefront",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics",
+      "status": "parity",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/wavefront/wvfOSAIndexToZernikeNM.m",
@@ -7927,14 +7929,15 @@
       "upstream_path": "opticalimage/wavefront/wvfWave2idx.m",
       "family": "opticalimage/wavefront",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics",
+      "status": "parity",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/wavefront/wvfZernikeNMToOSAIndex.m",

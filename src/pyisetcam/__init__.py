@@ -136,15 +136,18 @@ from .optics import (
     wvf_aperture_params,
     wvf_compute,
     wvf_compute_psf,
+    wvf_clear_data,
     wvf_create,
     wvf_defocus_diopters_to_microns,
     wvf_defocus_microns_to_diopters,
     wvf_get,
     wvf_load_thibos_virtual_eyes,
+    wvf_osa_index_to_vector_index,
     wvf_osa_index_to_zernike_nm,
     wvf_pupil_function,
     wvf_set,
     wvf_to_oi,
+    wvf_wave_to_idx,
     wvf_zernike_nm_to_osa_index,
     zemax_load,
     zemax_read_header,
@@ -779,11 +782,14 @@ __all__ = [
     "wvfApertureP",
     "wvfCreate",
     "wvfComputePSF",
+    "wvfClearData",
     "wvfGet",
     "wvfLoadThibosVirtualEyes",
+    "wvfOSAIndexToVectorIndex",
     "wvfOSAIndexToZernikeNM",
     "wvfPupilFunction",
     "wvfSet",
+    "wvfWave2idx",
     "wvfZernikeNMToOSAIndex",
     "wvf2oi",
     "wvfDefocusDioptersToMicrons",
@@ -792,14 +798,17 @@ __all__ = [
     "wvf_aperture_params",
     "wvf_create",
     "wvf_compute_psf",
+    "wvf_clear_data",
     "wvf_defocus_diopters_to_microns",
     "wvf_defocus_microns_to_diopters",
     "wvf_get",
     "wvf_load_thibos_virtual_eyes",
+    "wvf_osa_index_to_vector_index",
     "wvf_osa_index_to_zernike_nm",
     "wvf_pupil_function",
     "wvf_set",
     "wvf_to_oi",
+    "wvf_wave_to_idx",
     "wvf_plot",
     "wvf_zernike_nm_to_osa_index",
     "chromaticity_xy",
@@ -900,13 +909,16 @@ wvfAperture = wvf_aperture
 wvfApertureP = wvf_aperture_params
 wvfCompute = wvf_compute
 wvfComputePSF = wvf_compute_psf
+wvfClearData = wvf_clear_data
 wvfCreate = wvf_create
 wvfGet = wvf_get
 wvfLoadThibosVirtualEyes = wvf_load_thibos_virtual_eyes
+wvfOSAIndexToVectorIndex = wvf_osa_index_to_vector_index
 wvfOSAIndexToZernikeNM = wvf_osa_index_to_zernike_nm
 wvfPupilFunction = wvf_pupil_function
 wvfSet = wvf_set
 wvf2oi = wvf_to_oi
+wvfWave2idx = wvf_wave_to_idx
 wvfZernikeNMToOSAIndex = wvf_zernike_nm_to_osa_index
 wvfDefocusDioptersToMicrons = wvf_defocus_diopters_to_microns
 wvfDefocusMicronsToDiopters = wvf_defocus_microns_to_diopters

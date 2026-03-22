@@ -495,6 +495,11 @@ Airy-disk match and `wvf2oi` f-number handoff, the pupil-size sweeps at
 That same script-driven WVF helper surface now also includes
 `wvfOSAIndexToZernikeNM` / `wvfZernikeNMToOSAIndex`, with direct Octave
 parity on the OSA index round-trip used by `s_wvfWavefronts.m`.
+That same script-driven WVF helper surface now also includes headless
+`wvf_clear_data(...)` / `wvfClearData(...)`, `wvf_wave_to_idx(...)` /
+`wvfWave2idx(...)`, and `wvf_osa_index_to_vector_index(...)` /
+`wvfOSAIndexToVectorIndex(...)` for the legacy MATLAB wavefront utility
+layer built on top of the existing WVF core.
 That same script-driven WVF surface now also has direct Octave parity on
 the 16-coefficient OSA-index sweep from `s_wvfWavefronts.m`, comparing
 the returned spatial support axis, normalized wavefront center rows and

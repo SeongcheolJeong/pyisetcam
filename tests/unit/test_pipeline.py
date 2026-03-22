@@ -166,16 +166,19 @@ from pyisetcam import (
     wvf_aperture,
     wvf_compute,
     wvf_compute_psf,
+    wvf_clear_data,
     wvf_create,
     wvf_defocus_diopters_to_microns,
     wvf_defocus_microns_to_diopters,
     wvf_get,
     wvf_load_thibos_virtual_eyes,
+    wvf_osa_index_to_vector_index,
     wvf_osa_index_to_zernike_nm,
     wvf_pupil_function,
     wvf_plot,
     wvf_set,
     wvf_to_oi,
+    wvf_wave_to_idx,
     wvf_zernike_nm_to_osa_index,
     xw_to_rgb_format,
     xyz_from_energy,
@@ -2393,6 +2396,25 @@ def test_wvf_compute_returns_psf_and_pupil_function() -> None:
     assert np.isclose(float(wvf_get(computed, "pupil diameter", "mm")), 3.0)
     assert np.asarray(wvf_get(computed, "psf")).shape == (201, 201, 2)
     assert np.asarray(wvf_get(computed, "pupil function")).shape == (201, 201, 2)
+
+
+def test_wvf_clear_data_preserves_metadata_and_recomputes_on_demand() -> None:
+    wvf = wvf_compute(wvf_set(wvf_create(wave=np.array([500.0, 600.0], dtype=float)), "pupil diameter", 3.0, "mm"))
+
+    cleared = wvf_clear_data(wvf)
+
+    assert cleared is not wvf
+    assert cleared["computed"] is False
+    assert cleared["psf"] is None
+    assert cleared["wavefront_aberrations_um"] is None
+    assert cleared["pupil_function"] is None
+    assert cleared["pupil_amplitude"] is None
+    assert cleared["pupil_phase"] is None
+    assert cleared["areapix"] is None
+    assert cleared["areapixapod"] is None
+    assert np.array_equal(np.asarray(wvf_get(cleared, "wave"), dtype=float), np.asarray(wvf_get(wvf, "wave"), dtype=float))
+    assert np.asarray(wvf_get(cleared, "psf", 500.0), dtype=float).shape == (201, 201)
+    assert np.asarray(wvf_get(wvf, "psf"), dtype=float).shape == (201, 201, 2)
 
 
 def test_wvf_pupil_function_and_compute_psf_support_explicit_aperture() -> None:
@@ -6229,6 +6251,16 @@ def test_wvf_wave_getter_supports_unit_and_index() -> None:
     assert np.allclose(np.asarray(wvf_get(wvf, "wave", "um"), dtype=float), np.array([0.45, 0.55, 0.65], dtype=float))
     assert np.isclose(float(wvf_get(wvf, "wave", "um", 2)), 0.55)
     assert np.isclose(float(wvf_get(wvf, "measured wavelength", "um")), 0.55)
+
+
+def test_wvf_wave_to_idx_matches_calc_wavelength_rounding() -> None:
+    wvf = wvf_create(wave=np.array([400.0, 500.0, 600.0], dtype=float))
+
+    idx = wvf_wave_to_idx(wvf, np.array([500.4, 599.6], dtype=float))
+
+    assert np.array_equal(idx, np.array([2, 3], dtype=int))
+    with pytest.raises(ValueError, match="No matching wavelength"):
+        wvf_wave_to_idx(wvf, np.array([455.0], dtype=float))
 
 
 def test_psf2zcoeff_error_is_small_for_matching_wvf_psf() -> None:
@@ -12008,6 +12040,17 @@ def test_wvf_osa_index_helpers_round_trip() -> None:
     assert np.array_equal(roundtrip, indices)
     assert wvf_osa_index_to_zernike_nm(15) == (5, -5)
     assert wvf_zernike_nm_to_osa_index(5, -5) == 15
+
+
+def test_wvf_osa_index_to_vector_index_supports_named_and_numeric_inputs() -> None:
+    vector_index, j_index = wvf_osa_index_to_vector_index(np.array([0, 4, 12], dtype=int))
+    named_vector_index, named_j_index = wvf_osa_index_to_vector_index(["defocus", "spherical"])
+
+    assert np.array_equal(vector_index, np.array([1, 5, 13], dtype=int))
+    assert np.array_equal(j_index, np.array([0, 4, 12], dtype=int))
+    assert np.array_equal(named_vector_index, np.array([5, 13], dtype=int))
+    assert np.array_equal(named_j_index, np.array([4, 12], dtype=int))
+    assert wvf_osa_index_to_vector_index("defocus") == (5, 4)
 
 
 def test_run_python_case_supports_wvf_osa_index_conversion_parity_case(asset_store) -> None:
