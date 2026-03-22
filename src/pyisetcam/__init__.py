@@ -256,6 +256,9 @@ from .sensor import (
     sensor_get,
     sensor_color_order,
     sensor_determine_cfa,
+    sensor_display_transform,
+    sensor_equate_transmittances,
+    sensor_filter_rgb,
     sensor_image_color_array,
     sensor_set,
     sensor_set_size_to_fov,
@@ -716,6 +719,9 @@ __all__ = [
     "sensorClearData",
     "sensorColorOrder",
     "sensorDetermineCFA",
+    "sensorDisplayTransform",
+    "sensorEquateTransmittances",
+    "sensorFilterRGB",
     "signalCurrent",
     "signal_current",
     "sensor_ccm",
@@ -746,6 +752,9 @@ __all__ = [
     "sensor_get",
     "sensor_color_order",
     "sensor_determine_cfa",
+    "sensor_display_transform",
+    "sensor_equate_transmittances",
+    "sensor_filter_rgb",
     "pixelSNR",
     "sensor_set",
     "sensor_set_size_to_fov",
@@ -956,6 +965,9 @@ sensorCCM = sensor_ccm
 sensorClearData = sensor_clear_data
 sensorColorOrder = sensor_color_order
 sensorDetermineCFA = sensor_determine_cfa
+sensorDisplayTransform = sensor_display_transform
+sensorEquateTransmittances = sensor_equate_transmittances
+sensorFilterRGB = sensor_filter_rgb
 sensorDR = sensor_dr
 signalCurrent = signal_current
 sensorColorFilter = sensor_color_filter

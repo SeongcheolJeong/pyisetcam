@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-22T17:11:57.890436+00:00",
+  "generated_at": "2026-03-22T17:41:06.419533+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -7,8 +7,8 @@
       "headless_only": 74,
       "missing": 40,
       "out_of_scope": 103,
-      "parity": 307,
-      "partial": 890,
+      "parity": 310,
+      "partial": 887,
       "ported": 29
     },
     "kind_counts": {
@@ -20,10 +20,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 433,
+      "P0": 430,
       "P1": 406,
       "P2": 165,
-      "P3": 439
+      "P3": 442
     },
     "delta_from_previous": {
       "status_counts": {
@@ -740,8 +740,8 @@
       "sensor": {
         "total": 56,
         "by_status": {
-          "parity": 24,
-          "partial": 31,
+          "parity": 27,
+          "partial": 28,
           "ported": 1
         },
         "by_kind": {
@@ -1010,16 +1010,6 @@
     },
     "top_open_families": [
       {
-        "family": "sensor",
-        "open_entries": 31,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 24,
-          "partial": 31,
-          "ported": 1
-        }
-      },
-      {
         "family": "scene",
         "open_entries": 30,
         "highest_open_priority": "P0",
@@ -1055,6 +1045,16 @@
         "highest_open_priority": "P0",
         "by_status": {
           "partial": 28
+        }
+      },
+      {
+        "family": "sensor",
+        "open_entries": 28,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 27,
+          "partial": 28,
+          "ported": 1
         }
       },
       {
@@ -13283,40 +13283,43 @@
       "upstream_path": "sensor/sensorDisplayTransform.m",
       "family": "sensor",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.sensor",
+      "status": "parity",
+      "python_surface": "pyisetcam.sensor, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "sensor/sensorEquateTransmittances.m",
       "family": "sensor",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.sensor",
+      "status": "parity",
+      "python_surface": "pyisetcam.sensor, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "sensor/sensorFilterRGB.m",
       "family": "sensor",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.sensor",
+      "status": "parity",
+      "python_surface": "pyisetcam.sensor, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "sensor/sensorFormats.m",

@@ -153,6 +153,9 @@ from pyisetcam import (
     sensor_dr,
     sensor_dng_read,
     sensorDetermineCFA,
+    sensorDisplayTransform,
+    sensorEquateTransmittances,
+    sensorFilterRGB,
     sensor_formats,
     sensor_get,
     sensorImageColorArray,
@@ -4818,6 +4821,91 @@ def test_sensor_snr_luxsec_matches_manual_reparameterization(asset_store) -> Non
     assert np.allclose(snr, expected_snr)
     assert np.allclose(luxsec, expected_luxsec)
     assert np.all(np.diff(luxsec, axis=0) > 0.0)
+
+
+def _legacy_sensor_color_block_matrix(wave: np.ndarray) -> np.ndarray:
+    wave = np.asarray(wave, dtype=float).reshape(-1)
+    default_wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    blue_count = 10
+    green_count = 8
+    red_count = default_wave.size - blue_count - green_count
+    default_matrix = np.column_stack(
+        (
+            np.concatenate((np.zeros(blue_count + green_count), np.ones(red_count))),
+            np.concatenate((np.zeros(blue_count), np.ones(green_count), np.zeros(red_count))),
+            np.concatenate((np.ones(blue_count), np.zeros(green_count + red_count))),
+        )
+    )
+    if np.array_equal(wave, default_wave):
+        matrix = default_matrix.copy()
+    else:
+        matrix = np.empty((wave.size, 3), dtype=float)
+        for index in range(3):
+            matrix[:, index] = np.interp(wave, default_wave, default_matrix[:, index], left=0.2, right=0.2)
+    matrix = matrix / np.maximum(np.sum(matrix, axis=0, keepdims=True), 1e-12)
+    white_spd = np.asarray(blackbody(wave, 6500.0, kind="quanta"), dtype=float).reshape(-1)
+    white_spd = white_spd / max(float(np.max(white_spd)), 1e-12)
+    matrix = matrix @ np.diag(1.0 / np.maximum(white_spd @ matrix, 1e-12))
+    return matrix
+
+
+def test_sensor_display_transform_matches_legacy_closed_form(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+
+    wave = np.asarray(sensor_get(sensor, "wave"), dtype=float).reshape(-1)
+    filter_spectra = np.asarray(sensor_get(sensor, "filterSpectra"), dtype=float)
+    block_matrix = _legacy_sensor_color_block_matrix(wave)
+    expected = (block_matrix.T @ filter_spectra).T
+    expected /= max(float(np.max(expected)), 1e-12)
+
+    transform = sensorDisplayTransform(sensor)
+
+    assert transform.shape == expected.shape
+    assert np.allclose(transform, expected)
+    assert np.isclose(float(np.max(transform)), 1.0)
+
+
+def test_sensor_equate_transmittances_matches_legacy_scaling() -> None:
+    filters = np.array(
+        [
+            [0.1, 0.4, 0.2],
+            [0.3, 0.2, 0.5],
+            [0.6, 0.4, 0.3],
+        ],
+        dtype=float,
+    )
+
+    balanced = sensorEquateTransmittances(filters)
+    expected = filters / np.sum(filters, axis=0, keepdims=True)
+    expected /= max(float(np.max(expected)), 1e-12)
+
+    assert np.allclose(balanced, expected)
+    assert np.allclose(np.sum(balanced, axis=0), np.sum(balanced, axis=0)[0])
+    assert np.isclose(float(np.max(balanced)), 1.0)
+
+
+def test_sensor_filter_rgb_matches_legacy_filter_colors(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+
+    wave = np.asarray(sensor_get(sensor, "wave"), dtype=float).reshape(-1)
+    pattern = np.asarray(sensor_get(sensor, "pattern"), dtype=int)
+    filter_spectra = np.asarray(sensor_get(sensor, "filterSpectra"), dtype=float)
+    block_matrix = _legacy_sensor_color_block_matrix(wave)
+    background = np.full(3, 0.94, dtype=float)
+    expected_full = np.zeros(pattern.shape + (3,), dtype=float)
+
+    for row in range(pattern.shape[0]):
+        for col in range(pattern.shape[1]):
+            color_filter = filter_spectra[:, int(pattern[row, col]) - 1]
+            rgb = np.asarray(block_matrix.T @ color_filter, dtype=float).reshape(-1)
+            expected_full[row, col] = rgb / max(float(np.max(rgb)), 1e-12)
+
+    rendered_full = sensorFilterRGB(sensor, 1.0)
+    rendered_soft = sensorFilterRGB(sensor, 0.25)
+
+    assert rendered_full.shape == expected_full.shape
+    assert np.allclose(rendered_full, expected_full)
+    assert np.allclose(rendered_soft, expected_full * 0.25 + background * 0.75)
 
 
 def test_sensor_set_etendue_scales_noiseless_response(asset_store) -> None:

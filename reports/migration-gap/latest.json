@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-22T17:11:57.890436+00:00",
+  "generated_at": "2026-03-22T17:41:06.419533+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-22T17:11:57.890436+00:00",
+    "generated_at": "2026-03-22T17:41:06.419533+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 74,
       "missing": 40,
       "out_of_scope": 103,
-      "parity": 307,
-      "partial": 890,
+      "parity": 310,
+      "partial": 887,
       "ported": 29
     },
     "kind_counts": {
@@ -22,10 +22,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 433,
+      "P0": 430,
       "P1": 406,
       "P2": 165,
-      "P3": 439
+      "P3": 442
     },
     "delta_from_previous": {
       "status_counts": {
@@ -742,8 +742,8 @@
       "sensor": {
         "total": 56,
         "by_status": {
-          "parity": 24,
-          "partial": 31,
+          "parity": 27,
+          "partial": 28,
           "ported": 1
         },
         "by_kind": {
@@ -1012,16 +1012,6 @@
     },
     "top_open_families": [
       {
-        "family": "sensor",
-        "open_entries": 31,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 24,
-          "partial": 31,
-          "ported": 1
-        }
-      },
-      {
         "family": "scene",
         "open_entries": 30,
         "highest_open_priority": "P0",
@@ -1057,6 +1047,16 @@
         "highest_open_priority": "P0",
         "by_status": {
           "partial": 28
+        }
+      },
+      {
+        "family": "sensor",
+        "open_entries": 28,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 27,
+          "partial": 28,
+          "ported": 1
         }
       },
       {

@@ -2310,6 +2310,43 @@ def sensor_snr_luxsec(
     return np.asarray(snr, dtype=float), luxsec
 
 
+def sensor_display_transform(sensor: Sensor) -> np.ndarray:
+    return _sensor_display_transform(sensor)
+
+
+def sensor_equate_transmittances(filters: Any) -> np.ndarray:
+    array = np.asarray(filters, dtype=float)
+    if array.ndim != 2:
+        raise ValueError("sensorEquateTransmittances expects a 2D filter matrix.")
+    filter_area = np.sum(array, axis=0, keepdims=True)
+    balanced = np.divide(
+        array,
+        np.maximum(filter_area, 1e-12),
+        out=np.zeros_like(array),
+        where=filter_area > 0.0,
+    )
+    filter_peak = max(float(np.max(balanced)), 1e-12)
+    return balanced / filter_peak
+
+
+def sensor_filter_rgb(sensor: Sensor, saturation: float = 1.0) -> np.ndarray:
+    block_matrix = _color_block_matrix(np.asarray(sensor_get(sensor, "wave"), dtype=float), extrap_val=0.2)
+    pattern = np.asarray(sensor_get(sensor, "pattern"), dtype=int)
+    filter_spectra = np.asarray(sensor_get(sensor, "filterSpectra"), dtype=float)
+    background = np.full(3, 0.94, dtype=float)
+    saturation_value = float(saturation)
+    filter_rgb = np.zeros(pattern.shape + (3,), dtype=float)
+
+    for row in range(pattern.shape[0]):
+        for col in range(pattern.shape[1]):
+            color_filter = filter_spectra[:, int(pattern[row, col]) - 1]
+            rgb = np.asarray(block_matrix.T @ color_filter, dtype=float).reshape(-1)
+            rgb = rgb / max(float(np.max(rgb)), 1e-12)
+            filter_rgb[row, col, :] = rgb * saturation_value + (1.0 - saturation_value) * background
+
+    return filter_rgb
+
+
 def _sensor_line_profile(sensor: Sensor, line_key: str, rc: Any) -> dict[str, list[np.ndarray]] | None:
     from .roi import _sensor_signal_cube
 
@@ -4756,6 +4793,9 @@ sensorCCM = sensor_ccm
 sensorClearData = sensor_clear_data
 sensorColorOrder = sensor_color_order
 sensorDetermineCFA = sensor_determine_cfa
+sensorDisplayTransform = sensor_display_transform
+sensorEquateTransmittances = sensor_equate_transmittances
+sensorFilterRGB = sensor_filter_rgb
 sensorImageColorArray = sensor_image_color_array
 sensorSNRluxsec = sensor_snr_luxsec
 sensorShowCFA = sensor_show_cfa

@@ -311,7 +311,12 @@ and `sensor_determine_cfa(...)` / `sensorDetermineCFA(...)` for the legacy
 CFA color-hint and tiled-pattern helpers used across the older sensor CFA
 utilities, plus headless `sensor_snr_luxsec(...)` / `sensorSNRluxsec(...)`
 for the direct MATLAB lux-sec sensor-SNR helper on top of the existing
-`sensorSNR(...)` / `pixelVperLuxSec(...)` path. That same Phase 1 sensor
+`sensorSNR(...)` / `pixelVperLuxSec(...)` path, plus headless
+`sensor_display_transform(...)` / `sensorDisplayTransform(...)` for the
+direct sensor-channel-to-display transform, `sensor_equate_transmittances(...)`
+/ `sensorEquateTransmittances(...)` for the legacy equal-area filter
+normalizer, and `sensor_filter_rgb(...)` / `sensorFilterRGB(...)` for the
+legacy CFA filter-color approximation helper. That same Phase 1 sensor
 wave now also includes
 public `sceneRotate(...)` / `oiCrop(...)` support for the deterministic
 rolling-shutter assembly path from `s_sensorRollingShutter.m`, with
