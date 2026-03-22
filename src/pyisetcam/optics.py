@@ -2917,6 +2917,100 @@ def wvf_clear_data(wvf: dict[str, Any]) -> dict[str, Any]:
     return updated
 
 
+def psf_find_peak(input_psf: Any) -> tuple[int, int]:
+    """Return the 1-based row/column location of the PSF peak."""
+
+    psf = np.asarray(input_psf, dtype=float)
+    if psf.ndim != 2:
+        raise ValueError("psfFindPeak expects a 2-D PSF array.")
+    peak_index = int(np.argmax(psf))
+    peak_row, peak_col = np.unravel_index(peak_index, psf.shape)
+    return int(peak_row + 1), int(peak_col + 1)
+
+
+def psf_volume(psf: Any, x_samples: Any, y_samples: Any) -> tuple[float, np.ndarray]:
+    """Compute PSF volume and the corresponding unit-volume normalized PSF."""
+
+    psf_array = np.asarray(psf, dtype=float)
+    x = np.asarray(x_samples, dtype=float)
+    y = np.asarray(y_samples, dtype=float)
+    if x.ndim == 1 and y.ndim == 1:
+        if x.size < 2 or y.size < 2:
+            raise ValueError("psfVolume requires at least two x and y samples.")
+        dx = float(x[1] - x[0])
+        dy = float(y[1] - y[0])
+    elif x.ndim == 2 and y.ndim == 2:
+        if x.shape[1] < 2 or y.shape[0] < 2:
+            raise ValueError("psfVolume matrix support requires at least 2x2 samples.")
+        dx = float(x[0, 1] - x[0, 0])
+        dy = float(y[1, 0] - y[0, 0])
+    else:
+        raise ValueError("Unexpected X,Y format. Both should be vectors or matrices.")
+
+    volume = float(np.sum(psf_array) * dx * dy)
+    normalized = np.asarray(psf_array / volume if volume != 0.0 else psf_array.copy(), dtype=float)
+    return volume, normalized
+
+
+def psf_center(input_psf: Any) -> tuple[np.ndarray, int, int]:
+    """Shift the PSF peak to the center of the grid using linear interpolation."""
+
+    in_psf = np.asarray(input_psf, dtype=float)
+    if in_psf.ndim != 2:
+        raise ValueError("psfCenter expects a 2-D PSF array.")
+
+    peak_row, peak_col = psf_find_peak(in_psf)
+    rows, cols = in_psf.shape
+    x_in = np.arange(1, cols + 1, dtype=float) - float(peak_col)
+    y_in = np.arange(1, rows + 1, dtype=float) - float(peak_row)
+    x_out = np.arange(1, cols + 1, dtype=float) - float(np.floor(cols / 2.0) + 1.0)
+    y_out = np.arange(1, rows + 1, dtype=float) - float(np.floor(rows / 2.0) + 1.0)
+
+    interpolator = RegularGridInterpolator((y_in, x_in), in_psf, bounds_error=False, fill_value=0.0)
+    xx, yy = np.meshgrid(x_out, y_out)
+    centered = np.asarray(interpolator(np.stack((yy, xx), axis=-1)), dtype=float)
+
+    input_sum = float(np.sum(in_psf))
+    centered_sum = float(np.sum(centered))
+    if centered_sum > 0.0:
+        centered = centered * (input_sum / centered_sum)
+    return centered, peak_row, peak_col
+
+
+def psf_find_criterion_radius(input_psf: Any, criterion: float) -> float:
+    """Find the radius, in pixels, containing the requested PSF mass fraction."""
+
+    psf = np.asarray(input_psf, dtype=float)
+    if psf.ndim != 2 or psf.shape[0] != psf.shape[1]:
+        raise ValueError("psfFindCriterionRadius expects a square 2-D PSF array.")
+    if not (0.0 <= float(criterion) <= 1.0):
+        raise ValueError("criterion must be between 0 and 1.")
+
+    normalized = psf / max(float(np.sum(psf)), 1e-12)
+    centered, _, _ = psf_center(normalized)
+    peak_row, peak_col = psf_find_peak(centered)
+    yy, xx = np.indices(centered.shape, dtype=float)
+    radius_mat = np.sqrt((yy - (peak_row - 1)) ** 2 + (xx - (peak_col - 1)) ** 2)
+    max_radius = float(np.max(radius_mat))
+    radius = max_radius
+    previous_mass = 0.0
+    for sample_radius in range(1, int(np.floor(max_radius)) + 1):
+        mass = float(np.sum(centered[radius_mat <= float(sample_radius)]))
+        if mass > float(criterion):
+            if mass <= previous_mass:
+                return float(sample_radius)
+            lam = (float(criterion) - previous_mass) / (mass - previous_mass)
+            return (1.0 - lam) * float(sample_radius - 1) + lam * float(sample_radius)
+        previous_mass = mass
+    return radius
+
+
+psfFindPeak = psf_find_peak
+psfVolume = psf_volume
+psfCenter = psf_center
+psfFindCriterionRadius = psf_find_criterion_radius
+
+
 def psf_to_zcoeff_error(
     zcoeffs: Any,
     psf_target: Any,

@@ -92,6 +92,10 @@ from pyisetcam import (
     oi_spatial_support,
     oi_spatial_resample,
     oi_set,
+    psfCenter,
+    psfFindCriterionRadius,
+    psfFindPeak,
+    psfVolume,
     psf_to_zcoeff_error,
     rt_angle_lut,
     rt_block_center,
@@ -2727,6 +2731,37 @@ def test_wvf_pupil_amplitude_alias_matches_wvf_aperture() -> None:
 
     assert np.allclose(alias_aperture, aperture)
     assert alias_params == params
+
+
+def test_psf_helper_wrappers_match_legacy_contract() -> None:
+    psf = np.array(
+        [
+            [0.0, 1.0, 2.0, 1.0, 0.0],
+            [0.0, 2.0, 8.0, 2.0, 0.0],
+            [0.0, 1.0, 2.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0],
+        ],
+        dtype=float,
+    )
+
+    peak_row, peak_col = psfFindPeak(psf)
+    assert (peak_row, peak_col) == (2, 3)
+
+    centered, source_row, source_col = psfCenter(psf)
+    centered_peak = psfFindPeak(centered)
+    assert (source_row, source_col) == (2, 3)
+    assert centered.shape == psf.shape
+    assert centered_peak == (3, 3)
+    assert np.isclose(np.sum(centered), np.sum(psf), atol=1e-10, rtol=1e-10)
+
+    support = np.arange(-2.0, 3.0, 1.0, dtype=float)
+    volume, normalized = psfVolume(centered, support, support)
+    assert np.isclose(volume, np.sum(centered), atol=1e-10, rtol=1e-10)
+    assert np.isclose(np.sum(normalized), 1.0, atol=1e-10, rtol=1e-10)
+
+    radius = float(psfFindCriterionRadius(psf, 0.9))
+    assert np.isclose(radius, 1.5, atol=1e-10, rtol=1e-10)
 
 
 def test_oi_set_wvf_prefixed_parameter_rebuilds_oi(asset_store) -> None:

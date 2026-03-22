@@ -129,6 +129,10 @@ from .optics import (
     oi_spatial_support,
     oi_spatial_resample,
     oi_set,
+    psf_center,
+    psf_find_criterion_radius,
+    psf_find_peak,
+    psf_volume,
     optics_psf_to_otf,
     psf_to_zcoeff_error,
     rt_angle_lut,
@@ -621,6 +625,14 @@ __all__ = [
     "oi_spatial_resample",
     "oi_set",
     "optics_psf_to_otf",
+    "psfCenter",
+    "psfFindCriterionRadius",
+    "psfFindPeak",
+    "psfVolume",
+    "psf_center",
+    "psf_find_criterion_radius",
+    "psf_find_peak",
+    "psf_volume",
     "param_format",
     "peak_signal_to_noise_ratio",
     "psf2zcoeff",
@@ -976,6 +988,10 @@ oiSet = oi_set
 oiCalculateIlluminance = oi_calculate_illuminance
 oiDiffuser = oi_diffuser
 opticsPSF2OTF = optics_psf_to_otf
+psfFindPeak = psf_find_peak
+psfVolume = psf_volume
+psfCenter = psf_center
+psfFindCriterionRadius = psf_find_criterion_radius
 psf2zcoeff = psf_to_zcoeff_error
 oiPlot = oi_plot
 ipPlot = ip_plot

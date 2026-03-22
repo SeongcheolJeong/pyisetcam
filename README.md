@@ -514,6 +514,12 @@ That same script-driven WVF helper surface now also includes headless
 `wvfOSAIndexToVectorIndex(...)` for the legacy MATLAB wavefront utility
 layer built on top of the existing WVF core.
 That same script-driven WVF helper surface now also includes headless
+`psf_find_peak(...)` / `psfFindPeak(...)`, `psf_volume(...)` /
+`psfVolume(...)`, `psf_center(...)` / `psfCenter(...)`, and
+`psf_find_criterion_radius(...)` / `psfFindCriterionRadius(...)` for the
+legacy MATLAB PSF utility layer built on top of the existing WVF/PSF
+compute path.
+That same script-driven WVF helper surface now also includes headless
 `wvf_to_psf(...)` / `wvf2PSF(...)`, `wvf_to_optics(...)` /
 `wvf2optics(...)`, and `wvf_pupil_amplitude(...)` /
 `wvfPupilAmplitude(...)` for the direct MATLAB PSF/optics conversion

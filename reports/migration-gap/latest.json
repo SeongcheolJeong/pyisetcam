@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-22T21:13:37.775486+00:00",
+  "generated_at": "2026-03-22T21:38:20.207001+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-22T21:13:37.775486+00:00",
+    "generated_at": "2026-03-22T21:38:20.207001+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 73,
       "missing": 40,
       "out_of_scope": 106,
-      "parity": 333,
-      "partial": 862,
+      "parity": 337,
+      "partial": 858,
       "ported": 29
     },
     "kind_counts": {
@@ -22,18 +22,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 405,
+      "P0": 401,
       "P1": 406,
       "P2": 164,
-      "P3": 468
+      "P3": 472
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
         "out_of_scope": 0,
-        "parity": 7,
-        "partial": -7,
+        "parity": 4,
+        "partial": -4,
         "ported": 0
       },
       "kind_counts": {
@@ -45,10 +45,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -7,
+        "P0": -4,
         "P1": 0,
         "P2": 0,
-        "P3": 7
+        "P3": 4
       }
     },
     "family_summary": {
@@ -488,8 +488,8 @@
       "opticalimage/wavefront": {
         "total": 49,
         "by_status": {
-          "parity": 21,
-          "partial": 26,
+          "parity": 25,
+          "partial": 22,
           "ported": 2
         },
         "by_kind": {
@@ -1034,16 +1034,6 @@
         }
       },
       {
-        "family": "opticalimage/wavefront",
-        "open_entries": 26,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 21,
-          "partial": 26,
-          "ported": 2
-        }
-      },
-      {
         "family": "opticalimage",
         "open_entries": 25,
         "highest_open_priority": "P0",
@@ -1093,6 +1083,16 @@
           "headless_only": 1,
           "parity": 2,
           "partial": 21
+        }
+      },
+      {
+        "family": "opticalimage/wavefront",
+        "open_entries": 22,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 25,
+          "partial": 22,
+          "ported": 2
         }
       },
       {
