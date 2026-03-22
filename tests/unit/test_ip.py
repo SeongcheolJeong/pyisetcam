@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from pyisetcam import ip_compute, ip_create, ip_get, ip_set, sensor_create, sensor_set
+from pyisetcam import demosaic, ip_compute, ip_create, ip_get, ip_set, sensor_create, sensor_set
 
 
 def test_ip_compute_supports_rgb_bayer_demosaic_methods(asset_store) -> None:
@@ -211,3 +211,48 @@ def test_ip_compute_adaptive_laplacian_falls_back_to_bilinear_for_gbrg(asset_sto
         np.asarray(ip_get(adaptive, "sensorspace"), dtype=float),
         np.asarray(ip_get(bilinear, "sensorspace"), dtype=float),
     )
+
+
+def test_demosaic_matches_ip_compute_sensor_space(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "volts", np.arange(1, 37, dtype=float).reshape(6, 6))
+
+    for method in ("bilinear", "nearest neighbor", "laplacian", "adaptive laplacian"):
+        ip = ip_set(ip_create(asset_store=asset_store), "demosaic method", method)
+        computed = ip_compute(ip, sensor, asset_store=asset_store)
+
+        assert np.allclose(
+            np.asarray(demosaic(ip, sensor), dtype=float),
+            np.asarray(ip_get(computed, "sensorspace"), dtype=float),
+        )
+
+
+def test_demosaic_prefers_ip_input_over_sensor_storage(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "volts", np.arange(1, 37, dtype=float).reshape(6, 6))
+    override = np.arange(101, 137, dtype=float).reshape(6, 6)
+
+    reference_sensor = sensor_create("default", asset_store=asset_store)
+    reference_sensor = sensor_set(reference_sensor, "volts", override)
+    reference_ip = ip_set(ip_create(asset_store=asset_store), "demosaic method", "nearest neighbor")
+    reference = ip_compute(reference_ip, reference_sensor, asset_store=asset_store)
+
+    ip = ip_set(ip_create(asset_store=asset_store), "demosaic method", "nearest neighbor")
+    ip.data["input"] = override
+
+    assert np.allclose(
+        np.asarray(demosaic(ip, sensor), dtype=float),
+        np.asarray(ip_get(reference, "sensorspace"), dtype=float),
+    )
+
+
+def test_demosaic_returns_monochrome_sensor_plane(asset_store) -> None:
+    sensor = sensor_create("monochrome", asset_store=asset_store)
+    volts = np.arange(1, 13, dtype=float).reshape(3, 4)
+    sensor = sensor_set(sensor, "volts", volts)
+    ip = ip_create(asset_store=asset_store)
+
+    result = np.asarray(demosaic(ip, sensor), dtype=float)
+
+    assert result.shape == (3, 4, 1)
+    assert np.allclose(result[:, :, 0], volts)

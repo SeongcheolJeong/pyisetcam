@@ -894,6 +894,10 @@ MATLAB-style `ieNearestNeighbor`, `Laplacian`, and
 `ipSet(..., 'demosaic method', ...)` for RGB Bayer sensors, with the
 same bilinear fallback that upstream `Demosaic.m` uses for the
 unsupported `gbrg` adaptive-Laplacian branch.
+That same headless image-processing surface now also exposes
+`demosaic(...)` / `Demosaic(...)`, matching the tutorial-visible
+`Demosaic(ip, sensor)` entry point and preferring the current
+`ip.data['input']` mosaic when it is present.
 Scene/OI/IP ROI plotting helpers now expose the matching chromaticity and
 summary getters too: `sceneGet(..., 'chromaticity'/'roi chromaticity mean')`,
 `sceneGet(..., 'roi mean luminance')`, `oiGet(..., 'chromaticity'/'roi chromaticity mean')`,

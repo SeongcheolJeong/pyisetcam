@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-22T06:34:17.599494+00:00",
+  "generated_at": "2026-03-22T06:56:17.321078+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -3798,7 +3798,7 @@
       "family": "imgproc",
       "kind": "api",
       "status": "parity",
-      "python_surface": "pyisetcam.ip, pyisetcam.parity, pyisetcam.ptable, pyisetcam.scene",
+      "python_surface": "pyisetcam.ip, pyisetcam.__init__, pyisetcam.parity, pyisetcam.ptable",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_ip.py",

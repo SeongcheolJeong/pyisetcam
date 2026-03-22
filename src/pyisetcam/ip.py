@@ -483,31 +483,57 @@ def _demosaic_rgb_planes(
     return _ie_bilinear(planes, cfa_pattern)
 
 
+def _sensor_space_from_data(
+    sensor: Sensor, sensor_data: np.ndarray, demosaic_method: str = "bilinear"
+) -> np.ndarray:
+    sensor_data = np.asarray(sensor_data, dtype=float)
+    if sensor_data.ndim == 3 and not sensor.fields["mosaic"]:
+        return sensor_data
+    if sensor_data.ndim == 3:
+        return sensor_data
+    if sensor.fields["mosaic"]:
+        pattern = np.asarray(sensor.fields["pattern"], dtype=int)
+        rows, cols = sensor_data.shape
+        nfilters = int(np.asarray(sensor.fields["filter_spectra"]).shape[1])
+        tiled = tile_pattern(pattern, rows, cols)
+        planes = np.zeros((rows, cols, nfilters), dtype=float)
+        for channel_index in range(nfilters):
+            mask = tiled == (channel_index + 1)
+            planes[:, :, channel_index][mask] = sensor_data[mask]
+        if nfilters == 1:
+            return planes
+        if nfilters == 3 and tuple(pattern.shape) == (2, 2):
+            return _demosaic_rgb_planes(planes, pattern, demosaic_method)
+        return _ie_bilinear(planes, pattern)
+    return np.repeat(sensor_data[..., None], 3, axis=2)
+
+
 def _sensor_space(sensor: Sensor, demosaic_method: str = "bilinear") -> np.ndarray:
     sensor_data = sensor.data.get("volts")
     if sensor_data is None:
         sensor_data = sensor.data.get("dv")
     if sensor_data is None:
         raise ValueError("Sensor has no computed volts.")
-    if np.asarray(sensor_data).ndim == 3 and not sensor.fields["mosaic"]:
-        return np.asarray(sensor_data, dtype=float)
-    if np.asarray(sensor_data).ndim == 3:
-        return np.asarray(sensor_data, dtype=float)
-    if sensor.fields["mosaic"]:
-        pattern = np.asarray(sensor.fields["pattern"], dtype=int)
-        rows, cols = np.asarray(sensor_data).shape
-        nfilters = int(np.asarray(sensor.fields["filter_spectra"]).shape[1])
-        tiled = tile_pattern(pattern, rows, cols)
-        planes = np.zeros((rows, cols, nfilters), dtype=float)
-        for channel_index in range(nfilters):
-            mask = tiled == (channel_index + 1)
-            planes[:, :, channel_index][mask] = np.asarray(sensor_data, dtype=float)[mask]
-        if nfilters == 1:
-            return planes
-        if nfilters == 3 and tuple(pattern.shape) == (2, 2):
-            return _demosaic_rgb_planes(planes, pattern, demosaic_method)
-        return _ie_bilinear(planes, pattern)
-    return np.repeat(np.asarray(sensor_data, dtype=float)[..., None], 3, axis=2)
+    return _sensor_space_from_data(sensor, sensor_data, demosaic_method)
+
+
+def demosaic(ip: ImageProcessor, sensor: Sensor) -> np.ndarray:
+    """Return the demosaiced sensor-space image for the current IP method."""
+
+    method = str(
+        ip.fields.get(
+            "demosaic_method",
+            ip.fields.get("demosaic", {}).get("method", "bilinear"),
+        )
+    )
+    sensor_data = ip.data.get("input")
+    if sensor_data is None:
+        sensor_data = sensor.data.get("volts")
+    if sensor_data is None:
+        sensor_data = sensor.data.get("dv")
+    if sensor_data is None:
+        raise ValueError("Sensor has no computed volts.")
+    return _sensor_space_from_data(sensor, sensor_data, method)
 
 
 def _sensor_to_internal(
@@ -1123,3 +1149,4 @@ def ip_set(
 
 
 imageDataXYZ = image_data_xyz
+Demosaic = demosaic
