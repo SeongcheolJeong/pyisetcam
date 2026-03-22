@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import imageio.v3 as iio
 import numpy as np
 
 from pyisetcam import (
@@ -15,6 +16,7 @@ from pyisetcam import (
     ip_get,
     ip_set,
     ipClearData,
+    ipSaveImage,
     sensor_create,
     sensor_get,
     sensor_set,
@@ -559,3 +561,31 @@ def test_ip_set_data_empty_matches_ip_clear_data(asset_store) -> None:
     assert ip_get(cleared_by_set, "input") is None
     assert ip_get(cleared_by_set, "transforms") == [None, None, None]
     assert ip_get(cleared_by_wrapper, "transforms") == [None, None, None]
+
+
+def test_ip_save_image_writes_png_and_appends_extension(tmp_path, asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "volts", np.arange(1, 37, dtype=float).reshape(6, 6))
+    computed = ip_compute(ip_create(asset_store=asset_store), sensor, asset_store=asset_store)
+
+    output = ipSaveImage(computed, tmp_path / "ip-save-image")
+
+    saved_path = tmp_path / "ip-save-image.png"
+    assert output == str(saved_path.resolve())
+    saved = iio.imread(saved_path)
+    srgb = np.asarray(ip_get(computed, "srgb"), dtype=float)
+    assert saved.shape == srgb.shape
+    assert saved.dtype == np.uint8
+
+
+def test_ip_save_image_cropborder_crops_black_frame(tmp_path, asset_store) -> None:
+    ip = ip_create(asset_store=asset_store)
+    srgb = np.zeros((6, 7, 3), dtype=float)
+    srgb[1:5, 2:6, :] = np.array([0.25, 0.5, 0.75], dtype=float)
+    ip.data["srgb"] = srgb
+
+    output = ipSaveImage(ip, tmp_path / "cropped.png", cropborder=True)
+
+    saved = iio.imread(output)
+    assert saved.shape == (4, 4, 3)
+    assert np.all(saved[0, 0] == np.array([64, 128, 191], dtype=np.uint8))

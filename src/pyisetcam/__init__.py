@@ -50,6 +50,7 @@ from .ip import (
     ip_compute,
     ip_create,
     ip_get,
+    ip_save_image,
     ip_set,
 )
 from .metrics import (
@@ -352,6 +353,8 @@ __all__ = [
     "image_sensor_correction",
     "ipClearData",
     "ip_clear_data",
+    "ipSaveImage",
+    "ip_save_image",
     "demosaic",
     "Demosaic",
     "imageLinearTransform",
@@ -938,6 +941,7 @@ ipCompute = ip_compute
 ipGet = ip_get
 ipSet = ip_set
 ipClearData = ip_clear_data
+ipSaveImage = ip_save_image
 imageDataXYZ = image_data_xyz
 displayRender = display_render
 imageRGB2XYZ = image_rgb_to_xyz

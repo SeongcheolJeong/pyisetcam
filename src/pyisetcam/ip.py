@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import copy
+from pathlib import Path
 from typing import Any
 
+import imageio.v3 as iio
 import numpy as np
 from scipy.signal import convolve2d
 
@@ -59,6 +61,22 @@ def _restore_channel_image(data: np.ndarray, squeeze_channel: bool) -> np.ndarra
     if squeeze_channel and data.ndim == 3 and data.shape[2] == 1:
         return data[:, :, 0]
     return data
+
+
+def _crop_border(img: np.ndarray, threshold: float = 0.06) -> np.ndarray:
+    rgb = np.asarray(img, dtype=float)
+    if rgb.ndim != 3 or rgb.shape[2] != 3:
+        return rgb
+    gray = np.mean(rgb, axis=2)
+    mask = gray > float(threshold)
+    if not np.any(mask):
+        return rgb
+    rows, cols = np.where(mask)
+    row1, row2 = int(rows.min()), int(rows.max())
+    col1, col2 = int(cols.min()), int(cols.max())
+    if row2 <= row1 or col2 <= col1:
+        return rgb
+    return rgb[row1 : row2 + 1, col1 : col2 + 1, :]
 
 
 def _ensure_ip_state(ip: ImageProcessor) -> ImageProcessor:
@@ -693,6 +711,41 @@ def ip_clear_data(ip: ImageProcessor) -> ImageProcessor:
     return _ensure_ip_state(cleared)
 
 
+def ip_save_image(
+    ip: ImageProcessor,
+    f_name: str | Path,
+    show_image_flag: bool = False,
+    true_size_flag: bool = False,
+    *,
+    cropborder: bool = False,
+) -> str:
+    """Save the current IP image to an 8-bit PNG file."""
+
+    del show_image_flag, true_size_flag
+    ip = _ensure_ip_state(ip)
+    image = ip.data.get("srgb")
+    if image is None:
+        result = ip.data.get("result")
+        if result is None:
+            raise ValueError("IP has no computed image data to save.")
+        image = linear_to_srgb(np.clip(np.asarray(result, dtype=float), 0.0, 1.0))
+
+    srgb = np.clip(np.asarray(image, dtype=float), 0.0, 1.0)
+    if cropborder:
+        srgb = _crop_border(srgb)
+
+    output_path = Path(f_name).expanduser()
+    if output_path.suffix == "":
+        output_path = output_path.with_suffix(".png")
+    if not output_path.is_absolute():
+        output_path = (Path.cwd() / output_path).resolve()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    payload = np.clip(np.round(srgb * 255.0), 0.0, 255.0).astype(np.uint8)
+    iio.imwrite(output_path, payload)
+    return str(output_path)
+
+
 def _sensor_to_internal(
     sensor_space: np.ndarray,
     ip: ImageProcessor,
@@ -1296,6 +1349,7 @@ imageDataXYZ = image_data_xyz  # noqa: N816
 imageRGB2XYZ = image_rgb_to_xyz  # noqa: N816
 displayRender = display_render  # noqa: N816
 ipClearData = ip_clear_data  # noqa: N816
+ipSaveImage = ip_save_image  # noqa: N816
 Demosaic = demosaic  # noqa: N816
 imageSensorConversion = image_sensor_conversion  # noqa: N816
 imageSensorCorrection = image_sensor_correction  # noqa: N816
