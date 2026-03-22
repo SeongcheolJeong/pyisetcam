@@ -153,6 +153,7 @@ from pyisetcam import (
     sensor_plot,
     sensorSaveImage,
     sensorShowCFA,
+    sensorShowCFAWeights,
     sensorShowImage,
     sensor_set_size_to_fov,
     sensor_set,
@@ -4649,6 +4650,37 @@ def test_sensor_image_color_array_matches_legacy_color_order() -> None:
     assert np.allclose(cfa_map[0], np.array([1.0, 0.0, 0.0], dtype=float))
     assert np.allclose(cfa_map[7], np.array([0.3, 0.3, 0.3], dtype=float))
     assert np.allclose(cfa_map[11], np.array([1.0, 0.6, 0.0], dtype=float))
+
+
+def test_sensor_show_cfa_weights_matches_legacy_weighted_render(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    weights = np.array(
+        [
+            [0.0, 0.5, 1.0],
+            [0.25, 0.75, 0.0],
+            [1.0, 0.5, 0.25],
+        ],
+        dtype=float,
+    )
+    c_pos = [1, 2]
+
+    weighted_img = sensorShowCFAWeights(weights, sensor, c_pos, "imgScale", 1)
+
+    unit_letters = np.asarray(sensor_get(sensor, "pattern colors"), dtype="<U1")
+    row_offsets = np.arange(weights.shape[0], dtype=int) - (weights.shape[0] // 2)
+    col_offsets = np.arange(weights.shape[1], dtype=int) - (weights.shape[1] // 2)
+    row_indices = np.mod(int(c_pos[0]) - 1 + row_offsets, unit_letters.shape[0])
+    col_indices = np.mod(int(c_pos[1]) - 1 + col_offsets, unit_letters.shape[1])
+    cfa_letters = unit_letters[np.ix_(row_indices, col_indices)]
+    cfa_numbers, cfa_map = sensorImageColorArray(cfa_letters)
+
+    expected = np.zeros(weights.shape + (3,), dtype=float)
+    valid = cfa_numbers > 0
+    normalized = (weights - np.min(weights)) / (np.max(weights) - np.min(weights))
+    expected[valid] = cfa_map[cfa_numbers[valid] - 1] * normalized[valid, np.newaxis]
+
+    assert np.allclose(np.asarray(weighted_img, dtype=float), expected)
+    assert np.allclose(weighted_img[1, 1], expected[1, 1])
 
 
 def test_sensor_set_etendue_scales_noiseless_response(asset_store) -> None:

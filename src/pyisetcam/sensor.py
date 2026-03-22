@@ -2509,6 +2509,64 @@ def sensor_image_color_array(cfa: Any) -> tuple[np.ndarray, np.ndarray]:
     return cfa_numbers, _SENSOR_COLOR_MAP.copy()
 
 
+def sensor_show_cfa_weights(
+    wgts: Any,
+    sensor: Sensor,
+    c_pos: Any | None = None,
+    *args: Any,
+) -> np.ndarray:
+    """Return a weighted CFA-color image on a small local CFA region."""
+
+    weights = np.asarray(wgts, dtype=float)
+    if weights.ndim != 2:
+        raise ValueError("sensorShowCFAWeights expects a 2D weight matrix.")
+
+    if c_pos is None:
+        c_pos_array = np.ceil(np.asarray(weights.shape, dtype=float) / 2.0).astype(int)
+    else:
+        c_pos_array = np.rint(np.asarray(c_pos, dtype=float).reshape(-1)).astype(int)
+    if c_pos_array.size != 2:
+        raise ValueError("sensorShowCFAWeights cPos must contain [row, col].")
+
+    img_scale = 32
+    if args:
+        if len(args) == 1 and not isinstance(args[0], str):
+            img_scale = int(np.rint(float(args[0])))
+        else:
+            settings = _matlab_kv_pairs(args, function_name="sensorShowCFAWeights")
+            for key, value in settings:
+                if param_format(key) == "imgscale":
+                    img_scale = int(np.rint(float(value)))
+                else:
+                    raise UnsupportedOptionError("sensorShowCFAWeights", key)
+
+    unit_letters = np.asarray(sensor_get(sensor, "pattern colors"), dtype="<U1")
+    block_rows, block_cols = unit_letters.shape
+    center_row = int(c_pos_array[0]) - 1
+    center_col = int(c_pos_array[1]) - 1
+    row_offsets = np.arange(weights.shape[0], dtype=int) - (weights.shape[0] // 2)
+    col_offsets = np.arange(weights.shape[1], dtype=int) - (weights.shape[1] // 2)
+    row_indices = np.mod(center_row + row_offsets, block_rows)
+    col_indices = np.mod(center_col + col_offsets, block_cols)
+    cfa_letters = unit_letters[np.ix_(row_indices, col_indices)]
+
+    cfa_numbers, cfa_map = sensor_image_color_array(cfa_letters)
+    cfa_rgb = np.zeros(cfa_letters.shape + (3,), dtype=float)
+    valid = cfa_numbers > 0
+    if np.any(valid):
+        cfa_rgb[valid] = cfa_map[cfa_numbers[valid] - 1]
+
+    if np.allclose(np.max(weights), np.min(weights)):
+        normalized_weights = np.ones_like(weights, dtype=float)
+    else:
+        min_weight = float(np.min(weights))
+        max_weight = float(np.max(weights))
+        normalized_weights = (weights - min_weight) / max(max_weight - min_weight, 1e-12)
+
+    weighted = np.repeat(normalized_weights[:, :, np.newaxis], 3, axis=2) * cfa_rgb
+    return image_increase_image_rgb_size(weighted, img_scale)
+
+
 def _sensor_chromaticity(sensor: Sensor, rect_or_locs: Any = None, mode: str = "vec") -> np.ndarray | None:
     from .ip import _sensor_space
 
@@ -4643,5 +4701,6 @@ sensorCCM = sensor_ccm
 sensorClearData = sensor_clear_data
 sensorImageColorArray = sensor_image_color_array
 sensorShowCFA = sensor_show_cfa
+sensorShowCFAWeights = sensor_show_cfa_weights
 sensorShowImage = sensor_show_image
 sensorSaveImage = sensor_save_image

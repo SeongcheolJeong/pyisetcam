@@ -235,11 +235,12 @@ from .sensor import (
     sensor_create_split_pixel,
     sensor_formats,
     sensor_get,
+    sensor_image_color_array,
     sensor_set,
     sensor_set_size_to_fov,
     sensor_save_image,
-    sensor_image_color_array,
     sensor_show_cfa,
+    sensor_show_cfa_weights,
     sensor_show_image,
 )
 from .types import Camera, Display, ImageProcessor, OpticalImage, Scene, Sensor, SessionContext
@@ -674,6 +675,7 @@ __all__ = [
     "sensorSaveImage",
     "sensorImageColorArray",
     "sensorShowCFA",
+    "sensorShowCFAWeights",
     "sensorShowImage",
     "sensor_compute",
     "sensor_compute_array",
@@ -694,6 +696,7 @@ __all__ = [
     "sensor_save_image",
     "sensor_image_color_array",
     "sensor_show_cfa",
+    "sensor_show_cfa_weights",
     "sensor_show_image",
     "vcAddAndSelectObject",
     "vcAddObject",
@@ -897,6 +900,7 @@ sensorSetSizeToFOV = sensor_set_size_to_fov
 sensorSaveImage = sensor_save_image
 sensorImageColorArray = sensor_image_color_array
 sensorShowCFA = sensor_show_cfa
+sensorShowCFAWeights = sensor_show_cfa_weights
 sensorShowImage = sensor_show_image
 
 metricsSPD = metrics_spd
