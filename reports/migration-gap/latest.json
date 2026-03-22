@@ -1,0 +1,1231 @@
+{
+  "generated_at": "2026-03-22T05:02:44.070329+00:00",
+  "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
+  "summary": {
+    "generated_at": "2026-03-22T05:02:44.070329+00:00",
+    "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
+    "entry_count": 1443,
+    "status_counts": {
+      "headless_only": 74,
+      "missing": 40,
+      "out_of_scope": 101,
+      "parity": 270,
+      "partial": 936,
+      "ported": 22
+    },
+    "kind_counts": {
+      "api": 661,
+      "asset": 62,
+      "gui": 101,
+      "helper": 414,
+      "script": 173,
+      "tutorial": 32
+    },
+    "priority_counts": {
+      "P0": 477,
+      "P1": 408,
+      "P2": 165,
+      "P3": 393
+    },
+    "delta_from_previous": {
+      "status_counts": {
+        "headless_only": 0,
+        "missing": 0,
+        "out_of_scope": 0,
+        "parity": 0,
+        "partial": 0,
+        "ported": 0
+      },
+      "kind_counts": {
+        "api": 0,
+        "asset": 0,
+        "gui": 0,
+        "helper": 0,
+        "script": 0,
+        "tutorial": 0
+      },
+      "priority_counts": {
+        "P0": 0,
+        "P1": 0,
+        "P2": 0,
+        "P3": 0
+      }
+    },
+    "family_summary": {
+      "camera": {
+        "total": 16,
+        "by_status": {
+          "parity": 8,
+          "partial": 8
+        },
+        "by_kind": {
+          "api": 16
+        },
+        "highest_open_priority": "P0"
+      },
+      "color": {
+        "total": 44,
+        "by_status": {
+          "headless_only": 3,
+          "parity": 16,
+          "partial": 23,
+          "ported": 2
+        },
+        "by_kind": {
+          "api": 44
+        },
+        "highest_open_priority": "P0"
+      },
+      "cp": {
+        "total": 12,
+        "by_status": {
+          "missing": 11,
+          "out_of_scope": 1
+        },
+        "by_kind": {
+          "gui": 1,
+          "helper": 11
+        },
+        "highest_open_priority": "P2"
+      },
+      "data/displays": {
+        "total": 4,
+        "by_status": {
+          "partial": 4
+        },
+        "by_kind": {
+          "asset": 4
+        },
+        "highest_open_priority": "P2"
+      },
+      "data/fluorescence": {
+        "total": 1,
+        "by_status": {
+          "partial": 1
+        },
+        "by_kind": {
+          "asset": 1
+        },
+        "highest_open_priority": "P2"
+      },
+      "data/fonts": {
+        "total": 1,
+        "by_status": {
+          "partial": 1
+        },
+        "by_kind": {
+          "asset": 1
+        },
+        "highest_open_priority": "P2"
+      },
+      "data/human": {
+        "total": 13,
+        "by_status": {
+          "partial": 13
+        },
+        "by_kind": {
+          "asset": 13
+        },
+        "highest_open_priority": "P2"
+      },
+      "data/images": {
+        "total": 2,
+        "by_status": {
+          "partial": 2
+        },
+        "by_kind": {
+          "asset": 2
+        },
+        "highest_open_priority": "P2"
+      },
+      "data/lens": {
+        "total": 4,
+        "by_status": {
+          "partial": 4
+        },
+        "by_kind": {
+          "asset": 4
+        },
+        "highest_open_priority": "P2"
+      },
+      "data/lights": {
+        "total": 8,
+        "by_status": {
+          "partial": 8
+        },
+        "by_kind": {
+          "asset": 8
+        },
+        "highest_open_priority": "P2"
+      },
+      "data/microlens": {
+        "total": 1,
+        "by_status": {
+          "partial": 1
+        },
+        "by_kind": {
+          "asset": 1
+        },
+        "highest_open_priority": "P2"
+      },
+      "data/optics": {
+        "total": 3,
+        "by_status": {
+          "partial": 3
+        },
+        "by_kind": {
+          "asset": 3
+        },
+        "highest_open_priority": "P2"
+      },
+      "data/safetystandards": {
+        "total": 2,
+        "by_status": {
+          "partial": 2
+        },
+        "by_kind": {
+          "asset": 2
+        },
+        "highest_open_priority": "P2"
+      },
+      "data/scenes": {
+        "total": 2,
+        "by_status": {
+          "partial": 2
+        },
+        "by_kind": {
+          "asset": 2
+        },
+        "highest_open_priority": "P2"
+      },
+      "data/sensor": {
+        "total": 17,
+        "by_status": {
+          "partial": 17
+        },
+        "by_kind": {
+          "asset": 17
+        },
+        "highest_open_priority": "P2"
+      },
+      "data/surfaces": {
+        "total": 3,
+        "by_status": {
+          "partial": 3
+        },
+        "by_kind": {
+          "asset": 3
+        },
+        "highest_open_priority": "P2"
+      },
+      "data/validation": {
+        "total": 1,
+        "by_status": {
+          "partial": 1
+        },
+        "by_kind": {
+          "asset": 1
+        },
+        "highest_open_priority": "P2"
+      },
+      "displays": {
+        "total": 23,
+        "by_status": {
+          "out_of_scope": 6,
+          "parity": 2,
+          "partial": 13,
+          "ported": 2
+        },
+        "by_kind": {
+          "api": 17,
+          "gui": 6
+        },
+        "highest_open_priority": "P0"
+      },
+      "fonts": {
+        "total": 5,
+        "by_status": {
+          "missing": 5
+        },
+        "by_kind": {
+          "api": 5
+        },
+        "highest_open_priority": "P2"
+      },
+      "gui": {
+        "total": 52,
+        "by_status": {
+          "out_of_scope": 52
+        },
+        "by_kind": {
+          "gui": 52
+        },
+        "highest_open_priority": "P3"
+      },
+      "human": {
+        "total": 24,
+        "by_status": {
+          "parity": 1,
+          "partial": 23
+        },
+        "by_kind": {
+          "api": 24
+        },
+        "highest_open_priority": "P1"
+      },
+      "imgproc": {
+        "total": 59,
+        "by_status": {
+          "parity": 3,
+          "partial": 55,
+          "ported": 1
+        },
+        "by_kind": {
+          "api": 59
+        },
+        "highest_open_priority": "P0"
+      },
+      "imgproc/binning": {
+        "total": 1,
+        "by_status": {
+          "partial": 1
+        },
+        "by_kind": {
+          "api": 1
+        },
+        "highest_open_priority": "P0"
+      },
+      "imgproc/gui": {
+        "total": 2,
+        "by_status": {
+          "out_of_scope": 2
+        },
+        "by_kind": {
+          "gui": 2
+        },
+        "highest_open_priority": "P3"
+      },
+      "imgproc/openexr": {
+        "total": 3,
+        "by_status": {
+          "partial": 3
+        },
+        "by_kind": {
+          "api": 3
+        },
+        "highest_open_priority": "P0"
+      },
+      "iset.m": {
+        "total": 1,
+        "by_status": {
+          "missing": 1
+        },
+        "by_kind": {
+          "api": 1
+        },
+        "highest_open_priority": "P2"
+      },
+      "isetpath.m": {
+        "total": 1,
+        "by_status": {
+          "missing": 1
+        },
+        "by_kind": {
+          "api": 1
+        },
+        "highest_open_priority": "P2"
+      },
+      "isetrootpath.m": {
+        "total": 1,
+        "by_status": {
+          "missing": 1
+        },
+        "by_kind": {
+          "api": 1
+        },
+        "highest_open_priority": "P2"
+      },
+      "main": {
+        "total": 10,
+        "by_status": {
+          "headless_only": 4,
+          "out_of_scope": 3,
+          "partial": 3
+        },
+        "by_kind": {
+          "gui": 3,
+          "helper": 7
+        },
+        "highest_open_priority": "P2"
+      },
+      "metrics": {
+        "total": 24,
+        "by_status": {
+          "headless_only": 1,
+          "parity": 2,
+          "partial": 21
+        },
+        "by_kind": {
+          "api": 24
+        },
+        "highest_open_priority": "P0"
+      },
+      "metrics/cielab": {
+        "total": 4,
+        "by_status": {
+          "parity": 1,
+          "partial": 3
+        },
+        "by_kind": {
+          "api": 4
+        },
+        "highest_open_priority": "P0"
+      },
+      "metrics/iso": {
+        "total": 20,
+        "by_status": {
+          "parity": 6,
+          "partial": 14
+        },
+        "by_kind": {
+          "api": 20
+        },
+        "highest_open_priority": "P0"
+      },
+      "metrics/metricsgui": {
+        "total": 3,
+        "by_status": {
+          "headless_only": 1,
+          "out_of_scope": 2
+        },
+        "by_kind": {
+          "api": 1,
+          "gui": 2
+        },
+        "highest_open_priority": "P2"
+      },
+      "metrics/scielab": {
+        "total": 25,
+        "by_status": {
+          "headless_only": 2,
+          "parity": 6,
+          "partial": 13,
+          "ported": 4
+        },
+        "by_kind": {
+          "api": 25
+        },
+        "highest_open_priority": "P0"
+      },
+      "opticalimage": {
+        "total": 37,
+        "by_status": {
+          "headless_only": 1,
+          "parity": 6,
+          "partial": 30
+        },
+        "by_kind": {
+          "api": 37
+        },
+        "highest_open_priority": "P0"
+      },
+      "opticalimage/depth": {
+        "total": 8,
+        "by_status": {
+          "partial": 8
+        },
+        "by_kind": {
+          "api": 8
+        },
+        "highest_open_priority": "P0"
+      },
+      "opticalimage/gui": {
+        "total": 3,
+        "by_status": {
+          "out_of_scope": 3
+        },
+        "by_kind": {
+          "gui": 3
+        },
+        "highest_open_priority": "P3"
+      },
+      "opticalimage/microlens": {
+        "total": 2,
+        "by_status": {
+          "out_of_scope": 1,
+          "parity": 1
+        },
+        "by_kind": {
+          "api": 1,
+          "gui": 1
+        },
+        "highest_open_priority": "P3"
+      },
+      "opticalimage/optics": {
+        "total": 35,
+        "by_status": {
+          "parity": 14,
+          "partial": 20,
+          "ported": 1
+        },
+        "by_kind": {
+          "api": 35
+        },
+        "highest_open_priority": "P0"
+      },
+      "opticalimage/raytrace": {
+        "total": 28,
+        "by_status": {
+          "partial": 28
+        },
+        "by_kind": {
+          "api": 28
+        },
+        "highest_open_priority": "P0"
+      },
+      "opticalimage/wavefront": {
+        "total": 49,
+        "by_status": {
+          "parity": 15,
+          "partial": 32,
+          "ported": 2
+        },
+        "by_kind": {
+          "api": 49
+        },
+        "highest_open_priority": "P0"
+      },
+      "python": {
+        "total": 1,
+        "by_status": {
+          "missing": 1
+        },
+        "by_kind": {
+          "api": 1
+        },
+        "highest_open_priority": "P2"
+      },
+      "scene": {
+        "total": 45,
+        "by_status": {
+          "parity": 11,
+          "partial": 30,
+          "ported": 4
+        },
+        "by_kind": {
+          "api": 45
+        },
+        "highest_open_priority": "P0"
+      },
+      "scene/depth": {
+        "total": 2,
+        "by_status": {
+          "partial": 2
+        },
+        "by_kind": {
+          "api": 2
+        },
+        "highest_open_priority": "P0"
+      },
+      "scene/gui": {
+        "total": 7,
+        "by_status": {
+          "out_of_scope": 7
+        },
+        "by_kind": {
+          "gui": 7
+        },
+        "highest_open_priority": "P3"
+      },
+      "scene/illumination": {
+        "total": 6,
+        "by_status": {
+          "parity": 3,
+          "partial": 2,
+          "ported": 1
+        },
+        "by_kind": {
+          "api": 6
+        },
+        "highest_open_priority": "P0"
+      },
+      "scene/imgtargets": {
+        "total": 8,
+        "by_status": {
+          "partial": 8
+        },
+        "by_kind": {
+          "api": 8
+        },
+        "highest_open_priority": "P0"
+      },
+      "scene/macbeth": {
+        "total": 16,
+        "by_status": {
+          "parity": 3,
+          "partial": 13
+        },
+        "by_kind": {
+          "api": 16
+        },
+        "highest_open_priority": "P0"
+      },
+      "scene/pattern": {
+        "total": 23,
+        "by_status": {
+          "parity": 3,
+          "partial": 18,
+          "ported": 2
+        },
+        "by_kind": {
+          "api": 23
+        },
+        "highest_open_priority": "P0"
+      },
+      "scene/reflectance": {
+        "total": 3,
+        "by_status": {
+          "parity": 1,
+          "partial": 2
+        },
+        "by_kind": {
+          "api": 3
+        },
+        "highest_open_priority": "P0"
+      },
+      "scripts/color": {
+        "total": 6,
+        "by_status": {
+          "parity": 6
+        },
+        "by_kind": {
+          "script": 6
+        },
+        "highest_open_priority": "P3"
+      },
+      "scripts/data": {
+        "total": 2,
+        "by_status": {
+          "missing": 2
+        },
+        "by_kind": {
+          "script": 2
+        },
+        "highest_open_priority": "P1"
+      },
+      "scripts/development": {
+        "total": 3,
+        "by_status": {
+          "missing": 3
+        },
+        "by_kind": {
+          "script": 3
+        },
+        "highest_open_priority": "P1"
+      },
+      "scripts/display": {
+        "total": 3,
+        "by_status": {
+          "partial": 3
+        },
+        "by_kind": {
+          "script": 3
+        },
+        "highest_open_priority": "P1"
+      },
+      "scripts/faces": {
+        "total": 1,
+        "by_status": {
+          "missing": 1
+        },
+        "by_kind": {
+          "script": 1
+        },
+        "highest_open_priority": "P1"
+      },
+      "scripts/gui": {
+        "total": 2,
+        "by_status": {
+          "out_of_scope": 2
+        },
+        "by_kind": {
+          "gui": 2
+        },
+        "highest_open_priority": "P3"
+      },
+      "scripts/human": {
+        "total": 11,
+        "by_status": {
+          "partial": 11
+        },
+        "by_kind": {
+          "script": 11
+        },
+        "highest_open_priority": "P1"
+      },
+      "scripts/image": {
+        "total": 21,
+        "by_status": {
+          "partial": 21
+        },
+        "by_kind": {
+          "script": 21
+        },
+        "highest_open_priority": "P1"
+      },
+      "scripts/metrics": {
+        "total": 20,
+        "by_status": {
+          "parity": 19,
+          "partial": 1
+        },
+        "by_kind": {
+          "script": 20
+        },
+        "highest_open_priority": "P0"
+      },
+      "scripts/oneoverf": {
+        "total": 3,
+        "by_status": {
+          "missing": 3
+        },
+        "by_kind": {
+          "script": 3
+        },
+        "highest_open_priority": "P1"
+      },
+      "scripts/optics": {
+        "total": 42,
+        "by_status": {
+          "parity": 36,
+          "partial": 6
+        },
+        "by_kind": {
+          "script": 42
+        },
+        "highest_open_priority": "P0"
+      },
+      "scripts/scene": {
+        "total": 27,
+        "by_status": {
+          "parity": 26,
+          "partial": 1
+        },
+        "by_kind": {
+          "script": 27
+        },
+        "highest_open_priority": "P0"
+      },
+      "scripts/sensor": {
+        "total": 33,
+        "by_status": {
+          "parity": 28,
+          "partial": 5
+        },
+        "by_kind": {
+          "script": 33
+        },
+        "highest_open_priority": "P0"
+      },
+      "scripts/utility": {
+        "total": 1,
+        "by_status": {
+          "partial": 1
+        },
+        "by_kind": {
+          "script": 1
+        },
+        "highest_open_priority": "P1"
+      },
+      "sensor": {
+        "total": 56,
+        "by_status": {
+          "parity": 15,
+          "partial": 40,
+          "ported": 1
+        },
+        "by_kind": {
+          "api": 56
+        },
+        "highest_open_priority": "P0"
+      },
+      "sensor/binning": {
+        "total": 2,
+        "by_status": {
+          "partial": 2
+        },
+        "by_kind": {
+          "api": 2
+        },
+        "highest_open_priority": "P0"
+      },
+      "sensor/cfadesign": {
+        "total": 5,
+        "by_status": {
+          "out_of_scope": 1,
+          "partial": 4
+        },
+        "by_kind": {
+          "api": 4,
+          "gui": 1
+        },
+        "highest_open_priority": "P0"
+      },
+      "sensor/gui": {
+        "total": 9,
+        "by_status": {
+          "out_of_scope": 9
+        },
+        "by_kind": {
+          "gui": 9
+        },
+        "highest_open_priority": "P3"
+      },
+      "sensor/microlens": {
+        "total": 22,
+        "by_status": {
+          "out_of_scope": 1,
+          "parity": 5,
+          "partial": 16
+        },
+        "by_kind": {
+          "api": 21,
+          "gui": 1
+        },
+        "highest_open_priority": "P0"
+      },
+      "sensor/models": {
+        "total": 11,
+        "by_status": {
+          "parity": 2,
+          "partial": 8,
+          "ported": 1
+        },
+        "by_kind": {
+          "api": 11
+        },
+        "highest_open_priority": "P0"
+      },
+      "sensor/pixel": {
+        "total": 31,
+        "by_status": {
+          "out_of_scope": 3,
+          "parity": 4,
+          "partial": 23,
+          "ported": 1
+        },
+        "by_kind": {
+          "api": 28,
+          "gui": 3
+        },
+        "highest_open_priority": "P0"
+      },
+      "sensor/simulation": {
+        "total": 25,
+        "by_status": {
+          "parity": 5,
+          "partial": 20
+        },
+        "by_kind": {
+          "api": 25
+        },
+        "highest_open_priority": "P0"
+      },
+      "tutorials/camera": {
+        "total": 5,
+        "by_status": {
+          "partial": 5
+        },
+        "by_kind": {
+          "tutorial": 5
+        },
+        "highest_open_priority": "P1"
+      },
+      "tutorials/code": {
+        "total": 4,
+        "by_status": {
+          "missing": 4
+        },
+        "by_kind": {
+          "tutorial": 4
+        },
+        "highest_open_priority": "P1"
+      },
+      "tutorials/color": {
+        "total": 3,
+        "by_status": {
+          "partial": 3
+        },
+        "by_kind": {
+          "tutorial": 3
+        },
+        "highest_open_priority": "P1"
+      },
+      "tutorials/display": {
+        "total": 3,
+        "by_status": {
+          "partial": 3
+        },
+        "by_kind": {
+          "tutorial": 3
+        },
+        "highest_open_priority": "P1"
+      },
+      "tutorials/gui": {
+        "total": 2,
+        "by_status": {
+          "out_of_scope": 2
+        },
+        "by_kind": {
+          "gui": 2
+        },
+        "highest_open_priority": "P3"
+      },
+      "tutorials/image": {
+        "total": 4,
+        "by_status": {
+          "partial": 4
+        },
+        "by_kind": {
+          "tutorial": 4
+        },
+        "highest_open_priority": "P1"
+      },
+      "tutorials/metrics": {
+        "total": 2,
+        "by_status": {
+          "partial": 2
+        },
+        "by_kind": {
+          "tutorial": 2
+        },
+        "highest_open_priority": "P0"
+      },
+      "tutorials/printing": {
+        "total": 1,
+        "by_status": {
+          "missing": 1
+        },
+        "by_kind": {
+          "tutorial": 1
+        },
+        "highest_open_priority": "P1"
+      },
+      "tutorials/scene": {
+        "total": 3,
+        "by_status": {
+          "parity": 2,
+          "partial": 1
+        },
+        "by_kind": {
+          "tutorial": 3
+        },
+        "highest_open_priority": "P0"
+      },
+      "tutorials/sensor": {
+        "total": 7,
+        "by_status": {
+          "parity": 6,
+          "partial": 1
+        },
+        "by_kind": {
+          "tutorial": 7
+        },
+        "highest_open_priority": "P0"
+      },
+      "utility": {
+        "total": 279,
+        "by_status": {
+          "headless_only": 41,
+          "out_of_scope": 1,
+          "parity": 9,
+          "partial": 228
+        },
+        "by_kind": {
+          "gui": 1,
+          "helper": 278
+        },
+        "highest_open_priority": "P1"
+      },
+      "utility/file": {
+        "total": 25,
+        "by_status": {
+          "headless_only": 10,
+          "partial": 15
+        },
+        "by_kind": {
+          "helper": 25
+        },
+        "highest_open_priority": "P1"
+      },
+      "utility/image": {
+        "total": 46,
+        "by_status": {
+          "headless_only": 2,
+          "out_of_scope": 2,
+          "parity": 5,
+          "partial": 37
+        },
+        "by_kind": {
+          "gui": 2,
+          "helper": 44
+        },
+        "highest_open_priority": "P1"
+      },
+      "utility/plots": {
+        "total": 50,
+        "by_status": {
+          "headless_only": 9,
+          "out_of_scope": 2,
+          "partial": 39
+        },
+        "by_kind": {
+          "gui": 2,
+          "helper": 48
+        },
+        "highest_open_priority": "P1"
+      },
+      "utility/tablebase": {
+        "total": 1,
+        "by_status": {
+          "partial": 1
+        },
+        "by_kind": {
+          "helper": 1
+        },
+        "highest_open_priority": "P1"
+      },
+      "web": {
+        "total": 7,
+        "by_status": {
+          "missing": 6,
+          "out_of_scope": 1
+        },
+        "by_kind": {
+          "api": 6,
+          "gui": 1
+        },
+        "highest_open_priority": "P2"
+      }
+    },
+    "top_open_families": [
+      {
+        "family": "imgproc",
+        "open_entries": 55,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 3,
+          "partial": 55,
+          "ported": 1
+        }
+      },
+      {
+        "family": "sensor",
+        "open_entries": 40,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 15,
+          "partial": 40,
+          "ported": 1
+        }
+      },
+      {
+        "family": "opticalimage/wavefront",
+        "open_entries": 32,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 15,
+          "partial": 32,
+          "ported": 2
+        }
+      },
+      {
+        "family": "opticalimage",
+        "open_entries": 31,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "headless_only": 1,
+          "parity": 6,
+          "partial": 30
+        }
+      },
+      {
+        "family": "scene",
+        "open_entries": 30,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 11,
+          "partial": 30,
+          "ported": 4
+        }
+      },
+      {
+        "family": "opticalimage/raytrace",
+        "open_entries": 28,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "partial": 28
+        }
+      },
+      {
+        "family": "color",
+        "open_entries": 26,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "headless_only": 3,
+          "parity": 16,
+          "partial": 23,
+          "ported": 2
+        }
+      },
+      {
+        "family": "sensor/pixel",
+        "open_entries": 23,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "out_of_scope": 3,
+          "parity": 4,
+          "partial": 23,
+          "ported": 1
+        }
+      },
+      {
+        "family": "metrics",
+        "open_entries": 22,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "headless_only": 1,
+          "parity": 2,
+          "partial": 21
+        }
+      },
+      {
+        "family": "opticalimage/optics",
+        "open_entries": 20,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 14,
+          "partial": 20,
+          "ported": 1
+        }
+      },
+      {
+        "family": "sensor/simulation",
+        "open_entries": 20,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 5,
+          "partial": 20
+        }
+      },
+      {
+        "family": "scene/pattern",
+        "open_entries": 18,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 3,
+          "partial": 18,
+          "ported": 2
+        }
+      }
+    ],
+    "exception_sites_by_module": {
+      "__init__": {
+        "unsupported_option_error_sites": 0,
+        "not_implemented_error_sites": 0
+      },
+      "assets": {
+        "unsupported_option_error_sites": 0,
+        "not_implemented_error_sites": 0
+      },
+      "camera": {
+        "unsupported_option_error_sites": 3,
+        "not_implemented_error_sites": 0
+      },
+      "color": {
+        "unsupported_option_error_sites": 6,
+        "not_implemented_error_sites": 0
+      },
+      "description": {
+        "unsupported_option_error_sites": 0,
+        "not_implemented_error_sites": 0
+      },
+      "display": {
+        "unsupported_option_error_sites": 1,
+        "not_implemented_error_sites": 0
+      },
+      "exceptions": {
+        "unsupported_option_error_sites": 1,
+        "not_implemented_error_sites": 0
+      },
+      "fileio": {
+        "unsupported_option_error_sites": 2,
+        "not_implemented_error_sites": 0
+      },
+      "illuminant": {
+        "unsupported_option_error_sites": 3,
+        "not_implemented_error_sites": 0
+      },
+      "ip": {
+        "unsupported_option_error_sites": 4,
+        "not_implemented_error_sites": 0
+      },
+      "iso": {
+        "unsupported_option_error_sites": 0,
+        "not_implemented_error_sites": 0
+      },
+      "metrics": {
+        "unsupported_option_error_sites": 3,
+        "not_implemented_error_sites": 0
+      },
+      "octave_runner": {
+        "unsupported_option_error_sites": 0,
+        "not_implemented_error_sites": 0
+      },
+      "optics": {
+        "unsupported_option_error_sites": 22,
+        "not_implemented_error_sites": 0
+      },
+      "parity": {
+        "unsupported_option_error_sites": 0,
+        "not_implemented_error_sites": 0
+      },
+      "plotting": {
+        "unsupported_option_error_sites": 14,
+        "not_implemented_error_sites": 0
+      },
+      "ptable": {
+        "unsupported_option_error_sites": 0,
+        "not_implemented_error_sites": 0
+      },
+      "roi": {
+        "unsupported_option_error_sites": 5,
+        "not_implemented_error_sites": 0
+      },
+      "scene": {
+        "unsupported_option_error_sites": 9,
+        "not_implemented_error_sites": 0
+      },
+      "scielab": {
+        "unsupported_option_error_sites": 6,
+        "not_implemented_error_sites": 0
+      },
+      "sensor": {
+        "unsupported_option_error_sites": 29,
+        "not_implemented_error_sites": 1
+      },
+      "session": {
+        "unsupported_option_error_sites": 0,
+        "not_implemented_error_sites": 2
+      },
+      "types": {
+        "unsupported_option_error_sites": 0,
+        "not_implemented_error_sites": 0
+      },
+      "utils": {
+        "unsupported_option_error_sites": 0,
+        "not_implemented_error_sites": 0
+      }
+    }
+  }
+}

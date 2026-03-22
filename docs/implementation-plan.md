@@ -311,7 +311,7 @@
 4. Port optics and optical image: `oi_create`, `oi_get/set`, diffraction-limited OTF/PSF path, shift-invariant wavefront path, padding, cropping, and resampling. Defer ray-trace optics. Exit gate: parity on default scene -> OI and one small wavefront case.
 5. Port the sensor stack: essential pixel helpers, supported CFA patterns, `sensor_set_size_to_fov`, exposure handling, `sensor_compute`, noise flag `0` and `2`, analog gain/offset, clipping, and quantization. Exit gate: parity on noiseless volts and seeded statistical checks for noisy output.
 6. Port image processing and camera orchestration: `ip_create`, `ip_compute`, bilinear demosaic, default adaptive transform path, display rendering, and `camera_create/compute/get/set`. Exit gate: end-to-end camera parity on curated cases.
-7. Add docs and examples: one migration guide mapping MATLAB names to Python names, one end-to-end notebook or script, and a machine-readable parity report in `reports/parity/`. Exit gate: a new engineer can run the curated cases without opening MATLAB.
+7. Add docs and examples: one migration guide mapping MATLAB names to Python names, one end-to-end notebook or script, a machine-readable parity report in `reports/parity/`, and a machine-readable migration gap ledger in `docs/migration-gap-ledger.yaml` with the companion audit summary in `reports/migration-gap/`. Exit gate: a new engineer can run the curated cases and inspect the remaining migration surface without opening MATLAB.
 
 ## Test Cases And Scenarios
 - `scene_macbeth_default`: `sceneCreate()` equivalent, compare wave axis, photons shape, mean luminance, and selected pixel spectra.

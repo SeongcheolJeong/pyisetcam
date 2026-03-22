@@ -132,6 +132,16 @@ Generate the current machine-readable parity summary:
 python tools/parity_report.py
 ```
 
+Generate the current machine-readable migration gap ledger and audit summary:
+
+```bash
+python tools/audit_migration_gap.py
+```
+
+This writes a JSON-compatible YAML ledger to
+`docs/migration-gap-ledger.yaml` and a summary snapshot to
+`reports/migration-gap/latest.json`.
+
 Run the initial metrics helpers:
 
 ```python
