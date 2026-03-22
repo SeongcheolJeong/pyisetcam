@@ -150,6 +150,7 @@ from pyisetcam import (
     pixel_snr_luxsec,
     pixel_v_per_lux_sec,
     sensor_ccm,
+    sensorCFANameList,
     sensorClearData,
     sensor_compute,
     sensor_compute_array,
@@ -168,6 +169,7 @@ from pyisetcam import (
     sensor_formats,
     sensor_get,
     sensorImageColorArray,
+    sensorPixelCoord,
     sensor_plot,
     sensorSaveImage,
     sensorSNR,
@@ -3680,6 +3682,36 @@ def test_sensor_get_reports_matlab_style_geometry_and_cfa_metadata(asset_store) 
     assert np.allclose(cfa_config, np.array([[0.0, 0.0], [pixel_size[1], 0.0], [0.0, pixel_size[0]], [pixel_size[1], pixel_size[0]]], dtype=float))
     assert pattern_colors.shape == (2, 2)
     assert np.array_equal(pattern_colors, np.array([["g", "r"], ["b", "g"]], dtype="<U1"))
+
+
+def test_sensor_cfa_name_list_matches_legacy_popup_options() -> None:
+    assert sensorCFANameList() == ["Bayer RGB", "Bayer CMY", "RGBW", "Monochrome", "Other"]
+
+
+def test_sensor_pixel_coord_matches_even_and_odd_geometry(asset_store) -> None:
+    sensor_even = sensor_set(sensor_create(asset_store=asset_store), "rows", 4)
+    sensor_even = sensor_set(sensor_even, "cols", 6)
+    pitch_x_even = float(sensor_get(sensor_even, "deltax"))
+    pitch_y_even = float(sensor_get(sensor_even, "deltay"))
+    full_x_even, full_y_even = sensorPixelCoord(sensor_even, "full")
+    upper_x_even, upper_y_even = sensorPixelCoord(sensor_even, "upper-right")
+
+    assert np.allclose(full_x_even, pitch_x_even * np.array([-2.5, -1.5, -0.5, 0.5, 1.5, 2.5], dtype=float))
+    assert np.allclose(full_y_even, pitch_y_even * np.array([-1.5, -0.5, 0.5, 1.5], dtype=float))
+    assert np.allclose(upper_x_even, pitch_x_even * np.array([0.5, 1.5, 2.5], dtype=float))
+    assert np.allclose(upper_y_even, pitch_y_even * np.array([0.5, 1.5], dtype=float))
+
+    sensor_odd = sensor_set(sensor_create("monochrome", asset_store=asset_store), "rows", 5)
+    sensor_odd = sensor_set(sensor_odd, "cols", 7)
+    pitch_x_odd = float(sensor_get(sensor_odd, "deltax"))
+    pitch_y_odd = float(sensor_get(sensor_odd, "deltay"))
+    full_x_odd, full_y_odd = sensorPixelCoord(sensor_odd, "full")
+    upper_x_odd, upper_y_odd = sensorPixelCoord(sensor_odd, "upper-right")
+
+    assert np.allclose(full_x_odd, pitch_x_odd * np.array([-3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0], dtype=float))
+    assert np.allclose(full_y_odd, pitch_y_odd * np.array([-2.0, -1.0, 0.0, 1.0, 2.0], dtype=float))
+    assert np.allclose(upper_x_odd, pitch_x_odd * np.array([0.0, 1.0, 2.0, 3.0], dtype=float))
+    assert np.allclose(upper_y_odd, pitch_y_odd * np.array([0.0, 1.0, 2.0], dtype=float))
 
 
 def test_sensor_get_set_supports_matlab_style_spectrum_metadata(asset_store) -> None:

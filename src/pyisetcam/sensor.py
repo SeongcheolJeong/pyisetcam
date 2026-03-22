@@ -2554,6 +2554,42 @@ def sensor_color_order(format: str = "cell") -> tuple[list[str] | str, np.ndarra
     return ordering, _SENSOR_COLOR_MAP.copy()
 
 
+def sensor_cfa_name_list() -> list[str]:
+    """Return the legacy ISET popup list of built-in CFA names."""
+
+    return ["Bayer RGB", "Bayer CMY", "RGBW", "Monochrome", "Other"]
+
+
+def sensor_pixel_coord(
+    sensor: Sensor,
+    quadrant_type: str = "full",
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return sensor pixel-center coordinates for the requested array view."""
+
+    n_rows = int(sensor_get(sensor, "rows"))
+    n_cols = int(sensor_get(sensor, "cols"))
+    pitch_x = float(sensor_get(sensor, "deltax"))
+    pitch_y = float(sensor_get(sensor, "deltay"))
+    normalized = param_format(quadrant_type)
+
+    def _upper_right(count: int, pitch: float) -> np.ndarray:
+        if count % 2 == 0:
+            return pitch * np.arange(count // 2, dtype=float) + pitch / 2.0
+        return pitch * np.arange(count // 2 + 1, dtype=float)
+
+    def _full(count: int, pitch: float) -> np.ndarray:
+        positive = _upper_right(count, pitch)
+        if count % 2 == 0:
+            return np.concatenate((-np.flip(positive), positive))
+        return np.concatenate((-np.flip(positive), positive[1:]))
+
+    if normalized in {"upperright", "upper-right"}:
+        return _upper_right(n_cols, pitch_x), _upper_right(n_rows, pitch_y)
+    if normalized == "full":
+        return _full(n_cols, pitch_x), _full(n_rows, pitch_y)
+    raise UnsupportedOptionError("sensorPixelCoord", quadrant_type)
+
+
 def sensor_determine_cfa(sensor: Sensor) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Return tiled CFA letters, CFA numbers, and the per-filter RGB map."""
 

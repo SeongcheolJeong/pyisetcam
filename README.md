@@ -317,8 +317,13 @@ for the direct MATLAB lux-sec sensor-SNR helper on top of the existing
 direct sensor-channel-to-display transform, `sensor_equate_transmittances(...)`
 / `sensorEquateTransmittances(...)` for the legacy equal-area filter
 normalizer, and `sensor_filter_rgb(...)` / `sensorFilterRGB(...)` for the
-legacy CFA filter-color approximation helper. That same Phase 1 sensor
-wave now also includes
+legacy CFA filter-color approximation helper, plus headless
+`sensor_cfa_name_list(...)` / `sensorCFANameList(...)` for the legacy CFA
+popup-name list and `sensor_pixel_coord(...)` / `sensorPixelCoord(...)`
+for the direct MATLAB pixel-center coordinate helper. The migration-gap
+audit now also treats the explicitly obsolete upstream `sensorUnitBlock.m`
+stub as out of scope rather than a remaining headless API target. That
+same Phase 1 sensor wave now also includes
 public `sceneRotate(...)` / `oiCrop(...)` support for the deterministic
 rolling-shutter assembly path from `s_sensorRollingShutter.m`, with
 curated Octave parity on the per-frame mean-voltage trace, final

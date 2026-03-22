@@ -249,6 +249,7 @@ from .sensor import (
     pixel_snr_luxsec,
     pixel_v_per_lux_sec,
     signal_current,
+    sensor_cfa_name_list,
     sensor_ccm,
     sensor_clear_data,
     sensor_color_filter,
@@ -271,6 +272,7 @@ from .sensor import (
     sensor_equate_transmittances,
     sensor_filter_rgb,
     sensor_image_color_array,
+    sensor_pixel_coord,
     sensor_set,
     sensor_set_size_to_fov,
     sensor_save_image,
@@ -743,18 +745,22 @@ __all__ = [
     "sensorFormats",
     "sensorGet",
     "sensorCCM",
+    "sensorCFANameList",
     "sensorClearData",
     "sensorColorOrder",
+    "sensorPixelCoord",
     "sensorDetermineCFA",
     "sensorDisplayTransform",
     "sensorEquateTransmittances",
     "sensorFilterRGB",
     "signalCurrent",
     "signal_current",
+    "sensor_cfa_name_list",
     "sensor_ccm",
     "sensor_clear_data",
     "sensorColorFilter",
     "sensor_color_filter",
+    "sensor_pixel_coord",
     "sensorSNR",
     "sensorSNRluxsec",
     "sensorSet",
@@ -1005,9 +1011,11 @@ sensorCompute = sensor_compute
 sensorComputeArray = sensor_compute_array
 sensorComputeSamples = sensor_compute_samples
 imx490Compute = imx490_compute
+sensorCFANameList = sensor_cfa_name_list
 sensorCCM = sensor_ccm
 sensorClearData = sensor_clear_data
 sensorColorOrder = sensor_color_order
+sensorPixelCoord = sensor_pixel_coord
 sensorDetermineCFA = sensor_determine_cfa
 sensorDisplayTransform = sensor_display_transform
 sensorEquateTransmittances = sensor_equate_transmittances

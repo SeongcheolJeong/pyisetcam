@@ -199,6 +199,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is explicitly marked as not functional yet, so it remains outside the headless migration target.",
         "module_hits": [],
     },
+    "sensor/sensorUnitBlock.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is explicitly marked obsolete and does not implement a usable headless API surface.",
+        "module_hits": [],
+    },
 }
 
 
