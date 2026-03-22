@@ -888,6 +888,12 @@ Sensor ROI/plot compatibility now also includes
 `sensorGet(..., 'chromaticity')` and
 `sensorGet(..., 'roi chromaticity mean')`, backed by the existing
 headless demosaic path.
+The adjacent image-processing demosaic surface now also supports
+MATLAB-style `ieNearestNeighbor`, `Laplacian`, and
+`AdaptiveLaplacian` routing through
+`ipSet(..., 'demosaic method', ...)` for RGB Bayer sensors, with the
+same bilinear fallback that upstream `Demosaic.m` uses for the
+unsupported `gbrg` adaptive-Laplacian branch.
 Scene/OI/IP ROI plotting helpers now expose the matching chromaticity and
 summary getters too: `sceneGet(..., 'chromaticity'/'roi chromaticity mean')`,
 `sceneGet(..., 'roi mean luminance')`, `oiGet(..., 'chromaticity'/'roi chromaticity mean')`,

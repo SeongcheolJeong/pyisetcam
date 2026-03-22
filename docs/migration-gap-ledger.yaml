@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-22T05:50:07.806943+00:00",
+  "generated_at": "2026-03-22T06:34:17.599494+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -7,8 +7,8 @@
       "headless_only": 74,
       "missing": 40,
       "out_of_scope": 101,
-      "parity": 270,
-      "partial": 936,
+      "parity": 273,
+      "partial": 933,
       "ported": 22
     },
     "kind_counts": {
@@ -20,10 +20,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 477,
+      "P0": 474,
       "P1": 408,
       "P2": 165,
-      "P3": 393
+      "P3": 396
     },
     "delta_from_previous": {
       "status_counts": {
@@ -274,8 +274,8 @@
       "imgproc": {
         "total": 59,
         "by_status": {
-          "parity": 3,
-          "partial": 55,
+          "parity": 6,
+          "partial": 52,
           "ported": 1
         },
         "by_kind": {
@@ -1009,11 +1009,11 @@
     "top_open_families": [
       {
         "family": "imgproc",
-        "open_entries": 55,
+        "open_entries": 52,
         "highest_open_priority": "P0",
         "by_status": {
-          "parity": 3,
-          "partial": 55,
+          "parity": 6,
+          "partial": 52,
           "ported": 1
         }
       },
@@ -3772,7 +3772,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -3781,13 +3782,16 @@
       "upstream_path": "imgproc/demosaic/AdaptiveLaplacian.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
+      "status": "parity",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/demosaic/Demosaic.m",
@@ -3797,6 +3801,7 @@
       "python_surface": "pyisetcam.ip, pyisetcam.parity, pyisetcam.ptable, pyisetcam.scene",
       "tests": [
         "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py",
         "tests/parity/cases.yaml",
         "tests/parity/test_parity_harness.py"
       ],
@@ -3807,13 +3812,16 @@
       "upstream_path": "imgproc/demosaic/Laplacian.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
+      "status": "parity",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/demosaic/Pocs.m",
@@ -3822,7 +3830,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -3834,7 +3843,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -3846,7 +3856,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -3858,7 +3869,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -3870,7 +3882,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -3882,7 +3895,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -3894,7 +3908,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -3906,7 +3921,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -3918,7 +3934,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -3930,7 +3947,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -3939,13 +3957,16 @@
       "upstream_path": "imgproc/demosaic/ieNearestNeighbor.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
+      "status": "parity",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/demosaic/lcc1.m",
@@ -3954,7 +3975,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -3966,7 +3988,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -3978,7 +4001,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -3990,7 +4014,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4002,7 +4027,8 @@
       "status": "out_of_scope",
       "python_surface": "pyisetcam.ip, pyisetcam.session",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "GUI/App Designer and figure fidelity remain outside the headless migration target.",
       "priority": "P3"
@@ -4014,7 +4040,8 @@
       "status": "out_of_scope",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "GUI/App Designer and figure fidelity remain outside the headless migration target.",
       "priority": "P3"
@@ -4026,7 +4053,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4038,7 +4066,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4050,7 +4079,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4062,7 +4092,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4074,7 +4105,8 @@
       "status": "ported",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "A direct Python implementation surface was detected for this upstream path.",
       "priority": "P3"
@@ -4086,7 +4118,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4098,7 +4131,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4110,7 +4144,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4122,7 +4157,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4134,7 +4170,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4146,7 +4183,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4158,7 +4196,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4171,6 +4210,7 @@
       "python_surface": "pyisetcam.ip, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py",
         "tests/parity/cases.yaml",
         "tests/parity/test_parity_harness.py"
       ],
@@ -4185,6 +4225,7 @@
       "python_surface": "pyisetcam.ip, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py",
         "tests/parity/cases.yaml",
         "tests/parity/test_parity_harness.py"
       ],
@@ -4198,7 +4239,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4210,7 +4252,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4222,7 +4265,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4234,7 +4278,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4246,7 +4291,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4258,7 +4304,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4270,7 +4317,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4282,7 +4330,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4294,7 +4343,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4306,7 +4356,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4318,7 +4369,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4330,7 +4382,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4342,7 +4395,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4354,7 +4408,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4366,7 +4421,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4378,7 +4434,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4390,7 +4447,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4402,7 +4460,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4414,7 +4473,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4426,7 +4486,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4438,7 +4499,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4450,7 +4512,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4462,7 +4525,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4474,7 +4538,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4486,7 +4551,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4498,7 +4564,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4510,7 +4577,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4522,7 +4590,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4534,7 +4603,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"
@@ -4546,7 +4616,8 @@
       "status": "partial",
       "python_surface": "pyisetcam.ip",
       "tests": [
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
       ],
       "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
       "priority": "P0"

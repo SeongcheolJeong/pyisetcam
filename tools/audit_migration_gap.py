@@ -88,7 +88,7 @@ FAMILY_TEST_MAP = {
     "camera": ["tests/unit/test_pipeline.py"],
     "color": ["tests/unit/test_pipeline.py", "tests/unit/test_metrics.py"],
     "displays": ["tests/unit/test_display.py", "tests/unit/test_pipeline.py"],
-    "imgproc": ["tests/unit/test_pipeline.py"],
+    "imgproc": ["tests/unit/test_pipeline.py", "tests/unit/test_ip.py"],
     "main": ["tests/unit/test_session.py"],
     "metrics": ["tests/unit/test_metrics.py", "tests/unit/test_pipeline.py"],
     "opticalimage": ["tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],

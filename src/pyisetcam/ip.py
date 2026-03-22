@@ -13,8 +13,8 @@ from .color import internal_to_display_matrix, sensor_to_target_matrix, xyz_colo
 from .display import Display, display_create, display_get, display_set
 from .exceptions import UnsupportedOptionError
 from .metrics import chromaticity_xy, xyz_from_energy
-from .session import track_ip_session_state, track_session_object
 from .sensor import sensor_get
+from .session import track_ip_session_state, track_session_object
 from .types import ImageProcessor, Sensor, SessionContext
 from .utils import (
     image_linear_transform,
@@ -47,7 +47,9 @@ def _identity_transform() -> np.ndarray:
 
 
 def _ensure_ip_state(ip: ImageProcessor) -> ImageProcessor:
-    wave = np.asarray(ip.fields.get("wave", np.arange(400.0, 701.0, 10.0, dtype=float)), dtype=float)
+    wave = np.asarray(
+        ip.fields.get("wave", np.arange(400.0, 701.0, 10.0, dtype=float)), dtype=float
+    )
     ip.fields["wave"] = wave
     ip.fields.setdefault("spectrum", {"wave": wave.copy()})
     ip.fields["spectrum"]["wave"] = wave.copy()
@@ -66,7 +68,9 @@ def _ensure_ip_state(ip: ImageProcessor) -> ImageProcessor:
         "illuminant_correction",
         {"method": ip.fields["illuminant_correction_method"]},
     )
-    ip.fields["demosaic"]["method"] = ip.fields.get("demosaic_method", ip.fields["demosaic"].get("method", "bilinear"))
+    ip.fields["demosaic"]["method"] = ip.fields.get(
+        "demosaic_method", ip.fields["demosaic"].get("method", "bilinear")
+    )
     ip.fields["sensor_correction"]["method"] = ip.fields.get(
         "conversion_method_sensor",
         ip.fields["sensor_correction"].get("method", "mcc optimized"),
@@ -110,9 +114,13 @@ def ip_create(
         ip.fields["wave"] = np.arange(400.0, 701.0, 10.0, dtype=float)
     ip.fields["spectrum"] = {"wave": np.asarray(ip.fields["wave"], dtype=float).copy()}
     if display is None:
-        ip.fields["display"] = display_create("lcdExample.mat", wave=ip.fields["wave"], asset_store=store, session=session)
+        ip.fields["display"] = display_create(
+            "lcdExample.mat", wave=ip.fields["wave"], asset_store=store, session=session
+        )
     elif isinstance(display, str):
-        ip.fields["display"] = display_create(display, wave=ip.fields["wave"], asset_store=store, session=session)
+        ip.fields["display"] = display_create(
+            display, wave=ip.fields["wave"], asset_store=store, session=session
+        )
     else:
         ip.fields["display"] = track_session_object(session, display)
     ip.fields.update(
@@ -129,7 +137,9 @@ def ip_create(
         }
     )
     ip.data["input"] = None if sensor is None else sensor.data.get("dv", sensor.data.get("volts"))
-    ip.fields["datamax"] = None if sensor is None else float(sensor.fields["pixel"]["voltage_swing"])
+    ip.fields["datamax"] = (
+        None if sensor is None else float(sensor.fields["pixel"]["voltage_swing"])
+    )
     ip.data["transforms"] = [None, None, None]
     return track_ip_session_state(session, _ensure_ip_state(ip))
 
@@ -146,11 +156,334 @@ def _ie_bilinear(planes: np.ndarray, cfa_pattern: np.ndarray) -> np.ndarray:
             rgb[:, :, channel_index] = convolve2d(plane, kernel, mode="valid")
         else:
             horizontal = convolve2d(plane, np.array([[0.5, 1.0, 0.5]], dtype=float), mode="valid")
-            rgb[:, :, channel_index] = convolve2d(horizontal, np.array([[0.5], [1.0], [0.5]], dtype=float), mode="valid")
+            rgb[:, :, channel_index] = convolve2d(
+                horizontal, np.array([[0.5], [1.0], [0.5]], dtype=float), mode="valid"
+            )
     return rgb
 
 
-def _sensor_space(sensor: Sensor) -> np.ndarray:
+def _bayer_pattern_name(cfa_pattern: np.ndarray) -> str | None:
+    pattern = np.asarray(cfa_pattern, dtype=int)
+    if pattern.shape != (2, 2):
+        return None
+    if np.array_equal(pattern, np.array([[2, 1], [3, 2]], dtype=int)):
+        return "grbg"
+    if np.array_equal(pattern, np.array([[1, 2], [2, 3]], dtype=int)):
+        return "rggb"
+    if np.array_equal(pattern, np.array([[2, 3], [1, 2]], dtype=int)):
+        return "gbrg"
+    if np.array_equal(pattern, np.array([[3, 2], [2, 1]], dtype=int)):
+        return "bggr"
+    return None
+
+
+def _mosaic_converter(
+    bayer_in: np.ndarray, in_bayer_pattern: str, out_bayer_pattern: str = "grbg"
+) -> tuple[np.ndarray, str]:
+    bayer_in = np.asarray(bayer_in, dtype=float)
+    in_pattern = param_format(in_bayer_pattern)
+    out_pattern = param_format(out_bayer_pattern)
+    if in_pattern == out_pattern:
+        return bayer_in.copy(), out_pattern
+
+    bayer_out = np.zeros_like(bayer_in, dtype=float)
+    if out_pattern == "grbg":
+        if in_pattern == "rggb":
+            bayer_out[:, :-1, :] = bayer_in[:, 1:, :]
+            bayer_out[:, -1, :] = bayer_in[:, -2, :]
+        elif in_pattern == "bggr":
+            bayer_out[:-1, :, :] = bayer_in[1:, :, :]
+            bayer_out[-1, :, :] = bayer_in[-2, :, :]
+        elif in_pattern == "gbrg":
+            bayer_out[:-1, :-1, :] = bayer_in[1:, 1:, :]
+            bayer_out[-1, :, :] = bayer_in[-2, :, :]
+            bayer_out[:, -1, :] = bayer_in[:, -2, :]
+        else:
+            raise ValueError(f"Unsupported Bayer RGB pattern: {in_bayer_pattern}")
+        return bayer_out, out_pattern
+
+    raise ValueError(f"Unsupported Bayer RGB pattern: {out_bayer_pattern}")
+
+
+def _bayer_indices(b_pattern: str, size: tuple[int, int], clip: int = 0) -> tuple[np.ndarray, ...]:
+    pattern = param_format(b_pattern)
+    rows, cols = map(int, size)
+    if pattern == "grbg":
+        g1x = np.arange(1 + clip, cols - clip + 1, 2, dtype=int)
+        g1y = np.arange(1 + clip, rows - clip + 1, 2, dtype=int)
+        rx = np.arange(2 + clip, cols - clip + 1, 2, dtype=int)
+        ry = np.arange(1 + clip, rows - clip + 1, 2, dtype=int)
+        bx = np.arange(1 + clip, cols - clip + 1, 2, dtype=int)
+        by = np.arange(2 + clip, rows - clip + 1, 2, dtype=int)
+        g2x = np.arange(2 + clip, cols - clip + 1, 2, dtype=int)
+        g2y = np.arange(2 + clip, rows - clip + 1, 2, dtype=int)
+        return rx, ry, bx, by, g1x, g1y, g2x, g2y
+    if pattern == "rggb":
+        g1x = np.arange(2 + clip, cols - clip + 1, 2, dtype=int)
+        g1y = np.arange(1 + clip, rows - clip + 1, 2, dtype=int)
+        rx = np.arange(1 + clip, cols - clip + 1, 2, dtype=int)
+        ry = np.arange(1 + clip, rows - clip + 1, 2, dtype=int)
+        bx = np.arange(2 + clip, cols - clip + 1, 2, dtype=int)
+        by = np.arange(2 + clip, rows - clip + 1, 2, dtype=int)
+        g2x = np.arange(1 + clip, cols - clip + 1, 2, dtype=int)
+        g2y = np.arange(2 + clip, rows - clip + 1, 2, dtype=int)
+        return rx, ry, bx, by, g1x, g1y, g2x, g2y
+    if pattern == "gbrg":
+        g1x = np.arange(1 + clip, cols - clip + 1, 2, dtype=int)
+        g1y = np.arange(1 + clip, rows - clip + 1, 2, dtype=int)
+        rx = np.arange(1 + clip, cols - clip + 1, 2, dtype=int)
+        ry = np.arange(2 + clip, rows - clip + 1, 2, dtype=int)
+        bx = np.arange(2 + clip, cols - clip + 1, 2, dtype=int)
+        by = np.arange(1 + clip, rows - clip + 1, 2, dtype=int)
+        g2x = np.arange(2 + clip, cols - clip + 1, 2, dtype=int)
+        g2y = np.arange(2 + clip, rows - clip + 1, 2, dtype=int)
+        return rx, ry, bx, by, g1x, g1y, g2x, g2y
+    if pattern == "bggr":
+        g1x = np.arange(2 + clip, cols - clip + 1, 2, dtype=int)
+        g1y = np.arange(1 + clip, rows - clip + 1, 2, dtype=int)
+        rx = np.arange(2 + clip, cols - clip + 1, 2, dtype=int)
+        ry = np.arange(2 + clip, rows - clip + 1, 2, dtype=int)
+        bx = np.arange(1 + clip, cols - clip + 1, 2, dtype=int)
+        by = np.arange(1 + clip, rows - clip + 1, 2, dtype=int)
+        g2x = np.arange(1 + clip, cols - clip + 1, 2, dtype=int)
+        g2y = np.arange(2 + clip, rows - clip + 1, 2, dtype=int)
+        return rx, ry, bx, by, g1x, g1y, g2x, g2y
+    raise ValueError(f"Unsupported Bayer pattern: {b_pattern}")
+
+
+def _indexed_plane(
+    data: np.ndarray, ys: np.ndarray, xs: np.ndarray, channel_index: int
+) -> np.ndarray:
+    return np.asarray(
+        data[np.ix_(ys.astype(int) - 1, xs.astype(int) - 1, [int(channel_index)])], dtype=float
+    )[:, :, 0]
+
+
+def _assign_indexed_plane(
+    data: np.ndarray, ys: np.ndarray, xs: np.ndarray, channel_index: int, values: np.ndarray
+) -> None:
+    data[np.ix_(ys.astype(int) - 1, xs.astype(int) - 1, [int(channel_index)])] = np.asarray(
+        values, dtype=float
+    )[:, :, None]
+
+
+def _bayer_extend(data: np.ndarray) -> np.ndarray:
+    rows, cols = data.shape[:2]
+    extended = np.concatenate((data[:, 2:4, :], data, data[:, (cols - 4) : (cols - 2), :]), axis=1)
+    extended = np.concatenate(
+        (extended[2:4, :, :], extended, extended[(rows - 4) : (rows - 2), :, :]), axis=0
+    )
+    return np.asarray(extended, dtype=float)
+
+
+def _bayer_laplacian_core(bayer_in: np.ndarray, *, adaptive: bool) -> np.ndarray:
+    rows, cols = map(int, bayer_in.shape[:2])
+    bayer_ex = _bayer_extend(bayer_in)
+    rows_ex, cols_ex = rows + 4, cols + 4
+    rgb = np.zeros_like(np.asarray(bayer_in, dtype=float), dtype=float)
+    rgb[:, :, 0] = bayer_in[:, :, 0]
+    rgb[:, :, 1] = bayer_in[:, :, 1]
+    rgb[:, :, 2] = bayer_in[:, :, 2]
+
+    rx, ry, bx, by, g1x, g1y, g2x, g2y = _bayer_indices("grbg", (rows_ex, cols_ex), 2)
+
+    gs_h = _indexed_plane(bayer_ex, g1y, g1x, 1) + _indexed_plane(bayer_ex, g1y, g1x + 2, 1)
+    gs_v = _indexed_plane(bayer_ex, g2y, g2x, 1) + _indexed_plane(bayer_ex, g2y - 2, g2x, 1)
+    r_h = (
+        2.0 * _indexed_plane(bayer_ex, ry, rx, 0)
+        - _indexed_plane(bayer_ex, ry, rx - 2, 0)
+        - _indexed_plane(bayer_ex, ry, rx + 2, 0)
+    )
+    r_v = (
+        2.0 * _indexed_plane(bayer_ex, ry, rx, 0)
+        - _indexed_plane(bayer_ex, ry - 2, rx, 0)
+        - _indexed_plane(bayer_ex, ry + 2, rx, 0)
+    )
+    if adaptive:
+        gd_h = _indexed_plane(bayer_ex, g1y, g1x, 1) - _indexed_plane(bayer_ex, g1y, g1x + 2, 1)
+        gd_v = _indexed_plane(bayer_ex, g2y, g2x, 1) - _indexed_plane(bayer_ex, g2y - 2, g2x, 1)
+        delta_h = np.abs(gd_h) + np.abs(r_h)
+        delta_v = np.abs(gd_v) + np.abs(r_v)
+        green_on_red = (
+            (delta_h < delta_v) * (0.50 * gs_h + 0.25 * r_h)
+            + (delta_h > delta_v) * (0.50 * gs_v + 0.25 * r_v)
+            + (delta_h == delta_v) * (0.25 * (gs_h + gs_v) + 0.125 * (r_h + r_v))
+        )
+    else:
+        green_on_red = 0.25 * (gs_h + gs_v) + 0.125 * (r_h + r_v)
+    _assign_indexed_plane(rgb, ry - 2, rx - 2, 1, green_on_red)
+
+    gs_h = _indexed_plane(bayer_ex, g2y, g2x, 1) + _indexed_plane(bayer_ex, g2y, g2x - 2, 1)
+    gs_v = _indexed_plane(bayer_ex, g1y, g1x, 1) + _indexed_plane(bayer_ex, g1y + 2, g1x, 1)
+    b_h = (
+        2.0 * _indexed_plane(bayer_ex, by, bx, 2)
+        - _indexed_plane(bayer_ex, by, bx - 2, 2)
+        - _indexed_plane(bayer_ex, by, bx + 2, 2)
+    )
+    b_v = (
+        2.0 * _indexed_plane(bayer_ex, by, bx, 2)
+        - _indexed_plane(bayer_ex, by - 2, bx, 2)
+        - _indexed_plane(bayer_ex, by + 2, bx, 2)
+    )
+    if adaptive:
+        gd_h = _indexed_plane(bayer_ex, g2y, g2x, 1) - _indexed_plane(bayer_ex, g2y, g2x - 2, 1)
+        gd_v = _indexed_plane(bayer_ex, g1y, g1x, 1) - _indexed_plane(bayer_ex, g1y + 2, g1x, 1)
+        delta_h = np.abs(gd_h) + np.abs(b_h)
+        delta_v = np.abs(gd_v) + np.abs(b_v)
+        green_on_blue = (
+            (delta_h < delta_v) * (0.50 * gs_h + 0.25 * b_h)
+            + (delta_h > delta_v) * (0.50 * gs_v + 0.25 * b_v)
+            + (delta_h == delta_v) * (0.25 * (gs_h + gs_v) + 0.125 * (b_h + b_v))
+        )
+    else:
+        green_on_blue = 0.25 * (gs_h + gs_v) + 0.125 * (b_h + b_v)
+    _assign_indexed_plane(rgb, by - 2, bx - 2, 1, green_on_blue)
+
+    grn = np.concatenate((rgb[:, 2:4, 1], rgb[:, :, 1], rgb[:, (cols - 4) : (cols - 2), 1]), axis=1)
+    grn = np.concatenate((grn[2:4, :], grn, grn[(rows - 4) : (rows - 2), :]), axis=0)
+    bayer_ex[:, :, 1] = grn
+
+    red_on_g1 = 0.5 * (
+        _indexed_plane(bayer_ex, ry, rx, 0) + _indexed_plane(bayer_ex, ry, rx - 2, 0)
+    ) + 0.25 * (
+        2.0 * _indexed_plane(bayer_ex, g1y, g1x, 1)
+        - _indexed_plane(bayer_ex, ry, rx - 2, 1)
+        - _indexed_plane(bayer_ex, ry, rx, 1)
+    )
+    _assign_indexed_plane(rgb, g1y - 2, g1x - 2, 0, red_on_g1)
+    red_on_g2 = 0.5 * (
+        _indexed_plane(bayer_ex, ry, rx, 0) + _indexed_plane(bayer_ex, ry + 2, rx, 0)
+    ) + 0.25 * (
+        2.0 * _indexed_plane(bayer_ex, g2y, g2x, 1)
+        - _indexed_plane(bayer_ex, ry + 2, rx, 1)
+        - _indexed_plane(bayer_ex, ry, rx, 1)
+    )
+    _assign_indexed_plane(rgb, g2y - 2, g2x - 2, 0, red_on_g2)
+
+    blue_on_g2 = 0.5 * (
+        _indexed_plane(bayer_ex, by, bx, 2) + _indexed_plane(bayer_ex, by, bx + 2, 2)
+    ) + 0.25 * (
+        2.0 * _indexed_plane(bayer_ex, g2y, g2x, 1)
+        - _indexed_plane(bayer_ex, by, bx + 2, 1)
+        - _indexed_plane(bayer_ex, by, bx, 1)
+    )
+    _assign_indexed_plane(rgb, g2y - 2, g2x - 2, 2, blue_on_g2)
+    blue_on_g1 = 0.5 * (
+        _indexed_plane(bayer_ex, by, bx, 2) + _indexed_plane(bayer_ex, by - 2, bx, 2)
+    ) + 0.25 * (
+        2.0 * _indexed_plane(bayer_ex, g1y, g1x, 1)
+        - _indexed_plane(bayer_ex, by - 2, bx, 1)
+        - _indexed_plane(bayer_ex, by, bx, 1)
+    )
+    _assign_indexed_plane(rgb, g1y - 2, g1x - 2, 2, blue_on_g1)
+
+    rs_n = _indexed_plane(bayer_ex, ry, rx - 2, 0) + _indexed_plane(bayer_ex, ry + 2, rx, 0)
+    rs_p = _indexed_plane(bayer_ex, ry, rx, 0) + _indexed_plane(bayer_ex, ry + 2, rx - 2, 0)
+    g_n = (
+        2.0 * _indexed_plane(bayer_ex, by, bx, 1)
+        - _indexed_plane(bayer_ex, ry, rx - 2, 1)
+        - _indexed_plane(bayer_ex, ry + 2, rx, 1)
+    )
+    g_p = (
+        2.0 * _indexed_plane(bayer_ex, by, bx, 1)
+        - _indexed_plane(bayer_ex, ry, rx, 1)
+        - _indexed_plane(bayer_ex, ry + 2, rx - 2, 1)
+    )
+    if adaptive:
+        rd_n = _indexed_plane(bayer_ex, ry, rx - 2, 0) - _indexed_plane(bayer_ex, ry + 2, rx, 0)
+        rd_p = _indexed_plane(bayer_ex, ry, rx, 0) - _indexed_plane(bayer_ex, ry + 2, rx - 2, 0)
+        delta_n = np.abs(rd_n) + np.abs(g_n)
+        delta_p = np.abs(rd_p) + np.abs(g_p)
+        red_on_blue = (
+            (delta_n < delta_p) * (0.50 * rs_n + 0.25 * g_n)
+            + (delta_n > delta_p) * (0.50 * rs_p + 0.25 * g_p)
+            + (delta_n == delta_p) * (0.25 * (rs_n + rs_p) + 0.125 * (g_n + g_p))
+        )
+    else:
+        red_on_blue = 0.25 * (rs_n + rs_p) + 0.125 * (g_n + g_p)
+    _assign_indexed_plane(rgb, by - 2, bx - 2, 0, red_on_blue)
+
+    bs_n = _indexed_plane(bayer_ex, by - 2, bx, 2) + _indexed_plane(bayer_ex, by, bx + 2, 2)
+    bs_p = _indexed_plane(bayer_ex, by, bx, 2) + _indexed_plane(bayer_ex, by - 2, bx + 2, 2)
+    g_n = (
+        2.0 * _indexed_plane(bayer_ex, ry, rx, 1)
+        - _indexed_plane(bayer_ex, by - 2, bx, 1)
+        - _indexed_plane(bayer_ex, by, bx + 2, 1)
+    )
+    g_p = (
+        2.0 * _indexed_plane(bayer_ex, ry, rx, 1)
+        - _indexed_plane(bayer_ex, by, bx, 1)
+        - _indexed_plane(bayer_ex, by - 2, bx + 2, 1)
+    )
+    if adaptive:
+        bd_n = _indexed_plane(bayer_ex, by - 2, bx, 2) - _indexed_plane(bayer_ex, by, bx + 2, 2)
+        bd_p = _indexed_plane(bayer_ex, by, bx, 2) - _indexed_plane(bayer_ex, by - 2, bx + 2, 2)
+        delta_n = np.abs(bd_n) + np.abs(g_n)
+        delta_p = np.abs(bd_p) + np.abs(g_p)
+        blue_on_red = (
+            (delta_n < delta_p) * (0.50 * bs_n + 0.25 * g_n)
+            + (delta_n > delta_p) * (0.50 * bs_p + 0.25 * g_p)
+            + (delta_n == delta_p) * (0.25 * (bs_n + bs_p) + 0.125 * (g_n + g_p))
+        )
+    else:
+        blue_on_red = 0.25 * (bs_n + bs_p) + 0.125 * (g_n + g_p)
+    _assign_indexed_plane(rgb, ry - 2, rx - 2, 2, blue_on_red)
+
+    return rgb
+
+
+def _laplacian_demosaic(planes: np.ndarray, b_pattern: str) -> np.ndarray:
+    converted, _ = _mosaic_converter(planes, b_pattern, "grbg")
+    return _bayer_laplacian_core(converted, adaptive=False)
+
+
+def _adaptive_laplacian_demosaic(planes: np.ndarray, b_pattern: str) -> np.ndarray:
+    converted, _ = _mosaic_converter(planes, b_pattern, "grbg")
+    return _bayer_laplacian_core(converted, adaptive=True)
+
+
+def _nearest_neighbor_demosaic(planes: np.ndarray, b_pattern: str) -> np.ndarray:
+    rows, cols = map(int, planes.shape[:2])
+    rgb = np.asarray(planes, dtype=float).copy()
+    rx, ry, bx, by, g1x, g1y, g2x, g2y = _bayer_indices(b_pattern, (rows, cols))
+    red = _indexed_plane(planes, ry, rx, 0)
+    green1 = _indexed_plane(planes, g1y, g1x, 1)
+    green2 = _indexed_plane(planes, g2y, g2x, 1)
+    blue = _indexed_plane(planes, by, bx, 2)
+
+    dy = 1 if int(ry[0]) % 2 == 1 else -1
+    dx = 1 if int(rx[0]) % 2 == 1 else -1
+    _assign_indexed_plane(rgb, ry, rx + dx, 0, red)
+    _assign_indexed_plane(rgb, ry + dy, rx, 0, red)
+    _assign_indexed_plane(rgb, ry + dy, rx + dx, 0, red)
+
+    dx = 1 if int(g1x[0]) % 2 == 1 else -1
+    _assign_indexed_plane(rgb, g1y, g1x + dx, 1, green1)
+    _assign_indexed_plane(rgb, g2y, g2x - dx, 1, green2)
+
+    dy = 1 if int(by[0]) % 2 == 1 else -1
+    dx = 1 if int(bx[0]) % 2 == 1 else -1
+    _assign_indexed_plane(rgb, by, bx + dx, 2, blue)
+    _assign_indexed_plane(rgb, by + dy, bx, 2, blue)
+    _assign_indexed_plane(rgb, by + dy, bx + dx, 2, blue)
+    return rgb
+
+
+def _demosaic_rgb_planes(
+    planes: np.ndarray, cfa_pattern: np.ndarray, demosaic_method: str
+) -> np.ndarray:
+    method = param_format(demosaic_method)
+    pattern_name = _bayer_pattern_name(cfa_pattern)
+    if method in {"nearestneighbor"} and pattern_name is not None:
+        return _nearest_neighbor_demosaic(planes, pattern_name)
+    if method in {"laplacian"} and pattern_name is not None:
+        return _laplacian_demosaic(planes, pattern_name)
+    if method in {"adaptivelaplacian"} and pattern_name in {"grbg", "rggb", "bggr"}:
+        return _adaptive_laplacian_demosaic(planes, pattern_name)
+    return _ie_bilinear(planes, cfa_pattern)
+
+
+def _sensor_space(sensor: Sensor, demosaic_method: str = "bilinear") -> np.ndarray:
     sensor_data = sensor.data.get("volts")
     if sensor_data is None:
         sensor_data = sensor.data.get("dv")
@@ -171,6 +504,8 @@ def _sensor_space(sensor: Sensor) -> np.ndarray:
             planes[:, :, channel_index][mask] = np.asarray(sensor_data, dtype=float)[mask]
         if nfilters == 1:
             return planes
+        if nfilters == 3 and tuple(pattern.shape) == (2, 2):
+            return _demosaic_rgb_planes(planes, pattern, demosaic_method)
         return _ie_bilinear(planes, pattern)
     return np.repeat(np.asarray(sensor_data, dtype=float)[..., None], 3, axis=2)
 
@@ -224,7 +559,9 @@ def _illuminant_white_ratio(
         return np.ones(int(channels), dtype=float)
 
     wave = np.asarray(ip_get(ip, "wave"), dtype=float).reshape(-1)
-    target = np.asarray(ie_read_spectra("D65", wave, asset_store=asset_store), dtype=float).reshape(-1)
+    target = np.asarray(ie_read_spectra("D65", wave, asset_store=asset_store), dtype=float).reshape(
+        -1
+    )
     white_ratio = np.asarray(internal_cmf, dtype=float).T @ target
     max_value = float(np.max(white_ratio))
     if max_value <= 0.0:
@@ -281,7 +618,9 @@ def _white_world_transform(
     base_value = max(float(bright_values[0]), np.finfo(float).tiny)
     scale = np.zeros(channels, dtype=float)
     for channel_index in range(channels):
-        scale[channel_index] = float(white_ratio[channel_index]) * (base_value / float(bright_values[channel_index]))
+        scale[channel_index] = float(white_ratio[channel_index]) * (
+            base_value / float(bright_values[channel_index])
+        )
     return np.diag(scale)
 
 
@@ -366,10 +705,16 @@ def ip_compute(
     store = _store(asset_store)
     computed = _ensure_ip_state(ip.clone())
     computed.data["input"] = sensor.data.get("dv", sensor.data.get("volts"))
-    sensor_space = _sensor_space(sensor)
-    internal_image, sensor_transform = _sensor_to_internal(sensor_space, computed, sensor, asset_store=store)
-    corrected_internal, illuminant_transform = _illuminant_correct_internal(internal_image, computed, asset_store=store)
-    display_linear, display_transform = _display_render(corrected_internal, computed, sensor, asset_store=store)
+    sensor_space = _sensor_space(sensor, computed.fields.get("demosaic_method", "bilinear"))
+    internal_image, sensor_transform = _sensor_to_internal(
+        sensor_space, computed, sensor, asset_store=store
+    )
+    corrected_internal, illuminant_transform = _illuminant_correct_internal(
+        internal_image, computed, asset_store=store
+    )
+    display_linear, display_transform = _display_render(
+        corrected_internal, computed, sensor, asset_store=store
+    )
 
     if hdr_white:
         max_channel = np.max(display_linear, axis=2, keepdims=True)
@@ -378,7 +723,9 @@ def ip_compute(
 
     display = computed.fields["display"]
     clamped_display = np.clip(display_linear, 0.0, 1.0)
-    display_rgb = invert_gamma_table(clamped_display, np.asarray(display.fields["gamma"], dtype=float))
+    display_rgb = invert_gamma_table(
+        clamped_display, np.asarray(display.fields["gamma"], dtype=float)
+    )
     srgb = linear_to_srgb(clamped_display)
 
     computed.fields["sensor_conversion_matrix"] = sensor_transform
@@ -487,12 +834,18 @@ def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
     if key in {"internalcmf", "internalcolormatchingfunction"}:
         if param_format(ip.fields["internal_cs"]) == "sensor":
             return None
-        return xyz_color_matching(np.asarray(ip.fields["wave"], dtype=float), asset_store=_store(None))
+        return xyz_color_matching(
+            np.asarray(ip.fields["wave"], dtype=float), asset_store=_store(None)
+        )
     if key in {"illuminantcorrection"}:
         return ip.fields["illuminant_correction"]
     if key in {"illuminantcorrectionmethod"}:
         return ip.fields["illuminant_correction"].get("method", "none")
-    if key in {"illuminantcorrectionmatrix", "correctiontransformilluminant", "correctionmatrixilluminant"}:
+    if key in {
+        "illuminantcorrectionmatrix",
+        "correctiontransformilluminant",
+        "correctionmatrixilluminant",
+    }:
         return _ip_transform(ip, 1)
     if key in {"demosaic", "demosaicstructure"}:
         return ip.fields["demosaic"]
@@ -523,7 +876,12 @@ def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
         return list(ip.data["transforms"])
     if key == "transformmethod":
         return ip.fields["transform_method"]
-    if key in {"ics2display", "ics2displaymatrix", "ics2displaytransform", "internalcs2displayspace"}:
+    if key in {
+        "ics2display",
+        "ics2displaymatrix",
+        "ics2displaytransform",
+        "internalcs2displayspace",
+    }:
         return _ip_transform(ip, 2)
     if key in {"transformcombined", "combinedtransform", "prodt"}:
         return _ip_transform(ip, 0) @ _ip_transform(ip, 1) @ _ip_transform(ip, 2)
@@ -550,7 +908,11 @@ def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
         if not args:
             raise ValueError("ROI required for ipGet(..., 'roi chromaticity mean').")
         chromaticity = ip_get(ip, "chromaticity", args[0])
-        return None if chromaticity is None else np.mean(np.asarray(chromaticity, dtype=float), axis=0).reshape(-1)
+        return (
+            None
+            if chromaticity is None
+            else np.mean(np.asarray(chromaticity, dtype=float), axis=0).reshape(-1)
+        )
     if key in {"input", "sensorinput", "sensormosaic"}:
         return ip.data.get("input")
     if key in {"sensorspace", "sensorchannels"}:
@@ -658,7 +1020,9 @@ def ip_set(
         return track_ip_session_state(session, ip)
     if key in {"sensorconversion", "conversionsensor"}:
         ip.fields["sensor_correction"] = dict(value)
-        ip.fields["conversion_method_sensor"] = str(ip.fields["sensor_correction"].get("method", "none"))
+        ip.fields["conversion_method_sensor"] = str(
+            ip.fields["sensor_correction"].get("method", "none")
+        )
         return track_ip_session_state(session, ip)
     if key in {"sensorconversionmethod", "conversionmethodsensor"}:
         method = "none" if value in {None, ""} else str(value)
@@ -670,14 +1034,21 @@ def ip_set(
         return track_ip_session_state(session, ip)
     if key in {"illuminantcorrection", "correctionilluminant"}:
         ip.fields["illuminant_correction"] = dict(value)
-        ip.fields["illuminant_correction_method"] = str(ip.fields["illuminant_correction"].get("method", "none"))
+        ip.fields["illuminant_correction_method"] = str(
+            ip.fields["illuminant_correction"].get("method", "none")
+        )
         return track_ip_session_state(session, ip)
     if key in {"illuminantcorrectionmethod", "correctionmethodilluminant"}:
         method = "none" if value in {None, ""} else str(value).lower()
         ip.fields["illuminant_correction_method"] = method
         ip.fields["illuminant_correction"]["method"] = method
         return track_ip_session_state(session, ip)
-    if key in {"correctionmatrixilluminant", "illuminantcorrectionmatrix", "correctiontransformilluminant", "illuminantcorrectiontransform"}:
+    if key in {
+        "correctionmatrixilluminant",
+        "illuminantcorrectionmatrix",
+        "correctiontransformilluminant",
+        "illuminantcorrectiontransform",
+    }:
         ip.data["transforms"][1] = np.asarray(value, dtype=float)
         return track_ip_session_state(session, ip)
     if key in {"display", "displaystructure"}:
@@ -731,7 +1102,9 @@ def ip_set(
     if key in {"renderflag", "displaymode"}:
         normalized = param_format(value)
         mapping = {"rgb": 1, "hdr": 2, "gray": 3}
-        ip.fields["render"]["renderflag"] = mapping.get(normalized, int(value) if isinstance(value, (int, np.integer)) else 1)
+        ip.fields["render"]["renderflag"] = mapping.get(
+            normalized, int(value) if isinstance(value, (int, np.integer)) else 1
+        )
         return track_ip_session_state(session, ip)
     if key in {"renderscale", "scaledisplay", "scaledisplayoutput"}:
         ip.fields["render"]["scale"] = bool(value)
