@@ -2473,6 +2473,44 @@ def sensor_clear_data(sensor: Sensor) -> Sensor:
     return cleared
 
 
+def sensor_no_noise(sensor: Sensor) -> Sensor:
+    """Return a sensor copy with all non-photon-noise terms disabled."""
+
+    noiseless = sensor.clone()
+    noiseless = sensor_set(noiseless, "prnulevel", 0.0)
+    noiseless = sensor_set(noiseless, "dsnulevel", 0.0)
+    noiseless = sensor_set(noiseless, "quantizationmethod", "analog")
+    noiseless = sensor_set(noiseless, "pixel read noise volts", 0.0)
+    noiseless = sensor_set(noiseless, "pixel dark voltage", 0.0)
+    return noiseless
+
+
+def sensor_gain_offset(sensor: Sensor, ag: float, ao: float) -> Sensor:
+    """Apply the legacy MATLAB analog gain/offset transform to sensor volts."""
+
+    gain = float(ag)
+    offset = float(ao)
+    adjusted = sensor.clone()
+    if np.isclose(gain, 1.0) and np.isclose(offset, 0.0):
+        return adjusted
+    if np.isclose(gain, 0.0):
+        raise ValueError("sensorGainOffset requires a non-zero analog gain.")
+
+    volts = sensor_get(adjusted, "volts")
+    if volts is not None:
+        adjusted = sensor_set(adjusted, "volts", (np.asarray(volts, dtype=float) + offset) / gain)
+    adjusted = sensor_set(adjusted, "analog gain", gain)
+    adjusted = sensor_set(adjusted, "analog offset", offset)
+    return adjusted
+
+
+def sensor_resample_wave(sensor: Sensor, new_wave_samples: Any) -> Sensor:
+    """Resample sensor spectral data onto a new wavelength sampling."""
+
+    resampled = sensor.clone()
+    return sensor_set(resampled, "wavelengthSamples", np.asarray(new_wave_samples, dtype=float).reshape(-1))
+
+
 def sensor_show_image(
     sensor: Sensor,
     gam: float | None = None,
@@ -4832,7 +4870,10 @@ sensorDetermineCFA = sensor_determine_cfa
 sensorDisplayTransform = sensor_display_transform
 sensorEquateTransmittances = sensor_equate_transmittances
 sensorFilterRGB = sensor_filter_rgb
+sensorGainOffset = sensor_gain_offset
 sensorImageColorArray = sensor_image_color_array
+sensorNoNoise = sensor_no_noise
+sensorResampleWave = sensor_resample_wave
 sensorSNRluxsec = sensor_snr_luxsec
 sensorShowCFA = sensor_show_cfa
 sensorShowCFAWeights = sensor_show_cfa_weights

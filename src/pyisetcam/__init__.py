@@ -296,6 +296,7 @@ from .sensor import (
     sensor_create_ideal,
     sensor_create_split_pixel,
     sensor_formats,
+    sensor_gain_offset,
     sensor_get,
     sensor_color_order,
     sensor_determine_cfa,
@@ -303,7 +304,9 @@ from .sensor import (
     sensor_equate_transmittances,
     sensor_filter_rgb,
     sensor_image_color_array,
+    sensor_no_noise,
     sensor_pixel_coord,
+    sensor_resample_wave,
     sensor_set,
     sensor_set_size_to_fov,
     sensor_save_image,
@@ -831,6 +834,7 @@ __all__ = [
     "sensorDisplayTransform",
     "sensorEquateTransmittances",
     "sensorFilterRGB",
+    "sensorGainOffset",
     "signalCurrent",
     "signal_current",
     "sensor_cfa_name_list",
@@ -838,13 +842,17 @@ __all__ = [
     "sensor_clear_data",
     "sensorColorFilter",
     "sensor_color_filter",
+    "sensor_gain_offset",
+    "sensor_no_noise",
     "sensor_pixel_coord",
+    "sensorResampleWave",
     "sensorSNR",
     "sensorSNRluxsec",
     "sensorSet",
     "sensorSetSizeToFOV",
     "sensorSaveImage",
     "sensorImageColorArray",
+    "sensorNoNoise",
     "sensorShowCFA",
     "sensorShowCFAWeights",
     "sensorShowImage",
@@ -861,6 +869,7 @@ __all__ = [
     "sensor_dng_read",
     "sensor_formats",
     "sensor_get",
+    "sensor_resample_wave",
     "sensor_color_order",
     "sensor_determine_cfa",
     "sensor_display_transform",
@@ -1120,6 +1129,9 @@ signalCurrent = signal_current
 sensorColorFilter = sensor_color_filter
 sensorCrop = sensor_crop
 sensorGet = sensor_get
+sensorGainOffset = sensor_gain_offset
+sensorNoNoise = sensor_no_noise
+sensorResampleWave = sensor_resample_wave
 sensorSNR = sensor_snr
 sensorSNRluxsec = sensor_snr_luxsec
 pixelSNR = pixel_snr

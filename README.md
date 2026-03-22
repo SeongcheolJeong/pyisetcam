@@ -322,7 +322,12 @@ normalizer, and `sensor_filter_rgb(...)` / `sensorFilterRGB(...)` for the
 legacy CFA filter-color approximation helper, plus headless
 `sensor_cfa_name_list(...)` / `sensorCFANameList(...)` for the legacy CFA
 popup-name list and `sensor_pixel_coord(...)` / `sensorPixelCoord(...)`
-for the direct MATLAB pixel-center coordinate helper. The migration-gap
+for the direct MATLAB pixel-center coordinate helper, plus headless
+`sensor_no_noise(...)` / `sensorNoNoise(...)`,
+`sensor_gain_offset(...)` / `sensorGainOffset(...)`, and
+`sensor_resample_wave(...)` / `sensorResampleWave(...)` for the legacy
+sensor noise-reset, analog gain/offset, and spectral-resampling helper
+mini-family. The migration-gap
 audit now also treats the explicitly obsolete upstream `sensorUnitBlock.m`
 stub as out of scope rather than a remaining headless API target. That
 same Phase 1 sensor wave now also includes

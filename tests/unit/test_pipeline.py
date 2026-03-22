@@ -189,11 +189,14 @@ from pyisetcam import (
     sensorDisplayTransform,
     sensorEquateTransmittances,
     sensorFilterRGB,
+    sensorGainOffset,
     sensor_formats,
     sensor_get,
     sensorImageColorArray,
+    sensorNoNoise,
     sensorPixelCoord,
     sensor_plot,
+    sensorResampleWave,
     sensorSaveImage,
     sensorSNR,
     sensorSNRluxsec,
@@ -4990,6 +4993,92 @@ def test_sensor_clear_data_clears_computed_payloads(asset_store) -> None:
     assert sensor_get(cleared, "volts") is None
     assert sensor_get(cleared, "dv") is None
     assert np.array_equal(np.asarray(sensor_get(cleared, "wave"), dtype=float), np.asarray(sensor_get(sensor, "wave"), dtype=float))
+
+
+def test_sensor_no_noise_matches_legacy_parameter_reset(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "prnulevel", 12.5)
+    sensor = sensor_set(sensor, "dsnulevel", 0.015)
+    sensor = sensor_set(sensor, "quantizationmethod", "coded")
+    sensor = sensor_set(sensor, "pixel read noise volts", 1.5e-3)
+    sensor = sensor_set(sensor, "pixel dark voltage", 2.5e-3)
+
+    noiseless = sensorNoNoise(sensor)
+
+    assert noiseless is not sensor
+    assert np.isclose(float(sensor_get(noiseless, "prnulevel")), 0.0)
+    assert np.isclose(float(sensor_get(noiseless, "dsnulevel")), 0.0)
+    assert sensor_get(noiseless, "quantizationmethod") == "analog"
+    assert np.isclose(float(sensor_get(noiseless, "pixel read noise volts")), 0.0)
+    assert np.isclose(float(sensor_get(noiseless, "pixel dark voltage")), 0.0)
+    assert np.isclose(float(sensor_get(sensor, "prnulevel")), 12.5)
+    assert np.isclose(float(sensor_get(sensor, "pixel read noise volts")), 1.5e-3)
+
+
+def test_sensor_gain_offset_matches_legacy_voltage_formula(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    volts = np.array([[0.2, 0.4], [0.6, 0.8]], dtype=float)
+    sensor = sensor_set(sensor, "volts", volts)
+
+    adjusted = sensorGainOffset(sensor, 2.0, 0.1)
+
+    assert adjusted is not sensor
+    assert np.allclose(np.asarray(sensor_get(adjusted, "volts"), dtype=float), (volts + 0.1) / 2.0)
+    assert np.isclose(float(sensor_get(adjusted, "analog gain")), 2.0)
+    assert np.isclose(float(sensor_get(adjusted, "analog offset")), 0.1)
+    assert np.allclose(np.asarray(sensor_get(sensor, "volts"), dtype=float), volts)
+
+
+def test_sensor_resample_wave_resamples_legacy_spectral_payloads(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "wavelengthsamples", np.array([500.0, 600.0, 700.0], dtype=float))
+    sensor = sensor_set(
+        sensor,
+        "filterSpectra",
+        np.array(
+            [
+                [0.1, 0.8],
+                [0.5, 0.4],
+                [0.9, 0.0],
+            ],
+            dtype=float,
+        ),
+    )
+    sensor = sensor_set(sensor, "irFilter", np.array([1.0, 0.5, 0.0], dtype=float))
+    sensor = sensor_set(sensor, "pixelSpectralQE", np.array([0.2, 0.6, 1.0], dtype=float))
+
+    new_wave = np.array([450.0, 500.0, 550.0, 600.0, 650.0, 700.0, 750.0], dtype=float)
+    resampled = sensorResampleWave(sensor, new_wave)
+
+    expected_filters = np.column_stack(
+        [
+            np.interp(new_wave, np.array([500.0, 600.0, 700.0], dtype=float), np.array([0.1, 0.5, 0.9], dtype=float), left=0.0, right=0.0),
+            np.interp(new_wave, np.array([500.0, 600.0, 700.0], dtype=float), np.array([0.8, 0.4, 0.0], dtype=float), left=0.0, right=0.0),
+        ]
+    )
+    expected_ir = np.interp(
+        new_wave,
+        np.array([500.0, 600.0, 700.0], dtype=float),
+        np.array([1.0, 0.5, 0.0], dtype=float),
+        left=0.0,
+        right=0.0,
+    )
+    expected_qe = np.interp(
+        new_wave,
+        np.array([500.0, 600.0, 700.0], dtype=float),
+        np.array([0.2, 0.6, 1.0], dtype=float),
+        left=0.0,
+        right=0.0,
+    )
+
+    assert resampled is not sensor
+    assert np.array_equal(np.asarray(sensor_get(resampled, "wave"), dtype=float), new_wave)
+    assert np.array_equal(np.asarray(sensor_get(resampled, "pixel wavelength"), dtype=float), new_wave)
+    assert np.allclose(np.asarray(sensor_get(resampled, "filterSpectra"), dtype=float), expected_filters)
+    assert np.allclose(np.asarray(sensor_get(resampled, "irFilter"), dtype=float), expected_ir)
+    assert np.allclose(np.asarray(sensor_get(resampled, "pixelSpectralQE"), dtype=float), expected_qe)
+    assert tuple(sensor_get(resampled, "size")) == tuple(sensor_get(sensor, "size"))
+    assert np.array_equal(np.asarray(sensor_get(sensor, "wave"), dtype=float), np.array([500.0, 600.0, 700.0], dtype=float))
 
 
 def test_sensor_show_image_matches_sensor_rgb_rendering(asset_store) -> None:

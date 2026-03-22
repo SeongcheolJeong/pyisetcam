@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-22T22:38:52.645104+00:00",
+  "generated_at": "2026-03-22T23:10:46.776673+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -7,8 +7,8 @@
       "headless_only": 73,
       "missing": 40,
       "out_of_scope": 106,
-      "parity": 345,
-      "partial": 850,
+      "parity": 348,
+      "partial": 847,
       "ported": 29
     },
     "kind_counts": {
@@ -20,18 +20,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 393,
+      "P0": 390,
       "P1": 406,
       "P2": 164,
-      "P3": 480
+      "P3": 483
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
         "out_of_scope": 0,
-        "parity": 4,
-        "partial": -4,
+        "parity": 3,
+        "partial": -3,
         "ported": 0
       },
       "kind_counts": {
@@ -43,10 +43,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -4,
+        "P0": -3,
         "P1": 0,
         "P2": 0,
-        "P3": 4
+        "P3": 3
       }
     },
     "family_summary": {
@@ -742,8 +742,8 @@
         "total": 56,
         "by_status": {
           "out_of_scope": 1,
-          "parity": 29,
-          "partial": 25,
+          "parity": 32,
+          "partial": 22,
           "ported": 1
         },
         "by_kind": {
@@ -1032,17 +1032,6 @@
         }
       },
       {
-        "family": "sensor",
-        "open_entries": 25,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "out_of_scope": 1,
-          "parity": 29,
-          "partial": 25,
-          "ported": 1
-        }
-      },
-      {
         "family": "scene",
         "open_entries": 23,
         "highest_open_priority": "P0",
@@ -1071,6 +1060,17 @@
           "headless_only": 1,
           "parity": 2,
           "partial": 21
+        }
+      },
+      {
+        "family": "sensor",
+        "open_entries": 22,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "out_of_scope": 1,
+          "parity": 32,
+          "partial": 22,
+          "ported": 1
         }
       },
       {
@@ -13396,14 +13396,15 @@
       "upstream_path": "sensor/sensorGainOffset.m",
       "family": "sensor",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.sensor",
+      "status": "parity",
+      "python_surface": "pyisetcam.sensor, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "sensor/sensorGet.m",
@@ -13490,14 +13491,15 @@
       "upstream_path": "sensor/sensorNoNoise.m",
       "family": "sensor",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.sensor",
+      "status": "parity",
+      "python_surface": "pyisetcam.sensor, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "sensor/sensorPDArray.m",
@@ -13595,14 +13597,15 @@
       "upstream_path": "sensor/sensorResampleWave.m",
       "family": "sensor",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.sensor",
+      "status": "parity",
+      "python_surface": "pyisetcam.sensor, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "sensor/sensorRescale.m",
