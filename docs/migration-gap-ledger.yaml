@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-22T14:36:34.755343+00:00",
+  "generated_at": "2026-03-22T14:52:40.307287+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -7,8 +7,8 @@
       "headless_only": 74,
       "missing": 40,
       "out_of_scope": 101,
-      "parity": 296,
-      "partial": 910,
+      "parity": 297,
+      "partial": 909,
       "ported": 22
     },
     "kind_counts": {
@@ -20,10 +20,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 453,
+      "P0": 452,
       "P1": 406,
       "P2": 165,
-      "P3": 419
+      "P3": 420
     },
     "delta_from_previous": {
       "status_counts": {
@@ -274,8 +274,8 @@
       "imgproc": {
         "total": 59,
         "by_status": {
-          "parity": 20,
-          "partial": 39
+          "parity": 21,
+          "partial": 38
         },
         "by_kind": {
           "api": 59
@@ -1009,11 +1009,11 @@
     "top_open_families": [
       {
         "family": "imgproc",
-        "open_entries": 39,
+        "open_entries": 38,
         "highest_open_priority": "P0",
         "by_status": {
-          "parity": 20,
-          "partial": 39
+          "parity": 21,
+          "partial": 38
         }
       },
       {
@@ -4588,14 +4588,16 @@
       "upstream_path": "imgproc/vcimageISOMTF.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.ip",
+      "status": "parity",
+      "python_surface": "pyisetcam.ip, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/unit/test_ip.py"
+        "tests/unit/test_ip.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/vcimageKeyPress.m",
@@ -4796,7 +4798,7 @@
       "family": "metrics/iso",
       "kind": "api",
       "status": "parity",
-      "python_surface": "pyisetcam.iso, pyisetcam.__init__, pyisetcam.camera, pyisetcam.parity",
+      "python_surface": "pyisetcam.iso, pyisetcam.__init__, pyisetcam.camera, pyisetcam.ip",
       "tests": [
         "tests/unit/test_metrics.py",
         "tests/unit/test_pipeline.py",

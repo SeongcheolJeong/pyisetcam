@@ -4,6 +4,8 @@ import imageio.v3 as iio
 import numpy as np
 
 from pyisetcam import (
+    camera_create,
+    camera_mtf,
     demosaic,
     displayRender,
     ieInternal2Display,
@@ -30,6 +32,7 @@ from pyisetcam import (
     scene_create,
     sensor_compute,
     vcimageClearData,
+    vcimageISOMTF,
     vcimageSRGB,
     sensor_create,
     sensor_get,
@@ -659,6 +662,26 @@ def test_vcimage_srgb_matches_manual_pipeline(asset_store) -> None:
     assert np.allclose(
         np.asarray(ip_get(generated, "sensor conversion matrix"), dtype=float),
         np.asarray(ip_get(manual, "sensor conversion matrix"), dtype=float),
+    )
+
+
+def test_vcimage_iso_mtf_matches_camera_mtf_vci(asset_store) -> None:
+    camera = camera_create(asset_store=asset_store)
+
+    generated = vcimageISOMTF(camera, asset_store=asset_store)
+    reference = camera_mtf(camera, asset_store=asset_store).vci
+
+    assert ip_get(generated, "name") == "iso12233"
+    assert tuple(np.asarray(ip_get(generated, "size"), dtype=int)) == tuple(
+        np.asarray(ip_get(reference, "size"), dtype=int)
+    )
+    assert np.allclose(
+        np.asarray(ip_get(generated, "result"), dtype=float),
+        np.asarray(ip_get(reference, "result"), dtype=float),
+    )
+    assert np.allclose(
+        np.asarray(ip_get(generated, "srgb"), dtype=float),
+        np.asarray(ip_get(reference, "srgb"), dtype=float),
     )
 
 

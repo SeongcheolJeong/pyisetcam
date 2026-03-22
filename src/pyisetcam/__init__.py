@@ -59,6 +59,7 @@ from .ip import (
     ip_get,
     ip_save_image,
     ip_set,
+    vcimage_iso_mtf,
     vcimage_srgb,
     vcimage_clear_data,
 )
@@ -381,6 +382,8 @@ __all__ = [
     "ip_clear_data",
     "vcimageClearData",
     "vcimage_clear_data",
+    "vcimageISOMTF",
+    "vcimage_iso_mtf",
     "vcimageSRGB",
     "vcimage_srgb",
     "ipSaveImage",
@@ -1000,6 +1003,7 @@ ipGet = ip_get
 ipSet = ip_set
 ipClearData = ip_clear_data
 vcimageClearData = vcimage_clear_data
+vcimageISOMTF = vcimage_iso_mtf
 vcimageSRGB = vcimage_srgb
 ipSaveImage = ip_save_image
 imageMCCTransform = image_mcc_transform

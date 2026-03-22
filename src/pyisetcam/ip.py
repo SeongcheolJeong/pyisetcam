@@ -217,6 +217,21 @@ def vcimage_srgb(
     return ip_compute(ip, working_sensor, asset_store=store, session=session)
 
 
+def vcimage_iso_mtf(
+    camera: Any | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> ImageProcessor:
+    """Legacy MATLAB wrapper that returns the slanted-edge ISO 12233 IP result."""
+
+    from .camera import camera_create, camera_mtf
+
+    working_camera = camera_create(asset_store=asset_store, session=session) if camera is None else camera
+    result = camera_mtf(working_camera, asset_store=asset_store, session=session)
+    return ip_set(result.vci.clone(), "name", "iso12233", session=session)
+
+
 def _ie_bilinear(planes: np.ndarray, cfa_pattern: np.ndarray) -> np.ndarray:
     rows, cols, nplanes = planes.shape
     extended = np.pad(planes, ((1, 1), (1, 1), (0, 0)), mode="reflect")
@@ -1653,3 +1668,4 @@ imageSensorCorrection = image_sensor_correction  # noqa: N816
 imageIlluminantCorrection = image_illuminant_correction  # noqa: N816
 imageColorBalance = image_color_balance  # noqa: N816
 vcimageSRGB = vcimage_srgb  # noqa: N816
+vcimageISOMTF = vcimage_iso_mtf  # noqa: N816

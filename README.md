@@ -964,6 +964,10 @@ That same image-processing surface now also exposes
 `vcimage_srgb(...)` / `vcimageSRGB(...)`, matching the legacy MATLAB
 scene-to-sRGB convenience pipeline and accepting MATLAB-style
 `colorBalanceMethod` / `colorconversionmethod` IP parameter aliases.
+That same image-processing surface now also exposes
+`vcimage_iso_mtf(...)` / `vcimageISOMTF(...)`, matching the legacy MATLAB
+slanted-edge ISO 12233 convenience wrapper on top of the current
+`camera_mtf(...)` workflow.
 Scene/OI/IP ROI plotting helpers now expose the matching chromaticity and
 summary getters too: `sceneGet(..., 'chromaticity'/'roi chromaticity mean')`,
 `sceneGet(..., 'roi mean luminance')`, `oiGet(..., 'chromaticity'/'roi chromaticity mean')`,
