@@ -95,6 +95,24 @@
       "atol": 1e-08
     },
     {
+      "name": "scene_uniformep_small",
+      "matlab_function": "sceneCreate('uniformephoton')",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
+      "name": "scene_uniformequalphoton_small",
+      "matlab_function": "sceneCreate('uniformequalphoton')",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
+      "name": "scene_uniformequalphotons_small",
+      "matlab_function": "sceneCreate('uniformequalphoton')",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "scene_uniform_ee_small",
       "matlab_function": "sceneCreate('uniform')",
       "rtol": 1e-05,
@@ -237,6 +255,12 @@
     {
       "name": "scene_line_ep_small",
       "matlab_function": "sceneCreate('line ep')",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
+      "name": "scene_lineequalphoton_small",
+      "matlab_function": "sceneCreate('lineequalphoton')",
       "rtol": 1e-05,
       "atol": 1e-08
     },

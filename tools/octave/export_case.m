@@ -149,6 +149,27 @@ switch case_name
         payload.photons = sceneGet(scene, 'photons');
         payload.mean_luminance = sceneGet(scene, 'mean luminance');
 
+    case 'scene_uniformep_small'
+        scene = sceneCreate('uniformephoton', 24);
+        payload.scene_size = double(sceneGet(scene, 'size'));
+        payload.wave = sceneGet(scene, 'wave');
+        payload.photons = sceneGet(scene, 'photons');
+        payload.mean_luminance = sceneGet(scene, 'mean luminance');
+
+    case 'scene_uniformequalphoton_small'
+        scene = sceneCreate('uniformequalphoton', 24);
+        payload.scene_size = double(sceneGet(scene, 'size'));
+        payload.wave = sceneGet(scene, 'wave');
+        payload.photons = sceneGet(scene, 'photons');
+        payload.mean_luminance = sceneGet(scene, 'mean luminance');
+
+    case 'scene_uniformequalphotons_small'
+        scene = sceneCreate('uniformequalphoton', 24);
+        payload.scene_size = double(sceneGet(scene, 'size'));
+        payload.wave = sceneGet(scene, 'wave');
+        payload.photons = sceneGet(scene, 'photons');
+        payload.mean_luminance = sceneGet(scene, 'mean luminance');
+
     case 'scene_uniform_ee_small'
         scene = sceneCreate('uniform', 24);
         payload.scene_size = double(sceneGet(scene, 'size'));
@@ -343,6 +364,13 @@ switch case_name
 
     case 'scene_line_ep_small'
         scene = sceneCreate('line ep', [64 64], 2);
+        payload.wave = sceneGet(scene, 'wave');
+        payload.scene_size = double(sceneGet(scene, 'size'));
+        payload.photons = sceneGet(scene, 'photons');
+        payload.mean_luminance = sceneGet(scene, 'mean luminance');
+
+    case 'scene_lineequalphoton_small'
+        scene = sceneCreate('lineequalphoton', [64 64], 2);
         payload.wave = sceneGet(scene, 'wave');
         payload.scene_size = double(sceneGet(scene, 'size'));
         payload.photons = sceneGet(scene, 'photons');

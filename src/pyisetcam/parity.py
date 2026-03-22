@@ -471,6 +471,45 @@ def run_python_case_with_context(
             context={"scene": scene},
         )
 
+    if case_name == "scene_uniformep_small":
+        scene = scene_create("uniformep", 24, asset_store=store)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "wave": scene_get(scene, "wave"),
+                "photons": scene_get(scene, "photons"),
+                "mean_luminance": scene_get(scene, "mean luminance", asset_store=store),
+            },
+            context={"scene": scene},
+        )
+
+    if case_name == "scene_uniformequalphoton_small":
+        scene = scene_create("uniformequalphoton", 24, asset_store=store)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "wave": scene_get(scene, "wave"),
+                "photons": scene_get(scene, "photons"),
+                "mean_luminance": scene_get(scene, "mean luminance", asset_store=store),
+            },
+            context={"scene": scene},
+        )
+
+    if case_name == "scene_uniformequalphotons_small":
+        scene = scene_create("uniformequalphotons", 24, asset_store=store)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "wave": scene_get(scene, "wave"),
+                "photons": scene_get(scene, "photons"),
+                "mean_luminance": scene_get(scene, "mean luminance", asset_store=store),
+            },
+            context={"scene": scene},
+        )
+
     if case_name == "scene_uniform_ee_small":
         scene = scene_create("uniform", 24, asset_store=store)
         return ParityCaseResult(
@@ -804,6 +843,19 @@ def run_python_case_with_context(
 
     if case_name == "scene_line_ep_small":
         scene = scene_create("line ep", [64, 64], 2, asset_store=store)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "wave": scene_get(scene, "wave"),
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "photons": scene_get(scene, "photons"),
+                "mean_luminance": scene_get(scene, "mean luminance", asset_store=store),
+            },
+            context={"scene": scene},
+        )
+
+    if case_name == "scene_lineequalphoton_small":
+        scene = scene_create("lineequalphoton", [64, 64], 2, asset_store=store)
         return ParityCaseResult(
             payload={
                 "case_name": case_name,
