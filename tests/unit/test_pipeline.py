@@ -187,6 +187,9 @@ from pyisetcam import (
     wvf_pupil_function,
     wvf_plot,
     wvf_set,
+    wvf2optics,
+    wvf2PSF,
+    wvfPupilAmplitude,
     wvf_to_oi,
     wvf_wave_to_idx,
     wvf_zernike_nm_to_osa_index,
@@ -2597,6 +2600,64 @@ def test_oi_compute_accepts_wvf_input(asset_store) -> None:
     assert np.isclose(float(oi_get(oi, "wvf", "zcoeffs", "vertical_astigmatism")), 0.5)
     assert oi_get(oi, "photons").shape[:2] == scene.data["photons"].shape[:2]
     assert wvf_to_oi(wvf).fields["optics"]["model"] == "shiftinvariant"
+
+
+def test_wvf2psf_returns_shift_invariant_psf_data() -> None:
+    wvf = wvf_create(wave=np.array([500.0, 600.0], dtype=float))
+    wvf = wvf_set(wvf, "pupil diameter", 3.0, "mm")
+
+    psf_data, computed = wvf2PSF(wvf, False)
+    psf = np.asarray(psf_data["psf"], dtype=float)
+
+    assert computed["computed"] is True
+    assert psf.shape == (128, 128, 2)
+    assert np.allclose(np.asarray(psf_data["wave"], dtype=float), np.array([500.0, 600.0], dtype=float))
+    assert np.allclose(np.asarray(psf_data["umPerSamp"], dtype=float), np.array([0.25, 0.25], dtype=float))
+    assert np.all(psf >= 0.0)
+    assert np.all(np.sum(psf, axis=(0, 1)) > 0.0)
+
+
+def test_wvf2optics_builds_shift_invariant_optics_bundle() -> None:
+    wvf = wvf_create(wave=np.array([500.0, 600.0], dtype=float))
+    wvf = wvf_set(wvf, "pupil diameter", 3.0, "mm")
+    psf_data, _ = wvf2PSF(wvf, False)
+
+    optics = wvf2optics(wvf)
+
+    assert optics["model"] == "shiftinvariant"
+    assert optics["name"] == "wvf"
+    assert optics["compute_method"] == "opticsotf"
+    assert optics["wavefront"]["computed"] is True
+    assert np.asarray(optics["psf_data"]["psf"], dtype=float).shape == np.asarray(psf_data["psf"], dtype=float).shape
+    assert np.asarray(optics["otf_data"], dtype=complex).shape == (128, 128, 2)
+    assert np.allclose(np.asarray(optics["otf_wave"], dtype=float), np.array([500.0, 600.0], dtype=float))
+
+
+def test_wvf_pupil_amplitude_alias_matches_wvf_aperture() -> None:
+    wvf = wvf_create(wave=np.array([550.0], dtype=float))
+    wvf = wvf_set(wvf, "spatial samples", 101)
+    args = (
+        "n sides",
+        8,
+        "dot mean",
+        0,
+        "dot sd",
+        0,
+        "line mean",
+        0,
+        "line sd",
+        0,
+        "image rotate",
+        0,
+        "seed",
+        1,
+    )
+
+    aperture, params = wvf_aperture(wvf, *args)
+    alias_aperture, alias_params = wvfPupilAmplitude(wvf, *args)
+
+    assert np.allclose(alias_aperture, aperture)
+    assert alias_params == params
 
 
 def test_oi_set_wvf_prefixed_parameter_rebuilds_oi(asset_store) -> None:

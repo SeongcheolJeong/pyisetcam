@@ -10,6 +10,7 @@ from typing import Any
 import imageio.v3 as iio
 import numpy as np
 from scipy.io import loadmat
+from scipy.interpolate import RegularGridInterpolator
 from scipy.ndimage import map_coordinates, rotate, uniform_filter
 from scipy.signal import fftconvolve
 from scipy.special import jv
@@ -3272,6 +3273,51 @@ def wvf_get(wvf: dict[str, Any], parameter: str, *args: Any) -> Any:
 def wvf_to_oi(wvf: dict[str, Any]) -> OpticalImage:
     current = dict(wvf if wvf.get("computed") else wvf_compute(wvf))
     return oi_create("wvf", current)
+
+
+def wvf_to_psf(
+    wvf: dict[str, Any],
+    show_bar: bool | None = None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    del show_bar
+    current = dict(wvf if wvf.get("psf") is not None else wvf_compute_psf(wvf))
+    wave = np.asarray(wvf_get(current, "wave"), dtype=float).reshape(-1)
+
+    n_pix = 128
+    um_per_samp = np.array([0.25, 0.25], dtype=float)
+    sample_axis = (np.arange(1, n_pix + 1, dtype=float) * um_per_samp[0])
+    sample_axis = sample_axis - float(np.mean(sample_axis))
+    target_x, target_y = np.meshgrid(sample_axis, sample_axis, indexing="xy")
+    target_points = np.column_stack((target_y.reshape(-1), target_x.reshape(-1)))
+    psf = np.zeros((n_pix, n_pix, wave.size), dtype=float)
+
+    for band_index, wavelength_nm in enumerate(wave):
+        plane = np.asarray(wvf_get(current, "psf", float(wavelength_nm)), dtype=float)
+        support = np.asarray(wvf_get(current, "psf spatial samples", "um", float(wavelength_nm)), dtype=float).reshape(-1)
+        interpolator = RegularGridInterpolator((support, support), plane, bounds_error=False, fill_value=0.0)
+        psf[:, :, band_index] = interpolator(target_points).reshape(n_pix, n_pix)
+
+    return _export_shift_invariant_psf_data({"psf": psf, "wave": wave.copy(), "umPerSamp": um_per_samp.copy()}), current
+
+
+def wvf_to_optics(wvf: dict[str, Any]) -> dict[str, Any]:
+    si_data, current = wvf_to_psf(wvf, show_bar=False)
+    oi = wvf_to_oi(current)
+    optics = dict(oi.fields["optics"])
+    normalized_psf = _normalize_shift_invariant_psf_data(si_data)
+    optics["name"] = "wvf"
+    optics["compute_method"] = "opticsotf"
+    optics["wavefront"] = current
+    optics["psf_data"] = normalized_psf
+    optics.update(_custom_shift_invariant_otf_bundle(normalized_psf, samples=128, sample_spacing_um=0.25))
+    return optics
+
+
+def wvf_pupil_amplitude(
+    wvf: dict[str, Any],
+    *args: Any,
+) -> tuple[np.ndarray, dict[str, Any]]:
+    return wvf_aperture(wvf, *args)
 
 
 def si_synthetic(

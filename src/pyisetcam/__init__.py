@@ -147,9 +147,12 @@ from .optics import (
     wvf_load_thibos_virtual_eyes,
     wvf_osa_index_to_vector_index,
     wvf_osa_index_to_zernike_nm,
+    wvf_pupil_amplitude,
     wvf_pupil_function,
     wvf_set,
     wvf_to_oi,
+    wvf_to_optics,
+    wvf_to_psf,
     wvf_wave_to_idx,
     wvf_zernike_nm_to_osa_index,
     zemax_load,
@@ -814,8 +817,11 @@ __all__ = [
     "wvfLoadThibosVirtualEyes",
     "wvfOSAIndexToVectorIndex",
     "wvfOSAIndexToZernikeNM",
+    "wvfPupilAmplitude",
     "wvfPupilFunction",
     "wvfSet",
+    "wvf2optics",
+    "wvf2PSF",
     "wvfWave2idx",
     "wvfZernikeNMToOSAIndex",
     "wvf2oi",
@@ -832,9 +838,12 @@ __all__ = [
     "wvf_load_thibos_virtual_eyes",
     "wvf_osa_index_to_vector_index",
     "wvf_osa_index_to_zernike_nm",
+    "wvf_pupil_amplitude",
     "wvf_pupil_function",
     "wvf_set",
     "wvf_to_oi",
+    "wvf_to_optics",
+    "wvf_to_psf",
     "wvf_wave_to_idx",
     "wvf_plot",
     "wvf_zernike_nm_to_osa_index",
@@ -948,9 +957,12 @@ wvfGet = wvf_get
 wvfLoadThibosVirtualEyes = wvf_load_thibos_virtual_eyes
 wvfOSAIndexToVectorIndex = wvf_osa_index_to_vector_index
 wvfOSAIndexToZernikeNM = wvf_osa_index_to_zernike_nm
+wvfPupilAmplitude = wvf_pupil_amplitude
 wvfPupilFunction = wvf_pupil_function
 wvfSet = wvf_set
 wvf2oi = wvf_to_oi
+wvf2optics = wvf_to_optics
+wvf2PSF = wvf_to_psf
 wvfWave2idx = wvf_wave_to_idx
 wvfZernikeNMToOSAIndex = wvf_zernike_nm_to_osa_index
 wvfDefocusDioptersToMicrons = wvf_defocus_diopters_to_microns

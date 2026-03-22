@@ -506,6 +506,11 @@ That same script-driven WVF helper surface now also includes headless
 `wvfWave2idx(...)`, and `wvf_osa_index_to_vector_index(...)` /
 `wvfOSAIndexToVectorIndex(...)` for the legacy MATLAB wavefront utility
 layer built on top of the existing WVF core.
+That same script-driven WVF helper surface now also includes headless
+`wvf_to_psf(...)` / `wvf2PSF(...)`, `wvf_to_optics(...)` /
+`wvf2optics(...)`, and `wvf_pupil_amplitude(...)` /
+`wvfPupilAmplitude(...)` for the direct MATLAB PSF/optics conversion
+helpers layered on top of the existing WVF compute path.
 That same script-driven WVF surface now also has direct Octave parity on
 the 16-coefficient OSA-index sweep from `s_wvfWavefronts.m`, comparing
 the returned spatial support axis, normalized wavefront center rows and

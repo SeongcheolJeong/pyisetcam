@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-22T18:04:11.400335+00:00",
+  "generated_at": "2026-03-22T18:37:19.571020+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-22T18:04:11.400335+00:00",
+    "generated_at": "2026-03-22T18:37:19.571020+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 74,
       "missing": 40,
       "out_of_scope": 103,
-      "parity": 313,
-      "partial": 884,
+      "parity": 316,
+      "partial": 881,
       "ported": 29
     },
     "kind_counts": {
@@ -22,10 +22,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 427,
+      "P0": 424,
       "P1": 406,
       "P2": 165,
-      "P3": 445
+      "P3": 448
     },
     "delta_from_previous": {
       "status_counts": {
@@ -487,8 +487,8 @@
       "opticalimage/wavefront": {
         "total": 49,
         "by_status": {
-          "parity": 18,
-          "partial": 29,
+          "parity": 21,
+          "partial": 26,
           "ported": 2
         },
         "by_kind": {
@@ -1012,16 +1012,6 @@
     },
     "top_open_families": [
       {
-        "family": "opticalimage/wavefront",
-        "open_entries": 29,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 18,
-          "partial": 29,
-          "ported": 2
-        }
-      },
-      {
         "family": "opticalimage",
         "open_entries": 28,
         "highest_open_priority": "P0",
@@ -1079,6 +1069,16 @@
           "parity": 24,
           "partial": 26,
           "ported": 7
+        }
+      },
+      {
+        "family": "opticalimage/wavefront",
+        "open_entries": 26,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 21,
+          "partial": 26,
+          "ported": 2
         }
       },
       {
