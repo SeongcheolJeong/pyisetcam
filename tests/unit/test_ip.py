@@ -8,6 +8,7 @@ from pyisetcam import (
     displayRender,
     imageDataXYZ,
     imageIlluminantCorrection,
+    imageMCCTransform,
     imageRGB2XYZ,
     imageSensorConversion,
     imageSensorCorrection,
@@ -21,6 +22,7 @@ from pyisetcam import (
     sensor_get,
     sensor_set,
 )
+from pyisetcam.color import sensor_to_target_matrix, xyz_color_matching
 
 
 def test_ip_compute_supports_rgb_bayer_demosaic_methods(asset_store) -> None:
@@ -589,3 +591,50 @@ def test_ip_save_image_cropborder_crops_black_frame(tmp_path, asset_store) -> No
     saved = iio.imread(output)
     assert saved.shape == (4, 4, 3)
     assert np.all(saved[0, 0] == np.array([64, 128, 191], dtype=np.uint8))
+
+
+def test_image_mcc_transform_matches_sensor_to_target_matrix(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    wave = np.asarray(sensor_get(sensor, "wave"), dtype=float)
+    sensor_qe = np.asarray(sensor_get(sensor, "spectral qe"), dtype=float)
+    target_qe = np.asarray(
+        xyz_color_matching(wave, quanta=True, asset_store=asset_store),
+        dtype=float,
+    )
+
+    transform = imageMCCTransform(sensor_qe, target_qe, "D65", wave, asset_store=asset_store)
+    expected = sensor_to_target_matrix(
+        wave,
+        sensor_qe,
+        target_space="xyz",
+        illuminant="D65",
+        surfaces="mcc",
+        asset_store=asset_store,
+    )
+
+    assert np.allclose(transform, expected)
+
+
+def test_image_mcc_transform_accepts_illuminant_vector(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    wave = np.asarray(sensor_get(sensor, "wave"), dtype=float)
+    sensor_qe = np.asarray(sensor_get(sensor, "spectral qe"), dtype=float)
+    target_qe = np.asarray(
+        xyz_color_matching(wave, quanta=True, asset_store=asset_store),
+        dtype=float,
+    )
+    illuminant_energy = np.asarray(
+        asset_store.load_illuminant("D65", wave_nm=wave)[1],
+        dtype=float,
+    )
+
+    from_string = imageMCCTransform(sensor_qe, target_qe, "D65", wave, asset_store=asset_store)
+    from_vector = imageMCCTransform(
+        sensor_qe,
+        target_qe,
+        illuminant_energy,
+        wave,
+        asset_store=asset_store,
+    )
+
+    assert np.allclose(from_vector, from_string)

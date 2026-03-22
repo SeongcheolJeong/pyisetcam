@@ -19,6 +19,7 @@ from .sensor import sensor_get
 from .session import track_ip_session_state, track_session_object
 from .types import ImageProcessor, Sensor, SessionContext
 from .utils import (
+    energy_to_quanta,
     image_linear_transform,
     invert_gamma_table,
     linear_to_srgb,
@@ -746,6 +747,36 @@ def ip_save_image(
     return str(output_path)
 
 
+def image_mcc_transform(
+    sensor_qe: np.ndarray,
+    target_qe: np.ndarray,
+    illuminant: str | np.ndarray = "D65",
+    wave: np.ndarray | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> np.ndarray:
+    """Calculate the Macbeth-optimized linear transform from sensor to target space."""
+
+    if wave is None:
+        wave_array = np.arange(400.0, 701.0, 10.0, dtype=float)
+    else:
+        wave_array = np.asarray(wave, dtype=float).reshape(-1)
+    store = _store(asset_store)
+    _, reflectances = store.load_reflectances("macbethChart.mat", wave_nm=wave_array)
+    if isinstance(illuminant, str):
+        _, illuminant_energy = store.load_illuminant(illuminant, wave_nm=wave_array)
+        illuminant_energy_array = np.asarray(illuminant_energy, dtype=float).reshape(-1)
+    else:
+        illuminant_energy_array = np.asarray(illuminant, dtype=float).reshape(-1)
+    illuminant_quanta = np.asarray(
+        energy_to_quanta(illuminant_energy_array, wave_array), dtype=float
+    )
+    weighted_surfaces = np.asarray(reflectances, dtype=float) * illuminant_quanta.reshape(-1, 1)
+    sensor_macbeth = weighted_surfaces.T @ np.asarray(sensor_qe, dtype=float)
+    target_macbeth = weighted_surfaces.T @ np.asarray(target_qe, dtype=float)
+    return np.asarray(np.linalg.pinv(sensor_macbeth) @ target_macbeth, dtype=float)
+
+
 def _sensor_to_internal(
     sensor_space: np.ndarray,
     ip: ImageProcessor,
@@ -1350,6 +1381,7 @@ imageRGB2XYZ = image_rgb_to_xyz  # noqa: N816
 displayRender = display_render  # noqa: N816
 ipClearData = ip_clear_data  # noqa: N816
 ipSaveImage = ip_save_image  # noqa: N816
+imageMCCTransform = image_mcc_transform  # noqa: N816
 Demosaic = demosaic  # noqa: N816
 imageSensorConversion = image_sensor_conversion  # noqa: N816
 imageSensorCorrection = image_sensor_correction  # noqa: N816

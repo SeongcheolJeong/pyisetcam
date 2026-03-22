@@ -43,6 +43,7 @@ from .ip import (
     display_render,
     image_data_xyz,
     image_illuminant_correction,
+    image_mcc_transform,
     image_rgb_to_xyz,
     image_sensor_conversion,
     image_sensor_correction,
@@ -355,6 +356,8 @@ __all__ = [
     "ip_clear_data",
     "ipSaveImage",
     "ip_save_image",
+    "imageMCCTransform",
+    "image_mcc_transform",
     "demosaic",
     "Demosaic",
     "imageLinearTransform",
@@ -942,6 +945,7 @@ ipGet = ip_get
 ipSet = ip_set
 ipClearData = ip_clear_data
 ipSaveImage = ip_save_image
+imageMCCTransform = image_mcc_transform
 imageDataXYZ = image_data_xyz
 displayRender = display_render
 imageRGB2XYZ = image_rgb_to_xyz
