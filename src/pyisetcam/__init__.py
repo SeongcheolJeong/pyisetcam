@@ -40,6 +40,7 @@ from .illuminant import illuminant_create, illuminant_get, illuminant_set
 from .iso import ISO12233, ISOFindSlantedBar, edge_to_mtf, ieCXcorr, ieISO12233, ie_cxcorr, ie_iso12233, iso12233, iso_find_slanted_bar
 from .ip import (
     demosaic,
+    display_render,
     image_data_xyz,
     image_illuminant_correction,
     image_rgb_to_xyz,
@@ -338,6 +339,8 @@ __all__ = [
     "ieInitSession",
     "imageDataXYZ",
     "image_data_xyz",
+    "displayRender",
+    "display_render",
     "imageRGB2XYZ",
     "image_rgb_to_xyz",
     "imageIlluminantCorrection",
@@ -932,6 +935,7 @@ ipCompute = ip_compute
 ipGet = ip_get
 ipSet = ip_set
 imageDataXYZ = image_data_xyz
+displayRender = display_render
 imageRGB2XYZ = image_rgb_to_xyz
 imageIlluminantCorrection = image_illuminant_correction
 imageSensorConversion = image_sensor_conversion

@@ -662,6 +662,29 @@ def image_rgb_to_xyz(
     return np.asarray(xyz, dtype=float)
 
 
+def display_render(
+    ics_image: np.ndarray,
+    ip: ImageProcessor,
+    sensor: Sensor,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[np.ndarray, ImageProcessor, np.ndarray]:
+    """Convert internal-color-space data into linear display RGB."""
+
+    rendered_ip = _ensure_ip_state(ip.clone())
+    display_linear, display_transform = _display_render(
+        np.asarray(ics_image, dtype=float), rendered_ip, sensor, asset_store=_store(asset_store)
+    )
+    rendered_ip.data["result"] = np.asarray(display_linear, dtype=float)
+    rendered_ip.data["transforms"][2] = np.asarray(display_transform, dtype=float)
+    rendered_ip.fields["ics2display"] = np.asarray(display_transform, dtype=float)
+    return (
+        np.asarray(display_linear, dtype=float),
+        rendered_ip,
+        np.asarray(display_transform, dtype=float),
+    )
+
+
 def _sensor_to_internal(
     sensor_space: np.ndarray,
     ip: ImageProcessor,
@@ -1263,6 +1286,7 @@ def ip_set(
 
 imageDataXYZ = image_data_xyz  # noqa: N816
 imageRGB2XYZ = image_rgb_to_xyz  # noqa: N816
+displayRender = display_render  # noqa: N816
 Demosaic = demosaic  # noqa: N816
 imageSensorConversion = image_sensor_conversion  # noqa: N816
 imageSensorCorrection = image_sensor_correction  # noqa: N816

@@ -911,6 +911,10 @@ That same image-processing surface now also exposes
 `image_rgb_to_xyz(...)` / `imageRGB2XYZ(...)`, matching the direct MATLAB
 display-linear RGB-to-XYZ entry point used by Macbeth and display-plot
 helpers while preserving RGB or XW data format.
+That same image-processing surface now also exposes
+`display_render(...)` / `displayRender(...)`, matching the direct MATLAB
+ICS-to-linear-display entry point on top of the existing IP display-render
+stage.
 Scene/OI/IP ROI plotting helpers now expose the matching chromaticity and
 summary getters too: `sceneGet(..., 'chromaticity'/'roi chromaticity mean')`,
 `sceneGet(..., 'roi mean luminance')`, `oiGet(..., 'chromaticity'/'roi chromaticity mean')`,

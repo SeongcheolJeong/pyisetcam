@@ -4,6 +4,7 @@ import numpy as np
 
 from pyisetcam import (
     demosaic,
+    displayRender,
     imageDataXYZ,
     imageIlluminantCorrection,
     imageRGB2XYZ,
@@ -473,3 +474,55 @@ def test_image_data_xyz_uses_image_rgb_to_xyz_for_result(asset_store) -> None:
     xyz_direct = np.asarray(imageRGB2XYZ(ip, rgb, asset_store=asset_store), dtype=float)
 
     assert np.allclose(xyz_from_result, xyz_direct)
+
+
+def test_display_render_matches_ip_compute_result(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "volts", np.arange(1, 37, dtype=float).reshape(6, 6))
+    ip = ip_set(ip_create(asset_store=asset_store), "conversion method sensor", "mcc optimized")
+    ip = ip_set(ip, "correction method illuminant", "gray world")
+
+    sensor_space = demosaic(ip, sensor)
+    internal, corrected_ip, _ = imageSensorCorrection(
+        sensor_space,
+        ip,
+        sensor,
+        asset_store=asset_store,
+    )
+    ics, corrected_ip, _ = imageIlluminantCorrection(
+        internal,
+        corrected_ip,
+        asset_store=asset_store,
+    )
+    display_linear, rendered_ip, display_transform = displayRender(
+        ics,
+        corrected_ip,
+        sensor,
+        asset_store=asset_store,
+    )
+    computed = ip_compute(ip, sensor, asset_store=asset_store)
+
+    assert np.allclose(display_linear, np.asarray(ip_get(computed, "result"), dtype=float))
+    assert np.allclose(display_transform, np.asarray(ip_get(computed, "ics2display"), dtype=float))
+    assert np.allclose(np.asarray(ip_get(rendered_ip, "result"), dtype=float), display_linear)
+
+
+def test_display_render_matches_sensor_internal_space_path(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "volts", np.arange(1, 37, dtype=float).reshape(6, 6))
+    ip = ip_set(ip_create(asset_store=asset_store), "internal cs", "sensor")
+    ip = ip_set(ip, "conversion method sensor", "none")
+    ip = ip_set(ip, "correction method illuminant", "none")
+
+    sensor_space = demosaic(ip, sensor)
+    display_linear, rendered_ip, display_transform = displayRender(
+        sensor_space,
+        ip,
+        sensor,
+        asset_store=asset_store,
+    )
+    computed = ip_compute(ip, sensor, asset_store=asset_store)
+
+    assert np.allclose(display_linear, np.asarray(ip_get(computed, "result"), dtype=float))
+    assert np.allclose(display_transform, np.asarray(ip_get(computed, "ics2display"), dtype=float))
+    assert np.allclose(np.asarray(ip_get(rendered_ip, "result"), dtype=float), display_linear)
