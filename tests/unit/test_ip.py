@@ -8,6 +8,7 @@ from pyisetcam import (
     displayRender,
     ieInternal2Display,
     imageDataXYZ,
+    imageDistort,
     imageEsserTransform,
     imageIlluminantCorrection,
     imageMCCTransform,
@@ -751,3 +752,33 @@ def test_ip_hdr_white_uses_input_max_when_saturation_omitted(asset_store) -> Non
     expected_weights = np.clip(ip.data["input"] / 5.0 - 0.5, 0.0, 1.0) / 0.5
     assert np.allclose(weights, expected_weights)
     assert np.allclose(np.asarray(ip_get(whitened_ip, "result"), dtype=float), expected_weights[:, :, np.newaxis])
+
+
+def test_image_distort_gaussian_noise_zero_preserves_uint8_image() -> None:
+    image = np.array(
+        [[[0, 32, 64], [96, 128, 160]], [[192, 224, 255], [16, 48, 80]]],
+        dtype=np.uint8,
+    )
+
+    distorted = imageDistort(image, "gaussian noise", 0)
+
+    assert distorted.dtype == np.uint8
+    assert np.array_equal(distorted, image)
+
+
+def test_image_distort_scale_contrast_scales_float_image() -> None:
+    image = np.array([[[0.25, 0.5, 0.75]]], dtype=float)
+
+    distorted = imageDistort(image, "scale contrast", 0.2)
+
+    assert np.allclose(distorted, image * 1.2)
+
+
+def test_image_distort_jpeg_compress_roundtrip_constant_image() -> None:
+    image = np.full((8, 8, 3), 128, dtype=np.uint8)
+
+    distorted = imageDistort(image, "jpeg compress", 90)
+
+    assert distorted.shape == image.shape
+    assert distorted.dtype == np.uint8
+    assert np.max(np.abs(distorted.astype(int) - image.astype(int))) <= 1

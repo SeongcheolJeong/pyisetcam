@@ -43,6 +43,7 @@ from .ip import (
     display_render,
     ie_internal_to_display,
     image_data_xyz,
+    image_distort,
     image_esser_transform,
     image_illuminant_correction,
     image_mcc_transform,
@@ -355,6 +356,8 @@ __all__ = [
     "ieInternal2Display",
     "imageDataXYZ",
     "image_data_xyz",
+    "imageDistort",
+    "image_distort",
     "displayRender",
     "display_render",
     "imageRGB2XYZ",
@@ -993,6 +996,7 @@ imageSensorTransform = image_sensor_transform
 imageEsserTransform = image_esser_transform
 ieInternal2Display = ie_internal_to_display
 ipHDRWhite = ip_hdr_white
+imageDistort = image_distort
 imageDataXYZ = image_data_xyz
 displayRender = display_render
 imageRGB2XYZ = image_rgb_to_xyz

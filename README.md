@@ -948,6 +948,10 @@ That same image-processing surface now also exposes
 highlight-whitening helper on top of the current IP `input` and `result`
 payloads.
 That same image-processing surface now also exposes
+`image_distort(...)` / `imageDistort(...)`, matching the direct MATLAB
+image-distortion gateway for Gaussian noise, JPEG compression, and simple
+contrast scaling.
+That same image-processing surface now also exposes
 `ip_clear_data(...)` / `ipClearData(...)`, matching the direct MATLAB
 computed-payload reset path and the `ipSet(..., 'data', [])` behavior.
 Scene/OI/IP ROI plotting helpers now expose the matching chromaticity and

@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-03-22T13:12:45.132410+00:00",
+  "generated_at": "2026-03-22T13:31:55.385439+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-22T13:12:45.132410+00:00",
+    "generated_at": "2026-03-22T13:31:55.385439+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 74,
       "missing": 40,
       "out_of_scope": 101,
-      "parity": 293,
-      "partial": 914,
-      "ported": 21
+      "parity": 294,
+      "partial": 912,
+      "ported": 22
     },
     "kind_counts": {
       "api": 661,
@@ -22,10 +22,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 456,
-      "P1": 407,
+      "P0": 455,
+      "P1": 406,
       "P2": 165,
-      "P3": 415
+      "P3": 417
     },
     "delta_from_previous": {
       "status_counts": {
@@ -276,8 +276,8 @@
       "imgproc": {
         "total": 59,
         "by_status": {
-          "parity": 17,
-          "partial": 42
+          "parity": 18,
+          "partial": 41
         },
         "by_kind": {
           "api": 59
@@ -665,8 +665,8 @@
       "scripts/image": {
         "total": 21,
         "by_status": {
-          "partial": 20,
-          "ported": 1
+          "partial": 19,
+          "ported": 2
         },
         "by_kind": {
           "script": 21
@@ -1011,11 +1011,11 @@
     "top_open_families": [
       {
         "family": "imgproc",
-        "open_entries": 42,
+        "open_entries": 41,
         "highest_open_priority": "P0",
         "by_status": {
-          "parity": 17,
-          "partial": 42
+          "parity": 18,
+          "partial": 41
         }
       },
       {
@@ -1166,7 +1166,7 @@
         "not_implemented_error_sites": 0
       },
       "ip": {
-        "unsupported_option_error_sites": 7,
+        "unsupported_option_error_sites": 8,
         "not_implemented_error_sites": 0
       },
       "iso": {

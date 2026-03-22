@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 from pathlib import Path
+import tempfile
 from typing import Any
 
 import imageio.v3 as iio
@@ -836,6 +837,55 @@ def ip_hdr_white(
     return updated, np.asarray(weights, dtype=float)
 
 
+def image_distort(
+    img: np.ndarray,
+    d_method: str = "Gaussian Noise",
+    *args: Any,
+) -> np.ndarray:
+    """Apply a simple legacy image-distortion method."""
+
+    if len(args) > 1:
+        raise ValueError("imageDistort accepts at most one method parameter.")
+
+    image = np.asarray(img)
+    method = param_format(d_method or "Gaussian Noise")
+
+    if method == "gaussiannoise":
+        if args:
+            noise_scale = float(args[0])
+        else:
+            noise_scale = 0.05 * float(np.max(image)) if image.size else 0.0
+        noise = noise_scale * np.random.randn(*image.shape)
+        if np.issubdtype(image.dtype, np.integer) and float(np.max(image, initial=0.0)) < 256.0:
+            distorted = np.clip(np.asarray(image, dtype=float) + noise, 0.0, 255.0)
+            return np.asarray(np.rint(distorted), dtype=np.uint8)
+        return np.asarray(image, dtype=float) + noise
+
+    if method == "jpegcompress":
+        quality = int(np.rint(float(args[0]))) if args else 75
+        quality = min(max(quality, 1), 100)
+        if np.issubdtype(image.dtype, np.integer):
+            payload = np.asarray(image)
+        else:
+            payload = np.clip(np.asarray(image, dtype=float), 0.0, 1.0)
+            payload = np.clip(np.round(payload * 255.0), 0.0, 255.0).astype(np.uint8)
+        temp_path: Path | None = None
+        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as handle:
+            temp_path = Path(handle.name)
+        try:
+            iio.imwrite(temp_path, payload, extension=".jpg", quality=quality)
+            return np.asarray(iio.imread(temp_path))
+        finally:
+            if temp_path is not None and temp_path.exists():
+                temp_path.unlink()
+
+    if method == "scalecontrast":
+        scale = float(args[0]) if args else 0.1
+        return np.asarray(image, dtype=float) * (1.0 + scale)
+
+    raise UnsupportedOptionError("imageDistort", d_method)
+
+
 def display_render(
     ics_image: np.ndarray,
     ip: ImageProcessor,
@@ -1541,6 +1591,7 @@ imageSensorTransform = image_sensor_transform  # noqa: N816
 imageEsserTransform = image_esser_transform  # noqa: N816
 ieInternal2Display = ie_internal_to_display  # noqa: N816
 ipHDRWhite = ip_hdr_white  # noqa: N816
+imageDistort = image_distort  # noqa: N816
 Demosaic = demosaic  # noqa: N816
 imageSensorConversion = image_sensor_conversion  # noqa: N816
 imageSensorCorrection = image_sensor_correction  # noqa: N816
