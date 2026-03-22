@@ -31,6 +31,12 @@
       "atol": 1e-08
     },
     {
+      "name": "scene_uniformblackbody_small",
+      "matlab_function": "sceneCreate('uniformbb')",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "scene_uniform_monochromatic_small",
       "matlab_function": "sceneCreate('uniform monochromatic')",
       "rtol": 1e-05,
