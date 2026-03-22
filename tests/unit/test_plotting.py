@@ -5,6 +5,7 @@ import pytest
 
 from pyisetcam import (
     airyDisk,
+    ieXYZFromEnergy,
     ipPlot,
     ip_create,
     ip_get,
@@ -34,6 +35,7 @@ from pyisetcam import (
     wvf_to_oi,
     xyz_to_lab,
     xyz_to_luv,
+    xyz_to_srgb,
 )
 from pyisetcam.exceptions import UnsupportedOptionError
 
@@ -88,6 +90,47 @@ def test_plot_scene_illuminant_energy(asset_store) -> None:
     assert udata["comment"] == "D65.mat"
     assert np.allclose(udata["wave"], np.asarray(scene_get(scene, "wave"), dtype=float))
     assert np.allclose(udata["energy"], np.asarray(scene_get(scene, "illuminant energy"), dtype=float))
+
+
+def test_plot_scene_illuminant_image_for_spectral_illuminant(asset_store) -> None:
+    scene = scene_create("uniform d65", 4, asset_store=asset_store)
+
+    udata, handle = plotScene(scene, "illuminant image", asset_store=asset_store)
+
+    wave = np.asarray(scene_get(scene, "wave"), dtype=float)
+    energy = np.asarray(scene_get(scene, "illuminant energy", asset_store=asset_store), dtype=float)
+    rows, cols = scene_get(scene, "size")
+    expected_energy = np.broadcast_to(energy.reshape(1, 1, -1), (rows, cols, wave.size))
+    expected_srgb = xyz_to_srgb(np.asarray(ieXYZFromEnergy(expected_energy, wave, asset_store=asset_store), dtype=float))
+
+    assert handle is None
+    assert udata["srgb"].shape == (rows, cols, 3)
+    assert np.allclose(udata["srgb"], expected_srgb)
+    assert np.allclose(udata["srgb"], udata["srgb"][0, 0][None, None, :])
+
+
+def test_plot_scene_illuminant_image_for_spatial_spectral_illuminant(asset_store) -> None:
+    wave = np.array([500.0, 600.0], dtype=float)
+    scene = scene_create("uniform ee", 4, asset_store=asset_store)
+    scene = scene_set(scene, "wave", wave)
+    scene = scene_set(scene, "photons", np.ones((2, 3, wave.size), dtype=float))
+    illuminant_energy = np.array(
+        [
+            [[0.2, 0.8], [0.5, 0.5], [0.8, 0.2]],
+            [[0.9, 0.1], [0.1, 0.9], [0.4, 0.6]],
+        ],
+        dtype=float,
+    )
+    scene = scene_set(scene, "illuminant energy", illuminant_energy)
+
+    udata, handle = plotScene(scene, "illuminant image", asset_store=asset_store)
+
+    expected_srgb = xyz_to_srgb(np.asarray(ieXYZFromEnergy(illuminant_energy, wave, asset_store=asset_store), dtype=float))
+
+    assert handle is None
+    assert udata["srgb"].shape == (2, 3, 3)
+    assert np.allclose(udata["srgb"], expected_srgb)
+    assert np.max(np.abs(udata["srgb"][0, 0] - udata["srgb"][1, 1])) > 1e-6
 
 
 def test_oi_plot_roi_and_line_data(asset_store) -> None:

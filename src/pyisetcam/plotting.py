@@ -9,12 +9,12 @@ import numpy as np
 from .color import xyz_color_matching
 from .exceptions import UnsupportedOptionError
 from .ip import ip_get
-from .metrics import xyz_to_lab, xyz_to_luv
+from .metrics import xyz_from_energy, xyz_to_lab, xyz_to_luv
 from .optics import airy_disk, oi_get, wvf_get
 from .scene import scene_get
 from .sensor import pixel_snr, sensor_get, sensor_snr
 from .types import ImageProcessor, OpticalImage, Scene, Sensor
-from .utils import linear_to_srgb, param_format, tile_pattern, xyz_to_linear_srgb
+from .utils import linear_to_srgb, param_format, tile_pattern, xw_to_rgb_format, xyz_to_linear_srgb, xyz_to_srgb
 
 
 def _roi_required(function_name: str, plot_type: str, roi_locs: Any | None) -> Any:
@@ -771,6 +771,20 @@ def scene_plot(
             "photons": photons,
             "comment": scene_get(scene, "illuminant comment", asset_store=asset_store),
         }, None
+    if key == "illuminantimage":
+        wave = np.asarray(scene_get(scene, "wave"), dtype=float)
+        rows, cols = map(int, scene_get(scene, "size"))
+        energy = np.asarray(scene_get(scene, "illuminant energy", asset_store=asset_store), dtype=float)
+        if energy.size == 0:
+            raise ValueError("No illuminant data.")
+        if param_format(scene_get(scene, "illuminant format", asset_store=asset_store)) == "spectral":
+            energy = np.broadcast_to(energy.reshape(1, 1, -1), (rows, cols, energy.size)).copy()
+        elif energy.ndim == 2:
+            energy = xw_to_rgb_format(energy, rows, cols)
+        elif energy.ndim != 3:
+            raise ValueError("Scene illuminant energy must be spectral or spatial-spectral.")
+        srgb = xyz_to_srgb(np.asarray(xyz_from_energy(energy, wave, asset_store=asset_store), dtype=float))
+        return {"srgb": srgb}, None
     raise UnsupportedOptionError("scenePlot", p_type)
 
 
