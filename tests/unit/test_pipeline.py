@@ -46,8 +46,12 @@ from pyisetcam import (
     ie_save_multispectral_image,
     ie_save_si_data_file,
     ie_cxcorr,
+    ie_luminance_to_radiance,
     ie_n_to_megapixel,
+    ie_responsivity_convert,
+    ie_scotopic_luminance_from_energy,
     ie_iso12233,
+    ie_xyz_from_photons,
     ie_field_height_to_index,
     ie_rect2_locs,
     ip_get,
@@ -59,6 +63,7 @@ from pyisetcam import (
     iso_find_slanted_bar,
     iso_acutance,
     iso12233,
+    lrgb_to_srgb,
     luminance_from_energy,
     luminance_from_photons,
     macbeth_read_reflectance,
@@ -143,6 +148,7 @@ from pyisetcam import (
     scene_set,
     signal_current,
     srgb2xyz,
+    srgb_to_lrgb,
     srgb_parameters,
     vc_get_roi_data,
     imx490_compute,
@@ -208,6 +214,7 @@ from pyisetcam import (
     xw_to_rgb_format,
     xyz_from_energy,
     xyz_to_srgb,
+    y_to_lstar,
     zemax_load,
     zemax_read_header,
 )
@@ -9629,6 +9636,49 @@ def test_scene_daylight_script_workflow(asset_store) -> None:
     )
     assert day_basis.shape == (wave.size, 3)
     assert basis_examples.shape == (wave.size, 3)
+
+
+def test_color_helper_wrappers_match_closed_form_math(asset_store) -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    photons = np.asarray(daylight(wave, 6500.0, "photons", asset_store=asset_store), dtype=float).reshape(-1)
+    energy = np.asarray(quanta_to_energy(photons, wave), dtype=float).reshape(-1)
+
+    xyz_from_wrapper = np.asarray(ie_xyz_from_photons(photons, wave, asset_store=asset_store), dtype=float).reshape(-1)
+    xyz_expected = np.asarray(xyz_from_energy(energy, wave, asset_store=asset_store), dtype=float).reshape(-1)
+    assert np.allclose(xyz_from_wrapper, xyz_expected, atol=1e-10, rtol=1e-10)
+
+    radiance_energy, radiance_wave = ie_luminance_to_radiance(125.0, 520.0, sd=12.0, wave=wave, asset_store=asset_store)
+    assert np.array_equal(np.asarray(radiance_wave, dtype=float), wave)
+    assert np.isclose(float(luminance_from_energy(radiance_energy, radiance_wave, asset_store=asset_store)), 125.0, atol=1e-8, rtol=1e-8)
+    assert int(np.argmax(np.asarray(radiance_energy, dtype=float))) == int(np.argmin(np.abs(wave - 520.0)))
+
+    y_values = np.array([0.5, 10.0, 100.0], dtype=float)
+    expected_lstar = np.array([903.3 * (0.5 / 100.0), 116.0 * (10.0 / 100.0) ** (1.0 / 3.0) - 16.0, 100.0], dtype=float)
+    assert np.allclose(y_to_lstar(y_values, 100.0), expected_lstar, atol=1e-8, rtol=1e-8)
+
+    srgb = np.array([[0.0, 0.04045, 0.5], [1.0, 0.25, 0.75]], dtype=float)
+    linear = np.asarray(srgb_to_lrgb(srgb), dtype=float)
+    assert np.allclose(lrgb_to_srgb(linear), srgb, atol=5e-8, rtol=1e-8)
+
+    responsivity_energy = np.column_stack(
+        [
+            np.linspace(0.2, 0.8, wave.size, dtype=float),
+            np.linspace(0.6, 0.1, wave.size, dtype=float),
+            np.linspace(0.1, 0.5, wave.size, dtype=float),
+        ],
+    )
+    responsivity_quanta, scale_e2q = ie_responsivity_convert(responsivity_energy, wave, "e2q")
+    assert responsivity_quanta.shape == responsivity_energy.shape
+    assert scale_e2q.shape == (wave.size,)
+    assert np.isclose(np.max(responsivity_quanta), np.max(responsivity_energy), atol=1e-12, rtol=0.0)
+    expected_quanta = scale_e2q[:, np.newaxis] * responsivity_energy
+    expected_quanta *= np.max(responsivity_energy) / np.max(expected_quanta)
+    assert np.allclose(responsivity_quanta, expected_quanta, atol=1e-12, rtol=1e-12)
+
+    rods = np.asarray(ie_read_spectra("rods.mat", wave, asset_store=asset_store), dtype=float).reshape(-1)
+    scotopic = np.asarray(ie_scotopic_luminance_from_energy(energy, wave, asset_store=asset_store), dtype=float).reshape(-1)
+    expected_scotopic = np.array([1745.0 * np.sum(energy * rods * np.mean(np.diff(wave)))], dtype=float)
+    assert np.allclose(scotopic, expected_scotopic, atol=1e-8, rtol=1e-8)
 
 
 def test_scene_illuminant_script_workflow(asset_store) -> None:

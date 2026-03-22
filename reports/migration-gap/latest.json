@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-22T20:39:30.453968+00:00",
+  "generated_at": "2026-03-22T21:13:37.775486+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-22T20:39:30.453968+00:00",
+    "generated_at": "2026-03-22T21:13:37.775486+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 73,
       "missing": 40,
       "out_of_scope": 106,
-      "parity": 326,
-      "partial": 869,
+      "parity": 333,
+      "partial": 862,
       "ported": 29
     },
     "kind_counts": {
@@ -22,18 +22,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 412,
+      "P0": 405,
       "P1": 406,
       "P2": 164,
-      "P3": 461
+      "P3": 468
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
         "out_of_scope": 0,
-        "parity": 4,
-        "partial": -4,
+        "parity": 7,
+        "partial": -7,
         "ported": 0
       },
       "kind_counts": {
@@ -45,10 +45,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -4,
+        "P0": -7,
         "P1": 0,
         "P2": 0,
-        "P3": 4
+        "P3": 7
       }
     },
     "family_summary": {
@@ -67,8 +67,8 @@
         "total": 44,
         "by_status": {
           "headless_only": 3,
-          "parity": 16,
-          "partial": 23,
+          "parity": 23,
+          "partial": 16,
           "ported": 2
         },
         "by_kind": {
@@ -1014,17 +1014,6 @@
     },
     "top_open_families": [
       {
-        "family": "color",
-        "open_entries": 26,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "headless_only": 3,
-          "parity": 16,
-          "partial": 23,
-          "ported": 2
-        }
-      },
-      {
         "family": "imgproc",
         "open_entries": 26,
         "highest_open_priority": "P0",
@@ -1126,6 +1115,17 @@
         }
       },
       {
+        "family": "color",
+        "open_entries": 19,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "headless_only": 3,
+          "parity": 23,
+          "partial": 16,
+          "ported": 2
+        }
+      },
+      {
         "family": "scene/pattern",
         "open_entries": 18,
         "highest_open_priority": "P0",
@@ -1150,7 +1150,7 @@
         "not_implemented_error_sites": 0
       },
       "color": {
-        "unsupported_option_error_sites": 6,
+        "unsupported_option_error_sites": 7,
         "not_implemented_error_sites": 0
       },
       "description": {

@@ -22,7 +22,20 @@ from .camera import (
     macbeth_color_error,
     macbeth_compare_ideal,
 )
-from .color import adobergb_parameters, daylight, luminance_from_energy, luminance_from_photons, srgb_parameters
+from .color import (
+    adobergb_parameters,
+    daylight,
+    ie_luminance_to_radiance,
+    ie_responsivity_convert,
+    ie_scotopic_luminance_from_energy,
+    ie_xyz_from_photons,
+    lrgb_to_srgb,
+    luminance_from_energy,
+    luminance_from_photons,
+    srgb_parameters,
+    srgb_to_lrgb,
+    y_to_lstar,
+)
 from .description import HeadlessDescriptionHandle, sensor_description
 from .display import display_create, display_get, display_set
 from .fileio import (
@@ -365,7 +378,11 @@ __all__ = [
     "correlated_color_temperature",
     "deltaEab",
     "delta_e_ab",
+    "ieLuminance2Radiance",
     "iePSNR",
+    "ieResponsivityConvert",
+    "ieScotopicLuminanceFromEnergy",
+    "ieXYZFromPhotons",
     "ieAddObject",
     "ieAppGet",
     "ieDeleteObject",
@@ -514,6 +531,11 @@ __all__ = [
     "ip_get",
     "ip_plot",
     "ip_set",
+    "ie_luminance_to_radiance",
+    "ie_responsivity_convert",
+    "ie_scotopic_luminance_from_energy",
+    "ie_xyz_from_photons",
+    "lrgb2srgb",
     "luminance_from_energy",
     "luminance_from_photons",
     "mean_absolute_error",
@@ -543,14 +565,18 @@ __all__ = [
     "srgbParameters",
     "srgb_parameters",
     "srgb2colortemp",
+    "srgb2lrgb",
     "srgb_to_color_temp",
     "XW2RGBFormat",
     "xw_to_rgb_format",
     "srgb2xyz",
+    "srgb_to_lrgb",
     "srgb_to_linear",
     "srgb_to_xyz",
     "xyz2srgb",
     "xyz_to_srgb",
+    "Y2Lstar",
+    "y_to_lstar",
     "opticsBuild2Dotf",
     "opticsCoC",
     "opticsDefocusCore",
@@ -1058,6 +1084,13 @@ metricsSPD = metrics_spd
 deltaEab = delta_e_ab
 srgbParameters = srgb_parameters
 adobergbParameters = adobergb_parameters
+srgb2lrgb = srgb_to_lrgb
+lrgb2srgb = lrgb_to_srgb
+Y2Lstar = y_to_lstar
+ieXYZFromPhotons = ie_xyz_from_photons
+ieLuminance2Radiance = ie_luminance_to_radiance
+ieScotopicLuminanceFromEnergy = ie_scotopic_luminance_from_energy
+ieResponsivityConvert = ie_responsivity_convert
 scParams = sc_params
 scComputeSCIELAB = sc_compute_scielab
 scOpponentFilter = sc_opponent_filter

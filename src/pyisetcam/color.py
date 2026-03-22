@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -51,6 +53,132 @@ def luminance_from_energy(
         y_bar * spectral_step(np.asarray(wave_nm, dtype=float)),
         axes=([-1], [0]),
     )
+
+
+def ie_xyz_from_photons(
+    photons: NDArray[np.float64],
+    wave_nm: NDArray[np.float64],
+    *,
+    asset_store: AssetStore | None = None,
+) -> NDArray[np.float64]:
+    """Convert photon spectra to XYZ using MATLAB ieXYZFromPhotons() semantics."""
+
+    wave = np.asarray(wave_nm, dtype=float).reshape(-1)
+    energy = np.asarray(quanta_to_energy(np.asarray(photons, dtype=float), wave), dtype=float)
+    xyz_energy = xyz_color_matching(wave, energy=True, asset_store=asset_store)
+    return 683.0 * np.tensordot(energy, xyz_energy * spectral_step(wave), axes=([-1], [0]))
+
+
+def ie_luminance_to_radiance(
+    luminance: float,
+    this_wave: float,
+    *,
+    sd: float = 10.0,
+    wave: NDArray[np.float64] | None = None,
+    asset_store: AssetStore | None = None,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Model monochromatic LED radiance from luminance using a Gaussian SPD."""
+
+    center_wave = float(this_wave)
+    if center_wave < 350.0 or center_wave > 720.0:
+        raise ValueError("this_wave must be between 350 and 720 nm.")
+    wave_array = np.asarray(np.arange(300.0, 771.0, 1.0, dtype=float) if wave is None else wave, dtype=float).reshape(-1)
+    if wave_array.size == 0:
+        raise ValueError("wave must not be empty.")
+    sigma = float(sd)
+    if sigma <= 0.0:
+        raise ValueError("sd must be positive.")
+
+    energy = np.exp(-0.5 * ((wave_array - center_wave) / sigma) ** 2)
+    scale = float(luminance) / max(float(luminance_from_energy(energy, wave_array, asset_store=asset_store)), 1e-12)
+    return np.asarray(energy * scale, dtype=float).reshape(-1), wave_array
+
+
+def ie_scotopic_luminance_from_energy(
+    energy: NDArray[np.float64],
+    wave_nm: NDArray[np.float64],
+    *,
+    asset_store: AssetStore | None = None,
+) -> NDArray[np.float64]:
+    """Compute rod-weighted luminance from energy using MATLAB semantics."""
+
+    store = asset_store or AssetStore.default()
+    wave = np.asarray(wave_nm, dtype=float).reshape(-1)
+    _, rods = store.load_spectra("rods.mat", wave_nm=wave)
+    v_prime = np.asarray(rods, dtype=float).reshape(-1)
+    return 1745.0 * np.tensordot(
+        np.asarray(energy, dtype=float),
+        v_prime * spectral_step(wave),
+        axes=([-1], [0]),
+    )
+
+
+def ie_responsivity_convert(
+    responsivity: NDArray[np.float64],
+    wave_nm: NDArray[np.float64],
+    method: str = "e2q",
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Convert responsivities between energy and quanta conventions."""
+
+    response = np.asarray(responsivity, dtype=float)
+    wave = np.asarray(wave_nm, dtype=float).reshape(-1)
+    if response.shape[0] != wave.size:
+        raise ValueError("Responsivity rows must match the wavelength vector length.")
+
+    peak = float(np.max(response)) if response.size else 0.0
+    normalized_method = param_format(method)
+    if normalized_method in {"e2q", "energy2quanta", "e2p", "energy2photons"}:
+        scale = np.asarray(quanta_to_energy(np.ones((wave.size,), dtype=float), wave), dtype=float).reshape(-1)
+        converted = scale[:, np.newaxis] * response
+    elif normalized_method in {"q2e", "quanta2energy", "p2e", "photons2energy"}:
+        scale = np.asarray(energy_to_quanta(np.ones((wave.size,), dtype=float), wave), dtype=float).reshape(-1)
+        converted = scale[:, np.newaxis] * response
+    else:
+        raise UnsupportedOptionError("ieResponsivityConvert", method)
+
+    if converted.size and peak > 0.0:
+        converted_peak = float(np.max(converted))
+        if converted_peak > 0.0:
+            converted = converted * (peak / converted_peak)
+    return np.asarray(converted, dtype=float), np.asarray(scale, dtype=float).reshape(-1)
+
+
+def y_to_lstar(y_value: NDArray[np.float64] | float, white_y: NDArray[np.float64] | float) -> NDArray[np.float64]:
+    """Convert luminance Y to CIELAB L* using MATLAB Y2Lstar() semantics."""
+
+    ratio = np.asarray(y_value, dtype=float) / np.maximum(np.asarray(white_y, dtype=float), 1e-12)
+    lstar = 116.0 * np.cbrt(ratio) - 16.0
+    low = ratio < 0.008856
+    if np.any(low):
+        lstar = np.asarray(lstar, dtype=float)
+        lstar[low] = 903.3 * ratio[low]
+    return np.asarray(lstar, dtype=float)
+
+
+def srgb_to_lrgb(rgb: NDArray[np.float64]) -> NDArray[np.float64]:
+    """Convert nonlinear sRGB values to linear sRGB values."""
+
+    values = np.asarray(rgb, dtype=float)
+    if values.size and float(np.max(values)) > 1.0:
+        warnings.warn("srgb appears to be outside the (0,1) range", RuntimeWarning, stacklevel=2)
+    linear = values.copy()
+    high = linear > 0.04045
+    linear[~high] = linear[~high] / 12.92
+    linear[high] = ((linear[high] + 0.055) / 1.055) ** 2.4
+    return linear
+
+
+def lrgb_to_srgb(rgb: NDArray[np.float64]) -> NDArray[np.float64]:
+    """Convert linear sRGB values to nonlinear framebuffer sRGB values."""
+
+    values = np.asarray(rgb, dtype=float)
+    if values.size and (float(np.max(values)) > 1.0 or float(np.min(values)) < 0.0):
+        raise ValueError("Linear rgb values must be between 0 and 1.")
+    srgb = values.copy()
+    high = srgb > 0.0031308
+    srgb[~high] = srgb[~high] * 12.92
+    srgb[high] = 1.055 * (srgb[high] ** (1.0 / 2.4)) - 0.055
+    return srgb
 
 
 def _xyy_to_xyz(xyy: NDArray[np.float64]) -> NDArray[np.float64]:
