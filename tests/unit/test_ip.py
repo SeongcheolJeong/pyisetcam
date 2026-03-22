@@ -6,6 +6,7 @@ import numpy as np
 from pyisetcam import (
     demosaic,
     displayRender,
+    ieInternal2Display,
     imageDataXYZ,
     imageEsserTransform,
     imageIlluminantCorrection,
@@ -700,3 +701,14 @@ def test_image_esser_transform_matches_direct_sensor_transform(asset_store) -> N
 
     assert np.allclose(direct, expected)
     assert np.allclose(esser, expected)
+
+
+def test_ie_internal_to_display_matches_direct_display_matrix(asset_store) -> None:
+    ip = ip_create(asset_store=asset_store)
+
+    transform = ieInternal2Display(ip)
+    internal_cmf = np.asarray(ip_get(ip, "internal cmf"), dtype=float)
+    display_spd = np.asarray(ip_get(ip, "display rgb spd"), dtype=float)
+    expected = np.linalg.inv(display_spd.T @ internal_cmf)
+
+    assert np.allclose(transform, expected)

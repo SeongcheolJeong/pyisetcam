@@ -41,6 +41,7 @@ from .iso import ISO12233, ISOFindSlantedBar, edge_to_mtf, ieCXcorr, ieISO12233,
 from .ip import (
     demosaic,
     display_render,
+    ie_internal_to_display,
     image_data_xyz,
     image_esser_transform,
     image_illuminant_correction,
@@ -350,6 +351,7 @@ __all__ = [
     "ieGetObject",
     "ieGetSelectedObject",
     "ieInitSession",
+    "ieInternal2Display",
     "imageDataXYZ",
     "image_data_xyz",
     "displayRender",
@@ -986,6 +988,7 @@ ipSaveImage = ip_save_image
 imageMCCTransform = image_mcc_transform
 imageSensorTransform = image_sensor_transform
 imageEsserTransform = image_esser_transform
+ieInternal2Display = ie_internal_to_display
 imageDataXYZ = image_data_xyz
 displayRender = display_render
 imageRGB2XYZ = image_rgb_to_xyz

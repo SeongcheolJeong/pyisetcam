@@ -774,6 +774,19 @@ def image_rgb_to_xyz(
     return np.asarray(xyz, dtype=float)
 
 
+def ie_internal_to_display(ip: ImageProcessor) -> np.ndarray:
+    """Return the linear transform from IP internal color space to display RGB."""
+
+    internal_cmf = ip_get(ip, "internal cmf")
+    if internal_cmf is None:
+        raise UnsupportedOptionError("ieInternal2Display", ip_get(ip, "internal cs"))
+    display_spd = np.asarray(ip_get(ip, "display rgb spd"), dtype=float)
+    return np.asarray(
+        np.linalg.inv(display_spd.T @ np.asarray(internal_cmf, dtype=float)),
+        dtype=float,
+    )
+
+
 def display_render(
     ics_image: np.ndarray,
     ip: ImageProcessor,
@@ -1477,6 +1490,7 @@ ipSaveImage = ip_save_image  # noqa: N816
 imageMCCTransform = image_mcc_transform  # noqa: N816
 imageSensorTransform = image_sensor_transform  # noqa: N816
 imageEsserTransform = image_esser_transform  # noqa: N816
+ieInternal2Display = ie_internal_to_display  # noqa: N816
 Demosaic = demosaic  # noqa: N816
 imageSensorConversion = image_sensor_conversion  # noqa: N816
 imageSensorCorrection = image_sensor_correction  # noqa: N816

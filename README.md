@@ -940,6 +940,10 @@ That same image-processing surface now also exposes
 direct MATLAB sensor-to-target linear transform calculators for the
 multisurface and Esser-optimized training sets.
 That same image-processing surface now also exposes
+`ie_internal_to_display(...)` / `ieInternal2Display(...)`, matching the
+direct MATLAB internal-color-space to linear-display transform helper used
+under `displayRender(...)` and related IP workflows.
+That same image-processing surface now also exposes
 `ip_clear_data(...)` / `ipClearData(...)`, matching the direct MATLAB
 computed-payload reset path and the `ipSet(..., 'data', [])` behavior.
 Scene/OI/IP ROI plotting helpers now expose the matching chromaticity and

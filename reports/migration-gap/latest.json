@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-22T12:39:30.662082+00:00",
+  "generated_at": "2026-03-22T12:55:46.077634+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-22T12:39:30.662082+00:00",
+    "generated_at": "2026-03-22T12:55:46.077634+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 74,
       "missing": 40,
       "out_of_scope": 101,
-      "parity": 291,
-      "partial": 917,
+      "parity": 292,
+      "partial": 916,
       "ported": 20
     },
     "kind_counts": {
@@ -22,18 +22,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 458,
+      "P0": 457,
       "P1": 408,
       "P2": 165,
-      "P3": 412
+      "P3": 413
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
         "out_of_scope": 0,
-        "parity": 2,
-        "partial": -2,
+        "parity": 1,
+        "partial": -1,
         "ported": 0
       },
       "kind_counts": {
@@ -45,10 +45,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -2,
+        "P0": -1,
         "P1": 0,
         "P2": 0,
-        "P3": 2
+        "P3": 1
       }
     },
     "family_summary": {
@@ -276,8 +276,8 @@
       "imgproc": {
         "total": 59,
         "by_status": {
-          "parity": 15,
-          "partial": 44
+          "parity": 16,
+          "partial": 43
         },
         "by_kind": {
           "api": 59
@@ -1010,11 +1010,11 @@
     "top_open_families": [
       {
         "family": "imgproc",
-        "open_entries": 44,
+        "open_entries": 43,
         "highest_open_priority": "P0",
         "by_status": {
-          "parity": 15,
-          "partial": 44
+          "parity": 16,
+          "partial": 43
         }
       },
       {
@@ -1165,7 +1165,7 @@
         "not_implemented_error_sites": 0
       },
       "ip": {
-        "unsupported_option_error_sites": 5,
+        "unsupported_option_error_sites": 6,
         "not_implemented_error_sites": 0
       },
       "iso": {
