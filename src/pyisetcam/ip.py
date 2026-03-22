@@ -917,6 +917,12 @@ def ip_clear_data(ip: ImageProcessor) -> ImageProcessor:
     return _ensure_ip_state(cleared)
 
 
+def vcimage_clear_data(ip: ImageProcessor) -> ImageProcessor:
+    """Legacy alias for clearing the computed data payload from an image processor."""
+
+    return ip_clear_data(ip)
+
+
 def ip_save_image(
     ip: ImageProcessor,
     f_name: str | Path,
@@ -1585,6 +1591,7 @@ imageDataXYZ = image_data_xyz  # noqa: N816
 imageRGB2XYZ = image_rgb_to_xyz  # noqa: N816
 displayRender = display_render  # noqa: N816
 ipClearData = ip_clear_data  # noqa: N816
+vcimageClearData = vcimage_clear_data  # noqa: N816
 ipSaveImage = ip_save_image  # noqa: N816
 imageMCCTransform = image_mcc_transform  # noqa: N816
 imageSensorTransform = image_sensor_transform  # noqa: N816

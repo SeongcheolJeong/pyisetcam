@@ -24,6 +24,7 @@ from pyisetcam import (
     ip_set,
     ipClearData,
     ipSaveImage,
+    vcimageClearData,
     sensor_create,
     sensor_get,
     sensor_set,
@@ -570,6 +571,24 @@ def test_ip_set_data_empty_matches_ip_clear_data(asset_store) -> None:
     assert ip_get(cleared_by_set, "input") is None
     assert ip_get(cleared_by_set, "transforms") == [None, None, None]
     assert ip_get(cleared_by_wrapper, "transforms") == [None, None, None]
+
+
+def test_vcimage_clear_data_matches_ip_clear_data(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "volts", np.arange(1, 37, dtype=float).reshape(6, 6))
+    computed = ip_compute(ip_create(asset_store=asset_store), sensor, asset_store=asset_store)
+
+    cleared_by_ip = ipClearData(computed)
+    cleared_by_vcimage = vcimageClearData(computed)
+
+    assert cleared_by_vcimage is not computed
+    assert ip_get(cleared_by_vcimage, "result") is None
+    assert ip_get(cleared_by_vcimage, "input") is None
+    assert ip_get(cleared_by_vcimage, "xyz") is None
+    assert ip_get(cleared_by_vcimage, "ics") is None
+    assert ip_get(cleared_by_vcimage, "transforms") == [None, None, None]
+    assert ip_get(cleared_by_vcimage, "internal cs") == ip_get(cleared_by_ip, "internal cs")
+    assert cleared_by_vcimage.data == cleared_by_ip.data
 
 
 def test_ip_save_image_writes_png_and_appends_extension(tmp_path, asset_store) -> None:

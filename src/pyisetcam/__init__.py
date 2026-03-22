@@ -58,6 +58,7 @@ from .ip import (
     ip_get,
     ip_save_image,
     ip_set,
+    vcimage_clear_data,
 )
 from .metrics import (
     ISOAcutance,
@@ -374,6 +375,8 @@ __all__ = [
     "ip_hdr_white",
     "ipClearData",
     "ip_clear_data",
+    "vcimageClearData",
+    "vcimage_clear_data",
     "ipSaveImage",
     "ip_save_image",
     "imageEsserTransform",
@@ -990,6 +993,7 @@ ipCompute = ip_compute
 ipGet = ip_get
 ipSet = ip_set
 ipClearData = ip_clear_data
+vcimageClearData = vcimage_clear_data
 ipSaveImage = ip_save_image
 imageMCCTransform = image_mcc_transform
 imageSensorTransform = image_sensor_transform

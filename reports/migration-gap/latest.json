@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-22T13:31:55.385439+00:00",
+  "generated_at": "2026-03-22T13:52:10.107665+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-22T13:31:55.385439+00:00",
+    "generated_at": "2026-03-22T13:52:10.107665+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 74,
       "missing": 40,
       "out_of_scope": 101,
-      "parity": 294,
-      "partial": 912,
+      "parity": 295,
+      "partial": 911,
       "ported": 22
     },
     "kind_counts": {
@@ -22,10 +22,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 455,
+      "P0": 454,
       "P1": 406,
       "P2": 165,
-      "P3": 417
+      "P3": 418
     },
     "delta_from_previous": {
       "status_counts": {
@@ -33,8 +33,8 @@
         "missing": 0,
         "out_of_scope": 0,
         "parity": 1,
-        "partial": -2,
-        "ported": 1
+        "partial": -1,
+        "ported": 0
       },
       "kind_counts": {
         "api": 0,
@@ -46,9 +46,9 @@
       },
       "priority_counts": {
         "P0": -1,
-        "P1": -1,
+        "P1": 0,
         "P2": 0,
-        "P3": 2
+        "P3": 1
       }
     },
     "family_summary": {
@@ -276,8 +276,8 @@
       "imgproc": {
         "total": 59,
         "by_status": {
-          "parity": 18,
-          "partial": 41
+          "parity": 19,
+          "partial": 40
         },
         "by_kind": {
           "api": 59
@@ -1011,11 +1011,11 @@
     "top_open_families": [
       {
         "family": "imgproc",
-        "open_entries": 41,
+        "open_entries": 40,
         "highest_open_priority": "P0",
         "by_status": {
-          "parity": 18,
-          "partial": 41
+          "parity": 19,
+          "partial": 40
         }
       },
       {
