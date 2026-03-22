@@ -46,6 +46,7 @@ from .ip import (
     image_rgb_to_xyz,
     image_sensor_conversion,
     image_sensor_correction,
+    ip_clear_data,
     ip_compute,
     ip_create,
     ip_get,
@@ -349,6 +350,8 @@ __all__ = [
     "image_sensor_conversion",
     "imageSensorCorrection",
     "image_sensor_correction",
+    "ipClearData",
+    "ip_clear_data",
     "demosaic",
     "Demosaic",
     "imageLinearTransform",
@@ -934,6 +937,7 @@ ipCreate = ip_create
 ipCompute = ip_compute
 ipGet = ip_get
 ipSet = ip_set
+ipClearData = ip_clear_data
 imageDataXYZ = image_data_xyz
 displayRender = display_render
 imageRGB2XYZ = image_rgb_to_xyz

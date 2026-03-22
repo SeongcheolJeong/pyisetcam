@@ -14,6 +14,7 @@ from pyisetcam import (
     ip_create,
     ip_get,
     ip_set,
+    ipClearData,
     sensor_create,
     sensor_get,
     sensor_set,
@@ -526,3 +527,35 @@ def test_display_render_matches_sensor_internal_space_path(asset_store) -> None:
     assert np.allclose(display_linear, np.asarray(ip_get(computed, "result"), dtype=float))
     assert np.allclose(display_transform, np.asarray(ip_get(computed, "ics2display"), dtype=float))
     assert np.allclose(np.asarray(ip_get(rendered_ip, "result"), dtype=float), display_linear)
+
+
+def test_ip_clear_data_clears_computed_payloads(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "volts", np.arange(1, 37, dtype=float).reshape(6, 6))
+    computed = ip_compute(ip_create(asset_store=asset_store), sensor, asset_store=asset_store)
+
+    cleared = ipClearData(computed)
+
+    assert cleared is not computed
+    assert ip_get(cleared, "result") is None
+    assert ip_get(cleared, "input") is None
+    assert ip_get(cleared, "xyz") is None
+    assert ip_get(cleared, "ics") is None
+    transforms = ip_get(cleared, "transforms")
+    assert len(transforms) == 3
+    assert transforms == [None, None, None]
+    assert ip_get(cleared, "internal cs") == ip_get(computed, "internal cs")
+
+
+def test_ip_set_data_empty_matches_ip_clear_data(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "volts", np.arange(1, 37, dtype=float).reshape(6, 6))
+    computed = ip_compute(ip_create(asset_store=asset_store), sensor, asset_store=asset_store)
+
+    cleared_by_set = ip_set(computed.clone(), "data", [])
+    cleared_by_wrapper = ipClearData(computed)
+
+    assert ip_get(cleared_by_set, "result") is None
+    assert ip_get(cleared_by_set, "input") is None
+    assert ip_get(cleared_by_set, "transforms") == [None, None, None]
+    assert ip_get(cleared_by_wrapper, "transforms") == [None, None, None]

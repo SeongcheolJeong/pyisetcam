@@ -685,6 +685,14 @@ def display_render(
     )
 
 
+def ip_clear_data(ip: ImageProcessor) -> ImageProcessor:
+    """Clear the computed data payload from an image processor."""
+
+    cleared = ip.clone()
+    cleared.data = {}
+    return _ensure_ip_state(cleared)
+
+
 def _sensor_to_internal(
     sensor_space: np.ndarray,
     ip: ImageProcessor,
@@ -1287,6 +1295,7 @@ def ip_set(
 imageDataXYZ = image_data_xyz  # noqa: N816
 imageRGB2XYZ = image_rgb_to_xyz  # noqa: N816
 displayRender = display_render  # noqa: N816
+ipClearData = ip_clear_data  # noqa: N816
 Demosaic = demosaic  # noqa: N816
 imageSensorConversion = image_sensor_conversion  # noqa: N816
 imageSensorCorrection = image_sensor_correction  # noqa: N816

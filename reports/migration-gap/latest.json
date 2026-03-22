@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-22T08:28:53.864297+00:00",
+  "generated_at": "2026-03-22T08:47:34.943424+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-22T08:28:53.864297+00:00",
+    "generated_at": "2026-03-22T08:47:34.943424+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 74,
       "missing": 40,
       "out_of_scope": 101,
-      "parity": 278,
-      "partial": 930,
+      "parity": 279,
+      "partial": 929,
       "ported": 20
     },
     "kind_counts": {
@@ -22,10 +22,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 471,
+      "P0": 470,
       "P1": 408,
       "P2": 165,
-      "P3": 399
+      "P3": 400
     },
     "delta_from_previous": {
       "status_counts": {
@@ -33,8 +33,8 @@
         "missing": 0,
         "out_of_scope": 0,
         "parity": 1,
-        "partial": 0,
-        "ported": -1
+        "partial": -1,
+        "ported": 0
       },
       "kind_counts": {
         "api": 0,
@@ -45,10 +45,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": 0,
+        "P0": -1,
         "P1": 0,
         "P2": 0,
-        "P3": 0
+        "P3": 1
       }
     },
     "family_summary": {
@@ -276,8 +276,8 @@
       "imgproc": {
         "total": 59,
         "by_status": {
-          "parity": 10,
-          "partial": 49
+          "parity": 11,
+          "partial": 48
         },
         "by_kind": {
           "api": 59
@@ -1010,11 +1010,11 @@
     "top_open_families": [
       {
         "family": "imgproc",
-        "open_entries": 49,
+        "open_entries": 48,
         "highest_open_priority": "P0",
         "by_status": {
-          "parity": 10,
-          "partial": 49
+          "parity": 11,
+          "partial": 48
         }
       },
       {
