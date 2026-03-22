@@ -92,7 +92,11 @@ from pyisetcam import (
     oi_spatial_support,
     oi_spatial_resample,
     oi_set,
+    lsf2circularpsf,
+    psf2lsf,
+    psfAverageMultiple,
     psfCenter,
+    psfCircularlyAverage,
     psfFindCriterionRadius,
     psfFindPeak,
     psfVolume,
@@ -2762,6 +2766,48 @@ def test_psf_helper_wrappers_match_legacy_contract() -> None:
 
     radius = float(psfFindCriterionRadius(psf, 0.9))
     assert np.isclose(radius, 1.5, atol=1e-10, rtol=1e-10)
+
+
+def test_psf_lsf_and_circular_average_wrappers_match_legacy_contract() -> None:
+    psf = np.array(
+        [
+            [0.0, 0.0, 1.0, 0.0, 0.0],
+            [0.0, 2.0, 4.0, 2.0, 0.0],
+            [1.0, 4.0, 8.0, 4.0, 1.0],
+            [0.0, 2.0, 4.0, 2.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0, 0.0],
+        ],
+        dtype=float,
+    )
+    psf_stack = np.stack((psf, 2.0 * psf), axis=2)
+
+    horizontal_lsf = np.asarray(psf2lsf(psf), dtype=float)
+    vertical_lsf = np.asarray(psf2lsf(psf, "direction", "vertical"), dtype=float)
+    stacked_lsf = np.asarray(psf2lsf(psf_stack), dtype=float)
+
+    assert np.allclose(horizontal_lsf, np.sum(psf, axis=1))
+    assert np.allclose(vertical_lsf, np.sum(psf, axis=0))
+    assert stacked_lsf.shape == (psf.shape[0], 2)
+    assert np.allclose(stacked_lsf[:, 0], horizontal_lsf)
+    assert np.allclose(stacked_lsf[:, 1], 2.0 * horizontal_lsf)
+
+    circular_psf = np.asarray(lsf2circularpsf(horizontal_lsf), dtype=float)
+    assert circular_psf.shape == psf.shape
+    assert np.isclose(np.sum(circular_psf), 1.0, atol=1e-10, rtol=1e-10)
+    assert psfFindPeak(circular_psf) == (3, 3)
+
+    yy, xx = np.indices((7, 7), dtype=float)
+    astigmatic_psf = np.exp(-(((yy - 3.0) ** 2) / 4.0 + ((xx - 3.0) ** 2) / 1.0))
+    circular_average = np.asarray(psfCircularlyAverage(astigmatic_psf), dtype=float)
+
+    assert circular_average.shape == astigmatic_psf.shape
+    assert np.isclose(np.sum(circular_average), np.sum(astigmatic_psf), atol=1e-10, rtol=1e-10)
+    assert psfFindPeak(circular_average) == (4, 4)
+    assert np.isclose(circular_average[3, 2], circular_average[3, 4], atol=1e-10, rtol=1e-10)
+    assert np.isclose(circular_average[2, 3], circular_average[4, 3], atol=1e-10, rtol=1e-10)
+
+    averaged = np.asarray(psfAverageMultiple(psf_stack), dtype=float)
+    assert np.allclose(averaged, 1.5 * psf)
 
 
 def test_oi_set_wvf_prefixed_parameter_rebuilds_oi(asset_store) -> None:

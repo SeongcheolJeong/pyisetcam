@@ -3011,6 +3011,121 @@ psfCenter = psf_center
 psfFindCriterionRadius = psf_find_criterion_radius
 
 
+def psf_to_lsf(psf: Any, *args: Any) -> np.ndarray:
+    """Derive a horizontal or vertical line-spread function from a PSF stack."""
+
+    options = _parse_key_value_options(args, "psf2lsf")
+    direction = param_format(options.pop("direction", "horizontal"))
+    if options:
+        unsupported = next(iter(options))
+        raise KeyError(f"Unsupported psf2lsf parameter: {unsupported}")
+    if direction not in {"horizontal", "vertical"}:
+        raise ValueError("psf2lsf direction must be 'horizontal' or 'vertical'.")
+
+    psf_array = np.asarray(psf, dtype=float)
+    if psf_array.ndim == 2:
+        psf_array = psf_array[:, :, np.newaxis]
+    elif psf_array.ndim != 3:
+        raise ValueError("psf2lsf expects a 2-D PSF or a 3-D PSF stack.")
+
+    if direction == "horizontal":
+        length = psf_array.shape[0]
+        samples = np.zeros((length, psf_array.shape[2]), dtype=float)
+        for band in range(psf_array.shape[2]):
+            psf_fft = np.fft.fft2(psf_array[:, :, band])
+            samples[:, band] = np.asarray(np.real_if_close(np.fft.ifft(psf_fft[:, 0])), dtype=float)
+    else:
+        length = psf_array.shape[1]
+        samples = np.zeros((length, psf_array.shape[2]), dtype=float)
+        for band in range(psf_array.shape[2]):
+            psf_fft = np.fft.fft2(psf_array[:, :, band])
+            samples[:, band] = np.asarray(np.real_if_close(np.fft.ifft(psf_fft[0, :])), dtype=float)
+
+    if samples.shape[1] == 1:
+        return samples[:, 0]
+    return samples
+
+
+def lsf_to_circular_psf(lsf: Any) -> np.ndarray:
+    """Convert a symmetric line-spread function into a circularly symmetric PSF."""
+
+    lsf_array = np.asarray(lsf, dtype=float).reshape(-1)
+    n = int(lsf_array.size)
+    if n == 0:
+        raise ValueError("lsf2circularpsf expects a non-empty LSF.")
+
+    center = (n // 2) + 1 if n % 2 else (n // 2) + 1
+    lsf_norm = lsf_array / max(float(np.sum(lsf_array)), 1e-12)
+    otf_1d = np.asarray(
+        np.real_if_close(np.fft.fftshift(np.fft.fft(np.fft.ifftshift(lsf_norm)))),
+        dtype=float,
+    )
+    otf_1d = np.abs(otf_1d)
+
+    u, v = np.meshgrid(np.arange(1, n + 1, dtype=float), np.arange(1, n + 1, dtype=float), indexing="xy")
+    r_uv = np.sqrt((u - float(center)) ** 2 + (v - float(center)) ** 2)
+    if n % 2 == 0:
+        freq = np.arange(0, n // 2, dtype=float)
+    else:
+        freq = np.arange(0, (n // 2) + 1, dtype=float)
+    radial_otf = np.asarray(otf_1d[center - 1 :], dtype=float)
+    otf_2d = np.interp(r_uv.reshape(-1), freq, radial_otf, left=float(radial_otf[0]), right=0.0).reshape(n, n)
+
+    psf_complex = np.fft.fftshift(np.fft.ifft2(np.fft.ifftshift(otf_2d)))
+    psf = np.abs(np.asarray(np.real_if_close(psf_complex), dtype=float))
+    psf_sum = float(np.sum(psf))
+    if psf_sum > 0.0:
+        psf = psf / psf_sum
+    return psf
+
+
+def psf_circularly_average(input_psf: Any) -> np.ndarray:
+    """Circularly average the provided PSF while preserving total volume."""
+
+    in_psf = np.asarray(input_psf, dtype=float)
+    if in_psf.ndim != 2 or in_psf.shape[0] != in_psf.shape[1]:
+        raise ValueError("psfCircularlyAverage expects a square 2-D PSF array.")
+
+    n_linear_pixels = int(in_psf.shape[0])
+    peak_row, peak_col = psf_find_peak(in_psf)
+    yy, xx = np.meshgrid(
+        np.arange(1, n_linear_pixels + 1, dtype=float),
+        np.arange(1, n_linear_pixels + 1, dtype=float),
+        indexing="ij",
+    )
+    radius_mat = np.sqrt((xx - float(peak_col)) ** 2 + (yy - float(peak_row)) ** 2)
+    out_psf = np.zeros_like(in_psf)
+    radii = np.linspace(0.0, 0.75 * float(n_linear_pixels), int(round(n_linear_pixels)))
+
+    for index in range(len(radii) - 1):
+        mask = np.logical_and(radius_mat >= radii[index], radius_mat < radii[index + 1])
+        if np.any(mask):
+            out_psf[mask] = float(np.mean(in_psf[mask]))
+
+    out_sum = float(np.sum(out_psf))
+    if out_sum > 0.0:
+        out_psf = float(np.sum(in_psf)) * out_psf / out_sum
+    return out_psf
+
+
+def psf_average_multiple(input_psfs: Any, check_in_sf_domain: Any | None = None) -> np.ndarray:
+    """Average a 3-D PSF stack over the third dimension."""
+
+    del check_in_sf_domain
+    psf_stack = np.asarray(input_psfs, dtype=float)
+    if psf_stack.ndim == 2:
+        return psf_stack.copy()
+    if psf_stack.ndim != 3:
+        raise ValueError("psfAverageMultiple expects a 2-D PSF or a 3-D PSF stack.")
+    return np.mean(psf_stack, axis=2)
+
+
+psf2lsf = psf_to_lsf
+lsf2circularpsf = lsf_to_circular_psf
+psfCircularlyAverage = psf_circularly_average
+psfAverageMultiple = psf_average_multiple
+
+
 def psf_to_zcoeff_error(
     zcoeffs: Any,
     psf_target: Any,

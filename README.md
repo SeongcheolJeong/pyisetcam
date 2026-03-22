@@ -520,6 +520,11 @@ That same script-driven WVF helper surface now also includes headless
 legacy MATLAB PSF utility layer built on top of the existing WVF/PSF
 compute path.
 That same script-driven WVF helper surface now also includes headless
+`psf2lsf(...)`, `lsf2circularpsf(...)`, `psfCircularlyAverage(...)`, and
+`psfAverageMultiple(...)` for the legacy MATLAB PSF/LSF conversion and
+multi-PSF averaging helpers layered on top of the existing WVF/PSF
+compute path.
+That same script-driven WVF helper surface now also includes headless
 `wvf_to_psf(...)` / `wvf2PSF(...)`, `wvf_to_optics(...)` /
 `wvf2optics(...)`, and `wvf_pupil_amplitude(...)` /
 `wvfPupilAmplitude(...)` for the direct MATLAB PSF/optics conversion

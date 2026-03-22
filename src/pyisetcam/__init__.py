@@ -129,9 +129,14 @@ from .optics import (
     oi_spatial_support,
     oi_spatial_resample,
     oi_set,
+    lsf_to_circular_psf,
+    psf2lsf,
+    psf_average_multiple,
     psf_center,
+    psf_circularly_average,
     psf_find_criterion_radius,
     psf_find_peak,
+    psf_to_lsf,
     psf_volume,
     optics_psf_to_otf,
     psf_to_zcoeff_error,
@@ -625,13 +630,21 @@ __all__ = [
     "oi_spatial_resample",
     "oi_set",
     "optics_psf_to_otf",
+    "lsf2circularpsf",
+    "psf2lsf",
+    "psfAverageMultiple",
+    "psfCircularlyAverage",
     "psfCenter",
     "psfFindCriterionRadius",
     "psfFindPeak",
     "psfVolume",
+    "lsf_to_circular_psf",
+    "psf_average_multiple",
     "psf_center",
+    "psf_circularly_average",
     "psf_find_criterion_radius",
     "psf_find_peak",
+    "psf_to_lsf",
     "psf_volume",
     "param_format",
     "peak_signal_to_noise_ratio",
@@ -992,6 +1005,10 @@ psfFindPeak = psf_find_peak
 psfVolume = psf_volume
 psfCenter = psf_center
 psfFindCriterionRadius = psf_find_criterion_radius
+psf2lsf = psf_to_lsf
+lsf2circularpsf = lsf_to_circular_psf
+psfCircularlyAverage = psf_circularly_average
+psfAverageMultiple = psf_average_multiple
 psf2zcoeff = psf_to_zcoeff_error
 oiPlot = oi_plot
 ipPlot = ip_plot
