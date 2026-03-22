@@ -805,6 +805,56 @@ def _window_figure_from_session(session: SessionContext, object_type: str) -> An
     raise KeyError(f"Unknown window type: {object_type}")
 
 
+def _next_headless_window_index(session: SessionContext, key: str) -> int:
+    counters = session.custom.setdefault("_headless_window_counts", {})
+    next_index = int(counters.get(key, 0)) + 1
+    counters[key] = next_index
+    return next_index
+
+
+def _create_headless_window_placeholder(
+    session: SessionContext,
+    object_type: str,
+) -> Any:
+    normalized = _session_type_name(object_type)
+    if normalized == "scene":
+        window_key, axis_key = "scene_window", "sceneImage"
+    elif normalized == "oi":
+        window_key, axis_key = "oi_window", "oiImage"
+    elif normalized == "sensor":
+        window_key, axis_key = "sensor_window", "imgMain"
+    elif normalized == "ip":
+        window_key, axis_key = "ip_window", "ipImage"
+    elif normalized == "display":
+        window_key, axis_key = "display_window", "displayImage"
+    else:
+        raise KeyError(f"Unknown window type: {object_type}")
+
+    index = _next_headless_window_index(session, normalized)
+    figure_handle = f"{normalized}-figure-{index}"
+    axis_handle = f"{normalized}-axis-{index}"
+    app = {
+        "figure1": figure_handle,
+        axis_key: axis_handle,
+        "headless_placeholder": True,
+    }
+    session.gui[window_key] = {
+        "app": app,
+        "hObject": figure_handle,
+        "handles": app,
+        "headless_placeholder": True,
+    }
+    return figure_handle
+
+
+def _create_headless_graphwin_placeholder(session: SessionContext) -> Any:
+    index = _next_headless_window_index(session, "graphwin")
+    figure_handle = f"graphwin-figure-{index}"
+    session.graphwin["hObject"] = figure_handle
+    session.graphwin["handle"] = f"graphwin-handle-{index}"
+    return figure_handle
+
+
 def vc_select_figure(
     session: SessionContext,
     object_type: str,
@@ -814,12 +864,12 @@ def vc_select_figure(
     if normalized in {"graphwin", "graphwinfigure", "graphwindow"}:
         figure_handle = ie_session_get(session, "graph win figure")
         if figure_handle is None and not no_new_win:
-            raise NotImplementedError("vcSelectFigure graphwin window creation is not implemented.")
+            figure_handle = _create_headless_graphwin_placeholder(session)
         return figure_handle
 
     figure_handle = _window_figure_from_session(session, normalized)
     if figure_handle is None and not no_new_win:
-        raise NotImplementedError(f"vcSelectFigure {object_type} window creation is not implemented.")
+        figure_handle = _create_headless_window_placeholder(session, normalized)
     return figure_handle
 
 
@@ -828,24 +878,36 @@ def ie_refresh_window(
     obj_type: str | BaseISETObject | dict[str, Any],
 ) -> Any:
     canonical = vc_equivalent_objtype(obj_type)
+    session_type: str
     if canonical == "SCENE":
+        session_type = "scene"
         app = ie_session_get(session, "scene window")
     elif canonical == "OPTICALIMAGE":
+        session_type = "oi"
         app = ie_session_get(session, "oi window")
     elif canonical == "ISA":
+        session_type = "sensor"
         app = ie_session_get(session, "sensor window")
     elif canonical == "VCIMAGE":
+        session_type = "ip"
         app = ie_session_get(session, "ip window")
     else:
         raise ValueError(f"Unknown object type for ieRefreshWindow: {obj_type}")
 
     if app is None:
-        raise ValueError(f"Undefined {canonical.lower()} app.")
+        vc_select_figure(session, session_type)
+        if canonical == "SCENE":
+            app = ie_session_get(session, "scene window")
+        elif canonical == "OPTICALIMAGE":
+            app = ie_session_get(session, "oi window")
+        elif canonical == "ISA":
+            app = ie_session_get(session, "sensor window")
+        else:
+            app = ie_session_get(session, "ip window")
 
     refresh = app.get("refresh") if isinstance(app, dict) else getattr(app, "refresh", None)
-    if not callable(refresh):
-        raise AttributeError(f"Stored {canonical.lower()} app does not define refresh().")
-    refresh()
+    if callable(refresh):
+        refresh()
     return app
 
 

@@ -850,6 +850,10 @@ windows. Stored window geometry/state compatibility is now exposed too
 through `ieWindowsGet` / `ieWindowsSet`, and the adjacent lightweight
 GUI/session wrappers `vcEquivalentObjtype`, `vcSetFigureHandles`, and
 `ieRefreshWindow` are now available on top of that session state.
+Missing session windows now fall back to lightweight headless
+placeholders so MATLAB-style `vcSelectFigure(...)` and
+`ieRefreshWindow(...)` calls do not fail just because no GUI app has been
+created.
 Name-based lookup is now covered too through `ieEquivalentObjtype` and
 `ieFindObjectByName`.
 The shared MATLAB-style programming helper `ieParameterOtype` is now

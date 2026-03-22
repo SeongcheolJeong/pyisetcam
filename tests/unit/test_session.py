@@ -691,15 +691,41 @@ def test_vc_get_figure_and_vc_select_figure_follow_session_windows(asset_store) 
     assert vcSelectFigure(session, "display", True) is None
 
 
-def test_vc_select_figure_without_existing_window_raises_when_creation_needed() -> None:
+def test_vc_select_figure_without_existing_window_creates_headless_placeholder(asset_store) -> None:
     session = ie_init_session()
 
-    try:
-        vcSelectFigure(session, "scene")
-    except NotImplementedError as error:
-        assert "vcSelectFigure scene window creation" in str(error)
-    else:
-        raise AssertionError("Expected NotImplementedError for missing scene window.")
+    scene_figure = vcSelectFigure(session, "scene")
+    graph_figure = vcSelectFigure(session, "graphwin")
+
+    assert scene_figure == "scene-figure-1"
+    assert graph_figure == "graphwin-figure-1"
+    assert ieSessionGet(session, "scene window") == {
+        "figure1": "scene-figure-1",
+        "sceneImage": "scene-axis-1",
+        "headless_placeholder": True,
+    }
+    assert ieSessionGet(session, "graph win figure") == "graphwin-figure-1"
+    assert vcGetFigure(session, scene_create("uniform ee", 8, asset_store=asset_store)) == (
+        {
+            "figure1": "scene-figure-1",
+            "sceneImage": "scene-axis-1",
+            "headless_placeholder": True,
+        },
+        "scene-axis-1",
+    )
+
+
+def test_ie_refresh_window_creates_headless_placeholder_when_missing() -> None:
+    session = ie_init_session()
+
+    returned = ieRefreshWindow(session, "scene")
+
+    assert returned == {
+        "figure1": "scene-figure-1",
+        "sceneImage": "scene-axis-1",
+        "headless_placeholder": True,
+    }
+    assert ieSessionGet(session, "scene window") == returned
 
 
 def test_ie_main_close_clears_window_slots() -> None:
