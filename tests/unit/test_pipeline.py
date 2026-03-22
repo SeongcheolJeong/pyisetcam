@@ -150,6 +150,7 @@ from pyisetcam import (
     sensor_formats,
     sensor_get,
     sensor_plot,
+    sensorShowImage,
     sensor_set_size_to_fov,
     sensor_set,
     spd_to_cct,
@@ -4588,6 +4589,21 @@ def test_sensor_clear_data_clears_computed_payloads(asset_store) -> None:
     assert sensor_get(cleared, "volts") is None
     assert sensor_get(cleared, "dv") is None
     assert np.array_equal(np.asarray(sensor_get(cleared, "wave"), dtype=float), np.asarray(sensor_get(sensor, "wave"), dtype=float))
+
+
+def test_sensor_show_image_matches_sensor_rgb_rendering(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    volts = np.full((4, 4), 0.25, dtype=float)
+    dv = np.arange(1, 17, dtype=float).reshape(4, 4)
+    sensor = sensor_set(sensor, "volts", volts)
+    sensor = sensor_set(sensor, "dv", dv)
+
+    rendered = sensorShowImage(sensor, 0.8, True, 0)
+    expected = sensor_get(sensor, "rgb", "dv or volts", 0.8, True)
+
+    assert rendered is not None
+    assert np.allclose(np.asarray(rendered, dtype=float), np.asarray(expected, dtype=float))
+    assert np.asarray(rendered, dtype=float).shape == (4, 4, 3)
 
 
 def test_sensor_set_etendue_scales_noiseless_response(asset_store) -> None:

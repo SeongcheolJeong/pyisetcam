@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-22T09:53:27.678225+00:00",
+  "generated_at": "2026-03-22T10:11:08.835475+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -7,8 +7,8 @@
       "headless_only": 74,
       "missing": 40,
       "out_of_scope": 101,
-      "parity": 282,
-      "partial": 926,
+      "parity": 283,
+      "partial": 925,
       "ported": 20
     },
     "kind_counts": {
@@ -20,10 +20,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 467,
+      "P0": 466,
       "P1": 408,
       "P2": 165,
-      "P3": 403
+      "P3": 404
     },
     "delta_from_previous": {
       "status_counts": {
@@ -737,8 +737,8 @@
       "sensor": {
         "total": 56,
         "by_status": {
-          "parity": 16,
-          "partial": 39,
+          "parity": 17,
+          "partial": 38,
           "ported": 1
         },
         "by_kind": {
@@ -1017,11 +1017,11 @@
       },
       {
         "family": "sensor",
-        "open_entries": 39,
+        "open_entries": 38,
         "highest_open_priority": "P0",
         "by_status": {
-          "parity": 16,
-          "partial": 39,
+          "parity": 17,
+          "partial": 38,
           "ported": 1
         }
       },
@@ -13630,14 +13630,15 @@
       "upstream_path": "sensor/sensorShowImage.m",
       "family": "sensor",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.sensor",
+      "status": "parity",
+      "python_surface": "pyisetcam.sensor, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "sensor/sensorStats.m",

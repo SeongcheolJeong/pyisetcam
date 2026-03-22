@@ -2394,6 +2394,18 @@ def sensor_clear_data(sensor: Sensor) -> Sensor:
     return cleared
 
 
+def sensor_show_image(
+    sensor: Sensor,
+    gam: float | None = None,
+    scale_max: bool | None = None,
+    app: Any | None = None,
+) -> np.ndarray | None:
+    """Return the headless sensor-window RGB rendering for the current sensor data."""
+
+    del app
+    return _sensor_rgb_image(sensor, "dv or volts", gam, scale_max)
+
+
 def _sensor_chromaticity(sensor: Sensor, rect_or_locs: Any = None, mode: str = "vec") -> np.ndarray | None:
     from .ip import _sensor_space
 
@@ -4526,3 +4538,4 @@ sensorComputeSamples = sensor_compute_samples
 sensorDR = sensor_dr
 sensorCCM = sensor_ccm
 sensorClearData = sensor_clear_data
+sensorShowImage = sensor_show_image
