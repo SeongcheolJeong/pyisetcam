@@ -221,6 +221,9 @@ from .scene import (
     scene_illuminant_pattern,
     scene_illuminant_ss,
     scene_interpolate_w,
+    scene_energy_from_vector,
+    scene_photons_from_vector,
+    scene_radiance_from_vector,
     scene_reflectance_chart,
     ie_reflectance_samples,
     scene_rotate,
@@ -669,7 +672,10 @@ __all__ = [
     "sceneGet",
     "sceneIlluminantPattern",
     "sceneIlluminantSS",
+    "sceneEnergyFromVector",
     "sceneInterpolateW",
+    "scenePhotonsFromVector",
+    "sceneRadianceFromVector",
     "sceneReflectanceChart",
     "sceneRotate",
     "sceneShowImage",
@@ -681,11 +687,14 @@ __all__ = [
     "scene_calculate_luminance",
     "scene_clear_data",
     "scene_create",
+    "scene_energy_from_vector",
     "scene_from_file",
     "scene_get",
     "scene_illuminant_pattern",
     "scene_illuminant_ss",
     "scene_interpolate_w",
+    "scene_photons_from_vector",
+    "scene_radiance_from_vector",
     "scene_reflectance_chart",
     "scene_rotate",
     "scene_show_image",
@@ -856,6 +865,9 @@ sceneGet = scene_get
 sceneIlluminantPattern = scene_illuminant_pattern
 sceneIlluminantSS = scene_illuminant_ss
 sceneInterpolateW = scene_interpolate_w
+sceneEnergyFromVector = scene_energy_from_vector
+scenePhotonsFromVector = scene_photons_from_vector
+sceneRadianceFromVector = scene_radiance_from_vector
 sceneReflectanceChart = scene_reflectance_chart
 macbethReadReflectance = macbeth_read_reflectance
 sceneRotate = scene_rotate

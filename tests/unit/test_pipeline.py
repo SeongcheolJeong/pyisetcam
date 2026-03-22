@@ -117,6 +117,7 @@ from pyisetcam import (
     scene_adjust_illuminant,
     scene_combine,
     scene_create,
+    sceneEnergyFromVector,
     scene_from_file,
     scene_adjust_luminance,
     scene_add,
@@ -124,6 +125,8 @@ from pyisetcam import (
     scene_illuminant_ss,
     scene_interpolate_w,
     scene_plot,
+    scenePhotonsFromVector,
+    sceneRadianceFromVector,
     scene_reflectance_chart,
     scene_rotate,
     scene_show_image,
@@ -5504,6 +5507,24 @@ def test_scene_render_script_workflow(asset_store) -> None:
     assert float(np.mean(np.abs(standard_res - standard_srgb))) > 0.0
     assert tuple(scene_get(daylight_scene, "size")) == (506, 759)
     assert tuple(scene_get(standard_scene, "size")) == (506, 759)
+
+
+def test_scene_vector_helpers_match_legacy_cube_layout() -> None:
+    spectral = np.array([1.0, 2.0, 4.0], dtype=float)
+    rows = 2
+    cols = 4
+    expected = np.broadcast_to(spectral.reshape(1, 1, -1), (rows, cols, spectral.size)).copy()
+
+    radiance = sceneRadianceFromVector(spectral, rows, cols)
+    photons = scenePhotonsFromVector(spectral, rows, cols)
+    energy = sceneEnergyFromVector(spectral, rows, cols)
+
+    assert radiance.shape == (rows, cols, 3)
+    assert np.array_equal(radiance, expected)
+    assert np.array_equal(photons, expected)
+    assert np.array_equal(energy, expected)
+    assert np.array_equal(radiance[0, 0], spectral)
+    assert np.array_equal(radiance[-1, -1], spectral)
 
 
 def test_run_python_case_supports_frequency_orientation_scene_parity_case(asset_store) -> None:

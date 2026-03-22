@@ -2904,6 +2904,24 @@ def _scene_rgb_render(scene: Scene, *, asset_store: AssetStore | None = None) ->
     return _scene_rgb_from_xyz(xyz)
 
 
+def scene_radiance_from_vector(radiance: Any, row: Any, col: Any) -> np.ndarray:
+    spectral = np.asarray(radiance, dtype=float).reshape(-1)
+    rows = int(row)
+    cols = int(col)
+    return np.broadcast_to(spectral.reshape(1, 1, -1), (rows, cols, spectral.size)).copy()
+
+
+def scene_photons_from_vector(radiance: Any, row: Any, col: Any) -> np.ndarray:
+    return scene_radiance_from_vector(radiance, row, col)
+
+
+def scene_energy_from_vector(energy: Any, row: Any, col: Any) -> np.ndarray:
+    spectral = np.asarray(energy, dtype=float).reshape(-1)
+    rows = int(row)
+    cols = int(col)
+    return np.broadcast_to(spectral.reshape(1, 1, -1), (rows, cols, spectral.size)).copy()
+
+
 def scene_show_image(
     scene: Scene,
     render_flag: int = 1,

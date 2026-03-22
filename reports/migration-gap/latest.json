@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-22T17:41:06.419533+00:00",
+  "generated_at": "2026-03-22T18:04:11.400335+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-22T17:41:06.419533+00:00",
+    "generated_at": "2026-03-22T18:04:11.400335+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 74,
       "missing": 40,
       "out_of_scope": 103,
-      "parity": 310,
-      "partial": 887,
+      "parity": 313,
+      "partial": 884,
       "ported": 29
     },
     "kind_counts": {
@@ -22,10 +22,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 430,
+      "P0": 427,
       "P1": 406,
       "P2": 165,
-      "P3": 442
+      "P3": 445
     },
     "delta_from_previous": {
       "status_counts": {
@@ -509,8 +509,8 @@
       "scene": {
         "total": 45,
         "by_status": {
-          "parity": 11,
-          "partial": 30,
+          "parity": 14,
+          "partial": 27,
           "ported": 4
         },
         "by_kind": {
@@ -1012,16 +1012,6 @@
     },
     "top_open_families": [
       {
-        "family": "scene",
-        "open_entries": 30,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 11,
-          "partial": 30,
-          "ported": 4
-        }
-      },
-      {
         "family": "opticalimage/wavefront",
         "open_entries": 29,
         "highest_open_priority": "P0",
@@ -1057,6 +1047,16 @@
           "parity": 27,
           "partial": 28,
           "ported": 1
+        }
+      },
+      {
+        "family": "scene",
+        "open_entries": 27,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 14,
+          "partial": 27,
+          "ported": 4
         }
       },
       {
