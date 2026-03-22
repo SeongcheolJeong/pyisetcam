@@ -756,6 +756,11 @@ end-to-end ray-trace entry point as well, including cached OI illuminance
 bookkeeping. The supporting OI helpers `oi_calculate_illuminance` /
 `oiCalculateIlluminance` and `oi_diffuser` / `oiDiffuser` are now public
 too, and `opticsRayTrace` routes its blur/illuminance path through them.
+That same headless OI utility surface now also includes
+`oi_clear_data(...)` / `oiClearData(...)`,
+`oi_show_image(...)` / `oiShowImage(...)`, and
+`oi_save_image(...)` / `oiSaveImage(...)` for the legacy MATLAB
+computed-payload reset, direct RGB render, and PNG-export helpers.
 The `rtOTF` groundwork is also starting to land through public helper ports
 for `rt_block_center` / `rtBlockCenter`, `rt_extract_block` /
 `rtExtractBlock`, `rt_insert_block` / `rtInsertBlock`, and

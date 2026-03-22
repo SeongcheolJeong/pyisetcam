@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-22T16:41:38.152239+00:00",
+  "generated_at": "2026-03-22T17:11:57.890436+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-22T16:41:38.152239+00:00",
+    "generated_at": "2026-03-22T17:11:57.890436+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 74,
       "missing": 40,
       "out_of_scope": 103,
-      "parity": 304,
-      "partial": 893,
+      "parity": 307,
+      "partial": 890,
       "ported": 29
     },
     "kind_counts": {
@@ -22,10 +22,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 436,
+      "P0": 433,
       "P1": 406,
       "P2": 165,
-      "P3": 436
+      "P3": 439
     },
     "delta_from_previous": {
       "status_counts": {
@@ -422,8 +422,8 @@
         "total": 37,
         "by_status": {
           "headless_only": 1,
-          "parity": 6,
-          "partial": 30
+          "parity": 9,
+          "partial": 27
         },
         "by_kind": {
           "api": 37
@@ -1012,16 +1012,6 @@
     },
     "top_open_families": [
       {
-        "family": "opticalimage",
-        "open_entries": 31,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "headless_only": 1,
-          "parity": 6,
-          "partial": 30
-        }
-      },
-      {
         "family": "sensor",
         "open_entries": 31,
         "highest_open_priority": "P0",
@@ -1049,6 +1039,16 @@
           "parity": 18,
           "partial": 29,
           "ported": 2
+        }
+      },
+      {
+        "family": "opticalimage",
+        "open_entries": 28,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "headless_only": 1,
+          "parity": 9,
+          "partial": 27
         }
       },
       {
@@ -1186,7 +1186,7 @@
         "not_implemented_error_sites": 0
       },
       "optics": {
-        "unsupported_option_error_sites": 22,
+        "unsupported_option_error_sites": 23,
         "not_implemented_error_sites": 0
       },
       "parity": {

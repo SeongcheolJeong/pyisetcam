@@ -105,9 +105,12 @@ from .optics import (
     oi_calculate_illuminance,
     oi_diffuser,
     oi_compute,
+    oi_clear_data,
     oi_crop,
     oi_create,
     oi_get,
+    oi_save_image,
+    oi_show_image,
     oi_spatial_resample,
     oi_set,
     optics_psf_to_otf,
@@ -543,20 +546,26 @@ __all__ = [
     "opticsRayTrace",
     "optics_ray_trace",
     "oiCalculateIlluminance",
+    "oiClearData",
     "oiDiffuser",
     "oiCompute",
     "oiCreate",
     "oiCrop",
     "oiGet",
+    "oiSaveImage",
+    "oiShowImage",
     "oiSpatialResample",
     "oiSet",
     "oi_calculate_illuminance",
+    "oi_clear_data",
     "oi_diffuser",
     "oi_compute",
     "oi_crop",
     "oi_create",
     "oi_get",
     "oi_plot",
+    "oi_save_image",
+    "oi_show_image",
     "oi_spatial_resample",
     "oi_set",
     "optics_psf_to_otf",
@@ -861,8 +870,11 @@ sensorDescription = sensor_description
 
 oiCreate = oi_create
 oiCompute = oi_compute
+oiClearData = oi_clear_data
 oiCrop = oi_crop
 oiGet = oi_get
+oiSaveImage = oi_save_image
+oiShowImage = oi_show_image
 oiSpatialResample = oi_spatial_resample
 oiSet = oi_set
 oiCalculateIlluminance = oi_calculate_illuminance

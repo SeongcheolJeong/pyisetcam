@@ -4975,6 +4975,100 @@ def oi_calculate_illuminance(oi: OpticalImage) -> tuple[np.ndarray, float, float
     return illuminance, mean_illuminance, mean_comp_illuminance
 
 
+def _oi_rgb_render(oi: OpticalImage, *, asset_store: AssetStore | None = None) -> np.ndarray | None:
+    store = _store(asset_store)
+    photons = np.asarray(oi.data.get("photons", np.empty((0, 0, 0), dtype=float)), dtype=float)
+    wave = np.asarray(oi.fields.get("wave", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    if photons.ndim != 3 or photons.size == 0 or wave.size == 0:
+        return None
+    energy = quanta_to_energy(photons, wave)
+    xyz = xyz_from_energy(energy, wave, asset_store=store)
+    from .utils import xyz_to_srgb
+
+    return np.asarray(xyz_to_srgb(xyz), dtype=float)
+
+
+def oi_show_image(
+    oi: OpticalImage,
+    render_flag: int = 1,
+    gam: float = 1.0,
+    oi_w: Any | None = None,
+    title_string: str | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> np.ndarray | None:
+    del oi_w, title_string
+    method = abs(int(render_flag))
+    clip_level = 90.0 if method == 5 else 99.5
+    if method == 5:
+        method = 4
+
+    if method in {0, 1}:
+        rgb = _oi_rgb_render(oi, asset_store=asset_store)
+    elif method == 2:
+        photons = np.asarray(oi.data.get("photons", np.empty((0, 0, 0), dtype=float)), dtype=float)
+        if photons.ndim != 3 or photons.size == 0:
+            return None
+        gray = np.mean(photons, axis=2, dtype=float)
+        gray_min = float(np.min(gray))
+        gray_max = float(np.max(gray))
+        if gray_max > gray_min:
+            gray = (gray - gray_min) / (gray_max - gray_min)
+        else:
+            gray = np.zeros_like(gray, dtype=float)
+        rgb = np.repeat(gray[:, :, np.newaxis], 3, axis=2)
+    elif method == 3:
+        from .scene import hdr_render
+
+        base = _oi_rgb_render(oi, asset_store=asset_store)
+        rgb = None if base is None else np.asarray(hdr_render(base), dtype=float)
+    elif method == 4:
+        from .scene import hdr_render
+        from .utils import xyz_to_srgb
+
+        photons = np.asarray(oi.data.get("photons", np.empty((0, 0, 0), dtype=float)), dtype=float)
+        wave = np.asarray(oi.fields.get("wave", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+        if photons.ndim != 3 or photons.size == 0 or wave.size == 0:
+            return None
+        energy = quanta_to_energy(photons, wave)
+        xyz = np.asarray(xyz_from_energy(energy, wave, asset_store=_store(asset_store)), dtype=float)
+        y_channel = xyz[:, :, 1]
+        y_clip = float(np.percentile(y_channel, clip_level))
+        rgb = np.asarray(hdr_render(xyz_to_srgb(np.clip(xyz, 0.0, y_clip))), dtype=float)
+    else:
+        raise UnsupportedOptionError(f"oiShowImage renderFlag={render_flag} is not supported.")
+
+    if rgb is None:
+        return None
+    if float(gam) != 1.0:
+        rgb = np.power(np.clip(np.asarray(rgb, dtype=float), 0.0, None), float(gam))
+    return np.asarray(rgb, dtype=float)
+
+
+def oi_save_image(
+    oi: OpticalImage,
+    f_name: str | Path,
+    *,
+    asset_store: AssetStore | None = None,
+) -> str:
+    """Save the current optical-image rendering to an 8-bit PNG file."""
+
+    rgb = oi_show_image(oi, -1, 1.0, asset_store=asset_store)
+    if rgb is None:
+        raise ValueError("Optical image has no computed photon data to save.")
+
+    output_path = Path(f_name).expanduser()
+    if output_path.suffix == "":
+        output_path = output_path.with_suffix(".png")
+    if not output_path.is_absolute():
+        output_path = (Path.cwd() / output_path).resolve()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    payload = np.clip(np.round(np.clip(np.asarray(rgb, dtype=float), 0.0, 1.0) * 255.0), 0.0, 255.0).astype(np.uint8)
+    iio.imwrite(output_path, payload)
+    return str(output_path)
+
+
 def _oi_roi_xyz(oi: OpticalImage, roi_locs: Any | None = None, *, asset_store: AssetStore | None = None) -> np.ndarray:
     store = _store(asset_store)
     wave = np.asarray(oi.fields.get("wave", np.empty(0, dtype=float)), dtype=float).reshape(-1)
@@ -6007,6 +6101,25 @@ def oi_compute(
         computed.fields["sample_spacing_m"] = float(pixel_size)
         computed.fields["requested_pixel_size_m"] = float(pixel_size)
     return track_session_object(session, computed)
+
+
+def oi_clear_data(oi: OpticalImage) -> OpticalImage:
+    """Clear computed data from an optical image while preserving configuration."""
+
+    cleared = oi.clone()
+    cleared.data.clear()
+    cleared.fields.pop("illuminance", None)
+    cleared.fields.pop("mean_illuminance", None)
+    cleared.fields.pop("mean_comp_illuminance", None)
+    cleared.fields["depth_map_m"] = None
+    _clear_precomputed_psf_state(cleared)
+
+    optics = dict(cleared.fields.get("optics", {}))
+    wavefront = optics.get("wavefront")
+    if isinstance(wavefront, dict):
+        optics["wavefront"] = wvf_clear_data(wavefront)
+    cleared.fields["optics"] = optics
+    return cleared
 
 
 def oi_crop(oi: OpticalImage, rect: Any) -> OpticalImage:

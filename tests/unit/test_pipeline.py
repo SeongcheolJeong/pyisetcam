@@ -10,6 +10,7 @@ from scipy import ndimage
 from pyisetcam.exceptions import UnsupportedOptionError
 from pyisetcam.parity import run_python_case_with_context
 from pyisetcam.utils import energy_to_quanta, tile_pattern
+from pyisetcam.utils import quanta_to_energy
 from pyisetcam import (
     blackbody,
     camera_acutance,
@@ -71,11 +72,14 @@ from pyisetcam import (
     optics_ray_trace,
     airy_disk,
     oi_calculate_illuminance,
+    oiClearData,
     oi_diffuser,
     oi_compute,
     oi_crop,
     oi_create,
     oi_get,
+    oiSaveImage,
+    oiShowImage,
     oi_plot,
     oi_spatial_resample,
     oi_set,
@@ -2311,6 +2315,56 @@ def test_oi_diffuser_blurs_photons_and_returns_kernel(asset_store) -> None:
     assert oi.data["photons"].shape == baseline.shape
     assert not np.allclose(oi.data["photons"], baseline)
     assert np.allclose(oi.fields["illuminance"], oi_get(oi, "illuminance"))
+
+
+def test_oi_clear_data_clears_computed_payloads_and_wvf_cache(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    oi = oi_compute(oi_create("wvf", wvf_create(wave=scene_get(scene, "wave")), asset_store=asset_store), scene, crop=True)
+    oi = oi_set(oi, "mean illuminance", 12.0)
+
+    cleared = oiClearData(oi)
+
+    assert cleared is not oi
+    assert cleared.data == {}
+    assert cleared.fields["depth_map_m"] is None
+    assert cleared.fields.get("mean_illuminance") is None
+    assert np.array_equal(np.asarray(oi_get(cleared, "wave"), dtype=float), np.asarray(oi_get(oi, "wave"), dtype=float))
+    assert isinstance(cleared.fields["optics"].get("wavefront"), dict)
+    assert cleared.fields["optics"]["wavefront"]["psf"] is None
+    assert cleared.fields["optics"]["wavefront"]["pupil_function"] is None
+
+
+def test_oi_show_image_matches_manual_render_and_gray_modes(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    oi = oi_compute(oi_create(asset_store=asset_store), scene, crop=True)
+
+    photons = np.asarray(oi_get(oi, "photons"), dtype=float)
+    wave = np.asarray(oi_get(oi, "wave"), dtype=float)
+    expected = xyz_to_srgb(xyz_from_energy(quanta_to_energy(photons, wave), wave, asset_store=asset_store))
+
+    rendered = oiShowImage(oi, 0, 1.0, asset_store=asset_store)
+    gamma_rendered = oiShowImage(oi, 1, 0.8, asset_store=asset_store)
+    gray = oiShowImage(oi, 2, 1.0, asset_store=asset_store)
+
+    assert rendered is not None
+    assert np.allclose(np.asarray(rendered, dtype=float), np.asarray(expected, dtype=float))
+    assert np.allclose(np.asarray(gamma_rendered, dtype=float), np.power(np.clip(np.asarray(expected, dtype=float), 0.0, None), 0.8))
+    assert gray is not None
+    assert np.asarray(gray, dtype=float).shape == np.asarray(rendered, dtype=float).shape
+    assert np.allclose(np.asarray(gray, dtype=float)[:, :, 0], np.asarray(gray, dtype=float)[:, :, 1])
+    assert np.allclose(np.asarray(gray, dtype=float)[:, :, 1], np.asarray(gray, dtype=float)[:, :, 2])
+
+
+def test_oi_save_image_appends_png_and_matches_headless_render(asset_store, tmp_path) -> None:
+    scene = scene_create(asset_store=asset_store)
+    oi = oi_compute(oi_create(asset_store=asset_store), scene, crop=True)
+
+    saved_path = oiSaveImage(oi, tmp_path / "oi_capture", asset_store=asset_store)
+    written = np.asarray(iio.imread(saved_path), dtype=float) / 255.0
+    expected = np.asarray(oiShowImage(oi, -1, 1.0, asset_store=asset_store), dtype=float)
+
+    assert saved_path.endswith(".png")
+    assert np.allclose(written, np.clip(np.round(np.clip(expected, 0.0, 1.0) * 255.0), 0.0, 255.0) / 255.0, atol=1.0 / 255.0)
 
 
 def test_optics_ray_trace_blur_matches_public_oi_diffuser(asset_store) -> None:
