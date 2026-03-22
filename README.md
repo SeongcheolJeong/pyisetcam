@@ -968,6 +968,10 @@ That same image-processing surface now also exposes
 `vcimage_iso_mtf(...)` / `vcimageISOMTF(...)`, matching the legacy MATLAB
 slanted-edge ISO 12233 convenience wrapper on top of the current
 `camera_mtf(...)` workflow.
+That same image-processing surface now also exposes
+`vcimage_vsnr(...)` / `vcimageVSNR(...)`, matching the legacy MATLAB
+ROI-based visual-SNR convenience wrapper on top of the current headless
+VSNR ROI computation.
 Scene/OI/IP ROI plotting helpers now expose the matching chromaticity and
 summary getters too: `sceneGet(..., 'chromaticity'/'roi chromaticity mean')`,
 `sceneGet(..., 'roi mean luminance')`, `oiGet(..., 'chromaticity'/'roi chromaticity mean')`,

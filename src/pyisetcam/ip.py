@@ -232,6 +232,32 @@ def vcimage_iso_mtf(
     return ip_set(result.vci.clone(), "name", "iso12233", session=session)
 
 
+def vcimage_vsnr(
+    ip: ImageProcessor,
+    dpi: float | None = None,
+    dist: float | None = None,
+    rect: Any | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[float, np.ndarray]:
+    """Legacy MATLAB wrapper for VSNR on an image-processor ROI."""
+
+    from .camera import _default_vsnr_rect, _ip_vsnr
+
+    if dpi is None:
+        dpi = float(ip_get(ip, "display dpi"))
+    if dist is None:
+        dist = float(ip_get(ip, "display viewing distance"))
+    del dpi, dist
+
+    rect_array = (
+        _default_vsnr_rect(ip)
+        if rect is None
+        else np.asarray(rect, dtype=int).reshape(-1)
+    )
+    return float(_ip_vsnr(ip, rect_array, asset_store=_store(asset_store))), rect_array.copy()
+
+
 def _ie_bilinear(planes: np.ndarray, cfa_pattern: np.ndarray) -> np.ndarray:
     rows, cols, nplanes = planes.shape
     extended = np.pad(planes, ((1, 1), (1, 1), (0, 0)), mode="reflect")
@@ -1669,3 +1695,4 @@ imageIlluminantCorrection = image_illuminant_correction  # noqa: N816
 imageColorBalance = image_color_balance  # noqa: N816
 vcimageSRGB = vcimage_srgb  # noqa: N816
 vcimageISOMTF = vcimage_iso_mtf  # noqa: N816
+vcimageVSNR = vcimage_vsnr  # noqa: N816

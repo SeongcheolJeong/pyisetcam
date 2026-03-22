@@ -62,6 +62,7 @@ from .ip import (
     vcimage_iso_mtf,
     vcimage_srgb,
     vcimage_clear_data,
+    vcimage_vsnr,
 )
 from .metrics import (
     ISOAcutance,
@@ -386,6 +387,8 @@ __all__ = [
     "vcimage_iso_mtf",
     "vcimageSRGB",
     "vcimage_srgb",
+    "vcimageVSNR",
+    "vcimage_vsnr",
     "ipSaveImage",
     "ip_save_image",
     "imageEsserTransform",
@@ -1005,6 +1008,7 @@ ipClearData = ip_clear_data
 vcimageClearData = vcimage_clear_data
 vcimageISOMTF = vcimage_iso_mtf
 vcimageSRGB = vcimage_srgb
+vcimageVSNR = vcimage_vsnr
 ipSaveImage = ip_save_image
 imageMCCTransform = image_mcc_transform
 imageSensorTransform = image_sensor_transform

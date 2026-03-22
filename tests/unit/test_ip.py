@@ -34,6 +34,7 @@ from pyisetcam import (
     vcimageClearData,
     vcimageISOMTF,
     vcimageSRGB,
+    vcimageVSNR,
     sensor_create,
     sensor_get,
     sensor_set,
@@ -683,6 +684,21 @@ def test_vcimage_iso_mtf_matches_camera_mtf_vci(asset_store) -> None:
         np.asarray(ip_get(generated, "srgb"), dtype=float),
         np.asarray(ip_get(reference, "srgb"), dtype=float),
     )
+
+
+def test_vcimage_vsnr_replays_same_score_with_returned_rect(asset_store) -> None:
+    ip = vcimageSRGB(asset_store=asset_store)
+
+    vsnr, rect = vcimageVSNR(ip, asset_store=asset_store)
+    replay_vsnr, replay_rect = vcimageVSNR(ip, rect=rect, asset_store=asset_store)
+
+    assert rect.shape == (4,)
+    assert rect[2] > 0
+    assert rect[3] > 0
+    assert np.isfinite(vsnr)
+    assert vsnr > 0.0
+    assert np.array_equal(replay_rect, rect)
+    assert np.isclose(replay_vsnr, vsnr, rtol=1.0e-12, atol=1.0e-12)
 
 
 def test_ip_save_image_writes_png_and_appends_extension(tmp_path, asset_store) -> None:
