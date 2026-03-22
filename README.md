@@ -907,6 +907,10 @@ That same image-processing surface now also exposes
 `image_illuminant_correction(...)` / `imageIlluminantCorrection(...)`,
 matching the direct MATLAB ICS white-balance entry point on top of the
 existing IP illuminant-correction path.
+That same image-processing surface now also exposes
+`image_rgb_to_xyz(...)` / `imageRGB2XYZ(...)`, matching the direct MATLAB
+display-linear RGB-to-XYZ entry point used by Macbeth and display-plot
+helpers while preserving RGB or XW data format.
 Scene/OI/IP ROI plotting helpers now expose the matching chromaticity and
 summary getters too: `sceneGet(..., 'chromaticity'/'roi chromaticity mean')`,
 `sceneGet(..., 'roi mean luminance')`, `oiGet(..., 'chromaticity'/'roi chromaticity mean')`,

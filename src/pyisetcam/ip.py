@@ -21,8 +21,10 @@ from .utils import (
     invert_gamma_table,
     linear_to_srgb,
     param_format,
+    rgb_to_xw_format,
     split_prefixed_parameter,
     tile_pattern,
+    xw_to_rgb_format,
 )
 
 
@@ -634,6 +636,32 @@ def image_illuminant_correction(
     return _restore_channel_image(corrected, squeeze_channel), corrected_ip, illuminant_transform
 
 
+def image_rgb_to_xyz(
+    ip: ImageProcessor,
+    rgb: np.ndarray,
+    *,
+    asset_store: AssetStore | None = None,
+) -> np.ndarray:
+    """Convert linear display RGB values into XYZ, preserving RGB or XW format."""
+
+    rgb_array = np.asarray(rgb, dtype=float)
+    rgb_flag = rgb_array.ndim != 2
+    if rgb_flag:
+        rgb_xw, rows, cols, _ = rgb_to_xw_format(rgb_array)
+    else:
+        rgb_xw = rgb_array
+        rows = cols = 0
+
+    spd = np.asarray(display_get(ip.fields["display"], "rgb spd"), dtype=float)
+    wave = np.asarray(display_get(ip.fields["display"], "wave"), dtype=float)
+    energy = rgb_xw @ spd.T
+    xyz = xyz_from_energy(energy, wave, asset_store=_store(asset_store))
+
+    if rgb_flag:
+        return xw_to_rgb_format(np.asarray(xyz, dtype=float), rows, cols)
+    return np.asarray(xyz, dtype=float)
+
+
 def _sensor_to_internal(
     sensor_space: np.ndarray,
     ip: ImageProcessor,
@@ -886,21 +914,7 @@ def image_data_xyz(
         data = vc_get_roi_data(ip, roi_locs, "result")
     if data is None:
         return None
-
-    rgb = np.asarray(data, dtype=float)
-    rgb_flag = rgb.ndim != 2
-    if rgb_flag:
-        rows, cols = rgb.shape[:2]
-        rgb = rgb.reshape(-1, rgb.shape[2])
-
-    spd = np.asarray(display_get(ip.fields["display"], "rgb spd"), dtype=float)
-    wave = np.asarray(display_get(ip.fields["display"], "wave"), dtype=float)
-    energy = rgb @ spd.T
-    xyz = xyz_from_energy(energy, wave, asset_store=_store(asset_store))
-
-    if rgb_flag:
-        xyz = xyz.reshape(rows, cols, 3)
-    return xyz
+    return image_rgb_to_xyz(ip, np.asarray(data, dtype=float), asset_store=asset_store)
 
 
 def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
@@ -1248,6 +1262,7 @@ def ip_set(
 
 
 imageDataXYZ = image_data_xyz  # noqa: N816
+imageRGB2XYZ = image_rgb_to_xyz  # noqa: N816
 Demosaic = demosaic  # noqa: N816
 imageSensorConversion = image_sensor_conversion  # noqa: N816
 imageSensorCorrection = image_sensor_correction  # noqa: N816

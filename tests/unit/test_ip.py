@@ -4,7 +4,9 @@ import numpy as np
 
 from pyisetcam import (
     demosaic,
+    imageDataXYZ,
     imageIlluminantCorrection,
+    imageRGB2XYZ,
     imageSensorConversion,
     imageSensorCorrection,
     ip_compute,
@@ -419,3 +421,55 @@ def test_image_illuminant_correction_preserves_2d_input(asset_store) -> None:
     assert np.allclose(corrected, img)
     assert illuminant_transform.shape == (1, 1)
     assert np.allclose(np.asarray(ip_get(corrected_ip, "ics"), dtype=float)[:, :, 0], img)
+
+
+def test_image_rgb_to_xyz_preserves_rgb_format(asset_store) -> None:
+    ip = ip_create(asset_store=asset_store)
+    rgb = np.array(
+        [
+            [[0.2, 0.4, 0.6], [0.1, 0.3, 0.5]],
+            [[0.7, 0.2, 0.1], [0.9, 0.8, 0.2]],
+        ],
+        dtype=float,
+    )
+
+    xyz = np.asarray(imageRGB2XYZ(ip, rgb, asset_store=asset_store), dtype=float)
+
+    assert xyz.shape == rgb.shape
+    manual = imageRGB2XYZ(ip, rgb.reshape(-1, 3), asset_store=asset_store).reshape(rgb.shape)
+    assert np.allclose(xyz, manual)
+
+
+def test_image_rgb_to_xyz_preserves_xw_format(asset_store) -> None:
+    ip = ip_create(asset_store=asset_store)
+    rgb_xw = np.array(
+        [
+            [0.2, 0.4, 0.6],
+            [0.1, 0.3, 0.5],
+            [0.7, 0.2, 0.1],
+            [0.9, 0.8, 0.2],
+        ],
+        dtype=float,
+    )
+
+    xyz_xw = np.asarray(imageRGB2XYZ(ip, rgb_xw, asset_store=asset_store), dtype=float)
+
+    assert xyz_xw.shape == rgb_xw.shape
+    assert np.allclose(xyz_xw, imageRGB2XYZ(ip, rgb_xw.copy(), asset_store=asset_store))
+
+
+def test_image_data_xyz_uses_image_rgb_to_xyz_for_result(asset_store) -> None:
+    ip = ip_create(asset_store=asset_store)
+    rgb = np.array(
+        [
+            [[0.25, 0.50, 0.75], [0.10, 0.20, 0.30]],
+            [[0.60, 0.40, 0.20], [0.90, 0.70, 0.50]],
+        ],
+        dtype=float,
+    )
+    ip.data["result"] = rgb
+
+    xyz_from_result = np.asarray(imageDataXYZ(ip, asset_store=asset_store), dtype=float)
+    xyz_direct = np.asarray(imageRGB2XYZ(ip, rgb, asset_store=asset_store), dtype=float)
+
+    assert np.allclose(xyz_from_result, xyz_direct)
