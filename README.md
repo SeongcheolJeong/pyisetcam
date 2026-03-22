@@ -297,7 +297,10 @@ MATLAB default `dv or volts` selection, plus headless
 PNG-export helper on top of the same rendered sensor RGB path, plus
 headless `sensor_show_cfa(...)` / `sensorShowCFA(...)` for the direct
 MATLAB CFA-pattern render helper on top of the same sensor rendering
-surface. That same Phase 1 sensor wave now also includes
+surface, plus headless `sensor_image_color_array(...)` /
+`sensorImageColorArray(...)` for the legacy CFA-letter to color-order map
+helper used by the older sensor CFA utilities. That same Phase 1 sensor
+wave now also includes
 public `sceneRotate(...)` / `oiCrop(...)` support for the deterministic
 rolling-shutter assembly path from `s_sensorRollingShutter.m`, with
 curated Octave parity on the per-frame mean-voltage trace, final

@@ -106,6 +106,25 @@ _SENSOR_FORMAT_ALIASES = {
     "sixteenthinch": "sixteenthinch",
     "sixteenth": "sixteenthinch",
 }
+_SENSOR_COLOR_ORDER = ("r", "g", "b", "c", "y", "m", "w", "i", "u", "x", "z", "o", "k")
+_SENSOR_COLOR_MAP = np.array(
+    [
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 0.0, 1.0],
+        [0.0, 1.0, 1.0],
+        [1.0, 1.0, 0.0],
+        [1.0, 0.0, 1.0],
+        [1.0, 1.0, 1.0],
+        [0.3, 0.3, 0.3],
+        [0.4, 0.7, 0.3],
+        [0.9, 0.6, 0.3],
+        [0.2, 0.5, 0.8],
+        [1.0, 0.6, 0.0],
+        [0.0, 0.0, 0.0],
+    ],
+    dtype=float,
+)
 
 
 def _store(asset_store: AssetStore | None) -> AssetStore:
@@ -2468,6 +2487,28 @@ def sensor_show_cfa(
     return None, np.asarray(cfa_img, dtype=float)
 
 
+def sensor_image_color_array(cfa: Any) -> tuple[np.ndarray, np.ndarray]:
+    """Convert a CFA letter array into MATLAB-style color-order indices and colormap."""
+
+    if cfa is None:
+        raise ValueError("cfa (letter array) required.")
+    cfa_array = np.asarray(cfa)
+    if cfa_array.ndim == 0:
+        cfa_letters = np.array([[str(cfa_array.item())]], dtype="<U1")
+    elif cfa_array.ndim == 1 and cfa_array.dtype.kind in {"U", "S", "O"} and all(
+        isinstance(item, str) for item in cfa_array.tolist()
+    ):
+        cfa_letters = np.array([list(str(item)) for item in cfa_array.tolist()], dtype="<U1")
+    else:
+        cfa_letters = np.asarray(cfa_array, dtype="<U1")
+
+    cfa_numbers = np.zeros(cfa_letters.shape, dtype=int)
+    lowered = np.char.lower(cfa_letters)
+    for index, letter in enumerate(_SENSOR_COLOR_ORDER, start=1):
+        cfa_numbers[lowered == letter] = index
+    return cfa_numbers, _SENSOR_COLOR_MAP.copy()
+
+
 def _sensor_chromaticity(sensor: Sensor, rect_or_locs: Any = None, mode: str = "vec") -> np.ndarray | None:
     from .ip import _sensor_space
 
@@ -4600,6 +4641,7 @@ sensorComputeSamples = sensor_compute_samples
 sensorDR = sensor_dr
 sensorCCM = sensor_ccm
 sensorClearData = sensor_clear_data
+sensorImageColorArray = sensor_image_color_array
 sensorShowCFA = sensor_show_cfa
 sensorShowImage = sensor_show_image
 sensorSaveImage = sensor_save_image

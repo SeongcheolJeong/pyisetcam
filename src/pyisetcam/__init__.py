@@ -238,6 +238,7 @@ from .sensor import (
     sensor_set,
     sensor_set_size_to_fov,
     sensor_save_image,
+    sensor_image_color_array,
     sensor_show_cfa,
     sensor_show_image,
 )
@@ -671,6 +672,7 @@ __all__ = [
     "sensorSet",
     "sensorSetSizeToFOV",
     "sensorSaveImage",
+    "sensorImageColorArray",
     "sensorShowCFA",
     "sensorShowImage",
     "sensor_compute",
@@ -690,6 +692,7 @@ __all__ = [
     "sensor_set",
     "sensor_set_size_to_fov",
     "sensor_save_image",
+    "sensor_image_color_array",
     "sensor_show_cfa",
     "sensor_show_image",
     "vcAddAndSelectObject",
@@ -892,6 +895,7 @@ pixelVperLuxSec = pixel_v_per_lux_sec
 sensorSet = sensor_set
 sensorSetSizeToFOV = sensor_set_size_to_fov
 sensorSaveImage = sensor_save_image
+sensorImageColorArray = sensor_image_color_array
 sensorShowCFA = sensor_show_cfa
 sensorShowImage = sensor_show_image
 

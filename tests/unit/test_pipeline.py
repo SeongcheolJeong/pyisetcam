@@ -149,6 +149,7 @@ from pyisetcam import (
     sensor_dng_read,
     sensor_formats,
     sensor_get,
+    sensorImageColorArray,
     sensor_plot,
     sensorSaveImage,
     sensorShowCFA,
@@ -4636,6 +4637,18 @@ def test_sensor_show_cfa_matches_plot_sensor_wrappers(asset_store) -> None:
     assert full_fig is None
     assert np.allclose(np.asarray(default_img, dtype=float), np.asarray(default_payload["img"], dtype=float))
     assert np.allclose(np.asarray(full_img, dtype=float), np.asarray(full_payload["img"], dtype=float))
+
+
+def test_sensor_image_color_array_matches_legacy_color_order() -> None:
+    cfa = np.array([["r", "g", "b"], ["c", "y", "o"]], dtype="<U1")
+
+    cfa_numbers, cfa_map = sensorImageColorArray(cfa)
+
+    assert np.array_equal(cfa_numbers, np.array([[1, 2, 3], [4, 5, 12]], dtype=int))
+    assert cfa_map.shape == (13, 3)
+    assert np.allclose(cfa_map[0], np.array([1.0, 0.0, 0.0], dtype=float))
+    assert np.allclose(cfa_map[7], np.array([0.3, 0.3, 0.3], dtype=float))
+    assert np.allclose(cfa_map[11], np.array([1.0, 0.6, 0.0], dtype=float))
 
 
 def test_sensor_set_etendue_scales_noiseless_response(asset_store) -> None:
