@@ -235,6 +235,8 @@ from .sensor import (
     sensor_create_split_pixel,
     sensor_formats,
     sensor_get,
+    sensor_color_order,
+    sensor_determine_cfa,
     sensor_image_color_array,
     sensor_set,
     sensor_set_size_to_fov,
@@ -663,6 +665,8 @@ __all__ = [
     "sensorGet",
     "sensorCCM",
     "sensorClearData",
+    "sensorColorOrder",
+    "sensorDetermineCFA",
     "signalCurrent",
     "signal_current",
     "sensor_ccm",
@@ -690,6 +694,8 @@ __all__ = [
     "sensor_dng_read",
     "sensor_formats",
     "sensor_get",
+    "sensor_color_order",
+    "sensor_determine_cfa",
     "pixelSNR",
     "sensor_set",
     "sensor_set_size_to_fov",
@@ -886,6 +892,8 @@ sensorComputeSamples = sensor_compute_samples
 imx490Compute = imx490_compute
 sensorCCM = sensor_ccm
 sensorClearData = sensor_clear_data
+sensorColorOrder = sensor_color_order
+sensorDetermineCFA = sensor_determine_cfa
 sensorDR = sensor_dr
 signalCurrent = signal_current
 sensorColorFilter = sensor_color_filter

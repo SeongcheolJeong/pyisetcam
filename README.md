@@ -302,6 +302,9 @@ surface, plus headless `sensor_image_color_array(...)` /
 helper used by the older sensor CFA utilities, plus headless
 `sensor_show_cfa_weights(...)` / `sensorShowCFAWeights(...)` for the
 weighted CFA-visualization helper used by the same legacy sensor CFA
+utilities, plus headless `sensor_color_order(...)` / `sensorColorOrder(...)`
+and `sensor_determine_cfa(...)` / `sensorDetermineCFA(...)` for the legacy
+CFA color-hint and tiled-pattern helpers used across the older sensor CFA
 utilities. That same Phase 1 sensor
 wave now also includes
 public `sceneRotate(...)` / `oiCrop(...)` support for the deterministic

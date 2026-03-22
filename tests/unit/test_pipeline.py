@@ -142,11 +142,13 @@ from pyisetcam import (
     sensor_compute_array,
     sensor_compute_samples,
     sensor_color_filter,
+    sensorColorOrder,
     sensor_crop,
     sensor_create,
     sensor_create_array,
     sensor_dr,
     sensor_dng_read,
+    sensorDetermineCFA,
     sensor_formats,
     sensor_get,
     sensorImageColorArray,
@@ -4650,6 +4652,47 @@ def test_sensor_image_color_array_matches_legacy_color_order() -> None:
     assert np.allclose(cfa_map[0], np.array([1.0, 0.0, 0.0], dtype=float))
     assert np.allclose(cfa_map[7], np.array([0.3, 0.3, 0.3], dtype=float))
     assert np.allclose(cfa_map[11], np.array([1.0, 0.6, 0.0], dtype=float))
+
+
+def test_sensor_color_order_matches_legacy_hint_map() -> None:
+    ordering_cell, cfa_map = sensorColorOrder()
+    ordering_string, string_map = sensorColorOrder("string")
+
+    assert ordering_cell == ["r", "g", "b", "c", "y", "m", "w", "i", "u", "x", "z", "o", "k"]
+    assert ordering_string == "rgbcymwiuxzok"
+    assert np.allclose(string_map, cfa_map)
+
+    numbers, remapped = sensorImageColorArray(np.array([list(ordering_string)], dtype="<U1"))
+    assert np.array_equal(numbers, np.arange(1, 14, dtype=int).reshape(1, -1))
+    assert np.allclose(remapped, cfa_map)
+
+
+def test_sensor_determine_cfa_tiles_legacy_pattern_and_colors(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 3)
+    sensor = sensor_set(sensor, "cols", 5)
+    rows = int(sensor_get(sensor, "rows"))
+    cols = int(sensor_get(sensor, "cols"))
+
+    cfa_letters, cfa_numbers, cfa_map = sensorDetermineCFA(sensor)
+
+    pattern = np.asarray(sensor_get(sensor, "pattern"), dtype=int)
+    expected_numbers = tile_pattern(pattern, rows, cols)
+    pattern_colors = np.asarray(sensor_get(sensor, "pattern colors"), dtype="<U1")
+    expected_letters = np.tile(
+        pattern_colors,
+        (
+            int(np.ceil(rows / pattern_colors.shape[0])),
+            int(np.ceil(cols / pattern_colors.shape[1])),
+        ),
+    )[:rows, :cols]
+    ordering_string, ordering_map = sensorColorOrder("string")
+    filter_letters = str(sensor_get(sensor, "filter color letters"))
+    expected_map = np.vstack([ordering_map[ordering_string.index(letter.lower())] for letter in filter_letters])
+
+    assert np.array_equal(cfa_numbers, expected_numbers)
+    assert np.array_equal(cfa_letters, expected_letters)
+    assert np.allclose(cfa_map, expected_map)
 
 
 def test_sensor_show_cfa_weights_matches_legacy_weighted_render(asset_store) -> None:

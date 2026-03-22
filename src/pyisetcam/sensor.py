@@ -2487,6 +2487,41 @@ def sensor_show_cfa(
     return None, np.asarray(cfa_img, dtype=float)
 
 
+def sensor_color_order(format: str = "cell") -> tuple[list[str] | str, np.ndarray]:
+    """Return the legacy ISET CFA color-hint ordering and its RGB colormap."""
+
+    normalized = param_format(format)
+    ordering = list(_SENSOR_COLOR_ORDER)
+    if normalized == "string":
+        return "".join(ordering), _SENSOR_COLOR_MAP.copy()
+    return ordering, _SENSOR_COLOR_MAP.copy()
+
+
+def sensor_determine_cfa(sensor: Sensor) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return tiled CFA letters, CFA numbers, and the per-filter RGB map."""
+
+    rows = int(sensor_get(sensor, "rows"))
+    cols = int(sensor_get(sensor, "cols"))
+    pattern = np.asarray(sensor_get(sensor, "pattern"), dtype=int)
+    cfa_numbers = tile_pattern(pattern, rows, cols)
+
+    pattern_colors = np.asarray(sensor_get(sensor, "pattern colors"), dtype="<U1")
+    row_tiles = int(np.ceil(rows / max(pattern_colors.shape[0], 1)))
+    col_tiles = int(np.ceil(cols / max(pattern_colors.shape[1], 1)))
+    cfa_letters = np.tile(pattern_colors, (row_tiles, col_tiles))[:rows, :cols]
+
+    ordering_string, ordering_map = sensor_color_order("string")
+    lookup = {letter: ordering_map[index] for index, letter in enumerate(ordering_string)}
+    fallback = lookup["k"]
+    filter_letters = str(sensor_get(sensor, "filter color letters"))
+    if filter_letters:
+        mp = np.vstack([lookup.get(letter.lower(), fallback) for letter in filter_letters])
+    else:
+        mp = np.zeros((0, 3), dtype=float)
+
+    return cfa_letters, cfa_numbers, np.asarray(mp, dtype=float)
+
+
 def sensor_image_color_array(cfa: Any) -> tuple[np.ndarray, np.ndarray]:
     """Convert a CFA letter array into MATLAB-style color-order indices and colormap."""
 
@@ -4699,6 +4734,8 @@ sensorComputeSamples = sensor_compute_samples
 sensorDR = sensor_dr
 sensorCCM = sensor_ccm
 sensorClearData = sensor_clear_data
+sensorColorOrder = sensor_color_order
+sensorDetermineCFA = sensor_determine_cfa
 sensorImageColorArray = sensor_image_color_array
 sensorShowCFA = sensor_show_cfa
 sensorShowCFAWeights = sensor_show_cfa_weights
