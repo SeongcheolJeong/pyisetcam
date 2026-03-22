@@ -26,6 +26,7 @@ from .utils import (
     DEFAULT_WAVE,
     apply_channelwise_gaussian,
     gaussian_sigma_pixels,
+    interp_spectra,
     param_format,
     quanta_to_energy,
     spectral_step,
@@ -5260,6 +5261,143 @@ def oi_calculate_illuminance(oi: OpticalImage) -> tuple[np.ndarray, float, float
     oi.fields["mean_illuminance"] = mean_illuminance
     oi.fields["mean_comp_illuminance"] = mean_comp_illuminance
     return illuminance, mean_illuminance, mean_comp_illuminance
+
+
+def oi_calculate_irradiance(scene: Scene, optics: Any) -> np.ndarray:
+    """Convert scene radiance into optical-image irradiance."""
+
+    optics_struct = dict(optics.fields.get("optics", {})) if isinstance(optics, OpticalImage) else dict(optics)
+    scene_photons = np.asarray(scene.data.get("photons", np.empty((0, 0, 0), dtype=float)), dtype=float)
+    return _radiance_to_irradiance(scene_photons, optics_struct, scene)
+
+
+def oi_adjust_illuminance(oi: OpticalImage, new_level: float, stat: str = "mean") -> OpticalImage:
+    """Scale an OI to the requested mean or peak illuminance."""
+
+    adjusted = oi.clone()
+    illuminance = np.asarray(oi_get(adjusted, "illuminance"), dtype=float)
+    if illuminance.size == 0:
+        return adjusted
+
+    mode = param_format(stat)
+    if mode == "mean":
+        current_level = float(np.mean(illuminance))
+    elif mode in {"max", "peak"}:
+        current_level = float(np.max(illuminance))
+    else:
+        raise ValueError(f"Unknown oiAdjustIlluminance statistic: {stat}")
+    if current_level <= 0.0:
+        return adjusted
+
+    scale = float(new_level) / current_level
+    photons = np.asarray(oi_get(adjusted, "photons"), dtype=float)
+    adjusted = oi_set(adjusted, "photons", photons * scale)
+    oi_calculate_illuminance(adjusted)
+    return adjusted
+
+
+def _oi_resample_wave_last(values: np.ndarray, source_wave_nm: np.ndarray, target_wave_nm: np.ndarray) -> np.ndarray:
+    wave_first = np.moveaxis(np.asarray(values, dtype=float), -1, 0)
+    resampled = interp_spectra(np.asarray(source_wave_nm, dtype=float), wave_first, np.asarray(target_wave_nm, dtype=float))
+    return np.moveaxis(np.asarray(resampled, dtype=float), 0, -1)
+
+
+def oi_interpolate_w(oi: OpticalImage, new_wave: Any) -> OpticalImage:
+    """Interpolate the wavelength dimension of an optical image."""
+
+    current = oi.clone()
+    source_wave = np.asarray(oi_get(current, "wave"), dtype=float).reshape(-1)
+    target_wave = np.asarray(new_wave, dtype=float).reshape(-1)
+    if target_wave.size == 0:
+        raise ValueError("oiInterpolateW target wavelength samples must not be empty.")
+    if source_wave.size == 0 or np.array_equal(source_wave, target_wave):
+        return oi_set(current, "wave", target_wave)
+    if float(np.min(target_wave)) < float(np.min(source_wave)) or float(np.max(target_wave)) > float(np.max(source_wave)):
+        raise ValueError("oiInterpolateW does not support extrapolation outside the current wavelength support.")
+
+    photons = np.asarray(oi_get(current, "photons"), dtype=float)
+    if photons.ndim != 3 or photons.shape[2] != source_wave.size:
+        raise ValueError("oiInterpolateW requires a wave-last OI photon cube.")
+    original_mean = float(oi_get(current, "mean illuminance"))
+    interpolated = _oi_resample_wave_last(photons, source_wave, target_wave)
+    current = oi_set(current, "wave", target_wave)
+    current = oi_set(current, "photons", interpolated)
+    oi_calculate_illuminance(current)
+    return oi_adjust_illuminance(current, original_mean, "mean")
+
+
+def oi_extract_waveband(oi: OpticalImage, wave_list: Any, illuminance_flag: Any = 0) -> OpticalImage:
+    """Extract the requested OI wavelength bands, interpolating when needed."""
+
+    current = oi.clone()
+    target_wave = np.asarray(wave_list, dtype=float).reshape(-1)
+    if target_wave.size == 0:
+        raise ValueError("oiExtractWaveband requires a non-empty wavelength list.")
+
+    source_wave = np.asarray(oi_get(current, "wave"), dtype=float).reshape(-1)
+    photons = np.asarray(oi_get(current, "photons"), dtype=float)
+    if photons.ndim != 3 or photons.shape[2] != source_wave.size:
+        raise ValueError("oiExtractWaveband requires a wave-last OI photon cube.")
+
+    extracted = _oi_resample_wave_last(photons, source_wave, target_wave)
+    current = oi_set(current, "wave", target_wave)
+    current = oi_set(current, "photons", extracted)
+    if bool(illuminance_flag):
+        oi_calculate_illuminance(current)
+    else:
+        current.fields.pop("illuminance", None)
+        current.fields.pop("mean_illuminance", None)
+        current.fields.pop("mean_comp_illuminance", None)
+    return current
+
+
+def oi_add(in1: Any, in2: Any, add_flag: str = "add") -> OpticalImage:
+    """Combine matched optical images using the legacy MATLAB oiAdd contract."""
+
+    flag = param_format(add_flag)
+    if flag not in {"add", "removespatialmean"}:
+        raise ValueError(f"Unknown oiAdd addFlag: {add_flag}")
+
+    def _prepare_component(component: OpticalImage, *, remove_spatial_mean: bool) -> np.ndarray:
+        photons = np.asarray(oi_get(component, "photons"), dtype=float)
+        if remove_spatial_mean:
+            photons = photons - np.mean(photons, axis=(0, 1), keepdims=True)
+        return photons
+
+    if isinstance(in1, (list, tuple)):
+        ois = list(in1)
+        weights = np.asarray(in2, dtype=float).reshape(-1)
+        if len(ois) == 0:
+            raise ValueError("oiAdd requires at least one optical image.")
+        if weights.size != len(ois):
+            raise ValueError("oiAdd weights must match the number of optical images.")
+        reference_shape = np.asarray(oi_get(ois[0], "photons"), dtype=float).shape
+        reference_wave = np.asarray(oi_get(ois[0], "wave"), dtype=float)
+        combined = weights[0] * np.asarray(oi_get(ois[0], "photons"), dtype=float)
+        for index, component in enumerate(ois[1:], start=1):
+            photons = np.asarray(oi_get(component, "photons"), dtype=float)
+            if photons.shape != reference_shape or not np.array_equal(np.asarray(oi_get(component, "wave"), dtype=float), reference_wave):
+                raise ValueError("oiAdd requires matched OI geometry and wavelength support.")
+            combined = combined + weights[index] * _prepare_component(component, remove_spatial_mean=(flag == "removespatialmean"))
+        output = ois[0].clone()
+    else:
+        reference_shape = np.asarray(oi_get(in1, "photons"), dtype=float).shape
+        other = np.asarray(oi_get(in2, "photons"), dtype=float)
+        if other.shape != reference_shape or not np.array_equal(np.asarray(oi_get(in1, "wave"), dtype=float), np.asarray(oi_get(in2, "wave"), dtype=float)):
+            raise ValueError("oiAdd requires matched OI geometry and wavelength support.")
+        combined = np.asarray(oi_get(in1, "photons"), dtype=float) + _prepare_component(in2, remove_spatial_mean=(flag == "removespatialmean"))
+        output = in1.clone()
+
+    output = oi_set(output, "photons", combined)
+    oi_calculate_illuminance(output)
+    return output
+
+
+oiCalculateIrradiance = oi_calculate_irradiance
+oiAdjustIlluminance = oi_adjust_illuminance
+oiInterpolateW = oi_interpolate_w
+oiExtractWaveband = oi_extract_waveband
+oiAdd = oi_add
 
 
 def _oi_rgb_render(oi: OpticalImage, *, asset_store: AssetStore | None = None) -> np.ndarray | None:

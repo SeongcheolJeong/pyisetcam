@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-22T22:07:23.978049+00:00",
+  "generated_at": "2026-03-22T22:38:52.645104+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -7,8 +7,8 @@
       "headless_only": 73,
       "missing": 40,
       "out_of_scope": 106,
-      "parity": 341,
-      "partial": 854,
+      "parity": 345,
+      "partial": 850,
       "ported": 29
     },
     "kind_counts": {
@@ -20,10 +20,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 397,
+      "P0": 393,
       "P1": 406,
       "P2": 164,
-      "P3": 476
+      "P3": 480
     },
     "delta_from_previous": {
       "status_counts": {
@@ -420,8 +420,8 @@
         "total": 37,
         "by_status": {
           "headless_only": 1,
-          "parity": 12,
-          "partial": 24
+          "parity": 16,
+          "partial": 20
         },
         "by_kind": {
           "api": 37
@@ -1032,16 +1032,6 @@
         }
       },
       {
-        "family": "opticalimage",
-        "open_entries": 25,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "headless_only": 1,
-          "parity": 12,
-          "partial": 24
-        }
-      },
-      {
         "family": "sensor",
         "open_entries": 25,
         "highest_open_priority": "P0",
@@ -1081,6 +1071,16 @@
           "headless_only": 1,
           "parity": 2,
           "partial": 21
+        }
+      },
+      {
+        "family": "opticalimage",
+        "open_entries": 21,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "headless_only": 1,
+          "parity": 16,
+          "partial": 20
         }
       },
       {
@@ -6026,14 +6026,15 @@
       "upstream_path": "opticalimage/oiAdjustIlluminance.m",
       "family": "opticalimage",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics",
+      "status": "parity",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/oiBirefringentDiffuser.m",
@@ -6066,14 +6067,15 @@
       "upstream_path": "opticalimage/oiCalculateIrradiance.m",
       "family": "opticalimage",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics",
+      "status": "parity",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/oiCalculateOTF.m",
@@ -6214,14 +6216,15 @@
       "upstream_path": "opticalimage/oiExtractWaveband.m",
       "family": "opticalimage",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics",
+      "status": "parity",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/oiFrequencyResolution.m",
@@ -6306,14 +6309,15 @@
       "upstream_path": "opticalimage/oiInterpolateW.m",
       "family": "opticalimage",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics",
+      "status": "parity",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/oiMakeEvenRowCol.m",
@@ -18879,7 +18883,7 @@
       "family": "data/images",
       "kind": "asset",
       "status": "partial",
-      "python_surface": "pyisetcam.__init__, pyisetcam.ip, pyisetcam.parity, pyisetcam.plotting",
+      "python_surface": "pyisetcam.__init__, pyisetcam.ip, pyisetcam.optics, pyisetcam.parity",
       "tests": [],
       "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
       "priority": "P2"

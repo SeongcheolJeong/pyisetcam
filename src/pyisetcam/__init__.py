@@ -115,14 +115,19 @@ from .optics import (
     optics_defocus_displacement,
     optics_dof,
     optics_ray_trace,
+    oi_add,
+    oi_adjust_illuminance,
     oi_calculate_illuminance,
+    oi_calculate_irradiance,
     oi_diffuser,
     oi_compute,
     oi_clear_data,
     oi_crop,
     oi_create,
+    oi_extract_waveband,
     oi_frequency_resolution,
     oi_get,
+    oi_interpolate_w,
     oi_save_image,
     oi_show_image,
     oi_space,
@@ -606,22 +611,32 @@ __all__ = [
     "oiCompute",
     "oiCreate",
     "oiCrop",
+    "oiAdd",
+    "oiAdjustIlluminance",
+    "oiCalculateIrradiance",
+    "oiExtractWaveband",
     "oiGet",
     "oiFrequencyResolution",
+    "oiInterpolateW",
     "oiSaveImage",
     "oiShowImage",
     "oiSpace",
     "oiSpatialSupport",
     "oiSpatialResample",
     "oiSet",
+    "oi_add",
+    "oi_adjust_illuminance",
     "oi_calculate_illuminance",
+    "oi_calculate_irradiance",
     "oi_clear_data",
     "oi_diffuser",
     "oi_compute",
     "oi_crop",
     "oi_create",
+    "oi_extract_waveband",
     "oi_frequency_resolution",
     "oi_get",
+    "oi_interpolate_w",
     "oi_plot",
     "oi_save_image",
     "oi_show_image",
@@ -990,8 +1005,13 @@ oiCreate = oi_create
 oiCompute = oi_compute
 oiClearData = oi_clear_data
 oiCrop = oi_crop
+oiAdd = oi_add
+oiAdjustIlluminance = oi_adjust_illuminance
+oiCalculateIrradiance = oi_calculate_irradiance
+oiExtractWaveband = oi_extract_waveband
 oiGet = oi_get
 oiFrequencyResolution = oi_frequency_resolution
+oiInterpolateW = oi_interpolate_w
 oiSaveImage = oi_save_image
 oiShowImage = oi_show_image
 oiSpace = oi_space

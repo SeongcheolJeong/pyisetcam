@@ -795,6 +795,13 @@ That same headless OI utility surface now also includes
 `oi_spatial_support(...)` / `oiSpatialSupport(...)`, and
 `oi_space(...)` / `oiSpace(...)` for the direct MATLAB OI geometry
 helper mini-family.
+That same headless OI utility surface now also includes
+`oi_calculate_irradiance(...)` / `oiCalculateIrradiance(...)`,
+`oi_adjust_illuminance(...)` / `oiAdjustIlluminance(...)`,
+`oi_interpolate_w(...)` / `oiInterpolateW(...)`,
+`oi_extract_waveband(...)` / `oiExtractWaveband(...)`, and
+`oi_add(...)` / `oiAdd(...)` for the legacy MATLAB OI spectral and
+irradiance helper mini-family.
 The `rtOTF` groundwork is also starting to land through public helper ports
 for `rt_block_center` / `rtBlockCenter`, `rt_extract_block` /
 `rtExtractBlock`, `rt_insert_block` / `rtInsertBlock`, and

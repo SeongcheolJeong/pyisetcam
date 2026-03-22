@@ -77,14 +77,19 @@ from pyisetcam import (
     optics_psf_to_otf,
     optics_ray_trace,
     airy_disk,
+    oiAdd,
+    oiAdjustIlluminance,
+    oiCalculateIrradiance,
     oi_calculate_illuminance,
     oiClearData,
     oi_diffuser,
     oi_compute,
     oi_crop,
     oi_create,
+    oiExtractWaveband,
     oi_frequency_resolution,
     oi_get,
+    oiInterpolateW,
     oiSaveImage,
     oiShowImage,
     oi_plot,
@@ -2451,6 +2456,71 @@ def test_oi_save_image_appends_png_and_matches_headless_render(asset_store, tmp_
 
     assert saved_path.endswith(".png")
     assert np.allclose(written, np.clip(np.round(np.clip(expected, 0.0, 1.0) * 255.0), 0.0, 255.0) / 255.0, atol=1.0 / 255.0)
+
+
+def test_oi_spectral_helper_wrappers_match_legacy_contract(asset_store) -> None:
+    wave = np.array([500.0, 600.0, 700.0], dtype=float)
+    scene = scene_create("uniform ee", 16, wave, asset_store=asset_store)
+    oi_base = oi_create("pinhole", asset_store=asset_store)
+    oi = oi_compute(oi_base, scene, crop=True)
+
+    expected_irradiance = np.asarray(oi_get(oi, "photons"), dtype=float)
+    irradiance = np.asarray(oiCalculateIrradiance(scene, oi_base), dtype=float)
+    assert np.allclose(irradiance, expected_irradiance)
+
+    photons = expected_irradiance.copy()
+    photons[:, :, 1] *= 2.0
+    photons[:, :, 2] *= 4.0
+    spectral_oi = oi_set(oi.clone(), "photons", photons)
+    oi_calculate_illuminance(spectral_oi)
+
+    adjusted_mean = oiAdjustIlluminance(spectral_oi, 25.0)
+    adjusted_peak = oiAdjustIlluminance(spectral_oi, 40.0, "peak")
+    assert np.isclose(float(oi_get(adjusted_mean, "mean illuminance")), 25.0, atol=1e-8, rtol=1e-8)
+    assert np.isclose(float(np.max(np.asarray(oi_get(adjusted_peak, "illuminance"), dtype=float))), 40.0, atol=1e-8, rtol=1e-8)
+
+    new_wave = np.array([500.0, 550.0, 600.0, 650.0, 700.0], dtype=float)
+    interpolated = oiInterpolateW(spectral_oi, new_wave)
+    expected_profile = np.interp(new_wave, wave, photons[0, 0, :])
+    manual_interpolated = oi_set(spectral_oi.clone(), "wave", new_wave)
+    manual_interpolated = oi_set(
+        manual_interpolated,
+        "photons",
+        np.broadcast_to(expected_profile.reshape(1, 1, -1), (photons.shape[0], photons.shape[1], new_wave.size)).copy(),
+    )
+    oi_calculate_illuminance(manual_interpolated)
+    expected_profile = expected_profile * (
+        float(oi_get(spectral_oi, "mean illuminance")) / float(oi_get(manual_interpolated, "mean illuminance"))
+    )
+    assert np.array_equal(np.asarray(oi_get(interpolated, "wave"), dtype=float), new_wave)
+    assert np.allclose(np.asarray(oi_get(interpolated, "photons"), dtype=float)[0, 0, :], expected_profile)
+    assert np.isclose(
+        float(oi_get(interpolated, "mean illuminance")),
+        float(oi_get(spectral_oi, "mean illuminance")),
+        atol=1e-8,
+        rtol=1e-8,
+    )
+
+    extracted = oiExtractWaveband(spectral_oi, np.array([550.0, 650.0], dtype=float))
+    extracted_with_illum = oiExtractWaveband(spectral_oi, np.array([550.0, 650.0], dtype=float), 1)
+    assert np.array_equal(np.asarray(oi_get(extracted, "wave"), dtype=float), np.array([550.0, 650.0], dtype=float))
+    assert np.allclose(
+        np.asarray(oi_get(extracted, "photons"), dtype=float)[0, 0, :],
+        np.interp(np.array([550.0, 650.0], dtype=float), wave, photons[0, 0, :]),
+    )
+    assert "illuminance" not in extracted.fields
+    assert np.asarray(oi_get(extracted_with_illum, "illuminance"), dtype=float).shape == photons.shape[:2]
+
+    added = oiAdd(spectral_oi, spectral_oi)
+    assert np.allclose(np.asarray(oi_get(added, "photons"), dtype=float), 2.0 * photons)
+
+    rows = photons.shape[0]
+    gradient = np.linspace(-1.0, 1.0, rows, dtype=float).reshape(rows, 1, 1)
+    contrast_oi = oi_set(spectral_oi.clone(), "photons", photons * (1.0 + 0.1 * gradient))
+    removed = oiAdd(spectral_oi, contrast_oi, "remove spatial mean")
+    contrast_photons = np.asarray(oi_get(contrast_oi, "photons"), dtype=float)
+    expected_removed = photons + (contrast_photons - np.mean(contrast_photons, axis=(0, 1), keepdims=True))
+    assert np.allclose(np.asarray(oi_get(removed, "photons"), dtype=float), expected_removed)
 
 
 def test_optics_ray_trace_blur_matches_public_oi_diffuser(asset_store) -> None:
