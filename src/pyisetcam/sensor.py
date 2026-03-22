@@ -21,6 +21,7 @@ from .optics import oi_get
 from .session import track_session_object
 from .types import OpticalImage, Scene, Sensor, SessionContext
 from .utils import DEFAULT_WAVE, blackbody, ensure_multiple, ie_parameter_otype, linear_to_srgb, param_format, tile_pattern, xyz_to_linear_srgb
+from .utils import image_increase_image_rgb_size
 
 _DEFAULT_PIXEL = {
     "name": "aps",
@@ -2438,6 +2439,35 @@ def sensor_save_image(
     return str(output_path)
 
 
+def sensor_show_cfa(
+    sensor: Sensor,
+    app: Any | None = None,
+    sz: Any | None = None,
+    s_scale: int | None = None,
+) -> tuple[None, np.ndarray]:
+    """Return the headless CFA-render image for the requested unit-block tiling."""
+
+    del app
+    render_sensor = sensor.clone()
+    pattern = np.asarray(sensor_get(sensor, "pattern"), dtype=int)
+    if sz is not None and np.asarray(sz).size != 0:
+        sz_array = np.asarray(sz, dtype=int).reshape(-1)
+        if sz_array.size != 2:
+            raise ValueError("sensorShowCFA sz must contain [rows, cols].")
+        pattern = np.tile(pattern, (int(sz_array[0]), int(sz_array[1])))
+    render_sensor.fields["pattern"] = pattern.copy()
+    render_sensor.fields["size"] = tuple(int(value) for value in pattern.shape)
+    render_sensor.data.clear()
+    render_sensor.data["volts"] = np.full(pattern.shape, float(sensor_get(sensor, "voltage swing")), dtype=float)
+    cfa_small = np.asarray(sensor_get(render_sensor, "rgb", "volts", 1.0, False), dtype=float)
+    if s_scale is None:
+        scale = 32 if cfa_small.shape[0] < 2 else 8 if cfa_small.shape[0] < 8 else 1
+    else:
+        scale = int(s_scale)
+    cfa_img = image_increase_image_rgb_size(cfa_small, [scale, scale]) if scale > 1 else cfa_small.copy()
+    return None, np.asarray(cfa_img, dtype=float)
+
+
 def _sensor_chromaticity(sensor: Sensor, rect_or_locs: Any = None, mode: str = "vec") -> np.ndarray | None:
     from .ip import _sensor_space
 
@@ -4570,5 +4600,6 @@ sensorComputeSamples = sensor_compute_samples
 sensorDR = sensor_dr
 sensorCCM = sensor_ccm
 sensorClearData = sensor_clear_data
+sensorShowCFA = sensor_show_cfa
 sensorShowImage = sensor_show_image
 sensorSaveImage = sensor_save_image

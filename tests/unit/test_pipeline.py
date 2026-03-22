@@ -151,6 +151,7 @@ from pyisetcam import (
     sensor_get,
     sensor_plot,
     sensorSaveImage,
+    sensorShowCFA,
     sensorShowImage,
     sensor_set_size_to_fov,
     sensor_set,
@@ -4619,6 +4620,22 @@ def test_sensor_save_image_appends_png_and_normalizes_rendering(asset_store, tmp
 
     assert saved_path.endswith(".png")
     assert np.allclose(written, expected, atol=1.0 / 255.0)
+
+
+def test_sensor_show_cfa_matches_plot_sensor_wrappers(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 4)
+    sensor = sensor_set(sensor, "cols", 4)
+
+    default_payload, _ = sensor_plot(sensor, "cfa")
+    full_payload, _ = sensor_plot(sensor, "cfafull")
+    default_fig, default_img = sensorShowCFA(sensor)
+    full_fig, full_img = sensorShowCFA(sensor, None, [2, 2], 8)
+
+    assert default_fig is None
+    assert full_fig is None
+    assert np.allclose(np.asarray(default_img, dtype=float), np.asarray(default_payload["img"], dtype=float))
+    assert np.allclose(np.asarray(full_img, dtype=float), np.asarray(full_payload["img"], dtype=float))
 
 
 def test_sensor_set_etendue_scales_noiseless_response(asset_store) -> None:
