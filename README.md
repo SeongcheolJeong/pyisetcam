@@ -150,9 +150,9 @@ This writes a JSON-compatible YAML ledger to
 `docs/migration-gap-ledger.yaml` and a summary snapshot to
 `reports/migration-gap/latest.json`.
 The audit now explicitly folds already-landed low-level demosaic internals,
-deprecated image-processing aliases, and GUI keypress hooks into covered or
-out-of-scope classifications instead of leaving them as false-positive
-`imgproc` gaps.
+deprecated image-processing aliases, MATLAB camelcase-to-Python snake_case
+wrapper matches, and GUI-only hooks into covered or out-of-scope
+classifications instead of leaving them as false-positive family gaps.
 
 Run the initial metrics helpers:
 

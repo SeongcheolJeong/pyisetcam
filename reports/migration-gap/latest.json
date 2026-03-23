@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-03-23T04:10:33.805989+00:00",
+  "generated_at": "2026-03-23T04:19:27.255182+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-23T04:10:33.805989+00:00",
+    "generated_at": "2026-03-23T04:19:27.255182+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 73,
-      "missing": 40,
-      "out_of_scope": 106,
-      "parity": 395,
-      "partial": 801,
-      "ported": 28
+      "headless_only": 91,
+      "missing": 37,
+      "out_of_scope": 107,
+      "parity": 437,
+      "partial": 739,
+      "ported": 32
     },
     "kind_counts": {
       "api": 661,
@@ -22,19 +22,19 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 344,
-      "P1": 406,
-      "P2": 164,
-      "P3": 529
+      "P0": 305,
+      "P1": 382,
+      "P2": 180,
+      "P3": 576
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": 0,
-        "missing": 0,
-        "out_of_scope": 0,
-        "parity": 11,
-        "partial": -11,
-        "ported": 0
+        "headless_only": 18,
+        "missing": -3,
+        "out_of_scope": 1,
+        "parity": 42,
+        "partial": -62,
+        "ported": 4
       },
       "kind_counts": {
         "api": 0,
@@ -45,18 +45,19 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -11,
-        "P1": 0,
-        "P2": 0,
-        "P3": 11
+        "P0": -39,
+        "P1": -24,
+        "P2": 16,
+        "P3": 47
       }
     },
     "family_summary": {
       "camera": {
         "total": 16,
         "by_status": {
+          "headless_only": 1,
           "parity": 8,
-          "partial": 8
+          "partial": 7
         },
         "by_kind": {
           "api": 16
@@ -67,9 +68,8 @@
         "total": 44,
         "by_status": {
           "headless_only": 3,
-          "parity": 28,
-          "partial": 11,
-          "ported": 2
+          "parity": 32,
+          "partial": 9
         },
         "by_kind": {
           "api": 44
@@ -79,8 +79,9 @@
       "cp": {
         "total": 12,
         "by_status": {
-          "missing": 11,
-          "out_of_scope": 1
+          "missing": 10,
+          "out_of_scope": 1,
+          "parity": 1
         },
         "by_kind": {
           "gui": 1,
@@ -232,8 +233,8 @@
         "total": 23,
         "by_status": {
           "out_of_scope": 6,
-          "parity": 3,
-          "partial": 13,
+          "parity": 5,
+          "partial": 11,
           "ported": 1
         },
         "by_kind": {
@@ -266,7 +267,8 @@
         "total": 24,
         "by_status": {
           "parity": 1,
-          "partial": 23
+          "partial": 22,
+          "ported": 1
         },
         "by_kind": {
           "api": 24
@@ -278,8 +280,8 @@
         "by_status": {
           "out_of_scope": 2,
           "parity": 24,
-          "partial": 26,
-          "ported": 7
+          "partial": 25,
+          "ported": 8
         },
         "by_kind": {
           "api": 59
@@ -396,21 +398,21 @@
       "metrics/metricsgui": {
         "total": 3,
         "by_status": {
-          "headless_only": 1,
-          "out_of_scope": 2
+          "out_of_scope": 2,
+          "parity": 1
         },
         "by_kind": {
           "api": 1,
           "gui": 2
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "metrics/scielab": {
         "total": 25,
         "by_status": {
           "headless_only": 2,
-          "parity": 6,
-          "partial": 13,
+          "parity": 8,
+          "partial": 11,
           "ported": 4
         },
         "by_kind": {
@@ -422,8 +424,9 @@
         "total": 37,
         "by_status": {
           "headless_only": 1,
+          "out_of_scope": 1,
           "parity": 18,
-          "partial": 18
+          "partial": 17
         },
         "by_kind": {
           "api": 37
@@ -466,7 +469,8 @@
         "total": 35,
         "by_status": {
           "parity": 21,
-          "partial": 14
+          "partial": 13,
+          "ported": 1
         },
         "by_kind": {
           "api": 35
@@ -487,8 +491,9 @@
       "opticalimage/wavefront": {
         "total": 49,
         "by_status": {
-          "parity": 29,
-          "partial": 18,
+          "headless_only": 1,
+          "parity": 30,
+          "partial": 16,
           "ported": 2
         },
         "by_kind": {
@@ -499,19 +504,19 @@
       "python": {
         "total": 1,
         "by_status": {
-          "missing": 1
+          "parity": 1
         },
         "by_kind": {
           "api": 1
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "scene": {
         "total": 45,
         "by_status": {
-          "parity": 24,
-          "partial": 17,
-          "ported": 4
+          "parity": 26,
+          "partial": 16,
+          "ported": 3
         },
         "by_kind": {
           "api": 45
@@ -521,7 +526,8 @@
       "scene/depth": {
         "total": 2,
         "by_status": {
-          "partial": 2
+          "parity": 1,
+          "partial": 1
         },
         "by_kind": {
           "api": 2
@@ -541,9 +547,8 @@
       "scene/illumination": {
         "total": 6,
         "by_status": {
-          "parity": 3,
-          "partial": 2,
-          "ported": 1
+          "parity": 4,
+          "partial": 2
         },
         "by_kind": {
           "api": 6
@@ -563,8 +568,8 @@
       "scene/macbeth": {
         "total": 16,
         "by_status": {
-          "parity": 3,
-          "partial": 13
+          "parity": 5,
+          "partial": 11
         },
         "by_kind": {
           "api": 16
@@ -574,9 +579,10 @@
       "scene/pattern": {
         "total": 23,
         "by_status": {
-          "parity": 3,
-          "partial": 18,
-          "ported": 2
+          "headless_only": 1,
+          "parity": 8,
+          "partial": 11,
+          "ported": 3
         },
         "by_kind": {
           "api": 23
@@ -607,7 +613,8 @@
       "scripts/data": {
         "total": 2,
         "by_status": {
-          "missing": 2
+          "missing": 1,
+          "parity": 1
         },
         "by_kind": {
           "script": 2
@@ -657,7 +664,8 @@
       "scripts/human": {
         "total": 11,
         "by_status": {
-          "partial": 11
+          "partial": 10,
+          "ported": 1
         },
         "by_kind": {
           "script": 11
@@ -667,8 +675,9 @@
       "scripts/image": {
         "total": 21,
         "by_status": {
+          "parity": 1,
           "partial": 19,
-          "ported": 2
+          "ported": 1
         },
         "by_kind": {
           "script": 21
@@ -721,8 +730,8 @@
       "scripts/sensor": {
         "total": 33,
         "by_status": {
-          "parity": 28,
-          "partial": 5
+          "parity": 29,
+          "partial": 4
         },
         "by_kind": {
           "script": 33
@@ -743,8 +752,8 @@
         "total": 56,
         "by_status": {
           "out_of_scope": 1,
-          "parity": 37,
-          "partial": 17,
+          "parity": 39,
+          "partial": 15,
           "ported": 1
         },
         "by_kind": {
@@ -789,7 +798,8 @@
         "by_status": {
           "out_of_scope": 1,
           "parity": 5,
-          "partial": 16
+          "partial": 11,
+          "ported": 5
         },
         "by_kind": {
           "api": 21,
@@ -800,8 +810,8 @@
       "sensor/models": {
         "total": 11,
         "by_status": {
-          "parity": 2,
-          "partial": 8,
+          "parity": 5,
+          "partial": 5,
           "ported": 1
         },
         "by_kind": {
@@ -813,9 +823,8 @@
         "total": 31,
         "by_status": {
           "out_of_scope": 3,
-          "parity": 10,
-          "partial": 17,
-          "ported": 1
+          "parity": 11,
+          "partial": 17
         },
         "by_kind": {
           "api": 28,
@@ -826,8 +835,8 @@
       "sensor/simulation": {
         "total": 25,
         "by_status": {
-          "parity": 7,
-          "partial": 18
+          "parity": 10,
+          "partial": 15
         },
         "by_kind": {
           "api": 25
@@ -837,7 +846,8 @@
       "tutorials/camera": {
         "total": 5,
         "by_status": {
-          "partial": 5
+          "parity": 1,
+          "partial": 4
         },
         "by_kind": {
           "tutorial": 5
@@ -887,7 +897,8 @@
       "tutorials/image": {
         "total": 4,
         "by_status": {
-          "partial": 4
+          "parity": 1,
+          "partial": 3
         },
         "by_kind": {
           "tutorial": 4
@@ -897,7 +908,8 @@
       "tutorials/metrics": {
         "total": 2,
         "by_status": {
-          "partial": 2
+          "parity": 1,
+          "partial": 1
         },
         "by_kind": {
           "tutorial": 2
@@ -928,21 +940,20 @@
       "tutorials/sensor": {
         "total": 7,
         "by_status": {
-          "parity": 6,
-          "partial": 1
+          "parity": 7
         },
         "by_kind": {
           "tutorial": 7
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "utility": {
         "total": 279,
         "by_status": {
-          "headless_only": 41,
+          "headless_only": 45,
           "out_of_scope": 1,
-          "parity": 9,
-          "partial": 228
+          "parity": 11,
+          "partial": 222
         },
         "by_kind": {
           "gui": 1,
@@ -964,10 +975,10 @@
       "utility/image": {
         "total": 46,
         "by_status": {
-          "headless_only": 1,
+          "headless_only": 6,
           "out_of_scope": 2,
-          "parity": 6,
-          "partial": 37
+          "parity": 7,
+          "partial": 31
         },
         "by_kind": {
           "gui": 2,
@@ -978,9 +989,9 @@
       "utility/plots": {
         "total": 50,
         "by_status": {
-          "headless_only": 9,
+          "headless_only": 16,
           "out_of_scope": 2,
-          "partial": 39
+          "partial": 32
         },
         "by_kind": {
           "gui": 2,
@@ -1013,17 +1024,6 @@
     },
     "top_open_families": [
       {
-        "family": "imgproc",
-        "open_entries": 26,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "out_of_scope": 2,
-          "parity": 24,
-          "partial": 26,
-          "ported": 7
-        }
-      },
-      {
         "family": "opticalimage/raytrace",
         "open_entries": 26,
         "highest_open_priority": "P0",
@@ -1033,63 +1033,36 @@
         }
       },
       {
+        "family": "imgproc",
+        "open_entries": 25,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "out_of_scope": 2,
+          "parity": 24,
+          "partial": 25,
+          "ported": 8
+        }
+      },
+      {
         "family": "opticalimage",
-        "open_entries": 19,
+        "open_entries": 18,
         "highest_open_priority": "P0",
         "by_status": {
           "headless_only": 1,
+          "out_of_scope": 1,
           "parity": 18,
-          "partial": 18
+          "partial": 17
         }
       },
       {
         "family": "opticalimage/wavefront",
-        "open_entries": 18,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 29,
-          "partial": 18,
-          "ported": 2
-        }
-      },
-      {
-        "family": "scene/pattern",
-        "open_entries": 18,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 3,
-          "partial": 18,
-          "ported": 2
-        }
-      },
-      {
-        "family": "sensor/simulation",
-        "open_entries": 18,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 7,
-          "partial": 18
-        }
-      },
-      {
-        "family": "scene",
         "open_entries": 17,
         "highest_open_priority": "P0",
         "by_status": {
-          "parity": 24,
-          "partial": 17,
-          "ported": 4
-        }
-      },
-      {
-        "family": "sensor",
-        "open_entries": 17,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "out_of_scope": 1,
-          "parity": 37,
-          "partial": 17,
-          "ported": 1
+          "headless_only": 1,
+          "parity": 30,
+          "partial": 16,
+          "ported": 2
         }
       },
       {
@@ -1098,41 +1071,78 @@
         "highest_open_priority": "P0",
         "by_status": {
           "out_of_scope": 3,
-          "parity": 10,
-          "partial": 17,
+          "parity": 11,
+          "partial": 17
+        }
+      },
+      {
+        "family": "scene",
+        "open_entries": 16,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 26,
+          "partial": 16,
+          "ported": 3
+        }
+      },
+      {
+        "family": "sensor",
+        "open_entries": 15,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "out_of_scope": 1,
+          "parity": 39,
+          "partial": 15,
           "ported": 1
         }
       },
       {
-        "family": "sensor/microlens",
-        "open_entries": 16,
+        "family": "sensor/simulation",
+        "open_entries": 15,
         "highest_open_priority": "P0",
         "by_status": {
-          "out_of_scope": 1,
-          "parity": 5,
-          "partial": 16
+          "parity": 10,
+          "partial": 15
+        }
+      },
+      {
+        "family": "metrics/iso",
+        "open_entries": 14,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 6,
+          "partial": 14
         }
       },
       {
         "family": "metrics/scielab",
-        "open_entries": 15,
+        "open_entries": 13,
         "highest_open_priority": "P0",
         "by_status": {
           "headless_only": 2,
-          "parity": 6,
-          "partial": 13,
+          "parity": 8,
+          "partial": 11,
           "ported": 4
         }
       },
       {
+        "family": "opticalimage/optics",
+        "open_entries": 13,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 21,
+          "partial": 13,
+          "ported": 1
+        }
+      },
+      {
         "family": "color",
-        "open_entries": 14,
+        "open_entries": 12,
         "highest_open_priority": "P0",
         "by_status": {
           "headless_only": 3,
-          "parity": 28,
-          "partial": 11,
-          "ported": 2
+          "parity": 32,
+          "partial": 9
         }
       }
     ],

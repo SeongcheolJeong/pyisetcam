@@ -199,6 +199,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is explicitly marked as not functional yet, so it remains outside the headless migration target.",
         "module_hits": [],
     },
+    "opticalimage/oiImageInitCustomStrings.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file only initializes GUI/window label strings and remains outside the headless migration target.",
+        "module_hits": [],
+    },
     "sensor/sensorUnitBlock.m": {
         "status": "out_of_scope",
         "note": "The upstream file is explicitly marked obsolete and does not implement a usable headless API surface.",
@@ -216,6 +221,10 @@ class InventoryEntry:
 
 def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="ignore")
+
+
+def _canonical_signal(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", text.lower())
 
 
 def _json_yaml_dump(data: Any) -> str:
@@ -336,14 +345,26 @@ def _family_tests(family: str) -> list[str]:
     return []
 
 
-def _module_texts() -> dict[str, str]:
-    return {path.stem: _read_text(path).lower() for path in sorted(SRC_ROOT.glob("*.py"))}
+def _module_texts() -> dict[str, dict[str, str]]:
+    module_texts: dict[str, dict[str, str]] = {}
+    for path in sorted(SRC_ROOT.glob("*.py")):
+        raw_text = _read_text(path).lower()
+        module_texts[path.stem] = {
+            "raw": raw_text,
+            "canonical": _canonical_signal(raw_text),
+        }
+    return module_texts
 
 
-def _module_hits(stem: str, module_texts: dict[str, str]) -> list[str]:
+def _module_hits(stem: str, module_texts: dict[str, dict[str, str]]) -> list[str]:
     if len(stem) < 6:
         return []
-    hits = [f"pyisetcam.{name}" for name, text in module_texts.items() if stem in text]
+    canonical_stem = _canonical_signal(stem)
+    hits = [
+        f"pyisetcam.{name}"
+        for name, text_bundle in module_texts.items()
+        if canonical_stem in text_bundle["canonical"]
+    ]
     return hits[:4]
 
 
@@ -361,7 +382,9 @@ def _docs_text() -> str:
 def _contains_signal(text: str, token: str) -> bool:
     if len(token) < 6:
         return False
-    return token in text
+    if token in text:
+        return True
+    return _canonical_signal(token) in _canonical_signal(text)
 
 
 def _status_and_note(
@@ -370,7 +393,7 @@ def _status_and_note(
     docs_text: str,
     tests_text: str,
     case_text: str,
-    module_texts: dict[str, str],
+    module_texts: dict[str, dict[str, str]],
 ) -> tuple[str, str, list[str]]:
     basename = Path(entry.upstream_path).name.lower()
     stem = Path(entry.upstream_path.rstrip("/")).stem.lower()
