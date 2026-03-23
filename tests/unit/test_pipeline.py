@@ -306,6 +306,8 @@ from pyisetcam import (
     spd_to_cct,
     srgb_to_color_temp,
     wvf_aperture,
+    wvfApply,
+    wvf2SiPsf,
     wvf_compute,
     wvf_compute_psf,
     wvf_clear_data,
@@ -313,6 +315,7 @@ from pyisetcam import (
     wvf_defocus_diopters_to_microns,
     wvf_defocus_microns_to_diopters,
     wvf_get,
+    wvfKeySynonyms,
     wvf_load_thibos_virtual_eyes,
     wvf_osa_index_to_vector_index,
     wvf_osa_index_to_zernike_nm,
@@ -14036,6 +14039,51 @@ def test_wvf_root_path_and_summary_helpers_match_headless_contract() -> None:
     assert "zCoeffs:" in summary
     assert "Max OTF freq" in summary
     assert "Max PSF support" in summary
+
+
+def test_wvf_key_synonyms_normalizes_strings_and_key_value_pairs() -> None:
+    assert wvfKeySynonyms("measured wavelength") == "measuredwl"
+    assert wvfKeySynonyms("zcoef") == "zcoeffs"
+
+    canonical = wvfKeySynonyms(["wave", np.array([500.0, 600.0], dtype=float), "stiles crawford", "demo"])
+    assert canonical[0] == "calcwavelengths"
+    assert np.array_equal(np.asarray(canonical[1], dtype=float), np.array([500.0, 600.0], dtype=float))
+    assert canonical[2] == "sceparams"
+    assert canonical[3] == "demo"
+
+    tuple_form = wvfKeySynonyms(("defocus diopters", 1.5))
+    assert isinstance(tuple_form, tuple)
+    assert tuple_form[0] == "calcobserverfocuscorrection"
+    assert tuple_form[1] == 1.5
+
+
+def test_wvf2sipsf_returns_shift_invariant_psf_data() -> None:
+    wvf = wvf_create(wave=np.array([500.0, 600.0], dtype=float))
+    wvf = wvf_set(wvf, "pupil diameter", 3.0, "mm")
+
+    alias_data, alias_computed = wvf2SiPsf(wvf)
+    direct_data, direct_computed = wvf2PSF(wvf, False)
+    custom_data, _ = wvf2SiPsf(wvf, "nPSFSamples", 33, "umPerSample", 0.5)
+
+    assert alias_computed["computed"] is True
+    assert direct_computed["computed"] is True
+    assert np.allclose(np.asarray(alias_data["psf"], dtype=float), np.asarray(direct_data["psf"], dtype=float))
+    assert np.allclose(np.asarray(alias_data["wave"], dtype=float), np.array([500.0, 600.0], dtype=float))
+    assert np.allclose(np.asarray(alias_data["umPerSamp"], dtype=float), np.array([0.25, 0.25], dtype=float))
+    assert np.asarray(custom_data["psf"], dtype=float).shape == (33, 33, 2)
+    assert np.allclose(np.asarray(custom_data["umPerSamp"], dtype=float), np.array([0.5, 0.5], dtype=float))
+
+
+def test_wvf_apply_matches_direct_wvf_to_oi_compute_path(asset_store) -> None:
+    scene = scene_create("checkerboard", 8, 4, asset_store=asset_store)
+    wvf = wvf_create(wave=np.asarray(scene_get(scene, "wave"), dtype=float))
+    wvf = wvf_set(wvf, "zcoeffs", np.array([1.0], dtype=float), "defocus")
+
+    applied = wvfApply(scene, wvf)
+    direct = oi_compute(wvf_to_oi(wvf_compute_psf(wvf, "computepupilfunc", True)), scene)
+
+    assert np.allclose(np.asarray(applied.data["photons"], dtype=float), np.asarray(direct.data["photons"], dtype=float))
+    assert applied.fields["optics"]["wavefront"]["computed"] is True
 
 
 def test_run_python_case_supports_wvf_osa_index_conversion_parity_case(asset_store) -> None:

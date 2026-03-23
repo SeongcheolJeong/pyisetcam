@@ -225,6 +225,21 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file only initializes GUI/window label strings and remains outside the headless migration target.",
         "module_hits": [],
     },
+    "opticalimage/wavefront/RandomDirtyApertureDeprecate.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a deprecated Computer Vision Toolbox dirty-aperture generator rather than a reusable headless WVF API surface.",
+        "module_hits": [],
+    },
+    "opticalimage/wavefront/underDevelopment_wavefront/wvfComputeOptimizedConePSF.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file lives under underDevelopment_wavefront and remains an experimental prototype outside the supported headless target.",
+        "module_hits": [],
+    },
+    "opticalimage/wavefront/underDevelopment_wavefront/wvfComputeOptimizedPSF.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file lives under underDevelopment_wavefront and remains an experimental prototype outside the supported headless target.",
+        "module_hits": [],
+    },
     "opticalimage/optics/airyDiskPlot.m": {
         "status": "out_of_scope",
         "note": "The upstream file is explicitly deprecated and only adjusts live MATLAB figure state for an existing PSF plot.",

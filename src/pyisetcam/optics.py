@@ -2529,6 +2529,91 @@ wvfSummarize = wvf_summarize
 wvfPrint = wvf_print
 
 
+_WVF_KEY_SYNONYMS = {
+    "name": "name",
+    "type": "type",
+    "umperdegree": "umperdegree",
+    "zcoeffs": "zcoeffs",
+    "zcoeff": "zcoeffs",
+    "zcoef": "zcoeffs",
+    "wavefrontaberrations": "wavefrontaberrations",
+    "pupilfunction": "pupilfunction",
+    "pupilfunc": "pupilfunction",
+    "pupfun": "pupilfunction",
+    "measuredpupilsize": "measuredpupil",
+    "measuredpupil": "measuredpupil",
+    "measuredpupilmm": "measuredpupil",
+    "measuredpupildiameter": "measuredpupil",
+    "measuredwave": "measuredwl",
+    "measuredwl": "measuredwl",
+    "measuredwavelength": "measuredwl",
+    "measuredopticalaxis": "measuredopticalaxis",
+    "measuredopticalaxisdeg": "measuredopticalaxis",
+    "measuredobserveraccommodation": "measuredobserveraccommodation",
+    "measuredobserveraccommodationdiopters": "measuredobserveraccommodation",
+    "measuredobserverfocuscorrection": "measuredobserverfocuscorrection",
+    "measuredobserverfocuscorrectiondiopters": "measuredobserverfocuscorrection",
+    "sampleintervaldomain": "sampleintervaldomain",
+    "numberspatialsamples": "spatialsamples",
+    "spatialsamples": "spatialsamples",
+    "npixels": "spatialsamples",
+    "fieldsizepixels": "spatialsamples",
+    "refpupilplanesize": "refpupilplanesize",
+    "refpupilplanesizemm": "refpupilplanesize",
+    "fieldsizemm": "refpupilplanesize",
+    "refpupilplanesampleinterval": "refpupilplanesampleinterval",
+    "fieldsamplesize": "refpupilplanesampleinterval",
+    "refpupilplanesampleintervalmm": "refpupilplanesampleinterval",
+    "fieldsamplesizemmperpixel": "refpupilplanesampleinterval",
+    "refpsfsampleinterval": "refpsfsampleinterval",
+    "refpsfarcminpersample": "refpsfsampleinterval",
+    "refpsfarcminperpixel": "refpsfsampleinterval",
+    "calcpupilsize": "calcpupilsize",
+    "calcpupildiameter": "calcpupilsize",
+    "calculatedpupil": "calcpupilsize",
+    "calculatedpupildiameter": "calcpupilsize",
+    "calcopticalaxis": "calcopticalaxis",
+    "calcobserveraccommodation": "calcobserveraccommodation",
+    "calcobserverfocuscorrection": "calcobserverfocuscorrection",
+    "defocusdiopters": "calcobserverfocuscorrection",
+    "calcwave": "calcwavelengths",
+    "calcwavelengths": "calcwavelengths",
+    "wavelengths": "calcwavelengths",
+    "wavelength": "calcwavelengths",
+    "wls": "calcwavelengths",
+    "wave": "calcwavelengths",
+    "calcconepsfinfo": "calcconepsfinfo",
+    "sceparams": "sceparams",
+    "stilescrawford": "sceparams",
+}
+
+
+def _wvf_canonical_key(key: str) -> str:
+    normalized = param_format(key).replace("_", "").replace("-", "")
+    return _WVF_KEY_SYNONYMS.get(normalized, normalized)
+
+
+def wvf_key_synonyms(key_values: Any) -> Any:
+    """Convert a MATLAB-style WVF key or key/value list to canonical form."""
+
+    if isinstance(key_values, str):
+        return _wvf_canonical_key(key_values)
+
+    if not isinstance(key_values, (list, tuple)):
+        raise ValueError("wvfKeySynonyms expects a string or a list/tuple of key/value pairs.")
+
+    canonical = list(key_values)
+    for index in range(0, len(canonical), 2):
+        key = canonical[index]
+        if not isinstance(key, str):
+            raise ValueError("wvfKeySynonyms expects string keys in odd positions.")
+        canonical[index] = _wvf_canonical_key(key)
+
+    if isinstance(key_values, tuple):
+        return tuple(canonical)
+    return canonical
+
+
 def _human_wave_defocus(wave_nm: Any) -> np.ndarray:
     wave = np.asarray(wave_nm, dtype=float)
     q1 = 1.7312
@@ -3668,29 +3753,95 @@ def wvf_to_oi(wvf: dict[str, Any]) -> OpticalImage:
     return oi_create("wvf", current)
 
 
-def wvf_to_psf(
+def _wvf_to_shift_invariant_psf_data(
     wvf: dict[str, Any],
-    show_bar: bool | None = None,
+    *,
+    n_psf_samples: int = 128,
+    um_per_sample: float = 0.25,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    del show_bar
-    current = dict(wvf if wvf.get("psf") is not None else wvf_compute_psf(wvf))
+    current = dict(wvf if wvf.get("psf") is not None else wvf_compute(wvf))
     wave = np.asarray(wvf_get(current, "wave"), dtype=float).reshape(-1)
 
-    n_pix = 128
-    um_per_samp = np.array([0.25, 0.25], dtype=float)
-    sample_axis = (np.arange(1, n_pix + 1, dtype=float) * um_per_samp[0])
-    sample_axis = sample_axis - float(np.mean(sample_axis))
-    target_x, target_y = np.meshgrid(sample_axis, sample_axis, indexing="xy")
+    n_pix = int(n_psf_samples)
+    if n_pix <= 0:
+        raise ValueError("nPSFSamples must be positive.")
+    sample_spacing_um = float(um_per_sample)
+    if sample_spacing_um <= 0.0:
+        raise ValueError("umPerSample must be positive.")
+
+    out_samp = ((np.arange(1, n_pix + 1, dtype=float) - (np.floor(n_pix / 2.0) + 1.0)) * sample_spacing_um).reshape(-1)
+    target_x, target_y = np.meshgrid(out_samp, out_samp, indexing="xy")
     target_points = np.column_stack((target_y.reshape(-1), target_x.reshape(-1)))
     psf = np.zeros((n_pix, n_pix, wave.size), dtype=float)
 
     for band_index, wavelength_nm in enumerate(wave):
         plane = np.asarray(wvf_get(current, "psf", float(wavelength_nm)), dtype=float)
         support = np.asarray(wvf_get(current, "psf spatial samples", "um", float(wavelength_nm)), dtype=float).reshape(-1)
+        if support.shape == out_samp.shape and np.max(np.abs(support - out_samp)) < 1e-10:
+            psf[:, :, band_index] = plane
+            continue
         interpolator = RegularGridInterpolator((support, support), plane, bounds_error=False, fill_value=0.0)
         psf[:, :, band_index] = interpolator(target_points).reshape(n_pix, n_pix)
 
-    return _export_shift_invariant_psf_data({"psf": psf, "wave": wave.copy(), "umPerSamp": um_per_samp.copy()}), current
+    um_per_samp = np.array([sample_spacing_um, sample_spacing_um], dtype=float)
+    return _export_shift_invariant_psf_data({"psf": psf, "wave": wave.copy(), "umPerSamp": um_per_samp}), current
+
+
+def wvf_to_si_psf(
+    wvf: dict[str, Any],
+    *args: Any,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Convert a WVF structure to MATLAB-style shift-invariant PSF data."""
+
+    options = _parse_key_value_options(args, "wvf2SiPsf") if args else {}
+    show_bar = _logical_scalar(options.pop("showbar", False)) if "showbar" in options else False
+    n_psf_samples = int(options.pop("npsfsamples", 128))
+    um_per_sample = float(options.pop("umpersample", 0.25))
+    if options:
+        unsupported = next(iter(options))
+        raise KeyError(f"Unsupported wvf2SiPsf parameter: {unsupported}")
+    del show_bar
+    return _wvf_to_shift_invariant_psf_data(
+        wvf,
+        n_psf_samples=n_psf_samples,
+        um_per_sample=um_per_sample,
+    )
+
+
+def wvf_to_psf(
+    wvf: dict[str, Any],
+    show_bar: bool | None = None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    del show_bar
+    return _wvf_to_shift_invariant_psf_data(wvf, n_psf_samples=128, um_per_sample=0.25)
+
+
+def wvf_apply(
+    scene: Scene,
+    wvf: dict[str, Any],
+    *args: Any,
+) -> OpticalImage:
+    """Headless compatibility wrapper for the deprecated MATLAB `wvfApply` helper."""
+
+    options = _parse_key_value_options(args, "wvfApply") if args else {}
+    lca = _logical_scalar(options.pop("lca", False)) if "lca" in options else False
+    compute_pupil_func = True
+    if "computepupilfunc" in options:
+        compute_pupil_func = _logical_scalar(options.pop("computepupilfunc"))
+    if "computepupilfunction" in options:
+        compute_pupil_func = _logical_scalar(options.pop("computepupilfunction"))
+    if options:
+        unsupported = next(iter(options))
+        raise KeyError(f"Unsupported wvfApply parameter: {unsupported}")
+
+    computed_wvf = wvf_compute_psf(
+        wvf,
+        "lca",
+        lca,
+        "computepupilfunc",
+        compute_pupil_func,
+    )
+    return oi_compute(wvf_to_oi(computed_wvf), scene)
 
 
 def wvf_to_optics(wvf: dict[str, Any]) -> dict[str, Any]:
@@ -3704,6 +3855,11 @@ def wvf_to_optics(wvf: dict[str, Any]) -> dict[str, Any]:
     optics["psf_data"] = normalized_psf
     optics.update(_custom_shift_invariant_otf_bundle(normalized_psf, samples=128, sample_spacing_um=0.25))
     return optics
+
+
+wvfKeySynonyms = wvf_key_synonyms
+wvf2SiPsf = wvf_to_si_psf
+wvfApply = wvf_apply
 
 
 def _normalize_public_optics(optics: dict[str, Any]) -> dict[str, Any]:

@@ -567,6 +567,11 @@ That same script-driven WVF helper surface now also includes headless
 legacy toolbox-location and text-summary helpers built on top of the same
 WVF core metadata.
 That same script-driven WVF helper surface now also includes headless
+`wvf_key_synonyms(...)` / `wvfKeySynonyms(...)`, `wvf_to_si_psf(...)` /
+`wvf2SiPsf(...)`, and `wvf_apply(...)` / `wvfApply(...)`, matching the
+legacy key-canonicalization, shift-invariant PSF export, and deprecated
+scene-to-OI compatibility wrappers on top of the existing WVF compute path.
+That same script-driven WVF helper surface now also includes headless
 `psf_find_peak(...)` / `psfFindPeak(...)`, `psf_volume(...)` /
 `psfVolume(...)`, `psf_center(...)` / `psfCenter(...)`, and
 `psf_find_criterion_radius(...)` / `psfFindCriterionRadius(...)` for the

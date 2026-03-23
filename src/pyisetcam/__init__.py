@@ -226,6 +226,7 @@ from .optics import (
     si_synthetic,
     wvf_aperture,
     wvf_aperture_params,
+    wvf_apply,
     wvf_compute,
     wvf_compute_psf,
     wvf_clear_data,
@@ -233,6 +234,7 @@ from .optics import (
     wvf_defocus_diopters_to_microns,
     wvf_defocus_microns_to_diopters,
     wvf_get,
+    wvf_key_synonyms,
     wvf_load_thibos_virtual_eyes,
     wvf_osa_index_to_vector_index,
     wvf_osa_index_to_zernike_nm,
@@ -242,6 +244,7 @@ from .optics import (
     wvf_root_path,
     wvf_set,
     wvf_summarize,
+    wvf_to_si_psf,
     wvf_to_oi,
     wvf_to_optics,
     wvf_to_psf,
@@ -1216,10 +1219,13 @@ __all__ = [
     "wvfCompute",
     "wvfAperture",
     "wvfApertureP",
+    "wvfApply",
     "wvfCreate",
     "wvfComputePSF",
+    "wvf2SiPsf",
     "wvfClearData",
     "wvfGet",
+    "wvfKeySynonyms",
     "wvfLoadThibosVirtualEyes",
     "wvfOSAIndexToVectorIndex",
     "wvfOSAIndexToZernikeNM",
@@ -1238,12 +1244,14 @@ __all__ = [
     "wvfDefocusMicronsToDiopters",
     "wvf_aperture",
     "wvf_aperture_params",
+    "wvf_apply",
     "wvf_create",
     "wvf_compute_psf",
     "wvf_clear_data",
     "wvf_defocus_diopters_to_microns",
     "wvf_defocus_microns_to_diopters",
     "wvf_get",
+    "wvf_key_synonyms",
     "wvf_load_thibos_virtual_eyes",
     "wvf_osa_index_to_vector_index",
     "wvf_osa_index_to_zernike_nm",
@@ -1253,6 +1261,7 @@ __all__ = [
     "wvf_root_path",
     "wvf_set",
     "wvf_summarize",
+    "wvf_to_si_psf",
     "wvf_to_oi",
     "wvf_to_optics",
     "wvf_to_psf",
@@ -1415,11 +1424,14 @@ sceCreate = sce_create
 sceGet = sce_get
 wvfAperture = wvf_aperture
 wvfApertureP = wvf_aperture_params
+wvfApply = wvf_apply
 wvfCompute = wvf_compute
 wvfComputePSF = wvf_compute_psf
+wvf2SiPsf = wvf_to_si_psf
 wvfClearData = wvf_clear_data
 wvfCreate = wvf_create
 wvfGet = wvf_get
+wvfKeySynonyms = wvf_key_synonyms
 wvfLoadThibosVirtualEyes = wvf_load_thibos_virtual_eyes
 wvfOSAIndexToVectorIndex = wvf_osa_index_to_vector_index
 wvfOSAIndexToZernikeNM = wvf_osa_index_to_zernike_nm
