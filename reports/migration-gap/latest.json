@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-23T15:47:41.046023+00:00",
+  "generated_at": "2026-03-23T16:20:39.959825+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-23T15:47:41.046023+00:00",
+    "generated_at": "2026-03-23T16:20:39.959825+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 92,
       "missing": 37,
-      "out_of_scope": 125,
-      "parity": 521,
-      "partial": 632,
+      "out_of_scope": 131,
+      "parity": 526,
+      "partial": 621,
       "ported": 36
     },
     "kind_counts": {
@@ -22,18 +22,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 199,
+      "P0": 188,
       "P1": 381,
       "P2": 181,
-      "P3": 682
+      "P3": 693
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 0,
-        "parity": 3,
-        "partial": -3,
+        "out_of_scope": 6,
+        "parity": 5,
+        "partial": -11,
         "ported": 0
       },
       "kind_counts": {
@@ -45,10 +45,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -3,
+        "P0": -11,
         "P1": 0,
         "P2": 0,
-        "P3": 3
+        "P3": 11
       }
     },
     "family_summary": {
@@ -801,16 +801,15 @@
       "sensor/microlens": {
         "total": 22,
         "by_status": {
-          "out_of_scope": 1,
-          "parity": 5,
-          "partial": 11,
+          "out_of_scope": 7,
+          "parity": 10,
           "ported": 5
         },
         "by_kind": {
           "api": 21,
           "gui": 1
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "sensor/models": {
         "total": 11,
@@ -1060,17 +1059,6 @@
         }
       },
       {
-        "family": "sensor/microlens",
-        "open_entries": 11,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "out_of_scope": 1,
-          "parity": 5,
-          "partial": 11,
-          "ported": 5
-        }
-      },
-      {
         "family": "opticalimage",
         "open_entries": 10,
         "highest_open_priority": "P0",
@@ -1144,6 +1132,17 @@
         "by_status": {
           "parity": 9,
           "partial": 7
+        }
+      },
+      {
+        "family": "scene/pattern",
+        "open_entries": 7,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "headless_only": 1,
+          "parity": 13,
+          "partial": 6,
+          "ported": 3
         }
       }
     ],

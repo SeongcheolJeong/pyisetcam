@@ -393,7 +393,12 @@ from .sensor import (
     analog_to_digital,
     imx490_compute,
     ml_analyze_array_etendue,
+    ml_description,
+    ml_get_current,
+    ml_import_params,
+    ml_print,
     ml_radiance,
+    ml_set_current,
     mlens_create,
     mlens_get,
     mlens_set,
@@ -1123,7 +1128,12 @@ __all__ = [
     "mo_target",
     "analog_to_digital",
     "mlAnalyzeArrayEtendue",
+    "mlDescription",
+    "mlGetCurrent",
+    "mlImportParams",
+    "mlPrint",
     "mlRadiance",
+    "mlSetCurrent",
     "mlensCreate",
     "mlensGet",
     "mlensSet",
@@ -1132,7 +1142,12 @@ __all__ = [
     "imx490Compute",
     "imx490_compute",
     "ml_analyze_array_etendue",
+    "ml_description",
+    "ml_get_current",
+    "ml_import_params",
+    "ml_print",
     "ml_radiance",
+    "ml_set_current",
     "mlens_create",
     "mlens_get",
     "mlens_set",
@@ -1571,6 +1586,11 @@ sensorFormats = sensor_formats
 mlensCreate = mlens_create
 mlensSet = mlens_set
 mlensGet = mlens_get
+mlGetCurrent = ml_get_current
+mlSetCurrent = ml_set_current
+mlImportParams = ml_import_params
+mlDescription = ml_description
+mlPrint = ml_print
 mlRadiance = ml_radiance
 mlAnalyzeArrayEtendue = ml_analyze_array_etendue
 sensorCompute = sensor_compute

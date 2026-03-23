@@ -249,7 +249,12 @@ from pyisetcam import (
     xyz2lms,
     xyz2srgb,
     imx490_compute,
+    mlDescription,
+    mlGetCurrent,
+    mlImportParams,
+    mlPrint,
     ml_radiance,
+    mlSetCurrent,
     mlens_create,
     mlens_get,
     mlens_set,
@@ -338,6 +343,7 @@ from pyisetcam import (
     sensorShowImage,
     sensor_set_size_to_fov,
     sensor_set,
+    session_create,
     spd_to_cct,
     srgb_to_color_temp,
     wvf_aperture,
@@ -9889,6 +9895,34 @@ def test_optics_microlens_workflow_supports_getters_and_radiance(asset_store) ->
     assert pixel_irradiance.shape == (255, 255)
     assert x_coordinate.shape == (255,)
     assert float(mlens_get(radiance_microlens, "etendue")) > 0.0
+
+
+def test_microlens_compatibility_wrappers_cover_current_description_and_import(asset_store) -> None:
+    session = session_create()
+    oi = oi_create(asset_store=asset_store)
+    sensor = sensor_create(asset_store=asset_store, session=session)
+    microlens = mlens_create(sensor, oi, asset_store=asset_store)
+
+    assert mlGetCurrent(session=session) is None
+
+    updated_sensor = mlSetCurrent(microlens, session=session)
+    current = mlGetCurrent(session=session)
+
+    assert current is not None
+    assert current["type"] == "microlens"
+    assert sensor_get(updated_sensor, "ml")["type"] == "microlens"
+
+    imported = mlImportParams(current, oi_get(oi, "optics"), sensor_get(updated_sensor, "pixel"))
+    assert float(mlens_get(imported, "source fnumber")) == pytest.approx(float(oi_get(oi, "optics fnumber")))
+    assert float(mlens_get(imported, "ml focal length")) == pytest.approx(float(sensor_get(updated_sensor, "pixel depth")))
+
+    description = mlDescription(current, updated_sensor)
+    assert "Pixel width (um)" in description
+    assert "Optimal offset" in description
+
+    printed = mlPrint(current)
+    assert "Microlens properties:" in printed
+    assert "Focal length (um):" in printed
 
 
 def test_run_python_case_supports_optics_microlens_parity_case(asset_store) -> None:

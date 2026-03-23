@@ -18,7 +18,7 @@ from .exceptions import UnsupportedOptionError
 from .metrics import xyz_from_energy
 from .optics import DEFAULT_FOCAL_LENGTH_M
 from .optics import oi_get
-from .session import track_session_object
+from .session import session_get_selected, session_replace_object, track_session_object
 from .types import OpticalImage, Scene, Sensor, SessionContext
 from .utils import DEFAULT_WAVE, blackbody, ensure_multiple, ie_parameter_otype, linear_to_srgb, param_format, tile_pattern, xyz_to_linear_srgb
 from .utils import image_increase_image_rgb_size
@@ -5199,6 +5199,138 @@ def ml_analyze_array_etendue(
     return analyzed
 
 
+def ml_get_current(sensor: Sensor | None = None, *, session: SessionContext | None = None) -> dict[str, Any] | None:
+    """Return the microlens attached to the explicit or selected sensor."""
+
+    current_sensor = sensor
+    if current_sensor is None and session is not None:
+        selected = session_get_selected(session, "sensor")
+        if isinstance(selected, Sensor):
+            current_sensor = selected
+    if current_sensor is None:
+        return None
+    microlens = sensor_get(current_sensor, "micro lens")
+    return None if microlens is None else _microlens_struct_from_value(microlens)
+
+
+def ml_set_current(
+    ml: dict[str, Any],
+    sensor: Sensor | None = None,
+    *,
+    session: SessionContext | None = None,
+) -> Sensor:
+    """Store a microlens on the explicit or selected sensor."""
+
+    if ml is None:
+        raise ValueError("mlSetCurrent requires a microlens payload.")
+
+    current_sensor = sensor
+    if current_sensor is None and session is not None:
+        selected = session_get_selected(session, "sensor")
+        if isinstance(selected, Sensor):
+            current_sensor = selected
+    if current_sensor is None:
+        raise ValueError("mlSetCurrent requires an explicit sensor or a session with a selected sensor.")
+
+    updated = sensor_set(current_sensor.clone(), "micro lens", ml)
+    if session is not None:
+        return session_replace_object(session, updated)
+    return updated
+
+
+def ml_import_params(ml: dict[str, Any], optics: dict[str, Any], pixel: Any) -> dict[str, Any]:
+    """Import optics and pixel parameters into a microlens payload."""
+
+    from .optics import optics_get
+
+    imported = _microlens_struct_from_value(ml)
+    imported["sourceFNumber"] = float(optics_get(optics, "f number"))
+    imported["sourceFocalLength"] = float(optics_get(optics, "focal length"))
+    imported["focalLength"] = float(pixel_get(pixel, "pixel depth"))
+    diameter = float(pixel_get(pixel, "pixel width"))
+    imported["fnumber"] = imported["focalLength"] / max(diameter, 1e-30)
+    return imported
+
+
+def ml_description(
+    ml: dict[str, Any],
+    sensor: Sensor | None = None,
+    *,
+    session: SessionContext | None = None,
+    asset_store: AssetStore | None = None,
+) -> str:
+    """Return the headless text summary used by the legacy microlens window."""
+
+    current_sensor = sensor
+    if current_sensor is None and session is not None:
+        selected = session_get_selected(session, "sensor")
+        if isinstance(selected, Sensor):
+            current_sensor = selected
+    if current_sensor is None:
+        current_sensor = sensor_create(asset_store=asset_store)
+
+    cra = float(mlens_get(ml, "chief ray angle radians"))
+    source_focal_length_mm = float(mlens_get(ml, "source focal length", "mm"))
+    pixel_width_um = float(sensor_get(current_sensor, "pixel width", "um"))
+    diameter_um = float(mlens_get(ml, "diameter", "um"))
+    distance_from_center_mm = source_focal_length_mm * np.tan(cra)
+    horiz_pix = int(np.round(distance_from_center_mm / max(pixel_width_um, 1e-30)))
+    diag_pix = int(np.round(distance_from_center_mm / max(pixel_width_um * np.sqrt(2.0), 1e-30)))
+
+    lines = [
+        f"  Pixel width (um) {pixel_width_um:.2f}",
+        f"  ML diameter (um) {diameter_um:.2f} {'(uLens too big)' if diameter_um > pixel_width_um else ' '}",
+        "",
+        f"  Distance from center (mm) {distance_from_center_mm:.2f}",
+        f"  horiz pix ({horiz_pix:d}), diag pix ({diag_pix:d})",
+    ]
+
+    etendue = float(mlens_get(ml, "etendue"))
+    if etendue > 0.0:
+        lines.append(f"  Etendue: {etendue:.3f}")
+
+    optimal_offset = float(mlens_get(ml, "optimal offset", current_sensor, "microns"))
+    lines.append(f"  Optimal offset = {optimal_offset:.2f} (um)")
+    return "\n".join(lines)
+
+
+def ml_print(
+    ml: dict[str, Any] | None = None,
+    sensor: Sensor | None = None,
+    *,
+    session: SessionContext | None = None,
+    show: bool = False,
+) -> str:
+    """Return the headless MATLAB-style microlens print summary."""
+
+    current = ml
+    if current is None:
+        current = ml_get_current(sensor, session=session)
+    if current is None:
+        raise ValueError("mlPrint requires a microlens payload or a current sensor microlens.")
+
+    text = "\n".join(
+        [
+            "",
+            "Microlens properties:",
+            "--------------------",
+            f"Focal length (um): {float(mlens_get(current, 'mlFocalLength', 'um')):.2f}",
+            f"F-number:          {float(mlens_get(current, 'mlFnumber')):.2f}",
+            f"Diameter (um):     {float(mlens_get(current, 'mlDiameter', 'um')):.2f}",
+            f"Refractive index:  {float(mlens_get(current, 'mlRefractiveIndex')):.2f}",
+            "",
+        ]
+    )
+    if show:
+        print(text)
+    return text
+
+
+mlGetCurrent = ml_get_current
+mlSetCurrent = ml_set_current
+mlImportParams = ml_import_params
+mlDescription = ml_description
+mlPrint = ml_print
 mlensCreate = mlens_create
 mlensSet = mlens_set
 mlensGet = mlens_get

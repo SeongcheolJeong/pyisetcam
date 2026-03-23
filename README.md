@@ -308,6 +308,13 @@ and optimal-offset workflow from `s_sensorMicrolens.m`, with curated
 Octave parity on the no-microlens/centered/optimal etendue maps, the
 optimal-offset curve and offset maps, and the single-pixel irradiance
 midlines used in the script’s chief-ray-angle illustration. That same
+microlens block now also includes headless `ml_get_current(...)` /
+`mlGetCurrent(...)`, `ml_set_current(...)` / `mlSetCurrent(...)`,
+`ml_import_params(...)` / `mlImportParams(...)`,
+`ml_description(...)` / `mlDescription(...)`, and
+`ml_print(...)` / `mlPrint(...)`, while the legacy GUIDE microlens window
+controllers are now explicitly treated as out of scope in the migration
+audit. That same
 sensor wave now also includes MATLAB-style `sceneSet(..., 'resize', ...)`,
 `sceneCombine(...)`, and `sensorSet(..., 'hfov'/'vfov', ...)` coverage for
 the mixed-sensor comparison workflow from `s_sensorComparison.m`, with

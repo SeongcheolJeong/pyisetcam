@@ -270,6 +270,36 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is a legacy MATLAB figure window controller and remains outside the headless migration target.",
         "module_hits": [],
     },
+    "sensor/microlens/microLensWindow.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a GUIDE figure window controller and remains outside the headless migration target.",
+        "module_hits": [],
+    },
+    "sensor/microlens/mlOpen.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a GUIDE window-opening callback and remains outside the headless migration target.",
+        "module_hits": [],
+    },
+    "sensor/microlens/mlRefresh.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a GUI refresh helper for the microlens window and remains outside the headless migration target.",
+        "module_hits": [],
+    },
+    "sensor/microlens/mlFillMLFromWindow.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file only pulls values from GUIDE controls into a microlens structure and remains outside the headless migration target.",
+        "module_hits": [],
+    },
+    "sensor/microlens/mlFillWindowFromML.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file only pushes microlens values into GUIDE controls and remains outside the headless migration target.",
+        "module_hits": [],
+    },
+    "sensor/microlens/mlIrradianceImage.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a figure-driven irradiance-image display helper and remains outside the headless migration target.",
+        "module_hits": [],
+    },
 }
 
 
