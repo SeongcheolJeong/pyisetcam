@@ -1479,14 +1479,7 @@ def _point_array_scene(
     return scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
 
 
-def _disk_array_scene(
-    size: Any,
-    radius: int,
-    array_size: Any,
-    wave: np.ndarray,
-    *,
-    asset_store: AssetStore,
-) -> Scene:
+def _disk_array_image(size: Any, radius: int, array_size: Any) -> np.ndarray:
     rows, cols = _scene_size_2d(size, default=128)
     array_values = np.asarray(array_size if array_size is not None else [1, 1], dtype=int).reshape(-1)
     if array_values.size == 0:
@@ -1521,6 +1514,18 @@ def _disk_array_scene(
                 continue
             pattern[row_start:row_end, col_start:col_end] = disk
 
+    return pattern
+
+
+def _disk_array_scene(
+    size: Any,
+    radius: int,
+    array_size: Any,
+    wave: np.ndarray,
+    *,
+    asset_store: AssetStore,
+) -> Scene:
+    pattern = _disk_array_image(size, radius, array_size)
     illuminant_energy, illuminant_photons = _spectral_illuminant("ep", wave, asset_store=asset_store)
     photons = pattern[:, :, None] * illuminant_photons.reshape(1, 1, -1)
     scene = Scene(name="Disk Array")
@@ -1535,14 +1540,7 @@ def _disk_array_scene(
     return scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
 
 
-def _square_array_scene(
-    size: Any,
-    square_size: int,
-    array_size: Any,
-    wave: np.ndarray,
-    *,
-    asset_store: AssetStore,
-) -> Scene:
+def _square_array_image(size: Any, square_size: int, array_size: Any) -> np.ndarray:
     rows, cols = _scene_size_2d(size, default=128)
     array_values = np.asarray(array_size if array_size is not None else [1, 1], dtype=int).reshape(-1)
     if array_values.size == 0:
@@ -1573,6 +1571,18 @@ def _square_array_scene(
                 continue
             pattern[row_start:row_end, col_start:col_end] = square
 
+    return pattern
+
+
+def _square_array_scene(
+    size: Any,
+    square_size: int,
+    array_size: Any,
+    wave: np.ndarray,
+    *,
+    asset_store: AssetStore,
+) -> Scene:
+    pattern = _square_array_image(size, square_size, array_size)
     illuminant_energy, illuminant_photons = _spectral_illuminant("ep", wave, asset_store=asset_store)
     photons = pattern[:, :, None] * illuminant_photons.reshape(1, 1, -1)
     scene = Scene(name="Square Array")
@@ -2269,6 +2279,82 @@ def _exponential_intensity_ramp_image(size: Any, dynamic_range: float) -> np.nda
     image = np.tile(ramp.reshape(1, -1), (rows, 1))
     image = _scale_range(image, 1.0, max(float(dynamic_range), 1.0))
     return image / max(float(np.max(image)), 1e-12)
+
+
+def img_deadleaves(n: Any = 256, sigma: float = 3.0, options: Any | None = None) -> np.ndarray:
+    """Create the legacy MATLAB dead-leaves grayscale image."""
+
+    return _dead_leaves_image(n, sigma, options)
+
+
+def img_disk_array(img_size: Any = 512, disk_radius: int = 16, array_size: Any | None = None) -> np.ndarray:
+    """Create the legacy MATLAB disk-array grayscale image."""
+
+    return _disk_array_image(img_size, disk_radius, array_size)
+
+
+def img_mackay(radial_frequency: float = 8.0, im_size: Any = 128) -> np.ndarray:
+    """Create the legacy MATLAB MacKay chart image."""
+
+    return _mackay_image(radial_frequency, im_size)
+
+
+def img_radial_ramp(sz: Any | None = None, expt: float = 1.0, origin: Any | None = None) -> np.ndarray:
+    """Create the legacy MATLAB radial-ramp image."""
+
+    rows, cols = _scene_size_2d([256, 256] if sz is None else sz, default=256)
+    if origin is None:
+        origin_array = (np.array([rows, cols], dtype=float) + 1.0) / 2.0
+    else:
+        origin_array = np.asarray(origin, dtype=float).reshape(-1)
+        if origin_array.size == 1:
+            origin_array = np.repeat(origin_array, 2)
+        if origin_array.size != 2:
+            raise ValueError("imgRadialRamp origin must be a scalar or [row, col].")
+    xramp, yramp = np.meshgrid(
+        np.arange(1.0, float(cols) + 1.0, dtype=float) - float(origin_array[1]),
+        np.arange(1.0, float(rows) + 1.0, dtype=float) - float(origin_array[0]),
+    )
+    return (xramp * xramp + yramp * yramp) ** (float(expt) / 2.0)
+
+
+def img_ramp(im_size: Any = 128, dynamic_range: float = 256.0) -> np.ndarray:
+    """Create the legacy MATLAB linear-intensity ramp image."""
+
+    return _linear_intensity_ramp_image(im_size, dynamic_range)
+
+
+def img_square_array(img_size: Any = 512, square_size: int = 16, array_size: Any | None = None) -> np.ndarray:
+    """Create the legacy MATLAB square-array grayscale image."""
+
+    return _square_array_image(img_size, square_size, array_size)
+
+
+def img_sweep(im_size: Any | None = None, max_freq: float | None = None, y_contrast: Any | None = None) -> np.ndarray:
+    """Create the legacy MATLAB sweep-frequency grayscale image."""
+
+    size = [128, 128] if im_size is None else im_size
+    if max_freq is None:
+        rows, cols = _scene_size_2d(size, default=128)
+        max_freq = float(cols) / 16.0
+        size = [rows, cols]
+    return _sweep_frequency_image(size, float(max_freq), y_contrast)
+
+
+def img_zone_plate(sz: Any | None = None, amp: float = 1.0, ph: float = 0.0) -> np.ndarray:
+    """Create the legacy MATLAB zone-plate image."""
+
+    return _zone_plate_image([256, 256] if sz is None else sz, amp, ph)
+
+
+imgDeadleaves = img_deadleaves
+imgDiskArray = img_disk_array
+imgMackay = img_mackay
+imgRadialRamp = img_radial_ramp
+imgRamp = img_ramp
+imgSquareArray = img_square_array
+imgSweep = img_sweep
+imgZonePlate = img_zone_plate
 
 
 def fot_params() -> dict[str, Any]:

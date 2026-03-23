@@ -57,6 +57,14 @@ from pyisetcam import (
     FOTParams,
     gaborP,
     hc_basis,
+    imgDeadleaves,
+    imgDiskArray,
+    imgMackay,
+    imgRadialRamp,
+    imgRamp,
+    imgSquareArray,
+    imgSweep,
+    imgZonePlate,
     image_flip,
     image_increase_image_rgb_size,
     image_linear_transform,
@@ -11669,6 +11677,71 @@ def test_run_python_case_supports_chromatic_spatial_chart_small_parity_case(asse
     assert case.payload["scene_mean_photons_norm"].shape == (101,)
     assert case.payload["scene_center_row_luminance_norm"].shape == (768,)
     assert case.payload["scene_center_col_luminance_norm"].shape == (384,)
+
+
+def test_scene_imgtarget_wrappers_match_existing_pattern_generators(asset_store) -> None:
+    wave = np.array([550.0], dtype=float)
+
+    def normalized_photons(scene) -> np.ndarray:
+        photons = np.asarray(scene_get(scene, "photons"), dtype=float)[:, :, 0]
+        return photons / max(float(np.max(photons)), 1e-12)
+
+    disk = imgDiskArray(64, 5, [2, 3])
+    disk_scene = scene_create("diskarray", 64, 5, np.array([2, 3], dtype=int), wave, asset_store=asset_store)
+    assert np.allclose(disk / max(float(np.max(disk)), 1e-12), normalized_photons(disk_scene))
+
+    square = imgSquareArray(64, 6, [2, 2])
+    square_scene = scene_create("squarearray", 64, 6, np.array([2, 2], dtype=int), wave, asset_store=asset_store)
+    assert np.allclose(square / max(float(np.max(square)), 1e-12), normalized_photons(square_scene))
+
+    mackay = imgMackay(10, 63)
+    mackay_scene = scene_create("mackay", 10, 63, wave, asset_store=asset_store)
+    assert np.allclose(mackay / max(float(np.max(mackay)), 1e-12), normalized_photons(mackay_scene))
+
+    sweep = imgSweep([32, 48], 6.0)
+    sweep_scene = scene_create("sweep", np.array([32, 48], dtype=int), 6.0, wave, asset_store=asset_store)
+    assert np.allclose(sweep / max(float(np.max(sweep)), 1e-12), normalized_photons(sweep_scene))
+
+    ramp = imgRamp([32, 48], 32.0)
+    ramp_scene = scene_create("linear intensity ramp", np.array([32, 48], dtype=int), 32.0, wave, asset_store=asset_store)
+    assert np.allclose(ramp / max(float(np.max(ramp)), 1e-12), normalized_photons(ramp_scene))
+
+    zone = imgZonePlate([31, 47])
+    zone_scene = scene_create("zoneplate", np.array([31, 47], dtype=int), wave, asset_store=asset_store)
+    zone_scene_expected = np.clip(zone, 1.0e-4, 1.0)
+    assert np.allclose(zone_scene_expected / max(float(np.max(zone_scene_expected)), 1e-12), normalized_photons(zone_scene))
+
+
+def test_scene_imgtarget_wrappers_cover_radial_zone_and_deadleaves_contracts() -> None:
+    centered = imgRadialRamp([5, 7])
+    cornered = imgRadialRamp([5, 7], 2.0, [1, 1])
+    zone = imgZonePlate([5, 7], 2.0, np.pi / 2.0)
+    expected_zone = 2.0 * np.cos((np.pi / 7.0) * imgRadialRamp([5, 7], 2.0) + (np.pi / 2.0)) + 1.0
+    leaves_options = {
+        "rmin": 0.25,
+        "rmax": 0.25,
+        "nbr_iter": 2,
+        "shape": "square",
+        "random_samples": np.array(
+            [
+                [0.0, 0.25, 0.25, 0.2],
+                [0.0, 0.75, 0.75, 0.8],
+            ],
+            dtype=float,
+        ),
+    }
+    leaves = imgDeadleaves([8, 8], 2.0, leaves_options)
+
+    assert centered.shape == (5, 7)
+    assert np.isclose(centered[2, 3], 0.0)
+    assert np.isclose(cornered[0, 0], 0.0)
+    assert cornered[-1, -1] > cornered[0, 0]
+    assert np.allclose(zone, expected_zone)
+    assert leaves.shape == (8, 8)
+    assert np.all(np.isfinite(leaves))
+    assert np.all((leaves >= 0.0) & (leaves <= 1.0))
+    assert np.any(np.isclose(leaves, 0.2))
+    assert np.any(np.isclose(leaves, 0.8))
 
 
 def test_color_constancy_script_workflow(asset_store) -> None:

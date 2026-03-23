@@ -345,6 +345,14 @@ from .scene import (
     fot_params,
     gabor_p,
     hdr_render,
+    img_deadleaves,
+    img_disk_array,
+    img_mackay,
+    img_radial_ramp,
+    img_ramp,
+    img_square_array,
+    img_sweep,
+    img_zone_plate,
     ie_checkerboard,
     macbeth_ideal_color,
     macbeth_patch_data,
@@ -1057,6 +1065,14 @@ __all__ = [
     "hdr_render",
     "FOTParams",
     "gaborP",
+    "imgDeadleaves",
+    "imgDiskArray",
+    "imgMackay",
+    "imgRadialRamp",
+    "imgRamp",
+    "imgSquareArray",
+    "imgSweep",
+    "imgZonePlate",
     "ieCheckerboard",
     "MOTarget",
     "sceneAdjustIlluminant",
@@ -1134,6 +1150,14 @@ __all__ = [
     "scene_translate",
     "fot_params",
     "gabor_p",
+    "img_deadleaves",
+    "img_disk_array",
+    "img_mackay",
+    "img_radial_ramp",
+    "img_ramp",
+    "img_square_array",
+    "img_sweep",
+    "img_zone_plate",
     "ie_checkerboard",
     "mo_target",
     "analog_to_digital",
@@ -1456,6 +1480,14 @@ sceneCalculateLuminance = scene_calculate_luminance
 sceneSPDScale = scene_spd_scale
 FOTParams = fot_params
 gaborP = gabor_p
+imgDeadleaves = img_deadleaves
+imgDiskArray = img_disk_array
+imgMackay = img_mackay
+imgRadialRamp = img_radial_ramp
+imgRamp = img_ramp
+imgSquareArray = img_square_array
+imgSweep = img_sweep
+imgZonePlate = img_zone_plate
 ieCheckerboard = ie_checkerboard
 MOTarget = mo_target
 analog2digital = analog_to_digital
