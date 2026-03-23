@@ -28,6 +28,7 @@ SUPPORTED_CODE_SUFFIXES = {".m", ".mlapp", ".fig"}
 SHORT_SIGNAL_PREFIXES = (
     "oi",
     "ip",
+    "lf",
     "rt",
     "wvf",
     "psf",
@@ -185,10 +186,30 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file immediately errors as requiring a rewrite, so it is treated as obsolete rather than actionable headless API debt.",
         "module_hits": [],
     },
+    "imgproc/lightfield/LFDispMousePan.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a pure Light Field Toolbox display interaction helper and remains outside the headless migration target.",
+        "module_hits": [],
+    },
+    "imgproc/lightfield/LFDispSetup.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a pure Light Field Toolbox display setup helper and remains outside the headless migration target.",
+        "module_hits": [],
+    },
+    "imgproc/lightfield/LFDispVidCirc.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a display/video viewer helper and remains outside the headless migration target.",
+        "module_hits": [],
+    },
     "imgproc/imageIlluminantCorrectionDeprecated.m": {
         "status": "ported",
         "note": "The deprecated MATLAB illuminant-correction file is already covered by the Python `image_illuminant_correction(...)` helper.",
         "module_hits": ["pyisetcam.ip"],
+    },
+    "imgproc/lightfield/LFMicrolensGeometry.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file opens a visualization figure for microlens geometry and is treated as GUI-only rather than a headless compute surface.",
+        "module_hits": [],
     },
     "imgproc/ipGet.m": {
         "status": "ported",

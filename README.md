@@ -1118,6 +1118,16 @@ That same image-processing surface now also exposes
 `faulty_bilinear(...)` / `FaultyBilinear(...)`, matching the legacy
 MATLAB faulty-pixel list, insertion, and GRBG repair helpers.
 That same image-processing surface now also exposes
+`lf_default_val(...)` / `LFDefaultVal(...)`,
+`lf_default_field(...)` / `LFDefaultField(...)`,
+`lf_convert_to_float(...)` / `LFConvertToFloat(...)`,
+`lf_buffer_to_image(...)` / `LFbuffer2image(...)`,
+`lf_image_to_buffer(...)` / `LFImage2buffer(...)`,
+`lf_buffer_to_sub_aperture_views(...)` / `LFbuffer2SubApertureViews(...)`,
+`lf_toolbox_version(...)` / `LFToolboxVersion(...)`, and
+`ip_to_lightfield(...)` / `ip2lightfield(...)` for the legacy
+Light Field Toolbox utility and IP-export helper family.
+That same image-processing surface now also exposes
 `image_sensor_conversion(...)` / `imageSensorConversion(...)` and
 `image_sensor_correction(...)` / `imageSensorCorrection(...)`, matching
 the direct MATLAB sensor-to-ICS entry points on top of the existing IP

@@ -96,6 +96,7 @@ from .ip import (
     faulty_insert,
     faulty_list,
     faulty_nearest_neighbor,
+    ip_to_lightfield,
     image_color_balance,
     ie_internal_to_display,
     image_data_xyz,
@@ -115,6 +116,13 @@ from .ip import (
     ip_mcc_xyz,
     ip_save_image,
     ip_set,
+    lf_buffer_to_image,
+    lf_buffer_to_sub_aperture_views,
+    lf_convert_to_float,
+    lf_default_field,
+    lf_default_val,
+    lf_image_to_buffer,
+    lf_toolbox_version,
     vcimage_mcc_xyz,
     vcimage_iso_mtf,
     vcimage_srgb,
@@ -659,6 +667,8 @@ __all__ = [
     "faulty_list",
     "FaultyNearestNeighbor",
     "faulty_nearest_neighbor",
+    "ip2lightfield",
+    "ip_to_lightfield",
     "imageDistort",
     "image_distort",
     "displayRender",
@@ -693,6 +703,20 @@ __all__ = [
     "vcimage_vsnr",
     "ipSaveImage",
     "ip_save_image",
+    "LFbuffer2image",
+    "lf_buffer_to_image",
+    "LFbuffer2SubApertureViews",
+    "lf_buffer_to_sub_aperture_views",
+    "LFConvertToFloat",
+    "lf_convert_to_float",
+    "LFDefaultField",
+    "lf_default_field",
+    "LFDefaultVal",
+    "lf_default_val",
+    "LFImage2buffer",
+    "lf_image_to_buffer",
+    "LFToolboxVersion",
+    "lf_toolbox_version",
     "imageEsserTransform",
     "image_esser_transform",
     "imageMCCTransform",
@@ -1910,6 +1934,14 @@ FaultyBilinear = faulty_bilinear
 faultyInsert = faulty_insert
 faultyList = faulty_list
 FaultyNearestNeighbor = faulty_nearest_neighbor
+LFDefaultVal = lf_default_val
+LFDefaultField = lf_default_field
+LFConvertToFloat = lf_convert_to_float
+LFbuffer2image = lf_buffer_to_image
+LFImage2buffer = lf_image_to_buffer
+LFbuffer2SubApertureViews = lf_buffer_to_sub_aperture_views
+LFToolboxVersion = lf_toolbox_version
+ip2lightfield = ip_to_lightfield
 
 cameraCreate = camera_create
 cameraCompute = camera_compute

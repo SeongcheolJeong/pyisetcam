@@ -458,6 +458,167 @@ def vcimage_mcc_xyz(
     return ip_mcc_xyz(ip, corner_points, method, asset_store=asset_store)
 
 
+def _is_empty_like(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, np.ndarray):
+        return value.size == 0
+    if isinstance(value, (str, bytes, list, tuple, dict, set)):
+        return len(value) == 0
+    return False
+
+
+def lf_default_val(var: Any, default_val: Any) -> Any:
+    """Return a default when the provided Python light-field value is empty."""
+
+    return default_val if _is_empty_like(var) else var
+
+
+def lf_default_field(parent_struct: dict[str, Any] | None, field_name: str, default_val: Any) -> dict[str, Any]:
+    """Apply a default field value to a Python dictionary."""
+
+    current = {} if parent_struct is None else dict(parent_struct)
+    if field_name not in current:
+        current[str(field_name)] = default_val
+    return current
+
+
+def lf_convert_to_float(lf: Any, precision: str = "single") -> np.ndarray:
+    """Convert light-field data to floating-point, normalizing integer inputs."""
+
+    array = np.asarray(lf)
+    dtype_name = param_format(precision)
+    if dtype_name in {"single", "float32"}:
+        dtype = np.float32
+    elif dtype_name in {"double", "float64"}:
+        dtype = np.float64
+    else:
+        raise ValueError(f"Unsupported LF precision: {precision}")
+
+    converted = array.astype(dtype, copy=True)
+    if np.issubdtype(array.dtype, np.integer):
+        converted = converted / np.array(np.iinfo(array.dtype).max, dtype=dtype)
+    return converted
+
+
+def lf_buffer_to_image(lfbuffer: Any) -> np.ndarray:
+    """Unshuffle a 5-D light-field buffer into a 2-D image."""
+
+    buffer_array = np.asarray(lfbuffer, dtype=float)
+    if buffer_array.ndim != 5:
+        raise ValueError("LFbuffer2image requires a 5-D light-field buffer.")
+    t_dim, s_dim, v_dim, u_dim, channels = buffer_array.shape
+    image = np.zeros((t_dim * v_dim, s_dim * u_dim, channels), dtype=buffer_array.dtype)
+    for t_index in range(t_dim):
+        for s_index in range(s_dim):
+            image[
+                t_index * v_dim : (t_index + 1) * v_dim,
+                s_index * u_dim : (s_index + 1) * u_dim,
+                :,
+            ] = buffer_array[t_index, s_index, :, :, :]
+    return image
+
+
+def lf_image_to_buffer(img: Any, ydim: int, xdim: int) -> np.ndarray:
+    """Shuffle a 2-D image into the legacy light-field buffer layout."""
+
+    image = np.asarray(img, dtype=float)
+    if image.ndim != 3:
+        raise ValueError("LFImage2buffer requires an image with shape rows x cols x channels.")
+    y_res, x_res, channels = image.shape
+    t_dim = int(xdim)
+    s_dim = int(ydim)
+    if t_dim <= 0 or s_dim <= 0:
+        raise ValueError("LFImage2buffer requires positive microlens dimensions.")
+    if y_res % t_dim != 0 or x_res % s_dim != 0:
+        raise ValueError("LFImage2buffer requires image dimensions divisible by the microlens dimensions.")
+    v_dim = y_res // t_dim
+    u_dim = x_res // s_dim
+
+    buffer_array = np.zeros((t_dim, s_dim, v_dim, u_dim, channels), dtype=image.dtype)
+    for v_index in range(v_dim):
+        for u_index in range(u_dim):
+            buffer_array[:, :, v_index, u_index, :] = image[v_index::v_dim, u_index::u_dim, :]
+    return buffer_array
+
+
+def lf_buffer_to_sub_aperture_views(image4d: Any) -> tuple[np.ndarray, np.ndarray]:
+    """Lay out sub-aperture views from a 5-D light-field buffer into a 2-D array."""
+
+    lightfield = np.asarray(image4d, dtype=float)
+    if lightfield.ndim != 5:
+        raise ValueError("LFbuffer2SubApertureViews requires a 5-D light-field buffer.")
+    m_dim, n_dim, v_dim, u_dim, channels = lightfield.shape
+    image2d = np.zeros((m_dim * v_dim, n_dim * u_dim, channels), dtype=lightfield.dtype)
+    corners = np.zeros((u_dim, v_dim, 2), dtype=float)
+    for u_index in range(u_dim):
+        for v_index in range(v_dim):
+            corners[u_index, v_index, :] = np.array([v_index * m_dim + 1, u_index * n_dim + 1], dtype=float)
+            image2d[
+                v_index * m_dim : (v_index + 1) * m_dim,
+                u_index * n_dim : (u_index + 1) * n_dim,
+                :,
+            ] = lightfield[:, :, v_index, u_index, :]
+    return image2d, corners
+
+
+def lf_toolbox_version() -> str:
+    """Return the vendored Light Field Toolbox version string."""
+
+    return "v0.4 released 12-Feb-2015"
+
+
+def ip_to_lightfield(ip: ImageProcessor, *args: Any, **kwargs: Any) -> np.ndarray:
+    """Convert IP result data into the legacy light-field array layout."""
+
+    pinholes = kwargs.pop("pinholes", kwargs.pop("nPinholes", None))
+    colorspace = kwargs.pop("colorspace", "linear")
+    if args:
+        if pinholes is None:
+            pinholes = args[0]
+            args = args[1:]
+        if args:
+            colorspace = args[0]
+            args = args[1:]
+    if args or kwargs:
+        raise TypeError("ip2lightfield accepts only `pinholes` and `colorspace`.")
+    if pinholes is None:
+        raise ValueError("ip2lightfield requires a `pinholes` vector.")
+
+    rgb = np.asarray(ip_get(ip, "result"), dtype=float)
+    if rgb.ndim != 3:
+        raise ValueError("ip2lightfield requires image-processor result data with shape rows x cols x channels.")
+    pinholes_array = np.asarray(pinholes, dtype=int).reshape(-1)
+    if pinholes_array.size != 2 or np.any(pinholes_array <= 0):
+        raise ValueError("ip2lightfield requires two positive pinhole counts.")
+
+    color_mode = param_format(colorspace)
+    if color_mode in {"linear", "lrgb"}:
+        output_rgb = rgb
+    elif color_mode == "srgb":
+        output_rgb = linear_to_srgb(np.clip(rgb, 0.0, 1.0))
+    else:
+        raise ValueError(f"Unknown color space {colorspace}")
+
+    super_pixel_h = int(output_rgb.shape[0] // pinholes_array[0])
+    super_pixel_w = int(output_rgb.shape[1] // pinholes_array[1])
+    if super_pixel_h * int(pinholes_array[0]) != output_rgb.shape[0] or super_pixel_w * int(pinholes_array[1]) != output_rgb.shape[1]:
+        raise ValueError("ip2lightfield requires image dimensions divisible by the pinhole counts.")
+
+    lightfield = np.zeros(
+        (super_pixel_h, super_pixel_w, int(pinholes_array[0]), int(pinholes_array[1]), output_rgb.shape[2]),
+        dtype=output_rgb.dtype,
+    )
+    for i_index in range(int(pinholes_array[1])):
+        for j_index in range(int(pinholes_array[0])):
+            lightfield[:, :, j_index, i_index, :] = output_rgb[
+                j_index * super_pixel_h : (j_index + 1) * super_pixel_h,
+                i_index * super_pixel_w : (i_index + 1) * super_pixel_w,
+                :,
+            ]
+    return lightfield
+
+
 def _ie_bilinear(planes: np.ndarray, cfa_pattern: np.ndarray) -> np.ndarray:
     rows, cols, nplanes = planes.shape
     extended = np.pad(planes, ((1, 1), (1, 1), (0, 0)), mode="reflect")
@@ -1893,6 +2054,14 @@ faultyList = faulty_list  # noqa: N816
 faultyInsert = faulty_insert  # noqa: N816
 FaultyNearestNeighbor = faulty_nearest_neighbor  # noqa: N816
 FaultyBilinear = faulty_bilinear  # noqa: N816
+LFDefaultVal = lf_default_val  # noqa: N816
+LFDefaultField = lf_default_field  # noqa: N816
+LFConvertToFloat = lf_convert_to_float  # noqa: N816
+LFbuffer2image = lf_buffer_to_image  # noqa: N816
+LFImage2buffer = lf_image_to_buffer  # noqa: N816
+LFbuffer2SubApertureViews = lf_buffer_to_sub_aperture_views  # noqa: N816
+LFToolboxVersion = lf_toolbox_version  # noqa: N816
+ip2lightfield = ip_to_lightfield  # noqa: N816
 imageSensorConversion = image_sensor_conversion  # noqa: N816
 imageSensorCorrection = image_sensor_correction  # noqa: N816
 imageIlluminantCorrection = image_illuminant_correction  # noqa: N816

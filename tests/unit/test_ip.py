@@ -7,12 +7,20 @@ from pyisetcam.camera import _chart_rectangles, _chart_rects_data, _linear_srgb_
 from pyisetcam import (
     FaultyBilinear,
     FaultyNearestNeighbor,
+    LFConvertToFloat,
+    LFDefaultField,
+    LFDefaultVal,
+    LFImage2buffer,
+    LFToolboxVersion,
+    LFbuffer2SubApertureViews,
+    LFbuffer2image,
     camera_create,
     camera_mtf,
     demosaic,
     displayRender,
     faultyInsert,
     faultyList,
+    ip2lightfield,
     ieInternal2Display,
     imageColorBalance,
     imageDataXYZ,
@@ -344,6 +352,39 @@ def test_faulty_pixel_helpers_match_legacy_grbg_rules() -> None:
         bilinear_fixed[3, 2, 2],
         0.25 * (planes[1, 2, 2] + planes[3, 0, 2] + planes[5, 2, 2] + planes[3, 4, 2]),
     )
+
+
+def test_lightfield_helper_utilities_match_expected_python_contract(asset_store) -> None:
+    assert LFDefaultVal(None, 3) == 3
+    assert LFDefaultVal(42, 3) == 42
+    assert LFDefaultField(None, "cheese", "indeed") == {"cheese": "indeed"}
+    assert LFDefaultField({"existing": 42}, "existing", 3) == {"existing": 42}
+    assert LFToolboxVersion() == "v0.4 released 12-Feb-2015"
+
+    int_lf = np.array([[0, 255]], dtype=np.uint8)
+    converted = LFConvertToFloat(int_lf)
+    assert converted.dtype == np.float32
+    assert np.allclose(converted, np.array([[0.0, 1.0]], dtype=np.float32))
+    assert LFConvertToFloat(np.array([[1.5]], dtype=np.float64), "double").dtype == np.float64
+
+    image = np.arange(4 * 6 * 3, dtype=float).reshape(4, 6, 3)
+    buffer_array = LFImage2buffer(image, 3, 2)
+    assert buffer_array.shape == (2, 3, 2, 2, 3)
+    assert np.allclose(LFbuffer2image(buffer_array), image)
+
+    subaperture_array, corners = LFbuffer2SubApertureViews(buffer_array)
+    assert subaperture_array.shape == (4, 6, 3)
+    assert np.array_equal(corners[0, 0, :], np.array([1.0, 1.0], dtype=float))
+    assert np.array_equal(corners[1, 1, :], np.array([3.0, 4.0], dtype=float))
+    assert np.allclose(subaperture_array[0:2, 0:3, :], buffer_array[:, :, 0, 0, :])
+
+    ip = ip_create(asset_store=asset_store)
+    result = np.linspace(0.0, 1.0, 4 * 6 * 3, dtype=float).reshape(4, 6, 3)
+    ip = ip_set(ip, "result", result)
+    lightfield = ip2lightfield(ip, pinholes=[2, 3], colorspace="linear")
+    assert lightfield.shape == (2, 2, 2, 3, 3)
+    assert np.allclose(lightfield[:, :, 0, 0, :], result[0:2, 0:2, :])
+    assert np.allclose(lightfield[:, :, 1, 2, :], result[2:4, 4:6, :])
 
 
 def test_image_sensor_conversion_matches_direct_formula(asset_store) -> None:

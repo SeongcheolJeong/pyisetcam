@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-03-23T20:58:48.212025+00:00",
+  "generated_at": "2026-03-23T21:22:08.211637+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 91,
       "missing": 37,
-      "out_of_scope": 135,
-      "parity": 558,
-      "partial": 587,
-      "ported": 35
+      "out_of_scope": 139,
+      "parity": 567,
+      "partial": 575,
+      "ported": 34
     },
     "kind_counts": {
       "api": 661,
@@ -20,19 +20,19 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 154,
+      "P0": 142,
       "P1": 381,
       "P2": 180,
-      "P3": 728
+      "P3": 740
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 1,
-        "parity": 4,
-        "partial": -5,
-        "ported": 0
+        "out_of_scope": 4,
+        "parity": 9,
+        "partial": -12,
+        "ported": -1
       },
       "kind_counts": {
         "api": 0,
@@ -43,10 +43,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -5,
+        "P0": -12,
         "P1": 0,
         "P2": 0,
-        "P3": 5
+        "P3": 12
       }
     },
     "family_summary": {
@@ -277,10 +277,10 @@
       "imgproc": {
         "total": 59,
         "by_status": {
-          "out_of_scope": 3,
-          "parity": 28,
-          "partial": 20,
-          "ported": 8
+          "out_of_scope": 7,
+          "parity": 37,
+          "partial": 8,
+          "ported": 7
         },
         "by_kind": {
           "api": 59
@@ -1037,13 +1037,13 @@
       },
       {
         "family": "imgproc",
-        "open_entries": 20,
+        "open_entries": 8,
         "highest_open_priority": "P0",
         "by_status": {
-          "out_of_scope": 3,
-          "parity": 28,
-          "partial": 20,
-          "ported": 8
+          "out_of_scope": 7,
+          "parity": 37,
+          "partial": 8,
+          "ported": 7
         }
       },
       {
@@ -4455,92 +4455,100 @@
       "upstream_path": "imgproc/lightfield/LFConvertToFloat.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.ip",
+      "status": "parity",
+      "python_surface": "pyisetcam.ip, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/unit/test_ip.py"
+        "tests/unit/test_ip.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/lightfield/LFDefaultField.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.ip",
+      "status": "parity",
+      "python_surface": "pyisetcam.ip, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/unit/test_ip.py"
+        "tests/unit/test_ip.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/lightfield/LFDefaultVal.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.ip",
+      "status": "parity",
+      "python_surface": "pyisetcam.ip, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/unit/test_ip.py"
+        "tests/unit/test_ip.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/lightfield/LFDisp.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "ported",
+      "status": "parity",
       "python_surface": "pyisetcam.ip, pyisetcam.assets",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/unit/test_ip.py"
+        "tests/unit/test_ip.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "A direct Python implementation surface was detected for this upstream path.",
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
       "priority": "P3"
     },
     {
       "upstream_path": "imgproc/lightfield/LFDispMousePan.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_ip.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream file is a pure Light Field Toolbox display interaction helper and remains outside the headless migration target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/lightfield/LFDispSetup.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_ip.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream file is a pure Light Field Toolbox display setup helper and remains outside the headless migration target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/lightfield/LFDispVidCirc.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_ip.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream file is a display/video viewer helper and remains outside the headless migration target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/lightfield/LFFiltShiftSum.m",
@@ -4559,79 +4567,89 @@
       "upstream_path": "imgproc/lightfield/LFImage2buffer.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.ip",
+      "status": "parity",
+      "python_surface": "pyisetcam.ip, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/unit/test_ip.py"
+        "tests/unit/test_ip.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/lightfield/LFMicrolensGeometry.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_ip.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream file opens a visualization figure for microlens geometry and is treated as GUI-only rather than a headless compute surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/lightfield/LFToolboxVersion.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.ip",
+      "status": "parity",
+      "python_surface": "pyisetcam.ip, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/unit/test_ip.py"
+        "tests/unit/test_ip.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/lightfield/LFbuffer2SubApertureViews.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.ip",
+      "status": "parity",
+      "python_surface": "pyisetcam.ip, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/unit/test_ip.py"
+        "tests/unit/test_ip.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/lightfield/LFbuffer2image.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.ip",
+      "status": "parity",
+      "python_surface": "pyisetcam.ip, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/unit/test_ip.py"
+        "tests/unit/test_ip.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/lightfield/ip2lightfield.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.ip",
+      "status": "parity",
+      "python_surface": "pyisetcam.ip, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/unit/test_ip.py"
+        "tests/unit/test_ip.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/openexr/exrreadchannels.m",
@@ -6132,7 +6150,7 @@
       "family": "opticalimage/microlens",
       "kind": "gui",
       "status": "out_of_scope",
-      "python_surface": "pyisetcam.optics, pyisetcam.parity, pyisetcam.sensor, pyisetcam.utils",
+      "python_surface": "pyisetcam.optics, pyisetcam.ip, pyisetcam.parity, pyisetcam.sensor, pyisetcam.utils",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
@@ -6145,7 +6163,7 @@
       "family": "opticalimage/microlens",
       "kind": "api",
       "status": "parity",
-      "python_surface": "pyisetcam.optics, pyisetcam.parity, pyisetcam.sensor, pyisetcam.utils",
+      "python_surface": "pyisetcam.optics, pyisetcam.ip, pyisetcam.parity, pyisetcam.sensor, pyisetcam.utils",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py",
@@ -19213,7 +19231,7 @@
       "family": "data/microlens",
       "kind": "asset",
       "status": "partial",
-      "python_surface": "pyisetcam.parity, pyisetcam.sensor, pyisetcam.utils",
+      "python_surface": "pyisetcam.ip, pyisetcam.parity, pyisetcam.sensor, pyisetcam.utils",
       "tests": [],
       "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
       "priority": "P2"
