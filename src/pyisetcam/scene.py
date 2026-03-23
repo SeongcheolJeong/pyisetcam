@@ -11,9 +11,9 @@ from scipy.ndimage import map_coordinates, zoom
 from scipy.signal import convolve2d
 
 from .assets import AssetStore, ie_read_spectra
-from .color import luminance_from_photons
+from .color import init_default_spectrum, lrgb_to_srgb, luminance_from_photons
 from .exceptions import MissingAssetError, UnsupportedOptionError
-from .metrics import chromaticity_xy, xyz_from_energy
+from .metrics import chromaticity_xy, delta_e_ab, xyz_from_energy
 from .session import track_session_object
 from .types import Scene, SessionContext
 from .utils import (
@@ -23,7 +23,10 @@ from .utils import (
     interp_spectra,
     param_format,
     quanta_to_energy,
+    rgb_to_xw_format,
+    srgb_to_xyz,
     unit_frequency_list,
+    xw_to_rgb_format,
     xyz_to_srgb,
 )
 
@@ -1149,6 +1152,343 @@ def macbeth_ideal_color(
         macbeth_xyz = macbeth_ideal_color(illuminant, "xyz", asset_store=store)
         return np.asarray(rgb_to_xw_format(xyz_to_srgb(xw_to_rgb_format(macbeth_xyz, 1, 24)))[0], dtype=float)
     raise UnsupportedOptionError("macbethIdealColor", color_space)
+
+
+def _macbeth_chart_parameters(obj: Any) -> dict[str, Any]:
+    if not hasattr(obj, "fields"):
+        raise TypeError("Macbeth helpers require an ISET object with `.fields` storage.")
+    obj_type = param_format(getattr(obj, "type", type(obj).__name__))
+    field_name = "chart_parameters" if obj_type == "scene" else "chartP"
+    stored = obj.fields.get(field_name)
+    if not isinstance(stored, dict):
+        stored = {}
+        obj.fields[field_name] = stored
+    return stored
+
+
+def _macbeth_object_type(obj: Any) -> str:
+    return param_format(getattr(obj, "type", type(obj).__name__))
+
+
+def _macbeth_object_data_type(obj: Any) -> str:
+    obj_type = _macbeth_object_type(obj)
+    if obj_type in {"scene", "opticalimage"}:
+        return "photons"
+    if obj_type in {"sensor", "isa"}:
+        return "dvorvolts"
+    if obj_type == "vcimage":
+        return "result"
+    raise ValueError(f"Unsupported Macbeth object type: {obj_type}")
+
+
+def _macbeth_chart_data(reflectances: np.ndarray, patch_size: int, black_border: bool) -> np.ndarray:
+    reflectance_array = np.asarray(reflectances, dtype=float)
+    patch_count = int(reflectance_array.shape[1])
+    wave_count = int(reflectance_array.shape[0])
+
+    if patch_count == 24:
+        base = np.reshape(reflectance_array.T, (_MACBETH_GRID[0], _MACBETH_GRID[1], wave_count), order="F")
+    else:
+        base = reflectance_array.T.reshape(1, patch_count, wave_count)
+
+    data = np.repeat(np.repeat(base, int(patch_size), axis=0), int(patch_size), axis=1)
+    if not black_border:
+        return np.asarray(data, dtype=float)
+
+    bordered = np.asarray(data, dtype=float).copy()
+    border_px = int(np.floor(0.2 * float(patch_size)))
+    if border_px <= 0:
+        return bordered
+
+    rows, cols, _ = bordered.shape
+    patch_rows = max(int(base.shape[0]), 1)
+    patch_cols = max(int(base.shape[1]), 1)
+    row_size = max(int(rows // patch_rows), 1)
+    col_size = max(int(cols // patch_cols), 1)
+
+    for col in range(1, patch_cols + 1):
+        start = max(int(np.floor(col * col_size - border_px)), 0)
+        stop = min(int(col * col_size), bordered.shape[1])
+        bordered[:, start:stop, :] = 0.0
+    for row in range(1, patch_rows + 1):
+        start = max(int(np.floor(row * row_size - border_px)), 0)
+        stop = min(int(row * row_size), bordered.shape[0])
+        bordered[start:stop, :, :] = 0.0
+
+    return np.pad(bordered, ((border_px, 0), (border_px, 0), (0, 0)), mode="constant")
+
+
+def macbeth_chart_create(
+    patch_size: int | None = None,
+    patch_list: Any | None = None,
+    spectrum: Any | None = None,
+    surface_file: str | None = None,
+    black_border: bool = False,
+    *,
+    asset_store: AssetStore | None = None,
+) -> Scene:
+    """Create the legacy Macbeth chart reflectance object used by scene wrappers."""
+
+    patch_size_value = 16 if patch_size is None else int(np.rint(float(patch_size)))
+    if patch_size_value <= 0:
+        raise ValueError("patch_size must be positive.")
+    patch_list_value = np.arange(1, 25, dtype=int) if patch_list is None else np.asarray(patch_list, dtype=int).reshape(-1)
+    if patch_list_value.size == 0:
+        patch_list_value = np.arange(1, 25, dtype=int)
+
+    chart = Scene(name="Macbeth Chart")
+    chart = init_default_spectrum(chart, "hyperspectral")
+    if isinstance(spectrum, dict):
+        wave = np.asarray(spectrum.get("wave", chart.fields["wave"]), dtype=float).reshape(-1)
+        chart.fields["spectrum"] = {"wave": wave.copy(), **dict(spectrum)}
+        chart.fields["spectrum"]["wave"] = wave.copy()
+        chart.fields["wave"] = wave.copy()
+    elif spectrum is not None:
+        wave = np.asarray(spectrum, dtype=float).reshape(-1)
+        chart.fields["spectrum"] = {"wave": wave.copy()}
+        chart.fields["wave"] = wave.copy()
+
+    wave = np.asarray(chart.fields["wave"], dtype=float).reshape(-1)
+    file_name = "macbethChart.mat" if surface_file is None else str(surface_file)
+    reflectance = np.asarray(ie_read_spectra(file_name, wave, asset_store=_store(asset_store)), dtype=float)
+    if patch_list_value.size:
+        patch_indices = patch_list_value.copy()
+        if np.min(patch_indices) >= 1:
+            patch_indices = patch_indices - 1
+        reflectance = reflectance[:, patch_indices]
+    chart.data["data"] = _macbeth_chart_data(reflectance, patch_size_value, bool(black_border))
+    chart.fields["patch_size"] = patch_size_value
+    chart.fields["patch_list"] = patch_list_value.copy()
+    chart.fields["surface_file"] = file_name
+    chart.fields["black_border"] = bool(black_border)
+    return chart
+
+
+def macbeth_draw_rects(obj: Any, onoff: str = "on") -> dict[str, Any]:
+    """Return headless Macbeth-rectangle payloads from stored chart corner points."""
+
+    if obj is None:
+        raise ValueError("Structure required.")
+    mode = param_format(onoff or "on")
+    if mode == "off":
+        return {"mode": "off"}
+    if mode != "on":
+        raise UnsupportedOptionError("macbethDrawRects", onoff)
+
+    chart = _macbeth_chart_parameters(obj)
+    corner_points = chart.get("cornerPoints")
+    if corner_points is None:
+        raise ValueError("No chart corner points.")
+    patch_locs, delta, patch_size = macbeth_rectangles(corner_points)
+    half_size = int(np.rint(patch_size / 2.0))
+    rects = np.column_stack(
+        [
+            patch_locs[1, :] - half_size,
+            patch_locs[0, :] - half_size,
+            np.full(patch_locs.shape[1], patch_size, dtype=int),
+            np.full(patch_locs.shape[1], patch_size, dtype=int),
+        ]
+    ).astype(int)
+    chart["rects"] = rects.copy()
+    chart["currentRect"] = rects[0].copy()
+    return {
+        "mode": "on",
+        "corner_points": np.asarray(corner_points, dtype=float).copy(),
+        "m_locs": patch_locs.copy(),
+        "delta": int(delta),
+        "patch_size": int(patch_size),
+        "rects": rects,
+    }
+
+
+def macbeth_select(
+    obj: Any,
+    show_selection: bool = True,
+    full_data: bool = False,
+    corner_points: Any | None = None,
+) -> tuple[Any, np.ndarray, int, np.ndarray, np.ndarray]:
+    """Extract Macbeth patch data headlessly from a scene, sensor, or IP object."""
+
+    if obj is None:
+        raise ValueError("Object required.")
+    chart = _macbeth_chart_parameters(obj)
+    if corner_points is None:
+        stored = chart.get("cornerPoints")
+        if stored is None:
+            raise ValueError("macbethSelect requires chart corner points in headless mode.")
+        corner_array = np.asarray(stored, dtype=float).reshape(4, 2)
+    else:
+        corner_array = np.asarray(corner_points, dtype=float).reshape(4, 2)
+        chart["cornerPoints"] = corner_array.copy()
+
+    patch_locs, delta, patch_size = macbeth_rectangles(corner_array)
+    patch_data, patch_std = macbeth_patch_data(
+        obj,
+        patch_locs,
+        delta,
+        full_data=bool(full_data),
+        data_type=_macbeth_object_data_type(obj),
+    )
+    if show_selection:
+        macbeth_draw_rects(obj, "on")
+    return patch_data, patch_locs, int(patch_size), corner_array.copy(), np.asarray(patch_std, dtype=float)
+
+
+def macbeth_sensor_values(
+    sensor: Any,
+    show_selection: bool = True,
+    corner_points: Any | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return mean and standard deviation of sensor Macbeth patches."""
+
+    full_rgb, _, _, resolved_corners, _ = macbeth_select(
+        sensor,
+        show_selection=show_selection,
+        full_data=True,
+        corner_points=corner_points,
+    )
+
+    patch_arrays = [np.asarray(patch, dtype=float) for patch in full_rgb]
+    n_sensors = 1 if patch_arrays[0].ndim == 1 else int(patch_arrays[0].shape[1])
+    sensor_img = np.zeros((24, n_sensors), dtype=float)
+    sensor_sd = np.zeros((24, n_sensors), dtype=float)
+
+    for ii, patch in enumerate(patch_arrays):
+        values = patch.reshape(-1, n_sensors)
+        for band in range(n_sensors):
+            valid = values[:, band][~np.isnan(values[:, band])]
+            sensor_img[ii, band] = float(np.mean(valid)) if valid.size else np.nan
+            sensor_sd[ii, band] = float(np.std(valid)) if valid.size else np.nan
+
+    return sensor_img, sensor_sd, resolved_corners
+
+
+def macbeth_evaluation_graphs(
+    L: Any | None,
+    sensorRGB: Any,
+    idealRGB: Any | None = None,
+    sName: str = "sensor",
+    *,
+    asset_store: AssetStore | None = None,
+) -> dict[str, Any]:
+    """Evaluate a linear Macbeth fit and return the legacy figure payload headlessly."""
+
+    transform = np.eye(3, dtype=float) if L is None else np.asarray(L, dtype=float)
+    sensor_rgb = np.asarray(sensorRGB, dtype=float)
+    if sensor_rgb.ndim != 2 or sensor_rgb.shape[1] != 3:
+        raise ValueError("sensorRGB must be an Nx3 XW-format array.")
+    ideal_rgb = (
+        np.asarray(macbeth_ideal_color("D65", "lRGB", asset_store=asset_store), dtype=float)
+        if idealRGB is None
+        else np.asarray(idealRGB, dtype=float)
+    )
+    if ideal_rgb.shape != sensor_rgb.shape:
+        raise ValueError("idealRGB must match sensorRGB shape.")
+
+    rgb_l = np.asarray(sensor_rgb @ transform, dtype=float)
+    rgb_l_srgb = xw_to_rgb_format(lrgb_to_srgb(np.clip(rgb_l, 0.0, 1.0)), 4, 6)
+    rgb_l_xyz = np.asarray(rgb_to_xw_format(srgb_to_xyz(rgb_l_srgb))[0], dtype=float)
+
+    ideal_srgb = xw_to_rgb_format(lrgb_to_srgb(np.clip(ideal_rgb, 0.0, 1.0)), 4, 6)
+    ideal_xyz = np.asarray(rgb_to_xw_format(srgb_to_xyz(ideal_srgb))[0], dtype=float)
+    white_xyz = np.asarray(ideal_xyz[3, :], dtype=float).reshape(-1)
+    d_e = np.asarray(delta_e_ab(rgb_l_xyz, ideal_xyz, white_xyz), dtype=float).reshape(-1)
+
+    user_data = {
+        "idealXYZ": ideal_xyz.copy(),
+        "rgbLXYZ": rgb_l_xyz.copy(),
+        "idealRGB": ideal_rgb.copy(),
+        "rgbL": rgb_l.copy(),
+        "dE": d_e.copy(),
+    }
+    return {
+        "figure_name": str(sName),
+        "sensor_name": str(sName),
+        "rgbL": rgb_l,
+        "idealRGB": ideal_rgb.copy(),
+        "idealXYZ": ideal_xyz,
+        "rgbLXYZ": rgb_l_xyz,
+        "whiteXYZ": white_xyz,
+        "deltaEab": d_e,
+        "meanDeltaEab": float(np.mean(d_e)),
+        "userData": user_data,
+    }
+
+
+def macbeth_luminance_noise(
+    ip: Any,
+    cp: Any | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[Any, np.ndarray, list[np.ndarray]]:
+    """Analyze luminance noise of the Macbeth gray series without opening a figure."""
+
+    from .ip import image_rgb_to_xyz, ip_set
+
+    if ip is None:
+        raise ValueError("ip required.")
+    chart = _macbeth_chart_parameters(ip)
+    if cp is None:
+        stored = chart.get("cornerPoints")
+        if stored is None:
+            raise ValueError("macbethLuminanceNoise requires chart corner points in headless mode.")
+        corner_points = np.asarray(stored, dtype=float).reshape(4, 2)
+    else:
+        corner_points = np.asarray(cp, dtype=float).reshape(4, 2)
+    ip = ip_set(ip, "chart corner points", corner_points)
+
+    _, m_locs, patch_size, _, _ = macbeth_select(ip, show_selection=False, full_data=False, corner_points=corner_points)
+    full_delta = max(int(np.rint(0.6 * float(patch_size))), 1)
+    m_rgb, _ = macbeth_patch_data(ip, m_locs, full_delta, full_data=True, data_type="result")
+
+    g_series = np.arange(3, 24, 4, dtype=int)
+    y_noise = np.zeros(g_series.size, dtype=float)
+    for jj, patch_index in enumerate(g_series):
+        rgb = np.asarray(m_rgb[int(patch_index)], dtype=float)
+        macbeth_xyz = np.asarray(image_rgb_to_xyz(ip, rgb, asset_store=asset_store), dtype=float)
+        y = np.asarray(macbeth_xyz, dtype=float)[:, 1]
+        y_noise[jj] = 100.0 * (float(np.std(y)) / max(float(np.mean(y)), 1.0e-12))
+
+    return ip, y_noise, [np.asarray(patch, dtype=float) for patch in m_rgb]
+
+
+def macbeth_gretag_sg_create(
+    *,
+    asset_store: AssetStore | None = None,
+) -> Scene:
+    """Create the larger Gretag SG Macbeth scene under an equal-energy illuminant."""
+
+    store = _store(asset_store)
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    reflectance = np.asarray(ie_read_spectra("gretagDigitalColorSG.mat", wave, asset_store=store), dtype=float)
+    rows = 10
+    cols = 14
+    n_wave = int(wave.size)
+
+    img = np.reshape(reflectance.T, (rows, cols, n_wave), order="F")
+    patch_size = 30
+    img = np.repeat(np.repeat(img, patch_size, axis=0), patch_size, axis=1)
+    n_black = 5
+
+    for ii in range(patch_size - n_black, rows * patch_size, patch_size):
+        img[ii : min(ii + n_black + 1, img.shape[0]), :, :] = 0.0
+    for jj in range(patch_size - n_black, cols * patch_size, patch_size):
+        img[:, jj : min(jj + n_black + 1, img.shape[1]), :] = 0.0
+
+    padded = np.zeros((img.shape[0] + 5, img.shape[1] + 5, n_wave), dtype=float)
+    padded[5:, 5:, :] = img
+
+    scene = Scene(name="GretagSC")
+    scene.fields["wave"] = wave.copy()
+    scene.fields["illuminant_format"] = "spectral"
+    scene.fields["illuminant_energy"] = np.ones(n_wave, dtype=float)
+    scene.fields["illuminant_photons"] = energy_to_quanta(scene.fields["illuminant_energy"], wave)
+    scene.fields["distance_m"] = DEFAULT_DISTANCE_M
+    scene.fields["fov_deg"] = DEFAULT_FOV_DEG
+    scene.fields["known_reflectance"] = np.array([float(padded[9, 9, 9]), 10.0, 10.0, 10.0], dtype=float)
+    scene.data["photons"] = padded * scene.fields["illuminant_photons"].reshape(1, 1, -1)
+    _update_scene_geometry(scene)
+    return scene_adjust_luminance(scene, 100.0, asset_store=store)
 
 
 def _scale_energy_to_luminance(
@@ -4277,6 +4617,22 @@ def scene_get(scene: Scene, parameter: str, *args: Any, asset_store: AssetStore 
         return np.divide(photons, illuminant, out=np.zeros_like(photons), where=illuminant > 0.0)
     if key == "chartparameters":
         return scene.fields.get("chart_parameters")
+    if key in {"cornerpoints", "chartcornerpoints", "chartcorners"}:
+        chart = scene.fields.get("chart_parameters", {})
+        value = chart.get("cornerPoints")
+        return None if value is None else np.asarray(value).copy()
+    if key == "mcccornerpoints":
+        return scene_get(scene, "chart corner points")
+    if key in {"chartrects", "chartrectangles"}:
+        chart = scene.fields.get("chart_parameters", {})
+        value = chart.get("rects")
+        return None if value is None else np.asarray(value).copy()
+    if key in {"currentrect", "chartcurrentrect"}:
+        chart = scene.fields.get("chart_parameters", {})
+        value = chart.get("currentRect")
+        return None if value is None else np.asarray(value).copy()
+    if key == "mccrecthandles":
+        return scene.fields.get("mccRectHandles")
     if key == "knownreflectance":
         value = scene.fields.get("known_reflectance")
         if value is None:
@@ -4472,6 +4828,25 @@ def scene_set(scene: Scene, parameter: str, value: Any) -> Scene:
         return scene
     if key == "chartparameters":
         scene.fields["chart_parameters"] = dict(value)
+        return scene
+    if key in {"chartcornerpoints", "cornerpoints", "chartcorners"}:
+        scene.fields.setdefault("chart_parameters", {})
+        scene.fields["chart_parameters"]["cornerPoints"] = np.asarray(value).copy()
+        return scene
+    if key == "mcccornerpoints":
+        scene.fields.setdefault("chart_parameters", {})
+        scene.fields["chart_parameters"]["cornerPoints"] = np.asarray(value).copy()
+        return scene
+    if key in {"chartrects", "chartrectangles"}:
+        scene.fields.setdefault("chart_parameters", {})
+        scene.fields["chart_parameters"]["rects"] = np.asarray(value).copy()
+        return scene
+    if key in {"chartcurrentrect", "currentrect"}:
+        scene.fields.setdefault("chart_parameters", {})
+        scene.fields["chart_parameters"]["currentRect"] = np.asarray(value).copy()
+        return scene
+    if key == "mccrecthandles":
+        scene.fields["mccRectHandles"] = value
         return scene
     if key == "knownreflectance":
         scene.fields["known_reflectance"] = np.asarray(value, dtype=float).reshape(-1)

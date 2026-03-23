@@ -380,11 +380,18 @@ from .scene import (
     img_sweep,
     img_zone_plate,
     ie_checkerboard,
+    macbeth_chart_create,
+    macbeth_draw_rects,
+    macbeth_evaluation_graphs,
+    macbeth_gretag_sg_create,
     macbeth_ideal_color,
     macbeth_patch_data,
     macbeth_read_reflectance,
     macbeth_rectangles,
     macbeth_rois,
+    macbeth_luminance_noise,
+    macbeth_select,
+    macbeth_sensor_values,
     mo_target,
     scene_add,
     scene_add_grid,
@@ -584,14 +591,28 @@ __all__ = [
     "macbeth_color_error",
     "macbethCompareIdeal",
     "macbeth_compare_ideal",
+    "macbethChartCreate",
+    "macbeth_chart_create",
+    "macbethDrawRects",
+    "macbeth_draw_rects",
+    "macbethEvaluationGraphs",
+    "macbeth_evaluation_graphs",
+    "macbethGretagSGCreate",
+    "macbeth_gretag_sg_create",
     "macbethIdealColor",
     "macbeth_ideal_color",
+    "macbethLuminanceNoise",
+    "macbeth_luminance_noise",
     "macbethPatchData",
     "macbeth_patch_data",
     "macbethRectangles",
     "macbeth_rectangles",
     "macbethROIs",
     "macbeth_rois",
+    "macbethSelect",
+    "macbeth_select",
+    "macbethSensorValues",
+    "macbeth_sensor_values",
     "camera_set",
     "adobergb_parameters",
     "cct2sun",
@@ -1553,10 +1574,17 @@ scenePhotonsFromVector = scene_photons_from_vector
 sceneRadianceFromVector = scene_radiance_from_vector
 sceneReflectanceChart = scene_reflectance_chart
 macbethReadReflectance = macbeth_read_reflectance
+macbethChartCreate = macbeth_chart_create
+macbethDrawRects = macbeth_draw_rects
+macbethEvaluationGraphs = macbeth_evaluation_graphs
+macbethGretagSGCreate = macbeth_gretag_sg_create
 macbethIdealColor = macbeth_ideal_color
+macbethLuminanceNoise = macbeth_luminance_noise
 macbethPatchData = macbeth_patch_data
 macbethRectangles = macbeth_rectangles
 macbethROIs = macbeth_rois
+macbethSelect = macbeth_select
+macbethSensorValues = macbeth_sensor_values
 sceneRotate = scene_rotate
 sceneSaveImage = scene_save_image
 sceneShowImage = scene_show_image

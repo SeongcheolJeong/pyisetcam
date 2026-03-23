@@ -38,10 +38,17 @@ from pyisetcam import (
     cmatrix,
     dac_to_rgb,
     macbeth_color_error,
+    macbethChartCreate,
+    macbethDrawRects,
+    macbethEvaluationGraphs,
+    macbethGretagSGCreate,
     macbethIdealColor,
+    macbethLuminanceNoise,
     macbethPatchData,
     macbethROIs,
     macbethRectangles,
+    macbethSelect,
+    macbethSensorValues,
     chromaticity_xy,
     cpiq_csf,
     adobergb_parameters,
@@ -14199,6 +14206,86 @@ def test_macbeth_helper_compatibility_surface(asset_store) -> None:
     assert np.all(ideal_srgb >= 0.0)
     assert np.all(ideal_srgb <= 1.0)
     assert not np.allclose(ideal_lrgb, ideal_srgb)
+
+
+def test_macbeth_wrapper_compatibility_surface(asset_store) -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    reflectance = macbeth_read_reflectance(wave, [1, 4, 24], asset_store=asset_store)
+    chart = macbethChartCreate(4, [1, 4, 24], wave, None, False, asset_store=asset_store)
+    chart_data = np.asarray(chart.data["data"], dtype=float)
+
+    assert chart.name == "Macbeth Chart"
+    assert chart.type == "scene"
+    assert chart_data.shape == (4, 12, 31)
+    assert np.allclose(chart_data[0:4, 0:4, :], reflectance[:, 0].reshape(1, 1, -1), atol=1e-12, rtol=1e-12)
+    assert np.allclose(chart_data[0:4, 4:8, :], reflectance[:, 1].reshape(1, 1, -1), atol=1e-12, rtol=1e-12)
+    assert np.allclose(chart_data[0:4, 8:12, :], reflectance[:, 2].reshape(1, 1, -1), atol=1e-12, rtol=1e-12)
+
+    scene = scene_create("macbeth d65", 16, asset_store=asset_store)
+    corner_points = np.array([[64.0, 1.0], [64.0, 96.0], [1.0, 96.0], [1.0, 1.0]], dtype=float)
+    scene = scene_set(scene, "chart corner points", corner_points)
+    rect_payload = macbethDrawRects(scene, "on")
+    patch_data, m_locs, p_size, resolved_corners, patch_std = macbethSelect(scene, False, False, corner_points)
+
+    assert rect_payload["rects"].shape == (24, 4)
+    assert np.array_equal(np.asarray(scene_get(scene, "chart corner points"), dtype=float), corner_points)
+    assert np.array_equal(np.asarray(scene_get(scene, "chart rects"), dtype=int), rect_payload["rects"])
+    assert np.array_equal(np.asarray(scene_get(scene, "current rect"), dtype=int), rect_payload["rects"][0])
+    assert patch_data.shape == (24, 31)
+    assert patch_std.shape == (24, 31)
+    assert m_locs.shape == (2, 24)
+    assert p_size == 11
+    assert np.array_equal(resolved_corners, corner_points)
+
+    ideal_rgb = np.asarray(macbethIdealColor("D65", "lRGB", asset_store=asset_store), dtype=float)
+    eval_payload = macbethEvaluationGraphs(np.eye(3), ideal_rgb, ideal_rgb, "sensor", asset_store=asset_store)
+
+    assert eval_payload["rgbL"].shape == (24, 3)
+    assert eval_payload["idealXYZ"].shape == (24, 3)
+    assert eval_payload["deltaEab"].shape == (24,)
+    assert np.isclose(eval_payload["meanDeltaEab"], 0.0, atol=1e-10, rtol=1e-10)
+
+
+def test_macbeth_sensor_and_gretag_wrappers(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    scene = scene_adjust_luminance(scene, 75.0, asset_store=asset_store)
+    scene = scene_set(scene, "fov", 2.64)
+    scene = scene_set(scene, "distance", 10.0)
+
+    oi = oi_create(asset_store=asset_store)
+    oi = oi_set(oi, "optics fnumber", 4.0)
+    oi = oi_set(oi, "optics focal length", 20.0e-3)
+    oi = oi_set(oi, "optics off axis method", "skip")
+    oi = oi_compute(oi, scene)
+
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set_size_to_fov(sensor, float(scene_get(scene, "fov")), oi)
+    sensor = sensor_compute(sensor, oi)
+
+    sensor_corner_points = np.array([[1.0, 244.0], [328.0, 246.0], [329.0, 28.0], [2.0, 27.0]], dtype=float)
+    sensor_img, sensor_sd, resolved_corner_points = macbethSensorValues(sensor, False, sensor_corner_points)
+
+    assert sensor_img.shape == (24, 3)
+    assert sensor_sd.shape == (24, 3)
+    assert np.array_equal(resolved_corner_points, sensor_corner_points)
+    assert np.all(np.isfinite(sensor_img))
+
+    ip = ip_create(asset_store=asset_store)
+    ip = ip_set(ip, "scale display", 1)
+    ip = ip_compute(ip, sensor, asset_store=asset_store)
+    ip_corner_points = np.array([[4.0, 246.0], [328.0, 243.0], [327.0, 26.0], [3.0, 27.0]], dtype=float)
+    ip, y_noise, m_rgb = macbethLuminanceNoise(ip, ip_corner_points, asset_store=asset_store)
+
+    assert np.array_equal(np.asarray(ip_get(ip, "chart corner points"), dtype=float), ip_corner_points)
+    assert y_noise.shape == (6,)
+    assert np.all(np.isfinite(y_noise))
+    assert len(m_rgb) == 24
+    assert m_rgb[0].shape[1] == 3
+
+    gretag = macbethGretagSGCreate(asset_store=asset_store)
+    assert gretag.name == "GretagSC"
+    assert tuple(scene_get(gretag, "size")) == (305, 425)
+    assert np.isclose(float(scene_get(gretag, "mean luminance", asset_store=asset_store)), 100.0, atol=1e-6, rtol=1e-6)
 
 
 def test_scene_from_multispectral_script_workflow(asset_store) -> None:
