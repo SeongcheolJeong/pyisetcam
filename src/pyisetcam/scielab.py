@@ -7,6 +7,7 @@ from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy.signal import convolve2d
 from skimage.color import deltaE_ciede2000, deltaE_ciede94
 
 from .display import display_create, display_get
@@ -31,6 +32,21 @@ def _image_linear_transform(image: Any, transform: Any) -> NDArray[np.float64]:
     rows, cols, channels = array.shape
     xw = array.reshape(rows * cols, channels)
     return np.asarray(xw @ np.asarray(transform, dtype=float), dtype=float).reshape(rows, cols, -1)
+
+
+def _resize_linear_2d(image: Any, new_rows: int, new_cols: int) -> NDArray[np.float64]:
+    array = np.asarray(image, dtype=float)
+    if array.ndim != 2:
+        raise ValueError("Linear resize expects a 2D array.")
+    if array.shape == (int(new_rows), int(new_cols)):
+        return array.copy()
+    source_rows = np.arange(array.shape[0], dtype=float)
+    source_cols = np.arange(array.shape[1], dtype=float)
+    target_rows = np.linspace(0.0, max(float(array.shape[0] - 1), 0.0), int(new_rows), dtype=float)
+    target_cols = np.linspace(0.0, max(float(array.shape[1] - 1), 0.0), int(new_cols), dtype=float)
+    col_resampled = np.vstack([np.interp(target_cols, source_cols, array[row, :]) for row in range(array.shape[0])])
+    resized = np.vstack([np.interp(target_rows, source_rows, col_resampled[:, col]) for col in range(col_resampled.shape[1])]).T
+    return np.asarray(resized, dtype=float)
 
 
 def _hwhm_to_sd(hwhm: float, dimensions: int = 2) -> float:
@@ -148,6 +164,330 @@ def _color_transform_matrix(matrix_type: str, space_type: int = 10) -> NDArray[n
 
 def color_transform_matrix(matrix_type: str, space_type: int = 10) -> NDArray[np.float64]:
     return _color_transform_matrix(matrix_type, space_type)
+
+
+def change_color_space(in_image: Any, color_matrix: Any) -> NDArray[np.float64]:
+    """Legacy MATLAB changeColorSpace() compatibility wrapper."""
+
+    array = np.asarray(in_image, dtype=float)
+    if array.size % 3 != 0:
+        raise ValueError("changeColorSpace expects a multiple-of-three input size.")
+    original_shape = array.shape
+    reshaped = array.reshape(array.size // 3, 3)
+    transformed = reshaped @ np.asarray(color_matrix, dtype=float).T
+    return np.asarray(transformed, dtype=float).reshape(original_shape)
+
+
+def cmatrix(matrix_type: str, space_type: int = 2) -> NDArray[np.float64]:
+    """Legacy MATLAB cmatrix() compatibility wrapper."""
+
+    key = param_format(matrix_type)
+    if key in {"lms2opp", "opp2lms", "xyz2opp", "opp2xyz"}:
+        return np.asarray(color_transform_matrix(matrix_type, space_type), dtype=float).T
+    if key == "lms2xyz":
+        return np.asarray(color_transform_matrix("hpe2xyz"), dtype=float).T
+    if key == "xyz2lms":
+        return np.asarray(color_transform_matrix("xyz2hpe"), dtype=float).T
+    if key in {"xyz2yiq", "yiq2xyz"}:
+        matrix = np.array(
+            [
+                [0.0, 1.0, 0.0],
+                [1.4070, -0.8420, -0.4510],
+                [0.9320, -1.1890, 0.2330],
+            ],
+            dtype=float,
+        )
+        return np.linalg.inv(matrix) if key == "yiq2xyz" else matrix
+    if key in {"rgb2yuv", "yuv2rgb"}:
+        matrix = np.array(
+            [
+                [0.2990, 0.5870, 0.1140],
+                [-0.1687, -0.3313, 0.5],
+                [0.5, -0.4187, -0.0813],
+            ],
+            dtype=float,
+        )
+        return np.linalg.inv(matrix) if key == "yuv2rgb" else matrix
+    if key in {"xyz2srg", "xyz2srgb"}:
+        return np.array(
+            [
+                [0.03241, -0.015374, -0.004986],
+                [-0.009692, 0.018760, 0.000416],
+                [0.000556, -0.002040, 0.01057],
+            ],
+            dtype=float,
+        )
+    if key in {"srgb2xy", "srgb2xyz"}:
+        matrix = np.array(
+            [
+                [0.03241, -0.015374, -0.004986],
+                [-0.009692, 0.018760, 0.000416],
+                [0.000556, -0.002040, 0.01057],
+            ],
+            dtype=float,
+        )
+        return np.linalg.inv(matrix)
+    if key in {"rgb2lms", "lms2rgb"}:
+        matrix = np.array(
+            [
+                [12.2430, 44.4548, 6.5701],
+                [4.6321, 44.6748, 9.5109],
+                [0.5227, 4.6900, 44.8061],
+            ],
+            dtype=float,
+        )
+        return np.linalg.inv(matrix) if key == "lms2rgb" else matrix
+    if key in {"rgb2xyz", "xyz2rgb"}:
+        if int(space_type) == 2:
+            matrix = np.array(
+                [
+                    [16.9898, 23.6831, 15.0614],
+                    [9.6167, 45.8480, 7.5094],
+                    [0.9067, 8.0767, 78.2157],
+                ],
+                dtype=float,
+            )
+        elif int(space_type) == 10:
+            matrix = np.array(
+                [
+                    [17.4665, 27.7468, 16.5398],
+                    [10.0969, 48.1835, 11.6466],
+                    [0.9293, 7.3710, 85.5683],
+                ],
+                dtype=float,
+            )
+        else:
+            raise ValueError(f"Unsupported RGB/XYZ space type {space_type}.")
+        return np.linalg.inv(matrix) if key == "xyz2rgb" else matrix
+    raise UnsupportedOptionError("cmatrix", matrix_type)
+
+
+def gauss(hwhm: float, support: int) -> NDArray[np.float64]:
+    """Legacy MATLAB gauss() compatibility wrapper."""
+
+    if support is None:
+        raise ValueError("Two input arguments required")
+    return _gauss(float(hwhm), int(support))
+
+
+def get_planes(allplanes: Any, whichplane: Any | None = None) -> tuple[NDArray[np.float64], ...]:
+    """Legacy MATLAB getPlanes() compatibility wrapper."""
+
+    which = np.asarray([1, 2, 3] if whichplane is None else whichplane, dtype=int).reshape(-1)
+    array = np.asarray(allplanes)
+    if array.size == 1:
+        total_cols = int(np.rint(float(array.reshape(-1)[0])))
+        width = int(np.rint(total_cols / 3.0))
+        source = np.arange(1, total_cols + 1, dtype=int).reshape(1, -1)
+    else:
+        if array.ndim != 2:
+            raise ValueError("getPlanes expects a 2D concatenated plane array.")
+        width = int(np.rint(array.shape[1] / 3.0))
+        source = array
+    if width * 3 != source.shape[1]:
+        raise ValueError("Input image allplanes is not the correct size.")
+    outputs = []
+    for plane in which:
+        start = (int(plane) - 1) * width
+        stop = int(plane) * width
+        outputs.append(np.asarray(source[:, start:stop], dtype=float))
+    return tuple(outputs)
+
+
+def ie_conv2_fft(a: Any, b: Any, method: Any | None = None) -> NDArray[np.float64]:
+    """Legacy MATLAB ieConv2FFT() compatibility wrapper."""
+
+    first = np.asarray(a, dtype=float)
+    second = np.asarray(b, dtype=float)
+    full = np.real(
+        np.fft.ifft2(
+            np.fft.fft2(first, s=(first.shape[0] + second.shape[0] - 1, first.shape[1] + second.shape[1] - 1))
+            * np.fft.fft2(second, s=(first.shape[0] + second.shape[0] - 1, first.shape[1] + second.shape[1] - 1))
+        )
+    )
+    if method is None or (isinstance(method, str) and method == ""):
+        return np.asarray(full, dtype=float)
+    if param_format(method) == "same":
+        dx = int(np.floor(second.shape[1] / 2.0))
+        dy = int(np.floor(second.shape[0] / 2.0))
+        return np.asarray(full[dy : dy + first.shape[0], dx : dx + first.shape[1]], dtype=float)
+    raise UnsupportedOptionError("ieConv2FFT", method)
+
+
+def pad4conv(im: Any, kernelsize: Any, dim: int = 3) -> NDArray[np.float64]:
+    """Legacy MATLAB pad4conv() compatibility wrapper."""
+
+    image = np.asarray(im, dtype=float)
+    kernel_size = np.asarray(kernelsize, dtype=int).reshape(-1)
+    if kernel_size.size == 1:
+        kernel_size = np.repeat(kernel_size, 2)
+    rows, cols = image.shape
+    h = int(np.floor(rows / 2.0)) if int(kernel_size[0]) >= rows else int(np.floor(kernel_size[0] / 2.0))
+    w = int(np.floor(cols / 2.0)) if int(kernel_size[1]) >= cols else int(np.floor(kernel_size[1] / 2.0))
+    padded = image.copy()
+    if h != 0 and int(dim) != 2:
+        padded = np.vstack((padded, np.flipud(padded[(rows - h) : rows, :])))
+        padded = np.vstack((np.flipud(padded[:h, :]), padded))
+    if w != 0 and int(dim) != 1:
+        padded = np.hstack((padded, np.fliplr(padded[:, (cols - w) : cols])))
+        padded = np.hstack((np.fliplr(padded[:, :w]), padded))
+    return np.asarray(padded, dtype=float)
+
+
+def sc_resize(orig: Any, new_size: Any, align: Any = 0, padding: float = 0.0) -> NDArray[np.float64]:
+    """Legacy MATLAB scResize() compatibility wrapper."""
+
+    array = np.asarray(orig, dtype=float)
+    if array.ndim != 2:
+        raise ValueError("scResize expects a 2D array.")
+    target = np.asarray(new_size, dtype=int).reshape(-1)
+    if target.size == 1:
+        target = np.repeat(target, 2)
+    align_array = np.asarray(align, dtype=int).reshape(-1)
+    if align_array.size == 1:
+        align_array = np.repeat(align_array, 2)
+
+    rows, cols = array.shape
+    target_rows, target_cols = int(target[0]), int(target[1])
+    m = min(rows, target_rows)
+    n = min(cols, target_cols)
+    result = np.full((target_rows, target_cols), float(padding), dtype=float)
+
+    start1 = np.floor(((np.array([rows - m, cols - n], dtype=float)) / 2.0) * (1 + align_array)).astype(int)
+    start2 = np.floor(((np.array([target_rows - m, target_cols - n], dtype=float)) / 2.0) * (1 + align_array)).astype(int)
+    result[start2[0] : start2[0] + m, start2[1] : start2[1] + n] = array[start1[0] : start1[0] + m, start1[1] : start1[1] + n]
+    return result
+
+
+def separable_filters(
+    samp_per_deg: float,
+    dimension: int = 1,
+    filter_size: float | None = None,
+) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
+    """Legacy MATLAB separableFilters() compatibility wrapper."""
+
+    min_samp_per_deg = 112.0
+    requested_filter_size = float(samp_per_deg if filter_size is None else filter_size)
+    working_samp = float(samp_per_deg)
+    if working_samp < min_samp_per_deg and int(dimension) != 2:
+        uprate = int(np.ceil(min_samp_per_deg / max(working_samp, 1.0e-12)))
+        working_samp *= uprate
+        requested_filter_size *= uprate
+    else:
+        uprate = 1
+
+    x1, x2, x3 = sc_gaussian_parameters(working_samp, {"filterversion": "distribution"})
+    width = int(np.ceil(requested_filter_size / 2.0) * 2 - 1)
+
+    if int(dimension) < 3:
+        k1 = _sum_gauss(np.concatenate(([width], x1)), int(dimension))
+        k2 = _sum_gauss(np.concatenate(([width], x2)), int(dimension))
+        k3 = _sum_gauss(np.concatenate(([width], x3)), int(dimension))
+    else:
+        k1 = np.vstack(
+            [
+                _gauss(float(x1[0]), width) * np.sqrt(abs(float(x1[1]))) * np.sign(float(x1[1])),
+                _gauss(float(x1[2]), width) * np.sqrt(abs(float(x1[3]))) * np.sign(float(x1[3])),
+                _gauss(float(x1[4]), width) * np.sqrt(abs(float(x1[5]))) * np.sign(float(x1[5])),
+            ]
+        )
+        k2 = np.vstack(
+            [
+                _gauss(float(x2[0]), width) * np.sqrt(abs(float(x2[1]))) * np.sign(float(x2[1])),
+                _gauss(float(x2[2]), width) * np.sqrt(abs(float(x2[3]))) * np.sign(float(x2[3])),
+            ]
+        )
+        k3 = np.vstack(
+            [
+                _gauss(float(x3[0]), width) * np.sqrt(abs(float(x3[1]))) * np.sign(float(x3[1])),
+                _gauss(float(x3[2]), width) * np.sqrt(abs(float(x3[3]))) * np.sign(float(x3[3])),
+            ]
+        )
+
+    if int(dimension) != 2 and uprate > 1:
+        upcol = np.concatenate((np.arange(1, uprate + 1), np.arange(uprate - 1, 0, -1))).astype(float) / float(uprate)
+        padded = sc_resize(upcol.reshape(1, -1), [1, upcol.size + width - 1]).reshape(-1)
+        k1 = convolve2d(k1, padded.reshape(1, -1), mode="same")
+        k2 = convolve2d(k2, padded.reshape(1, -1), mode="same")
+        k3 = convolve2d(k3, padded.reshape(1, -1), mode="same")
+        s = k1.shape[1]
+        mid = int(np.ceil(s / 2.0))
+        downs = np.concatenate((np.arange(mid, 0, -uprate), np.arange(mid + uprate, s + 1, uprate))) - 1
+        k1 = k1[:, downs]
+        k2 = k2[:, downs]
+        k3 = k3[:, downs]
+
+    return np.asarray(k1, dtype=float), np.asarray(k2, dtype=float), np.asarray(k3, dtype=float)
+
+
+def separable_conv(im: Any, xkernels: Any, ykernels: Any | None = None) -> NDArray[np.float64]:
+    """Legacy MATLAB separableConv() compatibility wrapper."""
+
+    image = np.asarray(im, dtype=float)
+    xkernels_array = np.asarray(xkernels, dtype=float)
+    if xkernels_array.ndim == 1:
+        xkernels_array = xkernels_array.reshape(1, -1)
+    ykernels_array = xkernels_array if ykernels is None else np.asarray(ykernels, dtype=float)
+    if ykernels_array.ndim == 1:
+        ykernels_array = ykernels_array.reshape(1, -1)
+
+    image_size = image.shape
+    padded_cols = pad4conv(image, xkernels_array.shape[1], 2)
+    result = np.zeros(image_size, dtype=float)
+    for index in range(xkernels_array.shape[0]):
+        partial = convolve2d(padded_cols, xkernels_array[index, :].reshape(1, -1), mode="full")
+        partial = sc_resize(partial, image_size)
+        padded_rows = pad4conv(partial, ykernels_array.shape[1], 1)
+        partial = convolve2d(padded_rows, ykernels_array[index, :].reshape(-1, 1), mode="full")
+        partial = sc_resize(partial, image_size)
+        result += partial
+    return np.asarray(result, dtype=float)
+
+
+def pre_scielab(ref_image: Any, cmp_image: Any) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Legacy MATLAB preSCIELAB() compatibility wrapper."""
+
+    reference = np.asarray(ref_image, dtype=float)
+    comparison = np.asarray(cmp_image, dtype=float)
+    if reference.ndim == 2:
+        reference = reference[:, :, np.newaxis]
+    if comparison.ndim == 2:
+        comparison = comparison[:, :, np.newaxis]
+    rows, cols, _ = reference.shape
+    resized_cmp = np.zeros((rows, cols, comparison.shape[2]), dtype=float)
+    for index in range(comparison.shape[2]):
+        resized_cmp[:, :, index] = _resize_linear_2d(comparison[:, :, index], rows, cols)
+
+    reference = reference / max(float(np.max(reference)), 1.0e-12)
+    resized_cmp = resized_cmp / max(float(np.max(resized_cmp)), 1.0e-12)
+
+    if comparison.shape[2] == 1:
+        reference_out = np.hstack([reference[:, :, 0], reference[:, :, 0], reference[:, :, 0]])
+        comparison_out = np.hstack([resized_cmp[:, :, 0], resized_cmp[:, :, 0], resized_cmp[:, :, 0]])
+    else:
+        reference_out = np.hstack([reference[:, :, 0], reference[:, :, 1], reference[:, :, 2]])
+        comparison_out = np.hstack([resized_cmp[:, :, 0], resized_cmp[:, :, 1], resized_cmp[:, :, 2]])
+    return np.asarray(reference_out, dtype=float), np.asarray(comparison_out, dtype=float)
+
+
+def visual_angle(numpixels: float, viewdist: float, dpi: float = 90.0, va: float = -1.0) -> float:
+    """Legacy MATLAB visualAngle() compatibility wrapper."""
+
+    values = [float(numpixels), float(viewdist), float(dpi), float(va)]
+    unknowns = [value < 0.0 for value in values]
+    if sum(unknowns) != 1:
+        raise ValueError("You must choose just one unknown (i.e., only one argument can be -1).")
+
+    if values[3] < 0.0 or values[1] < 0.0:
+        size_inches = values[0] / values[2]
+        if values[3] < 0.0:
+            return float(np.rad2deg(np.arctan(size_inches / values[1])))
+        return float(size_inches / np.tan(np.deg2rad(values[3])))
+
+    size_inches = values[1] * np.tan(np.deg2rad(values[3]))
+    if values[0] < 0.0:
+        return float(values[2] * size_inches)
+    return float(values[0] / size_inches)
 
 
 def _normalize_params(params: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -484,3 +824,14 @@ def scielab_rgb(
     }
     error_image, _, _, _ = scielab(scene_xyz1, scene_xyz2, white_xyz, params)
     return error_image, scene1, scene2, display
+
+
+changeColorSpace = change_color_space
+colorTransformMatrix = color_transform_matrix
+ieConv2FFT = ie_conv2_fft
+preSCIELAB = pre_scielab
+scComputeSCIELAB = sc_compute_scielab
+scOpponentFilter = sc_opponent_filter
+scPrepareFilters = sc_prepare_filters
+scResize = sc_resize
+visualAngle = visual_angle

@@ -9,6 +9,7 @@ import pyisetcam.sensor as sensor_module
 import imageio.v3 as iio
 from scipy.io import savemat
 from scipy import ndimage
+from scipy.signal import convolve2d
 
 from pyisetcam.exceptions import UnsupportedOptionError
 from pyisetcam.parity import run_python_case_with_context
@@ -26,6 +27,8 @@ from pyisetcam import (
     camera_set,
     camera_vsnr,
     chartPatchCompare,
+    changeColorSpace,
+    cmatrix,
     dac_to_rgb,
     macbeth_color_error,
     chromaticity_xy,
@@ -50,6 +53,7 @@ from pyisetcam import (
     ie_save_color_filter,
     ie_save_multispectral_image,
     ie_save_si_data_file,
+    ieConv2FFT,
     ie_cxcorr,
     ie_luminance_to_radiance,
     ie_n_to_megapixel,
@@ -150,12 +154,17 @@ from pyisetcam import (
     rt_synthetic,
     rgb_to_xw_format,
     colorTransformMatrix,
+    gauss,
+    getPlanes,
     scComputeSCIELAB,
     scOpponentFilter,
+    scResize,
     sc_params,
     sc_prepare_filters,
     scielab,
     scielab_rgb,
+    separableConv,
+    separableFilters,
     sceCreate,
     sceGet,
     si_synthetic,
@@ -220,7 +229,9 @@ from pyisetcam import (
     metrics_spd,
     noiseColumnFPN,
     noiseFPN,
+    pad4conv,
     photometricExposure,
+    preSCIELAB,
     iePixelWellCapacity,
     pixelCenterFillPD,
     pixelCreate,
@@ -302,6 +313,7 @@ from pyisetcam import (
     xyz_from_energy,
     xyz_to_srgb,
     y_to_lstar,
+    visualAngle,
     zemax_load,
     zemax_read_header,
 )
@@ -8185,6 +8197,90 @@ def test_run_python_case_supports_metrics_scielab_example_small_parity_case(asse
     assert case.payload["filter_peaks"].shape == (3,)
     assert case.payload["filter_center_rows_norm"].shape == (3, 65)
     assert case.payload["explicit_error_center_row_norm"].shape == (129,)
+
+
+def test_scielab_legacy_color_space_wrappers_match_current_helpers() -> None:
+    image = np.arange(1, 13, dtype=float).reshape(2, 2, 3) / 12.0
+
+    xyz_to_opp = cmatrix("xyz2opp", 10)
+    transformed = changeColorSpace(image, xyz_to_opp)
+    expected = image_linear_transform(image, colorTransformMatrix("xyz2opp", 10))
+
+    assert np.allclose(transformed, expected)
+    assert np.allclose(cmatrix("opp2xyz", 10), np.linalg.inv(cmatrix("xyz2opp", 10)))
+    assert np.allclose(cmatrix("lms2xyz"), np.linalg.inv(cmatrix("xyz2lms")))
+
+
+def test_scielab_legacy_filter_helpers_match_internal_support() -> None:
+    kernel = gauss(2.0, 7)
+    image = np.arange(1, 10, dtype=float).reshape(3, 3)
+    fft_kernel = np.array([[1.0, 0.0], [0.0, -1.0]], dtype=float)
+
+    assert kernel.shape == (7,)
+    assert np.isclose(float(np.sum(kernel)), 1.0, atol=1e-12, rtol=1e-12)
+    assert np.allclose(kernel, kernel[::-1])
+
+    padded = pad4conv(np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float), 2)
+    assert np.array_equal(
+        padded,
+        np.array(
+            [
+                [1.0, 1.0, 2.0, 2.0],
+                [1.0, 1.0, 2.0, 2.0],
+                [3.0, 3.0, 4.0, 4.0],
+                [3.0, 3.0, 4.0, 4.0],
+            ],
+            dtype=float,
+        ),
+    )
+
+    fft_full = convolve2d(image, fft_kernel, mode="full")
+    dy = fft_kernel.shape[0] // 2
+    dx = fft_kernel.shape[1] // 2
+    expected_same = fft_full[dy : dy + image.shape[0], dx : dx + image.shape[1]]
+    assert np.allclose(ieConv2FFT(image, fft_kernel, "same"), expected_same)
+
+    k1, k2, k3 = separableFilters(224, 1, 7)
+    assert k1.shape == k2.shape == k3.shape == (7,)
+    assert np.isclose(float(np.sum(k1)), 1.0, atol=1e-12, rtol=1e-12)
+    k1_sep, k2_sep, k3_sep = separableFilters(56, 3, 7)
+    assert k1_sep.shape[0] == 3
+    assert k2_sep.shape[0] == 2
+    assert k3_sep.shape[0] == 2
+
+    xkernels = np.array([[0.25, 0.5, 0.25]], dtype=float)
+    expected = convolve2d(pad4conv(image, xkernels.shape[1], 2), xkernels, mode="full")
+    expected = scResize(expected, image.shape)
+    expected = convolve2d(pad4conv(expected, xkernels.shape[1], 1), xkernels.T, mode="full")
+    expected = scResize(expected, image.shape)
+    assert np.allclose(separableConv(image, xkernels), expected)
+
+
+def test_scielab_legacy_preprocess_and_plane_helpers() -> None:
+    plane_image = np.arange(1, 19, dtype=float).reshape(2, 9)
+    p1, p3 = getPlanes(plane_image, [1, 3])
+    i1, i2, i3 = getPlanes(6)
+
+    assert np.array_equal(p1, plane_image[:, :3])
+    assert np.array_equal(p3, plane_image[:, 6:9])
+    assert np.array_equal(i1, np.array([[1.0, 2.0]], dtype=float))
+    assert np.array_equal(i2, np.array([[3.0, 4.0]], dtype=float))
+    assert np.array_equal(i3, np.array([[5.0, 6.0]], dtype=float))
+
+    resized = scResize(np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float), [4, 4], 0, -1.0)
+    assert resized.shape == (4, 4)
+    assert np.array_equal(resized[1:3, 1:3], np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float))
+    assert np.all(resized[[0, -1], :] == -1.0)
+
+    ref = np.array([[0.5, 1.0], [0.25, 0.75]], dtype=float)
+    cmp = np.array([[2.0]], dtype=float)
+    ref_out, cmp_out = preSCIELAB(ref, cmp)
+    assert ref_out.shape == cmp_out.shape == (2, 6)
+    assert np.isclose(float(np.max(ref_out)), 1.0, atol=1e-12, rtol=1e-12)
+    assert np.isclose(float(np.max(cmp_out)), 1.0, atol=1e-12, rtol=1e-12)
+
+    assert np.isclose(visualAngle(20, 12, 72), np.rad2deg(np.arctan((20.0 / 72.0) / 12.0)))
+    assert np.isclose(visualAngle(-1, 12, 72, 5), 72.0 * 12.0 * np.tan(np.deg2rad(5.0)))
 
 
 def test_metrics_scielab_filters_script_workflow() -> None:

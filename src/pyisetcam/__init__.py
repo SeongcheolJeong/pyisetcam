@@ -243,7 +243,26 @@ from .parity import run_python_case, run_python_case_with_context
 from .plotting import ip_plot, oi_plot, scene_plot, sensor_plot, sensor_plot_fft, sensor_plot_line, wvf_plot
 from .ptable import IEPTable, ie_p_table
 from .roi import ie_locs2_rect, ie_rect2_locs, ie_rect2_vertices, ie_roi2_locs, vc_get_roi_data, vc_rect2_locs
-from .scielab import color_transform_matrix, sc_compute_scielab, sc_opponent_filter, sc_params, sc_prepare_filters, scielab, scielab_rgb
+from .scielab import (
+    change_color_space,
+    cmatrix,
+    color_transform_matrix,
+    gauss,
+    get_planes,
+    ie_conv2_fft,
+    pad4conv,
+    pre_scielab,
+    sc_compute_scielab,
+    sc_opponent_filter,
+    sc_params,
+    sc_prepare_filters,
+    sc_resize,
+    scielab,
+    scielab_rgb,
+    separable_conv,
+    separable_filters,
+    visual_angle,
+)
 from .session import (
     ie_app_get,
     ie_add_object,
@@ -675,10 +694,29 @@ __all__ = [
     "photometricExposure",
     "photometric_exposure",
     "edge_to_mtf",
+    "changeColorSpace",
+    "change_color_space",
+    "cmatrix",
+    "gauss",
+    "getPlanes",
+    "get_planes",
+    "ieConv2FFT",
+    "ie_conv2_fft",
+    "pad4conv",
+    "preSCIELAB",
+    "pre_scielab",
     "scParams",
     "scComputeSCIELAB",
     "scOpponentFilter",
     "scPrepareFilters",
+    "scResize",
+    "sc_resize",
+    "separableConv",
+    "separableFilters",
+    "separable_conv",
+    "separable_filters",
+    "visualAngle",
+    "visual_angle",
     "colorTransformMatrix",
     "color_transform_matrix",
     "sc_compute_scielab",
@@ -1426,10 +1464,18 @@ ieXYZFromPhotons = ie_xyz_from_photons
 ieLuminance2Radiance = ie_luminance_to_radiance
 ieScotopicLuminanceFromEnergy = ie_scotopic_luminance_from_energy
 ieResponsivityConvert = ie_responsivity_convert
+changeColorSpace = change_color_space
+getPlanes = get_planes
+ieConv2FFT = ie_conv2_fft
+preSCIELAB = pre_scielab
 scParams = sc_params
 scComputeSCIELAB = sc_compute_scielab
 scOpponentFilter = sc_opponent_filter
 scPrepareFilters = sc_prepare_filters
+scResize = sc_resize
+separableConv = separable_conv
+separableFilters = separable_filters
+visualAngle = visual_angle
 colorTransformMatrix = color_transform_matrix
 scielabRGB = scielab_rgb
 xyz2luv = xyz_to_luv
