@@ -46,7 +46,19 @@ from .color import (
     y_to_lstar,
 )
 from .description import HeadlessDescriptionHandle, sensor_description
-from .display import display_create, display_get, display_set
+from .display import (
+    display_create,
+    display_description,
+    display_get,
+    display_list,
+    display_max_contrast,
+    display_set,
+    display_set_max_luminance,
+    display_set_white_point,
+    display_show_image,
+    ie_calculate_monitor_dpi,
+    mperdot2dpi,
+)
 from .fileio import (
     ie_dng_read,
     ie_dng_simple_info,
@@ -526,11 +538,25 @@ __all__ = [
     "hcBasis",
     "hc_basis",
     "displayCreate",
+    "displayDescription",
     "displayGet",
+    "displayList",
+    "displayMaxContrast",
     "displaySet",
+    "displaySetMaxLuminance",
+    "displaySetWhitePoint",
+    "displayShowImage",
     "display_create",
+    "display_description",
     "display_get",
+    "display_list",
+    "display_max_contrast",
     "display_set",
+    "display_set_max_luminance",
+    "display_set_white_point",
+    "display_show_image",
+    "ieCalculateMonitorDPI",
+    "mperdot2dpi",
     "ensure_upstream_snapshot",
     "comparison_metrics",
     "correlated_color_temperature",
@@ -1383,8 +1409,16 @@ illuminantGet = illuminant_get
 illuminantSet = illuminant_set
 
 displayCreate = display_create
+displayDescription = display_description
 displayGet = display_get
+displayList = display_list
+displayMaxContrast = display_max_contrast
 displaySet = display_set
+displaySetMaxLuminance = display_set_max_luminance
+displaySetWhitePoint = display_set_white_point
+displayShowImage = display_show_image
+ieCalculateMonitorDPI = ie_calculate_monitor_dpi
+mperdot2dpi = mperdot2dpi
 sensorDescription = sensor_description
 
 oiCreate = oi_create

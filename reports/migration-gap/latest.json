@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-23T14:09:40.058800+00:00",
+  "generated_at": "2026-03-23T14:35:54.447169+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-23T14:09:40.058800+00:00",
+    "generated_at": "2026-03-23T14:35:54.447169+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 92,
       "missing": 37,
       "out_of_scope": 125,
-      "parity": 506,
-      "partial": 647,
+      "parity": 514,
+      "partial": 639,
       "ported": 36
     },
     "kind_counts": {
@@ -22,18 +22,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 214,
+      "P0": 206,
       "P1": 381,
       "P2": 181,
-      "P3": 667
+      "P3": 675
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
         "out_of_scope": 0,
-        "parity": 4,
-        "partial": -4,
+        "parity": 8,
+        "partial": -8,
         "ported": 0
       },
       "kind_counts": {
@@ -45,10 +45,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -4,
+        "P0": -8,
         "P1": 0,
         "P2": 0,
-        "P3": 4
+        "P3": 8
       }
     },
     "family_summary": {
@@ -234,8 +234,8 @@
         "total": 23,
         "by_status": {
           "out_of_scope": 6,
-          "parity": 5,
-          "partial": 11,
+          "parity": 13,
+          "partial": 3,
           "ported": 1
         },
         "by_kind": {
@@ -1060,17 +1060,6 @@
         }
       },
       {
-        "family": "displays",
-        "open_entries": 11,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "out_of_scope": 6,
-          "parity": 5,
-          "partial": 11,
-          "ported": 1
-        }
-      },
-      {
         "family": "scene/macbeth",
         "open_entries": 11,
         "highest_open_priority": "P0",
@@ -1145,6 +1134,17 @@
           "parity": 17,
           "partial": 8
         }
+      },
+      {
+        "family": "color",
+        "open_entries": 7,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "headless_only": 3,
+          "out_of_scope": 1,
+          "parity": 36,
+          "partial": 4
+        }
       }
     ],
     "exception_sites_by_module": {
@@ -1169,7 +1169,7 @@
         "not_implemented_error_sites": 0
       },
       "display": {
-        "unsupported_option_error_sites": 1,
+        "unsupported_option_error_sites": 2,
         "not_implemented_error_sites": 0
       },
       "exceptions": {

@@ -37,8 +37,14 @@ from pyisetcam import (
     adobergb_parameters,
     daylight,
     delta_e_ab,
+    displayDescription,
     display_create,
     display_get,
+    displayList,
+    displayMaxContrast,
+    displaySetMaxLuminance,
+    displaySetWhitePoint,
+    displayShowImage,
     edge_to_mtf,
     exposureValue,
     FOTParams,
@@ -56,6 +62,7 @@ from pyisetcam import (
     ie_save_color_filter,
     ie_save_multispectral_image,
     ie_save_si_data_file,
+    ieCalculateMonitorDPI,
     ieCheckerboard,
     ieCirclePoints,
     ieConv2FFT,
@@ -88,6 +95,7 @@ from pyisetcam import (
     luminance_from_photons,
     macbeth_read_reflectance,
     macbeth_compare_ideal,
+    mperdot2dpi,
     mkInvGammaTable,
     MOTarget,
     lensList,
@@ -13552,6 +13560,53 @@ def test_scene_rgb2radiance_tutorial_workflow(asset_store) -> None:
     assert payloads["OLED-Sony.mat"]["mean_luminance"] > payloads["LCD-Apple.mat"]["mean_luminance"] > payloads["CRT-Dell.mat"]["mean_luminance"]
     assert not np.allclose(payloads["OLED-Sony.mat"]["rgb_channel_means"], payloads["LCD-Apple.mat"]["rgb_channel_means"])
     assert not np.allclose(payloads["LCD-Apple.mat"]["rgb_channel_means"], payloads["CRT-Dell.mat"]["rgb_channel_means"])
+
+
+def test_display_helper_compatibility_surface(asset_store) -> None:
+    all_names = displayList(show=False, asset_store=asset_store)
+    lcd_names = displayList(type="LCD", show=False, asset_store=asset_store)
+    display = display_create("LCD-Apple.mat", asset_store=asset_store)
+    rgb = np.linspace(0.0, 1.0, 27, dtype=float).reshape(3, 3, 3)
+    display.fields["image"] = rgb
+
+    description = displayDescription(display)
+    rendered = np.asarray(displayShowImage(display, asset_store=asset_store), dtype=float)
+    expected = np.asarray(
+        scene_get(scene_from_file(rgb, "rgb", None, display, asset_store=asset_store), "rgb", asset_store=asset_store),
+        dtype=float,
+    )
+    current_white = np.asarray(display_get(display, "white point"), dtype=float).reshape(3)
+    scaled = displaySetMaxLuminance(display, current_white[1] * 1.25)
+    rewhite = displaySetWhitePoint(display, np.array([0.31, 0.33], dtype=float))
+
+    assert "LCD-Apple.mat" in all_names
+    assert "LCD-Apple.mat" in lcd_names
+    assert all(name.startswith("LCD") for name in lcd_names)
+    assert displayDescription(None) == "No display structure"
+    assert str(display_get(display, "name")) in description
+    assert "Image width: 3" in description
+    assert "Height: 3" in description
+    assert np.isclose(mperdot2dpi(254.0), 100.0, atol=1e-12, rtol=1e-12)
+    dpi, pitch = ieCalculateMonitorDPI(25.4, 25.4, 1000, 1000)
+    assert np.allclose(dpi, np.full(2, 100.0, dtype=float), atol=1e-12, rtol=1e-12)
+    assert np.allclose(pitch, np.full(2, 0.254, dtype=float), atol=1e-12, rtol=1e-12)
+    assert np.isclose(
+        displayMaxContrast(np.array([0.5, -0.25, 0.1], dtype=float), np.array([0.5, 0.5, 0.2], dtype=float)),
+        1.0,
+        atol=1e-12,
+        rtol=1e-12,
+    )
+    assert rendered.shape == rgb.shape
+    assert np.allclose(rendered, expected, atol=1e-12, rtol=1e-12)
+    assert np.isclose(display_get(scaled, "max luminance"), current_white[1] * 1.25, atol=1e-10, rtol=1e-10)
+    assert np.isclose(display_get(display, "max luminance"), current_white[1], atol=1e-10, rtol=1e-10)
+    assert np.isclose(display_get(rewhite, "white point")[1], current_white[1], atol=1e-10, rtol=1e-10)
+    assert np.allclose(
+        np.asarray(display_get(rewhite, "white xy"), dtype=float).reshape(2),
+        np.array([0.31, 0.33], dtype=float),
+        atol=1e-8,
+        rtol=1e-8,
+    )
 
 
 def test_scene_from_multispectral_script_workflow(asset_store) -> None:

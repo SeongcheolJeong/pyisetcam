@@ -107,6 +107,53 @@ def _inverse_gamma_table(gamma_table: np.ndarray, n_steps: int) -> np.ndarray:
     return invert_gamma_table(linear_rgb, gamma_table)
 
 
+def mperdot2dpi(mpd: Any) -> float:
+    """Convert microns-per-dot to dots-per-inch."""
+
+    microns_per_dot = float(np.asarray(mpd, dtype=float).reshape(-1)[0])
+    if microns_per_dot <= 0.0:
+        raise ValueError("mperdot2dpi requires a positive microns-per-dot value.")
+    return float((1.0 / microns_per_dot) * (2.54 * 1e4))
+
+
+def ie_calculate_monitor_dpi(
+    monitor_size_x_cm: float,
+    monitor_size_y_cm: float,
+    num_pixels_x: int,
+    num_pixels_y: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Compute MATLAB-style monitor DPI and dot pitch from dimensions in cm."""
+
+    if num_pixels_x <= 0 or num_pixels_y <= 0:
+        raise ValueError("ieCalculateMonitorDPI requires positive pixel counts.")
+    pixel_size_x_mm = float(monitor_size_x_cm) * 10.0 / float(num_pixels_x)
+    pixel_size_y_mm = float(monitor_size_y_cm) * 10.0 / float(num_pixels_y)
+    dpi_x = mperdot2dpi(pixel_size_x_mm * 1e3)
+    dpi_y = mperdot2dpi(pixel_size_y_mm * 1e3)
+    return (
+        np.array([dpi_x, dpi_y], dtype=float),
+        np.array([pixel_size_x_mm, pixel_size_y_mm], dtype=float),
+    )
+
+
+def display_max_contrast(signal_dir: Any, back_dir: Any) -> float:
+    """Return the maximum scalar contrast that keeps RGB within [0, 1]."""
+
+    signal = np.asarray(signal_dir, dtype=float).reshape(-1)
+    background = np.asarray(back_dir, dtype=float).reshape(-1)
+    if signal.size != 3 or background.size != 3:
+        raise ValueError("displayMaxContrast requires three-element signal/background vectors.")
+    bounds = np.empty(3, dtype=float)
+    for index in range(3):
+        if np.isclose(signal[index], 0.0):
+            bounds[index] = np.inf
+        elif signal[index] > 0.0:
+            bounds[index] = (1.0 - background[index]) / signal[index]
+        else:
+            bounds[index] = abs(-background[index] / signal[index])
+    return float(np.min(bounds))
+
+
 def display_create(
     display_name: str = "LCD-Apple",
     *args: Any,
@@ -146,6 +193,103 @@ def display_create(
         display.fields["wave"] = target_wave
     display.fields.setdefault("image", None)
     return track_session_object(session, display)
+
+
+def display_list(
+    *,
+    type: str = "",
+    show: bool = True,
+    asset_store: AssetStore | None = None,
+) -> list[str]:
+    """List vendored display calibration files, optionally filtered by prefix."""
+
+    store = _store(asset_store)
+    display_root = store.ensure() / "data" / "displays"
+    pattern = f"{type}*.mat" if str(type).strip() else "*.mat"
+    names = sorted(path.name for path in display_root.glob(pattern))
+    if show:
+        for name in names:
+            print(name)
+    return names
+
+
+def display_description(display: Display | None) -> str:
+    """Return a concise text summary of a display."""
+
+    if display is None:
+        return "No display structure"
+
+    description = f"Name:\t{display_get(display, 'name')}\n"
+    wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)
+    spacing = int(np.rint(float(display_get(display, "binwidth"))))
+    description += f"Wave:\t{int(np.min(wave))}:{spacing}:{int(np.max(wave))} nm\n"
+    description += f"# primaries:\t{int(display_get(display, 'nprimaries'))}\n"
+    description += f"Color bit depth:\t{int(display_get(display, 'bits'))}\n"
+    rgb = display_get(display, "image")
+    if rgb is not None:
+        rgb_array = np.asarray(rgb)
+        if rgb_array.ndim >= 2:
+            description += f"Image width: {rgb_array.shape[1]}\t Height: {rgb_array.shape[0]}"
+    return description
+
+
+def display_show_image(
+    display: Display,
+    app: Any | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> np.ndarray:
+    """Render the display's stored RGB image headlessly through the display model."""
+
+    del app
+    from .scene import scene_create, scene_from_file, scene_get
+
+    rgb = display_get(display, "image")
+    if rgb is None:
+        scene = scene_create(asset_store=_store(asset_store))
+        rgb = np.asarray(scene_get(scene, "rgb"), dtype=float)
+        display_set(display, "image", rgb)
+        return rgb
+    scene = scene_from_file(rgb, "rgb", None, display, asset_store=_store(asset_store))
+    return np.asarray(scene_get(scene, "rgb"), dtype=float)
+
+
+def display_set_max_luminance(display: Display, max_luminance: float) -> Display:
+    """Scale primary SPDs so the display white point reaches the requested luminance."""
+
+    current = display.clone()
+    current_white = np.asarray(display_get(current, "white point"), dtype=float).reshape(3)
+    current_y = float(current_white[1])
+    scale = float(max_luminance) / max(current_y, 1e-12)
+    spd = np.asarray(display_get(current, "spd"), dtype=float)
+    return display_set(current, "spd", spd * scale)
+
+
+def display_set_white_point(
+    display: Display,
+    white_xy: Any,
+    format: str = "xyz",
+) -> Display:
+    """Scale display primaries so the white point chromaticity matches the target xy."""
+
+    normalized = param_format(format or "xyz")
+    if normalized != "xyz":
+        raise UnsupportedOptionError("displaySetWhitePoint", format)
+
+    chromaticity = np.asarray(white_xy, dtype=float).reshape(-1)
+    if chromaticity.size != 2:
+        raise ValueError("displaySetWhitePoint requires [x, y] chromaticity.")
+
+    current = display.clone()
+    current_y = float(np.asarray(display_get(current, "white point"), dtype=float).reshape(3)[1])
+    x, y = float(chromaticity[0]), float(chromaticity[1])
+    if y <= 0.0:
+        raise ValueError("displaySetWhitePoint requires positive y chromaticity.")
+    xyz_white = np.array([x * current_y / y, current_y, (1.0 - x - y) * current_y / y], dtype=float)
+    rgb2xyz = np.asarray(display_get(current, "rgb2xyz"), dtype=float)
+    scale = xyz_white @ np.linalg.inv(rgb2xyz)
+    spd = np.asarray(display_get(current, "spd"), dtype=float)
+    return display_set(current, "spd", spd @ np.diag(scale))
 
 
 def display_get(display: Display, parameter: str, *args: Any) -> Any:
@@ -250,6 +394,8 @@ def display_get(display: Display, parameter: str, *args: Any) -> Any:
         return display.fields.get("refresh_rate_hz")
     if key == "image":
         return display.fields.get("image")
+    if key in {"maxluminance", "peakluminance", "peakdisplayluminance"}:
+        return float(np.asarray(display_get(display, "white point"), dtype=float).reshape(3)[1])
     raise KeyError(f"Unsupported displayGet parameter: {parameter}")
 
 
