@@ -1112,6 +1112,12 @@ That same headless image-processing surface now also exposes
 `Demosaic(ip, sensor)` entry point and preferring the current
 `ip.data['input']` mosaic when it is present.
 That same image-processing surface now also exposes
+`faulty_list(...)` / `faultyList(...)`,
+`faulty_insert(...)` / `faultyInsert(...)`,
+`faulty_nearest_neighbor(...)` / `FaultyNearestNeighbor(...)`, and
+`faulty_bilinear(...)` / `FaultyBilinear(...)`, matching the legacy
+MATLAB faulty-pixel list, insertion, and GRBG repair helpers.
+That same image-processing surface now also exposes
 `image_sensor_conversion(...)` / `imageSensorConversion(...)` and
 `image_sensor_correction(...)` / `imageSensorCorrection(...)`, matching
 the direct MATLAB sensor-to-ICS entry points on top of the existing IP

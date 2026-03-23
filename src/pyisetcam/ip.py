@@ -68,6 +68,25 @@ def _restore_channel_image(data: np.ndarray, squeeze_channel: bool) -> np.ndarra
     return data
 
 
+def _faulty_pixel_colors(list_array: np.ndarray) -> np.ndarray:
+    x = np.asarray(list_array[:, 0], dtype=int)
+    y = np.asarray(list_array[:, 1], dtype=int)
+    colors = np.full(x.shape, 2, dtype=int)
+    odd_x = (x % 2) == 1
+    odd_y = (y % 2) == 1
+    colors[(~odd_x) & odd_y] = 1
+    colors[odd_x & (~odd_y)] = 3
+    return colors
+
+
+def _bayer_reflect(data: np.ndarray) -> np.ndarray:
+    array = np.asarray(data, dtype=float)
+    rows, cols = array.shape[:2]
+    extended = np.concatenate((array[:, 2:4, :], array, array[:, (cols - 4) : (cols - 2), :]), axis=1)
+    extended = np.concatenate((extended[2:4, :, :], extended, extended[(rows - 4) : (rows - 2), :, :]), axis=0)
+    return extended
+
+
 def _crop_border(img: np.ndarray, threshold: float = 0.06) -> np.ndarray:
     rgb = np.asarray(img, dtype=float)
     if rgb.ndim != 3 or rgb.shape[2] != 3:
@@ -82,6 +101,133 @@ def _crop_border(img: np.ndarray, threshold: float = 0.06) -> np.ndarray:
     if row2 <= row1 or col2 <= col1:
         return rgb
     return rgb[row1 : row2 + 1, col1 : col2 + 1, :]
+
+
+def faulty_list(
+    row: int,
+    col: int,
+    n_bad_pixels: int | None = None,
+    min_separation: float = 2.0,
+    *,
+    rng: np.random.Generator | None = None,
+) -> np.ndarray:
+    """Generate MATLAB-style faulty-pixel `[x, y]` locations."""
+
+    rows = int(row)
+    cols = int(col)
+    if rows <= 0 or cols <= 0:
+        raise ValueError("faultyList requires positive row and col sizes.")
+    count = int(round(rows * cols * 0.01)) if n_bad_pixels is None else int(n_bad_pixels)
+    if count <= 0:
+        return np.zeros((0, 2), dtype=int)
+    if count * float(min_separation) * 4.0 > rows * cols:
+        raise ValueError("Separation parameter and size are poorly chosen.")
+
+    generator = np.random.default_rng() if rng is None else rng
+    current = np.zeros((0, 2), dtype=int)
+    while current.shape[0] != count:
+        xlist = generator.integers(1, cols + 1, size=count, endpoint=False)
+        ylist = generator.integers(1, rows + 1, size=count, endpoint=False)
+        current = np.unique(np.column_stack((xlist, ylist)).astype(int), axis=0)
+
+    if count == 1:
+        return current
+
+    min_distance = float(min_separation)
+    index = 0
+    while index < count:
+        deltas = current.astype(float) - current[index].astype(float)
+        distances = np.sort(np.sqrt(np.sum(deltas * deltas, axis=1)))
+        if distances[1] < min_distance:
+            while True:
+                replacement = np.array(
+                    [
+                        generator.integers(1, cols + 1, endpoint=False),
+                        generator.integers(1, rows + 1, endpoint=False),
+                    ],
+                    dtype=int,
+                )
+                current[index] = replacement
+                current = np.unique(current, axis=0)
+                if current.shape[0] == count:
+                    break
+            index = max(index - 1, 0)
+            continue
+        index += 1
+    return current
+
+
+def faulty_insert(list_array: Any, img: Any, val: Any = 0) -> np.ndarray:
+    """Insert MATLAB-style faulty pixels into an RGB or plane-stack image."""
+
+    faulty = np.asarray(list_array, dtype=int)
+    image = np.asarray(img, dtype=float).copy()
+    if faulty.ndim != 2 or faulty.shape[1] != 2:
+        raise ValueError("faultyInsert requires an Nx2 faulty-pixel list.")
+    if image.ndim != 3:
+        raise ValueError("faultyInsert requires an image with shape rows x cols x channels.")
+    fill = np.asarray(val, dtype=float)
+    for x, y in faulty:
+        image[int(y) - 1, int(x) - 1, :] = fill
+    return image
+
+
+def faulty_nearest_neighbor(list_array: Any, bayer_in: Any) -> np.ndarray:
+    """Replace faulty Bayer samples using the legacy nearest-neighbor rule."""
+
+    faulty = np.asarray(list_array, dtype=int)
+    bayer = np.asarray(bayer_in, dtype=float)
+    if faulty.ndim != 2 or faulty.shape[1] != 2:
+        raise ValueError("FaultyNearestNeighbor requires an Nx2 faulty-pixel list.")
+    if bayer.ndim != 3 or bayer.shape[2] < 3:
+        raise ValueError("FaultyNearestNeighbor requires a Bayer plane stack with at least three channels.")
+
+    extended = _bayer_reflect(bayer)
+    colors = _faulty_pixel_colors(faulty)
+    output = bayer.copy()
+    shifted = faulty + 1
+    for index, (x, y) in enumerate(shifted):
+        channel = int(colors[index]) - 1
+        if channel in {0, 2}:
+            missing = extended[int(y) + 2, int(x), channel]
+        else:
+            missing = extended[int(y) + 1, int(x) + 1, channel]
+        output[int(faulty[index, 1]) - 1, int(faulty[index, 0]) - 1, channel] = float(missing)
+    return output
+
+
+def faulty_bilinear(list_array: Any, bayer_in: Any) -> np.ndarray:
+    """Replace faulty Bayer samples using the legacy bilinear rule."""
+
+    faulty = np.asarray(list_array, dtype=int)
+    bayer = np.asarray(bayer_in, dtype=float)
+    if faulty.ndim != 2 or faulty.shape[1] != 2:
+        raise ValueError("FaultyBilinear requires an Nx2 faulty-pixel list.")
+    if bayer.ndim != 3 or bayer.shape[2] < 3:
+        raise ValueError("FaultyBilinear requires a Bayer plane stack with at least three channels.")
+
+    extended = _bayer_reflect(bayer)
+    colors = _faulty_pixel_colors(faulty)
+    output = bayer.copy()
+    shifted = faulty + 1
+    for index, (x, y) in enumerate(shifted):
+        channel = int(colors[index]) - 1
+        if channel in {0, 2}:
+            missing = 0.25 * (
+                extended[int(y) - 2, int(x), channel]
+                + extended[int(y), int(x) - 2, channel]
+                + extended[int(y) + 2, int(x), channel]
+                + extended[int(y), int(x) + 2, channel]
+            )
+        else:
+            missing = 0.25 * (
+                extended[int(y) - 1, int(x) - 1, channel]
+                + extended[int(y) - 1, int(x) + 1, channel]
+                + extended[int(y) + 1, int(x) - 1, channel]
+                + extended[int(y) + 1, int(x) + 1, channel]
+            )
+        output[int(faulty[index, 1]) - 1, int(faulty[index, 0]) - 1, channel] = float(missing)
+    return output
 
 
 def _ensure_ip_state(ip: ImageProcessor) -> ImageProcessor:
@@ -1743,6 +1889,10 @@ ieInternal2Display = ie_internal_to_display  # noqa: N816
 ipHDRWhite = ip_hdr_white  # noqa: N816
 imageDistort = image_distort  # noqa: N816
 Demosaic = demosaic  # noqa: N816
+faultyList = faulty_list  # noqa: N816
+faultyInsert = faulty_insert  # noqa: N816
+FaultyNearestNeighbor = faulty_nearest_neighbor  # noqa: N816
+FaultyBilinear = faulty_bilinear  # noqa: N816
 imageSensorConversion = image_sensor_conversion  # noqa: N816
 imageSensorCorrection = image_sensor_correction  # noqa: N816
 imageIlluminantCorrection = image_illuminant_correction  # noqa: N816

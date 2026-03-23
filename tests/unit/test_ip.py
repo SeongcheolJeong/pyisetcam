@@ -5,10 +5,14 @@ import numpy as np
 
 from pyisetcam.camera import _chart_rectangles, _chart_rects_data, _linear_srgb_to_xyz, _whole_chart_corner_points
 from pyisetcam import (
+    FaultyBilinear,
+    FaultyNearestNeighbor,
     camera_create,
     camera_mtf,
     demosaic,
     displayRender,
+    faultyInsert,
+    faultyList,
     ieInternal2Display,
     imageColorBalance,
     imageDataXYZ,
@@ -298,6 +302,48 @@ def test_demosaic_returns_monochrome_sensor_plane(asset_store) -> None:
 
     assert result.shape == (3, 4, 1)
     assert np.allclose(result[:, :, 0], volts)
+
+
+def test_faulty_pixel_helpers_match_legacy_grbg_rules() -> None:
+    faulty = faultyList(8, 8, 3, 2, rng=np.random.default_rng(7))
+    assert faulty.shape == (3, 2)
+    assert np.unique(faulty, axis=0).shape[0] == 3
+    assert np.all((faulty[:, 0] >= 1) & (faulty[:, 0] <= 8))
+    assert np.all((faulty[:, 1] >= 1) & (faulty[:, 1] <= 8))
+    distances = np.sqrt(np.sum((faulty[:, None, :] - faulty[None, :, :]) ** 2, axis=2))
+    nearest = distances + np.eye(faulty.shape[0], dtype=float) * 1.0e9
+    assert np.all(np.min(nearest, axis=1) >= 2.0)
+
+    planes = np.zeros((6, 6, 3), dtype=float)
+    planes[0::2, 1::2, 0] = 10.0 * np.arange(1, 10, dtype=float).reshape(3, 3)
+    planes[0::2, 0::2, 1] = 20.0 * np.arange(1, 10, dtype=float).reshape(3, 3)
+    planes[1::2, 1::2, 1] = 30.0 * np.arange(1, 10, dtype=float).reshape(3, 3)
+    planes[1::2, 0::2, 2] = 40.0 * np.arange(1, 10, dtype=float).reshape(3, 3)
+
+    faulty_sites = np.array([[4, 3], [3, 3], [3, 4]], dtype=int)
+    inserted = faultyInsert(faulty_sites, planes, 0.0)
+    assert np.allclose(inserted[2, 3, :], 0.0)
+    assert np.allclose(inserted[2, 2, :], 0.0)
+    assert np.allclose(inserted[3, 2, :], 0.0)
+
+    nearest_fixed = FaultyNearestNeighbor(faulty_sites, inserted)
+    bilinear_fixed = FaultyBilinear(faulty_sites, inserted)
+
+    assert np.isclose(nearest_fixed[2, 3, 0], planes[4, 3, 0])
+    assert np.isclose(
+        bilinear_fixed[2, 3, 0],
+        0.25 * (planes[0, 3, 0] + planes[2, 1, 0] + planes[4, 3, 0] + planes[2, 5, 0]),
+    )
+    assert np.isclose(nearest_fixed[2, 2, 1], planes[3, 3, 1])
+    assert np.isclose(
+        bilinear_fixed[2, 2, 1],
+        0.25 * (planes[1, 1, 1] + planes[1, 3, 1] + planes[3, 1, 1] + planes[3, 3, 1]),
+    )
+    assert np.isclose(nearest_fixed[3, 2, 2], planes[5, 2, 2])
+    assert np.isclose(
+        bilinear_fixed[3, 2, 2],
+        0.25 * (planes[1, 2, 2] + planes[3, 0, 2] + planes[5, 2, 2] + planes[3, 4, 2]),
+    )
 
 
 def test_image_sensor_conversion_matches_direct_formula(asset_store) -> None:

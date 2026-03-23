@@ -92,6 +92,10 @@ from .iso import (
 from .ip import (
     demosaic,
     display_render,
+    faulty_bilinear,
+    faulty_insert,
+    faulty_list,
+    faulty_nearest_neighbor,
     image_color_balance,
     ie_internal_to_display,
     image_data_xyz,
@@ -647,6 +651,14 @@ __all__ = [
     "ieInternal2Display",
     "imageDataXYZ",
     "image_data_xyz",
+    "FaultyBilinear",
+    "faulty_bilinear",
+    "faultyInsert",
+    "faulty_insert",
+    "faultyList",
+    "faulty_list",
+    "FaultyNearestNeighbor",
+    "faulty_nearest_neighbor",
     "imageDistort",
     "image_distort",
     "displayRender",
@@ -1894,6 +1906,10 @@ imageColorBalance = image_color_balance
 imageSensorConversion = image_sensor_conversion
 imageSensorCorrection = image_sensor_correction
 Demosaic = demosaic
+FaultyBilinear = faulty_bilinear
+faultyInsert = faulty_insert
+faultyList = faulty_list
+FaultyNearestNeighbor = faulty_nearest_neighbor
 
 cameraCreate = camera_create
 cameraCompute = camera_compute

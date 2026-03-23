@@ -180,6 +180,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The deprecated MATLAB color-balance gateway is already covered by the Python `image_color_balance(...)` compatibility wrapper.",
         "module_hits": ["pyisetcam.ip"],
     },
+    "imgproc/demosaic/faultypixel/FaultyPixelCorrection.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file immediately errors as requiring a rewrite, so it is treated as obsolete rather than actionable headless API debt.",
+        "module_hits": [],
+    },
     "imgproc/imageIlluminantCorrectionDeprecated.m": {
         "status": "ported",
         "note": "The deprecated MATLAB illuminant-correction file is already covered by the Python `image_illuminant_correction(...)` helper.",

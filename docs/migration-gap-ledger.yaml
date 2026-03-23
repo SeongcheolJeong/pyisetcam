@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-23T20:23:07.776019+00:00",
+  "generated_at": "2026-03-23T20:58:48.212025+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 91,
       "missing": 37,
-      "out_of_scope": 134,
-      "parity": 554,
-      "partial": 592,
+      "out_of_scope": 135,
+      "parity": 558,
+      "partial": 587,
       "ported": 35
     },
     "kind_counts": {
@@ -20,10 +20,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 159,
+      "P0": 154,
       "P1": 381,
       "P2": 180,
-      "P3": 723
+      "P3": 728
     },
     "delta_from_previous": {
       "status_counts": {
@@ -277,9 +277,9 @@
       "imgproc": {
         "total": 59,
         "by_status": {
-          "out_of_scope": 2,
-          "parity": 24,
-          "partial": 25,
+          "out_of_scope": 3,
+          "parity": 28,
+          "partial": 20,
           "ported": 8
         },
         "by_kind": {
@@ -1037,12 +1037,12 @@
       },
       {
         "family": "imgproc",
-        "open_entries": 25,
+        "open_entries": 20,
         "highest_open_priority": "P0",
         "by_status": {
-          "out_of_scope": 2,
-          "parity": 24,
-          "partial": 25,
+          "out_of_scope": 3,
+          "parity": 28,
+          "partial": 20,
           "ported": 8
         }
       },
@@ -3973,66 +3973,74 @@
       "upstream_path": "imgproc/demosaic/faultypixel/FaultyBilinear.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.ip",
+      "status": "parity",
+      "python_surface": "pyisetcam.ip, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/unit/test_ip.py"
+        "tests/unit/test_ip.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/demosaic/faultypixel/FaultyNearestNeighbor.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.ip",
+      "status": "parity",
+      "python_surface": "pyisetcam.ip, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/unit/test_ip.py"
+        "tests/unit/test_ip.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/demosaic/faultypixel/FaultyPixelCorrection.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_ip.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream file immediately errors as requiring a rewrite, so it is treated as obsolete rather than actionable headless API debt.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/demosaic/faultypixel/faultyInsert.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.ip",
+      "status": "parity",
+      "python_surface": "pyisetcam.ip, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/unit/test_ip.py"
+        "tests/unit/test_ip.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/demosaic/faultypixel/faultyList.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.ip",
+      "status": "parity",
+      "python_surface": "pyisetcam.ip, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/unit/test_ip.py"
+        "tests/unit/test_ip.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/demosaic/ieBilinear.m",
