@@ -2147,6 +2147,198 @@ def imx490_compute(
 imx490Compute = imx490_compute
 
 
+def _pixel_payload_from_value(pixel: Any) -> dict[str, Any]:
+    if isinstance(pixel, dict):
+        return copy.deepcopy(pixel)
+    if pixel is None:
+        raise ValueError("pixel must be defined.")
+    if isinstance(pixel, Sensor):
+        return _pixel_payload_from_sensor(pixel)
+    return copy.deepcopy(dict(vars(pixel)))
+
+
+def _pixel_wave_from_payload(pixel: dict[str, Any]) -> np.ndarray:
+    wave = pixel.get("wave")
+    if wave is None:
+        spectrum = pixel.get("spectrum", {})
+        if isinstance(spectrum, dict):
+            wave = spectrum.get("wave")
+        elif spectrum is not None:
+            wave = getattr(spectrum, "wave", None)
+    if wave is None:
+        return DEFAULT_WAVE.copy()
+    return np.asarray(wave, dtype=float).reshape(-1)
+
+
+def _pixel_qe_from_payload(pixel: dict[str, Any], wave: np.ndarray) -> np.ndarray:
+    for key in ("pd_spectral_qe", "pixel_qe", "spectral_qe", "spectralQE", "qe"):
+        stored = pixel.get(key)
+        if stored is None:
+            continue
+        qe = np.asarray(stored, dtype=float).reshape(-1)
+        if qe.size == 1:
+            return np.full(wave.size, float(qe[0]), dtype=float)
+        return qe
+    return np.ones(wave.size, dtype=float)
+
+
+def _pixel_sensor_from_value(pixel: Any) -> Sensor:
+    if isinstance(pixel, Sensor):
+        return pixel.clone()
+    payload = _pixel_payload_from_value(pixel)
+    wave = _pixel_wave_from_payload(payload)
+    pixel_qe = _pixel_qe_from_payload(payload, wave)
+    for key in ("wave", "pd_spectral_qe", "pixel_qe", "spectral_qe", "spectralQE", "qe"):
+        payload.pop(key, None)
+    sensor = _sensor_base(str(payload.get("name", "pixel")), wave, (1, 1), payload)
+    sensor.fields["pixel_qe"] = pixel_qe
+    sensor.fields["pixel"]["spectrum"] = _pixel_spectrum_struct(sensor)
+    return sensor
+
+
+def _pixel_payload_from_sensor(sensor: Sensor) -> dict[str, Any]:
+    payload = copy.deepcopy(sensor.fields["pixel"])
+    payload["spectrum"] = _pixel_spectrum_struct(sensor)
+    payload["wave"] = np.asarray(sensor.fields["wave"], dtype=float).copy()
+    payload["pd_spectral_qe"] = _sensor_pixel_qe(sensor).copy()
+    return payload
+
+
+def pixel_create(
+    pixel_type: str = "default",
+    wave: Any | None = None,
+    pixel_size_m: float = 2.8e-6,
+) -> dict[str, Any]:
+    """Create a standalone MATLAB-style pixel payload."""
+
+    resolved_wave = DEFAULT_WAVE.copy() if wave is None else np.asarray(wave, dtype=float).reshape(-1)
+    normalized = param_format(pixel_type or "default")
+
+    if normalized in {"default", "aps"}:
+        payload = _default_pixel({"name": "aps", "type": "pixel"})
+    elif normalized in {"human", "humancone"}:
+        payload = _default_pixel(
+            {
+                "name": "humancone",
+                "type": "pixel",
+                "size_m": np.array([2.0e-6, 2.0e-6], dtype=float),
+                "pd_size_m": np.array([2.0e-6, 2.0e-6], dtype=float),
+                "fill_factor": 1.0,
+                "conversion_gain_v_per_electron": 1.0e-5,
+                "voltage_swing": 1.0,
+                "dark_voltage_v_per_sec": 1.0e-3,
+                "read_noise_v": 1.0e-3,
+                "layer_thickness_m": np.array([0.5e-6, 4.5e-6], dtype=float),
+                "refractive_indices": np.array([1.0, 2.0, 1.46, 3.5], dtype=float),
+            }
+        )
+        _sync_pixel_pd_state(payload)
+    elif normalized in {"mouse", "mousecone"}:
+        payload = _default_pixel(
+            {
+                "name": "mousecone",
+                "type": "pixel",
+                "size_m": np.array([9.0e-6, 9.0e-6], dtype=float),
+                "pd_size_m": np.array([2.0e-6, 2.0e-6], dtype=float),
+                "conversion_gain_v_per_electron": 1.0e-5,
+                "voltage_swing": 0.2,
+                "dark_voltage_v_per_sec": 0.0,
+                "read_noise_v": 0.0,
+            }
+        )
+        _sync_pixel_pd_state(payload)
+    elif normalized == "ideal":
+        payload = _default_pixel(
+            {
+                "name": "aps",
+                "type": "pixel",
+                "size_m": np.array([float(pixel_size_m), float(pixel_size_m)], dtype=float),
+                "pd_size_m": np.array([float(pixel_size_m), float(pixel_size_m)], dtype=float),
+                "fill_factor": 1.0,
+            }
+        )
+        _sync_pixel_pd_state(payload)
+        payload["wave"] = resolved_wave.copy()
+        payload["spectrum"] = {"wave": resolved_wave.copy()}
+        payload["pd_spectral_qe"] = np.ones(resolved_wave.size, dtype=float)
+        return pixel_ideal(payload)
+    else:
+        raise UnsupportedOptionError("pixelCreate", pixel_type)
+
+    payload["wave"] = resolved_wave.copy()
+    payload["spectrum"] = {"wave": resolved_wave.copy()}
+    payload["pd_spectral_qe"] = np.ones(resolved_wave.size, dtype=float)
+    return payload
+
+
+def pixel_get(pixel: Any, parameter: str, *args: Any) -> Any:
+    """Return MATLAB-style standalone pixel properties."""
+
+    return _sensor_pixel_get(_pixel_sensor_from_value(pixel), parameter, *args)
+
+
+def pixel_set(pixel: Any, parameter: str, value: Any) -> dict[str, Any]:
+    """Set MATLAB-style standalone pixel properties."""
+
+    sensor = _pixel_sensor_from_value(pixel)
+    sensor = _sensor_pixel_set(sensor, parameter, value)
+    return _pixel_payload_from_sensor(sensor)
+
+
+def pixel_ideal(pixel: Any | None = None) -> dict[str, Any]:
+    """Create a matched standalone pixel payload without read or dark noise."""
+
+    payload = pixel_create("default") if pixel is None else _pixel_payload_from_value(pixel)
+    payload = pixel_set(payload, "readNoiseVolts", 0.0)
+    payload = pixel_set(payload, "darkVoltage", 0.0)
+    return pixel_set(payload, "voltage swing", 1.0e6)
+
+
+def pixel_sr(pixel: Any) -> np.ndarray:
+    """Return MATLAB-style pixel spectral responsivity."""
+
+    return _pixel_spectral_sr(_pixel_sensor_from_value(pixel))
+
+
+def _interp_linear_with_extrapolation(x: np.ndarray, y: np.ndarray, x_new: np.ndarray) -> np.ndarray:
+    result = np.interp(x_new, x, y)
+    if x.size >= 2:
+        left_mask = x_new < x[0]
+        if np.any(left_mask):
+            left_slope = (y[1] - y[0]) / max(x[1] - x[0], 1e-30)
+            result[left_mask] = y[0] + (x_new[left_mask] - x[0]) * left_slope
+        right_mask = x_new > x[-1]
+        if np.any(right_mask):
+            right_slope = (y[-1] - y[-2]) / max(x[-1] - x[-2], 1e-30)
+            result[right_mask] = y[-1] + (x_new[right_mask] - x[-1]) * right_slope
+    return result
+
+
+def ie_pixel_well_capacity(
+    pixel_size_um: Any | None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[float | np.ndarray | None, np.ndarray]:
+    """Estimate full well capacity from pixel size in microns."""
+
+    store = _store(asset_store)
+    well_capacity = np.asarray(store.load_mat("data/sensor/wellCapacity.mat")["wellCapacity"], dtype=float)
+    if pixel_size_um is None:
+        return None, well_capacity
+    sizes = np.asarray(pixel_size_um, dtype=float)
+    if sizes.size == 0:
+        return None, well_capacity
+
+    flat_sizes = sizes.reshape(-1)
+    electrons = _interp_linear_with_extrapolation(well_capacity[:, 0], well_capacity[:, 1], flat_sizes)
+    reshaped = electrons.reshape(sizes.shape)
+    if reshaped.ndim == 0:
+        return float(reshaped), well_capacity
+    if reshaped.size == 1:
+        return float(reshaped.reshape(-1)[0]), well_capacity
+    return reshaped, well_capacity
+
+
 def _snr_voltage_levels(pixel: dict[str, Any], volts: Any | None) -> np.ndarray:
     if volts is None:
         return np.logspace(-4.0, 0.0, 50, dtype=float) * max(float(pixel["voltage_swing"]), 1e-12)

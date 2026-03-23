@@ -279,8 +279,14 @@ from .sensor import (
     mlens_create,
     mlens_get,
     mlens_set,
+    ie_pixel_well_capacity,
+    pixel_create,
+    pixel_get,
+    pixel_ideal,
     pixel_snr,
     pixel_snr_luxsec,
+    pixel_sr,
+    pixel_set,
     pixel_v_per_lux_sec,
     signal_current,
     sensor_cfa_name_list,
@@ -835,6 +841,12 @@ __all__ = [
     "sensorFormats",
     "sensorGet",
     "sensorCCM",
+    "pixelCreate",
+    "pixelGet",
+    "pixelIdeal",
+    "pixelSet",
+    "pixelSR",
+    "iePixelWellCapacity",
     "sensorCFANameList",
     "sensorClearData",
     "sensorColorOrder",
@@ -884,7 +896,13 @@ __all__ = [
     "sensor_display_transform",
     "sensor_equate_transmittances",
     "sensor_filter_rgb",
+    "pixel_create",
+    "pixel_get",
+    "pixel_ideal",
     "pixelSNR",
+    "pixel_set",
+    "pixel_sr",
+    "ie_pixel_well_capacity",
     "sensor_set",
     "sensor_set_size_to_fov",
     "sensor_save_image",
@@ -1136,6 +1154,12 @@ sensorDetermineCFA = sensor_determine_cfa
 sensorDisplayTransform = sensor_display_transform
 sensorEquateTransmittances = sensor_equate_transmittances
 sensorFilterRGB = sensor_filter_rgb
+pixelCreate = pixel_create
+pixelGet = pixel_get
+pixelIdeal = pixel_ideal
+pixelSet = pixel_set
+pixelSR = pixel_sr
+iePixelWellCapacity = ie_pixel_well_capacity
 sensorDR = sensor_dr
 signalCurrent = signal_current
 sensorColorFilter = sensor_color_filter

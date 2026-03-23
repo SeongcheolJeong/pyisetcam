@@ -173,6 +173,12 @@ from pyisetcam import (
     mlens_get,
     mlens_set,
     metrics_spd,
+    iePixelWellCapacity,
+    pixelCreate,
+    pixelGet,
+    pixelIdeal,
+    pixelSet,
+    pixelSR,
     pixel_snr_luxsec,
     pixel_v_per_lux_sec,
     sensor_ccm,
@@ -5082,6 +5088,68 @@ def test_sensor_resample_wave_resamples_legacy_spectral_payloads(asset_store) ->
     assert np.allclose(np.asarray(sensor_get(resampled, "pixelSpectralQE"), dtype=float), expected_qe)
     assert tuple(sensor_get(resampled, "size")) == tuple(sensor_get(sensor, "size"))
     assert np.array_equal(np.asarray(sensor_get(sensor, "wave"), dtype=float), np.array([500.0, 600.0, 700.0], dtype=float))
+
+
+def test_pixel_create_get_set_and_ideal_match_legacy_contract() -> None:
+    wave = np.array([450.0, 550.0, 650.0], dtype=float)
+    pixel = pixelCreate("default", wave, 1.1e-6)
+
+    assert pixelGet(pixel, "name") == "aps"
+    assert pixelGet(pixel, "type") == "pixel"
+    assert np.isclose(float(pixelGet(pixel, "width")), 2.8e-6)
+    assert np.isclose(float(pixelGet(pixel, "fill factor")), 0.75)
+    assert np.array_equal(np.asarray(pixelGet(pixel, "wave"), dtype=float), wave)
+    assert np.array_equal(np.asarray(pixelGet(pixel, "spectralQE"), dtype=float), np.ones(wave.size, dtype=float))
+
+    resized = pixelSet(pixel, "size same fill factor", np.array([1.5e-6, 1.5e-6], dtype=float))
+    noisy = pixelSet(resized, "readNoiseVolts", 2.0e-3)
+    noisy = pixelSet(noisy, "darkVoltage", 3.0e-3)
+    idealized = pixelIdeal(noisy)
+    created_ideal = pixelCreate("ideal", wave, 1.5e-6)
+
+    assert np.isclose(float(pixelGet(resized, "width")), 1.5e-6)
+    assert np.isclose(float(pixelGet(resized, "height")), 1.5e-6)
+    assert np.isclose(float(pixelGet(resized, "fill factor")), float(pixelGet(pixel, "fill factor")))
+    assert np.isclose(float(pixelGet(noisy, "readNoiseVolts")), 2.0e-3)
+    assert np.isclose(float(pixelGet(idealized, "readNoiseVolts")), 0.0)
+    assert np.isclose(float(pixelGet(idealized, "darkVoltage")), 0.0)
+    assert np.isclose(float(pixelGet(idealized, "voltage swing")), 1.0e6)
+    assert np.isclose(float(pixelGet(created_ideal, "width")), 1.5e-6)
+    assert np.isclose(float(pixelGet(created_ideal, "pdwidth")), 1.5e-6)
+    assert np.isclose(float(pixelGet(created_ideal, "pdheight")), 1.5e-6)
+    assert np.isclose(float(pixelGet(created_ideal, "fill factor")), 1.0)
+
+
+def test_pixel_sr_matches_closed_form_responsivity() -> None:
+    wave = np.array([450.0, 550.0, 650.0], dtype=float)
+    qe = np.array([0.2, 0.6, 1.0], dtype=float)
+    pixel = pixelCreate("human", wave)
+    pixel = pixelSet(pixel, "spectralQE", qe)
+
+    sr = pixelSR(pixel)
+    q = 1.602177e-19
+    h = 6.62607015e-34
+    c = 2.99792458e8
+    expected = ((wave * 1e-9 * q) / (h * c)) * qe
+
+    assert np.allclose(sr, expected)
+
+
+def test_ie_pixel_well_capacity_matches_asset_interpolation(asset_store) -> None:
+    electrons, table = iePixelWellCapacity(2.35, asset_store=asset_store)
+    empty_electrons, empty_table = iePixelWellCapacity([], asset_store=asset_store)
+
+    reference_table = np.asarray(asset_store.load_mat("data/sensor/wellCapacity.mat")["wellCapacity"], dtype=float)
+    expected = np.interp(2.35, reference_table[:, 0], reference_table[:, 1])
+    left_slope = (reference_table[1, 1] - reference_table[0, 1]) / (reference_table[1, 0] - reference_table[0, 0])
+    extrapolated, _ = iePixelWellCapacity(0.05, asset_store=asset_store)
+    expected_extrapolated = reference_table[0, 1] + (0.05 - reference_table[0, 0]) * left_slope
+
+    assert np.isclose(float(electrons), expected)
+    assert empty_electrons is None
+    assert np.allclose(table, reference_table)
+    assert np.allclose(empty_table, reference_table)
+    assert np.isclose(float(extrapolated), expected_extrapolated)
 
 
 def test_sensor_show_image_matches_sensor_rgb_rendering(asset_store) -> None:
