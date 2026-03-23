@@ -2765,6 +2765,20 @@ def sensor_snr_luxsec(
     return np.asarray(snr, dtype=float), luxsec
 
 
+def sensor_mpe30(sensor: Sensor) -> float | np.ndarray:
+    """Return the lux-second level where the sensor reaches 30 dB SNR."""
+
+    snr, luxsec = sensor_snr_luxsec(sensor)
+    snr_axis = np.asarray(snr, dtype=float).reshape(-1)
+    luxsec_array = np.asarray(luxsec, dtype=float)
+    if luxsec_array.ndim == 1 or luxsec_array.shape[1] == 1:
+        return float(np.interp(30.0, snr_axis, luxsec_array.reshape(-1)))
+    return np.asarray(
+        [np.interp(30.0, snr_axis, luxsec_array[:, index]) for index in range(luxsec_array.shape[1])],
+        dtype=float,
+    )
+
+
 def sensor_display_transform(sensor: Sensor) -> np.ndarray:
     return _sensor_display_transform(sensor)
 
@@ -2928,6 +2942,13 @@ def sensor_clear_data(sensor: Sensor) -> Sensor:
     return cleared
 
 
+def sensor_jiggle(sensor: Sensor, pixels: Any) -> Sensor:
+    """Return the current sensor unchanged, matching the upstream no-op helper."""
+
+    del pixels
+    return sensor.clone()
+
+
 def sensor_no_noise(sensor: Sensor) -> Sensor:
     """Return a sensor copy with all non-photon-noise terms disabled."""
 
@@ -2938,6 +2959,89 @@ def sensor_no_noise(sensor: Sensor) -> Sensor:
     noiseless = sensor_set(noiseless, "pixel read noise volts", 0.0)
     noiseless = sensor_set(noiseless, "pixel dark voltage", 0.0)
     return noiseless
+
+
+def sensor_pd_array(sensor: Sensor, spacing: float) -> np.ndarray:
+    """Measure photodetector coverage over the MATLAB-style ISA sampling grid."""
+
+    spacing_value = float(spacing)
+    if spacing_value > 1.0 or spacing_value <= 0.0:
+        raise ValueError("The spacing parameter exceeds the limit. It must be between 0 and 1.")
+
+    pixel = sensor_get(sensor, "pixel")
+    pixel_size = np.asarray(pixel_get(pixel, "size"), dtype=float).reshape(-1)
+    pd_position = np.asarray(pixel_get(pixel, "pd position"), dtype=float).reshape(-1)
+    pd_size = np.asarray(pixel_get(pixel, "pd size"), dtype=float).reshape(-1)
+
+    normalized_pd_min = pd_position / max(spacing_value, 1.0e-30) / pixel_size
+    normalized_pd_max = (pd_size + pd_position) / max(spacing_value, 1.0e-30) / pixel_size
+
+    grid_positions = np.arange(0.0, 1.0 + spacing_value, spacing_value, dtype=float) / max(spacing_value, 1.0e-30)
+    n_squares = max(grid_positions.size - 1, 0)
+    in_pd_rows = np.zeros(n_squares, dtype=float)
+    in_pd_cols = np.zeros(n_squares, dtype=float)
+
+    for index in range(n_squares):
+        lower = max(grid_positions[index], normalized_pd_min[0])
+        upper = min(grid_positions[index + 1], normalized_pd_max[0])
+        in_pd_rows[index] = max(0.0, upper - lower)
+
+        lower = max(grid_positions[index], normalized_pd_min[1])
+        upper = min(grid_positions[index + 1], normalized_pd_max[1])
+        in_pd_cols[index] = max(0.0, upper - lower)
+
+    return in_pd_rows.reshape(-1, 1) @ in_pd_cols.reshape(1, -1)
+
+
+def sensor_wb_compute(sensor: Sensor, work_dir: str | Path, display_flag: int | bool = 0) -> Sensor:
+    """Replay MATLAB-style per-waveband OI files through the sensor pipeline."""
+
+    del display_flag
+    directory = Path(work_dir)
+    oi_paths = sorted(directory.glob("oi*.mat"))
+    if not oi_paths:
+        raise ValueError("sensorWBCompute requires a directory containing oi*.mat files.")
+
+    def _normalize_loaded_oi(optical_image: OpticalImage) -> OpticalImage:
+        normalized = optical_image.clone()
+        wave = np.asarray(normalized.fields["wave"], dtype=float).reshape(-1)
+        photons = np.asarray(normalized.data["photons"], dtype=float)
+        if photons.ndim == 2:
+            if wave.size != 1:
+                raise ValueError("Single-plane OI data must have exactly one wavelength sample.")
+            photons = photons[:, :, np.newaxis]
+        normalized.fields["wave"] = wave
+        normalized.data["photons"] = photons
+        return normalized
+
+    noiseless_sensor = sensor_no_noise(sensor)
+    accumulated_volts: np.ndarray | None = None
+    last_oi: OpticalImage | None = None
+
+    for oi_path in oi_paths[:-1]:
+        optical_image, _ = vc_load_object("oi", oi_path)
+        if not isinstance(optical_image, OpticalImage):
+            raise ValueError(f"{oi_path} did not contain an optical image.")
+        optical_image = _normalize_loaded_oi(optical_image)
+        computed = sensor_compute(noiseless_sensor, optical_image, False)
+        current_volts = np.asarray(sensor_get(computed, "volts"), dtype=float)
+        accumulated_volts = current_volts if accumulated_volts is None else accumulated_volts + current_volts
+
+    last_oi, _ = vc_load_object("oi", oi_paths[-1])
+    if not isinstance(last_oi, OpticalImage):
+        raise ValueError(f"{oi_paths[-1]} did not contain an optical image.")
+    last_oi = _normalize_loaded_oi(last_oi)
+    result = sensor_compute(sensor, last_oi, False)
+    final_volts = np.asarray(sensor_get(result, "volts"), dtype=float)
+    combined_volts = final_volts if accumulated_volts is None else accumulated_volts + final_volts
+    result = sensor_set(result, "volts", combined_volts)
+
+    if param_format(sensor_get(result, "quantizationmethod")) != "analog":
+        digital_values, _ = analog_to_digital(result)
+        result.data["dv"] = np.asarray(np.rint(digital_values), dtype=np.int32)
+
+    result = sensor_set(result, "name", f"wb-{oi_get(last_oi, 'name')}")
+    return result
 
 
 def sensor_gain_offset(sensor: Sensor, ag: float, ao: float) -> Sensor:
@@ -6092,6 +6196,10 @@ sensorComputeImage = sensor_compute_image
 sensorComputeFullArray = sensor_compute_full_array
 sensorDR = sensor_dr
 sensorCCM = sensor_ccm
+sensorJiggle = sensor_jiggle
+sensorMPE30 = sensor_mpe30
+sensorPDArray = sensor_pd_array
+sensorWBCompute = sensor_wb_compute
 analog2digital = analog_to_digital
 noiseFPN = noise_fpn
 noiseColumnFPN = noise_column_fpn

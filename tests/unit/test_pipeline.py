@@ -338,7 +338,10 @@ from pyisetcam import (
     sensor_formats,
     sensor_get,
     sensorImageColorArray,
+    sensorJiggle,
+    sensorMPE30,
     sensorNoNoise,
+    sensorPDArray,
     sensorPixelCoord,
     sensor_plot,
     sensorRGB2Plane,
@@ -354,6 +357,7 @@ from pyisetcam import (
     sensorShowCFA,
     sensorShowCFAWeights,
     sensorShowImage,
+    sensorWBCompute,
     sensor_set_size_to_fov,
     sensor_set,
     session_create,
@@ -5448,6 +5452,54 @@ def test_sensor_no_noise_matches_legacy_parameter_reset(asset_store) -> None:
     assert np.isclose(float(sensor_get(noiseless, "pixel dark voltage")), 0.0)
     assert np.isclose(float(sensor_get(sensor, "prnulevel")), 12.5)
     assert np.isclose(float(sensor_get(sensor, "pixel read noise volts")), 1.5e-3)
+
+
+def test_sensor_utility_wrappers_match_legacy_contracts(asset_store, tmp_path) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "noise flag", 0)
+    sensor = sensor_set(sensor, "quantization method", "analog")
+
+    pd_array = sensorPDArray(sensor, 1.0)
+    expected_fill_factor = float(pixelGet(sensor_get(sensor, "pixel"), "fill factor"))
+    assert pd_array.shape == (1, 1)
+    assert np.isclose(float(pd_array[0, 0]), expected_fill_factor)
+
+    sensor = sensor_set(sensor, "volts", np.arange(1.0, 17.0, dtype=float).reshape(4, 4) / 16.0)
+    jiggled = sensorJiggle(sensor, 5)
+    assert jiggled is not sensor
+    assert np.allclose(np.asarray(sensor_get(jiggled, "volts"), dtype=float), np.asarray(sensor_get(sensor, "volts"), dtype=float))
+
+    monochrome = sensor_create("monochrome", asset_store=asset_store)
+    mpe30 = sensorMPE30(monochrome)
+    snr, luxsec = sensorSNRluxsec(monochrome, asset_store=asset_store)
+    expected_mpe30 = np.interp(30.0, np.asarray(snr, dtype=float), np.asarray(luxsec, dtype=float).reshape(-1))
+    assert np.isclose(float(mpe30), float(expected_mpe30))
+
+    wave = np.array([500.0, 501.0, 502.0], dtype=float)
+    scene = scene_create("uniform ee", 12, wave, asset_store=asset_store)
+    oi = oi_compute(oi_create(asset_store=asset_store), scene, crop=True)
+    photons = np.asarray(oi_get(oi, "photons"), dtype=float)
+    direct_sensor = sensor_create(asset_store=asset_store)
+    direct_sensor = sensor_set(direct_sensor, "noise flag", 0)
+    direct_sensor = sensor_set(direct_sensor, "quantization method", "analog")
+    direct_sensor = sensor_set(direct_sensor, "integration time", 0.01)
+    direct = sensor_compute(direct_sensor, oi)
+
+    for index, wavelength in enumerate(wave, start=1):
+        band = oi.clone()
+        band.fields["wave"] = np.array([wavelength], dtype=float)
+        band.data["photons"] = photons[:, :, index - 1 : index]
+        band.name = f"band-{int(wavelength)}"
+        vcSaveObject(band, tmp_path / f"oi{index:02d}.mat")
+
+    replay_sensor = sensor_create(asset_store=asset_store)
+    replay_sensor = sensor_set(replay_sensor, "noise flag", 0)
+    replay_sensor = sensor_set(replay_sensor, "quantization method", "analog")
+    replay_sensor = sensor_set(replay_sensor, "integration time", 0.01)
+    wb = sensorWBCompute(replay_sensor, tmp_path)
+
+    assert np.allclose(np.asarray(sensor_get(wb, "volts"), dtype=float), np.asarray(sensor_get(direct, "volts"), dtype=float))
+    assert sensor_get(wb, "name") == "wb-oi03"
 
 
 def test_sensor_simulation_legacy_wrappers(asset_store) -> None:

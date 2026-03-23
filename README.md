@@ -265,6 +265,12 @@ plus direct curated parity on calibrated `ieReadColorFilter('NikonD100')`
 asset loading from `s_sensorPlotColorFilters.m`,
 plus direct curated parity on the simulated filter-responsivity and
 spectral-filter recovery workflow from `s_sensorSpectralEstimation.m`,
+plus headless `sensor_mpe30(...)` / `sensorMPE30(...)`,
+`sensor_pd_array(...)` / `sensorPDArray(...)`,
+`sensor_jiggle(...)` / `sensorJiggle(...)`, and
+`sensor_wb_compute(...)` / `sensorWBCompute(...)` for the remaining
+legacy sensor utility helpers built on top of the existing SNR, pixel,
+MAT-object load, and sensor-compute paths,
 plus direct curated parity on the CFA construction workflow from
 `s_sensorCFA.m`, including `sensorCreate('ycmy')` and
 `sensorSet(..., 'pattern and size', pattern)` behavior,

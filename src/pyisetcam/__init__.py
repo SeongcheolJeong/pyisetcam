@@ -470,7 +470,10 @@ from .sensor import (
     sensor_filter_rgb,
     sensor_from_file,
     sensor_image_color_array,
+    sensor_jiggle,
+    sensor_mpe30,
     sensor_no_noise,
+    sensor_pd_array,
     sensor_pixel_coord,
     sensor_rgb_to_plane,
     sensor_read_color_filters,
@@ -485,6 +488,7 @@ from .sensor import (
     sensor_show_cfa,
     sensor_show_cfa_weights,
     sensor_show_image,
+    sensor_wb_compute,
     spatial_integration,
 )
 from .types import Camera, Display, ImageProcessor, OpticalImage, Scene, Sensor, SessionContext
@@ -1244,7 +1248,10 @@ __all__ = [
     "sensorAddNoise",
     "sensor_add_noise",
     "sensor_gain_offset",
+    "sensor_jiggle",
+    "sensor_mpe30",
     "sensor_no_noise",
+    "sensor_pd_array",
     "sensor_pixel_coord",
     "sensor_read_color_filters",
     "sensor_read_filter",
@@ -1260,6 +1267,9 @@ __all__ = [
     "sensor_replace_filter",
     "sensorSNR",
     "sensorSNRluxsec",
+    "sensorJiggle",
+    "sensorMPE30",
+    "sensorPDArray",
     "sensorSet",
     "sensorSetSizeToFOV",
     "sensorSaveImage",
@@ -1269,6 +1279,7 @@ __all__ = [
     "sensorShowCFA",
     "sensorShowCFAWeights",
     "sensorShowImage",
+    "sensorWBCompute",
     "sensorComputeFullArray",
     "sensorComputeImage",
     "sensorComputeNoiseFree",
@@ -1276,6 +1287,7 @@ __all__ = [
     "sensor_compute_full_array",
     "sensor_compute_image",
     "sensor_compute_noise_free",
+    "sensor_wb_compute",
     "sensor_compute_array",
     "sensor_compute_samples",
     "sensor_crop",
@@ -1692,7 +1704,10 @@ sensorColorFilter = sensor_color_filter
 sensorCrop = sensor_crop
 sensorGet = sensor_get
 sensorGainOffset = sensor_gain_offset
+sensorJiggle = sensor_jiggle
+sensorMPE30 = sensor_mpe30
 sensorNoNoise = sensor_no_noise
+sensorPDArray = sensor_pd_array
 sensorReadColorFilters = sensor_read_color_filters
 sensorReadFilter = sensor_read_filter
 sensorRGB2Plane = sensor_rgb_to_plane
@@ -1712,6 +1727,7 @@ sensorStats = sensor_stats
 sensorShowCFA = sensor_show_cfa
 sensorShowCFAWeights = sensor_show_cfa_weights
 sensorShowImage = sensor_show_image
+sensorWBCompute = sensor_wb_compute
 spatialIntegration = spatial_integration
 
 metricsSPD = metrics_spd
