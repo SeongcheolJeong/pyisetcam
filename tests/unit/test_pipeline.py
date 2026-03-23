@@ -181,6 +181,11 @@ from pyisetcam import (
     si_synthetic,
     run_python_case,
     hdr_render,
+    sceneAddGrid,
+    sceneAdjustPixelSize,
+    sceneAdjustReflectance,
+    sceneIlluminantScale,
+    sceneSPDScale,
     scene_adjust_illuminant,
     scene_combine,
     scene_create,
@@ -190,6 +195,7 @@ from pyisetcam import (
     scene_from_file,
     scene_adjust_luminance,
     scene_add,
+    scene_add_grid,
     sceneCrop,
     scene_get,
     scene_illuminant_ss,
@@ -13118,6 +13124,57 @@ def test_scene_helper_wrappers_match_legacy_contract(asset_store, tmp_path: Path
     expected_translated[:, 1:, :] = photons[:, :-1, :]
     assert np.allclose(translated_photons, expected_translated)
     assert np.array_equal(np.asarray(scene_get(scene_for_shift, "photons"), dtype=float), photons)
+
+
+def test_scene_legacy_arithmetic_wrappers(asset_store) -> None:
+    wave = np.array([500.0, 600.0, 700.0], dtype=float)
+    scene = scene_create("uniform ee", 4, wave, asset_store=asset_store)
+    oi = oi_create()
+
+    sample_spacing = np.asarray(scene_get(scene, "sample spacing", "m"), dtype=float).reshape(-1)
+    adjusted, new_distance = sceneAdjustPixelSize(scene, oi, sample_spacing[0] * 2.0)
+    assert np.isclose(float(scene_get(adjusted, "distance")), new_distance)
+    assert np.isclose(new_distance, float(scene_get(scene, "distance")) * 2.0)
+
+    base_energy = np.asarray(scene_get(scene, "energy"), dtype=float)
+    scaled_scene, returned = sceneSPDScale(scene, np.array([1.0, 2.0, 4.0], dtype=float), "*", True, asset_store=asset_store)
+    assert isinstance(returned, np.ndarray)
+    assert np.allclose(
+        np.asarray(scene_get(scaled_scene, "energy"), dtype=float),
+        base_energy * np.array([1.0, 2.0, 4.0], dtype=float).reshape(1, 1, -1),
+    )
+    assert np.allclose(
+        np.asarray(scene_get(scaled_scene, "illuminant energy"), dtype=float),
+        np.asarray(scene_get(scene, "illuminant energy"), dtype=float),
+    )
+
+    reflectance = np.array([0.25, 0.5, 0.75], dtype=float)
+    reflected = sceneAdjustReflectance(scene, reflectance)
+    expected_reflected = np.broadcast_to(
+        (reflectance * np.asarray(scene_get(scene, "illuminant photons"), dtype=float)).reshape(1, 1, -1),
+        np.asarray(scene_get(scene, "photons"), dtype=float).shape,
+    )
+    assert np.allclose(np.asarray(scene_get(reflected, "photons"), dtype=float), expected_reflected)
+
+    illuminant = np.asarray(scene_get(scene, "illuminant photons"), dtype=float).reshape(-1)
+    dimmed = scene_set(
+        scene.clone(),
+        "photons",
+        np.broadcast_to((0.45 * illuminant).reshape(1, 1, -1), np.asarray(scene_get(scene, "photons"), dtype=float).shape).copy(),
+    )
+    scaled_illuminant = sceneIlluminantScale(dimmed)
+    assert np.allclose(np.asarray(scene_get(scaled_illuminant, "illuminant photons"), dtype=float), 0.5 * illuminant)
+    assert np.isclose(float(np.asarray(scene_get(scaled_illuminant, "known reflectance"), dtype=float)[0]), 0.9)
+
+    grid_source = scene_create("uniform ee", 8, wave, asset_store=asset_store)
+    gridded = sceneAddGrid(grid_source, [4, 4], 1)
+    gridded_photons = np.asarray(scene_get(gridded, "photons"), dtype=float)
+    assert np.allclose(gridded_photons[0, :, :], 0.0)
+    assert np.allclose(gridded_photons[-1, :, :], 0.0)
+    assert np.allclose(gridded_photons[:, 0, :], 0.0)
+    assert np.allclose(gridded_photons[:, -1, :], 0.0)
+    assert np.allclose(gridded_photons[3, :, :], 0.0)
+    assert np.allclose(gridded_photons[:, 3, :], 0.0)
 
 
 def test_scene_geometry_resample_and_noise_wrappers(asset_store) -> None:

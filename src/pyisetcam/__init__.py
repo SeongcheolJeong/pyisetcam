@@ -327,8 +327,11 @@ from .scene import (
     hdr_render,
     macbeth_read_reflectance,
     scene_add,
+    scene_add_grid,
+    scene_adjust_pixel_size,
     scene_adjust_illuminant,
     scene_adjust_luminance,
+    scene_adjust_reflectance,
     scene_calculate_luminance,
     scene_clear_data,
     scene_combine,
@@ -338,6 +341,7 @@ from .scene import (
     scene_extract_waveband,
     scene_from_file,
     scene_get,
+    scene_illuminant_scale,
     scene_illuminant_pattern,
     scene_illuminant_ss,
     scene_init_geometry,
@@ -357,6 +361,7 @@ from .scene import (
     scene_spatial_resample,
     scene_spatial_support,
     scene_set,
+    scene_spd_scale,
     scene_thumbnail,
     scene_translate,
 )
@@ -981,7 +986,10 @@ __all__ = [
     "hdr_render",
     "sceneAdjustIlluminant",
     "sceneAdd",
+    "sceneAddGrid",
+    "sceneAdjustPixelSize",
     "sceneAdjustLuminance",
+    "sceneAdjustReflectance",
     "sceneCalculateLuminance",
     "sceneClearData",
     "sceneCombine",
@@ -991,6 +999,7 @@ __all__ = [
     "sceneExtractWaveband",
     "sceneFromFile",
     "sceneGet",
+    "sceneIlluminantScale",
     "sceneIlluminantPattern",
     "sceneIlluminantSS",
     "sceneEnergyFromVector",
@@ -1006,12 +1015,16 @@ __all__ = [
     "sceneShowImage",
     "sceneSpatialSupport",
     "sceneSet",
+    "sceneSPDScale",
     "sceneThumbnail",
     "sceneTranslate",
     "scene_combine",
     "scene_adjust_illuminant",
     "scene_add",
+    "scene_add_grid",
+    "scene_adjust_pixel_size",
     "scene_adjust_luminance",
+    "scene_adjust_reflectance",
     "scene_calculate_luminance",
     "scene_clear_data",
     "scene_create",
@@ -1022,6 +1035,7 @@ __all__ = [
     "scene_frequency_support",
     "scene_from_file",
     "scene_get",
+    "scene_illuminant_scale",
     "scene_illuminant_pattern",
     "scene_illuminant_ss",
     "scene_init_geometry",
@@ -1038,6 +1052,7 @@ __all__ = [
     "scene_spatial_resample",
     "scene_spatial_support",
     "scene_set",
+    "scene_spd_scale",
     "scene_thumbnail",
     "scene_translate",
     "analog_to_digital",
@@ -1318,10 +1333,15 @@ sceneThumbnail = scene_thumbnail
 sceneTranslate = scene_translate
 hdrRender = hdr_render
 sceneAdd = scene_add
+sceneAddGrid = scene_add_grid
+sceneAdjustPixelSize = scene_adjust_pixel_size
 sceneCombine = scene_combine
 sceneAdjustIlluminant = scene_adjust_illuminant
+sceneIlluminantScale = scene_illuminant_scale
 sceneAdjustLuminance = scene_adjust_luminance
+sceneAdjustReflectance = scene_adjust_reflectance
 sceneCalculateLuminance = scene_calculate_luminance
+sceneSPDScale = scene_spd_scale
 analog2digital = analog_to_digital
 noiseFPN = noise_fpn
 noiseColumnFPN = noise_column_fpn

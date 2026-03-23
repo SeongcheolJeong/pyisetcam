@@ -577,6 +577,183 @@ def scene_add(in1: Scene | list[Scene] | tuple[Scene, ...], in2: Scene | Any, ad
     return scene_set(reference.clone(), "photons", photons)
 
 
+def scene_add_grid(
+    scene: Scene,
+    p_size: Any | None = None,
+    g_width: Any = 1,
+) -> Scene:
+    """Add black grid lines to scene photons following MATLAB sceneAddGrid()."""
+
+    rows, cols = scene_get(scene, "size")
+    if p_size is None:
+        p_size_array = np.array([rows / 2.0, cols / 2.0], dtype=float)
+    else:
+        p_size_array = np.asarray(p_size, dtype=float).reshape(-1)
+        if p_size_array.size == 1:
+            p_size_array = np.repeat(p_size_array, 2)
+    if p_size_array.size != 2:
+        raise ValueError("sceneAddGrid pSize must be a scalar or [row, col].")
+
+    step_rows = max(int(np.rint(p_size_array[0])), 1)
+    step_cols = max(int(np.rint(p_size_array[1])), 1)
+    edge_width = max(int(np.rint(np.asarray(g_width, dtype=float).reshape(-1)[0])), 1)
+
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float).copy()
+    photons[:edge_width, :, :] = 0.0
+    photons[-edge_width:, :, :] = 0.0
+    photons[:, :edge_width, :] = 0.0
+    photons[:, -edge_width:, :] = 0.0
+
+    for start in range(step_rows - 1, rows - 1, step_rows):
+        stop = min(start + edge_width, rows)
+        photons[start:stop, :, :] = 0.0
+    for start in range(step_cols - 1, cols - 1, step_cols):
+        stop = min(start + edge_width, cols)
+        photons[:, start:stop, :] = 0.0
+
+    return scene_set(scene.clone(), "photons", photons)
+
+
+def scene_adjust_pixel_size(
+    scene: Scene,
+    oi: Any,
+    pixel_size: Any,
+) -> tuple[Scene, float]:
+    """Adjust scene distance so scene sample spacing matches a target pixel size."""
+
+    del oi
+    pixel_array = np.asarray(pixel_size, dtype=float).reshape(-1)
+    if pixel_array.size == 0:
+        raise ValueError("sceneAdjustPixelSize requires a pixel size.")
+    current_distance = float(scene_get(scene, "distance"))
+    sample_spacing = np.asarray(scene_get(scene, "sample spacing", "m"), dtype=float).reshape(-1)
+    new_distance = current_distance * (float(pixel_array[0]) / max(float(sample_spacing[0]), 1e-12))
+    adjusted = scene_set(scene.clone(), "distance", new_distance)
+    return adjusted, float(new_distance)
+
+
+def scene_illuminant_scale(scene: Scene) -> Scene:
+    """Rescale scene illuminant so scene radiance implies a plausible reflectance."""
+
+    illuminant_spd = np.asarray(scene_get(scene, "illuminant photons"), dtype=float).reshape(-1)
+    if illuminant_spd.size == 0:
+        raise ValueError("Scene requires an illuminant for sceneIlluminantScale.")
+
+    wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+    known_reflectance = np.asarray(scene_get(scene, "known reflectance"), dtype=float).reshape(-1)
+    current = scene.clone()
+
+    if known_reflectance.size == 0:
+        peak_radiance, peak_wave = np.asarray(scene_get(scene, "peak radiance and wave"), dtype=float).reshape(-1)
+        wave_index = int(np.argmin(np.abs(wave - float(peak_wave))))
+        photon_slice = np.asarray(scene_get(scene, "photons", float(peak_wave)), dtype=float)
+        max_index = int(np.argmax(photon_slice))
+        row_index, col_index = np.unravel_index(max_index, photon_slice.shape)
+        known_reflectance = np.array([0.9, row_index + 1, col_index + 1, wave_index + 1], dtype=float)
+        current = scene_set(current, "known reflectance", known_reflectance)
+        scene = current
+
+    reflectance = float(known_reflectance[0])
+    row_index = int(np.rint(known_reflectance[1])) - 1
+    col_index = int(np.rint(known_reflectance[2])) - 1
+    wave_index = int(np.rint(known_reflectance[3])) - 1
+    photon_slice = np.asarray(scene_get(scene, "photons", float(wave[wave_index])), dtype=float)
+    scene_radiance = float(photon_slice[row_index, col_index])
+    scale = (scene_radiance / max(reflectance, 1e-12)) / max(float(illuminant_spd[wave_index]), 1e-12)
+    return scene_set(scene.clone(), "illuminant photons", scale * illuminant_spd)
+
+
+def scene_spd_scale(
+    scene: Scene,
+    full_name: Any,
+    op: str,
+    skip_illuminant: Any = False,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[Scene, Any]:
+    """Apply a spectral arithmetic operation to a scene cube using energy-domain SPD data."""
+
+    if full_name is None:
+        raise ValueError("sceneSPDScale requires a spectrum source in headless mode.")
+
+    wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+    energy = np.asarray(scene_get(scene, "energy"), dtype=float)
+    if isinstance(full_name, (str, Path)):
+        spd = np.asarray(ie_read_spectra(full_name, wave, asset_store=_store(asset_store)), dtype=float).reshape(-1)
+    else:
+        spd = np.asarray(full_name, dtype=float).reshape(-1)
+    if spd.size != wave.size:
+        raise ValueError("sceneSPDScale spectrum must match the scene wavelength sampling.")
+
+    operator = param_format(op)
+    scale = spd.reshape(1, 1, -1)
+    updated_energy = energy.copy()
+    illuminant_energy = None
+
+    if operator in {"/", "divide"}:
+        updated_energy = np.divide(updated_energy, scale, out=np.zeros_like(updated_energy), where=scale != 0.0)
+        if not bool(skip_illuminant):
+            current_illuminant = np.asarray(scene_get(scene, "illuminant energy"), dtype=float)
+            illuminant_energy = np.divide(current_illuminant, spd, out=np.zeros_like(current_illuminant, dtype=float), where=spd != 0.0)
+    elif operator in {"*", "multiply"}:
+        updated_energy = updated_energy * scale
+        if not bool(skip_illuminant):
+            illuminant_energy = np.asarray(scene_get(scene, "illuminant energy"), dtype=float) * spd
+    elif operator in {"+", "add", "sum", "plus"}:
+        updated_energy = updated_energy + scale
+    elif operator in {"-", "subtract", "minus"}:
+        updated_energy = updated_energy - scale
+    else:
+        raise ValueError(f"Unknown sceneSPDScale operation: {op}")
+
+    updated = scene_set(scene.clone(), "energy", updated_energy)
+    if illuminant_energy is not None:
+        updated = scene_set(updated, "illuminant energy", illuminant_energy)
+    scene_calculate_luminance(updated, asset_store=asset_store)
+    return updated, full_name
+
+
+def scene_adjust_reflectance(
+    scene: Scene,
+    new_reflectance: Any,
+) -> Scene:
+    """Replace scene reflectance while keeping the illuminant unchanged."""
+
+    reflectance = np.asarray(new_reflectance, dtype=float)
+    if reflectance.size == 0:
+        raise ValueError("sceneAdjustReflectance requires a reflectance input.")
+    if np.max(reflectance) > 1.0 or np.min(reflectance) < 0.0:
+        raise ValueError("sceneAdjustReflectance reflectance values must lie in [0, 1].")
+
+    wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+    illuminant = np.asarray(scene_get(scene, "illuminant photons"), dtype=float)
+    illuminant_format = param_format(scene_get(scene, "illuminant format"))
+
+    if reflectance.ndim == 1:
+        if reflectance.size != wave.size:
+            raise ValueError("Reflectance vector must match the scene wavelength samples.")
+        if illuminant_format == "spectral":
+            rows, cols = scene_get(scene, "size")
+            photons = np.broadcast_to((reflectance * illuminant).reshape(1, 1, -1), (rows, cols, wave.size)).copy()
+        elif illuminant_format == "spatialspectral":
+            photons = np.asarray(illuminant, dtype=float) * reflectance.reshape(1, 1, -1)
+        else:
+            raise ValueError(f"Unknown illuminant format {scene_get(scene, 'illuminant format')}.")
+    elif reflectance.ndim == 3:
+        if reflectance.shape[-1] != wave.size:
+            raise ValueError("Reflectance cube must match the scene wavelength samples.")
+        if illuminant_format == "spectral":
+            photons = reflectance * np.asarray(illuminant, dtype=float).reshape(1, 1, -1)
+        elif illuminant_format == "spatialspectral":
+            photons = reflectance * np.asarray(illuminant, dtype=float)
+        else:
+            raise ValueError(f"Unknown illuminant format {scene_get(scene, 'illuminant format')}.")
+    else:
+        raise ValueError("sceneAdjustReflectance expects a reflectance vector or scene-sized reflectance cube.")
+
+    return scene_set(scene.clone(), "photons", photons)
+
+
 def _normalize_scene_illuminant_array(value: Any, wave: np.ndarray) -> tuple[np.ndarray, str]:
     array = np.asarray(value, dtype=float)
     if array.ndim == 1:
@@ -3622,7 +3799,20 @@ def scene_get(scene: Scene, parameter: str, *args: Any, asset_store: AssetStore 
     if key == "nwave":
         return int(np.asarray(scene.fields["wave"], dtype=float).size)
     if key == "photons":
-        return np.asarray(scene.data["photons"], dtype=float)
+        photons = np.asarray(scene.data["photons"], dtype=float)
+        if args:
+            wavelength = float(np.asarray(args[0], dtype=float).reshape(-1)[0])
+            wave = np.asarray(scene.fields["wave"], dtype=float).reshape(-1)
+            return np.asarray(photons[:, :, int(np.argmin(np.abs(wave - wavelength)))], dtype=float)
+        return photons
+    if key == "energy":
+        photons = np.asarray(scene.data["photons"], dtype=float)
+        wave = np.asarray(scene.fields["wave"], dtype=float).reshape(-1)
+        energy = np.asarray(quanta_to_energy(photons, wave), dtype=float)
+        if args:
+            wavelength = float(np.asarray(args[0], dtype=float).reshape(-1)[0])
+            return np.asarray(energy[:, :, int(np.argmin(np.abs(wave - wavelength)))], dtype=float)
+        return energy
     if key == "data":
         return scene.data
     if key == "rows":
@@ -3662,6 +3852,17 @@ def scene_get(scene: Scene, parameter: str, *args: Any, asset_store: AssetStore 
         return float(scene.fields["fov_deg"]) / max(float(scene.fields["width_m"]), 1e-12) / max(scale, 1e-12)
     if key in {"degreepersample", "degpersamp", "degreespersample"}:
         return float(scene.fields["fov_deg"]) / max(int(scene.fields["cols"]), 1)
+    if key in {"samplespacing", "samplespacingmeters", "samplespacingm", "sample spacing"}:
+        scale = _spatial_unit_scale(args[0] if args else "m")
+        cols = max(int(scene.fields["cols"]), 1)
+        rows = max(int(scene.fields["rows"]), 1)
+        return np.array(
+            [
+                float(scene.fields["width_m"]) * scale / cols,
+                float(scene.fields["height_m"]) * scale / rows,
+            ],
+            dtype=float,
+        )
     if key == "spatialsupportlinear":
         return _scene_spatial_support_linear(scene, args[0] if args else None)
     if key == "spatialsupport":
@@ -3716,6 +3917,22 @@ def scene_get(scene: Scene, parameter: str, *args: Any, asset_store: AssetStore 
         return np.divide(photons, illuminant, out=np.zeros_like(photons), where=illuminant > 0.0)
     if key == "chartparameters":
         return scene.fields.get("chart_parameters")
+    if key == "knownreflectance":
+        value = scene.fields.get("known_reflectance")
+        if value is None:
+            return np.array([], dtype=float)
+        return np.asarray(value, dtype=float).reshape(-1).copy()
+    if key == "peakradianceandwave":
+        photons = np.asarray(scene.data["photons"], dtype=float)
+        peak_index = int(np.argmax(photons))
+        row_index, col_index, wave_index = np.unravel_index(peak_index, photons.shape)
+        return np.array(
+            [
+                float(photons[row_index, col_index, wave_index]),
+                float(np.asarray(scene.fields["wave"], dtype=float).reshape(-1)[wave_index]),
+            ],
+            dtype=float,
+        )
     if key == "illuminantphotons":
         return np.asarray(scene.fields["illuminant_photons"], dtype=float)
     if key == "illuminantenergy":
@@ -3865,6 +4082,11 @@ def scene_set(scene: Scene, parameter: str, value: Any) -> Scene:
         scene.data["photons"] = np.asarray(value, dtype=float)
         _invalidate_scene_caches(scene)
         return _update_scene_geometry(scene)
+    if key == "energy":
+        wave = np.asarray(scene.fields["wave"], dtype=float).reshape(-1)
+        scene.data["photons"] = np.asarray(energy_to_quanta(np.asarray(value, dtype=float), wave), dtype=float)
+        _invalidate_scene_caches(scene)
+        return _update_scene_geometry(scene)
     if key == "depthmap":
         depth_map = np.asarray(value, dtype=float)
         if depth_map.shape != scene_get(scene, "size"):
@@ -3890,5 +4112,8 @@ def scene_set(scene: Scene, parameter: str, value: Any) -> Scene:
         return scene
     if key == "chartparameters":
         scene.fields["chart_parameters"] = dict(value)
+        return scene
+    if key == "knownreflectance":
+        scene.fields["known_reflectance"] = np.asarray(value, dtype=float).reshape(-1)
         return scene
     raise KeyError(f"Unsupported sceneSet parameter: {parameter}")
