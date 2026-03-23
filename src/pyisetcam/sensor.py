@@ -4797,6 +4797,28 @@ def signal_current(oi: OpticalImage, sensor: Sensor) -> np.ndarray:
     return np.asarray(electron_rate * _ELEMENTARY_CHARGE_C, dtype=float)
 
 
+def signal_current_density(oi: OpticalImage, sensor: Sensor) -> np.ndarray:
+    """Return the MATLAB SignalCurrentDensity current-density cube."""
+
+    return np.asarray(_signal_current_density(oi, sensor.clone()), dtype=float)
+
+
+def spatial_integration(
+    scdi: np.ndarray,
+    oi: OpticalImage,
+    sensor: Sensor,
+    grid_spacing: float = 1.0,
+) -> np.ndarray:
+    """Integrate a current-density cube using the default MATLAB spatialIntegration path."""
+
+    if not np.isclose(float(grid_spacing), 1.0):
+        raise UnsupportedOptionError("spatialIntegration", "gridSpacing != 1")
+    return np.asarray(
+        _spatial_integrate_current_density(np.asarray(scdi, dtype=float), oi, sensor.clone()),
+        dtype=float,
+    )
+
+
 def _regrid_electron_rate_density(
     density_cube: np.ndarray,
     oi: OpticalImage,

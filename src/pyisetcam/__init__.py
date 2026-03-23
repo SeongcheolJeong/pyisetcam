@@ -305,6 +305,7 @@ from .sensor import (
     pixel_set,
     pixel_v_per_lux_sec,
     signal_current,
+    signal_current_density,
     sensor_add_filter,
     sensor_cfa_name_list,
     sensor_ccm,
@@ -343,6 +344,7 @@ from .sensor import (
     sensor_show_cfa,
     sensor_show_cfa_weights,
     sensor_show_image,
+    spatial_integration,
 )
 from .types import Camera, Display, ImageProcessor, OpticalImage, Scene, Sensor, SessionContext
 from .utils import (
@@ -910,8 +912,10 @@ __all__ = [
     "sensorEquateTransmittances",
     "sensorFilterRGB",
     "sensorGainOffset",
+    "SignalCurrentDensity",
     "signalCurrent",
     "signal_current",
+    "signal_current_density",
     "sensor_cfa_name_list",
     "sensor_ccm",
     "sensor_clear_data",
@@ -928,6 +932,8 @@ __all__ = [
     "sensorDeleteFilter",
     "sensorReadColorFilters",
     "sensorReadFilter",
+    "spatialIntegration",
+    "spatial_integration",
     "sensor_replace_filter",
     "sensorSNR",
     "sensorSNRluxsec",
@@ -1238,6 +1244,7 @@ pixelSet = pixel_set
 pixelSR = pixel_sr
 iePixelWellCapacity = ie_pixel_well_capacity
 sensorDR = sensor_dr
+SignalCurrentDensity = signal_current_density
 signalCurrent = signal_current
 sensorColorFilter = sensor_color_filter
 sensorCrop = sensor_crop
@@ -1260,6 +1267,7 @@ sensorImageColorArray = sensor_image_color_array
 sensorShowCFA = sensor_show_cfa
 sensorShowCFAWeights = sensor_show_cfa_weights
 sensorShowImage = sensor_show_image
+spatialIntegration = spatial_integration
 
 metricsSPD = metrics_spd
 exposureValue = exposure_value

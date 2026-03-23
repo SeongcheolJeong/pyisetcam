@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 import pyisetcam.optics as optics_module
+import pyisetcam.sensor as sensor_module
 import imageio.v3 as iio
 from scipy.io import savemat
 from scipy import ndimage
@@ -178,9 +179,11 @@ from pyisetcam import (
     sceneThumbnail,
     sceneTranslate,
     signal_current,
+    SignalCurrentDensity,
     srgb2xyz,
     srgb_to_lrgb,
     srgb_parameters,
+    spatialIntegration,
     vc_get_roi_data,
     imx490_compute,
     ml_radiance,
@@ -8889,6 +8892,46 @@ def test_signal_current_matches_sensor_compute_mean_electrons(asset_store) -> No
     coulombs_to_electrons = float(sensor_get(sensor, "integration time")) / 1.602176634e-19
 
     assert np.mean(current_center * coulombs_to_electrons) == pytest.approx(np.mean(electrons_center), rel=1e-5)
+
+
+def _make_current_density_test_inputs(asset_store):
+    scene = scene_create("uniform ee", 32, asset_store=asset_store)
+    scene = scene_set(scene, "fov", 6.0)
+    scene = scene_set(scene, "distance", 1.0)
+    scene = scene_adjust_luminance(scene, 20.0, asset_store=asset_store)
+    oi = oi_compute(oi_create(asset_store=asset_store), scene)
+    sensor = sensor_create("bayer", asset_store=asset_store)
+    sensor = sensor_set(sensor, "noise flag", 0)
+    sensor = sensor_set(sensor, "exp time", 0.05)
+    return oi, sensor
+
+
+def test_signal_current_density_matches_internal_current_density(asset_store) -> None:
+    oi, sensor = _make_current_density_test_inputs(asset_store)
+
+    current_density = SignalCurrentDensity(oi, sensor)
+    internal_density = sensor_module._signal_current_density(oi, sensor.clone())
+
+    assert current_density.ndim == 3
+    np.testing.assert_allclose(current_density, internal_density, rtol=1e-10, atol=1e-14)
+
+
+def test_spatial_integration_matches_signal_current_default_grid_spacing(asset_store) -> None:
+    oi, sensor = _make_current_density_test_inputs(asset_store)
+
+    current_density = SignalCurrentDensity(oi, sensor)
+    integrated = spatialIntegration(current_density, oi, sensor)
+    expected = signal_current(oi, sensor)
+
+    np.testing.assert_allclose(integrated, expected, rtol=1e-10, atol=1e-14)
+
+
+def test_spatial_integration_rejects_nondefault_grid_spacing(asset_store) -> None:
+    oi, sensor = _make_current_density_test_inputs(asset_store)
+    current_density = SignalCurrentDensity(oi, sensor)
+
+    with pytest.raises(UnsupportedOptionError, match="gridSpacing != 1"):
+        spatialIntegration(current_density, oi, sensor, grid_spacing=0.5)
 
 
 def test_run_python_case_supports_sensor_signal_current_uniform_parity_case(asset_store) -> None:
