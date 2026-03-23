@@ -2411,10 +2411,80 @@ def wvf_wave_to_idx(wvf: dict[str, Any], w_list: Any) -> np.ndarray:
     return idx.astype(int)
 
 
+def wvf_root_path() -> str:
+    """Return the root path of the vendored upstream wavefront toolbox snapshot."""
+
+    return str(ensure_upstream_snapshot() / "opticalimage" / "wavefront")
+
+
+def _wvf_summary_text(wvf: dict[str, Any]) -> str:
+    wave = np.asarray(wvf_get(wvf, "wave"), dtype=float).reshape(-1)
+    summary_wave = float(wave[0]) if wave.size else float(DEFAULT_WVF_MEASURED_WAVELENGTH_NM)
+    zcoeffs = np.asarray(wvf_get(wvf, "zcoeffs"), dtype=float).reshape(-1)
+    otf_support = np.asarray(wvf_get(wvf, "otf support", "mm", summary_wave), dtype=float).reshape(-1)
+    psf_support = np.asarray(wvf_get(wvf, "psf support", "um", summary_wave), dtype=float).reshape(-1)
+
+    lines = [
+        "",
+        f"wavefront struct name: {wvf.get('name', 'wvf')}",
+    ]
+    if wave.size > 1:
+        lines.append(f"Summarizing for wave {int(round(summary_wave))} nm.")
+    lines.extend(
+        [
+            "-------------------",
+            f"f number\t {float(wvf_get(wvf, 'fnumber')):.6f}",
+            f"f length\t {float(wvf_get(wvf, 'focal length', 'mm')):.6f}\t mm",
+            f"um per deg\t {float(wvf_get(wvf, 'um per degree')):.6f}\t um",
+            f"calc pupil diam\t {float(wvf_get(wvf, 'calc pupil diameter', 'mm')):.6f}\t mm",
+            "",
+            "Reference",
+            "------",
+            f"n samples\t {int(wvf_get(wvf, 'spatial samples'))}",
+            f"ref pupil plane\t {float(wvf_get(wvf, 'pupil plane size', 'mm', summary_wave)):.6f}\t mm",
+            f"ref pupil dx\t {float(wvf_get(wvf, 'pupil sample spacing', 'um', summary_wave)):.6f}\t um",
+            "",
+            "Measured",
+            "------",
+            "zCoeffs:\t " + " ".join(f"{value:.2f}" for value in zcoeffs),
+            f"zDiameter:\t {float(wvf_get(wvf, 'z pupil diameter', 'mm')):.6f}\t mm",
+            f"Max OTF freq\t {float(np.max(otf_support)) if otf_support.size else 0.0:.6f}\t cyc/mm",
+            f"OTF df\t\t {float(otf_support[1] - otf_support[0]) if otf_support.size >= 2 else 0.0:.6f}\t cyc/mm",
+            f"Max PSF support\t {float(np.max(psf_support)) if psf_support.size else 0.0:.6f}\t um",
+            f"PSF dx\t\t {float(psf_support[1] - psf_support[0]) if psf_support.size >= 2 else 0.0:.6f}\t um",
+            "-------------------",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def wvf_summarize(wvf: dict[str, Any], *, show: bool = False) -> str:
+    """Return a headless MATLAB-style WVF summary string."""
+
+    text = _wvf_summary_text(wvf)
+    if show:
+        print(text)
+    return text
+
+
+def wvf_print(wvf: dict[str, Any], *args: Any, show: bool = False) -> dict[str, Any]:
+    """Headless MATLAB-style WVF print helper."""
+
+    if args:
+        _parse_key_value_options(args, "wvfPrint")
+    text = _wvf_summary_text(wvf)
+    if show:
+        print(text)
+    return dict(wvf)
+
+
 wvfOSAIndexToZernikeNM = wvf_osa_index_to_zernike_nm
 wvfZernikeNMToOSAIndex = wvf_zernike_nm_to_osa_index
 wvfOSAIndexToVectorIndex = wvf_osa_index_to_vector_index
 wvfWave2idx = wvf_wave_to_idx
+wvfRootPath = wvf_root_path
+wvfSummarize = wvf_summarize
+wvfPrint = wvf_print
 
 
 def _human_wave_defocus(wave_nm: Any) -> np.ndarray:

@@ -549,6 +549,11 @@ plus `wvfGet(..., 'sce'/'sce rho'/'scex0'/'scey0'/'sce wavelengths')`
 support for the standalone Stiles-Crawford parameter helpers used by the
 legacy wavefront toolbox.
 That same script-driven WVF helper surface now also includes headless
+`wvf_root_path(...)` / `wvfRootPath(...)`, `wvf_summarize(...)` /
+`wvfSummarize(...)`, and `wvf_print(...)` / `wvfPrint(...)` for the
+legacy toolbox-location and text-summary helpers built on top of the same
+WVF core metadata.
+That same script-driven WVF helper surface now also includes headless
 `psf_find_peak(...)` / `psfFindPeak(...)`, `psf_volume(...)` /
 `psfVolume(...)`, `psf_center(...)` / `psfCenter(...)`, and
 `psf_find_criterion_radius(...)` / `psfFindCriterionRadius(...)` for the

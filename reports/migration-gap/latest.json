@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-23T06:12:12.304152+00:00",
+  "generated_at": "2026-03-23T06:31:16.916618+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-23T06:12:12.304152+00:00",
+    "generated_at": "2026-03-23T06:31:16.916618+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 92,
       "missing": 37,
       "out_of_scope": 107,
-      "parity": 447,
-      "partial": 728,
+      "parity": 450,
+      "partial": 725,
       "ported": 32
     },
     "kind_counts": {
@@ -22,10 +22,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 295,
+      "P0": 292,
       "P1": 381,
       "P2": 181,
-      "P3": 586
+      "P3": 589
     },
     "delta_from_previous": {
       "status_counts": {
@@ -492,8 +492,8 @@
         "total": 49,
         "by_status": {
           "headless_only": 1,
-          "parity": 32,
-          "partial": 14,
+          "parity": 35,
+          "partial": 11,
           "ported": 2
         },
         "by_kind": {
@@ -1054,17 +1054,6 @@
         }
       },
       {
-        "family": "opticalimage/wavefront",
-        "open_entries": 15,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "headless_only": 1,
-          "parity": 32,
-          "partial": 14,
-          "ported": 2
-        }
-      },
-      {
         "family": "sensor",
         "open_entries": 15,
         "highest_open_priority": "P0",
@@ -1143,6 +1132,17 @@
           "headless_only": 3,
           "parity": 32,
           "partial": 9
+        }
+      },
+      {
+        "family": "opticalimage/wavefront",
+        "open_entries": 12,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "headless_only": 1,
+          "parity": 35,
+          "partial": 11,
+          "ported": 2
         }
       }
     ],

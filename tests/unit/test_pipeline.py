@@ -276,8 +276,11 @@ from pyisetcam import (
     wvf_osa_index_to_vector_index,
     wvf_osa_index_to_zernike_nm,
     wvf_pupil_function,
+    wvfPrint,
+    wvfRootPath,
     wvf_plot,
     wvf_set,
+    wvfSummarize,
     wvf2optics,
     wvf2PSF,
     wvfPupilAmplitude,
@@ -13429,6 +13432,28 @@ def test_sce_create_and_wvf_sce_helpers_round_trip() -> None:
     assert np.isclose(float(wvf_get(wvf, "scex0")), 0.51)
     assert np.isclose(float(wvf_get(wvf, "scey0")), 0.20)
     assert np.array_equal(np.asarray(sceGet(wvf_get(wvf, "sce"), "wave"), dtype=float), wave)
+
+
+def test_wvf_root_path_and_summary_helpers_match_headless_contract() -> None:
+    root = Path(wvfRootPath())
+    expected = Path("/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821/opticalimage/wavefront")
+    assert root == expected
+    assert root.name == "wavefront"
+
+    wvf = wvf_create(wave=np.array([500.0, 600.0], dtype=float))
+    wvf = wvf_set(wvf, "name", "summary-demo")
+    summary = wvfSummarize(wvf)
+    printed = wvfPrint(wvf)
+
+    assert isinstance(printed, dict)
+    assert printed["name"] == "summary-demo"
+    assert "wavefront struct name: summary-demo" in summary
+    assert "Summarizing for wave 500 nm." in summary
+    assert "f number" in summary
+    assert "calc pupil diam" in summary
+    assert "zCoeffs:" in summary
+    assert "Max OTF freq" in summary
+    assert "Max PSF support" in summary
 
 
 def test_run_python_case_supports_wvf_osa_index_conversion_parity_case(asset_store) -> None:

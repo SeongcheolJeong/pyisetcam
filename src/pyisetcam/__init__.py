@@ -213,7 +213,10 @@ from .optics import (
     wvf_osa_index_to_zernike_nm,
     wvf_pupil_amplitude,
     wvf_pupil_function,
+    wvf_print,
+    wvf_root_path,
     wvf_set,
+    wvf_summarize,
     wvf_to_oi,
     wvf_to_optics,
     wvf_to_psf,
@@ -1088,7 +1091,10 @@ __all__ = [
     "wvfOSAIndexToZernikeNM",
     "wvfPupilAmplitude",
     "wvfPupilFunction",
+    "wvfPrint",
+    "wvfRootPath",
     "wvfSet",
+    "wvfSummarize",
     "wvf2optics",
     "wvf2PSF",
     "wvfWave2idx",
@@ -1109,7 +1115,10 @@ __all__ = [
     "wvf_osa_index_to_zernike_nm",
     "wvf_pupil_amplitude",
     "wvf_pupil_function",
+    "wvf_print",
+    "wvf_root_path",
     "wvf_set",
+    "wvf_summarize",
     "wvf_to_oi",
     "wvf_to_optics",
     "wvf_to_psf",
@@ -1269,7 +1278,10 @@ wvfOSAIndexToVectorIndex = wvf_osa_index_to_vector_index
 wvfOSAIndexToZernikeNM = wvf_osa_index_to_zernike_nm
 wvfPupilAmplitude = wvf_pupil_amplitude
 wvfPupilFunction = wvf_pupil_function
+wvfPrint = wvf_print
+wvfRootPath = wvf_root_path
 wvfSet = wvf_set
+wvfSummarize = wvf_summarize
 wvf2oi = wvf_to_oi
 wvf2optics = wvf_to_optics
 wvf2PSF = wvf_to_psf
