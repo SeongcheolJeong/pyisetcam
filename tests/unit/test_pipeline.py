@@ -153,6 +153,8 @@ from pyisetcam import (
     sc_prepare_filters,
     scielab,
     scielab_rgb,
+    sceCreate,
+    sceGet,
     si_synthetic,
     run_python_case,
     hdr_render,
@@ -13366,6 +13368,30 @@ def test_wvf_osa_index_to_vector_index_supports_named_and_numeric_inputs() -> No
     assert np.array_equal(named_vector_index, np.array([5, 13], dtype=int))
     assert np.array_equal(named_j_index, np.array([4, 12], dtype=int))
     assert wvf_osa_index_to_vector_index("defocus") == (5, 4)
+
+
+def test_sce_create_and_wvf_sce_helpers_round_trip() -> None:
+    wave = np.array([450.0, 550.0, 650.0], dtype=float)
+
+    sce = sceCreate(wave, "berendschot_data", "applegate")
+    assert np.array_equal(np.asarray(sceGet(sce, "wavelengths"), dtype=float), wave)
+    assert np.allclose(np.asarray(sceGet(sce, "rho"), dtype=float), np.array([0.05775, 0.0410, 0.0490], dtype=float))
+    assert np.isclose(float(sceGet(sce, "rho", 550.0)), 0.0410)
+    assert np.isclose(float(sceGet(sce, "xo")), 0.51)
+    assert np.isclose(float(sceGet(sce, "yo")), 0.20)
+
+    model = sceCreate(np.array([550.0], dtype=float), "berendschot_model", "centered")
+    assert np.isclose(float(sceGet(model, "rho", 550.0)), 0.0410, atol=1e-6)
+    assert np.isclose(float(sceGet(model, "xo")), 0.0)
+    assert np.isclose(float(sceGet(model, "yo")), 0.0)
+
+    wvf = wvf_set(wvf_create(wave=wave), "sce params", sce)
+    assert np.array_equal(np.asarray(wvf_get(wvf, "sce wavelengths"), dtype=float), wave)
+    assert np.allclose(np.asarray(wvf_get(wvf, "sce rho"), dtype=float), np.asarray(sceGet(sce, "rho"), dtype=float))
+    assert np.isclose(float(wvf_get(wvf, "sce rho", 550.0)), 0.0410)
+    assert np.isclose(float(wvf_get(wvf, "scex0")), 0.51)
+    assert np.isclose(float(wvf_get(wvf, "scey0")), 0.20)
+    assert np.array_equal(np.asarray(sceGet(wvf_get(wvf, "sce"), "wave"), dtype=float), wave)
 
 
 def test_run_python_case_supports_wvf_osa_index_conversion_parity_case(asset_store) -> None:

@@ -164,6 +164,8 @@ from .optics import (
     oi_spatial_support,
     oi_spatial_resample,
     oi_set,
+    sce_create,
+    sce_get,
     lsf_to_circular_psf,
     psf2lsf,
     psf_average_multiple,
@@ -1061,6 +1063,10 @@ __all__ = [
     "vc_rect2_locs",
     "vc_save_object",
     "vc_set_figure_handles",
+    "sceCreate",
+    "sceGet",
+    "sce_create",
+    "sce_get",
     "wvfCompute",
     "wvfAperture",
     "wvfApertureP",
@@ -1240,6 +1246,8 @@ rtRootPath = rt_root_path
 rtSampleHeights = rt_sample_heights
 rtSynthetic = rt_synthetic
 siSynthetic = si_synthetic
+sceCreate = sce_create
+sceGet = sce_get
 wvfAperture = wvf_aperture
 wvfApertureP = wvf_aperture_params
 wvfCompute = wvf_compute

@@ -3385,8 +3385,47 @@ def wvf_get(wvf: dict[str, Any], parameter: str, *args: Any) -> Any:
             ).reshape(-1)[0]
         )
 
+    if key == "sce":
+        sce_params = wvf.get("sce_params", {})
+        return _sce_export(
+            np.asarray(sce_params.get("wave", _wvf_wave_values(wvf)), dtype=float),
+            np.asarray(sce_params.get("rho", np.zeros(_wvf_wave_values(wvf).size, dtype=float)), dtype=float),
+            xo_mm=float(sce_params.get("xo_mm", 0.0)),
+            yo_mm=float(sce_params.get("yo_mm", 0.0)),
+        )
+
+    if key in {"scex0", "scexo"}:
+        return float(wvf.get("sce_params", {}).get("xo_mm", 0.0))
+
+    if key in {"scey0", "sceyo"}:
+        return float(wvf.get("sce_params", {}).get("yo_mm", 0.0))
+
+    if key in {"scewavelength", "scewavelengths", "scewave"}:
+        values = np.asarray(wvf.get("sce_params", {}).get("wave", _wvf_wave_values(wvf)), dtype=float).reshape(-1).copy()
+        if args:
+            values = values * _wave_unit_scale(args[0])
+        return values
+
+    if key == "scerho":
+        sce_params = wvf.get("sce_params", {})
+        exported = _sce_export(
+            np.asarray(sce_params.get("wave", _wvf_wave_values(wvf)), dtype=float),
+            np.asarray(sce_params.get("rho", np.zeros(_wvf_wave_values(wvf).size, dtype=float)), dtype=float),
+            xo_mm=float(sce_params.get("xo_mm", 0.0)),
+            yo_mm=float(sce_params.get("yo_mm", 0.0)),
+        )
+        if not args:
+            return np.asarray(exported["rho"], dtype=float).copy()
+        return sce_get(exported, "rho", args[0])
+
     if key in {"sceparams", "stilescrawford"}:
-        return dict(wvf.get("sce_params", {}))
+        sce_params = wvf.get("sce_params", {})
+        return _sce_export(
+            np.asarray(sce_params.get("wave", _wvf_wave_values(wvf)), dtype=float),
+            np.asarray(sce_params.get("rho", np.zeros(_wvf_wave_values(wvf).size, dtype=float)), dtype=float),
+            xo_mm=float(sce_params.get("xo_mm", 0.0)),
+            yo_mm=float(sce_params.get("yo_mm", 0.0)),
+        )
 
     if key in {"aperturefunction", "aperturefunc"}:
         aperture = wvf.get("aperture_function")
@@ -4261,6 +4300,143 @@ def _normalize_sce_params(wave: np.ndarray, sce_params: dict[str, Any] | None = 
         "xo_mm": float(current.get("xo_mm", current.get("xo", 0.0))),
         "yo_mm": float(current.get("yo_mm", current.get("yo", 0.0))),
     }
+
+
+def _sce_sampling_to_wavelengths(start_nm: float, step_nm: float, count: int) -> np.ndarray:
+    last_nm = float(start_nm) + (int(count) - 1) * float(step_nm)
+    return np.arange(float(start_nm), last_nm + (float(step_nm) * 0.5), float(step_nm), dtype=float)
+
+
+def _wvf_data_root() -> Path:
+    return ensure_upstream_snapshot() / "opticalimage" / "wavefront" / "data"
+
+
+def _load_sce_berendschot_model() -> tuple[np.ndarray, np.ndarray]:
+    data_path = _wvf_data_root() / "BerendschotEtAl2001_Figure2BoldSmooth.txt"
+    raw_lines = data_path.read_text(encoding="latin1").replace("\r", "\n").splitlines()
+    rows: list[tuple[float, float]] = []
+    for line in raw_lines:
+        stripped = line.strip()
+        if not stripped or stripped.lower().startswith("wavelength"):
+            continue
+        parts = stripped.split()
+        if len(parts) < 2:
+            continue
+        rows.append((float(parts[0]), float(parts[1])))
+    if not rows:
+        raise ValueError(f"Unable to parse SCE model data from {data_path}")
+
+    raw = np.asarray(rows, dtype=float)
+    init_wave = _sce_sampling_to_wavelengths(400.0, 5.0, 71)
+    rho = np.interp(init_wave, raw[:, 0], raw[:, 1], left=raw[0, 1], right=raw[-1, 1])
+    reference_index = int(np.argmin(np.abs(init_wave - 550.0)))
+    rho = rho - rho[reference_index] + 0.041
+    return init_wave, rho
+
+
+def _sce_export(wave_nm: np.ndarray, rho: np.ndarray, *, xo_mm: float, yo_mm: float) -> dict[str, Any]:
+    wave_values = np.asarray(wave_nm, dtype=float).reshape(-1).copy()
+    rho_values = np.asarray(rho, dtype=float).reshape(-1).copy()
+    return {
+        "wave": wave_values,
+        "wavelengths": wave_values.copy(),
+        "rho": rho_values,
+        "xo": float(xo_mm),
+        "yo": float(yo_mm),
+        "xo_mm": float(xo_mm),
+        "yo_mm": float(yo_mm),
+    }
+
+
+def sce_create(
+    wave: Any | None = None,
+    rho_source: str | None = None,
+    position_source: str | None = None,
+) -> dict[str, Any]:
+    wave_nm = np.asarray(_sce_sampling_to_wavelengths(400.0, 10.0, 31) if wave is None else wave, dtype=float).reshape(-1)
+    rho_key = str(param_format("none" if rho_source is None else rho_source)).replace("_", "")
+    position_key = str(param_format("centered" if position_source is None else position_source)).replace("_", "")
+
+    if rho_key == "berendschotdata":
+        init_wave = _sce_sampling_to_wavelengths(400.0, 10.0, 31)
+        rho0 = np.asarray(
+            [
+                0.0565,
+                0.0585,
+                0.0605,
+                0.0600,
+                0.05875,
+                0.05775,
+                0.0565,
+                0.0545,
+                0.0525,
+                0.0510,
+                0.04925,
+                0.04675,
+                0.0440,
+                0.0410,
+                0.0400,
+                0.0410,
+                0.0410,
+                0.0415,
+                0.0425,
+                0.04275,
+                0.04325,
+                0.0450,
+                0.0470,
+                0.0480,
+                0.0485,
+                0.0490,
+                0.04975,
+                0.0500,
+                0.04975,
+                0.04925,
+                0.0490,
+            ],
+            dtype=float,
+        )
+    elif rho_key == "berendschotmodel":
+        init_wave, rho0 = _load_sce_berendschot_model()
+    elif rho_key == "none":
+        init_wave = _sce_sampling_to_wavelengths(400.0, 10.0, 31)
+        rho0 = np.zeros(init_wave.size, dtype=float)
+    else:
+        raise ValueError(f"Unsupported SCE rho source: {rho_source}")
+
+    if position_key == "centered":
+        xo_mm = 0.0
+        yo_mm = 0.0
+    elif position_key == "applegate":
+        xo_mm = 0.51
+        yo_mm = 0.20
+    else:
+        raise ValueError(f"Unsupported SCE position source: {position_source}")
+
+    rho = np.interp(wave_nm, init_wave, rho0, left=rho0[0], right=rho0[-1])
+    return _sce_export(wave_nm, rho, xo_mm=xo_mm, yo_mm=yo_mm)
+
+
+def sce_get(sce_params: dict[str, Any], parameter: str, *args: Any) -> Any:
+    wave_nm = np.asarray(sce_params.get("wave", sce_params.get("wavelengths", np.empty(0, dtype=float))), dtype=float).reshape(-1)
+    current = _normalize_sce_params(wave_nm, sce_params)
+    key = param_format(parameter)
+
+    if key == "xo":
+        return float(current.get("xo_mm", 0.0))
+    if key == "yo":
+        return float(current.get("yo_mm", 0.0))
+    if key in {"wave", "wavelengths"}:
+        return np.asarray(current.get("wave", np.empty(0, dtype=float)), dtype=float).copy()
+    if key == "rho":
+        rho = np.asarray(current.get("rho", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+        if not args:
+            return rho.copy()
+        requested_wave = np.asarray(args[0], dtype=float).reshape(-1)
+        values = np.interp(requested_wave, wave_nm, rho, left=rho[0], right=rho[-1])
+        if values.size == 1:
+            return float(values[0])
+        return values
+    raise KeyError(f"Unknown SCE parameter: {parameter}")
 
 
 def _sce_rho_for_wave(sce_params: dict[str, Any], wavelength_nm: float) -> float:

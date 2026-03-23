@@ -540,6 +540,11 @@ That same script-driven WVF helper surface now also includes headless
 `wvfOSAIndexToVectorIndex(...)` for the legacy MATLAB wavefront utility
 layer built on top of the existing WVF core.
 That same script-driven WVF helper surface now also includes headless
+`sce_create(...)` / `sceCreate(...)` and `sce_get(...)` / `sceGet(...)`,
+plus `wvfGet(..., 'sce'/'sce rho'/'scex0'/'scey0'/'sce wavelengths')`
+support for the standalone Stiles-Crawford parameter helpers used by the
+legacy wavefront toolbox.
+That same script-driven WVF helper surface now also includes headless
 `psf_find_peak(...)` / `psfFindPeak(...)`, `psf_volume(...)` /
 `psfVolume(...)`, `psf_center(...)` / `psfCenter(...)`, and
 `psf_find_criterion_radius(...)` / `psfFindCriterionRadius(...)` for the
