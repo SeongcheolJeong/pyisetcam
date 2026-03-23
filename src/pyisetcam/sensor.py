@@ -3026,6 +3026,140 @@ def sensor_image_color_array(cfa: Any) -> tuple[np.ndarray, np.ndarray]:
     return cfa_numbers, _SENSOR_COLOR_MAP.copy()
 
 
+def sensor_rgb_to_plane(rgb_data: Any, cfa_pattern: Any) -> tuple[np.ndarray, Sensor]:
+    """Convert multiband CFA-aligned data into a legacy MATLAB sensor plane."""
+
+    if rgb_data is None:
+        raise ValueError("rgb data required")
+    if cfa_pattern is None:
+        raise ValueError("cfaPattern required")
+
+    rgb = np.asarray(rgb_data, dtype=float)
+    if rgb.ndim != 3:
+        raise ValueError("rgb data must be an (r, c, w) array.")
+
+    pattern = np.asarray(cfa_pattern, dtype=int)
+    if pattern.ndim != 2 or pattern.size == 0:
+        raise ValueError("cfaPattern must be a non-empty 2D array.")
+
+    n_bands = int(rgb.shape[2])
+    if int(np.max(pattern)) > n_bands:
+        raise ValueError("bad cfa pattern")
+
+    block_rows, block_cols = pattern.shape
+    rows = block_rows * (int(rgb.shape[0]) // block_rows)
+    cols = block_cols * (int(rgb.shape[1]) // block_cols)
+    rgb = rgb[:rows, :cols, :]
+
+    sensor = sensor_create()
+    filter_names, _ = sensor_color_order()
+    sensor = sensor_set(sensor, "pattern", pattern.copy())
+    sensor = sensor_set(sensor, "size", [rows, cols])
+    sensor = sensor_set(sensor, "filter spectra", np.ones((int(sensor_get(sensor, "nwave")), n_bands), dtype=float))
+    sensor = sensor_set(sensor, "filter names", list(filter_names[:n_bands]))
+
+    tiled = tile_pattern(pattern, rows, cols)
+    sensor_plane = np.zeros((rows, cols), dtype=float)
+    for band_index in range(n_bands):
+        selector = tiled == (band_index + 1)
+        sensor_plane[selector] = rgb[:, :, band_index][selector]
+
+    return sensor_plane, sensor
+
+
+def sensor_check_array(sensor: Sensor, n: int = 64) -> np.ndarray:
+    """Return a headless CFA visibility image following MATLAB sensorCheckArray()."""
+
+    _, image = sensor_show_cfa(sensor, None, None, int(n))
+    return np.asarray(image, dtype=float)
+
+
+def sensor_stats(
+    sensor: Sensor,
+    stat_type: str = "basic",
+    unit_type: str = "volts",
+    roi: Any | None = None,
+    quiet: bool = False,
+) -> tuple[Any, Sensor]:
+    """Return MATLAB-style ROI summary statistics for volts, electrons, or DV data."""
+
+    del quiet
+    updated = sensor.clone()
+    if roi is not None and np.asarray(roi).size != 0:
+        updated = sensor_set(updated, "roi", roi)
+    elif sensor_get(updated, "roi") is None:
+        rows = int(sensor_get(updated, "rows"))
+        cols = int(sensor_get(updated, "cols"))
+        updated = sensor_set(updated, "roi", np.array([1, 1, cols - 1, rows - 1], dtype=int))
+
+    normalized_unit = param_format(unit_type or "volts")
+    if normalized_unit == "volts":
+        data = sensor_get(updated, "roi volts")
+    elif normalized_unit == "electrons":
+        data = sensor_get(updated, "roi electrons")
+    elif normalized_unit in {"dv", "digitalcount"}:
+        data = sensor_get(updated, "roi dv")
+    else:
+        raise ValueError("Unknown unit type")
+
+    if data is None:
+        raise ValueError("sensorStats requires ROI data.")
+
+    array = np.asarray(data, dtype=float)
+    if array.ndim <= 1:
+        columns = [array.reshape(-1)]
+    else:
+        columns = [array[:, index].reshape(-1) for index in range(array.shape[1])]
+
+    def _valid_stats(values: np.ndarray) -> tuple[float, float, float, int]:
+        usable = values[np.isfinite(values)]
+        count = int(usable.size)
+        if count == 0:
+            return float("nan"), float("nan"), float("nan"), 0
+        mean = float(np.mean(usable, dtype=float))
+        std = float(np.std(usable, ddof=1)) if count > 1 else 0.0
+        sem = float(std / np.sqrt(max(count - 1, 1)))
+        return mean, std, sem, count
+
+    normalized_stat = param_format(stat_type or "basic")
+    if normalized_stat == "mean":
+        means = np.array([_valid_stats(column)[0] for column in columns], dtype=float)
+        return (float(means[0]) if means.size == 1 else means), updated
+
+    if normalized_stat == "basic":
+        means = []
+        stds = []
+        sems = []
+        counts = []
+        for column in columns:
+            mean, std, sem, count = _valid_stats(column)
+            means.append(mean)
+            stds.append(std)
+            sems.append(sem)
+            counts.append(count)
+        if len(columns) == 1:
+            return (
+                {
+                    "mean": float(means[0]),
+                    "std": float(stds[0]),
+                    "sem": float(sems[0]),
+                    "N": int(counts[0]),
+                },
+                updated,
+            )
+        return (
+            {
+                "mean": np.asarray(means, dtype=float),
+                "std": np.asarray(stds, dtype=float),
+                "sem": np.asarray(sems, dtype=float),
+                "N": int(counts[0]),
+            },
+            updated,
+        )
+
+    raise ValueError("Unknown statistic type.")
+
+
 def _sensor_filter_selection(
     data: np.ndarray,
     names: list[str],
@@ -5382,10 +5516,13 @@ sensorDisplayTransform = sensor_display_transform
 sensorEquateTransmittances = sensor_equate_transmittances
 sensorFilterRGB = sensor_filter_rgb
 sensorGainOffset = sensor_gain_offset
+sensorCheckArray = sensor_check_array
 sensorImageColorArray = sensor_image_color_array
 sensorNoNoise = sensor_no_noise
+sensorRGB2Plane = sensor_rgb_to_plane
 sensorResampleWave = sensor_resample_wave
 sensorSNRluxsec = sensor_snr_luxsec
+sensorStats = sensor_stats
 sensorShowCFA = sensor_show_cfa
 sensorShowCFAWeights = sensor_show_cfa_weights
 sensorShowImage = sensor_show_image

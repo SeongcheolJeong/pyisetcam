@@ -234,6 +234,7 @@ from pyisetcam import (
     sensorAddFilter,
     sensorCFANameList,
     sensorClearData,
+    sensorCheckArray,
     sensor_compute,
     sensor_compute_array,
     sensor_compute_samples,
@@ -256,6 +257,7 @@ from pyisetcam import (
     sensorNoNoise,
     sensorPixelCoord,
     sensor_plot,
+    sensorRGB2Plane,
     sensorReadColorFilters,
     sensorReadFilter,
     sensorResampleWave,
@@ -263,6 +265,7 @@ from pyisetcam import (
     sensorSaveImage,
     sensorSNR,
     sensorSNRluxsec,
+    sensorStats,
     sensorShowCFA,
     sensorShowCFAWeights,
     sensorShowImage,
@@ -5569,6 +5572,74 @@ def test_sensor_show_cfa_matches_plot_sensor_wrappers(asset_store) -> None:
     assert full_fig is None
     assert np.allclose(np.asarray(default_img, dtype=float), np.asarray(default_payload["img"], dtype=float))
     assert np.allclose(np.asarray(full_img, dtype=float), np.asarray(full_payload["img"], dtype=float))
+
+
+def test_sensor_check_array_matches_sensor_show_cfa_render(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+
+    check_img = sensorCheckArray(sensor, 4)
+    _, expected_img = sensorShowCFA(sensor, None, None, 4)
+
+    assert np.allclose(np.asarray(check_img, dtype=float), np.asarray(expected_img, dtype=float))
+
+
+def test_sensor_rgb_to_plane_matches_legacy_cfa_assignment() -> None:
+    rgb_data = np.arange(1, 1 + (5 * 4 * 3), dtype=float).reshape(5, 4, 3)
+    cfa_pattern = np.array([[1, 2], [2, 3]], dtype=int)
+
+    sensor_plane, dummy_sensor = sensorRGB2Plane(rgb_data, cfa_pattern)
+
+    expected_rgb = rgb_data[:4, :4, :]
+    tiled_pattern = tile_pattern(cfa_pattern, 4, 4)
+    expected_plane = np.zeros((4, 4), dtype=float)
+    for band_index in range(expected_rgb.shape[2]):
+        selector = tiled_pattern == (band_index + 1)
+        expected_plane[selector] = expected_rgb[:, :, band_index][selector]
+
+    assert np.allclose(sensor_plane, expected_plane)
+    assert np.array_equal(np.asarray(sensor_get(dummy_sensor, "pattern"), dtype=int), cfa_pattern)
+    assert tuple(np.asarray(sensor_get(dummy_sensor, "size"), dtype=int)) == (4, 4)
+    assert sensor_get(dummy_sensor, "filter names") == ["r", "g", "b"]
+
+
+def test_sensor_stats_matches_legacy_roi_summary_paths(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    volts = np.arange(1, 17, dtype=float).reshape(4, 4) / 10.0
+    dv = np.arange(10, 26, dtype=float).reshape(4, 4)
+    sensor = sensor_set(sensor, "volts", volts)
+    sensor = sensor_set(sensor, "dv", dv)
+    roi = np.array([2, 2, 1, 1], dtype=int)
+
+    basic_stats, updated = sensorStats(sensor, "basic", "volts", roi, True)
+    mean_stats, updated_mean = sensorStats(sensor, "mean", "dv", roi, True)
+    roi_volts = np.asarray(sensor_get(updated, "roi volts"), dtype=float)
+    roi_dv = np.asarray(sensor_get(updated_mean, "roi dv"), dtype=float)
+
+    expected_mean = []
+    expected_std = []
+    expected_sem = []
+    for index in range(roi_volts.shape[1]):
+        column = roi_volts[:, index]
+        column = column[np.isfinite(column)]
+        expected_mean.append(np.mean(column))
+        if column.size > 1:
+            expected_std.append(np.std(column, ddof=1))
+            expected_sem.append(np.std(column, ddof=1) / np.sqrt(column.size - 1))
+        else:
+            expected_std.append(0.0)
+            expected_sem.append(0.0)
+
+    expected_dv_mean = []
+    for index in range(roi_dv.shape[1]):
+        column = roi_dv[:, index]
+        column = column[np.isfinite(column)]
+        expected_dv_mean.append(np.mean(column))
+
+    assert np.allclose(np.asarray(basic_stats["mean"], dtype=float), np.asarray(expected_mean, dtype=float))
+    assert np.allclose(np.asarray(basic_stats["std"], dtype=float), np.asarray(expected_std, dtype=float))
+    assert np.allclose(np.asarray(basic_stats["sem"], dtype=float), np.asarray(expected_sem, dtype=float))
+    assert int(basic_stats["N"]) == int(np.sum(np.isfinite(roi_volts[:, 0])))
+    assert np.allclose(np.asarray(mean_stats, dtype=float), np.asarray(expected_dv_mean, dtype=float))
 
 
 def test_sensor_image_color_array_matches_legacy_color_order() -> None:

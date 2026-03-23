@@ -340,6 +340,7 @@ from .sensor import (
     sensor_add_filter,
     sensor_cfa_name_list,
     sensor_ccm,
+    sensor_check_array,
     sensor_clear_data,
     sensor_color_filter,
     sensor_compute_array,
@@ -365,6 +366,7 @@ from .sensor import (
     sensor_image_color_array,
     sensor_no_noise,
     sensor_pixel_coord,
+    sensor_rgb_to_plane,
     sensor_read_color_filters,
     sensor_read_filter,
     sensor_resample_wave,
@@ -372,6 +374,7 @@ from .sensor import (
     sensor_set,
     sensor_set_size_to_fov,
     sensor_save_image,
+    sensor_stats,
     sensor_show_cfa,
     sensor_show_cfa_weights,
     sensor_show_image,
@@ -977,6 +980,7 @@ __all__ = [
     "pixelSR",
     "iePixelWellCapacity",
     "sensorCFANameList",
+    "sensorCheckArray",
     "sensorClearData",
     "sensorColorOrder",
     "sensorPixelCoord",
@@ -992,6 +996,7 @@ __all__ = [
     "signal_current_density",
     "sensor_cfa_name_list",
     "sensor_ccm",
+    "sensor_check_array",
     "sensor_clear_data",
     "sensorColorFilter",
     "sensor_color_filter",
@@ -1006,6 +1011,7 @@ __all__ = [
     "sensorDeleteFilter",
     "sensorReadColorFilters",
     "sensorReadFilter",
+    "sensorRGB2Plane",
     "spatialIntegration",
     "spatial_integration",
     "sensor_replace_filter",
@@ -1015,6 +1021,7 @@ __all__ = [
     "sensorSetSizeToFOV",
     "sensorSaveImage",
     "sensorImageColorArray",
+    "sensorStats",
     "sensorNoNoise",
     "sensorShowCFA",
     "sensorShowCFAWeights",
@@ -1052,6 +1059,8 @@ __all__ = [
     "sensor_set_size_to_fov",
     "sensor_save_image",
     "sensor_image_color_array",
+    "sensor_rgb_to_plane",
+    "sensor_stats",
     "sensor_show_cfa",
     "sensor_show_cfa_weights",
     "sensor_show_image",
@@ -1328,6 +1337,7 @@ imx490Compute = imx490_compute
 sensorAddFilter = sensor_add_filter
 sensorCFANameList = sensor_cfa_name_list
 sensorCCM = sensor_ccm
+sensorCheckArray = sensor_check_array
 sensorClearData = sensor_clear_data
 sensorColorOrder = sensor_color_order
 sensorPixelCoord = sensor_pixel_coord
@@ -1355,6 +1365,7 @@ sensorGainOffset = sensor_gain_offset
 sensorNoNoise = sensor_no_noise
 sensorReadColorFilters = sensor_read_color_filters
 sensorReadFilter = sensor_read_filter
+sensorRGB2Plane = sensor_rgb_to_plane
 sensorResampleWave = sensor_resample_wave
 sensorReplaceFilter = sensor_replace_filter
 sensorSNR = sensor_snr
@@ -1366,6 +1377,7 @@ sensorSet = sensor_set
 sensorSetSizeToFOV = sensor_set_size_to_fov
 sensorSaveImage = sensor_save_image
 sensorImageColorArray = sensor_image_color_array
+sensorStats = sensor_stats
 sensorShowCFA = sensor_show_cfa
 sensorShowCFAWeights = sensor_show_cfa_weights
 sensorShowImage = sensor_show_image
