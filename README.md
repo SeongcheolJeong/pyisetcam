@@ -334,7 +334,14 @@ mini-family, plus headless `pixel_create(...)` / `pixelCreate(...)`,
 `pixel_ideal(...)` / `pixelIdeal(...)`, `pixel_sr(...)` / `pixelSR(...)`,
 and `ie_pixel_well_capacity(...)` / `iePixelWellCapacity(...)` for the
 legacy standalone pixel helper mini-family built on top of the same
-internal sensor-pixel state. The migration-gap
+internal sensor-pixel state, plus headless
+`sensor_read_color_filters(...)` / `sensorReadColorFilters(...)`,
+`sensor_read_filter(...)` / `sensorReadFilter(...)`,
+`sensor_add_filter(...)` / `sensorAddFilter(...)`,
+`sensor_replace_filter(...)` / `sensorReplaceFilter(...)`, and
+`sensor_delete_filter(...)` / `sensorDeleteFilter(...)` for the legacy
+sensor filter-management helper mini-family on top of the same filter
+spectra and asset-loading paths. The migration-gap
 audit now also treats the explicitly obsolete upstream `sensorUnitBlock.m`
 stub as out of scope rather than a remaining headless API target. That
 same Phase 1 sensor wave now also includes

@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-23T00:49:57.045187+00:00",
+  "generated_at": "2026-03-23T01:11:14.058117+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-23T00:49:57.045187+00:00",
+    "generated_at": "2026-03-23T01:11:14.058117+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 73,
       "missing": 40,
       "out_of_scope": 106,
-      "parity": 360,
-      "partial": 835,
+      "parity": 365,
+      "partial": 830,
       "ported": 29
     },
     "kind_counts": {
@@ -22,18 +22,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 378,
+      "P0": 373,
       "P1": 406,
       "P2": 164,
-      "P3": 495
+      "P3": 500
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
         "out_of_scope": 0,
-        "parity": 3,
-        "partial": -3,
+        "parity": 5,
+        "partial": -5,
         "ported": 0
       },
       "kind_counts": {
@@ -45,10 +45,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -3,
+        "P0": -5,
         "P1": 0,
         "P2": 0,
-        "P3": 3
+        "P3": 5
       }
     },
     "family_summary": {
@@ -744,8 +744,8 @@
         "total": 56,
         "by_status": {
           "out_of_scope": 1,
-          "parity": 32,
-          "partial": 22,
+          "parity": 37,
+          "partial": 17,
           "ported": 1
         },
         "by_kind": {
@@ -1034,17 +1034,6 @@
         }
       },
       {
-        "family": "sensor",
-        "open_entries": 22,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "out_of_scope": 1,
-          "parity": 32,
-          "partial": 22,
-          "ported": 1
-        }
-      },
-      {
         "family": "opticalimage",
         "open_entries": 21,
         "highest_open_priority": "P0",
@@ -1122,6 +1111,17 @@
           "parity": 3,
           "partial": 18,
           "ported": 2
+        }
+      },
+      {
+        "family": "sensor",
+        "open_entries": 17,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "out_of_scope": 1,
+          "parity": 37,
+          "partial": 17,
+          "ported": 1
         }
       },
       {
@@ -1218,7 +1218,7 @@
         "not_implemented_error_sites": 0
       },
       "sensor": {
-        "unsupported_option_error_sites": 32,
+        "unsupported_option_error_sites": 33,
         "not_implemented_error_sites": 1
       },
       "session": {

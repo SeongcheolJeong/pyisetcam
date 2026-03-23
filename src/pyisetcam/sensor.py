@@ -2867,6 +2867,141 @@ def sensor_image_color_array(cfa: Any) -> tuple[np.ndarray, np.ndarray]:
     return cfa_numbers, _SENSOR_COLOR_MAP.copy()
 
 
+def _sensor_filter_selection(
+    data: np.ndarray,
+    names: list[str],
+    which_column: int | None,
+) -> tuple[np.ndarray, str]:
+    spectra = np.asarray(data, dtype=float)
+    if spectra.ndim == 1:
+        spectra = spectra.reshape(-1, 1)
+    if spectra.shape[1] == 0:
+        raise ValueError("Filter spectra must contain at least one column.")
+    column_index = 0 if which_column is None else int(which_column) - 1
+    if column_index < 0 or column_index >= spectra.shape[1]:
+        raise ValueError("Requested filter column is out of range.")
+    resolved_names = list(names) if names else [f"f{index + 1}" for index in range(spectra.shape[1])]
+    return spectra[:, column_index].copy(), str(resolved_names[column_index])
+
+
+def sensor_read_color_filters(
+    sensor: Sensor,
+    filter_file: str,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[np.ndarray, list[str]]:
+    """Return MATLAB-style filter spectra matched to the sensor wavelength sampling."""
+
+    store = _store(asset_store)
+    wave = np.asarray(sensor_get(sensor, "wave"), dtype=float).reshape(-1)
+    normalized = param_format(filter_file)
+
+    if normalized in {"rgb", "monochrome", "cym", "grbc", "xyz"}:
+        _, filter_spectra, filter_names = store.load_color_filters(normalized, wave_nm=wave)
+        return np.asarray(filter_spectra, dtype=float), list(filter_names)
+
+    if normalized == "stockmanabs":
+        filter_spectra, filter_names, _ = ie_read_color_filter(wave, "data/human/stockman.mat", asset_store=store)
+        return np.asarray(filter_spectra, dtype=float), list(filter_names)
+
+    filter_spectra, filter_names, _ = ie_read_color_filter(wave, filter_file, asset_store=store)
+    return np.asarray(filter_spectra, dtype=float), list(filter_names)
+
+
+def sensor_read_filter(
+    filter_type: str,
+    sensor: Sensor,
+    fname: str,
+    *,
+    asset_store: AssetStore | None = None,
+) -> Sensor:
+    """Read MATLAB-style sensor filter payloads into the requested slot."""
+
+    updated = sensor.clone()
+    normalized_type = param_format(filter_type or "cfa")
+    if normalized_type in {"cfa", "colorfilters", "colorfilter"}:
+        filter_spectra, filter_names = sensor_read_color_filters(updated, fname, asset_store=asset_store)
+        pattern = np.minimum(np.asarray(sensor_get(updated, "pattern"), dtype=int), int(filter_spectra.shape[1]))
+        updated = sensor_set(updated, "filter spectra", filter_spectra)
+        updated = sensor_set(updated, "filter names", filter_names)
+        updated = sensor_set(updated, "pattern", pattern)
+        return updated
+
+    wave = np.asarray(sensor_get(updated, "wave"), dtype=float).reshape(-1)
+    filter_spectra, _, _ = ie_read_color_filter(wave, fname, asset_store=_store(asset_store))
+    if normalized_type == "pdspectralqe":
+        return sensor_set(updated, "pixel pd spectral qe", np.asarray(filter_spectra, dtype=float).reshape(-1))
+    if normalized_type in {"infrared", "irfilter"}:
+        return sensor_set(updated, "ir filter", np.asarray(filter_spectra, dtype=float).reshape(-1))
+    raise UnsupportedOptionError("sensorReadFilter", filter_type)
+
+
+def sensor_add_filter(
+    sensor: Sensor,
+    fname: str,
+    *,
+    which_column: int | None = None,
+    asset_store: AssetStore | None = None,
+) -> Sensor:
+    """Add a MATLAB-style color filter column to the sensor."""
+
+    updated = sensor.clone()
+    filter_spectra = np.asarray(sensor_get(updated, "filter spectra"), dtype=float)
+    filter_names = list(sensor_get(updated, "filter names"))
+    loaded_data, loaded_names = sensor_read_color_filters(updated, fname, asset_store=asset_store)
+    new_column, new_name = _sensor_filter_selection(loaded_data, loaded_names, which_column)
+    updated = sensor_set(updated, "filter spectra", np.column_stack([filter_spectra, new_column]))
+    updated = sensor_set(updated, "filter names", [*filter_names, new_name])
+    return updated
+
+
+def sensor_replace_filter(
+    sensor: Sensor,
+    which_filter: int,
+    new_filter_file: str,
+    *,
+    which_column: int | None = None,
+    new_filter_name: str | None = None,
+    asset_store: AssetStore | None = None,
+) -> Sensor:
+    """Replace a MATLAB-style sensor filter without changing the CFA pattern."""
+
+    updated = sensor.clone()
+    filter_index = int(which_filter) - 1
+    filter_spectra = np.asarray(sensor_get(updated, "filter spectra"), dtype=float)
+    if filter_index < 0 or filter_index >= filter_spectra.shape[1]:
+        raise ValueError("Requested filter index is out of range.")
+    filter_names = list(sensor_get(updated, "filter names"))
+    loaded_data, loaded_names = sensor_read_color_filters(updated, new_filter_file, asset_store=asset_store)
+    new_column, inferred_name = _sensor_filter_selection(loaded_data, loaded_names, which_column)
+    filter_spectra[:, filter_index] = new_column
+    filter_names[filter_index] = str(new_filter_name) if new_filter_name is not None else inferred_name
+    updated = sensor_set(updated, "filter spectra", filter_spectra)
+    updated = sensor_set(updated, "filter names", filter_names)
+    return updated
+
+
+def sensor_delete_filter(sensor: Sensor, which_filter: int) -> Sensor:
+    """Delete a MATLAB-style color filter and shift the CFA pattern down."""
+
+    updated = sensor.clone()
+    filter_index = int(which_filter) - 1
+    filter_spectra = np.asarray(sensor_get(updated, "filter spectra"), dtype=float)
+    if filter_index < 0 or filter_index >= filter_spectra.shape[1]:
+        raise ValueError("Requested filter index is out of range.")
+    keep_list = np.ones(filter_spectra.shape[1], dtype=bool)
+    keep_list[filter_index] = False
+    updated = sensor_set(updated, "filter spectra", filter_spectra[:, keep_list])
+    updated = sensor_set(updated, "filter names", [name for index, name in enumerate(sensor_get(sensor, "filter names")) if keep_list[index]])
+    pattern = np.asarray(sensor_get(updated, "pattern"), dtype=int)
+    threshold = int(which_filter)
+    pattern = pattern.copy()
+    mask = pattern >= threshold
+    pattern[mask] = np.maximum(1, pattern[mask] - 1)
+    updated = sensor_set(updated, "pattern", pattern)
+    return updated
+
+
 def sensor_show_cfa_weights(
     wgts: Any,
     sensor: Sensor,

@@ -292,6 +292,7 @@ from .sensor import (
     pixel_set,
     pixel_v_per_lux_sec,
     signal_current,
+    sensor_add_filter,
     sensor_cfa_name_list,
     sensor_ccm,
     sensor_clear_data,
@@ -307,6 +308,7 @@ from .sensor import (
     sensor_create,
     sensor_create_ideal,
     sensor_create_split_pixel,
+    sensor_delete_filter,
     sensor_formats,
     sensor_gain_offset,
     sensor_get,
@@ -318,7 +320,10 @@ from .sensor import (
     sensor_image_color_array,
     sensor_no_noise,
     sensor_pixel_coord,
+    sensor_read_color_filters,
+    sensor_read_filter,
     sensor_resample_wave,
+    sensor_replace_filter,
     sensor_set,
     sensor_set_size_to_fov,
     sensor_save_image,
@@ -849,6 +854,7 @@ __all__ = [
     "sensorCreateSplitPixel",
     "sensorFormats",
     "sensorGet",
+    "sensorAddFilter",
     "sensorCCM",
     "pixelCreate",
     "pixelGet",
@@ -861,6 +867,7 @@ __all__ = [
     "sensorColorOrder",
     "sensorPixelCoord",
     "sensorDetermineCFA",
+    "sensorDeleteFilter",
     "sensorDisplayTransform",
     "sensorEquateTransmittances",
     "sensorFilterRGB",
@@ -872,10 +879,18 @@ __all__ = [
     "sensor_clear_data",
     "sensorColorFilter",
     "sensor_color_filter",
+    "sensor_add_filter",
     "sensor_gain_offset",
     "sensor_no_noise",
     "sensor_pixel_coord",
+    "sensor_read_color_filters",
+    "sensor_read_filter",
     "sensorResampleWave",
+    "sensorReplaceFilter",
+    "sensorDeleteFilter",
+    "sensorReadColorFilters",
+    "sensorReadFilter",
+    "sensor_replace_filter",
     "sensorSNR",
     "sensorSNRluxsec",
     "sensorSet",
@@ -1154,12 +1169,14 @@ sensorCompute = sensor_compute
 sensorComputeArray = sensor_compute_array
 sensorComputeSamples = sensor_compute_samples
 imx490Compute = imx490_compute
+sensorAddFilter = sensor_add_filter
 sensorCFANameList = sensor_cfa_name_list
 sensorCCM = sensor_ccm
 sensorClearData = sensor_clear_data
 sensorColorOrder = sensor_color_order
 sensorPixelCoord = sensor_pixel_coord
 sensorDetermineCFA = sensor_determine_cfa
+sensorDeleteFilter = sensor_delete_filter
 sensorDisplayTransform = sensor_display_transform
 sensorEquateTransmittances = sensor_equate_transmittances
 sensorFilterRGB = sensor_filter_rgb
@@ -1176,7 +1193,10 @@ sensorCrop = sensor_crop
 sensorGet = sensor_get
 sensorGainOffset = sensor_gain_offset
 sensorNoNoise = sensor_no_noise
+sensorReadColorFilters = sensor_read_color_filters
+sensorReadFilter = sensor_read_filter
 sensorResampleWave = sensor_resample_wave
+sensorReplaceFilter = sensor_replace_filter
 sensorSNR = sensor_snr
 sensorSNRluxsec = sensor_snr_luxsec
 pixelSNR = pixel_snr

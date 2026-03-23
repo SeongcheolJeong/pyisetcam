@@ -185,6 +185,7 @@ from pyisetcam import (
     pixel_snr_luxsec,
     pixel_v_per_lux_sec,
     sensor_ccm,
+    sensorAddFilter,
     sensorCFANameList,
     sensorClearData,
     sensor_compute,
@@ -198,6 +199,7 @@ from pyisetcam import (
     sensor_dr,
     sensor_dng_read,
     sensorDetermineCFA,
+    sensorDeleteFilter,
     sensorDisplayTransform,
     sensorEquateTransmittances,
     sensorFilterRGB,
@@ -208,7 +210,10 @@ from pyisetcam import (
     sensorNoNoise,
     sensorPixelCoord,
     sensor_plot,
+    sensorReadColorFilters,
+    sensorReadFilter,
     sensorResampleWave,
+    sensorReplaceFilter,
     sensorSaveImage,
     sensorSNR,
     sensorSNRluxsec,
@@ -5091,6 +5096,71 @@ def test_sensor_resample_wave_resamples_legacy_spectral_payloads(asset_store) ->
     assert np.allclose(np.asarray(sensor_get(resampled, "pixelSpectralQE"), dtype=float), expected_qe)
     assert tuple(sensor_get(resampled, "size")) == tuple(sensor_get(sensor, "size"))
     assert np.array_equal(np.asarray(sensor_get(sensor, "wave"), dtype=float), np.array([500.0, 600.0, 700.0], dtype=float))
+
+
+def test_sensor_read_color_filters_matches_legacy_special_cases(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    wave = np.asarray(sensor_get(sensor, "wave"), dtype=float)
+
+    rgb_spectra, rgb_names = sensorReadColorFilters(sensor, "rgb", asset_store=asset_store)
+    expected_rgb, expected_rgb_names, _ = ie_read_color_filter(wave, "data/sensor/colorfilters/RGB.mat", asset_store=asset_store)
+    monochrome_spectra, monochrome_names = sensorReadColorFilters(sensor, "monochrome", asset_store=asset_store)
+    xyz_spectra, xyz_names = sensorReadColorFilters(sensor, "xyz", asset_store=asset_store)
+
+    assert np.allclose(rgb_spectra, expected_rgb)
+    assert rgb_names == expected_rgb_names
+    assert np.allclose(monochrome_spectra, np.ones((wave.size, 1), dtype=float))
+    assert monochrome_names == ["w"]
+    assert xyz_spectra.shape == (wave.size, 3)
+    assert xyz_names == ["rX", "gY", "bZ"]
+
+
+def test_sensor_read_filter_updates_legacy_sensor_filter_slots(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    wave = np.asarray(sensor_get(sensor, "wave"), dtype=float)
+
+    cfa_updated = sensorReadFilter("colorfilters", sensor, "grbc", asset_store=asset_store)
+    expected_grbc, expected_grbc_names = sensorReadColorFilters(sensor, "grbc", asset_store=asset_store)
+    qe_updated = sensorReadFilter("pdspectralqe", sensor, "data/sensor/colorfilters/W.mat", asset_store=asset_store)
+    expected_qe, _, _ = ie_read_color_filter(wave, "data/sensor/colorfilters/W.mat", asset_store=asset_store)
+    ir_updated = sensorReadFilter("irfilter", sensor, "data/sensor/irfilters/ircf_public.mat", asset_store=asset_store)
+    expected_ir, _, _ = ie_read_color_filter(wave, "data/sensor/irfilters/ircf_public.mat", asset_store=asset_store)
+
+    assert np.allclose(np.asarray(sensor_get(cfa_updated, "filter spectra"), dtype=float), expected_grbc)
+    assert sensor_get(cfa_updated, "filter names") == expected_grbc_names
+    assert np.all(np.asarray(sensor_get(cfa_updated, "pattern"), dtype=int) <= expected_grbc.shape[1])
+    assert np.allclose(np.asarray(sensor_get(qe_updated, "pixel spectral qe"), dtype=float), expected_qe.reshape(-1))
+    assert np.allclose(np.asarray(sensor_get(ir_updated, "ir filter"), dtype=float), expected_ir.reshape(-1))
+
+
+def test_sensor_filter_edit_helpers_match_legacy_array_updates(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    original_pattern = np.asarray(sensor_get(sensor, "pattern"), dtype=int)
+    w_filter, w_names, _ = ie_read_color_filter(
+        np.asarray(sensor_get(sensor, "wave"), dtype=float),
+        "data/sensor/colorfilters/W.mat",
+        asset_store=asset_store,
+    )
+
+    added = sensorAddFilter(sensor, "data/sensor/colorfilters/W.mat", asset_store=asset_store)
+    replaced = sensorReplaceFilter(added, 2, "data/sensor/colorfilters/W.mat", new_filter_name="white", asset_store=asset_store)
+    deleted = sensorDeleteFilter(replaced, 2)
+
+    added_spectra = np.asarray(sensor_get(added, "filter spectra"), dtype=float)
+    assert added_spectra.shape[1] == int(sensor_get(sensor, "nfilters")) + 1
+    assert np.allclose(added_spectra[:, -1], w_filter.reshape(-1))
+    assert sensor_get(added, "filter names")[-1] == w_names[0]
+
+    replaced_spectra = np.asarray(sensor_get(replaced, "filter spectra"), dtype=float)
+    assert np.allclose(replaced_spectra[:, 1], w_filter.reshape(-1))
+    assert sensor_get(replaced, "filter names")[1] == "white"
+    assert np.array_equal(np.asarray(sensor_get(replaced, "pattern"), dtype=int), np.asarray(sensor_get(added, "pattern"), dtype=int))
+
+    expected_pattern = original_pattern.copy()
+    mask = expected_pattern >= 2
+    expected_pattern[mask] = np.maximum(1, expected_pattern[mask] - 1)
+    assert int(sensor_get(deleted, "nfilters")) == int(sensor_get(sensor, "nfilters"))
+    assert np.array_equal(np.asarray(sensor_get(deleted, "pattern"), dtype=int), expected_pattern)
 
 
 def test_pixel_create_get_set_and_ideal_match_legacy_contract() -> None:
