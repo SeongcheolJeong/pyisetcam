@@ -205,6 +205,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "GUI keypress handlers remain outside the headless migration target.",
         "module_hits": [],
     },
+    "color/transforms/colorTransformMatrixCreate.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a script used to derive static transform matrices, not a reusable headless API surface.",
+        "module_hits": [],
+    },
     "opticalimage/raytrace/rtBlockPartition.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a script-style diagnostic prototype with display side effects rather than a reusable headless API surface.",

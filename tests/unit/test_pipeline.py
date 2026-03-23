@@ -28,6 +28,7 @@ from pyisetcam import (
     camera_vsnr,
     chartPatchCompare,
     changeColorSpace,
+    cct2sun,
     cmatrix,
     dac_to_rgb,
     macbeth_color_error,
@@ -53,7 +54,9 @@ from pyisetcam import (
     ie_save_color_filter,
     ie_save_multispectral_image,
     ie_save_si_data_file,
+    ieCirclePoints,
     ieConv2FFT,
+    ieCTemp2SRGB,
     ie_cxcorr,
     ie_luminance_to_radiance,
     ie_n_to_megapixel,
@@ -82,6 +85,7 @@ from pyisetcam import (
     luminance_from_photons,
     macbeth_read_reflectance,
     macbeth_compare_ideal,
+    mkInvGammaTable,
     lensList,
     optics_build_2d_otf,
     opticsClearData,
@@ -10988,6 +10992,66 @@ def test_scene_daylight_script_workflow(asset_store) -> None:
     )
     assert day_basis.shape == (wave.size, 3)
     assert basis_examples.shape == (wave.size, 3)
+
+
+def test_color_temperature_helper_wrappers_match_existing_surfaces(asset_store) -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    cct = np.array([4000.0, 6500.0, 9000.0], dtype=float)
+
+    assert np.allclose(
+        np.asarray(cct2sun(wave, cct, "energy", asset_store=asset_store), dtype=float),
+        np.asarray(daylight(wave, cct, "energy", asset_store=asset_store), dtype=float),
+    )
+
+    srgb = np.asarray(ieCTemp2SRGB(3000.0, wave=wave, asset_store=asset_store), dtype=float).reshape(-1)
+    energy = np.asarray(blackbody(wave, 3000.0, kind="energy"), dtype=float).reshape(1, -1)
+    xyz = np.asarray(xyz_from_energy(energy, wave, asset_store=asset_store), dtype=float).reshape(1, 1, 3)
+    expected = np.asarray(xyz_to_srgb(xyz), dtype=float).reshape(-1)
+    assert np.allclose(srgb, expected, atol=1e-10, rtol=1e-10)
+
+
+def test_basic_color_geometry_and_gamma_helpers_match_legacy_contract() -> None:
+    x, y = ieCirclePoints(2.0 * np.pi / 4.0)
+    expected_circle = np.array(
+        [
+            [1.0, 0.0],
+            [0.0, 1.0],
+            [-1.0, 0.0],
+            [0.0, -1.0],
+            [1.0, 0.0],
+        ],
+        dtype=float,
+    )
+    assert np.allclose(np.column_stack([x, y]), expected_circle, atol=1e-12, rtol=0.0)
+
+    gamma = np.array(
+        [
+            [0.0, 0.0],
+            [0.4, 0.2],
+            [0.3, 0.7],
+            [1.0, 1.0],
+        ],
+        dtype=float,
+    )
+
+    def _manual_mk_inv_gamma_table(g_table: np.ndarray, entries: int) -> np.ndarray:
+        result = np.zeros((entries, g_table.shape[1]), dtype=float)
+        target = np.arange(entries, dtype=float) / max(entries - 1, 1)
+        for column in range(g_table.shape[1]):
+            this_table = np.asarray(g_table[:, column], dtype=float).reshape(-1)
+            if np.any(np.diff(this_table) <= 0.0):
+                this_table = np.sort(this_table)
+                positive_locs = np.where(np.diff(this_table) > 0.0)[0] + 1
+                pos_locs = np.concatenate(([0], positive_locs)).astype(float)
+                monotone_table = this_table[pos_locs.astype(int)]
+            else:
+                monotone_table = this_table
+                pos_locs = np.arange(this_table.size, dtype=float)
+            result[:, column] = np.interp(target, monotone_table, pos_locs)
+        return result
+
+    expected = _manual_mk_inv_gamma_table(gamma, 9)
+    assert np.allclose(mkInvGammaTable(gamma, 9), expected, atol=1e-12, rtol=0.0)
 
 
 def test_color_helper_wrappers_match_closed_form_math(asset_store) -> None:

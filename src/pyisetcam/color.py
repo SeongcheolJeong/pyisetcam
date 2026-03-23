@@ -9,7 +9,7 @@ from numpy.typing import NDArray
 
 from .assets import AssetStore
 from .exceptions import UnsupportedOptionError
-from .utils import energy_to_quanta, interp_spectra, param_format, quanta_to_energy, spectral_step
+from .utils import blackbody, energy_to_quanta, interp_spectra, param_format, quanta_to_energy, spectral_step, xyz_to_srgb
 
 
 def xyz_color_matching(
@@ -426,6 +426,76 @@ def daylight(
     return spectra, np.asarray(xyz, dtype=float)
 
 
+def cct_to_sun(
+    wave_nm: NDArray[np.float64] | None,
+    cct_k: float | NDArray[np.float64],
+    units: str = "energy",
+    *,
+    asset_store: AssetStore | None = None,
+) -> NDArray[np.float64]:
+    """Legacy MATLAB ``cct2sun`` compatibility wrapper."""
+
+    wave = np.arange(400.0, 701.0, 1.0, dtype=float) if wave_nm is None else np.asarray(wave_nm, dtype=float).reshape(-1)
+    return np.asarray(daylight(wave, cct_k, units, asset_store=asset_store), dtype=float)
+
+
+def ie_ctemp_to_srgb(
+    c_temp: float,
+    *,
+    wave: NDArray[np.float64] | None = None,
+    asset_store: AssetStore | None = None,
+) -> NDArray[np.float64]:
+    """Convert a blackbody color temperature into a headless sRGB triplet."""
+
+    wave_array = np.asarray(np.arange(400.0, 701.0, 10.0, dtype=float) if wave is None else wave, dtype=float).reshape(-1)
+    energy = np.asarray(blackbody(wave_array, float(c_temp), kind="energy"), dtype=float).reshape(1, -1)
+    from .metrics import xyz_from_energy
+
+    xyz = np.asarray(xyz_from_energy(energy, wave_array, asset_store=asset_store), dtype=float).reshape(1, 1, 3)
+    return np.asarray(xyz_to_srgb(xyz), dtype=float).reshape(3)
+
+
+def ie_circle_points(rad_spacing: float = 2.0 * np.pi / 60.0) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Return samples on the unit circle using the MATLAB ``ieCirclePoints`` contract."""
+
+    spacing = float(rad_spacing)
+    if spacing <= 0.0:
+        raise ValueError("rad_spacing must be positive.")
+    theta = np.arange(0.0, (2.0 * np.pi) + (spacing * 0.5), spacing, dtype=float)
+    return np.cos(theta), np.sin(theta)
+
+
+def mk_inv_gamma_table(g_table: NDArray[np.float64], num_entries: int | None = None) -> NDArray[np.float64]:
+    """Compute a MATLAB-style inverse gamma lookup table."""
+
+    gamma_table = np.asarray(g_table, dtype=float)
+    if gamma_table.ndim == 1:
+        gamma_table = gamma_table.reshape(-1, 1)
+    if gamma_table.ndim != 2 or gamma_table.shape[0] == 0:
+        raise ValueError("g_table must be a non-empty 1D or 2D gamma table.")
+
+    entry_count = int(4 * gamma_table.shape[0] if num_entries is None else num_entries)
+    if entry_count <= 0:
+        raise ValueError("num_entries must be positive.")
+
+    result = np.zeros((entry_count, gamma_table.shape[1]), dtype=float)
+    target_axis = np.arange(entry_count, dtype=float) / max(entry_count - 1, 1)
+
+    for column in range(gamma_table.shape[1]):
+        this_table = np.asarray(gamma_table[:, column], dtype=float).reshape(-1)
+        if np.any(np.diff(this_table) <= 0.0):
+            this_table = np.sort(this_table)
+            positive_locs = np.where(np.diff(this_table) > 0.0)[0] + 1
+            pos_locs = np.concatenate(([0], positive_locs)).astype(float)
+            monotone_table = this_table[pos_locs.astype(int)]
+        else:
+            monotone_table = this_table
+            pos_locs = np.arange(this_table.size, dtype=float)
+        result[:, column] = np.interp(target_axis, monotone_table, pos_locs)
+
+    return result
+
+
 def _surface_reflectances(
     surfaces: str,
     wave_nm: NDArray[np.float64],
@@ -510,3 +580,9 @@ def internal_to_display_matrix(
         raise UnsupportedOptionError("displayRender", internal_cs)
     internal_cmf = xyz_color_matching(np.asarray(wave_nm, dtype=float), energy=False, asset_store=asset_store)
     return np.linalg.inv(np.asarray(display_spd, dtype=float).T @ internal_cmf)
+
+
+cct2sun = cct_to_sun
+ieCTemp2SRGB = ie_ctemp_to_srgb
+ieCirclePoints = ie_circle_points
+mkInvGammaTable = mk_inv_gamma_table

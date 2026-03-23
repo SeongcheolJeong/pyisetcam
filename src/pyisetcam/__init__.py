@@ -24,7 +24,10 @@ from .camera import (
 )
 from .color import (
     adobergb_parameters,
+    cct_to_sun,
     daylight,
+    ie_circle_points,
+    ie_ctemp_to_srgb,
     ie_lab_to_xyz,
     ie_luminance_to_radiance,
     ie_responsivity_convert,
@@ -33,6 +36,7 @@ from .color import (
     lms_to_srgb,
     lms_to_xyz,
     lrgb_to_srgb,
+    mk_inv_gamma_table,
     luminance_from_energy,
     luminance_from_photons,
     srgb_parameters,
@@ -488,6 +492,8 @@ __all__ = [
     "macbeth_compare_ideal",
     "camera_set",
     "adobergb_parameters",
+    "cct2sun",
+    "cct_to_sun",
     "cct",
     "cct_from_uv",
     "cpiqCSF",
@@ -495,6 +501,10 @@ __all__ = [
     "dac2rgb",
     "dac_to_rgb",
     "daylight",
+    "ieCirclePoints",
+    "ieCTemp2SRGB",
+    "ie_circle_points",
+    "ie_ctemp_to_srgb",
     "HeadlessDescriptionHandle",
     "hcBasis",
     "hc_basis",
@@ -743,6 +753,8 @@ __all__ = [
     "scielab_rgb",
     "RGB2XWFormat",
     "adobergbParameters",
+    "mkInvGammaTable",
+    "mk_inv_gamma_table",
     "rgb_to_xw_format",
     "spd2cct",
     "spd_to_cct",
@@ -1539,9 +1551,13 @@ visualAngle = visual_angle
 colorTransformMatrix = color_transform_matrix
 scielabRGB = scielab_rgb
 xyz2luv = xyz_to_luv
+cct2sun = cct_to_sun
 cct = cct_from_uv
 spd2cct = spd_to_cct
 srgb2colortemp = srgb_to_color_temp
+ieCirclePoints = ie_circle_points
+ieCTemp2SRGB = ie_ctemp_to_srgb
+mkInvGammaTable = mk_inv_gamma_table
 RGB2XWFormat = rgb_to_xw_format
 XW2RGBFormat = xw_to_rgb_format
 hcBasis = hc_basis
