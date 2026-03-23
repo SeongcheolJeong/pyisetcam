@@ -435,6 +435,38 @@ def ie_iso12233(
     return result
 
 
+def iso12233_v1(
+    bar_image: Any,
+    delta_x: float | None = None,
+    weight: Any | None = None,
+    plot_options: str | None = None,
+) -> ISO12233Result:
+    """Compatibility wrapper for the legacy MATLAB ISO12233v1 file surface."""
+
+    return iso12233(bar_image, delta_x=delta_x, weight=weight, plot_options=plot_options)
+
+
+def ie_iso12233_v1(
+    ip: ImageProcessor,
+    sensor: Sensor,
+    plot_options: str | None = None,
+    master_rect: Any | None = None,
+    *,
+    weight: Any | None = None,
+    npoly: int = 1,
+) -> ISO12233Result:
+    """Compatibility wrapper for the legacy MATLAB ieISO12233v1 file surface."""
+
+    return ie_iso12233(
+        ip,
+        sensor,
+        plot_options=plot_options,
+        master_rect=master_rect,
+        weight=weight,
+        npoly=npoly,
+    )
+
+
 def edge_to_mtf(
     bar_image: Any,
     *,
@@ -481,5 +513,7 @@ def edge_to_mtf(
 
 ISOFindSlantedBar = iso_find_slanted_bar
 ISO12233 = iso12233
+ISO12233v1 = iso12233_v1
 ieCXcorr = ie_cxcorr
 ieISO12233 = ie_iso12233
+ieISO12233v1 = ie_iso12233_v1

@@ -55,7 +55,21 @@ from .fileio import (
     vc_save_object,
 )
 from .illuminant import illuminant_create, illuminant_get, illuminant_set
-from .iso import ISO12233, ISOFindSlantedBar, edge_to_mtf, ieCXcorr, ieISO12233, ie_cxcorr, ie_iso12233, iso12233, iso_find_slanted_bar
+from .iso import (
+    ISO12233,
+    ISO12233v1,
+    ISOFindSlantedBar,
+    edge_to_mtf,
+    ieCXcorr,
+    ieISO12233,
+    ieISO12233v1,
+    ie_cxcorr,
+    ie_iso12233,
+    ie_iso12233_v1,
+    iso12233,
+    iso12233_v1,
+    iso_find_slanted_bar,
+)
 from .ip import (
     demosaic,
     display_render,
@@ -598,11 +612,15 @@ __all__ = [
     "illuminant_get",
     "illuminant_set",
     "ISO12233",
+    "ISO12233v1",
     "ISOFindSlantedBar",
     "ieISO12233",
+    "ieISO12233v1",
     "ie_iso12233",
+    "ie_iso12233_v1",
     "iso_find_slanted_bar",
     "iso12233",
+    "iso12233_v1",
     "iso_acutance",
     "macbethReadReflectance",
     "macbeth_read_reflectance",

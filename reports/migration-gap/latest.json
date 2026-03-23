@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-03-23T08:19:43.374815+00:00",
+  "generated_at": "2026-03-23T08:41:46.573837+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-23T08:19:43.374815+00:00",
+    "generated_at": "2026-03-23T08:41:46.573837+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 92,
       "missing": 37,
-      "out_of_scope": 107,
-      "parity": 459,
-      "partial": 716,
-      "ported": 32
+      "out_of_scope": 116,
+      "parity": 460,
+      "partial": 703,
+      "ported": 35
     },
     "kind_counts": {
       "api": 661,
@@ -22,19 +22,19 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 283,
+      "P0": 270,
       "P1": 381,
       "P2": 181,
-      "P3": 598
+      "P3": 611
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 0,
-        "parity": 3,
-        "partial": -3,
-        "ported": 0
+        "out_of_scope": 9,
+        "parity": 1,
+        "partial": -13,
+        "ported": 3
       },
       "kind_counts": {
         "api": 0,
@@ -45,10 +45,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -3,
+        "P0": -13,
         "P1": 0,
         "P2": 0,
-        "P3": 3
+        "P3": 13
       }
     },
     "family_summary": {
@@ -387,8 +387,10 @@
       "metrics/iso": {
         "total": 20,
         "by_status": {
-          "parity": 6,
-          "partial": 14
+          "out_of_scope": 9,
+          "parity": 7,
+          "partial": 1,
+          "ported": 3
         },
         "by_kind": {
           "api": 20
@@ -1044,15 +1046,6 @@
         }
       },
       {
-        "family": "metrics/iso",
-        "open_entries": 14,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 6,
-          "partial": 14
-        }
-      },
-      {
         "family": "sensor/pixel",
         "open_entries": 14,
         "highest_open_priority": "P0",
@@ -1145,6 +1138,15 @@
           "parity": 42,
           "partial": 12,
           "ported": 1
+        }
+      },
+      {
+        "family": "sensor/simulation",
+        "open_entries": 12,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 13,
+          "partial": 12
         }
       }
     ],

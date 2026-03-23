@@ -452,6 +452,20 @@ def _status_and_note(
             "Python-native asset pipeline.",
             module_hits,
         )
+    if entry.upstream_path.startswith("metrics/ISO/sfrmat4v5/"):
+        if stem in {"sfrmat4", "sfrmat4simplified", "clip"}:
+            return (
+                "ported",
+                "The MATLAB-private sfrmat4v5 algorithm helper is already absorbed into the "
+                "current headless slanted-edge implementation in `pyisetcam.iso`.",
+                ["pyisetcam.iso"],
+            )
+        return (
+            "out_of_scope",
+            "The remaining sfrmat4v5 file-I/O and GUI support helpers are not migrated as "
+            "standalone headless Python APIs.",
+            module_hits,
+        )
     if entry.family.startswith("opticalimage/raytrace"):
         if explicit_hit and entry.kind in {"script", "tutorial"}:
             return (

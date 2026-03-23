@@ -56,6 +56,7 @@ from pyisetcam import (
     ie_responsivity_convert,
     ie_scotopic_luminance_from_energy,
     ie_iso12233,
+    ieISO12233v1,
     ie_xyz_from_photons,
     ie_field_height_to_index,
     ie_rect2_locs,
@@ -68,6 +69,7 @@ from pyisetcam import (
     iso_find_slanted_bar,
     iso_acutance,
     iso12233,
+    ISO12233v1,
     ieLAB2XYZ,
     lrgb_to_srgb,
     lms2srgb,
@@ -8677,6 +8679,42 @@ def test_metrics_mtf_slanted_bar_script_workflow(asset_store) -> None:
     assert np.isclose(float(color_direct.nyquistf), float(color_ie.nyquistf), rtol=1e-10, atol=1e-12)
     assert np.isfinite(float(color_ie.mtf50))
     assert np.isfinite(float(mono_direct.mtf50))
+
+
+def test_metrics_iso12233_v1_wrappers_match_current_iso_surface(asset_store) -> None:
+    scene = scene_create("slanted bar", 512, 7.0 / 3.0, asset_store=asset_store)
+    scene = scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
+    scene = scene_set(scene, "distance", 1.0)
+    scene = scene_set(scene, "fov", 5.0)
+
+    oi = oi_compute(oi_create(asset_store=asset_store), scene)
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "autoExposure", 1)
+    sensor = sensor_compute(sensor, oi)
+    ip = ip_compute(ip_create(asset_store=asset_store), sensor)
+
+    rect = iso_find_slanted_bar(ip)
+    col_min, row_min, width, height = np.asarray(rect, dtype=int).reshape(-1)
+    bar = np.asarray(ip_get(ip, "result"), dtype=float)[row_min - 1 : row_min + height, col_min - 1 : col_min + width, :]
+    dx = float(sensor_get(sensor, "pixel width", "mm"))
+
+    current_direct = iso12233(bar, dx, plot_options="none")
+    legacy_direct = ISO12233v1(bar, dx, plot_options="none")
+    current_ie = ie_iso12233(ip, sensor, plot_options="none", master_rect=rect)
+    legacy_ie = ieISO12233v1(ip, sensor, plot_options="none", master_rect=rect)
+
+    assert np.allclose(np.asarray(legacy_direct.freq, dtype=float), np.asarray(current_direct.freq, dtype=float))
+    assert np.allclose(np.asarray(legacy_direct.mtf, dtype=float), np.asarray(current_direct.mtf, dtype=float))
+    assert np.allclose(np.asarray(legacy_direct.lsf, dtype=float), np.asarray(current_direct.lsf, dtype=float))
+    assert np.isclose(float(legacy_direct.mtf50), float(current_direct.mtf50))
+    assert np.isclose(float(legacy_direct.aliasingPercentage), float(current_direct.aliasingPercentage))
+
+    assert np.array_equal(np.asarray(legacy_ie.rect, dtype=int), np.asarray(current_ie.rect, dtype=int))
+    assert np.allclose(np.asarray(legacy_ie.freq, dtype=float), np.asarray(current_ie.freq, dtype=float))
+    assert np.allclose(np.asarray(legacy_ie.mtf, dtype=float), np.asarray(current_ie.mtf, dtype=float))
+    assert np.allclose(np.asarray(legacy_ie.lsf, dtype=float), np.asarray(current_ie.lsf, dtype=float))
+    assert np.isclose(float(legacy_ie.mtf50), float(current_ie.mtf50))
+    assert np.isclose(float(legacy_ie.aliasingPercentage), float(current_ie.aliasingPercentage))
 
 
 def test_run_python_case_supports_metrics_mtf_slanted_bar_small_parity_case(asset_store) -> None:
