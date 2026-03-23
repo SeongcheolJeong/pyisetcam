@@ -20,6 +20,7 @@ from .utils import (
     DEFAULT_WAVE,
     blackbody,
     energy_to_quanta,
+    image_increase_image_rgb_size,
     interp_spectra,
     param_format,
     quanta_to_energy,
@@ -2413,6 +2414,27 @@ def _normalized_parameter_dict(value: Any) -> dict[str, Any]:
     return {param_format(str(key)): item for key, item in raw.items()}
 
 
+def _scene_scale_peak_luminance(
+    scene: Scene,
+    target_luminance: float,
+    *,
+    asset_store: AssetStore | None = None,
+) -> Scene:
+    luminance = np.asarray(scene_get(scene, "luminance", asset_store=asset_store), dtype=float)
+    current_peak = float(np.max(luminance)) if luminance.size else 0.0
+    if current_peak <= 0.0:
+        return scene
+    scale = float(target_luminance) / current_peak
+    scene.data["photons"] = np.asarray(scene.data["photons"], dtype=float) * scale
+    if "illuminant_photons" in scene.fields:
+        scene.fields["illuminant_photons"] = np.asarray(scene.fields["illuminant_photons"], dtype=float) * scale
+    if "illuminant_energy" in scene.fields:
+        scene.fields["illuminant_energy"] = np.asarray(scene.fields["illuminant_energy"], dtype=float) * scale
+    _invalidate_scene_caches(scene)
+    scene_calculate_luminance(scene, asset_store=asset_store)
+    return scene
+
+
 def _broadcast_parameter_vector(values: np.ndarray, count: int, name: str) -> np.ndarray:
     if values.size == count:
         return values.astype(float, copy=False)
@@ -2767,6 +2789,344 @@ def mo_target(pattern: str = "sinusoidalim", parms: Any | None = None) -> np.nda
 
     image = np.asarray(image, dtype=float).T
     return np.repeat(image[:, :, None], 3, axis=2)
+
+
+def scene_hdr_chart(
+    d_range: float = 1.0e4,
+    n_levels: int = 12,
+    cols_per_level: int = 8,
+    max_l: float | None = None,
+    il: Any | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> Scene:
+    """Create the legacy MATLAB HDR strip chart scene."""
+
+    from .illuminant import illuminant_create, illuminant_get
+
+    scene = scene_create("empty", asset_store=_store(asset_store))
+    wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+    if il is None:
+        illuminant = illuminant_create("d65", wave, 100.0, asset_store=_store(asset_store))
+        ill_photons = np.asarray(illuminant_get(illuminant, "photons", asset_store=_store(asset_store)), dtype=float).reshape(-1)
+        illuminant_comment = str(illuminant_get(illuminant, "name", asset_store=_store(asset_store)))
+    elif isinstance(il, dict):
+        if "photons" in il:
+            ill_photons = np.asarray(il["photons"], dtype=float).reshape(-1)
+        elif "energy" in il:
+            ill_photons = np.asarray(energy_to_quanta(np.asarray(il["energy"], dtype=float).reshape(-1), wave), dtype=float)
+        else:
+            raise ValueError("HDR chart illuminant dict must contain photons or energy.")
+        illuminant_comment = str(il.get("name", "user-defined"))
+    else:
+        ill_photons = np.asarray(illuminant_get(il, "photons", asset_store=_store(asset_store)), dtype=float).reshape(-1)
+        illuminant_comment = str(illuminant_get(il, "name", asset_store=_store(asset_store)))
+
+    cols = int(n_levels) * int(cols_per_level)
+    rows = cols
+    reflectances = np.logspace(0.0, np.log10(1.0 / float(d_range)), int(n_levels), dtype=float)
+    photons_by_level = reflectances[:, None] * ill_photons.reshape(1, -1)
+    img = np.zeros((rows, cols, wave.size), dtype=float)
+    for ll in range(int(n_levels)):
+        these_cols = slice(ll * int(cols_per_level), (ll + 1) * int(cols_per_level))
+        img[:, these_cols, :] = photons_by_level[ll, :].reshape(1, 1, -1)
+
+    scene = scene_set(scene, "photons", img)
+    scene = scene_set(scene, "illuminant photons", ill_photons)
+    scene = scene_set(scene, "illuminant comment", illuminant_comment)
+    scene.name = "HDR Chart"
+    scene = scene_set(
+        scene,
+        "chart parameters",
+        {
+            "dRange": float(d_range),
+            "nLevels": int(n_levels),
+            "colsPerLevel": int(cols_per_level),
+            "cornerPoints": np.array([[1.0, float(rows)], [float(cols), float(rows)], [float(cols), 1.0], [1.0, 1.0]], dtype=float),
+        },
+    )
+    if max_l is not None:
+        scene = _scene_scale_peak_luminance(scene, float(max_l), asset_store=_store(asset_store))
+    return scene
+
+
+def scene_hdr_image(
+    n_patches: int,
+    *,
+    background: str | Path | np.ndarray | None = "PsychBuilding.png",
+    image_size: Any | None = None,
+    dynamic_range: float = 3.0,
+    patch_shape: str = "square",
+    patch_size: int | None = None,
+    row: int | None = None,
+    asset_store: AssetStore | None = None,
+) -> tuple[Scene, Scene]:
+    """Create the legacy MATLAB HDR image scene and return the background scene too."""
+
+    from .display import display_create
+
+    store = _store(asset_store)
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    display = display_create(wave=wave, asset_store=store)
+
+    if background is None or (isinstance(background, str) and background == ""):
+        if image_size is None:
+            image_size = [512, 512]
+        background_scene = scene_create("uniformee", image_size, wave, asset_store=store)
+        background_scene = scene_adjust_luminance(background_scene, 0.0, asset_store=store)
+        im_size = np.asarray(scene_get(background_scene, "size"), dtype=int)
+    else:
+        input_background = background
+        if isinstance(background, str):
+            input_background = background
+        background_scene = scene_from_file(input_background, "rgb" if not str(background).lower().endswith(".mat") else "spectral", 1.0, display, wave, asset_store=store)
+        if image_size is not None:
+            background_scene = scene_set(background_scene, "resize", image_size)
+        background_scene = scene_adjust_luminance(background_scene, 1.0, asset_store=store)
+        im_size = np.asarray(scene_get(background_scene, "size"), dtype=int)
+
+    im_height = int(im_size[0])
+    im_width = int(im_size[1])
+    patch_levels = np.flip(np.logspace(0.0, float(dynamic_range), int(n_patches), dtype=float))
+    composite_scene: Scene | None = None
+    normalized_shape = param_format(patch_shape)
+
+    for ii in range(int(n_patches)):
+        patch_image = np.zeros((im_height, im_width), dtype=float)
+        if normalized_shape == "square":
+            patch_width = max(int(np.floor(im_width / (2 * int(n_patches)))), 1) if patch_size is None else int(patch_size)
+            patch_height = patch_width
+            spacing = im_width / max(int(n_patches) + 1, 1)
+            start_cols = np.rint(np.arange(1, int(n_patches) + 1, dtype=float) * spacing).astype(int)
+            start_row = int(np.rint((im_height - patch_height) / 2.0)) if row is None else int(row)
+            row_slice = slice(max(start_row, 0), min(start_row + patch_height, im_height))
+            start_col = int(start_cols[ii] - np.rint(patch_width / 2.0))
+            col_slice = slice(max(start_col, 0), min(start_col + patch_width, im_width))
+            patch_image[row_slice, col_slice] = 1.0
+        elif normalized_shape == "circle":
+            radius = max(int(np.floor(im_width / (4 * int(n_patches)))), 1) if patch_size is None else int(patch_size)
+            spacing = im_width / max(int(n_patches) + 1, 1)
+            center_cols = np.arange(1, int(n_patches) + 1, dtype=float) * spacing
+            center_row = int(np.rint(im_height / 2.0)) if row is None else int(row)
+            xx, yy = np.meshgrid(np.arange(1, im_width + 1, dtype=float), np.arange(1, im_height + 1, dtype=float))
+            dist = np.sqrt((xx - center_cols[ii]) ** 2 + (yy - float(center_row)) ** 2)
+            patch_image = (dist < radius).astype(float)
+        else:
+            raise UnsupportedOptionError("sceneHDRImage", patch_shape)
+
+        patch_rgb = np.repeat(patch_image[:, :, None], 3, axis=2)
+        patch_scene = scene_from_file(patch_rgb, "rgb", 1.0, display, wave, asset_store=store)
+        patch_scene = _scene_scale_peak_luminance(patch_scene, float(patch_levels[ii]), asset_store=store)
+        composite_scene = patch_scene if composite_scene is None else scene_add(composite_scene, patch_scene)
+
+    assert composite_scene is not None
+    combined = scene_add(background_scene, composite_scene)
+    combined.name = "HDR Image"
+    combined = scene_set(
+        combined,
+        "chart parameters",
+        {
+            "nPatches": int(n_patches),
+            "imageSize": np.asarray(im_size, dtype=int).copy(),
+            "dynamicRange": float(dynamic_range),
+            "patchShape": str(patch_shape),
+            "patchSize": None if patch_size is None else int(patch_size),
+            "row": None if row is None else int(row),
+        },
+    )
+    return combined, background_scene
+
+
+def scene_radiance_chart(
+    wave: Any,
+    radiance: Any,
+    *,
+    rowcol: Any | None = None,
+    patch_size: int = 10,
+    gray_fill: bool = True,
+    sampling: str = "r",
+    illuminant: Any | None = None,
+    asset_store: AssetStore | None = None,
+) -> tuple[Scene, np.ndarray]:
+    """Create the legacy MATLAB radiance chart scene."""
+
+    chart_wave = np.asarray(wave, dtype=float).reshape(-1)
+    radiance_array = np.asarray(radiance, dtype=float)
+    if radiance_array.ndim != 2 or radiance_array.shape[0] != chart_wave.size:
+        raise ValueError("radiance must be an nWave x nSamples matrix.")
+
+    scene = scene_create("empty", asset_store=_store(asset_store))
+    scene = scene_set(scene, "wave", chart_wave)
+    n_samples = int(radiance_array.shape[1])
+    if rowcol is None:
+        rows = int(np.ceil(np.sqrt(n_samples)))
+        cols = int(np.ceil(n_samples / max(rows, 1)))
+    else:
+        rowcol_array = np.asarray(rowcol, dtype=int).reshape(-1)
+        rows = int(rowcol_array[0])
+        cols = int(rowcol_array[1])
+
+    expanded = radiance_array.copy()
+    if rows * cols > n_samples:
+        n_missing = rows * cols - n_samples
+        extra = expanded[:, np.random.default_rng(0).integers(0, n_samples, size=n_missing)]
+        expanded = np.concatenate((expanded, extra), axis=1)
+
+    illuminant_photons: np.ndarray
+    if gray_fill:
+        mean_luminance = np.mean(luminance_from_photons(expanded.T, chart_wave, asset_store=_store(asset_store)))
+        unit_luminance = float(luminance_from_photons(np.ones(chart_wave.size, dtype=float), chart_wave, asset_store=_store(asset_store)))
+        gray_scale = np.linspace(0.2, 3.0, rows, dtype=float)
+        gray_column = np.ones((chart_wave.size, rows), dtype=float) * (mean_luminance / max(unit_luminance, 1e-12))
+        gray_column = gray_column * gray_scale.reshape(1, -1)
+        expanded = np.concatenate((expanded, gray_column), axis=1)
+        cols += 1
+        illuminant_photons = gray_column[:, -1]
+    else:
+        if illuminant is None:
+            illuminant_photons = np.mean(expanded, axis=1) * 5.0
+        else:
+            illuminant_photons = np.asarray(illuminant, dtype=float).reshape(-1)
+
+    rc_size = np.array([rows, cols], dtype=int)
+    patch_cube = xw_to_rgb_format(expanded.T, rows, cols)
+    s_data = image_increase_image_rgb_size(patch_cube, patch_size)
+
+    scene = scene_set(scene, "photons", s_data)
+    scene = scene_set(scene, "illuminant photons", illuminant_photons)
+    scene = scene_set(scene, "illuminant comment", "scene radiance chart")
+    scene.name = "Radiance Chart (EE)"
+    scene = scene_set(
+        scene,
+        "chart parameters",
+        {
+            "patchSize": int(patch_size),
+            "grayFill": bool(gray_fill),
+            "sampling": str(sampling),
+            "rowcol": rc_size.copy(),
+            "cornerPoints": np.array(
+                [[1.0, float(rows * patch_size)], [float(cols * patch_size), float(rows * patch_size)], [float(cols * patch_size), 1.0], [1.0, 1.0]],
+                dtype=float,
+            ),
+        },
+    )
+    return scene, rc_size
+
+
+def _vernier_image(params: dict[str, Any]) -> np.ndarray:
+    scene_size = params.get("scenesz", 64)
+    if np.isscalar(scene_size):
+        rows = cols = int(scene_size)
+    else:
+        size_array = np.asarray(scene_size, dtype=int).reshape(-1)
+        rows = int(size_array[0])
+        cols = int(size_array[1])
+    bar_width = int(params.get("barwidth", 1))
+    offset = int(params.get("offset", 1))
+    bar_length = int(params.get("barlength", rows // 2))
+    bar_color = np.asarray(params.get("barcolor", np.ones(3, dtype=float)), dtype=float).reshape(3)
+    bg_color = np.asarray(params.get("bgcolor", np.zeros(3, dtype=float)), dtype=float).reshape(3)
+
+    image = np.broadcast_to(bg_color.reshape(1, 1, 3), (rows, cols, 3)).copy()
+    center_col = int(np.rint((cols - bar_width) / 2.0))
+    top_cols = np.arange(center_col - int(np.floor(offset / 2.0)), center_col - int(np.floor(offset / 2.0)) + bar_width)
+    bottom_cols = top_cols + offset
+    top_cols = np.clip(top_cols, 0, cols - 1)
+    bottom_cols = np.clip(bottom_cols, 0, cols - 1)
+    top_half = rows // 2
+    top_start = max(int(np.rint((top_half - bar_length) / 2.0)), 0)
+    top_end = min(top_start + bar_length, top_half)
+    bot_start = top_half
+    bot_end = min(bot_start + bar_length, rows)
+    image[top_start:top_end, top_cols, :] = bar_color.reshape(1, 1, 3)
+    image[bot_start:bot_end, bottom_cols, :] = bar_color.reshape(1, 1, 3)
+    return image
+
+
+def scene_vernier(
+    scene: Scene,
+    type: str = "display",
+    params: dict[str, Any] | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> Scene:
+    """Create the legacy MATLAB Vernier scene from display or object parameters."""
+
+    from .display import display_create
+    from .illuminant import illuminant_create, illuminant_get
+
+    if not isinstance(scene, Scene):
+        raise ValueError("sceneVernier requires a scene input.")
+    parameters = _normalized_parameter_dict(params)
+    normalized_type = param_format(type or "display")
+
+    if normalized_type == "display":
+        display_value = parameters.get("display", "LCD-Apple")
+        display = display_value if not isinstance(display_value, str) else display_create(display_value, asset_store=_store(asset_store))
+        image = _vernier_image(parameters)
+        result = scene_from_file(image, "rgb", None, display, asset_store=_store(asset_store))
+    elif normalized_type == "object":
+        current = scene.clone()
+        scene_size = parameters.get("scenesz", 64)
+        if np.isscalar(scene_size):
+            rows = cols = int(scene_size)
+        else:
+            size_array = np.asarray(scene_size, dtype=int).reshape(-1)
+            rows = int(size_array[0])
+            cols = int(size_array[1])
+        if cols % 2 == 0:
+            cols += 1
+        bar_width = int(parameters.get("barwidth", 1))
+        offset = int(parameters.get("offset", 1))
+        line_reflectance = float(parameters.get("barreflect", 0.6))
+        back_reflectance = float(parameters.get("bgreflect", 0.3))
+        wave = np.asarray(current.fields.get("wave", DEFAULT_WAVE), dtype=float).reshape(-1)
+        if "wave" not in current.fields:
+            current = init_default_spectrum(current, "hyperspectral")
+            wave = np.asarray(current.fields["wave"], dtype=float).reshape(-1)
+
+        illuminant_param = parameters.get("il")
+        if illuminant_param is None:
+            illuminant = illuminant_create("equal photons", wave, 100.0, asset_store=_store(asset_store))
+            ill_photons = np.asarray(illuminant_get(illuminant, "photons", asset_store=_store(asset_store)), dtype=float).reshape(-1)
+            illuminant_comment = str(illuminant_get(illuminant, "name", asset_store=_store(asset_store)))
+        elif isinstance(illuminant_param, str):
+            illuminant = illuminant_create(illuminant_param, wave, 100.0, asset_store=_store(asset_store))
+            ill_photons = np.asarray(illuminant_get(illuminant, "photons", asset_store=_store(asset_store)), dtype=float).reshape(-1)
+            illuminant_comment = str(illuminant_get(illuminant, "name", asset_store=_store(asset_store)))
+        elif isinstance(illuminant_param, dict):
+            if "photons" in illuminant_param:
+                ill_photons = np.asarray(illuminant_param["photons"], dtype=float).reshape(-1)
+            elif "energy" in illuminant_param:
+                ill_photons = np.asarray(energy_to_quanta(np.asarray(illuminant_param["energy"], dtype=float).reshape(-1), wave), dtype=float)
+            else:
+                raise ValueError("sceneVernier object illuminant dict must contain photons or energy.")
+            illuminant_comment = str(illuminant_param.get("name", "user-defined"))
+        else:
+            ill_photons = np.asarray(illuminant_get(illuminant_param, "photons", asset_store=_store(asset_store)), dtype=float).reshape(-1)
+            illuminant_comment = str(illuminant_get(illuminant_param, "name", asset_store=_store(asset_store)))
+
+        photons = np.ones((rows, cols, wave.size), dtype=float)
+        photons *= back_reflectance * ill_photons.reshape(1, 1, -1)
+        top_cols = np.arange(int(np.rint((cols - bar_width) / 2.0)) - int(np.floor(offset / 2.0)), int(np.rint((cols - bar_width) / 2.0)) - int(np.floor(offset / 2.0)) + bar_width)
+        bot_cols = top_cols + offset
+        top_cols = np.clip(top_cols, 0, cols - 1)
+        bot_cols = np.clip(bot_cols, 0, cols - 1)
+        top_half = int(np.rint(rows / 2.0))
+        photons[:top_half, top_cols, :] = line_reflectance * ill_photons.reshape(1, 1, -1)
+        photons[top_half:, bot_cols, :] = line_reflectance * ill_photons.reshape(1, 1, -1)
+        current.name = f"vernier-{offset}"
+        current = scene_set(current, "photons", photons)
+        current = scene_set(current, "illuminant photons", ill_photons)
+        current = scene_set(current, "illuminant comment", illuminant_comment)
+        result = current
+    else:
+        raise UnsupportedOptionError("sceneVernier", type)
+
+    mean_lum = parameters.get("meanlum")
+    if mean_lum is not None:
+        result = scene_adjust_luminance(result, float(mean_lum), asset_store=_store(asset_store))
+    return result
 
 
 def scene_ramp(
@@ -3233,6 +3593,53 @@ def scene_create(
     if name in {"hdrlights", "highdynamicrange", "hdr"}:
         params = _hdr_lights_parameters(args[0] if len(args) > 0 else None)
         return track_session_object(session, _hdr_lights_scene(params, asset_store=store))
+
+    if name in {"hdrchart", "hdr chart".replace(" ", "")}:
+        d_range = float(args[0]) if len(args) > 0 else 1.0e4
+        n_levels = int(args[1]) if len(args) > 1 else 12
+        cols_per_level = int(args[2]) if len(args) > 2 else 8
+        max_l = None if len(args) <= 3 else float(args[3]) if args[3] is not None else None
+        illuminant = args[4] if len(args) > 4 else None
+        return track_session_object(session, scene_hdr_chart(d_range, n_levels, cols_per_level, max_l, illuminant, asset_store=store))
+
+    if name in {"hdrimage", "hdr image".replace(" ", "")}:
+        n_patches = int(args[0]) if len(args) > 0 else 5
+        params = _normalized_parameter_dict(args[1]) if len(args) > 1 and hasattr(args[1], "items") else {}
+        if len(args) > 1 and not hasattr(args[1], "items"):
+            params["background"] = args[1]
+        scene, _ = scene_hdr_image(
+            n_patches,
+            background=params.get("background", "PsychBuilding.png"),
+            image_size=params.get("imagesize"),
+            dynamic_range=float(params.get("dynamicrange", 3.0)),
+            patch_shape=str(params.get("patchshape", "square")),
+            patch_size=None if params.get("patchsize") is None else int(params.get("patchsize")),
+            row=None if params.get("row") is None else int(params.get("row")),
+            asset_store=store,
+        )
+        return track_session_object(session, scene)
+
+    if name in {"radiancechart", "radiance chart".replace(" ", "")}:
+        if len(args) < 2:
+            raise ValueError("sceneCreate('radiance chart', ...) requires wave and radiance.")
+        params = _normalized_parameter_dict(args[2]) if len(args) > 2 and hasattr(args[2], "items") else {}
+        scene, _ = scene_radiance_chart(
+            args[0],
+            args[1],
+            rowcol=params.get("rowcol"),
+            patch_size=int(params.get("patchsize", 10)),
+            gray_fill=bool(params.get("grayfill", True)),
+            sampling=str(params.get("sampling", "r")),
+            illuminant=params.get("illuminant"),
+            asset_store=store,
+        )
+        return track_session_object(session, scene)
+
+    if name == "vernier":
+        base_scene = args[0] if args and isinstance(args[0], Scene) else scene_create("empty", asset_store=store)
+        vernier_type = str(args[1]) if len(args) > 1 else "display"
+        params = args[2] if len(args) > 2 and hasattr(args[2], "items") else {}
+        return track_session_object(session, scene_vernier(base_scene, vernier_type, params, asset_store=store))
 
     if name in {"reflectancechart", "reflectance"}:
         if args and isinstance(args[0], dict):

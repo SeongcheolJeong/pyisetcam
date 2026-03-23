@@ -356,6 +356,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is a figure-driven irradiance-image display helper and remains outside the headless migration target.",
         "module_hits": [],
     },
+    "scene/pattern/_tests_/sceneFluorescenceChart_test.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a private MATLAB regression script for the fluorescence-chart helper rather than a standalone headless API surface.",
+        "module_hits": [],
+    },
 }
 
 

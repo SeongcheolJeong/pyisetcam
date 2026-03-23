@@ -239,6 +239,8 @@ from pyisetcam import (
     sceneDescription,
     sceneEnergyFromVector,
     sceneFrequencySupport,
+    sceneHDRChart,
+    sceneHDRImage,
     scene_from_file,
     scene_adjust_luminance,
     scene_add,
@@ -255,6 +257,7 @@ from pyisetcam import (
     scenePhotonNoise,
     scenePhotonsFromVector,
     sceneRadianceFromVector,
+    sceneRadianceChart,
     scene_reflectance_chart,
     scene_ramp,
     scene_rotate,
@@ -265,6 +268,7 @@ from pyisetcam import (
     scene_set,
     sceneThumbnail,
     sceneTranslate,
+    sceneVernier,
     signal_current,
     SignalCurrentDensity,
     srgb2xyz,
@@ -14286,6 +14290,83 @@ def test_macbeth_sensor_and_gretag_wrappers(asset_store) -> None:
     assert gretag.name == "GretagSC"
     assert tuple(scene_get(gretag, "size")) == (305, 425)
     assert np.isclose(float(scene_get(gretag, "mean luminance", asset_store=asset_store)), 100.0, atol=1e-6, rtol=1e-6)
+
+
+def test_scene_pattern_wrapper_surface(asset_store) -> None:
+    hdr_chart = sceneHDRChart(1.0e3, 5, 4, 50.0, asset_store=asset_store)
+    hdr_chart_alias = scene_create("hdr chart", 1.0e3, 5, 4, 50.0, asset_store=asset_store)
+
+    hdr_luminance = np.asarray(scene_get(hdr_chart, "luminance", asset_store=asset_store), dtype=float)
+    assert tuple(scene_get(hdr_chart, "size")) == (20, 20)
+    assert np.isclose(float(np.max(hdr_luminance)), 50.0, atol=1e-6, rtol=1e-6)
+    assert tuple(scene_get(hdr_chart_alias, "size")) == (20, 20)
+
+    hdr_scene, hdr_background = sceneHDRImage(
+        3,
+        background="",
+        image_size=[96, 96],
+        dynamic_range=2.0,
+        patch_shape="circle",
+        patch_size=8,
+        row=40,
+        asset_store=asset_store,
+    )
+    hdr_scene_alias = scene_create(
+        "hdr image",
+        3,
+        {"background": "", "image size": [96, 96], "dynamic range": 2.0, "patch shape": "circle", "patch size": 8, "row": 40},
+        asset_store=asset_store,
+    )
+
+    assert tuple(scene_get(hdr_scene, "size")) == (96, 96)
+    assert tuple(scene_get(hdr_background, "size")) == (96, 96)
+    assert tuple(scene_get(hdr_scene_alias, "size")) == (96, 96)
+    assert np.max(np.asarray(scene_get(hdr_scene, "luminance", asset_store=asset_store), dtype=float)) > 50.0
+    assert np.allclose(np.asarray(scene_get(hdr_background, "photons"), dtype=float), 0.0, atol=1e-12, rtol=0.0)
+
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    radiance = np.linspace(1.0e12, 5.0e12, wave.size * 4, dtype=float).reshape(wave.size, 4, order="F")
+    radiance_scene, rc_size = sceneRadianceChart(wave, radiance, rowcol=[2, 2], patch_size=6, gray_fill=True, asset_store=asset_store)
+    radiance_alias = scene_create("radiance chart", wave, radiance, {"rowcol": [2, 2], "patch size": 6, "gray fill": True}, asset_store=asset_store)
+
+    chart_parameters = scene_get(radiance_scene, "chart parameters")
+    assert tuple(rc_size) == (2, 3)
+    assert tuple(scene_get(radiance_scene, "size")) == (12, 18)
+    assert tuple(scene_get(radiance_alias, "size")) == (12, 18)
+    assert tuple(np.asarray(chart_parameters["rowcol"], dtype=int)) == (2, 3)
+    assert np.asarray(scene_get(radiance_scene, "photons"), dtype=float).shape == (12, 18, 31)
+
+
+def test_scene_vernier_wrapper_surface(asset_store) -> None:
+    display_scene = sceneVernier(
+        scene_create("empty", asset_store=asset_store),
+        "display",
+        {"sceneSz": 64, "barWidth": 3, "offset": 2, "barLength": 20, "barColor": [1.0, 0.5, 0.5], "bgColor": [0.0, 0.0, 0.0], "meanLum": 10.0},
+        asset_store=asset_store,
+    )
+    object_scene = sceneVernier(
+        scene_create("empty", asset_store=asset_store),
+        "object",
+        {"sceneSz": 64, "barWidth": 3, "offset": 2, "barReflect": 0.7, "bgReflect": 0.2, "meanLum": 12.0},
+        asset_store=asset_store,
+    )
+    object_alias = scene_create(
+        "vernier",
+        scene_create("empty", asset_store=asset_store),
+        "object",
+        {"sceneSz": 64, "barWidth": 3, "offset": 2, "barReflect": 0.7, "bgReflect": 0.2, "meanLum": 12.0},
+        asset_store=asset_store,
+    )
+
+    assert tuple(scene_get(display_scene, "size")) == (64, 64)
+    assert np.isclose(float(scene_get(display_scene, "mean luminance", asset_store=asset_store)), 10.0, atol=1e-6, rtol=1e-6)
+    assert tuple(scene_get(object_scene, "size")) == (64, 65)
+    assert tuple(scene_get(object_alias, "size")) == (64, 65)
+    assert object_scene.name == "vernier-2"
+    assert np.isclose(float(scene_get(object_scene, "mean luminance", asset_store=asset_store)), 12.0, atol=1e-6, rtol=1e-6)
+    assert np.max(np.asarray(scene_get(object_scene, "luminance", asset_store=asset_store), dtype=float)) > np.min(
+        np.asarray(scene_get(object_scene, "luminance", asset_store=asset_store), dtype=float)
+    )
 
 
 def test_scene_from_multispectral_script_workflow(asset_store) -> None:

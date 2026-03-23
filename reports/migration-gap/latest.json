@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-23T23:11:07.763894+00:00",
+  "generated_at": "2026-03-23T23:36:42.824977+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-23T23:11:07.763894+00:00",
+    "generated_at": "2026-03-23T23:36:42.824977+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 91,
       "missing": 37,
-      "out_of_scope": 142,
-      "parity": 582,
-      "partial": 557,
+      "out_of_scope": 143,
+      "parity": 587,
+      "partial": 551,
       "ported": 34
     },
     "kind_counts": {
@@ -22,18 +22,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 125,
-      "P1": 380,
+      "P0": 120,
+      "P1": 379,
       "P2": 180,
-      "P3": 758
+      "P3": 764
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 0,
-        "parity": 7,
-        "partial": -7,
+        "out_of_scope": 1,
+        "parity": 5,
+        "partial": -6,
         "ported": 0
       },
       "kind_counts": {
@@ -45,10 +45,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -7,
-        "P1": 0,
+        "P0": -5,
+        "P1": -1,
         "P2": 0,
-        "P3": 7
+        "P3": 6
       }
     },
     "family_summary": {
@@ -583,9 +583,9 @@
       "scene/pattern": {
         "total": 23,
         "by_status": {
-          "headless_only": 1,
-          "parity": 13,
-          "partial": 6,
+          "out_of_scope": 1,
+          "parity": 18,
+          "partial": 1,
           "ported": 3
         },
         "by_kind": {
@@ -979,10 +979,10 @@
       "utility/image": {
         "total": 46,
         "by_status": {
-          "headless_only": 6,
+          "headless_only": 7,
           "out_of_scope": 2,
           "parity": 7,
-          "partial": 31
+          "partial": 30
         },
         "by_kind": {
           "gui": 2,
@@ -1044,17 +1044,6 @@
           "parity": 34,
           "partial": 7,
           "ported": 4
-        }
-      },
-      {
-        "family": "scene/pattern",
-        "open_entries": 7,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "headless_only": 1,
-          "parity": 13,
-          "partial": 6,
-          "ported": 3
         }
       },
       {
@@ -1147,6 +1136,15 @@
           "parity": 29,
           "partial": 4
         }
+      },
+      {
+        "family": "sensor/cfadesign",
+        "open_entries": 4,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "out_of_scope": 1,
+          "partial": 4
+        }
       }
     ],
     "exception_sites_by_module": {
@@ -1223,7 +1221,7 @@
         "not_implemented_error_sites": 0
       },
       "scene": {
-        "unsupported_option_error_sites": 12,
+        "unsupported_option_error_sites": 14,
         "not_implemented_error_sites": 0
       },
       "scielab": {

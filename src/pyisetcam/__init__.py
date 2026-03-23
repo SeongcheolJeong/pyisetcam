@@ -380,6 +380,8 @@ from .scene import (
     img_sweep,
     img_zone_plate,
     ie_checkerboard,
+    scene_hdr_chart,
+    scene_hdr_image,
     macbeth_chart_create,
     macbeth_draw_rects,
     macbeth_evaluation_graphs,
@@ -432,6 +434,8 @@ from .scene import (
     scene_spd_scale,
     scene_thumbnail,
     scene_translate,
+    scene_radiance_chart,
+    scene_vernier,
 )
 from .sensor import (
     analog_to_digital,
@@ -1208,6 +1212,9 @@ __all__ = [
     "scenePhotonsFromVector",
     "sceneRadianceFromVector",
     "sceneReflectanceChart",
+    "sceneHDRChart",
+    "sceneHDRImage",
+    "sceneRadianceChart",
     "sceneRotate",
     "sceneSaveImage",
     "sceneShowImage",
@@ -1216,6 +1223,7 @@ __all__ = [
     "sceneSPDScale",
     "sceneThumbnail",
     "sceneTranslate",
+    "sceneVernier",
     "scene_combine",
     "scene_adjust_illuminant",
     "scene_add",
@@ -1244,6 +1252,9 @@ __all__ = [
     "scene_photons_from_vector",
     "scene_radiance_from_vector",
     "scene_reflectance_chart",
+    "scene_hdr_chart",
+    "scene_hdr_image",
+    "scene_radiance_chart",
     "scene_ramp",
     "scene_rotate",
     "scene_save_image",
@@ -1254,6 +1265,7 @@ __all__ = [
     "scene_spd_scale",
     "scene_thumbnail",
     "scene_translate",
+    "scene_vernier",
     "fot_params",
     "gabor_p",
     "img_deadleaves",
@@ -1573,6 +1585,9 @@ scenePhotonNoise = scene_photon_noise
 scenePhotonsFromVector = scene_photons_from_vector
 sceneRadianceFromVector = scene_radiance_from_vector
 sceneReflectanceChart = scene_reflectance_chart
+sceneHDRChart = scene_hdr_chart
+sceneHDRImage = scene_hdr_image
+sceneRadianceChart = scene_radiance_chart
 macbethReadReflectance = macbeth_read_reflectance
 macbethChartCreate = macbeth_chart_create
 macbethDrawRects = macbeth_draw_rects
@@ -1593,6 +1608,7 @@ sceneSpatialSupport = scene_spatial_support
 sceneSet = scene_set
 sceneThumbnail = scene_thumbnail
 sceneTranslate = scene_translate
+sceneVernier = scene_vernier
 sceneRamp = scene_ramp
 hdrRender = hdr_render
 sceneAdd = scene_add
