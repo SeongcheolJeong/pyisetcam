@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-23T01:34:37.643847+00:00",
+  "generated_at": "2026-03-23T02:02:48.012308+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -7,9 +7,9 @@
       "headless_only": 73,
       "missing": 40,
       "out_of_scope": 106,
-      "parity": 367,
-      "partial": 828,
-      "ported": 29
+      "parity": 374,
+      "partial": 822,
+      "ported": 28
     },
     "kind_counts": {
       "api": 661,
@@ -20,19 +20,19 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 371,
+      "P0": 365,
       "P1": 406,
       "P2": 164,
-      "P3": 502
+      "P3": 508
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
         "out_of_scope": 0,
-        "parity": 2,
-        "partial": -2,
-        "ported": 0
+        "parity": 7,
+        "partial": -6,
+        "ported": -1
       },
       "kind_counts": {
         "api": 0,
@@ -43,10 +43,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -2,
+        "P0": -6,
         "P1": 0,
         "P2": 0,
-        "P3": 2
+        "P3": 6
       }
     },
     "family_summary": {
@@ -463,9 +463,8 @@
       "opticalimage/optics": {
         "total": 35,
         "by_status": {
-          "parity": 14,
-          "partial": 20,
-          "ported": 1
+          "parity": 21,
+          "partial": 14
         },
         "by_kind": {
           "api": 35
@@ -1032,16 +1031,6 @@
         }
       },
       {
-        "family": "opticalimage/optics",
-        "open_entries": 20,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 14,
-          "partial": 20,
-          "ported": 1
-        }
-      },
-      {
         "family": "scene",
         "open_entries": 20,
         "highest_open_priority": "P0",
@@ -1131,6 +1120,16 @@
           "parity": 10,
           "partial": 17,
           "ported": 1
+        }
+      },
+      {
+        "family": "sensor/microlens",
+        "open_entries": 16,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "out_of_scope": 1,
+          "parity": 5,
+          "partial": 16
         }
       }
     ],
@@ -6626,27 +6625,29 @@
       "upstream_path": "opticalimage/optics/lensList.m",
       "family": "opticalimage/optics",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics",
+      "status": "parity",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/optics/optics2wvf.m",
       "family": "opticalimage/optics",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics",
+      "status": "parity",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/optics/opticsBuild2Dotf.m",
@@ -6666,14 +6667,15 @@
       "upstream_path": "opticalimage/optics/opticsClearData.m",
       "family": "opticalimage/optics",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics",
+      "status": "parity",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/optics/opticsCoC.m",
@@ -6707,14 +6709,15 @@
       "upstream_path": "opticalimage/optics/opticsCreate.m",
       "family": "opticalimage/optics",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics",
+      "status": "parity",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/optics/opticsDLCompute.m",
@@ -6773,14 +6776,15 @@
       "upstream_path": "opticalimage/optics/opticsDescription.m",
       "family": "opticalimage/optics",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics",
+      "status": "parity",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/optics/opticsDoF.m",
@@ -6800,13 +6804,14 @@
       "upstream_path": "opticalimage/optics/opticsGet.m",
       "family": "opticalimage/optics",
       "kind": "api",
-      "status": "ported",
-      "python_surface": "pyisetcam.optics",
+      "status": "parity",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "A direct Python implementation surface was detected for this upstream path.",
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
       "priority": "P3"
     },
     {
@@ -6921,14 +6926,15 @@
       "upstream_path": "opticalimage/optics/opticsSet.m",
       "family": "opticalimage/optics",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics",
+      "status": "parity",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/optics/psfMovie.m",

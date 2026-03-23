@@ -111,13 +111,20 @@ from .metrics import (
 from .optics import (
     airy_disk,
     ie_field_height_to_index,
+    lens_list,
     optics_build_2d_otf,
+    optics_clear_data,
     optics_coc,
+    optics_create,
     optics_defocus_core,
     optics_depth_defocus,
     optics_defocus_displacement,
+    optics_description,
     optics_dof,
+    optics_get,
     optics_ray_trace,
+    optics_set,
+    optics_to_wvf,
     oi_add,
     oi_adjust_illuminance,
     oi_calculate_illuminance,
@@ -622,18 +629,31 @@ __all__ = [
     "y_to_lstar",
     "opticsBuild2Dotf",
     "opticsCoC",
+    "lensList",
+    "opticsClearData",
+    "opticsCreate",
     "opticsDefocusCore",
     "opticsDepthDefocus",
     "opticsDefocusDisplacement",
+    "opticsDescription",
     "opticsDoF",
+    "opticsGet",
     "optics_build_2d_otf",
+    "optics_clear_data",
     "optics_coc",
+    "optics_create",
     "optics_defocus_core",
     "optics_depth_defocus",
     "optics_defocus_displacement",
+    "optics_description",
     "optics_dof",
+    "optics_get",
     "opticsRayTrace",
     "optics_ray_trace",
+    "opticsSet",
+    "optics2wvf",
+    "optics_set",
+    "optics_to_wvf",
     "oiCalculateIlluminance",
     "oiClearData",
     "oiDiffuser",
@@ -1114,12 +1134,19 @@ sensorPlotLine = sensor_plot_line
 wvfPlot = wvf_plot
 airyDisk = airy_disk
 opticsBuild2Dotf = optics_build_2d_otf
+lensList = lens_list
+opticsClearData = optics_clear_data
+opticsCreate = optics_create
 opticsCoC = optics_coc
 opticsDefocusCore = optics_defocus_core
 opticsDepthDefocus = optics_depth_defocus
 opticsDefocusDisplacement = optics_defocus_displacement
+opticsDescription = optics_description
 opticsDoF = optics_dof
+opticsGet = optics_get
 opticsRayTrace = optics_ray_trace
+opticsSet = optics_set
+optics2wvf = optics_to_wvf
 ieFieldHeight2Index = ie_field_height_to_index
 rtAngleLUT = rt_angle_lut
 rtBlockCenter = rt_block_center

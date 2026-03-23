@@ -3555,6 +3555,160 @@ def wvf_to_optics(wvf: dict[str, Any]) -> dict[str, Any]:
     return optics
 
 
+def _normalize_public_optics(optics: dict[str, Any]) -> dict[str, Any]:
+    current = dict(oi_create().fields["optics"])
+    raw = dict(optics)
+    mapped = dict(raw)
+    remap = {
+        "fNumber": "f_number",
+        "focalLength": "focal_length_m",
+        "computeMethod": "compute_method",
+        "aberrationScale": "aberration_scale",
+        "offaxis": "offaxis_method",
+        "offaxisMethod": "offaxis_method",
+        "nominalFocalLength": "nominal_focal_length_m",
+        "psfData": "psf_data",
+    }
+    for source_key, target_key in remap.items():
+        if source_key in mapped and target_key not in mapped:
+            mapped[target_key] = mapped.pop(source_key)
+    if isinstance(mapped.get("transmittance"), dict):
+        mapped["transmittance"] = _normalize_transmittance_update(
+            dict(mapped["transmittance"]),
+            dict(current.get("transmittance", {})),
+        )
+    return _normalize_optics_update(mapped, current)
+
+
+def _wave_for_optics_context(optics: dict[str, Any]) -> np.ndarray:
+    current = dict(optics)
+    transmittance = current.get("transmittance")
+    if isinstance(transmittance, dict):
+        wave = np.asarray(transmittance.get("wave", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+        if wave.size > 0:
+            return wave
+    if isinstance(current.get("wavefront"), dict):
+        wave = np.asarray(wvf_get(current["wavefront"], "wave"), dtype=float).reshape(-1)
+        if wave.size > 0:
+            return wave
+    otf_wave = np.asarray(current.get("otf_wave", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    if otf_wave.size > 0:
+        return otf_wave
+    psf_data = current.get("psf_data")
+    if isinstance(psf_data, dict):
+        wave = np.asarray(psf_data.get("wave", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+        if wave.size > 0:
+            return wave
+    return DEFAULT_WAVE.copy()
+
+
+def _oi_for_optics_context(optics: dict[str, Any]) -> OpticalImage:
+    current = _normalize_public_optics(optics)
+    oi = oi_create()
+    oi = oi_set(oi, "wave", _wave_for_optics_context(current))
+    oi.fields["optics"] = current
+    oi.fields["compute_method"] = str(current.get("compute_method", oi.fields.get("compute_method", "")))
+    _sync_oi_geometry_fields(oi)
+    return oi
+
+
+def optics_create(
+    optics_type: str = "default",
+    *args: Any,
+    asset_store: AssetStore | None = None,
+) -> dict[str, Any]:
+    """Create a headless optics struct using the currently supported OI models."""
+
+    oi = oi_create(optics_type, *args, asset_store=asset_store)
+    return dict(oi.fields["optics"])
+
+
+def optics_get(optics: dict[str, Any], parameter: str, *args: Any) -> Any:
+    """Get optics parameters through a temporary headless OI context."""
+
+    return oi_get(_oi_for_optics_context(optics), parameter, *args)
+
+
+def optics_set(optics: dict[str, Any], parameter: str, value: Any, *args: Any) -> dict[str, Any]:
+    """Set optics parameters through a temporary headless OI context."""
+
+    updated = oi_set(_oi_for_optics_context(optics), parameter, value, *args)
+    return dict(updated.fields["optics"])
+
+
+def optics_clear_data(optics: dict[str, Any]) -> dict[str, Any]:
+    """Clear cached optics payloads without losing the core model fields."""
+
+    current = dict(_normalize_public_optics(optics))
+    for key in ("otf_data", "otf_fx", "otf_fy", "otf_wave", "cos4th_data", "cos4th_value"):
+        current.pop(key, None)
+    return current
+
+
+def optics_description(optics: dict[str, Any] | None = None) -> str:
+    """Return a short headless text summary for an optics struct."""
+
+    current = optics_create("default") if optics is None else _normalize_public_optics(optics)
+    name = str(current.get("name", "No name") or "No name")
+    f_number = float(current.get("f_number", np.nan))
+    focal_length = float(current.get("focal_length_m", np.nan))
+    diameter = focal_length / max(f_number, 1.0e-12) if np.isfinite(focal_length) and np.isfinite(f_number) else np.nan
+    numerical_aperture = 1.0 / (2.0 * f_number) if np.isfinite(f_number) and f_number > 0.0 else np.nan
+    aperture_area = np.pi * (diameter / 2.0) ** 2 if np.isfinite(diameter) else np.nan
+    return (
+        f"Optics: {name}\n"
+        f" NA       : \t{numerical_aperture:0.2e}\n"
+        f" Aper Area: \t{aperture_area:0.2e} m^2\n"
+        f" Aper Diam: \t{diameter:0.2e} m\n"
+    )
+
+
+def lens_list(
+    star: str = "*.json",
+    quiet: bool = False,
+    *,
+    asset_store: AssetStore | None = None,
+) -> list[dict[str, str]]:
+    """List the pinned upstream lens JSON descriptors."""
+
+    lens_root = _store(asset_store).snapshot_root / "data" / "lens"
+    files = [
+        {"name": path.name, "path": str(path)}
+        for path in sorted(lens_root.glob(star))
+        if path.is_file()
+    ]
+    if not quiet:
+        for index, item in enumerate(files, start=1):
+            print(f"{index} - {item['name']}")
+    return files
+
+
+def optics_to_wvf(optics: dict[str, Any]) -> dict[str, Any]:
+    """Create a lightweight WVF description from the current optics parameters."""
+
+    current = _normalize_public_optics(optics)
+    stored_wvf = current.get("wavefront")
+    if isinstance(stored_wvf, dict):
+        return dict(stored_wvf)
+    focal_length_m = float(current.get("focal_length_m", DEFAULT_FOCAL_LENGTH_M))
+    f_number = float(current.get("f_number", 4.0))
+    wvf = wvf_create(
+        wave=_wave_for_optics_context(current),
+        focal_length_m=focal_length_m,
+        f_number=f_number,
+    )
+    return wvf_set(wvf, "calc pupil diameter", (focal_length_m * 1e3) / max(f_number, 1.0e-12), "mm")
+
+
+opticsCreate = optics_create
+opticsGet = optics_get
+opticsSet = optics_set
+opticsClearData = optics_clear_data
+opticsDescription = optics_description
+lensList = lens_list
+optics2wvf = optics_to_wvf
+
+
 def wvf_pupil_amplitude(
     wvf: dict[str, Any],
     *args: Any,

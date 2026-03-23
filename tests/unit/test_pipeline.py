@@ -70,14 +70,21 @@ from pyisetcam import (
     luminance_from_photons,
     macbeth_read_reflectance,
     macbeth_compare_ideal,
+    lensList,
     optics_build_2d_otf,
+    opticsClearData,
     optics_coc,
+    opticsCreate,
     optics_defocus_core,
     optics_depth_defocus,
     optics_defocus_displacement,
+    opticsDescription,
     optics_dof,
+    opticsGet,
     optics_psf_to_otf,
     optics_ray_trace,
+    opticsSet,
+    optics2wvf,
     airy_disk,
     oiAdd,
     oiAdjustIlluminance,
@@ -2463,6 +2470,45 @@ def test_rt_psf_apply_uses_explicit_angle_step(asset_store) -> None:
 
     assert np.isclose(oi_get(result, "psf angle step"), 30.0)
     assert np.array_equal(oi_get(result, "psf sample angles"), np.arange(0.0, 361.0, 30.0))
+
+
+def test_optics_object_wrappers_round_trip_supported_fields(asset_store) -> None:
+    optics = opticsCreate(asset_store=asset_store)
+    optics = opticsSet(optics, "fnumber", 2.8)
+    optics = opticsSet(optics, "focal length", 0.01)
+    optics = opticsSet(optics, "transmittance wave", np.array([500.0, 600.0], dtype=float))
+    optics = opticsSet(optics, "transmittance scale", np.array([0.25, 0.75], dtype=float))
+
+    assert np.isclose(float(opticsGet(optics, "fnumber")), 2.8)
+    assert np.isclose(float(opticsGet(optics, "focal length")), 0.01)
+    assert np.array_equal(np.asarray(opticsGet(optics, "transmittance wave"), dtype=float), np.array([500.0, 600.0], dtype=float))
+    assert np.allclose(np.asarray(opticsGet(optics, "transmittance scale"), dtype=float), np.array([0.25, 0.75], dtype=float))
+    assert np.isclose(float(opticsGet(optics, "aperture diameter")), 0.01 / 2.8)
+
+
+def test_optics_clear_data_description_and_wvf_bridge(asset_store) -> None:
+    optics = opticsCreate("psf", asset_store=asset_store)
+    assert "otf_data" in optics
+
+    cleared = opticsClearData(optics)
+    description = opticsDescription(cleared)
+    bridged_wvf = optics2wvf(cleared)
+
+    assert "otf_data" not in cleared
+    assert np.isclose(float(cleared["f_number"]), float(optics["f_number"]))
+    assert np.isclose(float(cleared["focal_length_m"]), float(optics["focal_length_m"]))
+    assert "Optics:" in description
+    assert "Aper Diam" in description
+    assert np.isclose(float(wvf_get(bridged_wvf, "fnumber")), float(cleared["f_number"]))
+    assert np.isclose(float(wvf_get(bridged_wvf, "focal length")), float(cleared["focal_length_m"]))
+
+
+def test_lens_list_reads_pinned_upstream_lens_jsons(asset_store) -> None:
+    files = lensList("dgauss*.json", quiet=True, asset_store=asset_store)
+
+    assert files
+    assert all(item["name"].endswith(".json") for item in files)
+    assert any(item["name"] == "dgauss.22deg.6.0mm.json" for item in files)
 
 
 def test_optics_ray_trace_matches_oi_compute_uncropped(asset_store) -> None:
