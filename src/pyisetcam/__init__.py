@@ -100,6 +100,17 @@ from .metrics import (
     ieXYZFromEnergy,
     mean_absolute_error,
     mean_relative_error,
+    metrics_camera,
+    metrics_compute,
+    metrics_description,
+    metrics_get,
+    metrics_get_vci_pair,
+    metrics_masked_error,
+    metrics_save_data,
+    metrics_save_image,
+    metrics_set,
+    metrics_show_image,
+    metrics_show_metric,
     metrics_spd,
     mired_difference,
     iso_acutance,
@@ -600,6 +611,28 @@ __all__ = [
     "luminance_from_photons",
     "mean_absolute_error",
     "mean_relative_error",
+    "metricsCamera",
+    "metricsCompute",
+    "metricsDescription",
+    "metricsGet",
+    "metricsGetVciPair",
+    "metricsMaskedError",
+    "metricsSaveData",
+    "metricsSaveImage",
+    "metricsSet",
+    "metricsShowImage",
+    "metricsShowMetric",
+    "metrics_camera",
+    "metrics_compute",
+    "metrics_description",
+    "metrics_get",
+    "metrics_get_vci_pair",
+    "metrics_masked_error",
+    "metrics_save_data",
+    "metrics_save_image",
+    "metrics_set",
+    "metrics_show_image",
+    "metrics_show_metric",
     "metricsSPD",
     "metrics_spd",
     "mired_difference",
@@ -1285,6 +1318,17 @@ sensorShowImage = sensor_show_image
 spatialIntegration = spatial_integration
 
 metricsSPD = metrics_spd
+metricsCamera = metrics_camera
+metricsCompute = metrics_compute
+metricsDescription = metrics_description
+metricsGet = metrics_get
+metricsGetVciPair = metrics_get_vci_pair
+metricsMaskedError = metrics_masked_error
+metricsSaveData = metrics_save_data
+metricsSaveImage = metrics_save_image
+metricsSet = metrics_set
+metricsShowImage = metrics_show_image
+metricsShowMetric = metrics_show_metric
 exposureValue = exposure_value
 photometricExposure = photometric_exposure
 chartPatchCompare = chart_patch_compare

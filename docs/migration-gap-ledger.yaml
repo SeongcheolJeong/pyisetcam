@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-23T03:32:38.383289+00:00",
+  "generated_at": "2026-03-23T04:10:33.805989+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -7,8 +7,8 @@
       "headless_only": 73,
       "missing": 40,
       "out_of_scope": 106,
-      "parity": 384,
-      "partial": 812,
+      "parity": 395,
+      "partial": 801,
       "ported": 28
     },
     "kind_counts": {
@@ -20,18 +20,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 355,
+      "P0": 344,
       "P1": 406,
       "P2": 164,
-      "P3": 518
+      "P3": 529
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
         "out_of_scope": 0,
-        "parity": 5,
-        "partial": -5,
+        "parity": 11,
+        "partial": -11,
         "ported": 0
       },
       "kind_counts": {
@@ -43,10 +43,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -5,
+        "P0": -11,
         "P1": 0,
         "P2": 0,
-        "P3": 5
+        "P3": 11
       }
     },
     "family_summary": {
@@ -361,8 +361,8 @@
         "total": 24,
         "by_status": {
           "headless_only": 1,
-          "parity": 5,
-          "partial": 18
+          "parity": 16,
+          "partial": 7
         },
         "by_kind": {
           "api": 24
@@ -1031,16 +1031,6 @@
         }
       },
       {
-        "family": "metrics",
-        "open_entries": 19,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "headless_only": 1,
-          "parity": 5,
-          "partial": 18
-        }
-      },
-      {
         "family": "opticalimage",
         "open_entries": 19,
         "highest_open_priority": "P0",
@@ -1131,6 +1121,17 @@
           "partial": 13,
           "ported": 4
         }
+      },
+      {
+        "family": "color",
+        "open_entries": 14,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "headless_only": 3,
+          "parity": 28,
+          "partial": 11,
+          "ported": 2
+        }
       }
     ],
     "exception_sites_by_module": {
@@ -1179,7 +1180,7 @@
         "not_implemented_error_sites": 0
       },
       "metrics": {
-        "unsupported_option_error_sites": 3,
+        "unsupported_option_error_sites": 6,
         "not_implemented_error_sites": 0
       },
       "octave_runner": {
@@ -5218,14 +5219,16 @@
       "upstream_path": "metrics/metricsCamera.m",
       "family": "metrics",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso",
+      "status": "parity",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_metrics.py",
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "metrics/metricsClose.m",
@@ -5257,53 +5260,61 @@
       "upstream_path": "metrics/metricsCompute.m",
       "family": "metrics",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso",
+      "status": "parity",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_metrics.py",
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "metrics/metricsDescription.m",
       "family": "metrics",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso",
+      "status": "parity",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_metrics.py",
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "metrics/metricsGet.m",
       "family": "metrics",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso",
+      "status": "parity",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_metrics.py",
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "metrics/metricsGetVciPair.m",
       "family": "metrics",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso",
+      "status": "parity",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_metrics.py",
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "metrics/metricsKeyPress.m",
@@ -5322,14 +5333,16 @@
       "upstream_path": "metrics/metricsMaskedError.m",
       "family": "metrics",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso",
+      "status": "parity",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_metrics.py",
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "metrics/metricsROI.m",
@@ -5376,66 +5389,76 @@
       "upstream_path": "metrics/metricsSaveData.m",
       "family": "metrics",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso",
+      "status": "parity",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_metrics.py",
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "metrics/metricsSaveImage.m",
       "family": "metrics",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso",
+      "status": "parity",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_metrics.py",
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "metrics/metricsSet.m",
       "family": "metrics",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso",
+      "status": "parity",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_metrics.py",
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "metrics/metricsShowImage.m",
       "family": "metrics",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso",
+      "status": "parity",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_metrics.py",
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "metrics/metricsShowMetric.m",
       "family": "metrics",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso",
+      "status": "parity",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_metrics.py",
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "metrics/metricsgui/metricsWindow.fig",
@@ -18929,7 +18952,7 @@
       "family": "data/images",
       "kind": "asset",
       "status": "partial",
-      "python_surface": "pyisetcam.__init__, pyisetcam.ip, pyisetcam.optics, pyisetcam.parity",
+      "python_surface": "pyisetcam.__init__, pyisetcam.ip, pyisetcam.metrics, pyisetcam.optics",
       "tests": [],
       "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
       "priority": "P2"

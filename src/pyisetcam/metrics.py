@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
+import imageio.v3 as iio
 import numpy as np
 from numpy.typing import NDArray
+from scipy.io import savemat
 from skimage.color import deltaE_ciede2000, deltaE_ciede94
 
 from .assets import AssetStore
@@ -361,6 +364,266 @@ def comparison_metrics(reference: Any, actual: Any, *, data_range: float | None 
     }
 
 
+def _metrics_handle_copy(handles: Any) -> dict[str, Any]:
+    if handles is None:
+        raise ValueError("metrics handles are required.")
+    if isinstance(handles, dict):
+        return dict(handles)
+    raise TypeError("metrics handles must be a dict in the headless Python API.")
+
+
+def _metrics_names(handles: dict[str, Any], key: str, default_prefix: str) -> list[str]:
+    names = handles.get(key)
+    if names is None:
+        return [str(handles.get(f"{default_prefix}1_name", "image1")), str(handles.get(f"{default_prefix}2_name", "image2"))]
+    if isinstance(names, (list, tuple)):
+        return [str(value) for value in names]
+    return [str(names)]
+
+
+def _metrics_metric_key(value: Any) -> str:
+    return str(param_format(value)).replace("(", "").replace(")", "").replace("_", "").replace("-", "")
+
+
+def metrics_get_vci_pair(handles: Any) -> tuple[Any, Any]:
+    """Return the selected pair of IP objects from a headless metrics handle dict."""
+
+    current = _metrics_handle_copy(handles)
+    if "vci1" in current and "vci2" in current:
+        return current["vci1"], current["vci2"]
+    pair = current.get("vcipair") or current.get("vcimagepair")
+    if isinstance(pair, (list, tuple)) and len(pair) == 2:
+        return pair[0], pair[1]
+
+    images = current.get("images")
+    if isinstance(images, dict):
+        image1_name = str(current.get("image1_name", current.get("image1name", "")))
+        image2_name = str(current.get("image2_name", current.get("image2name", "")))
+        if image1_name in images and image2_name in images:
+            return images[image1_name], images[image2_name]
+
+    raise ValueError("metrics handles do not contain a resolvable IP pair.")
+
+
+def metrics_get(handles: Any, param: str, *args: Any) -> Any:
+    """Headless MATLAB-style metricsGet() wrapper."""
+
+    current = _metrics_handle_copy(handles)
+    key = param_format(param)
+    if key == "image1name":
+        return str(current.get("image1_name", current.get("image1name", "image1")))
+    if key == "image2name":
+        return str(current.get("image2_name", current.get("image2name", "image2")))
+    if key in {"metricaxes", "metricsaxes"}:
+        return current.get("imgMetric")
+    if key in {"metricdata", "metricuserdata"}:
+        return current.get("metric_image", current.get("metricImage"))
+    if key in {"currentmetric", "curmetric"}:
+        return str(current.get("current_metric", current.get("currentMetric", "CIELAB (dE)")))
+    if key in {"listofmetricnames", "metricnames"}:
+        return list(current.get("metric_names", current.get("metricNames", ["CIELAB (dE)", "CIELUV (dE)", "MSE", "RMSE", "PSNR"])))
+    if key in {"metricimagedata", "metricimage"}:
+        image = current.get("metric_image", current.get("metricImage"))
+        if image is None:
+            return None
+        metric_name = str(metrics_get(current, "currentmetric"))
+        image_array = np.asarray(image, dtype=float)
+        if _metrics_metric_key(metric_name) == "cielabde":
+            return image_array / 30.0
+        image_max = float(np.max(image_array)) if image_array.size else 0.0
+        return image_array if image_max <= 0.0 else image_array / image_max
+    if key in {"vcipair", "vcimagepair"}:
+        vci1, vci2 = metrics_get_vci_pair(current)
+        return {"vci1": vci1, "vci2": vci2}
+    raise KeyError(f"Unknown metricsGet parameter: {param}")
+
+
+def metrics_set(handles: Any, param: str, val: Any, *args: Any) -> dict[str, Any]:
+    """Headless MATLAB-style metricsSet() wrapper."""
+
+    current = _metrics_handle_copy(handles)
+    key = param_format(param)
+    if key in {"metricdata", "metricuserdata"}:
+        current["metric_image"] = np.asarray(val, dtype=float)
+        return current
+    raise KeyError(f"Unknown metricsSet parameter: {param}")
+
+
+def _metrics_white_point(vci1: Any, vci2: Any) -> NDArray[np.float64]:
+    from .ip import ip_get
+
+    wp1 = ip_get(vci1, "datawhitepoint")
+    wp2 = ip_get(vci2, "datawhitepoint")
+    if wp1 is None and wp2 is None:
+        raise ValueError("Metrics calculations require at least one IP white point.")
+    if wp1 is None:
+        return np.asarray(wp2, dtype=float)
+    if wp2 is None:
+        return np.asarray(wp1, dtype=float)
+    wp1_array = np.asarray(wp1, dtype=float)
+    wp2_array = np.asarray(wp2, dtype=float)
+    return np.asarray((wp1_array + wp2_array) / 2.0, dtype=float)
+
+
+def metrics_description(handles: Any) -> str:
+    """Return the headless text summary that metricsDescription() writes into the GUI."""
+
+    from .ip import ip_get
+
+    current = _metrics_handle_copy(handles)
+    vci1, vci2 = metrics_get_vci_pair(current)
+    names = [str(metrics_get(current, "image1name")), str(metrics_get(current, "image2name"))]
+    chunks: list[str] = []
+    for index, (name, vci) in enumerate(((names[0], vci1), (names[1], vci2)), start=1):
+        size = np.asarray(ip_get(vci, "size"), dtype=float).reshape(-1)
+        wp = ip_get(vci, "datawhitepoint")
+        chunks.append(f"Image {index} ({name}):")
+        if size.size >= 2:
+            chunks.append(f"size: ({size[0]:.0f}, {size[1]:.0f})")
+        if wp is None:
+            chunks.append("No image white point")
+        else:
+            wp_array = np.asarray(wp, dtype=float).reshape(-1)
+            chunks.append(f"White (X,Y,Z): ({wp_array[0]:.1f}, {wp_array[1]:.1f}, {wp_array[2]:.1f})")
+        if index == 1:
+            chunks.append("")
+            chunks.append("-----------------")
+            chunks.append("")
+    return "\n".join(chunks)
+
+
+def metrics_masked_error(img_v: Any, error: Any, method: str = "ls") -> float:
+    """Estimate the correlated error term using the MATLAB metricsMaskedError() contract."""
+
+    normalized_method = param_format(method)
+    if normalized_method != "ls":
+        raise UnsupportedOptionError("metricsMaskedError", method)
+    img_array = np.asarray(img_v, dtype=float).reshape(-1)
+    error_array = np.asarray(error, dtype=float).reshape(-1)
+    if img_array.size != error_array.size:
+        raise ValueError("img_v and error must have the same number of elements.")
+    return float(np.linalg.lstsq(img_array.reshape(-1, 1), error_array, rcond=None)[0][0])
+
+
+def metrics_compute(vc1: Any, vc2: Any, metric_name: str = "difference") -> tuple[NDArray[np.float64] | None, float | None]:
+    """Compute the headless metrics image/value for a pair of IP objects."""
+
+    from .ip import ip_get
+
+    normalized_metric = _metrics_metric_key(metric_name)
+    if normalized_metric in {"cielab", "cielabde"}:
+        xyz1 = np.asarray(ip_get(vc1, "dataxyz"), dtype=float)
+        xyz2 = np.asarray(ip_get(vc2, "dataxyz"), dtype=float)
+        delta = np.asarray(delta_e_ab(xyz1, xyz2, _metrics_white_point(vc1, vc2)), dtype=float)
+        return delta, None
+    if normalized_metric in {"cieluv", "cieluvde"}:
+        xyz1 = np.asarray(ip_get(vc1, "dataxyz"), dtype=float)
+        xyz2 = np.asarray(ip_get(vc2, "dataxyz"), dtype=float)
+        white = _metrics_white_point(vc1, vc2)
+        luv1 = np.asarray(xyz_to_luv(xyz1, white), dtype=float)
+        luv2 = np.asarray(xyz_to_luv(xyz2, white), dtype=float)
+        delta = np.linalg.norm(luv1 - luv2, axis=-1)
+        return np.asarray(delta, dtype=float), None
+    result1 = np.asarray(ip_get(vc1, "result"), dtype=float)
+    result2 = np.asarray(ip_get(vc2, "result"), dtype=float)
+    if normalized_metric in {"mse", "meansquarederror"}:
+        diff = result1 - result2
+        img = np.sum(np.square(diff), axis=-1) if diff.ndim == 3 else np.square(diff)
+        return np.asarray(img, dtype=float), float(np.mean(img))
+    if normalized_metric in {"rmse", "rootmeansquarederror"}:
+        diff = result1 - result2
+        img = np.sqrt(np.sum(np.square(diff), axis=-1)) if diff.ndim == 3 else np.abs(diff)
+        return np.asarray(img, dtype=float), float(np.mean(img))
+    if normalized_metric in {"psnr", "peaksnr"}:
+        return None, peak_signal_to_noise_ratio(result1, result2)
+    raise UnsupportedOptionError("metricsCompute", metric_name)
+
+
+def metrics_show_image(handles: Any) -> dict[str, Any]:
+    """Return the rendered-image payload that metricsShowImage() would display."""
+
+    from .ip import ip_get
+
+    current = _metrics_handle_copy(handles)
+    vci1, vci2 = metrics_get_vci_pair(current)
+    gamma = float(current.get("gamma", 1.0))
+    return {
+        "image1": None if ip_get(vci1, "result") is None else np.asarray(ip_get(vci1, "result"), dtype=float),
+        "image2": None if ip_get(vci2, "result") is None else np.asarray(ip_get(vci2, "result"), dtype=float),
+        "gamma": gamma,
+    }
+
+
+def metrics_show_metric(handles: Any) -> dict[str, Any]:
+    """Return the metric-image payload that metricsShowMetric() would display."""
+
+    current = _metrics_handle_copy(handles)
+    image = metrics_get(current, "metricimagedata")
+    return {
+        "metric": str(metrics_get(current, "currentmetric")),
+        "image": None if image is None else np.asarray(image, dtype=float),
+    }
+
+
+def metrics_save_image(handles: Any, path: str | Path) -> tuple[str, str]:
+    """Save the headless metric image to a TIFF file."""
+
+    current = _metrics_handle_copy(handles)
+    image = metrics_get(current, "metricimagedata")
+    if image is None:
+        raise ValueError("No metric image data present.")
+    full_path = Path(path).with_suffix(".tiff")
+    iio.imwrite(full_path, np.asarray(image, dtype=np.float32))
+    return str(full_path), str(metrics_get(current, "currentmetric"))
+
+
+def metrics_save_data(handles: Any, path: str | Path) -> tuple[str, str]:
+    """Save the current headless metrics payload to a MAT file."""
+
+    current = _metrics_handle_copy(handles)
+    image = metrics_get(current, "metricdata")
+    if image is None:
+        raise ValueError("No metric data present.")
+    full_path = Path(path).with_suffix(".mat")
+    savemat(
+        full_path,
+        {
+            "data": np.asarray(image, dtype=float),
+            "metricName": str(metrics_get(current, "currentmetric")),
+            "image1": str(metrics_get(current, "image1name")),
+            "image2": str(metrics_get(current, "image2name")),
+        },
+    )
+    return str(full_path), str(metrics_get(current, "currentmetric"))
+
+
+def metrics_camera(
+    camera: Any,
+    metric_name: str,
+    *,
+    asset_store: AssetStore | None = None,
+    session: Any | None = None,
+) -> Any:
+    """Compute a predefined camera metric using the MATLAB metricsCamera() gateway shape."""
+
+    from .camera import camera_acutance, camera_color_accuracy, camera_mtf, camera_vsnr
+
+    normalized_metric = param_format(metric_name)
+    if normalized_metric == "mcccolor":
+        metric, _ = camera_color_accuracy(camera, asset_store=asset_store, session=session)
+        if isinstance(metric, dict) and "vci" in metric:
+            metric = dict(metric)
+            metric.pop("vci", None)
+        return metric
+    if normalized_metric == "slantededge":
+        return camera_mtf(camera, asset_store=asset_store, session=session)
+    if normalized_metric == "vsnr":
+        return camera_vsnr(camera, asset_store=asset_store, session=session)
+    if normalized_metric == "acutance":
+        return float(camera_acutance(camera, asset_store=asset_store, session=session))
+    raise UnsupportedOptionError("metricsCamera", metric_name)
+
+
 def exposure_value(oi: Any, sensor: Any) -> float:
     """Compute MATLAB-style exposure value from OI f-number and sensor exposure time."""
 
@@ -540,6 +803,17 @@ ieXYZ2LAB = xyz_to_lab
 xyz2luv = xyz_to_luv
 deltaEab = delta_e_ab
 iePSNR = peak_signal_to_noise_ratio
+metricsCamera = metrics_camera
+metricsCompute = metrics_compute
+metricsDescription = metrics_description
+metricsGet = metrics_get
+metricsGetVciPair = metrics_get_vci_pair
+metricsMaskedError = metrics_masked_error
+metricsSaveData = metrics_save_data
+metricsSaveImage = metrics_save_image
+metricsSet = metrics_set
+metricsShowImage = metrics_show_image
+metricsShowMetric = metrics_show_metric
 exposureValue = exposure_value
 photometricExposure = photometric_exposure
 chartPatchCompare = chart_patch_compare

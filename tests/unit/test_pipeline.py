@@ -197,6 +197,17 @@ from pyisetcam import (
     mlens_create,
     mlens_get,
     mlens_set,
+    metricsCamera,
+    metricsCompute,
+    metricsDescription,
+    metricsGet,
+    metricsGetVciPair,
+    metricsMaskedError,
+    metricsSaveData,
+    metricsSaveImage,
+    metricsSet,
+    metricsShowImage,
+    metricsShowMetric,
     metrics_spd,
     photometricExposure,
     iePixelWellCapacity,
@@ -10271,6 +10282,124 @@ def test_chart_patch_compare_matches_legacy_template_layout() -> None:
     assert np.allclose(delta_map[4:8, 0:4], 0.0)
     assert np.allclose(delta_map[0:4, 0:4], delta_map[0, 0])
     assert float(delta_map[0, 0]) > 0.0
+
+
+def _build_metrics_test_ip(name: str, result: np.ndarray, xyz: np.ndarray, white_point: np.ndarray):
+    ip = ip_create()
+    ip.name = name
+    ip = ip_set(ip, "result", np.asarray(result, dtype=float))
+    ip = ip_set(ip, "datawhitepoint", np.asarray(white_point, dtype=float))
+    ip.data["xyz"] = np.asarray(xyz, dtype=float).copy()
+    return ip
+
+
+def test_metrics_compute_and_masked_error_helpers(tmp_path) -> None:
+    white_point = np.array([0.95047, 1.0, 1.08883], dtype=float)
+    result1 = np.array(
+        [
+            [[0.10, 0.20, 0.30], [0.20, 0.30, 0.40]],
+            [[0.30, 0.40, 0.50], [0.40, 0.50, 0.60]],
+        ],
+        dtype=float,
+    )
+    result2 = result1 + 0.05
+    xyz1 = np.array(
+        [
+            [[0.20, 0.30, 0.10], [0.25, 0.35, 0.15]],
+            [[0.30, 0.40, 0.20], [0.35, 0.45, 0.25]],
+        ],
+        dtype=float,
+    )
+    xyz2 = xyz1 + 0.02
+
+    ip1 = _build_metrics_test_ip("first", result1, xyz1, white_point)
+    ip2 = _build_metrics_test_ip("second", result2, xyz2, white_point)
+
+    d_e_image, d_e_value = metricsCompute(ip1, ip2, "CIELAB (dE)")
+    expected_d_e = delta_e_ab(xyz1, xyz2, white_point)
+    np.testing.assert_allclose(d_e_image, expected_d_e, rtol=1e-10, atol=1e-12)
+    assert d_e_value is None
+
+    mse_image, mse_value = metricsCompute(ip1, ip2, "MSE")
+    expected_mse = np.sum(np.square(result1 - result2), axis=-1)
+    np.testing.assert_allclose(mse_image, expected_mse, rtol=1e-10, atol=1e-12)
+    assert mse_value == pytest.approx(float(np.mean(expected_mse)), rel=1e-12, abs=1e-12)
+
+    rmse_image, rmse_value = metricsCompute(ip1, ip2, "RMSE")
+    expected_rmse = np.sqrt(np.sum(np.square(result1 - result2), axis=-1))
+    np.testing.assert_allclose(rmse_image, expected_rmse, rtol=1e-10, atol=1e-12)
+    assert rmse_value == pytest.approx(float(np.mean(expected_rmse)), rel=1e-12, abs=1e-12)
+
+    psnr_image, psnr_value = metricsCompute(ip1, ip2, "PSNR")
+    assert psnr_image is None
+    assert psnr_value == pytest.approx(
+        metrics_module.peak_signal_to_noise_ratio(result1, result2),
+        rel=1e-12,
+        abs=1e-12,
+    )
+
+    alpha = metricsMaskedError(result1, result2 - result1)
+    expected_alpha = float(np.linalg.lstsq(result1.reshape(-1, 1), (result2 - result1).reshape(-1), rcond=None)[0][0])
+    assert alpha == pytest.approx(expected_alpha, rel=1e-12, abs=1e-12)
+
+    handles = {
+        "vci1": ip1,
+        "vci2": ip2,
+        "image1_name": "first",
+        "image2_name": "second",
+        "metric_names": ["CIELAB (dE)", "MSE", "RMSE", "PSNR"],
+        "current_metric": "CIELAB (dE)",
+        "metric_image": d_e_image,
+        "gamma": 2.2,
+    }
+
+    selected1, selected2 = metricsGetVciPair(handles)
+    assert selected1 is ip1
+    assert selected2 is ip2
+    assert metricsGet(handles, "image1name") == "first"
+    assert metricsGet(handles, "currentmetric") == "CIELAB (dE)"
+    assert metricsGet(handles, "metricnames") == ["CIELAB (dE)", "MSE", "RMSE", "PSNR"]
+    np.testing.assert_allclose(metricsGet(handles, "metricImageData"), d_e_image / 30.0, rtol=1e-10, atol=1e-12)
+
+    updated = metricsSet(handles, "metricdata", mse_image)
+    np.testing.assert_allclose(metricsGet(updated, "metricdata"), mse_image, rtol=1e-10, atol=1e-12)
+
+    description = metricsDescription(handles)
+    assert "Image 1 (first):" in description
+    assert "Image 2 (second):" in description
+    assert "White (X,Y,Z):" in description
+
+    shown_images = metricsShowImage(handles)
+    np.testing.assert_allclose(shown_images["image1"], result1, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(shown_images["image2"], result2, rtol=1e-10, atol=1e-12)
+    assert shown_images["gamma"] == pytest.approx(2.2, rel=0.0, abs=0.0)
+
+    shown_metric = metricsShowMetric(handles)
+    assert shown_metric["metric"] == "CIELAB (dE)"
+    np.testing.assert_allclose(shown_metric["image"], d_e_image / 30.0, rtol=1e-10, atol=1e-12)
+
+    image_path, metric_name = metricsSaveImage(handles, tmp_path / "metric_output")
+    data_path, saved_metric_name = metricsSaveData(handles, tmp_path / "metric_payload")
+    assert Path(image_path).suffix == ".tiff"
+    assert Path(data_path).suffix == ".mat"
+    assert Path(image_path).exists()
+    assert Path(data_path).exists()
+    assert metric_name == "CIELAB (dE)"
+    assert saved_metric_name == "CIELAB (dE)"
+
+
+def test_metrics_camera_gateway_matches_existing_wrappers(asset_store) -> None:
+    camera = camera_create(asset_store=asset_store)
+    camera = camera_set(camera, "sensor auto exposure", True)
+
+    mtf = metricsCamera(camera, "slantededge", asset_store=asset_store)
+    assert np.asarray(mtf.freq, dtype=float).ndim == 1
+    assert np.asarray(mtf.mtf, dtype=float).ndim == 2
+    assert float(mtf.mtf50) > 0.0
+
+    color_metric = metricsCamera(camera, "mcccolor", asset_store=asset_store)
+    assert np.asarray(color_metric["deltaE"], dtype=float).shape == (24,)
+    assert "vci" not in color_metric
 
 
 def test_scene_cct_script_workflow(asset_store) -> None:
