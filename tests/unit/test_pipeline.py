@@ -134,8 +134,10 @@ from pyisetcam import (
     oi_compute,
     oi_crop,
     oi_create,
+    oiExtractBright,
     oiExtractWaveband,
     oi_frequency_resolution,
+    oiFromFile,
     oi_get,
     oiIlluminantPattern,
     oiIlluminantSS,
@@ -361,6 +363,7 @@ from pyisetcam import (
     wvf_get,
     wvfKeySynonyms,
     wvf_load_thibos_virtual_eyes,
+    wvfOSAIndexToName,
     wvf_osa_index_to_vector_index,
     wvf_osa_index_to_zernike_nm,
     wvf_pupil_function,
@@ -2731,6 +2734,38 @@ def test_oi_save_image_appends_png_and_matches_headless_render(asset_store, tmp_
 
     assert saved_path.endswith(".png")
     assert np.allclose(written, np.clip(np.round(np.clip(expected, 0.0, 1.0) * 255.0), 0.0, 255.0) / 255.0, atol=1.0 / 255.0)
+
+
+def test_oi_from_file_and_extract_bright_match_legacy_contract(asset_store) -> None:
+    rgb = np.linspace(0.0, 1.0, 4 * 6 * 3, dtype=float).reshape(4, 6, 3)
+    display = display_create("LCD-Apple.mat", asset_store=asset_store)
+    wave = np.arange(450.0, 651.0, 50.0, dtype=float)
+
+    oi = oiFromFile(rgb, "rgb", 50.0, display, wave, asset_store=asset_store)
+
+    scene = scene_from_file(rgb, "rgb", 50.0, display, wave, asset_store=asset_store)
+    scene = scene_adjust_illuminant(scene, "D65", asset_store=asset_store)
+
+    assert oi_get(oi, "optics model") == "raytrace"
+    assert np.array_equal(np.asarray(oi_get(oi, "wave"), dtype=float), np.asarray(scene_get(scene, "wave"), dtype=float))
+    assert np.isclose(float(oi_get(oi, "fov")), float(scene_get(scene, "fov")))
+    assert np.allclose(
+        np.asarray(oi_get(oi, "photons"), dtype=float),
+        np.asarray(scene_get(scene, "photons"), dtype=float) / np.pi,
+    )
+
+    oi_calculate_illuminance(oi)
+    illuminance = np.asarray(oi_get(oi, "illuminance"), dtype=float)
+    row_index, col_index = np.unravel_index(int(np.argmax(illuminance)), illuminance.shape)
+
+    bright = oiExtractBright(oi)
+    expected = oi_crop(oi, np.array([col_index + 1, row_index + 1, 1, 1], dtype=int))
+    expected = oi_set(expected, "compute method", "skip")
+    expected = oi_set(expected, "off axis method", "skip")
+
+    assert np.allclose(np.asarray(oi_get(bright, "photons"), dtype=float), np.asarray(oi_get(expected, "photons"), dtype=float))
+    assert oi_get(bright, "compute method") == "skip"
+    assert oi_get(bright, "off axis method") == "skip"
 
 
 def test_oi_spectral_helper_wrappers_match_legacy_contract(asset_store) -> None:
@@ -14413,6 +14448,14 @@ def test_wvf_osa_index_to_vector_index_supports_named_and_numeric_inputs() -> No
     assert np.array_equal(named_vector_index, np.array([5, 13], dtype=int))
     assert np.array_equal(named_j_index, np.array([4, 12], dtype=int))
     assert wvf_osa_index_to_vector_index("defocus") == (5, 4)
+
+
+def test_wvf_osa_index_to_name_supports_scalar_vector_and_invalid_inputs() -> None:
+    assert wvfOSAIndexToName(0) == "piston"
+    assert wvfOSAIndexToName([4, 12, 14]) == ["defocus", "spherical", "vertical_quadrafoil"]
+
+    with pytest.raises(ValueError, match="Unknown index 99"):
+        wvfOSAIndexToName(99)
 
 
 def test_sce_create_and_wvf_sce_helpers_round_trip() -> None:

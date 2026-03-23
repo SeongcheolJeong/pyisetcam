@@ -187,8 +187,10 @@ from .optics import (
     oi_clear_data,
     oi_crop,
     oi_create,
+    oi_extract_bright,
     oi_extract_waveband,
     oi_frequency_resolution,
+    oi_from_file,
     oi_get,
     oi_illuminant_pattern,
     oi_illuminant_ss,
@@ -251,6 +253,7 @@ from .optics import (
     wvf_get,
     wvf_key_synonyms,
     wvf_load_thibos_virtual_eyes,
+    wvf_osa_index_to_name,
     wvf_osa_index_to_vector_index,
     wvf_osa_index_to_zernike_nm,
     wvf_pupil_amplitude,
@@ -897,9 +900,11 @@ __all__ = [
     "oiAdd",
     "oiAdjustIlluminance",
     "oiCalculateIrradiance",
+    "oiExtractBright",
     "oiExtractWaveband",
     "oiGet",
     "oiFrequencyResolution",
+    "oiFromFile",
     "oiIlluminantPattern",
     "oiIlluminantSS",
     "oiInterpolateW",
@@ -923,8 +928,10 @@ __all__ = [
     "oi_compute",
     "oi_crop",
     "oi_create",
+    "oi_extract_bright",
     "oi_extract_waveband",
     "oi_frequency_resolution",
+    "oi_from_file",
     "oi_get",
     "oi_illuminant_pattern",
     "oi_illuminant_ss",
@@ -1340,6 +1347,7 @@ __all__ = [
     "wvfGet",
     "wvfKeySynonyms",
     "wvfLoadThibosVirtualEyes",
+    "wvfOSAIndexToName",
     "wvfOSAIndexToVectorIndex",
     "wvfOSAIndexToZernikeNM",
     "wvfPupilAmplitude",
@@ -1366,6 +1374,7 @@ __all__ = [
     "wvf_get",
     "wvf_key_synonyms",
     "wvf_load_thibos_virtual_eyes",
+    "wvf_osa_index_to_name",
     "wvf_osa_index_to_vector_index",
     "wvf_osa_index_to_zernike_nm",
     "wvf_pupil_amplitude",
@@ -1477,7 +1486,9 @@ oiCrop = oi_crop
 oiAdd = oi_add
 oiAdjustIlluminance = oi_adjust_illuminance
 oiCalculateIrradiance = oi_calculate_irradiance
+oiExtractBright = oi_extract_bright
 oiExtractWaveband = oi_extract_waveband
+oiFromFile = oi_from_file
 oiGet = oi_get
 oiFrequencyResolution = oi_frequency_resolution
 oiIlluminantPattern = oi_illuminant_pattern
@@ -1568,6 +1579,7 @@ wvfCreate = wvf_create
 wvfGet = wvf_get
 wvfKeySynonyms = wvf_key_synonyms
 wvfLoadThibosVirtualEyes = wvf_load_thibos_virtual_eyes
+wvfOSAIndexToName = wvf_osa_index_to_name
 wvfOSAIndexToVectorIndex = wvf_osa_index_to_vector_index
 wvfOSAIndexToZernikeNM = wvf_osa_index_to_zernike_nm
 wvfPupilAmplitude = wvf_pupil_amplitude

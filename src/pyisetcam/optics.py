@@ -2443,6 +2443,37 @@ def wvf_osa_index_to_vector_index(j_index: Any) -> tuple[Any, Any]:
     return vector_index, indices
 
 
+def wvf_osa_index_to_name(idx: Any) -> str | list[str]:
+    """Return the legacy aberration names for OSA j indices."""
+
+    names_by_index = {
+        0: "piston",
+        1: "vertical_tilt",
+        2: "horizontal_tilt",
+        3: "oblique_astigmatism",
+        4: "defocus",
+        5: "vertical_astigmatism",
+        6: "vertical_trefoil",
+        7: "vertical_coma",
+        8: "horizontal_coma",
+        9: "oblique_trefoil",
+        10: "oblique_quadrafoil",
+        11: "oblique_secondary_astigmatism",
+        12: "spherical",
+        13: "vertical_secondary_astigmatism",
+        14: "vertical_quadrafoil",
+    }
+    indices = np.asarray(idx, dtype=int).reshape(-1)
+    names: list[str] = []
+    for value in indices.tolist():
+        if value not in names_by_index:
+            raise ValueError(f"Unknown index {value}")
+        names.append(names_by_index[value])
+    if np.isscalar(idx):
+        return names[0]
+    return names
+
+
 def wvf_wave_to_idx(wvf: dict[str, Any], w_list: Any) -> np.ndarray:
     wave = np.asarray(wvf_get(wvf, "calc wavelengths"), dtype=float).reshape(-1)
     rounded_wave = np.round(wave).astype(int)
@@ -2523,6 +2554,7 @@ def wvf_print(wvf: dict[str, Any], *args: Any, show: bool = False) -> dict[str, 
 wvfOSAIndexToZernikeNM = wvf_osa_index_to_zernike_nm
 wvfZernikeNMToOSAIndex = wvf_zernike_nm_to_osa_index
 wvfOSAIndexToVectorIndex = wvf_osa_index_to_vector_index
+wvfOSAIndexToName = wvf_osa_index_to_name
 wvfWave2idx = wvf_wave_to_idx
 wvfRootPath = wvf_root_path
 wvfSummarize = wvf_summarize
@@ -6367,6 +6399,51 @@ def oi_save_image(
     payload = np.clip(np.round(np.clip(np.asarray(rgb, dtype=float), 0.0, 1.0) * 255.0), 0.0, 255.0).astype(np.uint8)
     iio.imwrite(output_path, payload)
     return str(output_path)
+
+
+def oi_extract_bright(oi: OpticalImage) -> OpticalImage:
+    """Extract the brightest optical-image patch as a small skip-optics OI."""
+
+    illuminance = oi_get(oi, "illuminance")
+    if illuminance is None:
+        oi_calculate_illuminance(oi)
+        illuminance = oi_get(oi, "illuminance")
+    illuminance_array = np.asarray(illuminance, dtype=float)
+    row_index, col_index = np.unravel_index(int(np.argmax(illuminance_array)), illuminance_array.shape)
+    extracted = oi_crop(oi, np.array([col_index + 1, row_index + 1, 1, 1], dtype=int))
+    extracted = oi_set(extracted, "compute method", "skip")
+    extracted = oi_set(extracted, "off axis method", "skip")
+    return extracted
+
+
+def oi_from_file(
+    image_data: Any,
+    image_type: str,
+    mean_luminance: Any | None = None,
+    disp_cal: Any | None = None,
+    w_list: Any | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> OpticalImage:
+    """Create a ray-trace optical image from the existing scene-from-file path."""
+
+    from .display import display_create
+    from .scene import scene_adjust_illuminant, scene_from_file
+
+    store = _store(asset_store)
+    display = display_create("LCD-Apple", asset_store=store) if disp_cal is None else disp_cal
+    wave = DEFAULT_WAVE.copy() if w_list is None else np.asarray(w_list, dtype=float).reshape(-1)
+    scene = scene_from_file(image_data, image_type, mean_luminance, display, wave, asset_store=store)
+    scene = scene_adjust_illuminant(scene, "D65", asset_store=store)
+
+    oi = oi_create("ray trace", asset_store=store)
+    oi = oi_set(oi, "wave", np.asarray(scene_get(scene, "wave"), dtype=float))
+    oi = oi_set(oi, "fov", float(scene_get(scene, "fov")))
+    return oi_set(oi, "photons", np.asarray(scene_get(scene, "photons"), dtype=float) / np.pi)
+
+
+oiExtractBright = oi_extract_bright
+oiFromFile = oi_from_file
 
 
 def oi_frequency_resolution(

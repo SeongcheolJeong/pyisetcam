@@ -574,6 +574,10 @@ That same script-driven WVF helper surface now also includes headless
 `wvfOSAIndexToVectorIndex(...)` for the legacy MATLAB wavefront utility
 layer built on top of the existing WVF core.
 That same script-driven WVF helper surface now also includes headless
+`wvf_osa_index_to_name(...)` / `wvfOSAIndexToName(...)`, covering the
+legacy OSA-index-to-aberration-name lookup used by the MATLAB wavefront
+toolbox.
+That same script-driven WVF helper surface now also includes headless
 `sce_create(...)` / `sceCreate(...)` and `sce_get(...)` / `sceGet(...)`,
 plus `wvfGet(..., 'sce'/'sce rho'/'scex0'/'scey0'/'sce wavelengths')`
 support for the standalone Stiles-Crawford parameter helpers used by the
@@ -881,6 +885,12 @@ That same headless OI utility surface now also includes
 `oi_extract_waveband(...)` / `oiExtractWaveband(...)`, and
 `oi_add(...)` / `oiAdd(...)` for the legacy MATLAB OI spectral and
 irradiance helper mini-family.
+That same headless OI utility surface now also includes
+`oi_extract_bright(...)` / `oiExtractBright(...)` and
+`oi_from_file(...)` / `oiFromFile(...)`, matching the legacy MATLAB
+brightest-patch extraction helper and the scene-to-ray-trace OI wrapper
+on top of the existing `sceneFromFile(...)` / `sceneAdjustIlluminant(...)`
+path.
 That same headless OI utility surface now also includes
 `oi_illuminant_ss(...)` / `oiIlluminantSS(...)`,
 `oi_illuminant_pattern(...)` / `oiIlluminantPattern(...)`, and
