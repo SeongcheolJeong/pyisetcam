@@ -15,6 +15,7 @@ from pyisetcam.parity import run_python_case_with_context
 from pyisetcam.utils import energy_to_quanta, tile_pattern
 from pyisetcam.utils import quanta_to_energy
 from pyisetcam import (
+    analog2digital,
     blackbody,
     camera_acutance,
     camera_color_accuracy,
@@ -215,6 +216,8 @@ from pyisetcam import (
     metricsShowImage,
     metricsShowMetric,
     metrics_spd,
+    noiseColumnFPN,
+    noiseFPN,
     photometricExposure,
     iePixelWellCapacity,
     pixelCenterFillPD,
@@ -5286,6 +5289,80 @@ def test_sensor_resample_wave_resamples_legacy_spectral_payloads(asset_store) ->
     assert np.allclose(np.asarray(sensor_get(resampled, "pixelSpectralQE"), dtype=float), expected_qe)
     assert tuple(sensor_get(resampled, "size")) == tuple(sensor_get(sensor, "size"))
     assert np.array_equal(np.asarray(sensor_get(sensor, "wave"), dtype=float), np.array([500.0, 600.0, 700.0], dtype=float))
+
+
+def test_analog2digital_matches_legacy_quantization_formula(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    volts = np.array([[0.0, 0.12], [0.49, 0.98]], dtype=float)
+    sensor = sensor_set(sensor, "volts", volts)
+    sensor = sensor_set(sensor, "nbits", 4)
+    sensor = sensor_set(sensor, "quantization method", "linear")
+
+    quantized, quantization_error = analog2digital(sensor)
+
+    step = float(sensor_get(sensor, "pixel voltage swing")) / 16.0
+    expected_quantized = np.rint(volts / step)
+    assert np.allclose(quantized, expected_quantized)
+    assert np.allclose(quantization_error, volts - (expected_quantized * step))
+
+    analog_quantized, analog_error = analog2digital(sensor, "analog")
+    assert np.allclose(analog_quantized, volts)
+    assert np.allclose(analog_error, np.zeros_like(volts))
+
+
+def test_noise_fpn_matches_legacy_formula_and_zero_exposure_branch(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    volts = np.array([[0.2, 0.4, 0.6], [0.8, 1.0, 1.2]], dtype=float)
+    sensor = sensor_set(sensor, "volts", volts)
+    sensor = sensor_set(sensor, "dsnulevel", 0.01)
+    sensor = sensor_set(sensor, "prnulevel", 5.0)
+    sensor = sensor_set(sensor, "integration time", 0.05)
+    sensor = sensor_set(sensor, "auto exposure", False)
+
+    noisy_a, dsnu_a, prnu_a = noiseFPN(sensor, seed=9)
+    noisy_b, dsnu_b, prnu_b = noiseFPN(sensor, seed=9)
+
+    assert np.array_equal(dsnu_a, dsnu_b)
+    assert np.array_equal(prnu_a, prnu_b)
+    assert np.allclose(noisy_a, (volts * prnu_a) + dsnu_a)
+    assert np.allclose(noisy_a, noisy_b)
+
+    sensor = sensor_set(sensor, "offset fpn image", np.full(volts.shape, 0.03, dtype=float))
+    sensor = sensor_set(sensor, "gain fpn image", np.full(volts.shape, 1.1, dtype=float))
+    noisy_stored, dsnu_stored, prnu_stored = noiseFPN(sensor, seed=1)
+    assert np.allclose(dsnu_stored, 0.03)
+    assert np.allclose(prnu_stored, 1.1)
+    assert np.allclose(noisy_stored, (volts * 1.1) + 0.03)
+
+    zero_exposure = sensor_set(sensor.clone(), "integration time", 0.0)
+    zero_exposure = sensor_set(zero_exposure, "offset fpn image", np.full(volts.shape, 0.02, dtype=float))
+    zero_exposure = sensor_set(zero_exposure, "gain fpn image", np.full(volts.shape, 1.4, dtype=float))
+    noisy_zero, dsnu_zero, prnu_zero = noiseFPN(zero_exposure, seed=3)
+    assert np.allclose(noisy_zero, dsnu_zero)
+    assert np.allclose(dsnu_zero, 0.02)
+    assert np.allclose(prnu_zero, 1.4)
+
+
+def test_noise_column_fpn_matches_legacy_formula_and_vector_override(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    volts = np.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]], dtype=float)
+    sensor = sensor_set(sensor, "volts", volts)
+    sensor = sensor_set(sensor, "column fpn", np.array([0.02, 0.05], dtype=float))
+
+    noisy_a, dsnu_a, prnu_a = noiseColumnFPN(sensor, seed=11)
+    noisy_b, dsnu_b, prnu_b = noiseColumnFPN(sensor, seed=11)
+
+    assert np.array_equal(dsnu_a, dsnu_b)
+    assert np.array_equal(prnu_a, prnu_b)
+    assert np.allclose(noisy_a, (volts * prnu_a.reshape(1, -1)) + dsnu_a.reshape(1, -1))
+    assert np.allclose(noisy_a, noisy_b)
+
+    sensor = sensor_set(sensor, "col offset fpn vector", np.array([0.01, 0.02, 0.03, 0.04], dtype=float))
+    sensor = sensor_set(sensor, "col gain fpn vector", np.array([1.0, 0.9, 1.1, 1.2], dtype=float))
+    noisy_stored, dsnu_stored, prnu_stored = noiseColumnFPN(sensor, seed=5)
+    assert np.allclose(dsnu_stored, np.array([0.01, 0.02, 0.03, 0.04], dtype=float))
+    assert np.allclose(prnu_stored, np.array([1.0, 0.9, 1.1, 1.2], dtype=float))
+    assert np.allclose(noisy_stored, (volts * prnu_stored.reshape(1, -1)) + dsnu_stored.reshape(1, -1))
 
 
 def test_sensor_read_color_filters_matches_legacy_special_cases(asset_store) -> None:

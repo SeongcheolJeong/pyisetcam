@@ -237,7 +237,8 @@ includes `signal_current` / `signalCurrent` coverage for the
 headless `signal_current_density` / `SignalCurrentDensity` and
 `spatial_integration` / `spatialIntegration` coverage for the adjacent
 legacy sensor-simulation current-density and default grid-integration
-helpers, plus
+helpers, plus direct `analog2digital` / `noiseFPN` / `noiseColumnFPN`
+coverage for the same legacy sensor-simulation quantization and fixed-pattern-noise helper surface, plus
 `ie_read_spectra` / `ieReadSpectra` coverage for the core spectral-loading
 path used by `t_sensorEstimation.m`, together with curated parity on the
 Macbeth/D65/scanner pseudoinverse estimation workflow,

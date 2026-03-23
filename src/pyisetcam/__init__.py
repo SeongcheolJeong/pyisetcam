@@ -314,12 +314,15 @@ from .scene import (
     scene_translate,
 )
 from .sensor import (
+    analog_to_digital,
     imx490_compute,
     ml_analyze_array_etendue,
     ml_radiance,
     mlens_create,
     mlens_get,
     mlens_set,
+    noise_column_fpn,
+    noise_fpn,
     ie_pixel_well_capacity,
     pixel_center_fill_pd,
     pixel_create,
@@ -934,11 +937,14 @@ __all__ = [
     "scene_set",
     "scene_thumbnail",
     "scene_translate",
+    "analog_to_digital",
     "mlAnalyzeArrayEtendue",
     "mlRadiance",
     "mlensCreate",
     "mlensGet",
     "mlensSet",
+    "noise_column_fpn",
+    "noise_fpn",
     "imx490Compute",
     "imx490_compute",
     "ml_analyze_array_etendue",
@@ -1185,6 +1191,9 @@ sceneCombine = scene_combine
 sceneAdjustIlluminant = scene_adjust_illuminant
 sceneAdjustLuminance = scene_adjust_luminance
 sceneCalculateLuminance = scene_calculate_luminance
+analog2digital = analog_to_digital
+noiseFPN = noise_fpn
+noiseColumnFPN = noise_column_fpn
 sceneClearData = scene_clear_data
 illuminantCreate = illuminant_create
 illuminantGet = illuminant_get

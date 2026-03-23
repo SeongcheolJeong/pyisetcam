@@ -2769,6 +2769,99 @@ def sensor_resample_wave(sensor: Sensor, new_wave_samples: Any) -> Sensor:
     return sensor_set(resampled, "wavelengthSamples", np.asarray(new_wave_samples, dtype=float).reshape(-1))
 
 
+def analog_to_digital(sensor: Sensor, method: str | None = None) -> tuple[np.ndarray, np.ndarray]:
+    """Quantize sensor volts using the legacy MATLAB analog2digital contract."""
+
+    quantization_method = method if method is not None else str(sensor_get(sensor, "quantization method"))
+    normalized_method = param_format(quantization_method)
+    volts = sensor_get(sensor, "volts")
+    if volts is None:
+        raise ValueError("analog2digital requires sensor volts.")
+
+    image = np.asarray(volts, dtype=float)
+    if normalized_method == "analog":
+        return image.copy(), np.zeros_like(image, dtype=float)
+
+    if normalized_method in {"lin", "linear"} or normalized_method.endswith("bit"):
+        n_bits = int(sensor_get(sensor, "nbits"))
+        if n_bits <= 0:
+            n_bits = 8
+        quantization_step = float(sensor_get(sensor, "pixel voltage swing")) / float(2**n_bits)
+        quantized = np.rint(image / max(quantization_step, 1e-30))
+        quantization_error = image - (quantized * quantization_step)
+        return np.asarray(quantized, dtype=float), np.asarray(quantization_error, dtype=float)
+
+    raise UnsupportedOptionError("analog2digital", quantization_method)
+
+
+def noise_fpn(sensor: Sensor, seed: int | None = None) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Apply legacy DSNU/PRNU fixed-pattern noise to the current sensor volts."""
+
+    volts = sensor_get(sensor, "volts")
+    if volts is None:
+        raise ValueError("noiseFPN requires sensor volts.")
+
+    image = np.asarray(volts, dtype=float)
+    rows, cols = image.shape[:2]
+    rng = np.random.default_rng(None if seed is None else int(seed))
+
+    stored_dsnu = sensor.fields.get("offset_fpn_image")
+    if stored_dsnu is not None and np.asarray(stored_dsnu).shape == (rows, cols):
+        dsnu_image = np.asarray(stored_dsnu, dtype=float).copy()
+    else:
+        dsnu_image = rng.normal(0.0, float(sensor_get(sensor, "dsnu level")), size=(rows, cols))
+
+    stored_prnu = sensor.fields.get("gain_fpn_image")
+    if stored_prnu is not None and np.asarray(stored_prnu).shape == (rows, cols):
+        prnu_image = np.asarray(stored_prnu, dtype=float).copy()
+    else:
+        prnu_image = 1.0 + rng.normal(0.0, float(sensor_get(sensor, "prnu level")) / 100.0, size=(rows, cols))
+
+    integration_time = np.asarray(sensor_get(sensor, "integration time"), dtype=float)
+    auto_exposure = bool(sensor_get(sensor, "auto exposure"))
+    if np.all(np.isclose(integration_time, 0.0)) and not auto_exposure:
+        noisy_image = dsnu_image.copy()
+    else:
+        noisy_image = (image * _pixel_plane(image, prnu_image)) + _pixel_plane(image, dsnu_image)
+
+    return np.asarray(noisy_image, dtype=float), dsnu_image, prnu_image
+
+
+def noise_column_fpn(sensor: Sensor, seed: int | None = None) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Apply legacy column fixed-pattern noise to the current sensor volts."""
+
+    volts = sensor_get(sensor, "volts")
+    if volts is None:
+        raise ValueError("noiseColumnFPN requires sensor volts.")
+
+    image = np.asarray(volts, dtype=float)
+    cols = int(sensor_get(sensor, "cols"))
+    rng = np.random.default_rng(None if seed is None else int(seed))
+
+    stored_offset = sensor.fields.get("column_offset_fpn")
+    if stored_offset is not None and np.asarray(stored_offset).reshape(-1).size == cols:
+        col_dsnu = np.asarray(stored_offset, dtype=float).reshape(-1).copy()
+    else:
+        offset_sigma = float(sensor_get(sensor, "column fpn offset"))
+        col_dsnu = rng.normal(0.0, offset_sigma, size=cols) if not np.isclose(offset_sigma, 0.0) else np.zeros(cols, dtype=float)
+
+    stored_gain = sensor.fields.get("column_gain_fpn")
+    if stored_gain is not None and np.asarray(stored_gain).reshape(-1).size == cols:
+        col_prnu = np.asarray(stored_gain, dtype=float).reshape(-1).copy()
+    else:
+        gain_sigma = float(sensor_get(sensor, "column fpn gain"))
+        col_prnu = 1.0 + rng.normal(0.0, gain_sigma, size=cols) if not np.isclose(gain_sigma, 0.0) else np.ones(cols, dtype=float)
+
+    if np.allclose(col_dsnu, 0.0) and np.allclose(col_prnu, 1.0):
+        noisy_image = image.copy()
+    else:
+        dsnu_image = np.broadcast_to(col_dsnu.reshape(1, cols), image.shape[:2])
+        prnu_image = np.broadcast_to(col_prnu.reshape(1, cols), image.shape[:2])
+        noisy_image = (image * _pixel_plane(image, prnu_image)) + _pixel_plane(image, dsnu_image)
+
+    return np.asarray(noisy_image, dtype=float), col_dsnu, col_prnu
+
+
 def sensor_show_image(
     sensor: Sensor,
     gam: float | None = None,
@@ -5279,6 +5372,9 @@ def sensor_ccm(
 sensorComputeSamples = sensor_compute_samples
 sensorDR = sensor_dr
 sensorCCM = sensor_ccm
+analog2digital = analog_to_digital
+noiseFPN = noise_fpn
+noiseColumnFPN = noise_column_fpn
 sensorClearData = sensor_clear_data
 sensorColorOrder = sensor_color_order
 sensorDetermineCFA = sensor_determine_cfa
