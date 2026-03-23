@@ -214,9 +214,12 @@ from pyisetcam import (
     metrics_spd,
     photometricExposure,
     iePixelWellCapacity,
+    pixelCenterFillPD,
     pixelCreate,
+    pixelDescription,
     pixelGet,
     pixelIdeal,
+    pixelPositionPD,
     pixelSet,
     pixelSR,
     pixel_snr_luxsec,
@@ -5404,6 +5407,40 @@ def test_ie_pixel_well_capacity_matches_asset_interpolation(asset_store) -> None
     assert np.allclose(table, reference_table)
     assert np.allclose(empty_table, reference_table)
     assert np.isclose(float(extrapolated), expected_extrapolated)
+
+
+def test_pixel_pd_helper_wrappers_match_legacy_geometry_contract(asset_store) -> None:
+    pixel = pixelCreate("default", np.array([450.0, 550.0, 650.0], dtype=float))
+    centered = pixelPositionPD(pixel, "center")
+    corner = pixelPositionPD(pixel, "corner")
+
+    expected_center_x = (float(pixelGet(pixel, "width")) - float(pixelGet(pixel, "pdwidth"))) / 2.0
+    expected_center_y = (float(pixelGet(pixel, "height")) - float(pixelGet(pixel, "pdheight"))) / 2.0
+
+    assert np.isclose(float(pixelGet(centered, "pdxpos")), expected_center_x)
+    assert np.isclose(float(pixelGet(centered, "pdypos")), expected_center_y)
+    assert np.isclose(float(pixelGet(corner, "pdxpos")), 0.0)
+    assert np.isclose(float(pixelGet(corner, "pdypos")), 0.0)
+
+    centered_fill = pixelCenterFillPD(pixel, 0.25)
+    assert np.isclose(float(pixelGet(centered_fill, "fillfactor")), 0.25)
+    assert np.isclose(float(pixelGet(centered_fill, "pdwidth")), np.sqrt(0.25) * float(pixelGet(pixel, "deltax")))
+    assert np.isclose(float(pixelGet(centered_fill, "pdheight")), np.sqrt(0.25) * float(pixelGet(pixel, "deltay")))
+    assert np.isclose(float(pixelGet(centered_fill, "pdxpos")), (float(pixelGet(pixel, "width")) - float(pixelGet(centered_fill, "pdwidth"))) / 2.0)
+    assert np.isclose(float(pixelGet(centered_fill, "pdypos")), (float(pixelGet(pixel, "height")) - float(pixelGet(centered_fill, "pdheight"))) / 2.0)
+
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "pixel", pixel)
+    sensor = pixelCenterFillPD(sensor, 0.36)
+    assert np.isclose(float(pixelGet(sensor_get(sensor, "pixel"), "fillfactor")), 0.36)
+
+    summary = pixelDescription(sensor_get(sensor, "pixel"), sensor)
+    assert "Pixel (H,W):" in summary
+    assert "PD (H,W):" in summary
+    assert "Fill percentage:" in summary
+    assert "Well capacity" in summary
+    assert "DR (1 ms):" in summary
+    assert "Peak SNR:" in summary
 
 
 def test_sensor_show_image_matches_sensor_rgb_rendering(asset_store) -> None:

@@ -315,9 +315,12 @@ from .sensor import (
     mlens_get,
     mlens_set,
     ie_pixel_well_capacity,
+    pixel_center_fill_pd,
     pixel_create,
+    pixel_description,
     pixel_get,
     pixel_ideal,
+    pixel_position_pd,
     pixel_snr,
     pixel_snr_luxsec,
     pixel_sr,
@@ -949,9 +952,12 @@ __all__ = [
     "sensorGet",
     "sensorAddFilter",
     "sensorCCM",
+    "pixelCenterFillPD",
     "pixelCreate",
+    "pixelDescription",
     "pixelGet",
     "pixelIdeal",
+    "pixelPositionPD",
     "pixelSet",
     "pixelSR",
     "iePixelWellCapacity",
@@ -1017,9 +1023,12 @@ __all__ = [
     "sensor_display_transform",
     "sensor_equate_transmittances",
     "sensor_filter_rgb",
+    "pixel_center_fill_pd",
     "pixel_create",
+    "pixel_description",
     "pixel_get",
     "pixel_ideal",
+    "pixel_position_pd",
     "pixelSNR",
     "pixel_set",
     "pixel_sr",
@@ -1297,9 +1306,12 @@ sensorDeleteFilter = sensor_delete_filter
 sensorDisplayTransform = sensor_display_transform
 sensorEquateTransmittances = sensor_equate_transmittances
 sensorFilterRGB = sensor_filter_rgb
+pixelCenterFillPD = pixel_center_fill_pd
 pixelCreate = pixel_create
+pixelDescription = pixel_description
 pixelGet = pixel_get
 pixelIdeal = pixel_ideal
+pixelPositionPD = pixel_position_pd
 pixelSet = pixel_set
 pixelSR = pixel_sr
 iePixelWellCapacity = ie_pixel_well_capacity

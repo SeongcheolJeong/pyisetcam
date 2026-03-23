@@ -342,6 +342,10 @@ mini-family, plus headless `pixel_create(...)` / `pixelCreate(...)`,
 and `ie_pixel_well_capacity(...)` / `iePixelWellCapacity(...)` for the
 legacy standalone pixel helper mini-family built on top of the same
 internal sensor-pixel state, plus headless
+`pixel_position_pd(...)` / `pixelPositionPD(...)`,
+`pixel_center_fill_pd(...)` / `pixelCenterFillPD(...)`, and
+`pixel_description(...)` / `pixelDescription(...)` for the legacy
+photodetector-positioning and pixel-summary helper layer, plus headless
 `sensor_read_color_filters(...)` / `sensorReadColorFilters(...)`,
 `sensor_read_filter(...)` / `sensorReadFilter(...)`,
 `sensor_add_filter(...)` / `sensorAddFilter(...)`,

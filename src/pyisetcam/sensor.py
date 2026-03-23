@@ -2300,6 +2300,72 @@ def pixel_sr(pixel: Any) -> np.ndarray:
     return _pixel_spectral_sr(_pixel_sensor_from_value(pixel))
 
 
+def pixel_position_pd(pixel: Any, place: str | None = None) -> dict[str, Any]:
+    """Place the photodetector within a standalone MATLAB-style pixel."""
+
+    payload = _pixel_payload_from_value(pixel)
+    normalized_place = param_format(place or "center")
+    pixel_size = _pixel_size_m(payload)
+    pd_size = _pixel_pd_size_from_pixel(payload)
+
+    if normalized_place == "center":
+        payload["pd_position_m"] = ((pixel_size - pd_size) / 2.0).astype(float, copy=False)
+    elif normalized_place == "corner":
+        payload["pd_position_m"] = np.zeros(2, dtype=float)
+    else:
+        raise ValueError(f"Unknown photodetector placement principle: {place}")
+
+    _sync_pixel_pd_state(payload)
+    return payload
+
+
+def pixel_center_fill_pd(sensor_or_pixel: Any, fillfactor: float | int | None = None) -> Any:
+    """Center a photodetector with a specified fill factor inside a pixel."""
+
+    fill_factor = 1.0 if fillfactor is None else float(fillfactor)
+    if fill_factor < 0.0 or fill_factor > 1.0:
+        raise ValueError(f"Fill factor must be between 0 and 1. Parameter value = {fill_factor}")
+
+    if isinstance(sensor_or_pixel, Sensor):
+        sensor = sensor_or_pixel.clone()
+        pixel = _pixel_payload_from_sensor(sensor)
+        pixel = pixel_set(pixel, "pd width", np.sqrt(fill_factor) * float(pixel_get(pixel, "deltax")))
+        pixel = pixel_set(pixel, "pd height", np.sqrt(fill_factor) * float(pixel_get(pixel, "deltay")))
+        pixel = pixel_position_pd(pixel, "center")
+        return sensor_set(sensor, "pixel", pixel)
+
+    pixel = _pixel_payload_from_value(sensor_or_pixel)
+    pixel = pixel_set(pixel, "pd width", np.sqrt(fill_factor) * float(pixel_get(pixel, "deltax")))
+    pixel = pixel_set(pixel, "pd height", np.sqrt(fill_factor) * float(pixel_get(pixel, "deltay")))
+    return pixel_position_pd(pixel, "center")
+
+
+def pixel_description(pixel: Any, sensor: Sensor | None = None) -> str:
+    """Return a headless MATLAB-style pixel summary string."""
+
+    payload = _pixel_payload_from_value(pixel)
+    lines = [
+        f"Pixel (H,W):\t({float(pixel_get(payload, 'deltay', 'um')):.1f},{float(pixel_get(payload, 'deltax', 'um')):.1f}) um",
+        f"PD (H,W):\t({float(pixel_get(payload, 'pdheight', 'um')):.1f}, {float(pixel_get(payload, 'pdwidth', 'um')):.1f}) um",
+        f"Fill percentage:\t{float(pixel_get(payload, 'fillfactor')) * 100:.0f}",
+        f"Well capacity\t{float(pixel_get(payload, 'wellcapacity')):.0f} e-",
+    ]
+
+    if sensor is not None:
+        dr = sensor_dr(sensor, 0.001)
+        if dr is not None and np.asarray(dr).size > 0:
+            lines.append(f"DR (1 ms):\t{float(np.asarray(dr, dtype=float).reshape(-1)[0]):.1f} dB")
+        peak_voltage = float(pixel_get(payload, "voltageswing"))
+        snr_peak = pixel_snr(sensor, peak_voltage)[0]
+        lines.append(f"Peak SNR:\t{float(np.asarray(snr_peak, dtype=float).reshape(-1)[0]):.0f} dB")
+        sensor_wave = np.asarray(sensor_get(sensor, "wavelength"), dtype=float).reshape(-1)
+        pixel_wave = np.asarray(pixel_get(payload, "wavelength"), dtype=float).reshape(-1)
+        if sensor_wave.size != pixel_wave.size or not np.array_equal(sensor_wave, pixel_wave):
+            lines.append("Wave rep mismatch!!")
+
+    return "\n".join(lines)
+
+
 def _interp_linear_with_extrapolation(x: np.ndarray, y: np.ndarray, x_new: np.ndarray) -> np.ndarray:
     result = np.interp(x_new, x, y)
     if x.size >= 2:
