@@ -71,6 +71,7 @@ from pyisetcam import (
     image_flip,
     image_increase_image_rgb_size,
     image_linear_transform,
+    initDefaultSpectrum,
     illuminant_create,
     illuminant_get,
     illuminant_set,
@@ -83,12 +84,14 @@ from pyisetcam import (
     ieCalculateMonitorDPI,
     ieCheckerboard,
     ieCirclePoints,
+    ieCovEllipsoid,
     ieConv2FFT,
     ieCTemp2SRGB,
     ie_cxcorr,
     ie_luminance_to_radiance,
     ie_n_to_megapixel,
     ie_responsivity_convert,
+    ieSpectraSphere,
     ie_scotopic_luminance_from_energy,
     ie_iso12233,
     ieISO12233v1,
@@ -264,6 +267,7 @@ from pyisetcam import (
     vc_get_roi_data,
     xyy2xyz,
     xyz2lms,
+    xyz2vSNR,
     xyz2srgb,
     imx490_compute,
     mlDescription,
@@ -9179,6 +9183,34 @@ def test_run_python_case_supports_metrics_scielab_tutorial_small_parity_case(ass
     assert case.payload["result_l_center_row_norm"].shape == (129,)
 
 
+def test_xyz2vsnr_matches_scielab_variance_formula() -> None:
+    rows, cols = 10, 12
+    yy, xx = np.meshgrid(np.linspace(0.0, 1.0, cols), np.linspace(0.0, 1.0, rows), indexing="xy")
+    roi_xyz = np.stack(
+        [
+            20.0 + 5.0 * xx,
+            25.0 + 3.0 * yy + 0.5 * xx,
+            18.0 + 2.0 * xx * yy,
+        ],
+        axis=2,
+    )
+    white_xyz = np.array([95.0, 100.0, 108.0], dtype=float)
+    params = sc_params()
+
+    s_lab, _ = scComputeSCIELAB(roi_xyz, white_xyz, params)
+    mid = np.round(0.8 * np.array(s_lab.shape[:2], dtype=float)).astype(int)
+    row0 = max((s_lab.shape[0] - int(mid[0])) // 2, 0)
+    col0 = max((s_lab.shape[1] - int(mid[1])) // 2, 0)
+    cropped = s_lab[row0 : row0 + int(mid[0]), col0 : col0 + int(mid[1]), :]
+    expected = 1.0 / np.sqrt(
+        float(np.var(cropped[:, :, 0], dtype=float))
+        + float(np.var(cropped[:, :, 1], dtype=float))
+        + float(np.var(cropped[:, :, 2], dtype=float))
+    )
+
+    assert np.isclose(float(xyz2vSNR(roi_xyz, white_xyz, params)), expected, atol=1e-10, rtol=1e-10)
+
+
 def test_metrics_scielab_harmonic_experiments_script_workflow(asset_store) -> None:
     size = 512
     max_frequency = float(size) / 64.0
@@ -11522,6 +11554,58 @@ def test_basic_color_geometry_and_gamma_helpers_match_legacy_contract() -> None:
 
     expected = _manual_mk_inv_gamma_table(gamma, 9)
     assert np.allclose(mkInvGammaTable(gamma, 9), expected, atol=1e-12, rtol=0.0)
+
+
+def test_additional_color_wrappers_match_legacy_contract(asset_store) -> None:
+    raw = {"spectrum": {"wave": np.array([1.0])}, "wave": np.array([1.0])}
+    updated = initDefaultSpectrum(raw, "custom", [450.0, 550.0, 650.0])
+    assert np.array_equal(np.asarray(updated["spectrum"]["wave"], dtype=float), np.array([450.0, 550.0, 650.0], dtype=float))
+    assert np.array_equal(np.asarray(updated["wave"], dtype=float), np.array([450.0, 550.0, 650.0], dtype=float))
+
+    monochrome_scene = initDefaultSpectrum(scene_create("default", asset_store=asset_store), "monochrome")
+    assert np.array_equal(np.asarray(scene_get(monochrome_scene, "wave"), dtype=float), np.array([550.0], dtype=float))
+
+    xy_data = np.array(
+        [
+            [68.5, 533.0],
+            [39.5, 618.0],
+            [79.0, 655.0],
+            [58.0, 546.0],
+            [35.0, 635.0],
+            [62.0, 720.0],
+            [92.0, 529.0],
+        ],
+        dtype=float,
+    )
+    e_vec, handle, payload = ieCovEllipsoid(xy_data, 2.0)
+    center = np.mean(xy_data, axis=0)
+    cov_inv = np.linalg.pinv(np.cov(xy_data, rowvar=False))
+    ellipse_radius = np.einsum("ij,jk,ik->i", e_vec - center, cov_inv, e_vec - center)
+    assert handle is None
+    assert np.allclose(ellipse_radius, np.full(e_vec.shape[0], 4.0), atol=1e-6, rtol=1e-6)
+    assert np.allclose(np.asarray(payload["covariance"], dtype=float), np.cov(xy_data, rowvar=False))
+
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    spectrum_e = np.asarray(blackbody(wave, 6500.0, kind="energy"), dtype=float).reshape(-1)
+    spectra_s, xyz, xyz0, s_basis = ieSpectraSphere(
+        wave,
+        spectrum_e,
+        4,
+        "cieDaylightBasis.mat",
+        0.05,
+        asset_store=asset_store,
+    )
+    assert spectra_s.shape == (wave.size, 25)
+    assert xyz.shape == (25, 3)
+    assert xyz0.shape == (3,)
+    assert s_basis.shape[0] == wave.size
+    assert np.allclose(xyz, xyz_from_energy(spectra_s.T, wave, asset_store=asset_store), atol=1e-8, rtol=1e-8)
+    assert np.allclose(
+        xyz0,
+        xyz_from_energy(spectrum_e.reshape(1, -1), wave, asset_store=asset_store).reshape(-1),
+        atol=1e-8,
+        rtol=1e-8,
+    )
 
 
 def test_color_helper_wrappers_match_closed_form_math(asset_store) -> None:

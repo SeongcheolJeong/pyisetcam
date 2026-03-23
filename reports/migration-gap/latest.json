@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-23T21:55:48.836871+00:00",
+  "generated_at": "2026-03-23T22:32:06.206265+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-23T21:55:48.836871+00:00",
+    "generated_at": "2026-03-23T22:32:06.206265+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 91,
       "missing": 37,
       "out_of_scope": 142,
-      "parity": 570,
-      "partial": 569,
+      "parity": 575,
+      "partial": 564,
       "ported": 34
     },
     "kind_counts": {
@@ -22,18 +22,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 136,
-      "P1": 381,
+      "P0": 132,
+      "P1": 380,
       "P2": 180,
-      "P3": 746
+      "P3": 751
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 3,
-        "parity": 3,
-        "partial": -6,
+        "out_of_scope": 0,
+        "parity": 5,
+        "partial": -5,
         "ported": 0
       },
       "kind_counts": {
@@ -45,10 +45,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -6,
-        "P1": 0,
+        "P0": -4,
+        "P1": -1,
         "P2": 0,
-        "P3": 6
+        "P3": 5
       }
     },
     "family_summary": {
@@ -69,13 +69,12 @@
         "by_status": {
           "headless_only": 3,
           "out_of_scope": 1,
-          "parity": 36,
-          "partial": 4
+          "parity": 40
         },
         "by_kind": {
           "api": 44
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P2"
       },
       "cp": {
         "total": 12,
@@ -872,7 +871,8 @@
       "tutorials/color": {
         "total": 3,
         "by_status": {
-          "partial": 3
+          "parity": 1,
+          "partial": 2
         },
         "by_kind": {
           "tutorial": 3
@@ -1038,17 +1038,6 @@
         }
       },
       {
-        "family": "color",
-        "open_entries": 7,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "headless_only": 3,
-          "out_of_scope": 1,
-          "parity": 36,
-          "partial": 4
-        }
-      },
-      {
         "family": "scene",
         "open_entries": 7,
         "highest_open_priority": "P0",
@@ -1149,6 +1138,16 @@
           "parity": 19,
           "partial": 4
         }
+      },
+      {
+        "family": "sensor/models",
+        "open_entries": 5,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 5,
+          "partial": 5,
+          "ported": 1
+        }
       }
     ],
     "exception_sites_by_module": {
@@ -1165,7 +1164,7 @@
         "not_implemented_error_sites": 0
       },
       "color": {
-        "unsupported_option_error_sites": 9,
+        "unsupported_option_error_sites": 10,
         "not_implemented_error_sites": 0
       },
       "description": {

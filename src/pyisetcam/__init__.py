@@ -29,13 +29,16 @@ from .color import (
     adobergb_parameters,
     cct_to_sun,
     daylight,
+    ie_cov_ellipsoid,
     ie_circle_points,
     ie_ctemp_to_srgb,
     ie_lab_to_xyz,
     ie_luminance_to_radiance,
     ie_responsivity_convert,
+    ie_spectra_sphere,
     ie_scotopic_luminance_from_energy,
     ie_xyz_from_photons,
+    init_default_spectrum,
     lms_to_srgb,
     lms_to_xyz,
     lrgb_to_srgb,
@@ -46,6 +49,7 @@ from .color import (
     srgb_to_lrgb,
     xyy_to_xyz,
     xyz_to_lms,
+    xyz_to_vsnr,
     y_to_lstar,
 )
 from .description import HeadlessDescriptionHandle, sensor_description
@@ -599,10 +603,16 @@ __all__ = [
     "dac2rgb",
     "dac_to_rgb",
     "daylight",
+    "ieCovEllipsoid",
     "ieCirclePoints",
     "ieCTemp2SRGB",
+    "ieSpectraSphere",
     "ie_circle_points",
+    "ie_cov_ellipsoid",
     "ie_ctemp_to_srgb",
+    "ie_spectra_sphere",
+    "initDefaultSpectrum",
+    "init_default_spectrum",
     "HeadlessDescriptionHandle",
     "hcBasis",
     "hc_basis",
@@ -923,8 +933,10 @@ __all__ = [
     "lms_to_xyz",
     "xyz2srgb",
     "xyz2lms",
+    "xyz2vSNR",
     "xyz_to_srgb",
     "xyz_to_lms",
+    "xyz_to_vsnr",
     "xyy2xyz",
     "xyy_to_xyz",
     "Y2Lstar",
@@ -1859,8 +1871,11 @@ cct2sun = cct_to_sun
 cct = cct_from_uv
 spd2cct = spd_to_cct
 srgb2colortemp = srgb_to_color_temp
+ieCovEllipsoid = ie_cov_ellipsoid
 ieCirclePoints = ie_circle_points
 ieCTemp2SRGB = ie_ctemp_to_srgb
+ieSpectraSphere = ie_spectra_sphere
+initDefaultSpectrum = init_default_spectrum
 mkInvGammaTable = mk_inv_gamma_table
 RGB2XWFormat = rgb_to_xw_format
 XW2RGBFormat = xw_to_rgb_format
@@ -1876,6 +1891,7 @@ ieLAB2XYZ = ie_lab_to_xyz
 lms2srgb = lms_to_srgb
 lms2xyz = lms_to_xyz
 xyz2lms = xyz_to_lms
+xyz2vSNR = xyz_to_vsnr
 ieLuminanceFromEnergy = luminance_from_energy
 ieLuminanceFromPhotons = luminance_from_photons
 

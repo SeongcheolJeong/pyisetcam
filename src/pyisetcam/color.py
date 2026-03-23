@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import copy
 import warnings
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -496,6 +498,180 @@ def mk_inv_gamma_table(g_table: NDArray[np.float64], num_entries: int | None = N
     return result
 
 
+def _copy_iset_like_object(object_in: Any) -> Any:
+    if hasattr(object_in, "clone"):
+        return object_in.clone()
+    return copy.deepcopy(object_in)
+
+
+def _object_fields(object_in: Any) -> dict[str, Any]:
+    if hasattr(object_in, "fields"):
+        return object_in.fields
+    if isinstance(object_in, dict):
+        return object_in
+    raise TypeError("initDefaultSpectrum requires an ISET object with `.fields` or a dictionary.")
+
+
+def init_default_spectrum(object_in: Any, spectral_type: str = "hyperspectral", wave: Any | None = None) -> Any:
+    """Attach a default wavelength spectrum to an ISET-style object."""
+
+    if object_in is None:
+        raise ValueError("Object required.")
+    object_out = _copy_iset_like_object(object_in)
+    fields = _object_fields(object_out)
+    spectrum = dict(fields.get("spectrum", {}))
+    normalized = param_format(spectral_type or "hyperspectral")
+
+    if normalized in {"spectral", "multispectral", "hyperspectral"}:
+        wave_values = np.arange(400.0, 701.0, 10.0, dtype=float)
+    elif normalized == "monochrome":
+        wave_values = np.array([550.0], dtype=float)
+    elif normalized == "custom":
+        if wave is None:
+            raise ValueError("wave required for custom spectrum")
+        wave_values = np.asarray(wave, dtype=float).reshape(-1)
+    else:
+        raise UnsupportedOptionError("initDefaultSpectrum", spectral_type)
+
+    spectrum["wave"] = np.asarray(wave_values, dtype=float).reshape(-1)
+    fields["spectrum"] = spectrum
+    fields["wave"] = np.asarray(wave_values, dtype=float).reshape(-1)
+    return object_out
+
+
+def ie_cov_ellipsoid(
+    xy_data: Any,
+    n_sd: float = 1.0,
+    h: Any | None = None,
+    n_samp: int = 20,
+) -> tuple[NDArray[np.float64], None, dict[str, NDArray[np.float64]]]:
+    """Calculate a covariance ellipse or ellipsoid without opening a figure."""
+
+    del h
+    data = np.asarray(xy_data, dtype=float)
+    if data.ndim != 2 or data.shape[1] not in {2, 3}:
+        raise ValueError("ieCovEllipsoid requires an Nx2 or Nx3 data matrix.")
+    dimensionality = int(data.shape[1])
+    if dimensionality == 2:
+        x_circle, y_circle = ie_circle_points(2.0 * np.pi * 0.01)
+        u_vec = np.column_stack((x_circle, y_circle))
+    else:
+        phi = np.linspace(0.0, np.pi, int(n_samp) + 1, dtype=float)
+        theta = np.linspace(0.0, 2.0 * np.pi, int(n_samp) + 1, dtype=float)
+        theta_grid, phi_grid = np.meshgrid(theta, phi)
+        x_sphere = np.cos(theta_grid) * np.sin(phi_grid)
+        y_sphere = np.sin(theta_grid) * np.sin(phi_grid)
+        z_sphere = np.cos(phi_grid)
+        u_vec = np.column_stack((x_sphere.reshape(-1), y_sphere.reshape(-1), z_sphere.reshape(-1)))
+
+    covariance = np.asarray(np.cov(data, rowvar=False), dtype=float)
+    covariance_inv = np.linalg.pinv(covariance)
+    mn = np.asarray(np.mean(data, axis=0), dtype=float).reshape(1, dimensionality)
+    lengths = np.einsum("ij,jk,ik->i", u_vec, covariance_inv, u_vec)
+    lengths = np.maximum(lengths, 1.0e-12)
+    e_vec = float(n_sd) * (u_vec / np.sqrt(lengths)[:, np.newaxis]) + mn
+
+    payload: dict[str, NDArray[np.float64]] = {
+        "pts": np.asarray(data, dtype=float),
+        "covariance": covariance,
+    }
+    if dimensionality == 2:
+        payload["crv"] = np.asarray(e_vec, dtype=float)
+    else:
+        payload["surf"] = np.asarray(e_vec, dtype=float)
+    return np.asarray(e_vec, dtype=float), None, payload
+
+
+def ie_spectra_sphere(
+    wave: Any | None = None,
+    spectrum_e: Any | None = None,
+    n: int = 8,
+    s_basis: Any | None = None,
+    s_factor: float = 0.05,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
+    """Calculate spectra whose XYZ values lie on a sphere around a base spectrum."""
+
+    store = asset_store or AssetStore.default()
+    wave_array = (
+        np.arange(400.0, 701.0, 10.0, dtype=float)
+        if wave is None
+        else np.asarray(wave, dtype=float).reshape(-1)
+    )
+    spectrum = (
+        np.zeros(wave_array.shape, dtype=float)
+        if spectrum_e is None
+        else np.asarray(spectrum_e, dtype=float).reshape(-1)
+    )
+    if spectrum.size != wave_array.size:
+        raise ValueError("spectrumE must match the wavelength vector length.")
+    if s_basis is None:
+        _, basis_array = store.load_spectra("cieDaylightBasis.mat", wave_nm=wave_array)
+    elif isinstance(s_basis, str):
+        _, basis_array = store.load_spectra(s_basis, wave_nm=wave_array)
+    else:
+        basis_array = np.asarray(s_basis, dtype=float)
+    basis_array = np.asarray(basis_array, dtype=float)
+    if basis_array.shape[0] != wave_array.size:
+        raise ValueError("sBasis rows must match the wavelength vector length.")
+
+    theta = np.linspace(0.0, 2.0 * np.pi, int(n) + 1, dtype=float)
+    phi = np.linspace(0.0, np.pi, int(n) + 1, dtype=float)
+    theta_grid, phi_grid = np.meshgrid(theta, phi)
+    d_xyz = np.column_stack(
+        (
+            (np.cos(theta_grid) * np.sin(phi_grid)).reshape(-1),
+            (np.sin(theta_grid) * np.sin(phi_grid)).reshape(-1),
+            np.cos(phi_grid).reshape(-1),
+        )
+    )
+
+    cie_xyz = xyz_color_matching(wave_array, energy=True, asset_store=store)
+    transform = np.linalg.lstsq(np.asarray(cie_xyz.T @ basis_array, dtype=float), d_xyz.T, rcond=None)[0]
+    spectra_s = np.asarray(basis_array @ transform, dtype=float)
+    basis_norm = float(np.linalg.norm(spectra_s[:, 0])) if spectra_s.shape[1] else 0.0
+    target_norm = float(np.linalg.norm(spectrum))
+    scale = 0.0 if basis_norm <= 0.0 else float(s_factor) * target_norm / basis_norm
+    spectra_s = spectra_s * scale + spectrum[:, np.newaxis]
+
+    xyz_energy = np.asarray(cie_xyz * spectral_step(wave_array), dtype=float)
+    xyz = 683.0 * np.asarray(spectra_s.T @ xyz_energy, dtype=float)
+    xyz0 = 683.0 * np.asarray(spectrum.reshape(1, -1) @ xyz_energy, dtype=float).reshape(-1)
+    return np.asarray(spectra_s, dtype=float), np.asarray(xyz, dtype=float), xyz0, basis_array
+
+
+def xyz_to_vsnr(
+    roi_xyz: Any,
+    white_pt_xyz: Any,
+    params: Any | None = None,
+) -> float:
+    """Calculate visual SNR from an XYZ image via the SCIELAB path."""
+
+    from .scielab import sc_compute_scielab, sc_params
+
+    roi = np.asarray(roi_xyz, dtype=float)
+    if roi.ndim != 3 or roi.shape[2] != 3:
+        raise ValueError("xyz2vSNR requires an XYZ image with shape rows x cols x 3.")
+    white = np.asarray(white_pt_xyz, dtype=float).reshape(-1)
+    if white.size != 3:
+        raise ValueError("xyz2vSNR requires a 3-element white point.")
+    params_dict = sc_params() if params is None else params
+    s_lab, _ = sc_compute_scielab(roi, white, params_dict)
+
+    rows, cols, _ = s_lab.shape
+    mid_rows = max(int(np.round(0.8 * rows)), 1)
+    mid_cols = max(int(np.round(0.8 * cols)), 1)
+    row0 = max((rows - mid_rows) // 2, 0)
+    col0 = max((cols - mid_cols) // 2, 0)
+    cropped = s_lab[row0 : row0 + mid_rows, col0 : col0 + mid_cols, :]
+
+    l_var = float(np.var(cropped[:, :, 0], dtype=float))
+    a_var = float(np.var(cropped[:, :, 1], dtype=float))
+    b_var = float(np.var(cropped[:, :, 2], dtype=float))
+    return float(1.0 / np.sqrt(max(l_var + a_var + b_var, 1.0e-12)))
+
+
 def _surface_reflectances(
     surfaces: str,
     wave_nm: NDArray[np.float64],
@@ -585,4 +761,8 @@ def internal_to_display_matrix(
 cct2sun = cct_to_sun
 ieCTemp2SRGB = ie_ctemp_to_srgb
 ieCirclePoints = ie_circle_points
+ieCovEllipsoid = ie_cov_ellipsoid
+ieSpectraSphere = ie_spectra_sphere
+initDefaultSpectrum = init_default_spectrum
 mkInvGammaTable = mk_inv_gamma_table
+xyz2vSNR = xyz_to_vsnr
