@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-23T06:31:16.916618+00:00",
+  "generated_at": "2026-03-23T07:08:16.497048+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-23T06:31:16.916618+00:00",
+    "generated_at": "2026-03-23T07:08:16.497048+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 92,
       "missing": 37,
       "out_of_scope": 107,
-      "parity": 450,
-      "partial": 725,
+      "parity": 453,
+      "partial": 722,
       "ported": 32
     },
     "kind_counts": {
@@ -22,10 +22,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 292,
+      "P0": 289,
       "P1": 381,
       "P2": 181,
-      "P3": 589
+      "P3": 592
     },
     "delta_from_previous": {
       "status_counts": {
@@ -514,8 +514,8 @@
       "scene": {
         "total": 45,
         "by_status": {
-          "parity": 26,
-          "partial": 16,
+          "parity": 29,
+          "partial": 13,
           "ported": 3
         },
         "by_kind": {
@@ -1044,16 +1044,6 @@
         }
       },
       {
-        "family": "scene",
-        "open_entries": 16,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 26,
-          "partial": 16,
-          "ported": 3
-        }
-      },
-      {
         "family": "sensor",
         "open_entries": 15,
         "highest_open_priority": "P0",
@@ -1122,6 +1112,16 @@
           "parity": 21,
           "partial": 13,
           "ported": 1
+        }
+      },
+      {
+        "family": "scene",
+        "open_entries": 13,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 29,
+          "partial": 13,
+          "ported": 3
         }
       },
       {

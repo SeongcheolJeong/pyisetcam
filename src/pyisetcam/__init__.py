@@ -293,9 +293,11 @@ from .scene import (
     scene_get,
     scene_illuminant_pattern,
     scene_illuminant_ss,
+    scene_init_geometry,
     scene_interpolate_w,
     scene_energy_from_vector,
     scene_frequency_support,
+    scene_photon_noise,
     scene_init_spatial,
     scene_list,
     scene_photons_from_vector,
@@ -305,6 +307,7 @@ from .scene import (
     scene_rotate,
     scene_save_image,
     scene_show_image,
+    scene_spatial_resample,
     scene_spatial_support,
     scene_set,
     scene_thumbnail,
@@ -915,15 +918,18 @@ __all__ = [
     "scene_get",
     "scene_illuminant_pattern",
     "scene_illuminant_ss",
+    "scene_init_geometry",
     "scene_init_spatial",
     "scene_interpolate_w",
     "scene_list",
+    "scene_photon_noise",
     "scene_photons_from_vector",
     "scene_radiance_from_vector",
     "scene_reflectance_chart",
     "scene_rotate",
     "scene_save_image",
     "scene_show_image",
+    "scene_spatial_resample",
     "scene_spatial_support",
     "scene_set",
     "scene_thumbnail",
@@ -1154,11 +1160,13 @@ sceneFromFile = scene_from_file
 sceneGet = scene_get
 sceneIlluminantPattern = scene_illuminant_pattern
 sceneIlluminantSS = scene_illuminant_ss
+sceneInitGeometry = scene_init_geometry
 sceneInterpolateW = scene_interpolate_w
 sceneEnergyFromVector = scene_energy_from_vector
 sceneFrequencySupport = scene_frequency_support
 sceneInitSpatial = scene_init_spatial
 sceneList = scene_list
+scenePhotonNoise = scene_photon_noise
 scenePhotonsFromVector = scene_photons_from_vector
 sceneRadianceFromVector = scene_radiance_from_vector
 sceneReflectanceChart = scene_reflectance_chart
@@ -1166,6 +1174,7 @@ macbethReadReflectance = macbeth_read_reflectance
 sceneRotate = scene_rotate
 sceneSaveImage = scene_save_image
 sceneShowImage = scene_show_image
+sceneSpatialResample = scene_spatial_resample
 sceneSpatialSupport = scene_spatial_support
 sceneSet = scene_set
 sceneThumbnail = scene_thumbnail

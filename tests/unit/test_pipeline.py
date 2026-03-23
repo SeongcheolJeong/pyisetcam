@@ -170,17 +170,20 @@ from pyisetcam import (
     sceneCrop,
     scene_get,
     scene_illuminant_ss,
+    sceneInitGeometry,
     sceneInitSpatial,
     scene_interpolate_w,
     sceneList,
     scene_plot,
     sceneExtractWaveband,
+    scenePhotonNoise,
     scenePhotonsFromVector,
     sceneRadianceFromVector,
     scene_reflectance_chart,
     scene_rotate,
     sceneSaveImage,
     scene_show_image,
+    sceneSpatialResample,
     sceneSpatialSupport,
     scene_set,
     sceneThumbnail,
@@ -12588,6 +12591,61 @@ def test_scene_helper_wrappers_match_legacy_contract(asset_store, tmp_path: Path
     expected_translated[:, 1:, :] = photons[:, :-1, :]
     assert np.allclose(translated_photons, expected_translated)
     assert np.array_equal(np.asarray(scene_get(scene_for_shift, "photons"), dtype=float), photons)
+
+
+def test_scene_geometry_resample_and_noise_wrappers(asset_store) -> None:
+    wave = np.array([500.0, 600.0, 700.0], dtype=float)
+    scene = scene_create("uniform ee", 4, wave, asset_store=asset_store)
+    photons = np.arange(1, 4 * 5 * wave.size + 1, dtype=float).reshape(4, 5, wave.size)
+    scene = scene_set(scene, "photons", photons)
+    scene = scene_set(scene, "fov", 5.0)
+
+    no_distance = scene.clone()
+    no_distance.fields.pop("distance_m", None)
+    initialized = sceneInitGeometry(no_distance)
+    assert np.isclose(float(scene_get(initialized, "distance")), 1.2, atol=1e-12, rtol=0.0)
+    assert tuple(scene_get(initialized, "size")) == (4, 5)
+
+    support = scene_get(scene, "spatial support linear", "m")
+    x_support = np.asarray(support["x"], dtype=float)
+    y_support = np.asarray(support["y"], dtype=float)
+    target_dx = float(np.mean(np.diff(x_support))) / 2.0
+    resampled = sceneSpatialResample(scene, target_dx, "m")
+    resampled_support = scene_get(resampled, "spatial support linear", "m")
+    expected_cols = int(np.floor((x_support[-1] - x_support[0]) / target_dx + 1e-12)) + 1
+    expected_rows = int(np.floor((y_support[-1] - y_support[0]) / target_dx + 1e-12)) + 1
+
+    assert tuple(scene_get(resampled, "size")) == (expected_rows, expected_cols)
+    assert np.isclose(np.mean(np.diff(np.asarray(resampled_support["x"], dtype=float))), target_dx, atol=1e-12, rtol=0.0)
+    assert np.isclose(np.mean(np.diff(np.asarray(resampled_support["y"], dtype=float))), target_dx, atol=1e-12, rtol=0.0)
+    assert resampled.name.endswith("-linear")
+    assert np.array_equal(np.asarray(scene_get(scene, "photons"), dtype=float), photons)
+
+    noise_scene = scene_create("uniform ee", 2, np.array([500.0, 600.0], dtype=float), asset_store=asset_store)
+    noise_photons = np.array(
+        [
+            [[1.0, 20.0], [14.0, 30.0]],
+            [[5.0, 40.0], [16.0, 8.0]],
+        ],
+        dtype=float,
+    )
+    noise_scene = scene_set(noise_scene, "photons", noise_photons)
+
+    noisy_a, noise_a = scenePhotonNoise(noise_scene, seed=7)
+    noisy_b, noise_b = scenePhotonNoise(noise_scene, seed=7)
+    noisy_roi, noise_roi = scenePhotonNoise(noise_scene, [1, 1, 1, 1], seed=7)
+
+    assert noisy_a.shape == noise_photons.shape
+    assert noise_a.shape == noise_photons.shape
+    assert np.array_equal(noisy_a, noisy_b)
+    assert np.array_equal(noise_a, noise_b)
+    assert np.allclose(noisy_a, np.rint(noisy_a))
+    assert noisy_roi.shape == (4, 2)
+    assert noise_roi.shape == (4, 2)
+    assert np.array_equal(np.asarray(scene_get(noise_scene, "photons"), dtype=float), noise_photons)
+
+    low_signal = noise_photons < 15.0
+    assert np.allclose(noise_a[low_signal], noisy_a[low_signal])
 
 
 def test_run_python_case_supports_scene_demo_small_parity_case(asset_store) -> None:

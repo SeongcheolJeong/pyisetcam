@@ -420,6 +420,44 @@ def _scene_resize(scene: Scene, new_size: Any) -> Scene:
     return resized
 
 
+def _support_resample_positions(start: float, stop: float, step: float) -> np.ndarray:
+    if step <= 0.0:
+        raise ValueError("Resample step must be positive.")
+    if stop <= start:
+        return np.array([float(start)], dtype=float)
+    count = int(np.floor((stop - start) / step + 1e-12)) + 1
+    return float(start) + float(step) * np.arange(max(count, 1), dtype=float)
+
+
+def _scene_resample_plane_on_support(
+    plane: np.ndarray,
+    x_support: np.ndarray,
+    y_support: np.ndarray,
+    x_query: np.ndarray,
+    y_query: np.ndarray,
+    *,
+    method: str,
+) -> np.ndarray:
+    normalized_method = param_format(method or "linear")
+    if x_support.size <= 1:
+        col_coords = np.zeros_like(x_query, dtype=float)
+    else:
+        col_coords = (np.asarray(x_query, dtype=float) - float(x_support[0])) / float(x_support[1] - x_support[0])
+    if y_support.size <= 1:
+        row_coords = np.zeros_like(y_query, dtype=float)
+    else:
+        row_coords = (np.asarray(y_query, dtype=float) - float(y_support[0])) / float(y_support[1] - y_support[0])
+
+    row_grid, col_grid = np.meshgrid(row_coords, col_coords, indexing="ij")
+    if normalized_method in {"nearest", "nearestneighbor"}:
+        return map_coordinates(np.asarray(plane, dtype=float), [row_grid, col_grid], order=0, mode="nearest", prefilter=False)
+    if normalized_method in {"linear", "bilinear"}:
+        return map_coordinates(np.asarray(plane, dtype=float), [row_grid, col_grid], order=1, mode="nearest", prefilter=False)
+    if normalized_method in {"cubic", "spline"}:
+        return map_coordinates(np.asarray(plane, dtype=float), [row_grid, col_grid], order=3, mode="nearest", prefilter=True)
+    raise ValueError(f"Unsupported scene resample method: {method}")
+
+
 def scene_combine(scene1: Scene, scene2: Scene, *args: Any) -> Scene:
     direction = "horizontal"
     if args:
@@ -3050,6 +3088,15 @@ def scene_frequency_support(scene: Scene, units: Any = "cyclesPerDegree") -> dic
     }
 
 
+def scene_init_geometry(scene: Scene) -> Scene:
+    """Initialize missing scene distance metadata to the MATLAB default 1.2 meters."""
+
+    if scene.fields.get("distance_m") is not None:
+        return scene
+    scene.fields["distance_m"] = DEFAULT_DISTANCE_M
+    return _update_scene_geometry(scene)
+
+
 def scene_init_spatial(scene: Scene) -> Scene:
     """Initialize missing scene FOV metadata to the MATLAB default 10 degrees."""
 
@@ -3057,6 +3104,112 @@ def scene_init_spatial(scene: Scene) -> Scene:
         return scene
     scene.fields["fov_deg"] = DEFAULT_FOV_DEG
     return _update_scene_geometry(scene)
+
+
+def scene_spatial_resample(
+    scene: Scene,
+    dx: Any,
+    units: Any = "m",
+    method: str = "linear",
+) -> Scene:
+    """Resample a scene cube to a new spatial sample spacing."""
+
+    sample_spacing_m = float(dx) / max(_spatial_unit_scale(units), 1e-12)
+    if sample_spacing_m <= 0.0:
+        raise ValueError("sceneSpatialResample requires a positive sample spacing.")
+
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+    if photons.size == 0:
+        return scene.clone()
+
+    support = _scene_spatial_support_linear(scene, "m")
+    x_support = np.asarray(support["x"], dtype=float)
+    y_support = np.asarray(support["y"], dtype=float)
+    x_query = _support_resample_positions(float(x_support[0]), float(x_support[-1]), sample_spacing_m)
+    y_query = _support_resample_positions(float(y_support[0]), float(y_support[-1]), sample_spacing_m)
+
+    resampled_cube = np.empty((y_query.size, x_query.size, photons.shape[2]), dtype=float)
+    for band_index in range(photons.shape[2]):
+        resampled_cube[:, :, band_index] = _scene_resample_plane_on_support(
+            photons[:, :, band_index],
+            x_support,
+            y_support,
+            x_query,
+            y_query,
+            method=method,
+        )
+
+    resampled = scene.clone()
+    original_fov = float(scene_get(scene, "fov"))
+    resampled = scene_set(resampled, "photons", resampled_cube)
+
+    depth_map = scene.fields.get("depth_map_m")
+    if depth_map is not None:
+        resampled.fields["depth_map_m"] = _scene_resample_plane_on_support(
+            np.asarray(depth_map, dtype=float),
+            x_support,
+            y_support,
+            x_query,
+            y_query,
+            method="nearest",
+        )
+
+    illuminant_photons = scene.fields.get("illuminant_photons")
+    if illuminant_photons is not None:
+        illuminant_array = np.asarray(illuminant_photons, dtype=float)
+        if illuminant_array.ndim == 3:
+            resampled_illuminant = np.empty((y_query.size, x_query.size, illuminant_array.shape[2]), dtype=float)
+            for band_index in range(illuminant_array.shape[2]):
+                resampled_illuminant[:, :, band_index] = _scene_resample_plane_on_support(
+                    illuminant_array[:, :, band_index],
+                    x_support,
+                    y_support,
+                    x_query,
+                    y_query,
+                    method=method,
+                )
+            resampled = scene_set(resampled, "illuminant photons", resampled_illuminant)
+
+    distance_m = float(scene_get(resampled, "distance"))
+    target_width_m = sample_spacing_m * max(int(scene_get(resampled, "cols")), 1)
+    if distance_m > 0.0 and target_width_m > 0.0:
+        target_fov = np.rad2deg(2.0 * np.arctan2(target_width_m / 2.0, distance_m))
+        resampled = scene_set(resampled, "fov", target_fov)
+    elif original_fov > 0.0:
+        resampled = scene_set(resampled, "fov", original_fov)
+
+    if resampled.name:
+        resampled.name = f"{resampled.name}-{param_format(method or 'linear')}"
+    return resampled
+
+
+def scene_photon_noise(
+    scene: Scene,
+    rect_or_locs: Any | None = None,
+    *,
+    seed: int | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Add MATLAB-style photon noise to a full scene cube or ROI sample matrix."""
+
+    if rect_or_locs is None:
+        photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+    else:
+        from .roi import vc_get_roi_data
+
+        photons = np.asarray(vc_get_roi_data(scene, rect_or_locs, "photons"), dtype=float)
+
+    rng = np.random.default_rng(None if seed is None else int(seed))
+    the_noise = np.sqrt(np.clip(photons, 0.0, None)) * rng.standard_normal(photons.shape)
+    noisy_photons = np.rint(photons + the_noise)
+
+    poisson_mask = photons < 15.0
+    if np.any(poisson_mask):
+        poisson_samples = rng.poisson(np.clip(photons[poisson_mask], 0.0, None))
+        the_noise = np.asarray(the_noise, dtype=float)
+        the_noise[poisson_mask] = np.asarray(poisson_samples, dtype=float)
+        noisy_photons[poisson_mask] = np.asarray(poisson_samples, dtype=float)
+
+    return np.asarray(noisy_photons, dtype=float), np.asarray(the_noise, dtype=float)
 
 
 def scene_description(
