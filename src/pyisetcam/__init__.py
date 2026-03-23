@@ -157,6 +157,7 @@ from .optics import (
     oi_make_even_row_col,
     oi_pad,
     oi_pad_value,
+    oi_psf,
     oi_save_image,
     oi_show_image,
     oi_space,
@@ -723,6 +724,7 @@ __all__ = [
     "oiMakeEvenRowCol",
     "oiPad",
     "oiPadValue",
+    "oiPSF",
     "oiSaveImage",
     "oiShowImage",
     "oiSpace",
@@ -745,6 +747,7 @@ __all__ = [
     "oi_make_even_row_col",
     "oi_pad",
     "oi_pad_value",
+    "oi_psf",
     "oi_plot",
     "oi_save_image",
     "oi_show_image",
@@ -1173,6 +1176,7 @@ oiInterpolateW = oi_interpolate_w
 oiMakeEvenRowCol = oi_make_even_row_col
 oiPad = oi_pad
 oiPadValue = oi_pad_value
+oiPSF = oi_psf
 oiSaveImage = oi_save_image
 oiShowImage = oi_show_image
 oiSpace = oi_space

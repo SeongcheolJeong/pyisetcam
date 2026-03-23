@@ -821,6 +821,10 @@ That same headless OI utility surface now also includes
 `oi_space(...)` / `oiSpace(...)` for the direct MATLAB OI geometry
 helper mini-family.
 That same headless OI utility surface now also includes
+`oi_psf(...)` / `oiPSF(...)` for the legacy MATLAB OI point-spread
+summary helper, covering thresholded PSF area and diameter
+measurements.
+That same headless OI utility surface now also includes
 `oi_calculate_irradiance(...)` / `oiCalculateIrradiance(...)`,
 `oi_adjust_illuminance(...)` / `oiAdjustIlluminance(...)`,
 `oi_interpolate_w(...)` / `oiInterpolateW(...)`,

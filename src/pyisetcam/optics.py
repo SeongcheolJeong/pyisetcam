@@ -6975,6 +6975,47 @@ def oi_spatial_resample(
     return _oi_spatial_resample(oi, sample_spacing_m, method=method)
 
 
+def oi_psf(oi: OpticalImage, param: str, *args: Any) -> float:
+    """Summarize a point-spread-function OI using the legacy MATLAB oiPSF contract."""
+
+    options = _parse_key_value_options(args, "oiPSF") if args else {}
+    units = str(options.pop("units", "m"))
+    threshold = float(options.pop("threshold", 0.1))
+    wavelength_nm = options.pop("wave", options.pop("wavelength", None))
+    if options:
+        unsupported = next(iter(options))
+        raise KeyError(f"Unsupported oiPSF parameter: {unsupported}")
+
+    normalized = param_format(param)
+    if normalized not in {"area", "diameter"}:
+        raise UnsupportedOptionError("oiPSF", param)
+    if threshold < 0.0:
+        raise ValueError("oiPSF threshold must be non-negative.")
+
+    psf_data = _oi_psf_data(oi, wavelength_nm=wavelength_nm, units=units)
+    psf = np.asarray(psf_data["psf"], dtype=float)
+    xy = np.asarray(psf_data["xy"], dtype=float)
+    if psf.ndim != 2 or xy.ndim != 3:
+        raise ValueError("oiPSF requires a 2-D PSF plane and a 2-D support grid.")
+
+    x_axis = np.asarray(xy[0, :, 0], dtype=float).reshape(-1)
+    y_axis = np.asarray(xy[:, 0, 1], dtype=float).reshape(-1)
+    if x_axis.size < 2 or y_axis.size < 2:
+        raise ValueError("oiPSF requires at least two spatial samples per axis.")
+
+    peak = float(np.max(psf)) if psf.size else 0.0
+    mask = np.asarray(psf >= (threshold * peak), dtype=float) if peak > 0.0 else np.zeros_like(psf, dtype=float)
+    dx = float(abs(x_axis[1] - x_axis[0]))
+    dy = float(abs(y_axis[1] - y_axis[0]))
+    area = float(np.sum(mask) * dx * dy)
+    if normalized == "area":
+        return area
+    return float(2.0 * np.sqrt(area / np.pi))
+
+
+oiPSF = oi_psf
+
+
 def _oi_shape(oi: OpticalImage) -> tuple[int, int]:
     photons = np.asarray(oi.data.get("photons", np.empty((0, 0, 0))), dtype=float)
     if photons.ndim >= 2:

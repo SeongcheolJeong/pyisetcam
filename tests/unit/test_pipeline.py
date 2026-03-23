@@ -107,6 +107,7 @@ from pyisetcam import (
     oiMakeEvenRowCol,
     oiPad,
     oiPadValue,
+    oiPSF,
     oiSaveImage,
     oiShowImage,
     oi_plot,
@@ -3120,6 +3121,28 @@ def test_oi_create_psf_accepts_custom_shift_invariant_psf_data(asset_store) -> N
     assert np.array_equal(np.asarray(stored["wave"]), np.array([550.0], dtype=float))
     assert computed.data["photons"].shape[:2] == scene.data["photons"].shape[:2]
     assert computed.data["photons"].shape[2] == scene.data["photons"].shape[2]
+
+
+def test_oi_psf_area_and_diameter_match_manual_threshold_support() -> None:
+    oi = oi_create("psf")
+    this_wave = 550.0
+    threshold = 0.1
+
+    area = float(oiPSF(oi, "area", "units", "um", "threshold", threshold, "wave", this_wave))
+    diameter = float(oiPSF(oi, "diameter", "units", "um", "threshold", threshold, "wave", this_wave))
+
+    psf_data = oi_get(oi, "psfdata")
+    psf_stack = np.asarray(psf_data["psf"], dtype=float)
+    wave = np.asarray(psf_data["wave"], dtype=float).reshape(-1)
+    wave_index = int(np.argmin(np.abs(wave - this_wave)))
+    psf = psf_stack[:, :, wave_index]
+    um_per_samp = np.asarray(psf_data["umPerSamp"], dtype=float).reshape(-1)
+    mask = np.asarray(psf >= (threshold * float(np.max(psf))), dtype=float)
+    expected_area = float(np.sum(mask) * np.prod(um_per_samp))
+    expected_diameter = float(2.0 * np.sqrt(expected_area / np.pi))
+
+    assert np.isclose(area, expected_area, atol=1e-12, rtol=1e-12)
+    assert np.isclose(diameter, expected_diameter, atol=1e-12, rtol=1e-12)
 
 
 def test_optics_psf_to_otf_builds_custom_otf_struct(asset_store) -> None:
