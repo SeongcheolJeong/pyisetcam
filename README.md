@@ -356,7 +356,11 @@ for the direct MATLAB pixel-center coordinate helper, plus headless
 `sensor_gain_offset(...)` / `sensorGainOffset(...)`, and
 `sensor_resample_wave(...)` / `sensorResampleWave(...)` for the legacy
 sensor noise-reset, analog gain/offset, and spectral-resampling helper
-mini-family, plus headless `pixel_create(...)` / `pixelCreate(...)`,
+mini-family, plus headless `sensor_rescale(...)` / `sensorRescale(...)`,
+`sensor_cfa_save(...)` / `sensorCfaSave(...)`, and
+`sensor_from_file(...)` / `sensorFromFile(...)` for the legacy sensor
+geometry/CFA-persistence/file-load helper mini-family, plus headless
+`pixel_create(...)` / `pixelCreate(...)`,
 `pixel_get(...)` / `pixelGet(...)`, `pixel_set(...)` / `pixelSet(...)`,
 `pixel_ideal(...)` / `pixelIdeal(...)`, `pixel_sr(...)` / `pixelSR(...)`,
 and `ie_pixel_well_capacity(...)` / `iePixelWellCapacity(...)` for the

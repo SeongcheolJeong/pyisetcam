@@ -7,7 +7,7 @@ import pyisetcam.metrics as metrics_module
 import pyisetcam.optics as optics_module
 import pyisetcam.sensor as sensor_module
 import imageio.v3 as iio
-from scipy.io import savemat
+from scipy.io import loadmat, savemat
 from scipy import ndimage
 from scipy.signal import convolve2d
 
@@ -297,6 +297,7 @@ from pyisetcam import (
     sensor_ccm,
     sensorAddFilter,
     sensorCFANameList,
+    sensorCfaSave,
     sensorAddNoise,
     sensorClearData,
     sensorCheckArray,
@@ -322,6 +323,7 @@ from pyisetcam import (
     sensorDisplayTransform,
     sensorEquateTransmittances,
     sensorFilterRGB,
+    sensorFromFile,
     sensorGainOffset,
     sensor_formats,
     sensor_get,
@@ -332,6 +334,7 @@ from pyisetcam import (
     sensorRGB2Plane,
     sensorReadColorFilters,
     sensorReadFilter,
+    sensorRescale,
     sensorResampleWave,
     sensorReplaceFilter,
     sensorSaveImage,
@@ -377,6 +380,7 @@ from pyisetcam import (
     xyz_to_srgb,
     y_to_lstar,
     visualAngle,
+    vcSaveObject,
     zemax_load,
     zemax_read_header,
 )
@@ -5846,6 +5850,50 @@ def test_sensor_save_image_appends_png_and_normalizes_rendering(asset_store, tmp
 
     assert saved_path.endswith(".png")
     assert np.allclose(written, expected, atol=1.0 / 255.0)
+
+
+def test_sensor_utility_wrappers_match_legacy_geometry_and_file_contract(asset_store, tmp_path) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "volts", np.full((4, 4), 0.25, dtype=float))
+
+    rescaled = sensorRescale(sensor, sensor_formats("qqcif"), sensor_formats("quarterinch"))
+    pixel = sensor_get(rescaled, "pixel")
+
+    assert tuple(np.asarray(sensor_get(rescaled, "size"), dtype=int)) == (72, 88)
+    assert np.isclose(float(sensor_get(rescaled, "height")), 0.0024)
+    assert np.isclose(float(sensor_get(rescaled, "width")), 0.0032)
+    assert np.isclose(float(pixelGet(pixel, "widthGap")), 0.0)
+    assert np.isclose(float(pixelGet(pixel, "heightGap")), 0.0)
+    assert np.isclose(float(pixelGet(pixel, "width")), 0.0032 / 88.0)
+    assert np.isclose(float(pixelGet(pixel, "height")), 0.0024 / 72.0)
+    assert np.isclose(float(pixelGet(pixel, "fill factor")), 0.5)
+    assert sensor_get(rescaled, "volts") is None
+    assert sensor_get(rescaled, "dv") is None
+
+    cfa_path = sensorCfaSave(rescaled, tmp_path / "saved_cfa")
+    cfa_payload = loadmat(cfa_path, squeeze_me=True, struct_as_record=False)
+    filter_names = [str(name) for name in np.asarray(cfa_payload["color"].filterNames, dtype=object).reshape(-1).tolist()]
+
+    assert cfa_path.endswith(".mat")
+    assert {"cfa", "color", "spectrum"} <= set(cfa_payload)
+    assert all((not name) or name[0].islower() for name in filter_names)
+    assert np.array_equal(np.asarray(cfa_payload["cfa"].pattern, dtype=int), np.asarray(sensor_get(rescaled, "pattern"), dtype=int))
+    assert np.array_equal(
+        np.asarray(cfa_payload["spectrum"].wave, dtype=float).reshape(-1),
+        np.asarray(sensor_get(rescaled, "wave"), dtype=float).reshape(-1),
+    )
+
+    saved_sensor_path = Path(vcSaveObject(rescaled, tmp_path / "saved_sensor"))
+    loaded = sensorFromFile(saved_sensor_path)
+    isa_payload = loadmat(saved_sensor_path, squeeze_me=True, struct_as_record=False)["isa"]
+    isa_alias_path = tmp_path / "saved_sensor_isa_alias.mat"
+    savemat(isa_alias_path, {"isa_": isa_payload})
+    loaded_isa_alias = sensorFromFile(isa_alias_path)
+
+    for restored in (loaded, loaded_isa_alias):
+        assert tuple(np.asarray(sensor_get(restored, "size"), dtype=int)) == (72, 88)
+        assert np.array_equal(np.asarray(sensor_get(restored, "pattern"), dtype=int), np.asarray(sensor_get(rescaled, "pattern"), dtype=int))
+        assert sensor_get(restored, "filter names") == sensor_get(rescaled, "filter names")
 
 
 def test_sensor_show_cfa_matches_plot_sensor_wrappers(asset_store) -> None:

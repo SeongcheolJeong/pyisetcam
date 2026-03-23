@@ -427,6 +427,7 @@ from .sensor import (
     signal_current,
     signal_current_density,
     sensor_add_filter,
+    sensor_cfa_save,
     sensor_cfa_name_list,
     sensor_ccm,
     sensor_check_array,
@@ -456,12 +457,14 @@ from .sensor import (
     sensor_display_transform,
     sensor_equate_transmittances,
     sensor_filter_rgb,
+    sensor_from_file,
     sensor_image_color_array,
     sensor_no_noise,
     sensor_pixel_coord,
     sensor_rgb_to_plane,
     sensor_read_color_filters,
     sensor_read_filter,
+    sensor_rescale,
     sensor_resample_wave,
     sensor_replace_filter,
     sensor_set,
@@ -1165,6 +1168,7 @@ __all__ = [
     "sensorFormats",
     "sensorGet",
     "sensorAddFilter",
+    "sensorCfaSave",
     "sensorCCM",
     "pixelCenterFillPD",
     "pixelCreate",
@@ -1193,6 +1197,7 @@ __all__ = [
     "sensorDisplayTransform",
     "sensorEquateTransmittances",
     "sensorFilterRGB",
+    "sensorFromFile",
     "sensorGainOffset",
     "SignalCurrentDensity",
     "signalCurrent",
@@ -1212,6 +1217,7 @@ __all__ = [
     "sensor_pixel_coord",
     "sensor_read_color_filters",
     "sensor_read_filter",
+    "sensorRescale",
     "sensorResampleWave",
     "sensorReplaceFilter",
     "sensorDeleteFilter",
@@ -1250,7 +1256,9 @@ __all__ = [
     "sensor_description",
     "sensor_dng_read",
     "sensor_formats",
+    "sensor_from_file",
     "sensor_get",
+    "sensor_rescale",
     "sensor_resample_wave",
     "sensor_color_order",
     "sensor_determine_cfa",
@@ -1277,6 +1285,7 @@ __all__ = [
     "ie_pixel_well_capacity",
     "sensor_set",
     "sensor_set_size_to_fov",
+    "sensor_cfa_save",
     "sensor_save_image",
     "sensor_image_color_array",
     "sensor_rgb_to_plane",
@@ -1602,6 +1611,7 @@ sensorComputeSamples = sensor_compute_samples
 imx490Compute = imx490_compute
 sensorAddFilter = sensor_add_filter
 sensorAddNoise = sensor_add_noise
+sensorCfaSave = sensor_cfa_save
 sensorCFANameList = sensor_cfa_name_list
 sensorCCM = sensor_ccm
 sensorCheckArray = sensor_check_array
@@ -1613,6 +1623,7 @@ sensorDeleteFilter = sensor_delete_filter
 sensorDisplayTransform = sensor_display_transform
 sensorEquateTransmittances = sensor_equate_transmittances
 sensorFilterRGB = sensor_filter_rgb
+sensorFromFile = sensor_from_file
 pixelCenterFillPD = pixel_center_fill_pd
 pixelCreate = pixel_create
 pixelDescription = pixel_description
@@ -1641,6 +1652,7 @@ sensorNoNoise = sensor_no_noise
 sensorReadColorFilters = sensor_read_color_filters
 sensorReadFilter = sensor_read_filter
 sensorRGB2Plane = sensor_rgb_to_plane
+sensorRescale = sensor_rescale
 sensorResampleWave = sensor_resample_wave
 sensorReplaceFilter = sensor_replace_filter
 sensorSNR = sensor_snr

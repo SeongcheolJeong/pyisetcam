@@ -10,11 +10,13 @@ import imageio.v3 as iio
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 from scipy.ndimage import gaussian_filter, map_coordinates
+from scipy.io import savemat
 from scipy.signal import convolve2d
 
 from .assets import AssetStore, ie_read_color_filter, ie_read_spectra
 from .color import luminance_from_photons, xyz_color_matching
 from .exceptions import UnsupportedOptionError
+from .fileio import vc_load_object
 from .metrics import xyz_from_energy
 from .optics import DEFAULT_FOCAL_LENGTH_M
 from .optics import oi_get
@@ -3293,6 +3295,63 @@ def sensor_save_image(
     payload = np.clip(np.round(rgb * 255.0), 0.0, 255.0).astype(np.uint8)
     iio.imwrite(output_path, payload)
     return str(output_path)
+
+
+def sensor_rescale(sensor: Sensor, rowcol: Any, sensor_height_width: Any) -> Sensor:
+    """Rescale a sensor to a new row/column size and physical die dimensions."""
+
+    if sensor_height_width is None:
+        raise ValueError("sensorRescale requires sensor height/width.")
+
+    target_size = np.asarray(rowcol, dtype=int).reshape(-1)
+    if target_size.size != 2:
+        raise ValueError("sensorRescale rowcol must contain [rows, cols].")
+    sensor_size_m = np.asarray(sensor_height_width, dtype=float).reshape(-1)
+    if sensor_size_m.size != 2:
+        raise ValueError("sensorRescale sensorHeightWidth must contain [height, width].")
+
+    rescaled = sensor.clone()
+    pixel = sensor_get(rescaled, "pixel")
+    pixel = pixel_set(pixel, "widthGap", 0.0)
+    pixel = pixel_set(pixel, "heightGap", 0.0)
+    pixel = pixel_set(pixel, "width", float(sensor_size_m[1]) / float(target_size[1]))
+    pixel = pixel_set(pixel, "height", float(sensor_size_m[0]) / float(target_size[0]))
+    pixel = pixel_set(pixel, "pd width", np.sqrt(0.5) * float(pixel_get(pixel, "width")))
+    pixel = pixel_set(pixel, "pd height", np.sqrt(0.5) * float(pixel_get(pixel, "height")))
+    pixel = pixel_position_pd(pixel, "center")
+    rescaled = sensor_set(rescaled, "pixel", pixel)
+    rescaled = sensor_set(rescaled, "size", target_size.astype(int))
+    return sensor_clear_data(rescaled)
+
+
+def sensor_cfa_save(sensor: Sensor, full_name: str | Path) -> str:
+    """Save the MATLAB-style CFA/color/spectrum payload to a MAT file."""
+
+    path = Path(full_name).expanduser()
+    if path.suffix.lower() != ".mat":
+        path = path.with_suffix(".mat")
+    if not path.is_absolute():
+        path = (Path.cwd() / path).resolve()
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    color = dict(sensor_get(sensor, "color"))
+    filter_names = list(color.get("filterNames", []))
+    color["filterNames"] = [
+        (name[:1].lower() + name[1:]) if isinstance(name, str) and name else name for name in filter_names
+    ]
+    cfa = sensor_get(sensor, "cfa")
+    spectrum = sensor_get(sensor, "spectrum")
+    savemat(path, {"cfa": cfa, "color": color, "spectrum": spectrum}, do_compression=True)
+    return str(path)
+
+
+def sensor_from_file(filename: str | Path) -> Sensor:
+    """Load a saved MATLAB-style sensor struct from a MAT file."""
+
+    loaded, _ = vc_load_object("sensor", filename)
+    if not isinstance(loaded, Sensor):
+        raise ValueError(f"sensorFromFile expected a sensor payload in {filename}.")
+    return loaded
 
 
 def sensor_show_cfa(
