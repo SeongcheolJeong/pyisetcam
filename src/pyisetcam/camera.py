@@ -3,33 +3,45 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
 
-from .assets import AssetStore
+from .assets import AssetStore, ie_read_spectra
 from .display import display_get
 from .exceptions import UnsupportedOptionError
-from .ip import ip_compute, ip_create, ip_get, ip_set
+from .ip import ip_clear_data, ip_compute, ip_create, ip_get, ip_set
 from .iso import iso12233, iso_find_slanted_bar
 from .metrics import delta_e_ab, iso_acutance, xyz_from_energy, xyz_to_lab
-from .optics import oi_compute, oi_create, oi_get, oi_set
-from .scene import Scene, scene_adjust_luminance, scene_create, scene_set
+from .optics import oi_clear_data, oi_compute, oi_create, oi_get, oi_set
+from .scene import Scene, scene_adjust_illuminant, scene_adjust_luminance, scene_create, scene_from_file, scene_get, scene_set
 from .session import track_camera_session_state, track_session_object
 from .sensor import (
     _chart_rectangles,
     _chart_roi,
     _macbeth_ideal_linear_rgb,
     sensor_compute,
+    sensor_compute_full_array,
     sensor_create,
     sensor_create_ideal,
+    sensor_clear_data,
     sensor_get,
     sensor_set,
     sensor_set_size_to_fov,
 )
 from .types import Camera, ImageProcessor, OpticalImage, Sensor, SessionContext
-from .utils import image_increase_image_rgb_size, linear_to_srgb, param_format, rgb_to_xw_format, split_prefixed_parameter, xw_to_rgb_format
+from .utils import (
+    image_increase_image_rgb_size,
+    linear_to_srgb,
+    param_format,
+    rgb_to_xw_format,
+    split_prefixed_parameter,
+    xw_to_rgb_format,
+    xyz_to_linear_srgb,
+    xyz_to_srgb,
+)
 
 
 def _store(asset_store: AssetStore | None) -> AssetStore:
@@ -329,6 +341,191 @@ def camera_compute(
     camera.fields["ip"] = ip
     camera.data["result"] = ip.data.get("result")
     return track_camera_session_state(session, camera)
+
+
+def _camera_crop_border(image: Any, border: int = 10) -> np.ndarray:
+    data = np.asarray(image)
+    if data.ndim < 2:
+        return np.asarray(data)
+    if data.shape[0] <= (2 * border) or data.shape[1] <= (2 * border):
+        return np.asarray(data)
+    slices = [slice(border, data.shape[0] - border), slice(border, data.shape[1] - border)]
+    slices.extend([slice(None)] * (data.ndim - 2))
+    return np.asarray(data[tuple(slices)])
+
+
+def _camera_center_mean(image: Any, border: int = 10) -> float:
+    cropped = _camera_crop_border(image, border=border)
+    return float(np.mean(np.asarray(cropped, dtype=float)))
+
+
+def _camera_scene_input(scene_name: str | Scene, *, asset_store: AssetStore) -> Scene:
+    if isinstance(scene_name, Scene):
+        return scene_name.clone()
+
+    requested = Path(str(scene_name)).expanduser()
+    candidates = [requested]
+    if requested.suffix:
+        candidates.append(Path("data/images/multispectral") / requested.name)
+        candidates.append(Path("data/images/multispectral") / requested)
+    else:
+        candidates.append(Path(f"{requested}.mat"))
+        candidates.append(Path("data/images/multispectral") / requested)
+        candidates.append(Path("data/images/multispectral") / f"{requested}.mat")
+
+    resolved = None
+    for candidate in candidates:
+        try:
+            resolved = asset_store.resolve(candidate)
+            break
+        except Exception:
+            continue
+    if resolved is None:
+        matches = list(asset_store.ensure().rglob(f"{requested.stem}.mat"))
+        if not matches:
+            raise ValueError(f"Unable to resolve multispectral scene {scene_name!r}.")
+        resolved = matches[0]
+    return scene_from_file(resolved, "multispectral", asset_store=asset_store)
+
+
+def _camera_ideal_xyz(
+    camera: Camera,
+    scene: Scene,
+    *,
+    asset_store: AssetStore,
+    session: SessionContext | None = None,
+) -> tuple[Camera, np.ndarray]:
+    working = camera.clone()
+    oi = oi_compute(camera_get(working, "oi"), scene, session=session)
+    sensor = sensor_set(camera_get(working, "sensor").clone(), "noise flag", -1)
+    wave = np.asarray(oi_get(oi, "wave"), dtype=float).reshape(-1)
+    sensor = sensor_set(sensor, "wave", wave)
+    xyz_quanta = np.asarray(ie_read_spectra("XYZQuanta", wave, asset_store=asset_store), dtype=float)
+    xyz_ideal, _ = sensor_compute_full_array(sensor, oi, xyz_quanta)
+    working = camera_set(working, "oi", oi, session=session)
+    working = camera_set(working, "sensor", sensor, session=session)
+    return working, np.asarray(xyz_ideal, dtype=float)
+
+
+def _xyz_to_srgb_pair(xyz: Any) -> tuple[np.ndarray, np.ndarray]:
+    xyz_image = np.asarray(xyz, dtype=float)
+    scaled_xyz = xyz_image.copy()
+    if scaled_xyz.ndim != 3 or scaled_xyz.shape[2] != 3:
+        raise ValueError("XYZ image must be rows x cols x 3.")
+    max_y = float(np.max(scaled_xyz[:, :, 1])) if scaled_xyz.size else 1.0
+    if max_y > 1.0:
+        scaled_xyz = scaled_xyz / max_y
+    if float(np.min(scaled_xyz)) < 0.0:
+        scaled_xyz = np.clip(scaled_xyz, 0.0, 1.0)
+    linear_rgb = np.clip(np.asarray(xyz_to_linear_srgb(scaled_xyz), dtype=float), 0.0, 1.0)
+    return np.asarray(xyz_to_srgb(xyz_image), dtype=float), linear_rgb
+
+
+def camera_clear_data(camera: Camera, *, session: SessionContext | None = None) -> Camera:
+    """Clear computed OI/sensor/IP payloads from a camera."""
+
+    cleared = camera.clone()
+    cleared.fields["oi"] = oi_clear_data(camera_get(cleared, "oi"))
+    cleared.fields["sensor"] = sensor_clear_data(camera_get(cleared, "sensor"))
+    cleared.fields["ip"] = ip_clear_data(camera_get(cleared, "ip"))
+    if "l3" in cleared.fields["ip"].fields:
+        cleared.fields["ip"].fields["l3"] = None
+    cleared.data = {}
+    return track_camera_session_state(session, cleared)
+
+
+def camera_compute_srgb(
+    camera: Camera,
+    scene_name: str | Scene,
+    mean_luminance: float = 100.0,
+    sz: Any | None = None,
+    scenefov: float | None = None,
+    scaleoutput: float = 1.0,
+    plot_flag: int = 0,
+    *,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, Camera]:
+    """Compute MATLAB-style camera result and ideal sRGB images."""
+
+    del plot_flag
+    store = _store(asset_store)
+    working = camera.clone()
+    scene = _camera_scene_input(scene_name, asset_store=store)
+    scene = scene_adjust_illuminant(scene, "D65.mat", asset_store=store)
+
+    if sz is not None:
+        size = np.asarray(sz, dtype=int).reshape(-1)
+        if size.size == 1:
+            size = np.repeat(size, 2)
+        sensor = sensor_set(camera_get(working, "sensor").clone(), "size", tuple((size[:2] + 20).tolist()))
+        working = camera_set(working, "sensor", sensor, session=session)
+
+    if scenefov is None:
+        oi = camera_get(working, "oi")
+        sensor = camera_get(working, "sensor")
+        scene_distance = float(scene_get(scene, "distance"))
+        scenefov = float(sensor_get(sensor, "fov", scene_distance, oi))
+    scene = scene_set(scene, "fov", float(scenefov))
+    scene = scene_adjust_luminance(scene, float(mean_luminance), asset_store=store)
+
+    working, xyz_ideal = _camera_ideal_xyz(working, scene, asset_store=store, session=session)
+    xyz_ideal = xyz_ideal / max(float(np.max(xyz_ideal)), 1.0e-12) * float(scaleoutput)
+    srgb_ideal, lrgb_ideal = _xyz_to_srgb_pair(xyz_ideal)
+
+    working = camera_compute(working, scene, asset_store=store, session=session)
+    lrgb_result = np.asarray(camera_get(working, "image"), dtype=float)
+    mean_result = _camera_center_mean(lrgb_result)
+    mean_ideal = _camera_center_mean(lrgb_ideal)
+    if mean_result > 0.0:
+        lrgb_result = lrgb_result * (mean_ideal / mean_result)
+        working = camera_set(working, "ip result", lrgb_result, session=session)
+
+    srgb_result = linear_to_srgb(np.clip(lrgb_result, 0.0, 1.0))
+    raw = np.asarray(camera_get(working, "sensor volts"), dtype=float)
+    return (
+        _camera_crop_border(srgb_result),
+        _camera_crop_border(srgb_ideal),
+        _camera_crop_border(raw),
+        working,
+    )
+
+
+def camera_compute_sequence(
+    camera: Camera,
+    *,
+    scenes: Any,
+    exposuretimes: Any = 1.0,
+    nframes: int | None = None,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> tuple[Camera, list[np.ndarray]]:
+    """Compute one or more frames with scene/exposure sequences."""
+
+    store = _store(asset_store)
+    if scenes is None:
+        raise ValueError("cameraComputeSequence requires one or more scenes.")
+
+    scene_list = list(scenes) if isinstance(scenes, (list, tuple)) else [scenes]
+    exposure_list = list(np.asarray(exposuretimes, dtype=float).reshape(-1)) if not np.isscalar(exposuretimes) else [float(exposuretimes)]
+    total_frames = int(max(len(scene_list), len(exposure_list), 1 if nframes is None else nframes))
+
+    if len(scene_list) == 1 and total_frames > 1:
+        scene_list = scene_list * total_frames
+    if len(exposure_list) == 1 and total_frames > 1:
+        exposure_list = exposure_list * total_frames
+    if len(scene_list) != len(exposure_list):
+        raise ValueError("cameraComputeSequence requires scenes and exposuretimes to broadcast to the same length.")
+
+    working = camera.clone()
+    images: list[np.ndarray] = []
+    for scene_item, exposure_time in zip(scene_list, exposure_list, strict=True):
+        current_scene = _camera_scene_input(scene_item, asset_store=store) if not isinstance(scene_item, Scene) else scene_item.clone()
+        sensor = sensor_set(camera_get(working, "sensor").clone(), "exposure time", float(exposure_time))
+        working = camera_set(working, "sensor", sensor, session=session)
+        working = camera_compute(working, current_scene, asset_store=store, session=session)
+        images.append(np.asarray(camera_get(working, "image"), dtype=float).copy())
+    return working, images
 
 
 def _matlab_round_scalar(value: float) -> int:

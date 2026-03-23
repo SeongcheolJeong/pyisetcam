@@ -13,7 +13,10 @@ from .camera import (
     CameraVSNRResult,
     camera_acutance,
     camera_color_accuracy,
+    camera_clear_data,
     camera_compute,
+    camera_compute_sequence,
+    camera_compute_srgb,
     camera_create,
     camera_get,
     camera_mtf,
@@ -504,7 +507,10 @@ __all__ = [
     "blackbody",
     "ISOAcutance",
     "cameraCompute",
+    "cameraComputeSequence",
+    "cameraComputesrgb",
     "cameraAcutance",
+    "cameraClearData",
     "cameraColorAccuracy",
     "cameraCreate",
     "cameraGet",
@@ -514,7 +520,10 @@ __all__ = [
     "CameraVSNRResult",
     "camera_acutance",
     "camera_color_accuracy",
+    "camera_clear_data",
     "camera_compute",
+    "camera_compute_sequence",
+    "camera_compute_srgb",
     "camera_create",
     "camera_get",
     "camera_mtf",
@@ -1756,6 +1765,9 @@ Demosaic = demosaic
 
 cameraCreate = camera_create
 cameraCompute = camera_compute
+cameraComputeSequence = camera_compute_sequence
+cameraComputesrgb = camera_compute_srgb
+cameraClearData = camera_clear_data
 cameraGet = camera_get
 cameraMTF = camera_mtf
 cameraAcutance = camera_acutance

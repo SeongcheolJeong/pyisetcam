@@ -20,7 +20,10 @@ from pyisetcam import (
     blackbody,
     camera_acutance,
     camera_color_accuracy,
+    cameraClearData,
     camera_compute,
+    cameraComputeSequence,
+    cameraComputesrgb,
     camera_create,
     camera_get,
     camera_mtf,
@@ -6319,6 +6322,57 @@ def test_camera_compute_supports_vendor_sensor_variants(asset_store) -> None:
 
     assert mt9v024_rgbw.fields["ip"].data["result"].shape[:2] == mt9v024_rgbw.fields["sensor"].fields["size"]
     assert ar0132at_rccc.fields["ip"].data["result"].shape[:2] == ar0132at_rccc.fields["sensor"].fields["size"]
+
+
+def test_camera_compatibility_wrappers_cover_srgb_sequence_and_clear(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    camera = camera_create(asset_store=asset_store)
+
+    srgb_result, srgb_ideal, raw, updated = cameraComputesrgb(
+        camera,
+        scene,
+        mean_luminance=50.0,
+        sz=np.array([16, 16], dtype=int),
+        scenefov=5.0,
+        scaleoutput=0.8,
+        plot_flag=0,
+        asset_store=asset_store,
+    )
+
+    assert srgb_ideal.shape == (16, 16, 3)
+    assert srgb_result.shape[:2] == raw.shape
+    assert srgb_result.shape[2] == 3
+    assert np.all(np.isfinite(srgb_result))
+    assert np.all(np.isfinite(srgb_ideal))
+    assert np.all((srgb_result >= 0.0) & (srgb_result <= 1.0))
+    assert np.all((srgb_ideal >= 0.0) & (srgb_ideal <= 1.0))
+    assert updated.fields["oi"].data["photons"].ndim == 3
+    assert updated.fields["sensor"].data["volts"].ndim == 2
+    assert updated.fields["ip"].data["result"].shape[:2] == updated.fields["sensor"].data["volts"].shape
+    assert updated.fields["ip"].data["result"].shape[2] == 3
+    assert updated.fields["ip"].data["result"].shape[0] == srgb_result.shape[0] + 20
+    assert updated.fields["ip"].data["result"].shape[1] == srgb_result.shape[1] + 20
+
+    sequence_camera, images = cameraComputeSequence(
+        camera_create(asset_store=asset_store),
+        scenes=[scene, scene],
+        exposuretimes=[0.01, 0.02],
+        nframes=2,
+        asset_store=asset_store,
+    )
+
+    assert len(images) == 2
+    assert images[0].shape == images[1].shape
+    assert images[0].ndim == 3 and images[0].shape[2] == 3
+    assert np.isclose(camera_get(sequence_camera, "sensor exposure time"), 0.02)
+
+    cleared = cameraClearData(updated)
+
+    assert cleared.data == {}
+    assert cleared.fields["oi"].data == {}
+    assert cleared.fields["sensor"].data == {}
+    assert cleared.fields["ip"].data.get("result") is None
+    assert cleared.fields["ip"].fields.get("l3") is None
 
 
 def test_run_python_case_with_context_returns_pipeline_objects(asset_store) -> None:
