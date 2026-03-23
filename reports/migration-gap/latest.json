@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-23T13:35:11.903312+00:00",
+  "generated_at": "2026-03-23T14:09:40.058800+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-23T13:35:11.903312+00:00",
+    "generated_at": "2026-03-23T14:09:40.058800+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 92,
       "missing": 37,
       "out_of_scope": 125,
-      "parity": 502,
-      "partial": 651,
+      "parity": 506,
+      "partial": 647,
       "ported": 36
     },
     "kind_counts": {
@@ -22,18 +22,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 218,
+      "P0": 214,
       "P1": 381,
       "P2": 181,
-      "P3": 663
+      "P3": 667
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
         "out_of_scope": 0,
-        "parity": 5,
-        "partial": -5,
+        "parity": 4,
+        "partial": -4,
         "ported": 0
       },
       "kind_counts": {
@@ -45,10 +45,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -5,
+        "P0": -4,
         "P1": 0,
         "P2": 0,
-        "P3": 5
+        "P3": 4
       }
     },
     "family_summary": {
@@ -840,8 +840,8 @@
       "sensor/simulation": {
         "total": 25,
         "by_status": {
-          "parity": 13,
-          "partial": 12
+          "parity": 17,
+          "partial": 8
         },
         "by_kind": {
           "api": 25
@@ -1060,15 +1060,6 @@
         }
       },
       {
-        "family": "sensor/simulation",
-        "open_entries": 12,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 13,
-          "partial": 12
-        }
-      },
-      {
         "family": "displays",
         "open_entries": 11,
         "highest_open_priority": "P0",
@@ -1143,6 +1134,15 @@
         "open_entries": 8,
         "highest_open_priority": "P0",
         "by_status": {
+          "partial": 8
+        }
+      },
+      {
+        "family": "sensor/simulation",
+        "open_entries": 8,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 17,
           "partial": 8
         }
       }
@@ -1229,7 +1229,7 @@
         "not_implemented_error_sites": 0
       },
       "sensor": {
-        "unsupported_option_error_sites": 36,
+        "unsupported_option_error_sites": 38,
         "not_implemented_error_sites": 1
       },
       "session": {

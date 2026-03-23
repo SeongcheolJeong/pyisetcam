@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-23T13:35:11.903312+00:00",
+  "generated_at": "2026-03-23T14:09:40.058800+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -7,8 +7,8 @@
       "headless_only": 92,
       "missing": 37,
       "out_of_scope": 125,
-      "parity": 502,
-      "partial": 651,
+      "parity": 506,
+      "partial": 647,
       "ported": 36
     },
     "kind_counts": {
@@ -20,18 +20,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 218,
+      "P0": 214,
       "P1": 381,
       "P2": 181,
-      "P3": 663
+      "P3": 667
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
         "out_of_scope": 0,
-        "parity": 5,
-        "partial": -5,
+        "parity": 4,
+        "partial": -4,
         "ported": 0
       },
       "kind_counts": {
@@ -43,10 +43,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -5,
+        "P0": -4,
         "P1": 0,
         "P2": 0,
-        "P3": 5
+        "P3": 4
       }
     },
     "family_summary": {
@@ -838,8 +838,8 @@
       "sensor/simulation": {
         "total": 25,
         "by_status": {
-          "parity": 13,
-          "partial": 12
+          "parity": 17,
+          "partial": 8
         },
         "by_kind": {
           "api": 25
@@ -1058,15 +1058,6 @@
         }
       },
       {
-        "family": "sensor/simulation",
-        "open_entries": 12,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 13,
-          "partial": 12
-        }
-      },
-      {
         "family": "displays",
         "open_entries": 11,
         "highest_open_priority": "P0",
@@ -1141,6 +1132,15 @@
         "open_entries": 8,
         "highest_open_priority": "P0",
         "by_status": {
+          "partial": 8
+        }
+      },
+      {
+        "family": "sensor/simulation",
+        "open_entries": 8,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 17,
           "partial": 8
         }
       }
@@ -1227,7 +1227,7 @@
         "not_implemented_error_sites": 0
       },
       "sensor": {
-        "unsupported_option_error_sites": 36,
+        "unsupported_option_error_sites": 38,
         "not_implemented_error_sites": 1
       },
       "session": {
@@ -14175,14 +14175,15 @@
       "upstream_path": "sensor/simulation/sensorAddNoise.m",
       "family": "sensor/simulation",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.sensor",
+      "status": "parity",
+      "python_surface": "pyisetcam.sensor, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "sensor/simulation/sensorCompute.m",
@@ -14202,27 +14203,29 @@
       "upstream_path": "sensor/simulation/sensorComputeFullArray.m",
       "family": "sensor/simulation",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.sensor",
+      "status": "parity",
+      "python_surface": "pyisetcam.sensor, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "sensor/simulation/sensorComputeImage.m",
       "family": "sensor/simulation",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.sensor",
+      "status": "parity",
+      "python_surface": "pyisetcam.sensor, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "sensor/simulation/sensorComputeMEV.m",
@@ -14242,7 +14245,7 @@
       "family": "sensor/simulation",
       "kind": "api",
       "status": "parity",
-      "python_surface": "pyisetcam.sensor",
+      "python_surface": "pyisetcam.sensor, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py",
@@ -14255,14 +14258,15 @@
       "upstream_path": "sensor/simulation/sensorComputeNoiseFree.m",
       "family": "sensor/simulation",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.sensor",
+      "status": "parity",
+      "python_surface": "pyisetcam.sensor, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "sensor/simulation/sensorComputeSVFilters.m",

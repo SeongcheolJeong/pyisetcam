@@ -408,7 +408,11 @@ from .sensor import (
     sensor_check_array,
     sensor_clear_data,
     sensor_color_filter,
+    sensor_compute_full_array,
+    sensor_compute_image,
+    sensor_compute_noise_free,
     sensor_compute_array,
+    sensor_add_noise,
     sensor_compute_samples,
     sensor_snr,
     sensor_snr_luxsec,
@@ -1139,6 +1143,8 @@ __all__ = [
     "sensorColorFilter",
     "sensor_color_filter",
     "sensor_add_filter",
+    "sensorAddNoise",
+    "sensor_add_noise",
     "sensor_gain_offset",
     "sensor_no_noise",
     "sensor_pixel_coord",
@@ -1164,7 +1170,13 @@ __all__ = [
     "sensorShowCFA",
     "sensorShowCFAWeights",
     "sensorShowImage",
+    "sensorComputeFullArray",
+    "sensorComputeImage",
+    "sensorComputeNoiseFree",
     "sensor_compute",
+    "sensor_compute_full_array",
+    "sensor_compute_image",
+    "sensor_compute_noise_free",
     "sensor_compute_array",
     "sensor_compute_samples",
     "sensor_crop",
@@ -1504,9 +1516,13 @@ mlRadiance = ml_radiance
 mlAnalyzeArrayEtendue = ml_analyze_array_etendue
 sensorCompute = sensor_compute
 sensorComputeArray = sensor_compute_array
+sensorComputeFullArray = sensor_compute_full_array
+sensorComputeImage = sensor_compute_image
+sensorComputeNoiseFree = sensor_compute_noise_free
 sensorComputeSamples = sensor_compute_samples
 imx490Compute = imx490_compute
 sensorAddFilter = sensor_add_filter
+sensorAddNoise = sensor_add_noise
 sensorCFANameList = sensor_cfa_name_list
 sensorCCM = sensor_ccm
 sensorCheckArray = sensor_check_array

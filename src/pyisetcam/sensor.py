@@ -3057,6 +3057,202 @@ def noise_column_fpn(sensor: Sensor, seed: int | None = None) -> tuple[np.ndarra
     return np.asarray(noisy_image, dtype=float), col_dsnu, col_prnu
 
 
+def sensor_compute_noise_free(
+    sensor: Sensor,
+    oi: OpticalImage,
+    *,
+    seed: int | None = None,
+    session: SessionContext | None = None,
+) -> Sensor:
+    """Compute the mean sensor-voltage image without noise, clipping, or quantization."""
+
+    working = sensor.clone()
+    original_noise_flag = int(sensor_get(working, "noise flag"))
+    original_quantization = str(sensor_get(working, "quantization method"))
+    original_analog_gain = float(sensor_get(working, "analog gain"))
+    original_analog_offset = float(sensor_get(working, "analog offset"))
+    original_voltage_swing = float(sensor_get(working, "pixel voltage swing"))
+
+    integration_time = np.asarray(sensor_get(working, "integration time"), dtype=float)
+    if bool(sensor_get(working, "auto exposure")) or (
+        integration_time.ndim == 0 and float(integration_time) <= 0.0
+    ):
+        exposure_time = _auto_exposure_default(working, oi)
+        working = sensor_set(working, "integration time", exposure_time)
+
+    working = sensor_set(working, "noise flag", 0)
+    working = sensor_set(working, "quantization method", "analog")
+    working = sensor_set(working, "analog gain", 1.0)
+    working = sensor_set(working, "analog offset", 0.0)
+    working.fields["pixel"] = dict(working.fields["pixel"])
+    working.fields["pixel"]["voltage_swing"] = 1.0e6
+
+    computed = sensor_compute(working, oi, seed=seed, session=session)
+    computed.fields["pixel"] = dict(computed.fields["pixel"])
+    computed.fields["pixel"]["voltage_swing"] = original_voltage_swing
+    computed = sensor_set(computed, "noise flag", original_noise_flag)
+    computed = sensor_set(computed, "quantization method", original_quantization)
+    computed = sensor_set(computed, "analog gain", original_analog_gain)
+    computed = sensor_set(computed, "analog offset", original_analog_offset)
+    return computed
+
+
+def sensor_add_noise(sensor: Sensor, *, seed: int | None = None) -> Sensor:
+    """Add legacy photon/electrical/FPN noise to a precomputed mean-voltage sensor image."""
+
+    updated = sensor.clone()
+    base_volts = updated.data.get("volts")
+    if base_volts is None:
+        raise ValueError("sensorAddNoise requires sensor volts.")
+
+    noise_flag = int(sensor_get(updated, "noise flag"))
+    if noise_flag == 0:
+        return updated
+    if noise_flag not in {-2, 1, 2}:
+        raise UnsupportedOptionError("sensorAddNoise", f"noise flag {noise_flag}")
+
+    if seed is None:
+        seed_value = int(updated.fields.get("noise_seed", 0))
+    else:
+        seed_value = int(seed)
+    updated.fields["noise_seed"] = seed_value
+    rng = np.random.default_rng(seed_value)
+
+    pixel = dict(updated.fields["pixel"])
+    conversion_gain = float(pixel["conversion_gain_v_per_electron"])
+    dark_voltage = float(pixel["dark_voltage_v_per_sec"])
+    read_noise = float(pixel["read_noise_v"])
+
+    integration_time = np.asarray(sensor_get(updated, "integration time"), dtype=float)
+    if integration_time.ndim > 1:
+        raise UnsupportedOptionError("sensorAddNoise", "matrix integration times")
+    exposure_times = integration_time.reshape(-1)
+    base = np.asarray(base_volts, dtype=float)
+    if base.ndim == 2:
+        captures = [base.copy()]
+    elif base.ndim == 3:
+        captures = [base[:, :, index].copy() for index in range(base.shape[2])]
+    else:
+        raise ValueError("sensorAddNoise expects 2-D or 3-D sensor volts.")
+
+    dsnu_image = None if updated.fields.get("offset_fpn_image") is None else np.asarray(updated.fields["offset_fpn_image"], dtype=float).copy()
+    prnu_image = None if updated.fields.get("gain_fpn_image") is None else np.asarray(updated.fields["gain_fpn_image"], dtype=float).copy()
+    column_dsnu = None if updated.fields.get("column_offset_fpn") is None else np.asarray(updated.fields["column_offset_fpn"], dtype=float).reshape(-1).copy()
+    column_prnu = None if updated.fields.get("column_gain_fpn") is None else np.asarray(updated.fields["column_gain_fpn"], dtype=float).reshape(-1).copy()
+
+    noisy_captures: list[np.ndarray] = []
+    for index, capture in enumerate(captures):
+        exposure_time = float(exposure_times[index]) if exposure_times.size > 1 else float(exposure_times[0] if exposure_times.size == 1 else 0.0)
+        volts = np.asarray(capture, dtype=float).copy()
+
+        if noise_flag == 2:
+            volts = volts + (dark_voltage * exposure_time)
+
+        volts = _shot_noise_electrons(rng, volts / max(conversion_gain, 1e-12)) * conversion_gain
+
+        if noise_flag == 2:
+            volts = _apply_read_noise(rng, volts, read_noise)
+
+        if noise_flag in {1, 2}:
+            stage_sensor = updated.clone()
+            stage_sensor.data["volts"] = volts
+            if dsnu_image is not None:
+                stage_sensor.fields["offset_fpn_image"] = dsnu_image.copy()
+            if prnu_image is not None:
+                stage_sensor.fields["gain_fpn_image"] = prnu_image.copy()
+            volts, dsnu_image, prnu_image = noise_fpn(stage_sensor, seed=seed_value if dsnu_image is None or prnu_image is None else None)
+
+            stage_sensor = updated.clone()
+            stage_sensor.data["volts"] = volts
+            if column_dsnu is not None:
+                stage_sensor.fields["column_offset_fpn"] = column_dsnu.copy()
+            if column_prnu is not None:
+                stage_sensor.fields["column_gain_fpn"] = column_prnu.copy()
+            volts, column_dsnu, column_prnu = noise_column_fpn(
+                stage_sensor,
+                seed=seed_value if column_dsnu is None or column_prnu is None else None,
+            )
+
+        noisy_captures.append(np.asarray(volts, dtype=float))
+
+    if dsnu_image is not None:
+        updated.fields["offset_fpn_image"] = dsnu_image.copy()
+    if prnu_image is not None:
+        updated.fields["gain_fpn_image"] = prnu_image.copy()
+    if column_dsnu is not None:
+        updated.fields["column_offset_fpn"] = column_dsnu.copy()
+    if column_prnu is not None:
+        updated.fields["column_gain_fpn"] = column_prnu.copy()
+
+    updated.data["volts"] = noisy_captures[0] if len(noisy_captures) == 1 else np.stack(noisy_captures, axis=2)
+    return updated
+
+
+def sensor_compute_image(
+    oi: OpticalImage,
+    sensor: Sensor,
+    w_bar: Any | None = None,
+    *,
+    seed: int | None = None,
+) -> tuple[np.ndarray, np.ndarray | None, np.ndarray | None]:
+    """Return the legacy MATLAB sensorComputeImage voltage image and FPN payloads."""
+
+    del w_bar
+    noise_free = sensor_compute_noise_free(sensor, oi, seed=seed)
+    noisy = sensor_add_noise(noise_free, seed=seed)
+    analog_gain = float(sensor_get(sensor, "analog gain"))
+    analog_offset = float(sensor_get(sensor, "analog offset"))
+    volt_image = (np.asarray(noisy.data["volts"], dtype=float) + analog_offset) / max(analog_gain, 1e-12)
+    dsnu = noisy.fields.get("offset_fpn_image")
+    prnu = noisy.fields.get("gain_fpn_image")
+    return (
+        np.asarray(volt_image, dtype=float),
+        None if dsnu is None else np.asarray(dsnu, dtype=float).copy(),
+        None if prnu is None else np.asarray(prnu, dtype=float).copy(),
+    )
+
+
+def sensor_compute_full_array(
+    sensor: Sensor,
+    oi: OpticalImage,
+    c_filters: Any | None = None,
+    *,
+    seed: int | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Compute full-array volt and DV images for each supplied filter spectrum."""
+
+    if c_filters is None:
+        filter_spectra = np.asarray(sensor_get(sensor, "color filters"), dtype=float)
+    else:
+        filter_spectra = np.asarray(c_filters, dtype=float)
+    if filter_spectra.ndim == 1:
+        filter_spectra = filter_spectra.reshape(-1, 1)
+
+    rows, cols = map(int, sensor_get(sensor, "size"))
+    num_channels = int(filter_spectra.shape[1])
+    volts = np.zeros((rows, cols, num_channels), dtype=float)
+    dvs = np.zeros((rows, cols, num_channels), dtype=float)
+
+    for channel_index in range(num_channels):
+        current = sensor.clone()
+        current.fields["mosaic"] = False
+        current.fields["pattern"] = np.array([[1]], dtype=int)
+        current = sensor_set(current, "filter spectra", filter_spectra[:, channel_index].reshape(-1, 1))
+        current = sensor_set(current, "filter names", [f"Channel-{channel_index + 1}"])
+        current = sensor_compute(current, oi, seed=None if seed is None else int(seed) + channel_index)
+        channel_volts = np.asarray(sensor_get(current, "volts"), dtype=float)
+        if channel_volts.ndim == 3 and channel_volts.shape[2] == 1:
+            channel_volts = channel_volts[:, :, 0]
+        volts[:, :, channel_index] = channel_volts
+        if param_format(sensor_get(current, "quantization method")) != "analog" and current.data.get("dv") is not None:
+            channel_dv = np.asarray(sensor_get(current, "dv"), dtype=float)
+            if channel_dv.ndim == 3 and channel_dv.shape[2] == 1:
+                channel_dv = channel_dv[:, :, 0]
+            dvs[:, :, channel_index] = channel_dv
+
+    return volts, dvs
+
+
 def sensor_show_image(
     sensor: Sensor,
     gam: float | None = None,
@@ -5699,6 +5895,10 @@ def sensor_ccm(
 
 
 sensorComputeSamples = sensor_compute_samples
+sensorComputeNoiseFree = sensor_compute_noise_free
+sensorAddNoise = sensor_add_noise
+sensorComputeImage = sensor_compute_image
+sensorComputeFullArray = sensor_compute_full_array
 sensorDR = sensor_dr
 sensorCCM = sensor_ccm
 analog2digital = analog_to_digital

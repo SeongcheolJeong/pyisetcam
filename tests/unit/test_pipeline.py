@@ -277,10 +277,18 @@ from pyisetcam import (
     sensor_ccm,
     sensorAddFilter,
     sensorCFANameList,
+    sensorAddNoise,
     sensorClearData,
     sensorCheckArray,
     sensor_compute,
     sensor_compute_array,
+    sensorComputeFullArray,
+    sensorComputeImage,
+    sensorComputeNoiseFree,
+    sensor_add_noise,
+    sensor_compute_full_array,
+    sensor_compute_image,
+    sensor_compute_noise_free,
     sensor_compute_samples,
     sensor_color_filter,
     sensorColorOrder,
@@ -5372,6 +5380,56 @@ def test_sensor_no_noise_matches_legacy_parameter_reset(asset_store) -> None:
     assert np.isclose(float(sensor_get(noiseless, "pixel dark voltage")), 0.0)
     assert np.isclose(float(sensor_get(sensor, "prnulevel")), 12.5)
     assert np.isclose(float(sensor_get(sensor, "pixel read noise volts")), 1.5e-3)
+
+
+def test_sensor_simulation_legacy_wrappers(asset_store) -> None:
+    scene = scene_create("uniform ee", 8, np.array([500.0, 600.0, 700.0], dtype=float), asset_store=asset_store)
+    oi = oi_compute(oi_create(), scene)
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 8)
+    sensor = sensor_set(sensor, "cols", 8)
+    sensor = sensor_set(sensor, "integration time", 0.01)
+    sensor = sensor_set(sensor, "auto exposure", False)
+    sensor = sensor_set(sensor, "analog gain", 2.0)
+    sensor = sensor_set(sensor, "analog offset", 0.05)
+    sensor = sensor_set(sensor, "quantization method", "linear")
+    sensor = sensor_set(sensor, "noise flag", 2)
+    sensor = sensor_set(sensor, "prnulevel", 5.0)
+    sensor = sensor_set(sensor, "dsnulevel", 0.01)
+    sensor = sensor_set(sensor, "column fpn", np.array([0.002, 0.01], dtype=float))
+    sensor = sensor_set(sensor, "noise seed", 11)
+    sensor = sensor_set(sensor, "reuse noise", True)
+
+    noise_free = sensorComputeNoiseFree(sensor, oi)
+    noise_free_snake = sensor_compute_noise_free(sensor, oi)
+    assert np.allclose(np.asarray(sensor_get(noise_free, "volts"), dtype=float), np.asarray(sensor_get(noise_free_snake, "volts"), dtype=float))
+    assert sensor_get(noise_free, "quantization method") == "linear"
+    assert np.isclose(float(sensor_get(noise_free, "analog gain")), 2.0)
+    assert np.isclose(float(sensor_get(noise_free, "analog offset")), 0.05)
+    assert np.isclose(float(sensor_get(noise_free, "pixel voltage swing")), float(sensor_get(sensor, "pixel voltage swing")))
+
+    noisy_a = sensorAddNoise(noise_free)
+    noisy_b = sensor_add_noise(noise_free)
+    assert np.allclose(np.asarray(sensor_get(noisy_a, "volts"), dtype=float), np.asarray(sensor_get(noisy_b, "volts"), dtype=float))
+    assert np.asarray(noisy_a.fields["offset_fpn_image"], dtype=float).shape == tuple(sensor_get(sensor, "size"))
+    assert np.asarray(noisy_a.fields["gain_fpn_image"], dtype=float).shape == tuple(sensor_get(sensor, "size"))
+    assert np.asarray(noisy_a.fields["column_offset_fpn"], dtype=float).reshape(-1).size == int(sensor_get(sensor, "cols"))
+    assert np.asarray(noisy_a.fields["column_gain_fpn"], dtype=float).reshape(-1).size == int(sensor_get(sensor, "cols"))
+
+    volt_image, dsnu, prnu = sensorComputeImage(oi, sensor)
+    expected_noisy = sensorAddNoise(sensorComputeNoiseFree(sensor, oi))
+    expected_volt_image = (np.asarray(sensor_get(expected_noisy, "volts"), dtype=float) + 0.05) / 2.0
+    assert np.allclose(np.asarray(volt_image, dtype=float), expected_volt_image)
+    assert np.allclose(np.asarray(dsnu, dtype=float), np.asarray(expected_noisy.fields["offset_fpn_image"], dtype=float))
+    assert np.allclose(np.asarray(prnu, dtype=float), np.asarray(expected_noisy.fields["gain_fpn_image"], dtype=float))
+
+    filters = np.asarray(sensor_get(sensor, "color filters"), dtype=float)[:, :2]
+    full_volts, full_dvs = sensorComputeFullArray(sensor_set(sensor.clone(), "noise flag", 0), oi, filters)
+    full_volts_snake, full_dvs_snake = sensor_compute_full_array(sensor_set(sensor.clone(), "noise flag", 0), oi, filters)
+    assert np.allclose(full_volts, full_volts_snake)
+    assert np.allclose(full_dvs, full_dvs_snake)
+    assert full_volts.shape == (8, 8, 2)
+    assert full_dvs.shape == (8, 8, 2)
 
 
 def test_sensor_gain_offset_matches_legacy_voltage_formula(asset_store) -> None:
