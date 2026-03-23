@@ -32,6 +32,10 @@ from pyisetcam import (
     cmatrix,
     dac_to_rgb,
     macbeth_color_error,
+    macbethIdealColor,
+    macbethPatchData,
+    macbethROIs,
+    macbethRectangles,
     chromaticity_xy,
     cpiq_csf,
     adobergb_parameters,
@@ -13607,6 +13611,60 @@ def test_display_helper_compatibility_surface(asset_store) -> None:
         atol=1e-8,
         rtol=1e-8,
     )
+
+
+def test_macbeth_helper_compatibility_surface(asset_store) -> None:
+    scene = scene_create("macbeth d65", 16, asset_store=asset_store)
+    corner_points = np.array(
+        [
+            [64, 1],
+            [64, 96],
+            [1, 96],
+            [1, 1],
+        ],
+        dtype=float,
+    )
+
+    patch_locs, delta, patch_size = macbethRectangles(corner_points)
+    roi_locs, rect = macbethROIs(patch_locs[:, 0], delta)
+    patch_data, patch_std = macbethPatchData(scene, patch_locs, delta, data_type="photons")
+    full_patch_data, empty_std = macbethPatchData(scene, patch_locs, delta, full_data=True, data_type="photons")
+
+    manual_patch = np.asarray(vc_get_roi_data(scene, roi_locs, "photons"), dtype=float)
+    ideal_xyz = np.asarray(macbethIdealColor("D65", "XYZ", asset_store=asset_store), dtype=float)
+    ideal_lab = np.asarray(macbethIdealColor("tungsten", "LAB", asset_store=asset_store), dtype=float)
+    ideal_lrgb = np.asarray(macbethIdealColor("D65", "lRGB", asset_store=asset_store), dtype=float)
+    ideal_srgb = np.asarray(macbethIdealColor("D65", "sRGB", asset_store=asset_store), dtype=float)
+
+    assert patch_locs.shape == (2, 24)
+    assert delta == 5
+    assert patch_size == 11
+    assert rect.shape == (4,)
+    assert np.array_equal(rect[2:], np.array([5, 5], dtype=int))
+    assert 1 <= rect[0] <= 96
+    assert 1 <= rect[1] <= 64
+    assert roi_locs.shape == (36, 2)
+    assert patch_data.shape == (24, 31)
+    assert patch_std.shape == (24, 31)
+    assert len(full_patch_data) == 24
+    assert full_patch_data[0].shape == (36, 31)
+    assert empty_std.size == 0
+    assert np.allclose(full_patch_data[0], manual_patch, atol=1e-12, rtol=1e-12)
+    assert np.allclose(patch_data[0], np.mean(manual_patch, axis=0), atol=1e-12, rtol=1e-12)
+    patch_means = np.mean(patch_data, axis=1)
+    assert float(np.max(patch_means)) > float(np.min(patch_means))
+
+    assert ideal_xyz.shape == (24, 3)
+    assert ideal_lab.shape == (24, 3)
+    assert ideal_lrgb.shape == (24, 3)
+    assert ideal_srgb.shape == (24, 3)
+    assert np.isclose(float(np.max(ideal_xyz[:, 1])), 100.0, atol=1e-8, rtol=1e-8)
+    assert ideal_lab[3, 0] > ideal_lab[23, 0]
+    assert np.all(ideal_lrgb >= 0.0)
+    assert np.all(ideal_lrgb <= 1.0)
+    assert np.all(ideal_srgb >= 0.0)
+    assert np.all(ideal_srgb <= 1.0)
+    assert not np.allclose(ideal_lrgb, ideal_srgb)
 
 
 def test_scene_from_multispectral_script_workflow(asset_store) -> None:

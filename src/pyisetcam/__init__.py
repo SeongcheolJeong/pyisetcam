@@ -340,7 +340,11 @@ from .scene import (
     gabor_p,
     hdr_render,
     ie_checkerboard,
+    macbeth_ideal_color,
+    macbeth_patch_data,
     macbeth_read_reflectance,
+    macbeth_rectangles,
+    macbeth_rois,
     mo_target,
     scene_add,
     scene_add_grid,
@@ -519,6 +523,14 @@ __all__ = [
     "macbeth_color_error",
     "macbethCompareIdeal",
     "macbeth_compare_ideal",
+    "macbethIdealColor",
+    "macbeth_ideal_color",
+    "macbethPatchData",
+    "macbeth_patch_data",
+    "macbethRectangles",
+    "macbeth_rectangles",
+    "macbethROIs",
+    "macbeth_rois",
     "camera_set",
     "adobergb_parameters",
     "cct2sun",
@@ -1376,6 +1388,10 @@ scenePhotonsFromVector = scene_photons_from_vector
 sceneRadianceFromVector = scene_radiance_from_vector
 sceneReflectanceChart = scene_reflectance_chart
 macbethReadReflectance = macbeth_read_reflectance
+macbethIdealColor = macbeth_ideal_color
+macbethPatchData = macbeth_patch_data
+macbethRectangles = macbeth_rectangles
+macbethROIs = macbeth_rois
 sceneRotate = scene_rotate
 sceneSaveImage = scene_save_image
 sceneShowImage = scene_show_image

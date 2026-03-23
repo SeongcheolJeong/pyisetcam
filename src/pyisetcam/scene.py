@@ -990,6 +990,167 @@ def macbeth_read_reflectance(
     return reflectance[:, patch_array]
 
 
+def macbeth_rectangles(corner_points: Any) -> tuple[np.ndarray, int, int]:
+    """Return Macbeth patch centers plus ROI delta/patch size from 4 chart corners."""
+
+    corners = np.asarray(corner_points, dtype=float).reshape(4, 2)
+    corners = np.fliplr(corners)
+
+    offset = corners[0, :]
+    current = np.column_stack(
+        (
+            (corners[1, :] - offset).reshape(-1),
+            (corners[2, :] - offset).reshape(-1),
+            (corners[3, :] - offset).reshape(-1),
+        )
+    )
+    ideal = np.array([[6.0, 6.0, 0.0], [0.0, 4.0, 4.0]], dtype=float)
+    linear = current @ np.linalg.pinv(ideal)
+
+    x_loc, y_loc = np.meshgrid(np.arange(0.5, 6.0, 1.0, dtype=float), np.arange(0.5, 4.0, 1.0, dtype=float))
+    ideal_locs = np.vstack((x_loc.reshape(-1), y_loc.reshape(-1)))
+    patch_locs = np.rint(linear @ ideal_locs + offset.reshape(2, 1)).astype(int)
+    flip_order = np.array([4, 3, 2, 1, 8, 7, 6, 5, 12, 11, 10, 9, 16, 15, 14, 13, 20, 19, 18, 17, 24, 23, 22, 21], dtype=int) - 1
+    patch_locs = patch_locs[:, flip_order]
+
+    if abs(corners[0, 1] - corners[1, 1]) > abs(corners[0, 0] - corners[1, 0]):
+        delta_x = int(np.rint(abs(corners[0, 1] - corners[1, 1]) / 6.0))
+        delta_y = int(np.rint(abs(corners[0, 0] - corners[3, 1]) / 4.0))
+    else:
+        delta_y = int(np.rint(abs(corners[0, 0] - corners[1, 0]) / 6.0))
+        delta_x = int(np.rint(abs(corners[0, 1] - corners[3, 1]) / 4.0))
+    delta = int(np.rint(min(delta_x, delta_y) / 3.0))
+    patch_size = int((2 * delta) + 1)
+    return patch_locs, delta, patch_size
+
+
+def macbeth_rois(current_loc: Any, delta: int = 10) -> tuple[np.ndarray, np.ndarray]:
+    """Return MATLAB-style ROI locations and rect from a Macbeth patch center."""
+
+    from .roi import ie_rect2_locs
+
+    center = np.rint(np.asarray(current_loc, dtype=float).reshape(-1)).astype(int)
+    if center.size != 2:
+        raise ValueError("current_loc must contain [row, col].")
+    rect = np.array(
+        [
+            int(center[1] - np.rint(float(delta) / 2.0)),
+            int(center[0] - np.rint(float(delta) / 2.0)),
+            int(delta),
+            int(delta),
+        ],
+        dtype=int,
+    )
+    return ie_rect2_locs(rect), rect
+
+
+def macbeth_patch_data(
+    obj: Any,
+    m_locs: Any,
+    delta: int,
+    full_data: bool = False,
+    data_type: str | None = None,
+) -> tuple[Any, np.ndarray]:
+    """Return Macbeth patch data from a scene/OI/sensor/IP using headless ROI extraction."""
+
+    from .roi import vc_get_roi_data
+
+    locs = np.asarray(m_locs, dtype=int)
+    if locs.shape == (24, 2):
+        locs = locs.T
+    if locs.shape != (2, 24):
+        raise ValueError("m_locs must be a 2x24 matrix of [row, col] patch centers.")
+
+    if data_type is None:
+        obj_type = param_format(getattr(obj, "type", type(obj).__name__))
+        if obj_type == "scene":
+            data_type = "photons"
+        elif obj_type == "opticalimage":
+            data_type = "photons"
+        elif obj_type in {"sensor", "isa"}:
+            data_type = "dvorvolts"
+        else:
+            data_type = "result"
+
+    if full_data:
+        all_patch_data: list[np.ndarray] = []
+        for patch_index in range(24):
+            roi_locs, _ = macbeth_rois(locs[:, patch_index], delta)
+            all_patch_data.append(np.asarray(vc_get_roi_data(obj, roi_locs, data_type), dtype=float))
+        return all_patch_data, np.asarray([], dtype=float)
+
+    means: list[np.ndarray] = []
+    stds: list[np.ndarray] = []
+    for patch_index in range(24):
+        roi_locs, _ = macbeth_rois(locs[:, patch_index], delta)
+        patch_data = np.asarray(vc_get_roi_data(obj, roi_locs, data_type), dtype=float)
+        means.append(np.nanmean(patch_data, axis=0))
+        stds.append(np.nanstd(patch_data, axis=0))
+    return np.vstack(means), np.vstack(stds)
+
+
+def macbeth_ideal_color(
+    illuminant: Any = "D65",
+    color_space: str = "XYZ",
+    *,
+    asset_store: AssetStore | None = None,
+) -> np.ndarray:
+    """Return Macbeth target values for a given illuminant and color space."""
+
+    from .illuminant import illuminant_create, illuminant_get
+    from .metrics import xyz_to_lab
+    from .utils import rgb_to_xw_format, xw_to_rgb_format, xyz_to_linear_srgb
+
+    store = _store(asset_store)
+    if isinstance(illuminant, dict):
+        spectrum = illuminant.get("spectrum", {})
+        wave = np.asarray(spectrum.get("wave", illuminant.get("wave", DEFAULT_WAVE)), dtype=float).reshape(-1)
+    else:
+        wave = DEFAULT_WAVE.copy()
+    reflectance = macbeth_read_reflectance(wave, np.arange(1, 25, dtype=int), asset_store=store)
+
+    if isinstance(illuminant, str):
+        illuminant_obj = illuminant_create(illuminant, wave, 100.0, asset_store=store)
+        illuminant_energy = np.asarray(illuminant_get(illuminant_obj, "energy", asset_store=store), dtype=float).reshape(-1)
+    elif isinstance(illuminant, dict):
+        illuminant_name = str(illuminant.get("name", "D65"))
+        luminance = float(illuminant.get("luminance", 100.0))
+        if "energy" in illuminant:
+            illuminant_energy = np.asarray(illuminant["energy"], dtype=float).reshape(-1)
+        elif "photons" in illuminant:
+            illuminant_energy = quanta_to_energy(np.asarray(illuminant["photons"], dtype=float).reshape(-1), wave)
+        elif param_format(illuminant_name) == "blackbody":
+            temperature = float(illuminant.get("temperature", 5000.0))
+            illuminant_obj = illuminant_create("blackbody", wave, temperature, luminance, asset_store=store)
+            illuminant_energy = np.asarray(illuminant_get(illuminant_obj, "energy", asset_store=store), dtype=float).reshape(-1)
+        elif param_format(illuminant_name) == "daylight":
+            temperature = float(illuminant.get("temperature", illuminant.get("cct", 6500.0)))
+            illuminant_obj = illuminant_create("daylight", wave, temperature, luminance, asset_store=store)
+            illuminant_energy = np.asarray(illuminant_get(illuminant_obj, "energy", asset_store=store), dtype=float).reshape(-1)
+        else:
+            illuminant_obj = illuminant_create(illuminant_name, wave, luminance, asset_store=store)
+            illuminant_energy = np.asarray(illuminant_get(illuminant_obj, "energy", asset_store=store), dtype=float).reshape(-1)
+    else:
+        illuminant_energy = np.asarray(illuminant_get(illuminant, "energy", asset_store=store), dtype=float).reshape(-1)
+
+    color_signal = reflectance * illuminant_energy.reshape(-1, 1)
+    normalized_space = param_format(color_space)
+    if normalized_space == "xyz":
+        target = xyz_from_energy(color_signal.T, wave, asset_store=store)
+        return 100.0 * (target / max(float(np.max(target[:, 1])), 1e-12))
+    if normalized_space == "lab":
+        macbeth_xyz = macbeth_ideal_color(illuminant, "xyz", asset_store=store)
+        return xyz_to_lab(macbeth_xyz, macbeth_xyz[3, :])
+    if normalized_space == "lrgb":
+        macbeth_xyz = macbeth_ideal_color(illuminant, "xyz", asset_store=store) / 100.0
+        linear_rgb = xyz_to_linear_srgb(xw_to_rgb_format(macbeth_xyz, 1, 24))
+        return np.asarray(rgb_to_xw_format(np.clip(linear_rgb, 0.0, 1.0))[0], dtype=float)
+    if normalized_space == "srgb":
+        macbeth_xyz = macbeth_ideal_color(illuminant, "xyz", asset_store=store)
+        return np.asarray(rgb_to_xw_format(xyz_to_srgb(xw_to_rgb_format(macbeth_xyz, 1, 24)))[0], dtype=float)
+    raise UnsupportedOptionError("macbethIdealColor", color_space)
+
+
 def _scale_energy_to_luminance(
     energy: np.ndarray,
     wave: np.ndarray,
