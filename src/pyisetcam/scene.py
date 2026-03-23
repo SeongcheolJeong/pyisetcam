@@ -2110,6 +2110,109 @@ def _exponential_intensity_ramp_image(size: Any, dynamic_range: float) -> np.nda
     return image / max(float(np.max(image)), 1e-12)
 
 
+def fot_params() -> dict[str, Any]:
+    """Return the legacy MATLAB FOTParams defaults."""
+
+    return {
+        "angles": np.linspace(0.0, np.pi / 2.0, 8, dtype=float),
+        "freqs": np.arange(1.0, 9.0, dtype=float),
+        "blockSize": 32,
+        "contrast": 1.0,
+    }
+
+
+def gabor_p(value: Any | None = None, /, **kwargs: Any) -> dict[str, Any]:
+    """Return the legacy MATLAB gaborP parameter structure."""
+
+    normalized = _normalized_parameter_dict(value)
+    if kwargs:
+        normalized.update(_normalized_parameter_dict(kwargs))
+    return {
+        "orientation": float(normalized.get("orientation", 0.0)),
+        "contrast": float(normalized.get("contrast", 1.0)),
+        "frequency": float(normalized.get("frequency", 1.0)),
+        "phase": float(normalized.get("phase", np.pi / 2.0)),
+        "imagesize": int(np.rint(normalized.get("imagesize", 65))),
+        "spread": float(normalized.get("spread", 10.0)),
+    }
+
+
+def ie_checkerboard(check_period: int = 16, n_check_pairs: int = 8) -> np.ndarray:
+    """Create the legacy MATLAB checkerboard pattern image."""
+
+    period = max(int(np.rint(check_period)), 1)
+    pairs = max(int(np.rint(n_check_pairs)), 1)
+    basic_pattern = np.kron(np.array([[0.0, 1.0], [1.0, 0.0]], dtype=float), np.ones((period, period), dtype=float))
+    return np.tile(basic_pattern, (pairs, pairs))
+
+
+def mo_target(pattern: str = "sinusoidalim", parms: Any | None = None) -> np.ndarray:
+    """Create the legacy MATLAB moire-orientation RGB target image."""
+
+    normalized = _normalized_parameter_dict(parms)
+    scene_size = max(int(np.rint(normalized.get("scenesize", 512))), 1)
+    frequency = float(normalized.get("f", 1.0 / scene_size / 10.0))
+    x, y = np.meshgrid(np.arange(1.0, scene_size + 1.0, dtype=float), np.arange(1.0, scene_size + 1.0, dtype=float))
+    distance = np.sqrt(x * x + y * y)
+
+    normalized_pattern = param_format(pattern)
+    if normalized_pattern == "sinusoidalim":
+        image = np.sin(np.pi * frequency * distance * distance)
+    elif normalized_pattern == "squareim":
+        image = np.sin(np.pi * frequency * distance * distance)
+        image = (1.0 + np.sign(image - 0.5)) / 2.0
+    elif normalized_pattern in {"sinusoidalimline", "squareimline"}:
+        line_frequency = float(normalized.get("fline", 0.001))
+        theta_line = float(normalized.get("thetaline", np.pi / 2.0))
+        spacing = normalized.get("spacingline")
+        if spacing is None:
+            spacing_array = np.arange(1.0, 501.0, dtype=float)
+        else:
+            spacing_array = np.asarray(spacing, dtype=float).reshape(-1)
+        x_line, y_line = np.meshgrid((2.0 * np.pi / max(line_frequency, 1e-30)) * spacing_array, spacing_array)
+        image = np.sin(line_frequency * (np.cos(theta_line) * x_line + np.sin(theta_line) * y_line) ** 2)
+        if normalized_pattern == "squareimline":
+            image = (1.0 + np.sign(image - 0.5)) / 2.0
+    elif normalized_pattern == "flat":
+        image = np.full((500, 500), 255.0, dtype=float)
+    else:
+        raise UnsupportedOptionError("MOTarget", pattern)
+
+    image = np.asarray(image, dtype=float).T
+    return np.repeat(image[:, :, None], 3, axis=2)
+
+
+def scene_ramp(
+    scene: Scene,
+    sz: Any = 128,
+    dynamic_range: float = 256.0,
+    *,
+    asset_store: AssetStore | None = None,
+) -> Scene:
+    """Apply the legacy MATLAB sceneRamp contract to a scene object."""
+
+    if not isinstance(scene, Scene):
+        raise ValueError("sceneRamp requires a scene input.")
+
+    current = scene.clone()
+    wave = current.fields.get("wave")
+    if wave is None:
+        wave = _wave_or_default(None)
+    wave_array = np.asarray(wave, dtype=float).reshape(-1)
+    ramp = _equal_photon_pattern_scene(
+        f"ramp DR {float(dynamic_range):.1f}",
+        _linear_intensity_ramp_image(sz, dynamic_range),
+        wave_array,
+        fov_deg=float(current.fields.get("fov_deg", DEFAULT_FOV_DEG)),
+        asset_store=_store(asset_store),
+    )
+    if "distance_m" in current.fields:
+        ramp.fields["distance_m"] = float(current.fields["distance_m"])
+        _update_scene_geometry(ramp)
+    ramp.metadata = dict(current.metadata)
+    return ramp
+
+
 def _equal_photon_pattern_scene(
     name: str,
     image: np.ndarray,
@@ -2631,6 +2734,16 @@ def scene_create(
             "wave": wave.copy(),
         }
         return track_session_object(session, scene)
+
+    if name == "ramp":
+        size = args[0] if len(args) > 0 else 128
+        dynamic_range = float(args[1]) if len(args) > 1 else 256.0
+        wave = _wave_or_default(args[2] if len(args) > 2 else None)
+        base_scene = Scene(name="ramp")
+        base_scene.fields["wave"] = wave.copy()
+        base_scene.fields["distance_m"] = DEFAULT_DISTANCE_M
+        base_scene.fields["fov_deg"] = DEFAULT_FOV_DEG
+        return track_session_object(session, scene_ramp(base_scene, size, dynamic_range, asset_store=store))
 
     if name in {"linearintensityramp", "linearramp"}:
         size = args[0] if len(args) > 0 else 128

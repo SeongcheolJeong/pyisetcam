@@ -324,8 +324,12 @@ from .session import (
     vc_select_figure,
 )
 from .scene import (
+    fot_params,
+    gabor_p,
     hdr_render,
+    ie_checkerboard,
     macbeth_read_reflectance,
+    mo_target,
     scene_add,
     scene_add_grid,
     scene_adjust_pixel_size,
@@ -354,6 +358,7 @@ from .scene import (
     scene_photons_from_vector,
     scene_radiance_from_vector,
     scene_reflectance_chart,
+    scene_ramp,
     ie_reflectance_samples,
     scene_rotate,
     scene_save_image,
@@ -984,12 +989,17 @@ __all__ = [
     "run_python_case_with_context",
     "hdrRender",
     "hdr_render",
+    "FOTParams",
+    "gaborP",
+    "ieCheckerboard",
+    "MOTarget",
     "sceneAdjustIlluminant",
     "sceneAdd",
     "sceneAddGrid",
     "sceneAdjustPixelSize",
     "sceneAdjustLuminance",
     "sceneAdjustReflectance",
+    "sceneRamp",
     "sceneCalculateLuminance",
     "sceneClearData",
     "sceneCombine",
@@ -1046,6 +1056,7 @@ __all__ = [
     "scene_photons_from_vector",
     "scene_radiance_from_vector",
     "scene_reflectance_chart",
+    "scene_ramp",
     "scene_rotate",
     "scene_save_image",
     "scene_show_image",
@@ -1055,6 +1066,10 @@ __all__ = [
     "scene_spd_scale",
     "scene_thumbnail",
     "scene_translate",
+    "fot_params",
+    "gabor_p",
+    "ie_checkerboard",
+    "mo_target",
     "analog_to_digital",
     "mlAnalyzeArrayEtendue",
     "mlRadiance",
@@ -1331,6 +1346,7 @@ sceneSpatialSupport = scene_spatial_support
 sceneSet = scene_set
 sceneThumbnail = scene_thumbnail
 sceneTranslate = scene_translate
+sceneRamp = scene_ramp
 hdrRender = hdr_render
 sceneAdd = scene_add
 sceneAddGrid = scene_add_grid
@@ -1342,6 +1358,10 @@ sceneAdjustLuminance = scene_adjust_luminance
 sceneAdjustReflectance = scene_adjust_reflectance
 sceneCalculateLuminance = scene_calculate_luminance
 sceneSPDScale = scene_spd_scale
+FOTParams = fot_params
+gaborP = gabor_p
+ieCheckerboard = ie_checkerboard
+MOTarget = mo_target
 analog2digital = analog_to_digital
 noiseFPN = noise_fpn
 noiseColumnFPN = noise_column_fpn

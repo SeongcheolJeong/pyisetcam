@@ -41,6 +41,8 @@ from pyisetcam import (
     display_get,
     edge_to_mtf,
     exposureValue,
+    FOTParams,
+    gaborP,
     hc_basis,
     image_flip,
     image_increase_image_rgb_size,
@@ -54,6 +56,7 @@ from pyisetcam import (
     ie_save_color_filter,
     ie_save_multispectral_image,
     ie_save_si_data_file,
+    ieCheckerboard,
     ieCirclePoints,
     ieConv2FFT,
     ieCTemp2SRGB,
@@ -86,6 +89,7 @@ from pyisetcam import (
     macbeth_read_reflectance,
     macbeth_compare_ideal,
     mkInvGammaTable,
+    MOTarget,
     lensList,
     optics_build_2d_otf,
     opticsClearData,
@@ -185,6 +189,7 @@ from pyisetcam import (
     sceneAdjustPixelSize,
     sceneAdjustReflectance,
     sceneIlluminantScale,
+    sceneRamp,
     sceneSPDScale,
     scene_adjust_illuminant,
     scene_combine,
@@ -209,6 +214,7 @@ from pyisetcam import (
     scenePhotonsFromVector,
     sceneRadianceFromVector,
     scene_reflectance_chart,
+    scene_ramp,
     scene_rotate,
     sceneSaveImage,
     scene_show_image,
@@ -13175,6 +13181,56 @@ def test_scene_legacy_arithmetic_wrappers(asset_store) -> None:
     assert np.allclose(gridded_photons[:, -1, :], 0.0)
     assert np.allclose(gridded_photons[3, :, :], 0.0)
     assert np.allclose(gridded_photons[:, 3, :], 0.0)
+
+
+def test_scene_pattern_legacy_wrappers(asset_store) -> None:
+    fot = FOTParams()
+    assert np.allclose(np.asarray(fot["angles"], dtype=float), np.linspace(0.0, np.pi / 2.0, 8))
+    assert np.array_equal(np.asarray(fot["freqs"], dtype=float), np.arange(1.0, 9.0, dtype=float))
+    assert fot["blockSize"] == 32
+    assert np.isclose(float(fot["contrast"]), 1.0)
+
+    gabor = gaborP(orientation=0.25, spread=7)
+    assert np.isclose(float(gabor["orientation"]), 0.25)
+    assert np.isclose(float(gabor["phase"]), np.pi / 2.0)
+    assert int(gabor["imagesize"]) == 65
+    assert np.isclose(float(gabor["spread"]), 7.0)
+
+    checker = ieCheckerboard(2, 2)
+    expected_checker = np.array(
+        [
+            [0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0],
+            [0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0],
+            [1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0],
+            [1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0],
+            [0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0],
+            [1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0],
+            [1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0],
+        ],
+        dtype=float,
+    )
+    assert np.array_equal(checker, expected_checker)
+
+    moire = MOTarget("squareim", {"sceneSize": 8, "f": 1.0 / 80.0})
+    assert moire.shape == (8, 8, 3)
+    assert np.array_equal(moire[:, :, 0], moire[:, :, 1])
+    assert np.array_equal(moire[:, :, 1], moire[:, :, 2])
+    assert set(np.unique(moire[:, :, 0]).tolist()).issubset({0.0, 1.0})
+
+    base = scene_create("uniform ee", 4, np.array([500.0, 600.0], dtype=float), asset_store=asset_store)
+    base = scene_set(base, "fov", 7.0)
+    ramp = sceneRamp(base, 16, 64.0, asset_store=asset_store)
+    ramp_direct = scene_ramp(base, 16, 64.0, asset_store=asset_store)
+    ramp_from_create = scene_create("ramp", 16, 64.0, np.array([500.0, 600.0], dtype=float), asset_store=asset_store)
+
+    assert ramp.name == "ramp DR 64.0"
+    assert tuple(scene_get(ramp, "size")) == (16, 16)
+    assert np.isclose(float(scene_get(ramp, "fov")), 7.0)
+    assert np.array_equal(np.asarray(scene_get(ramp, "wave"), dtype=float), np.asarray(scene_get(base, "wave"), dtype=float))
+    assert np.array_equal(np.asarray(scene_get(ramp, "photons"), dtype=float), np.asarray(scene_get(ramp_direct, "photons"), dtype=float))
+    assert tuple(scene_get(ramp_from_create, "size")) == (16, 16)
+    assert ramp_from_create.name == "ramp DR 64.0"
 
 
 def test_scene_geometry_resample_and_noise_wrappers(asset_store) -> None:

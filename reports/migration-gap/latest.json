@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-23T12:50:10.077058+00:00",
+  "generated_at": "2026-03-23T13:35:11.903312+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-23T12:50:10.077058+00:00",
+    "generated_at": "2026-03-23T13:35:11.903312+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 92,
       "missing": 37,
       "out_of_scope": 125,
-      "parity": 497,
-      "partial": 656,
+      "parity": 502,
+      "partial": 651,
       "ported": 36
     },
     "kind_counts": {
@@ -22,10 +22,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 223,
+      "P0": 218,
       "P1": 381,
       "P2": 181,
-      "P3": 658
+      "P3": 663
     },
     "delta_from_previous": {
       "status_counts": {
@@ -585,8 +585,8 @@
         "total": 23,
         "by_status": {
           "headless_only": 1,
-          "parity": 8,
-          "partial": 11,
+          "parity": 13,
+          "partial": 6,
           "ported": 3
         },
         "by_kind": {
@@ -1049,17 +1049,6 @@
         }
       },
       {
-        "family": "scene/pattern",
-        "open_entries": 12,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "headless_only": 1,
-          "parity": 8,
-          "partial": 11,
-          "ported": 3
-        }
-      },
-      {
         "family": "sensor",
         "open_entries": 12,
         "highest_open_priority": "P0",
@@ -1148,6 +1137,14 @@
         "by_status": {
           "partial": 8
         }
+      },
+      {
+        "family": "scene/imgtargets",
+        "open_entries": 8,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "partial": 8
+        }
       }
     ],
     "exception_sites_by_module": {
@@ -1224,7 +1221,7 @@
         "not_implemented_error_sites": 0
       },
       "scene": {
-        "unsupported_option_error_sites": 9,
+        "unsupported_option_error_sites": 10,
         "not_implemented_error_sites": 0
       },
       "scielab": {
