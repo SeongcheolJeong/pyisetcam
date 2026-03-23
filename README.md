@@ -1128,6 +1128,14 @@ That same image-processing surface now also exposes
 `ip_to_lightfield(...)` / `ip2lightfield(...)` for the legacy
 Light Field Toolbox utility and IP-export helper family.
 That same image-processing surface now also exposes
+`lf_filt_shift_sum(...)` / `LFFiltShiftSum(...)`,
+`lf_autofocus(...)` / `LFAutofocus(...)`, and
+`demosaic_rccc(...)` / `demosaicRCCC(...)`, covering the remaining
+headless Light Field Toolbox planar-focus/autofocus helpers plus the
+RCCC monochrome demosaic path while treating upstream `lcc1.m`,
+`shtlin.m`, and `shtlog.m` as incomplete legacy algorithms outside the
+supported migration target.
+That same image-processing surface now also exposes
 `image_sensor_conversion(...)` / `imageSensorConversion(...)` and
 `image_sensor_correction(...)` / `imageSensorCorrection(...)`, matching
 the direct MATLAB sensor-to-ICS entry points on top of the existing IP

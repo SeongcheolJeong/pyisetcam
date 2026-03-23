@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import copy
+from datetime import UTC, datetime
 from pathlib import Path
 import tempfile
 from typing import Any
 
 import imageio.v3 as iio
 import numpy as np
-from scipy.ndimage import gaussian_filter
+from scipy.ndimage import gaussian_filter, map_coordinates
 from scipy.signal import convolve2d
 
 from .assets import AssetStore, ie_read_spectra
@@ -617,6 +618,192 @@ def ip_to_lightfield(ip: ImageProcessor, *args: Any, **kwargs: Any) -> np.ndarra
                 :,
             ]
     return lightfield
+
+
+def _lf_interp_order(interp_method: str) -> int:
+    normalized = param_format(interp_method)
+    if normalized in {"nearest"}:
+        return 0
+    if normalized in {"linear"}:
+        return 1
+    if normalized in {"cubic", "spline"}:
+        return 3
+    raise UnsupportedOptionError("LFFiltShiftSum", interp_method)
+
+
+def demosaic_rccc(mosaic_image: Any) -> np.ndarray:
+    """Convert RCCC sensor planes into a monochrome image."""
+
+    mosaic = np.asarray(mosaic_image, dtype=float)
+    if mosaic.ndim != 3 or mosaic.shape[2] < 2:
+        raise ValueError("demosaicRCCC requires an RCCC plane stack with at least two channels.")
+    rows, cols = mosaic.shape[:2]
+    if rows < 2 or cols < 2:
+        raise ValueError("demosaicRCCC requires at least a 2x2 input image.")
+
+    kernel = np.array(
+        [
+            [0.0, 0.0, -1.0, 0.0, 0.0],
+            [0.0, 0.0, 2.0, 0.0, 0.0],
+            [-1.0, 2.0, 4.0, 2.0, -1.0],
+            [0.0, 0.0, 2.0, 0.0, 0.0],
+            [0.0, 0.0, -1.0, 0.0, 0.0],
+        ],
+        dtype=float,
+    ) / 8.0
+
+    mosaic_ex = np.concatenate((mosaic[:, 1:2, :], mosaic, mosaic[:, -2:-1, :]), axis=1)
+    mosaic_ex = np.concatenate((mosaic_ex[1:2, :, :], mosaic_ex, mosaic_ex[-2:-1, :, :]), axis=0)
+
+    r_ex = mosaic_ex[:, :, 0]
+    c_ex = mosaic_ex[:, :, 1]
+    r_mask = (r_ex != 0).astype(float)
+    r_conv = convolve2d(r_ex + c_ex, kernel, mode="same") * r_mask
+    return c_ex[1:-1, 1:-1] + r_conv[1:-1, 1:-1]
+
+
+def lf_filt_shift_sum(
+    lf: Any,
+    slope: float,
+    filt_options: dict[str, Any] | None = None,
+) -> tuple[np.ndarray, dict[str, Any], np.ndarray]:
+    """Shift light-field slices to a common depth and flatten them."""
+
+    options = lf_default_field(filt_options, "Precision", "single")
+    options = lf_default_field(options, "Normalize", True)
+    precision_name = str(options["Precision"])
+    precision_array = np.array(0.0, dtype=lf_convert_to_float(np.array([0]), precision_name).dtype)
+    options = lf_default_field(options, "MinWeight", 10.0 * float(np.finfo(precision_array.dtype).eps))
+    options = lf_default_field(options, "Aspect4D", 1.0)
+    options = lf_default_field(options, "FlattenMethod", "sum")
+    options = lf_default_field(options, "InterpMethod", "linear")
+    options = lf_default_field(options, "ExtrapVal", 0.0)
+
+    aspect4d = np.asarray(options["Aspect4D"], dtype=float).reshape(-1)
+    if aspect4d.size == 1:
+        aspect4d = np.repeat(aspect4d, 4)
+    if aspect4d.size != 4:
+        raise ValueError("LFFiltShiftSum requires `Aspect4D` to be scalar or length four.")
+    options["Aspect4D"] = aspect4d
+
+    working_lf = lf_convert_to_float(lf, precision_name)
+    if working_lf.ndim != 5:
+        raise ValueError("LFFiltShiftSum requires a 5-D light field.")
+
+    lf_size = working_lf.shape
+    n_col_chans = lf_size[4]
+    has_weight = n_col_chans in {2, 4}
+    n_color_chans = n_col_chans - 1 if has_weight else n_col_chans
+    normalize = bool(options["Normalize"])
+    if normalize:
+        if has_weight:
+            working_lf[:, :, :, :, :n_color_chans] *= working_lf[:, :, :, :, -1:]
+        else:
+            weight = np.ones(working_lf.shape[:4] + (1,), dtype=working_lf.dtype)
+            working_lf = np.concatenate((working_lf, weight), axis=4)
+
+    lf_size = working_lf.shape
+    t_dim, s_dim, v_dim, u_dim, _ = lf_size
+    tv_slope = float(slope) * aspect4d[2] / aspect4d[0]
+    su_slope = float(slope) * aspect4d[3] / aspect4d[1]
+    v_vec = np.linspace(-0.5, 0.5, t_dim, dtype=float) * tv_slope * t_dim
+    u_vec = np.linspace(-0.5, 0.5, s_dim, dtype=float) * su_slope * s_dim
+
+    interp_order = _lf_interp_order(str(options["InterpMethod"]))
+    extrap_val = float(options["ExtrapVal"])
+    vv, uu = np.meshgrid(np.arange(v_dim, dtype=float), np.arange(u_dim, dtype=float), indexing="ij")
+    shifted_lf = working_lf.copy()
+    for t_index, v_offset in enumerate(v_vec):
+        for s_index, u_offset in enumerate(u_vec):
+            coords = np.array([vv + float(v_offset), uu + float(u_offset)], dtype=float)
+            for channel_index in range(lf_size[4]):
+                shifted_lf[t_index, s_index, :, :, channel_index] = map_coordinates(
+                    shifted_lf[t_index, s_index, :, :, channel_index],
+                    coords,
+                    order=interp_order,
+                    mode="constant",
+                    cval=extrap_val,
+                    prefilter=interp_order > 1,
+                )
+
+    flatten_method = param_format(str(options["FlattenMethod"]))
+    if flatten_method == "sum":
+        img_out = np.sum(shifted_lf, axis=(0, 1))
+    elif flatten_method == "max":
+        img_out = np.max(shifted_lf, axis=(0, 1))
+    elif flatten_method == "median":
+        img_out = np.median(shifted_lf.reshape(t_dim * s_dim, v_dim, u_dim, lf_size[4]), axis=0)
+    else:
+        raise UnsupportedOptionError("LFFiltShiftSum", options["FlattenMethod"])
+
+    if normalize:
+        weight_chan = np.asarray(img_out[:, :, -1], dtype=float)
+        invalid = weight_chan < float(options["MinWeight"])
+        safe_weight = np.where(invalid, 1.0, weight_chan)
+        for channel_index in range(n_color_chans):
+            img_out[:, :, channel_index] = np.asarray(img_out[:, :, channel_index], dtype=float) / safe_weight
+            img_out[:, :, channel_index][invalid] = 0.0
+
+    options["FilterInfo"] = {
+        "mfilename": "LFFiltShiftSum",
+        "time": datetime.now(UTC).strftime("%d%b%Y_%H%M%S"),
+        "VersionStr": lf_toolbox_version(),
+    }
+    return np.asarray(img_out, dtype=shifted_lf.dtype), options, shifted_lf
+
+
+def lf_autofocus(
+    lightfield: Any,
+    rect: Any | None = None,
+    slope_range: Any | None = None,
+    slope_step: float | None = None,
+    fast_mode: bool | None = None,
+) -> np.ndarray:
+    """Focus a light-field ROI by maximizing the shifted-image variance."""
+
+    lf = np.asarray(lightfield, dtype=float)
+    if lf.ndim != 5 or lf.shape[4] < 3:
+        raise ValueError("LFAutofocus requires a 5-D RGB light field.")
+
+    if rect is None:
+        round_rect = np.array([1, 1, lf.shape[3] - 1, lf.shape[2] - 1], dtype=int)
+    else:
+        round_rect = np.round(np.asarray(rect, dtype=float).reshape(-1)[:4]).astype(int)
+    if round_rect.size != 4:
+        raise ValueError("LFAutofocus requires a MATLAB-style `[x, y, width, height]` rect.")
+
+    if slope_range is None:
+        slope_bounds = np.array([-0.7, 0.5], dtype=float)
+    else:
+        slope_bounds = np.asarray(slope_range, dtype=float).reshape(-1)
+    if slope_bounds.size != 2:
+        raise ValueError("LFAutofocus requires `slope_range` to contain two values.")
+    step = 0.05 if slope_step is None else float(slope_step)
+    if step <= 0:
+        raise ValueError("LFAutofocus requires a positive `slope_step`.")
+    del fast_mode
+
+    x0 = max(int(round_rect[0]) - 1, 0)
+    y0 = max(int(round_rect[1]) - 1, 0)
+    x1 = min(x0 + max(int(round_rect[2]), 0) + 1, lf.shape[3])
+    y1 = min(y0 + max(int(round_rect[3]), 0) + 1, lf.shape[2])
+    roi_lf = lf[:, :, y0:y1, x0:x1, :]
+
+    slope_vec = np.arange(
+        float(slope_bounds[0]),
+        float(slope_bounds[1]) + 0.5 * step,
+        step,
+        dtype=float,
+    )
+    variance_vec = np.zeros_like(slope_vec)
+    for index, slope_value in enumerate(slope_vec):
+        shift_img, _, _ = lf_filt_shift_sum(roi_lf, float(slope_value))
+        tmp_img = np.asarray(shift_img[:, :, :3], dtype=float)
+        variance_vec[index] = float(np.var(tmp_img, axis=0).sum())
+
+    best_slope = float(slope_vec[int(np.argmax(variance_vec))])
+    shift_img, _, _ = lf_filt_shift_sum(lf, best_slope)
+    return np.asarray(shift_img[:, :, :3], dtype=float)
 
 
 def _ie_bilinear(planes: np.ndarray, cfa_pattern: np.ndarray) -> np.ndarray:
@@ -2071,3 +2258,6 @@ vcimageISOMTF = vcimage_iso_mtf  # noqa: N816
 vcimageVSNR = vcimage_vsnr  # noqa: N816
 ipMCCXYZ = ip_mcc_xyz  # noqa: N816
 vcimageMCCXYZ = vcimage_mcc_xyz  # noqa: N816
+demosaicRCCC = demosaic_rccc  # noqa: N816
+LFFiltShiftSum = lf_filt_shift_sum  # noqa: N816
+LFAutofocus = lf_autofocus  # noqa: N816

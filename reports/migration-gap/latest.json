@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-23T21:22:08.211637+00:00",
+  "generated_at": "2026-03-23T21:55:48.836871+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-23T21:22:08.211637+00:00",
+    "generated_at": "2026-03-23T21:55:48.836871+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 91,
       "missing": 37,
-      "out_of_scope": 139,
-      "parity": 567,
-      "partial": 575,
+      "out_of_scope": 142,
+      "parity": 570,
+      "partial": 569,
       "ported": 34
     },
     "kind_counts": {
@@ -22,19 +22,19 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 142,
+      "P0": 136,
       "P1": 381,
       "P2": 180,
-      "P3": 740
+      "P3": 746
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 4,
-        "parity": 9,
-        "partial": -12,
-        "ported": -1
+        "out_of_scope": 3,
+        "parity": 3,
+        "partial": -6,
+        "ported": 0
       },
       "kind_counts": {
         "api": 0,
@@ -45,10 +45,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -12,
+        "P0": -6,
         "P1": 0,
         "P2": 0,
-        "P3": 12
+        "P3": 6
       }
     },
     "family_summary": {
@@ -279,9 +279,9 @@
       "imgproc": {
         "total": 59,
         "by_status": {
-          "out_of_scope": 7,
-          "parity": 37,
-          "partial": 8,
+          "out_of_scope": 10,
+          "parity": 40,
+          "partial": 2,
           "ported": 7
         },
         "by_kind": {
@@ -1038,17 +1038,6 @@
         }
       },
       {
-        "family": "imgproc",
-        "open_entries": 8,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "out_of_scope": 7,
-          "parity": 37,
-          "partial": 8,
-          "ported": 7
-        }
-      },
-      {
         "family": "color",
         "open_entries": 7,
         "highest_open_priority": "P0",
@@ -1150,6 +1139,16 @@
           "parity": 11,
           "partial": 4
         }
+      },
+      {
+        "family": "metrics",
+        "open_entries": 5,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "headless_only": 1,
+          "parity": 19,
+          "partial": 4
+        }
       }
     ],
     "exception_sites_by_module": {
@@ -1190,7 +1189,7 @@
         "not_implemented_error_sites": 0
       },
       "ip": {
-        "unsupported_option_error_sites": 9,
+        "unsupported_option_error_sites": 11,
         "not_implemented_error_sites": 0
       },
       "iso": {

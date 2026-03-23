@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import imageio.v3 as iio
 import numpy as np
+from scipy.signal import convolve2d
 
 from pyisetcam.camera import _chart_rectangles, _chart_rects_data, _linear_srgb_to_xyz, _whole_chart_corner_points
 from pyisetcam import (
     FaultyBilinear,
     FaultyNearestNeighbor,
+    LFAutofocus,
+    LFFiltShiftSum,
     LFConvertToFloat,
     LFDefaultField,
     LFDefaultVal,
@@ -17,6 +20,7 @@ from pyisetcam import (
     camera_create,
     camera_mtf,
     demosaic,
+    demosaicRCCC,
     displayRender,
     faultyInsert,
     faultyList,
@@ -385,6 +389,93 @@ def test_lightfield_helper_utilities_match_expected_python_contract(asset_store)
     assert lightfield.shape == (2, 2, 2, 3, 3)
     assert np.allclose(lightfield[:, :, 0, 0, :], result[0:2, 0:2, :])
     assert np.allclose(lightfield[:, :, 1, 2, :], result[2:4, 4:6, :])
+
+
+def test_demosaic_rccc_matches_upstream_convolution_rule() -> None:
+    mosaic = np.zeros((4, 5, 2), dtype=float)
+    mosaic[:, :, 1] = np.array(
+        [
+            [5.0, 6.0, 7.0, 8.0, 9.0],
+            [10.0, 11.0, 12.0, 13.0, 14.0],
+            [15.0, 16.0, 17.0, 18.0, 19.0],
+            [20.0, 21.0, 22.0, 23.0, 24.0],
+        ],
+        dtype=float,
+    )
+    mosaic[0::2, 1::2, 0] = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float)
+    mosaic[1::2, 0::2, 0] = np.array([[5.0, 6.0, 7.0], [8.0, 9.0, 10.0]], dtype=float)
+
+    kernel = np.array(
+        [
+            [0.0, 0.0, -1.0, 0.0, 0.0],
+            [0.0, 0.0, 2.0, 0.0, 0.0],
+            [-1.0, 2.0, 4.0, 2.0, -1.0],
+            [0.0, 0.0, 2.0, 0.0, 0.0],
+            [0.0, 0.0, -1.0, 0.0, 0.0],
+        ],
+        dtype=float,
+    ) / 8.0
+    mosaic_ex = np.concatenate((mosaic[:, 1:2, :], mosaic, mosaic[:, -2:-1, :]), axis=1)
+    mosaic_ex = np.concatenate((mosaic_ex[1:2, :, :], mosaic_ex, mosaic_ex[-2:-1, :, :]), axis=0)
+    red = mosaic_ex[:, :, 0]
+    clear = mosaic_ex[:, :, 1]
+    red_mask = (red != 0).astype(float)
+    expected = clear[1:-1, 1:-1] + (convolve2d(red + clear, kernel, mode="same") * red_mask)[1:-1, 1:-1]
+
+    actual = demosaicRCCC(mosaic)
+
+    assert actual.shape == mosaic.shape[:2]
+    assert np.allclose(actual, expected)
+
+
+def test_lf_shift_sum_and_autofocus_match_headless_focus_contract() -> None:
+    lightfield = np.zeros((2, 2, 6, 6, 3), dtype=float)
+    base = np.zeros((6, 6, 3), dtype=float)
+    base[1:5, 2:4, 0] = 1.0
+    base[2:4, 1:5, 1] = 0.5
+    base[2:5, 2:5, 2] = np.array(
+        [
+            [0.1, 0.2, 0.3],
+            [0.4, 0.8, 0.4],
+            [0.3, 0.2, 0.1],
+        ],
+        dtype=float,
+    )
+
+    def shift_with_zeros(img: np.ndarray, row_shift: int, col_shift: int) -> np.ndarray:
+        out = np.zeros_like(img)
+        src_row0 = max(-row_shift, 0)
+        src_row1 = min(img.shape[0] - row_shift, img.shape[0])
+        src_col0 = max(-col_shift, 0)
+        src_col1 = min(img.shape[1] - col_shift, img.shape[1])
+        dst_row0 = max(row_shift, 0)
+        dst_row1 = dst_row0 + (src_row1 - src_row0)
+        dst_col0 = max(col_shift, 0)
+        dst_col1 = dst_col0 + (src_col1 - src_col0)
+        out[dst_row0:dst_row1, dst_col0:dst_col1, :] = img[src_row0:src_row1, src_col0:src_col1, :]
+        return out
+
+    true_slope = 1.0
+    v_offsets = np.linspace(-0.5, 0.5, 2) * true_slope * 2.0
+    u_offsets = np.linspace(-0.5, 0.5, 2) * true_slope * 2.0
+    for t_index, v_offset in enumerate(v_offsets):
+        for s_index, u_offset in enumerate(u_offsets):
+            lightfield[t_index, s_index, :, :, :] = shift_with_zeros(
+                base,
+                int(round(v_offset)),
+                int(round(u_offset)),
+            )
+
+    mean_img, filt_options, shifted_lf = LFFiltShiftSum(lightfield, 0.0)
+    assert mean_img.shape == (6, 6, 4)
+    assert shifted_lf.shape == (2, 2, 6, 6, 4)
+    assert np.allclose(mean_img[:, :, :3], np.mean(lightfield, axis=(0, 1)))
+    assert np.allclose(mean_img[:, :, 3], 4.0)
+    assert filt_options["FlattenMethod"] == "sum"
+
+    focused = LFAutofocus(lightfield, None, [0.0, 1.0], 1.0)
+    assert focused.shape == base.shape
+    assert np.allclose(focused, base, atol=1.0e-6)
 
 
 def test_image_sensor_conversion_matches_direct_formula(asset_store) -> None:

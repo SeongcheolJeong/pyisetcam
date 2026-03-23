@@ -186,6 +186,21 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file immediately errors as requiring a rewrite, so it is treated as obsolete rather than actionable headless API debt.",
         "module_hits": [],
     },
+    "imgproc/demosaic/lcc1.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is explicitly marked not fully implemented and questions whether the patented method should even remain in the simulator.",
+        "module_hits": [],
+    },
+    "imgproc/demosaic/shtlin.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is explicitly marked not fully implemented and left with TODO placeholders, so it is treated as legacy experimental code rather than supported headless API debt.",
+        "module_hits": [],
+    },
+    "imgproc/demosaic/shtlog.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is explicitly marked as needing a complete rewrite, so it remains outside the supported headless migration target.",
+        "module_hits": [],
+    },
     "imgproc/lightfield/LFDispMousePan.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a pure Light Field Toolbox display interaction helper and remains outside the headless migration target.",
