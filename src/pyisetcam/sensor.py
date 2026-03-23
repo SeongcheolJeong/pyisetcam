@@ -3095,6 +3095,12 @@ def analog_to_digital(sensor: Sensor, method: str | None = None) -> tuple[np.nda
     raise UnsupportedOptionError("analog2digital", quantization_method)
 
 
+def bin_noise_fpn(sensor: Sensor, seed: int | None = None) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Apply the legacy binning-path DSNU/PRNU helper to the current sensor image."""
+
+    return noise_fpn(sensor, seed=seed)
+
+
 def noise_fpn(sensor: Sensor, seed: int | None = None) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Apply legacy DSNU/PRNU fixed-pattern noise to the current sensor volts."""
 
@@ -3126,6 +3132,12 @@ def noise_fpn(sensor: Sensor, seed: int | None = None) -> tuple[np.ndarray, np.n
         noisy_image = (image * _pixel_plane(image, prnu_image)) + _pixel_plane(image, dsnu_image)
 
     return np.asarray(noisy_image, dtype=float), dsnu_image, prnu_image
+
+
+def bin_noise_column_fpn(sensor: Sensor, seed: int | None = None) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Apply the legacy binning-path column FPN helper to the current sensor image."""
+
+    return noise_column_fpn(sensor, seed=seed)
 
 
 def noise_column_fpn(sensor: Sensor, seed: int | None = None) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -3161,6 +3173,22 @@ def noise_column_fpn(sensor: Sensor, seed: int | None = None) -> tuple[np.ndarra
         noisy_image = (image * _pixel_plane(image, prnu_image)) + _pixel_plane(image, dsnu_image)
 
     return np.asarray(noisy_image, dtype=float), col_dsnu, col_prnu
+
+
+def bin_noise_read(sensor: Sensor, seed: int | None = None) -> tuple[np.ndarray, np.ndarray]:
+    """Apply legacy temporal read noise to the current binning-path sensor image."""
+
+    source = sensor_get(sensor, "digital values")
+    if source is None:
+        source = sensor_get(sensor, "volts")
+    if source is None:
+        raise ValueError("binNoiseRead requires sensor digital values or volts.")
+
+    image = np.asarray(source, dtype=float)
+    sigma_read = float(pixel_get(sensor_get(sensor, "pixel"), "readNoiseVolts"))
+    rng = np.random.default_rng(None if seed is None else int(seed))
+    noise = rng.normal(0.0, sigma_read, size=image.shape)
+    return np.asarray(image + noise, dtype=float), np.asarray(noise, dtype=float)
 
 
 def sensor_compute_noise_free(
@@ -6196,6 +6224,9 @@ sensorComputeImage = sensor_compute_image
 sensorComputeFullArray = sensor_compute_full_array
 sensorDR = sensor_dr
 sensorCCM = sensor_ccm
+binNoiseColumnFPN = bin_noise_column_fpn
+binNoiseFPN = bin_noise_fpn
+binNoiseRead = bin_noise_read
 sensorJiggle = sensor_jiggle
 sensorMPE30 = sensor_mpe30
 sensorPDArray = sensor_pd_array

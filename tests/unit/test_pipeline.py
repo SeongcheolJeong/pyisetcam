@@ -18,6 +18,9 @@ from pyisetcam.utils import quanta_to_energy
 from pyisetcam import (
     analog2digital,
     blackbody,
+    binNoiseColumnFPN,
+    binNoiseFPN,
+    binNoiseRead,
     camera_acutance,
     camera_color_accuracy,
     cameraClearData,
@@ -5553,6 +5556,37 @@ def test_sensor_simulation_legacy_wrappers(asset_store) -> None:
     assert np.allclose(full_dvs, full_dvs_snake)
     assert full_volts.shape == (8, 8, 2)
     assert full_dvs.shape == (8, 8, 2)
+
+
+def test_sensor_binning_noise_wrappers_match_legacy_contracts(asset_store) -> None:
+    sensor = sensor_create(asset_store=asset_store)
+    volts = np.arange(1.0, 17.0, dtype=float).reshape(4, 4) / 20.0
+    dv = volts * 100.0
+    sensor = sensor_set(sensor, "volts", volts)
+    sensor = sensor_set(sensor, "digital values", dv)
+    sensor = sensor_set(sensor, "integration time", 0.02)
+    sensor = sensor_set(sensor, "prnulevel", 5.0)
+    sensor = sensor_set(sensor, "dsnulevel", 0.01)
+    sensor = sensor_set(sensor, "column fpn", np.array([0.002, 0.01], dtype=float))
+
+    noisy_fpn, dsnu, prnu = binNoiseFPN(sensor, seed=7)
+    expected_noisy_fpn, expected_dsnu, expected_prnu = noiseFPN(sensor, seed=7)
+    np.testing.assert_allclose(noisy_fpn, expected_noisy_fpn, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(dsnu, expected_dsnu, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(prnu, expected_prnu, rtol=1e-10, atol=1e-12)
+
+    noisy_col, col_dsnu, col_prnu = binNoiseColumnFPN(sensor, seed=9)
+    expected_noisy_col, expected_col_dsnu, expected_col_prnu = noiseColumnFPN(sensor, seed=9)
+    np.testing.assert_allclose(noisy_col, expected_noisy_col, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(col_dsnu, expected_col_dsnu, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(col_prnu, expected_col_prnu, rtol=1e-10, atol=1e-12)
+
+    sigma_read = float(pixelGet(sensor_get(sensor, "pixel"), "readNoiseVolts"))
+    rng = np.random.default_rng(13)
+    expected_read_noise = rng.normal(0.0, sigma_read, size=dv.shape)
+    noisy_read, read_noise = binNoiseRead(sensor, seed=13)
+    np.testing.assert_allclose(read_noise, expected_read_noise, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(noisy_read, dv + expected_read_noise, rtol=1e-10, atol=1e-12)
 
 
 def test_sensor_gain_offset_matches_legacy_voltage_formula(asset_store) -> None:

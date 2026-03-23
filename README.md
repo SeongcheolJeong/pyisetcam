@@ -271,6 +271,11 @@ plus headless `sensor_mpe30(...)` / `sensorMPE30(...)`,
 `sensor_wb_compute(...)` / `sensorWBCompute(...)` for the remaining
 legacy sensor utility helpers built on top of the existing SNR, pixel,
 MAT-object load, and sensor-compute paths,
+plus headless `bin_noise_fpn(...)` / `binNoiseFPN(...)`,
+`bin_noise_column_fpn(...)` / `binNoiseColumnFPN(...)`, and
+`bin_noise_read(...)` / `binNoiseRead(...)` for the legacy sensor
+binning-noise helpers layered directly on the existing fixed-pattern and
+read-noise simulation paths,
 plus direct curated parity on the CFA construction workflow from
 `s_sensorCFA.m`, including `sensorCreate('ycmy')` and
 `sensorSet(..., 'pattern and size', pattern)` behavior,

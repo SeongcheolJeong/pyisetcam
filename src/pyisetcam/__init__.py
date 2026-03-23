@@ -431,6 +431,9 @@ from .sensor import (
     pixel_sr,
     pixel_set,
     pixel_v_per_lux_sec,
+    bin_noise_column_fpn,
+    bin_noise_fpn,
+    bin_noise_read,
     pt_interface_matrix,
     pt_poynting_factor,
     pt_propagation_matrix,
@@ -1188,6 +1191,12 @@ __all__ = [
     "noise_fpn",
     "imx490Compute",
     "imx490_compute",
+    "binNoiseColumnFPN",
+    "binNoiseFPN",
+    "binNoiseRead",
+    "bin_noise_column_fpn",
+    "bin_noise_fpn",
+    "bin_noise_read",
     "ml_analyze_array_etendue",
     "ml_description",
     "ml_get_current",
@@ -1709,6 +1718,9 @@ iePixelWellCapacity = ie_pixel_well_capacity
 sensorDR = sensor_dr
 SignalCurrentDensity = signal_current_density
 signalCurrent = signal_current
+binNoiseColumnFPN = bin_noise_column_fpn
+binNoiseFPN = bin_noise_fpn
+binNoiseRead = bin_noise_read
 sensorColorFilter = sensor_color_filter
 sensorCrop = sensor_crop
 sensorGet = sensor_get
