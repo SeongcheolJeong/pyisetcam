@@ -859,6 +859,12 @@ That same headless OI utility surface now also includes
 `oi_add(...)` / `oiAdd(...)` for the legacy MATLAB OI spectral and
 irradiance helper mini-family.
 That same headless OI utility surface now also includes
+`oi_illuminant_ss(...)` / `oiIlluminantSS(...)`,
+`oi_illuminant_pattern(...)` / `oiIlluminantPattern(...)`, and
+`oi_photon_noise(...)` / `oiPhotonNoise(...)`, together with
+`oiGet/oiSet(..., 'illuminant'/'illuminant photons')` support for the
+legacy MATLAB OI illuminant/noise helper mini-family.
+That same headless OI utility surface now also includes
 `oi_pad_value(...)` / `oiPadValue(...)`, `oi_pad(...)` / `oiPad(...)`,
 and `oi_make_even_row_col(...)` / `oiMakeEvenRowCol(...)` for the
 legacy MATLAB OI padding and even-dimension helper mini-family.

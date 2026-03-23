@@ -18,10 +18,11 @@ from skimage.draw import polygon2mask
 
 from .assets import AssetStore, ensure_upstream_snapshot
 from .exceptions import UnsupportedOptionError
+from .illuminant import illuminant_get
 from .metrics import chromaticity_xy, xyz_from_energy
 from .scene import scene_get
 from .session import track_session_object
-from .types import OpticalImage, Scene, SessionContext
+from .types import BaseISETObject, OpticalImage, Scene, SessionContext
 from .utils import (
     DEFAULT_WAVE,
     apply_channelwise_gaussian,
@@ -5956,11 +5957,73 @@ def oi_make_even_row_col(
     return oi_pad(oi, [pad_rows, pad_cols, 0], s_dist=s_dist, direction="post")
 
 
+def oi_illuminant_ss(oi: OpticalImage, pattern: Any | None = None) -> OpticalImage:
+    """Convert an OI illuminant to spatial-spectral format using the MATLAB contract."""
+
+    illuminant_format = _oi_illuminant_format(oi)
+    if not illuminant_format:
+        raise ValueError("No OI illuminant present.")
+
+    current = oi.clone()
+    if param_format(illuminant_format) == "spectral":
+        rows, cols = _oi_shape(current)
+        illuminant = np.asarray(oi_get(current, "illuminant photons"), dtype=float).reshape(1, 1, -1)
+        current = oi_set(
+            current,
+            "illuminant photons",
+            np.broadcast_to(illuminant, (rows, cols, illuminant.shape[2])).copy(),
+        )
+    elif param_format(illuminant_format) != "spatialspectral":
+        raise ValueError(f"Unknown illuminant format: {illuminant_format}")
+
+    if pattern is None or np.asarray(pattern).size == 0:
+        return current
+    return oi_illuminant_pattern(current, pattern)
+
+
+def oi_illuminant_pattern(oi: OpticalImage, pattern: Any) -> OpticalImage:
+    """Apply a spatial illuminant pattern to both OI photons and illuminant photons."""
+
+    current = oi.clone() if param_format(_oi_illuminant_format(oi)) == "spatialspectral" else oi_illuminant_ss(oi)
+    rows, cols = _oi_shape(current)
+    pattern_array = _resize_oi_pattern(pattern, (rows, cols))
+    photons = np.asarray(oi_get(current, "photons"), dtype=float) * pattern_array[:, :, None]
+    illuminant = np.asarray(oi_get(current, "illuminant photons"), dtype=float) * pattern_array[:, :, None]
+    current = oi_set(current, "photons", photons)
+    current = oi_set(current, "illuminant photons", illuminant)
+    return current
+
+
+def oi_photon_noise(oi: OpticalImage | Any, *, seed: int | None = None) -> tuple[np.ndarray, np.ndarray]:
+    """Add MATLAB-style photon noise to an OI photon cube or a raw array."""
+
+    if isinstance(oi, OpticalImage):
+        photons = np.asarray(oi_get(oi, "photons"), dtype=float)
+    else:
+        photons = np.asarray(oi, dtype=float)
+
+    rng = np.random.default_rng(None if seed is None else int(seed))
+    the_noise = np.sqrt(np.clip(photons, 0.0, None)) * rng.standard_normal(photons.shape)
+    noisy_photons = np.rint(photons + the_noise)
+
+    poisson_mask = photons < 15.0
+    if np.any(poisson_mask):
+        poisson_samples = rng.poisson(np.clip(photons[poisson_mask], 0.0, None))
+        the_noise = np.asarray(the_noise, dtype=float)
+        the_noise[poisson_mask] = np.asarray(poisson_samples, dtype=float)
+        noisy_photons[poisson_mask] = np.asarray(poisson_samples, dtype=float)
+
+    return np.asarray(noisy_photons, dtype=float), np.asarray(the_noise, dtype=float)
+
+
 oiCalculateIrradiance = oi_calculate_irradiance
 oiAdjustIlluminance = oi_adjust_illuminance
 oiInterpolateW = oi_interpolate_w
 oiExtractWaveband = oi_extract_waveband
 oiAdd = oi_add
+oiIlluminantSS = oi_illuminant_ss
+oiIlluminantPattern = oi_illuminant_pattern
+oiPhotonNoise = oi_photon_noise
 oiPadValue = oi_pad_value
 oiPad = oi_pad
 oiMakeEvenRowCol = oi_make_even_row_col
@@ -7389,6 +7452,65 @@ def _oi_frequency_support_1d(oi: OpticalImage, unit: str = "cyclesperdegree") ->
     return fx, fy
 
 
+def _oi_illuminant_photons(oi: OpticalImage) -> np.ndarray:
+    stored = oi.fields.get("illuminant_photons")
+    if stored is None:
+        return np.empty(0, dtype=float)
+    return np.asarray(stored, dtype=float)
+
+
+def _oi_illuminant_format(oi: OpticalImage) -> str:
+    illuminant = _oi_illuminant_photons(oi)
+    wave = np.asarray(oi.fields.get("wave", DEFAULT_WAVE), dtype=float).reshape(-1)
+    if illuminant.ndim == 1 and illuminant.size == wave.size:
+        return "spectral"
+    if illuminant.ndim == 3 and illuminant.shape[2] == wave.size:
+        return "spatial spectral"
+    return ""
+
+
+def _set_oi_illuminant_photons(oi: OpticalImage, value: Any) -> OpticalImage:
+    illuminant = np.asarray(value, dtype=float)
+    wave = np.asarray(oi.fields.get("wave", DEFAULT_WAVE), dtype=float).reshape(-1)
+    rows, cols = _oi_shape(oi)
+    if illuminant.ndim == 1:
+        if illuminant.size != wave.size:
+            raise ValueError("Spectral illuminant photons must match the OI wavelength support.")
+        oi.fields["illuminant_photons"] = illuminant.reshape(-1).copy()
+        return oi
+    if illuminant.ndim == 3:
+        if illuminant.shape[2] != wave.size:
+            raise ValueError("Spatial-spectral illuminant photons must match the OI wavelength support.")
+        if rows > 0 and cols > 0 and illuminant.shape[:2] != (rows, cols):
+            raise ValueError("Spatial-spectral illuminant photons must match the OI image size.")
+        oi.fields["illuminant_photons"] = illuminant.copy()
+        return oi
+    raise ValueError("OI illuminant photons must be either a 1-D spectrum or a 3-D spatial-spectral cube.")
+
+
+def _set_oi_illuminant(oi: OpticalImage, illuminant: Any) -> OpticalImage:
+    wave = np.asarray(oi.fields.get("wave", DEFAULT_WAVE), dtype=float).reshape(-1)
+    if isinstance(illuminant, BaseISETObject):
+        photons = np.asarray(illuminant_get(illuminant, "photons", wave), dtype=float)
+        return _set_oi_illuminant_photons(oi, photons)
+    if isinstance(illuminant, dict) and "photons" in illuminant:
+        photons = np.asarray(illuminant["photons"], dtype=float)
+        source_wave = illuminant.get("wave")
+        if source_wave is not None and photons.ndim == 1:
+            photons = np.asarray(interp_spectra(np.asarray(source_wave, dtype=float).reshape(-1), photons.reshape(-1), wave), dtype=float)
+        return _set_oi_illuminant_photons(oi, photons)
+    raise ValueError("oiSet(..., 'illuminant', value) expects an illuminant object or a dict with photons.")
+
+
+def _resize_oi_pattern(pattern: Any, size: tuple[int, int]) -> np.ndarray:
+    array = np.asarray(pattern, dtype=float)
+    if array.ndim != 2:
+        raise ValueError("OI illuminant patterns must be 2-D arrays.")
+    if array.shape == tuple(size):
+        return array.copy()
+    return _resize_image(array, size, method="linear")
+
+
 def _sync_oi_geometry_fields(oi: OpticalImage) -> None:
     rows, cols = _oi_shape(oi)
     oi.fields["rows"] = rows
@@ -7430,6 +7552,16 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         return oi.data
     if key in {"wave", "wavelength"}:
         return np.asarray(oi.fields["wave"], dtype=float)
+    if key == "illuminantformat":
+        return _oi_illuminant_format(oi)
+    if key == "illuminant":
+        return {
+            "wave": np.asarray(oi.fields["wave"], dtype=float).reshape(-1),
+            "photons": _oi_illuminant_photons(oi),
+            "comment": oi.fields.get("illuminant_comment"),
+        }
+    if key == "illuminantphotons":
+        return _oi_illuminant_photons(oi)
     if key == "photons":
         return np.asarray(oi.data["photons"], dtype=float)
     if key in {"irradiancehline", "hline", "hlineirradiance"}:
@@ -7935,6 +8067,13 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any, *args: Any) -> OpticalI
         return oi
     if key == "wave":
         oi.fields["wave"] = np.asarray(value, dtype=float).reshape(-1)
+        return oi
+    if key == "illuminant":
+        return _set_oi_illuminant(oi, value)
+    if key == "illuminantphotons":
+        return _set_oi_illuminant_photons(oi, value)
+    if key == "illuminantcomment":
+        oi.fields["illuminant_comment"] = str(value)
         return oi
     if key == "photons":
         oi.data["photons"] = np.asarray(value, dtype=float)

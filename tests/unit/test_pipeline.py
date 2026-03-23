@@ -110,10 +110,13 @@ from pyisetcam import (
     oiExtractWaveband,
     oi_frequency_resolution,
     oi_get,
+    oiIlluminantPattern,
+    oiIlluminantSS,
     oiInterpolateW,
     oiMakeEvenRowCol,
     oiPad,
     oiPadValue,
+    oiPhotonNoise,
     oiPSF,
     oiSaveImage,
     oiShowImage,
@@ -2737,6 +2740,63 @@ def test_oi_spectral_helper_wrappers_match_legacy_contract(asset_store) -> None:
     contrast_photons = np.asarray(oi_get(contrast_oi, "photons"), dtype=float)
     expected_removed = photons + (contrast_photons - np.mean(contrast_photons, axis=(0, 1), keepdims=True))
     assert np.allclose(np.asarray(oi_get(removed, "photons"), dtype=float), expected_removed)
+
+
+def test_oi_illuminant_helper_wrappers_match_legacy_contract(asset_store) -> None:
+    wave = np.array([500.0, 600.0, 700.0], dtype=float)
+    scene = scene_create("uniform ee", 16, wave, asset_store=asset_store)
+    oi = oi_compute(oi_create("pinhole", asset_store=asset_store), scene, crop=True)
+    illuminant = illuminant_create("equal photons", wave, 100.0, asset_store=asset_store)
+    oi = oi_set(oi, "illuminant", illuminant)
+
+    assert oi_get(oi, "illuminant format") == "spectral"
+    assert np.array_equal(np.asarray(oi_get(oi, "illuminant photons"), dtype=float), np.asarray(illuminant.data["photons"], dtype=float))
+
+    spatial = oiIlluminantSS(oi)
+    rows, cols = oi_get(spatial, "size")
+    expected_spectral = np.asarray(illuminant.data["photons"], dtype=float).reshape(1, 1, -1)
+    assert oi_get(spatial, "illuminant format") == "spatial spectral"
+    assert np.allclose(
+        np.asarray(oi_get(spatial, "illuminant photons"), dtype=float),
+        np.broadcast_to(expected_spectral, (rows, cols, expected_spectral.shape[2])),
+    )
+
+    pattern = np.array([[1.0, 0.5], [0.25, 2.0]], dtype=float)
+    patterned = oiIlluminantPattern(spatial, pattern)
+    row_positions = np.linspace(0.0, pattern.shape[0] - 1, rows, dtype=float)
+    col_positions = np.linspace(0.0, pattern.shape[1] - 1, cols, dtype=float)
+    row_grid, col_grid = np.meshgrid(row_positions, col_positions, indexing="ij")
+    resized_pattern = ndimage.map_coordinates(pattern, [row_grid, col_grid], order=1, mode="nearest", prefilter=False)
+    assert np.allclose(
+        np.asarray(oi_get(patterned, "illuminant photons"), dtype=float),
+        np.asarray(oi_get(spatial, "illuminant photons"), dtype=float) * resized_pattern[:, :, None],
+    )
+    assert np.allclose(
+        np.asarray(oi_get(patterned, "photons"), dtype=float),
+        np.asarray(oi_get(spatial, "photons"), dtype=float) * resized_pattern[:, :, None],
+    )
+
+
+def test_oi_photon_noise_matches_seeded_legacy_contract() -> None:
+    photons = np.array(
+        [
+            [[4.0, 20.0], [9.0, 25.0]],
+            [[16.0, 36.0], [1.0, 49.0]],
+        ],
+        dtype=float,
+    )
+    rng = np.random.default_rng(7)
+    expected_noise = np.sqrt(photons) * rng.standard_normal(photons.shape)
+    expected_noisy = np.rint(photons + expected_noise)
+    poisson_mask = photons < 15.0
+    poisson_samples = rng.poisson(photons[poisson_mask])
+    expected_noise[poisson_mask] = poisson_samples
+    expected_noisy[poisson_mask] = poisson_samples
+
+    noisy, noise = oiPhotonNoise(photons, seed=7)
+
+    assert np.array_equal(noisy, expected_noisy)
+    assert np.array_equal(noise, expected_noise)
 
 
 def test_optics_ray_trace_blur_matches_public_oi_diffuser(asset_store) -> None:

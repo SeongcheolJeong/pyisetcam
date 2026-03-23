@@ -167,10 +167,13 @@ from .optics import (
     oi_extract_waveband,
     oi_frequency_resolution,
     oi_get,
+    oi_illuminant_pattern,
+    oi_illuminant_ss,
     oi_interpolate_w,
     oi_make_even_row_col,
     oi_pad,
     oi_pad_value,
+    oi_photon_noise,
     oi_psf,
     oi_save_image,
     oi_show_image,
@@ -801,10 +804,13 @@ __all__ = [
     "oiExtractWaveband",
     "oiGet",
     "oiFrequencyResolution",
+    "oiIlluminantPattern",
+    "oiIlluminantSS",
     "oiInterpolateW",
     "oiMakeEvenRowCol",
     "oiPad",
     "oiPadValue",
+    "oiPhotonNoise",
     "oiPSF",
     "oiSaveImage",
     "oiShowImage",
@@ -824,10 +830,13 @@ __all__ = [
     "oi_extract_waveband",
     "oi_frequency_resolution",
     "oi_get",
+    "oi_illuminant_pattern",
+    "oi_illuminant_ss",
     "oi_interpolate_w",
     "oi_make_even_row_col",
     "oi_pad",
     "oi_pad_value",
+    "oi_photon_noise",
     "oi_psf",
     "oi_plot",
     "oi_save_image",
@@ -1303,10 +1312,13 @@ oiCalculateIrradiance = oi_calculate_irradiance
 oiExtractWaveband = oi_extract_waveband
 oiGet = oi_get
 oiFrequencyResolution = oi_frequency_resolution
+oiIlluminantPattern = oi_illuminant_pattern
+oiIlluminantSS = oi_illuminant_ss
 oiInterpolateW = oi_interpolate_w
 oiMakeEvenRowCol = oi_make_even_row_col
 oiPad = oi_pad
 oiPadValue = oi_pad_value
+oiPhotonNoise = oi_photon_noise
 oiPSF = oi_psf
 oiSaveImage = oi_save_image
 oiShowImage = oi_show_image
