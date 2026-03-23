@@ -190,6 +190,9 @@ from .optics import (
     oi_clear_data,
     oi_crop,
     oi_create,
+    oi_combine_depths,
+    oi_depth_combine,
+    oi_depth_segment_map,
     oi_extract_bright,
     oi_extract_waveband,
     oi_frequency_resolution,
@@ -200,6 +203,7 @@ from .optics import (
     oi_interpolate_w,
     oi_make_even_row_col,
     oi_pad,
+    oi_pad_depth_map,
     oi_pad_value,
     oi_photon_noise,
     oi_psf,
@@ -919,11 +923,14 @@ __all__ = [
     "oiClearData",
     "oiDiffuser",
     "oiCompute",
+    "oiCombineDepths",
     "oiCreate",
     "oiCrop",
     "oiAdd",
     "oiAdjustIlluminance",
     "oiCalculateIrradiance",
+    "oiDepthCombine",
+    "oiDepthSegmentMap",
     "oiExtractBright",
     "oiExtractWaveband",
     "oiGet",
@@ -934,6 +941,7 @@ __all__ = [
     "oiInterpolateW",
     "oiMakeEvenRowCol",
     "oiPad",
+    "oiPadDepthMap",
     "oiPadValue",
     "oiPhotonNoise",
     "oiPSF",
@@ -950,8 +958,11 @@ __all__ = [
     "oi_clear_data",
     "oi_diffuser",
     "oi_compute",
+    "oi_combine_depths",
     "oi_crop",
     "oi_create",
+    "oi_depth_combine",
+    "oi_depth_segment_map",
     "oi_extract_bright",
     "oi_extract_waveband",
     "oi_frequency_resolution",
@@ -962,6 +973,7 @@ __all__ = [
     "oi_interpolate_w",
     "oi_make_even_row_col",
     "oi_pad",
+    "oi_pad_depth_map",
     "oi_pad_value",
     "oi_photon_noise",
     "oi_psf",
@@ -1545,9 +1557,12 @@ oiCreate = oi_create
 oiCompute = oi_compute
 oiClearData = oi_clear_data
 oiCrop = oi_crop
+oiCombineDepths = oi_combine_depths
 oiAdd = oi_add
 oiAdjustIlluminance = oi_adjust_illuminance
 oiCalculateIrradiance = oi_calculate_irradiance
+oiDepthCombine = oi_depth_combine
+oiDepthSegmentMap = oi_depth_segment_map
 oiExtractBright = oi_extract_bright
 oiExtractWaveband = oi_extract_waveband
 oiFromFile = oi_from_file
@@ -1558,6 +1573,7 @@ oiIlluminantSS = oi_illuminant_ss
 oiInterpolateW = oi_interpolate_w
 oiMakeEvenRowCol = oi_make_even_row_col
 oiPad = oi_pad
+oiPadDepthMap = oi_pad_depth_map
 oiPadValue = oi_pad_value
 oiPhotonNoise = oi_photon_noise
 oiPSF = oi_psf

@@ -230,6 +230,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The pinned upstream file is empty, so it is treated as a non-actionable stub rather than a remaining headless API gap.",
         "module_hits": [],
     },
+    "opticalimage/depth/oiDepthOverlay.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file immediately errors as obsolete and directs callers to `oiPlot(..., 'depth map contour', ...)` instead.",
+        "module_hits": [],
+    },
     "opticalimage/wavefront/RandomDirtyApertureDeprecate.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a deprecated Computer Vision Toolbox dirty-aperture generator rather than a reusable headless WVF API surface.",

@@ -141,6 +141,9 @@ from pyisetcam import (
     oiCalculateIrradiance,
     oi_calculate_illuminance,
     oiClearData,
+    oiCombineDepths,
+    oiDepthCombine,
+    oiDepthSegmentMap,
     oi_diffuser,
     oi_compute,
     oi_crop,
@@ -155,6 +158,7 @@ from pyisetcam import (
     oiInterpolateW,
     oiMakeEvenRowCol,
     oiPad,
+    oiPadDepthMap,
     oiPadValue,
     oiPhotonNoise,
     oiPSF,
@@ -727,6 +731,96 @@ def test_oi_compute_tracks_padded_and_cropped_depth_maps(asset_store) -> None:
 
     oi_cropped = oi_compute(oi_create(), scene, crop=True)
     assert np.allclose(oi_get(oi_cropped, "depth map"), depth_map)
+
+
+def test_oi_depth_helpers_match_manual_depth_map_selection(asset_store) -> None:
+    wave = np.array([500.0, 600.0], dtype=float)
+    scene = scene_create("uniform ee", 8, wave, asset_store=asset_store)
+    scene_depth = np.vstack(
+        [
+            np.full((4, 8), 1.0, dtype=float),
+            np.full((4, 8), 3.0, dtype=float),
+        ]
+    )
+    scene = scene_set(scene, "depth map", scene_depth)
+
+    padded = oiPadDepthMap(scene)
+    expected_padded = np.pad(scene_depth, ((1, 1), (1, 1)), mode="constant", constant_values=0.0)
+
+    assert np.array_equal(padded, expected_padded)
+
+    depth_edges = np.array([1.0, 3.0], dtype=float)
+    segmented = oiDepthSegmentMap(padded, depth_edges)
+    expected_segmented = np.where(
+        np.abs(padded - depth_edges[0]) <= np.abs(padded - depth_edges[1]),
+        1,
+        2,
+    )
+
+    assert np.array_equal(segmented, expected_segmented)
+
+    def build_depth_oi(photons: np.ndarray, depth_map: np.ndarray) -> object:
+        oi = oi_create()
+        oi = oi_set(oi, "wave", wave)
+        oi = oi_set(oi, "photons", photons)
+        return oi_set(oi, "depth map", depth_map)
+
+    combined = oiDepthCombine(
+        [
+            build_depth_oi(np.full((*padded.shape, wave.size), 10.0, dtype=float), np.zeros_like(padded)),
+            build_depth_oi(np.full((*padded.shape, wave.size), 20.0, dtype=float), np.zeros_like(padded)),
+        ],
+        scene,
+        depth_edges,
+    )
+    expected_combined = np.where(segmented[:, :, np.newaxis] == 1, 10.0, 20.0)
+
+    assert np.allclose(np.asarray(oi_get(combined, "photons"), dtype=float), expected_combined)
+    assert np.array_equal(np.asarray(oi_get(combined, "depth map"), dtype=float), expected_padded)
+    assert oi_get(combined, "name") == "Combined"
+
+    near_mask = np.pad(
+        np.vstack(
+            [
+                np.ones((4, 8), dtype=bool),
+                np.zeros((4, 8), dtype=bool),
+            ]
+        ),
+        ((1, 1), (1, 1)),
+        mode="constant",
+        constant_values=False,
+    )
+    far_mask = np.pad(
+        np.vstack(
+            [
+                np.zeros((4, 8), dtype=bool),
+                np.ones((4, 8), dtype=bool),
+            ]
+        ),
+        ((1, 1), (1, 1)),
+        mode="constant",
+        constant_values=False,
+    )
+    near_photons = np.where(
+        near_mask[:, :, np.newaxis],
+        np.array([3.0, 5.0], dtype=float).reshape(1, 1, -1),
+        0.0,
+    )
+    far_photons = np.where(
+        far_mask[:, :, np.newaxis],
+        np.array([7.0, 11.0], dtype=float).reshape(1, 1, -1),
+        0.0,
+    )
+    summed = oiCombineDepths(
+        [
+            build_depth_oi(near_photons, np.where(near_mask, 1.0, 0.0)),
+            build_depth_oi(far_photons, np.where(far_mask, 3.0, 0.0)),
+        ]
+    )
+    expected_depth = np.where(near_mask, 1.0, np.where(far_mask, 3.0, 0.0))
+
+    assert np.allclose(np.asarray(oi_get(summed, "photons"), dtype=float), near_photons + far_photons)
+    assert np.allclose(np.asarray(oi_get(summed, "depth map"), dtype=float), expected_depth)
 
 
 def test_oi_get_reports_matlab_style_geometry_vectors(asset_store) -> None:

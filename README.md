@@ -913,6 +913,13 @@ That same headless OI utility surface now also includes
 `oi_pad_value(...)` / `oiPadValue(...)`, `oi_pad(...)` / `oiPad(...)`,
 and `oi_make_even_row_col(...)` / `oiMakeEvenRowCol(...)` for the
 legacy MATLAB OI padding and even-dimension helper mini-family.
+That same headless OI utility surface now also includes
+`oi_pad_depth_map(...)` / `oiPadDepthMap(...)`,
+`oi_depth_segment_map(...)` / `oiDepthSegmentMap(...)`,
+`oi_depth_combine(...)` / `oiDepthCombine(...)`, and
+`oi_combine_depths(...)` / `oiCombineDepths(...)` for the legacy MATLAB
+OI depth-map padding, segmentation, and plane-combination helper
+mini-family.
 That same headless optics-object compatibility surface now also includes
 `optics_create(...)` / `opticsCreate(...)`,
 `optics_get(...)` / `opticsGet(...)`, `optics_set(...)` / `opticsSet(...)`,

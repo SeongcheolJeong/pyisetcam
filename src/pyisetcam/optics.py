@@ -6186,6 +6186,100 @@ def oi_make_even_row_col(
     return oi_pad(oi, [pad_rows, pad_cols, 0], s_dist=s_dist, direction="post")
 
 
+def oi_pad_depth_map(scene: Scene, invert: Any = 0, *args: Any) -> np.ndarray:
+    """Pad a scene depth map into OI coordinates using the legacy MATLAB contract."""
+
+    if bool(invert):
+        raise UnsupportedOptionError("oiPadDepthMap", "invert=True")
+    pad_pixels = tuple(np.rint(np.asarray(scene_get(scene, "size"), dtype=float).reshape(2) / 8.0).astype(int))
+    return _pad_depth_map(scene, pad_pixels)
+
+
+def oi_depth_segment_map(oi_dmap: Any, depth_edges: Any) -> np.ndarray:
+    """Assign each OI depth-map sample to the closest depth plane."""
+
+    depth_map = np.asarray(oi_dmap, dtype=float)
+    edges = np.asarray(depth_edges, dtype=float).reshape(-1)
+    if depth_map.ndim != 2:
+        raise ValueError("oiDepthSegmentMap requires a 2-D depth map.")
+    if edges.size == 0:
+        raise ValueError("oiDepthSegmentMap requires at least one depth edge.")
+    distance = np.abs(depth_map[:, :, np.newaxis] - edges.reshape(1, 1, -1))
+    return np.argmin(distance, axis=2).astype(int) + 1
+
+
+def _validate_depth_oi_stack(oi_depths: list[OpticalImage]) -> tuple[tuple[int, int, int], np.ndarray]:
+    if not oi_depths:
+        raise ValueError("At least one optical image is required.")
+    reference_photons = np.asarray(oi_get(oi_depths[0], "photons"), dtype=float)
+    reference_wave = np.asarray(oi_get(oi_depths[0], "wave"), dtype=float).reshape(-1)
+    if reference_photons.ndim != 3:
+        raise ValueError("Depth-combine helpers require wave-last OI photon cubes.")
+    for current in oi_depths[1:]:
+        photons = np.asarray(oi_get(current, "photons"), dtype=float)
+        wave = np.asarray(oi_get(current, "wave"), dtype=float).reshape(-1)
+        if photons.shape != reference_photons.shape:
+            raise ValueError("All optical images in the depth stack must share the same photon-cube shape.")
+        if not np.array_equal(wave, reference_wave):
+            raise ValueError("All optical images in the depth stack must share the same wavelength sampling.")
+    return reference_photons.shape, reference_wave
+
+
+def oi_depth_combine(oi_depths: list[OpticalImage] | tuple[OpticalImage, ...], scene: Scene, depth_edges: Any) -> OpticalImage:
+    """Combine defocused optical images using the scene depth-map segmentation."""
+
+    current_depths = list(oi_depths)
+    shape, _ = _validate_depth_oi_stack(current_depths)
+    edges = np.asarray(depth_edges, dtype=float).reshape(-1)
+    if edges.size != len(current_depths):
+        raise ValueError("oiDepthCombine requires one depth edge per optical image.")
+
+    depth_map = oi_pad_depth_map(scene)
+    if depth_map.shape != shape[:2]:
+        raise ValueError("The padded scene depth map must match the optical image size.")
+    idx = oi_depth_segment_map(depth_map, edges) - 1
+
+    photons_stack = np.stack([np.asarray(oi_get(oi, "photons"), dtype=float) for oi in current_depths], axis=3)
+    selected = np.take_along_axis(photons_stack, idx[:, :, np.newaxis, np.newaxis], axis=3).squeeze(axis=3)
+
+    combined = current_depths[0].clone()
+    combined = oi_set(combined, "photons", selected)
+    combined = oi_set(combined, "depth map", depth_map)
+    oi_calculate_illuminance(combined)
+    combined = oi_set(combined, "name", "Combined")
+    return combined
+
+
+def oi_combine_depths(oi_depths: list[OpticalImage] | tuple[OpticalImage, ...]) -> OpticalImage:
+    """Combine an ordered depth stack from back to front using legacy MATLAB semantics."""
+
+    current_depths = list(oi_depths)
+    shape, _ = _validate_depth_oi_stack(current_depths)
+    photons = np.sum(np.stack([np.asarray(oi_get(oi, "photons"), dtype=float) for oi in current_depths], axis=0), axis=0)
+
+    depth_maps = np.stack(
+        [np.asarray(oi_get(oi, "depth map"), dtype=float) for oi in current_depths],
+        axis=2,
+    )
+    if depth_maps.shape[:2] != shape[:2]:
+        raise ValueError("All depth maps in the OI stack must match the optical image size.")
+    positive = depth_maps[depth_maps > 0.0]
+    if positive.size == 0:
+        depth_map = np.zeros(shape[:2], dtype=float)
+    else:
+        far_fill = 2.0 * float(np.max(positive))
+        adjusted = depth_maps.copy()
+        adjusted[adjusted <= 0.0] = far_fill
+        depth_map = np.min(adjusted, axis=2)
+        depth_map[depth_map == far_fill] = 0.0
+
+    combined = current_depths[0].clone()
+    combined = oi_set(combined, "photons", photons)
+    combined = oi_set(combined, "depth map", depth_map)
+    oi_calculate_illuminance(combined)
+    return combined
+
+
 def optics_dl_compute(
     scene: Scene,
     oi: OpticalImage | None = None,

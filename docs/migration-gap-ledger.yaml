@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-23T19:52:40.329799+00:00",
+  "generated_at": "2026-03-23T20:23:07.776019+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 91,
       "missing": 37,
-      "out_of_scope": 133,
-      "parity": 550,
-      "partial": 597,
+      "out_of_scope": 134,
+      "parity": 554,
+      "partial": 592,
       "ported": 35
     },
     "kind_counts": {
@@ -20,18 +20,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 164,
+      "P0": 159,
       "P1": 381,
       "P2": 180,
-      "P3": 718
+      "P3": 723
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
         "out_of_scope": 1,
-        "parity": 3,
-        "partial": -4,
+        "parity": 4,
+        "partial": -5,
         "ported": 0
       },
       "kind_counts": {
@@ -43,10 +43,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -4,
+        "P0": -5,
         "P1": 0,
         "P2": 0,
-        "P3": 4
+        "P3": 5
       }
     },
     "family_summary": {
@@ -436,7 +436,9 @@
       "opticalimage/depth": {
         "total": 8,
         "by_status": {
-          "partial": 8
+          "out_of_scope": 1,
+          "parity": 4,
+          "partial": 3
         },
         "by_kind": {
           "api": 8
@@ -1045,14 +1047,6 @@
         }
       },
       {
-        "family": "opticalimage/depth",
-        "open_entries": 8,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "partial": 8
-        }
-      },
-      {
         "family": "color",
         "open_entries": 7,
         "highest_open_priority": "P0",
@@ -1144,6 +1138,16 @@
           "parity": 49,
           "partial": 6
         }
+      },
+      {
+        "family": "camera",
+        "open_entries": 5,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "headless_only": 1,
+          "parity": 11,
+          "partial": 4
+        }
       }
     ],
     "exception_sites_by_module": {
@@ -1200,7 +1204,7 @@
         "not_implemented_error_sites": 0
       },
       "optics": {
-        "unsupported_option_error_sites": 24,
+        "unsupported_option_error_sites": 25,
         "not_implemented_error_sites": 0
       },
       "parity": {
@@ -5972,27 +5976,29 @@
       "upstream_path": "opticalimage/depth/oiCombineDepths.m",
       "family": "opticalimage/depth",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics",
+      "status": "parity",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/depth/oiDepthCombine.m",
       "family": "opticalimage/depth",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics",
+      "status": "parity",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/depth/oiDepthCompute.m",
@@ -6024,40 +6030,42 @@
       "upstream_path": "opticalimage/depth/oiDepthOverlay.m",
       "family": "opticalimage/depth",
       "kind": "api",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.optics",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream file immediately errors as obsolete and directs callers to `oiPlot(..., 'depth map contour', ...)` instead.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/depth/oiDepthSegmentMap.m",
       "family": "opticalimage/depth",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics",
+      "status": "parity",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/depth/oiPadDepthMap.m",
       "family": "opticalimage/depth",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics",
+      "status": "parity",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/depth/s3dRenderDepthDefocus.m",
