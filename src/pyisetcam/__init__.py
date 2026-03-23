@@ -134,11 +134,14 @@ from .metrics import (
     mean_absolute_error,
     mean_relative_error,
     metrics_camera,
+    metrics_close,
     metrics_compute,
     metrics_description,
     metrics_get,
     metrics_get_vci_pair,
+    metrics_key_press,
     metrics_masked_error,
+    metrics_refresh,
     metrics_save_data,
     metrics_save_image,
     metrics_set,
@@ -779,22 +782,28 @@ __all__ = [
     "mean_absolute_error",
     "mean_relative_error",
     "metricsCamera",
+    "metricsClose",
     "metricsCompute",
     "metricsDescription",
     "metricsGet",
     "metricsGetVciPair",
+    "metricsKeyPress",
     "metricsMaskedError",
+    "metricsRefresh",
     "metricsSaveData",
     "metricsSaveImage",
     "metricsSet",
     "metricsShowImage",
     "metricsShowMetric",
     "metrics_camera",
+    "metrics_close",
     "metrics_compute",
     "metrics_description",
     "metrics_get",
     "metrics_get_vci_pair",
+    "metrics_key_press",
     "metrics_masked_error",
+    "metrics_refresh",
     "metrics_save_data",
     "metrics_save_image",
     "metrics_set",
@@ -1732,11 +1741,14 @@ spatialIntegration = spatial_integration
 
 metricsSPD = metrics_spd
 metricsCamera = metrics_camera
+metricsClose = metrics_close
 metricsCompute = metrics_compute
 metricsDescription = metrics_description
 metricsGet = metrics_get
 metricsGetVciPair = metrics_get_vci_pair
+metricsKeyPress = metrics_key_press
 metricsMaskedError = metrics_masked_error
+metricsRefresh = metrics_refresh
 metricsSaveData = metrics_save_data
 metricsSaveImage = metrics_save_image
 metricsSet = metrics_set

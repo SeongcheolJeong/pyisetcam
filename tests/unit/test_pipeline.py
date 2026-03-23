@@ -269,11 +269,14 @@ from pyisetcam import (
     mlens_get,
     mlens_set,
     metricsCamera,
+    metricsClose,
     metricsCompute,
     metricsDescription,
     metricsGet,
     metricsGetVciPair,
+    metricsKeyPress,
     metricsMaskedError,
+    metricsRefresh,
     metricsSaveData,
     metricsSaveImage,
     metricsSet,
@@ -11225,6 +11228,29 @@ def test_metrics_compute_and_masked_error_helpers(tmp_path) -> None:
     shown_metric = metricsShowMetric(handles)
     assert shown_metric["metric"] == "CIELAB (dE)"
     np.testing.assert_allclose(shown_metric["image"], d_e_image / 30.0, rtol=1e-10, atol=1e-12)
+
+    refreshed = metricsRefresh({**handles, "images": {"first": ip1, "second": ip2}})
+    assert refreshed["popImageList1"] == ["first", "second"]
+    assert refreshed["popImageList2"] == ["first", "second"]
+    assert "description_text" in refreshed
+    np.testing.assert_allclose(refreshed["shown_images"]["image1"], result1, rtol=1e-10, atol=1e-12)
+
+    computed = metricsKeyPress({**handles, "current_metric": "MSE"}, 16)
+    np.testing.assert_allclose(computed["metric_image"], mse_image, rtol=1e-10, atol=1e-12)
+    assert computed["metric_value"] == pytest.approx(float(np.mean(expected_mse)), rel=1e-12, abs=1e-12)
+    assert computed["last_action"] == "compute"
+
+    refreshed_via_key = metricsKeyPress({**handles, "images": {"first": ip1, "second": ip2}}, 18)
+    assert refreshed_via_key["last_action"] == "refresh"
+    assert refreshed_via_key["popImageList1"] == ["first", "second"]
+
+    help_state = metricsKeyPress(handles, 8)
+    assert help_state["last_action"] == "help"
+
+    closed = metricsClose({"metricsWindow": object(), "figure1": object(), **handles})
+    assert closed["closed"] is True
+    assert "metricsWindow" not in closed
+    assert "figure1" not in closed
 
     image_path, metric_name = metricsSaveImage(handles, tmp_path / "metric_output")
     data_path, saved_metric_name = metricsSaveData(handles, tmp_path / "metric_payload")

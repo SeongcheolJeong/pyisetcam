@@ -597,6 +597,64 @@ def metrics_save_data(handles: Any, path: str | Path) -> tuple[str, str]:
     return str(full_path), str(metrics_get(current, "currentmetric"))
 
 
+def metrics_close(handles: Any | None = None) -> dict[str, Any]:
+    """Close the headless metrics window state and drop GUI-only handles."""
+
+    current: dict[str, Any] = {} if handles is None else _metrics_handle_copy(handles)
+    current.pop("metricsWindow", None)
+    current.pop("metrics_window", None)
+    current.pop("figure1", None)
+    current["closed"] = True
+    return current
+
+
+def metrics_refresh(handles: Any) -> dict[str, Any]:
+    """Refresh the headless metrics-window payloads."""
+
+    current = _metrics_handle_copy(handles)
+    if "images" in current and isinstance(current["images"], dict):
+        names = [str(name) for name in current["images"].keys()]
+    else:
+        names = _metrics_names(current, "image_names", "image")
+    current["popImageList1"] = list(names)
+    current["popImageList2"] = list(names)
+    current["image_names"] = list(names)
+    current["shown_images"] = metrics_show_image(current)
+    current["shown_metric"] = metrics_show_metric(current)
+    current["description_text"] = metrics_description(current)
+    return current
+
+
+def metrics_key_press(handles: Any, key: Any) -> dict[str, Any]:
+    """Dispatch the small upstream metrics keyboard-control surface headlessly."""
+
+    current = _metrics_handle_copy(handles)
+    if isinstance(key, str):
+        if len(key) != 1:
+            raise ValueError("metricsKeyPress string keys must be single characters.")
+        key_code = ord(key)
+    else:
+        key_code = int(key)
+
+    if key_code == 8:
+        current["last_action"] = "help"
+        return current
+    if key_code == 16:
+        vci1, vci2 = metrics_get_vci_pair(current)
+        metric_name = str(metrics_get(current, "currentmetric"))
+        metric_image, metric_value = metrics_compute(vci1, vci2, metric_name)
+        if metric_image is not None:
+            current["metric_image"] = np.asarray(metric_image, dtype=float)
+        current["metric_value"] = None if metric_value is None else float(metric_value)
+        current["last_action"] = "compute"
+        return current
+    if key_code == 18:
+        refreshed = metrics_refresh(current)
+        refreshed["last_action"] = "refresh"
+        return refreshed
+    return current
+
+
 def metrics_camera(
     camera: Any,
     metric_name: str,
@@ -806,9 +864,12 @@ iePSNR = peak_signal_to_noise_ratio
 metricsCamera = metrics_camera
 metricsCompute = metrics_compute
 metricsDescription = metrics_description
+metricsClose = metrics_close
 metricsGet = metrics_get
 metricsGetVciPair = metrics_get_vci_pair
+metricsKeyPress = metrics_key_press
 metricsMaskedError = metrics_masked_error
+metricsRefresh = metrics_refresh
 metricsSaveData = metrics_save_data
 metricsSaveImage = metrics_save_image
 metricsSet = metrics_set

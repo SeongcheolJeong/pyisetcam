@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-23T18:55:29.166033+00:00",
+  "generated_at": "2026-03-23T19:25:06.869018+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-23T18:55:29.166033+00:00",
+    "generated_at": "2026-03-23T19:25:06.869018+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 91,
       "missing": 37,
       "out_of_scope": 132,
-      "parity": 544,
-      "partial": 604,
+      "parity": 547,
+      "partial": 601,
       "ported": 35
     },
     "kind_counts": {
@@ -22,19 +22,19 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 171,
+      "P0": 168,
       "P1": 381,
       "P2": 180,
-      "P3": 711
+      "P3": 714
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
         "out_of_scope": 0,
-        "parity": 4,
+        "parity": 3,
         "partial": -3,
-        "ported": -1
+        "ported": 0
       },
       "kind_counts": {
         "api": 0,
@@ -366,8 +366,8 @@
         "total": 24,
         "by_status": {
           "headless_only": 1,
-          "parity": 16,
-          "partial": 7
+          "parity": 19,
+          "partial": 4
         },
         "by_kind": {
           "api": 24
@@ -1046,16 +1046,6 @@
         }
       },
       {
-        "family": "metrics",
-        "open_entries": 8,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "headless_only": 1,
-          "parity": 16,
-          "partial": 7
-        }
-      },
-      {
         "family": "opticalimage/depth",
         "open_entries": 8,
         "highest_open_priority": "P0",
@@ -1144,6 +1134,15 @@
           "parity": 38,
           "partial": 5,
           "ported": 2
+        }
+      },
+      {
+        "family": "scripts/optics",
+        "open_entries": 6,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 36,
+          "partial": 6
         }
       }
     ],
