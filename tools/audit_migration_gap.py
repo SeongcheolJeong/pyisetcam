@@ -25,6 +25,22 @@ IMPLEMENTATION_PLAN_PATH = REPO_ROOT / "docs" / "implementation-plan.md"
 SRC_ROOT = REPO_ROOT / "src" / "pyisetcam"
 TEST_ROOT = REPO_ROOT / "tests" / "unit"
 SUPPORTED_CODE_SUFFIXES = {".m", ".mlapp", ".fig"}
+SHORT_SIGNAL_PREFIXES = (
+    "oi",
+    "ip",
+    "rt",
+    "wvf",
+    "psf",
+    "si",
+    "ie",
+    "sc",
+    "ml",
+    "vc",
+    "hc",
+    "xyy",
+    "xyz",
+    "lms",
+)
 
 FAMILY_SURFACE_MAP = {
     "camera": ["pyisetcam.camera"],
@@ -227,6 +243,13 @@ def _canonical_signal(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", text.lower())
 
 
+def _signal_min_length(token: str) -> int:
+    normalized = _canonical_signal(token)
+    if normalized.startswith(SHORT_SIGNAL_PREFIXES):
+        return 4
+    return 6
+
+
 def _json_yaml_dump(data: Any) -> str:
     return json.dumps(data, indent=2, sort_keys=False) + "\n"
 
@@ -357,7 +380,7 @@ def _module_texts() -> dict[str, dict[str, str]]:
 
 
 def _module_hits(stem: str, module_texts: dict[str, dict[str, str]]) -> list[str]:
-    if len(stem) < 6:
+    if len(_canonical_signal(stem)) < _signal_min_length(stem):
         return []
     canonical_stem = _canonical_signal(stem)
     hits = [
@@ -380,7 +403,7 @@ def _docs_text() -> str:
 
 
 def _contains_signal(text: str, token: str) -> bool:
-    if len(token) < 6:
+    if len(_canonical_signal(token)) < _signal_min_length(token):
         return False
     if token in text:
         return True
