@@ -198,6 +198,118 @@ def _xyy_to_xyz(xyy: NDArray[np.float64]) -> NDArray[np.float64]:
     return xyz.reshape(values.shape)
 
 
+def xyy_to_xyz(xyy: NDArray[np.float64]) -> NDArray[np.float64]:
+    """Convert CIE xyY values to CIE XYZ values."""
+
+    values = np.asarray(xyy, dtype=float)
+    if values.shape[-1] != 3:
+        raise ValueError("xyy must have a trailing dimension of size 3.")
+    return np.asarray(_xyy_to_xyz(values), dtype=float)
+
+
+def ie_lab_to_xyz(lab: NDArray[np.float64], white_point: NDArray[np.float64]) -> NDArray[np.float64]:
+    """Convert CIELAB values to XYZ using MATLAB ieLAB2XYZ() semantics."""
+
+    lab_array = np.asarray(lab, dtype=float)
+    white = np.asarray(white_point, dtype=float)
+    if lab_array.shape[-1] != 3:
+        raise ValueError("lab must have a trailing dimension of size 3.")
+    if white.shape[-1] != 3:
+        raise ValueError("white_point must have a trailing dimension of size 3.")
+
+    delta = 6.0 / 29.0
+    fy = (lab_array[..., 0] + 16.0) / 116.0
+    fx = (lab_array[..., 1] / 500.0) + fy
+    fz = fy - (lab_array[..., 2] / 200.0)
+
+    def _inverse_f(values: NDArray[np.float64]) -> NDArray[np.float64]:
+        return np.where(values > delta, values**3, 3.0 * delta**2 * (values - (4.0 / 29.0)))
+
+    xyz = np.empty_like(lab_array, dtype=float)
+    xyz[..., 0] = _inverse_f(fx) * white[..., 0]
+    xyz[..., 1] = _inverse_f(fy) * white[..., 1]
+    xyz[..., 2] = _inverse_f(fz) * white[..., 2]
+    return xyz
+
+
+def _stockman_xyz_matrices(
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    store = asset_store or AssetStore.default()
+    wave = np.arange(400.0, 701.0, 5.0, dtype=float)
+    xyz = np.asarray(xyz_color_matching(wave, asset_store=store), dtype=float)
+    _, lms = store.load_spectra("stockman.mat", wave_nm=wave)
+    lms_array = np.asarray(lms, dtype=float)
+    xyz_to_lms_matrix, _, _, _ = np.linalg.lstsq(xyz, lms_array, rcond=None)
+    lms_to_xyz_matrix, _, _, _ = np.linalg.lstsq(lms_array, xyz, rcond=None)
+    return np.asarray(xyz_to_lms_matrix, dtype=float), np.asarray(lms_to_xyz_matrix, dtype=float)
+
+
+def _apply_tristimulus_transform(values: NDArray[np.float64], matrix: NDArray[np.float64]) -> NDArray[np.float64]:
+    array = np.asarray(values, dtype=float)
+    transform = np.asarray(matrix, dtype=float)
+    if array.ndim >= 1 and array.shape[-1] == 3:
+        reshaped = array.reshape(-1, 3)
+        return np.asarray(reshaped @ transform, dtype=float).reshape(array.shape)
+    if array.ndim == 2 and array.shape[0] == 3 and array.shape[1] != 3:
+        return np.asarray(transform.T @ array, dtype=float)
+    raise ValueError("Input must have a trailing dimension of size 3 or be a 3xN array.")
+
+
+def xyz_to_lms(
+    xyz: NDArray[np.float64],
+    cb_type: int = 0,
+    extrap_val: float = 0.0,
+    *,
+    asset_store: AssetStore | None = None,
+) -> NDArray[np.float64]:
+    """Convert XYZ values to Stockman LMS using the direct MATLAB xyz2lms() path."""
+
+    cb = int(cb_type)
+    if cb > 0:
+        raise UnsupportedOptionError("xyz2lms", f"cbType={cb_type}")
+    xyz_to_lms_matrix, _ = _stockman_xyz_matrices(asset_store=asset_store)
+    lms = np.asarray(_apply_tristimulus_transform(np.asarray(xyz, dtype=float), xyz_to_lms_matrix), dtype=float)
+    if cb == 0:
+        return lms
+    channel_index = abs(cb) - 1
+    if channel_index not in {0, 1, 2}:
+        raise UnsupportedOptionError("xyz2lms", f"cbType={cb_type}")
+    lms = np.asarray(lms, dtype=float).copy()
+    if lms.ndim >= 1 and lms.shape[-1] == 3:
+        lms[..., channel_index] = float(extrap_val)
+        return lms
+    lms[channel_index, :] = float(extrap_val)
+    return lms
+
+
+def lms_to_xyz(
+    lms: NDArray[np.float64],
+    *,
+    asset_store: AssetStore | None = None,
+) -> NDArray[np.float64]:
+    """Convert Stockman LMS values to XYZ using the direct MATLAB lms2xyz() path."""
+
+    _, lms_to_xyz_matrix = _stockman_xyz_matrices(asset_store=asset_store)
+    return np.asarray(_apply_tristimulus_transform(np.asarray(lms, dtype=float), lms_to_xyz_matrix), dtype=float)
+
+
+def lms_to_srgb(
+    lms: NDArray[np.float64],
+    *,
+    asset_store: AssetStore | None = None,
+) -> NDArray[np.float64]:
+    """Convert LMS image data to sRGB for visualization."""
+
+    from .utils import xyz_to_srgb
+
+    xyz = np.asarray(lms_to_xyz(lms, asset_store=asset_store), dtype=float)
+    if xyz.ndim != 3 or xyz.shape[2] != 3:
+        raise ValueError("lms2srgb expects an RGB-format LMS image.")
+    return np.asarray(xyz_to_srgb(xyz), dtype=float)
+
+
 def srgb_parameters(value: str = "all") -> NDArray[np.float64]:
     """Return sRGB display parameters using MATLAB srgbParameters() semantics."""
 

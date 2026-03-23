@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import numpy as np
 import pytest
+import pyisetcam.metrics as metrics_module
 import pyisetcam.optics as optics_module
 import pyisetcam.sensor as sensor_module
 import imageio.v3 as iio
@@ -66,7 +67,10 @@ from pyisetcam import (
     iso_find_slanted_bar,
     iso_acutance,
     iso12233,
+    ieLAB2XYZ,
     lrgb_to_srgb,
+    lms2srgb,
+    lms2xyz,
     luminance_from_energy,
     luminance_from_photons,
     macbeth_read_reflectance,
@@ -185,6 +189,9 @@ from pyisetcam import (
     srgb_parameters,
     spatialIntegration,
     vc_get_roi_data,
+    xyy2xyz,
+    xyz2lms,
+    xyz2srgb,
     imx490_compute,
     ml_radiance,
     mlens_create,
@@ -8939,6 +8946,90 @@ def test_run_python_case_supports_sensor_signal_current_uniform_parity_case(asse
 
     assert case.payload["current_center"].shape == (40, 40)
     assert float(case.payload["mean_current"]) > 0.0
+
+
+def test_xyy2xyz_matches_closed_form() -> None:
+    xyy = np.array(
+        [
+            [0.3127, 0.3290, 1.0],
+            [0.25, 0.40, 12.0],
+        ],
+        dtype=float,
+    )
+
+    xyz = xyy2xyz(xyy)
+    expected = np.array(
+        [
+            [(0.3127 / 0.3290) * 1.0, 1.0, ((1.0 - 0.3127 - 0.3290) / 0.3290) * 1.0],
+            [(0.25 / 0.40) * 12.0, 12.0, ((1.0 - 0.25 - 0.40) / 0.40) * 12.0],
+        ],
+        dtype=float,
+    )
+
+    np.testing.assert_allclose(xyz, expected, rtol=1e-10, atol=1e-12)
+
+
+def test_ie_lab_to_xyz_roundtrips_metrics_xyz_to_lab() -> None:
+    xyz = np.array(
+        [
+            [0.95047, 1.0, 1.08883],
+            [0.31, 0.22, 0.08],
+        ],
+        dtype=float,
+    )
+    white = np.array([0.95047, 1.0, 1.08883], dtype=float)
+
+    lab = metrics_module.xyz_to_lab(xyz, white)
+    reconstructed = ieLAB2XYZ(lab, white)
+
+    np.testing.assert_allclose(reconstructed, xyz, rtol=1e-6, atol=1e-8)
+
+
+def test_xyz2lms_and_lms2xyz_roundtrip_for_row_vectors() -> None:
+    xyz = np.array(
+        [
+            [0.30, 0.20, 0.10],
+            [0.95, 1.00, 1.09],
+            [0.15, 0.40, 0.25],
+        ],
+        dtype=float,
+    )
+
+    lms = xyz2lms(xyz)
+    reconstructed = lms2xyz(lms)
+
+    np.testing.assert_allclose(reconstructed, xyz, rtol=2e-2, atol=1.5e-2)
+
+
+def test_xyz2lms_zero_fills_missing_cone_channel() -> None:
+    xyz = np.array(
+        [
+            [[0.3, 0.2, 0.1], [0.6, 0.5, 0.2]],
+            [[0.1, 0.2, 0.3], [0.9, 0.8, 0.7]],
+        ],
+        dtype=float,
+    )
+
+    lms = xyz2lms(xyz, cb_type=-2, extrap_val=0.25)
+
+    assert lms.shape == xyz.shape
+    np.testing.assert_allclose(lms[:, :, 1], 0.25, rtol=0.0, atol=0.0)
+
+
+def test_lms2srgb_matches_xyz2srgb_of_reconstructed_xyz() -> None:
+    xyz = np.array(
+        [
+            [[0.20, 0.30, 0.10], [0.25, 0.35, 0.15]],
+            [[0.40, 0.45, 0.30], [0.55, 0.60, 0.40]],
+        ],
+        dtype=float,
+    )
+
+    lms = xyz2lms(xyz)
+    srgb = lms2srgb(lms)
+    expected = xyz2srgb(lms2xyz(lms))
+
+    np.testing.assert_allclose(srgb, expected, rtol=1e-10, atol=1e-12)
 
 
 def test_ie_read_color_filter_handles_ovt_hdf_orientation(asset_store) -> None:

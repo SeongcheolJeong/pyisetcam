@@ -25,15 +25,20 @@ from .camera import (
 from .color import (
     adobergb_parameters,
     daylight,
+    ie_lab_to_xyz,
     ie_luminance_to_radiance,
     ie_responsivity_convert,
     ie_scotopic_luminance_from_energy,
     ie_xyz_from_photons,
+    lms_to_srgb,
+    lms_to_xyz,
     lrgb_to_srgb,
     luminance_from_energy,
     luminance_from_photons,
     srgb_parameters,
     srgb_to_lrgb,
+    xyy_to_xyz,
+    xyz_to_lms,
     y_to_lstar,
 )
 from .description import HeadlessDescriptionHandle, sensor_description
@@ -427,6 +432,8 @@ __all__ = [
     "correlated_color_temperature",
     "deltaEab",
     "delta_e_ab",
+    "ie_lab_to_xyz",
+    "ieLAB2XYZ",
     "ieLuminance2Radiance",
     "iePSNR",
     "ieResponsivityConvert",
@@ -628,8 +635,16 @@ __all__ = [
     "srgb_to_lrgb",
     "srgb_to_linear",
     "srgb_to_xyz",
+    "lms2srgb",
+    "lms2xyz",
+    "lms_to_srgb",
+    "lms_to_xyz",
     "xyz2srgb",
+    "xyz2lms",
     "xyz_to_srgb",
+    "xyz_to_lms",
+    "xyy2xyz",
+    "xyy_to_xyz",
     "Y2Lstar",
     "y_to_lstar",
     "opticsBuild2Dotf",
@@ -1302,6 +1317,11 @@ imageFlip = image_flip
 imageIncreaseImageRGBSize = image_increase_image_rgb_size
 srgb2xyz = srgb_to_xyz
 xyz2srgb = xyz_to_srgb
+xyy2xyz = xyy_to_xyz
+ieLAB2XYZ = ie_lab_to_xyz
+lms2srgb = lms_to_srgb
+lms2xyz = lms_to_xyz
+xyz2lms = xyz_to_lms
 ieLuminanceFromEnergy = luminance_from_energy
 ieLuminanceFromPhotons = luminance_from_photons
 
