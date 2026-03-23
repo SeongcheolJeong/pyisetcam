@@ -22,6 +22,7 @@ from pyisetcam import (
     camera_mtf,
     camera_set,
     camera_vsnr,
+    chartPatchCompare,
     dac_to_rgb,
     macbeth_color_error,
     chromaticity_xy,
@@ -32,6 +33,7 @@ from pyisetcam import (
     display_create,
     display_get,
     edge_to_mtf,
+    exposureValue,
     hc_basis,
     image_flip,
     image_increase_image_rgb_size,
@@ -173,6 +175,7 @@ from pyisetcam import (
     mlens_get,
     mlens_set,
     metrics_spd,
+    photometricExposure,
     iePixelWellCapacity,
     pixelCreate,
     pixelGet,
@@ -9887,6 +9890,48 @@ def test_sensor_macbeth_daylight_estimate_script_contract(asset_store) -> None:
     assert camera_data.shape == (3, 24)
     assert design_matrix.shape == (72, 3)
     assert np.allclose(estimated_weights, true_weights, atol=1e-10, rtol=1e-10)
+
+
+def test_exposure_value_and_photometric_exposure_match_legacy_formulas(asset_store) -> None:
+    oi = oi_create("diffraction limited", asset_store=asset_store)
+    oi = oi_set(oi, "fnumber", 4.0)
+    oi = oi_set(oi, "meanilluminance", 80.0)
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "exposure time", 0.25)
+
+    assert np.isclose(exposureValue(oi, sensor), np.log2((4.0**2) / 0.25))
+    assert np.isclose(photometricExposure(oi, sensor), 20.0)
+
+
+def test_chart_patch_compare_matches_legacy_template_layout() -> None:
+    patch_height = 2
+    patch_width = 2
+    rows = 4
+    cols = 6
+    img_l = np.zeros((rows * patch_height, cols * patch_width, 3), dtype=float)
+    img_s = np.zeros_like(img_l)
+    rects = []
+
+    count = 0
+    for col in range(cols):
+        for row in range(rows):
+            color = np.array([count / 24.0, (count + 1) / 25.0, (count + 2) / 26.0], dtype=float)
+            img_l[row * patch_height : (row + 1) * patch_height, col * patch_width : (col + 1) * patch_width, :] = color
+            img_s[row * patch_height : (row + 1) * patch_height, col * patch_width : (col + 1) * patch_width, :] = color
+            rects.append([col * patch_width, row * patch_height, patch_width - 1, patch_height - 1])
+            count += 1
+
+    img_s[0:patch_height, 0:patch_width, :] = np.array([0.9, 0.2, 0.1], dtype=float)
+
+    chart_template, delta_map = chartPatchCompare(img_l, img_s, np.asarray(rects, dtype=float), np.asarray(rects, dtype=float), patch_size=4)
+
+    assert chart_template.shape == (16, 24, 3)
+    assert delta_map.shape == (16, 24)
+    assert np.allclose(chart_template[0:2, 0:2, :], img_l[0, 0, :].reshape(1, 1, 3))
+    assert np.allclose(chart_template[2:4, 2:4, :], img_s[0, 0, :].reshape(1, 1, 3))
+    assert np.allclose(delta_map[4:8, 0:4], 0.0)
+    assert np.allclose(delta_map[0:4, 0:4], delta_map[0, 0])
+    assert float(delta_map[0, 0]) > 0.0
 
 
 def test_scene_cct_script_workflow(asset_store) -> None:

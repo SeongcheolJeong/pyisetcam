@@ -361,6 +361,98 @@ def comparison_metrics(reference: Any, actual: Any, *, data_range: float | None 
     }
 
 
+def exposure_value(oi: Any, sensor: Any) -> float:
+    """Compute MATLAB-style exposure value from OI f-number and sensor exposure time."""
+
+    from .optics import oi_get
+    from .sensor import sensor_get
+
+    f_number = float(oi_get(oi, "fnumber"))
+    exposure_time = float(sensor_get(sensor, "exposuretime"))
+    return float(np.log2((f_number**2) / max(exposure_time, 1e-30)))
+
+
+def photometric_exposure(oi: Any, sensor: Any) -> float:
+    """Compute MATLAB-style photometric exposure in lux-seconds."""
+
+    from .optics import oi_get
+    from .sensor import sensor_get
+
+    return float(oi_get(oi, "meanilluminance")) * float(sensor_get(sensor, "exposuretime"))
+
+
+def _chart_crop(image: NDArray[np.float64], rect: Any) -> NDArray[np.float64]:
+    rectangle = np.asarray(rect, dtype=float).reshape(-1)
+    if rectangle.size < 4:
+        raise ValueError("rectangles must contain [x, y, width, height].")
+    x, y, width, height = rectangle[:4]
+    left = int(np.floor(x))
+    top = int(np.floor(y))
+    right = left + max(int(np.round(width)), 0) + 1
+    bottom = top + max(int(np.round(height)), 0) + 1
+    left = max(left, 0)
+    top = max(top, 0)
+    right = min(right, image.shape[1])
+    bottom = min(bottom, image.shape[0])
+    if right <= left or bottom <= top:
+        raise ValueError("chart patch rectangle must intersect the image bounds.")
+    return np.asarray(image[top:bottom, left:right, :], dtype=float)
+
+
+def chart_patch_compare(
+    img_l: Any,
+    img_s: Any,
+    rect_l: Any,
+    rect_s: Any,
+    *,
+    patch_size: int = 32,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Compare two 24-patch sRGB charts using the legacy MATLAB template contract."""
+
+    image_l = np.asarray(img_l, dtype=float)
+    image_s = np.asarray(img_s, dtype=float)
+    if image_l.ndim != 3 or image_l.shape[-1] != 3:
+        raise ValueError("img_l must be an RGB image.")
+    if image_s.ndim != 3 or image_s.shape[-1] != 3:
+        raise ValueError("img_s must be an RGB image.")
+
+    rects_l = np.asarray(rect_l, dtype=float)
+    rects_s = np.asarray(rect_s, dtype=float)
+    if rects_l.shape != rects_s.shape or rects_l.ndim != 2 or rects_l.shape[1] != 4:
+        raise ValueError("rect_l and rect_s must be matching Nx4 rectangle arrays.")
+    if rects_l.shape[0] != 24:
+        raise ValueError("chartPatchCompare expects 24 chart rectangles in MATLAB patch order.")
+    if int(patch_size) <= 0 or int(patch_size) % 2 != 0:
+        raise ValueError("patch_size must be a positive even integer.")
+
+    patch_size = int(patch_size)
+    chart_template = np.zeros((patch_size * 4, patch_size * 6, 3), dtype=float)
+    delta_e_map = np.zeros((patch_size * 4, patch_size * 6), dtype=float)
+    white_point = np.asarray(srgb_to_xyz(np.ones((1, 1, 3), dtype=float)), dtype=float)[0, 0, :]
+
+    count = 0
+    for column in range(6):
+        c_start = column * patch_size
+        for row in range(4):
+            r_start = row * patch_size
+            mean_patch_l = np.mean(_chart_crop(image_l, rects_l[count]), axis=(0, 1), dtype=float)
+            mean_patch_s = np.mean(_chart_crop(image_s, rects_s[count]), axis=(0, 1), dtype=float)
+
+            chart_template[r_start : r_start + patch_size, c_start : c_start + patch_size, :] = mean_patch_l.reshape(1, 1, 3)
+            half = patch_size // 2
+            chart_template[r_start + half : r_start + patch_size, c_start + half : c_start + patch_size, :] = mean_patch_s.reshape(1, 1, 3)
+
+            xyz_l = np.asarray(srgb_to_xyz(mean_patch_l.reshape(1, 1, 3)), dtype=float)[0, 0, :]
+            xyz_s = np.asarray(srgb_to_xyz(mean_patch_s.reshape(1, 1, 3)), dtype=float)[0, 0, :]
+            lab_l = xyz_to_lab(xyz_l.reshape(1, 1, 3), white_point.reshape(1, 1, 3))
+            lab_s = xyz_to_lab(xyz_s.reshape(1, 1, 3), white_point.reshape(1, 1, 3))
+            delta_e = float(deltaE_ciede2000(lab_l, lab_s)[0, 0])
+            delta_e_map[r_start : r_start + patch_size, c_start : c_start + patch_size] = delta_e
+            count += 1
+
+    return chart_template, delta_e_map
+
+
 def metrics_spd(
     spd1: Any,
     spd2: Any,
@@ -448,6 +540,9 @@ ieXYZ2LAB = xyz_to_lab
 xyz2luv = xyz_to_luv
 deltaEab = delta_e_ab
 iePSNR = peak_signal_to_noise_ratio
+exposureValue = exposure_value
+photometricExposure = photometric_exposure
+chartPatchCompare = chart_patch_compare
 metricsSPD = metrics_spd
 spd2cct = spd_to_cct
 cpiqCSF = cpiq_csf

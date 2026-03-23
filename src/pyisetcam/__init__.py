@@ -81,6 +81,7 @@ from .ip import (
 )
 from .metrics import (
     ISOAcutance,
+    chart_patch_compare,
     cct_from_uv,
     cpiqCSF,
     cpiq_csf,
@@ -88,6 +89,7 @@ from .metrics import (
     comparison_metrics,
     correlated_color_temperature,
     delta_e_ab,
+    exposure_value,
     iePSNR,
     ieXYZ2LAB,
     ieXYZFromEnergy,
@@ -97,6 +99,7 @@ from .metrics import (
     mired_difference,
     iso_acutance,
     peak_signal_to_noise_ratio,
+    photometric_exposure,
     root_mean_squared_error,
     spd_to_cct,
     srgb_to_color_temp,
@@ -561,6 +564,10 @@ __all__ = [
     "ie_responsivity_convert",
     "ie_scotopic_luminance_from_energy",
     "ie_xyz_from_photons",
+    "chartPatchCompare",
+    "chart_patch_compare",
+    "exposureValue",
+    "exposure_value",
     "lrgb2srgb",
     "luminance_from_energy",
     "luminance_from_photons",
@@ -569,6 +576,8 @@ __all__ = [
     "metricsSPD",
     "metrics_spd",
     "mired_difference",
+    "photometricExposure",
+    "photometric_exposure",
     "edge_to_mtf",
     "scParams",
     "scComputeSCIELAB",
@@ -1182,6 +1191,9 @@ sensorShowCFAWeights = sensor_show_cfa_weights
 sensorShowImage = sensor_show_image
 
 metricsSPD = metrics_spd
+exposureValue = exposure_value
+photometricExposure = photometric_exposure
+chartPatchCompare = chart_patch_compare
 deltaEab = delta_e_ab
 srgbParameters = srgb_parameters
 adobergbParameters = adobergb_parameters
