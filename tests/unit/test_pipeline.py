@@ -153,6 +153,7 @@ from pyisetcam import (
     scene_adjust_illuminant,
     scene_combine,
     scene_create,
+    sceneDescription,
     sceneEnergyFromVector,
     sceneFrequencySupport,
     scene_from_file,
@@ -163,6 +164,7 @@ from pyisetcam import (
     scene_illuminant_ss,
     sceneInitSpatial,
     scene_interpolate_w,
+    sceneList,
     scene_plot,
     sceneExtractWaveband,
     scenePhotonsFromVector,
@@ -173,6 +175,7 @@ from pyisetcam import (
     scene_show_image,
     sceneSpatialSupport,
     scene_set,
+    sceneThumbnail,
     sceneTranslate,
     signal_current,
     srgb2xyz,
@@ -12180,6 +12183,35 @@ def test_scene_support_wrappers_match_scene_get(asset_store, tmp_path: Path) -> 
     saved = iio.imread(output)
     assert saved.shape[:2] == tuple(np.asarray(scene_get(scene, "size"), dtype=int))
     assert saved.shape[2] == 3
+
+
+def test_scene_description_list_and_thumbnail_wrappers(asset_store, tmp_path: Path) -> None:
+    scene = scene_create("uniform ee", 8, np.array([500.0, 600.0, 700.0], dtype=float), asset_store=asset_store)
+    scene.name = "thumbnail-scene"
+
+    description = sceneDescription(scene, asset_store=asset_store)
+    listing = sceneList()
+    thumbnail = Path(
+        sceneThumbnail(
+            scene,
+            "row size",
+            24,
+            "force square",
+            True,
+            "output file name",
+            tmp_path / "scene_thumb",
+            asset_store=asset_store,
+        )
+    )
+
+    assert "Row,Col:" in description
+    assert "Wave:" in description
+    assert "uniform equal energy" in listing.lower()
+    assert "scene from file" in listing.lower()
+    assert thumbnail.name == "scene_thumb.png"
+    written = np.asarray(iio.imread(thumbnail), dtype=float)
+    assert written.shape[:2] == (24, 24)
+    assert written.shape[2] == 3
 
 
 def test_scene_helper_wrappers_match_legacy_contract(asset_store, tmp_path: Path) -> None:

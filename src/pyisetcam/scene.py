@@ -42,6 +42,21 @@ _SPATIAL_UNIT_SCALE = {
     "um": 1e6,
 }
 
+_SCENE_LIST_TEXT = """ISETCam scene types with optional parameters
+
+Supported Python sceneCreate families include:
+  empty
+  macbeth d65 / d50 / illc / fluorescent / tungsten / ee_ir
+  reflectance chart
+  multispectral / rgb / uniform monochromatic
+  rings rays / harmonic / sweep frequency / freq orient pattern
+  line d65 / line ee / line ep / bar / vernier
+  point array / grid lines / radial lines / slanted edge / checkerboard
+  zone plate / linear intensity ramp
+  uniform equal energy / uniform equal photon / uniform d65 / uniform bb
+  white noise / letter / scene from file
+"""
+
 
 def _store(asset_store: AssetStore | None) -> AssetStore:
     return asset_store or AssetStore.default()
@@ -3044,6 +3059,67 @@ def scene_init_spatial(scene: Scene) -> Scene:
     return _update_scene_geometry(scene)
 
 
+def scene_description(
+    scene: Scene | None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> str:
+    """Return a headless text description for a scene."""
+
+    if scene is None:
+        return "No scene"
+
+    rows = int(scene_get(scene, "rows"))
+    cols = int(scene_get(scene, "cols"))
+    height_m = float(scene_get(scene, "height"))
+    width_m = float(scene_get(scene, "width"))
+    sample_size_m = width_m / max(cols, 1)
+    deg_per_sample = float(scene_get(scene, "fov")) / max(cols, 1)
+    wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+    spacing = float(np.mean(np.diff(wave))) if wave.size >= 2 else 0.0
+    luminance = np.asarray(scene_get(scene, "luminance", asset_store=asset_store), dtype=float)
+    mx = float(np.max(luminance)) if luminance.size else 0.0
+    mn = float(np.min(luminance)) if luminance.size else 0.0
+
+    size_order = round(np.log10(max(height_m, 1e-12)))
+    if size_order >= 0:
+        size_unit, size_scale = "m", 1.0
+    elif size_order >= -3:
+        size_unit, size_scale = "mm", 1e3
+    else:
+        size_unit, size_scale = "um", 1e6
+
+    if sample_size_m >= 1.0:
+        sample_unit, sample_scale = "m", 1.0
+    elif sample_size_m >= 1e-3:
+        sample_unit, sample_scale = "mm", 1e3
+    else:
+        sample_unit, sample_scale = "um", 1e6
+
+    lines = [
+        f"Row,Col:\t{rows:.0f} by {cols:.0f} ",
+        f"Hgt,Wdth:\t({height_m * size_scale:3.2f}, {width_m * size_scale:3.2f}) {size_unit}",
+        f"Sample:\t{sample_size_m * sample_scale:3.2f} {sample_unit}",
+        f"Deg/samp: {deg_per_sample:2.2f}",
+    ]
+    if wave.size:
+        lines.append(f"Wave:\t{float(np.min(wave)):.0f}:{spacing:.0f}:{float(np.max(wave)):.0f} nm")
+    if mn == 0.0:
+        lines.append(f"DR: Inf\n  (max {mx:.0f}, min {mn:.2f} cd/m2)")
+    else:
+        lines.append(f"DR: {20.0 * np.log10(mx / mn):.2f} dB (max {mx:.0f} cd/m2)")
+    if scene.fields.get("depth_map_m") is not None:
+        depth_map = np.asarray(scene_get(scene, "depth map"), dtype=float)
+        lines.append(f"Depth range: [{float(np.min(depth_map)):.1f} {float(np.max(depth_map)):.1f}]m")
+    return "\n".join(lines)
+
+
+def scene_list() -> str:
+    """Return a headless summary of supported sceneCreate families."""
+
+    return _SCENE_LIST_TEXT
+
+
 def scene_save_image(
     scene: Scene,
     f_name: str | Path,
@@ -3063,6 +3139,52 @@ def scene_save_image(
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     payload = np.clip(np.round(np.clip(image, 0.0, 1.0) * 255.0), 0.0, 255.0).astype(np.uint8)
+    iio.imwrite(output_path, payload)
+    return str(output_path)
+
+
+def scene_thumbnail(
+    scene: Scene,
+    *args: Any,
+    asset_store: AssetStore | None = None,
+    **kwargs: Any,
+) -> str:
+    """Write a headless scene thumbnail PNG using the legacy MATLAB shape."""
+
+    options: dict[str, Any] = {}
+    if len(args) % 2 != 0:
+        raise ValueError("sceneThumbnail expects key/value arguments after the scene.")
+    for index in range(0, len(args), 2):
+        options[param_format(str(args[index]))] = args[index + 1]
+    for key, value in kwargs.items():
+        options[param_format(str(key))] = value
+
+    row_size = max(int(np.rint(options.get("rowsize", 192))), 1)
+    force_square = bool(options.get("forcesquare", False))
+    output_filename = options.get("outputfilename")
+
+    rgb = np.asarray(scene_show_image(scene, -1, 1.0, asset_store=asset_store), dtype=float)
+    rows, cols = rgb.shape[:2]
+    col_size = max(int(np.rint((row_size / max(rows, 1)) * cols)), 1)
+    resized = zoom(rgb, (row_size / max(rows, 1), col_size / max(cols, 1), 1.0), order=1)
+    resized = np.clip(np.asarray(resized, dtype=float), 0.0, 1.0)
+
+    if force_square:
+        pad_size = row_size - resized.shape[1]
+        if pad_size > 0:
+            resized = np.pad(resized, ((0, 0), (0, pad_size), (0, 0)), mode="constant", constant_values=0.3)
+        elif pad_size < 0:
+            resized = resized[:, :row_size, :]
+
+    output_name = scene.name if output_filename in {None, ""} else str(output_filename)
+    output_path = Path(output_name).expanduser()
+    if output_path.suffix == "":
+        output_path = output_path.with_suffix(".png")
+    if not output_path.is_absolute():
+        output_path = (Path.cwd() / output_path).resolve()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    payload = np.clip(np.round(resized * 255.0), 0.0, 255.0).astype(np.uint8)
     iio.imwrite(output_path, payload)
     return str(output_path)
 
