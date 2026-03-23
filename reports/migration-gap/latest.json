@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-23T01:11:14.058117+00:00",
+  "generated_at": "2026-03-23T01:34:37.643847+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-23T01:11:14.058117+00:00",
+    "generated_at": "2026-03-23T01:34:37.643847+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 73,
       "missing": 40,
       "out_of_scope": 106,
-      "parity": 365,
-      "partial": 830,
+      "parity": 367,
+      "partial": 828,
       "ported": 29
     },
     "kind_counts": {
@@ -22,18 +22,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 373,
+      "P0": 371,
       "P1": 406,
       "P2": 164,
-      "P3": 500
+      "P3": 502
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
         "out_of_scope": 0,
-        "parity": 5,
-        "partial": -5,
+        "parity": 2,
+        "partial": -2,
         "ported": 0
       },
       "kind_counts": {
@@ -45,10 +45,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -5,
+        "P0": -2,
         "P1": 0,
         "P2": 0,
-        "P3": 5
+        "P3": 2
       }
     },
     "family_summary": {
@@ -422,8 +422,8 @@
         "total": 37,
         "by_status": {
           "headless_only": 1,
-          "parity": 16,
-          "partial": 20
+          "parity": 18,
+          "partial": 18
         },
         "by_kind": {
           "api": 37
@@ -1034,16 +1034,6 @@
         }
       },
       {
-        "family": "opticalimage",
-        "open_entries": 21,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "headless_only": 1,
-          "parity": 16,
-          "partial": 20
-        }
-      },
-      {
         "family": "opticalimage/optics",
         "open_entries": 20,
         "highest_open_priority": "P0",
@@ -1090,6 +1080,16 @@
         "by_status": {
           "headless_only": 1,
           "parity": 5,
+          "partial": 18
+        }
+      },
+      {
+        "family": "opticalimage",
+        "open_entries": 19,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "headless_only": 1,
+          "parity": 18,
           "partial": 18
         }
       },

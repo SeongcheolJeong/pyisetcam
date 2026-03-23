@@ -821,6 +821,10 @@ That same headless OI utility surface now also includes
 `oi_extract_waveband(...)` / `oiExtractWaveband(...)`, and
 `oi_add(...)` / `oiAdd(...)` for the legacy MATLAB OI spectral and
 irradiance helper mini-family.
+That same headless OI utility surface now also includes
+`oi_pad_value(...)` / `oiPadValue(...)`, `oi_pad(...)` / `oiPad(...)`,
+and `oi_make_even_row_col(...)` / `oiMakeEvenRowCol(...)` for the
+legacy MATLAB OI padding and even-dimension helper mini-family.
 The `rtOTF` groundwork is also starting to land through public helper ports
 for `rt_block_center` / `rtBlockCenter`, `rt_extract_block` /
 `rtExtractBlock`, `rt_insert_block` / `rtInsertBlock`, and

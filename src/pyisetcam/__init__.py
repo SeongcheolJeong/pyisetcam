@@ -131,6 +131,9 @@ from .optics import (
     oi_frequency_resolution,
     oi_get,
     oi_interpolate_w,
+    oi_make_even_row_col,
+    oi_pad,
+    oi_pad_value,
     oi_save_image,
     oi_show_image,
     oi_space,
@@ -644,6 +647,9 @@ __all__ = [
     "oiGet",
     "oiFrequencyResolution",
     "oiInterpolateW",
+    "oiMakeEvenRowCol",
+    "oiPad",
+    "oiPadValue",
     "oiSaveImage",
     "oiShowImage",
     "oiSpace",
@@ -663,6 +669,9 @@ __all__ = [
     "oi_frequency_resolution",
     "oi_get",
     "oi_interpolate_w",
+    "oi_make_even_row_col",
+    "oi_pad",
+    "oi_pad_value",
     "oi_plot",
     "oi_save_image",
     "oi_show_image",
@@ -1075,6 +1084,9 @@ oiExtractWaveband = oi_extract_waveband
 oiGet = oi_get
 oiFrequencyResolution = oi_frequency_resolution
 oiInterpolateW = oi_interpolate_w
+oiMakeEvenRowCol = oi_make_even_row_col
+oiPad = oi_pad
+oiPadValue = oi_pad_value
 oiSaveImage = oi_save_image
 oiShowImage = oi_show_image
 oiSpace = oi_space

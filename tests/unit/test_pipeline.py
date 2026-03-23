@@ -92,6 +92,9 @@ from pyisetcam import (
     oi_frequency_resolution,
     oi_get,
     oiInterpolateW,
+    oiMakeEvenRowCol,
+    oiPad,
+    oiPadValue,
     oiSaveImage,
     oiShowImage,
     oi_plot,
@@ -658,6 +661,89 @@ def test_oi_geometry_helpers_match_existing_getters(asset_store) -> None:
         dtype=float,
     )
     assert np.allclose(dpos, expected)
+
+
+def test_oi_pad_value_matches_legacy_mean_zero_and_border_padding() -> None:
+    photons = np.array(
+        [
+            [[1.0, 10.0], [2.0, 20.0]],
+            [[3.0, 30.0], [4.0, 40.0]],
+        ],
+        dtype=float,
+    )
+    oi = oi_create()
+    oi = oi_set(oi, "wave", np.array([500.0, 600.0], dtype=float))
+    oi = oi_set(oi, "photons", photons)
+    oi = oi_set(oi, "image distance", 0.02)
+    oi = oi_set(oi, "fov", 5.0)
+
+    mean_padded = oiPadValue(oi, [1, 2, 0], "mean photons")
+    zero_padded = oiPadValue(oi, [1, 2, 0], "zero photons")
+    border_padded = oiPadValue(oi, [1, 2, 0], "border photons", direction="post")
+
+    mean_band = np.mean(photons, axis=(0, 1), dtype=float)
+    assert mean_padded.data["photons"].shape == (4, 6, 2)
+    assert np.allclose(mean_padded.data["photons"][1:3, 2:4, :], photons)
+    assert np.allclose(mean_padded.data["photons"][0, 0, :], mean_band)
+    assert mean_padded.fields["pad_value"] == "mean photons"
+    assert mean_padded.fields["padding_pixels"] == (1, 2)
+
+    width = float(oi_get(oi, "width"))
+    expected_width = width * (1.0 + (4.0 / float(oi_get(oi, "cols"))))
+    expected_hfov = np.rad2deg(2.0 * np.arctan2(expected_width / 2.0, float(oi_get(oi, "image distance"))))
+    assert np.isclose(float(oi_get(mean_padded, "hfov")), expected_hfov)
+
+    assert np.allclose(zero_padded.data["photons"][0, 0, :], 0.0)
+    assert np.allclose(zero_padded.data["photons"][1:3, 2:4, :], photons)
+
+    assert border_padded.data["photons"].shape == (3, 4, 2)
+    assert np.allclose(border_padded.data["photons"][:2, :2, :], photons)
+    assert np.allclose(border_padded.data["photons"][-1, -1, :], photons[0, 0, :])
+
+
+def test_oi_pad_deprecated_wrapper_uses_near_zero_padding() -> None:
+    photons = np.array(
+        [
+            [[1.0, 10.0], [2.0, 20.0]],
+            [[3.0, 30.0], [4.0, 40.0]],
+        ],
+        dtype=float,
+    )
+    oi = oi_create()
+    oi = oi_set(oi, "wave", np.array([500.0, 600.0], dtype=float))
+    oi = oi_set(oi, "photons", photons)
+
+    padded = oiPad(oi, [1, 1, 0], direction="post")
+    near_zero = float(np.max(photons)) * 1.0e-9
+
+    assert padded.data["photons"].shape == (3, 3, 2)
+    assert np.allclose(padded.data["photons"][:2, :2, :], photons)
+    assert np.allclose(padded.data["photons"][-1, -1, :], near_zero)
+    assert np.isclose(float(padded.fields["pad_value"]), near_zero)
+
+
+def test_oi_make_even_row_col_only_pads_odd_dimensions() -> None:
+    odd_photons = np.arange(3 * 5 * 2, dtype=float).reshape(3, 5, 2)
+    odd = oi_create()
+    odd = oi_set(odd, "wave", np.array([500.0, 600.0], dtype=float))
+    odd = oi_set(odd, "photons", odd_photons)
+
+    evened = oiMakeEvenRowCol(odd)
+
+    assert evened.data["photons"].shape == (4, 6, 2)
+    assert np.allclose(evened.data["photons"][:3, :5, :], odd_photons)
+    assert evened.fields["padding_pixels"] == (1, 1)
+
+    even_photons = np.arange(4 * 6 * 2, dtype=float).reshape(4, 6, 2)
+    even = oi_create()
+    even = oi_set(even, "wave", np.array([500.0, 600.0], dtype=float))
+    even = oi_set(even, "photons", even_photons)
+
+    unchanged = oiMakeEvenRowCol(even)
+
+    assert unchanged is not even
+    assert unchanged.data["photons"].shape == (4, 6, 2)
+    assert np.allclose(unchanged.data["photons"], even_photons)
 
 
 def test_diffraction_otf_matches_oi_frequency_support(asset_store) -> None:

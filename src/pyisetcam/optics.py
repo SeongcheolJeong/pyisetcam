@@ -5393,11 +5393,177 @@ def oi_add(in1: Any, in2: Any, add_flag: str = "add") -> OpticalImage:
     return output
 
 
+def _normalize_oi_pad_size(pad_size: Any) -> tuple[int, int, int]:
+    values = np.asarray(pad_size, dtype=float).reshape(-1)
+    if values.size == 0:
+        raise ValueError("oiPadValue requires a non-empty pad size.")
+    if values.size == 1:
+        rows = cols = int(np.rint(values[0]))
+        waves = 0
+    elif values.size == 2:
+        rows = int(np.rint(values[0]))
+        cols = int(np.rint(values[1]))
+        waves = 0
+    else:
+        rows = int(np.rint(values[0]))
+        cols = int(np.rint(values[1]))
+        waves = int(np.rint(values[2]))
+    if rows < 0 or cols < 0 or waves < 0:
+        raise ValueError("oiPadValue pad sizes must be non-negative.")
+    return rows, cols, waves
+
+
+def _oi_pad_width_scale(oi: OpticalImage, pad_cols: int) -> float:
+    if pad_cols <= 0:
+        return float(oi_get(oi, "hfov"))
+    width_m = float(oi_get(oi, "width"))
+    cols = int(oi_get(oi, "cols"))
+    image_distance = float(oi_get(oi, "image distance"))
+    if width_m <= 0.0 or cols <= 0 or image_distance <= 0.0:
+        return float(oi_get(oi, "hfov"))
+    new_width_m = width_m * (1.0 + (float(pad_cols) / float(cols)))
+    return float(np.rad2deg(2.0 * np.arctan2(new_width_m / 2.0, image_distance)))
+
+
+def _oi_pad_bandwise(
+    photons: np.ndarray,
+    row_pad: tuple[int, int],
+    col_pad: tuple[int, int],
+    band_values: np.ndarray,
+) -> np.ndarray:
+    padded_bands: list[np.ndarray] = []
+    for band_index in range(photons.shape[2]):
+        padded_bands.append(
+            np.pad(
+                photons[:, :, band_index],
+                (row_pad, col_pad),
+                mode="constant",
+                constant_values=float(band_values[band_index]),
+            )
+        )
+    return np.stack(padded_bands, axis=2)
+
+
+def _oi_pad_wave_constant(
+    photons: np.ndarray,
+    wave_pad: tuple[int, int],
+    pad_value: float,
+) -> np.ndarray:
+    if wave_pad == (0, 0):
+        return photons
+    return np.pad(
+        photons,
+        ((0, 0), (0, 0), wave_pad),
+        mode="constant",
+        constant_values=float(pad_value),
+    )
+
+
+def oi_pad_value(
+    oi: OpticalImage,
+    pad_size: Any,
+    pad_type: Any = "mean photons",
+    s_dist: Any | None = None,
+    direction: str = "both",
+) -> OpticalImage:
+    """Pad an optical image using the legacy MATLAB oiPadValue contract."""
+
+    del s_dist
+    padded = oi.clone()
+    photons = np.asarray(oi_get(padded, "photons"), dtype=float)
+    if photons.ndim != 3:
+        raise ValueError("oiPadValue requires a wave-last OI photon cube.")
+
+    pad_rows, pad_cols, pad_waves = _normalize_oi_pad_size(pad_size)
+    mode = param_format(direction)
+    if mode == "both":
+        row_pad = (pad_rows, pad_rows)
+        col_pad = (pad_cols, pad_cols)
+        wave_pad = (pad_waves, pad_waves)
+        total_cols = 2 * pad_cols
+    elif mode == "pre":
+        row_pad = (pad_rows, 0)
+        col_pad = (pad_cols, 0)
+        wave_pad = (pad_waves, 0)
+        total_cols = pad_cols
+    elif mode == "post":
+        row_pad = (0, pad_rows)
+        col_pad = (0, pad_cols)
+        wave_pad = (0, pad_waves)
+        total_cols = pad_cols
+    else:
+        raise ValueError(f"Unknown oiPadValue direction: {direction}")
+
+    band_values: np.ndarray
+    wave_value: float
+    if isinstance(pad_type, str):
+        normalized = param_format(pad_type)
+        if normalized in {"zerophotons", "zero", "zeros"}:
+            band_values = np.zeros(photons.shape[2], dtype=float)
+            wave_value = 0.0
+            stored_pad_value: Any = "zero photons"
+        elif normalized in {"meanphotons", "mean"}:
+            band_values = np.mean(photons, axis=(0, 1), dtype=float).reshape(-1)
+            wave_value = float(np.mean(band_values)) if band_values.size else 0.0
+            stored_pad_value = "mean photons"
+        elif normalized in {"borderphotons", "border"}:
+            band_values = np.asarray(photons[0, 0, :], dtype=float).reshape(-1)
+            wave_value = float(band_values[0]) if band_values.size else 0.0
+            stored_pad_value = "border photons"
+        else:
+            raise ValueError(f"Unknown oiPadValue padType: {pad_type}")
+    else:
+        wave_value = float(np.asarray(pad_type, dtype=float).reshape(-1)[0])
+        band_values = np.full(photons.shape[2], wave_value, dtype=float)
+        stored_pad_value = wave_value
+
+    padded_photons = _oi_pad_bandwise(photons, row_pad, col_pad, band_values)
+    padded_photons = _oi_pad_wave_constant(padded_photons, wave_pad, wave_value)
+
+    padded = oi_set(padded, "photons", padded_photons)
+    padded = oi_set(padded, "hfov", _oi_pad_width_scale(oi, total_cols))
+    padded.fields["pad_value"] = stored_pad_value
+    padded.fields["padding_pixels"] = (int(pad_rows), int(pad_cols))
+    padded.fields["depth_map_m"] = None
+    oi_calculate_illuminance(padded)
+    return padded
+
+
+def oi_pad(
+    oi: OpticalImage,
+    pad_size: Any,
+    s_dist: Any | None = None,
+    direction: str = "both",
+) -> OpticalImage:
+    """Pad an optical image using the deprecated near-zero MATLAB contract."""
+
+    photons = np.asarray(oi_get(oi, "photons"), dtype=float)
+    data_max = float(np.max(photons)) if photons.size else 0.0
+    return oi_pad_value(oi, pad_size, data_max * 1.0e-9, s_dist=s_dist, direction=direction)
+
+
+def oi_make_even_row_col(
+    oi: OpticalImage,
+    s_dist: Any | None = None,
+) -> OpticalImage:
+    """Pad odd OI dimensions to even sizes using the legacy MATLAB contract."""
+
+    rows, cols = np.asarray(oi_get(oi, "size"), dtype=int).reshape(2)
+    pad_rows = int(rows % 2)
+    pad_cols = int(cols % 2)
+    if pad_rows == 0 and pad_cols == 0:
+        return oi.clone()
+    return oi_pad(oi, [pad_rows, pad_cols, 0], s_dist=s_dist, direction="post")
+
+
 oiCalculateIrradiance = oi_calculate_irradiance
 oiAdjustIlluminance = oi_adjust_illuminance
 oiInterpolateW = oi_interpolate_w
 oiExtractWaveband = oi_extract_waveband
 oiAdd = oi_add
+oiPadValue = oi_pad_value
+oiPad = oi_pad
+oiMakeEvenRowCol = oi_make_even_row_col
 
 
 def _oi_rgb_render(oi: OpticalImage, *, asset_store: AssetStore | None = None) -> np.ndarray | None:
