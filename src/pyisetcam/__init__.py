@@ -363,11 +363,19 @@ from .sensor import (
     pixel_get,
     pixel_ideal,
     pixel_position_pd,
+    pixel_transmittance,
     pixel_snr,
     pixel_snr_luxsec,
     pixel_sr,
     pixel_set,
     pixel_v_per_lux_sec,
+    pt_interface_matrix,
+    pt_poynting_factor,
+    pt_propagation_matrix,
+    pt_reflection_and_transmission,
+    pt_scattering_matrix,
+    pt_snells_law,
+    pt_transmittance,
     signal_current,
     signal_current_density,
     sensor_add_filter,
@@ -1034,6 +1042,14 @@ __all__ = [
     "pixelPositionPD",
     "pixelSet",
     "pixelSR",
+    "pixelTransmittance",
+    "ptInterfaceMatrix",
+    "ptPoyntingFactor",
+    "ptPropagationMatrix",
+    "ptReflectionAndTransmission",
+    "ptScatteringMatrix",
+    "ptSnellsLaw",
+    "ptTransmittance",
     "iePixelWellCapacity",
     "sensorCFANameList",
     "sensorCheckArray",
@@ -1107,9 +1123,17 @@ __all__ = [
     "pixel_get",
     "pixel_ideal",
     "pixel_position_pd",
+    "pixel_transmittance",
     "pixelSNR",
     "pixel_set",
     "pixel_sr",
+    "pt_interface_matrix",
+    "pt_poynting_factor",
+    "pt_propagation_matrix",
+    "pt_reflection_and_transmission",
+    "pt_scattering_matrix",
+    "pt_snells_law",
+    "pt_transmittance",
     "ie_pixel_well_capacity",
     "sensor_set",
     "sensor_set_size_to_fov",
@@ -1410,6 +1434,14 @@ pixelIdeal = pixel_ideal
 pixelPositionPD = pixel_position_pd
 pixelSet = pixel_set
 pixelSR = pixel_sr
+pixelTransmittance = pixel_transmittance
+ptInterfaceMatrix = pt_interface_matrix
+ptPoyntingFactor = pt_poynting_factor
+ptPropagationMatrix = pt_propagation_matrix
+ptReflectionAndTransmission = pt_reflection_and_transmission
+ptScatteringMatrix = pt_scattering_matrix
+ptSnellsLaw = pt_snells_law
+ptTransmittance = pt_transmittance
 iePixelWellCapacity = ie_pixel_well_capacity
 sensorDR = sensor_dr
 SignalCurrentDensity = signal_current_density

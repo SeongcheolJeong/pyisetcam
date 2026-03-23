@@ -2511,6 +2511,201 @@ def pixel_snr_luxsec(
     return snr, luxsec, snr_shot, snr_read, anti_luxsec
 
 
+def pt_snells_law(n: Any, theta_in: Any) -> np.ndarray:
+    """Return the MATLAB-style Snell-law angle grid for a refractive-index stack."""
+
+    indices = np.asarray(n, dtype=np.complex128).reshape(-1)
+    incoming = np.asarray(theta_in, dtype=np.complex128).reshape(-1)
+    reduced_theta = indices[0] * np.sin(incoming)
+    reduced_grid, index_grid = np.meshgrid(reduced_theta, indices)
+    return np.asarray(np.arcsin(reduced_grid / index_grid), dtype=np.complex128)[None, :, :]
+
+
+def pt_reflection_and_transmission(
+    n_in: Any,
+    n_out: Any,
+    theta_in: Any,
+    polarization: str,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return the MATLAB-style Fresnel reflection/transmission coefficients."""
+
+    n_in_value = np.asarray(n_in, dtype=np.complex128).reshape(-1)[0]
+    n_out_value = np.asarray(n_out, dtype=np.complex128).reshape(-1)[0]
+    theta_in_value = np.asarray(theta_in, dtype=np.complex128)
+    theta_out = np.arcsin(n_in_value * np.sin(theta_in_value) / n_out_value)
+
+    normalized = param_format(polarization)
+    if normalized == "s":
+        denominator = (n_in_value * np.cos(theta_in_value)) + (n_out_value * np.cos(theta_out))
+        rho = ((n_in_value * np.cos(theta_in_value)) - (n_out_value * np.cos(theta_out))) / denominator
+        tau = (2.0 * n_in_value * np.cos(theta_in_value)) / denominator
+        return np.asarray(rho, dtype=np.complex128), np.asarray(tau, dtype=np.complex128)
+    if normalized == "p":
+        denominator = (n_out_value * np.cos(theta_in_value)) + (n_in_value * np.cos(theta_out))
+        rho = ((n_out_value * np.cos(theta_in_value)) - (n_in_value * np.cos(theta_out))) / denominator
+        tau = (2.0 * n_in_value * np.cos(theta_in_value)) / denominator
+        return np.asarray(rho, dtype=np.complex128), np.asarray(tau, dtype=np.complex128)
+    raise UnsupportedOptionError("ptReflectionAndTransmission", polarization)
+
+
+def pt_interface_matrix(rho: Any, tau: Any) -> np.ndarray:
+    """Return the MATLAB-style 2x2xN interface matrix stack."""
+
+    rho_values = np.asarray(rho, dtype=np.complex128).reshape(-1)
+    tau_values = np.asarray(tau, dtype=np.complex128).reshape(-1)
+    if rho_values.size != tau_values.size:
+        raise ValueError("rho and tau must have the same number of samples.")
+    interface = np.zeros((2, 2, rho_values.size), dtype=np.complex128)
+    interface[0, 0, :] = 1.0 / tau_values
+    interface[0, 1, :] = rho_values / tau_values
+    interface[1, 0, :] = rho_values / tau_values
+    interface[1, 1, :] = 1.0 / tau_values
+    return interface
+
+
+def pt_propagation_matrix(n: Any, d: Any, theta: Any, lambda_value: Any) -> np.ndarray:
+    """Return the MATLAB-style 2x2xN propagation matrix for one layer."""
+
+    index_value = np.asarray(n, dtype=np.complex128).reshape(-1)[0]
+    distance_value = float(np.asarray(d, dtype=float).reshape(-1)[0])
+    theta_values = np.asarray(theta, dtype=np.complex128).reshape(-1)
+    wavelength_m = float(np.asarray(lambda_value, dtype=float).reshape(-1)[0])
+    wave_number = (2.0 * np.pi / max(wavelength_m, 1.0e-30)) * index_value
+    phase = np.exp(1j * wave_number * distance_value * np.cos(theta_values))
+    propagation = np.zeros((2, 2, theta_values.size), dtype=np.complex128)
+    propagation[0, 0, :] = phase
+    propagation[1, 1, :] = np.exp(-1j * wave_number * distance_value * np.cos(theta_values))
+    return propagation
+
+
+def pt_scattering_matrix(
+    n: Any,
+    d: Any,
+    theta_in: Any,
+    lambda_value: Any,
+    polarization: str,
+) -> np.ndarray:
+    """Return the MATLAB-style multilayer scattering matrix over incidence angle."""
+
+    indices = np.asarray(n, dtype=np.complex128).reshape(-1)
+    thickness = np.asarray(d, dtype=float).reshape(-1)
+    theta = pt_snells_law(indices, theta_in)
+
+    interface_count = max(indices.size - 1, 0)
+    interfaces = []
+    for interface_index in range(interface_count):
+        rho, tau = pt_reflection_and_transmission(
+            indices[interface_index],
+            indices[interface_index + 1],
+            theta[0, interface_index, :],
+            polarization,
+        )
+        interfaces.append(pt_interface_matrix(rho, tau))
+
+    propagation_count = thickness.size
+    propagations = []
+    for propagation_index in range(propagation_count):
+        propagations.append(
+            pt_propagation_matrix(
+                indices[propagation_index + 1],
+                thickness[propagation_index],
+                theta[0, propagation_index + 1, :],
+                lambda_value,
+            )
+        )
+
+    scattering = np.zeros((2, 2, theta.shape[2]), dtype=np.complex128)
+    identity = np.eye(2, dtype=np.complex128)
+    for angle_index in range(theta.shape[2]):
+        current = interfaces[0][:, :, angle_index] if interfaces else identity.copy()
+        for interface_index in range(1, interface_count):
+            layer_index = interface_index - 1
+            if layer_index < propagation_count:
+                current = current @ propagations[layer_index][:, :, angle_index]
+            current = current @ interfaces[interface_index][:, :, angle_index]
+        if propagation_count == interface_count and propagation_count > 0:
+            current = current @ propagations[-1][:, :, angle_index]
+        scattering[:, :, angle_index] = current
+    return scattering
+
+
+def pt_poynting_factor(n: Any, theta_in: Any) -> np.ndarray:
+    """Return the MATLAB-style Poynting correction factor for the output medium."""
+
+    indices = np.asarray(n, dtype=np.complex128).reshape(-1)
+    theta = pt_snells_law(indices, theta_in)
+    if np.isclose(np.imag(indices[-1]), 0.0):
+        factor = (indices[-1] * np.cos(theta[0, -1, :])) / (indices[0] * np.cos(theta[0, 0, :]))
+        return np.asarray(np.real_if_close(factor), dtype=np.complex128).reshape(-1)
+
+    eta = np.abs(indices[-1] * np.cos(theta[0, -1, :]))
+    beta = np.angle(indices[-1] * np.cos(theta[0, -1, :]))
+    n_t = np.sqrt((indices[0] ** 2) * np.sin(theta[0, 0, :]) ** 2 + eta**2 * np.cos(beta) ** 2)
+    cos_theta_t = np.sqrt(1.0 - ((indices[0] * np.sin(theta[0, 0, :])) / n_t) ** 2)
+    factor = (np.real(indices[-1]) * np.real(cos_theta_t)) / (indices[0] * np.cos(theta[0, 0, :]))
+    return np.asarray(np.real_if_close(factor), dtype=np.complex128).reshape(-1)
+
+
+def pt_transmittance(n: Any, d: Any, lambda_nm: Any, theta: Any) -> dict[str, Any]:
+    """Return the MATLAB-style pixel tunnel transmittance summary."""
+
+    indices = np.asarray(n, dtype=np.complex128).reshape(-1)
+    thickness = np.asarray(d, dtype=float).reshape(-1)
+    wavelengths_nm = np.asarray(lambda_nm, dtype=float).reshape(-1)
+    theta_values = np.asarray(theta, dtype=float).reshape(-1)
+    wavelengths_m = wavelengths_nm * 1.0e-9
+
+    transmission = np.empty((theta_values.size, wavelengths_nm.size), dtype=float)
+    poynting = np.asarray(pt_poynting_factor(indices, theta_values), dtype=np.complex128).reshape(-1)
+    for wave_index, wavelength_m in enumerate(wavelengths_m):
+        scattering_s = pt_scattering_matrix(indices, thickness, theta_values, wavelength_m, "s")
+        scattering_p = pt_scattering_matrix(indices, thickness, theta_values, wavelength_m, "p")
+        band = (np.abs(1.0 / scattering_s[0, 0, :]) ** 2 + np.abs(1.0 / scattering_p[0, 0, :]) ** 2) / 2.0
+        transmission[:, wave_index] = np.asarray(np.real_if_close(band * poynting), dtype=float)
+
+    spectral = np.mean(transmission, axis=0, dtype=float)
+    average = np.mean(transmission, axis=1, dtype=float)
+    return {
+        "transmission": {
+            "average": np.asarray(average, dtype=float),
+            "spectral": np.asarray(spectral, dtype=float),
+            "spectra": np.asarray(spectral, dtype=float),
+            "data": np.asarray(transmission, dtype=float),
+        },
+        "wave": wavelengths_nm.copy(),
+        "theta": theta_values.copy(),
+    }
+
+
+def pixel_transmittance(
+    optical_image: OpticalImage,
+    pixel: Any,
+    optics: dict[str, Any],
+) -> tuple[OpticalImage, Any, dict[str, Any]]:
+    """Apply the legacy pixel transmittance stack to an optical image."""
+
+    current_oi = optical_image.clone()
+    photons = np.asarray(oi_get(current_oi, "photons"), dtype=float)
+    wave = np.asarray(oi_get(current_oi, "wave"), dtype=float).reshape(-1)
+    if photons.ndim != 3 or photons.shape[2] != wave.size:
+        raise ValueError("pixelTransmittance requires an optical image with spectral photons.")
+
+    current_pixel = pixel.clone() if isinstance(pixel, Sensor) else _pixel_payload_from_value(pixel)
+    current_optics = dict(optics)
+    f_number = float(current_optics.get("f_number", current_optics.get("fNumber", 4.0)))
+    incidence_angles = np.linspace(-np.arctan(1.0 / (2.0 * max(f_number, 1.0e-30))), np.arctan(1.0 / (2.0 * max(f_number, 1.0e-30))), 25)
+
+    refractive_index = np.asarray(pixel_get(current_pixel, "refractiveindex"), dtype=np.complex128).reshape(-1)
+    layer_thickness = np.asarray(pixel_get(current_pixel, "layerthickness"), dtype=float).reshape(-1)
+    tunnel = pt_transmittance(refractive_index, layer_thickness, wave, incidence_angles)
+    spectral = np.asarray(tunnel["transmission"]["spectral"], dtype=float).reshape(1, 1, -1)
+
+    current_oi.data["photons"] = photons * spectral
+    current_oi.fields["pixel_transmittance"] = copy.deepcopy(tunnel)
+    current_oi.fields.pop("illuminance", None)
+    return current_oi, current_pixel, current_optics
+
+
 def sensor_snr(
     sensor: Sensor,
     volts: Any | None = None,
@@ -5527,3 +5722,11 @@ sensorShowCFA = sensor_show_cfa
 sensorShowCFAWeights = sensor_show_cfa_weights
 sensorShowImage = sensor_show_image
 sensorSaveImage = sensor_save_image
+pixelTransmittance = pixel_transmittance
+ptInterfaceMatrix = pt_interface_matrix
+ptPoyntingFactor = pt_poynting_factor
+ptPropagationMatrix = pt_propagation_matrix
+ptReflectionAndTransmission = pt_reflection_and_transmission
+ptScatteringMatrix = pt_scattering_matrix
+ptSnellsLaw = pt_snells_law
+ptTransmittance = pt_transmittance

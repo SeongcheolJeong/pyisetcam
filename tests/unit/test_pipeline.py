@@ -241,8 +241,16 @@ from pyisetcam import (
     pixelPositionPD,
     pixelSet,
     pixelSR,
+    pixelTransmittance,
     pixel_snr_luxsec,
     pixel_v_per_lux_sec,
+    ptInterfaceMatrix,
+    ptPoyntingFactor,
+    ptPropagationMatrix,
+    ptReflectionAndTransmission,
+    ptScatteringMatrix,
+    ptSnellsLaw,
+    ptTransmittance,
     sensor_ccm,
     sensorAddFilter,
     sensorCFANameList,
@@ -5541,6 +5549,71 @@ def test_pixel_pd_helper_wrappers_match_legacy_geometry_contract(asset_store) ->
     assert "Well capacity" in summary
     assert "DR (1 ms):" in summary
     assert "Peak SNR:" in summary
+
+
+def test_pixel_transmittance_helpers_match_legacy_fresnel_contract() -> None:
+    theta_in = np.array([0.0, 0.2], dtype=float)
+    n_stack = np.array([1.0, 1.5], dtype=float)
+
+    theta_out = ptSnellsLaw(n_stack, theta_in)
+    expected_theta_out = np.arcsin(n_stack[0] * np.sin(theta_in) / n_stack[1])
+    assert theta_out.shape == (1, 2, 2)
+    assert np.allclose(np.real(theta_out[0, 1, :]), expected_theta_out)
+
+    rho_s, tau_s = ptReflectionAndTransmission(1.0, 1.5, theta_in, "s")
+    rho_p, tau_p = ptReflectionAndTransmission(1.0, 1.5, theta_in, "p")
+    assert np.isclose(float(np.real(rho_s[0])), (1.0 - 1.5) / (1.0 + 1.5))
+    assert np.isclose(float(np.real(tau_s[0])), 2.0 / (1.0 + 1.5))
+    assert np.isclose(float(np.real(rho_p[0])), (1.5 - 1.0) / (1.5 + 1.0))
+    assert np.isclose(float(np.real(tau_p[0])), 2.0 / (1.5 + 1.0))
+
+    interface = ptInterfaceMatrix(rho_s, tau_s)
+    propagation = ptPropagationMatrix(1.5, 2.0e-6, theta_out[0, 1, :], 550.0e-9)
+    assert interface.shape == (2, 2, theta_in.size)
+    assert propagation.shape == (2, 2, theta_in.size)
+    assert np.allclose(propagation[0, 0, :] * propagation[1, 1, :], np.ones(theta_in.size, dtype=complex))
+
+
+def test_pt_transmittance_stack_returns_unity_for_index_matched_layers() -> None:
+    n_stack = np.array([1.0, 1.0, 1.0], dtype=float)
+    thickness = np.array([1.0e-6, 2.0e-6], dtype=float)
+    theta = np.linspace(-0.2, 0.2, 5, dtype=float)
+    wave = np.array([450.0, 550.0, 650.0], dtype=float)
+
+    scattering = ptScatteringMatrix(n_stack, thickness, theta, 550.0e-9, "s")
+    poynting = ptPoyntingFactor(n_stack, theta)
+    tunnel = ptTransmittance(n_stack, thickness, wave, theta)
+
+    assert scattering.shape == (2, 2, theta.size)
+    assert np.allclose(np.abs(1.0 / scattering[0, 0, :]) ** 2, np.ones(theta.size, dtype=float))
+    assert np.allclose(np.real(poynting), np.ones(theta.size, dtype=float))
+    assert np.allclose(tunnel["transmission"]["spectral"], np.ones(wave.size, dtype=float))
+    assert np.allclose(tunnel["transmission"]["average"], np.ones(theta.size, dtype=float))
+
+
+def test_pixel_transmittance_scales_optical_image_by_spectral_tunnel_average() -> None:
+    wave = np.array([500.0, 600.0, 700.0], dtype=float)
+    photons = np.stack(
+        [
+            np.full((2, 3), 1.0, dtype=float),
+            np.full((2, 3), 2.0, dtype=float),
+            np.full((2, 3), 3.0, dtype=float),
+        ],
+        axis=2,
+    )
+    oi = oi_set(oi_set(oi_create(), "wave", wave), "photons", photons)
+    pixel = pixelCreate("human", wave)
+    optics = dict(oi.fields["optics"])
+    incidence_angles = np.linspace(-np.arctan(1.0 / (2.0 * float(optics["f_number"]))), np.arctan(1.0 / (2.0 * float(optics["f_number"]))), 25)
+    tunnel = ptTransmittance(pixelGet(pixel, "refractiveindex"), pixelGet(pixel, "layerthickness"), wave, incidence_angles)
+
+    filtered_oi, returned_pixel, returned_optics = pixelTransmittance(oi, pixel, optics)
+    expected = photons * np.asarray(tunnel["transmission"]["spectral"], dtype=float).reshape(1, 1, -1)
+
+    assert np.allclose(oi_get(filtered_oi, "photons"), expected)
+    assert np.allclose(filtered_oi.fields["pixel_transmittance"]["transmission"]["spectral"], tunnel["transmission"]["spectral"])
+    assert np.array_equal(np.asarray(pixelGet(returned_pixel, "wave"), dtype=float), wave)
+    assert np.isclose(float(returned_optics["f_number"]), float(optics["f_number"]))
 
 
 def test_sensor_show_image_matches_sensor_rgb_rendering(asset_store) -> None:

@@ -225,6 +225,16 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is explicitly marked obsolete and does not implement a usable headless API surface.",
         "module_hits": [],
     },
+    "sensor/pixel/pixelGUI/pixelGeometryWindow.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a legacy MATLAB figure window controller and remains outside the headless migration target.",
+        "module_hits": [],
+    },
+    "sensor/pixel/pixelGUI/pixelOEWindow.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a legacy MATLAB figure window controller and remains outside the headless migration target.",
+        "module_hits": [],
+    },
 }
 
 

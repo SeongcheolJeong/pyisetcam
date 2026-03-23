@@ -352,6 +352,12 @@ internal sensor-pixel state, plus headless
 `pixel_center_fill_pd(...)` / `pixelCenterFillPD(...)`, and
 `pixel_description(...)` / `pixelDescription(...)` for the legacy
 photodetector-positioning and pixel-summary helper layer, plus headless
+`pixel_transmittance(...)` / `pixelTransmittance(...)` together with the
+direct dielectric-stack helpers `ptSnellsLaw(...)`,
+`ptReflectionAndTransmission(...)`, `ptInterfaceMatrix(...)`,
+`ptPropagationMatrix(...)`, `ptScatteringMatrix(...)`,
+`ptPoyntingFactor(...)`, and `ptTransmittance(...)` for the buried
+photodetector tunnel-transmission path, plus headless
 `sensor_read_color_filters(...)` / `sensorReadColorFilters(...)`,
 `sensor_read_filter(...)` / `sensorReadFilter(...)`,
 `sensor_add_filter(...)` / `sensorAddFilter(...)`,
