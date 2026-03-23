@@ -300,6 +300,47 @@ def optics_depth_defocus(
     return np.asarray(defocus_diopters, dtype=float), np.asarray(image_distance_m, dtype=float)
 
 
+def optics_defocus_depth(
+    defocus_diopters: Any,
+    optics: OpticalImage | dict[str, Any],
+    img_plane_dist: Any | None = None,
+) -> float | np.ndarray:
+    """Return object distances in meters that produce the requested defocus."""
+
+    current = _coerce_optics_struct(optics)
+    focal_length_m = _optics_scalar_value(
+        current,
+        "focal_length_m",
+        "nominal_focal_length_m",
+        "focalLength",
+        "nominalFocalLength",
+        default=DEFAULT_FOCAL_LENGTH_M,
+    )
+    if focal_length_m <= 0.0:
+        raise ValueError("Optics focal length must be positive.")
+
+    if img_plane_dist is None:
+        image_plane_distance_m = np.asarray(focal_length_m, dtype=float)
+    else:
+        image_plane_distance_m = np.asarray(img_plane_dist, dtype=float)
+    if np.any(image_plane_distance_m < focal_length_m):
+        raise ValueError("img_plane_dist must be at least the focal length.")
+
+    defocus = np.asarray(defocus_diopters, dtype=float)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        image_distance_m = 1.0 / ((1.0 / image_plane_distance_m) + defocus)
+        object_distance_m = (image_distance_m * focal_length_m) / np.maximum(image_distance_m - focal_length_m, 1e-30)
+
+    infinite_mask = np.isclose(image_distance_m, focal_length_m)
+    if np.any(infinite_mask):
+        object_distance_m = np.asarray(object_distance_m, dtype=float)
+        object_distance_m[infinite_mask] = np.inf
+
+    if np.asarray(object_distance_m).ndim == 0:
+        return float(np.asarray(object_distance_m, dtype=float))
+    return np.asarray(object_distance_m, dtype=float)
+
+
 def optics_defocus_displacement(base_power_diopters: Any, delta_power_diopters: Any) -> float | np.ndarray:
     """Return the image-plane displacement in meters for a change in lens power."""
 
@@ -5957,6 +5998,51 @@ def oi_make_even_row_col(
     return oi_pad(oi, [pad_rows, pad_cols, 0], s_dist=s_dist, direction="post")
 
 
+def optics_dl_compute(
+    scene: Scene,
+    oi: OpticalImage | None = None,
+    *args: Any,
+    session: SessionContext | None = None,
+    **kwargs: Any,
+) -> OpticalImage:
+    """Run the legacy diffraction-limited optics entry point through ``oi_compute``."""
+
+    current = oi_create("diffraction limited", session=session) if oi is None else oi
+    model = param_format(current.fields.get("optics", {}).get("model", ""))
+    if model not in {"diffractionlimited", "skip"}:
+        raise ValueError("opticsDLCompute requires a diffraction-limited or skip optics model.")
+    return oi_compute(current, scene, *args, session=session, **kwargs)
+
+
+def optics_si_compute(
+    scene: Scene,
+    oi: OpticalImage | None = None,
+    *args: Any,
+    session: SessionContext | None = None,
+    **kwargs: Any,
+) -> OpticalImage:
+    """Run the legacy shift-invariant optics entry point through ``oi_compute``."""
+
+    current = oi_create("shift invariant", session=session) if oi is None else oi
+    model = param_format(current.fields.get("optics", {}).get("model", ""))
+    if model != "shiftinvariant":
+        raise ValueError("opticsSICompute requires a shift-invariant optics model.")
+    return oi_compute(current, scene, *args, session=session, **kwargs)
+
+
+def optics_plot_transmittance(oi: OpticalImage, this_w: Any | None = None) -> dict[str, Any]:
+    """Return MATLAB-style optics transmittance plot payload without opening a figure."""
+
+    del this_w
+    wave = np.asarray(oi_get(oi, "wave"), dtype=float).reshape(-1)
+    if wave.size == 0:
+        return {"wave": np.empty(0, dtype=float), "transmittance": np.empty(0, dtype=float)}
+    return {
+        "wave": wave.copy(),
+        "transmittance": np.asarray(oi_get(oi, "transmittance", wave), dtype=float).reshape(-1).copy(),
+    }
+
+
 def oi_illuminant_ss(oi: OpticalImage, pattern: Any | None = None) -> OpticalImage:
     """Convert an OI illuminant to spatial-spectral format using the MATLAB contract."""
 
@@ -6021,12 +6107,16 @@ oiAdjustIlluminance = oi_adjust_illuminance
 oiInterpolateW = oi_interpolate_w
 oiExtractWaveband = oi_extract_waveband
 oiAdd = oi_add
+opticsDLCompute = optics_dl_compute
+opticsSICompute = optics_si_compute
+opticsPlotTransmittance = optics_plot_transmittance
 oiIlluminantSS = oi_illuminant_ss
 oiIlluminantPattern = oi_illuminant_pattern
 oiPhotonNoise = oi_photon_noise
 oiPadValue = oi_pad_value
 oiPad = oi_pad
 oiMakeEvenRowCol = oi_make_even_row_col
+opticsDefocusDepth = optics_defocus_depth
 
 
 def _oi_rgb_render(oi: OpticalImage, *, asset_store: AssetStore | None = None) -> np.ndarray | None:

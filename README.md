@@ -875,6 +875,12 @@ That same headless optics-object compatibility surface now also includes
 `optics_description(...)` / `opticsDescription(...)`,
 `lens_list(...)` / `lensList(...)`, and `optics_to_wvf(...)` /
 `optics2wvf(...)` for the legacy MATLAB optics-object helper mini-family.
+That same headless optics helper surface now also includes
+`optics_defocus_depth(...)` / `opticsDefocusDepth(...)`,
+`optics_dl_compute(...)` / `opticsDLCompute(...)`,
+`optics_si_compute(...)` / `opticsSICompute(...)`, and
+`optics_plot_transmittance(...)` / `opticsPlotTransmittance(...)`
+for the legacy MATLAB optics depth/compute/transmittance wrapper family.
 The `rtOTF` groundwork is also starting to land through public helper ports
 for `rt_block_center` / `rtBlockCenter`, `rt_extract_block` /
 `rtExtractBlock`, `rt_insert_block` / `rtInsertBlock`, and

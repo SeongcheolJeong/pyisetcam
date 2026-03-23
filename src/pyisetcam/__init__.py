@@ -147,13 +147,17 @@ from .optics import (
     optics_coc,
     optics_create,
     optics_defocus_core,
+    optics_defocus_depth,
     optics_depth_defocus,
     optics_defocus_displacement,
+    optics_dl_compute,
     optics_description,
     optics_dof,
     optics_get,
+    optics_plot_transmittance,
     optics_ray_trace,
     optics_set,
+    optics_si_compute,
     optics_to_wvf,
     oi_add,
     oi_adjust_illuminance,
@@ -771,26 +775,34 @@ __all__ = [
     "opticsClearData",
     "opticsCreate",
     "opticsDefocusCore",
+    "opticsDefocusDepth",
     "opticsDepthDefocus",
     "opticsDefocusDisplacement",
+    "opticsDLCompute",
     "opticsDescription",
     "opticsDoF",
     "opticsGet",
+    "opticsPlotTransmittance",
     "optics_build_2d_otf",
     "optics_clear_data",
     "optics_coc",
     "optics_create",
     "optics_defocus_core",
+    "optics_defocus_depth",
     "optics_depth_defocus",
     "optics_defocus_displacement",
+    "optics_dl_compute",
     "optics_description",
     "optics_dof",
     "optics_get",
     "opticsRayTrace",
+    "opticsSICompute",
+    "optics_plot_transmittance",
     "optics_ray_trace",
     "opticsSet",
     "optics2wvf",
     "optics_set",
+    "optics_si_compute",
     "optics_to_wvf",
     "oiCalculateIlluminance",
     "oiClearData",
@@ -1352,13 +1364,17 @@ opticsClearData = optics_clear_data
 opticsCreate = optics_create
 opticsCoC = optics_coc
 opticsDefocusCore = optics_defocus_core
+opticsDefocusDepth = optics_defocus_depth
 opticsDepthDefocus = optics_depth_defocus
 opticsDefocusDisplacement = optics_defocus_displacement
+opticsDLCompute = optics_dl_compute
 opticsDescription = optics_description
 opticsDoF = optics_dof
 opticsGet = optics_get
+opticsPlotTransmittance = optics_plot_transmittance
 opticsRayTrace = optics_ray_trace
 opticsSet = optics_set
+opticsSICompute = optics_si_compute
 optics2wvf = optics_to_wvf
 ieFieldHeight2Index = ie_field_height_to_index
 rtAngleLUT = rt_angle_lut

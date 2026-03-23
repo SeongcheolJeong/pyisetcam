@@ -220,6 +220,21 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file only initializes GUI/window label strings and remains outside the headless migration target.",
         "module_hits": [],
     },
+    "opticalimage/optics/airyDiskPlot.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is explicitly deprecated and only adjusts live MATLAB figure state for an existing PSF plot.",
+        "module_hits": [],
+    },
+    "opticalimage/optics/defocusMTF.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file immediately errors as obsolete and directs callers to newer defocus/OTF helpers instead.",
+        "module_hits": [],
+    },
+    "opticalimage/optics/psfMovie.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a figure-driven animation helper, which remains outside the headless migration target.",
+        "module_hits": [],
+    },
     "sensor/sensorUnitBlock.m": {
         "status": "out_of_scope",
         "note": "The upstream file is explicitly marked obsolete and does not implement a usable headless API surface.",

@@ -88,14 +88,18 @@ from pyisetcam import (
     optics_coc,
     opticsCreate,
     optics_defocus_core,
+    opticsDefocusDepth,
     optics_depth_defocus,
     optics_defocus_displacement,
+    opticsDLCompute,
     opticsDescription,
     optics_dof,
     opticsGet,
+    opticsPlotTransmittance,
     optics_psf_to_otf,
     optics_ray_trace,
     opticsSet,
+    opticsSICompute,
     optics2wvf,
     airy_disk,
     oiAdd,
@@ -2797,6 +2801,47 @@ def test_oi_photon_noise_matches_seeded_legacy_contract() -> None:
 
     assert np.array_equal(noisy, expected_noisy)
     assert np.array_equal(noise, expected_noise)
+
+
+def test_legacy_optics_compute_wrappers_match_direct_oi_compute(asset_store) -> None:
+    scene = scene_create("uniform ee", 16, 550.0, asset_store=asset_store)
+
+    dl_base = oi_create("diffraction limited", asset_store=asset_store)
+    dl_direct = oi_compute(dl_base, scene, crop=True)
+    dl_wrapped = opticsDLCompute(scene, dl_base, crop=True)
+    assert np.allclose(np.asarray(oi_get(dl_wrapped, "photons"), dtype=float), np.asarray(oi_get(dl_direct, "photons"), dtype=float))
+    assert np.allclose(np.asarray(oi_get(dl_wrapped, "illuminance"), dtype=float), np.asarray(oi_get(dl_direct, "illuminance"), dtype=float))
+
+    si_base = oi_create("shift invariant", asset_store=asset_store)
+    si_direct = oi_compute(si_base, scene, crop=True)
+    si_wrapped = opticsSICompute(scene, si_base, crop=True)
+    assert np.allclose(np.asarray(oi_get(si_wrapped, "photons"), dtype=float), np.asarray(oi_get(si_direct, "photons"), dtype=float))
+    assert np.allclose(np.asarray(oi_get(si_wrapped, "illuminance"), dtype=float), np.asarray(oi_get(si_direct, "illuminance"), dtype=float))
+
+
+def test_legacy_optics_defocus_and_transmittance_wrappers_match_contract(asset_store) -> None:
+    scene = scene_create("uniform ee", 16, np.array([500.0, 600.0, 700.0], dtype=float), asset_store=asset_store)
+    oi = oi_create("diffraction limited", asset_store=asset_store)
+    oi = oi_set(oi, "transmittance wave", np.array([500.0, 600.0, 700.0], dtype=float))
+    oi = oi_set(oi, "transmittance scale", np.array([0.25, 0.5, 0.75], dtype=float))
+
+    udata = opticsPlotTransmittance(oi)
+    assert np.array_equal(np.asarray(udata["wave"], dtype=float), np.asarray(oi_get(oi, "wave"), dtype=float))
+    assert np.allclose(
+        np.asarray(udata["transmittance"], dtype=float),
+        np.asarray(oi_get(oi, "transmittance", oi_get(oi, "wave")), dtype=float),
+    )
+
+    optics = oi_get(oi, "optics")
+    image_plane_distance = float(opticsGet(optics, "focal length", "m")) * 1.1
+    object_distance = 1.75
+    defocus_diopters, _ = optics_depth_defocus(object_distance, optics, image_plane_distance)
+    recovered = opticsDefocusDepth(defocus_diopters, optics, image_plane_distance)
+    assert np.isclose(float(recovered), object_distance, atol=1e-8, rtol=1e-8)
+
+    wrapped = opticsDLCompute(scene, oi, crop=True)
+    direct = oi_compute(oi, scene, crop=True)
+    assert np.allclose(np.asarray(oi_get(wrapped, "photons"), dtype=float), np.asarray(oi_get(direct, "photons"), dtype=float))
 
 
 def test_optics_ray_trace_blur_matches_public_oi_diffuser(asset_store) -> None:
