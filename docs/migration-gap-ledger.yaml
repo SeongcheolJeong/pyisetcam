@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-03-24T12:33:11.204902+00:00",
+  "generated_at": "2026-03-24T12:46:29.257033+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 90,
       "missing": 37,
-      "out_of_scope": 163,
-      "parity": 646,
-      "partial": 469,
-      "ported": 38
+      "out_of_scope": 166,
+      "parity": 647,
+      "partial": 464,
+      "ported": 39
     },
     "kind_counts": {
       "api": 661,
@@ -20,19 +20,19 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 41,
+      "P0": 36,
       "P1": 376,
       "P2": 179,
-      "P3": 847
+      "P3": 852
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 0,
-        "parity": 2,
-        "partial": -2,
-        "ported": 0
+        "out_of_scope": 3,
+        "parity": 1,
+        "partial": -5,
+        "ported": 1
       },
       "kind_counts": {
         "api": 0,
@@ -43,10 +43,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -2,
+        "P0": -5,
         "P1": 0,
         "P2": 0,
-        "P3": 2
+        "P3": 5
       }
     },
     "family_summary": {
@@ -289,12 +289,12 @@
       "imgproc/binning": {
         "total": 1,
         "by_status": {
-          "partial": 1
+          "ported": 1
         },
         "by_kind": {
           "api": 1
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "imgproc/gui": {
         "total": 2,
@@ -384,15 +384,14 @@
       "metrics/iso": {
         "total": 20,
         "by_status": {
-          "out_of_scope": 9,
+          "out_of_scope": 10,
           "parity": 7,
-          "partial": 1,
           "ported": 3
         },
         "by_kind": {
           "api": 20
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "metrics/metricsgui": {
         "total": 3,
@@ -465,13 +464,12 @@
         "total": 35,
         "by_status": {
           "out_of_scope": 4,
-          "parity": 30,
-          "partial": 1
+          "parity": 31
         },
         "by_kind": {
           "api": 35
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "opticalimage/raytrace": {
         "total": 28,
@@ -522,13 +520,13 @@
       "scene/depth": {
         "total": 2,
         "by_status": {
-          "parity": 1,
-          "partial": 1
+          "out_of_scope": 1,
+          "parity": 1
         },
         "by_kind": {
           "api": 2
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "scene/gui": {
         "total": 7,
@@ -681,13 +679,13 @@
       "scripts/metrics": {
         "total": 20,
         "by_status": {
-          "parity": 19,
-          "partial": 1
+          "out_of_scope": 1,
+          "parity": 19
         },
         "by_kind": {
           "script": 20
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "scripts/oneoverf": {
         "total": 3,
@@ -1053,44 +1051,6 @@
         }
       },
       {
-        "family": "imgproc/binning",
-        "open_entries": 1,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "partial": 1
-        }
-      },
-      {
-        "family": "metrics/iso",
-        "open_entries": 1,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "out_of_scope": 9,
-          "parity": 7,
-          "partial": 1,
-          "ported": 3
-        }
-      },
-      {
-        "family": "opticalimage/optics",
-        "open_entries": 1,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "out_of_scope": 4,
-          "parity": 30,
-          "partial": 1
-        }
-      },
-      {
-        "family": "scene/depth",
-        "open_entries": 1,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 1,
-          "partial": 1
-        }
-      },
-      {
         "family": "scene/pattern",
         "open_entries": 1,
         "highest_open_priority": "P0",
@@ -1099,15 +1059,6 @@
           "parity": 18,
           "partial": 1,
           "ported": 3
-        }
-      },
-      {
-        "family": "scripts/metrics",
-        "open_entries": 1,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 19,
-          "partial": 1
         }
       },
       {
@@ -1126,6 +1077,56 @@
         "by_status": {
           "parity": 1,
           "partial": 1
+        }
+      },
+      {
+        "family": "tutorials/scene",
+        "open_entries": 1,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 2,
+          "partial": 1
+        }
+      },
+      {
+        "family": "utility",
+        "open_entries": 267,
+        "highest_open_priority": "P1",
+        "by_status": {
+          "headless_only": 46,
+          "out_of_scope": 1,
+          "parity": 11,
+          "partial": 221
+        }
+      },
+      {
+        "family": "utility/plots",
+        "open_entries": 48,
+        "highest_open_priority": "P1",
+        "by_status": {
+          "headless_only": 16,
+          "out_of_scope": 2,
+          "partial": 32
+        }
+      },
+      {
+        "family": "utility/image",
+        "open_entries": 37,
+        "highest_open_priority": "P1",
+        "by_status": {
+          "headless_only": 7,
+          "out_of_scope": 2,
+          "parity": 7,
+          "partial": 30
+        }
+      },
+      {
+        "family": "utility/file",
+        "open_entries": 25,
+        "highest_open_priority": "P1",
+        "by_status": {
+          "headless_only": 11,
+          "partial": 14
         }
       }
     ],
@@ -3859,14 +3860,14 @@
       "upstream_path": "imgproc/binning/binAnalog2digital.m",
       "family": "imgproc/binning",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.ip",
+      "status": "ported",
+      "python_surface": "pyisetcam.ip, pyisetcam.sensor, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_ip.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The legacy MATLAB binning quantizer is already covered by the Python `analog_to_digital(...)` / `analog2digital(...)` compatibility surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/demosaic/AdaptiveLaplacian.m",
@@ -4999,14 +5000,14 @@
       "upstream_path": "metrics/ISO/ISOspeedNoise.m",
       "family": "metrics/iso",
       "kind": "api",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.iso",
       "tests": [
         "tests/unit/test_metrics.py",
         "tests/unit/test_pipeline.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream file is a teaching script that expects GUI-managed scene/OI/sensor state rather than a standalone supported headless ISO API.",
+      "priority": "P3"
     },
     {
       "upstream_path": "metrics/ISO/ieISO12233.m",
@@ -6804,14 +6805,15 @@
       "upstream_path": "opticalimage/optics/dlMTF.m",
       "family": "opticalimage/optics",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics",
+      "status": "parity",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/optics/lensList.m",
@@ -8266,15 +8268,15 @@
       "upstream_path": "scene/depth/sceneDepthOverlay.m",
       "family": "scene/depth",
       "kind": "api",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.scene",
       "tests": [
         "tests/unit/test_scene.py",
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream file immediately errors and redirects callers to `scenePlot`, so it is treated as obsolete rather than actionable headless API debt.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scene/depth/sceneDepthRange.m",
@@ -10526,14 +10528,14 @@
       "upstream_path": "scripts/metrics/Contents.m",
       "family": "scripts/metrics",
       "kind": "script",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.metrics, pyisetcam.scielab",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream file is only an index listing for the metrics scripts and does not define a reusable headless API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/metrics/s_metricsAcutance.m",

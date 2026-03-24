@@ -26,6 +26,7 @@ SRC_ROOT = REPO_ROOT / "src" / "pyisetcam"
 TEST_ROOT = REPO_ROOT / "tests" / "unit"
 SUPPORTED_CODE_SUFFIXES = {".m", ".mlapp", ".fig"}
 SHORT_SIGNAL_PREFIXES = (
+    "dl",
     "oi",
     "ip",
     "lf",
@@ -176,6 +177,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The low-level MATLAB Bayer-pattern conversion helper is already covered by the shared internal `_mosaic_converter` implementation.",
         "module_hits": ["pyisetcam.ip"],
     },
+    "imgproc/binning/binAnalog2digital.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB binning quantizer is already covered by the Python `analog_to_digital(...)` / `analog2digital(...)` compatibility surface.",
+        "module_hits": ["pyisetcam.sensor", "pyisetcam.__init__"],
+    },
     "imgproc/imageColorBalanceDeprecated.m": {
         "status": "ported",
         "note": "The deprecated MATLAB color-balance gateway is already covered by the Python `image_color_balance(...)` compatibility wrapper.",
@@ -296,6 +302,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB S-CIELAB filter-application helper is covered by the Python `sc_apply_filters(...)` / `ApplyFilters(...)` / `scApplyFilters(...)` compatibility surface.",
         "module_hits": ["pyisetcam.scielab", "pyisetcam.__init__"],
     },
+    "metrics/ISO/ISOspeedNoise.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a teaching script that expects GUI-managed scene/OI/sensor state rather than a standalone supported headless ISO API.",
+        "module_hits": [],
+    },
     "color/transforms/colorTransformMatrixCreate.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a script used to derive static transform matrices, not a reusable headless API surface.",
@@ -304,6 +315,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
     "scripts/optics/Contents.m": {
         "status": "out_of_scope",
         "note": "The upstream file is only an index listing for the optics scripts and does not define a reusable headless API surface.",
+        "module_hits": [],
+    },
+    "scripts/metrics/Contents.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is only an index listing for the metrics scripts and does not define a reusable headless API surface.",
         "module_hits": [],
     },
     "scripts/optics/chromAb/ChromAb.m": {
@@ -484,6 +500,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
     "scene/pattern/_tests_/sceneFluorescenceChart_test.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a private MATLAB regression script for the fluorescence-chart helper rather than a standalone headless API surface.",
+        "module_hits": [],
+    },
+    "scene/depth/sceneDepthOverlay.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file immediately errors and redirects callers to `scenePlot`, so it is treated as obsolete rather than actionable headless API debt.",
         "module_hits": [],
     },
 }

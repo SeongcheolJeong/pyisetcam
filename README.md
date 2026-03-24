@@ -1010,6 +1010,10 @@ That same headless optics helper surface now also includes
 remaining diffraction OTF core/export, defocus-surface, off-axis
 falloff, and single-field ray-trace-to-shift-invariant conversion
 helpers from the upstream MATLAB optics family.
+The audit rules now also recognize short diffraction helper names such as
+`dlMTF` as covered compatibility surfaces, while obsolete redirect/index
+files like `sceneDepthOverlay.m` and `scripts/metrics/Contents.m` are now
+classified out of scope instead of headless API debt.
 That same optics helper surface now also includes
 `make_combined_otf(...)` / `makeCombinedOtf(...)`,
 `make_cmatrix(...)` / `makeCmatrix(...)`, and
