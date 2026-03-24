@@ -177,6 +177,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The low-level MATLAB Bayer-pattern conversion helper is already covered by the shared internal `_mosaic_converter` implementation.",
         "module_hits": ["pyisetcam.ip"],
     },
+    "imgproc/demosaic/Pocs.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB POCS demosaic entry point is covered by the Python `pocs(...)` / `Pocs(...)` compatibility wrapper on top of the existing Bayer/CFA helpers.",
+        "module_hits": ["pyisetcam.ip", "pyisetcam.__init__"],
+    },
     "imgproc/binning/binAnalog2digital.m": {
         "status": "ported",
         "note": "The legacy MATLAB binning quantizer is already covered by the Python `analog_to_digital(...)` / `analog2digital(...)` compatibility surface.",

@@ -1211,6 +1211,11 @@ That same image-processing surface now also exposes
 `faulty_bilinear(...)` / `FaultyBilinear(...)`, matching the legacy
 MATLAB faulty-pixel list, insertion, and GRBG repair helpers.
 That same image-processing surface now also exposes
+`demosaic_multichannel(...)` / `demosaicMultichannel(...)` and
+`pocs(...)` / `Pocs(...)`, matching the remaining MATLAB multichannel
+CFA-plane interpolation and sample-preserving POCS demosaic helper
+surface on top of the existing Bayer/CFA utilities.
+That same image-processing surface now also exposes
 `lf_default_val(...)` / `LFDefaultVal(...)`,
 `lf_default_field(...)` / `LFDefaultField(...)`,
 `lf_convert_to_float(...)` / `LFConvertToFloat(...)`,

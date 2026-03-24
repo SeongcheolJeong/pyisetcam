@@ -107,6 +107,7 @@ from .iso import (
 )
 from .ip import (
     demosaic,
+    demosaic_multichannel,
     demosaic_rccc,
     display_render,
     faulty_bilinear,
@@ -142,6 +143,7 @@ from .ip import (
     lf_filt_shift_sum,
     lf_image_to_buffer,
     lf_toolbox_version,
+    pocs,
     vcimage_mcc_xyz,
     vcimage_iso_mtf,
     vcimage_srgb,
@@ -858,8 +860,12 @@ __all__ = [
     "image_mcc_transform",
     "demosaic",
     "Demosaic",
+    "demosaicMultichannel",
+    "demosaic_multichannel",
     "demosaicRCCC",
     "demosaic_rccc",
+    "Pocs",
+    "pocs",
     "imageLinearTransform",
     "image_linear_transform",
     "ieMainClose",
@@ -2263,7 +2269,9 @@ imageColorBalance = image_color_balance
 imageSensorConversion = image_sensor_conversion
 imageSensorCorrection = image_sensor_correction
 Demosaic = demosaic
+demosaicMultichannel = demosaic_multichannel
 demosaicRCCC = demosaic_rccc
+Pocs = pocs
 FaultyBilinear = faulty_bilinear
 faultyInsert = faulty_insert
 faultyList = faulty_list

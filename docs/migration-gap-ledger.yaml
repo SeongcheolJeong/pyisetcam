@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-24T15:26:35.618950+00:00",
+  "generated_at": "2026-03-24T16:01:04.496079+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -7,9 +7,9 @@
       "headless_only": 90,
       "missing": 37,
       "out_of_scope": 166,
-      "parity": 657,
-      "partial": 454,
-      "ported": 39
+      "parity": 658,
+      "partial": 452,
+      "ported": 40
     },
     "kind_counts": {
       "api": 661,
@@ -20,19 +20,19 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 29,
+      "P0": 27,
       "P1": 373,
       "P2": 179,
-      "P3": 862
+      "P3": 864
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
         "out_of_scope": 0,
-        "parity": 2,
-        "partial": -2,
-        "ported": 0
+        "parity": 0,
+        "partial": -1,
+        "ported": 1
       },
       "kind_counts": {
         "api": 0,
@@ -43,10 +43,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -2,
+        "P0": -1,
         "P1": 0,
         "P2": 0,
-        "P3": 2
+        "P3": 1
       }
     },
     "family_summary": {
@@ -277,14 +277,13 @@
         "total": 59,
         "by_status": {
           "out_of_scope": 10,
-          "parity": 40,
-          "partial": 2,
-          "ported": 7
+          "parity": 41,
+          "ported": 8
         },
         "by_kind": {
           "api": 59
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "imgproc/binning": {
         "total": 1,
@@ -1017,17 +1016,6 @@
         }
       },
       {
-        "family": "imgproc",
-        "open_entries": 2,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "out_of_scope": 10,
-          "parity": 40,
-          "partial": 2,
-          "ported": 7
-        }
-      },
-      {
         "family": "scene/pattern",
         "open_entries": 1,
         "highest_open_priority": "P0",
@@ -1124,6 +1112,14 @@
         "by_status": {
           "missing": 4
         }
+      },
+      {
+        "family": "scripts/development",
+        "open_entries": 3,
+        "highest_open_priority": "P1",
+        "by_status": {
+          "missing": 3
+        }
       }
     ],
     "exception_sites_by_module": {
@@ -1164,7 +1160,7 @@
         "not_implemented_error_sites": 0
       },
       "ip": {
-        "unsupported_option_error_sites": 11,
+        "unsupported_option_error_sites": 12,
         "not_implemented_error_sites": 0
       },
       "iso": {
@@ -3914,14 +3910,14 @@
       "upstream_path": "imgproc/demosaic/Pocs.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.ip",
+      "status": "ported",
+      "python_surface": "pyisetcam.ip, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_ip.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The legacy MATLAB POCS demosaic entry point is covered by the Python `pocs(...)` / `Pocs(...)` compatibility wrapper on top of the existing Bayer/CFA helpers.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/demosaic/bayerIndices.m",
@@ -3940,14 +3936,16 @@
       "upstream_path": "imgproc/demosaic/demosaicMultichannel.m",
       "family": "imgproc",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.ip",
+      "status": "parity",
+      "python_surface": "pyisetcam.ip, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/unit/test_ip.py"
+        "tests/unit/test_ip.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/demosaic/demosaicRCCC.m",
@@ -13662,7 +13660,7 @@
       "family": "sensor",
       "kind": "api",
       "status": "parity",
-      "python_surface": "pyisetcam.sensor, pyisetcam.__init__",
+      "python_surface": "pyisetcam.sensor, pyisetcam.__init__, pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py",

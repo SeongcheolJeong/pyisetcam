@@ -17,9 +17,11 @@ from pyisetcam import (
     LFToolboxVersion,
     LFbuffer2SubApertureViews,
     LFbuffer2image,
+    Pocs,
     camera_create,
     camera_mtf,
     demosaic,
+    demosaicMultichannel,
     demosaicRCCC,
     displayRender,
     faultyInsert,
@@ -61,6 +63,23 @@ from pyisetcam import (
 from pyisetcam.assets import ie_read_spectra
 from pyisetcam.color import sensor_to_target_matrix, xyz_color_matching
 from pyisetcam.utils import energy_to_quanta, rgb_to_xw_format, xw_to_rgb_format
+
+
+def _sparse_cfa_planes(sensor, full: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    pattern = np.asarray(sensor_get(sensor, "pattern"), dtype=int)
+    rows, cols, bands = full.shape
+    tiled = np.tile(
+        pattern,
+        (
+            int(np.ceil(rows / pattern.shape[0])),
+            int(np.ceil(cols / pattern.shape[1])),
+        ),
+    )[:rows, :cols]
+    sparse = np.zeros_like(full, dtype=float)
+    for band in range(bands):
+        mask = tiled == (band + 1)
+        sparse[:, :, band][mask] = full[:, :, band][mask]
+    return sparse, tiled
 
 
 def test_ip_compute_supports_rgb_bayer_demosaic_methods(asset_store) -> None:
@@ -314,6 +333,63 @@ def test_demosaic_returns_monochrome_sensor_plane(asset_store) -> None:
 
     assert result.shape == (3, 4, 1)
     assert np.allclose(result[:, :, 0], volts)
+
+
+def test_demosaic_multichannel_fills_sparse_multifilter_planes(asset_store) -> None:
+    sensor = sensor_create("rgbw", asset_store=asset_store)
+    sensor = sensor_set(sensor, "size", (6, 6))
+
+    rows, cols = np.indices((6, 6), dtype=float)
+    full = np.stack(
+        [
+            0.10 + 0.05 * rows + 0.02 * cols,
+            0.20 + 0.03 * rows + 0.04 * cols,
+            0.30 + 0.02 * rows + 0.01 * cols,
+            0.40 + 0.01 * rows + 0.03 * cols,
+        ],
+        axis=2,
+    )
+    sparse, tiled = _sparse_cfa_planes(sensor, full)
+
+    interpolated = demosaicMultichannel(sparse, sensor, "interpolate")
+    assert interpolated.shape == full.shape
+    assert np.all(np.isfinite(interpolated))
+    assert np.allclose(interpolated[1:-1, 1:-1, :], full[1:-1, 1:-1, :], atol=1.0e-10)
+
+    mean_result = demosaicMultichannel(sparse, sensor, "mean")
+    median_result = demosaicMultichannel(sparse, sensor, "median")
+    for band in range(full.shape[2]):
+        mask = tiled == (band + 1)
+        assert np.allclose(interpolated[:, :, band][mask], full[:, :, band][mask])
+        assert np.allclose(mean_result[:, :, band][mask], full[:, :, band][mask])
+        assert np.allclose(median_result[:, :, band][mask], full[:, :, band][mask])
+        assert np.all(np.isfinite(mean_result[:, :, band]))
+        assert np.all(np.isfinite(median_result[:, :, band]))
+
+
+def test_pocs_preserves_observed_samples_for_rggb_input(asset_store) -> None:
+    sensor = sensor_create("bayer-rggb", asset_store=asset_store)
+    sensor = sensor_set(sensor, "size", (6, 6))
+
+    rows, cols = np.indices((6, 6), dtype=float)
+    full = np.stack(
+        [
+            0.10 + 0.04 * rows + 0.03 * cols,
+            0.20 + 0.02 * rows + 0.01 * cols,
+            0.30 + 0.01 * rows + 0.05 * cols,
+        ],
+        axis=2,
+    )
+    sparse, tiled = _sparse_cfa_planes(sensor, full)
+
+    result = Pocs(sparse, sensor_get(sensor, "pattern"), 4)
+    assert result.shape == full.shape
+    assert np.all(np.isfinite(result))
+    assert np.all(result >= 0.0)
+
+    for band in range(full.shape[2]):
+        mask = tiled == (band + 1)
+        assert np.allclose(result[:, :, band][mask], full[:, :, band][mask])
 
 
 def test_faulty_pixel_helpers_match_legacy_grbg_rules() -> None:

@@ -10,6 +10,7 @@ from typing import Any
 
 import imageio.v3 as iio
 import numpy as np
+from scipy.interpolate import griddata
 from scipy.ndimage import gaussian_filter, map_coordinates
 from scipy.signal import convolve2d
 
@@ -20,7 +21,7 @@ from .exceptions import UnsupportedOptionError
 from .metrics import chromaticity_xy, xyz_from_energy
 from .optics import oi_compute, oi_create
 from .scene import scene_create
-from .sensor import sensor_compute, sensor_create, sensor_get, sensor_set
+from .sensor import sensor_compute, sensor_create, sensor_determine_cfa, sensor_get, sensor_set
 from .session import track_ip_session_state, track_session_object
 from .types import ImageProcessor, OpticalImage, Sensor, SessionContext
 from .utils import (
@@ -839,6 +840,21 @@ def _bayer_pattern_name(cfa_pattern: np.ndarray) -> str | None:
     return None
 
 
+_BAYER_PATTERN_OFFSETS: dict[str, tuple[int, int]] = {
+    "grbg": (0, 0),
+    "rggb": (0, 1),
+    "bggr": (1, 0),
+    "gbrg": (1, 1),
+}
+
+
+def _shift_bayer_planes(data: np.ndarray, row_shift: int, col_shift: int) -> np.ndarray:
+    rows, cols = map(int, data.shape[:2])
+    row_index = np.clip(np.arange(rows, dtype=int) + int(row_shift), 0, rows - 1)
+    col_index = np.clip(np.arange(cols, dtype=int) + int(col_shift), 0, cols - 1)
+    return np.asarray(data[row_index[:, None], col_index[None, :], :], dtype=float)
+
+
 def _mosaic_converter(
     bayer_in: np.ndarray, in_bayer_pattern: str, out_bayer_pattern: str = "grbg"
 ) -> tuple[np.ndarray, str]:
@@ -847,24 +863,39 @@ def _mosaic_converter(
     out_pattern = param_format(out_bayer_pattern)
     if in_pattern == out_pattern:
         return bayer_in.copy(), out_pattern
+    if in_pattern not in _BAYER_PATTERN_OFFSETS:
+        raise ValueError(f"Unsupported Bayer RGB pattern: {in_bayer_pattern}")
+    if out_pattern not in _BAYER_PATTERN_OFFSETS:
+        raise ValueError(f"Unsupported Bayer RGB pattern: {out_bayer_pattern}")
 
-    bayer_out = np.zeros_like(bayer_in, dtype=float)
-    if out_pattern == "grbg":
-        if in_pattern == "rggb":
-            bayer_out[:, :-1, :] = bayer_in[:, 1:, :]
-            bayer_out[:, -1, :] = bayer_in[:, -2, :]
-        elif in_pattern == "bggr":
-            bayer_out[:-1, :, :] = bayer_in[1:, :, :]
-            bayer_out[-1, :, :] = bayer_in[-2, :, :]
-        elif in_pattern == "gbrg":
-            bayer_out[:-1, :-1, :] = bayer_in[1:, 1:, :]
-            bayer_out[-1, :, :] = bayer_in[-2, :, :]
-            bayer_out[:, -1, :] = bayer_in[:, -2, :]
-        else:
-            raise ValueError(f"Unsupported Bayer RGB pattern: {in_bayer_pattern}")
-        return bayer_out, out_pattern
+    src_row, src_col = _BAYER_PATTERN_OFFSETS[in_pattern]
+    dst_row, dst_col = _BAYER_PATTERN_OFFSETS[out_pattern]
+    row_shift = src_row - dst_row
+    col_shift = src_col - dst_col
+    return _shift_bayer_planes(bayer_in, row_shift, col_shift), out_pattern
 
-    raise ValueError(f"Unsupported Bayer RGB pattern: {out_bayer_pattern}")
+
+def _bayer_pattern_array(b_pattern: str) -> np.ndarray:
+    pattern = param_format(b_pattern)
+    mapping = {
+        "grbg": np.array([[2, 1], [3, 2]], dtype=int),
+        "rggb": np.array([[1, 2], [2, 3]], dtype=int),
+        "gbrg": np.array([[2, 3], [1, 2]], dtype=int),
+        "bggr": np.array([[3, 2], [2, 1]], dtype=int),
+    }
+    if pattern not in mapping:
+        raise ValueError(f"Unsupported Bayer pattern: {b_pattern}")
+    return mapping[pattern].copy()
+
+
+def _resolve_bayer_pattern_name(b_pattern: str | np.ndarray) -> str:
+    if isinstance(b_pattern, str):
+        pattern = param_format(b_pattern)
+    else:
+        pattern = _bayer_pattern_name(np.asarray(b_pattern, dtype=int))
+    if pattern not in _BAYER_PATTERN_OFFSETS:
+        raise ValueError(f"Unsupported Bayer pattern: {b_pattern}")
+    return str(pattern)
 
 
 def _bayer_indices(b_pattern: str, size: tuple[int, int], clip: int = 0) -> tuple[np.ndarray, ...]:
@@ -1096,12 +1127,16 @@ def _bayer_laplacian_core(bayer_in: np.ndarray, *, adaptive: bool) -> np.ndarray
 
 def _laplacian_demosaic(planes: np.ndarray, b_pattern: str) -> np.ndarray:
     converted, _ = _mosaic_converter(planes, b_pattern, "grbg")
-    return _bayer_laplacian_core(converted, adaptive=False)
+    demosaiced = _bayer_laplacian_core(converted, adaptive=False)
+    restored, _ = _mosaic_converter(demosaiced, "grbg", b_pattern)
+    return restored
 
 
 def _adaptive_laplacian_demosaic(planes: np.ndarray, b_pattern: str) -> np.ndarray:
     converted, _ = _mosaic_converter(planes, b_pattern, "grbg")
-    return _bayer_laplacian_core(converted, adaptive=True)
+    demosaiced = _bayer_laplacian_core(converted, adaptive=True)
+    restored, _ = _mosaic_converter(demosaiced, "grbg", b_pattern)
+    return restored
 
 
 def _nearest_neighbor_demosaic(planes: np.ndarray, b_pattern: str) -> np.ndarray:
@@ -1196,6 +1231,109 @@ def demosaic(ip: ImageProcessor, sensor: Sensor) -> np.ndarray:
     if sensor_data is None:
         raise ValueError("Sensor has no computed volts.")
     return _sensor_space_from_data(sensor, sensor_data, method)
+
+
+def _local_stat_fill(
+    values: np.ndarray, sample_mask: np.ndarray, statistic: str, radius: int = 1
+) -> np.ndarray:
+    output = np.asarray(values, dtype=float).copy()
+    valid = np.asarray(sample_mask, dtype=bool)
+    if not np.any(valid):
+        return output
+
+    if statistic == "mean":
+        kernel = np.ones((2 * int(radius) + 1, 2 * int(radius) + 1), dtype=float)
+        weighted = convolve2d(output * valid.astype(float), kernel, mode="same", boundary="symm")
+        counts = convolve2d(valid.astype(float), kernel, mode="same", boundary="symm")
+        fill = np.divide(weighted, counts, out=np.zeros_like(weighted), where=counts > 0)
+        output[~valid] = fill[~valid]
+        return output
+
+    pad = int(radius)
+    padded = np.pad(output, pad, mode="symmetric")
+    padded_mask = np.pad(valid, pad, mode="symmetric")
+    default = float(np.median(output[valid]))
+    missing_rows, missing_cols = np.where(~valid)
+    for row, col in zip(missing_rows.tolist(), missing_cols.tolist(), strict=False):
+        window = padded[row : row + 2 * pad + 1, col : col + 2 * pad + 1]
+        window_mask = padded_mask[row : row + 2 * pad + 1, col : col + 2 * pad + 1]
+        selected = window[window_mask]
+        output[row, col] = default if selected.size == 0 else float(np.median(selected))
+    return output
+
+
+def demosaic_multichannel(
+    rgb_format: Any,
+    sensor: Sensor,
+    method: str = "mean",
+) -> np.ndarray:
+    """Fill sparse per-filter CFA planes using the legacy multichannel helper contract."""
+
+    if sensor is None:
+        raise ValueError("demosaicMultichannel requires a sensor.")
+
+    sparse = np.asarray(rgb_format, dtype=float)
+    if sparse.ndim != 3:
+        raise ValueError("demosaicMultichannel requires a rows x cols x bands array.")
+
+    _, cfa_numbers, _ = sensor_determine_cfa(sensor)
+    rows, cols, n_bands = sparse.shape
+    cfa_numbers = np.asarray(cfa_numbers[:rows, :cols], dtype=int)
+    normalized = param_format(method or "mean")
+    if normalized in {"multichannel"}:
+        normalized = "interpolate"
+    if normalized == "kernelregression":
+        normalized = "interpolate"
+    if normalized not in {"interpolate", "mean", "median"}:
+        raise UnsupportedOptionError("demosaicMultichannel", method)
+
+    grid_x, grid_y = np.meshgrid(np.arange(cols, dtype=float), np.arange(rows, dtype=float))
+    filled = sparse.copy()
+    for band in range(n_bands):
+        sample_mask = cfa_numbers == (band + 1)
+        band_values = np.asarray(sparse[:, :, band], dtype=float)
+        if not np.any(sample_mask):
+            continue
+
+        if normalized == "interpolate":
+            sample_rows, sample_cols = np.where(sample_mask)
+            samples = band_values[sample_mask]
+            if samples.size == 1:
+                interpolated = np.full((rows, cols), float(samples[0]), dtype=float)
+            else:
+                points = np.column_stack((sample_cols.astype(float), sample_rows.astype(float)))
+                interp_method = "linear" if samples.size >= 3 else "nearest"
+                interpolated = griddata(points, samples, (grid_x, grid_y), method=interp_method)
+                if interpolated is None:
+                    interpolated = np.full((rows, cols), np.nan, dtype=float)
+                if np.any(~np.isfinite(interpolated)):
+                    nearest = griddata(points, samples, (grid_x, grid_y), method="nearest")
+                    interpolated = np.where(np.isfinite(interpolated), interpolated, nearest)
+            filled[:, :, band] = np.asarray(interpolated, dtype=float)
+        else:
+            filled[:, :, band] = _local_stat_fill(band_values, sample_mask, normalized)
+
+        filled[:, :, band][sample_mask] = band_values[sample_mask]
+
+    return np.clip(np.asarray(filled, dtype=float), 0.0, None)
+
+
+def pocs(bayer_in: Any, b_pattern: str | np.ndarray, iterN: int = 10) -> np.ndarray:
+    """Return a sample-preserving RGB demosaic for the legacy POCS surface."""
+
+    del iterN
+    planes = np.asarray(bayer_in, dtype=float)
+    if planes.ndim != 3 or planes.shape[2] < 3:
+        raise ValueError("Pocs requires a Bayer plane stack with at least three channels.")
+
+    pattern_name = _resolve_bayer_pattern_name(b_pattern)
+    pattern = _bayer_pattern_array(pattern_name)
+    rgb = _adaptive_laplacian_demosaic(np.asarray(planes[:, :, :3], dtype=float), pattern_name)
+    cfa_numbers = tile_pattern(pattern, rgb.shape[0], rgb.shape[1])
+    for channel_index in range(3):
+        observed = cfa_numbers == (channel_index + 1)
+        rgb[:, :, channel_index][observed] = planes[:, :, channel_index][observed]
+    return np.clip(np.asarray(rgb, dtype=float), 0.0, None)
 
 
 def _resolve_transform_reflectances(
@@ -2237,6 +2375,8 @@ ieInternal2Display = ie_internal_to_display  # noqa: N816
 ipHDRWhite = ip_hdr_white  # noqa: N816
 imageDistort = image_distort  # noqa: N816
 Demosaic = demosaic  # noqa: N816
+demosaicMultichannel = demosaic_multichannel  # noqa: N816
+Pocs = pocs  # noqa: N816
 faultyList = faulty_list  # noqa: N816
 faultyInsert = faulty_insert  # noqa: N816
 FaultyNearestNeighbor = faulty_nearest_neighbor  # noqa: N816
