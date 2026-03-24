@@ -306,6 +306,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is a figure-driven animation helper, which remains outside the headless migration target.",
         "module_hits": [],
     },
+    "opticalimage/optics/defocus/opticsReducedSFandW20.m": {
+        "status": "out_of_scope",
+        "note": "The upstream helper is internally incomplete, references undefined state, and does not expose a usable supported headless API surface.",
+        "module_hits": [],
+    },
     "sensor/sensorUnitBlock.m": {
         "status": "out_of_scope",
         "note": "The upstream file is explicitly marked obsolete and does not implement a usable headless API surface.",

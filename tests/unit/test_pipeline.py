@@ -67,6 +67,8 @@ from pyisetcam import (
     FOTParams,
     gaborP,
     hc_basis,
+    dlCore,
+    dlMTF,
     imgDeadleaves,
     imgDiskArray,
     imgMackay,
@@ -139,6 +141,8 @@ from pyisetcam import (
     opticsDescription,
     optics_dof,
     opticsGet,
+    opticsPlotDefocus,
+    opticsPlotOffAxis,
     opticsPlotTransmittance,
     optics_psf_to_otf,
     optics_ray_trace,
@@ -228,6 +232,7 @@ from pyisetcam import (
     separableFilters,
     sceCreate,
     sceGet,
+    siConvertRTdata,
     si_synthetic,
     run_python_case,
     hdr_render,
@@ -1095,6 +1100,83 @@ def test_diffraction_otf_matches_oi_frequency_support(asset_store) -> None:
         expected[:, :, index] = np.fft.ifftshift(current)
 
     assert np.allclose(otf, expected)
+
+
+def test_dl_core_and_dl_mtf_compatibility_surface(asset_store) -> None:
+    scene = scene_create("uniform ee", np.array([8, 8], dtype=int), asset_store=asset_store)
+    scene = scene_set(scene, "fov", 4.0)
+    oi = oi_compute(oi_create("diffraction limited", asset_store=asset_store), scene)
+
+    wave = np.asarray(oi_get(oi, "wave"), dtype=float).reshape(-1)
+    support_mm = np.asarray(oi_get(oi, "frequency support", "mm"), dtype=float)
+    target_wave = float(wave[np.argmin(np.abs(wave - 550.0))])
+
+    otf_plane, returned_support = oiCalculateOTF(oi, target_wave, "mm")
+    otf_helper, helper_support, cutoff = dlMTF(oi, support_mm, target_wave, "mm")
+    otf_optics, optics_support, optics_cutoff = dlMTF(dict(oi.fields["optics"]), support_mm, target_wave, "mm")
+    rho = np.sqrt(np.asarray(support_mm[:, :, 0], dtype=float) ** 2 + np.asarray(support_mm[:, :, 1], dtype=float) ** 2)
+    otf_core = dlCore(rho, cutoff)
+
+    assert np.allclose(returned_support, support_mm, atol=1e-12, rtol=1e-12)
+    assert np.allclose(helper_support, support_mm, atol=1e-12, rtol=1e-12)
+    assert np.allclose(optics_support, support_mm, atol=1e-12, rtol=1e-12)
+    assert np.allclose(otf_helper, otf_plane, atol=1e-12, rtol=1e-12)
+    assert np.allclose(otf_optics, otf_plane, atol=1e-12, rtol=1e-12)
+    assert np.allclose(otf_core, otf_plane, atol=1e-12, rtol=1e-12)
+    assert np.allclose(optics_cutoff, cutoff, atol=1e-12, rtol=1e-12)
+
+
+def test_optics_plot_wrappers_and_si_convert_rt_data(asset_store, tmp_path: Path) -> None:
+    optics = opticsCreate()
+    defocus = np.array([-0.5, 0.0, 0.5], dtype=float)
+    sample_sf = np.array([0.0, 10.0, 20.0], dtype=float)
+    defocus_surface = opticsPlotDefocus(defocus, sample_sf, 550.0, optics)
+
+    focal_length_m = float(optics["focal_length_m"])
+    f_number = float(optics["f_number"])
+    diopters = 1.0 / focal_length_m
+    pupil_radius_m = focal_length_m / (2.0 * f_number)
+    deg_per_meter = diopters / np.tan(np.deg2rad(1.0))
+    reduced_sf = (deg_per_meter * 550.0e-9 / max(diopters * pupil_radius_m, 1.0e-12)) * sample_sf
+    expected_surface = np.zeros_like(defocus_surface)
+    for index, defocus_diopters in enumerate(defocus):
+        w20 = ((pupil_radius_m**2) / 2.0) * (diopters * defocus_diopters) / max(diopters + defocus_diopters, 1.0e-12)
+        alpha = (4.0 * np.pi / 550.0e-9) * w20 * np.abs(reduced_sf)
+        expected_surface[index, :] = optics_module._optics_defocused_mtf(reduced_sf, np.abs(alpha))
+
+    assert defocus_surface.shape == (defocus.size, sample_sf.size)
+    assert np.all(np.isfinite(defocus_surface))
+    assert np.allclose(defocus_surface, expected_surface, atol=1e-12, rtol=1e-12)
+
+    scene = scene_set(scene_create("uniform ee", 16, asset_store=asset_store), "fov", 5.0)
+    oi = oi_compute(oi_create("diffraction limited", asset_store=asset_store), scene, crop=True)
+    off_axis = opticsPlotOffAxis(oi)
+    expected_cos4th = optics_module._cos4th_factor(*np.asarray(oi_get(oi, "size"), dtype=int), off_axis.fields["optics"], scene)
+
+    assert off_axis is not oi
+    assert np.allclose(np.asarray(off_axis.fields["optics"]["cos4th_data"], dtype=float), expected_cos4th, atol=5e-5, rtol=5e-5)
+    assert np.allclose(np.asarray(off_axis.fields["optics"]["cos4th_value"], dtype=float), expected_cos4th, atol=5e-5, rtol=5e-5)
+
+    rt_oi = oi_create("ray trace", asset_store=asset_store)
+    field_height = float(np.asarray(oi_get(rt_oi, "rtpsffieldheight"), dtype=float).reshape(-1)[0])
+    first_wave = float(np.asarray(oi_get(rt_oi, "rtpsfwavelength"), dtype=float).reshape(-1)[0])
+    converted, input_path, output_path = siConvertRTdata(dict(rt_oi.fields["optics"]), field_height, tmp_path / "si-rt")
+    expected_psf = np.asarray(oi_get(rt_oi, "rtpsfdata", field_height, first_wave), dtype=float)
+    expected_otf = np.fft.fftshift(np.fft.fft2(expected_psf / np.sum(expected_psf, dtype=float)))
+    saved_path = Path(output_path) if output_path is not None else None
+
+    assert input_path is None
+    assert saved_path is not None
+    assert saved_path.suffix == ".mat"
+    assert saved_path.exists()
+    assert converted["model"] == "shiftinvariant"
+    assert opticsGet(converted, "compute method") == "opticsotf"
+    assert np.array_equal(
+        np.asarray(opticsGet(converted, "otfwave"), dtype=float),
+        np.asarray(oi_get(rt_oi, "rtpsfwavelength"), dtype=float),
+    )
+    assert np.allclose(np.asarray(opticsGet(converted, "otfdata"))[:, :, 0], expected_otf, atol=1e-12, rtol=1e-12)
+    assert "optics" in loadmat(saved_path, squeeze_me=True, struct_as_record=False)
 
 
 def test_oi_get_image_distance_uses_depth_map_when_geometry_is_not_precomputed() -> None:

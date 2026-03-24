@@ -9,7 +9,7 @@ from typing import Any
 
 import imageio.v3 as iio
 import numpy as np
-from scipy.io import loadmat
+from scipy.io import loadmat, savemat
 from scipy.interpolate import RegularGridInterpolator
 from scipy.ndimage import map_coordinates, rotate, uniform_filter
 from scipy.signal import fftconvolve
@@ -4046,6 +4046,230 @@ opticsClearData = optics_clear_data
 opticsDescription = optics_description
 lensList = lens_list
 optics2wvf = optics_to_wvf
+
+
+def dl_core(rho: Any, in_cut_freq: Any) -> np.ndarray:
+    """Compute the diffraction-limited OTF from radial support and cutoff frequency."""
+
+    rho_array = np.asarray(rho, dtype=float)
+    if rho_array.ndim != 2:
+        raise ValueError("dlCore rho must be a 2-D support grid.")
+
+    cutoff = np.asarray(in_cut_freq, dtype=float).reshape(-1)
+    if cutoff.size == 0:
+        raise ValueError("dlCore requires at least one cutoff frequency.")
+
+    otf = np.zeros(rho_array.shape + (cutoff.size,), dtype=float)
+    for band_index, cutoff_frequency in enumerate(cutoff):
+        normalized = rho_array / max(float(cutoff_frequency), 1.0e-12)
+        clipped = np.clip(normalized, 0.0, 1.0)
+        plane = (2.0 / np.pi) * (np.arccos(clipped) - clipped * np.sqrt(1.0 - clipped**2))
+        plane[normalized >= 1.0] = 0.0
+        otf[:, :, band_index] = np.fft.ifftshift(np.asarray(plane, dtype=float))
+
+    if cutoff.size == 1:
+        return np.asarray(otf[:, :, 0], dtype=float)
+    return np.asarray(otf, dtype=float)
+
+
+def dl_mtf(
+    oi_or_optics: OpticalImage | dict[str, Any],
+    f_support: Any | None = None,
+    wavelength: Any | None = None,
+    units: str = "cyclesPerDegree",
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Headless `dlMTF` compatibility wrapper for OI or optics inputs."""
+
+    current_oi = oi_or_optics if isinstance(oi_or_optics, OpticalImage) else None
+    current_optics = _normalize_public_optics(_coerce_optics_struct(oi_or_optics))
+    normalized_unit = param_format(units)
+
+    if current_oi is None and normalized_unit in {"cyclesperdegree", "cycperdeg"}:
+        raise ValueError("dlMTF with an optics struct requires non-angular frequency units.")
+
+    if f_support is None:
+        if current_oi is None:
+            raise ValueError("dlMTF requires f_support when the first argument is an optics struct.")
+        support = np.asarray(oi_get(current_oi, "frequency support", units), dtype=float)
+    else:
+        support = np.asarray(f_support, dtype=float)
+    if support.ndim != 3 or support.shape[2] != 2:
+        raise ValueError("dlMTF frequency support must be a rows x cols x 2 grid.")
+
+    if wavelength is None:
+        if current_oi is None:
+            raise ValueError("dlMTF requires wavelength when the first argument is an optics struct.")
+        wave_nm = np.asarray(oi_get(current_oi, "wave"), dtype=float).reshape(-1)
+    else:
+        wave_nm = np.asarray(wavelength, dtype=float).reshape(-1)
+    if wave_nm.size == 0:
+        raise ValueError("dlMTF requires at least one wavelength sample.")
+
+    aperture_diameter = _optics_scalar_value(
+        current_optics,
+        "aperture_diameter_m",
+        "apertureDiameter",
+        default=_optics_scalar_value(current_optics, "focal_length_m", "focalLength", default=DEFAULT_FOCAL_LENGTH_M)
+        / max(_optics_scalar_value(current_optics, "f_number", "fNumber", default=4.0), 1.0e-12),
+    )
+    focal_plane_distance = _optics_scalar_value(
+        current_optics,
+        "focal_plane_distance_m",
+        "focalPlaneDistance",
+        "focal_length_m",
+        "focalLength",
+        default=DEFAULT_FOCAL_LENGTH_M,
+    )
+    cutoff = (aperture_diameter / max(focal_plane_distance, 1.0e-12)) / np.maximum(wave_nm * 1.0e-9, 1.0e-12)
+    if normalized_unit in {"cyclesperdegree", "cycperdeg"}:
+        cutoff = cutoff * float(oi_get(current_oi, "distance per degree", "meters"))
+    else:
+        unit_scale = {"meters": 1.0, "m": 1.0, "millimeters": 1.0e3, "mm": 1.0e3, "microns": 1.0e6, "um": 1.0e6}
+        if normalized_unit not in unit_scale:
+            raise KeyError(f"Unknown dlMTF units: {units}")
+        cutoff = cutoff / unit_scale[normalized_unit]
+
+    rho = np.sqrt(np.asarray(support[:, :, 0], dtype=float) ** 2 + np.asarray(support[:, :, 1], dtype=float) ** 2)
+    otf = dl_core(rho, cutoff)
+    return np.asarray(otf, dtype=float), support.copy(), np.asarray(cutoff, dtype=float)
+
+
+def optics_plot_defocus(
+    defocus: Any | None = None,
+    sample_sf: Any | None = None,
+    wave: Any = 550.0,
+    optics: OpticalImage | dict[str, Any] | None = None,
+) -> np.ndarray:
+    """Return the legacy defocus-by-spatial-frequency OTF surface without plotting."""
+
+    defocus_values = np.asarray(np.arange(-1.0, 1.0001, 0.05) if defocus is None else defocus, dtype=float).reshape(-1)
+    sample_sf_values = np.asarray(np.arange(0.0, 65.0, 1.0) if sample_sf is None else sample_sf, dtype=float).reshape(-1)
+    if defocus_values.size == 0 or sample_sf_values.size == 0:
+        raise ValueError("opticsPlotDefocus requires non-empty defocus and sample_sf inputs.")
+
+    current = _normalize_public_optics(_coerce_optics_struct(optics_create() if optics is None else optics))
+    focal_length_m = _optics_scalar_value(current, "focal_length_m", "focalLength", default=DEFAULT_FOCAL_LENGTH_M)
+    f_number = _optics_scalar_value(current, "f_number", "fNumber", default=4.0)
+    if focal_length_m <= 0.0 or f_number <= 0.0:
+        raise ValueError("opticsPlotDefocus requires positive focal length and f-number.")
+
+    wave_nm = float(np.asarray(wave, dtype=float).reshape(-1)[0])
+    diopters = 1.0 / focal_length_m
+    pupil_radius_m = focal_length_m / (2.0 * f_number)
+    deg_per_meter = diopters / np.tan(np.deg2rad(1.0))
+    reduced_sf = (deg_per_meter * wave_nm * 1.0e-9 / max(diopters * pupil_radius_m, 1.0e-12)) * sample_sf_values
+
+    otf = np.zeros((defocus_values.size, sample_sf_values.size), dtype=float)
+    for index, defocus_diopters in enumerate(defocus_values):
+        w20 = ((pupil_radius_m**2) / 2.0) * (diopters * defocus_diopters) / max(diopters + defocus_diopters, 1.0e-12)
+        alpha = (4.0 * np.pi / max(wave_nm * 1.0e-9, 1.0e-12)) * w20 * np.abs(reduced_sf)
+        otf[index, :] = _optics_defocused_mtf(reduced_sf, np.abs(alpha))
+    return otf
+
+
+def optics_plot_off_axis(oi: OpticalImage, this_w: Any | None = None) -> OpticalImage:
+    """Return an OI with cached cos4th off-axis falloff payload, without plotting."""
+
+    del this_w
+    current = oi.clone()
+    stored = current.fields.get("optics", {}).get("cos4th_data")
+    if stored is None:
+        rows, cols = _oi_shape(current)
+        surrogate_scene = Scene(
+            name=current.name,
+            type="scene",
+            fields={
+                "distance_m": _oi_depth_distance_m(current) or np.inf,
+                "fov_deg": float(oi_get(current, "fov")),
+                "vfov_deg": float(oi_get(current, "vfov")),
+                "wave": np.asarray(oi_get(current, "wave"), dtype=float).reshape(-1).copy(),
+            },
+            data={},
+        )
+        data = _cos4th_factor(rows, cols, current.fields["optics"], surrogate_scene)
+        current.fields["optics"]["cos4th_data"] = np.asarray(data, dtype=float).copy()
+        current.fields["optics"]["cos4th_value"] = np.asarray(data, dtype=float).copy()
+    else:
+        current.fields["optics"]["cos4th_data"] = np.asarray(stored, dtype=float).copy()
+    return current
+
+
+def si_convert_rt_data(
+    in_name: str | Path | dict[str, Any],
+    field_height: float = 0.0,
+    out_name: str | Path | None = None,
+) -> tuple[dict[str, Any], str | None, str | None]:
+    """Convert a single-field ray-trace PSF bundle into shift-invariant custom OTF optics."""
+
+    input_path: Path | None = None
+    if isinstance(in_name, (str, Path)):
+        from .fileio import _deserialize_value, _reconstruct_object
+
+        input_path = Path(in_name).expanduser()
+        payload = loadmat(input_path, squeeze_me=True, struct_as_record=False)
+        raw = payload.get("optics")
+        if raw is None:
+            raise ValueError(f"siConvertRTdata expected an optics payload in {input_path}.")
+        reconstructed = _reconstruct_object(_deserialize_value(raw))
+        if isinstance(reconstructed, OpticalImage):
+            current = dict(reconstructed.fields.get("optics", {}))
+        elif isinstance(reconstructed, dict):
+            current = reconstructed
+        else:
+            raise ValueError(f"siConvertRTdata could not reconstruct optics from {input_path}.")
+    else:
+        current = dict(in_name)
+
+    rt_optics = _normalize_public_optics(current)
+    rt_wave = np.asarray(optics_get(rt_optics, "rtpsfwavelength"), dtype=float).reshape(-1)
+    dx = np.asarray(optics_get(rt_optics, "rtpsfspacing", "m"), dtype=float).reshape(-1)
+    if rt_wave.size == 0 or dx.size != 2:
+        raise ValueError("siConvertRTdata requires ray-trace PSF wavelengths and 2-D sample spacing.")
+
+    sample_psf = np.asarray(optics_get(rt_optics, "rtpsfdata", float(field_height), float(rt_wave[0])), dtype=float)
+    if sample_psf.ndim != 2:
+        raise ValueError("siConvertRTdata requires 2-D ray-trace PSF planes.")
+
+    n_samples = int(sample_psf.shape[0])
+    nyquist_f = 1.0 / np.maximum(2.0 * dx, 1.0e-12)
+    otf = np.zeros((n_samples, n_samples, rt_wave.size), dtype=complex)
+    for band_index, wavelength_nm in enumerate(rt_wave):
+        psf = np.asarray(optics_get(rt_optics, "rtpsfdata", float(field_height), float(wavelength_nm)), dtype=float)
+        psf = psf / max(float(np.sum(psf)), 1.0e-12)
+        otf[:, :, band_index] = np.fft.fftshift(np.fft.fft2(psf))
+
+    fx = unit_frequency_list(n_samples) * float(nyquist_f[-1])
+    fy = unit_frequency_list(n_samples) * float(nyquist_f[0])
+
+    converted = optics_create()
+    converted = optics_set(
+        converted,
+        "otfstruct",
+        {
+            "function": "custom",
+            "OTF": otf,
+            "fx": fx,
+            "fy": fy,
+            "wave": rt_wave,
+        },
+    )
+
+    output_path: Path | None = None
+    if out_name is not None:
+        output_path = Path(out_name).expanduser()
+        if output_path.suffix.lower() != ".mat":
+            output_path = output_path.with_suffix(".mat")
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        savemat(output_path, {"optics": _export_optics(converted)}, do_compression=True)
+
+    return converted, (str(input_path) if input_path is not None else None), (str(output_path) if output_path is not None else None)
+
+
+dlCore = dl_core
+dlMTF = dl_mtf
+opticsPlotDefocus = optics_plot_defocus
+opticsPlotOffAxis = optics_plot_off_axis
+siConvertRTdata = si_convert_rt_data
 
 
 def wvf_pupil_amplitude(

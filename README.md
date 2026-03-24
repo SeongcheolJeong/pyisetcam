@@ -944,6 +944,14 @@ That same headless optics helper surface now also includes
 `optics_si_compute(...)` / `opticsSICompute(...)`, and
 `optics_plot_transmittance(...)` / `opticsPlotTransmittance(...)`
 for the legacy MATLAB optics depth/compute/transmittance wrapper family.
+That same headless optics helper surface now also includes
+`dl_core(...)` / `dlCore(...)`, `dl_mtf(...)` / `dlMTF(...)`,
+`optics_plot_defocus(...)` / `opticsPlotDefocus(...)`,
+`optics_plot_off_axis(...)` / `opticsPlotOffAxis(...)`, and
+`si_convert_rt_data(...)` / `siConvertRTdata(...)`, covering the
+remaining diffraction OTF core/export, defocus-surface, off-axis
+falloff, and single-field ray-trace-to-shift-invariant conversion
+helpers from the upstream MATLAB optics family.
 The `rtOTF` groundwork is also starting to land through public helper ports
 for `rt_block_center` / `rtBlockCenter`, `rt_extract_block` /
 `rtExtractBlock`, `rt_insert_block` / `rtInsertBlock`, and

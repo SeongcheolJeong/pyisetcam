@@ -181,6 +181,8 @@ from .metrics import (
 )
 from .optics import (
     airy_disk,
+    dl_core,
+    dl_mtf,
     ie_field_height_to_index,
     lens_list,
     optics_build_2d_otf,
@@ -195,6 +197,8 @@ from .optics import (
     optics_description,
     optics_dof,
     optics_get,
+    optics_plot_defocus,
+    optics_plot_off_axis,
     optics_plot_transmittance,
     optics_ray_trace,
     optics_set,
@@ -270,6 +274,7 @@ from .optics import (
     rt_root_path,
     rt_sample_heights,
     rt_synthetic,
+    si_convert_rt_data,
     si_synthetic,
     wvf_aperture,
     wvf_aperture_params,
@@ -674,6 +679,10 @@ __all__ = [
     "comparison_metrics",
     "correlated_color_temperature",
     "deltaEab",
+    "dlCore",
+    "dlMTF",
+    "dl_core",
+    "dl_mtf",
     "delta_e_ab",
     "ie_lab_to_xyz",
     "ieLAB2XYZ",
@@ -988,6 +997,8 @@ __all__ = [
     "opticsDescription",
     "opticsDoF",
     "opticsGet",
+    "opticsPlotDefocus",
+    "opticsPlotOffAxis",
     "opticsPlotTransmittance",
     "optics_build_2d_otf",
     "optics_clear_data",
@@ -1001,6 +1012,8 @@ __all__ = [
     "optics_description",
     "optics_dof",
     "optics_get",
+    "optics_plot_defocus",
+    "optics_plot_off_axis",
     "opticsRayTrace",
     "opticsSICompute",
     "optics_plot_transmittance",
@@ -1182,6 +1195,8 @@ __all__ = [
     "rt_sample_heights",
     "rtSynthetic",
     "rt_synthetic",
+    "siConvertRTdata",
+    "si_convert_rt_data",
     "siSynthetic",
     "si_synthetic",
     "wvf_compute",
@@ -1745,6 +1760,8 @@ lensList = lens_list
 opticsClearData = optics_clear_data
 opticsCreate = optics_create
 opticsCoC = optics_coc
+dlCore = dl_core
+dlMTF = dl_mtf
 opticsDefocusCore = optics_defocus_core
 opticsDefocusDepth = optics_defocus_depth
 opticsDepthDefocus = optics_depth_defocus
@@ -1753,6 +1770,8 @@ opticsDLCompute = optics_dl_compute
 opticsDescription = optics_description
 opticsDoF = optics_dof
 opticsGet = optics_get
+opticsPlotDefocus = optics_plot_defocus
+opticsPlotOffAxis = optics_plot_off_axis
 opticsPlotTransmittance = optics_plot_transmittance
 opticsRayTrace = optics_ray_trace
 opticsSet = optics_set
@@ -1780,6 +1799,7 @@ rtRIInterp = rt_ri_interp
 rtRootPath = rt_root_path
 rtSampleHeights = rt_sample_heights
 rtSynthetic = rt_synthetic
+siConvertRTdata = si_convert_rt_data
 siSynthetic = si_synthetic
 sceCreate = sce_create
 sceGet = sce_get
