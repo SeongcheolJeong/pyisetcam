@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-24T11:11:24.680687+00:00",
+  "generated_at": "2026-03-24T11:19:35.732454+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 92,
       "missing": 37,
-      "out_of_scope": 160,
+      "out_of_scope": 163,
       "parity": 644,
-      "partial": 475,
+      "partial": 472,
       "ported": 35
     },
     "kind_counts": {
@@ -20,18 +20,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 47,
+      "P0": 44,
       "P1": 376,
       "P2": 181,
-      "P3": 839
+      "P3": 842
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 0,
-        "parity": 2,
-        "partial": -2,
+        "out_of_scope": 3,
+        "parity": 0,
+        "partial": -3,
         "ported": 0
       },
       "kind_counts": {
@@ -43,10 +43,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -2,
+        "P0": -3,
         "P1": 0,
         "P2": 0,
-        "P3": 2
+        "P3": 3
       }
     },
     "family_summary": {
@@ -309,12 +309,12 @@
       "imgproc/openexr": {
         "total": 3,
         "by_status": {
-          "partial": 3
+          "out_of_scope": 3
         },
         "by_kind": {
           "api": 3
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "iset.m": {
         "total": 1,
@@ -1026,14 +1026,6 @@
         }
       },
       {
-        "family": "imgproc/openexr",
-        "open_entries": 3,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "partial": 3
-        }
-      },
-      {
         "family": "metrics/scielab",
         "open_entries": 3,
         "highest_open_priority": "P0",
@@ -1131,6 +1123,15 @@
           "parity": 18,
           "partial": 1,
           "ported": 3
+        }
+      },
+      {
+        "family": "scripts/metrics",
+        "open_entries": 1,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 19,
+          "partial": 1
         }
       }
     ],
@@ -4662,40 +4663,40 @@
       "upstream_path": "imgproc/openexr/exrreadchannels.m",
       "family": "imgproc/openexr",
       "kind": "api",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_ip.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream file is only a MATLAB help shim for a MEX-backed OpenEXR binding, which remains outside the supported headless Python migration target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/openexr/exrwritechannels.m",
       "family": "imgproc/openexr",
       "kind": "api",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_ip.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream file is only a MATLAB help shim for a MEX-backed OpenEXR binding, which remains outside the supported headless Python migration target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/openexr/make.m",
       "family": "imgproc/openexr",
       "kind": "api",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_ip.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream file is a local MATLAB MEX build script for OpenEXR bindings rather than a reusable supported headless API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "imgproc/vcimageClearData.m",

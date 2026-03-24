@@ -173,7 +173,9 @@ The audit now explicitly folds already-landed low-level demosaic internals,
 deprecated image-processing aliases, MATLAB camelcase-to-Python snake_case
 wrapper matches, short prefixed MATLAB wrapper names such as `oiGet` /
 `oiSet` / `oiAdd`, and GUI-only hooks into covered or out-of-scope
-classifications instead of leaving them as false-positive family gaps.
+classifications instead of leaving them as false-positive family gaps; it
+also now treats the MATLAB OpenEXR MEX shim/build-script family as
+out-of-scope integration debt rather than a remaining headless API target.
 
 Run the initial metrics helpers:
 

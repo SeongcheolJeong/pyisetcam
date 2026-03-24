@@ -226,6 +226,21 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file opens a visualization figure for microlens geometry and is treated as GUI-only rather than a headless compute surface.",
         "module_hits": [],
     },
+    "imgproc/openexr/exrreadchannels.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is only a MATLAB help shim for a MEX-backed OpenEXR binding, which remains outside the supported headless Python migration target.",
+        "module_hits": [],
+    },
+    "imgproc/openexr/exrwritechannels.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is only a MATLAB help shim for a MEX-backed OpenEXR binding, which remains outside the supported headless Python migration target.",
+        "module_hits": [],
+    },
+    "imgproc/openexr/make.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a local MATLAB MEX build script for OpenEXR bindings rather than a reusable supported headless API surface.",
+        "module_hits": [],
+    },
     "imgproc/ipGet.m": {
         "status": "ported",
         "note": "The direct MATLAB image-processor getter surface is already covered by `ip_get(...)` / `ipGet(...)`.",
