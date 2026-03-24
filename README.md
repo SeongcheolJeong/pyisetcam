@@ -1727,3 +1727,7 @@ noise, anti-alias, and full system walkthroughs are tracked through
 focused headless camera regressions plus a small diffuser fix that now
 replays blur and birefringent anti-alias filters through non-raytrace
 `oi_compute(...)`.
+The `tutorials/printing` tail is now closed too: the halftoning walkthrough
+is backed by direct `HalfToneImage(...)` and `FloydSteinberg(...)`
+compatibility wrappers plus a focused printing tutorial regression over
+clustered-dot, Bayer, and error-diffusion output.

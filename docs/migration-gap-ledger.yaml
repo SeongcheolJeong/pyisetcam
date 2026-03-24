@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-03-24T20:14:37.606558+00:00",
+  "generated_at": "2026-03-24T20:59:11.302215+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 84,
-      "missing": 27,
+      "missing": 26,
       "out_of_scope": 182,
-      "parity": 673,
-      "partial": 409,
-      "ported": 68
+      "parity": 674,
+      "partial": 407,
+      "ported": 70
     },
     "kind_counts": {
       "api": 661,
@@ -20,18 +20,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 347,
+      "P1": 344,
       "P2": 173,
-      "P3": 923
+      "P3": 926
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
-        "missing": 0,
+        "missing": -1,
         "out_of_scope": 0,
-        "parity": 4,
-        "partial": -4,
-        "ported": 0
+        "parity": 1,
+        "partial": -2,
+        "ported": 2
       },
       "kind_counts": {
         "api": 0,
@@ -42,9 +42,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -4,
+        "P1": -3,
         "P2": 0,
-        "P3": 4
+        "P3": 3
       }
     },
     "family_summary": {
@@ -896,12 +896,12 @@
       "tutorials/printing": {
         "total": 1,
         "by_status": {
-          "missing": 1
+          "parity": 1
         },
         "by_kind": {
           "tutorial": 1
         },
-        "highest_open_priority": "P1"
+        "highest_open_priority": "P3"
       },
       "tutorials/scene": {
         "total": 3,
@@ -929,7 +929,8 @@
           "headless_only": 46,
           "out_of_scope": 1,
           "parity": 12,
-          "partial": 220
+          "partial": 218,
+          "ported": 2
         },
         "by_kind": {
           "gui": 1,
@@ -1001,13 +1002,14 @@
     "top_open_families": [
       {
         "family": "utility",
-        "open_entries": 266,
+        "open_entries": 264,
         "highest_open_priority": "P1",
         "by_status": {
           "headless_only": 46,
           "out_of_scope": 1,
           "parity": 12,
-          "partial": 220
+          "partial": 218,
+          "ported": 2
         }
       },
       {
@@ -1087,14 +1089,6 @@
         }
       },
       {
-        "family": "tutorials/printing",
-        "open_entries": 1,
-        "highest_open_priority": "P1",
-        "by_status": {
-          "missing": 1
-        }
-      },
-      {
         "family": "data/sensor",
         "open_entries": 17,
         "highest_open_priority": "P2",
@@ -1108,6 +1102,16 @@
         "highest_open_priority": "P2",
         "by_status": {
           "partial": 13
+        }
+      },
+      {
+        "family": "cp",
+        "open_entries": 10,
+        "highest_open_priority": "P2",
+        "by_status": {
+          "missing": 10,
+          "out_of_scope": 1,
+          "parity": 1
         }
       }
     ],
@@ -14806,14 +14810,15 @@
       "upstream_path": "tutorials/printing/t_printingHalftone.m",
       "family": "tutorials/printing",
       "kind": "tutorial",
-      "status": "missing",
-      "python_surface": "",
+      "status": "parity",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "No usable Python surface was detected for this upstream path.",
-      "priority": "P1"
+      "notes": "The printing tutorial is covered by the focused headless halftoning regression exercising `HalfToneImage(...)`, the Bayer-style threshold-cell workflow, and Floyd-Steinberg error diffusion.",
+      "priority": "P3"
     },
     {
       "upstream_path": "tutorials/scene/t_sceneIntroduction.m",
@@ -18363,21 +18368,21 @@
       "upstream_path": "utility/printing/FloydSteinberg.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB Floyd-Steinberg error-diffusion helper is covered by the Python `floyd_steinberg(...)` / `FloydSteinberg(...)` compatibility wrapper and direct utility regressions.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/printing/HalfToneImage.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB halftone-cell helper is covered by the Python `half_tone_image(...)` / `HalfToneImage(...)` compatibility wrapper and direct utility regressions.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/addText.m",

@@ -3,10 +3,12 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pyisetcam import ieParameterOtype
+from pyisetcam import FloydSteinberg, HalfToneImage, ieParameterOtype
 from pyisetcam.utils import (
     blackbody,
     energy_to_quanta,
+    floyd_steinberg,
+    half_tone_image,
     ie_fit_line,
     ie_parameter_otype,
     interp_spectra,
@@ -68,6 +70,85 @@ def test_blackbody_matlab_scaling() -> None:
     assert np.all(spectra > 0.0)
     eq_index = int(np.argmin(np.abs(wave - 550.0)))
     assert np.isclose(spectra[eq_index, 0], spectra[eq_index, 1])
+
+
+def test_half_tone_image_scales_integer_cells_and_alias_matches() -> None:
+    cell = np.array([[1, 2], [3, 4]], dtype=float)
+    image = np.array(
+        [
+            [0.10, 0.50, 0.90],
+            [0.20, 0.40, 0.60],
+            [0.80, 1.00, 0.10],
+        ],
+        dtype=float,
+    )
+    scaled_cell = np.array([[0.125, 0.375], [0.625, 0.875]], dtype=float)
+    tiled = np.tile(scaled_cell, (2, 2))[: image.shape[0], : image.shape[1]]
+    expected = tiled < image
+
+    result = half_tone_image(cell, image)
+    alias = HalfToneImage(cell, image)
+
+    assert result.dtype == np.bool_
+    assert np.array_equal(result, expected)
+    assert np.array_equal(alias, expected)
+
+
+def test_floyd_steinberg_matches_legacy_error_diffusion_and_alias() -> None:
+    fs = np.array([[0.0, 0.0, 7.0], [3.0, 5.0, 1.0]], dtype=float) / 16.0
+    image = np.array(
+        [
+            [0.20, 0.40, 0.60, 0.80],
+            [0.30, 0.70, 0.50, 0.10],
+            [0.90, 0.20, 0.80, 0.40],
+        ],
+        dtype=float,
+    )
+
+    def _reference(fs_kernel: np.ndarray, image_data: np.ndarray) -> np.ndarray:
+        rows, cols = image_data.shape
+        fs_rows, fs_cols = fs_kernel.shape
+        radius = fs_cols // 2
+        temp = np.zeros((rows + fs_rows, cols + 2 * radius), dtype=float)
+        temp[:rows, radius : radius + cols] = image_data
+
+        def _round_scalar(value: float) -> float:
+            return float(np.sign(value) * np.floor(abs(value) + 0.5))
+
+        for row in range(rows):
+            for col in range(radius, cols):
+                error = float(temp[row, col])
+                temp[row, col] = _round_scalar(error)
+                error -= float(temp[row, col])
+                for dr in range(fs_rows):
+                    for dc in range(fs_cols):
+                        temp[row + dr, col - radius + dc] += error * float(fs_kernel[dr, dc])
+
+            temp[row : row + fs_rows, cols : cols + radius] += temp[row + 1 : row + fs_rows + 1, :radius]
+
+            for col in range(cols, cols + radius):
+                error = float(temp[row, col])
+                temp[row, col] = _round_scalar(error)
+                error -= float(temp[row, col])
+                for dr in range(fs_rows):
+                    for dc in range(fs_cols):
+                        temp[row + dr, col - radius + dc] += error * float(fs_kernel[dr, dc])
+
+            temp[row + 1 : row + fs_rows + 1, radius : 2 * radius] += temp[
+                row : row + fs_rows, cols + radius : cols + 2 * radius
+            ]
+            temp[:, :radius] = 0.0
+            temp[:, cols + radius : cols + 2 * radius] = 0.0
+
+        return temp[:rows, radius : radius + cols]
+
+    expected = _reference(fs, image)
+    result = floyd_steinberg(fs, image)
+    alias = FloydSteinberg(fs, image)
+
+    assert np.array_equal(result, expected)
+    assert np.array_equal(alias, expected)
+    assert set(np.unique(result)).issubset({0.0, 1.0})
 
 
 def test_unit_frequency_list_matches_matlab_even_and_odd() -> None:

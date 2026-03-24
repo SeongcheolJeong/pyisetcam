@@ -71,8 +71,10 @@ from pyisetcam import (
     edge_to_mtf,
     exposureValue,
     FOTParams,
+    FloydSteinberg,
     gaborP,
     hc_basis,
+    HalfToneImage,
     dlCore,
     dlMTF,
     imgDeadleaves,
@@ -15296,6 +15298,70 @@ def test_camera_antialias_and_noise_tutorial_workflows(asset_store) -> None:
     assert float(np.mean(photon_rgb)) < float(np.mean(noiseless_rgb))
     assert float(np.mean(np.abs(all_noise_rgb - noiseless_rgb))) > 1e-4
     assert float(np.mean(np.abs(photon_rgb - noiseless_rgb))) > 1e-4
+
+
+def test_printing_halftone_tutorial_workflow() -> None:
+    half_tone_cell_4 = np.array(
+        [
+            [15, 5, 12, 14],
+            [10, 3, 2, 8],
+            [7, 1, 4, 11],
+            [13, 9, 6, 16],
+        ],
+        dtype=float,
+    )
+    half_tone_cell_b4 = np.array(
+        [
+            [1, 17, 5, 21, 2, 18, 6, 22],
+            [25, 9, 29, 13, 26, 10, 30, 14],
+            [7, 23, 3, 19, 8, 24, 4, 20],
+            [31, 15, 27, 11, 32, 16, 28, 12],
+            [2, 18, 6, 22, 1, 17, 5, 21],
+            [26, 10, 30, 14, 25, 9, 29, 13],
+            [8, 24, 4, 20, 7, 23, 3, 19],
+            [32, 16, 28, 12, 31, 15, 27, 11],
+        ],
+        dtype=float,
+    )
+    gray_strips = 8
+    sweep_size = 128
+    monitor_gamma = 2.0
+    fs = np.array([[0.0, 0.0, 7.0], [3.0, 5.0, 1.0]], dtype=float) / 16.0
+
+    x, y = np.meshgrid(np.arange(sweep_size, dtype=float), np.arange(sweep_size, dtype=float))
+    y = np.fix(y * gray_strips / sweep_size) / gray_strips
+    x = x / (sweep_size * gray_strips)
+    sweep_8 = np.ones((sweep_size, sweep_size), dtype=float) - (x + y)
+    sweep_8_linear = sweep_8**monitor_gamma
+
+    ht_sweep_4 = HalfToneImage(half_tone_cell_4, sweep_8_linear)
+    ht_sweep_b4 = HalfToneImage(half_tone_cell_b4, sweep_8_linear)
+    fs_sweep = FloydSteinberg(fs, sweep_8_linear)
+
+    def _block_mean(image: np.ndarray, block_size: int) -> np.ndarray:
+        rows = image.shape[0] // block_size
+        cols = image.shape[1] // block_size
+        return (
+            np.asarray(image[: rows * block_size, : cols * block_size], dtype=float)
+            .reshape(rows, block_size, cols, block_size)
+            .mean(axis=(1, 3))
+        )
+
+    source4 = _block_mean(sweep_8_linear, 4)
+    source8 = _block_mean(sweep_8_linear, 8)
+    ht4 = _block_mean(ht_sweep_4.astype(float), 4)
+    ht8 = _block_mean(ht_sweep_b4.astype(float), 8)
+
+    assert ht_sweep_4.shape == sweep_8_linear.shape
+    assert ht_sweep_b4.shape == sweep_8_linear.shape
+    assert fs_sweep.shape == sweep_8_linear.shape
+    assert set(np.unique(ht_sweep_4)).issubset({False, True})
+    assert set(np.unique(ht_sweep_b4)).issubset({False, True})
+    assert set(np.unique(fs_sweep)).issubset({0.0, 1.0})
+    assert float(np.mean(np.abs(ht4 - source4))) < 0.12
+    assert float(np.mean(np.abs(ht8 - source8))) < 0.08
+    assert abs(float(np.mean(fs_sweep)) - float(np.mean(sweep_8_linear))) < 0.02
+    assert np.kron(ht_sweep_b4.astype(float), np.ones((3, 3), dtype=float)).shape == (384, 384)
 
 
 def test_display_helper_compatibility_surface(asset_store) -> None:

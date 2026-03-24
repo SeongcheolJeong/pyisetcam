@@ -192,6 +192,16 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The deprecated MATLAB color-balance gateway is already covered by the Python `image_color_balance(...)` compatibility wrapper.",
         "module_hits": ["pyisetcam.ip"],
     },
+    "utility/printing/FloydSteinberg.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB Floyd-Steinberg error-diffusion helper is covered by the Python `floyd_steinberg(...)` / `FloydSteinberg(...)` compatibility wrapper and direct utility regressions.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/printing/HalfToneImage.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB halftone-cell helper is covered by the Python `half_tone_image(...)` / `HalfToneImage(...)` compatibility wrapper and direct utility regressions.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
     "imgproc/demosaic/faultypixel/FaultyPixelCorrection.m": {
         "status": "out_of_scope",
         "note": "The upstream file immediately errors as requiring a rewrite, so it is treated as obsolete rather than actionable headless API debt.",
@@ -416,6 +426,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "status": "out_of_scope",
         "note": "The upstream file is a deprecated MATLAB path-management note about `startup.m`, not a reusable supported headless API surface.",
         "module_hits": [],
+    },
+    "tutorials/printing/t_printingHalftone.m": {
+        "status": "parity",
+        "note": "The printing tutorial is covered by the focused headless halftoning regression exercising `HalfToneImage(...)`, the Bayer-style threshold-cell workflow, and Floyd-Steinberg error diffusion.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
     },
     "tutorials/camera/t_SystemSimulate.m": {
         "status": "parity",

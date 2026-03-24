@@ -909,6 +909,94 @@ def apply_channelwise_gaussian(
     return output
 
 
+def _matlab_round(values: Any) -> NDArray[np.float64]:
+    array = np.asarray(values, dtype=float)
+    return np.sign(array) * np.floor(np.abs(array) + 0.5)
+
+
+def _scale_to_range(values: Any, out_min: float, out_max: float) -> NDArray[np.float64]:
+    array = np.asarray(values, dtype=float)
+    in_min = float(np.min(array))
+    in_max = float(np.max(array))
+    if np.isclose(in_min, in_max):
+        return np.full_like(array, float(out_min))
+    scaled = (array - in_min) / (in_max - in_min)
+    return scaled * (float(out_max) - float(out_min)) + float(out_min)
+
+
+def half_tone_image(cell: Any, image: Any) -> NDArray[np.bool_]:
+    """Apply the legacy MATLAB HalfToneImage threshold-cell algorithm."""
+
+    image_array = np.asarray(image, dtype=float)
+    cell_array = np.asarray(cell, dtype=float)
+    if image_array.ndim != 2:
+        raise ValueError("HalfToneImage expects a 2D grayscale image.")
+    if cell_array.ndim != 2 or cell_array.size == 0:
+        raise ValueError("HalfToneImage expects a non-empty 2D halftone cell.")
+
+    if float(np.max(cell_array)) > 1.0:
+        low = 0.5 / max(float(np.max(cell_array)), 1e-12)
+        high = 1.0 - low
+        half_tone_cell = _scale_to_range(cell_array, low, high)
+    else:
+        half_tone_cell = cell_array.copy()
+
+    row_tiles = int(np.ceil(image_array.shape[0] / half_tone_cell.shape[0]))
+    col_tiles = int(np.ceil(image_array.shape[1] / half_tone_cell.shape[1]))
+    half_tone_mask = np.tile(half_tone_cell, (row_tiles, col_tiles))
+    half_tone_mask = half_tone_mask[: image_array.shape[0], : image_array.shape[1]]
+    return np.asarray(half_tone_mask < image_array, dtype=bool)
+
+
+HalfToneImage = half_tone_image
+
+
+def floyd_steinberg(fs: Any, image: Any) -> NDArray[np.float64]:
+    """Apply the legacy MATLAB FloydSteinberg error-diffusion loop."""
+
+    fs_array = np.asarray(fs, dtype=float)
+    image_array = np.asarray(image, dtype=float)
+    if fs_array.ndim != 2 or fs_array.size == 0:
+        raise ValueError("FloydSteinberg expects a non-empty 2D error kernel.")
+    if image_array.ndim != 2:
+        raise ValueError("FloydSteinberg expects a 2D grayscale image.")
+
+    img_rows, img_cols = image_array.shape
+    fs_rows, fs_cols = fs_array.shape
+    fs_col_radius = fs_cols // 2
+
+    temp = np.zeros((img_rows + fs_rows, img_cols + 2 * fs_col_radius), dtype=float)
+    temp[:img_rows, fs_col_radius : fs_col_radius + img_cols] = image_array
+
+    for row in range(img_rows):
+        for col in range(fs_col_radius, img_cols):
+            error = float(temp[row, col])
+            temp[row, col] = float(_matlab_round(error))
+            error -= float(temp[row, col])
+            temp[row : row + fs_rows, col - fs_col_radius : col + fs_col_radius + 1] += error * fs_array
+
+        temp[row : row + fs_rows, img_cols : img_cols + fs_col_radius] += temp[
+            row + 1 : row + fs_rows + 1, :fs_col_radius
+        ]
+
+        for col in range(img_cols, img_cols + fs_col_radius):
+            error = float(temp[row, col])
+            temp[row, col] = float(_matlab_round(error))
+            error -= float(temp[row, col])
+            temp[row : row + fs_rows, col - fs_col_radius : col + fs_col_radius + 1] += error * fs_array
+
+        temp[row + 1 : row + fs_rows + 1, fs_col_radius : 2 * fs_col_radius] += temp[
+            row : row + fs_rows, img_cols + fs_col_radius : img_cols + 2 * fs_col_radius
+        ]
+        temp[:, :fs_col_radius] = 0.0
+        temp[:, img_cols + fs_col_radius : img_cols + 2 * fs_col_radius] = 0.0
+
+    return np.asarray(temp[:img_rows, fs_col_radius : fs_col_radius + img_cols], dtype=float)
+
+
+FloydSteinberg = floyd_steinberg
+
+
 def least_squares_matrix(
     source_sensitivities: NDArray[np.float64],
     target_sensitivities: NDArray[np.float64],
