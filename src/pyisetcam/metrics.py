@@ -953,7 +953,7 @@ def ie_sqri(sf: Any, d_mtf: Any, luminance: Any, *args: Any) -> tuple[float, NDA
         raise ValueError("L must be nonnegative.")
 
     a = 540.0 * (1.0 + (0.7 / max(luminance_value, 1e-12))) ** (-0.2)
-    a /= 1.0 + (12.0 / (float(width) * (1.0 + (sf_array / 3.0) ** 2)))
+    a /= 1.0 + (12.0 / (float(width) * (1.0 + (sf_array / 3.0)) ** 2))
     b = 0.3 * (1.0 + (100.0 / max(luminance_value, 1e-12))) ** 0.15
     c = 0.06
     h_csf = (a * sf_array) * np.exp(-b * sf_array) * np.sqrt(1.0 + c * np.exp(b * sf_array))

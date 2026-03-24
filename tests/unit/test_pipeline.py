@@ -10749,6 +10749,22 @@ def test_run_python_case_supports_sensor_signal_current_uniform_parity_case(asse
     assert float(case.payload["mean_current"]) > 0.0
 
 
+def test_run_python_case_supports_metrics_sqri_tutorial_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("metrics_sqri_tutorial_small", asset_store=asset_store)
+
+    assert case.payload["sf"].shape == (5000,)
+    assert np.array_equal(case.payload["widths"], np.array([0.5, 1.0, 2.3, 6.5, 60.0], dtype=float))
+    assert case.payload["max_sqri_by_width"].shape == (5,)
+    assert case.payload["csf_peak_by_width"].shape == (5,)
+    assert case.payload["luminance_levels"].shape == (6,)
+    assert case.payload["max_sqri_by_luminance"].shape == (6,)
+    assert np.array_equal(case.payload["note3_distances_m"], np.array([0.2, 0.4, 0.8], dtype=float))
+    assert case.payload["note3_dmtf_selected"].shape == (3, 5)
+    assert float(case.payload["crt_dpi"]) > 0.0
+    assert float(case.payload["crt_sqri"]) > 0.0
+    assert float(case.payload["crt_csf_peak"]) > 0.0
+
+
 def test_xyy2xyz_matches_closed_form() -> None:
     xyy = np.array(
         [
@@ -12273,7 +12289,7 @@ def test_metrics_roi_compare_and_sqri_helpers() -> None:
     luminance = 340.0 / np.pi
     sqri, h_csf = ieSQRI(sf, d_mtf, luminance, "width", 6.5)
 
-    a = 540.0 * (1.0 + (0.7 / luminance)) ** (-0.2) / (1.0 + (12.0 / (6.5 * (1.0 + (sf / 3.0) ** 2))))
+    a = 540.0 * (1.0 + (0.7 / luminance)) ** (-0.2) / (1.0 + (12.0 / (6.5 * (1.0 + (sf / 3.0)) ** 2)))
     b = 0.3 * (1.0 + (100.0 / luminance)) ** 0.15
     c = 0.06
     expected_h_csf = (a * sf) * np.exp(-b * sf) * np.sqrt(1.0 + c * np.exp(b * sf))
@@ -14811,6 +14827,37 @@ def test_run_python_case_supports_scene_demo_small_parity_case(asset_store) -> N
     assert case.payload["freq_scene_support_x_mm"].shape == (256,)
     assert case.payload["freq_scene_bottom_row_luminance_norm"].shape == (256,)
     assert case.payload["freq_scene_radiance_hline_550_norm"].shape == (256,)
+
+
+def test_run_python_case_supports_scene_introduction_tutorial_parity_case(asset_store) -> None:
+    case = run_python_case_with_context("scene_introduction_tutorial_small", asset_store=asset_store)
+
+    assert case.payload["scene_name"] == "Macbeth (D65)"
+    assert case.payload["scene_type"] == "scene"
+    assert tuple(case.payload["macbeth_size"]) == (64, 96)
+    assert np.isclose(float(case.payload["hfov_after"]), 0.5, atol=1e-12, rtol=0.0)
+    assert np.isclose(float(case.payload["distance_mm"]), 1200.0, atol=1e-9, rtol=0.0)
+    assert case.payload["spacing_before_mm"].shape == (2,)
+    assert np.all(case.payload["spacing_before_mm"] > 0.0)
+    assert np.all(case.payload["spacing_after_distance_mm"] < case.payload["spacing_before_mm"])
+    assert np.all(case.payload["spacing_after_hfov_mm"] < case.payload["spacing_after_distance_mm"])
+    assert case.payload["spacing_after_hfov_um"].shape == (2,)
+    assert case.payload["spacing_after_hfov_m"].shape == (2,)
+    assert tuple(case.payload["stuffed_scene_size"]) == (506, 759)
+    assert case.payload["stuffed_wave"].shape == (31,)
+    assert float(case.payload["stuffed_mean_luminance"]) > 0.0
+    assert np.isclose(
+        float(case.payload["adjusted_mean_luminance"]),
+        float(case.payload["stuffed_mean_luminance"]),
+        atol=1e-10,
+        rtol=1e-10,
+    )
+    assert case.payload["illuminant_energy_before_norm"].shape == (31,)
+    assert case.payload["blackbody_energy_norm"].shape == (31,)
+    assert case.payload["illuminant_energy_after_norm"].shape == (31,)
+    assert case.payload["illuminant_photons_after_norm"].shape == (31,)
+    assert not np.allclose(case.payload["illuminant_energy_before_norm"], case.payload["blackbody_energy_norm"])
+    assert np.allclose(case.payload["illuminant_energy_after_norm"], case.payload["blackbody_energy_norm"])
 
 
 def test_scene_examples_script_workflow(asset_store) -> None:

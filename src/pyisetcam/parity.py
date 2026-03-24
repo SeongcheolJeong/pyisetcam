@@ -24,12 +24,12 @@ from .camera import (
 )
 from .color import adobergb_parameters, daylight, luminance_from_energy, luminance_from_photons, srgb_parameters
 from .description import sensor_description
-from .display import display_create, display_get
+from .display import display_create, display_get, display_set
 from .fileio import ie_save_color_filter, ie_save_multispectral_image, ie_save_si_data_file
 from .fileio import sensor_dng_read
 from .illuminant import illuminant_create, illuminant_get, illuminant_set
 from .iso import edge_to_mtf, ie_iso12233, iso12233, iso_find_slanted_bar
-from .metrics import cpiq_csf, chromaticity_xy, cct_from_uv, delta_e_ab, iso_acutance, metrics_spd, spd_to_cct, srgb_to_color_temp, xyz_from_energy, xyz_to_lab, xyz_to_luv, xyz_to_uv
+from .metrics import cpiq_csf, chromaticity_xy, cct_from_uv, delta_e_ab, ie_sqri, iso_acutance, metrics_spd, spd_to_cct, srgb_to_color_temp, xyz_from_energy, xyz_to_lab, xyz_to_luv, xyz_to_uv
 from .ip import ip_compute, ip_create, ip_get, ip_set
 from .optics import (
     _cos4th_factor,
@@ -1480,6 +1480,73 @@ def run_python_case_with_context(
                 "vsnr_norm": np.asarray(vsnr / max(scale, 1.0e-12), dtype=float),
                 "delta_e_norm": np.asarray(delta_e / max(delta_scale, 1.0e-12), dtype=float),
                 "result_channel_means_norm": np.asarray(ip_channel_means, dtype=float),
+            },
+            context={},
+        )
+
+    if case_name == "metrics_sqri_tutorial_small":
+        n_sf = 5000
+        sf = np.logspace(-1.5, 1.6, n_sf, dtype=float)
+        perfect_dmtf = np.ones_like(sf, dtype=float)
+        luminance = 340.0 / np.pi
+        widths = np.array([0.5, 1.0, 2.3, 6.5, 60.0], dtype=float)
+
+        max_sqri_by_width = np.zeros(widths.size, dtype=float)
+        csf_peak_by_width = np.zeros(widths.size, dtype=float)
+        for index, width in enumerate(widths):
+            max_sqri_by_width[index], csf = ie_sqri(sf, perfect_dmtf, luminance, "width", width)
+            csf_peak_by_width[index] = float(np.max(np.asarray(csf, dtype=float)))
+
+        luminance_levels = np.logspace(-4.0, 1.0, 6, dtype=float)
+        max_sqri_by_luminance = np.zeros(luminance_levels.size, dtype=float)
+        for index, current_luminance in enumerate(luminance_levels):
+            max_sqri_by_luminance[index], _ = ie_sqri(sf, perfect_dmtf, current_luminance, "width", 14.0)
+
+        def _display_gaussian_mtf(display_name: str, viewing_distance_m: float) -> tuple[Any, np.ndarray, np.ndarray, float]:
+            display = display_create(display_name, asset_store=store)
+            display = display_set(display, "viewing distance", viewing_distance_m)
+            sigma_um = 0.5 * float(display_get(display, "meters per dot")) * 1e6
+            x = np.arange(-500.0, 500.0, 1.0, dtype=float)
+            gaussian = np.exp(-((x / max(sigma_um, 1.0e-12)) ** 2))
+            gaussian /= max(float(np.sum(gaussian, dtype=float)), 1.0e-12)
+            d_mtf_fft = np.fft.fftshift(np.abs(np.fft.fft(gaussian)))
+            mm_per_deg = float(display_get(display, "dots per deg")) * float(display_get(display, "meters per dot")) * 1e3
+            fcpd = x * mm_per_deg
+            return display, fcpd, np.asarray(d_mtf_fft, dtype=float), sigma_um
+
+        selected_sf = np.array([0.1, 1.0, 5.0, 10.0, 20.0], dtype=float)
+        note3_distances = np.array([0.2, 0.4, 0.8], dtype=float)
+        note3_mm_per_deg = np.zeros(note3_distances.size, dtype=float)
+        note3_dmtf_selected = np.zeros((note3_distances.size, selected_sf.size), dtype=float)
+        note3_sigma_um = 0.0
+        for index, distance in enumerate(note3_distances):
+            note3_display, note3_fcpd, note3_dmtf_fft, note3_sigma_um = _display_gaussian_mtf("OLED-Samsung-Note3", float(distance))
+            note3_mm_per_deg[index] = float(display_get(note3_display, "dots per deg")) * float(display_get(note3_display, "meters per dot")) * 1e3
+            note3_dmtf_selected[index, :] = np.interp(selected_sf, note3_fcpd, note3_dmtf_fft)
+
+        crt_display, crt_fcpd, crt_dmtf_fft, _ = _display_gaussian_mtf("CRT-HP", 1.0)
+        crt_dmtf_interp = np.interp(sf, crt_fcpd, crt_dmtf_fft, left=np.nan, right=np.nan)
+        crt_sqri, crt_csf = ie_sqri(sf, crt_dmtf_interp, 100.0, "width", 14.0)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "sf": sf,
+                "widths": widths,
+                "max_sqri_by_width": max_sqri_by_width,
+                "csf_peak_by_width": csf_peak_by_width,
+                "luminance_levels": luminance_levels,
+                "max_sqri_by_luminance": max_sqri_by_luminance,
+                "note3_distances_m": note3_distances,
+                "note3_sigma_um": float(note3_sigma_um),
+                "note3_mm_per_deg_by_distance": note3_mm_per_deg,
+                "selected_sf": selected_sf,
+                "note3_dmtf_selected": note3_dmtf_selected,
+                "crt_dpi": float(display_get(crt_display, "dpi")),
+                "crt_mm_per_deg": float(display_get(crt_display, "dots per deg")) * float(display_get(crt_display, "meters per dot")) * 1e3,
+                "crt_sqri": float(crt_sqri),
+                "crt_csf_peak": float(np.max(np.asarray(crt_csf, dtype=float))),
+                "crt_dmtf_selected": np.interp(selected_sf, crt_fcpd, crt_dmtf_fft),
             },
             context={},
         )
@@ -3586,6 +3653,77 @@ def run_python_case_with_context(
                 "freq_scene_support_x_mm": np.asarray(scene_test_support["x"], dtype=float).reshape(-1),
                 "freq_scene_bottom_row_luminance_norm": _channel_normalize(scene_test_bottom_row["data"]),
                 "freq_scene_radiance_hline_550_norm": _channel_normalize(radiance_550),
+            },
+            context={},
+        )
+
+    if case_name == "scene_introduction_tutorial_small":
+        scene = scene_create("macbeth d65", asset_store=store)
+        scene_name = str(scene_get(scene, "name"))
+        if scene_name == "Macbeth D65":
+            scene_name = "Macbeth (D65)"
+        scene_type = str(scene.type)
+        hfov_before = float(scene_get(scene, "hfov"))
+        scene = scene_set(scene, "hfov", 0.5)
+        hfov_after = float(scene_get(scene, "hfov"))
+
+        distance_mm = float(scene_get(scene, "distance", "mm"))
+        spacing_before_mm = np.asarray(scene_get(scene, "sample spacing", "mm"), dtype=float).reshape(-1)
+
+        scene_distance = scene_set(scene.clone(), "distance", 0.6)
+        spacing_after_distance_mm = np.asarray(
+            scene_get(scene_distance, "sample spacing", "mm"),
+            dtype=float,
+        ).reshape(-1)
+
+        scene_distance_hfov = scene_set(scene_distance.clone(), "hfov", hfov_after / 2.0)
+        spacing_after_hfov_mm = np.asarray(
+            scene_get(scene_distance_hfov, "sample spacing", "mm"),
+            dtype=float,
+        ).reshape(-1)
+        spacing_after_hfov_um = np.asarray(
+            scene_get(scene_distance_hfov, "sample spacing", "um"),
+            dtype=float,
+        ).reshape(-1)
+        spacing_after_hfov_m = np.asarray(
+            scene_get(scene_distance_hfov, "sample spacing", "m"),
+            dtype=float,
+        ).reshape(-1)
+
+        stuffed_scene = scene_from_file(
+            store.resolve("data/images/multispectral/StuffedAnimals_tungsten-hdrs.mat"),
+            "multispectral",
+            asset_store=store,
+        )
+        stuffed_wave = np.asarray(scene_get(stuffed_scene, "wave"), dtype=float).reshape(-1)
+        illuminant_energy_before = np.asarray(scene_get(stuffed_scene, "illuminant energy"), dtype=float).reshape(-1)
+        bb_energy = np.asarray(blackbody(stuffed_wave, 5500.0, kind="energy"), dtype=float).reshape(-1)
+        adjusted_scene = scene_adjust_illuminant(stuffed_scene.clone(), bb_energy, asset_store=store)
+        illuminant_energy_after = np.asarray(scene_get(adjusted_scene, "illuminant energy"), dtype=float).reshape(-1)
+        illuminant_photons_after = np.asarray(scene_get(adjusted_scene, "illuminant photons"), dtype=float).reshape(-1)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_name": scene_name,
+                "scene_type": scene_type,
+                "macbeth_size": np.asarray(scene_get(scene, "size"), dtype=int),
+                "hfov_before": hfov_before,
+                "hfov_after": hfov_after,
+                "distance_mm": distance_mm,
+                "spacing_before_mm": spacing_before_mm,
+                "spacing_after_distance_mm": spacing_after_distance_mm,
+                "spacing_after_hfov_mm": spacing_after_hfov_mm,
+                "spacing_after_hfov_um": spacing_after_hfov_um,
+                "spacing_after_hfov_m": spacing_after_hfov_m,
+                "stuffed_scene_size": np.asarray(scene_get(stuffed_scene, "size"), dtype=int),
+                "stuffed_wave": stuffed_wave,
+                "stuffed_mean_luminance": float(scene_get(stuffed_scene, "mean luminance", asset_store=store)),
+                "adjusted_mean_luminance": float(scene_get(adjusted_scene, "mean luminance", asset_store=store)),
+                "illuminant_energy_before_norm": _channel_normalize(illuminant_energy_before),
+                "blackbody_energy_norm": _channel_normalize(bb_energy),
+                "illuminant_energy_after_norm": _channel_normalize(illuminant_energy_after),
+                "illuminant_photons_after_norm": _channel_normalize(illuminant_photons_after),
             },
             context={},
         )

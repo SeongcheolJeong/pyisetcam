@@ -1087,6 +1087,58 @@ switch case_name
         payload.delta_e_norm = double(deltaE / max(deltaE(find(isfinite(deltaE), 1, 'first')), 1e-12));
         payload.result_channel_means_norm = double(resultChannelMeans);
 
+    case 'metrics_sqri_tutorial_small'
+        nSF = 5000;
+        sf = logspace(-1.5, 1.6, nSF)';
+        perfectDMTF = ones(size(sf));
+        luminance = 340 / pi;
+        widths = [0.5 1 2.3 6.5 60]';
+
+        maxSQRIByWidth = zeros(numel(widths), 1);
+        csfPeakByWidth = zeros(numel(widths), 1);
+        for ii = 1:numel(widths)
+            [maxSQRIByWidth(ii), csf] = ieSQRI(sf, perfectDMTF, luminance, 'width', widths(ii));
+            csfPeakByWidth(ii) = max(double(csf(:)));
+        end
+
+        luminanceLevels = logspace(-4, 1, 6)';
+        maxSQRIByLuminance = zeros(numel(luminanceLevels), 1);
+        for ii = 1:numel(luminanceLevels)
+            maxSQRIByLuminance(ii) = ieSQRI(sf, perfectDMTF, luminanceLevels(ii), 'width', 14);
+        end
+
+        selectedSF = [0.1 1 5 10 20]';
+        note3Distances = [0.2 0.4 0.8]';
+        note3MmPerDeg = zeros(numel(note3Distances), 1);
+        note3DmtfSelected = zeros(numel(note3Distances), numel(selectedSF));
+        note3SigmaUm = 0;
+        for ii = 1:numel(note3Distances)
+            [note3Display, note3Fcpd, note3DMTFfft, note3SigmaUm] = local_display_gaussian_mtf('OLED-Samsung-Note3', note3Distances(ii));
+            note3MmPerDeg(ii) = displayGet(note3Display, 'dots per deg') * displayGet(note3Display, 'meters per dot', 'mm');
+            note3DmtfSelected(ii, :) = interp1(note3Fcpd, note3DMTFfft, selectedSF, 'linear')';
+        end
+
+        [crtDisplay, crtFcpd, crtDMTFfft] = local_display_gaussian_mtf('CRT-HP', 1.0);
+        crtDMTFInterp = interp1(crtFcpd, crtDMTFfft, sf, 'linear');
+        [crtSQRI, crtCSF] = ieSQRI(sf, crtDMTFInterp, 100, 'width', 14);
+
+        payload.sf = double(sf(:));
+        payload.widths = double(widths(:));
+        payload.max_sqri_by_width = double(maxSQRIByWidth(:));
+        payload.csf_peak_by_width = double(csfPeakByWidth(:));
+        payload.luminance_levels = double(luminanceLevels(:));
+        payload.max_sqri_by_luminance = double(maxSQRIByLuminance(:));
+        payload.note3_distances_m = double(note3Distances(:));
+        payload.note3_sigma_um = double(note3SigmaUm);
+        payload.note3_mm_per_deg_by_distance = double(note3MmPerDeg(:));
+        payload.selected_sf = double(selectedSF(:));
+        payload.note3_dmtf_selected = double(note3DmtfSelected);
+        payload.crt_dpi = double(displayGet(crtDisplay, 'dpi'));
+        payload.crt_mm_per_deg = double(displayGet(crtDisplay, 'dots per deg') * displayGet(crtDisplay, 'meters per dot', 'mm'));
+        payload.crt_sqri = double(crtSQRI);
+        payload.crt_csf_peak = double(max(crtCSF(:)));
+        payload.crt_dmtf_selected = double(interp1(crtFcpd, crtDMTFfft, selectedSF, 'linear')(:));
+
     case 'metrics_scielab_rgb_small'
         file1 = fullfile(isetRootPath, 'data', 'images', 'rgb', 'hats.jpg');
         file2 = fullfile(isetRootPath, 'data', 'images', 'rgb', 'hatsC.jpg');
@@ -2793,6 +2845,42 @@ switch case_name
         payload.freq_scene_support_x_mm = double(sceneTestSupport.x(:));
         payload.freq_scene_bottom_row_luminance_norm = local_channel_normalize(double(sceneTestBottomRow(:)));
         payload.freq_scene_radiance_hline_550_norm = local_channel_normalize(double(radiance550(:)));
+
+    case 'scene_introduction_tutorial_small'
+        scene = sceneCreate('macbeth d65');
+        payload.scene_name = char(sceneGet(scene, 'name'));
+        payload.scene_type = char(scene.type);
+        payload.macbeth_size = double(sceneGet(scene, 'size')(:));
+        payload.hfov_before = double(sceneGet(scene, 'hfov'));
+        scene = sceneSet(scene, 'hfov', 0.5);
+        payload.hfov_after = double(sceneGet(scene, 'hfov'));
+
+        payload.distance_mm = double(sceneGet(scene, 'distance', 'mm'));
+        payload.spacing_before_mm = double(sceneGet(scene, 'sample spacing', 'mm'));
+
+        sceneDistance = sceneSet(scene, 'distance', 0.6);
+        payload.spacing_after_distance_mm = double(sceneGet(sceneDistance, 'sample spacing', 'mm'));
+
+        sceneDistanceHFOV = sceneSet(sceneDistance, 'hfov', payload.hfov_after / 2);
+        payload.spacing_after_hfov_mm = double(sceneGet(sceneDistanceHFOV, 'sample spacing', 'mm'));
+        payload.spacing_after_hfov_um = double(sceneGet(sceneDistanceHFOV, 'sample spacing', 'um'));
+        payload.spacing_after_hfov_m = double(sceneGet(sceneDistanceHFOV, 'sample spacing', 'm'));
+
+        fname = fullfile(isetRootPath, 'data', 'images', 'multispectral', 'StuffedAnimals_tungsten-hdrs.mat');
+        stuffedScene = sceneFromFile(fname, 'multispectral');
+        stuffedWave = double(sceneGet(stuffedScene, 'wave'));
+        illuminantEnergyBefore = double(sceneGet(stuffedScene, 'illuminant energy'));
+        bbEnergy = double(blackbody(stuffedWave, 5500, 'energy'));
+        adjustedScene = sceneAdjustIlluminant(stuffedScene, bbEnergy);
+
+        payload.stuffed_scene_size = double(sceneGet(stuffedScene, 'size')(:));
+        payload.stuffed_wave = stuffedWave(:);
+        payload.stuffed_mean_luminance = double(sceneGet(stuffedScene, 'mean luminance'));
+        payload.adjusted_mean_luminance = double(sceneGet(adjustedScene, 'mean luminance'));
+        payload.illuminant_energy_before_norm = local_channel_normalize(illuminantEnergyBefore(:));
+        payload.blackbody_energy_norm = local_channel_normalize(bbEnergy(:));
+        payload.illuminant_energy_after_norm = local_channel_normalize(double(sceneGet(adjustedScene, 'illuminant energy')));
+        payload.illuminant_photons_after_norm = local_channel_normalize(double(sceneGet(adjustedScene, 'illuminant photons')));
 
     case 'scene_examples_small'
         parms.angles = linspace(0, pi/2, 5);
@@ -7815,4 +7903,16 @@ image = local_dead_leaves_image(imSize, sigma, options);
 scene = sceneFromFile(image, 'rgb', 100, 'OLED-Sony.mat');
 scene = sceneSet(scene, 'fov', 10);
 scene = sceneSet(scene, 'name', 'Dead leaves');
+end
+
+function [display, fcpd, dMTFfft, sigmaUm] = local_display_gaussian_mtf(displayName, viewingDistanceM)
+display = displayCreate(displayName);
+display = displaySet(display, 'viewing distance', viewingDistanceM);
+sigmaUm = 0.5 * displayGet(display, 'meters per dot', 'um');
+x = -500:499;
+g = exp(-(x / max(sigmaUm, 1e-12)).^2);
+g = g / max(sum(g(:)), 1e-12);
+dMTFfft = fftshift(abs(fft(g)));
+mmPerDeg = displayGet(display, 'dots per deg') * displayGet(display, 'meters per dot', 'mm');
+fcpd = x * mmPerDeg;
 end

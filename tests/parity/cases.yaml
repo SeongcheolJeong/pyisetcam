@@ -444,6 +444,12 @@
       }
     },
     {
+      "name": "metrics_sqri_tutorial_small",
+      "matlab_function": "t_metricsSQRI.m",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
       "name": "metrics_scielab_rgb_small",
       "matlab_function": "t_metricsScielab.m",
       "rtol": 1e-05,
@@ -980,6 +986,12 @@
     {
       "name": "scene_demo_small",
       "matlab_function": "s_sceneDemo",
+      "rtol": 1e-05,
+      "atol": 1e-08
+    },
+    {
+      "name": "scene_introduction_tutorial_small",
+      "matlab_function": "t_sceneIntroduction.m",
       "rtol": 1e-05,
       "atol": 1e-08
     },

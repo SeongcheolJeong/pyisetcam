@@ -5305,7 +5305,8 @@ def scene_get(scene: Scene, parameter: str, *args: Any, asset_store: AssetStore 
     if key == "size":
         return (int(scene.fields["rows"]), int(scene.fields["cols"]))
     if key in {"distance", "distancem"}:
-        return float(scene.fields["distance_m"])
+        scale = _spatial_unit_scale(args[0] if args else "m")
+        return float(scene.fields["distance_m"]) * scale
     if key == "depthmap":
         depth_map = scene.fields.get("depth_map_m")
         if depth_map is None:

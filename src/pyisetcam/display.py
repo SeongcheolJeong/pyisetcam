@@ -573,10 +573,13 @@ def display_get(display: Display, parameter: str, *args: Any) -> Any:
         return 1.0 / max(float(display_get(display, "meters per dot")), 1e-12)
     if key in {"dotsperdeg"}:
         dist = float(display_get(display, "viewing distance"))
-        meters_per_degree = 2.0 * dist * np.tan(np.deg2rad(0.5))
-        return float(display_get(display, "dots per meter")) * meters_per_degree
+        meters_per_dot = float(display_get(display, "meters per dot"))
+        deg_per_dot = np.degrees(np.arctan2(meters_per_dot, max(dist, 1.0e-12)))
+        return float(np.round(1.0 / max(deg_per_dot, 1.0e-12)))
     if key in {"degperdot", "degperpixel"}:
-        return 1.0 / max(float(display_get(display, "dots per deg")), 1e-12)
+        dist = float(display_get(display, "viewing distance"))
+        meters_per_dot = float(display_get(display, "meters per dot"))
+        return float(np.degrees(np.arctan2(meters_per_dot, max(dist, 1.0e-12))))
     if key in {"dist", "viewingdistance"}:
         return float(display.fields["dist"])
     if key == "size":
