@@ -180,7 +180,10 @@ wrapper matches, short prefixed MATLAB wrapper names such as `oiGet` /
 `oiSet` / `oiAdd`, and GUI-only hooks into covered or out-of-scope
 classifications instead of leaving them as false-positive family gaps; it
 also now treats the MATLAB OpenEXR MEX shim/build-script family as
-out-of-scope integration debt rather than a remaining headless API target.
+out-of-scope integration debt rather than a remaining headless API target,
+and it also classifies `sceneFluorescenceChart.m` as out of scope because
+the pinned upstream snapshot does not actually vendor the required
+`fluorescenceSignal` / `fluorescenceWeights` model helpers.
 
 Run the initial metrics helpers:
 

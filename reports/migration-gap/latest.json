@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-24T16:01:04.496079+00:00",
+  "generated_at": "2026-03-24T16:10:30.208696+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-24T16:01:04.496079+00:00",
+    "generated_at": "2026-03-24T16:10:30.208696+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 90,
       "missing": 37,
-      "out_of_scope": 166,
+      "out_of_scope": 167,
       "parity": 658,
-      "partial": 452,
+      "partial": 451,
       "ported": 40
     },
     "kind_counts": {
@@ -22,19 +22,19 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 27,
+      "P0": 26,
       "P1": 373,
       "P2": 179,
-      "P3": 864
+      "P3": 865
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 0,
+        "out_of_scope": 1,
         "parity": 0,
         "partial": -1,
-        "ported": 1
+        "ported": 0
       },
       "kind_counts": {
         "api": 0,
@@ -571,15 +571,14 @@
       "scene/pattern": {
         "total": 23,
         "by_status": {
-          "out_of_scope": 1,
+          "out_of_scope": 2,
           "parity": 18,
-          "partial": 1,
           "ported": 3
         },
         "by_kind": {
           "api": 23
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "scene/reflectance": {
         "total": 3,
@@ -1018,17 +1017,6 @@
         }
       },
       {
-        "family": "scene/pattern",
-        "open_entries": 1,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "out_of_scope": 1,
-          "parity": 18,
-          "partial": 1,
-          "ported": 3
-        }
-      },
-      {
         "family": "utility",
         "open_entries": 266,
         "highest_open_priority": "P1",
@@ -1121,6 +1109,14 @@
         "highest_open_priority": "P1",
         "by_status": {
           "missing": 3
+        }
+      },
+      {
+        "family": "scripts/display",
+        "open_entries": 3,
+        "highest_open_priority": "P1",
+        "by_status": {
+          "partial": 3
         }
       }
     ],

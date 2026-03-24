@@ -507,6 +507,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is a private MATLAB regression script for the fluorescence-chart helper rather than a standalone headless API surface.",
         "module_hits": [],
     },
+    "scene/pattern/sceneFluorescenceChart.m": {
+        "status": "out_of_scope",
+        "note": "The pinned upstream snapshot does not vendor the required `fluorescenceSignal` / `fluorescenceWeights` model helpers, so this chart constructor depends on external fluorescence-model code outside the supported ISETCam migration target.",
+        "module_hits": [],
+    },
     "scene/depth/sceneDepthOverlay.m": {
         "status": "out_of_scope",
         "note": "The upstream file immediately errors and redirects callers to `scenePlot`, so it is treated as obsolete rather than actionable headless API debt.",
