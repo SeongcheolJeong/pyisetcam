@@ -535,6 +535,7 @@ from .sensor import (
     sensor_equate_transmittances,
     sensor_filter_rgb,
     sensor_from_file,
+    load_raw_sensor_data,
     sensor_image_color_array,
     sensor_jiggle,
     sensor_mpe30,
@@ -1388,6 +1389,7 @@ __all__ = [
     "sensorCreateSplitPixel",
     "sensorFormats",
     "sensorGet",
+    "LoadRawSensorData",
     "sensorAddFilter",
     "sensorCfaSave",
     "sensorCCM",
@@ -1486,6 +1488,7 @@ __all__ = [
     "sensor_dng_read",
     "sensor_formats",
     "sensor_from_file",
+    "load_raw_sensor_data",
     "sensor_get",
     "sensor_rescale",
     "sensor_resample_wave",
@@ -1914,6 +1917,7 @@ sensorDisplayTransform = sensor_display_transform
 sensorEquateTransmittances = sensor_equate_transmittances
 sensorFilterRGB = sensor_filter_rgb
 sensorFromFile = sensor_from_file
+LoadRawSensorData = load_raw_sensor_data
 pixelCenterFillPD = pixel_center_fill_pd
 pixelCreate = pixel_create
 pixelDescription = pixel_description

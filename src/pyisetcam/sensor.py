@@ -3486,6 +3486,33 @@ def sensor_from_file(filename: str | Path) -> Sensor:
     return loaded
 
 
+def load_raw_sensor_data(
+    filename: str | Path,
+    bpp: int = 8,
+    byte_format: str = "little",
+    row: int | None = None,
+    col: int | None = None,
+) -> np.ndarray:
+    """Load raw sensor bytes using the legacy MATLAB LoadRawSensorData contract."""
+
+    del row, col
+    path = Path(filename).expanduser()
+    if not path.exists():
+        raise FileNotFoundError(f"Cannot open file {path}")
+
+    bits_per_pixel = int(bpp)
+    normalized_format = param_format(byte_format or "little")
+    if normalized_format not in {"little", "big"}:
+        raise ValueError("byteFormat must be 'little' or 'big'.")
+
+    if bits_per_pixel == 8:
+        return np.fromfile(path, dtype=np.uint8)
+    if bits_per_pixel == 10:
+        dtype = np.dtype("<u2") if normalized_format == "little" else np.dtype(">u2")
+        return np.asarray(np.fromfile(path, dtype=dtype), dtype=np.uint16)
+    raise ValueError(f"Bad bpp {bits_per_pixel}. Must be 8 or 10 bits per pixel.")
+
+
 def sensor_show_cfa(
     sensor: Sensor,
     app: Any | None = None,
@@ -6252,6 +6279,7 @@ sensorShowCFA = sensor_show_cfa
 sensorShowCFAWeights = sensor_show_cfa_weights
 sensorShowImage = sensor_show_image
 sensorSaveImage = sensor_save_image
+LoadRawSensorData = load_raw_sensor_data
 pixelTransmittance = pixel_transmittance
 ptInterfaceMatrix = pt_interface_matrix
 ptPoyntingFactor = pt_poynting_factor

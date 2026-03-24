@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-24T04:30:47.336543+00:00",
+  "generated_at": "2026-03-24T04:55:02.876976+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 92,
       "missing": 37,
-      "out_of_scope": 148,
-      "parity": 613,
-      "partial": 521,
+      "out_of_scope": 151,
+      "parity": 614,
+      "partial": 517,
       "ported": 32
     },
     "kind_counts": {
@@ -20,17 +20,17 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 91,
+      "P0": 87,
       "P1": 378,
       "P2": 181,
-      "P3": 793
+      "P3": 797
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 1,
-        "parity": 3,
+        "out_of_scope": 3,
+        "parity": 1,
         "partial": -4,
         "ported": 0
       },
@@ -730,13 +730,13 @@
       "scripts/sensor": {
         "total": 33,
         "by_status": {
-          "parity": 29,
-          "partial": 4
+          "out_of_scope": 3,
+          "parity": 30
         },
         "by_kind": {
           "script": 33
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "scripts/utility": {
         "total": 1,
@@ -1063,15 +1063,6 @@
         }
       },
       {
-        "family": "scripts/sensor",
-        "open_entries": 4,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 29,
-          "partial": 4
-        }
-      },
-      {
         "family": "sensor/cfadesign",
         "open_entries": 4,
         "highest_open_priority": "P0",
@@ -1137,6 +1128,16 @@
           "parity": 18,
           "partial": 1,
           "ported": 4
+        }
+      },
+      {
+        "family": "opticalimage/depth",
+        "open_entries": 3,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "out_of_scope": 1,
+          "parity": 4,
+          "partial": 3
         }
       }
     ],
@@ -11795,14 +11796,14 @@
       "upstream_path": "scripts/sensor/Contents.m",
       "family": "scripts/sensor",
       "kind": "script",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.sensor, pyisetcam.camera",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream file is only an index listing for the sensor scripts and does not define a reusable headless API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/sensor/pixel/s_pixelReadNoise.m",
@@ -11822,40 +11823,41 @@
       "upstream_path": "scripts/sensor/pixel/s_pixelSizeDR.m",
       "family": "scripts/sensor",
       "kind": "script",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.sensor, pyisetcam.camera",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream file is a teaching script that explores pixel dynamic-range trends rather than a standalone reusable headless API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/sensor/readrawsensor/LoadRawSensorData.m",
       "family": "scripts/sensor",
       "kind": "script",
-      "status": "partial",
-      "python_surface": "pyisetcam.sensor, pyisetcam.camera",
+      "status": "parity",
+      "python_surface": "pyisetcam.sensor, pyisetcam.camera, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "Curated parity or direct script/tutorial evidence exists for this upstream workflow.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/sensor/readrawsensor/s_Raw2ISET.m",
       "family": "scripts/sensor",
       "kind": "script",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.sensor, pyisetcam.camera",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream file is an interactive file-picker walkthrough layered on top of LoadRawSensorData rather than a reusable headless API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/sensor/s_sensorAliasing.m",

@@ -120,6 +120,7 @@ from pyisetcam import (
     ISO12233v1,
     ieLAB2XYZ,
     lrgb_to_srgb,
+    LoadRawSensorData,
     lms2srgb,
     lms2xyz,
     luminance_from_energy,
@@ -6370,6 +6371,25 @@ def test_sensor_utility_wrappers_match_legacy_geometry_and_file_contract(asset_s
         assert tuple(np.asarray(sensor_get(restored, "size"), dtype=int)) == (72, 88)
         assert np.array_equal(np.asarray(sensor_get(restored, "pattern"), dtype=int), np.asarray(sensor_get(rescaled, "pattern"), dtype=int))
         assert sensor_get(restored, "filter names") == sensor_get(rescaled, "filter names")
+
+
+def test_load_raw_sensor_data_matches_legacy_8bit_and_10bit_file_contract(tmp_path) -> None:
+    raw8 = np.array([0, 5, 127, 255], dtype=np.uint8)
+    raw8_path = tmp_path / "sensor8.raw"
+    raw8.tofile(raw8_path)
+    np.testing.assert_array_equal(LoadRawSensorData(raw8_path), raw8)
+
+    raw10_values = np.array([0x0001, 0x0123, 0x03FF], dtype=np.uint16)
+    raw10_le_path = tmp_path / "sensor10_le.raw"
+    raw10_be_path = tmp_path / "sensor10_be.raw"
+    raw10_values.astype("<u2").tofile(raw10_le_path)
+    raw10_values.astype(">u2").tofile(raw10_be_path)
+
+    np.testing.assert_array_equal(LoadRawSensorData(raw10_le_path, 10, "little", 3, 1), raw10_values)
+    np.testing.assert_array_equal(LoadRawSensorData(raw10_be_path, 10, "big"), raw10_values)
+
+    with pytest.raises(ValueError, match="Bad bpp"):
+        LoadRawSensorData(raw10_le_path, 12)
 
 
 def test_sensor_show_cfa_matches_plot_sensor_wrappers(asset_store) -> None:

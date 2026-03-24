@@ -266,6 +266,21 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is effectively a plotting/comment stub for the chromatic-aberration workflow and remains outside the headless migration target.",
         "module_hits": [],
     },
+    "scripts/sensor/Contents.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is only an index listing for the sensor scripts and does not define a reusable headless API surface.",
+        "module_hits": [],
+    },
+    "scripts/sensor/pixel/s_pixelSizeDR.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a teaching script that explores pixel dynamic-range trends rather than a standalone reusable headless API surface.",
+        "module_hits": [],
+    },
+    "scripts/sensor/readrawsensor/s_Raw2ISET.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is an interactive file-picker walkthrough layered on top of LoadRawSensorData rather than a reusable headless API surface.",
+        "module_hits": [],
+    },
     "metrics/ssim/s_metricsSSIM.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a teaching/regression script that drives an interactive camera-to-metrics walkthrough rather than a standalone reusable headless API surface.",
