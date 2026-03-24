@@ -1717,3 +1717,8 @@ The remaining `tutorials/color` audit tail is closed too: the
 chromaticity and energy/quanta walkthroughs are now tracked as covered
 workflow evidence through focused headless regressions, while
 `t_colorSpectrum.m` remains backed by curated parity.
+The `tutorials/code` tail is closed as well: the deprecated rendering
+walkthrough is now backed by a focused headless regression, the
+`vcSESSION` object-database tutorials are counted against the existing
+session compatibility layer, and the old `startup.m` path-management note
+is explicitly out of scope.

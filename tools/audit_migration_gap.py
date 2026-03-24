@@ -397,6 +397,26 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The energy-versus-quanta tutorial workflow is already covered by the current headless regression surface through `quanta_to_energy(...)`, `energy_to_quanta(...)`, `ie_read_spectra(...)`, `xyz_from_energy(...)`, and `ie_xyz_from_photons(...)`.",
         "module_hits": ["pyisetcam.color", "pyisetcam.metrics"],
     },
+    "tutorials/code/t_codeObjects.m": {
+        "status": "parity",
+        "note": "The deprecated object-database tutorial is covered by the optional `pyisetcam.session` compatibility layer and direct regressions for `ieInitSession(...)`, `ieAddObject(...)`, `ieGetObject(...)`, and `ieReplaceObject(...)`; MATLAB windows remain intentionally headless.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "tutorials/code/t_codeRendering.m": {
+        "status": "parity",
+        "note": "The spectral rendering tutorial is covered by the current headless regression surface through `blackbody(...)`, `xyz_from_energy(...)`, `XW2RGBFormat(...)`, `xyz2srgb(...)`, and `imageIncreaseImageRGBSize(...)`.",
+        "module_hits": ["pyisetcam.color", "pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "tutorials/code/t_codeSESSION.m": {
+        "status": "parity",
+        "note": "The vcSESSION add/get tutorial is covered by the optional `pyisetcam.session` compatibility layer and direct regressions for `ieInitSession(...)`, `ieAddObject(...)`, `ieGetObject(...)`, and selected-object bookkeeping; window display remains intentionally headless.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "tutorials/code/t_codeStartup.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a deprecated MATLAB path-management note about `startup.m`, not a reusable supported headless API surface.",
+        "module_hits": [],
+    },
     "tutorials/image/t_ip.m": {
         "status": "parity",
         "note": "The introductory IP tutorial workflow is already covered by the current headless `scene -> oi -> sensor -> ip` regression path, including `MCC Optimized` sensor conversion, `gray world` illuminant correction, adaptive-Laplacian demosaic, and display-backed IP state.",

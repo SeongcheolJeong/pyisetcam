@@ -15164,6 +15164,35 @@ def test_color_energy_quanta_tutorial_workflow(asset_store) -> None:
     assert np.allclose(xyz_from_energy_manual, xyz_from_energy_wrapper, atol=1e-8, rtol=1e-8)
 
 
+def test_code_rendering_tutorial_workflow(asset_store) -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+
+    warm_spd = np.asarray(blackbody(wave, 3000.0, kind="energy"), dtype=float).reshape(1, -1)
+    warm_xyz = np.asarray(xyz_from_energy(warm_spd, wave, asset_store=asset_store), dtype=float).reshape(1, 1, 3)
+    warm_srgb = np.asarray(xyz_to_srgb(warm_xyz), dtype=float)
+    warm_cube = np.asarray(xw_to_rgb_format(warm_spd, 1, 1), dtype=float)
+    warm_big = np.asarray(image_increase_image_rgb_size(warm_cube, 120), dtype=float)
+
+    cool_spd = np.asarray(blackbody(wave, 8000.0, kind="energy"), dtype=float).reshape(1, -1)
+    cool_xyz = np.asarray(xyz_from_energy(cool_spd, wave, asset_store=asset_store), dtype=float).reshape(1, 1, 3)
+    cool_srgb = np.asarray(xyz_to_srgb(cool_xyz), dtype=float)
+    cool_cube = np.asarray(xw_to_rgb_format(cool_spd, 1, 1), dtype=float)
+    cool_big = np.asarray(image_increase_image_rgb_size(cool_cube, 120), dtype=float)
+
+    assert warm_srgb.shape == (1, 1, 3)
+    assert cool_srgb.shape == (1, 1, 3)
+    assert warm_big.shape == (120, 120, wave.size)
+    assert cool_big.shape == (120, 120, wave.size)
+    assert np.allclose(warm_big[0, 0, :], warm_spd.reshape(-1), atol=1e-12, rtol=1e-12)
+    assert np.allclose(cool_big[-1, -1, :], cool_spd.reshape(-1), atol=1e-12, rtol=1e-12)
+    assert float(warm_srgb[0, 0, 0]) > float(warm_srgb[0, 0, 2])
+    assert float(cool_srgb[0, 0, 2]) > float(cool_srgb[0, 0, 0])
+    assert np.all(warm_srgb >= 0.0)
+    assert np.all(warm_srgb <= 1.0)
+    assert np.all(cool_srgb >= 0.0)
+    assert np.all(cool_srgb <= 1.0)
+
+
 def test_display_helper_compatibility_surface(asset_store) -> None:
     all_names = displayList(show=False, asset_store=asset_store)
     lcd_names = displayList(type="LCD", show=False, asset_store=asset_store)
