@@ -37,6 +37,7 @@ from pyisetcam import (
     camera_set,
     camera_vsnr,
     cameraVSNR_SL,
+    chartPatchData,
     chartPatchCompare,
     changeColorSpace,
     cct2sun,
@@ -115,6 +116,7 @@ from pyisetcam import (
     ie_xyz_from_photons,
     ie_field_height_to_index,
     ie_rect2_locs,
+    ieCookTorrance,
     ip_get,
     ip_plot,
     ip_set,
@@ -15137,6 +15139,67 @@ def test_macbeth_wrapper_compatibility_surface(asset_store) -> None:
     assert eval_payload["idealXYZ"].shape == (24, 3)
     assert eval_payload["deltaEab"].shape == (24,)
     assert np.isclose(eval_payload["meanDeltaEab"], 0.0, atol=1e-10, rtol=1e-10)
+
+
+def test_scene_reflectance_wrapper_surface(asset_store) -> None:
+    ip = ip_create(asset_store=asset_store)
+    ip = ip_set(ip, "result", np.arange(1.0, 6.0 * 6.0 * 3.0 + 1.0, dtype=float).reshape(6, 6, 3))
+    m_locs = np.array([[2.0, 4.0], [2.0, 4.0]], dtype=float)
+
+    patch_means = np.asarray(chartPatchData(ip, m_locs, 1, False), dtype=float)
+    full_patch_data = chartPatchData(ip, m_locs, 1, True)
+    roi_a = ie_rect2_locs(np.array([1, 1, 1, 1], dtype=int))
+    roi_b = ie_rect2_locs(np.array([3, 3, 1, 1], dtype=int))
+    manual_a = np.asarray(ip_get(ip, "roi data", roi_a), dtype=float)
+    manual_b = np.asarray(ip_get(ip, "roi data", roi_b), dtype=float)
+
+    assert patch_means.shape == (2, 3)
+    assert len(full_patch_data) == 2
+    assert np.allclose(full_patch_data[0], manual_a, atol=1e-12, rtol=1e-12)
+    assert np.allclose(full_patch_data[1], manual_b, atol=1e-12, rtol=1e-12)
+    assert np.allclose(patch_means[0], np.mean(manual_a, axis=0), atol=1e-12, rtol=1e-12)
+    assert np.allclose(patch_means[1], np.mean(manual_b, axis=0), atol=1e-12, rtol=1e-12)
+
+    sensor = sensor_create(asset_store=asset_store)
+    with pytest.raises(ValueError, match="Use fullData = 1"):
+        chartPatchData(sensor, m_locs, 1, False, "volts")
+
+
+def test_ie_cook_torrance_wrapper_matches_manual_formula() -> None:
+    surface_normal = np.array([0.0, 0.0, 1.0], dtype=float)
+    view_direction = np.array([0.1, -0.2, 1.0], dtype=float)
+    light_direction = np.array([0.3, 0.4, 1.0], dtype=float)
+    base_reflectance = np.array([0.04, 0.05, 0.06], dtype=float)
+    roughness = 0.35
+
+    result = np.asarray(ieCookTorrance(surface_normal, view_direction, light_direction, base_reflectance, roughness), dtype=float)
+
+    surface = surface_normal / np.linalg.norm(surface_normal)
+    view = view_direction / np.linalg.norm(view_direction)
+    light = light_direction / np.linalg.norm(light_direction)
+    half_vector = view + light
+    half_vector = half_vector / np.linalg.norm(half_vector)
+
+    n_dot_v = max(float(np.dot(surface, view)), 1.0e-5)
+    n_dot_l = max(float(np.dot(surface, light)), 1.0e-5)
+    n_dot_h = max(float(np.dot(surface, half_vector)), 1.0e-5)
+    v_dot_h = max(float(np.dot(view, half_vector)), 1.0e-5)
+    alpha = roughness**2
+    alpha_sq = alpha**2
+    distribution = alpha_sq / (np.pi * (n_dot_h**2 * (alpha_sq - 1.0) + 1.0) ** 2)
+    fresnel = base_reflectance + (1.0 - base_reflectance) * (1.0 - v_dot_h) ** 5
+
+    def g1(direction: np.ndarray) -> float:
+        n_dot_w = float(np.dot(surface, direction))
+        return (2.0 * n_dot_w) / (n_dot_w + np.sqrt(alpha_sq + (1.0 - alpha_sq) * n_dot_w**2))
+
+    expected = (distribution * fresnel * (g1(view) * g1(light))) / (4.0 * n_dot_l * n_dot_v)
+    scalar_result = ieCookTorrance(surface_normal, view_direction, light_direction, 0.04, roughness)
+
+    assert result.shape == (3,)
+    assert np.allclose(result, expected, atol=1e-12, rtol=1e-12)
+    assert isinstance(scalar_result, float)
+    assert np.isclose(scalar_result, expected[0], atol=1e-12, rtol=1e-12)
 
 
 def test_macbeth_sensor_and_gretag_wrappers(asset_store) -> None:

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-24T12:46:29.257033+00:00",
+  "generated_at": "2026-03-24T13:30:12.358089+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -7,8 +7,8 @@
       "headless_only": 90,
       "missing": 37,
       "out_of_scope": 166,
-      "parity": 647,
-      "partial": 464,
+      "parity": 653,
+      "partial": 458,
       "ported": 39
     },
     "kind_counts": {
@@ -20,19 +20,19 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 36,
-      "P1": 376,
+      "P0": 33,
+      "P1": 373,
       "P2": 179,
-      "P3": 852
+      "P3": 858
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 3,
-        "parity": 1,
-        "partial": -5,
-        "ported": 1
+        "out_of_scope": 0,
+        "parity": 6,
+        "partial": -6,
+        "ported": 0
       },
       "kind_counts": {
         "api": 0,
@@ -43,10 +43,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -5,
-        "P1": 0,
+        "P0": -3,
+        "P1": -3,
         "P2": 0,
-        "P3": 5
+        "P3": 6
       }
     },
     "family_summary": {
@@ -584,13 +584,12 @@
       "scene/reflectance": {
         "total": 3,
         "by_status": {
-          "parity": 1,
-          "partial": 2
+          "parity": 3
         },
         "by_kind": {
           "api": 3
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "scripts/color": {
         "total": 6,
@@ -667,8 +666,8 @@
       "scripts/image": {
         "total": 21,
         "by_status": {
-          "parity": 1,
-          "partial": 19,
+          "parity": 2,
+          "partial": 18,
           "ported": 1
         },
         "by_kind": {
@@ -711,13 +710,12 @@
       "scripts/scene": {
         "total": 27,
         "by_status": {
-          "parity": 26,
-          "partial": 1
+          "parity": 27
         },
         "by_kind": {
           "script": 27
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "scripts/sensor": {
         "total": 33,
@@ -865,7 +863,8 @@
       "tutorials/display": {
         "total": 3,
         "by_status": {
-          "partial": 3
+          "parity": 1,
+          "partial": 2
         },
         "by_kind": {
           "tutorial": 3
@@ -940,8 +939,8 @@
         "by_status": {
           "headless_only": 46,
           "out_of_scope": 1,
-          "parity": 11,
-          "partial": 221
+          "parity": 12,
+          "partial": 220
         },
         "by_kind": {
           "gui": 1,
@@ -1042,15 +1041,6 @@
         }
       },
       {
-        "family": "scene/reflectance",
-        "open_entries": 2,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 1,
-          "partial": 2
-        }
-      },
-      {
         "family": "scene/pattern",
         "open_entries": 1,
         "highest_open_priority": "P0",
@@ -1059,15 +1049,6 @@
           "parity": 18,
           "partial": 1,
           "ported": 3
-        }
-      },
-      {
-        "family": "scripts/scene",
-        "open_entries": 1,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 26,
-          "partial": 1
         }
       },
       {
@@ -1090,13 +1071,13 @@
       },
       {
         "family": "utility",
-        "open_entries": 267,
+        "open_entries": 266,
         "highest_open_priority": "P1",
         "by_status": {
           "headless_only": 46,
           "out_of_scope": 1,
-          "parity": 11,
-          "partial": 221
+          "parity": 12,
+          "partial": 220
         }
       },
       {
@@ -1127,6 +1108,26 @@
         "by_status": {
           "headless_only": 11,
           "partial": 14
+        }
+      },
+      {
+        "family": "human",
+        "open_entries": 20,
+        "highest_open_priority": "P1",
+        "by_status": {
+          "parity": 2,
+          "partial": 20,
+          "ported": 2
+        }
+      },
+      {
+        "family": "scripts/image",
+        "open_entries": 18,
+        "highest_open_priority": "P1",
+        "by_status": {
+          "parity": 2,
+          "partial": 18,
+          "ported": 1
         }
       }
     ],
@@ -3125,7 +3126,7 @@
       "family": "gui",
       "kind": "gui",
       "status": "out_of_scope",
-      "python_surface": "pyisetcam.camera, pyisetcam.sensor",
+      "python_surface": "pyisetcam.camera, pyisetcam.scene, pyisetcam.sensor",
       "tests": [],
       "notes": "GUI/App Designer and figure fidelity remain outside the headless migration target.",
       "priority": "P3"
@@ -9185,29 +9186,31 @@
       "upstream_path": "scene/reflectance/chartPatchData.m",
       "family": "scene/reflectance",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.scene, pyisetcam.fileio",
+      "status": "parity",
+      "python_surface": "pyisetcam.scene, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_scene.py",
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scene/reflectance/ieCookTorrance.m",
       "family": "scene/reflectance",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.scene, pyisetcam.fileio",
+      "status": "parity",
+      "python_surface": "pyisetcam.scene, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_scene.py",
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scene/reflectance/ieReflectanceSamples.m",
@@ -10254,14 +10257,15 @@
       "upstream_path": "scripts/image/Contents.m",
       "family": "scripts/image",
       "kind": "script",
-      "status": "partial",
+      "status": "parity",
       "python_surface": "pyisetcam.ip, pyisetcam.fileio",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "Curated parity or direct script/tutorial evidence exists for this upstream workflow.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/image/jpegFiles/dctAlgorithm.m",
@@ -11431,14 +11435,15 @@
       "upstream_path": "scripts/scene/Contents.m",
       "family": "scripts/scene",
       "kind": "script",
-      "status": "partial",
+      "status": "parity",
       "python_surface": "pyisetcam.scene",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "Curated parity or direct script/tutorial evidence exists for this upstream workflow.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/scene/s_sceneCCT.m",
@@ -14655,14 +14660,15 @@
       "upstream_path": "tutorials/display/Contents.m",
       "family": "tutorials/display",
       "kind": "tutorial",
-      "status": "partial",
+      "status": "parity",
       "python_surface": "pyisetcam.display",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "Curated parity or direct script/tutorial evidence exists for this upstream workflow.",
+      "priority": "P3"
     },
     {
       "upstream_path": "tutorials/display/t_displayIntroduction.m",
@@ -16200,11 +16206,14 @@
       "upstream_path": "utility/external/freezeColors/Contents.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "parity",
       "python_surface": "pyisetcam.utils",
-      "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "tests": [
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/freezeColors/freezeColors.m",

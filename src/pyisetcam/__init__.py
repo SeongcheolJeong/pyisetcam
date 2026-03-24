@@ -410,6 +410,7 @@ from .session import (
     vc_select_figure,
 )
 from .scene import (
+    chart_patch_data,
     fot_params,
     gabor_p,
     hdr_render,
@@ -422,6 +423,7 @@ from .scene import (
     img_sweep,
     img_zone_plate,
     ie_checkerboard,
+    ie_cook_torrance,
     scene_hdr_chart,
     scene_hdr_image,
     macbeth_chart_create,
@@ -952,6 +954,8 @@ __all__ = [
     "ie_responsivity_convert",
     "ie_scotopic_luminance_from_energy",
     "ie_xyz_from_photons",
+    "chartPatchData",
+    "chart_patch_data",
     "chartPatchCompare",
     "chart_patch_compare",
     "exposureValue",
@@ -1006,6 +1010,8 @@ __all__ = [
     "gauss",
     "getPlanes",
     "get_planes",
+    "ieCookTorrance",
+    "ie_cook_torrance",
     "ieConv2FFT",
     "ie_conv2_fft",
     "pad4conv",
@@ -2128,6 +2134,7 @@ metricsShowMetric = metrics_show_metric
 ieSQRI = ie_sqri
 exposureValue = exposure_value
 photometricExposure = photometric_exposure
+chartPatchData = chart_patch_data
 chartPatchCompare = chart_patch_compare
 deltaEab = delta_e_ab
 deltaE2000 = delta_e_2000
@@ -2142,6 +2149,7 @@ ieXYZFromPhotons = ie_xyz_from_photons
 ieLuminance2Radiance = ie_luminance_to_radiance
 ieScotopicLuminanceFromEnergy = ie_scotopic_luminance_from_energy
 ieResponsivityConvert = ie_responsivity_convert
+ieCookTorrance = ie_cook_torrance
 ApplyFilters = sc_apply_filters
 changeColorSpace = change_color_space
 getPlanes = get_planes

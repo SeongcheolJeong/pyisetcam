@@ -1101,6 +1101,121 @@ def macbeth_patch_data(
     return np.vstack(means), np.vstack(stds)
 
 
+def chart_patch_data(
+    obj: Any,
+    m_locs: Any,
+    delta: Any,
+    full_data: bool = False,
+    data_type: str | None = None,
+) -> np.ndarray | list[np.ndarray]:
+    """Return chart ROI values from a vcimage-like object or sensor."""
+
+    from .roi import ie_rect2_locs, vc_get_roi_data
+
+    if obj is None:
+        raise ValueError("vcimage or sensor required")
+
+    locs = np.asarray(m_locs, dtype=float)
+    if locs.ndim != 2:
+        raise ValueError("Mid locations required")
+    if locs.shape[0] != 2 and locs.shape[1] == 2:
+        locs = locs.T
+    if locs.shape[0] != 2:
+        raise ValueError("m_locs must be a 2xN matrix of [row, col] patch centers.")
+
+    delta_value = float(np.asarray(delta, dtype=float).reshape(-1)[0])
+    roi_delta = _matlab_round_scalar(delta_value)
+    half_delta = _matlab_round_scalar(delta_value / 2.0)
+    resolved_type = "result" if data_type is None else str(data_type)
+    obj_type = param_format(getattr(obj, "type", type(obj).__name__))
+
+    if not full_data and obj_type in {"sensor", "isa"}:
+        raise ValueError("Use fullData = 1")
+
+    patch_data: list[np.ndarray] = []
+    for index in range(locs.shape[1]):
+        current = np.asarray(locs[:, index], dtype=float).reshape(2)
+        rect = np.array(
+            [
+                _matlab_round_scalar(current[1]) - half_delta,
+                _matlab_round_scalar(current[0]) - half_delta,
+                roi_delta,
+                roi_delta,
+            ],
+            dtype=int,
+        )
+        roi_locs = ie_rect2_locs(rect)
+        current_patch = np.asarray(vc_get_roi_data(obj, roi_locs, resolved_type), dtype=float)
+        if current_patch.ndim == 1:
+            current_patch = current_patch.reshape(-1, 1)
+        patch_data.append(current_patch)
+
+    if full_data:
+        return patch_data
+
+    if not patch_data:
+        return np.zeros((0, 0), dtype=float)
+
+    means = np.zeros((locs.shape[1], patch_data[0].shape[1]), dtype=float)
+    for index, current_patch in enumerate(patch_data):
+        means[index, :] = np.mean(current_patch, axis=0, dtype=float)
+    return means
+
+
+def ie_cook_torrance(
+    surface_normal: Any,
+    view_direction: Any,
+    light_direction: Any,
+    base_reflectance: Any,
+    roughness: float,
+) -> float | np.ndarray:
+    """Compute the Cook-Torrance BRDF value using the upstream GGX/Schlick form."""
+
+    def _normalize(direction: Any, name: str) -> np.ndarray:
+        vector = np.asarray(direction, dtype=float).reshape(-1)
+        if vector.size != 3:
+            raise ValueError(f"{name} must contain exactly 3 elements.")
+        magnitude = float(np.linalg.norm(vector))
+        if magnitude <= 0.0:
+            raise ValueError(f"{name} must be non-zero.")
+        return vector / magnitude
+
+    surface = _normalize(surface_normal, "surface_normal")
+    view = _normalize(view_direction, "view_direction")
+    light = _normalize(light_direction, "light_direction")
+
+    half_vector = view + light
+    half_norm = float(np.linalg.norm(half_vector))
+    if half_norm <= 0.0:
+        half_vector = surface.copy()
+    else:
+        half_vector = half_vector / half_norm
+
+    n_dot_v = max(float(np.dot(surface, view)), 1.0e-5)
+    n_dot_l = max(float(np.dot(surface, light)), 1.0e-5)
+    n_dot_h = max(float(np.dot(surface, half_vector)), 1.0e-5)
+    v_dot_h = max(float(np.dot(view, half_vector)), 1.0e-5)
+
+    alpha = max(float(roughness) ** 2, 1.0e-8)
+    alpha_sq = alpha**2
+    denom = max((n_dot_h**2 * (alpha_sq - 1.0) + 1.0) ** 2, 1.0e-12)
+    distribution = alpha_sq / (np.pi * denom)
+
+    reflectance = np.asarray(base_reflectance, dtype=float)
+    fresnel = reflectance + (1.0 - reflectance) * (1.0 - v_dot_h) ** 5
+
+    def _g1(direction: np.ndarray) -> float:
+        n_dot_w = float(np.dot(surface, direction))
+        g1_denom = n_dot_w + np.sqrt(alpha_sq + (1.0 - alpha_sq) * n_dot_w**2)
+        return (2.0 * n_dot_w) / max(float(g1_denom), 1.0e-12)
+
+    geometry = _g1(view) * _g1(light)
+    result = (distribution * fresnel * geometry) / (4.0 * n_dot_l * n_dot_v)
+    if reflectance.ndim == 0:
+        return float(result)
+    return np.asarray(result, dtype=float).reshape(reflectance.shape)
+
+
 def macbeth_ideal_color(
     illuminant: Any = "D65",
     color_space: str = "XYZ",
