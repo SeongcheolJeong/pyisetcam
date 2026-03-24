@@ -379,6 +379,13 @@ mini-family, plus headless `sensor_rescale(...)` / `sensorRescale(...)`,
 `sensor_from_file(...)` / `sensorFromFile(...)`, and
 `load_raw_sensor_data(...)` / `LoadRawSensorData(...)` for the legacy
 sensor geometry/CFA-persistence/file-load/raw-loader helper mini-family,
+plus headless `sensor_check_human(...)` / `sensorCheckHuman(...)`,
+`sensor_create_cone_mosaic(...)` / `sensorCreateConeMosaic(...)`,
+`sensor_human_resize(...)` / `sensorHumanResize(...)`, and
+`sensor_light_field(...)` / `sensorLightField(...)` for the remaining
+human-cone and light-field sensor helper surface, while treating the
+plot-only `sensorConePlot.m` and OpenEXR export helper `sensor2EXR.m` as
+out of scope,
 plus headless
 `pixel_create(...)` / `pixelCreate(...)`,
 `pixel_get(...)` / `pixelGet(...)`, `pixel_set(...)` / `pixelSet(...)`,

@@ -511,6 +511,7 @@ from .sensor import (
     sensor_cfa_name_list,
     sensor_ccm,
     sensor_check_array,
+    sensor_check_human,
     sensor_clear_data,
     sensor_color_filter,
     sensor_compute_full_array,
@@ -525,6 +526,7 @@ from .sensor import (
     sensor_crop,
     sensor_dr,
     sensor_create_array,
+    sensor_create_cone_mosaic,
     sensor_create,
     sensor_create_ideal,
     sensor_create_split_pixel,
@@ -532,6 +534,7 @@ from .sensor import (
     sensor_formats,
     sensor_gain_offset,
     sensor_get,
+    sensor_human_resize,
     sensor_color_order,
     sensor_determine_cfa,
     sensor_display_transform,
@@ -558,6 +561,7 @@ from .sensor import (
     sensor_show_cfa,
     sensor_show_cfa_weights,
     sensor_show_image,
+    sensor_light_field,
     sensor_wb_compute,
     spatial_integration,
 )
@@ -1390,6 +1394,7 @@ __all__ = [
     "sensorCrop",
     "sensorCreate",
     "sensorCreateArray",
+    "sensorCreateConeMosaic",
     "sensorDescription",
     "sensorDR",
     "sensorDNGRead",
@@ -1420,6 +1425,7 @@ __all__ = [
     "iePixelWellCapacity",
     "sensorCFANameList",
     "sensorCheckArray",
+    "sensorCheckHuman",
     "sensorClearData",
     "sensorColorOrder",
     "sensorPixelCoord",
@@ -1430,6 +1436,7 @@ __all__ = [
     "sensorFilterRGB",
     "sensorFromFile",
     "sensorGainOffset",
+    "sensorHumanResize",
     "SignalCurrentDensity",
     "signalCurrent",
     "signal_current",
@@ -1437,14 +1444,18 @@ __all__ = [
     "sensor_cfa_name_list",
     "sensor_ccm",
     "sensor_check_array",
+    "sensor_check_human",
     "sensor_clear_data",
     "sensorColorFilter",
     "sensor_color_filter",
     "sensor_add_filter",
     "sensorAddNoise",
     "sensor_add_noise",
+    "sensor_create_cone_mosaic",
     "sensor_gain_offset",
+    "sensor_human_resize",
     "sensor_jiggle",
+    "sensor_light_field",
     "sensor_mpe30",
     "sensor_no_noise",
     "sensor_pd_array",
@@ -1475,6 +1486,7 @@ __all__ = [
     "sensorShowCFA",
     "sensorShowCFAWeights",
     "sensorShowImage",
+    "sensorLightField",
     "sensorWBCompute",
     "sensorComputeFullArray",
     "sensorComputeImage",
@@ -1889,6 +1901,7 @@ zemaxReadHeader = zemax_read_header
 
 sensorCreate = sensor_create
 sensorCreateArray = sensor_create_array
+sensorCreateConeMosaic = sensor_create_cone_mosaic
 sensorCreateSplitPixel = sensor_create_split_pixel
 sensorDNGRead = sensor_dng_read
 sensorCreateIdeal = sensor_create_ideal
@@ -1916,6 +1929,7 @@ sensorCfaSave = sensor_cfa_save
 sensorCFANameList = sensor_cfa_name_list
 sensorCCM = sensor_ccm
 sensorCheckArray = sensor_check_array
+sensorCheckHuman = sensor_check_human
 sensorClearData = sensor_clear_data
 sensorColorOrder = sensor_color_order
 sensorPixelCoord = sensor_pixel_coord
@@ -1953,7 +1967,9 @@ sensorColorFilter = sensor_color_filter
 sensorCrop = sensor_crop
 sensorGet = sensor_get
 sensorGainOffset = sensor_gain_offset
+sensorHumanResize = sensor_human_resize
 sensorJiggle = sensor_jiggle
+sensorLightField = sensor_light_field
 sensorMPE30 = sensor_mpe30
 sensorNoNoise = sensor_no_noise
 sensorPDArray = sensor_pd_array

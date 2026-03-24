@@ -376,6 +376,16 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file immediately errors as obsolete and does not implement a usable headless API surface.",
         "module_hits": [],
     },
+    "sensor/human/sensorConePlot.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a figure-driven visualization helper for cone mosaics and remains outside the headless migration target.",
+        "module_hits": [],
+    },
+    "sensor/sensor2EXR.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file depends on MATLAB OpenEXR I/O and a network-training export workflow rather than a supported headless Python API surface.",
+        "module_hits": [],
+    },
     "sensor/pixel/pixelGUI/pixelGeometryWindow.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a legacy MATLAB figure window controller and remains outside the headless migration target.",

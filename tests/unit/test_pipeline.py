@@ -359,6 +359,7 @@ from pyisetcam import (
     sensorAddNoise,
     sensorClearData,
     sensorCheckArray,
+    sensorCheckHuman,
     sensor_compute,
     sensor_compute_array,
     sensorComputeFullArray,
@@ -374,6 +375,7 @@ from pyisetcam import (
     sensor_crop,
     sensor_create,
     sensor_create_array,
+    sensorCreateConeMosaic,
     sensor_dr,
     sensor_dng_read,
     sensorDetermineCFA,
@@ -385,8 +387,10 @@ from pyisetcam import (
     sensorGainOffset,
     sensor_formats,
     sensor_get,
+    sensorHumanResize,
     sensorImageColorArray,
     sensorJiggle,
+    sensorLightField,
     sensorMPE30,
     sensorNoNoise,
     sensorPDArray,
@@ -5101,6 +5105,44 @@ def test_sensor_get_set_supports_legacy_human_storage_surface(asset_store) -> No
     assert np.array_equal(sensor_get(sensor, "conexy"), xy)
     assert np.array_equal(sensor_get(sensor, "conelocs"), xy)
     assert sensor_get(sensor, "humanrseed") == 23
+
+
+def test_sensor_human_legacy_wrappers_and_light_field(asset_store) -> None:
+    base = sensor_create("default", asset_store=asset_store)
+    human_sensor, xy, cone_type, r_seed, densities = sensorCreateConeMosaic(
+        base,
+        [6, 8],
+        [0.1, 0.5, 0.3, 0.1],
+        [1.5e-6, 1.5e-6],
+        7,
+        asset_store=asset_store,
+    )
+
+    assert sensorCheckHuman(base) is False
+    assert sensorCheckHuman(human_sensor) is True
+    assert np.array_equal(np.asarray(sensor_get(human_sensor, "pattern"), dtype=int), cone_type)
+    assert np.array_equal(np.asarray(sensor_get(human_sensor, "conetype"), dtype=int), cone_type)
+    assert xy.shape == (48, 2)
+    assert r_seed == 7
+    assert np.isclose(float(np.sum(densities, dtype=float)), 1.0)
+    assert sensor_get(human_sensor, "filter names")[0] == "kBlack"
+
+    resized = sensorHumanResize(human_sensor, [1, 0], [0, 2])
+    resized_pattern = np.asarray(sensor_get(resized, "pattern"), dtype=int)
+    assert resized_pattern.shape == (7, 10)
+    assert np.all(resized_pattern[0, :] == 1)
+    assert np.all(resized_pattern[:, -2:] == 1)
+    assert sensor_get(resized, "human")["xy"] is None
+
+    scene = scene_create("uniform d65", asset_store=asset_store)
+    oi = oi_compute(oi_create(), scene)
+    lf_sensor = sensorLightField(oi, asset_store=asset_store)
+    oi_size = np.asarray(oi_get(oi, "size"), dtype=int).reshape(-1)
+    sample_spacing = np.asarray(oi_get(oi, "sample spacing", "m"), dtype=float).reshape(-1)
+
+    assert np.array_equal(np.asarray(sensor_get(lf_sensor, "size"), dtype=int), oi_size[:2])
+    assert np.allclose(np.asarray(sensor_get(lf_sensor, "pixel size"), dtype=float), sample_spacing[0])
+    assert sensor_get(lf_sensor, "name") == "lightfield"
 
 
 def test_sensor_get_set_supports_legacy_scene_and_lens_metadata_aliases(asset_store) -> None:

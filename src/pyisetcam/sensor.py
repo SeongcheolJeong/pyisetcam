@@ -1544,6 +1544,62 @@ def _sensor_variant_name(args: tuple[Any, ...], default: str) -> str:
     return str(args[0])
 
 
+def _human_cone_mosaic(
+    sz: Any,
+    densities: Any | None = None,
+    um_cone_width: float = 2.0,
+    r_seed: Any | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, int]:
+    size = np.asarray(sz, dtype=int).reshape(-1)
+    if size.size != 2:
+        raise ValueError("humanConeMosaic requires a [rows, cols] size.")
+    rows, cols = int(size[0]), int(size[1])
+    if rows <= 0 or cols <= 0:
+        raise ValueError("humanConeMosaic requires positive rows and cols.")
+
+    density_array = np.asarray(
+        [0.1, 0.55, 0.25, 0.1] if densities is None else densities,
+        dtype=float,
+    ).reshape(-1)
+    if density_array.size == 3:
+        density_sum = float(np.sum(density_array, dtype=float))
+        if density_sum >= 1.0:
+            density_array = np.concatenate(([0.0], density_array / max(density_sum, 1.0e-12)))
+        else:
+            density_array = np.concatenate(([1.0 - density_sum], density_array))
+    elif density_array.size != 4:
+        raise ValueError("humanConeMosaic requires three LMS or four K/L/M/S densities.")
+    density_array = density_array / max(float(np.sum(density_array, dtype=float)), 1.0e-12)
+
+    seed_value = 0 if r_seed is None else int(np.asarray(r_seed).reshape(-1)[0])
+    rng = np.random.default_rng(seed_value)
+
+    n_locs = rows * cols
+    n_receptors = np.rint(density_array * float(n_locs)).astype(int)
+    difference = int(n_locs - int(np.sum(n_receptors)))
+    if difference != 0:
+        max_index = int(np.argmax(n_receptors))
+        n_receptors[max_index] += difference
+
+    cone_type_vector = np.zeros(n_locs, dtype=int)
+    start = 0
+    for index, count in enumerate(n_receptors, start=1):
+        stop = start + int(max(count, 0))
+        cone_type_vector[start:stop] = index
+        start = stop
+    cone_type_vector = cone_type_vector[rng.permutation(n_locs)]
+    cone_type = cone_type_vector.reshape(rows, cols)
+
+    x = (np.arange(cols, dtype=float) + 1.0) * float(um_cone_width)
+    x -= np.mean(x, dtype=float)
+    y = (np.arange(rows, dtype=float) + 1.0) * float(um_cone_width)
+    y -= np.mean(y, dtype=float)
+    xx, yy = np.meshgrid(x, y)
+    xy = np.column_stack((xx.reshape(-1), yy.reshape(-1)))
+
+    return xy, cone_type, density_array, seed_value
+
+
 def _sensor_vendor_mt9v024(variant: str, *, asset_store: AssetStore) -> Sensor:
     normalized = param_format(variant)
     mapping = {
@@ -1859,6 +1915,122 @@ def sensor_create_ideal(
         return track_session_object(session, sensor)
 
     raise UnsupportedOptionError("sensorCreateIdeal", ideal_type)
+
+
+def sensor_create_cone_mosaic(
+    sensor: Sensor | None = None,
+    sz: Any | None = None,
+    densities: Any | None = None,
+    cone_aperture: Any | None = None,
+    r_seed: Any | None = None,
+    species: str = "human",
+    *,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> tuple[Sensor, np.ndarray, np.ndarray, int, np.ndarray]:
+    """Create a MATLAB-style human cone-mosaic sensor."""
+
+    store = _store(asset_store)
+    normalized_species = param_format(species)
+    if normalized_species != "human":
+        raise UnsupportedOptionError("sensorCreateConeMosaic", species)
+
+    current = sensor_create(asset_store=store, session=session) if sensor is None else sensor.clone()
+    mosaic_size = np.asarray([72, 88] if sz is None else sz, dtype=int).reshape(-1)
+    aperture = np.asarray([1.5e-6, 1.5e-6] if cone_aperture is None else cone_aperture, dtype=float).reshape(-1)
+    if aperture.size == 1:
+        aperture = np.repeat(aperture, 2)
+
+    xy, cone_type, corrected_densities, resolved_seed = _human_cone_mosaic(
+        mosaic_size,
+        densities,
+        float(aperture[0] * 1.0e6),
+        r_seed,
+    )
+    current = sensor_set(current, "name", "human")
+    current = sensor_set(current, "size", tuple(int(value) for value in cone_type.shape))
+    current = sensor_set(current, "pattern", cone_type)
+    current = sensor_set(
+        current,
+        "human",
+        {
+            "name": "human",
+            "coneType": cone_type.copy(),
+            "densities": corrected_densities.copy(),
+            "xy": xy.copy(),
+            "rSeed": resolved_seed,
+            "species": "human",
+        },
+    )
+
+    wave = np.asarray(sensor_get(current, "wave"), dtype=float).reshape(-1)
+    stockman_quanta, filter_names, _ = ie_read_color_filter(wave, "data/human/stockmanQuanta.mat", asset_store=store)
+    black = np.zeros((wave.size, 1), dtype=float)
+    current = sensor_set(current, "filter spectra", np.hstack((black, np.asarray(stockman_quanta, dtype=float))))
+    current = sensor_set(current, "filter names", ["kBlack", *filter_names])
+    current = sensor_set(current, "pixel size same fill factor", aperture[:2])
+    return track_session_object(session, current), xy, cone_type, resolved_seed, corrected_densities
+
+
+def sensor_check_human(sensor: Sensor) -> bool:
+    """Determine whether the sensor carries the legacy human-cone metadata."""
+
+    if sensor is None:
+        raise ValueError("sensor required")
+    name = str(sensor_get(sensor, "name") or "")
+    return ("human" in param_format(name)) or isinstance(sensor.fields.get("human"), dict)
+
+
+def sensor_human_resize(sensor: Sensor, rows: Any, cols: Any) -> Sensor:
+    """Add or remove rows/cols around a human cone mosaic."""
+
+    current = sensor.clone()
+    row_adjust = np.asarray(rows, dtype=int).reshape(-1)
+    col_adjust = np.asarray(cols, dtype=int).reshape(-1)
+    if row_adjust.size != 2 or col_adjust.size != 2:
+        raise ValueError("sensorHumanResize expects [top, bottom] rows and [left, right] cols.")
+
+    pattern = np.asarray(sensor_get(current, "pattern"), dtype=int)
+    if col_adjust[0] > 0:
+        pattern = np.hstack((np.ones((pattern.shape[0], int(col_adjust[0])), dtype=int), pattern))
+    elif col_adjust[0] < 0:
+        pattern = pattern[:, int(abs(col_adjust[0])) :]
+    if col_adjust[1] > 0:
+        pattern = np.hstack((pattern, np.ones((pattern.shape[0], int(col_adjust[1])), dtype=int)))
+    elif col_adjust[1] < 0:
+        pattern = pattern[:, : pattern.shape[1] - int(abs(col_adjust[1]))]
+
+    if row_adjust[0] > 0:
+        pattern = np.vstack((np.ones((int(row_adjust[0]), pattern.shape[1]), dtype=int), pattern))
+    elif row_adjust[0] < 0:
+        pattern = pattern[int(abs(row_adjust[0])) :, :]
+    if row_adjust[1] > 0:
+        pattern = np.vstack((pattern, np.ones((int(row_adjust[1]), pattern.shape[1]), dtype=int)))
+    elif row_adjust[1] < 0:
+        pattern = pattern[: pattern.shape[0] - int(abs(row_adjust[1])), :]
+
+    current = sensor_set(current, "size", tuple(int(value) for value in pattern.shape))
+    current = sensor_set(current, "pattern", pattern)
+    if isinstance(current.fields.get("human"), dict):
+        current.fields["human"]["coneType"] = pattern.copy()
+        current.fields["human"]["xy"] = None
+    return current
+
+
+def sensor_light_field(
+    oi: OpticalImage,
+    *,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> Sensor:
+    """Create a light-field sensor matched to the optical-image geometry."""
+
+    sensor = sensor_create(asset_store=_store(asset_store), session=session)
+    sample_spacing = np.asarray(oi_get(oi, "sample spacing", "m"), dtype=float).reshape(-1)
+    sensor = sensor_set(sensor, "pixel size same fill factor", float(sample_spacing[0]))
+    sensor = sensor_set(sensor, "size", tuple(int(value) for value in np.asarray(oi_get(oi, "size"), dtype=int).reshape(-1)[:2]))
+    sensor = sensor_set(sensor, "name", "lightfield")
+    return track_session_object(session, sensor)
 
 
 def sensor_create_split_pixel(
@@ -6279,6 +6451,10 @@ sensorShowCFA = sensor_show_cfa
 sensorShowCFAWeights = sensor_show_cfa_weights
 sensorShowImage = sensor_show_image
 sensorSaveImage = sensor_save_image
+sensorCheckHuman = sensor_check_human
+sensorCreateConeMosaic = sensor_create_cone_mosaic
+sensorHumanResize = sensor_human_resize
+sensorLightField = sensor_light_field
 LoadRawSensorData = load_raw_sensor_data
 pixelTransmittance = pixel_transmittance
 ptInterfaceMatrix = pt_interface_matrix
