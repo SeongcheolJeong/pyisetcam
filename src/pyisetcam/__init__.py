@@ -232,6 +232,8 @@ from .optics import (
     oi_calculate_otf,
     oi_combine_depths,
     oi_depth_combine,
+    oi_depth_compute,
+    oi_depth_edges,
     oi_depth_segment_map,
     oi_extract_bright,
     oi_extract_waveband,
@@ -290,6 +292,7 @@ from .optics import (
     rt_sample_heights,
     rt_synthetic,
     retinal_image,
+    s3d_render_depth_defocus,
     si_convert_rt_data,
     si_synthetic,
     wvf_aperture,
@@ -1101,6 +1104,8 @@ __all__ = [
     "oiAdjustIlluminance",
     "oiCalculateIrradiance",
     "oiDepthCombine",
+    "oiDepthCompute",
+    "oiDepthEdges",
     "oiDepthSegmentMap",
     "oiExtractBright",
     "oiExtractWaveband",
@@ -1137,6 +1142,8 @@ __all__ = [
     "oi_crop",
     "oi_create",
     "oi_depth_combine",
+    "oi_depth_compute",
+    "oi_depth_edges",
     "oi_depth_segment_map",
     "oi_extract_bright",
     "oi_extract_waveband",
@@ -1262,6 +1269,8 @@ __all__ = [
     "rt_synthetic",
     "retinalImage",
     "retinal_image",
+    "s3dRenderDepthDefocus",
+    "s3d_render_depth_defocus",
     "siConvertRTdata",
     "si_convert_rt_data",
     "siSynthetic",
@@ -1827,6 +1836,8 @@ oiAdjustIlluminance = oi_adjust_illuminance
 oiCalculateOTF = oi_calculate_otf
 oiCalculateIrradiance = oi_calculate_irradiance
 oiDepthCombine = oi_depth_combine
+oiDepthCompute = oi_depth_compute
+oiDepthEdges = oi_depth_edges
 oiDepthSegmentMap = oi_depth_segment_map
 oiExtractBright = oi_extract_bright
 oiExtractWaveband = oi_extract_waveband
@@ -1895,6 +1906,7 @@ optics2wvf = optics_to_wvf
 makeCmatrix = make_cmatrix
 makeCombinedOtf = make_combined_otf
 retinalImage = retinal_image
+s3dRenderDepthDefocus = s3d_render_depth_defocus
 ieFieldHeight2Index = ie_field_height_to_index
 rtAngleLUT = rt_angle_lut
 rtBlockCenter = rt_block_center

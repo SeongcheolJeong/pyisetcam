@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-24T09:27:36.780907+00:00",
+  "generated_at": "2026-03-24T10:06:49.472824+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-24T09:27:36.780907+00:00",
+    "generated_at": "2026-03-24T10:06:49.472824+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 92,
       "missing": 37,
       "out_of_scope": 160,
-      "parity": 637,
-      "partial": 482,
+      "parity": 640,
+      "partial": 479,
       "ported": 35
     },
     "kind_counts": {
@@ -22,10 +22,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 54,
+      "P0": 51,
       "P1": 376,
       "P2": 181,
-      "P3": 832
+      "P3": 835
     },
     "delta_from_previous": {
       "status_counts": {
@@ -437,13 +437,12 @@
         "total": 8,
         "by_status": {
           "out_of_scope": 1,
-          "parity": 4,
-          "partial": 3
+          "parity": 7
         },
         "by_kind": {
           "api": 8
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "opticalimage/gui": {
         "total": 3,
@@ -1049,16 +1048,6 @@
         }
       },
       {
-        "family": "opticalimage/depth",
-        "open_entries": 3,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "out_of_scope": 1,
-          "parity": 4,
-          "partial": 3
-        }
-      },
-      {
         "family": "imgproc",
         "open_entries": 2,
         "highest_open_priority": "P0",
@@ -1132,6 +1121,16 @@
           "parity": 7,
           "partial": 1,
           "ported": 3
+        }
+      },
+      {
+        "family": "opticalimage/optics",
+        "open_entries": 1,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "out_of_scope": 4,
+          "parity": 30,
+          "partial": 1
         }
       }
     ],

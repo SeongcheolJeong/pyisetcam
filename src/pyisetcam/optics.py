@@ -6860,6 +6860,159 @@ def oi_combine_depths(oi_depths: list[OpticalImage] | tuple[OpticalImage, ...]) 
     return combined
 
 
+def _scene_depth_range(scene: Scene, depth_edges: Any) -> tuple[Scene, np.ndarray]:
+    """Restrict a scene to the requested depth slab using MATLAB sceneDepthRange semantics."""
+
+    edges = np.asarray(depth_edges, dtype=float).reshape(-1)
+    if edges.size != 2:
+        raise ValueError("sceneDepthRange requires a two-element depth range.")
+
+    depth_map = np.asarray(scene_get(scene, "depth map"), dtype=float)
+    depth_plane = (float(edges[0]) <= depth_map) & (depth_map < float(edges[1]))
+
+    current = scene.clone()
+    photons = np.asarray(scene_get(current, "photons"), dtype=float).copy()
+    photons[~depth_plane, :] = 0.0
+
+    from .scene import scene_set
+
+    current = scene_set(current, "photons", photons)
+    current = scene_set(current, "depth map", depth_map * depth_plane.astype(float))
+    return current, depth_plane
+
+
+def oi_depth_edges(
+    oi: OpticalImage,
+    defocus: Any,
+    in_focus_depth: Any,
+) -> tuple[np.ndarray, float, np.ndarray]:
+    """Determine depth edges that achieve the requested defocus values."""
+
+    optics = oi_get(oi, "optics")
+    focal_length = float(optics_get(optics, "focal length", "m"))
+    defocus_values = np.asarray(defocus, dtype=float).reshape(-1).copy()
+    defocus_values[defocus_values >= 0.0] = -0.01
+
+    depth_edges = np.asarray(optics_defocus_depth(defocus_values, optics, focal_length), dtype=float).reshape(-1)
+    target_depth = float(np.asarray(in_focus_depth, dtype=float).reshape(-1)[0])
+    nearest_index = int(np.argmin(np.abs(target_depth - depth_edges)))
+    object_distance = float(depth_edges[nearest_index])
+    _, image_distance = optics_depth_defocus(object_distance, optics, focal_length)
+    object_defocus, _ = optics_depth_defocus(depth_edges, optics, image_distance)
+    return depth_edges, float(image_distance), np.asarray(object_defocus, dtype=float).reshape(-1)
+
+
+def s3d_render_depth_defocus(
+    scene: Scene,
+    oi: OpticalImage,
+    img_plane_dist: Any | None = None,
+    depth_edges: Any | None = None,
+    c_aberration: Any | None = None,
+) -> tuple[OpticalImage, list[OpticalImage], np.ndarray]:
+    """Compute a defocused OI stack and combined OI across scene depth slabs."""
+
+    if scene is None:
+        raise ValueError("Scene required")
+    if oi is None:
+        raise ValueError("oi required")
+
+    optics = oi_get(oi, "optics")
+    if img_plane_dist is None:
+        img_plane_distance = float(optics_get(optics, "focal length", "m"))
+    else:
+        img_plane_distance = float(np.asarray(img_plane_dist, dtype=float).reshape(-1)[0])
+
+    depth_map = np.asarray(scene_get(scene, "depth map"), dtype=float)
+    if depth_edges is None:
+        edges = np.array([float(np.min(depth_map)), float(np.max(depth_map))], dtype=float)
+    else:
+        edges = np.asarray(depth_edges, dtype=float).reshape(-1)
+        if edges.size == 1:
+            edges = np.array([float(np.min(depth_map)), float(edges[0]), float(np.max(depth_map))], dtype=float)
+    if edges.size < 2:
+        raise ValueError("s3dRenderDepthDefocus requires at least two depth edges.")
+
+    depth_centers = edges[:-1] + (np.diff(edges) / 2.0)
+    wave = np.asarray(oi_get(oi, "wave"), dtype=float).reshape(-1)
+    if c_aberration is None:
+        chromatic_aberration = np.zeros(wave.size, dtype=float)
+    else:
+        chromatic_aberration = np.asarray(c_aberration, dtype=float).reshape(-1)
+        if chromatic_aberration.size == 1:
+            chromatic_aberration = np.full(wave.size, float(chromatic_aberration[0]), dtype=float)
+        if chromatic_aberration.size != wave.size:
+            raise ValueError("cAberration must be scalar or match the scene wavelength support.")
+
+    defocus_diopters, _ = optics_depth_defocus(depth_centers, optics, img_plane_distance)
+    defocus_diopters = np.asarray(defocus_diopters, dtype=float).reshape(-1)
+
+    max_sf = float(scene_get(scene, "maxfreqres", "cpd"))
+    n_steps = int(min(max(np.ceil(max_sf), 1.0), 70.0))
+    sample_sf = np.linspace(0.0, max_sf, n_steps, dtype=float)
+
+    oi_depths: list[OpticalImage] = [oi.clone() for _ in range(depth_centers.size)]
+    for depth_index in range(depth_centers.size - 1, -1, -1):
+        defocus = chromatic_aberration + defocus_diopters[depth_index]
+        otf_rows, sample_sf_mm = optics_defocus_core(optics, sample_sf, defocus)
+        current_optics = optics_build_2d_otf(optics, otf_rows, sample_sf_mm)
+        current_oi = oi_set(oi.clone(), "optics", current_optics)
+
+        current_range = np.array([edges[depth_index], edges[depth_index + 1]], dtype=float)
+        if np.isclose(current_range[0], current_range[1]):
+            scene_depth = scene.clone()
+        else:
+            scene_depth, _ = _scene_depth_range(scene, current_range)
+        oi_depths[depth_index] = oi_compute(current_oi, scene_depth)
+
+    combined = oi_combine_depths(oi_depths) if len(oi_depths) > 1 else oi_depths[0]
+    oi_calculate_illuminance(combined)
+    return combined, oi_depths, defocus_diopters
+
+
+def oi_depth_compute(
+    oi: OpticalImage,
+    scene: Scene,
+    image_dist: Any | None = None,
+    depth_edges: Any | None = None,
+    c_aberration: Any | None = None,
+    display_flag: Any = 1,
+) -> tuple[list[OpticalImage], np.ndarray]:
+    """Compute one defocused OI per requested scene depth."""
+
+    del display_flag
+    if oi is None:
+        raise ValueError("oi required")
+    if scene is None:
+        raise ValueError("scene required")
+    if depth_edges is None:
+        raise ValueError("depthEdges required")
+
+    if image_dist is None:
+        image_distance = float(optics_get(oi_get(oi, "optics"), "focal length", "m"))
+    else:
+        image_distance = float(np.asarray(image_dist, dtype=float).reshape(-1)[0])
+
+    original_depth_map = np.asarray(scene_get(scene, "depth map"), dtype=float)
+    oi_depths: list[OpticalImage] = []
+    last_defocus = np.empty(0, dtype=float)
+
+    from .scene import scene_set
+
+    for edge in np.asarray(depth_edges, dtype=float).reshape(-1):
+        current_scene = scene.clone()
+        current_scene = scene_set(current_scene, "depth map", np.ones_like(original_depth_map, dtype=float) * float(edge))
+        current_oi, _, current_defocus = s3d_render_depth_defocus(current_scene, oi, image_distance, None, c_aberration)
+        oi_depths.append(oi_set(current_oi, "name", f"Defocus {float(np.asarray(current_defocus).reshape(-1)[0]):.2f}"))
+        last_defocus = np.asarray(current_defocus, dtype=float).reshape(-1)
+
+    return oi_depths, last_defocus
+
+
+oiDepthEdges = oi_depth_edges
+s3dRenderDepthDefocus = s3d_render_depth_defocus
+oiDepthCompute = oi_depth_compute
+
+
 def optics_dl_compute(
     scene: Scene,
     oi: OpticalImage | None = None,

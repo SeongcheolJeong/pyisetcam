@@ -967,6 +967,12 @@ That same headless OI utility surface now also includes
 `oi_combine_depths(...)` / `oiCombineDepths(...)` for the legacy MATLAB
 OI depth-map padding, segmentation, and plane-combination helper
 mini-family.
+That same headless OI depth surface now also includes
+`oi_depth_edges(...)` / `oiDepthEdges(...)`,
+`s3d_render_depth_defocus(...)` / `s3dRenderDepthDefocus(...)`, and
+`oi_depth_compute(...)` / `oiDepthCompute(...)`, covering the legacy
+MATLAB depth-edge selection, depth-slab defocus rendering, and per-depth
+OI stack helpers.
 That same headless OI utility surface now also includes
 `oi_calculate_otf(...)` / `oiCalculateOTF(...)`,
 `oi_custom_compute(...)` / `oiCustomCompute(...)`,

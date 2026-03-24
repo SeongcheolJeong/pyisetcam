@@ -165,6 +165,8 @@ from pyisetcam import (
     oiCombineDepths,
     oiCustomCompute,
     oiDepthCombine,
+    oiDepthCompute,
+    oiDepthEdges,
     oiDepthSegmentMap,
     oi_diffuser,
     oi_compute,
@@ -193,6 +195,7 @@ from pyisetcam import (
     oi_spatial_resample,
     oi_set,
     oiWBCompute,
+    s3dRenderDepthDefocus,
     lsf2circularpsf,
     psf2lsf,
     psfAverageMultiple,
@@ -882,6 +885,92 @@ def test_oi_depth_helpers_match_manual_depth_map_selection(asset_store) -> None:
 
     assert np.allclose(np.asarray(oi_get(summed, "photons"), dtype=float), near_photons + far_photons)
     assert np.allclose(np.asarray(oi_get(summed, "depth map"), dtype=float), expected_depth)
+
+
+def test_oi_depth_defocus_wrappers_match_manual_replay(asset_store) -> None:
+    wave = np.array([500.0, 600.0], dtype=float)
+    scene = scene_create("uniform ee", 8, wave, asset_store=asset_store)
+
+    scene_photons = np.zeros((8, 8, wave.size), dtype=float)
+    base_plane = np.outer(np.linspace(1.0, 2.0, 8, dtype=float), np.linspace(0.5, 1.5, 8, dtype=float))
+    scene_photons[:, :, 0] = base_plane
+    scene_photons[:, :, 1] = np.flipud(base_plane) * 1.3
+    depth_map = np.vstack(
+        [
+            np.full((4, 8), 1.2, dtype=float),
+            np.full((4, 8), 2.4, dtype=float),
+        ]
+    )
+    scene = scene_set(scene, "photons", scene_photons)
+    scene = scene_set(scene, "depth map", depth_map)
+
+    oi = oi_create("diffraction limited", asset_store=asset_store)
+    optics = oi_get(oi, "optics")
+    oi_wave = np.asarray(oi_get(oi, "wave"), dtype=float).reshape(-1)
+    focal_length = float(opticsGet(optics, "focal length", "m"))
+
+    requested_defocus = np.array([-0.25, -0.75], dtype=float)
+    depth_edges, image_distance, object_defocus = oiDepthEdges(oi, requested_defocus, 1.6)
+
+    expected_edges = np.asarray(opticsDefocusDepth(requested_defocus, optics, focal_length), dtype=float).reshape(-1)
+    expected_index = int(np.argmin(np.abs(expected_edges - 1.6)))
+    _, expected_image_distance = optics_depth_defocus(expected_edges[expected_index], optics, focal_length)
+    expected_object_defocus, _ = optics_depth_defocus(expected_edges, optics, expected_image_distance)
+
+    assert np.allclose(depth_edges, expected_edges)
+    assert np.isclose(image_distance, expected_image_distance)
+    assert np.allclose(object_defocus, np.asarray(expected_object_defocus, dtype=float).reshape(-1))
+
+    stack_edges = np.array([1.0, 1.8, 2.8], dtype=float)
+    combined, depth_ois, stack_defocus = s3dRenderDepthDefocus(scene, oi, image_distance, stack_edges)
+
+    depth_centers = stack_edges[:-1] + (np.diff(stack_edges) / 2.0)
+    expected_stack_defocus, _ = optics_depth_defocus(depth_centers, optics, image_distance)
+    expected_stack_defocus = np.asarray(expected_stack_defocus, dtype=float).reshape(-1)
+    max_sf = float(scene_get(scene, "maxfreqres", "cpd"))
+    n_steps = int(min(max(np.ceil(max_sf), 1.0), 70.0))
+    sample_sf = np.linspace(0.0, max_sf, n_steps, dtype=float)
+
+    manual_depth_ois = [oi.clone() for _ in range(depth_centers.size)]
+    for depth_index in range(depth_centers.size - 1, -1, -1):
+        defocus = np.full(oi_wave.size, expected_stack_defocus[depth_index], dtype=float)
+        otf_rows, sample_sf_mm = optics_defocus_core(optics, sample_sf, defocus)
+        current_optics = optics_build_2d_otf(optics, otf_rows, sample_sf_mm)
+        current_oi = oi_set(oi.clone(), "optics", current_optics)
+
+        slab_mask = (stack_edges[depth_index] <= depth_map) & (depth_map < stack_edges[depth_index + 1])
+        slab_scene = scene.clone()
+        slab_photons = scene_photons.copy()
+        slab_photons[~slab_mask, :] = 0.0
+        slab_scene = scene_set(slab_scene, "photons", slab_photons)
+        slab_scene = scene_set(slab_scene, "depth map", depth_map * slab_mask.astype(float))
+        manual_depth_ois[depth_index] = oi_compute(current_oi, slab_scene)
+
+    manual_combined = oiCombineDepths(manual_depth_ois)
+
+    assert np.allclose(stack_defocus, expected_stack_defocus)
+    for computed, expected in zip(depth_ois, manual_depth_ois, strict=True):
+        assert np.allclose(np.asarray(oi_get(computed, "photons"), dtype=float), np.asarray(oi_get(expected, "photons"), dtype=float))
+        assert np.allclose(np.asarray(oi_get(computed, "depth map"), dtype=float), np.asarray(oi_get(expected, "depth map"), dtype=float))
+    assert np.allclose(np.asarray(oi_get(combined, "photons"), dtype=float), np.asarray(oi_get(manual_combined, "photons"), dtype=float))
+    assert np.allclose(np.asarray(oi_get(combined, "depth map"), dtype=float), np.asarray(oi_get(manual_combined, "depth map"), dtype=float))
+
+    requested_planes = np.array([1.2, 2.6], dtype=float)
+    oi_stack, last_defocus = oiDepthCompute(oi, scene, image_distance, requested_planes)
+
+    expected_last_defocus = np.empty(0, dtype=float)
+    for current_oi, plane_depth in zip(oi_stack, requested_planes, strict=True):
+        plane_scene = scene.clone()
+        plane_scene = scene_set(plane_scene, "depth map", np.full_like(depth_map, plane_depth, dtype=float))
+        expected_oi, _, current_defocus = s3dRenderDepthDefocus(plane_scene, oi, image_distance)
+        current_defocus = np.asarray(current_defocus, dtype=float).reshape(-1)
+
+        assert oi_get(current_oi, "name") == f"Defocus {float(current_defocus[0]):.2f}"
+        assert np.allclose(np.asarray(oi_get(current_oi, "photons"), dtype=float), np.asarray(oi_get(expected_oi, "photons"), dtype=float))
+        assert np.allclose(np.asarray(oi_get(current_oi, "depth map"), dtype=float), np.asarray(oi_get(expected_oi, "depth map"), dtype=float))
+        expected_last_defocus = current_defocus
+
+    assert np.allclose(last_defocus, expected_last_defocus)
 
 
 def test_oi_get_reports_matlab_style_geometry_vectors(asset_store) -> None:
