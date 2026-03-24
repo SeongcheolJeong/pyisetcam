@@ -83,7 +83,13 @@ from .fileio import (
     vc_load_object,
     vc_save_object,
 )
-from .illuminant import illuminant_create, illuminant_get, illuminant_set
+from .illuminant import (
+    illuminant_create,
+    illuminant_get,
+    illuminant_modernize,
+    illuminant_read,
+    illuminant_set,
+)
 from .iso import (
     ISO12233,
     ISO12233v1,
@@ -906,9 +912,13 @@ __all__ = [
     "ieXYZFromEnergy",
     "illuminantCreate",
     "illuminantGet",
+    "illuminantModernize",
+    "illuminantRead",
     "illuminantSet",
     "illuminant_create",
     "illuminant_get",
+    "illuminant_modernize",
+    "illuminant_read",
     "illuminant_set",
     "ISO12233",
     "ISO12233v1",
@@ -1807,6 +1817,8 @@ noiseColumnFPN = noise_column_fpn
 sceneClearData = scene_clear_data
 illuminantCreate = illuminant_create
 illuminantGet = illuminant_get
+illuminantModernize = illuminant_modernize
+illuminantRead = illuminant_read
 illuminantSet = illuminant_set
 
 displayCreate = display_create

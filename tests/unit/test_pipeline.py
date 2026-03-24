@@ -85,6 +85,8 @@ from pyisetcam import (
     initDefaultSpectrum,
     illuminant_create,
     illuminant_get,
+    illuminantModernize,
+    illuminantRead,
     illuminant_set,
     ie_reflectance_samples,
     ie_read_color_filter,
@@ -12423,6 +12425,43 @@ def test_scene_illuminant_script_workflow(asset_store) -> None:
     assert np.asarray(illuminant_get(d65_resampled, "energy"), dtype=float).shape == (61,)
     assert np.asarray(illuminant_get(fluorescent, "photons"), dtype=float).shape == (61,)
     assert np.asarray(illuminant_get(tungsten, "photons"), dtype=float).shape == (31,)
+
+
+def test_illuminant_legacy_wrappers_match_current_creation_paths(asset_store) -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    energy = np.linspace(0.25, 1.25, wave.size, dtype=float)
+    legacy = {
+        "data": {"photons": energy.copy()},
+        "wavelength": wave.copy(),
+        "comment": "legacy payload",
+    }
+
+    modern = illuminantModernize(legacy, asset_store=asset_store)
+
+    assert np.array_equal(np.asarray(illuminant_get(modern, "wave"), dtype=float).reshape(-1), wave)
+    assert np.allclose(np.asarray(illuminant_get(modern, "energy"), dtype=float).reshape(-1), energy)
+    assert illuminant_get(modern, "comment") == "legacy payload"
+    assert illuminant_get(modern, "name").startswith("CCT ")
+
+    read_energy, read_wave = illuminantRead(None, "d65", wave, 150.0, asset_store=asset_store)
+    direct = illuminant_create("d65", wave, 150.0, asset_store=asset_store)
+    assert np.array_equal(np.asarray(read_wave, dtype=float).reshape(-1), wave)
+    assert np.allclose(np.asarray(read_energy, dtype=float).reshape(-1), np.asarray(illuminant_get(direct, "energy"), dtype=float).reshape(-1))
+
+    blackbody_params = {
+        "name": "blackbody",
+        "temperature": 3200.0,
+        "luminance": 75.0,
+        "spectrum": {"wave": wave.copy()},
+    }
+    blackbody_energy, blackbody_wave = illuminantRead(blackbody_params, asset_store=asset_store)
+    direct_blackbody = illuminant_create("blackbody", wave, 3200.0, 75.0, asset_store=asset_store)
+
+    assert np.array_equal(np.asarray(blackbody_wave, dtype=float).reshape(-1), wave)
+    assert np.allclose(
+        np.asarray(blackbody_energy, dtype=float).reshape(-1),
+        np.asarray(illuminant_get(direct_blackbody, "energy"), dtype=float).reshape(-1),
+    )
 
 
 def test_scene_illuminant_mixtures_script_workflow(asset_store) -> None:

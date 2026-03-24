@@ -223,3 +223,104 @@ def illuminant_set(
         updated.fields["comment"] = str(value)
         return updated
     raise UnsupportedOptionError("illuminantSet", param)
+
+
+def illuminant_modernize(
+    illuminant: Any,
+    *,
+    asset_store: AssetStore | None = None,
+) -> BaseISETObject:
+    """Convert a legacy illuminant struct into the current headless object format."""
+
+    if isinstance(illuminant, BaseISETObject):
+        return illuminant.clone()
+    if not isinstance(illuminant, dict):
+        raise ValueError("illuminantModernize expects an illuminant object or legacy illuminant dict.")
+
+    if "data" not in illuminant:
+        raise ValueError("No illuminant data.")
+
+    wave = illuminant.get("wavelength")
+    if wave is None:
+        spectrum = illuminant.get("spectrum")
+        if isinstance(spectrum, dict):
+            wave = spectrum.get("wave", spectrum.get("wavelength"))
+    if wave is None:
+        raise ValueError("No wavelength or spectrum.wavelength slot.")
+
+    data = illuminant["data"]
+    if isinstance(data, dict):
+        if "photons" in data:
+            energy = np.asarray(data["photons"], dtype=float)
+        elif "energy" in data:
+            energy = np.asarray(data["energy"], dtype=float)
+        else:
+            raise ValueError("No illuminant data.")
+    else:
+        energy = np.asarray(data, dtype=float)
+
+    wave_array = np.asarray(wave, dtype=float).reshape(-1)
+    modern = _base_illuminant(str(illuminant.get("name", "illuminant")), wave_array)
+    modern.data["photons"] = np.asarray(energy_to_quanta(energy, wave_array), dtype=float)
+
+    comment = illuminant.get("comment")
+    if comment is not None:
+        modern.fields["comment"] = str(comment)
+
+    name = illuminant.get("name")
+    if name is None:
+        from .metrics import spd_to_cct
+
+        cct = float(np.asarray(spd_to_cct(wave_array, energy, asset_store=_store(asset_store)), dtype=float).reshape(-1)[0])
+        modern.name = f"CCT {cct:.0f}"
+    else:
+        modern.name = str(name)
+
+    return modern
+
+
+def illuminant_read(
+    ill_p: Any | None = None,
+    light_name: str | None = None,
+    wave: Any | None = None,
+    luminance: float | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return the requested illuminant spectral radiance in energy units."""
+
+    store = _store(asset_store)
+    if ill_p is None:
+        name = "d65" if light_name is None else str(light_name)
+        wave_nm = _wave_or_default(wave)
+        luminance_cd_m2 = 100.0 if luminance is None else float(luminance)
+        if param_format(name) == "blackbody":
+            illuminant = illuminant_create(name, wave_nm, 6500.0, luminance_cd_m2, asset_store=store)
+        else:
+            illuminant = illuminant_create(name, wave_nm, luminance_cd_m2, asset_store=store)
+    else:
+        if isinstance(ill_p, BaseISETObject):
+            illuminant = ill_p.clone()
+        elif isinstance(ill_p, dict):
+            name = str(ill_p.get("name", light_name or "d65"))
+            luminance_cd_m2 = float(ill_p.get("luminance", 100.0 if luminance is None else luminance))
+            spectrum = ill_p.get("spectrum", {})
+            if not isinstance(spectrum, dict):
+                spectrum = {}
+            wave_nm = _wave_or_default(spectrum.get("wave", wave))
+            if param_format(name) == "blackbody":
+                temperature_k = float(ill_p.get("temperature", 6500.0))
+                illuminant = illuminant_create(name, wave_nm, temperature_k, luminance_cd_m2, asset_store=store)
+            else:
+                illuminant = illuminant_create(name, wave_nm, luminance_cd_m2, asset_store=store)
+        else:
+            raise ValueError("illuminantRead expects an illuminant parameter dict or illuminant object.")
+
+    return (
+        np.asarray(illuminant_get(illuminant, "energy", asset_store=store), dtype=float),
+        np.asarray(illuminant_get(illuminant, "wave"), dtype=float).reshape(-1),
+    )
+
+
+illuminantModernize = illuminant_modernize
+illuminantRead = illuminant_read

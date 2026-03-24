@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-24T10:06:49.472824+00:00",
+  "generated_at": "2026-03-24T10:37:30.802724+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-24T10:06:49.472824+00:00",
+    "generated_at": "2026-03-24T10:37:30.802724+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 92,
       "missing": 37,
       "out_of_scope": 160,
-      "parity": 640,
-      "partial": 479,
+      "parity": 642,
+      "partial": 477,
       "ported": 35
     },
     "kind_counts": {
@@ -22,18 +22,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 51,
+      "P0": 49,
       "P1": 376,
       "P2": 181,
-      "P3": 835
+      "P3": 837
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
         "out_of_scope": 0,
-        "parity": 3,
-        "partial": -3,
+        "parity": 2,
+        "partial": -2,
         "ported": 0
       },
       "kind_counts": {
@@ -45,10 +45,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -3,
+        "P0": -2,
         "P1": 0,
         "P2": 0,
-        "P3": 3
+        "P3": 2
       }
     },
     "family_summary": {
@@ -548,13 +548,12 @@
       "scene/illumination": {
         "total": 6,
         "by_status": {
-          "parity": 4,
-          "partial": 2
+          "parity": 6
         },
         "by_kind": {
           "api": 6
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "scene/imgtargets": {
         "total": 8,
@@ -1079,15 +1078,6 @@
         }
       },
       {
-        "family": "scene/illumination",
-        "open_entries": 2,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 4,
-          "partial": 2
-        }
-      },
-      {
         "family": "scene/reflectance",
         "open_entries": 2,
         "highest_open_priority": "P0",
@@ -1130,6 +1120,15 @@
         "by_status": {
           "out_of_scope": 4,
           "parity": 30,
+          "partial": 1
+        }
+      },
+      {
+        "family": "scene/depth",
+        "open_entries": 1,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 1,
           "partial": 1
         }
       }
