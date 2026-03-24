@@ -453,6 +453,7 @@ from .scene import (
     scene_crop,
     scene_extract_waveband,
     scene_from_basis,
+    scene_from_ddf_file,
     scene_from_file,
     scene_get,
     scene_illuminant_scale,
@@ -478,6 +479,7 @@ from .scene import (
     scene_spatial_resample,
     scene_spatial_support,
     scene_set,
+    scene_sdr,
     scene_spd_scale,
     scene_thumbnail,
     scene_to_file,
@@ -1336,6 +1338,7 @@ __all__ = [
     "sceneCrop",
     "sceneExtractWaveband",
     "sceneFromBasis",
+    "sceneFromDDFFile",
     "sceneFromFile",
     "sceneGet",
     "sceneIlluminantScale",
@@ -1359,6 +1362,7 @@ __all__ = [
     "sceneShowImage",
     "sceneSpatialSupport",
     "sceneSet",
+    "sceneSDR",
     "sceneSPDScale",
     "sceneThumbnail",
     "sceneToFile",
@@ -1381,6 +1385,7 @@ __all__ = [
     "scene_energy_from_vector",
     "scene_frequency_support",
     "scene_from_basis",
+    "scene_from_ddf_file",
     "scene_from_file",
     "scene_get",
     "scene_illuminant_scale",
@@ -1406,6 +1411,7 @@ __all__ = [
     "scene_spatial_resample",
     "scene_spatial_support",
     "scene_set",
+    "scene_sdr",
     "scene_spd_scale",
     "scene_thumbnail",
     "scene_to_file",
@@ -1767,6 +1773,7 @@ sceneDescription = scene_description
 sceneCrop = scene_crop
 sceneExtractWaveband = scene_extract_waveband
 sceneFromBasis = scene_from_basis
+sceneFromDDFFile = scene_from_ddf_file
 sceneFromFile = scene_from_file
 sceneGet = scene_get
 sceneIlluminantPattern = scene_illuminant_pattern
@@ -1804,6 +1811,7 @@ sceneShowImage = scene_show_image
 sceneSpatialResample = scene_spatial_resample
 sceneSpatialSupport = scene_spatial_support
 sceneSet = scene_set
+sceneSDR = scene_sdr
 sceneThumbnail = scene_thumbnail
 sceneToFile = scene_to_file
 sceneTranslate = scene_translate

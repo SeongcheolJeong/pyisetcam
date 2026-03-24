@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-24T14:46:33.428888+00:00",
+  "generated_at": "2026-03-24T15:26:35.618950+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-24T14:46:33.428888+00:00",
+    "generated_at": "2026-03-24T15:26:35.618950+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 90,
       "missing": 37,
       "out_of_scope": 166,
-      "parity": 655,
-      "partial": 456,
+      "parity": 657,
+      "partial": 454,
       "ported": 39
     },
     "kind_counts": {
@@ -22,10 +22,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 31,
+      "P0": 29,
       "P1": 373,
       "P2": 179,
-      "P3": 860
+      "P3": 862
     },
     "delta_from_previous": {
       "status_counts": {
@@ -510,14 +510,13 @@
       "scene": {
         "total": 45,
         "by_status": {
-          "parity": 39,
-          "partial": 2,
+          "parity": 41,
           "ported": 4
         },
         "by_kind": {
           "api": 45
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "scene/depth": {
         "total": 2,
@@ -1031,16 +1030,6 @@
         }
       },
       {
-        "family": "scene",
-        "open_entries": 2,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 39,
-          "partial": 2,
-          "ported": 4
-        }
-      },
-      {
         "family": "scene/pattern",
         "open_entries": 1,
         "highest_open_priority": "P0",
@@ -1128,6 +1117,14 @@
         "by_status": {
           "parity": 1,
           "partial": 4
+        }
+      },
+      {
+        "family": "tutorials/code",
+        "open_entries": 4,
+        "highest_open_priority": "P1",
+        "by_status": {
+          "missing": 4
         }
       }
     ],

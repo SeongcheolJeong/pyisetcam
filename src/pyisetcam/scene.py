@@ -2,8 +2,14 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
+import shutil
+import subprocess
+import tempfile
 from typing import Any
+from urllib.parse import quote
+from urllib.request import Request, urlopen
 
 import imageio.v3 as iio
 import numpy as np
@@ -47,6 +53,12 @@ _SPATIAL_UNIT_SCALE = {
     "micron": 1e6,
     "um": 1e6,
 }
+_SCENE_SDR_DEPOSIT_URLS = {
+    "isetcambitterli": "https://stacks.stanford.edu/file/rq335tn9587/ISETCam%20scenes%20rendered/bitterli",
+    "isetcampharr": "https://stacks.stanford.edu/file/rq335tn9587/ISETCam%20scenes%20rendered/pbrtv4",
+    "isetcamiset3d": "https://stacks.stanford.edu/file/rq335tn9587/ISETCam%20scenes%20rendered/iset3d",
+}
+_SCENE_SDR_DEFAULT_DIR = Path(__file__).resolve().parents[2] / "data" / "scenes" / "web"
 
 _SCENE_LIST_TEXT = """ISETCam scene types with optional parameters
 
@@ -4072,6 +4084,164 @@ def scene_from_file(
     if mean_luminance is not None:
         scene = scene_adjust_luminance(scene, float(mean_luminance), asset_store=store)
     return track_session_object(session, scene)
+
+
+def _scene_ddf_depth_map(file_name: Any) -> np.ndarray | None:
+    path = Path(file_name).expanduser()
+    exiftool = shutil.which("exiftool")
+    if exiftool is None or not path.is_file():
+        return None
+
+    try:
+        trailer = subprocess.run(
+            [exiftool, "-b", "-trailer", str(path)],
+            check=False,
+            capture_output=True,
+        )
+        if trailer.returncode != 0 or not trailer.stdout:
+            return None
+
+        depth_payload = subprocess.run(
+            [exiftool, "-", "-b", "-trailer"],
+            check=False,
+            input=trailer.stdout,
+            capture_output=True,
+        )
+        if depth_payload.returncode != 0 or not depth_payload.stdout:
+            return None
+
+        info_result = subprocess.run(
+            [exiftool, "-j", str(path)],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if info_result.returncode != 0 or not info_result.stdout.strip():
+            return None
+        info_list = json.loads(info_result.stdout)
+        if not info_list:
+            return None
+        info = info_list[0]
+
+        with tempfile.NamedTemporaryFile(suffix=".png") as handle:
+            handle.write(depth_payload.stdout)
+            handle.flush()
+            depth_map = np.asarray(iio.imread(handle.name), dtype=np.float32)
+    except Exception:
+        return None
+
+    if depth_map.ndim > 2:
+        depth_map = depth_map[:, :, 0]
+    if depth_map.size == 0:
+        return None
+
+    depth_max = float(np.max(depth_map))
+    if depth_max <= 0.0:
+        return None
+
+    try:
+        units = str(info.get("DepthMapUnits", ""))
+        near_value = float(info["DepthMapNear"])
+        far_value = float(info["DepthMapFar"])
+        if units == "Meters":
+            depth_map = near_value + (depth_map / depth_max) * (far_value - near_value)
+        elif units == "Diopters":
+            far_diopters = far_value
+            near_diopters = near_value
+            d_normal = depth_map / depth_max
+            denominator = far_diopters - d_normal * (far_diopters - near_diopters)
+            depth_map = (far_diopters * near_diopters) / np.maximum(denominator, 1.0e-12)
+
+        image_height = int(info.get("ImageHeight", depth_map.shape[0]))
+        image_width = int(info.get("ImageWidth", depth_map.shape[1]))
+        if depth_map.shape != (image_height, image_width):
+            depth_map = zoom(
+                depth_map,
+                (
+                    image_height / max(depth_map.shape[0], 1),
+                    image_width / max(depth_map.shape[1], 1),
+                ),
+                order=1,
+            )
+    except Exception:
+        return None
+
+    return np.asarray(depth_map, dtype=float)
+
+
+def scene_from_ddf_file(
+    f_name: Any,
+    im_type: str = "rgb",
+    mean_luminance: float | None = None,
+    disp_cal: Any = None,
+    w_list: Any | None = None,
+    *scene_from_file_args: Any,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> Scene:
+    """Read a Dynamic Depth Format image using the legacy MATLAB wrapper contract."""
+
+    scene = scene_from_file(
+        f_name,
+        im_type,
+        mean_luminance,
+        disp_cal,
+        w_list,
+        *scene_from_file_args,
+        asset_store=_store(asset_store),
+        session=session,
+    )
+
+    depth_map = _scene_ddf_depth_map(scene.fields.get("filename", f_name))
+    if depth_map is None:
+        return scene
+
+    scene_size = np.asarray(scene_get(scene, "size"), dtype=int).reshape(-1)
+    if depth_map.shape != tuple(scene_size):
+        depth_map = zoom(
+            depth_map,
+            (
+                scene_size[0] / max(depth_map.shape[0], 1),
+                scene_size[1] / max(depth_map.shape[1], 1),
+            ),
+            order=1,
+        )
+    return scene_set(scene, "depth map", np.asarray(depth_map, dtype=float))
+
+
+def scene_sdr(
+    deposit_name: str,
+    scene_name: str,
+    *,
+    download_dir: str | Path | None = None,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> Scene | np.ndarray:
+    """Download or reuse a cached Stanford Digital Repository scene/image."""
+
+    deposit_key = param_format(deposit_name)
+    if deposit_key not in _SCENE_SDR_DEPOSIT_URLS:
+        valid = ", ".join(sorted(_SCENE_SDR_DEPOSIT_URLS))
+        raise ValueError(f"Invalid deposit name. Please choose from: {valid}")
+
+    scene_path = Path(scene_name)
+    suffix = scene_path.suffix.lower() or ".mat"
+    local_name = f"{scene_path.stem}{suffix}"
+    cache_dir = Path(download_dir).expanduser() if download_dir is not None else _SCENE_SDR_DEFAULT_DIR
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    local_file = cache_dir / local_name
+
+    if not local_file.exists():
+        remote_url = f"{_SCENE_SDR_DEPOSIT_URLS[deposit_key].rstrip('/')}/{quote(local_name)}"
+        request = Request(remote_url, headers={"User-Agent": "pyisetcam/0.1.0"})
+        with urlopen(request) as response, local_file.open("wb") as handle:
+            handle.write(response.read())
+
+    if suffix == ".mat":
+        return scene_from_file(local_file, "multispectral", asset_store=_store(asset_store), session=session)
+    if suffix == ".png":
+        return np.asarray(iio.imread(local_file))
+    raise ValueError(f"Unknown file extension '{suffix}'.")
 
 
 def scene_from_basis(
