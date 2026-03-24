@@ -322,6 +322,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is a teaching script that expects GUI-managed scene/OI/sensor state rather than a standalone supported headless ISO API.",
         "module_hits": [],
     },
+    "utility/tablebase/ieTableGet.m": {
+        "status": "ported",
+        "note": "The MATLAB metadata-table filter helper is covered by the Python `ie_table_get(...)` / `ieTableGet(...)` compatibility wrapper in `pyisetcam.ptable`.",
+        "module_hits": ["pyisetcam.ptable", "pyisetcam.__init__"],
+    },
     "color/ieColorTransform.m": {
         "status": "ported",
         "note": "The MATLAB sensor-to-target color transform helper is covered by the Python `ie_color_transform(...)` / `ieColorTransform(...)` compatibility wrapper.",

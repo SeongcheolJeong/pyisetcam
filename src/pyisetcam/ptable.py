@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from collections.abc import Mapping, Sequence
+from typing import Any, Callable
 
 import numpy as np
 
@@ -29,6 +30,80 @@ class IEPTable:
     tag: str = "IEPTable Table"
 
 
+def _column_length(column: Any) -> int:
+    if isinstance(column, (str, bytes, bytearray)):
+        raise TypeError("Table columns must be sequence-like, not scalar strings.")
+    return len(column)
+
+
+def _column_value(column: Any, index: int) -> Any:
+    if isinstance(column, np.ndarray):
+        return column[index]
+    return column[index]
+
+
+def _slice_column(column: Any, indices: list[int]) -> Any:
+    if isinstance(column, np.ndarray):
+        return np.asarray(column)[indices]
+    if isinstance(column, tuple):
+        return tuple(column[index] for index in indices)
+    if isinstance(column, list):
+        return [column[index] for index in indices]
+    return [column[index] for index in indices]
+
+
+def _value_matches(left: Any, right: Any) -> bool:
+    if isinstance(left, str) or isinstance(right, str):
+        return str(left) == str(right)
+    if np.isscalar(left) and np.isscalar(right):
+        return bool(left == right)
+    return bool(np.array_equal(np.asarray(left), np.asarray(right)))
+
+
+def _normalize_table(
+    table: Any,
+) -> tuple[list[dict[str, Any]], Callable[[list[int]], Any], dict[str, str]]:
+    if isinstance(table, Mapping):
+        normalized_names = {param_format(key): str(key) for key in table}
+        lengths = {_column_length(column) for column in table.values()}
+        if len(lengths) > 1:
+            raise ValueError("All table columns must have the same length.")
+        count = lengths.pop() if lengths else 0
+        rows = [
+            {
+                normalized: _column_value(table[original], index)
+                for normalized, original in normalized_names.items()
+            }
+            for index in range(count)
+        ]
+
+        def subset(indices: list[int]) -> dict[str, Any]:
+            return {
+                original: _slice_column(table[original], indices)
+                for original in table
+            }
+
+        return rows, subset, normalized_names
+
+    if isinstance(table, Sequence) and not isinstance(table, (str, bytes, bytearray)):
+        rows: list[dict[str, Any]] = []
+        normalized_names: dict[str, str] = {}
+        for row in table:
+            if not isinstance(row, Mapping):
+                raise TypeError("Sequence-based tables must contain mapping rows.")
+            normalized_row = {param_format(key): value for key, value in row.items()}
+            rows.append(normalized_row)
+            for key in row:
+                normalized_names.setdefault(param_format(key), str(key))
+
+        def subset(indices: list[int]) -> list[Any]:
+            return [table[index] for index in indices]
+
+        return rows, subset, normalized_names
+
+    raise TypeError("Unsupported table type. Use a mapping of columns or a sequence of row mappings.")
+
+
 def _format_scalar(value: Any, precision: int = 3) -> str:
     if value is None:
         return ""
@@ -45,6 +120,55 @@ def _format_scalar(value: Any, precision: int = 3) -> str:
     if array.size == 0:
         return ""
     return np.array2string(array, precision=precision, separator=" ", suppress_small=False)
+
+
+def ie_table_get(
+    table: Any,
+    *args: Any,
+    operator: str = "and",
+    return_type: str = "table rows",
+) -> tuple[list[Any], Any]:
+    """Return rows/files matching MATLAB-style metadata-table conditions."""
+
+    if len(args) % 2 != 0:
+        raise ValueError("ieTableGet expects key/value pairs.")
+
+    rows, subset, normalized_names = _normalize_table(table)
+    pairs = param_format(list(args))
+    op = param_format(operator)
+    result_kind = param_format(return_type)
+    conditions: list[tuple[str, Any]] = []
+
+    for index in range(0, len(pairs), 2):
+        key = pairs[index]
+        value = args[index + 1]
+        if key == "operator":
+            op = param_format(value)
+            continue
+        if key == "return":
+            result_kind = param_format(value)
+            continue
+        if key not in normalized_names:
+            raise ValueError(f"{key} is not a table variable name.")
+        conditions.append((key, value))
+
+    if op not in {"and", "or"}:
+        raise ValueError(f"Unknown operator {operator}")
+    if result_kind not in {"tablerows", "rows", "table", "file", "files"}:
+        raise ValueError(f"Unknown return type {return_type}")
+
+    selected: list[int] | None = None
+    for field, value in conditions:
+        matches = [index for index, row in enumerate(rows) if _value_matches(row.get(field), value)]
+        if op == "and":
+            selected = matches if selected is None else [index for index in selected if index in matches]
+        else:
+            selected = sorted(set([] if selected is None else selected).union(matches))
+
+    final_indices = [] if selected is None else selected
+    filtered_rows = subset(final_indices)
+    files = [rows[index].get("file") for index in final_indices] if "file" in normalized_names else []
+    return files, filtered_rows
 
 
 def _wave_summary(wave: Any) -> str:
@@ -368,3 +492,4 @@ def ie_p_table(
 
 # MATLAB-style alias.
 iePTable = ie_p_table
+ieTableGet = ie_table_get

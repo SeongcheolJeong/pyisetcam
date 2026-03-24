@@ -1178,6 +1178,9 @@ paths are provided.
 `iePTable` is now ported in a headless form too, returning structured
 parameter-table rows for the core object types without depending on a GUI
 table widget.
+The adjacent metadata-table helper `ieTableGet` is now ported too, covering
+MATLAB-style row/file filtering over headless table-like Python mappings or
+row records.
 `vcGetROIData` is now ported in a headless form too for scene/OI/sensor/IP
 objects, including MATLAB-style rect-to-location conversion, clipped ROI
 bounds, XW-style row output, and NaN-filled sensor mosaic planes.

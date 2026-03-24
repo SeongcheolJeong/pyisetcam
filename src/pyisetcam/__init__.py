@@ -344,7 +344,7 @@ from .optics import (
 )
 from .parity import run_python_case, run_python_case_with_context
 from .plotting import ip_plot, oi_plot, scene_plot, sensor_plot, sensor_plot_fft, sensor_plot_line, wvf_plot
-from .ptable import IEPTable, ie_p_table
+from .ptable import IEPTable, ie_p_table, ie_table_get
 from .roi import ie_locs2_rect, ie_rect2_locs, ie_rect2_vertices, ie_roi2_locs, vc_get_roi_data, vc_rect2_locs
 from .scielab import (
     sc_apply_filters,
@@ -790,6 +790,7 @@ __all__ = [
     "ieLocs2Rect",
     "ieParameterOtype",
     "iePTable",
+    "ieTableGet",
     "ieGetObject",
     "ieGetSelectedObject",
     "ieInitSession",
@@ -909,6 +910,7 @@ __all__ = [
     "ie_locs2_rect",
     "ie_parameter_otype",
     "ie_p_table",
+    "ie_table_get",
     "ie_field_height_to_index",
     "ie_get_object",
     "ie_get_selected_object",
@@ -2231,6 +2233,7 @@ ieReadSpectra = ie_read_spectra
 ieLocs2Rect = ie_locs2_rect
 ieParameterOtype = ie_parameter_otype
 iePTable = ie_p_table
+ieTableGet = ie_table_get
 ieGetObject = ie_get_object
 ieGetSelectedObject = ie_get_selected_object
 ieInitSession = ie_init_session
