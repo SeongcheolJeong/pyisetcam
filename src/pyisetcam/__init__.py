@@ -57,11 +57,14 @@ from .color import (
 )
 from .description import HeadlessDescriptionHandle, sensor_description
 from .display import (
+    display_convert,
     display_create,
     display_description,
     display_get,
     display_list,
     display_max_contrast,
+    display_pt2iset,
+    display_reflectance,
     display_set,
     display_set_max_luminance,
     display_set_white_point,
@@ -696,19 +699,25 @@ __all__ = [
     "hcBasis",
     "hc_basis",
     "displayCreate",
+    "displayConvert",
     "displayDescription",
     "displayGet",
     "displayList",
     "displayMaxContrast",
+    "displayPT2ISET",
+    "displayReflectance",
     "displaySet",
     "displaySetMaxLuminance",
     "displaySetWhitePoint",
     "displayShowImage",
+    "display_convert",
     "display_create",
     "display_description",
     "display_get",
     "display_list",
     "display_max_contrast",
+    "display_pt2iset",
+    "display_reflectance",
     "display_set",
     "display_set_max_luminance",
     "display_set_white_point",
@@ -1792,10 +1801,13 @@ illuminantGet = illuminant_get
 illuminantSet = illuminant_set
 
 displayCreate = display_create
+displayConvert = display_convert
 displayDescription = display_description
 displayGet = display_get
 displayList = display_list
 displayMaxContrast = display_max_contrast
+displayPT2ISET = display_pt2iset
+displayReflectance = display_reflectance
 displaySet = display_set
 displaySetMaxLuminance = display_set_max_luminance
 displaySetWhitePoint = display_set_white_point

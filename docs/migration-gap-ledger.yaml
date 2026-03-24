@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-24T09:00:25.582279+00:00",
+  "generated_at": "2026-03-24T09:27:36.780907+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -7,8 +7,8 @@
       "headless_only": 92,
       "missing": 37,
       "out_of_scope": 160,
-      "parity": 634,
-      "partial": 485,
+      "parity": 637,
+      "partial": 482,
       "ported": 35
     },
     "kind_counts": {
@@ -20,10 +20,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 57,
+      "P0": 54,
       "P1": 376,
       "P2": 181,
-      "P3": 829
+      "P3": 832
     },
     "delta_from_previous": {
       "status_counts": {
@@ -232,15 +232,14 @@
         "total": 23,
         "by_status": {
           "out_of_scope": 6,
-          "parity": 13,
-          "partial": 3,
+          "parity": 16,
           "ported": 1
         },
         "by_kind": {
           "api": 17,
           "gui": 6
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "fonts": {
         "total": 5,
@@ -1029,17 +1028,6 @@
         }
       },
       {
-        "family": "displays",
-        "open_entries": 3,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "out_of_scope": 6,
-          "parity": 13,
-          "partial": 3,
-          "ported": 1
-        }
-      },
-      {
         "family": "imgproc/openexr",
         "open_entries": 3,
         "highest_open_priority": "P0",
@@ -1131,6 +1119,17 @@
         "highest_open_priority": "P0",
         "by_status": {
           "partial": 1
+        }
+      },
+      {
+        "family": "metrics/iso",
+        "open_entries": 1,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "out_of_scope": 9,
+          "parity": 7,
+          "partial": 1,
+          "ported": 3
         }
       }
     ],
@@ -2730,14 +2729,16 @@
       "upstream_path": "displays/displayConvert.m",
       "family": "displays",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.display",
+      "status": "parity",
+      "python_surface": "pyisetcam.display, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_display.py",
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "displays/displayCreate.m",
@@ -2818,14 +2819,16 @@
       "upstream_path": "displays/displayPT2ISET.m",
       "family": "displays",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.display",
+      "status": "parity",
+      "python_surface": "pyisetcam.display, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_display.py",
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "displays/displayPlot.m",
@@ -2846,14 +2849,16 @@
       "upstream_path": "displays/displayReflectance.m",
       "family": "displays",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.display",
+      "status": "parity",
+      "python_surface": "pyisetcam.display, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_display.py",
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "displays/displayRender.m",
@@ -8388,7 +8393,7 @@
       "family": "scene/illumination",
       "kind": "api",
       "status": "parity",
-      "python_surface": "pyisetcam.scene, pyisetcam.illuminant, pyisetcam.__init__, pyisetcam.color, pyisetcam.metrics",
+      "python_surface": "pyisetcam.scene, pyisetcam.illuminant, pyisetcam.__init__, pyisetcam.color, pyisetcam.display",
       "tests": [
         "tests/unit/test_scene.py",
         "tests/unit/test_pipeline.py",
@@ -16595,7 +16600,7 @@
       "family": "utility/file",
       "kind": "helper",
       "status": "headless_only",
-      "python_surface": "pyisetcam.fileio, pyisetcam.__init__, pyisetcam.assets, pyisetcam.camera, pyisetcam.ip",
+      "python_surface": "pyisetcam.fileio, pyisetcam.__init__, pyisetcam.assets, pyisetcam.camera, pyisetcam.display",
       "tests": [
         "tests/unit/test_fileio.py"
       ],

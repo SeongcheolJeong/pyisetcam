@@ -1,8 +1,18 @@
 from __future__ import annotations
 
-import numpy as np
+from types import SimpleNamespace
 
-from pyisetcam import display_create, display_get, display_set
+import numpy as np
+from scipy.io import loadmat, savemat
+
+from pyisetcam import (
+    displayConvert,
+    displayPT2ISET,
+    displayReflectance,
+    display_create,
+    display_get,
+    display_set,
+)
 
 
 def test_display_create_lcd_example(asset_store) -> None:
@@ -54,3 +64,96 @@ def test_display_set_resamples_ambient_and_tracks_dixel_metadata(asset_store) ->
     assert display_get(display, "pixels per dixel") == [1, 1]
     assert display_get(display, "dixel size") == (2, 3)
     assert np.array_equal(display_get(display, "dixel control map"), control)
+
+
+def test_display_conversion_wrappers_match_legacy_contracts(asset_store, tmp_path) -> None:
+    ct_display = SimpleNamespace(
+        m_strDisplayName="ct-example",
+        sViewingContext=SimpleNamespace(m_fViewingDistance=0.7),
+        sPhysicalDisplay=SimpleNamespace(
+            m_fVerticalRefreshRate=120.0,
+            m_objCDixelStructure=SimpleNamespace(
+                m_aWaveLengthSamples=np.array([400.0, 500.0, 600.0], dtype=float),
+                m_aSpectrumOfPrimaries=np.eye(3, dtype=float),
+                m_cellGammaStructure=np.array(
+                    [
+                        SimpleNamespace(vGammaRampLUT=np.linspace(0.0, 1.0, 4, dtype=float))
+                        for _ in range(3)
+                    ],
+                    dtype=object,
+                ),
+                m_cellPSFStructure=np.array(
+                    [
+                        SimpleNamespace(sCustomData=SimpleNamespace(aRawData=np.full((20, 20), idx + 1.0, dtype=float)))
+                        for idx in range(3)
+                    ],
+                    dtype=object,
+                ),
+                m_fPixelSizeInMmX=0.254,
+            ),
+        ),
+    )
+
+    converted_path = tmp_path / "converted_display.mat"
+    converted = displayConvert(
+        ct_display,
+        np.array([400.0, 450.0, 500.0, 550.0, 600.0], dtype=float),
+        str(converted_path),
+        True,
+        "converted-display",
+    )
+
+    assert display_get(converted, "name") == "converted-display"
+    assert display_get(converted, "wave").shape == (5,)
+    assert display_get(converted, "spd").shape == (5, 3)
+    assert display_get(converted, "gamma").shape == (4, 3)
+    assert np.isclose(display_get(converted, "dpi"), 100.0, atol=1e-12, rtol=1e-12)
+    assert np.isclose(display_get(converted, "dist"), 0.7, atol=1e-12, rtol=1e-12)
+    assert np.isclose(display_get(converted, "refresh rate"), 120.0, atol=1e-12, rtol=1e-12)
+    psfs = np.asarray(display_get(converted, "psfs"), dtype=float)
+    assert psfs.shape == (20, 20, 3)
+    np.testing.assert_allclose(np.sum(psfs, axis=(0, 1)), np.ones(3, dtype=float), rtol=1e-12, atol=1e-12)
+    assert converted_path.exists()
+    reloaded = loadmat(converted_path, squeeze_me=True, struct_as_record=False)["d"]
+    assert reloaded.name == "converted-display"
+
+    pt_path = tmp_path / "pt_display.mat"
+    savemat(
+        pt_path,
+        {
+            "cals": np.array(
+                [
+                    {
+                        "S_device": np.array([400.0, 10.0, 3.0], dtype=float),
+                        "P_device": np.array(
+                            [
+                                [1.0, 0.0, 0.0],
+                                [0.0, 1.0, 0.0],
+                                [0.0, 0.0, 1.0],
+                            ],
+                            dtype=float,
+                        ),
+                        "gammaTable": np.linspace(0.0, 1.0, 12, dtype=float).reshape(4, 3),
+                        "describe": {"dacsize": 2},
+                    }
+                ],
+                dtype=object,
+            )
+        },
+    )
+
+    pt_display = displayPT2ISET(str(pt_path), np.array([400.0, 410.0, 420.0], dtype=float))
+    assert display_get(pt_display, "wave").shape == (3,)
+    assert display_get(pt_display, "spd").shape == (3, 3)
+    assert display_get(pt_display, "gamma").shape == (4, 3)
+    assert display_get(pt_display, "dacsize") == 2
+
+    reflectance_display, rgb_primaries, ill_energy = displayReflectance(6500.0, np.arange(400.0, 701.0, 10.0), asset_store=asset_store)
+    apple = display_create("LCD-Apple.mat", asset_store=asset_store)
+    assert display_get(reflectance_display, "name") == "Natural (ill 6500K)"
+    assert display_get(reflectance_display, "wave").shape == (31,)
+    assert rgb_primaries.shape == (31, 3)
+    assert ill_energy.shape == (31,)
+    np.testing.assert_allclose(display_get(reflectance_display, "spd"), rgb_primaries, rtol=1e-12, atol=1e-12)
+    np.testing.assert_allclose(display_get(reflectance_display, "gamma"), display_get(apple, "gamma"), rtol=1e-12, atol=1e-12)
+    assert np.isclose(display_get(reflectance_display, "max luminance"), 100.0, rtol=1e-6, atol=1e-6)

@@ -2,20 +2,64 @@
 
 from __future__ import annotations
 
+import warnings
+from pathlib import Path
 from typing import Any
 
 import numpy as np
+from scipy.io import savemat
 
-from .assets import AssetStore
+from .assets import AssetStore, ie_read_spectra
 from .color import xyz_color_matching
 from .exceptions import UnsupportedOptionError
 from .session import track_session_object
 from .types import Display, SessionContext
-from .utils import interp_spectra, invert_gamma_table, param_format, spectral_step
+from .utils import blackbody, interp_spectra, invert_gamma_table, param_format, spectral_step, srgb_to_xyz
 
 
 def _store(asset_store: AssetStore | None) -> AssetStore:
     return asset_store or AssetStore.default()
+
+
+def _struct_field(value: Any, field: str, default: Any = ...,) -> Any:
+    if isinstance(value, dict):
+        if field in value:
+            return value[field]
+    elif hasattr(value, field):
+        return getattr(value, field)
+    if default is ...:
+        raise KeyError(field)
+    return default
+
+
+def _flatten_struct_sequence(value: Any) -> list[Any]:
+    if value is None:
+        return []
+    if isinstance(value, np.ndarray):
+        if value.ndim == 0:
+            return [value.item()]
+        return [item for item in value.reshape(-1, order="F")]
+    return [value]
+
+
+def _display_to_mat_payload(display: Display) -> dict[str, Any]:
+    payload = {
+        "name": display.name,
+        "type": display.type,
+        "wave": np.asarray(display.fields["wave"], dtype=float),
+        "spd": np.asarray(display_get(display, "spd"), dtype=float),
+        "gamma": np.asarray(display_get(display, "gamma"), dtype=float),
+        "dpi": float(display_get(display, "dpi")),
+        "dist": float(display_get(display, "dist")),
+        "isEmissive": bool(display.fields.get("is_emissive", True)),
+    }
+    if display.fields.get("refresh_rate_hz") is not None:
+        payload["refreshRate"] = float(display.fields["refresh_rate_hz"])
+    if display.fields.get("psfs") is not None:
+        payload["psfs"] = np.asarray(display.fields["psfs"], dtype=float)
+    if display.fields.get("dacsize") is not None:
+        payload["dacsize"] = int(display.fields["dacsize"])
+    return payload
 
 
 def _mat_display_to_display(display_struct: Any) -> Display:
@@ -44,6 +88,10 @@ def _mat_display_to_display(display_struct: Any) -> Display:
     display.fields["comment"] = None
     display.fields["refresh_rate_hz"] = None
     display.fields["image"] = None
+    if hasattr(display_struct, "psfs"):
+        display.fields["psfs"] = np.asarray(getattr(display_struct, "psfs"), dtype=float)
+    if hasattr(display_struct, "dacsize"):
+        display.fields["dacsize"] = int(getattr(display_struct, "dacsize"))
     return display
 
 
@@ -66,9 +114,167 @@ def _display_default() -> Display:
             "comment": None,
             "refresh_rate_hz": None,
             "image": None,
+            "psfs": None,
+            "dacsize": int(round(np.log2(gamma.shape[0]))),
         }
     )
     return display
+
+
+def display_convert(
+    ct_disp: Any,
+    sample_wave: Any | None = None,
+    output_filename: str | None = None,
+    overwrite: bool = False,
+    display_name: str | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> Display:
+    """Convert a ctToolbox-style display structure into a pyISETCam display."""
+
+    if ct_disp is None:
+        raise ValueError("ctToolbox display structure required")
+
+    store = _store(asset_store)
+    source = ct_disp
+    if isinstance(ct_disp, str):
+        loaded = store.load_mat(ct_disp)
+        source = loaded.get("vDisp")
+        if source is None:
+            raise KeyError("displayConvert expected a vDisp payload")
+
+    cdixel = _struct_field(_struct_field(source, "sPhysicalDisplay"), "m_objCDixelStructure")
+    display = _display_default()
+    display = display_set(display, "name", str(_struct_field(source, "m_strDisplayName")))
+    display = display_set(display, "wave", np.asarray(_struct_field(cdixel, "m_aWaveLengthSamples"), dtype=float).reshape(-1))
+
+    spd = np.asarray(_struct_field(cdixel, "m_aSpectrumOfPrimaries"), dtype=float)
+    if spd.ndim == 1:
+        spd = spd.reshape(-1, 1)
+    if spd.shape[0] != display_get(display, "nwave") and spd.shape[1] == display_get(display, "nwave"):
+        spd = spd.T
+    display = display_set(display, "spd", spd)
+
+    gamma_structs = _flatten_struct_sequence(_struct_field(cdixel, "m_cellGammaStructure"))
+    gamma_columns = [
+        np.asarray(_struct_field(struct, "vGammaRampLUT"), dtype=float).reshape(-1)
+        for struct in gamma_structs
+    ]
+    if gamma_columns:
+        display = display_set(display, "gTable", np.column_stack(gamma_columns))
+
+    psf_structs = _flatten_struct_sequence(_struct_field(cdixel, "m_cellPSFStructure", None))
+    if psf_structs:
+        psf_planes = []
+        for struct in psf_structs:
+            raw = np.asarray(_struct_field(_struct_field(struct, "sCustomData"), "aRawData"), dtype=float)
+            if raw.shape != (20, 20):
+                row_idx = np.linspace(0.0, raw.shape[0] - 1.0, 20, dtype=float)
+                col_idx = np.linspace(0.0, raw.shape[1] - 1.0, 20, dtype=float)
+                raw = interp_spectra(np.arange(raw.shape[0], dtype=float), raw, row_idx)
+                raw = interp_spectra(np.arange(raw.shape[1], dtype=float), raw.T, col_idx).T
+            total = float(np.sum(raw, dtype=float))
+            psf_planes.append(raw / max(total, 1.0e-12))
+        display = display_set(display, "psfs", np.stack(psf_planes, axis=2))
+
+    pixel_size_mm = float(_struct_field(cdixel, "m_fPixelSizeInMmX"))
+    display = display_set(display, "dpi", 25.4 / max(pixel_size_mm, 1.0e-12))
+    display = display_set(display, "viewing distance", float(_struct_field(_struct_field(source, "sViewingContext"), "m_fViewingDistance")))
+    display = display_set(display, "refresh rate", float(_struct_field(_struct_field(source, "sPhysicalDisplay"), "m_fVerticalRefreshRate")))
+
+    if sample_wave is not None and np.asarray(sample_wave).size:
+        target_wave = np.asarray(sample_wave, dtype=float).reshape(-1)
+        display = display_set(display, "wave", target_wave)
+
+    if display_name not in {None, ""}:
+        display = display_set(display, "name", str(display_name))
+
+    if output_filename not in {None, ""}:
+        save_path = Path(str(output_filename))
+        if save_path.exists() and not overwrite:
+            warnings.warn("File already exists. Try other name or overwrite flag", stacklevel=2)
+        else:
+            savemat(save_path, {"d": _display_to_mat_payload(display)})
+
+    return display
+
+
+def display_pt2iset(
+    fname: str,
+    i_wave: Any | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> Display:
+    """Convert a PsychToolbox calibration file to a pyISETCam display."""
+
+    if fname in {None, ""}:
+        raise ValueError("No calibration file supplied")
+
+    store = _store(asset_store)
+    data = store.load_mat(fname)
+    calibration = _flatten_struct_sequence(data["cals"])[0]
+
+    display = _display_default()
+    display = display_set(display, "name", str(fname))
+
+    s_device = np.asarray(_struct_field(calibration, "S_device"), dtype=float).reshape(-1)
+    wave = (np.arange(int(s_device[2]), dtype=float) * float(s_device[1])) + float(s_device[0])
+    display = display_set(display, "wave", wave)
+
+    p_device = np.asarray(_struct_field(calibration, "P_device"), dtype=float)
+    if p_device.ndim == 1:
+        p_device = p_device.reshape(-1, 1)
+    if i_wave is None:
+        display = display_set(display, "spd", p_device)
+    else:
+        target_wave = np.asarray(i_wave, dtype=float).reshape(-1)
+        display = display_set(display, "spd", p_device)
+        display = display_set(display, "wave", target_wave)
+
+    gamma = np.asarray(_struct_field(calibration, "gammaTable"), dtype=float)
+    if gamma.ndim == 1:
+        gamma = gamma.reshape(-1, 1)
+    display = display_set(display, "gamma", gamma)
+    display.fields["dacsize"] = int(_struct_field(_struct_field(calibration, "describe"), "dacsize"))
+    return display
+
+
+def display_reflectance(
+    ctemp: float,
+    wave: Any | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[Display, np.ndarray, np.ndarray]:
+    """Create the legacy theoretical reflectance display for an illuminant temperature."""
+
+    store = _store(asset_store)
+    wave_array = np.arange(400.0, 701.0, 1.0, dtype=float) if wave is None else np.asarray(wave, dtype=float).reshape(-1)
+
+    basis = np.asarray(ie_read_spectra("reflectanceBasis.mat", wave_array, asset_store=store), dtype=float)
+    basis[:, 0] = -basis[:, 0]
+    ill_energy = np.asarray(blackbody(wave_array, float(ctemp), kind="energy"), dtype=float).reshape(-1)
+    radiance_basis = ill_energy[:, None] * basis[:, :3]
+
+    srgb_primaries = np.eye(3, dtype=float).reshape(1, 3, 3)
+    lxyz_in_cols = np.asarray(srgb_to_xyz(srgb_primaries), dtype=float).reshape(3, 3).T
+    xyz = np.asarray(ie_read_spectra("XYZEnergy.mat", wave_array, asset_store=store), dtype=float)
+    transform = np.linalg.pinv(xyz.T @ radiance_basis) @ lxyz_in_cols
+    rgb_primaries = radiance_basis @ transform
+
+    display = _display_default()
+    display = display_set(display, "wave", wave_array)
+    display = display_set(display, "spd", rgb_primaries)
+
+    peak_luminance = float(display_get(display, "peak luminance"))
+    scale = 100.0 / max(peak_luminance, 1.0e-12)
+    rgb_primaries = rgb_primaries * scale
+    display = display_set(display, "spd", rgb_primaries)
+    ill_energy = ill_energy * scale
+
+    apple_display = display_create("LCD-Apple", asset_store=store)
+    display = display_set(display, "gamma", np.asarray(display_get(apple_display, "gamma"), dtype=float))
+    display = display_set(display, "name", f"Natural (ill {int(np.rint(float(ctemp)))}K)")
+    return display, np.asarray(rgb_primaries, dtype=float), np.asarray(ill_energy, dtype=float)
 
 
 def _display_ambient(display: Display) -> np.ndarray:
@@ -302,11 +508,16 @@ def display_get(display: Display, parameter: str, *args: Any) -> Any:
         return bool(display.fields.get("is_emissive", True))
     if key in {"gtable", "dv2intensity", "gamma", "gammatable", "gammatable"}:
         return np.asarray(display.fields["gamma"], dtype=float)
+    if key == "psfs":
+        psfs = display.fields.get("psfs")
+        return None if psfs is None else np.asarray(psfs, dtype=float)
     if key in {"inversegamma", "inversegammatable"}:
         gamma = np.asarray(display_get(display, "gamma table"), dtype=float)
         n_steps = int(args[0]) if args else gamma.shape[0]
         return _inverse_gamma_table(gamma[:, : min(3, gamma.shape[1])], n_steps)
     if key in {"bits", "dacsize"}:
+        if key == "dacsize" and display.fields.get("dacsize") is not None:
+            return int(display.fields["dacsize"])
         gamma = np.asarray(display_get(display, "gamma table"), dtype=float)
         return int(round(np.log2(gamma.shape[0])))
     if key in {"nlevels"}:
@@ -413,6 +624,12 @@ def display_set(display: Display, parameter: str, value: Any, *args: Any) -> Dis
             axis = np.linspace(0.0, 1.0, size, dtype=float)[:, None]
             value = np.repeat(axis, int(display_get(display, "nprimaries")), axis=1)
         display.fields["gamma"] = np.asarray(value, dtype=float)
+        return display
+    if key == "psfs":
+        display.fields["psfs"] = np.asarray(value, dtype=float)
+        return display
+    if key == "dacsize":
+        display.fields["dacsize"] = int(value)
         return display
     if key in {"wave", "wavelength"}:
         new_wave = np.asarray(value, dtype=float).reshape(-1)
