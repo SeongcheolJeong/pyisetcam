@@ -6,7 +6,12 @@ import pytest
 from pyisetcam import (
     FloydSteinberg,
     HalfToneImage,
+    ieCmap,
+    ieCropRect,
     ieFindWaveIndex,
+    ieLUTDigital,
+    ieLUTInvert,
+    ieLUTLinear,
     ieParameterOtype,
     ieRadialMatrix,
     ieWave2Index,
@@ -20,8 +25,13 @@ from pyisetcam.utils import (
     energy_to_quanta,
     floyd_steinberg,
     half_tone_image,
+    ie_cmap,
+    ie_crop_rect,
     ie_fit_line,
     ie_find_wave_index,
+    ie_lut_digital,
+    ie_lut_invert,
+    ie_lut_linear,
     ie_parameter_otype,
     ie_radial_matrix,
     ie_wave2_index,
@@ -280,6 +290,67 @@ def test_image_circular_and_contrast_match_legacy_contract_aliases() -> None:
     assert np.array_equal(alias_circular, expected_circular)
     assert np.allclose(contrast, expected_contrast)
     assert np.allclose(alias_contrast, expected_contrast)
+
+
+def test_ie_cmap_matches_rg_bw_and_alias() -> None:
+    rg = ie_cmap("rg", 4)
+    bw = ieCmap("bw", 3, 2.0)
+
+    assert np.allclose(
+        rg,
+        np.array(
+            [
+                [0.0, 1.0, 0.5],
+                [1.0 / 3.0, 2.0 / 3.0, 0.5],
+                [2.0 / 3.0, 1.0 / 3.0, 0.5],
+                [1.0, 0.0, 0.5],
+            ],
+            dtype=float,
+        ),
+    )
+    assert np.allclose(
+        bw,
+        np.array(
+            [
+                [0.0, 0.0, 0.0],
+                [0.25, 0.25, 0.25],
+                [1.0, 1.0, 1.0],
+            ],
+            dtype=float,
+        ),
+    )
+
+
+def test_ie_crop_rect_matches_matlab_fov_geometry_and_alias() -> None:
+    oi = {"optics": {"raytrace": {"objectDistance": 2.0}}}
+    scenesize = np.array([100, 200], dtype=float)
+
+    crop_rect = ie_crop_rect(oi, scenesize, 20.0, 10.0)
+    alias = ieCropRect(oi, scenesize, 20.0, 10.0)
+
+    assert np.array_equal(crop_rect, np.array([52, 26, 98, 49]))
+    assert np.array_equal(alias, crop_rect)
+
+
+def test_ie_lut_digital_invert_linear_match_legacy_tables_and_aliases() -> None:
+    dac = np.array([[0, 1], [2, 3]], dtype=float)
+    gamma = np.array([0.0, 0.25, 0.5, 1.0], dtype=float)
+    rgb = np.array([[0.0, 0.25], [0.5, 1.0]], dtype=float)
+    inverse_gamma = np.array([0.0, 10.0, 20.0, 30.0], dtype=float)
+
+    digital = ie_lut_digital(dac, gamma)
+    digital_alias = ieLUTDigital(dac, gamma)
+    invert = ie_lut_invert(gamma, 4)
+    invert_alias = ieLUTInvert(gamma, 4)
+    linear = ie_lut_linear(rgb, inverse_gamma)
+    linear_alias = ieLUTLinear(rgb, inverse_gamma)
+
+    assert np.allclose(digital, np.array([[0.0, 0.25], [0.5, 1.0]], dtype=float))
+    assert np.allclose(digital_alias, digital)
+    assert np.allclose(invert, np.array([[1.0], [2.0], [3.0], [3.5]], dtype=float))
+    assert np.allclose(invert_alias, invert)
+    assert np.allclose(linear, np.array([[0.0, 10.0], [20.0, 30.0]], dtype=float))
+    assert np.allclose(linear_alias, linear)
 
 
 def test_ie_parameter_otype_handles_direct_prefix_and_unique_params() -> None:

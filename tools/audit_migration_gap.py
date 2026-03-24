@@ -218,6 +218,36 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB wavelength-membership helper is covered by the Python `ie_find_wave_index(...)` / `ieFindWaveIndex(...)` compatibility wrapper in `pyisetcam.utils`.",
         "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
     },
+    "utility/image/ieCmap.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB color-map helper is covered by the Python `ie_cmap(...)` / `ieCmap(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/ieCropRect.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB FOV crop-rectangle helper is covered by the Python `ie_crop_rect(...)` / `ieCropRect(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/ieLUTDigital.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB DAC-to-linear-RGB helper is covered by the Python `ie_lut_digital(...)` / `ieLUTDigital(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/ieLUTInvert-deprecate.m": {
+        "status": "ported",
+        "note": "The deprecated MATLAB inverse-gamma helper is covered by the Python `ie_lut_invert(...)` / `ieLUTInvert(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/ieLUTInvert.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB inverse-gamma helper is covered by the Python `ie_lut_invert(...)` / `ieLUTInvert(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/ieLUTLinear.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB linear-RGB-to-DAC helper is covered by the Python `ie_lut_linear(...)` / `ieLUTLinear(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
     "utility/image/ieRadialMatrix.m": {
         "status": "ported",
         "note": "The legacy MATLAB radial-distance helper is covered by the Python `ie_radial_matrix(...)` / `ieRadialMatrix(...)` compatibility wrapper in `pyisetcam.utils`.",

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-24T22:40:30.187025+00:00",
+  "generated_at": "2026-03-24T23:04:15.474222+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -8,8 +8,8 @@
       "missing": 21,
       "out_of_scope": 186,
       "parity": 675,
-      "partial": 391,
-      "ported": 88
+      "partial": 385,
+      "ported": 94
     },
     "kind_counts": {
       "api": 661,
@@ -20,18 +20,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 326,
+      "P1": 320,
       "P2": 168,
-      "P3": 949
+      "P3": 955
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": -2,
+        "headless_only": 0,
         "missing": 0,
         "out_of_scope": 0,
         "parity": 0,
-        "partial": -5,
-        "ported": 7
+        "partial": -6,
+        "ported": 6
       },
       "kind_counts": {
         "api": 0,
@@ -42,9 +42,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -5,
-        "P2": -2,
-        "P3": 7
+        "P1": -6,
+        "P2": 0,
+        "P3": 6
       }
     },
     "family_summary": {
@@ -956,8 +956,8 @@
           "headless_only": 5,
           "out_of_scope": 2,
           "parity": 7,
-          "partial": 25,
-          "ported": 7
+          "partial": 19,
+          "ported": 13
         },
         "by_kind": {
           "gui": 2,
@@ -1026,14 +1026,14 @@
       },
       {
         "family": "utility/image",
-        "open_entries": 30,
+        "open_entries": 24,
         "highest_open_priority": "P1",
         "by_status": {
           "headless_only": 5,
           "out_of_scope": 2,
           "parity": 7,
-          "partial": 25,
-          "ported": 7
+          "partial": 19,
+          "ported": 13
         }
       },
       {
@@ -17110,21 +17110,21 @@
       "upstream_path": "utility/image/ieCmap.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB color-map helper is covered by the Python `ie_cmap(...)` / `ieCmap(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/ieCropRect.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB FOV crop-rectangle helper is covered by the Python `ie_crop_rect(...)` / `ieCropRect(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/ieFieldHeight2Index.m",
@@ -17150,41 +17150,41 @@
       "upstream_path": "utility/image/ieLUTDigital.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB DAC-to-linear-RGB helper is covered by the Python `ie_lut_digital(...)` / `ieLUTDigital(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/ieLUTInvert-deprecate.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The deprecated MATLAB inverse-gamma helper is covered by the Python `ie_lut_invert(...)` / `ieLUTInvert(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/ieLUTInvert.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB inverse-gamma helper is covered by the Python `ie_lut_invert(...)` / `ieLUTInvert(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/ieLUTLinear.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB linear-RGB-to-DAC helper is covered by the Python `ie_lut_linear(...)` / `ieLUTLinear(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/ieMontages.m",

@@ -626,8 +626,13 @@ from .utils import (
     floyd_steinberg,
     hc_basis,
     half_tone_image,
+    ie_cmap,
+    ie_crop_rect,
     ie_fit_line,
     ie_find_wave_index,
+    ie_lut_digital,
+    ie_lut_invert,
+    ie_lut_linear,
     ie_mvnrnd,
     ie_n_to_megapixel,
     ie_radial_matrix,
@@ -899,6 +904,10 @@ __all__ = [
     "pocs",
     "imageLinearTransform",
     "image_linear_transform",
+    "ieCmap",
+    "ie_cmap",
+    "ieCropRect",
+    "ie_crop_rect",
     "imageBoundingBox",
     "image_bounding_box",
     "imageCentroid",
@@ -912,6 +921,12 @@ __all__ = [
     "ieImageType",
     "ieFindWaveIndex",
     "ie_find_wave_index",
+    "ieLUTDigital",
+    "ie_lut_digital",
+    "ieLUTInvert",
+    "ie_lut_invert",
+    "ieLUTLinear",
+    "ie_lut_linear",
     "ieRadialMatrix",
     "ie_radial_matrix",
     "ieReadSpectra",
@@ -2266,7 +2281,12 @@ RGB2XWFormat = rgb_to_xw_format
 XW2RGBFormat = xw_to_rgb_format
 hcBasis = hc_basis
 dac2rgb = dac_to_rgb
+ieCmap = ie_cmap
+ieCropRect = ie_crop_rect
 ieFindWaveIndex = ie_find_wave_index
+ieLUTDigital = ie_lut_digital
+ieLUTInvert = ie_lut_invert
+ieLUTLinear = ie_lut_linear
 ieWave2Index = ie_wave2_index
 ieRadialMatrix = ie_radial_matrix
 imageBoundingBox = image_bounding_box

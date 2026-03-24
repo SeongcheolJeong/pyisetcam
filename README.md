@@ -1757,6 +1757,11 @@ The adjacent `utility/image` numeric helper tail is shrinking too:
 `pyisetcam.utils` with focused regressions over MATLAB-style 1-based
 indexing, radial support, centered aperture masking, centroid rounding, and
 per-channel contrast normalization.
+That same utility-image slice now also covers `ieCmap(...)`,
+`ieCropRect(...)`, `ieLUTDigital(...)`, `ieLUTInvert(...)`, and
+`ieLUTLinear(...)`, with direct regressions for the simple MATLAB color-map
+forms, field-of-view crop-rectangle math, and forward/inverse gamma-table
+lookup behavior.
 The legacy startup/path trio is now covered too: `ISET.m`, `isetPath.m`,
 and `isetRootPath.m` are tracked against the optional headless session
 bootstrap wrappers `iset(...)`, `isetPath(...)`, and `isetRootPath(...)`

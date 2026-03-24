@@ -1210,6 +1210,197 @@ def image_contrast(data: Any) -> NDArray[np.float64]:
 imageContrast = image_contrast
 
 
+def ie_cmap(c_name: str = "rg", num: int = 256, gam: float = 1.0) -> NDArray[np.float64]:
+    """Prepare simple MATLAB-style color maps."""
+
+    name = param_format(c_name)
+    count = int(num)
+    if count <= 0:
+        raise ValueError("num must be positive.")
+
+    a = np.linspace(0.0, 1.0, count, dtype=float)
+    if name in {"redgreen", "rg"}:
+        return np.column_stack((a, a[::-1], 0.5 * np.ones_like(a)))
+    if name in {"blueyellow", "by"}:
+        return np.column_stack((a, a, a[::-1]))
+    if name in {"luminance", "blackwhite", "bw"}:
+        gray = np.repeat(a[:, np.newaxis], 3, axis=1)
+        return gray**float(gam)
+    raise ValueError(f"Unknown color map name {c_name}")
+
+
+ieCmap = ie_cmap
+
+
+def _matlab_round_scalar(value: float) -> int:
+    return int(np.sign(value) * np.floor(abs(float(value)) + 0.5))
+
+
+def _extract_rt_object_distance_m(oi: Any) -> float:
+    try:
+        from .optics import oi_get
+
+        return float(oi_get(oi, "optics rt object distance"))
+    except Exception:
+        pass
+
+    fields = oi.fields if hasattr(oi, "fields") else oi
+    if not isinstance(fields, dict):
+        raise TypeError("ieCropRect expects an ISET-like optical image or dictionary.")
+    optics = fields.get("optics", {})
+    if not isinstance(optics, dict):
+        raise ValueError("Optics data are required.")
+    raytrace = optics.get("raytrace", optics)
+    if not isinstance(raytrace, dict):
+        raise ValueError("Ray-trace optics data are required.")
+    object_distance = raytrace.get("objectDistance")
+    if object_distance is None:
+        object_distance = raytrace.get("object_distance_m")
+    if object_distance is None:
+        raise ValueError("Ray-trace object distance is required.")
+    distance = float(object_distance)
+    return distance / 1e3 if distance > 100.0 else distance
+
+
+def ie_crop_rect(
+    oi: Any,
+    scenesize: Any,
+    fov: float,
+    new_fov: float,
+    *,
+    center: Any | None = None,
+) -> NDArray[np.int_]:
+    """Calculate a MATLAB-style crop rect for reducing scene field of view."""
+
+    scene_size = np.asarray(scenesize, dtype=float).reshape(-1)
+    if scene_size.size != 2:
+        raise ValueError("scenesize must be a two-element row/col vector.")
+    current_fov = float(fov)
+    target_fov = float(new_fov)
+    if target_fov > current_fov:
+        raise ValueError(f"New field of view ({target_fov}) must not exceed current field of view {current_fov}.")
+
+    center_rc = (
+        np.floor(scene_size / 2.0)
+        if center is None
+        else np.asarray(center, dtype=float).reshape(-1)
+    )
+    if center_rc.size != 2:
+        raise ValueError("center must be a two-element row/col vector.")
+
+    aspect_ratio = float(scene_size[1] / scene_size[0])
+    object_distance = _extract_rt_object_distance_m(oi)
+    width_new = 2.0 * object_distance * np.tan(np.deg2rad(target_fov / 2.0))
+    width_full = 2.0 * object_distance * np.tan(np.deg2rad(current_fov / 2.0))
+    n_col_new = _matlab_round_scalar(scene_size[1] * width_new / width_full)
+    n_row_new = _matlab_round_scalar(n_col_new / aspect_ratio)
+    start_row = _matlab_round_scalar(center_rc[0] - (n_row_new / 2.0))
+    start_col = _matlab_round_scalar(center_rc[1] - (n_col_new / 2.0))
+    return np.array([start_col + 1, start_row + 1, n_col_new - 1, n_row_new - 1], dtype=int)
+
+
+ieCropRect = ie_crop_rect
+
+
+def ie_lut_digital(dac: Any, g_table: Any = 2.2) -> NDArray[np.float64]:
+    """Convert DAC values to linear RGB through a gamma table."""
+
+    dac_array = np.asarray(dac, dtype=float)
+    gamma = np.asarray(g_table, dtype=float)
+    if gamma.ndim == 0:
+        return np.power(dac_array, float(gamma))
+
+    if np.max(dac_array) > gamma.shape[0]:
+        raise ValueError("Max DAC value exceeds the row dimension of the gTable.")
+    if np.max(gamma) > 1.0 or np.min(gamma) < 0.0:
+        raise ValueError("gTable entries should be between 0 and 1.")
+
+    if dac_array.ndim == 2:
+        dac_array = dac_array[:, :, np.newaxis]
+        squeeze = True
+    elif dac_array.ndim == 3:
+        squeeze = False
+    else:
+        raise ValueError("ieLUTDigital expects a 2-D or 3-D DAC array.")
+
+    if gamma.ndim == 1:
+        gamma = gamma.reshape(-1, 1)
+    if gamma.shape[1] == 1:
+        gamma = np.repeat(gamma, dac_array.shape[2], axis=1)
+
+    output = np.zeros_like(dac_array, dtype=float)
+    indices = np.clip(dac_array.astype(int), 0, gamma.shape[0] - 1)
+    for channel in range(dac_array.shape[2]):
+        output[:, :, channel] = gamma[:, channel][indices[:, :, channel]]
+    return output[:, :, 0] if squeeze else output
+
+
+ieLUTDigital = ie_lut_digital
+
+
+def ie_lut_invert(in_lut: Any, n_steps: int = 2048) -> NDArray[np.float64]:
+    """Calculate inverse lookup tables from linear RGB to DAC values."""
+
+    lut_in = np.asarray(in_lut, dtype=float)
+    if lut_in.ndim == 1:
+        lut_in = lut_in.reshape(-1, 1)
+    if lut_in.ndim != 2 or lut_in.shape[0] == 0:
+        raise ValueError("input lut required")
+
+    steps = int(n_steps)
+    if steps <= 0:
+        raise ValueError("nSteps must be positive.")
+
+    n_in_steps = lut_in.shape[0]
+    y = np.arange(1.0, n_in_steps + 1.0, dtype=float)
+    iy = np.linspace(0.0, (steps - 1.0) / steps, steps, dtype=float)
+    lut = np.zeros((steps, lut_in.shape[1]), dtype=float)
+    for channel in range(lut_in.shape[1]):
+        x, indx = np.unique(lut_in[:, channel], return_index=True)
+        lut[:, channel] = np.interp(iy, x, y[indx])
+        lut[iy < np.min(x), channel] = 0.0
+        lut[iy > np.max(x), channel] = float(n_in_steps)
+    return np.clip(lut, 0.0, float(np.max(y)))
+
+
+ieLUTInvert = ie_lut_invert
+
+
+def ie_lut_linear(rgb: Any, g_table: Any = 2.2) -> NDArray[np.float64]:
+    """Convert linear RGB values through an inverse gamma table to DAC values."""
+
+    rgb_array = np.asarray(rgb, dtype=float)
+    gamma = np.asarray(g_table, dtype=float)
+    if gamma.ndim == 0:
+        return np.power(rgb_array, 1.0 / float(gamma))
+
+    if rgb_array.ndim == 2:
+        rgb_array = rgb_array[:, :, np.newaxis]
+        squeeze = True
+    elif rgb_array.ndim == 3:
+        squeeze = False
+    else:
+        raise ValueError("ieLUTLinear expects a 2-D or 3-D RGB array.")
+
+    if gamma.ndim == 1:
+        gamma = gamma.reshape(-1, 1)
+    if gamma.shape[1] == 1:
+        gamma = np.repeat(gamma, rgb_array.shape[2], axis=1)
+
+    t_max = gamma.shape[0]
+    scaled = np.floor(rgb_array * t_max) + 1
+    scaled[scaled > t_max] = t_max
+    scaled = np.clip(scaled.astype(int) - 1, 0, t_max - 1)
+
+    output = np.zeros_like(rgb_array, dtype=float)
+    for channel in range(rgb_array.shape[2]):
+        output[:, :, channel] = gamma[:, channel][scaled[:, :, channel]]
+    return output[:, :, 0] if squeeze else output
+
+
+ieLUTLinear = ie_lut_linear
+
+
 def image_linear_transform(image: Any, transform: Any) -> NDArray[np.float64]:
     """Apply a linear color transform to an image cube."""
 
