@@ -15364,6 +15364,35 @@ def test_printing_halftone_tutorial_workflow() -> None:
     assert np.kron(ht_sweep_b4.astype(float), np.ones((3, 3), dtype=float)).shape == (384, 384)
 
 
+def test_data_scratch_initialization_workflow(asset_store) -> None:
+    scene = scene_create("slanted bar", asset_store=asset_store)
+    oi = oi_create(asset_store=asset_store)
+    oi = oi_compute(oi, scene)
+
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_compute(sensor, oi)
+
+    ip = ip_create(asset_store=asset_store)
+    ip = ip_compute(ip, sensor)
+
+    oi_photons = np.asarray(oi_get(oi, "photons"), dtype=float)
+    sensor_volts = np.asarray(sensor_get(sensor, "volts"), dtype=float)
+    ip_rgb = np.asarray(ip_get(ip, "result"), dtype=float)
+
+    assert scene.name
+    assert oi.name == scene.name
+    assert oi_photons.ndim == 3 and oi_photons.size > 0
+    assert sensor_volts.ndim == 2 and sensor_volts.size > 0
+    assert sensor_volts.shape[0] <= oi_photons.shape[0]
+    assert sensor_volts.shape[1] <= oi_photons.shape[1]
+    assert ip_rgb.shape[:2] == sensor_volts.shape
+    assert ip_rgb.shape[2] == 3
+    assert float(np.mean(oi_photons)) > 0.0
+    assert float(np.mean(sensor_volts)) > 0.0
+    assert np.all(ip_rgb >= 0.0)
+    assert np.all(ip_rgb <= 1.0)
+
+
 def test_display_helper_compatibility_surface(asset_store) -> None:
     all_names = displayList(show=False, asset_store=asset_store)
     lcd_names = displayList(type="LCD", show=False, asset_store=asset_store)

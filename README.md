@@ -1731,3 +1731,8 @@ The `tutorials/printing` tail is now closed too: the halftoning walkthrough
 is backed by direct `HalfToneImage(...)` and `FloydSteinberg(...)`
 compatibility wrappers plus a focused printing tutorial regression over
 clustered-dot, Bayer, and error-diffusion output.
+The tiny `scripts/data` / `scripts/faces` tail is now cleaned up too: the
+scratch-data bootstrap script is covered by a focused headless
+`scene -> oi -> sensor -> ip` initialization regression, while the face
+detection demo is explicitly out of scope because the vendored upstream file
+immediately returns and depends on MATLAB Vision Toolbox UI behavior.

@@ -432,6 +432,16 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The printing tutorial is covered by the focused headless halftoning regression exercising `HalfToneImage(...)`, the Bayer-style threshold-cell workflow, and Floyd-Steinberg error diffusion.",
         "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
     },
+    "scripts/data/ieScratchData.m": {
+        "status": "parity",
+        "note": "The scratch-data bootstrap script is covered by the focused headless `scene -> oi -> sensor -> ip` initialization regression using default slanted-bar, optical-image, sensor, and IP objects.",
+        "module_hits": ["pyisetcam.scene", "pyisetcam.optics", "pyisetcam.sensor", "pyisetcam.ip"],
+    },
+    "scripts/faces/s_faceDetectionDemo.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file immediately prints a TODO and returns, and the remaining code depends on MATLAB Vision Toolbox face-detection UI workflows rather than a supported reusable headless ISETCam surface.",
+        "module_hits": [],
+    },
     "tutorials/camera/t_SystemSimulate.m": {
         "status": "parity",
         "note": "The end-to-end system tutorial is covered by the current headless `scene -> oi -> sensor -> ip` workflow regressions together with the camera-introduction regression and the existing scene/OI/sensor/IP compatibility surface.",

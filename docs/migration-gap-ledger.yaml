@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-03-24T20:59:11.302215+00:00",
+  "generated_at": "2026-03-24T21:11:49.003551+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 84,
-      "missing": 26,
-      "out_of_scope": 182,
-      "parity": 674,
+      "missing": 24,
+      "out_of_scope": 183,
+      "parity": 675,
       "partial": 407,
       "ported": 70
     },
@@ -20,18 +20,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 344,
+      "P1": 342,
       "P2": 173,
-      "P3": 926
+      "P3": 928
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
-        "missing": -1,
-        "out_of_scope": 0,
+        "missing": -2,
+        "out_of_scope": 1,
         "parity": 1,
-        "partial": -2,
-        "ported": 2
+        "partial": 0,
+        "ported": 0
       },
       "kind_counts": {
         "api": 0,
@@ -42,9 +42,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -3,
+        "P1": -2,
         "P2": 0,
-        "P3": 3
+        "P3": 2
       }
     },
     "family_summary": {
@@ -597,13 +597,12 @@
       "scripts/data": {
         "total": 2,
         "by_status": {
-          "missing": 1,
-          "parity": 1
+          "parity": 2
         },
         "by_kind": {
           "script": 2
         },
-        "highest_open_priority": "P1"
+        "highest_open_priority": "P3"
       },
       "scripts/development": {
         "total": 3,
@@ -628,12 +627,12 @@
       "scripts/faces": {
         "total": 1,
         "by_status": {
-          "missing": 1
+          "out_of_scope": 1
         },
         "by_kind": {
           "script": 1
         },
-        "highest_open_priority": "P1"
+        "highest_open_priority": "P3"
       },
       "scripts/gui": {
         "total": 2,
@@ -1072,23 +1071,6 @@
         }
       },
       {
-        "family": "scripts/data",
-        "open_entries": 1,
-        "highest_open_priority": "P1",
-        "by_status": {
-          "missing": 1,
-          "parity": 1
-        }
-      },
-      {
-        "family": "scripts/faces",
-        "open_entries": 1,
-        "highest_open_priority": "P1",
-        "by_status": {
-          "missing": 1
-        }
-      },
-      {
         "family": "data/sensor",
         "open_entries": 17,
         "highest_open_priority": "P2",
@@ -1112,6 +1094,24 @@
           "missing": 10,
           "out_of_scope": 1,
           "parity": 1
+        }
+      },
+      {
+        "family": "data/lights",
+        "open_entries": 8,
+        "highest_open_priority": "P2",
+        "by_status": {
+          "partial": 8
+        }
+      },
+      {
+        "family": "main",
+        "open_entries": 7,
+        "highest_open_priority": "P2",
+        "by_status": {
+          "headless_only": 4,
+          "out_of_scope": 3,
+          "partial": 3
         }
       }
     ],
@@ -9958,14 +9958,15 @@
       "upstream_path": "scripts/data/ieScratchData.m",
       "family": "scripts/data",
       "kind": "script",
-      "status": "missing",
-      "python_surface": "",
+      "status": "parity",
+      "python_surface": "pyisetcam.scene, pyisetcam.optics, pyisetcam.sensor, pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "No usable Python surface was detected for this upstream path.",
-      "priority": "P1"
+      "notes": "The scratch-data bootstrap script is covered by the focused headless `scene -> oi -> sensor -> ip` initialization regression using default slanted-bar, optical-image, sensor, and IP objects.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/data/s_daylights.m",
@@ -10066,14 +10067,14 @@
       "upstream_path": "scripts/faces/s_faceDetectionDemo.m",
       "family": "scripts/faces",
       "kind": "script",
-      "status": "missing",
+      "status": "out_of_scope",
       "python_surface": "",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "No usable Python surface was detected for this upstream path.",
-      "priority": "P1"
+      "notes": "The upstream file immediately prints a TODO and returns, and the remaining code depends on MATLAB Vision Toolbox face-detection UI workflows rather than a supported reusable headless ISETCam surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/gui/s_initFont.m",
