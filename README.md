@@ -188,7 +188,10 @@ tracks the legacy display introduction/rendering tutorials and the
 `s_displayCompare` / `s_displayReflectanceCtemp` / `s_displaySurfaceReflectance`
 script workflows as covered by the existing headless display-scene
 regressions, while treating `s_initSO.m` as session-only `vcSESSION`
-scaffolding outside the explicit-object migration target.
+scaffolding outside the explicit-object migration target. The same audit
+pass now also treats the remaining `scripts/development` scratch/tutorial
+files as out of scope because they are explicitly unfinished exploratory
+workflows rather than stable reusable MATLAB APIs.
 
 Run the initial metrics helpers:
 

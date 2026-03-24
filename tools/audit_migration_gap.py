@@ -357,6 +357,21 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is only an index listing for the metrics scripts and does not define a reusable headless API surface.",
         "module_hits": [],
     },
+    "scripts/development/s_sensorIRSimulation.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is explicitly marked `UNDER DEVELOPMENT` and depends on session/window-driven exploratory IR workflows rather than a supported reusable headless API surface.",
+        "module_hits": [],
+    },
+    "scripts/development/s_spectraNatural.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a scratch exploratory notebook-style script with no stable API contract, so it remains outside the supported headless migration target.",
+        "module_hits": [],
+    },
+    "scripts/development/s_stereoFundamentals.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is an unfinished figure-driven class tutorial marked as still not working, so it is treated as exploratory teaching code rather than actionable headless migration debt.",
+        "module_hits": [],
+    },
     "scripts/display/s_displayCompare.m": {
         "status": "parity",
         "note": "The display-comparison workflow is already covered by the current headless display/scene rendering surface and the existing display-driven `scene_from_file(...)` regression coverage across `OLED-Sony`, `LCD-Apple`, and `CRT-Dell`.",
