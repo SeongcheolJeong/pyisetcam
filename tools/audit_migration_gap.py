@@ -387,6 +387,21 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is an explicit tinker script for dead-leaves-style spectrum experiments rather than a supported reusable API surface.",
         "module_hits": [],
     },
+    "tutorials/image/t_ip.m": {
+        "status": "parity",
+        "note": "The introductory IP tutorial workflow is already covered by the current headless `scene -> oi -> sensor -> ip` regression path, including `MCC Optimized` sensor conversion, `gray world` illuminant correction, adaptive-Laplacian demosaic, and display-backed IP state.",
+        "module_hits": ["pyisetcam.ip", "pyisetcam.__init__", "pyisetcam.display"],
+    },
+    "tutorials/image/t_ipJPEGMonochrome.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a standalone educational JPEG/DCT tutorial built around the legacy `scripts/image/jpegFiles` teaching helpers rather than the ISET object pipeline, so it remains outside the supported headless migration target.",
+        "module_hits": [],
+    },
+    "tutorials/image/t_ipJPEGcolor.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a standalone educational JPEG color-compression tutorial built around the legacy `scripts/image/jpegFiles` teaching helpers rather than the ISET object pipeline, so it remains outside the supported headless migration target.",
+        "module_hits": [],
+    },
     "scripts/display/s_displayCompare.m": {
         "status": "parity",
         "note": "The display-comparison workflow is already covered by the current headless display/scene rendering surface and the existing display-driven `scene_from_file(...)` regression coverage across `OLED-Sony`, `LCD-Apple`, and `CRT-Dell`.",

@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-24T18:36:19.310190+00:00",
+  "generated_at": "2026-03-24T18:57:12.522878+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 84,
       "missing": 31,
-      "out_of_scope": 179,
-      "parity": 663,
-      "partial": 418,
+      "out_of_scope": 181,
+      "parity": 664,
+      "partial": 415,
       "ported": 68
     },
     "kind_counts": {
@@ -20,17 +20,17 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 360,
+      "P1": 357,
       "P2": 173,
-      "P3": 910
+      "P3": 913
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
-        "missing": -3,
-        "out_of_scope": 3,
-        "parity": 0,
-        "partial": 0,
+        "missing": 0,
+        "out_of_scope": 2,
+        "parity": 1,
+        "partial": -3,
         "ported": 0
       },
       "kind_counts": {
@@ -876,13 +876,13 @@
       "tutorials/image": {
         "total": 4,
         "by_status": {
-          "parity": 1,
-          "partial": 3
+          "out_of_scope": 2,
+          "parity": 2
         },
         "by_kind": {
           "tutorial": 4
         },
-        "highest_open_priority": "P1"
+        "highest_open_priority": "P3"
       },
       "tutorials/metrics": {
         "total": 2,
@@ -1088,15 +1088,6 @@
         }
       },
       {
-        "family": "tutorials/image",
-        "open_entries": 3,
-        "highest_open_priority": "P1",
-        "by_status": {
-          "parity": 1,
-          "partial": 3
-        }
-      },
-      {
         "family": "tutorials/color",
         "open_entries": 2,
         "highest_open_priority": "P1",
@@ -1112,6 +1103,14 @@
         "by_status": {
           "missing": 1,
           "parity": 1
+        }
+      },
+      {
+        "family": "scripts/faces",
+        "open_entries": 1,
+        "highest_open_priority": "P1",
+        "by_status": {
+          "missing": 1
         }
       }
     ],
@@ -14719,14 +14718,15 @@
       "upstream_path": "tutorials/image/t_ip.m",
       "family": "tutorials/image",
       "kind": "tutorial",
-      "status": "partial",
-      "python_surface": "pyisetcam.ip, pyisetcam.fileio",
+      "status": "parity",
+      "python_surface": "pyisetcam.ip, pyisetcam.fileio, pyisetcam.__init__, pyisetcam.display",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The introductory IP tutorial workflow is already covered by the current headless `scene -> oi -> sensor -> ip` regression path, including `MCC Optimized` sensor conversion, `gray world` illuminant correction, adaptive-Laplacian demosaic, and display-backed IP state.",
+      "priority": "P3"
     },
     {
       "upstream_path": "tutorials/image/t_ipDemosaic.m",
@@ -14746,27 +14746,27 @@
       "upstream_path": "tutorials/image/t_ipJPEGMonochrome.m",
       "family": "tutorials/image",
       "kind": "tutorial",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.ip, pyisetcam.fileio",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a standalone educational JPEG/DCT tutorial built around the legacy `scripts/image/jpegFiles` teaching helpers rather than the ISET object pipeline, so it remains outside the supported headless migration target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "tutorials/image/t_ipJPEGcolor.m",
       "family": "tutorials/image",
       "kind": "tutorial",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.ip, pyisetcam.fileio",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a standalone educational JPEG color-compression tutorial built around the legacy `scripts/image/jpegFiles` teaching helpers rather than the ISET object pipeline, so it remains outside the supported headless migration target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "tutorials/metrics/t_metricsColor.m",

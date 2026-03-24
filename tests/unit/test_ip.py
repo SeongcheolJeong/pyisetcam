@@ -24,6 +24,7 @@ from pyisetcam import (
     demosaicMultichannel,
     demosaicRCCC,
     displayRender,
+    display_get,
     faultyInsert,
     faultyList,
     ip2lightfield,
@@ -51,6 +52,8 @@ from pyisetcam import (
     oi_compute,
     oi_create,
     scene_create,
+    scene_get,
+    scene_set,
     sensor_compute,
     vcimageClearData,
     vcimageISOMTF,
@@ -634,6 +637,39 @@ def test_image_sensor_correction_preserves_2d_monochrome_input(asset_store) -> N
     assert np.allclose(corrected, img / np.max(img))
     assert sensor_transform.shape == (1, 1)
     assert np.allclose(np.asarray(ip_get(corrected_ip, "sensorspace"), dtype=float)[:, :, 0], img)
+
+
+def test_t_ip_tutorial_workflow_is_supported_headlessly(asset_store) -> None:
+    scene = scene_create("macbeth tungsten", asset_store=asset_store)
+    oi = oi_create(asset_store=asset_store)
+    sensor = sensor_set(sensor_create("default", asset_store=asset_store), "size", [340, 420])
+
+    fov = sensor_get(sensor, "fov", scene_get(scene, "distance"), oi)
+    scene = scene_set(scene, "fov", fov)
+    oi = oi_compute(oi, scene)
+    sensor = sensor_compute(sensor, oi)
+
+    ip = ip_set(ip_create(asset_store=asset_store), "name", "default")
+    ip = ip_set(ip, "internal cs", "XYZ")
+    ip = ip_set(ip, "conversion method sensor", "MCC Optimized")
+    xyz_ip = ip_compute(ip, sensor, asset_store=asset_store)
+
+    gray_world_ip = ip_set(xyz_ip, "illuminant correction method", "gray world")
+    gray_world_ip = ip_compute(gray_world_ip, sensor, asset_store=asset_store)
+
+    adaptive_ip = ip_set(gray_world_ip, "demosaic method", "Adaptive Laplacian")
+    adaptive_ip = ip_compute(adaptive_ip, sensor, asset_store=asset_store)
+
+    assert ip_get(xyz_ip, "name") == "default"
+    assert str(ip_get(xyz_ip, "internal cs")) == "XYZ"
+    assert str(ip_get(xyz_ip, "conversion method sensor")) == "MCC Optimized"
+    assert tuple(np.asarray(ip_get(xyz_ip, "result"), dtype=float).shape) == (340, 420, 3)
+    assert tuple(np.asarray(ip_get(gray_world_ip, "result"), dtype=float).shape) == (340, 420, 3)
+    assert tuple(np.asarray(ip_get(adaptive_ip, "result"), dtype=float).shape) == (340, 420, 3)
+    assert str(ip_get(gray_world_ip, "illuminant correction method")) == "gray world"
+    assert str(ip_get(adaptive_ip, "demosaic method")) == "adaptive laplacian"
+    assert np.asarray(ip_get(gray_world_ip, "illuminant correction transform"), dtype=float).shape == (3, 3)
+    assert display_get(ip_get(adaptive_ip, "display"), "dpi") > 0
 
 
 def test_image_illuminant_correction_matches_ip_compute_ics(asset_store) -> None:

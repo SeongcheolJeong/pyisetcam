@@ -194,7 +194,10 @@ files as out of scope because they are explicitly unfinished exploratory
 workflows rather than stable reusable MATLAB APIs. The adjacent
 `scripts/oneoverf` tinker/synthesis notebooks are now also treated as out
 of scope for the same reason: they are exploratory spectrum-analysis
-scripts, not stable reusable compute surfaces.
+scripts, not stable reusable compute surfaces. The image-tutorial audit now
+also treats the old standalone JPEG/DCT teaching walkthroughs as out of
+scope while tracking `t_ip.m` as covered by the current headless IP
+workflow regression surface.
 
 Run the initial metrics helpers:
 
