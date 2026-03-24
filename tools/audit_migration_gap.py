@@ -246,6 +246,26 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "GUI keypress handlers remain outside the headless migration target.",
         "module_hits": [],
     },
+    "camera/cameraFullReference.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB full-reference camera benchmark is covered by the Python `camera_full_reference(...)` / `cameraFullReference(...)` wrapper.",
+        "module_hits": ["pyisetcam.camera"],
+    },
+    "camera/cameraMoire.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is an exploratory figure-driven moire-analysis workflow with interactive plots rather than a reusable supported headless API surface.",
+        "module_hits": [],
+    },
+    "camera/cameraVSNR_SL.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB vSNR wrapper name is covered by the Python `camera_vsnr(...)` / `camera_vsnr_sl(...)` compatibility surface.",
+        "module_hits": ["pyisetcam.camera"],
+    },
+    "camera/cameraWindow.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file only opens MATLAB object windows and remains outside the headless migration target.",
+        "module_hits": [],
+    },
     "color/transforms/colorTransformMatrixCreate.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a script used to derive static transform matrices, not a reusable headless API surface.",

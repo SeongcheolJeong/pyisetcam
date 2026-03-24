@@ -8,6 +8,7 @@ from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy.signal import convolve2d
 
 from .assets import AssetStore, ie_read_spectra
 from .display import display_get
@@ -17,6 +18,7 @@ from .iso import iso12233, iso_find_slanted_bar
 from .metrics import delta_e_ab, iso_acutance, xyz_from_energy, xyz_to_lab
 from .optics import oi_clear_data, oi_compute, oi_create, oi_get, oi_set
 from .scene import Scene, scene_adjust_illuminant, scene_adjust_luminance, scene_create, scene_from_file, scene_get, scene_set
+from .scielab import scielab
 from .session import track_camera_session_state, track_session_object
 from .sensor import (
     _chart_rectangles,
@@ -38,6 +40,7 @@ from .utils import (
     param_format,
     rgb_to_xw_format,
     split_prefixed_parameter,
+    srgb_to_linear,
     xw_to_rgb_format,
     xyz_to_linear_srgb,
     xyz_to_srgb,
@@ -77,6 +80,16 @@ class CameraVSNRResult:
     ip: list[ImageProcessor]
     oi: OpticalImage
     sensor: Sensor
+
+
+@dataclass
+class CameraFullReferenceResult:
+    """Headless payload returned by camera_full_reference()."""
+
+    sceneNames: list[str]
+    meanLuminances: NDArray[np.float64]
+    scielab: NDArray[np.float64]
+    ssim: NDArray[np.float64]
 
 
 def _pixel_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
@@ -528,6 +541,114 @@ def camera_compute_sequence(
     return working, images
 
 
+def camera_full_reference(
+    camera: Camera,
+    scene_names: Any | None = None,
+    mean_luminances: Any | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> CameraFullReferenceResult:
+    """Compute MATLAB-style full-reference camera metrics without GUI output."""
+
+    store = _store(asset_store)
+    scene_list = list(scene_names) if isinstance(scene_names, (list, tuple)) else [scene_names]
+    if scene_names is None:
+        scene_list = ["StuffedAnimals_tungsten-hdrs"]
+
+    luminances = np.asarray(
+        [3.0, 6.0, 12.0, 25.0, 50.0, 100.0, 200.0, 400.0] if mean_luminances is None else mean_luminances,
+        dtype=float,
+    ).reshape(-1)
+    if luminances.size == 0:
+        raise ValueError("cameraFullReference requires one or more mean luminances.")
+
+    scielab_metric = np.zeros((len(scene_list), luminances.size), dtype=float)
+    ssim_metric = np.zeros_like(scielab_metric)
+    resolved_names: list[str] = []
+
+    for scene_index, scene_name in enumerate(scene_list):
+        source_scene = _camera_scene_input(scene_name, asset_store=store)
+        resolved_names.append(source_scene.name if source_scene.name else str(scene_name))
+        base_scene = scene_adjust_illuminant(source_scene, "D65.mat", asset_store=store)
+
+        oi = camera_get(camera, "oi")
+        sensor = camera_get(camera, "sensor")
+        scene_distance = float(scene_get(base_scene, "distance"))
+        fov = float(sensor_get(sensor, "fov", scene_distance, oi))
+        base_scene = scene_set(base_scene, "fov", 1.26 * fov)
+
+        for luminance_index, mean_luminance in enumerate(luminances):
+            working_scene = scene_adjust_luminance(base_scene.clone(), float(mean_luminance), asset_store=store)
+
+            working_camera, xyz_ideal = _camera_ideal_xyz(camera.clone(), working_scene, asset_store=store, session=session)
+            xyz_ideal = np.asarray(xyz_ideal, dtype=float)
+            xyz_ideal /= max(float(np.max(xyz_ideal)), 1.0e-12)
+
+            _, lrgb_ideal = _xyz_to_srgb_pair(xyz_ideal)
+            working_camera = camera_compute(working_camera, working_scene, asset_store=store, session=session)
+            lrgb_result = np.asarray(camera_get(working_camera, "image"), dtype=float)
+
+            mean_result = _camera_center_mean(lrgb_result)
+            mean_ideal = _camera_center_mean(lrgb_ideal)
+            if mean_result > 0.0:
+                lrgb_result = lrgb_result * (mean_ideal / mean_result)
+
+            xyz_ideal_cropped = _camera_crop_border(xyz_ideal)
+            lrgb_ideal_cropped = _camera_crop_border(lrgb_ideal)
+            lrgb_result_cropped = _camera_crop_border(lrgb_result)
+            target_shape = np.minimum(
+                np.asarray(xyz_ideal_cropped.shape[:2], dtype=int),
+                np.asarray(lrgb_result_cropped.shape[:2], dtype=int),
+            )
+            xyz_ideal_cropped = _center_crop_to_shape(xyz_ideal_cropped, target_shape)
+            lrgb_ideal_cropped = _center_crop_to_shape(lrgb_ideal_cropped, target_shape)
+            lrgb_result_cropped = _center_crop_to_shape(lrgb_result_cropped, target_shape)
+            srgb_ideal = linear_to_srgb(np.clip(lrgb_ideal_cropped, 0.0, 1.0))
+            srgb_result = linear_to_srgb(np.clip(lrgb_result_cropped, 0.0, 1.0))
+            xyz_result = _linear_srgb_to_xyz(np.asarray(srgb_to_linear(srgb_result), dtype=float))
+
+            white_point = np.asarray(scene_get(working_scene, "illuminant xyz"), dtype=float).reshape(-1)
+            white_point /= max(float(np.max(white_point)), 1.0e-12)
+            delta_e_image, _, _, _ = scielab(
+                xyz_ideal_cropped,
+                np.asarray(xyz_result, dtype=float),
+                white_point,
+                {"imageFormat": "xyz"},
+            )
+            scielab_metric[scene_index, luminance_index] = float(np.mean(np.asarray(delta_e_image, dtype=float), dtype=float))
+
+            gray_ideal = np.uint8(np.clip(_rgb_to_gray(srgb_ideal) * 255.0, 0.0, 255.0))
+            gray_result = np.uint8(np.clip(_rgb_to_gray(srgb_result) * 255.0, 0.0, 255.0))
+            ssim_metric[scene_index, luminance_index] = _ssim_index(gray_ideal, gray_result)
+
+    return CameraFullReferenceResult(
+        sceneNames=resolved_names,
+        meanLuminances=luminances,
+        scielab=scielab_metric,
+        ssim=ssim_metric,
+    )
+
+
+def camera_vsnr_sl(
+    camera: Camera,
+    light_levels: Any | None = None,
+    exposure_time: float = 0.01,
+    *,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> CameraVSNRResult:
+    """Legacy wrapper name for camera_vsnr()."""
+
+    return camera_vsnr(
+        camera,
+        light_levels,
+        exposure_time=exposure_time,
+        asset_store=asset_store,
+        session=session,
+    )
+
+
 def _matlab_round_scalar(value: float) -> int:
     value = float(value)
     if value >= 0.0:
@@ -599,6 +720,16 @@ def _middle_matrix(m: Any, sz: Any) -> np.ndarray:
     return np.asarray(data[row_min - 1 : row_max, col_min - 1 : col_max, ...], dtype=float)
 
 
+def _center_crop_to_shape(image: Any, shape: Any) -> np.ndarray:
+    data = np.asarray(image, dtype=float)
+    target = np.asarray(shape, dtype=int).reshape(-1)
+    rows = min(int(target[0]), int(data.shape[0]))
+    cols = min(int(target[1]), int(data.shape[1]))
+    row_start = max((int(data.shape[0]) - rows) // 2, 0)
+    col_start = max((int(data.shape[1]) - cols) // 2, 0)
+    return np.asarray(data[row_start : row_start + rows, col_start : col_start + cols, ...], dtype=float)
+
+
 def _default_vsnr_rect(ip: ImageProcessor) -> np.ndarray:
     size = np.asarray(ip_get(ip, "size"), dtype=int).reshape(-1)
     border = np.asarray([_matlab_round_scalar(0.1 * float(value)) for value in size[:2]], dtype=int)
@@ -655,6 +786,56 @@ def _linear_srgb_to_xyz(rgb: Any) -> np.ndarray:
     if rows is None or cols is None:
         return xyz
     return xw_to_rgb_format(xyz, rows, cols)
+
+
+def _rgb_to_gray(rgb: Any) -> np.ndarray:
+    rgb_array = np.asarray(rgb, dtype=float)
+    if rgb_array.ndim != 3 or rgb_array.shape[2] != 3:
+        raise ValueError("RGB data must be rows x cols x 3.")
+    weights = np.array([0.2989, 0.5870, 0.1140], dtype=float)
+    return np.tensordot(rgb_array, weights, axes=([2], [0]))
+
+
+def _gaussian_window(size: int = 11, sigma: float = 1.5) -> np.ndarray:
+    coords = np.arange(size, dtype=float) - ((size - 1) / 2.0)
+    kernel_1d = np.exp(-(coords * coords) / (2.0 * sigma * sigma))
+    kernel_1d /= np.sum(kernel_1d, dtype=float)
+    return np.outer(kernel_1d, kernel_1d)
+
+
+def _ssim_index(gray1: Any, gray2: Any, *, window_size: int = 11, sigma: float = 1.5) -> float:
+    first = np.asarray(gray1, dtype=float)
+    second = np.asarray(gray2, dtype=float)
+    if first.shape != second.shape or first.ndim != 2:
+        raise ValueError("SSIM expects same-shaped 2D images.")
+
+    min_dim = max(1, min(first.shape))
+    size = min(int(window_size), min_dim)
+    if size % 2 == 0:
+        size = max(1, size - 1)
+    window = _gaussian_window(size, sigma if size > 1 else 1.0)
+
+    mu1 = convolve2d(first, window, mode="same", boundary="symm")
+    mu2 = convolve2d(second, window, mode="same", boundary="symm")
+
+    mu1_sq = mu1 * mu1
+    mu2_sq = mu2 * mu2
+    mu1_mu2 = mu1 * mu2
+
+    sigma1_sq = convolve2d(first * first, window, mode="same", boundary="symm") - mu1_sq
+    sigma2_sq = convolve2d(second * second, window, mode="same", boundary="symm") - mu2_sq
+    sigma12 = convolve2d(first * second, window, mode="same", boundary="symm") - mu1_mu2
+
+    sigma1_sq = np.maximum(sigma1_sq, 0.0)
+    sigma2_sq = np.maximum(sigma2_sq, 0.0)
+
+    l_value = 255.0
+    c1 = (0.01 * l_value) ** 2
+    c2 = (0.03 * l_value) ** 2
+    numerator = (2.0 * mu1_mu2 + c1) * (2.0 * sigma12 + c2)
+    denominator = (mu1_sq + mu2_sq + c1) * (sigma1_sq + sigma2_sq + c2)
+    ssim_map = numerator / np.maximum(denominator, np.finfo(float).eps)
+    return float(np.mean(ssim_map, dtype=float))
 
 
 def _macbeth_ideal_xyz(
@@ -958,6 +1139,8 @@ def camera_vsnr(
 
 
 cameraColorAccuracy = camera_color_accuracy
+cameraFullReference = camera_full_reference
+cameraVSNR_SL = camera_vsnr_sl
 cameraVSNR = camera_vsnr
 macbethColorError = macbeth_color_error
 macbethCompareIdeal = macbeth_compare_ideal

@@ -28,10 +28,12 @@ from pyisetcam import (
     cameraComputeSequence,
     cameraComputesrgb,
     camera_create,
+    cameraFullReference,
     camera_get,
     camera_mtf,
     camera_set,
     camera_vsnr,
+    cameraVSNR_SL,
     chartPatchCompare,
     changeColorSpace,
     cct2sun,
@@ -8924,6 +8926,31 @@ def test_metrics_vsnr_script_workflow(asset_store) -> None:
     assert valid.size == 3
     assert np.all(valid > 0.0)
     assert np.all(np.diff(valid) > 0.0)
+
+
+def test_camera_legacy_full_reference_and_vsnr_alias(asset_store) -> None:
+    camera = camera_create(asset_store=asset_store)
+    camera = camera_set(camera, "sensor size", (48, 64))
+
+    scene_path = asset_store.resolve("data/images/multispectral/StuffedAnimals_tungsten-hdrs.mat")
+    reference = cameraFullReference(camera, [scene_path], [25.0], asset_store=asset_store)
+
+    assert len(reference.sceneNames) == 1
+    assert "StuffedAnimals_tungsten-hdrs" in reference.sceneNames[0]
+    assert reference.meanLuminances.shape == (1,)
+    assert reference.scielab.shape == (1, 1)
+    assert reference.ssim.shape == (1, 1)
+    assert np.isfinite(float(reference.scielab[0, 0]))
+    assert 0.0 <= float(reference.ssim[0, 0]) <= 1.0
+
+    levels = np.asarray([50.0, 100.0, 200.0], dtype=float)
+    expected = camera_vsnr(camera, levels, asset_store=asset_store)
+    legacy = cameraVSNR_SL(camera, levels, asset_store=asset_store)
+
+    assert np.array_equal(legacy.lightLevels, expected.lightLevels)
+    assert np.allclose(legacy.vSNR, expected.vSNR, equal_nan=True)
+    assert np.array_equal(legacy.rect, expected.rect)
+    assert np.allclose(legacy.eTime, expected.eTime)
 
 
 def test_run_python_case_supports_metrics_vsnr_parity_case(asset_store) -> None:

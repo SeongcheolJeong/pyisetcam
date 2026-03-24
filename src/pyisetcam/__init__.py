@@ -9,6 +9,7 @@ from .assets import (
     ie_read_spectra,
 )
 from .camera import (
+    CameraFullReferenceResult,
     CameraMTFResult,
     CameraVSNRResult,
     camera_acutance,
@@ -18,10 +19,12 @@ from .camera import (
     camera_compute_sequence,
     camera_compute_srgb,
     camera_create,
+    camera_full_reference,
     camera_get,
     camera_mtf,
     camera_set,
     camera_vsnr,
+    camera_vsnr_sl,
     macbeth_color_error,
     macbeth_compare_ideal,
 )
@@ -583,6 +586,7 @@ __all__ = [
     "AssetStore",
     "airy_disk",
     "Camera",
+    "CameraFullReferenceResult",
     "CameraMTFResult",
     "DEFAULT_UPSTREAM_SHA",
     "DEFAULT_UPSTREAM_TARBALL_SHA256",
@@ -603,10 +607,12 @@ __all__ = [
     "cameraClearData",
     "cameraColorAccuracy",
     "cameraCreate",
+    "cameraFullReference",
     "cameraGet",
     "cameraMTF",
     "cameraSet",
     "cameraVSNR",
+    "cameraVSNR_SL",
     "CameraVSNRResult",
     "camera_acutance",
     "camera_color_accuracy",
@@ -615,9 +621,11 @@ __all__ = [
     "camera_compute_sequence",
     "camera_compute_srgb",
     "camera_create",
+    "camera_full_reference",
     "camera_get",
     "camera_mtf",
     "camera_vsnr",
+    "camera_vsnr_sl",
     "macbethColorError",
     "macbeth_color_error",
     "macbethCompareIdeal",
@@ -2126,11 +2134,13 @@ cameraCompute = camera_compute
 cameraComputeSequence = camera_compute_sequence
 cameraComputesrgb = camera_compute_srgb
 cameraClearData = camera_clear_data
+cameraFullReference = camera_full_reference
 cameraGet = camera_get
 cameraMTF = camera_mtf
 cameraAcutance = camera_acutance
 cameraColorAccuracy = camera_color_accuracy
 cameraVSNR = camera_vsnr
+cameraVSNR_SL = camera_vsnr_sl
 cameraSet = camera_set
 macbethColorError = macbeth_color_error
 macbethCompareIdeal = macbeth_compare_ideal
