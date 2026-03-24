@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-24T19:45:25.115657+00:00",
+  "generated_at": "2026-03-24T20:14:37.606558+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -7,8 +7,8 @@
       "headless_only": 84,
       "missing": 27,
       "out_of_scope": 182,
-      "parity": 669,
-      "partial": 413,
+      "parity": 673,
+      "partial": 409,
       "ported": 68
     },
     "kind_counts": {
@@ -20,17 +20,17 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 351,
+      "P1": 347,
       "P2": 173,
-      "P3": 919
+      "P3": 923
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
-        "missing": -4,
-        "out_of_scope": 1,
-        "parity": 3,
-        "partial": 0,
+        "missing": 0,
+        "out_of_scope": 0,
+        "parity": 4,
+        "partial": -4,
         "ported": 0
       },
       "kind_counts": {
@@ -824,13 +824,12 @@
       "tutorials/camera": {
         "total": 5,
         "by_status": {
-          "parity": 1,
-          "partial": 4
+          "parity": 5
         },
         "by_kind": {
           "tutorial": 5
         },
-        "highest_open_priority": "P1"
+        "highest_open_priority": "P3"
       },
       "tutorials/code": {
         "total": 4,
@@ -1071,15 +1070,6 @@
         }
       },
       {
-        "family": "tutorials/camera",
-        "open_entries": 4,
-        "highest_open_priority": "P1",
-        "by_status": {
-          "parity": 1,
-          "partial": 4
-        }
-      },
-      {
         "family": "scripts/data",
         "open_entries": 1,
         "highest_open_priority": "P1",
@@ -1110,6 +1100,14 @@
         "highest_open_priority": "P2",
         "by_status": {
           "partial": 17
+        }
+      },
+      {
+        "family": "data/human",
+        "open_entries": 13,
+        "highest_open_priority": "P2",
+        "by_status": {
+          "partial": 13
         }
       }
     ],
@@ -1167,7 +1165,7 @@
         "not_implemented_error_sites": 0
       },
       "optics": {
-        "unsupported_option_error_sites": 26,
+        "unsupported_option_error_sites": 27,
         "not_implemented_error_sites": 0
       },
       "parity": {
@@ -14491,27 +14489,29 @@
       "upstream_path": "tutorials/camera/t_SystemSimulate.m",
       "family": "tutorials/camera",
       "kind": "tutorial",
-      "status": "partial",
-      "python_surface": "pyisetcam.camera",
+      "status": "parity",
+      "python_surface": "pyisetcam.camera, pyisetcam.scene, pyisetcam.optics, pyisetcam.sensor, pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The end-to-end system tutorial is covered by the current headless `scene -> oi -> sensor -> ip` workflow regressions together with the camera-introduction regression and the existing scene/OI/sensor/IP compatibility surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "tutorials/camera/t_cameraAntiAliasing.m",
       "family": "tutorials/camera",
       "kind": "tutorial",
-      "status": "partial",
-      "python_surface": "pyisetcam.camera",
+      "status": "parity",
+      "python_surface": "pyisetcam.camera, pyisetcam.scene, pyisetcam.optics, pyisetcam.sensor, pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The anti-alias tutorial is covered by the headless frequency-orientation camera regression plus the underlying `oi_diffuser(...)` and `oiBirefringentDiffuser(...)` compatibility coverage, including diffuser replay through `oi_compute(...)`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "tutorials/camera/t_cameraCompute.m",
@@ -14531,27 +14531,29 @@
       "upstream_path": "tutorials/camera/t_cameraIntroduction.m",
       "family": "tutorials/camera",
       "kind": "tutorial",
-      "status": "partial",
-      "python_surface": "pyisetcam.camera",
+      "status": "parity",
+      "python_surface": "pyisetcam.camera, pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The camera-introduction tutorial is covered by the current `camera_create/get/set/compute(...)` regression surface, including direct `cameraGet(..., 'ip data srgb')` access and compute replay starting from `scene`, `oi`, and `sensor`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "tutorials/camera/t_cameraNoise.m",
       "family": "tutorials/camera",
       "kind": "tutorial",
-      "status": "partial",
-      "python_surface": "pyisetcam.camera",
+      "status": "parity",
+      "python_surface": "pyisetcam.camera, pyisetcam.scene, pyisetcam.display",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The camera-noise tutorial is covered by the seeded headless camera-noise regression, including `noise flag` control, luminance changes, and the default camera pipeline on an RGB scene file.",
+      "priority": "P3"
     },
     {
       "upstream_path": "tutorials/code/t_codeObjects.m",

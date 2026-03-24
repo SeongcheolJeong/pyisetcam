@@ -8774,6 +8774,17 @@ def oi_compute(
         computed.fields["psf_struct"] = psf_struct
         _sync_psf_metadata_fields(computed)
     computed.data["photons"] = result
+    if model != "raytrace":
+        diffuser_method = param_format(computed.fields.get("diffuser_method", "skip"))
+        if diffuser_method == "blur":
+            blur_m = float(computed.fields.get("diffuser_blur_m", 0.0))
+            if blur_m > 0.0:
+                computed, _, _ = oi_diffuser(computed, blur_m * 1e6)
+        elif diffuser_method == "birefringent":
+            displacement_um = float(computed.fields.get("sample_spacing_m", output_sample_spacing_m)) * 1e6
+            computed, _ = oi_birefringent_diffuser(computed, displacement_um)
+        elif diffuser_method != "skip":
+            raise UnsupportedOptionError("oiCompute", computed.fields.get("diffuser_method", diffuser_method))
     if pixel_size is not None:
         computed = _oi_spatial_resample(computed, float(pixel_size), method="linear")
         computed.fields["sample_spacing_m"] = float(pixel_size)

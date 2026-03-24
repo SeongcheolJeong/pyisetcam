@@ -15193,6 +15193,111 @@ def test_code_rendering_tutorial_workflow(asset_store) -> None:
     assert np.all(cool_srgb <= 1.0)
 
 
+def test_camera_introduction_tutorial_workflow(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    scene = scene_set(scene, "fov", 8.0)
+
+    camera = camera_create(asset_store=asset_store)
+    camera = camera_compute(camera, scene, asset_store=asset_store)
+    ip = camera_get(camera, "ip")
+    srgb_default = np.asarray(camera_get(camera, "ip data srgb"), dtype=float)
+
+    camera = camera_set(camera, "optics fnumber", 16.0)
+    camera = camera_compute(camera, scene, asset_store=asset_store)
+    srgb_stopped = np.asarray(camera_get(camera, "ip data srgb"), dtype=float)
+
+    camera = camera_set(camera, "ip illuminant correction method", "gray world")
+    camera = camera_compute(camera, scene, asset_store=asset_store)
+    srgb_gray = np.asarray(camera_get(camera, "ip data srgb"), dtype=float)
+
+    camera_from_oi = camera_compute(camera, "oi", asset_store=asset_store)
+    srgb_from_oi = np.asarray(camera_get(camera_from_oi, "ip data srgb"), dtype=float)
+    camera_from_sensor = camera_compute(camera_from_oi, "sensor", asset_store=asset_store)
+    srgb_from_sensor = np.asarray(camera_get(camera_from_sensor, "ip data srgb"), dtype=float)
+
+    assert srgb_default.shape == srgb_stopped.shape == srgb_gray.shape
+    assert srgb_default.shape[2] == 3
+    assert np.allclose(np.asarray(ip_get(ip, "data srgb"), dtype=float), srgb_default, atol=1e-12, rtol=1e-12)
+    assert not np.allclose(srgb_default, srgb_stopped)
+    assert not np.allclose(srgb_stopped, srgb_gray)
+    assert np.allclose(srgb_gray, srgb_from_oi, atol=1e-12, rtol=1e-12)
+    assert np.allclose(srgb_gray, srgb_from_sensor, atol=1e-12, rtol=1e-12)
+
+
+def test_camera_antialias_and_noise_tutorial_workflows(asset_store) -> None:
+    aa_scene = scene_create("freq orient", 512, asset_store=asset_store)
+    aa_scene = scene_set(aa_scene, "fov", 6.0)
+
+    oi_base = oi_create(asset_store=asset_store)
+    oi_base = oi_set(oi_base, "optics fnumber", 2.0)
+    oi_base = oi_compute(oi_base, aa_scene)
+
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "pixel size constant fill factor", [1.5e-6, 1.5e-6])
+    sensor = sensor_set_size_to_fov(sensor, 5.0, oi_base)
+    pixel_size = float(np.asarray(sensor_get(sensor, "pixel size"), dtype=float).reshape(-1)[0])
+
+    def _ip_gray_from_oi(current_oi):
+        current_sensor = sensor_compute(sensor.clone(), current_oi, seed=0)
+        current_ip = ip_compute(ip_create(asset_store=asset_store), current_sensor)
+        current_rgb = np.asarray(ip_get(current_ip, "result"), dtype=float)
+        current_gray = np.mean(current_rgb, axis=2)
+        return current_gray
+
+    base_gray = _ip_gray_from_oi(oi_base)
+
+    oi_blur = oi_set(oi_base.clone(), "diffuser method", "blur")
+    oi_blur = oi_set(oi_blur, "diffuser blur", pixel_size)
+    oi_blur = oi_compute(oi_blur, aa_scene)
+    blur_gray = _ip_gray_from_oi(oi_blur)
+
+    oi_biref = oi_set(oi_base.clone(), "diffuser method", "birefringent")
+    oi_biref = oi_compute(oi_biref, aa_scene)
+    biref_gray = _ip_gray_from_oi(oi_biref)
+
+    base_grad = float(np.mean(np.abs(np.diff(base_gray, axis=1))))
+    blur_grad = float(np.mean(np.abs(np.diff(blur_gray, axis=1))))
+    biref_grad = float(np.mean(np.abs(np.diff(biref_gray, axis=1))))
+
+    assert base_gray.shape == blur_gray.shape == biref_gray.shape
+    assert blur_grad < base_grad
+    assert biref_grad < base_grad
+    assert not np.allclose(base_gray, blur_gray)
+    assert not np.allclose(base_gray, biref_gray)
+
+    display = display_create(asset_store=asset_store)
+    noise_scene = scene_from_file("faceMale.jpg", "rgb", None, display, asset_store=asset_store)
+    low_noise_scene = scene_adjust_luminance(noise_scene.clone(), 5.0, asset_store=asset_store)
+    bright_noise_scene = scene_adjust_luminance(noise_scene.clone(), 100.0, asset_store=asset_store)
+
+    base_camera = camera_create(asset_store=asset_store)
+    base_camera = camera_set(base_camera, "optics fnumber", 2.0)
+    base_camera = camera_set(base_camera, "sensor exp time", 0.01)
+
+    camera_noiseless = camera_set(base_camera.clone(), "sensor noise flag", 0)
+    camera_noiseless = camera_compute(camera_noiseless, bright_noise_scene, asset_store=asset_store)
+    noiseless_rgb = np.asarray(camera_get(camera_noiseless, "ip data srgb"), dtype=float)
+
+    camera_photon = camera_set(base_camera.clone(), "sensor noise flag", 1)
+    camera_photon = camera_set(camera_photon, "sensor noise seed", 7)
+    camera_photon = camera_compute(camera_photon, low_noise_scene, asset_store=asset_store)
+    photon_rgb = np.asarray(camera_get(camera_photon, "ip data srgb"), dtype=float)
+
+    camera_all = camera_set(base_camera.clone(), "sensor noise flag", 2)
+    camera_all = camera_set(camera_all, "sensor noise seed", 7)
+    camera_all = camera_set(camera_all, "pixel read noise volts", 0.0)
+    camera_all = camera_set(camera_all, "pixel dark voltage", 0.0)
+    camera_all = camera_set(camera_all, "sensor dsnu level", 0.0)
+    camera_all = camera_set(camera_all, "sensor prnu level", 0.0)
+    camera_all = camera_compute(camera_all, bright_noise_scene, asset_store=asset_store)
+    all_noise_rgb = np.asarray(camera_get(camera_all, "ip data srgb"), dtype=float)
+
+    assert noiseless_rgb.shape == photon_rgb.shape == all_noise_rgb.shape
+    assert float(np.mean(photon_rgb)) < float(np.mean(noiseless_rgb))
+    assert float(np.mean(np.abs(all_noise_rgb - noiseless_rgb))) > 1e-4
+    assert float(np.mean(np.abs(photon_rgb - noiseless_rgb))) > 1e-4
+
+
 def test_display_helper_compatibility_surface(asset_store) -> None:
     all_names = displayList(show=False, asset_store=asset_store)
     lcd_names = displayList(type="LCD", show=False, asset_store=asset_store)

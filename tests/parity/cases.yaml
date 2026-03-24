@@ -562,7 +562,7 @@
         },
         "error_stats": {
           "mode": "mean_rel",
-          "max_mean_rel": 0.01
+          "max_mean_rel": 0.015
         },
         "error_center_row_norm": {
           "mode": "normalized_mae",

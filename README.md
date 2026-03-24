@@ -1722,3 +1722,8 @@ walkthrough is now backed by a focused headless regression, the
 `vcSESSION` object-database tutorials are counted against the existing
 session compatibility layer, and the old `startup.m` path-management note
 is explicitly out of scope.
+The `tutorials/camera` family is now closed too: the camera introduction,
+noise, anti-alias, and full system walkthroughs are tracked through
+focused headless camera regressions plus a small diffuser fix that now
+replays blur and birefringent anti-alias filters through non-raytrace
+`oi_compute(...)`.

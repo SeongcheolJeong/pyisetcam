@@ -417,6 +417,26 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is a deprecated MATLAB path-management note about `startup.m`, not a reusable supported headless API surface.",
         "module_hits": [],
     },
+    "tutorials/camera/t_SystemSimulate.m": {
+        "status": "parity",
+        "note": "The end-to-end system tutorial is covered by the current headless `scene -> oi -> sensor -> ip` workflow regressions together with the camera-introduction regression and the existing scene/OI/sensor/IP compatibility surface.",
+        "module_hits": ["pyisetcam.scene", "pyisetcam.optics", "pyisetcam.sensor", "pyisetcam.ip", "pyisetcam.camera"],
+    },
+    "tutorials/camera/t_cameraAntiAliasing.m": {
+        "status": "parity",
+        "note": "The anti-alias tutorial is covered by the headless frequency-orientation camera regression plus the underlying `oi_diffuser(...)` and `oiBirefringentDiffuser(...)` compatibility coverage, including diffuser replay through `oi_compute(...)`.",
+        "module_hits": ["pyisetcam.scene", "pyisetcam.optics", "pyisetcam.sensor", "pyisetcam.ip"],
+    },
+    "tutorials/camera/t_cameraIntroduction.m": {
+        "status": "parity",
+        "note": "The camera-introduction tutorial is covered by the current `camera_create/get/set/compute(...)` regression surface, including direct `cameraGet(..., 'ip data srgb')` access and compute replay starting from `scene`, `oi`, and `sensor`.",
+        "module_hits": ["pyisetcam.camera", "pyisetcam.ip"],
+    },
+    "tutorials/camera/t_cameraNoise.m": {
+        "status": "parity",
+        "note": "The camera-noise tutorial is covered by the seeded headless camera-noise regression, including `noise flag` control, luminance changes, and the default camera pipeline on an RGB scene file.",
+        "module_hits": ["pyisetcam.camera", "pyisetcam.scene", "pyisetcam.display"],
+    },
     "tutorials/image/t_ip.m": {
         "status": "parity",
         "note": "The introductory IP tutorial workflow is already covered by the current headless `scene -> oi -> sensor -> ip` regression path, including `MCC Optimized` sensor conversion, `gray world` illuminant correction, adaptive-Laplacian demosaic, and display-backed IP state.",
