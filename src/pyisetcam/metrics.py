@@ -32,6 +32,22 @@ def _paired_arrays(reference: Any, actual: Any) -> tuple[NDArray[np.float64], ND
     return reference_array, actual_array
 
 
+def _paired_color_vectors(
+    reference: Any,
+    actual: Any,
+    *,
+    name: str,
+) -> tuple[NDArray[np.float64], NDArray[np.float64], tuple[int, ...]]:
+    reference_array, actual_array = _paired_arrays(reference, actual)
+    if reference_array.ndim < 2 or reference_array.shape[-1] != 3:
+        raise ValueError(f"{name} inputs must have a trailing dimension of size 3.")
+    return (
+        reference_array.reshape(-1, 3),
+        actual_array.reshape(-1, 3),
+        reference_array.shape[:-1],
+    )
+
+
 def _default_wave(length: int) -> NDArray[np.float64]:
     if int(length) != int(DEFAULT_WAVE.size):
         raise ValueError("wave must be provided when SPD length does not match DEFAULT_WAVE.")
@@ -178,6 +194,159 @@ def delta_e_ab(
     if normalized_version in {"2000", "00", "cie2000", "ciede2000"}:
         return np.asarray(deltaE_ciede2000(lab1, lab2), dtype=float)
     raise UnsupportedOptionError("deltaEab", delta_e_version)
+
+
+def delta_e_2000(
+    lab_std: Any,
+    lab_sample: Any,
+    klch: Any | None = None,
+) -> tuple[NDArray[np.float64], dict[str, NDArray[np.float64]]]:
+    """Legacy MATLAB deltaE2000() compatibility wrapper."""
+
+    lab_std_flat, lab_sample_flat, out_shape = _paired_color_vectors(lab_std, lab_sample, name="deltaE2000")
+    if klch is None:
+        kl, kc, kh = 1.0, 1.0, 1.0
+    else:
+        weights = np.asarray(klch, dtype=float).reshape(-1)
+        if weights.size != 3:
+            raise ValueError("deltaE2000 requires KLCH to be a three-element vector.")
+        kl, kc, kh = (float(weights[0]), float(weights[1]), float(weights[2]))
+
+    l_std = lab_std_flat[:, 0]
+    a_std = lab_std_flat[:, 1]
+    b_std = lab_std_flat[:, 2]
+    c_std = np.sqrt(a_std**2 + b_std**2)
+
+    l_sample = lab_sample_flat[:, 0]
+    a_sample = lab_sample_flat[:, 1]
+    b_sample = lab_sample_flat[:, 2]
+    c_sample = np.sqrt(a_sample**2 + b_sample**2)
+
+    c_mean = (c_std + c_sample) / 2.0
+    g = 0.5 * (1.0 - np.sqrt((c_mean**7) / np.maximum((c_mean**7) + (25.0**7), 1.0e-12)))
+
+    a_std_prime = (1.0 + g) * a_std
+    a_sample_prime = (1.0 + g) * a_sample
+    c_std_prime = np.sqrt(a_std_prime**2 + b_std**2)
+    c_sample_prime = np.sqrt(a_sample_prime**2 + b_sample**2)
+    c_prod = c_std_prime * c_sample_prime
+    zero_chroma = c_prod == 0.0
+
+    h_std_prime = np.arctan2(b_std, a_std_prime)
+    h_std_prime = h_std_prime + (2.0 * np.pi * (h_std_prime < 0.0))
+    h_std_prime[(np.abs(a_std_prime) + np.abs(b_std)) == 0.0] = 0.0
+
+    h_sample_prime = np.arctan2(b_sample, a_sample_prime)
+    h_sample_prime = h_sample_prime + (2.0 * np.pi * (h_sample_prime < 0.0))
+    h_sample_prime[(np.abs(a_sample_prime) + np.abs(b_sample)) == 0.0] = 0.0
+
+    delta_l = l_sample - l_std
+    delta_c = c_sample_prime - c_std_prime
+
+    delta_h_prime = h_sample_prime - h_std_prime
+    delta_h_prime = delta_h_prime - (2.0 * np.pi * (delta_h_prime > np.pi))
+    delta_h_prime = delta_h_prime + (2.0 * np.pi * (delta_h_prime < -np.pi))
+    delta_h_prime[zero_chroma] = 0.0
+    delta_h = 2.0 * np.sqrt(c_prod) * np.sin(delta_h_prime / 2.0)
+
+    l_prime = (l_sample + l_std) / 2.0
+    c_prime = (c_std_prime + c_sample_prime) / 2.0
+    h_prime = (h_std_prime + h_sample_prime) / 2.0
+    h_prime = h_prime - ((np.abs(h_std_prime - h_sample_prime) > np.pi) * np.pi)
+    h_prime = h_prime + ((h_prime < 0.0) * 2.0 * np.pi)
+    h_prime[zero_chroma] = h_sample_prime[zero_chroma] + h_std_prime[zero_chroma]
+
+    lp_minus_50_sq = (l_prime - 50.0) ** 2
+    s_l = 1.0 + (0.015 * lp_minus_50_sq / np.sqrt(20.0 + lp_minus_50_sq))
+    s_c = 1.0 + (0.045 * c_prime)
+    t = (
+        1.0
+        - 0.17 * np.cos(h_prime - (np.pi / 6.0))
+        + 0.24 * np.cos(2.0 * h_prime)
+        + 0.32 * np.cos((3.0 * h_prime) + (np.pi / 30.0))
+        - 0.20 * np.cos((4.0 * h_prime) - (63.0 * np.pi / 180.0))
+    )
+    s_h = 1.0 + (0.015 * c_prime * t)
+    delta_theta = (30.0 * np.pi / 180.0) * np.exp(-(((180.0 / np.pi * h_prime) - 275.0) / 25.0) ** 2)
+    r_c = 2.0 * np.sqrt((c_prime**7) / np.maximum((c_prime**7) + (25.0**7), 1.0e-12))
+    r_t = -np.sin(2.0 * delta_theta) * r_c
+
+    d_l = delta_l / (kl * s_l)
+    d_c = delta_c / (kc * s_c)
+    d_h = delta_h / (kh * s_h)
+    interaction = r_t * d_c * d_h
+    delta_e = np.sqrt(np.maximum((d_l**2) + (d_c**2) + (d_h**2) + interaction, 0.0))
+
+    reshaped_delta_e = np.asarray(delta_e, dtype=float).reshape(out_shape)
+    components = {
+        "dL": np.asarray(d_l, dtype=float).reshape(out_shape),
+        "dC": np.asarray(d_c, dtype=float).reshape(out_shape),
+        "dH": np.asarray(d_h, dtype=float).reshape(out_shape),
+        "RT": np.asarray(interaction, dtype=float).reshape(out_shape),
+    }
+    return reshaped_delta_e, components
+
+
+def delta_e_94(
+    lab1: Any,
+    lab2: Any,
+    k: Any | None = None,
+) -> tuple[NDArray[np.float64], dict[str, NDArray[np.float64]]]:
+    """Legacy MATLAB deltaE94() compatibility wrapper."""
+
+    lab1_flat, lab2_flat, out_shape = _paired_color_vectors(lab1, lab2, name="deltaE94")
+    if k is None:
+        k_l, k_c, k_h = 1.0, 1.0, 1.0
+    else:
+        weights = np.asarray(k, dtype=float).reshape(-1)
+        if weights.size != 3:
+            raise ValueError("deltaE94 requires k to be a three-element vector.")
+        k_l, k_c, k_h = (float(weights[0]), float(weights[1]), float(weights[2]))
+
+    c_ab1 = np.sqrt(lab1_flat[:, 1] ** 2 + lab1_flat[:, 2] ** 2)
+    c_ab2 = np.sqrt(lab2_flat[:, 1] ** 2 + lab2_flat[:, 2] ** 2)
+    delta_c = c_ab1 - c_ab2
+    delta_l = lab1_flat[:, 0] - lab2_flat[:, 0]
+    delta_e_76 = np.sqrt(np.sum((lab1_flat - lab2_flat) ** 2, axis=1))
+    delta_h_sq = np.maximum((delta_e_76**2) - (delta_l**2) - (delta_c**2), 0.0)
+    delta_h = np.sqrt(delta_h_sq)
+
+    s_l = np.ones_like(c_ab1, dtype=float)
+    s_c = 1.0 + (0.045 * c_ab1)
+    s_h = 1.0 + (0.015 * c_ab1)
+
+    d_l = delta_l / (s_l * k_l)
+    d_c = delta_c / (s_c * k_c)
+    d_h = delta_h / (s_h * k_h)
+    delta_e = np.sqrt(np.maximum((d_l**2) + (d_c**2) + (d_h**2), 0.0))
+
+    reshaped_delta_e = np.asarray(delta_e, dtype=float).reshape(out_shape)
+    components = {
+        "dL": np.asarray(delta_l / s_l, dtype=float).reshape(out_shape),
+        "dC": np.asarray(delta_c / s_c, dtype=float).reshape(out_shape),
+        "dH": np.asarray(delta_h / s_h, dtype=float).reshape(out_shape),
+    }
+    return reshaped_delta_e, components
+
+
+def delta_e_uv(
+    xyz1: Any,
+    xyz2: Any,
+    white_point: Any,
+) -> NDArray[np.float64]:
+    """Legacy MATLAB deltaEuv() compatibility wrapper."""
+
+    xyz1_array, xyz2_array = _paired_arrays(xyz1, xyz2)
+    if xyz1_array.ndim < 2 or xyz1_array.shape[-1] != 3:
+        raise ValueError("deltaEuv expects XYZ inputs with a trailing dimension of size 3.")
+
+    if isinstance(white_point, (list, tuple)) and len(white_point) == 2:
+        luv1 = xyz_to_luv(xyz1_array, white_point[0])
+        luv2 = xyz_to_luv(xyz2_array, white_point[1])
+    else:
+        luv1 = xyz_to_luv(xyz1_array, white_point)
+        luv2 = xyz_to_luv(xyz2_array, white_point)
+    return np.sqrt(np.sum((luv1 - luv2) ** 2, axis=-1))
 
 
 def spectral_angle(spd1: Any, spd2: Any, *, degrees: bool = True) -> float:
@@ -976,6 +1145,9 @@ ieXYZFromEnergy = xyz_from_energy
 ieXYZ2LAB = xyz_to_lab
 xyz2luv = xyz_to_luv
 deltaEab = delta_e_ab
+deltaE2000 = delta_e_2000
+deltaE94 = delta_e_94
+deltaEuv = delta_e_uv
 iePSNR = peak_signal_to_noise_ratio
 ieSQRI = ie_sqri
 metricsCamera = metrics_camera

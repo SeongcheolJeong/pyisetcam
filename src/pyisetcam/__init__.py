@@ -149,6 +149,9 @@ from .metrics import (
     comparison_metrics,
     correlated_color_temperature,
     delta_e_ab,
+    delta_e_2000,
+    delta_e_94,
+    delta_e_uv,
     exposure_value,
     iePSNR,
     ie_sqri,
@@ -716,11 +719,17 @@ __all__ = [
     "comparison_metrics",
     "correlated_color_temperature",
     "deltaEab",
+    "deltaE2000",
+    "deltaE94",
+    "deltaEuv",
     "dlCore",
     "dlMTF",
     "dl_core",
     "dl_mtf",
     "delta_e_ab",
+    "delta_e_2000",
+    "delta_e_94",
+    "delta_e_uv",
     "ie_lab_to_xyz",
     "ieLAB2XYZ",
     "ieLuminance2Radiance",
@@ -2065,6 +2074,9 @@ exposureValue = exposure_value
 photometricExposure = photometric_exposure
 chartPatchCompare = chart_patch_compare
 deltaEab = delta_e_ab
+deltaE2000 = delta_e_2000
+deltaE94 = delta_e_94
+deltaEuv = delta_e_uv
 srgbParameters = srgb_parameters
 adobergbParameters = adobergb_parameters
 srgb2lrgb = srgb_to_lrgb

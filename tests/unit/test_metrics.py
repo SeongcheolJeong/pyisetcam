@@ -8,6 +8,9 @@ from pyisetcam import (
     cct_from_uv,
     comparison_metrics,
     correlated_color_temperature,
+    deltaE2000,
+    deltaE94,
+    deltaEuv,
     delta_e_ab,
     metrics_spd,
     mired_difference,
@@ -60,6 +63,58 @@ def test_delta_e_ab_is_zero_for_identical_xyz() -> None:
     xyz = np.array([20.0, 30.0, 15.0], dtype=float)
 
     assert np.isclose(delta_e_ab(xyz, xyz, white), 0.0)
+
+
+def test_delta_e_2000_matches_skimage_and_reports_components() -> None:
+    lab_std = np.array([[50.0, 2.6772, -79.7751], [50.0, 0.0, 0.0]], dtype=float)
+    lab_sample = np.array([[50.0, 0.0, -82.7485], [50.0, -1.0, 2.0]], dtype=float)
+
+    delta_e, components = deltaE2000(lab_std, lab_sample)
+
+    from skimage.color import deltaE_ciede2000
+
+    expected = deltaE_ciede2000(lab_std, lab_sample)
+    np.testing.assert_allclose(delta_e, expected, rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(
+        delta_e**2,
+        components["dL"] ** 2 + components["dC"] ** 2 + components["dH"] ** 2 + components["RT"],
+        rtol=1e-10,
+        atol=1e-10,
+    )
+
+
+def test_delta_e_94_matches_skimage_and_reports_components() -> None:
+    lab1 = np.array([[50.0, 20.0, 30.0], [65.0, -5.0, 15.0]], dtype=float)
+    lab2 = np.array([[48.0, 18.0, 28.0], [60.0, -2.0, 10.0]], dtype=float)
+
+    delta_e, components = deltaE94(lab1, lab2)
+
+    from skimage.color import deltaE_ciede94
+
+    expected = deltaE_ciede94(lab1, lab2)
+    np.testing.assert_allclose(delta_e, expected, rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(
+        delta_e**2,
+        components["dL"] ** 2 + components["dC"] ** 2 + components["dH"] ** 2,
+        rtol=1e-10,
+        atol=1e-10,
+    )
+
+
+def test_delta_e_uv_accepts_single_and_pair_white_points() -> None:
+    xyz1 = np.array([[[20.0, 30.0, 15.0], [22.0, 31.0, 18.0]]], dtype=float)
+    xyz2 = np.array([[[19.0, 29.0, 14.0], [21.0, 32.0, 17.0]]], dtype=float)
+    white1 = np.array([95.047, 100.0, 108.883], dtype=float)
+    white2 = np.array([96.0, 101.0, 109.0], dtype=float)
+
+    shared = deltaEuv(xyz1, xyz2, white1)
+    paired = deltaEuv(xyz1, xyz2, (white1, white2))
+
+    expected_shared = np.sqrt(np.sum((xyz_to_luv(xyz1, white1) - xyz_to_luv(xyz2, white1)) ** 2, axis=-1))
+    expected_paired = np.sqrt(np.sum((xyz_to_luv(xyz1, white1) - xyz_to_luv(xyz2, white2)) ** 2, axis=-1))
+
+    np.testing.assert_allclose(shared, expected_shared, rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(paired, expected_paired, rtol=1e-10, atol=1e-10)
 
 
 def test_metrics_spd_angle_matches_direct_vector_angle() -> None:

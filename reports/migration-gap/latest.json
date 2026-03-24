@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-24T08:34:26.866674+00:00",
+  "generated_at": "2026-03-24T09:00:25.582279+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-24T08:34:26.866674+00:00",
+    "generated_at": "2026-03-24T09:00:25.582279+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 92,
       "missing": 37,
       "out_of_scope": 160,
-      "parity": 631,
-      "partial": 488,
+      "parity": 634,
+      "partial": 485,
       "ported": 35
     },
     "kind_counts": {
@@ -22,18 +22,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 60,
+      "P0": 57,
       "P1": 376,
       "P2": 181,
-      "P3": 826
+      "P3": 829
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
         "out_of_scope": 0,
-        "parity": 4,
-        "partial": -4,
+        "parity": 3,
+        "partial": -3,
         "ported": 0
       },
       "kind_counts": {
@@ -45,10 +45,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -4,
+        "P0": -3,
         "P1": 0,
         "P2": 0,
-        "P3": 4
+        "P3": 3
       }
     },
     "family_summary": {
@@ -377,13 +377,12 @@
       "metrics/cielab": {
         "total": 4,
         "by_status": {
-          "parity": 1,
-          "partial": 3
+          "parity": 4
         },
         "by_kind": {
           "api": 4
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "metrics/iso": {
         "total": 20,
@@ -1051,15 +1050,6 @@
         }
       },
       {
-        "family": "metrics/cielab",
-        "open_entries": 3,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 1,
-          "partial": 3
-        }
-      },
-      {
         "family": "metrics/scielab",
         "open_entries": 3,
         "highest_open_priority": "P0",
@@ -1135,6 +1125,14 @@
         "highest_open_priority": "P0",
         "by_status": {
           "partial": 2
+        }
+      },
+      {
+        "family": "imgproc/binning",
+        "open_entries": 1,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "partial": 1
         }
       }
     ],
