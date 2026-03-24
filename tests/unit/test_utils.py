@@ -15,10 +15,15 @@ from pyisetcam import (
     ieParameterOtype,
     ieRadialMatrix,
     ieWave2Index,
+    imageHparams,
+    imageInterpolate,
+    imageTranslate,
+    imageTranspose,
     imageBoundingBox,
     imageCentroid,
     imageCircular,
     imageContrast,
+    rgb2dac,
 )
 from pyisetcam.utils import (
     blackbody,
@@ -35,6 +40,10 @@ from pyisetcam.utils import (
     ie_parameter_otype,
     ie_radial_matrix,
     ie_wave2_index,
+    image_hparams,
+    image_interpolate,
+    image_translate,
+    image_transpose,
     interp_spectra,
     image_bounding_box,
     image_centroid,
@@ -42,6 +51,7 @@ from pyisetcam.utils import (
     image_contrast,
     param_format,
     quanta_to_energy,
+    rgb_to_dac,
     unit_frequency_list,
 )
 
@@ -351,6 +361,91 @@ def test_ie_lut_digital_invert_linear_match_legacy_tables_and_aliases() -> None:
     assert np.allclose(invert_alias, invert)
     assert np.allclose(linear, np.array([[0.0, 10.0], [20.0, 30.0]], dtype=float))
     assert np.allclose(linear_alias, linear)
+
+
+def test_rgb2dac_matches_single_and_three_channel_tables_and_alias() -> None:
+    rgb = np.array(
+        [
+            [[0.0, 0.5, 1.0], [0.25, 0.75, 0.5]],
+        ],
+        dtype=float,
+    )
+    inv_gamma = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [10.0, 20.0, 30.0],
+            [40.0, 50.0, 60.0],
+            [70.0, 80.0, 90.0],
+        ],
+        dtype=float,
+    )
+
+    result = rgb_to_dac(rgb, inv_gamma)
+    alias = rgb2dac(rgb, inv_gamma)
+
+    expected = np.array(
+        [
+            [[0.0, 50.0, 90.0], [10.0, 50.0, 60.0]],
+        ],
+        dtype=float,
+    )
+    assert np.array_equal(result, expected)
+    assert np.array_equal(alias, expected)
+
+
+def test_image_transpose_translate_and_interpolate_match_headless_numeric_contracts() -> None:
+    cube = np.arange(1.0, 13.0, dtype=float).reshape(2, 3, 2)
+    image = np.array(
+        [
+            [1.0, 2.0, 3.0],
+            [4.0, 5.0, 6.0],
+            [7.0, 8.0, 9.0],
+        ],
+        dtype=float,
+    )
+
+    transposed = image_transpose(cube)
+    transposed_alias = imageTranspose(cube)
+    translated = image_translate(image, [1, 1])
+    translated_alias = imageTranslate(image, [1, 1])
+    interpolated = image_interpolate(np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float), 4, 4)
+    interpolated_alias = imageInterpolate(np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float), 4, 4)
+
+    assert np.array_equal(transposed[:, :, 0], np.array([[1.0, 7.0], [3.0, 9.0], [5.0, 11.0]], dtype=float))
+    assert np.array_equal(transposed_alias, transposed)
+    assert np.array_equal(
+        translated,
+        np.array(
+            [
+                [5.0, 6.0, 0.0],
+                [8.0, 9.0, 0.0],
+                [0.0, 0.0, 0.0],
+            ],
+            dtype=float,
+        ),
+    )
+    assert np.array_equal(translated_alias, translated)
+    assert interpolated.shape == (4, 4)
+    assert interpolated[0, 0] == pytest.approx(1.0)
+    assert interpolated[-1, -1] == pytest.approx(4.0)
+    assert np.allclose(interpolated_alias, interpolated)
+
+
+def test_image_hparams_matches_legacy_defaults_and_alias() -> None:
+    params = image_hparams()
+    alias = imageHparams()
+
+    expected = {
+        "freq": 2,
+        "contrast": 1,
+        "ang": 0,
+        "ph": 1.5708,
+        "row": 128,
+        "col": 128,
+        "GaborFlag": 0,
+    }
+    assert params == expected
+    assert alias == expected
 
 
 def test_ie_parameter_otype_handles_direct_prefix_and_unique_params() -> None:

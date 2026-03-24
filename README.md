@@ -1762,6 +1762,13 @@ That same utility-image slice now also covers `ieCmap(...)`,
 `ieLUTLinear(...)`, with direct regressions for the simple MATLAB color-map
 forms, field-of-view crop-rectangle math, and forward/inverse gamma-table
 lookup behavior.
+The adjacent resampling/geometry utility tail is smaller too:
+`rgb2dac(...)`, `imageTranspose(...)`, `imageTranslate(...)`,
+`imageInterpolate(...)`, and `imageHparams(...)` now have direct headless
+compatibility wrappers in `pyisetcam.utils`, with focused regressions over
+DAC lookup-table mapping, per-plane transpose, MATLAB-style left/up
+translation, bilinear resize shape/corner behavior, and the default
+harmonic-parameter structure.
 The legacy startup/path trio is now covered too: `ISET.m`, `isetPath.m`,
 and `isetRootPath.m` are tracked against the optional headless session
 bootstrap wrappers `iset(...)`, `isetPath(...)`, and `isetRootPath(...)`

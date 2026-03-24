@@ -637,6 +637,8 @@ from .utils import (
     ie_n_to_megapixel,
     ie_radial_matrix,
     ie_wave2_index,
+    image_hparams,
+    image_interpolate,
     image_linear_transform,
     image_bounding_box,
     image_centroid,
@@ -644,8 +646,11 @@ from .utils import (
     image_contrast,
     image_flip,
     image_increase_image_rgb_size,
+    image_translate,
+    image_transpose,
     ie_parameter_otype,
     param_format,
+    rgb_to_dac,
     rgb_to_xw_format,
     srgb_to_linear,
     srgb_to_xyz,
@@ -902,8 +907,14 @@ __all__ = [
     "demosaic_rccc",
     "Pocs",
     "pocs",
+    "rgb2dac",
+    "rgb_to_dac",
     "imageLinearTransform",
     "image_linear_transform",
+    "imageHparams",
+    "image_hparams",
+    "imageInterpolate",
+    "image_interpolate",
     "ieCmap",
     "ie_cmap",
     "ieCropRect",
@@ -916,6 +927,10 @@ __all__ = [
     "image_circular",
     "imageContrast",
     "image_contrast",
+    "imageTranslate",
+    "image_translate",
+    "imageTranspose",
+    "image_transpose",
     "ieMainClose",
     "ieRefreshWindow",
     "ieImageType",
@@ -2281,6 +2296,7 @@ RGB2XWFormat = rgb_to_xw_format
 XW2RGBFormat = xw_to_rgb_format
 hcBasis = hc_basis
 dac2rgb = dac_to_rgb
+rgb2dac = rgb_to_dac
 ieCmap = ie_cmap
 ieCropRect = ie_crop_rect
 ieFindWaveIndex = ie_find_wave_index
@@ -2289,11 +2305,15 @@ ieLUTInvert = ie_lut_invert
 ieLUTLinear = ie_lut_linear
 ieWave2Index = ie_wave2_index
 ieRadialMatrix = ie_radial_matrix
+imageHparams = image_hparams
+imageInterpolate = image_interpolate
 imageBoundingBox = image_bounding_box
 imageCentroid = image_centroid
 imageCircular = image_circular
 imageContrast = image_contrast
 imageLinearTransform = image_linear_transform
+imageTranslate = image_translate
+imageTranspose = image_transpose
 imageFlip = image_flip
 imageIncreaseImageRGBSize = image_increase_image_rgb_size
 srgb2xyz = srgb_to_xyz

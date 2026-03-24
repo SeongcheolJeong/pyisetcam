@@ -248,6 +248,26 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB linear-RGB-to-DAC helper is covered by the Python `ie_lut_linear(...)` / `ieLUTLinear(...)` compatibility wrapper in `pyisetcam.utils`.",
         "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
     },
+    "utility/image/imageHparams.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB harmonic-parameter default helper is covered by the Python `image_hparams(...)` / `imageHparams(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/imageInterpolate.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB image-resampling helper is covered by the Python `image_interpolate(...)` / `imageInterpolate(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/imageTranslate.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB image-translation helper is covered by the Python `image_translate(...)` / `imageTranslate(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/imageTranspose.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB per-plane transpose helper is covered by the Python `image_transpose(...)` / `imageTranspose(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
     "utility/image/ieRadialMatrix.m": {
         "status": "ported",
         "note": "The legacy MATLAB radial-distance helper is covered by the Python `ie_radial_matrix(...)` / `ieRadialMatrix(...)` compatibility wrapper in `pyisetcam.utils`.",
@@ -276,6 +296,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
     "utility/image/imageContrast.m": {
         "status": "ported",
         "note": "The legacy MATLAB per-channel contrast helper is covered by the Python `image_contrast(...)` / `imageContrast(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/rgb2dac.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB RGB-to-DAC helper is covered by the Python `rgb_to_dac(...)` / `rgb2dac(...)` compatibility wrapper in `pyisetcam.utils`.",
         "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
     },
     "utility/file/vcSelectDataFile.m": {

@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-03-24T23:04:15.474222+00:00",
+  "generated_at": "2026-03-24T23:23:35.940491+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 82,
+      "headless_only": 81,
       "missing": 21,
       "out_of_scope": 186,
       "parity": 675,
-      "partial": 385,
-      "ported": 94
+      "partial": 381,
+      "ported": 99
     },
     "kind_counts": {
       "api": 661,
@@ -20,18 +20,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 320,
-      "P2": 168,
-      "P3": 955
+      "P1": 316,
+      "P2": 167,
+      "P3": 960
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": 0,
+        "headless_only": -1,
         "missing": 0,
         "out_of_scope": 0,
         "parity": 0,
-        "partial": -6,
-        "ported": 6
+        "partial": -4,
+        "ported": 5
       },
       "kind_counts": {
         "api": 0,
@@ -42,9 +42,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -6,
-        "P2": 0,
-        "P3": 6
+        "P1": -4,
+        "P2": -1,
+        "P3": 5
       }
     },
     "family_summary": {
@@ -953,11 +953,11 @@
       "utility/image": {
         "total": 46,
         "by_status": {
-          "headless_only": 5,
+          "headless_only": 4,
           "out_of_scope": 2,
           "parity": 7,
-          "partial": 19,
-          "ported": 13
+          "partial": 15,
+          "ported": 18
         },
         "by_kind": {
           "gui": 2,
@@ -1025,18 +1025,6 @@
         }
       },
       {
-        "family": "utility/image",
-        "open_entries": 24,
-        "highest_open_priority": "P1",
-        "by_status": {
-          "headless_only": 5,
-          "out_of_scope": 2,
-          "parity": 7,
-          "partial": 19,
-          "ported": 13
-        }
-      },
-      {
         "family": "human",
         "open_entries": 20,
         "highest_open_priority": "P1",
@@ -1044,6 +1032,18 @@
           "parity": 2,
           "partial": 20,
           "ported": 2
+        }
+      },
+      {
+        "family": "utility/image",
+        "open_entries": 19,
+        "highest_open_priority": "P1",
+        "by_status": {
+          "headless_only": 4,
+          "out_of_scope": 2,
+          "parity": 7,
+          "partial": 15,
+          "ported": 18
         }
       },
       {
@@ -8918,7 +8918,7 @@
       "family": "scene/pattern",
       "kind": "api",
       "status": "parity",
-      "python_surface": "pyisetcam.scene, pyisetcam.parity",
+      "python_surface": "pyisetcam.scene, pyisetcam.parity, pyisetcam.utils",
       "tests": [
         "tests/unit/test_scene.py",
         "tests/unit/test_pipeline.py",
@@ -17329,11 +17329,11 @@
       "upstream_path": "utility/image/imageHparams.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB harmonic-parameter default helper is covered by the Python `image_hparams(...)` / `imageHparams(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/imageIncreaseImageRGBSize.m",
@@ -17352,11 +17352,11 @@
       "upstream_path": "utility/image/imageInterpolate.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.optics",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB image-resampling helper is covered by the Python `image_interpolate(...)` / `imageInterpolate(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/imageLinearTransform.m",
@@ -17488,21 +17488,21 @@
       "upstream_path": "utility/image/imageTranslate.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB image-translation helper is covered by the Python `image_translate(...)` / `imageTranslate(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/imageTranspose.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB per-plane transpose helper is covered by the Python `image_transpose(...)` / `imageTranspose(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/imageVernier.m",
@@ -17558,11 +17558,11 @@
       "upstream_path": "utility/image/rgb2dac.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB RGB-to-DAC helper is covered by the Python `rgb_to_dac(...)` / `rgb2dac(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/list/ieDataList.m",

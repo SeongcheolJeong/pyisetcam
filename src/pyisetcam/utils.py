@@ -7,7 +7,7 @@ from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.ndimage import gaussian_filter, zoom
+from scipy.ndimage import gaussian_filter, shift as ndi_shift, zoom
 
 DEFAULT_WAVE = np.arange(400.0, 701.0, 10.0, dtype=float)
 
@@ -1399,6 +1399,90 @@ def ie_lut_linear(rgb: Any, g_table: Any = 2.2) -> NDArray[np.float64]:
 
 
 ieLUTLinear = ie_lut_linear
+
+
+def rgb_to_dac(rgb: Any, inv_gamma_table: Any = 2.2) -> NDArray[np.float64]:
+    """Convert linear RGB values through an inverse gamma table to DAC values."""
+
+    rgb_array = np.asarray(rgb, dtype=float)
+    gamma = np.asarray(inv_gamma_table, dtype=float)
+    if gamma.ndim == 0:
+        return np.power(rgb_array, 1.0 / float(gamma))
+
+    scaled = np.rint(rgb_array * (gamma.shape[0] - 1)).astype(int)
+    scaled = np.clip(scaled, 0, gamma.shape[0] - 1)
+    if gamma.ndim == 1:
+        result = gamma[scaled]
+    else:
+        reshaped = scaled.reshape(-1, gamma.shape[1])
+        result = np.column_stack([gamma[reshaped[:, ii], ii] for ii in range(gamma.shape[1])]).reshape(rgb_array.shape)
+    return np.rint(result).astype(float)
+
+
+rgb2dac = rgb_to_dac
+
+
+def image_transpose(im: Any) -> NDArray[np.float64]:
+    """Transpose each plane of a multispectral or RGB image."""
+
+    array = np.asarray(im, dtype=float)
+    if array.ndim != 3:
+        raise ValueError("Input must be 3-dimensional: row x col x w")
+    return np.transpose(array, (1, 0, 2)).astype(float, copy=False)
+
+
+imageTranspose = image_transpose
+
+
+def image_translate(img: Any, shift: Any, fill_values: float = 0.0) -> NDArray[np.float64]:
+    """Translate image data using MATLAB-style x/y pixel shifts."""
+
+    array = np.asarray(img, dtype=float)
+    if array.ndim not in {2, 3}:
+        raise ValueError("Image required")
+    shift_xy = np.asarray(shift, dtype=float).reshape(-1)
+    if shift_xy.size != 2:
+        raise ValueError("(x,y) Displacement required")
+    offset = (-float(shift_xy[1]), -float(shift_xy[0])) if array.ndim == 2 else (-float(shift_xy[1]), -float(shift_xy[0]), 0.0)
+    return np.asarray(ndi_shift(array, shift=offset, order=1, mode="constant", cval=float(fill_values), prefilter=False), dtype=float)
+
+
+imageTranslate = image_translate
+
+
+def image_interpolate(in_img: Any, r: int, c: int) -> NDArray[np.float64]:
+    """Resample a 2-D or 3-D image to the requested row/col size."""
+
+    array = np.asarray(in_img, dtype=float)
+    if array.ndim == 2:
+        row0, col0 = array.shape
+        zoom_factors = (float(r) / float(row0), float(c) / float(col0))
+        return np.asarray(zoom(array, zoom_factors, order=1), dtype=float)
+    if array.ndim == 3:
+        row0, col0, _ = array.shape
+        zoom_factors = (float(r) / float(row0), float(c) / float(col0), 1.0)
+        return np.asarray(zoom(array, zoom_factors, order=1), dtype=float)
+    raise ValueError("Input image required.")
+
+
+imageInterpolate = image_interpolate
+
+
+def image_hparams() -> dict[str, Any]:
+    """Return the legacy MATLAB default harmonic-parameter structure."""
+
+    return {
+        "freq": 2,
+        "contrast": 1,
+        "ang": 0,
+        "ph": 1.5708,
+        "row": 128,
+        "col": 128,
+        "GaborFlag": 0,
+    }
+
+
+imageHparams = image_hparams
 
 
 def image_linear_transform(image: Any, transform: Any) -> NDArray[np.float64]:
