@@ -6022,6 +6022,40 @@ def rt_psf_interp(
     return map_coordinates(psf, [row_coords, col_coords], order=1, mode="constant", cval=0.0, prefilter=False)
 
 
+def rt_psf_edit(
+    optics_or_oi: OpticalImage | dict[str, Any],
+    cntr: bool | int = False,
+    rot: int = 0,
+    visualize_flag: bool | int = False,
+) -> dict[str, Any]:
+    del visualize_flag
+    edited = _normalize_raytrace_optics(_coerce_optics_for_raytrace(optics_or_oi))
+    psf = np.asarray(edited.get("raytrace", {}).get("psf", {}).get("function", np.empty(0, dtype=float)), dtype=float)
+    if psf.ndim != 4:
+        raise ValueError("rtPSFEdit requires 4D ray-trace PSF data.")
+
+    centered = bool(cntr)
+    rotation = int(rot) % 4
+    if not centered and rotation == 0:
+        return edited
+
+    result = psf.copy()
+    for height_index in range(result.shape[2]):
+        for wave_index in range(result.shape[3]):
+            kernel = result[:, :, height_index, wave_index]
+            if centered:
+                kernel = 0.5 * (kernel + np.flipud(kernel))
+                kernel = 0.5 * (kernel + np.fliplr(kernel))
+            if rotation:
+                kernel = np.rot90(kernel, rotation)
+            result[:, :, height_index, wave_index] = kernel
+
+    edited["raytrace"] = dict(edited.get("raytrace", {}))
+    edited["raytrace"]["psf"] = dict(edited["raytrace"].get("psf", {}))
+    edited["raytrace"]["psf"]["function"] = result
+    return edited
+
+
 def rt_di_interp(
     optics_or_oi: OpticalImage | dict[str, Any],
     wavelength_nm: float,

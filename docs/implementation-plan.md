@@ -535,6 +535,7 @@
 - `sensor_external_analysis_small`: `s_sensorExternalAnalysis.m` parity on the asset-driven DUT setup workflow, compare the configured wave grid, loaded color/IR filter and QE spectra, CFA pattern, pixel metadata, imported `dutData.mat` volts plane, and stable voltage summary statistics.
 - `sensor_macbeth_daylight_estimate_small`: `s_sensorMacbethDaylightEstimate.m` parity on the deterministic daylight-basis Macbeth solve, compare the reflectance matrix, sensor spectral QE, daylight basis in photons, generated camera-response matrix, stacked design system, and recovered normalized daylight weights and illuminant.
 - `sensor_spectral_radiometer_small`: `s_spectralRadiometer.m` parity on the radiometer-sensor workflow, compare the radiometer sample wavelengths, explicit `1 x N` filter pattern, filter spectra, deterministic noise-free electron line, theoretical shot-noise curve, and stable noisy/full-image electron summary statistics.
+- The remaining `opticalimage/raytrace` helper family is now being closed with per-file accounting instead of a family-wide `partial` fallback: the already-landed `rtAngleLUT`/`rtDIInterp`/`rtGeometry`/`rtOTF`/`rtPrecomputePSF`/`rtSynthetic` helper layer is counted directly, headless `rtPSFEdit(...)` now covers the legacy PSF centering/rotation helper, and the GUI-only `rtPlot.m` / `rtPSFVisualize.m` files are explicitly out of scope.
 
 ## Validation Harness
 - Maintain parity case definitions in `tests/parity/cases.yaml`.

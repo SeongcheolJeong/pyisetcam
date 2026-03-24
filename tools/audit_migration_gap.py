@@ -362,10 +362,140 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is a script-style diagnostic prototype with display side effects rather than a reusable headless API surface.",
         "module_hits": [],
     },
+    "opticalimage/raytrace/rtAngleLUT.m": {
+        "status": "ported",
+        "note": "The MATLAB angle-lookup helper is covered by the Python `rt_angle_lut(...)` / `rtAngleLUT(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "opticalimage/raytrace/rtBlockCenter.m": {
+        "status": "ported",
+        "note": "The MATLAB ray-trace block-center helper is covered by the Python `rt_block_center(...)` / `rtBlockCenter(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "opticalimage/raytrace/rtChooseBlockSize.m": {
+        "status": "ported",
+        "note": "The MATLAB ray-trace block-sizing helper is covered by the Python `rt_choose_block_size(...)` / `rtChooseBlockSize(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "opticalimage/raytrace/rtDIInterp.m": {
+        "status": "ported",
+        "note": "The MATLAB geometric-distortion interpolation helper is covered by the Python `rt_di_interp(...)` / `rtDIInterp(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "opticalimage/raytrace/rtExtractBlock.m": {
+        "status": "ported",
+        "note": "The MATLAB ray-trace block-extraction helper is covered by the Python `rt_extract_block(...)` / `rtExtractBlock(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "opticalimage/raytrace/rtFileNames.m": {
+        "status": "ported",
+        "note": "The MATLAB Zemax filename helper is covered by the Python `rt_file_names(...)` / `rtFileNames(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "opticalimage/raytrace/rtGeometry.m": {
+        "status": "ported",
+        "note": "The MATLAB ray-trace geometry stage is covered by the Python `rt_geometry(...)` / `rtGeometry(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
     "opticalimage/raytrace/rtImagePSFFieldHeight.m": {
         "status": "out_of_scope",
         "note": "The upstream file is explicitly marked as not functional yet, so it remains outside the headless migration target.",
         "module_hits": [],
+    },
+    "opticalimage/raytrace/rtImageRotate.m": {
+        "status": "ported",
+        "note": "The MATLAB PSF image-rotation helper is covered by the Python `rt_image_rotate(...)` / `rtImageRotate(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "opticalimage/raytrace/rtImportData.m": {
+        "status": "ported",
+        "note": "The MATLAB Zemax import helper is covered by the Python `rt_import_data(...)` / `rtImportData(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "opticalimage/raytrace/rtInsertBlock.m": {
+        "status": "ported",
+        "note": "The MATLAB ray-trace block-insertion helper is covered by the Python `rt_insert_block(...)` / `rtInsertBlock(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "opticalimage/raytrace/rtOTF.m": {
+        "status": "ported",
+        "note": "The MATLAB ray-trace OTF builder is covered by the Python `rt_otf(...)` / `rtOTF(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "opticalimage/raytrace/rtPSFApply.m": {
+        "status": "ported",
+        "note": "The MATLAB shift-variant PSF application entry point is covered by the Python `rt_psf_apply(...)` / `rtPSFApply(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "opticalimage/raytrace/rtPSFEdit.m": {
+        "status": "ported",
+        "note": "The MATLAB PSF centering/rotation helper is covered by the Python `rt_psf_edit(...)` / `rtPSFEdit(...)` compatibility wrapper; visualization remains intentionally headless.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "opticalimage/raytrace/rtPSFGrid.m": {
+        "status": "ported",
+        "note": "The MATLAB PSF support-grid helper is covered by the Python `rt_psf_grid(...)` / `rtPSFGrid(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "opticalimage/raytrace/rtPSFInterp.m": {
+        "status": "ported",
+        "note": "The MATLAB ray-trace PSF interpolation helper is covered by the Python `rt_psf_interp(...)` / `rtPSFInterp(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "opticalimage/raytrace/rtPSFVisualize.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a figure/movie viewer for ray-trace PSFs and remains outside the headless migration target.",
+        "module_hits": [],
+    },
+    "opticalimage/raytrace/rtPlot.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is an interactive plotting gateway with dialogs and figure side effects rather than a reusable supported headless API surface.",
+        "module_hits": [],
+    },
+    "opticalimage/raytrace/rtPrecomputePSF.m": {
+        "status": "ported",
+        "note": "The MATLAB precomputed shift-variant PSF builder is covered by the Python `rt_precompute_psf(...)` / `rtPrecomputePSF(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "opticalimage/raytrace/rtPrecomputePSFApply.m": {
+        "status": "ported",
+        "note": "The MATLAB precomputed shift-variant PSF application helper is covered by the Python `rt_precompute_psf_apply(...)` / `rtPrecomputePSFApply(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "opticalimage/raytrace/rtRIInterp.m": {
+        "status": "ported",
+        "note": "The MATLAB relative-illumination interpolation helper is covered by the Python `rt_ri_interp(...)` / `rtRIInterp(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "opticalimage/raytrace/rtRootPath.m": {
+        "status": "ported",
+        "note": "The MATLAB vendored ray-trace root helper is covered by the Python `rt_root_path(...)` / `rtRootPath(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "opticalimage/raytrace/rtSampleHeights.m": {
+        "status": "ported",
+        "note": "The MATLAB sample-height selection helper is covered by the Python `rt_sample_heights(...)` / `rtSampleHeights(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "opticalimage/raytrace/rtSynthetic.m": {
+        "status": "ported",
+        "note": "The MATLAB synthetic ray-trace optics generator is covered by the Python `rt_synthetic(...)` / `rtSynthetic(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "opticalimage/raytrace/zemax/zemax2json.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file depends on a live Windows OpticStudio/.NET connection and external JSON-writing workflow, so it remains outside the supported headless migration target.",
+        "module_hits": [],
+    },
+    "opticalimage/raytrace/zemax/zemaxLoad.m": {
+        "status": "ported",
+        "note": "The MATLAB Zemax PSF text-loader is covered by the Python `zemax_load(...)` / `zemaxLoad(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "opticalimage/raytrace/zemax/zemaxReadHeader.m": {
+        "status": "ported",
+        "note": "The MATLAB Zemax header parser is covered by the Python `zemax_read_header(...)` / `zemaxReadHeader(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
     },
     "opticalimage/oiImageInitCustomStrings.m": {
         "status": "out_of_scope",

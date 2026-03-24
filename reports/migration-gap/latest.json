@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-03-24T16:10:30.208696+00:00",
+  "generated_at": "2026-03-24T16:50:07.662789+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-24T16:10:30.208696+00:00",
+    "generated_at": "2026-03-24T16:50:07.662789+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 90,
       "missing": 37,
-      "out_of_scope": 167,
+      "out_of_scope": 170,
       "parity": 658,
-      "partial": 451,
-      "ported": 40
+      "partial": 425,
+      "ported": 63
     },
     "kind_counts": {
       "api": 661,
@@ -22,10 +22,9 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 26,
       "P1": 373,
       "P2": 179,
-      "P3": 865
+      "P3": 891
     },
     "delta_from_previous": {
       "status_counts": {
@@ -33,8 +32,8 @@
         "missing": 0,
         "out_of_scope": 1,
         "parity": 0,
-        "partial": -1,
-        "ported": 0
+        "partial": -3,
+        "ported": 2
       },
       "kind_counts": {
         "api": 0,
@@ -45,10 +44,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -1,
+        "P0": -3,
         "P1": 0,
         "P2": 0,
-        "P3": 1
+        "P3": 3
       }
     },
     "family_summary": {
@@ -475,13 +474,13 @@
       "opticalimage/raytrace": {
         "total": 28,
         "by_status": {
-          "out_of_scope": 2,
-          "partial": 26
+          "out_of_scope": 5,
+          "ported": 23
         },
         "by_kind": {
           "api": 28
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "opticalimage/wavefront": {
         "total": 49,
@@ -1008,15 +1007,6 @@
     },
     "top_open_families": [
       {
-        "family": "opticalimage/raytrace",
-        "open_entries": 26,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "out_of_scope": 2,
-          "partial": 26
-        }
-      },
-      {
         "family": "utility",
         "open_entries": 266,
         "highest_open_priority": "P1",
@@ -1117,6 +1107,14 @@
         "highest_open_priority": "P1",
         "by_status": {
           "partial": 3
+        }
+      },
+      {
+        "family": "scripts/oneoverf",
+        "open_entries": 3,
+        "highest_open_priority": "P1",
+        "by_status": {
+          "missing": 3
         }
       }
     ],

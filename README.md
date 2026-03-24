@@ -1683,3 +1683,10 @@ corrected-render summaries. The adjacent `s_sensorRollingShutter.m`
 workflow is now also covered headlessly through `sceneRotate(...)`,
 `oiCrop(...)`, and a deterministic rolling-shutter assembly parity case
 that compares the temporal sensor trace plus the final assembled render.
+The ray-trace helper audit now counts the already-landed data/math wrapper
+layer individually instead of holding the entire family at `partial`:
+`rtAngleLUT` through `rtSynthetic` are recognized as direct Python
+compatibility surfaces, the new headless `rtPSFEdit(...)` port covers the
+legacy PSF centering/rotation helper, and the remaining `rtPlot` /
+`rtPSFVisualize` movie-window routines are explicitly treated as GUI-only
+out-of-scope files.

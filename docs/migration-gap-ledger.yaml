@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-03-24T16:10:30.208696+00:00",
+  "generated_at": "2026-03-24T16:50:07.662789+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 90,
       "missing": 37,
-      "out_of_scope": 167,
+      "out_of_scope": 170,
       "parity": 658,
-      "partial": 451,
-      "ported": 40
+      "partial": 425,
+      "ported": 63
     },
     "kind_counts": {
       "api": 661,
@@ -20,10 +20,9 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 26,
       "P1": 373,
       "P2": 179,
-      "P3": 865
+      "P3": 891
     },
     "delta_from_previous": {
       "status_counts": {
@@ -31,8 +30,8 @@
         "missing": 0,
         "out_of_scope": 1,
         "parity": 0,
-        "partial": -1,
-        "ported": 0
+        "partial": -3,
+        "ported": 2
       },
       "kind_counts": {
         "api": 0,
@@ -43,10 +42,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -1,
+        "P0": -3,
         "P1": 0,
         "P2": 0,
-        "P3": 1
+        "P3": 3
       }
     },
     "family_summary": {
@@ -473,13 +472,13 @@
       "opticalimage/raytrace": {
         "total": 28,
         "by_status": {
-          "out_of_scope": 2,
-          "partial": 26
+          "out_of_scope": 5,
+          "ported": 23
         },
         "by_kind": {
           "api": 28
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "opticalimage/wavefront": {
         "total": 49,
@@ -1006,15 +1005,6 @@
     },
     "top_open_families": [
       {
-        "family": "opticalimage/raytrace",
-        "open_entries": 26,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "out_of_scope": 2,
-          "partial": 26
-        }
-      },
-      {
         "family": "utility",
         "open_entries": 266,
         "highest_open_priority": "P1",
@@ -1115,6 +1105,14 @@
         "highest_open_priority": "P1",
         "by_status": {
           "partial": 3
+        }
+      },
+      {
+        "family": "scripts/oneoverf",
+        "open_entries": 3,
+        "highest_open_priority": "P1",
+        "by_status": {
+          "missing": 3
         }
       }
     ],
@@ -7172,27 +7170,27 @@
       "upstream_path": "opticalimage/raytrace/rtAngleLUT.m",
       "family": "opticalimage/raytrace",
       "kind": "api",
-      "status": "partial",
+      "status": "ported",
       "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
+      "notes": "The MATLAB angle-lookup helper is covered by the Python `rt_angle_lut(...)` / `rtAngleLUT(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/raytrace/rtBlockCenter.m",
       "family": "opticalimage/raytrace",
       "kind": "api",
-      "status": "partial",
+      "status": "ported",
       "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
+      "notes": "The MATLAB ray-trace block-center helper is covered by the Python `rt_block_center(...)` / `rtBlockCenter(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/raytrace/rtBlockPartition.m",
@@ -7211,66 +7209,66 @@
       "upstream_path": "opticalimage/raytrace/rtChooseBlockSize.m",
       "family": "opticalimage/raytrace",
       "kind": "api",
-      "status": "partial",
+      "status": "ported",
       "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
+      "notes": "The MATLAB ray-trace block-sizing helper is covered by the Python `rt_choose_block_size(...)` / `rtChooseBlockSize(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/raytrace/rtDIInterp.m",
       "family": "opticalimage/raytrace",
       "kind": "api",
-      "status": "partial",
+      "status": "ported",
       "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
+      "notes": "The MATLAB geometric-distortion interpolation helper is covered by the Python `rt_di_interp(...)` / `rtDIInterp(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/raytrace/rtExtractBlock.m",
       "family": "opticalimage/raytrace",
       "kind": "api",
-      "status": "partial",
+      "status": "ported",
       "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
+      "notes": "The MATLAB ray-trace block-extraction helper is covered by the Python `rt_extract_block(...)` / `rtExtractBlock(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/raytrace/rtFileNames.m",
       "family": "opticalimage/raytrace",
       "kind": "api",
-      "status": "partial",
+      "status": "ported",
       "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
+      "notes": "The MATLAB Zemax filename helper is covered by the Python `rt_file_names(...)` / `rtFileNames(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/raytrace/rtGeometry.m",
       "family": "opticalimage/raytrace",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics, pyisetcam.__init__, pyisetcam.parity, pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
+      "notes": "The MATLAB ray-trace geometry stage is covered by the Python `rt_geometry(...)` / `rtGeometry(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/raytrace/rtImagePSFFieldHeight.m",
@@ -7289,248 +7287,248 @@
       "upstream_path": "opticalimage/raytrace/rtImageRotate.m",
       "family": "opticalimage/raytrace",
       "kind": "api",
-      "status": "partial",
+      "status": "ported",
       "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
+      "notes": "The MATLAB PSF image-rotation helper is covered by the Python `rt_image_rotate(...)` / `rtImageRotate(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/raytrace/rtImportData.m",
       "family": "opticalimage/raytrace",
       "kind": "api",
-      "status": "partial",
+      "status": "ported",
       "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
+      "notes": "The MATLAB Zemax import helper is covered by the Python `rt_import_data(...)` / `rtImportData(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/raytrace/rtInsertBlock.m",
       "family": "opticalimage/raytrace",
       "kind": "api",
-      "status": "partial",
+      "status": "ported",
       "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
+      "notes": "The MATLAB ray-trace block-insertion helper is covered by the Python `rt_insert_block(...)` / `rtInsertBlock(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/raytrace/rtOTF.m",
       "family": "opticalimage/raytrace",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics, pyisetcam.__init__, pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
+      "notes": "The MATLAB ray-trace OTF builder is covered by the Python `rt_otf(...)` / `rtOTF(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/raytrace/rtPSFApply.m",
       "family": "opticalimage/raytrace",
       "kind": "api",
-      "status": "partial",
+      "status": "ported",
       "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
+      "notes": "The MATLAB shift-variant PSF application entry point is covered by the Python `rt_psf_apply(...)` / `rtPSFApply(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/raytrace/rtPSFEdit.m",
       "family": "opticalimage/raytrace",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics",
+      "status": "ported",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
+      "notes": "The MATLAB PSF centering/rotation helper is covered by the Python `rt_psf_edit(...)` / `rtPSFEdit(...)` compatibility wrapper; visualization remains intentionally headless.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/raytrace/rtPSFGrid.m",
       "family": "opticalimage/raytrace",
       "kind": "api",
-      "status": "partial",
+      "status": "ported",
       "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
+      "notes": "The MATLAB PSF support-grid helper is covered by the Python `rt_psf_grid(...)` / `rtPSFGrid(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/raytrace/rtPSFInterp.m",
       "family": "opticalimage/raytrace",
       "kind": "api",
-      "status": "partial",
+      "status": "ported",
       "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
+      "notes": "The MATLAB ray-trace PSF interpolation helper is covered by the Python `rt_psf_interp(...)` / `rtPSFInterp(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/raytrace/rtPSFVisualize.m",
       "family": "opticalimage/raytrace",
       "kind": "api",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.optics",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
+      "notes": "The upstream file is a figure/movie viewer for ray-trace PSFs and remains outside the headless migration target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/raytrace/rtPlot.m",
       "family": "opticalimage/raytrace",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics, pyisetcam.parity",
-      "tests": [
-        "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
-      ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
-    },
-    {
-      "upstream_path": "opticalimage/raytrace/rtPrecomputePSF.m",
-      "family": "opticalimage/raytrace",
-      "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics, pyisetcam.__init__, pyisetcam.parity",
-      "tests": [
-        "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
-      ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
-    },
-    {
-      "upstream_path": "opticalimage/raytrace/rtPrecomputePSFApply.m",
-      "family": "opticalimage/raytrace",
-      "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics, pyisetcam.__init__, pyisetcam.parity",
-      "tests": [
-        "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
-      ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
-    },
-    {
-      "upstream_path": "opticalimage/raytrace/rtRIInterp.m",
-      "family": "opticalimage/raytrace",
-      "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
-      "tests": [
-        "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
-      ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
-    },
-    {
-      "upstream_path": "opticalimage/raytrace/rtRootPath.m",
-      "family": "opticalimage/raytrace",
-      "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
-      "tests": [
-        "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
-      ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
-    },
-    {
-      "upstream_path": "opticalimage/raytrace/rtSampleHeights.m",
-      "family": "opticalimage/raytrace",
-      "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
-      "tests": [
-        "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
-      ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
-    },
-    {
-      "upstream_path": "opticalimage/raytrace/rtSynthetic.m",
-      "family": "opticalimage/raytrace",
-      "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics, pyisetcam.__init__, pyisetcam.parity",
-      "tests": [
-        "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
-      ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
-    },
-    {
-      "upstream_path": "opticalimage/raytrace/zemax/zemax2json.m",
-      "family": "opticalimage/raytrace",
-      "kind": "api",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.optics",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
+      "notes": "The upstream file is an interactive plotting gateway with dialogs and figure side effects rather than a reusable supported headless API surface.",
+      "priority": "P3"
+    },
+    {
+      "upstream_path": "opticalimage/raytrace/rtPrecomputePSF.m",
+      "family": "opticalimage/raytrace",
+      "kind": "api",
+      "status": "ported",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The MATLAB precomputed shift-variant PSF builder is covered by the Python `rt_precompute_psf(...)` / `rtPrecomputePSF(...)` compatibility wrapper.",
+      "priority": "P3"
+    },
+    {
+      "upstream_path": "opticalimage/raytrace/rtPrecomputePSFApply.m",
+      "family": "opticalimage/raytrace",
+      "kind": "api",
+      "status": "ported",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The MATLAB precomputed shift-variant PSF application helper is covered by the Python `rt_precompute_psf_apply(...)` / `rtPrecomputePSFApply(...)` compatibility wrapper.",
+      "priority": "P3"
+    },
+    {
+      "upstream_path": "opticalimage/raytrace/rtRIInterp.m",
+      "family": "opticalimage/raytrace",
+      "kind": "api",
+      "status": "ported",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The MATLAB relative-illumination interpolation helper is covered by the Python `rt_ri_interp(...)` / `rtRIInterp(...)` compatibility wrapper.",
+      "priority": "P3"
+    },
+    {
+      "upstream_path": "opticalimage/raytrace/rtRootPath.m",
+      "family": "opticalimage/raytrace",
+      "kind": "api",
+      "status": "ported",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The MATLAB vendored ray-trace root helper is covered by the Python `rt_root_path(...)` / `rtRootPath(...)` compatibility wrapper.",
+      "priority": "P3"
+    },
+    {
+      "upstream_path": "opticalimage/raytrace/rtSampleHeights.m",
+      "family": "opticalimage/raytrace",
+      "kind": "api",
+      "status": "ported",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The MATLAB sample-height selection helper is covered by the Python `rt_sample_heights(...)` / `rtSampleHeights(...)` compatibility wrapper.",
+      "priority": "P3"
+    },
+    {
+      "upstream_path": "opticalimage/raytrace/rtSynthetic.m",
+      "family": "opticalimage/raytrace",
+      "kind": "api",
+      "status": "ported",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The MATLAB synthetic ray-trace optics generator is covered by the Python `rt_synthetic(...)` / `rtSynthetic(...)` compatibility wrapper.",
+      "priority": "P3"
+    },
+    {
+      "upstream_path": "opticalimage/raytrace/zemax/zemax2json.m",
+      "family": "opticalimage/raytrace",
+      "kind": "api",
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.optics",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file depends on a live Windows OpticStudio/.NET connection and external JSON-writing workflow, so it remains outside the supported headless migration target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/raytrace/zemax/zemaxLoad.m",
       "family": "opticalimage/raytrace",
       "kind": "api",
-      "status": "partial",
+      "status": "ported",
       "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
+      "notes": "The MATLAB Zemax PSF text-loader is covered by the Python `zemax_load(...)` / `zemaxLoad(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/raytrace/zemax/zemaxReadHeader.m",
       "family": "opticalimage/raytrace",
       "kind": "api",
-      "status": "partial",
+      "status": "ported",
       "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "Ray-trace support exists in Python, but the family is still documented as partial.",
-      "priority": "P0"
+      "notes": "The MATLAB Zemax header parser is covered by the Python `zemax_read_header(...)` / `zemaxReadHeader(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/wavefront/RandomDirtyApertureDeprecate.m",

@@ -293,6 +293,7 @@ from .optics import (
     rt_otf,
     rt_file_names,
     rt_psf_apply,
+    rt_psf_edit,
     rt_psf_grid,
     rt_psf_interp,
     rt_precompute_psf,
@@ -1290,6 +1291,8 @@ __all__ = [
     "rt_insert_block",
     "rt_otf",
     "rt_file_names",
+    "rtPSFEdit",
+    "rt_psf_edit",
     "rt_psf_grid",
     "rt_psf_apply",
     "rtPSFInterp",
@@ -1971,6 +1974,7 @@ rtInsertBlock = rt_insert_block
 rtOTF = rt_otf
 rtPSFApply = rt_psf_apply
 rtFileNames = rt_file_names
+rtPSFEdit = rt_psf_edit
 rtPSFGrid = rt_psf_grid
 rtPSFInterp = rt_psf_interp
 rtPrecomputePSF = rt_precompute_psf

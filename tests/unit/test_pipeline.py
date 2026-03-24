@@ -227,6 +227,7 @@ from pyisetcam import (
     rt_insert_block,
     rt_otf,
     rt_psf_apply,
+    rt_psf_edit,
     rt_psf_grid,
     rt_psf_interp,
     rt_precompute_psf,
@@ -3002,6 +3003,47 @@ def test_rt_psf_apply_uses_explicit_angle_step(asset_store) -> None:
 
     assert np.isclose(oi_get(result, "psf angle step"), 30.0)
     assert np.array_equal(oi_get(result, "psf sample angles"), np.arange(0.0, 361.0, 30.0))
+
+
+def test_rt_psf_edit_centers_and_rotates_raytrace_planes() -> None:
+    centered_input = np.zeros((3, 3, 1, 1), dtype=float)
+    centered_input[0, 0, 0, 0] = 1.0
+    centered_optics = {
+        "model": "raytrace",
+        "raytrace": {
+            "geometry": {},
+            "psf": {"function": centered_input},
+        },
+    }
+    centered = rt_psf_edit(centered_optics, cntr=True, visualize_flag=True)
+
+    assert np.allclose(
+        centered["raytrace"]["psf"]["function"][:, :, 0, 0],
+        np.array(
+            [
+                [0.25, 0.0, 0.25],
+                [0.0, 0.0, 0.0],
+                [0.25, 0.0, 0.25],
+            ],
+            dtype=float,
+        ),
+    )
+    assert np.array_equal(centered_optics["raytrace"]["psf"]["function"], centered_input)
+
+    rotate_input = np.arange(1.0, 10.0, dtype=float).reshape(3, 3)
+    rotate_optics = {
+        "model": "raytrace",
+        "raytrace": {
+            "geometry": {},
+            "psf": {"function": rotate_input[:, :, np.newaxis, np.newaxis]},
+        },
+    }
+    rotated = rt_psf_edit(rotate_optics, rot=1)
+
+    assert np.array_equal(
+        rotated["raytrace"]["psf"]["function"][:, :, 0, 0],
+        np.rot90(rotate_input, 1),
+    )
 
 
 def test_optics_object_wrappers_round_trip_supported_fields(asset_store) -> None:
