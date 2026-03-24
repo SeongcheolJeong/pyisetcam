@@ -409,6 +409,11 @@ from pyisetcam import (
     wvf_compute_psf,
     wvf_clear_data,
     wvf_create,
+    wvfComputeConeAverageCriterionRadius,
+    wvfComputeConePSF,
+    wvfComputePupilFunctionCustomLCA,
+    wvfComputePupilFunctionCustomLCAFromMaster,
+    wvfComputePupilFunctionFromMaster,
     wvf_defocus_diopters_to_microns,
     wvf_defocus_microns_to_diopters,
     wvf_get,
@@ -15227,6 +15232,98 @@ def test_sce_create_and_wvf_sce_helpers_round_trip() -> None:
     assert np.isclose(float(wvf_get(wvf, "scex0")), 0.51)
     assert np.isclose(float(wvf_get(wvf, "scey0")), 0.20)
     assert np.array_equal(np.asarray(sceGet(wvf_get(wvf, "sce"), "wave"), dtype=float), wave)
+
+
+def test_wvf_cone_psf_and_criterion_radius_wrappers(asset_store) -> None:
+    wave = np.array([450.0, 550.0, 650.0], dtype=float)
+    wvf = wvf_create(wave=wave)
+    wvf = wvf_set(wvf, "spatial samples", 81)
+    wvf = wvf_set(wvf, "compute sce", True)
+    wvf = wvf_compute(wvf)
+
+    cone_psf, cone_sce_fraction = wvfComputeConePSF(wvf, asset_store=asset_store)
+    assert cone_psf.shape == (81, 81, 3)
+    assert np.allclose(np.sum(cone_psf, axis=(0, 1)), np.ones(3, dtype=float))
+
+    info = wvf_get(wvf, "calc cone psf info")
+    sensitivities = np.asarray(
+        optics_module.interp_spectra(
+            np.asarray(info["wavelengths"], dtype=float),
+            np.asarray(info["spectral_sensitivities"], dtype=float),
+            wave,
+        ),
+        dtype=float,
+    )
+    spd_weighting = np.asarray(
+        optics_module.interp_spectra(
+            np.asarray(info["wavelengths"], dtype=float),
+            np.asarray(info["spectral_weighting"], dtype=float),
+            wave,
+        ),
+        dtype=float,
+    ).reshape(-1)
+    spd_weighting = spd_weighting / np.sum(spd_weighting)
+    cone_weights = sensitivities.T * spd_weighting[None, :]
+    cone_weights = cone_weights / np.sum(cone_weights, axis=1, keepdims=True)
+
+    psf = np.asarray(wvf_get(wvf, "psf"), dtype=float)
+    expected_cone_psf = np.asarray(np.tensordot(psf, cone_weights.T, axes=([2], [0])), dtype=float)
+    expected_cone_psf = expected_cone_psf / np.sum(expected_cone_psf, axis=(0, 1), keepdims=True)
+    sce_fraction = np.asarray(wvf_get(wvf, "sce fraction", wave), dtype=float).reshape(-1)
+    expected_cone_sce_fraction = np.asarray(cone_weights @ sce_fraction, dtype=float).reshape(-1)
+
+    assert np.allclose(cone_psf, expected_cone_psf)
+    assert np.allclose(cone_sce_fraction, expected_cone_sce_fraction)
+    assert np.allclose(np.asarray(wvf_get(wvf, "cone psf"), dtype=float), cone_psf)
+    assert np.allclose(np.asarray(wvf_get(wvf, "cone sce fraction"), dtype=float), cone_sce_fraction)
+
+    avg_radius, cone_radii, updated = wvfComputeConeAverageCriterionRadius(wvf, 0.5, 0.5, asset_store=asset_store)
+    expected_defocus = float(
+        np.asarray(
+            wvf_defocus_diopters_to_microns(0.5, wvf_get(wvf, "measured pupil size", "mm")),
+            dtype=float,
+        ).reshape(-1)[0]
+    )
+    assert np.isclose(float(wvf_get(updated, "zcoeffs", "defocus")), expected_defocus)
+
+    updated_cone_psf, _ = wvfComputeConePSF(updated, asset_store=asset_store)
+    expected_cone_radii = np.asarray(
+        [psfFindCriterionRadius(updated_cone_psf[:, :, index], 0.5) for index in range(updated_cone_psf.shape[2])],
+        dtype=float,
+    )
+    cone_weighting = np.asarray(wvf_get(updated, "calc cone psf info")["cone_weighting"], dtype=float).reshape(-1)
+    expected_avg_radius = float(np.sum(cone_weighting * expected_cone_radii))
+
+    assert np.allclose(cone_radii, expected_cone_radii)
+    assert np.isclose(avg_radius, expected_avg_radius)
+
+
+def test_wvf_pupil_function_compatibility_wrappers_match_explicit_compute() -> None:
+    def custom_lca(measured_nm: float, this_nm: float) -> float:
+        return 5e-4 * (float(this_nm) - float(measured_nm))
+
+    wvf = wvf_create(wave=np.array([450.0, 550.0, 650.0], dtype=float))
+    wvf = wvf_set(wvf, "spatial samples", 61)
+    wvf = wvf_set(wvf, "lca method", custom_lca)
+
+    assert wvf_get(wvf, "lca method") is custom_lca
+
+    custom = wvfComputePupilFunctionCustomLCA(wvf)
+    manual = optics_module._wvf_compute_pupil_function_explicit(wvf)
+    assert np.allclose(np.asarray(custom["pupil_function"]), np.asarray(manual["pupil_function"]))
+    assert np.allclose(np.asarray(custom["wavefront_aberrations_um"]), np.asarray(manual["wavefront_aberrations_um"]))
+    assert np.allclose(np.asarray(custom["areapix"]), np.asarray(manual["areapix"]))
+    assert np.allclose(np.asarray(custom["areapixapod"]), np.asarray(manual["areapixapod"]))
+
+    no_lca = wvfComputePupilFunctionCustomLCA(wvf, False, "no lca", True)
+    manual_no_lca = optics_module._wvf_compute_pupil_function_explicit(wvf_set(wvf, "lca method", "none"))
+    assert np.allclose(np.asarray(no_lca["pupil_function"]), np.asarray(manual_no_lca["pupil_function"]))
+    assert np.allclose(np.asarray(no_lca["wavefront_aberrations_um"]), np.asarray(manual_no_lca["wavefront_aberrations_um"]))
+
+    from_master = wvfComputePupilFunctionFromMaster(wvf)
+    custom_from_master = wvfComputePupilFunctionCustomLCAFromMaster(wvf)
+    assert np.allclose(np.asarray(from_master["pupil_function"]), np.asarray(manual["pupil_function"]))
+    assert np.allclose(np.asarray(custom_from_master["pupil_function"]), np.asarray(manual["pupil_function"]))
 
 
 def test_wvf_root_path_and_summary_helpers_match_headless_contract() -> None:

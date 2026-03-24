@@ -2299,6 +2299,7 @@ def _wvf_default_state() -> dict[str, Any]:
         "rotate_psf_90_degs": False,
         "compute_sce": False,
         "sce_params": _normalize_sce_params(wave_values, None),
+        "calc_cone_psf_info": None,
     }
 
 
@@ -2715,6 +2716,111 @@ def _wvf_zcoeffs_with_lca(zcoeffs: np.ndarray, lca_microns: float) -> np.ndarray
     return coefficients
 
 
+def _default_cone_psf_info(*, asset_store: AssetStore | None = None) -> dict[str, Any]:
+    wavelengths, sensitivities = _store(asset_store).load_spectra("stockman.mat")
+    sensitivities_array = np.asarray(sensitivities, dtype=float)
+    if sensitivities_array.ndim == 1:
+        sensitivities_array = sensitivities_array.reshape(-1, 1)
+    n_cones = int(sensitivities_array.shape[1])
+    return {
+        "wavelengths": np.asarray(wavelengths, dtype=float).reshape(-1).copy(),
+        "spectral_sensitivities": sensitivities_array.copy(),
+        "spectral_weighting": np.ones(int(np.asarray(wavelengths).size), dtype=float),
+        "cone_weighting": np.full(n_cones, 1.0 / max(n_cones, 1), dtype=float),
+    }
+
+
+def _normalize_cone_psf_info(
+    value: Any | None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> dict[str, Any]:
+    if value is None:
+        return _default_cone_psf_info(asset_store=asset_store)
+
+    current = dict(_mat_to_native(value)) if not isinstance(value, dict) else dict(value)
+    wavelengths = np.asarray(
+        current.get("wavelengths", current.get("wave", current.get("S", []))),
+        dtype=float,
+    ).reshape(-1)
+    sensitivities = np.asarray(
+        current.get(
+            "spectral_sensitivities",
+            current.get("spectralSensitivities", current.get("T", current.get("data", []))),
+        ),
+        dtype=float,
+    )
+    if wavelengths.size == 0 or sensitivities.size == 0:
+        return _default_cone_psf_info(asset_store=asset_store)
+    if sensitivities.ndim == 1:
+        sensitivities = sensitivities.reshape(-1, 1)
+    elif sensitivities.shape[0] != wavelengths.size and sensitivities.shape[1] == wavelengths.size:
+        sensitivities = sensitivities.T
+    if sensitivities.shape[0] != wavelengths.size:
+        raise ValueError("Cone PSF info sensitivities must match the wavelength dimension.")
+
+    spectral_weighting = np.asarray(
+        current.get(
+            "spectral_weighting",
+            current.get("spectralWeighting", current.get("spdWeighting", np.ones(wavelengths.size, dtype=float))),
+        ),
+        dtype=float,
+    ).reshape(-1)
+    if spectral_weighting.size != wavelengths.size:
+        raise ValueError("Cone PSF info spectral weighting must match the wavelength dimension.")
+
+    cone_weighting = np.asarray(
+        current.get(
+            "cone_weighting",
+            current.get("coneWeighting", np.full(sensitivities.shape[1], 1.0 / max(sensitivities.shape[1], 1), dtype=float)),
+        ),
+        dtype=float,
+    ).reshape(-1)
+    if cone_weighting.size != sensitivities.shape[1]:
+        raise ValueError("Cone PSF info cone weighting must match the number of cone classes.")
+    cone_weighting_sum = float(np.sum(cone_weighting))
+    if cone_weighting_sum > 0.0:
+        cone_weighting = cone_weighting / cone_weighting_sum
+
+    return {
+        "wavelengths": wavelengths.copy(),
+        "spectral_sensitivities": sensitivities.copy(),
+        "spectral_weighting": spectral_weighting.copy(),
+        "cone_weighting": cone_weighting.copy(),
+    }
+
+
+def _export_cone_psf_info(value: Any | None, *, asset_store: AssetStore | None = None) -> dict[str, Any]:
+    current = _normalize_cone_psf_info(value, asset_store=asset_store)
+    return {
+        "wave": current["wavelengths"].copy(),
+        "wavelengths": current["wavelengths"].copy(),
+        "spectral_sensitivities": current["spectral_sensitivities"].copy(),
+        "spectralSensitivities": current["spectral_sensitivities"].copy(),
+        "spectral_weighting": current["spectral_weighting"].copy(),
+        "spectralWeighting": current["spectral_weighting"].copy(),
+        "cone_weighting": current["cone_weighting"].copy(),
+        "coneWeighting": current["cone_weighting"].copy(),
+    }
+
+
+def _wvf_cone_psf_weights(
+    cone_psf_info: dict[str, Any],
+    wave_nm: np.ndarray,
+) -> np.ndarray:
+    wave = np.asarray(wave_nm, dtype=float).reshape(-1)
+    info = _normalize_cone_psf_info(cone_psf_info)
+    sensitivities = np.asarray(interp_spectra(info["wavelengths"], info["spectral_sensitivities"], wave), dtype=float)
+    weighting = np.asarray(interp_spectra(info["wavelengths"], info["spectral_weighting"], wave), dtype=float).reshape(-1)
+    weighting_sum = float(np.sum(weighting))
+    if weighting_sum > 0.0:
+        weighting = weighting / weighting_sum
+    weights = sensitivities.T * weighting[None, :]
+    normalizer = np.sum(weights, axis=1, keepdims=True)
+    normalizer[normalizer == 0.0] = 1.0
+    return np.asarray(weights / normalizer, dtype=float)
+
+
 def wvf_load_thibos_virtual_eyes(
     pupil_diameter_mm: float = 6.0,
     *,
@@ -3052,6 +3158,8 @@ def wvf_compute(
     pupil_function = np.zeros((n_pixels, n_pixels, wave.size), dtype=np.complex128)
     psf_stack = np.zeros((n_pixels, n_pixels, wave.size), dtype=float)
     wavefront_stack = np.zeros((n_pixels, n_pixels, wave.size), dtype=float)
+    areapix = np.zeros(wave.size, dtype=float)
+    areapixapod = np.zeros(wave.size, dtype=float)
 
     zcoeffs = np.asarray(updated.get("zcoeffs", np.array([0.0], dtype=float)), dtype=float).reshape(-1)
     for band_index, wavelength_nm in enumerate(wave):
@@ -3063,6 +3171,7 @@ def wvf_compute(
         theta = np.arctan2(ypos, xpos)
         calc_radius_index = norm_radius <= calc_radius
         aperture_mask = _wvf_aperture_mask(n_pixels, calc_radius_index, aperture=aperture)
+        base_aperture_mask = np.asarray(aperture_mask, dtype=float).copy()
         if local_compute_sce:
             rho = _sce_rho_for_wave(sce_params, float(wavelength_nm))
             xo_mm = float(sce_params.get("xo_mm", 0.0))
@@ -3076,6 +3185,8 @@ def wvf_compute(
         pupil_phase = np.exp(-1j * 2.0 * np.pi * wavefront_aberrations_um / max(float(wavelength_nm) * 1e-3, 1e-12))
         local_pupil = aperture_mask * pupil_phase
         pupil_function[:, :, band_index] = local_pupil
+        areapix[band_index] = float(np.sum(np.abs(base_aperture_mask)))
+        areapixapod[band_index] = float(np.sum(np.abs(local_pupil)))
         if compute_psf:
             psf = np.abs(np.fft.fftshift(np.fft.fft2(local_pupil))) ** 2
             psf_sum = float(np.sum(psf))
@@ -3095,6 +3206,8 @@ def wvf_compute(
     updated["wavefront_aberrations_um"] = wavefront_stack if compute_pupil_function else None
     updated["psf"] = psf_stack if compute_psf else None
     updated["pupil_support"] = sample_positions.copy()
+    updated["areapix"] = areapix
+    updated["areapixapod"] = areapixapod
     return updated
 
 
@@ -3132,6 +3245,118 @@ def wvf_compute_psf(
     if compute_pupil_func or not pupil_available:
         current = _wvf_compute_pupil_function_explicit(current)
     return _wvf_compute_psf_from_pupil_function(current, current.get("pupil_function"))
+
+
+def _wvf_parse_pupil_function_options(show_bar: Any | None, args: tuple[Any, ...], context: str) -> dict[str, Any]:
+    key_args = args
+    if isinstance(show_bar, str):
+        key_args = (show_bar, *args)
+    elif show_bar is not None:
+        _logical_scalar(show_bar)
+    return _parse_key_value_options(key_args, context) if key_args else {}
+
+
+def wvf_compute_cone_psf(
+    wvf: dict[str, Any],
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    current = dict(wvf if wvf.get("psf") is not None else wvf_compute(wvf))
+    psf = np.asarray(current.get("psf"), dtype=float)
+    if psf.ndim == 2:
+        psf = psf[:, :, np.newaxis]
+    wave = _wvf_wave_values(current)
+    cone_psf_info = _normalize_cone_psf_info(current.get("calc_cone_psf_info"), asset_store=asset_store)
+    cone_weights = _wvf_cone_psf_weights(cone_psf_info, wave)
+    cone_psf = np.asarray(np.tensordot(psf, cone_weights.T, axes=([2], [0])), dtype=float)
+    cone_psf_sum = np.sum(cone_psf, axis=(0, 1), keepdims=True)
+    cone_psf_sum[cone_psf_sum == 0.0] = 1.0
+    cone_psf = cone_psf / cone_psf_sum
+    sce_fraction = np.asarray(wvf_get(current, "sce fraction", wave), dtype=float).reshape(-1)
+    cone_sce_fraction = np.asarray(cone_weights @ sce_fraction, dtype=float).reshape(-1)
+    return cone_psf, cone_sce_fraction
+
+
+def wvf_compute_cone_average_criterion_radius(
+    wvf: dict[str, Any],
+    defocus_diopters: Any,
+    criterion_fraction: float,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[float, np.ndarray, dict[str, Any]]:
+    pupil_diameter_mm = float(wvf_get(wvf, "measured pupil size", "mm"))
+    defocus_microns = np.asarray(
+        wvf_defocus_diopters_to_microns(defocus_diopters, pupil_diameter_mm),
+        dtype=float,
+    ).reshape(-1)
+    updated = wvf_set(dict(wvf), "zcoeffs", defocus_microns, "defocus")
+    updated = wvf_compute(updated)
+    cone_psf, _ = wvf_compute_cone_psf(updated, asset_store=asset_store)
+    cone_weighting = np.asarray(
+        wvf_get(updated, "calc cone psf info")["cone_weighting"],
+        dtype=float,
+    ).reshape(-1)
+    cone_criterion_radii = np.asarray(
+        [psf_find_criterion_radius(cone_psf[:, :, index], criterion_fraction) for index in range(cone_psf.shape[2])],
+        dtype=float,
+    )
+    cone_avg_criterion_radius = float(np.sum(cone_weighting * cone_criterion_radii))
+    return cone_avg_criterion_radius, cone_criterion_radii, updated
+
+
+def wvf_compute_pupil_function_custom_lca(
+    wvf: dict[str, Any],
+    show_bar: Any | None = None,
+    *args: Any,
+) -> dict[str, Any]:
+    options = _wvf_parse_pupil_function_options(show_bar, args, "wvfComputePupilFunctionCustomLCA")
+    no_lca = _logical_scalar(options.pop("nolca", False))
+    if options:
+        unsupported = next(iter(options))
+        raise KeyError(f"Unsupported wvfComputePupilFunctionCustomLCA parameter: {unsupported}")
+    current = dict(wvf)
+    if no_lca:
+        current = wvf_set(current, "lca method", "none")
+    return _wvf_compute_pupil_function_explicit(current)
+
+
+def wvf_compute_pupil_function_custom_lca_from_master(
+    wvf: dict[str, Any],
+    show_bar: Any | None = None,
+    *args: Any,
+) -> dict[str, Any]:
+    options = _wvf_parse_pupil_function_options(show_bar, args, "wvfComputePupilFunctionCustomLCAFromMaster")
+    no_lca = _logical_scalar(options.pop("nolca", False))
+    if options:
+        unsupported = next(iter(options))
+        raise KeyError(f"Unsupported wvfComputePupilFunctionCustomLCAFromMaster parameter: {unsupported}")
+    current = dict(wvf)
+    if no_lca:
+        current = wvf_set(current, "lca method", "none")
+    return _wvf_compute_pupil_function_explicit(current)
+
+
+def wvf_compute_pupil_function_from_master(
+    wvf: dict[str, Any],
+    show_bar: Any | None = None,
+    *args: Any,
+) -> dict[str, Any]:
+    options = _wvf_parse_pupil_function_options(show_bar, args, "wvfComputePupilFunctionFromMaster")
+    no_lca = _logical_scalar(options.pop("nolca", False))
+    if options:
+        unsupported = next(iter(options))
+        raise KeyError(f"Unsupported wvfComputePupilFunctionFromMaster parameter: {unsupported}")
+    current = dict(wvf)
+    if no_lca:
+        current = wvf_set(current, "lca method", "none")
+    return _wvf_compute_pupil_function_explicit(current)
+
+
+wvfComputeConePSF = wvf_compute_cone_psf
+wvfComputeConeAverageCriterionRadius = wvf_compute_cone_average_criterion_radius
+wvfComputePupilFunctionCustomLCA = wvf_compute_pupil_function_custom_lca
+wvfComputePupilFunctionCustomLCAFromMaster = wvf_compute_pupil_function_custom_lca_from_master
+wvfComputePupilFunctionFromMaster = wvf_compute_pupil_function_from_master
 
 
 def wvf_clear_data(wvf: dict[str, Any]) -> dict[str, Any]:
@@ -3405,14 +3630,17 @@ def wvf_set(wvf: dict[str, Any], parameter: str, value: Any, *args: Any) -> dict
     key = param_format(parameter)
     updated = dict(wvf)
 
-    if key in {"name", "type", "sampleintervaldomain", "lcamethod"}:
+    if key in {"name", "type", "sampleintervaldomain"}:
         mapped_key = {
             "name": "name",
             "type": "type",
             "sampleintervaldomain": "sample_interval_domain",
-            "lcamethod": "lca_method",
         }[key]
         updated[mapped_key] = str(value)
+        return updated
+
+    if key == "lcamethod":
+        updated["lca_method"] = "none" if value is None else (value if callable(value) else str(value))
         return updated
 
     if key in {"wave", "wavelength", "wavelengths", "calcwave", "calcwavelengths", "wls"}:
@@ -3505,6 +3733,10 @@ def wvf_set(wvf: dict[str, Any], parameter: str, value: Any, *args: Any) -> dict
         updated["sce_params"] = _normalize_sce_params(np.asarray(updated.get("wave", DEFAULT_WAVE), dtype=float), value)
         return updated
 
+    if key in {"calcconepsfinfo"}:
+        updated["calc_cone_psf_info"] = _normalize_cone_psf_info(value)
+        return updated
+
     if key in {"aperturefunction", "aperturefunc"}:
         updated["aperture_function"] = np.asarray(value, dtype=float).copy()
         return updated
@@ -3550,7 +3782,11 @@ def wvf_get(wvf: dict[str, Any], parameter: str, *args: Any) -> Any:
         return str(wvf.get("sample_interval_domain", "psf"))
 
     if key in {"lcamethod"}:
-        return str(wvf.get("lca_method", "none"))
+        raw_method = wvf.get("lca_method", "none")
+        return "none" if raw_method is None else raw_method
+
+    if key in {"calcconepsfinfo"}:
+        return _export_cone_psf_info(wvf.get("calc_cone_psf_info"))
 
     if key in {"umperdegree", "umperdeg"}:
         # MATLAB/Octave wvfGet('um per degree') reports the mm-per-degree
@@ -3646,6 +3882,47 @@ def wvf_get(wvf: dict[str, Any], parameter: str, *args: Any) -> Any:
         if not args:
             return np.asarray(exported["rho"], dtype=float).copy()
         return sce_get(exported, "rho", args[0])
+
+    if key in {"scefraction", "scefrac", "stilescrawfordeffectfraction"}:
+        computed = wvf if wvf.get("areapix") is not None and wvf.get("areapixapod") is not None else wvf_compute(wvf, compute_psf=False)
+        base = np.asarray(computed.get("areapix"), dtype=float).reshape(-1)
+        apodized = np.asarray(computed.get("areapixapod"), dtype=float).reshape(-1)
+        values = np.divide(apodized, base, out=np.zeros_like(apodized, dtype=float), where=base != 0.0)
+        if not args:
+            return values
+        idx = wvf_wave_to_idx(computed, args[0]) - 1
+        selected = values[idx]
+        if selected.size == 1:
+            return float(selected[0])
+        return selected.copy()
+
+    if key in {"areapix"}:
+        computed = wvf if wvf.get("areapix") is not None else wvf_compute(wvf, compute_psf=False)
+        values = np.asarray(computed.get("areapix"), dtype=float).reshape(-1)
+        if not args:
+            return values.copy()
+        idx = wvf_wave_to_idx(computed, args[0]) - 1
+        selected = values[idx]
+        if selected.size == 1:
+            return float(selected[0])
+        return selected.copy()
+
+    if key in {"areapixapod"}:
+        computed = wvf if wvf.get("areapixapod") is not None else wvf_compute(wvf, compute_psf=False)
+        values = np.asarray(computed.get("areapixapod"), dtype=float).reshape(-1)
+        if not args:
+            return values.copy()
+        idx = wvf_wave_to_idx(computed, args[0]) - 1
+        selected = values[idx]
+        if selected.size == 1:
+            return float(selected[0])
+        return selected.copy()
+
+    if key in {"conepsf"}:
+        return wvf_compute_cone_psf(wvf)[0]
+
+    if key in {"sceconesfraction", "conescefraction"}:
+        return wvf_compute_cone_psf(wvf)[1]
 
     if key in {"sceparams", "stilescrawford"}:
         sce_params = wvf.get("sce_params", {})

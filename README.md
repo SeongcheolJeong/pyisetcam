@@ -604,6 +604,19 @@ That same script-driven WVF helper surface now also includes headless
 legacy toolbox-location and text-summary helpers built on top of the same
 WVF core metadata.
 That same script-driven WVF helper surface now also includes headless
+`wvf_compute_cone_psf(...)` / `wvfComputeConePSF(...)`,
+`wvf_compute_cone_average_criterion_radius(...)` /
+`wvfComputeConeAverageCriterionRadius(...)`,
+`wvf_compute_pupil_function_custom_lca(...)` /
+`wvfComputePupilFunctionCustomLCA(...)`,
+`wvf_compute_pupil_function_custom_lca_from_master(...)` /
+`wvfComputePupilFunctionCustomLCAFromMaster(...)`, and
+`wvf_compute_pupil_function_from_master(...)` /
+`wvfComputePupilFunctionFromMaster(...)`, together with direct
+`wvfGet(..., 'calc cone psf info'/'cone psf'/'sce fraction'/'cone sce fraction')`
+support for the remaining legacy wavefront cone-weighting and pupil-function
+compatibility helpers.
+That same script-driven WVF helper surface now also includes headless
 `wvf_key_synonyms(...)` / `wvfKeySynonyms(...)`, `wvf_to_si_psf(...)` /
 `wvf2SiPsf(...)`, and `wvf_apply(...)` / `wvfApply(...)`, matching the
 legacy key-canonicalization, shift-invariant PSF export, and deprecated

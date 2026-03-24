@@ -280,6 +280,8 @@ from .optics import (
     wvf_aperture_params,
     wvf_apply,
     wvf_compute,
+    wvf_compute_cone_average_criterion_radius,
+    wvf_compute_cone_psf,
     wvf_compute_psf,
     wvf_clear_data,
     wvf_create,
@@ -292,6 +294,9 @@ from .optics import (
     wvf_osa_index_to_vector_index,
     wvf_osa_index_to_zernike_nm,
     wvf_pupil_amplitude,
+    wvf_compute_pupil_function_custom_lca,
+    wvf_compute_pupil_function_custom_lca_from_master,
+    wvf_compute_pupil_function_from_master,
     wvf_pupil_function,
     wvf_print,
     wvf_root_path,
@@ -1539,6 +1544,8 @@ __all__ = [
     "wvfApertureP",
     "wvfApply",
     "wvfCreate",
+    "wvfComputeConeAverageCriterionRadius",
+    "wvfComputeConePSF",
     "wvfComputePSF",
     "wvf2SiPsf",
     "wvfClearData",
@@ -1549,6 +1556,9 @@ __all__ = [
     "wvfOSAIndexToVectorIndex",
     "wvfOSAIndexToZernikeNM",
     "wvfPupilAmplitude",
+    "wvfComputePupilFunctionCustomLCA",
+    "wvfComputePupilFunctionCustomLCAFromMaster",
+    "wvfComputePupilFunctionFromMaster",
     "wvfPupilFunction",
     "wvfPrint",
     "wvfRootPath",
@@ -1564,6 +1574,9 @@ __all__ = [
     "wvf_aperture",
     "wvf_aperture_params",
     "wvf_apply",
+    "wvf_compute",
+    "wvf_compute_cone_average_criterion_radius",
+    "wvf_compute_cone_psf",
     "wvf_create",
     "wvf_compute_psf",
     "wvf_clear_data",
@@ -1576,6 +1589,9 @@ __all__ = [
     "wvf_osa_index_to_vector_index",
     "wvf_osa_index_to_zernike_nm",
     "wvf_pupil_amplitude",
+    "wvf_compute_pupil_function_custom_lca",
+    "wvf_compute_pupil_function_custom_lca_from_master",
+    "wvf_compute_pupil_function_from_master",
     "wvf_pupil_function",
     "wvf_print",
     "wvf_root_path",
@@ -1807,6 +1823,8 @@ wvfAperture = wvf_aperture
 wvfApertureP = wvf_aperture_params
 wvfApply = wvf_apply
 wvfCompute = wvf_compute
+wvfComputeConeAverageCriterionRadius = wvf_compute_cone_average_criterion_radius
+wvfComputeConePSF = wvf_compute_cone_psf
 wvfComputePSF = wvf_compute_psf
 wvf2SiPsf = wvf_to_si_psf
 wvfClearData = wvf_clear_data
@@ -1818,6 +1836,9 @@ wvfOSAIndexToName = wvf_osa_index_to_name
 wvfOSAIndexToVectorIndex = wvf_osa_index_to_vector_index
 wvfOSAIndexToZernikeNM = wvf_osa_index_to_zernike_nm
 wvfPupilAmplitude = wvf_pupil_amplitude
+wvfComputePupilFunctionCustomLCA = wvf_compute_pupil_function_custom_lca
+wvfComputePupilFunctionCustomLCAFromMaster = wvf_compute_pupil_function_custom_lca_from_master
+wvfComputePupilFunctionFromMaster = wvf_compute_pupil_function_from_master
 wvfPupilFunction = wvf_pupil_function
 wvfPrint = wvf_print
 wvfRootPath = wvf_root_path
