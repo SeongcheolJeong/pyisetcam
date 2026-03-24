@@ -728,6 +728,85 @@ def optics_psf_to_otf(
     )
 
 
+def make_combined_otf(otf: Any, sample_sf: Any) -> np.ndarray:
+    """Apply the Williams/Brainard chromatic-aberration correction factor."""
+
+    otf_array = np.asarray(otf, dtype=float)
+    sample_sf_array = np.asarray(sample_sf, dtype=float).reshape(-1)
+    if otf_array.ndim != 2:
+        raise ValueError("makeCombinedOtf expects a 2-D OTF array.")
+    if otf_array.shape[1] != sample_sf_array.size:
+        raise ValueError("sampleSf length must match the OTF spatial-frequency dimension.")
+
+    a = 0.1212
+    w1 = 0.3481
+    w2 = 0.6519
+    williams_factor = w1 + w2 * np.exp(-a * sample_sf_array)
+    return np.asarray(otf_array * williams_factor.reshape(1, -1), dtype=float)
+
+
+def make_cmatrix(otf: Any, receptor: Any, monitor_spd: Any) -> np.ndarray:
+    """Build per-frequency 3x3 calibration matrices for the chromatic-aberration model."""
+
+    otf_array = np.asarray(otf, dtype=float)
+    receptor_array = np.asarray(receptor, dtype=float)
+    monitor_array = np.asarray(monitor_spd, dtype=float)
+    if otf_array.ndim != 2:
+        raise ValueError("makeCmatrix expects a 2-D OTF array.")
+    if receptor_array.ndim != 2 or monitor_array.ndim != 2:
+        raise ValueError("makeCmatrix expects 2-D receptor and monitor SPD arrays.")
+    if otf_array.shape[0] != receptor_array.shape[0] or otf_array.shape[0] != monitor_array.shape[0]:
+        raise ValueError("OTF, receptor, and monitor SPD must agree on the wavelength dimension.")
+
+    n_receptors = receptor_array.shape[1]
+    n_primaries = monitor_array.shape[1]
+    matrices = np.zeros((n_receptors * n_primaries, otf_array.shape[1]), dtype=float)
+    for frequency_index in range(otf_array.shape[1]):
+        current = receptor_array.T @ (otf_array[:, frequency_index][:, None] * monitor_array)
+        matrices[:, frequency_index] = np.reshape(current, -1, order="F")
+    return matrices
+
+
+def retinal_image(image: Any, c_matrices: Any) -> np.ndarray:
+    """Apply the 1-D chromatic-aberration frequency-domain transform to an RGB image strip."""
+
+    image_array = np.asarray(image, dtype=float)
+    matrices_array = np.asarray(c_matrices, dtype=float)
+    if image_array.ndim != 2 or image_array.shape[1] != 3:
+        raise ValueError("retinalImage expects an N x 3 image array.")
+    if matrices_array.ndim != 2 or matrices_array.shape[0] != 9:
+        raise ValueError("retinalImage expects Cmatrices with shape 9 x M.")
+
+    image_t = image_array.T
+    max_sf = int(matrices_array.shape[1] - 1)
+    image_size = int(image_t.shape[1])
+    if max_sf <= 0:
+        raise ValueError("retinalImage requires at least two Cmatrix frequency samples.")
+    if (image_size / 2.0) % max_sf != 0:
+        raise ValueError("The image is not matched to the OTF (too large).")
+
+    image_fft = np.fft.fft(image_t, axis=1)
+    cone_response_fft = np.zeros_like(image_fft, dtype=np.complex128)
+
+    for frequency_index in range(max_sf + 1):
+        cmatrix = matrices_array[:, frequency_index].reshape(3, 3, order="F")
+        cone_response_fft[:, frequency_index] = cmatrix @ image_fft[:, frequency_index]
+
+    upper_limit = min(2 * max_sf, image_fft.shape[1] - 1)
+    for frequency_index in range(max_sf + 1, upper_limit + 1):
+        mirrored_index = 2 * max_sf + 1 - frequency_index
+        cmatrix = matrices_array[:, mirrored_index - 1].reshape(3, 3, order="F")
+        cone_response_fft[:, frequency_index] = cmatrix @ image_fft[:, frequency_index]
+
+    image_out = np.real(np.fft.ifft(cone_response_fft, axis=1))
+    return np.asarray(image_out.T, dtype=float)
+
+
+makeCombinedOtf = make_combined_otf
+makeCmatrix = make_cmatrix
+retinalImage = retinal_image
+
+
 def _synthetic_shift_invariant_gaussian_psf_data(
     wave: np.ndarray,
     f_number: float,

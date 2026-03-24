@@ -204,6 +204,8 @@ from .optics import (
     optics_set,
     optics_si_compute,
     optics_to_wvf,
+    make_cmatrix,
+    make_combined_otf,
     oi_add,
     oi_adjust_illuminance,
     oi_calculate_illuminance,
@@ -274,6 +276,7 @@ from .optics import (
     rt_root_path,
     rt_sample_heights,
     rt_synthetic,
+    retinal_image,
     si_convert_rt_data,
     si_synthetic,
     wvf_aperture,
@@ -1028,6 +1031,10 @@ __all__ = [
     "optics_set",
     "optics_si_compute",
     "optics_to_wvf",
+    "makeCmatrix",
+    "makeCombinedOtf",
+    "make_cmatrix",
+    "make_combined_otf",
     "oiCalculateIlluminance",
     "oiCalculateOTF",
     "oiClearData",
@@ -1200,6 +1207,8 @@ __all__ = [
     "rt_sample_heights",
     "rtSynthetic",
     "rt_synthetic",
+    "retinalImage",
+    "retinal_image",
     "siConvertRTdata",
     "si_convert_rt_data",
     "siSynthetic",
@@ -1793,6 +1802,9 @@ opticsRayTrace = optics_ray_trace
 opticsSet = optics_set
 opticsSICompute = optics_si_compute
 optics2wvf = optics_to_wvf
+makeCmatrix = make_cmatrix
+makeCombinedOtf = make_combined_otf
+retinalImage = retinal_image
 ieFieldHeight2Index = ie_field_height_to_index
 rtAngleLUT = rt_angle_lut
 rtBlockCenter = rt_block_center

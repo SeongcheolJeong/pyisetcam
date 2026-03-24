@@ -129,6 +129,8 @@ from pyisetcam import (
     mkInvGammaTable,
     MOTarget,
     lensList,
+    makeCmatrix,
+    makeCombinedOtf,
     optics_build_2d_otf,
     opticsClearData,
     optics_coc,
@@ -217,6 +219,7 @@ from pyisetcam import (
     rtRootPath,
     rt_sample_heights,
     rt_synthetic,
+    retinalImage,
     rgb_to_xw_format,
     colorTransformMatrix,
     gauss,
@@ -3654,6 +3657,82 @@ def test_oi_psf_area_and_diameter_match_manual_threshold_support() -> None:
 
     assert np.isclose(area, expected_area, atol=1e-12, rtol=1e-12)
     assert np.isclose(diameter, expected_diameter, atol=1e-12, rtol=1e-12)
+
+
+def test_make_combined_otf_and_make_cmatrix_match_closed_form() -> None:
+    otf = np.array(
+        [
+            [1.0, 0.8, 0.5],
+            [0.7, 0.4, 0.2],
+            [0.6, 0.3, 0.1],
+        ],
+        dtype=float,
+    )
+    sample_sf = np.array([0.0, 8.0, 16.0], dtype=float)
+
+    expected_factor = 0.3481 + 0.6519 * np.exp(-0.1212 * sample_sf)
+    combined_otf = makeCombinedOtf(otf, sample_sf)
+    assert np.allclose(combined_otf, otf * expected_factor.reshape(1, -1), atol=1e-12, rtol=1e-12)
+
+    receptor = np.array(
+        [
+            [0.8, 0.2, 0.1],
+            [0.3, 0.9, 0.2],
+            [0.1, 0.4, 0.7],
+        ],
+        dtype=float,
+    )
+    monitor_spd = np.array(
+        [
+            [0.9, 0.2, 0.1],
+            [0.2, 0.8, 0.3],
+            [0.1, 0.3, 0.9],
+        ],
+        dtype=float,
+    )
+    expected_cmatrix = np.column_stack(
+        [
+            (receptor.T @ (combined_otf[:, index][:, None] * monitor_spd)).reshape(-1, order="F")
+            for index in range(combined_otf.shape[1])
+        ]
+    )
+
+    assert np.allclose(makeCmatrix(combined_otf, receptor, monitor_spd), expected_cmatrix, atol=1e-12, rtol=1e-12)
+
+
+def test_retinal_image_matches_frequency_domain_contract() -> None:
+    image = np.array(
+        [
+            [0.10, 0.20, 0.30],
+            [0.25, 0.15, 0.05],
+            [0.40, 0.10, 0.20],
+            [0.15, 0.35, 0.25],
+            [0.30, 0.45, 0.10],
+            [0.05, 0.25, 0.40],
+        ],
+        dtype=float,
+    )
+    identity_cmatrices = np.repeat(np.eye(3, dtype=float).reshape(9, 1, order="F"), 4, axis=1)
+    assert np.allclose(retinalImage(image, identity_cmatrices), image, atol=1e-12, rtol=1e-12)
+
+    cmatrices = identity_cmatrices.copy()
+    cmatrices[:, 1] = np.diag([1.20, 0.85, 0.60]).reshape(-1, order="F")
+    cmatrices[:, 2] = np.diag([0.95, 1.10, 0.75]).reshape(-1, order="F")
+    cmatrices[:, 3] = np.diag([0.70, 0.90, 1.15]).reshape(-1, order="F")
+
+    image_fft = np.fft.fft(image.T, axis=1)
+    expected_fft = np.zeros_like(image_fft, dtype=np.complex128)
+    max_sf = cmatrices.shape[1] - 1
+    for frequency_index in range(max_sf + 1):
+        cmatrix = cmatrices[:, frequency_index].reshape(3, 3, order="F")
+        expected_fft[:, frequency_index] = cmatrix @ image_fft[:, frequency_index]
+    for frequency_index in range(max_sf + 1, min(2 * max_sf, image_fft.shape[1] - 1) + 1):
+        mirrored_index = 2 * max_sf + 1 - frequency_index
+        cmatrix = cmatrices[:, mirrored_index - 1].reshape(3, 3, order="F")
+        expected_fft[:, frequency_index] = cmatrix @ image_fft[:, frequency_index]
+    expected = np.real(np.fft.ifft(expected_fft, axis=1)).T
+
+    assert np.allclose(retinalImage(image, cmatrices), expected, atol=1e-12, rtol=1e-12)
 
 
 def test_optics_psf_to_otf_builds_custom_otf_struct(asset_store) -> None:

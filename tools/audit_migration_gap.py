@@ -251,6 +251,21 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is a script used to derive static transform matrices, not a reusable headless API surface.",
         "module_hits": [],
     },
+    "scripts/optics/Contents.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is only an index listing for the optics scripts and does not define a reusable headless API surface.",
+        "module_hits": [],
+    },
+    "scripts/optics/chromAb/ChromAb.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a shell-driven external-binary workflow around `otf` and `pr_mat`, so it is treated as a legacy launcher rather than a supported headless Python API target.",
+        "module_hits": [],
+    },
+    "scripts/optics/chromAb/makeCAplots.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is effectively a plotting/comment stub for the chromatic-aberration workflow and remains outside the headless migration target.",
+        "module_hits": [],
+    },
     "opticalimage/raytrace/rtBlockPartition.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a script-style diagnostic prototype with display side effects rather than a reusable headless API surface.",

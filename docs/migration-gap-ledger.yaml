@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-24T03:19:42.471487+00:00",
+  "generated_at": "2026-03-24T03:52:39.983751+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 92,
       "missing": 37,
-      "out_of_scope": 144,
-      "parity": 607,
-      "partial": 531,
+      "out_of_scope": 147,
+      "parity": 610,
+      "partial": 525,
       "ported": 32
     },
     "kind_counts": {
@@ -20,19 +20,19 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 101,
+      "P0": 95,
       "P1": 378,
       "P2": 181,
-      "P3": 783
+      "P3": 789
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 0,
-        "parity": 6,
-        "partial": -5,
-        "ported": -1
+        "out_of_scope": 3,
+        "parity": 3,
+        "partial": -6,
+        "ported": 0
       },
       "kind_counts": {
         "api": 0,
@@ -43,10 +43,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -5,
+        "P0": -6,
         "P1": 0,
         "P2": 0,
-        "P3": 5
+        "P3": 6
       }
     },
     "family_summary": {
@@ -708,13 +708,13 @@
       "scripts/optics": {
         "total": 42,
         "by_status": {
-          "parity": 36,
-          "partial": 6
+          "out_of_scope": 3,
+          "parity": 39
         },
         "by_kind": {
           "script": 42
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "scripts/scene": {
         "total": 27,
@@ -1033,15 +1033,6 @@
         }
       },
       {
-        "family": "scripts/optics",
-        "open_entries": 6,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 36,
-          "partial": 6
-        }
-      },
-      {
         "family": "sensor",
         "open_entries": 6,
         "highest_open_priority": "P0",
@@ -1135,6 +1126,15 @@
         "open_entries": 3,
         "highest_open_priority": "P0",
         "by_status": {
+          "partial": 3
+        }
+      },
+      {
+        "family": "metrics/cielab",
+        "open_entries": 3,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 1,
           "partial": 3
         }
       }
@@ -5660,7 +5660,7 @@
       "family": "metrics/scielab",
       "kind": "api",
       "status": "parity",
-      "python_surface": "pyisetcam.scielab, pyisetcam.__init__",
+      "python_surface": "pyisetcam.scielab, pyisetcam.__init__, pyisetcam.optics",
       "tests": [
         "tests/unit/test_metrics.py",
         "tests/unit/test_pipeline.py",
@@ -10826,79 +10826,82 @@
       "upstream_path": "scripts/optics/Contents.m",
       "family": "scripts/optics",
       "kind": "script",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.optics",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream file is only an index listing for the optics scripts and does not define a reusable headless API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/optics/chromAb/ChromAb.m",
       "family": "scripts/optics",
       "kind": "script",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.optics",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream file is a shell-driven external-binary workflow around `otf` and `pr_mat`, so it is treated as a legacy launcher rather than a supported headless Python API target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/optics/chromAb/makeCAplots.m",
       "family": "scripts/optics",
       "kind": "script",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.optics",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream file is effectively a plotting/comment stub for the chromatic-aberration workflow and remains outside the headless migration target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/optics/chromAb/makeCmatrix.m",
       "family": "scripts/optics",
       "kind": "script",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics",
+      "status": "parity",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "Curated parity or direct script/tutorial evidence exists for this upstream workflow.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/optics/chromAb/makeCombinedOtf.m",
       "family": "scripts/optics",
       "kind": "script",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics",
+      "status": "parity",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "Curated parity or direct script/tutorial evidence exists for this upstream workflow.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/optics/chromAb/retinalImage.m",
       "family": "scripts/optics",
       "kind": "script",
-      "status": "partial",
-      "python_surface": "pyisetcam.optics",
+      "status": "parity",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "Curated parity or direct script/tutorial evidence exists for this upstream workflow.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/optics/flare/s_opticsFlare.m",

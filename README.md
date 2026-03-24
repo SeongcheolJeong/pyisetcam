@@ -965,6 +965,14 @@ That same headless optics helper surface now also includes
 remaining diffraction OTF core/export, defocus-surface, off-axis
 falloff, and single-field ray-trace-to-shift-invariant conversion
 helpers from the upstream MATLAB optics family.
+That same optics helper surface now also includes
+`make_combined_otf(...)` / `makeCombinedOtf(...)`,
+`make_cmatrix(...)` / `makeCmatrix(...)`, and
+`retinal_image(...)` / `retinalImage(...)`, covering the reusable
+chromatic-aberration OTF weighting, per-frequency calibration-matrix,
+and retinal-strip replay helpers from the older `scripts/optics/chromAb`
+workflow while leaving the external `ChromAb.m` launcher and plotting
+stub out of scope.
 The `rtOTF` groundwork is also starting to land through public helper ports
 for `rt_block_center` / `rtBlockCenter`, `rt_extract_block` /
 `rtExtractBlock`, `rt_insert_block` / `rtInsertBlock`, and
