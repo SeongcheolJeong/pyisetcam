@@ -372,6 +372,21 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is an unfinished figure-driven class tutorial marked as still not working, so it is treated as exploratory teaching code rather than actionable headless migration debt.",
         "module_hits": [],
     },
+    "scripts/oneoverf/s_oneOverF1D.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a research-style exploratory synthesis notebook for 1/f intuition with interactive figures rather than a stable reusable MATLAB API surface.",
+        "module_hits": [],
+    },
+    "scripts/oneoverf/s_oneoverf2D_tinker.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is an explicit tinker script for FFT/cropping experiments and remains outside the supported headless migration target.",
+        "module_hits": [],
+    },
+    "scripts/oneoverf/s_oneoverf_tinker.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is an explicit tinker script for dead-leaves-style spectrum experiments rather than a supported reusable API surface.",
+        "module_hits": [],
+    },
     "scripts/display/s_displayCompare.m": {
         "status": "parity",
         "note": "The display-comparison workflow is already covered by the current headless display/scene rendering surface and the existing display-driven `scene_from_file(...)` regression coverage across `OLED-Sony`, `LCD-Apple`, and `CRT-Dell`.",

@@ -191,7 +191,10 @@ regressions, while treating `s_initSO.m` as session-only `vcSESSION`
 scaffolding outside the explicit-object migration target. The same audit
 pass now also treats the remaining `scripts/development` scratch/tutorial
 files as out of scope because they are explicitly unfinished exploratory
-workflows rather than stable reusable MATLAB APIs.
+workflows rather than stable reusable MATLAB APIs. The adjacent
+`scripts/oneoverf` tinker/synthesis notebooks are now also treated as out
+of scope for the same reason: they are exploratory spectrum-analysis
+scripts, not stable reusable compute surfaces.
 
 Run the initial metrics helpers:
 

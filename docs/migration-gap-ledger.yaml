@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-03-24T18:21:30.668941+00:00",
+  "generated_at": "2026-03-24T18:36:19.310190+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 84,
-      "missing": 34,
-      "out_of_scope": 176,
+      "missing": 31,
+      "out_of_scope": 179,
       "parity": 663,
       "partial": 418,
       "ported": 68
@@ -20,9 +20,9 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 363,
+      "P1": 360,
       "P2": 173,
-      "P3": 907
+      "P3": 910
     },
     "delta_from_previous": {
       "status_counts": {
@@ -682,12 +682,12 @@
       "scripts/oneoverf": {
         "total": 3,
         "by_status": {
-          "missing": 3
+          "out_of_scope": 3
         },
         "by_kind": {
           "script": 3
         },
-        "highest_open_priority": "P1"
+        "highest_open_priority": "P3"
       },
       "scripts/optics": {
         "total": 42,
@@ -1088,14 +1088,6 @@
         }
       },
       {
-        "family": "scripts/oneoverf",
-        "open_entries": 3,
-        "highest_open_priority": "P1",
-        "by_status": {
-          "missing": 3
-        }
-      },
-      {
         "family": "tutorials/image",
         "open_entries": 3,
         "highest_open_priority": "P1",
@@ -1111,6 +1103,15 @@
         "by_status": {
           "parity": 1,
           "partial": 2
+        }
+      },
+      {
+        "family": "scripts/data",
+        "open_entries": 1,
+        "highest_open_priority": "P1",
+        "by_status": {
+          "missing": 1,
+          "parity": 1
         }
       }
     ],
@@ -10801,40 +10802,40 @@
       "upstream_path": "scripts/oneoverf/s_oneOverF1D.m",
       "family": "scripts/oneoverf",
       "kind": "script",
-      "status": "missing",
+      "status": "out_of_scope",
       "python_surface": "",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "No usable Python surface was detected for this upstream path.",
-      "priority": "P1"
+      "notes": "The upstream file is a research-style exploratory synthesis notebook for 1/f intuition with interactive figures rather than a stable reusable MATLAB API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/oneoverf/s_oneoverf2D_tinker.m",
       "family": "scripts/oneoverf",
       "kind": "script",
-      "status": "missing",
+      "status": "out_of_scope",
       "python_surface": "",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "No usable Python surface was detected for this upstream path.",
-      "priority": "P1"
+      "notes": "The upstream file is an explicit tinker script for FFT/cropping experiments and remains outside the supported headless migration target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/oneoverf/s_oneoverf_tinker.m",
       "family": "scripts/oneoverf",
       "kind": "script",
-      "status": "missing",
+      "status": "out_of_scope",
       "python_surface": "",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "No usable Python surface was detected for this upstream path.",
-      "priority": "P1"
+      "notes": "The upstream file is an explicit tinker script for dead-leaves-style spectrum experiments rather than a supported reusable API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/optics/Contents.m",
