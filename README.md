@@ -393,6 +393,10 @@ plus headless `sensor_create_imec_ssm_4x4_vis(...)` /
 `sensorMT9V024(...)` for the remaining reusable MATLAB sensor-model
 helper surface, while treating the exploratory `s_sensorIMX490Test.m`
 demo script as out of scope,
+and the migration-gap audit now also treats the GUIDE-only
+`sensor/cfadesign` family (`cfaDesign.m`, `cfaDesignCallbacks.m`,
+`cfaDesignUI.m`) plus the unimplemented `cfaDesignUtilities.m` example
+stub as out of scope rather than remaining headless API debt,
 plus headless
 `pixel_create(...)` / `pixelCreate(...)`,
 `pixel_get(...)` / `pixelGet(...)`, `pixel_set(...)` / `pixelSet(...)`,

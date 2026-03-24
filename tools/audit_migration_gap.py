@@ -391,6 +391,26 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is a figure-driven exploratory IMX490 demo script rather than a reusable supported headless API surface.",
         "module_hits": [],
     },
+    "sensor/cfaDesign/cfaDesign.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a GUIDE figure entry point for interactive CFA editing and remains outside the headless migration target.",
+        "module_hits": [],
+    },
+    "sensor/cfaDesign/cfaDesignCallbacks.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a GUIDE callback/controller layer for the CFA design UI and does not define a reusable supported headless API surface.",
+        "module_hits": [],
+    },
+    "sensor/cfaDesign/cfaDesignUI.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file constructs an interactive GUIDE CFA design window and remains outside the headless migration target.",
+        "module_hits": [],
+    },
+    "sensor/cfaDesign/cfaDesignUtilities.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is an explicitly unimplemented example stub for CFA-design scripting rather than a usable supported headless API surface.",
+        "module_hits": [],
+    },
     "sensor/pixel/pixelGUI/pixelGeometryWindow.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a legacy MATLAB figure window controller and remains outside the headless migration target.",

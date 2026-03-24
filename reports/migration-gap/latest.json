@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-24T07:13:12.661234+00:00",
+  "generated_at": "2026-03-24T07:23:31.795390+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-24T07:13:12.661234+00:00",
+    "generated_at": "2026-03-24T07:23:31.795390+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 92,
       "missing": 37,
-      "out_of_scope": 156,
+      "out_of_scope": 160,
       "parity": 623,
-      "partial": 500,
+      "partial": 496,
       "ported": 35
     },
     "kind_counts": {
@@ -22,18 +22,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 72,
+      "P0": 68,
       "P1": 376,
       "P2": 181,
-      "P3": 814
+      "P3": 818
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 1,
-        "parity": 4,
-        "partial": -5,
+        "out_of_scope": 4,
+        "parity": -4,
+        "partial": 0,
         "ported": 0
       },
       "kind_counts": {
@@ -45,10 +45,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -5,
+        "P0": 0,
         "P1": 0,
         "P2": 0,
-        "P3": 5
+        "P3": 0
       }
     },
     "family_summary": {
@@ -775,14 +775,13 @@
       "sensor/cfadesign": {
         "total": 5,
         "by_status": {
-          "out_of_scope": 1,
-          "partial": 4
+          "out_of_scope": 5
         },
         "by_kind": {
           "api": 4,
           "gui": 1
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "sensor/gui": {
         "total": 9,
@@ -1035,15 +1034,6 @@
         }
       },
       {
-        "family": "sensor/cfadesign",
-        "open_entries": 4,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "out_of_scope": 1,
-          "partial": 4
-        }
-      },
-      {
         "family": "sensor/pixel",
         "open_entries": 4,
         "highest_open_priority": "P0",
@@ -1141,6 +1131,15 @@
           "parity": 39,
           "partial": 2,
           "ported": 4
+        }
+      },
+      {
+        "family": "scene/illumination",
+        "open_entries": 2,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 4,
+          "partial": 2
         }
       }
     ],
