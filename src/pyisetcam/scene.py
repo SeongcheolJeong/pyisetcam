@@ -7,6 +7,7 @@ from typing import Any
 
 import imageio.v3 as iio
 import numpy as np
+from scipy.io import savemat
 from scipy.ndimage import map_coordinates, zoom
 from scipy.signal import convolve2d
 
@@ -20,6 +21,7 @@ from .utils import (
     DEFAULT_WAVE,
     blackbody,
     energy_to_quanta,
+    hc_basis,
     image_increase_image_rgb_size,
     interp_spectra,
     param_format,
@@ -105,6 +107,12 @@ def _mat_struct_field(structure: Any, field: str, default: Any = None) -> Any:
     if structure is None:
         return default
     return getattr(structure, field, default)
+
+
+def _scene_struct_value(structure: Any, field: str, default: Any = None) -> Any:
+    if isinstance(structure, dict):
+        return structure.get(field, default)
+    return _mat_struct_field(structure, field, default)
 
 
 def _resample_wave_last(values: np.ndarray, source_wave_nm: np.ndarray, target_wave_nm: np.ndarray) -> np.ndarray:
@@ -3951,6 +3959,259 @@ def scene_from_file(
     return track_session_object(session, scene)
 
 
+def scene_from_basis(
+    scene_s: Any,
+    *,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> Scene:
+    if isinstance(scene_s, (str, Path)):
+        return scene_from_file(scene_s, "multispectral", asset_store=_store(asset_store), session=session)
+
+    mc_coef = _scene_struct_value(scene_s, "mcCOEF")
+    basis_struct = _scene_struct_value(scene_s, "basis")
+    illuminant = _scene_struct_value(scene_s, "illuminant")
+    if mc_coef is None:
+        raise ValueError("sceneFromBasis requires mcCOEF.")
+    if basis_struct is None:
+        raise ValueError("sceneFromBasis requires basis.")
+
+    basis_wave = np.asarray(_scene_struct_value(basis_struct, "wave"), dtype=float).reshape(-1)
+    basis_matrix = np.asarray(_scene_struct_value(basis_struct, "basis"), dtype=float)
+    if basis_matrix.ndim == 1:
+        basis_matrix = basis_matrix.reshape(-1, 1)
+    if basis_matrix.shape[0] != basis_wave.size and basis_matrix.shape[1] == basis_wave.size:
+        basis_matrix = basis_matrix.T
+    if basis_matrix.shape[0] != basis_wave.size:
+        raise ValueError("Basis wavelength samples must align with the basis matrix.")
+
+    coefficients = np.asarray(mc_coef, dtype=float)
+    if coefficients.ndim == 2:
+        coefficients = coefficients[:, :, np.newaxis]
+    photons = np.tensordot(coefficients, basis_matrix.T, axes=([2], [0]))
+
+    img_mean = _scene_struct_value(scene_s, "imgMean")
+    if img_mean is not None:
+        mean_vector = np.asarray(img_mean, dtype=float).reshape(-1)
+        if mean_vector.size not in {0, basis_wave.size}:
+            raise ValueError("imgMean wavelength length does not match basis wavelength samples.")
+        if mean_vector.size:
+            photons = photons + mean_vector.reshape(1, 1, -1)
+
+    photons = np.maximum(np.asarray(photons, dtype=float), 0.0)
+    scene = Scene(name=str(_scene_struct_value(scene_s, "name", "scene")))
+    scene.fields["wave"] = basis_wave
+    scene.fields["illuminant_format"] = "spectral"
+    scene.fields["distance_m"] = float(np.asarray(_scene_struct_value(scene_s, "dist", DEFAULT_DISTANCE_M), dtype=float).reshape(-1)[0])
+    scene.fields["fov_deg"] = float(np.asarray(_scene_struct_value(scene_s, "fov", DEFAULT_FOV_DEG), dtype=float).reshape(-1)[0])
+    scene.data["photons"] = photons
+
+    if illuminant is not None:
+        illuminant_wave = np.asarray(
+            _scene_struct_value(illuminant, "wave", _scene_struct_value(illuminant, "wavelength", basis_wave)),
+            dtype=float,
+        ).reshape(-1)
+        illuminant_energy = _scene_struct_value(illuminant, "energy", _scene_struct_value(illuminant, "data"))
+        illuminant_photons = _scene_struct_value(illuminant, "photons")
+        if illuminant_photons is not None:
+            illuminant_photons = np.asarray(illuminant_photons, dtype=float)
+            if illuminant_photons.ndim == 3 and illuminant_photons.shape[0] == illuminant_wave.size and illuminant_photons.shape[-1] != illuminant_wave.size:
+                illuminant_photons = np.moveaxis(illuminant_photons, 0, -1)
+            if not np.array_equal(illuminant_wave, basis_wave):
+                if illuminant_photons.ndim == 1:
+                    illuminant_photons = interp_spectra(illuminant_wave, illuminant_photons, basis_wave).reshape(-1)
+                else:
+                    illuminant_photons = _resample_wave_last(illuminant_photons, illuminant_wave, basis_wave)
+            scene.fields["illuminant_photons"] = illuminant_photons
+            scene.fields["illuminant_energy"] = quanta_to_energy(illuminant_photons, basis_wave)
+            if np.asarray(scene.fields["illuminant_energy"]).ndim == 3:
+                scene.fields["illuminant_energy"] = np.mean(np.asarray(scene.fields["illuminant_energy"], dtype=float), axis=(0, 1))
+            scene.fields["illuminant_format"] = "spatial spectral" if np.asarray(illuminant_photons).ndim == 3 else "spectral"
+        elif illuminant_energy is not None:
+            illuminant_energy = np.asarray(illuminant_energy, dtype=float)
+            if illuminant_energy.ndim == 3 and illuminant_energy.shape[0] == illuminant_wave.size and illuminant_energy.shape[-1] != illuminant_wave.size:
+                illuminant_energy = np.moveaxis(illuminant_energy, 0, -1)
+            if not np.array_equal(illuminant_wave, basis_wave):
+                if illuminant_energy.ndim == 1:
+                    illuminant_energy = interp_spectra(illuminant_wave, illuminant_energy, basis_wave).reshape(-1)
+                else:
+                    illuminant_energy = _resample_wave_last(illuminant_energy, illuminant_wave, basis_wave)
+            scene.fields["illuminant_energy"] = illuminant_energy
+            scene.fields["illuminant_photons"] = energy_to_quanta(illuminant_energy, basis_wave)
+            if np.asarray(illuminant_energy).ndim == 3:
+                scene.fields["illuminant_energy"] = np.mean(np.asarray(illuminant_energy, dtype=float), axis=(0, 1))
+            scene.fields["illuminant_format"] = "spatial spectral" if np.asarray(illuminant_energy).ndim == 3 else "spectral"
+        scene.fields["illuminant_comment"] = str(_scene_struct_value(illuminant, "comment", scene.name))
+    else:
+        scene.fields["illuminant_photons"] = np.maximum(np.mean(photons, axis=(0, 1), dtype=float), 1.0e-12)
+        scene.fields["illuminant_energy"] = quanta_to_energy(scene.fields["illuminant_photons"], basis_wave)
+        scene.fields["illuminant_comment"] = scene.name
+
+    _update_scene_geometry(scene)
+    return track_session_object(session, scene)
+
+
+def scene_insert(scene1: Scene, scene2: Scene, position: Any) -> Scene:
+    wave1 = np.asarray(scene_get(scene1, "wave"), dtype=float).reshape(-1)
+    wave2 = np.asarray(scene_get(scene2, "wave"), dtype=float).reshape(-1)
+    if not np.array_equal(wave1, wave2):
+        raise ValueError("sceneInsert requires matching wavelength samples.")
+
+    anchor = np.asarray(position, dtype=int).reshape(-1)
+    if anchor.size != 2:
+        raise ValueError("sceneInsert position must be a 2-vector.")
+
+    base = np.asarray(scene_get(scene1, "photons"), dtype=float).copy()
+    inset = np.asarray(scene_get(scene2, "photons"), dtype=float)
+    row0 = int(anchor[0]) - 1
+    col0 = int(anchor[1]) - 1
+    row1 = row0 + int(inset.shape[0])
+    col1 = col0 + int(inset.shape[1])
+    if row0 < 0 or col0 < 0 or row1 > base.shape[0] or col1 > base.shape[1]:
+        raise ValueError("sceneInsert position places the inserted scene outside the base scene.")
+
+    base[row0:row1, col0:col1, ...] = inset
+    return scene_set(scene1.clone(), "photons", base)
+
+
+def scene_to_file(
+    fname: str | Path,
+    scene: Scene,
+    b_type: Any | None = None,
+    m_type: str = "mean svd",
+    comment: str | None = None,
+) -> tuple[float, int]:
+    path = Path(fname).expanduser()
+    if path.suffix.lower() != ".mat":
+        path = path.with_suffix(".mat")
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    if comment is None:
+        comment = f"Scene: {scene_get(scene, 'name')}"
+
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+    wave = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+    illuminant = scene_get(scene, "illuminant")
+    fov = float(scene_get(scene, "fov"))
+    dist = float(scene_get(scene, "distance"))
+    name = str(scene_get(scene, "name"))
+
+    b_type_array = np.asarray(b_type, dtype=float).reshape(-1) if b_type is not None else np.array([], dtype=float)
+    if b_type is None or b_type_array.size == 0:
+        savemat(
+            path,
+            {
+                "photons": photons,
+                "wave": wave,
+                "comment": str(comment),
+                "illuminant": {
+                    "wave": np.asarray(illuminant["wave"], dtype=float).reshape(-1),
+                    "data": np.asarray(illuminant["energy"], dtype=float),
+                },
+                "fov": fov,
+                "dist": dist,
+                "name": name,
+                "type": scene.type,
+                "data": dict(scene.data),
+            },
+            do_compression=True,
+        )
+        return 1.0, int(wave.size)
+
+    from .fileio import ie_save_multispectral_image
+
+    sampled = photons[::3, ::3, :]
+    img_mean, basis_data, _, var_explained = hc_basis(sampled, float(b_type_array[0]), m_type)
+    photons_xw, rows, cols, _ = rgb_to_xw_format(photons)
+    normalized_mean_type = param_format(m_type)
+    if normalized_mean_type == "canonical":
+        coefficients_xw = photons_xw @ basis_data
+        saved_mean = None
+    elif normalized_mean_type == "meansvd":
+        coefficients_xw = (photons_xw - img_mean.reshape(1, -1)) @ basis_data
+        saved_mean = img_mean
+    else:
+        raise ValueError(f"Unknown sceneToFile mean type '{m_type}'.")
+
+    coefficients = xw_to_rgb_format(coefficients_xw, rows, cols)
+    ie_save_multispectral_image(
+        path,
+        coefficients,
+        {"basis": basis_data, "wave": wave},
+        comment,
+        saved_mean,
+        illuminant,
+        fov,
+        dist,
+        name,
+    )
+    return float(var_explained), int(coefficients.shape[2])
+
+
+def scene_wb_create(scene_all: Scene, work_dir: str | Path | None = None) -> str:
+    from .fileio import vc_save_object
+
+    output_dir = Path.cwd() / str(scene_get(scene_all, "name")) if work_dir is None else Path(work_dir).expanduser()
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    wave = np.asarray(scene_get(scene_all, "wave"), dtype=float).reshape(-1)
+    photons = np.asarray(scene_get(scene_all, "photons"), dtype=float)
+    illuminant_photons = np.asarray(scene_get(scene_all, "illuminant photons"), dtype=float)
+    illuminant_energy = np.asarray(scene_get(scene_all, "illuminant energy"), dtype=float)
+
+    for index, wavelength in enumerate(wave):
+        scene_band = scene_all.clone()
+        scene_band.fields["wave"] = np.array([float(wavelength)], dtype=float)
+        scene_band.data["photons"] = np.asarray(photons[:, :, index : index + 1], dtype=float)
+        if illuminant_photons.ndim == 1:
+            scene_band.fields["illuminant_photons"] = np.array([float(illuminant_photons[index])], dtype=float)
+        else:
+            scene_band.fields["illuminant_photons"] = np.asarray(illuminant_photons[:, :, index : index + 1], dtype=float)
+        if illuminant_energy.ndim == 1:
+            scene_band.fields["illuminant_energy"] = np.array([float(illuminant_energy[index])], dtype=float)
+        else:
+            scene_band.fields["illuminant_energy"] = np.asarray(illuminant_energy[:, :, index : index + 1], dtype=float)
+        scene_band.fields["illuminant_format"] = "spatial spectral" if np.asarray(scene_band.fields["illuminant_photons"]).ndim == 3 else "spectral"
+        _invalidate_scene_caches(scene_band)
+        _update_scene_geometry(scene_band)
+        vc_save_object(scene_band, output_dir / f"scene{int(np.rint(wavelength))}.mat")
+
+    return str(output_dir)
+
+
+def scene_make_video(
+    scene_list: list[Scene] | tuple[Scene, ...],
+    full_name: str | Path | None = None,
+    render_flag: int = -3,
+    gam: float = 2.2,
+    fps: float = 3.0,
+    *,
+    asset_store: AssetStore | None = None,
+) -> str:
+    scenes = list(scene_list)
+    if not scenes:
+        raise ValueError("sceneMakeVideo requires at least one scene.")
+
+    path = Path(full_name) if full_name is not None else (Path.cwd() / "Video-output.gif")
+    if path.suffix == "":
+        path = path.with_suffix(".gif")
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    store = _store(asset_store)
+    frames = []
+    for scene in scenes:
+        rgb = np.asarray(scene_show_image(scene, render_flag, gam, asset_store=store), dtype=float)
+        frames.append(np.clip(np.rint(rgb * 255.0), 0.0, 255.0).astype(np.uint8))
+
+    duration = 1.0 / max(float(fps), 1.0e-12)
+    frame_stack = np.stack(frames, axis=0)
+    if path.suffix.lower() == ".gif":
+        iio.imwrite(path, frame_stack, duration=duration, loop=0)
+    else:
+        iio.imwrite(path, frame_stack, fps=float(fps))
+    return str(path)
+
+
 def scene_calculate_luminance(scene: Scene, *, asset_store: AssetStore | None = None) -> np.ndarray:
     store = _store(asset_store)
     luminance = luminance_from_photons(scene.data["photons"], np.asarray(scene.fields["wave"], dtype=float), asset_store=store)
@@ -4902,7 +5163,7 @@ def scene_get(scene: Scene, parameter: str, *args: Any, asset_store: AssetStore 
     if key == "metadata":
         return scene.metadata
     if key == "wave":
-        return np.asarray(scene.fields["wave"], dtype=float)
+        return np.asarray(scene.fields["wave"], dtype=float).reshape(-1)
     if key == "nwave":
         return int(np.asarray(scene.fields["wave"], dtype=float).size)
     if key == "photons":

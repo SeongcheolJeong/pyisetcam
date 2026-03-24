@@ -247,11 +247,14 @@ from pyisetcam import (
     scene_add_grid,
     sceneCrop,
     scene_get,
+    sceneFromBasis,
     scene_illuminant_ss,
     sceneInitGeometry,
     sceneInitSpatial,
+    sceneInsert,
     scene_interpolate_w,
     sceneList,
+    sceneMakeVideo,
     scene_plot,
     sceneExtractWaveband,
     scenePhotonNoise,
@@ -267,8 +270,10 @@ from pyisetcam import (
     sceneSpatialSupport,
     scene_set,
     sceneThumbnail,
+    sceneToFile,
     sceneTranslate,
     sceneVernier,
+    sceneWBCreate,
     signal_current,
     SignalCurrentDensity,
     srgb2xyz,
@@ -420,6 +425,7 @@ from pyisetcam import (
     xyz_to_srgb,
     y_to_lstar,
     visualAngle,
+    vcLoadObject,
     vcSaveObject,
     zemax_load,
     zemax_read_header,
@@ -14367,6 +14373,74 @@ def test_scene_vernier_wrapper_surface(asset_store) -> None:
     assert np.max(np.asarray(scene_get(object_scene, "luminance", asset_store=asset_store), dtype=float)) > np.min(
         np.asarray(scene_get(object_scene, "luminance", asset_store=asset_store), dtype=float)
     )
+
+
+def test_scene_export_wrapper_surface(asset_store, tmp_path: Path) -> None:
+    wave = np.array([500.0, 600.0, 700.0], dtype=float)
+    base = scene_create("uniform ee", np.array([5, 6], dtype=int), wave, asset_store=asset_store)
+    base_photons = np.arange(1, 5 * 6 * wave.size + 1, dtype=float).reshape(5, 6, wave.size)
+    base = scene_set(base, "photons", base_photons)
+
+    inset = scene_create("uniform ee", np.array([2, 3], dtype=int), wave, asset_store=asset_store)
+    inset_photons = np.full((2, 3, wave.size), 999.0, dtype=float)
+    inset = scene_set(inset, "photons", inset_photons)
+
+    inserted = sceneInsert(base, inset, [2, 3])
+    expected = base_photons.copy()
+    expected[1:3, 2:5, :] = inset_photons
+
+    assert np.array_equal(np.asarray(scene_get(inserted, "photons"), dtype=float), expected)
+    assert np.array_equal(np.asarray(scene_get(base, "photons"), dtype=float), base_photons)
+
+    raw_path = Path(tmp_path / "scene_export")
+    raw_var, raw_bases = sceneToFile(raw_path, inserted)
+    raw_output = raw_path.with_suffix(".mat")
+    raw_reload = scene_from_file(raw_output, "multispectral", asset_store=asset_store)
+
+    assert raw_output.exists()
+    assert np.isclose(raw_var, 1.0, atol=1e-12, rtol=0.0)
+    assert raw_bases == wave.size
+    assert np.array_equal(np.asarray(scene_get(raw_reload, "wave"), dtype=float), wave)
+    assert np.allclose(np.asarray(scene_get(raw_reload, "photons"), dtype=float), expected, atol=1e-12, rtol=1e-12)
+
+    basis_path = Path(tmp_path / "scene_basis_export")
+    basis_var, basis_bases = sceneToFile(basis_path, inserted, 3, "mean svd")
+    basis_output = basis_path.with_suffix(".mat")
+    basis_payload = asset_store.load_mat(basis_output)
+    basis_reload = sceneFromBasis(basis_payload, asset_store=asset_store)
+
+    assert basis_output.exists()
+    assert basis_bases == 3
+    assert basis_var >= 0.999999999
+    assert np.array_equal(np.asarray(scene_get(basis_reload, "wave"), dtype=float), wave)
+    assert np.allclose(np.asarray(scene_get(basis_reload, "photons"), dtype=float), expected, atol=1e-10, rtol=1e-10)
+
+
+def test_scene_waveband_and_video_wrapper_surface(asset_store, tmp_path: Path) -> None:
+    wave = np.array([500.0, 600.0, 700.0], dtype=float)
+    scene = scene_create("uniform ee", 4, wave, asset_store=asset_store)
+    photons = np.arange(1, 4 * 4 * wave.size + 1, dtype=float).reshape(4, 4, wave.size)
+    scene = scene_set(scene, "photons", photons)
+    scene.name = "wb-scene"
+
+    work_dir = Path(sceneWBCreate(scene, tmp_path / "wb-scenes"))
+    saved_files = sorted(work_dir.glob("scene*.mat"))
+    loaded_band, loaded_path = vcLoadObject("scene", saved_files[1])
+
+    assert work_dir.exists()
+    assert len(saved_files) == wave.size
+    assert Path(loaded_path) == saved_files[1]
+    assert np.array_equal(np.asarray(scene_get(loaded_band, "wave"), dtype=float), np.array([wave[1]], dtype=float))
+    assert np.allclose(np.asarray(scene_get(loaded_band, "photons"), dtype=float), photons[:, :, 1], atol=1e-12, rtol=1e-12)
+
+    brighter = scene_adjust_luminance(scene.clone(), 150.0, asset_store=asset_store)
+    video_path = Path(sceneMakeVideo([scene, brighter], tmp_path / "scene-demo", asset_store=asset_store))
+    frames = list(iio.imiter(video_path))
+
+    assert video_path.suffix == ".gif"
+    assert video_path.exists()
+    assert video_path.stat().st_size > 0
+    assert len(frames) == 2
 
 
 def test_scene_from_multispectral_script_workflow(asset_store) -> None:

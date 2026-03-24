@@ -408,6 +408,7 @@ from .scene import (
     scene_description,
     scene_crop,
     scene_extract_waveband,
+    scene_from_basis,
     scene_from_file,
     scene_get,
     scene_illuminant_scale,
@@ -417,6 +418,8 @@ from .scene import (
     scene_interpolate_w,
     scene_energy_from_vector,
     scene_frequency_support,
+    scene_insert,
+    scene_make_video,
     scene_photon_noise,
     scene_init_spatial,
     scene_list,
@@ -433,9 +436,11 @@ from .scene import (
     scene_set,
     scene_spd_scale,
     scene_thumbnail,
+    scene_to_file,
     scene_translate,
     scene_radiance_chart,
     scene_vernier,
+    scene_wb_create,
 )
 from .sensor import (
     analog_to_digital,
@@ -1199,6 +1204,7 @@ __all__ = [
     "sceneDescription",
     "sceneCrop",
     "sceneExtractWaveband",
+    "sceneFromBasis",
     "sceneFromFile",
     "sceneGet",
     "sceneIlluminantScale",
@@ -1207,8 +1213,10 @@ __all__ = [
     "sceneEnergyFromVector",
     "sceneFrequencySupport",
     "sceneInitSpatial",
+    "sceneInsert",
     "sceneInterpolateW",
     "sceneList",
+    "sceneMakeVideo",
     "scenePhotonsFromVector",
     "sceneRadianceFromVector",
     "sceneReflectanceChart",
@@ -1222,8 +1230,10 @@ __all__ = [
     "sceneSet",
     "sceneSPDScale",
     "sceneThumbnail",
+    "sceneToFile",
     "sceneTranslate",
     "sceneVernier",
+    "sceneWBCreate",
     "scene_combine",
     "scene_adjust_illuminant",
     "scene_add",
@@ -1239,6 +1249,7 @@ __all__ = [
     "scene_extract_waveband",
     "scene_energy_from_vector",
     "scene_frequency_support",
+    "scene_from_basis",
     "scene_from_file",
     "scene_get",
     "scene_illuminant_scale",
@@ -1246,8 +1257,10 @@ __all__ = [
     "scene_illuminant_ss",
     "scene_init_geometry",
     "scene_init_spatial",
+    "scene_insert",
     "scene_interpolate_w",
     "scene_list",
+    "scene_make_video",
     "scene_photon_noise",
     "scene_photons_from_vector",
     "scene_radiance_from_vector",
@@ -1264,8 +1277,10 @@ __all__ = [
     "scene_set",
     "scene_spd_scale",
     "scene_thumbnail",
+    "scene_to_file",
     "scene_translate",
     "scene_vernier",
+    "scene_wb_create",
     "fot_params",
     "gabor_p",
     "img_deadleaves",
@@ -1571,6 +1586,7 @@ sceneCreate = scene_create
 sceneDescription = scene_description
 sceneCrop = scene_crop
 sceneExtractWaveband = scene_extract_waveband
+sceneFromBasis = scene_from_basis
 sceneFromFile = scene_from_file
 sceneGet = scene_get
 sceneIlluminantPattern = scene_illuminant_pattern
@@ -1580,7 +1596,9 @@ sceneInterpolateW = scene_interpolate_w
 sceneEnergyFromVector = scene_energy_from_vector
 sceneFrequencySupport = scene_frequency_support
 sceneInitSpatial = scene_init_spatial
+sceneInsert = scene_insert
 sceneList = scene_list
+sceneMakeVideo = scene_make_video
 scenePhotonNoise = scene_photon_noise
 scenePhotonsFromVector = scene_photons_from_vector
 sceneRadianceFromVector = scene_radiance_from_vector
@@ -1607,8 +1625,10 @@ sceneSpatialResample = scene_spatial_resample
 sceneSpatialSupport = scene_spatial_support
 sceneSet = scene_set
 sceneThumbnail = scene_thumbnail
+sceneToFile = scene_to_file
 sceneTranslate = scene_translate
 sceneVernier = scene_vernier
+sceneWBCreate = scene_wb_create
 sceneRamp = scene_ramp
 hdrRender = hdr_render
 sceneAdd = scene_add
