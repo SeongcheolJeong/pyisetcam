@@ -1041,6 +1041,175 @@ def xw_to_rgb_format(im_xw: Any, rows: int, cols: int) -> NDArray[np.float64]:
     return np.reshape(array, (int(rows), int(cols), int(array.shape[1])), order="F")
 
 
+def ie_find_wave_index(
+    wave: Any,
+    wave_val: Any,
+    perfect: bool = True,
+) -> NDArray[np.bool_]:
+    """Return a boolean wavelength-membership vector."""
+
+    wave_samples = np.asarray(wave, dtype=float).reshape(-1)
+    if wave_samples.size == 0:
+        raise ValueError("Must define list of all wavelengths.")
+    requested = np.asarray(wave_val, dtype=float).reshape(-1)
+    if requested.size == 0:
+        raise ValueError("Must define wavelength values.")
+
+    if perfect:
+        return np.isin(wave_samples, requested)
+
+    found = np.zeros(wave_samples.size, dtype=bool)
+    for value in requested:
+        found[int(np.argmin(np.abs(wave_samples - float(value))))] = True
+    return found
+
+
+ieFindWaveIndex = ie_find_wave_index
+
+
+def ie_wave2_index(
+    wave_list: Any,
+    wave: Any,
+    *,
+    bounding: bool = False,
+) -> int | tuple[int, int]:
+    """Convert a wavelength to a 1-based index into the wave list."""
+
+    wave_samples = np.asarray(wave_list, dtype=float).reshape(-1)
+    if wave_samples.size == 0:
+        raise ValueError("wave_list must contain at least one wavelength.")
+
+    target = float(wave)
+    idx1 = int(np.argmin(np.abs(wave_samples - target)))
+    if not bounding:
+        return idx1 + 1
+
+    if float(wave_samples[idx1]) > target:
+        idx2 = max(0, idx1 - 1)
+        idx1, idx2 = idx2, idx1
+    elif float(wave_samples[idx1]) < target:
+        idx2 = min(wave_samples.size - 1, idx1 + 1)
+    else:
+        idx2 = idx1
+    return idx1 + 1, idx2 + 1
+
+
+ieWave2Index = ie_wave2_index
+
+
+def ie_radial_matrix(
+    nx: int,
+    ny: int,
+    centerx: float,
+    centery: float | None = None,
+) -> NDArray[np.float64]:
+    """Return the radial distance matrix from a MATLAB-style image center."""
+
+    x_center = float(centerx)
+    y_center = x_center if centery is None else float(centery)
+    x = np.arange(1, int(nx) + 1, dtype=float) - x_center
+    y = np.arange(1, int(ny) + 1, dtype=float) - y_center
+    return np.sqrt(np.square(y)[:, np.newaxis] + np.square(x)[np.newaxis, :])
+
+
+ieRadialMatrix = ie_radial_matrix
+
+
+def image_bounding_box(image: Any) -> NDArray[np.float64]:
+    """Return a MATLAB-style square bounding box around non-zero support."""
+
+    support = np.asarray(image)
+    if support.ndim == 0:
+        raise ValueError("image must be at least two-dimensional.")
+    if support.ndim > 2:
+        support = np.any(support != 0, axis=tuple(range(2, support.ndim)))
+
+    row, col = np.nonzero(support)
+    if row.size == 0 or col.size == 0:
+        raise ValueError("image must contain at least one non-zero element.")
+
+    min_row = float(np.min(row) + 1)
+    max_row = float(np.max(row) + 1)
+    min_col = float(np.min(col) + 1)
+    max_col = float(np.max(col) + 1)
+
+    center_x = (min_col + max_col) / 2.0
+    center_y = (min_row + max_row) / 2.0
+    max_diff = max(abs(max_row - center_y), abs(max_col - center_x))
+    return np.array(
+        [center_x - max_diff, center_y - max_diff, 2.0 * max_diff, 2.0 * max_diff],
+        dtype=float,
+    )
+
+
+imageBoundingBox = image_bounding_box
+
+
+def image_centroid(img: Any) -> tuple[int, int]:
+    """Calculate the rounded centroid of a 2-D image in 1-based pixels."""
+
+    image = np.asarray(img, dtype=float)
+    if image.ndim != 2:
+        raise ValueError("imageCentroid expects a 2-D image.")
+
+    col_sum = np.sum(image, axis=0)
+    row_sum = np.sum(image, axis=1)
+    if float(np.sum(col_sum)) == 0.0 or float(np.sum(row_sum)) == 0.0:
+        raise ValueError("imageCentroid requires non-zero image mass.")
+
+    col_sum = col_sum / np.sum(col_sum)
+    row_sum = row_sum / np.sum(row_sum)
+    x_pos = np.arange(1, image.shape[1] + 1, dtype=float)
+    y_pos = np.arange(1, image.shape[0] + 1, dtype=float)
+    x = int(_matlab_round(np.dot(col_sum, x_pos)).item())
+    y = int(_matlab_round(np.dot(row_sum, y_pos)).item())
+    return x, y
+
+
+imageCentroid = image_centroid
+
+
+def image_circular(im: Any) -> NDArray[Any]:
+    """Zero values outside the centered circular aperture."""
+
+    image = np.array(im, copy=True)
+    if image.ndim != 2:
+        raise ValueError("Need a 2-D image array.")
+
+    image_size = np.array(image.shape, dtype=float)
+    center_point = image_size / 2.0 + 1.0
+    radius = (float(np.min(image_size)) - 1.0) / 2.0
+    x = np.arange(1, image.shape[1] + 1, dtype=float) - center_point[1]
+    y = np.arange(1, image.shape[0] + 1, dtype=float) - center_point[0]
+    image_radius = np.sqrt(np.square(y)[:, np.newaxis] + np.square(x)[np.newaxis, :])
+    image[image_radius > radius] = 0
+    return image
+
+
+imageCircular = image_circular
+
+
+def image_contrast(data: Any) -> NDArray[np.float64]:
+    """Compute per-channel mean-normalized image contrast."""
+
+    original = np.asarray(data)
+    image = np.asarray(data, dtype=float)
+    if image.ndim == 2:
+        image = image[:, :, np.newaxis]
+    if image.ndim != 3:
+        raise ValueError("imageContrast expects a 2-D or 3-D image array.")
+
+    contrast = np.zeros_like(image, dtype=float)
+    for channel in range(image.shape[2]):
+        plane = image[:, :, channel]
+        mean_value = float(np.mean(plane))
+        contrast[:, :, channel] = (plane - mean_value) / mean_value
+    return contrast[:, :, 0] if original.ndim == 2 else contrast
+
+
+imageContrast = image_contrast
+
+
 def image_linear_transform(image: Any, transform: Any) -> NDArray[np.float64]:
     """Apply a linear color transform to an image cube."""
 

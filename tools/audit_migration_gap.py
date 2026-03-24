@@ -213,6 +213,41 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB multispectral-image writer is covered by the Python `vc_save_multispectral_image(...)` / `vcSaveMultiSpectralImage(...)` compatibility wrapper on top of the existing basis-coded save path.",
         "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
     },
+    "utility/image/ieFindWaveIndex.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB wavelength-membership helper is covered by the Python `ie_find_wave_index(...)` / `ieFindWaveIndex(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/ieRadialMatrix.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB radial-distance helper is covered by the Python `ie_radial_matrix(...)` / `ieRadialMatrix(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/ieWave2Index.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB wavelength-index helper is covered by the Python `ie_wave2_index(...)` / `ieWave2Index(...)` compatibility wrapper in `pyisetcam.utils`, preserving the MATLAB 1-based return contract.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/imageBoundingBox.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB non-zero-support bounding-box helper is covered by the Python `image_bounding_box(...)` / `imageBoundingBox(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/imageCentroid.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB weighted-centroid helper is covered by the Python `image_centroid(...)` / `imageCentroid(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/imageCircular.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB centered circular-aperture helper is covered by the Python `image_circular(...)` / `imageCircular(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/imageContrast.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB per-channel contrast helper is covered by the Python `image_contrast(...)` / `imageContrast(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
     "utility/file/vcSelectDataFile.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a persistent GUI file-picker around MATLAB `uigetfile` / `uiputfile` dialogs and remains outside the headless migration target.",

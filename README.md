@@ -1750,6 +1750,13 @@ cover `ieImageType(...)`, `ieSaveSpectralFile(...)`, `ieTempfile(...)`,
 MATLAB file-picker helpers `ieReadMultipleFileNames.m`,
 `vcSelectDataFile.m`, and `vcSelectImage.m` are explicitly tracked as GUI
 out of scope rather than residual headless debt.
+The adjacent `utility/image` numeric helper tail is shrinking too:
+`ieFindWaveIndex(...)`, `ieWave2Index(...)`, `ieRadialMatrix(...)`,
+`imageBoundingBox(...)`, `imageCentroid(...)`, `imageCircular(...)`, and
+`imageContrast(...)` now have direct headless compatibility wrappers in
+`pyisetcam.utils` with focused regressions over MATLAB-style 1-based
+indexing, radial support, centered aperture masking, centroid rounding, and
+per-channel contrast normalization.
 The legacy startup/path trio is now covered too: `ISET.m`, `isetPath.m`,
 and `isetRootPath.m` are tracked against the optional headless session
 bootstrap wrappers `iset(...)`, `isetPath(...)`, and `isetRootPath(...)`

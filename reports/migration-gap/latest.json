@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-03-24T22:05:16.914656+00:00",
+  "generated_at": "2026-03-24T22:40:30.187025+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-24T22:05:16.914656+00:00",
+    "generated_at": "2026-03-24T22:40:30.187025+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 84,
+      "headless_only": 82,
       "missing": 21,
       "out_of_scope": 186,
       "parity": 675,
-      "partial": 396,
-      "ported": 81
+      "partial": 391,
+      "ported": 88
     },
     "kind_counts": {
       "api": 661,
@@ -22,18 +22,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 331,
-      "P2": 170,
-      "P3": 942
+      "P1": 326,
+      "P2": 168,
+      "P3": 949
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": 0,
+        "headless_only": -2,
         "missing": 0,
-        "out_of_scope": 3,
+        "out_of_scope": 0,
         "parity": 0,
-        "partial": -11,
-        "ported": 8
+        "partial": -5,
+        "ported": 7
       },
       "kind_counts": {
         "api": 0,
@@ -44,9 +44,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -11,
-        "P2": 0,
-        "P3": 11
+        "P1": -5,
+        "P2": -2,
+        "P3": 7
       }
     },
     "family_summary": {
@@ -955,10 +955,11 @@
       "utility/image": {
         "total": 46,
         "by_status": {
-          "headless_only": 7,
+          "headless_only": 5,
           "out_of_scope": 2,
           "parity": 7,
-          "partial": 30
+          "partial": 25,
+          "ported": 7
         },
         "by_kind": {
           "gui": 2,
@@ -1027,13 +1028,14 @@
       },
       {
         "family": "utility/image",
-        "open_entries": 37,
+        "open_entries": 30,
         "highest_open_priority": "P1",
         "by_status": {
-          "headless_only": 7,
+          "headless_only": 5,
           "out_of_scope": 2,
           "parity": 7,
-          "partial": 30
+          "partial": 25,
+          "ported": 7
         }
       },
       {

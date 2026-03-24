@@ -3,15 +3,33 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pyisetcam import FloydSteinberg, HalfToneImage, ieParameterOtype
+from pyisetcam import (
+    FloydSteinberg,
+    HalfToneImage,
+    ieFindWaveIndex,
+    ieParameterOtype,
+    ieRadialMatrix,
+    ieWave2Index,
+    imageBoundingBox,
+    imageCentroid,
+    imageCircular,
+    imageContrast,
+)
 from pyisetcam.utils import (
     blackbody,
     energy_to_quanta,
     floyd_steinberg,
     half_tone_image,
     ie_fit_line,
+    ie_find_wave_index,
     ie_parameter_otype,
+    ie_radial_matrix,
+    ie_wave2_index,
     interp_spectra,
+    image_bounding_box,
+    image_centroid,
+    image_circular,
+    image_contrast,
     param_format,
     quanta_to_energy,
     unit_frequency_list,
@@ -168,6 +186,100 @@ def test_ie_fit_line_matches_matlab_one_line_and_multiple_lines() -> None:
     slopes, offsets = ie_fit_line(x_multi, y_multi, "multipleLines")
     assert np.allclose(slopes, np.array([2.0, -1.0], dtype=float))
     assert np.allclose(offsets, np.array([0.5, 3.0], dtype=float))
+
+
+def test_ie_find_wave_index_exact_and_nearest_match_alias() -> None:
+    wave = np.array([400.0, 500.0, 600.0, 700.0], dtype=float)
+
+    exact = ie_find_wave_index(wave, [500.0, 700.0])
+    nearest = ieFindWaveIndex(wave, [520.0, 610.0], perfect=False)
+
+    assert np.array_equal(exact, np.array([False, True, False, True]))
+    assert np.array_equal(nearest, np.array([False, True, True, False]))
+
+
+def test_ie_wave2_index_matches_matlab_one_based_and_bounding_pair_alias() -> None:
+    wave = np.array([400.0, 500.0, 600.0], dtype=float)
+
+    assert ie_wave2_index(wave, 503.0) == 2
+    assert ieWave2Index(wave, 487.0, bounding=True) == (1, 2)
+    assert ieWave2Index(wave, 600.0, bounding=True) == (3, 3)
+
+
+def test_ie_radial_matrix_matches_centered_distance_grid_alias() -> None:
+    expected = np.array(
+        [
+            [np.sqrt(2.0), 1.0, np.sqrt(2.0)],
+            [1.0, 0.0, 1.0],
+            [np.sqrt(2.0), 1.0, np.sqrt(2.0)],
+        ],
+        dtype=float,
+    )
+
+    result = ie_radial_matrix(3, 3, 2, 2)
+    alias = ieRadialMatrix(3, 3, 2, 2)
+
+    assert np.allclose(result, expected)
+    assert np.allclose(alias, expected)
+
+
+def test_image_bounding_box_and_centroid_match_matlab_pixel_geometry_aliases() -> None:
+    support = np.zeros((5, 5), dtype=float)
+    support[1:4, 1:4] = 1.0
+    weighted = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [0.0, 1.0, 2.0],
+            [0.0, 0.0, 0.0],
+        ],
+        dtype=float,
+    )
+
+    box = image_bounding_box(support)
+    alias_box = imageBoundingBox(support)
+    centroid = image_centroid(weighted)
+    alias_centroid = imageCentroid(weighted)
+
+    assert np.allclose(box, np.array([2.0, 2.0, 2.0, 2.0], dtype=float))
+    assert np.allclose(alias_box, box)
+    assert centroid == (3, 2)
+    assert alias_centroid == centroid
+
+
+def test_image_circular_and_contrast_match_legacy_contract_aliases() -> None:
+    image = np.ones((3, 3), dtype=float)
+    contrast_input = np.array(
+        [
+            [[1.0, 2.0], [3.0, 6.0]],
+            [[5.0, 10.0], [7.0, 14.0]],
+        ],
+        dtype=float,
+    )
+    expected_circular = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [0.0, 1.0, 1.0],
+            [0.0, 1.0, 1.0],
+        ],
+        dtype=float,
+    )
+    expected_contrast = np.array(
+        [
+            [[-0.75, -0.75], [-0.25, -0.25]],
+            [[0.25, 0.25], [0.75, 0.75]],
+        ],
+        dtype=float,
+    )
+
+    circular = image_circular(image)
+    alias_circular = imageCircular(image)
+    contrast = image_contrast(contrast_input)
+    alias_contrast = imageContrast(contrast_input)
+
+    assert np.array_equal(circular, expected_circular)
+    assert np.array_equal(alias_circular, expected_circular)
+    assert np.allclose(contrast, expected_contrast)
+    assert np.allclose(alias_contrast, expected_contrast)
 
 
 def test_ie_parameter_otype_handles_direct_prefix_and_unique_params() -> None:

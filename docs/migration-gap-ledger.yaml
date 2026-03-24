@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-03-24T22:05:16.914656+00:00",
+  "generated_at": "2026-03-24T22:40:30.187025+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 84,
+      "headless_only": 82,
       "missing": 21,
       "out_of_scope": 186,
       "parity": 675,
-      "partial": 396,
-      "ported": 81
+      "partial": 391,
+      "ported": 88
     },
     "kind_counts": {
       "api": 661,
@@ -20,18 +20,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 331,
-      "P2": 170,
-      "P3": 942
+      "P1": 326,
+      "P2": 168,
+      "P3": 949
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": 0,
+        "headless_only": -2,
         "missing": 0,
-        "out_of_scope": 3,
+        "out_of_scope": 0,
         "parity": 0,
-        "partial": -11,
-        "ported": 8
+        "partial": -5,
+        "ported": 7
       },
       "kind_counts": {
         "api": 0,
@@ -42,9 +42,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -11,
-        "P2": 0,
-        "P3": 11
+        "P1": -5,
+        "P2": -2,
+        "P3": 7
       }
     },
     "family_summary": {
@@ -953,10 +953,11 @@
       "utility/image": {
         "total": 46,
         "by_status": {
-          "headless_only": 7,
+          "headless_only": 5,
           "out_of_scope": 2,
           "parity": 7,
-          "partial": 30
+          "partial": 25,
+          "ported": 7
         },
         "by_kind": {
           "gui": 2,
@@ -1025,13 +1026,14 @@
       },
       {
         "family": "utility/image",
-        "open_entries": 37,
+        "open_entries": 30,
         "highest_open_priority": "P1",
         "by_status": {
-          "headless_only": 7,
+          "headless_only": 5,
           "out_of_scope": 2,
           "parity": 7,
-          "partial": 30
+          "partial": 25,
+          "ported": 7
         }
       },
       {
@@ -17138,11 +17140,11 @@
       "upstream_path": "utility/image/ieFindWaveIndex.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB wavelength-membership helper is covered by the Python `ie_find_wave_index(...)` / `ieFindWaveIndex(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/ieLUTDigital.m",
@@ -17198,61 +17200,61 @@
       "upstream_path": "utility/image/ieRadialMatrix.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB radial-distance helper is covered by the Python `ie_radial_matrix(...)` / `ieRadialMatrix(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/ieWave2Index.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB wavelength-index helper is covered by the Python `ie_wave2_index(...)` / `ieWave2Index(...)` compatibility wrapper in `pyisetcam.utils`, preserving the MATLAB 1-based return contract.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/imageBoundingBox.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.optics",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB non-zero-support bounding-box helper is covered by the Python `image_bounding_box(...)` / `imageBoundingBox(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/imageCentroid.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB weighted-centroid helper is covered by the Python `image_centroid(...)` / `imageCentroid(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/imageCircular.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB centered circular-aperture helper is covered by the Python `image_circular(...)` / `imageCircular(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/imageContrast.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.scene",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB per-channel contrast helper is covered by the Python `image_contrast(...)` / `imageContrast(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/imageCropBorder.m",

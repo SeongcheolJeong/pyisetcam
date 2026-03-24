@@ -627,9 +627,16 @@ from .utils import (
     hc_basis,
     half_tone_image,
     ie_fit_line,
+    ie_find_wave_index,
     ie_mvnrnd,
     ie_n_to_megapixel,
+    ie_radial_matrix,
+    ie_wave2_index,
     image_linear_transform,
+    image_bounding_box,
+    image_centroid,
+    image_circular,
+    image_contrast,
     image_flip,
     image_increase_image_rgb_size,
     ie_parameter_otype,
@@ -892,9 +899,21 @@ __all__ = [
     "pocs",
     "imageLinearTransform",
     "image_linear_transform",
+    "imageBoundingBox",
+    "image_bounding_box",
+    "imageCentroid",
+    "image_centroid",
+    "imageCircular",
+    "image_circular",
+    "imageContrast",
+    "image_contrast",
     "ieMainClose",
     "ieRefreshWindow",
     "ieImageType",
+    "ieFindWaveIndex",
+    "ie_find_wave_index",
+    "ieRadialMatrix",
+    "ie_radial_matrix",
     "ieReadSpectra",
     "ieReadColorFilter",
     "ieSaveColorFilter",
@@ -1099,6 +1118,8 @@ __all__ = [
     "srgb2colortemp",
     "srgb2lrgb",
     "srgb_to_color_temp",
+    "ieWave2Index",
+    "ie_wave2_index",
     "XW2RGBFormat",
     "xw_to_rgb_format",
     "srgb2xyz",
@@ -2245,6 +2266,13 @@ RGB2XWFormat = rgb_to_xw_format
 XW2RGBFormat = xw_to_rgb_format
 hcBasis = hc_basis
 dac2rgb = dac_to_rgb
+ieFindWaveIndex = ie_find_wave_index
+ieWave2Index = ie_wave2_index
+ieRadialMatrix = ie_radial_matrix
+imageBoundingBox = image_bounding_box
+imageCentroid = image_centroid
+imageCircular = image_circular
+imageContrast = image_contrast
 imageLinearTransform = image_linear_transform
 imageFlip = image_flip
 imageIncreaseImageRGBSize = image_increase_image_rgb_size
