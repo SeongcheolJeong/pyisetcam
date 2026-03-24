@@ -32,6 +32,7 @@ from .color import (
     adobergb_parameters,
     cct_to_sun,
     daylight,
+    ie_color_transform,
     ie_cov_ellipsoid,
     ie_circle_points,
     ie_ctemp_to_srgb,
@@ -760,6 +761,8 @@ __all__ = [
     "delta_e_2000",
     "delta_e_94",
     "delta_e_uv",
+    "ieColorTransform",
+    "ie_color_transform",
     "ie_lab_to_xyz",
     "ieLAB2XYZ",
     "ieLuminance2Radiance",
@@ -2205,6 +2208,7 @@ imageIncreaseImageRGBSize = image_increase_image_rgb_size
 srgb2xyz = srgb_to_xyz
 xyz2srgb = xyz_to_srgb
 xyy2xyz = xyy_to_xyz
+ieColorTransform = ie_color_transform
 ieLAB2XYZ = ie_lab_to_xyz
 lms2srgb = lms_to_srgb
 lms2xyz = lms_to_xyz

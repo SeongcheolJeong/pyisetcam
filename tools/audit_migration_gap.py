@@ -277,6 +277,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB full-reference camera benchmark is covered by the Python `camera_full_reference(...)` / `cameraFullReference(...)` wrapper.",
         "module_hits": ["pyisetcam.camera"],
     },
+    "camera/cameraPlot.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a plotting gateway stub rather than a reusable supported headless camera API surface.",
+        "module_hits": [],
+    },
     "camera/cameraMoire.m": {
         "status": "out_of_scope",
         "note": "The upstream file is an exploratory figure-driven moire-analysis workflow with interactive plots rather than a reusable supported headless API surface.",
@@ -307,10 +312,30 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB S-CIELAB filter-application helper is covered by the Python `sc_apply_filters(...)` / `ApplyFilters(...)` / `scApplyFilters(...)` compatibility surface.",
         "module_hits": ["pyisetcam.scielab", "pyisetcam.__init__"],
     },
+    "metrics/iePSNR.m": {
+        "status": "ported",
+        "note": "The direct MATLAB PSNR helper is covered by the Python `peak_signal_to_noise_ratio(...)` / `iePSNR(...)` compatibility surface.",
+        "module_hits": ["pyisetcam.metrics", "pyisetcam.__init__"],
+    },
     "metrics/ISO/ISOspeedNoise.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a teaching script that expects GUI-managed scene/OI/sensor state rather than a standalone supported headless ISO API.",
         "module_hits": [],
+    },
+    "color/ieColorTransform.m": {
+        "status": "ported",
+        "note": "The MATLAB sensor-to-target color transform helper is covered by the Python `ie_color_transform(...)` / `ieColorTransform(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.color", "pyisetcam.__init__"],
+    },
+    "color/ieLuminanceFromEnergy.m": {
+        "status": "ported",
+        "note": "The direct MATLAB luminance-from-energy helper is covered by the Python `luminance_from_energy(...)` / `ieLuminanceFromEnergy(...)` compatibility surface.",
+        "module_hits": ["pyisetcam.color", "pyisetcam.__init__"],
+    },
+    "color/ieLuminanceFromPhotons.m": {
+        "status": "ported",
+        "note": "The direct MATLAB luminance-from-photons helper is covered by the Python `luminance_from_photons(...)` / `ieLuminanceFromPhotons(...)` compatibility surface.",
+        "module_hits": ["pyisetcam.color", "pyisetcam.__init__"],
     },
     "color/transforms/colorTransformMatrixCreate.m": {
         "status": "out_of_scope",
@@ -515,6 +540,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
     "opticalimage/wavefront/RandomDirtyApertureDeprecate.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a deprecated Computer Vision Toolbox dirty-aperture generator rather than a reusable headless WVF API surface.",
+        "module_hits": [],
+    },
+    "opticalimage/wavefront/psf/psfPlotrange.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file only adjusts figure axis limits and title text for PSF plots, so it remains outside the headless migration target.",
         "module_hits": [],
     },
     "opticalimage/wavefront/underDevelopment_wavefront/wvfComputeOptimizedConePSF.m": {

@@ -9,7 +9,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from .assets import AssetStore
+from .assets import AssetStore, ie_read_color_filter
 from .exceptions import UnsupportedOptionError
 from .utils import blackbody, energy_to_quanta, interp_spectra, param_format, quanta_to_energy, spectral_step, xyz_to_srgb
 
@@ -702,7 +702,53 @@ def _target_qe(
     normalized = param_format(target_space)
     if normalized == "xyz":
         return xyz_color_matching(wave_nm, quanta=True, asset_store=asset_store)
+    if normalized == "stockman":
+        return np.asarray(
+            ie_read_color_filter(
+                np.asarray(wave_nm, dtype=float),
+                "data/human/stockmanQuanta.mat",
+                asset_store=asset_store,
+            )[0],
+            dtype=float,
+        )
     raise UnsupportedOptionError("ieColorTransform", target_space)
+
+
+def ie_color_transform(
+    sensor: Any,
+    target_space: str = "XYZ",
+    illuminant: str | NDArray[np.float64] = "D65",
+    surface: str | NDArray[np.float64] = "multisurface",
+    *,
+    asset_store: AssetStore | None = None,
+) -> NDArray[np.float64]:
+    """Mirror MATLAB ieColorTransform() for the supported headless target spaces."""
+
+    from .ip import image_sensor_transform
+    from .sensor import sensor_get
+
+    store = asset_store or AssetStore.default()
+    wave = np.asarray(sensor_get(sensor, "wave"), dtype=float).reshape(-1)
+    sensor_qe = np.asarray(sensor_get(sensor, "spectral qe"), dtype=float)
+    if sensor_qe.ndim == 1:
+        sensor_qe = sensor_qe.reshape(-1, 1)
+
+    normalized_target = param_format(target_space)
+    if normalized_target == "sensor":
+        return np.eye(sensor_qe.shape[1], dtype=float)
+
+    target_qe = _target_qe(normalized_target, wave, asset_store=store)
+    return np.asarray(
+        image_sensor_transform(
+            sensor_qe,
+            target_qe,
+            illuminant,
+            wave,
+            surface,
+            asset_store=store,
+        ),
+        dtype=float,
+    )
 
 
 def sensor_to_target_matrix(
@@ -766,3 +812,4 @@ ieSpectraSphere = ie_spectra_sphere
 initDefaultSpectrum = init_default_spectrum
 mkInvGammaTable = mk_inv_gamma_table
 xyz2vSNR = xyz_to_vsnr
+ieColorTransform = ie_color_transform

@@ -27,6 +27,7 @@ from pyisetcam import (
     faultyInsert,
     faultyList,
     ip2lightfield,
+    ieColorTransform,
     ieInternal2Display,
     imageColorBalance,
     imageDataXYZ,
@@ -1091,6 +1092,52 @@ def test_image_sensor_transform_supports_multisurface_default(asset_store) -> No
     transform = imageSensorTransform(sensor_qe, target_qe, "D65", wave, asset_store=asset_store)
 
     assert np.allclose(transform, expected)
+
+
+def test_ie_color_transform_matches_xyz_sensor_transform(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    wave = np.asarray(sensor_get(sensor, "wave"), dtype=float)
+    sensor_qe = np.asarray(sensor_get(sensor, "spectral qe"), dtype=float)
+    target_qe = np.asarray(
+        xyz_color_matching(wave, quanta=True, asset_store=asset_store),
+        dtype=float,
+    )
+
+    expected = imageSensorTransform(
+        sensor_qe,
+        target_qe,
+        "D65",
+        wave,
+        "multisurface",
+        asset_store=asset_store,
+    )
+    generated = ieColorTransform(sensor, "XYZ", "D65", "multisurface", asset_store=asset_store)
+
+    assert np.allclose(generated, expected)
+
+
+def test_ie_color_transform_supports_stockman_and_sensor_identity(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    wave = np.asarray(sensor_get(sensor, "wave"), dtype=float)
+    sensor_qe = np.asarray(sensor_get(sensor, "spectral qe"), dtype=float)
+    stockman_qe = np.asarray(
+        ie_read_spectra("data/human/stockmanQuanta.mat", wave, asset_store=asset_store),
+        dtype=float,
+    )
+
+    expected = imageSensorTransform(
+        sensor_qe,
+        stockman_qe,
+        "D65",
+        wave,
+        "mcc",
+        asset_store=asset_store,
+    )
+    generated = ieColorTransform(sensor, "Stockman", "D65", "mcc", asset_store=asset_store)
+    identity = ieColorTransform(sensor, "sensor", asset_store=asset_store)
+
+    assert np.allclose(generated, expected)
+    assert np.array_equal(identity, np.eye(sensor_qe.shape[1], dtype=float))
 
 
 def test_image_esser_transform_matches_direct_sensor_transform(asset_store) -> None:

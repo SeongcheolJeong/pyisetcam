@@ -1690,3 +1690,9 @@ compatibility surfaces, the new headless `rtPSFEdit(...)` port covers the
 legacy PSF centering/rotation helper, and the remaining `rtPlot` /
 `rtPSFVisualize` movie-window routines are explicitly treated as GUI-only
 out-of-scope files.
+The small color/metrics cleanup layer now also exposes legacy
+`ieColorTransform(...)` on top of the existing sensor-transform math, and
+the direct alias wrappers `ieLuminanceFromEnergy(...)`,
+`ieLuminanceFromPhotons(...)`, and `iePSNR(...)` are counted as covered
+compatibility surfaces. Plot-only stubs like `cameraPlot.m` and
+`psfPlotrange.m` are now classified as GUI-only out of scope.

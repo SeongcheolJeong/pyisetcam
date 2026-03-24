@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-03-24T16:50:07.662789+00:00",
+  "generated_at": "2026-03-24T17:17:48.031668+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 90,
+      "headless_only": 84,
       "missing": 37,
-      "out_of_scope": 170,
+      "out_of_scope": 172,
       "parity": 658,
       "partial": 425,
-      "ported": 63
+      "ported": 67
     },
     "kind_counts": {
       "api": 661,
@@ -21,17 +21,17 @@
     },
     "priority_counts": {
       "P1": 373,
-      "P2": 179,
-      "P3": 891
+      "P2": 173,
+      "P3": 897
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": 0,
+        "headless_only": -6,
         "missing": 0,
-        "out_of_scope": 1,
+        "out_of_scope": 2,
         "parity": 0,
-        "partial": -3,
-        "ported": 2
+        "partial": 0,
+        "ported": 4
       },
       "kind_counts": {
         "api": 0,
@@ -42,37 +42,35 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -3,
         "P1": 0,
-        "P2": 0,
-        "P3": 3
+        "P2": -6,
+        "P3": 6
       }
     },
     "family_summary": {
       "camera": {
         "total": 16,
         "by_status": {
-          "headless_only": 1,
-          "out_of_scope": 2,
+          "out_of_scope": 3,
           "parity": 11,
           "ported": 2
         },
         "by_kind": {
           "api": 16
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "color": {
         "total": 44,
         "by_status": {
-          "headless_only": 3,
           "out_of_scope": 1,
-          "parity": 40
+          "parity": 40,
+          "ported": 3
         },
         "by_kind": {
           "api": 44
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "cp": {
         "total": 12,
@@ -360,14 +358,14 @@
       "metrics": {
         "total": 24,
         "by_status": {
-          "headless_only": 1,
           "out_of_scope": 1,
-          "parity": 22
+          "parity": 22,
+          "ported": 1
         },
         "by_kind": {
           "api": 24
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "metrics/cielab": {
         "total": 4,
@@ -483,15 +481,14 @@
       "opticalimage/wavefront": {
         "total": 49,
         "by_status": {
-          "headless_only": 1,
-          "out_of_scope": 3,
+          "out_of_scope": 4,
           "parity": 44,
           "ported": 1
         },
         "by_kind": {
           "api": 49
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "python": {
         "total": 1,
@@ -1380,13 +1377,13 @@
       "upstream_path": "camera/cameraPlot.m",
       "family": "camera",
       "kind": "api",
-      "status": "headless_only",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.camera",
       "tests": [
         "tests/unit/test_pipeline.py"
       ],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "notes": "The upstream file is a plotting gateway stub rather than a reusable supported headless camera API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "camera/cameraSet.m",
@@ -1624,14 +1621,14 @@
       "upstream_path": "color/ieColorTransform.m",
       "family": "color",
       "kind": "api",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.color, pyisetcam.illuminant",
+      "status": "ported",
+      "python_surface": "pyisetcam.color, pyisetcam.illuminant, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_metrics.py"
       ],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "notes": "The MATLAB sensor-to-target color transform helper is covered by the Python `ie_color_transform(...)` / `ieColorTransform(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "color/ieCovEllipsoid.m",
@@ -1667,27 +1664,27 @@
       "upstream_path": "color/ieLuminanceFromEnergy.m",
       "family": "color",
       "kind": "api",
-      "status": "headless_only",
+      "status": "ported",
       "python_surface": "pyisetcam.color, pyisetcam.illuminant, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_metrics.py"
       ],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "notes": "The direct MATLAB luminance-from-energy helper is covered by the Python `luminance_from_energy(...)` / `ieLuminanceFromEnergy(...)` compatibility surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "color/ieLuminanceFromPhotons.m",
       "family": "color",
       "kind": "api",
-      "status": "headless_only",
+      "status": "ported",
       "python_surface": "pyisetcam.color, pyisetcam.illuminant, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_metrics.py"
       ],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "notes": "The direct MATLAB luminance-from-photons helper is covered by the Python `luminance_from_photons(...)` / `ieLuminanceFromPhotons(...)` compatibility surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "color/ieResponsivityConvert.m",
@@ -4286,7 +4283,7 @@
       "family": "imgproc",
       "kind": "api",
       "status": "parity",
-      "python_surface": "pyisetcam.ip, pyisetcam.__init__",
+      "python_surface": "pyisetcam.ip, pyisetcam.__init__, pyisetcam.color",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_ip.py",
@@ -5292,14 +5289,14 @@
       "upstream_path": "metrics/iePSNR.m",
       "family": "metrics",
       "kind": "api",
-      "status": "headless_only",
+      "status": "ported",
       "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_metrics.py",
         "tests/unit/test_pipeline.py"
       ],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "notes": "The direct MATLAB PSNR helper is covered by the Python `peak_signal_to_noise_ratio(...)` / `iePSNR(...)` compatibility surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "metrics/metricsCamera.m",
@@ -7659,14 +7656,14 @@
       "upstream_path": "opticalimage/wavefront/psf/psfPlotrange.m",
       "family": "opticalimage/wavefront",
       "kind": "api",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.optics, pyisetcam.plotting",
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.optics",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "notes": "The upstream file only adjusts figure axis limits and title text for PSF plots, so it remains outside the headless migration target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "opticalimage/wavefront/psf/psfVolume.m",
@@ -13752,7 +13749,7 @@
       "family": "sensor",
       "kind": "api",
       "status": "parity",
-      "python_surface": "pyisetcam.sensor, pyisetcam.__init__, pyisetcam.camera, pyisetcam.fileio, pyisetcam.ip",
+      "python_surface": "pyisetcam.sensor, pyisetcam.__init__, pyisetcam.camera, pyisetcam.color, pyisetcam.fileio",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py",
@@ -16583,7 +16580,7 @@
       "family": "utility/file",
       "kind": "helper",
       "status": "headless_only",
-      "python_surface": "pyisetcam.fileio, pyisetcam.__init__, pyisetcam.assets, pyisetcam.parity, pyisetcam.sensor",
+      "python_surface": "pyisetcam.fileio, pyisetcam.__init__, pyisetcam.assets, pyisetcam.color, pyisetcam.parity",
       "tests": [
         "tests/unit/test_fileio.py"
       ],
@@ -19279,7 +19276,7 @@
       "family": "data/images",
       "kind": "asset",
       "status": "partial",
-      "python_surface": "pyisetcam.__init__, pyisetcam.camera, pyisetcam.description, pyisetcam.fileio",
+      "python_surface": "pyisetcam.__init__, pyisetcam.camera, pyisetcam.color, pyisetcam.description",
       "tests": [],
       "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
       "priority": "P2"
