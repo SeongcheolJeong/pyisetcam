@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any, TypeVar
@@ -108,6 +109,35 @@ def session_create(name: str = "vcSESSION") -> SessionContext:
     return SessionContext(name=name, directory=str(Path.cwd()))
 
 
+def iset_root_path() -> str:
+    return str(Path(__file__).resolve().parents[2])
+
+
+def iset_path(
+    iset_dir: str | Path | None = None,
+    *,
+    apply: bool = False,
+) -> list[str]:
+    root = Path(iset_root_path() if iset_dir is None else iset_dir).expanduser().resolve()
+    if not root.exists():
+        raise FileNotFoundError(f"ISET root directory does not exist: {root}")
+
+    directories = [root]
+    directories.extend(path for path in sorted(root.rglob("*")) if path.is_dir())
+    path_list = [
+        str(path)
+        for path in directories
+        if not any(part in {".git", ".svn"} for part in path.parts)
+    ]
+
+    if apply:
+        for directory in reversed(path_list):
+            if directory not in sys.path:
+                sys.path.insert(0, directory)
+
+    return path_list
+
+
 def ie_init_session(
     *,
     name: str | None = None,
@@ -192,6 +222,16 @@ def track_camera_session_state(
     if isinstance(ip, ImageProcessor):
         camera.fields["ip"] = track_ip_session_state(session, ip, select=select)
     return track_session_object(session, camera, select=select)
+
+
+def _latest_iset_session_name(directory: str | Path | None = None) -> str:
+    session_dir = Path.cwd() if directory is None else Path(directory)
+    candidates = sorted(
+        path.name for path in session_dir.glob("iset-*.mat") if path.is_file()
+    )
+    if candidates:
+        return candidates[-1]
+    return "isetSession.mat"
 
 
 def session_get_object(
@@ -853,6 +893,41 @@ def _create_headless_graphwin_placeholder(session: SessionContext) -> Any:
     session.graphwin["hObject"] = figure_handle
     session.graphwin["handle"] = f"graphwin-handle-{index}"
     return figure_handle
+
+
+def _create_headless_main_window_placeholder(session: SessionContext) -> dict[str, Any]:
+    index = _next_headless_window_index(session, "main")
+    figure_handle = f"main-figure-{index}"
+    app = {
+        "figure1": figure_handle,
+        "headless_placeholder": True,
+    }
+    session.gui["main_window"] = {
+        "app": app,
+        "hObject": figure_handle,
+        "handles": app,
+        "headless_placeholder": True,
+    }
+    return app
+
+
+def iset(
+    *,
+    directory: str | Path | None = None,
+    name: str | None = None,
+    version: str | float = "4.0",
+    create_main_window: bool = True,
+) -> SessionContext:
+    session_dir = Path.cwd() if directory is None else Path(directory)
+    session = ie_init_session(
+        name=name or _latest_iset_session_name(session_dir),
+        directory=session_dir,
+    )
+    session.version = str(version)
+    session.directory = str(session_dir)
+    if create_main_window:
+        _create_headless_main_window_placeholder(session)
+    return session
 
 
 def vc_select_figure(

@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-03-24T21:11:49.003551+00:00",
+  "generated_at": "2026-03-24T21:38:54.286248+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-24T21:11:49.003551+00:00",
+    "generated_at": "2026-03-24T21:38:54.286248+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 84,
-      "missing": 24,
+      "missing": 21,
       "out_of_scope": 183,
       "parity": 675,
       "partial": 407,
-      "ported": 70
+      "ported": 73
     },
     "kind_counts": {
       "api": 661,
@@ -23,17 +23,17 @@
     },
     "priority_counts": {
       "P1": 342,
-      "P2": 173,
-      "P3": 928
+      "P2": 170,
+      "P3": 931
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
-        "missing": -2,
-        "out_of_scope": 1,
-        "parity": 1,
+        "missing": -3,
+        "out_of_scope": 0,
+        "parity": 0,
         "partial": 0,
-        "ported": 0
+        "ported": 3
       },
       "kind_counts": {
         "api": 0,
@@ -44,9 +44,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -2,
-        "P2": 0,
-        "P3": 2
+        "P1": 0,
+        "P2": -3,
+        "P3": 3
       }
     },
     "family_summary": {
@@ -317,32 +317,32 @@
       "iset.m": {
         "total": 1,
         "by_status": {
-          "missing": 1
+          "ported": 1
         },
         "by_kind": {
           "api": 1
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "isetpath.m": {
         "total": 1,
         "by_status": {
-          "missing": 1
+          "ported": 1
         },
         "by_kind": {
           "api": 1
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "isetrootpath.m": {
         "total": 1,
         "by_status": {
-          "missing": 1
+          "ported": 1
         },
         "by_kind": {
           "api": 1
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "main": {
         "total": 10,

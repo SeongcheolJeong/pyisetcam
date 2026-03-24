@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 from pyisetcam import (
+    ISET,
     camera_compute,
     camera_create,
     camera_set,
@@ -38,6 +41,9 @@ from pyisetcam import (
     ie_windows_get,
     ie_windows_set,
     ie_select_object,
+    iset,
+    iset_path,
+    iset_root_path,
     ip_create,
     ip_set,
     oi_create,
@@ -786,3 +792,56 @@ def test_vcsetobjects_reindexes_and_clears_invalid_selection(asset_store) -> Non
     assert session_get_selected(session, "scene") is None
     assert first is not replacement
     assert second is not replacement
+
+
+def test_iset_root_path_returns_repository_root() -> None:
+    expected = Path(__file__).resolve().parents[2]
+
+    assert Path(iset_root_path()) == expected
+
+
+def test_iset_path_returns_non_vcs_directories_and_can_update_sys_path(tmp_path, monkeypatch) -> None:
+    visible = tmp_path / "visible"
+    nested = visible / "nested"
+    git_dir = tmp_path / ".git" / "objects"
+    svn_dir = tmp_path / ".svn" / "pristine"
+    nested.mkdir(parents=True)
+    git_dir.mkdir(parents=True)
+    svn_dir.mkdir(parents=True)
+
+    discovered = iset_path(tmp_path)
+
+    assert discovered[0] == str(tmp_path.resolve())
+    assert str(visible.resolve()) in discovered
+    assert str(nested.resolve()) in discovered
+    assert str((tmp_path / ".git").resolve()) not in discovered
+    assert str(git_dir.resolve()) not in discovered
+    assert str((tmp_path / ".svn").resolve()) not in discovered
+    assert str(svn_dir.resolve()) not in discovered
+
+    monkeypatch.setattr(sys, "path", ["sentinel"])
+    applied = iset_path(tmp_path, apply=True)
+
+    assert applied == discovered
+    assert sys.path[: len(applied)] == applied
+    assert sys.path[-1] == "sentinel"
+
+
+def test_iset_initializes_headless_session_with_latest_saved_name(tmp_path) -> None:
+    (tmp_path / "iset-20260324T010101.mat").write_text("", encoding="utf-8")
+    (tmp_path / "iset-20260325T020202.mat").write_text("", encoding="utf-8")
+
+    session = iset(directory=tmp_path)
+
+    assert session.name == "iset-20260325T020202.mat"
+    assert session.directory == str(tmp_path)
+    assert session.version == "4.0"
+    assert ie_session_get(session, "main window") == {
+        "figure1": "main-figure-1",
+        "headless_placeholder": True,
+    }
+
+    named = ISET(directory=tmp_path, name="custom-session.mat", create_main_window=False)
+
+    assert named.name == "custom-session.mat"
+    assert ie_session_get(named, "main window") is None

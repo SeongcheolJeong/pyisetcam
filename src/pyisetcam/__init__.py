@@ -368,6 +368,9 @@ from .scielab import (
     visual_angle,
 )
 from .session import (
+    iset,
+    iset_path,
+    iset_root_path,
     ie_app_get,
     ie_add_object,
     ie_delete_object,
@@ -937,6 +940,12 @@ __all__ = [
     "ie_windows_get",
     "ie_windows_set",
     "ie_select_object",
+    "ISET",
+    "iset",
+    "isetPath",
+    "isetRootPath",
+    "iset_path",
+    "iset_root_path",
     "ieXYZ2LAB",
     "ieXYZFromEnergy",
     "illuminantCreate",
@@ -2244,6 +2253,7 @@ iePTable = ie_p_table
 ieTableGet = ie_table_get
 ieGetObject = ie_get_object
 ieGetSelectedObject = ie_get_selected_object
+ISET = iset
 ieInitSession = ie_init_session
 ieMainClose = ie_main_close
 ieRefreshWindow = ie_refresh_window
@@ -2261,6 +2271,8 @@ ieSessionSet = ie_session_set
 ieWindowsGet = ie_windows_get
 ieWindowsSet = ie_windows_set
 ieSelectObject = ie_select_object
+isetPath = iset_path
+isetRootPath = iset_root_path
 
 ipCreate = ip_create
 ipCompute = ip_compute

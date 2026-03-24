@@ -1177,6 +1177,13 @@ Missing session windows now fall back to lightweight headless
 placeholders so MATLAB-style `vcSelectFigure(...)` and
 `ieRefreshWindow(...)` calls do not fail just because no GUI app has been
 created.
+The same session compatibility surface now also exposes headless
+`iset(...)` / `ISET(...)`, `iset_path(...)` / `isetPath(...)`, and
+`iset_root_path(...)` / `isetRootPath(...)`, so the legacy startup and
+path-bootstrap helpers resolve the repository root, enumerate recursive
+non-VCS subdirectories for optional `sys.path` injection, and initialize a
+headless main-window session placeholder without relying on MATLAB GUI
+startup.
 Name-based lookup is now covered too through `ieEquivalentObjtype` and
 `ieFindObjectByName`.
 The shared MATLAB-style programming helper `ieParameterOtype` is now
@@ -1736,3 +1743,7 @@ scratch-data bootstrap script is covered by a focused headless
 `scene -> oi -> sensor -> ip` initialization regression, while the face
 detection demo is explicitly out of scope because the vendored upstream file
 immediately returns and depends on MATLAB Vision Toolbox UI behavior.
+The legacy startup/path trio is now covered too: `ISET.m`, `isetPath.m`,
+and `isetRootPath.m` are tracked against the optional headless session
+bootstrap wrappers `iset(...)`, `isetPath(...)`, and `isetRootPath(...)`
+rather than remaining as anonymous top-level audit debt.

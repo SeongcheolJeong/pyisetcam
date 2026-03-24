@@ -100,6 +100,9 @@ FAMILY_SURFACE_MAP = {
     "utility/image": ["pyisetcam.utils", "pyisetcam.fileio"],
     "utility/plots": ["pyisetcam.plotting"],
     "utility/tablebase": ["pyisetcam.ptable"],
+    "iset.m": ["pyisetcam.session"],
+    "isetpath.m": ["pyisetcam.session"],
+    "isetrootpath.m": ["pyisetcam.session"],
 }
 
 FAMILY_TEST_MAP = {
@@ -121,6 +124,9 @@ FAMILY_TEST_MAP = {
     "utility/file": ["tests/unit/test_fileio.py"],
     "utility/plots": ["tests/unit/test_plotting.py"],
     "utility/tablebase": ["tests/unit/test_ptable.py"],
+    "iset.m": ["tests/unit/test_session.py"],
+    "isetpath.m": ["tests/unit/test_session.py"],
+    "isetrootpath.m": ["tests/unit/test_session.py"],
 }
 
 GUI_KEYWORDS = ("plot", "figure", "window", "handle", "refresh", "show", "app")
@@ -162,6 +168,21 @@ MID_PRIORITY_FAMILIES = {
 }
 
 UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
+    "ISET.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB startup script is covered by the headless Python `iset(...)` / `ISET(...)` compatibility wrapper on top of the optional session layer, without reproducing the MATLAB GUI launch.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "isetPath.m": {
+        "status": "ported",
+        "note": "The MATLAB path bootstrap helper is covered by the Python `iset_path(...)` / `isetPath(...)` compatibility wrapper, including recursive non-VCS path discovery and optional `sys.path` injection.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "isetRootPath.m": {
+        "status": "ported",
+        "note": "The MATLAB root-path helper is covered by the Python `iset_root_path(...)` / `isetRootPath(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
     "imgproc/demosaic/bayerIndices.m": {
         "status": "ported",
         "note": "The low-level MATLAB Bayer-index helper is already covered by the shared internal `_bayer_indices` implementation.",
