@@ -520,6 +520,7 @@ from .sensor import (
     sensor_color_filter,
     sensor_compute_full_array,
     sensor_compute_image,
+    sensor_compute_mev,
     sensor_compute_noise_free,
     sensor_compute_array,
     sensor_add_noise,
@@ -563,6 +564,7 @@ from .sensor import (
     sensor_replace_filter,
     sensor_set,
     sensor_set_size_to_fov,
+    sensor_compute_sv_filters,
     sensor_save_image,
     sensor_stats,
     sensor_show_cfa,
@@ -571,6 +573,8 @@ from .sensor import (
     sensor_light_field,
     sensor_mt9v024,
     sensor_wb_compute,
+    regrid_oi_to_isa,
+    plane2mosaic,
     spatial_integration,
 )
 from .types import Camera, Display, ImageProcessor, OpticalImage, Scene, Sensor, SessionContext
@@ -1510,12 +1514,20 @@ __all__ = [
     "sensorWBCompute",
     "sensorComputeFullArray",
     "sensorComputeImage",
+    "sensorComputeMEV",
     "sensorComputeNoiseFree",
+    "sensorComputeSVFilters",
+    "regridOI2ISA",
+    "plane2mosaic",
+    "plane2rgb",
     "sensor_compute",
     "sensor_compute_full_array",
     "sensor_compute_image",
+    "sensor_compute_mev",
     "sensor_compute_noise_free",
     "sensor_wb_compute",
+    "sensor_compute_sv_filters",
+    "regrid_oi_to_isa",
     "sensor_compute_array",
     "sensor_compute_samples",
     "sensor_crop",
@@ -1944,8 +1956,12 @@ sensorCompute = sensor_compute
 sensorComputeArray = sensor_compute_array
 sensorComputeFullArray = sensor_compute_full_array
 sensorComputeImage = sensor_compute_image
+sensorComputeMEV = sensor_compute_mev
 sensorComputeNoiseFree = sensor_compute_noise_free
 sensorComputeSamples = sensor_compute_samples
+sensorComputeSVFilters = sensor_compute_sv_filters
+regridOI2ISA = regrid_oi_to_isa
+plane2rgb = plane2mosaic
 imx490Compute = imx490_compute
 sensorAddFilter = sensor_add_filter
 sensorAddNoise = sensor_add_noise

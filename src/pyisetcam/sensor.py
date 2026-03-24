@@ -6285,6 +6285,53 @@ def spatial_integration(
     )
 
 
+def regrid_oi_to_isa(
+    scdi: np.ndarray,
+    oi: OpticalImage,
+    sensor: Sensor,
+    spacing: float = 0.2,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Regrid current density from OI coordinates into sensor coordinates."""
+
+    spacing_value = float(spacing)
+    if spacing_value <= 0.0:
+        raise ValueError("spacing must be positive.")
+
+    density = np.asarray(scdi, dtype=float)
+    oi_rows, oi_cols = density.shape[:2]
+    oi_height_spacing = float(oi_get(oi, "hspatialresolution"))
+    oi_width_spacing = float(oi_get(oi, "wspatialresolution"))
+    source_rows = _sample2space(np.arange(oi_rows, dtype=float), oi_height_spacing)
+    source_cols = _sample2space(np.arange(oi_cols, dtype=float), oi_width_spacing)
+
+    sensor_rows = int(sensor_get(sensor, "rows"))
+    sensor_cols = int(sensor_get(sensor, "cols"))
+    target_row_samples = np.arange(0.0, sensor_rows, spacing_value, dtype=float) + (spacing_value / 2.0)
+    target_col_samples = np.arange(0.0, sensor_cols, spacing_value, dtype=float) + (spacing_value / 2.0)
+    sensor_height_spacing = float(sensor_get(sensor, "hres"))
+    sensor_width_spacing = float(sensor_get(sensor, "wres"))
+    new_rows = _sample2space(target_row_samples, sensor_height_spacing)
+    new_cols = _sample2space(target_col_samples, sensor_width_spacing)
+
+    interpolated_cfa = _interpolated_cfa(sensor, spacing_value, new_rows.size, new_cols.size)
+    height_samples_per_pixel = max(1, int(np.ceil(sensor_height_spacing / max(oi_height_spacing, 1e-12))))
+    width_samples_per_pixel = max(1, int(np.ceil(sensor_width_spacing / max(oi_width_spacing, 1e-12))))
+    kernel = _gaussian_kernel((height_samples_per_pixel, width_samples_per_pixel), height_samples_per_pixel / 4.0)
+
+    flat_scdi = np.zeros((new_rows.size, new_cols.size), dtype=float)
+    n_filters = int(sensor_get(sensor, "nfilters"))
+    for index in range(n_filters):
+        plane = convolve2d(np.asarray(density[:, :, index], dtype=float), kernel, mode="same")
+        sampled = _interp2_linear_constant_zero(plane, source_rows, source_cols, new_rows, new_cols)
+        mask = interpolated_cfa == (index + 1)
+        if sampled.ndim == 1:
+            sampled = np.reshape(sampled, mask.shape)
+        flat_scdi = flat_scdi + (mask * sampled)
+
+    flat_scdi = np.nan_to_num(flat_scdi, nan=0.0)
+    return np.asarray(flat_scdi, dtype=float), np.asarray(new_rows, dtype=float), np.asarray(new_cols, dtype=float)
+
+
 def _regrid_electron_rate_density(
     density_cube: np.ndarray,
     oi: OpticalImage,
@@ -6319,6 +6366,115 @@ def _regrid_electron_rate_density(
         interpolator = RegularGridInterpolator((oi_y, oi_x), plane, bounds_error=False, fill_value=0.0)
         regridded[:, :, channel_index] = interpolator(np.stack([sensor_yy, sensor_xx], axis=-1))
     return regridded
+
+
+def plane2mosaic(img: np.ndarray, sensor: Sensor, empty_val: float = np.nan) -> tuple[np.ndarray, np.ndarray]:
+    """Convert a sensor mosaic plane into per-filter image planes."""
+
+    image = np.asarray(img, dtype=float)
+    _, cfa_numbers, _ = sensor_determine_cfa(sensor)
+    filter_letters = str(sensor_get(sensor, "filter color letters"))
+    n_planes = len(filter_letters)
+    rows, cols = image.shape[:2]
+    rgb_format = np.zeros((rows, cols, n_planes), dtype=float)
+
+    if cfa_numbers.shape != image.shape:
+        cfa_numbers = cfa_numbers[:rows, :cols]
+
+    for index in range(n_planes):
+        plane = np.full((rows, cols), float(empty_val), dtype=float)
+        locations = cfa_numbers == (index + 1)
+        plane[locations] = image[locations]
+        rgb_format[:, :, index] = plane
+
+    return rgb_format, np.unique(cfa_numbers)
+
+
+def sensor_compute_mev(
+    sensor: Sensor,
+    oi: OpticalImage,
+    *,
+    seed: int | None = None,
+    session: SessionContext | None = None,
+) -> Sensor:
+    """Compute a multi-exposure stack and combine it into a single response."""
+
+    computed = sensor_compute(sensor, oi, seed=seed, session=session)
+    volts = np.asarray(sensor_get(computed, "volts"), dtype=float)
+    if volts.ndim != 3 or volts.shape[2] <= 1:
+        return computed
+
+    voltage_swing = float(sensor_get(computed, "pixel voltage swing"))
+    exposure_times = np.asarray(sensor_get(computed, "exp time"), dtype=float).reshape(-1)
+    n_exposures = int(sensor_get(computed, "n exposures"))
+    max_time = float(np.max(exposure_times))
+
+    combined = volts[:, :, -1].copy()
+    threshold = voltage_swing * 0.95
+    for exposure_index in range(n_exposures - 2, -1, -1):
+        saturated = combined > threshold
+        if not np.any(saturated):
+            break
+        scale_factor = max_time / max(float(exposure_times[exposure_index]), 1e-30)
+        scaled = volts[:, :, exposure_index] * scale_factor
+        combined[saturated] = scaled[saturated]
+        threshold *= scale_factor
+
+    updated = computed.clone()
+    updated = sensor_set(updated, "pixel voltage swing", float(np.max(combined)) / 0.95 if np.max(combined) > 0 else voltage_swing)
+    updated = sensor_set(updated, "volts", combined)
+    updated = sensor_set(updated, "name", "combined")
+    updated = sensor_set(updated, "exp time", max_time)
+    if session is not None:
+        return track_session_object(session, updated)
+    return updated
+
+
+def sensor_compute_sv_filters(
+    sensor: Sensor,
+    oi: OpticalImage,
+    filter_file: Any,
+    *,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Compute a voltage image with space-varying IR filters."""
+
+    from .optics import optics_get
+
+    store = _store(asset_store)
+    wave = np.asarray(sensor_get(sensor, "wave"), dtype=float)
+    ir_filters, _, ir_filter_all_data = ie_read_color_filter(wave, filter_file, asset_store=store)
+    optics = oi_get(oi, "optics")
+    sensor_deg_map = np.asarray(sensor_get(sensor, "chiefRayAngleDegrees", optics_get(optics, "focal length")), dtype=float)
+
+    field_heights = np.asarray(ir_filter_all_data.get("fHeight", []), dtype=float).reshape(-1)
+    if field_heights.size == 0:
+        raise ValueError("sensorComputeSVFilters requires fHeight entries in the filter payload.")
+    keep = field_heights <= float(np.max(sensor_deg_map))
+    field_heights = field_heights[keep]
+    ir_filters = np.asarray(ir_filters, dtype=float)[:, keep]
+    n_filters = field_heights.size
+    if n_filters == 0:
+        raise ValueError("sensorComputeSVFilters requires at least one in-range filter.")
+
+    size = tuple(int(v) for v in np.asarray(sensor_get(sensor, "size"), dtype=int))
+    voltage_images = np.zeros((size[0], size[1], n_filters), dtype=float)
+    for index in range(n_filters):
+        current_sensor = sensor_set(sensor.clone(), "irFilter", ir_filters[:, index])
+        current_sensor = sensor_compute(current_sensor, oi, session=None)
+        voltage_images[:, :, index] = np.asarray(sensor_get(current_sensor, "volts"), dtype=float)
+
+    combined = np.zeros(size, dtype=float)
+    for index in range(1, n_filters):
+        this_band = (field_heights[index - 1] < sensor_deg_map) & (sensor_deg_map < field_heights[index])
+        inner_distance = np.abs(sensor_deg_map - field_heights[index - 1])
+        inner_weight = 1.0 - (inner_distance / max(field_heights[index] - field_heights[index - 1], 1e-30))
+        inner_weight[~this_band] = 0.0
+        weighted = (inner_weight * voltage_images[:, :, index - 1]) + ((1.0 - inner_weight) * voltage_images[:, :, index])
+        combined[this_band] = weighted[this_band]
+
+    return np.asarray(combined, dtype=float), np.asarray(voltage_images, dtype=float), np.asarray(ir_filters, dtype=float)
 
 
 def _auto_exposure_default(sensor: Sensor, oi: OpticalImage) -> float:
@@ -6681,8 +6837,10 @@ sensorComputeNoiseFree = sensor_compute_noise_free
 sensorAddNoise = sensor_add_noise
 sensorComputeImage = sensor_compute_image
 sensorComputeFullArray = sensor_compute_full_array
+sensorComputeMEV = sensor_compute_mev
 sensorDR = sensor_dr
 sensorCCM = sensor_ccm
+sensorComputeSVFilters = sensor_compute_sv_filters
 binNoiseColumnFPN = bin_noise_column_fpn
 binNoiseFPN = bin_noise_fpn
 binNoiseRead = bin_noise_read
@@ -6693,6 +6851,8 @@ sensorWBCompute = sensor_wb_compute
 analog2digital = analog_to_digital
 noiseFPN = noise_fpn
 noiseColumnFPN = noise_column_fpn
+regridOI2ISA = regrid_oi_to_isa
+plane2rgb = plane2mosaic
 sensorClearData = sensor_clear_data
 sensorColorOrder = sensor_color_order
 sensorDetermineCFA = sensor_determine_cfa

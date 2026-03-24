@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-24T08:02:53.890004+00:00",
+  "generated_at": "2026-03-24T08:34:26.866674+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-24T08:02:53.890004+00:00",
+    "generated_at": "2026-03-24T08:34:26.866674+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 92,
       "missing": 37,
       "out_of_scope": 160,
-      "parity": 627,
-      "partial": 492,
+      "parity": 631,
+      "partial": 488,
       "ported": 35
     },
     "kind_counts": {
@@ -22,10 +22,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 64,
+      "P0": 60,
       "P1": 376,
       "P2": 181,
-      "P3": 822
+      "P3": 826
     },
     "delta_from_previous": {
       "status_counts": {
@@ -834,13 +834,12 @@
         "total": 25,
         "by_status": {
           "out_of_scope": 1,
-          "parity": 20,
-          "partial": 4
+          "parity": 24
         },
         "by_kind": {
           "api": 25
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "tutorials/camera": {
         "total": 5,
@@ -1033,16 +1032,6 @@
         }
       },
       {
-        "family": "sensor/simulation",
-        "open_entries": 4,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "out_of_scope": 1,
-          "parity": 20,
-          "partial": 4
-        }
-      },
-      {
         "family": "displays",
         "open_entries": 3,
         "highest_open_priority": "P0",
@@ -1137,6 +1126,14 @@
         "highest_open_priority": "P0",
         "by_status": {
           "parity": 1,
+          "partial": 2
+        }
+      },
+      {
+        "family": "sensor/binning",
+        "open_entries": 2,
+        "highest_open_priority": "P0",
+        "by_status": {
           "partial": 2
         }
       }

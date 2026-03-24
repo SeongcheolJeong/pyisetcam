@@ -368,11 +368,16 @@ from pyisetcam import (
     sensor_compute_array,
     sensorComputeFullArray,
     sensorComputeImage,
+    sensorComputeMEV,
     sensorComputeNoiseFree,
+    sensorComputeSVFilters,
     sensor_add_noise,
     sensor_compute_full_array,
     sensor_compute_image,
+    sensor_compute_mev,
     sensor_compute_noise_free,
+    plane2mosaic,
+    regridOI2ISA,
     sensor_compute_samples,
     sensor_color_filter,
     sensorColorOrder,
@@ -6005,6 +6010,106 @@ def test_sensor_simulation_legacy_wrappers(asset_store) -> None:
     assert np.allclose(full_dvs, full_dvs_snake)
     assert full_volts.shape == (8, 8, 2)
     assert full_dvs.shape == (8, 8, 2)
+
+
+def test_sensor_simulation_helper_wrappers_match_legacy_contracts(asset_store, tmp_path) -> None:
+    scene = scene_create("uniform ee", 8, np.array([500.0, 600.0, 700.0], dtype=float), asset_store=asset_store)
+    oi = oi_compute(oi_create(asset_store=asset_store), scene)
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 4)
+    sensor = sensor_set(sensor, "cols", 4)
+    sensor = sensor_set(sensor, "noise flag", 0)
+    sensor = sensor_set(sensor, "quantization method", "analog")
+    sensor = sensor_set(sensor, "integration time", 0.01)
+
+    oi_rows, oi_cols = tuple(int(v) for v in np.asarray(oi_get(oi, "size"), dtype=int))
+    scdi = np.stack(
+        [
+            np.ones((oi_rows, oi_cols), dtype=float),
+            np.full((oi_rows, oi_cols), 2.0, dtype=float),
+            np.full((oi_rows, oi_cols), 3.0, dtype=float),
+        ],
+        axis=2,
+    )
+    flat_scdi, new_rows, new_cols = regridOI2ISA(scdi, oi, sensor, 1.0)
+    cfa_pattern = tile_pattern(np.asarray(sensor_get(sensor, "pattern"), dtype=int), 4, 4)
+    expected_flat = np.choose(cfa_pattern - 1, [np.ones((4, 4), dtype=float), np.full((4, 4), 2.0), np.full((4, 4), 3.0)])
+    np.testing.assert_allclose(flat_scdi, expected_flat, rtol=1e-10, atol=1e-12)
+    assert new_rows.shape == (4,)
+    assert new_cols.shape == (4,)
+
+    img = np.arange(1.0, 17.0, dtype=float).reshape(4, 4)
+    rgb_format, cfa_vals = plane2mosaic(img, sensor, -1.0)
+    for index in range(3):
+        expected_plane = np.full((4, 4), -1.0, dtype=float)
+        expected_plane[cfa_pattern == (index + 1)] = img[cfa_pattern == (index + 1)]
+        np.testing.assert_allclose(rgb_format[:, :, index], expected_plane, rtol=1e-10, atol=1e-12)
+    assert np.array_equal(cfa_vals, np.array([1, 2, 3], dtype=int))
+
+    mev_sensor = sensor_set(sensor.clone(), "integration time", np.array([0.01, 0.1], dtype=float))
+    mev_sensor = sensor_set(mev_sensor, "pixel voltage swing", 1e-4)
+    stack = sensor_compute(mev_sensor, oi)
+    mev = sensorComputeMEV(mev_sensor, oi)
+    volts = np.asarray(sensor_get(stack, "volts"), dtype=float)
+    exp_times = np.asarray(sensor_get(stack, "exp time"), dtype=float).reshape(-1)
+    combined_expected = volts[:, :, -1].copy()
+    max_time = float(np.max(exp_times))
+    max_v = float(sensor_get(stack, "pixel voltage swing")) * 0.95
+    for exposure_index in range(exp_times.size - 2, -1, -1):
+        saturated = combined_expected > max_v
+        if not np.any(saturated):
+            break
+        scale_factor = max_time / float(exp_times[exposure_index])
+        scaled = volts[:, :, exposure_index] * scale_factor
+        combined_expected[saturated] = scaled[saturated]
+        max_v *= scale_factor
+    np.testing.assert_allclose(np.asarray(sensor_get(mev, "volts"), dtype=float), combined_expected, rtol=1e-10, atol=1e-12)
+    assert sensor_get(mev, "name") == "combined"
+    assert np.isclose(float(sensor_get(mev, "exp time")), max_time)
+
+    optics = oi_get(oi, "optics")
+    focal_length = float(opticsGet(optics, "focal length"))
+    sensor_deg_map = np.asarray(sensor_get(sensor, "chiefRayAngleDegrees", focal_length), dtype=float)
+    max_deg = float(np.max(sensor_deg_map))
+    filter_wave = np.asarray(sensor_get(sensor, "wave"), dtype=float)
+    filter_data = np.column_stack(
+        [
+            np.ones(filter_wave.size, dtype=float),
+            np.full(filter_wave.size, 0.7, dtype=float),
+            np.full(filter_wave.size, 0.3, dtype=float),
+        ]
+    )
+    filter_file = tmp_path / "sv_filters.mat"
+    savemat(
+        filter_file,
+        {
+            "wavelength": filter_wave,
+            "data": filter_data,
+            "filterNames": np.asarray(["f1", "f2", "f3"], dtype=object),
+            "fHeight": np.array([0.0, max_deg * 0.5, max_deg], dtype=float),
+        },
+    )
+
+    combined_volts, v_images, ir_filters = sensorComputeSVFilters(sensor, oi, filter_file, asset_store=asset_store)
+    assert ir_filters.shape[1] == 3
+
+    expected_v_images = np.zeros_like(v_images)
+    for index in range(ir_filters.shape[1]):
+        current_sensor = sensor_set(sensor.clone(), "irFilter", ir_filters[:, index])
+        current_sensor = sensor_compute(current_sensor, oi)
+        expected_v_images[:, :, index] = np.asarray(sensor_get(current_sensor, "volts"), dtype=float)
+    np.testing.assert_allclose(v_images, expected_v_images, rtol=1e-10, atol=1e-12)
+
+    expected_combined = np.zeros_like(combined_volts)
+    field_heights = np.array([0.0, max_deg * 0.5, max_deg], dtype=float)
+    for index in range(1, field_heights.size):
+        this_band = (field_heights[index - 1] < sensor_deg_map) & (sensor_deg_map < field_heights[index])
+        inner_distance = np.abs(sensor_deg_map - field_heights[index - 1])
+        inner_weight = 1.0 - (inner_distance / max(field_heights[index] - field_heights[index - 1], 1e-30))
+        inner_weight[~this_band] = 0.0
+        weighted = (inner_weight * expected_v_images[:, :, index - 1]) + ((1.0 - inner_weight) * expected_v_images[:, :, index])
+        expected_combined[this_band] = weighted[this_band]
+    np.testing.assert_allclose(combined_volts, expected_combined, rtol=1e-10, atol=1e-12)
 
 
 def test_sensor_binning_noise_wrappers_match_legacy_contracts(asset_store) -> None:
