@@ -386,6 +386,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file depends on MATLAB OpenEXR I/O and a network-training export workflow rather than a supported headless Python API surface.",
         "module_hits": [],
     },
+    "sensor/models/s_sensorIMX490Test.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a figure-driven exploratory IMX490 demo script rather than a reusable supported headless API surface.",
+        "module_hits": [],
+    },
     "sensor/pixel/pixelGUI/pixelGeometryWindow.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a legacy MATLAB figure window controller and remains outside the headless migration target.",

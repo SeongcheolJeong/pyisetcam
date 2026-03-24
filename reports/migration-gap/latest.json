@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-24T06:32:02.159821+00:00",
+  "generated_at": "2026-03-24T07:13:12.661234+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-24T06:32:02.159821+00:00",
+    "generated_at": "2026-03-24T07:13:12.661234+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 92,
       "missing": 37,
-      "out_of_scope": 155,
-      "parity": 619,
-      "partial": 505,
+      "out_of_scope": 156,
+      "parity": 623,
+      "partial": 500,
       "ported": 35
     },
     "kind_counts": {
@@ -22,19 +22,19 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 77,
+      "P0": 72,
       "P1": 376,
       "P2": 181,
-      "P3": 809
+      "P3": 814
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 2,
-        "parity": 5,
-        "partial": -8,
-        "ported": 1
+        "out_of_scope": 1,
+        "parity": 4,
+        "partial": -5,
+        "ported": 0
       },
       "kind_counts": {
         "api": 0,
@@ -45,10 +45,10 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -6,
-        "P1": -2,
+        "P0": -5,
+        "P1": 0,
         "P2": 0,
-        "P3": 8
+        "P3": 5
       }
     },
     "family_summary": {
@@ -810,14 +810,14 @@
       "sensor/models": {
         "total": 11,
         "by_status": {
-          "parity": 5,
-          "partial": 5,
+          "out_of_scope": 1,
+          "parity": 9,
           "ported": 1
         },
         "by_kind": {
           "api": 11
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "sensor/pixel": {
         "total": 31,
@@ -1035,16 +1035,6 @@
         }
       },
       {
-        "family": "sensor/models",
-        "open_entries": 5,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "parity": 5,
-          "partial": 5,
-          "ported": 1
-        }
-      },
-      {
         "family": "sensor/cfadesign",
         "open_entries": 4,
         "highest_open_priority": "P0",
@@ -1141,6 +1131,16 @@
           "out_of_scope": 2,
           "parity": 33,
           "partial": 2
+        }
+      },
+      {
+        "family": "scene",
+        "open_entries": 2,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 39,
+          "partial": 2,
+          "ported": 4
         }
       }
     ],

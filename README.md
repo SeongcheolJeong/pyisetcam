@@ -386,6 +386,13 @@ plus headless `sensor_check_human(...)` / `sensorCheckHuman(...)`,
 human-cone and light-field sensor helper surface, while treating the
 plot-only `sensorConePlot.m` and OpenEXR export helper `sensor2EXR.m` as
 out of scope,
+plus headless `sensor_create_imec_ssm_4x4_vis(...)` /
+`sensorCreateIMECSSM4x4vis(...)`, `sensor_imx363_v2(...)` /
+`sensorIMX363V2(...)`, `sensor_interleaved(...)` /
+`sensorInterleaved(...)`, and `sensor_mt9v024(...)` /
+`sensorMT9V024(...)` for the remaining reusable MATLAB sensor-model
+helper surface, while treating the exploratory `s_sensorIMX490Test.m`
+demo script as out of scope,
 plus headless
 `pixel_create(...)` / `pixelCreate(...)`,
 `pixel_get(...)` / `pixelGet(...)`, `pixel_set(...)` / `pixelSet(...)`,

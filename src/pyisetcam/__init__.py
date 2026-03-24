@@ -520,6 +520,7 @@ from .sensor import (
     sensor_compute_array,
     sensor_add_noise,
     sensor_compute_samples,
+    sensor_create_imec_ssm_4x4_vis,
     sensor_snr,
     sensor_snr_luxsec,
     sensor_compute,
@@ -535,6 +536,8 @@ from .sensor import (
     sensor_gain_offset,
     sensor_get,
     sensor_human_resize,
+    sensor_imx363_v2,
+    sensor_interleaved,
     sensor_color_order,
     sensor_determine_cfa,
     sensor_display_transform,
@@ -562,6 +565,7 @@ from .sensor import (
     sensor_show_cfa_weights,
     sensor_show_image,
     sensor_light_field,
+    sensor_mt9v024,
     sensor_wb_compute,
     spatial_integration,
 )
@@ -1428,6 +1432,10 @@ __all__ = [
     "sensorCheckHuman",
     "sensorClearData",
     "sensorColorOrder",
+    "sensorCreateIMECSSM4x4vis",
+    "sensorIMX363V2",
+    "sensorInterleaved",
+    "sensorMT9V024",
     "sensorPixelCoord",
     "sensorDetermineCFA",
     "sensorDeleteFilter",
@@ -1452,11 +1460,15 @@ __all__ = [
     "sensorAddNoise",
     "sensor_add_noise",
     "sensor_create_cone_mosaic",
+    "sensor_create_imec_ssm_4x4_vis",
     "sensor_gain_offset",
     "sensor_human_resize",
+    "sensor_imx363_v2",
+    "sensor_interleaved",
     "sensor_jiggle",
     "sensor_light_field",
     "sensor_mpe30",
+    "sensor_mt9v024",
     "sensor_no_noise",
     "sensor_pd_array",
     "sensor_pixel_coord",
@@ -1932,6 +1944,10 @@ sensorCheckArray = sensor_check_array
 sensorCheckHuman = sensor_check_human
 sensorClearData = sensor_clear_data
 sensorColorOrder = sensor_color_order
+sensorCreateIMECSSM4x4vis = sensor_create_imec_ssm_4x4_vis
+sensorIMX363V2 = sensor_imx363_v2
+sensorInterleaved = sensor_interleaved
+sensorMT9V024 = sensor_mt9v024
 sensorPixelCoord = sensor_pixel_coord
 sensorDetermineCFA = sensor_determine_cfa
 sensorDeleteFilter = sensor_delete_filter

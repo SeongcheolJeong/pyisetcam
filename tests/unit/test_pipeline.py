@@ -376,6 +376,7 @@ from pyisetcam import (
     sensor_create,
     sensor_create_array,
     sensorCreateConeMosaic,
+    sensorCreateIMECSSM4x4vis,
     sensor_dr,
     sensor_dng_read,
     sensorDetermineCFA,
@@ -388,10 +389,13 @@ from pyisetcam import (
     sensor_formats,
     sensor_get,
     sensorHumanResize,
+    sensorIMX363V2,
     sensorImageColorArray,
+    sensorInterleaved,
     sensorJiggle,
     sensorLightField,
     sensorMPE30,
+    sensorMT9V024,
     sensorNoNoise,
     sensorPDArray,
     sensorPixelCoord,
@@ -5742,6 +5746,58 @@ def test_sensor_create_vendor_models_load_upstream_rgbw_and_rccc_metadata(asset_
     assert ar0132at_rccc.name == "AR0132AT-RCCC"
     assert sensor_get(ar0132at_rccc, "filtercolorletters") == "rw"
     assert np.array_equal(sensor_get(ar0132at_rccc, "patterncolors"), np.array([["w", "w"], ["w", "r"]], dtype="<U1"))
+
+
+def test_sensor_model_wrappers_match_legacy_vendor_contracts(asset_store) -> None:
+    mt9v024 = sensorMT9V024(None, "rgbw", asset_store=asset_store)
+    direct_mt9v024 = sensor_create("mt9v024", "rgbw", asset_store=asset_store)
+    assert mt9v024.name == direct_mt9v024.name
+    assert mt9v024.fields["size"] == direct_mt9v024.fields["size"]
+    assert np.array_equal(sensor_get(mt9v024, "pattern"), sensor_get(direct_mt9v024, "pattern"))
+
+    imx363 = sensorIMX363V2(None, "row col", [12, 16], asset_store=asset_store)
+    direct_imx363 = sensor_create("imx363", None, "row col", [12, 16], asset_store=asset_store)
+    assert imx363.name == direct_imx363.name
+    assert imx363.fields["size"] == direct_imx363.fields["size"]
+    assert sensor_get(imx363, "quantizationmethod") == sensor_get(direct_imx363, "quantizationmethod")
+
+    filter_struct = {
+        "data": np.array(
+            [
+                [1.0, 0.0, 0.5],
+                [0.0, 1.0, 0.5],
+                [0.5, 0.5, 1.0],
+            ],
+            dtype=float,
+        ),
+        "filterNames": ["c1", "c2", "c3"],
+        "wavelength": np.array([500.0, 600.0, 700.0], dtype=float),
+    }
+    pattern = np.array([[1, 2], [3, 1]], dtype=int)
+    interleaved = sensorInterleaved(None, pattern, filter_struct, asset_store=asset_store)
+    interleaved_wave = np.asarray(sensor_get(interleaved, "wave"), dtype=float)
+    interleaved_filters = np.asarray(sensor_get(interleaved, "color filters"), dtype=float)
+    assert interleaved.name == "interleaved"
+    assert np.array_equal(sensor_get(interleaved, "pattern"), pattern)
+    assert sensor_get(interleaved, "filter names") == ["c1", "c2", "c3"]
+    assert sensor_get(interleaved, "nfilters") == 3
+    for wavelength, expected in {
+        500.0: np.array([1.0, 0.0, 0.5], dtype=float),
+        600.0: np.array([0.0, 1.0, 0.5], dtype=float),
+        700.0: np.array([0.5, 0.5, 1.0], dtype=float),
+    }.items():
+        idx = int(np.where(np.isclose(interleaved_wave, wavelength))[0][0])
+        np.testing.assert_allclose(interleaved_filters[idx], expected, rtol=1e-10, atol=1e-12)
+
+    wave = np.arange(460.0, 481.0, dtype=float)
+    imec = sensorCreateIMECSSM4x4vis("row col", [8, 12], "wave", wave, asset_store=asset_store)
+    assert imec.name == "IMEC SSM"
+    assert imec.fields["size"] == (8, 12)
+    assert sensor_get(imec, "quantizationmethod") == "10 bit"
+    assert np.array_equal(sensor_get(imec, "pattern"), np.arange(1, 17, dtype=int).reshape(4, 4).T)
+    assert np.array_equal(np.asarray(sensor_get(imec, "wave"), dtype=float), wave)
+    assert sensor_get(imec, "nfilters") == 16
+    assert len(sensor_get(imec, "filter names")) == 16
 
 
 def test_sensor_create_imx363_and_crop_support_raw_tutorial_flow(asset_store) -> None:

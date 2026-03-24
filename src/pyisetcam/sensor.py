@@ -2033,6 +2033,117 @@ def sensor_light_field(
     return track_session_object(session, sensor)
 
 
+def sensor_interleaved(
+    sensor: Sensor | None,
+    filter_pattern: Any,
+    filter_file: Any,
+    *,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> Sensor:
+    """Create a MATLAB-style interleaved sensor with a custom filter set."""
+
+    store = _store(asset_store)
+    current = sensor_create(asset_store=store, session=session) if sensor is None else sensor.clone()
+    current = sensor_set(current, "name", "interleaved")
+    current = sensor_set(current, "cfapattern", np.asarray(filter_pattern, dtype=int))
+
+    wave = np.asarray(sensor_get(current, "wave"), dtype=float).reshape(-1)
+    if isinstance(filter_file, (str, Path)):
+        filter_spectra, filter_names, _ = ie_read_color_filter(wave, filter_file, asset_store=store)
+    elif isinstance(filter_file, dict) or hasattr(filter_file, "data"):
+        source_data = filter_file if isinstance(filter_file, dict) else vars(filter_file)
+        filter_spectra = np.asarray(source_data["data"], dtype=float)
+        filter_names = list(source_data["filterNames"])
+        filter_wave = np.asarray(source_data["wavelength"], dtype=float).reshape(-1)
+        if filter_spectra.ndim == 1:
+            filter_spectra = filter_spectra.reshape(-1, 1)
+        if filter_spectra.shape[0] != filter_wave.size and filter_spectra.shape[1] == filter_wave.size:
+            filter_spectra = filter_spectra.T
+        filter_spectra = np.vstack(
+            [np.interp(wave, filter_wave, filter_spectra[:, index], left=0.0, right=0.0) for index in range(filter_spectra.shape[1])]
+        ).T
+    else:
+        raise ValueError("Bad format for filterFile variable.")
+
+    current = sensor_set(current, "filter spectra", filter_spectra)
+    current = sensor_set(current, "filter names", filter_names)
+    return track_session_object(session, current)
+
+
+def sensor_mt9v024(
+    sensor_or_color_type: Any | None = None,
+    color_type: str | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> Sensor:
+    """Legacy MATLAB wrapper for the ON MT9V024 sensor family."""
+
+    variant = color_type
+    if variant is None and isinstance(sensor_or_color_type, str):
+        variant = sensor_or_color_type
+    if variant is None:
+        variant = "rgb"
+    return track_session_object(session, _sensor_vendor_mt9v024(str(variant), asset_store=_store(asset_store)))
+
+
+def sensor_imx363_v2(
+    *args: Any,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> Sensor:
+    """Legacy MATLAB compatibility wrapper for the IMX363V2 constructor."""
+
+    forwarded = args[1:] if args and args[0] is None else args
+    return sensor_create("imx363", None, *forwarded, asset_store=_store(asset_store), session=session)
+
+
+def sensor_create_imec_ssm_4x4_vis(
+    *args: Any,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> Sensor:
+    """Create the legacy IMEC SSM 4x4 visible multispectral sensor."""
+
+    store = _store(asset_store)
+    settings = dict(_matlab_kv_pairs(args, function_name="sensorCreateIMECSSM4x4vis"))
+    row_col = np.asarray(settings.get("rowcol", [1016, 2040]), dtype=int).reshape(-1)
+    pixel_size = float(settings.get("pixelsize", 5.5e-6))
+    quantization = str(settings.get("quantization", "10 bit"))
+    dsnu = float(settings.get("dsnu", 0.0))
+    prnu = float(settings.get("prnu", 0.7))
+    fill_factor = float(settings.get("fillfactor", 0.42))
+    dark_current = float(settings.get("darkcurrent", 125.0))
+    exposure_time = float(settings.get("exposuretime", 1.0 / 60.0))
+    wave = np.asarray(settings.get("wave", np.arange(460.0, 621.0, 1.0)), dtype=float).reshape(-1)
+    read_noise = float(settings.get("readnoise", 13.0))
+    well_capacity = float(settings.get("wellcapacity", 13.5e3))
+    voltage_swing = float(settings.get("voltageswing", 2.0))
+    qe_filename = settings.get("qefilename", "data/sensor/imec/qe_IMEC.mat")
+
+    sensor = sensor_create(asset_store=store, session=session)
+    sensor = sensor_set(sensor, "pixel fill factor", fill_factor)
+    sensor = sensor_set(sensor, "pixel size constant fill factor", pixel_size)
+    sensor = sensor_set(sensor, "rows", int(row_col[0]))
+    sensor = sensor_set(sensor, "cols", int(row_col[1]))
+    sensor = sensor_set(sensor, "name", "IMEC SSM")
+    sensor = sensor_set(sensor, "quantization", quantization)
+    sensor = sensor_set(sensor, "exp time", exposure_time)
+    sensor = sensor_set(sensor, "pixel voltage swing", voltage_swing)
+    sensor = sensor_set(sensor, "pixel conversion gain", voltage_swing / max(well_capacity, 1.0e-12))
+    sensor = sensor_set(sensor, "pixel dark voltage", (voltage_swing / max(well_capacity, 1.0e-12)) * dark_current)
+    sensor = sensor_set(sensor, "pixel read noise electrons", read_noise)
+    sensor = sensor_set(sensor, "DSNU level", dsnu)
+    sensor = sensor_set(sensor, "PRNU level", prnu)
+    sensor = sensor_set(sensor, "pattern", np.arange(1, 17, dtype=int).reshape(4, 4).T)
+    sensor = sensor_set(sensor, "wave", wave)
+    filters, filter_names, _ = ie_read_color_filter(wave, qe_filename, asset_store=store)
+    sensor = sensor_set(sensor, "filter transmissivities", filters)
+    sensor = sensor_set(sensor, "filter names", filter_names)
+    return track_session_object(session, sensor)
+
+
 def sensor_create_split_pixel(
     *args: Any,
     asset_store: AssetStore | None = None,
@@ -6454,7 +6565,11 @@ sensorSaveImage = sensor_save_image
 sensorCheckHuman = sensor_check_human
 sensorCreateConeMosaic = sensor_create_cone_mosaic
 sensorHumanResize = sensor_human_resize
+sensorCreateIMECSSM4x4vis = sensor_create_imec_ssm_4x4_vis
+sensorIMX363V2 = sensor_imx363_v2
+sensorInterleaved = sensor_interleaved
 sensorLightField = sensor_light_field
+sensorMT9V024 = sensor_mt9v024
 LoadRawSensorData = load_raw_sensor_data
 pixelTransmittance = pixel_transmittance
 ptInterfaceMatrix = pt_interface_matrix
