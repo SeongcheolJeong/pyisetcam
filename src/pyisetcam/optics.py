@@ -7684,6 +7684,164 @@ def oi_diffuser(
     return oi, returned_sd, blur_filter
 
 
+def oi_birefringent_diffuser(
+    oi: OpticalImage | None = None,
+    um_disp: Any | None = None,
+) -> tuple[OpticalImage, float]:
+    """Apply the legacy birefringent anti-alias filter to an OI photon cube."""
+
+    current = oi.clone() if oi is not None else oi_create()
+    photons, _ = _oi_photon_cube(current)
+
+    if um_disp is None:
+        default_disp_um = float(oi_get(current, "wspatialresolution")) * _spatial_unit_scale("um") / 2.0
+        displacement_um = 1.0 if default_disp_um <= 0.0 else default_disp_um
+    else:
+        displacement_um = float(np.asarray(um_disp, dtype=float).reshape(-1)[0])
+
+    if photons is None:
+        rows, cols = _oi_shape(current)
+        current.fields["illuminance"] = np.empty((rows, cols), dtype=float)
+        current.fields["mean_illuminance"] = 0.0
+        current.fields["mean_comp_illuminance"] = 0.0
+        return current, displacement_um
+
+    support = oi_get(current, "spatial support linear", "um")
+    x_coords = np.asarray(support["x"], dtype=float).reshape(-1)
+    y_coords = np.asarray(support["y"], dtype=float).reshape(-1)
+    yy, xx = np.meshgrid(y_coords, x_coords, indexing="ij")
+    offsets = (
+        (-displacement_um, -displacement_um),
+        (-displacement_um, displacement_um),
+        (displacement_um, -displacement_um),
+        (displacement_um, displacement_um),
+    )
+
+    filtered = np.empty_like(photons, dtype=float)
+    for wave_index in range(photons.shape[2]):
+        interpolator = RegularGridInterpolator(
+            (y_coords, x_coords),
+            np.asarray(photons[:, :, wave_index], dtype=float),
+            bounds_error=False,
+            fill_value=0.0,
+        )
+        plane = np.zeros(photons.shape[:2], dtype=float)
+        for dy_um, dx_um in offsets:
+            sample_points = np.stack((yy + dy_um, xx + dx_um), axis=-1)
+            plane += np.asarray(interpolator(sample_points), dtype=float)
+        filtered[:, :, wave_index] = plane / 4.0
+
+    current.data["photons"] = filtered
+    oi_calculate_illuminance(current)
+    return current, displacement_um
+
+
+def _normalize_camera_motion_amounts(value: Any) -> list[np.ndarray]:
+    amount_array = np.asarray(value, dtype=float)
+    if amount_array.size == 0:
+        return []
+    if amount_array.ndim == 1:
+        if amount_array.size != 2:
+            raise ValueError("oiCameraMotion expects a 2-element shift or an array of [row, col] shifts.")
+        amount_array = amount_array.reshape(1, 2)
+    if amount_array.shape[-1] != 2:
+        raise ValueError("oiCameraMotion amount entries must contain [row, col] motion pairs.")
+    return [np.asarray(pair, dtype=float).reshape(2) for pair in amount_array.reshape(-1, 2)]
+
+
+def oi_camera_motion(
+    oi: OpticalImage | None = None,
+    options: dict[str, Any] | None = None,
+    *,
+    amount: Any | None = None,
+    focal_length: float | None = None,
+) -> OpticalImage:
+    """Replay the legacy depth-map camera-motion burst helper on an OI."""
+
+    current = oi.clone() if oi is not None else oi_create()
+    photons, _ = _oi_photon_cube(current)
+    if photons is None:
+        return current
+
+    params: dict[str, Any] = {
+        "amount": ((0.0, 0.1), (0.0, 0.2)),
+        "focallength": 0.004,
+    }
+    if options:
+        for key, value in options.items():
+            normalized = param_format(key)
+            if normalized == "amount":
+                params["amount"] = value
+            elif normalized == "focallength":
+                params["focallength"] = float(np.asarray(value, dtype=float).reshape(-1)[0])
+    if amount is not None:
+        params["amount"] = amount
+    if focal_length is not None:
+        params["focallength"] = float(focal_length)
+
+    shifts = _normalize_camera_motion_amounts(params["amount"])
+    if not shifts:
+        return current
+
+    row_spacing_m = float(oi_get(current, "hspatialresolution"))
+    col_spacing_m = float(oi_get(current, "wspatialresolution"))
+    if row_spacing_m <= 0.0 or col_spacing_m <= 0.0:
+        raise ValueError("oiCameraMotion requires an optical image with positive spatial sampling.")
+
+    base_illuminance = current.fields.get("illuminance")
+    if base_illuminance is None:
+        base_illuminance = oi_get(current, "illuminance")
+    base_illuminance_array = np.asarray(base_illuminance, dtype=float)
+    if base_illuminance_array.shape != photons.shape[:2]:
+        base_illuminance_array = _oi_illuminance(current)
+
+    depth_map = np.asarray(oi_get(current, "depth map"), dtype=float)
+    if depth_map.shape != photons.shape[:2]:
+        raise ValueError("oiCameraMotion requires a depth map matching the OI size.")
+
+    focal_length_m = float(params["focallength"])
+    rows, cols = photons.shape[:2]
+    photon_frames = [np.asarray(photons, dtype=float).copy()]
+    illuminance_frames = [base_illuminance_array.copy()]
+
+    for shift in shifts:
+        row_offset_m = np.divide(
+            float(shift[0]) * focal_length_m,
+            depth_map,
+            out=np.zeros_like(depth_map, dtype=float),
+            where=np.isfinite(depth_map) & (depth_map != 0.0),
+        )
+        col_offset_m = np.divide(
+            float(shift[1]) * focal_length_m,
+            depth_map,
+            out=np.zeros_like(depth_map, dtype=float),
+            where=np.isfinite(depth_map) & (depth_map != 0.0),
+        )
+        row_offset_px = row_offset_m / max(row_spacing_m, 1.0e-30)
+        col_offset_px = col_offset_m / max(col_spacing_m, 1.0e-30)
+        row_offset_px[~np.isfinite(row_offset_px)] = 0.0
+        col_offset_px[~np.isfinite(col_offset_px)] = 0.0
+
+        shifted_photons = np.zeros_like(photons, dtype=float)
+        shifted_illuminance = np.zeros_like(base_illuminance_array, dtype=float)
+        for row in range(rows):
+            for col in range(cols):
+                new_row = int(np.floor(row + row_offset_px[row, col]))
+                new_col = int(np.floor(col + col_offset_px[row, col]))
+                if 0 <= new_row < rows and 0 <= new_col < cols:
+                    shifted_photons[new_row, new_col, :] = photons[row, col, :]
+                    shifted_illuminance[new_row, new_col] = base_illuminance_array[row, col]
+
+        photon_frames.append(shifted_photons)
+        illuminance_frames.append(shifted_illuminance)
+
+    current.data["photons"] = np.stack(photon_frames, axis=3)
+    current.fields["illuminance"] = np.stack(illuminance_frames, axis=2)
+    current.fields.pop("mean_illuminance", None)
+    current.fields.pop("mean_comp_illuminance", None)
+    return current
+
+
 def optics_ray_trace(
     scene: Scene,
     oi: OpticalImage,

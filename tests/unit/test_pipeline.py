@@ -163,8 +163,10 @@ from pyisetcam import (
     airy_disk,
     oiAdd,
     oiAdjustIlluminance,
+    oiBirefringentDiffuser,
     oiCalculateOTF,
     oiCalculateIrradiance,
+    oiCameraMotion,
     oi_calculate_illuminance,
     oiClearData,
     oiCombineDepths,
@@ -3086,6 +3088,67 @@ def test_oi_diffuser_blurs_photons_and_returns_kernel(asset_store) -> None:
     assert oi.data["photons"].shape == baseline.shape
     assert not np.allclose(oi.data["photons"], baseline)
     assert np.allclose(oi.fields["illuminance"], oi_get(oi, "illuminance"))
+
+
+def test_oi_birefringent_diffuser_matches_four_corner_average() -> None:
+    photons = np.arange(1.0, 17.0, dtype=float).reshape(4, 4, 1)
+    oi = oi_create("empty", np.array([550.0], dtype=float))
+    oi = oi_set(oi, "photons", photons)
+    displacement_um = float(oi_get(oi, "wspatialresolution")) * 1e6
+
+    filtered, returned_disp_um = oiBirefringentDiffuser(oi, displacement_um)
+
+    padded = np.pad(photons[:, :, 0], 1, mode="constant", constant_values=0.0)
+    expected = (
+        padded[:-2, :-2]
+        + padded[:-2, 2:]
+        + padded[2:, :-2]
+        + padded[2:, 2:]
+    ) / 4.0
+
+    assert np.isclose(returned_disp_um, displacement_um)
+    assert np.allclose(np.asarray(oi_get(filtered, "photons"), dtype=float)[:, :, 0], expected)
+    assert np.allclose(np.asarray(oi_get(filtered, "illuminance"), dtype=float), np.asarray(filtered.fields["illuminance"], dtype=float))
+
+
+def test_oi_camera_motion_builds_depth_shifted_frame_stack() -> None:
+    photons = np.zeros((3, 3, 1), dtype=float)
+    photons[1, 1, 0] = 10.0
+    focal_length_m = 0.004
+    sample_spacing_m = 1e-4
+    width_m = photons.shape[1] * sample_spacing_m
+    fov_deg = float(np.rad2deg(2.0 * np.arctan2(width_m / 2.0, focal_length_m)))
+
+    oi = oi_create("empty", np.array([550.0], dtype=float))
+    oi = oi_set(oi, "optics focal length", focal_length_m)
+    oi = oi_set(oi, "photons", photons)
+    oi = oi_set(oi, "wangular", fov_deg)
+    oi = oi_set(oi, "depth map", np.full((3, 3), focal_length_m, dtype=float))
+    oi_calculate_illuminance(oi)
+
+    shifted = oiCameraMotion(
+        oi,
+        {
+            "amount": ((0.0, sample_spacing_m), (sample_spacing_m, 0.0)),
+            "focalLength": focal_length_m,
+        },
+    )
+
+    shifted_photons = np.asarray(oi_get(shifted, "photons"), dtype=float)
+    shifted_illuminance = np.asarray(shifted.fields["illuminance"], dtype=float)
+
+    expected_right = np.zeros((3, 3, 1), dtype=float)
+    expected_right[1, 2, 0] = 10.0
+    expected_down = np.zeros((3, 3, 1), dtype=float)
+    expected_down[2, 1, 0] = 10.0
+
+    assert shifted_photons.shape == (3, 3, 1, 3)
+    assert np.allclose(shifted_photons[:, :, :, 0], photons)
+    assert np.allclose(shifted_photons[:, :, :, 1], expected_right)
+    assert np.allclose(shifted_photons[:, :, :, 2], expected_down)
+    assert shifted_illuminance.shape == (3, 3, 3)
+    assert np.count_nonzero(shifted_illuminance[:, :, 1]) == 1
+    assert np.count_nonzero(shifted_illuminance[:, :, 2]) == 1
 
 
 def test_oi_clear_data_clears_computed_payloads_and_wvf_cache(asset_store) -> None:

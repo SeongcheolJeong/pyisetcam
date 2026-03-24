@@ -227,8 +227,10 @@ from .optics import (
     make_combined_otf,
     oi_add,
     oi_adjust_illuminance,
+    oi_birefringent_diffuser,
     oi_calculate_illuminance,
     oi_calculate_irradiance,
+    oi_camera_motion,
     oi_diffuser,
     oi_compute,
     oi_custom_compute,
@@ -1118,7 +1120,9 @@ __all__ = [
     "oiCrop",
     "oiAdd",
     "oiAdjustIlluminance",
+    "oiBirefringentDiffuser",
     "oiCalculateIrradiance",
+    "oiCameraMotion",
     "oiDepthCombine",
     "oiDepthCompute",
     "oiDepthEdges",
@@ -1147,9 +1151,11 @@ __all__ = [
     "oiWBCompute",
     "oi_add",
     "oi_adjust_illuminance",
+    "oi_birefringent_diffuser",
     "oi_calculate_illuminance",
     "oi_calculate_otf",
     "oi_calculate_irradiance",
+    "oi_camera_motion",
     "oi_clear_data",
     "oi_custom_compute",
     "oi_diffuser",
@@ -1855,8 +1861,10 @@ oiCrop = oi_crop
 oiCombineDepths = oi_combine_depths
 oiAdd = oi_add
 oiAdjustIlluminance = oi_adjust_illuminance
+oiBirefringentDiffuser = oi_birefringent_diffuser
 oiCalculateOTF = oi_calculate_otf
 oiCalculateIrradiance = oi_calculate_irradiance
+oiCameraMotion = oi_camera_motion
 oiDepthCombine = oi_depth_combine
 oiDepthCompute = oi_depth_compute
 oiDepthEdges = oi_depth_edges

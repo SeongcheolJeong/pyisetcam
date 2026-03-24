@@ -984,6 +984,11 @@ That same headless OI utility surface now also includes
 `oi_wb_compute(...)` / `oiWBCompute(...)`, covering the legacy MATLAB
 OTF export, custom-compute detection, preview-animation rendering, and
 waveband-scene batch-compute helper surface.
+That same headless OI utility surface now also includes
+`oi_birefringent_diffuser(...)` / `oiBirefringentDiffuser(...)` and
+`oi_camera_motion(...)` / `oiCameraMotion(...)`, covering the legacy
+MATLAB birefringent anti-alias filter and depth-map-driven camera-motion
+burst helpers.
 That same headless optics-object compatibility surface now also includes
 `optics_create(...)` / `opticsCreate(...)`,
 `optics_get(...)` / `opticsGet(...)`, `optics_set(...)` / `opticsSet(...)`,
