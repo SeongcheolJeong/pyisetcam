@@ -385,6 +385,79 @@ def _metrics_metric_key(value: Any) -> str:
     return str(param_format(value)).replace("(", "").replace(")", "").replace("_", "").replace("-", "")
 
 
+def _metrics_rect(handles: dict[str, Any], which_image: str, rect: Any | None = None) -> np.ndarray:
+    if rect is not None:
+        return np.asarray(rect, dtype=float).reshape(-1)
+
+    normalized = _metrics_metric_key(which_image)
+    if normalized in {"img1", "image1", "upperleftimage"}:
+        keys = (
+            "img1_rect",
+            "image1_rect",
+            "upperleftimage_rect",
+            "rect_img1",
+            "rect_image1",
+        )
+    elif normalized in {"img2", "image2", "upperrightimage"}:
+        keys = (
+            "img2_rect",
+            "image2_rect",
+            "upperrightimage_rect",
+            "rect_img2",
+            "rect_image2",
+        )
+    elif normalized in {"metricimage", "lowerimage", "metricimg"}:
+        keys = (
+            "metric_rect",
+            "metricimage_rect",
+            "lowerimage_rect",
+            "rect_metric",
+            "rect_metricimage",
+        )
+    else:
+        raise UnsupportedOptionError("metricsROI", which_image)
+
+    for key in keys:
+        if key in handles and handles[key] is not None:
+            return np.asarray(handles[key], dtype=float).reshape(-1)
+
+    roi_rects = handles.get("roi_rects")
+    if isinstance(roi_rects, dict):
+        for key in keys:
+            if key in roi_rects and roi_rects[key] is not None:
+                return np.asarray(roi_rects[key], dtype=float).reshape(-1)
+
+    raise ValueError(f"metricsROI requires an explicit stored rect for {which_image!r} in headless mode.")
+
+
+def metrics_roi(handles: Any, which_image: str, rect: Any | None = None) -> NDArray[np.int_]:
+    """Return ROI locations for a metrics image using a stored headless rect."""
+
+    from .roi import ie_rect2_locs
+
+    current = _metrics_handle_copy(handles)
+    return np.asarray(ie_rect2_locs(_metrics_rect(current, which_image, rect)), dtype=int)
+
+
+def metrics_compare_roi(
+    handles: Any,
+    roi_locs: Any | None = None,
+    *,
+    rect: Any | None = None,
+) -> tuple[NDArray[np.float64], NDArray[np.int_]]:
+    """Compare Delta Eab across a metrics ROI using the two selected IP objects."""
+
+    from .ip import ip_get
+
+    current = _metrics_handle_copy(handles)
+    vci1, vci2 = metrics_get_vci_pair(current)
+    locs = metrics_roi(current, "img1", rect) if roi_locs is None else np.asarray(roi_locs, dtype=int)
+    xyz1 = np.asarray(ip_get(vci1, "roixyz", locs), dtype=float)
+    xyz2 = np.asarray(ip_get(vci2, "roixyz", locs), dtype=float)
+    delta = np.asarray(delta_e_ab(xyz1, xyz2, _metrics_white_point(vci1, vci2)), dtype=float)
+    return delta, np.asarray(locs, dtype=int)
+
+
 def metrics_get_vci_pair(handles: Any) -> tuple[Any, Any]:
     """Return the selected pair of IP objects from a headless metrics handle dict."""
 
@@ -682,6 +755,49 @@ def metrics_camera(
     raise UnsupportedOptionError("metricsCamera", metric_name)
 
 
+def ie_sqri(sf: Any, d_mtf: Any, luminance: Any, *args: Any) -> tuple[float, NDArray[np.float64]]:
+    """Return the Barten SQRI value and corresponding human CSF."""
+
+    width = 40.0
+    if len(args) % 2 != 0:
+        raise ValueError("ieSQRI optional arguments must be key/value pairs.")
+    for index in range(0, len(args), 2):
+        key = param_format(args[index])
+        value = args[index + 1]
+        if key == "width":
+            width = float(np.asarray(value, dtype=float).reshape(-1)[0])
+        else:
+            raise UnsupportedOptionError("ieSQRI", str(args[index]))
+
+    sf_array = np.asarray(sf, dtype=float).reshape(-1)
+    d_mtf_array = np.asarray(d_mtf, dtype=float).reshape(-1)
+    luminance_value = float(np.asarray(luminance, dtype=float).reshape(-1)[0])
+    if sf_array.size < 2:
+        raise ValueError("ieSQRI requires at least two spatial-frequency samples.")
+    if sf_array.size != d_mtf_array.size:
+        raise ValueError("sf and dMTF must have the same length.")
+    if np.any(sf_array < 0.0):
+        raise ValueError("sf must be nonnegative.")
+    if np.any(d_mtf_array < 0.0) or np.any(d_mtf_array > 1.0 + (100.0 * np.finfo(float).eps)):
+        raise ValueError("dMTF must lie within [0, 1].")
+    if luminance_value < 0.0:
+        raise ValueError("L must be nonnegative.")
+
+    a = 540.0 * (1.0 + (0.7 / max(luminance_value, 1e-12))) ** (-0.2)
+    a /= 1.0 + (12.0 / (float(width) * (1.0 + (sf_array / 3.0) ** 2)))
+    b = 0.3 * (1.0 + (100.0 / max(luminance_value, 1e-12))) ** 0.15
+    c = 0.06
+    h_csf = (a * sf_array) * np.exp(-b * sf_array) * np.sqrt(1.0 + c * np.exp(b * sf_array))
+    h_csf = np.asarray(h_csf, dtype=float).reshape(-1)
+
+    du = np.diff(sf_array)
+    u = sf_array[1:]
+    dm = 0.5 * (d_mtf_array[:-1] + d_mtf_array[1:])
+    dh = 0.5 * (h_csf[:-1] + h_csf[1:])
+    sqri = (1.0 / np.log(2.0)) * np.sum(np.sqrt(dm * dh) * (du / np.maximum(u, 1e-12)))
+    return float(sqri), h_csf
+
+
 def exposure_value(oi: Any, sensor: Any) -> float:
     """Compute MATLAB-style exposure value from OI f-number and sensor exposure time."""
 
@@ -861,7 +977,9 @@ ieXYZ2LAB = xyz_to_lab
 xyz2luv = xyz_to_luv
 deltaEab = delta_e_ab
 iePSNR = peak_signal_to_noise_ratio
+ieSQRI = ie_sqri
 metricsCamera = metrics_camera
+metricsCompareROI = metrics_compare_roi
 metricsCompute = metrics_compute
 metricsDescription = metrics_description
 metricsClose = metrics_close
@@ -869,6 +987,7 @@ metricsGet = metrics_get
 metricsGetVciPair = metrics_get_vci_pair
 metricsKeyPress = metrics_key_press
 metricsMaskedError = metrics_masked_error
+metricsROI = metrics_roi
 metricsRefresh = metrics_refresh
 metricsSaveData = metrics_save_data
 metricsSaveImage = metrics_save_image

@@ -148,11 +148,14 @@ from .metrics import (
     delta_e_ab,
     exposure_value,
     iePSNR,
+    ie_sqri,
+    ieSQRI,
     ieXYZ2LAB,
     ieXYZFromEnergy,
     mean_absolute_error,
     mean_relative_error,
     metrics_camera,
+    metrics_compare_roi,
     metrics_close,
     metrics_compute,
     metrics_description,
@@ -160,6 +163,7 @@ from .metrics import (
     metrics_get_vci_pair,
     metrics_key_press,
     metrics_masked_error,
+    metrics_roi,
     metrics_refresh,
     metrics_save_data,
     metrics_save_image,
@@ -696,6 +700,8 @@ __all__ = [
     "ieLAB2XYZ",
     "ieLuminance2Radiance",
     "iePSNR",
+    "ie_sqri",
+    "ieSQRI",
     "ieResponsivityConvert",
     "ieScotopicLuminanceFromEnergy",
     "ieXYZFromPhotons",
@@ -895,6 +901,7 @@ __all__ = [
     "mean_absolute_error",
     "mean_relative_error",
     "metricsCamera",
+    "metricsCompareROI",
     "metricsClose",
     "metricsCompute",
     "metricsDescription",
@@ -902,6 +909,7 @@ __all__ = [
     "metricsGetVciPair",
     "metricsKeyPress",
     "metricsMaskedError",
+    "metricsROI",
     "metricsRefresh",
     "metricsSaveData",
     "metricsSaveImage",
@@ -909,6 +917,7 @@ __all__ = [
     "metricsShowImage",
     "metricsShowMetric",
     "metrics_camera",
+    "metrics_compare_roi",
     "metrics_close",
     "metrics_compute",
     "metrics_description",
@@ -916,6 +925,7 @@ __all__ = [
     "metrics_get_vci_pair",
     "metrics_key_press",
     "metrics_masked_error",
+    "metrics_roi",
     "metrics_refresh",
     "metrics_save_data",
     "metrics_save_image",
@@ -1966,12 +1976,15 @@ metricsGet = metrics_get
 metricsGetVciPair = metrics_get_vci_pair
 metricsKeyPress = metrics_key_press
 metricsMaskedError = metrics_masked_error
+metricsCompareROI = metrics_compare_roi
+metricsROI = metrics_roi
 metricsRefresh = metrics_refresh
 metricsSaveData = metrics_save_data
 metricsSaveImage = metrics_save_image
 metricsSet = metrics_set
 metricsShowImage = metrics_show_image
 metricsShowMetric = metrics_show_metric
+ieSQRI = ie_sqri
 exposureValue = exposure_value
 photometricExposure = photometric_exposure
 chartPatchCompare = chart_patch_compare

@@ -266,6 +266,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is effectively a plotting/comment stub for the chromatic-aberration workflow and remains outside the headless migration target.",
         "module_hits": [],
     },
+    "metrics/ssim/s_metricsSSIM.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a teaching/regression script that drives an interactive camera-to-metrics walkthrough rather than a standalone reusable headless API surface.",
+        "module_hits": [],
+    },
     "opticalimage/raytrace/rtBlockPartition.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a script-style diagnostic prototype with display side effects rather than a reusable headless API surface.",

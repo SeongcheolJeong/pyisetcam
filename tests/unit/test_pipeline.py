@@ -99,6 +99,7 @@ from pyisetcam import (
     ie_cxcorr,
     ie_luminance_to_radiance,
     ie_n_to_megapixel,
+    ieSQRI,
     ie_responsivity_convert,
     ieSpectraSphere,
     ie_scotopic_luminance_from_energy,
@@ -309,12 +310,14 @@ from pyisetcam import (
     mlens_set,
     metricsCamera,
     metricsClose,
+    metricsCompareROI,
     metricsCompute,
     metricsDescription,
     metricsGet,
     metricsGetVciPair,
     metricsKeyPress,
     metricsMaskedError,
+    metricsROI,
     metricsRefresh,
     metricsSaveData,
     metricsSaveImage,
@@ -11663,6 +11666,64 @@ def test_metrics_compute_and_masked_error_helpers(tmp_path) -> None:
     assert Path(data_path).exists()
     assert metric_name == "CIELAB (dE)"
     assert saved_metric_name == "CIELAB (dE)"
+
+
+def test_metrics_roi_compare_and_sqri_helpers() -> None:
+    white_point = np.array([0.95047, 1.0, 1.08883], dtype=float)
+    result1 = np.array(
+        [
+            [[0.10, 0.20, 0.30], [0.20, 0.30, 0.40]],
+            [[0.30, 0.40, 0.50], [0.40, 0.50, 0.60]],
+        ],
+        dtype=float,
+    )
+    result2 = result1 + 0.05
+    xyz1 = np.array(
+        [
+            [[0.20, 0.30, 0.10], [0.25, 0.35, 0.15]],
+            [[0.30, 0.40, 0.20], [0.35, 0.45, 0.25]],
+        ],
+        dtype=float,
+    )
+    xyz2 = xyz1 + 0.02
+    ip1 = _build_metrics_test_ip("first", result1, xyz1, white_point)
+    ip2 = _build_metrics_test_ip("second", result2, xyz2, white_point)
+    handles = {
+        "vci1": ip1,
+        "vci2": ip2,
+        "img1_rect": [1, 1, 0, 1],
+        "img2_rect": [1, 1, 1, 0],
+        "metric_rect": [2, 1, 0, 1],
+    }
+
+    roi_locs = metricsROI(handles, "img1")
+    expected_locs = np.array([[1, 1], [2, 1]], dtype=int)
+    np.testing.assert_array_equal(roi_locs, expected_locs)
+    np.testing.assert_array_equal(metricsROI(handles, "img2"), np.array([[1, 1], [1, 2]], dtype=int))
+    np.testing.assert_array_equal(metricsROI(handles, "metricImage"), np.array([[1, 2], [2, 2]], dtype=int))
+
+    d_e_roi, returned_locs = metricsCompareROI(handles)
+    expected_d_e = delta_e_ab(ip_get(ip1, "roixyz", expected_locs), ip_get(ip2, "roixyz", expected_locs), white_point)
+    np.testing.assert_array_equal(returned_locs, expected_locs)
+    np.testing.assert_allclose(d_e_roi, expected_d_e, rtol=1e-10, atol=1e-12)
+
+    sf = np.logspace(-1.5, 1.5, 30)
+    d_mtf = np.ones_like(sf)
+    luminance = 340.0 / np.pi
+    sqri, h_csf = ieSQRI(sf, d_mtf, luminance, "width", 6.5)
+
+    a = 540.0 * (1.0 + (0.7 / luminance)) ** (-0.2) / (1.0 + (12.0 / (6.5 * (1.0 + (sf / 3.0) ** 2))))
+    b = 0.3 * (1.0 + (100.0 / luminance)) ** 0.15
+    c = 0.06
+    expected_h_csf = (a * sf) * np.exp(-b * sf) * np.sqrt(1.0 + c * np.exp(b * sf))
+    du = np.diff(sf)
+    u = sf[1:]
+    dm = 0.5 * (d_mtf[:-1] + d_mtf[1:])
+    dh = 0.5 * (expected_h_csf[:-1] + expected_h_csf[1:])
+    expected_sqri = (1.0 / np.log(2.0)) * np.sum(np.sqrt(dm * dh) * (du / u))
+
+    np.testing.assert_allclose(h_csf, expected_h_csf, rtol=1e-10, atol=1e-12)
+    assert sqri == pytest.approx(float(expected_sqri), rel=1e-12, abs=1e-12)
 
 
 def test_metrics_camera_gateway_matches_existing_wrappers(asset_store) -> None:
