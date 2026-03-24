@@ -352,6 +352,36 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is only an index listing for the metrics scripts and does not define a reusable headless API surface.",
         "module_hits": [],
     },
+    "scripts/display/s_displayCompare.m": {
+        "status": "parity",
+        "note": "The display-comparison workflow is already covered by the current headless display/scene rendering surface and the existing display-driven `scene_from_file(...)` regression coverage across `OLED-Sony`, `LCD-Apple`, and `CRT-Dell`.",
+        "module_hits": ["pyisetcam.display", "pyisetcam.scene", "pyisetcam.ip"],
+    },
+    "scripts/display/s_displayReflectanceCtemp.m": {
+        "status": "parity",
+        "note": "The theoretical reflectance-display workflow is already covered by the current `display_reflectance(...)` / `displayReflectance(...)`, `scene_from_file(...)`, and `scene_adjust_illuminant(...)` compatibility surface with direct regression coverage.",
+        "module_hits": ["pyisetcam.display", "pyisetcam.scene", "pyisetcam.ip"],
+    },
+    "scripts/display/s_displaySurfaceReflectance.m": {
+        "status": "parity",
+        "note": "The MATLAB reflectance-display construction walkthrough is already exercised by the current headless `display_create/get/set(...)` and display-backed `scene_from_file(...)` workflow coverage, so the script is tracked as covered tutorial evidence rather than open API debt.",
+        "module_hits": ["pyisetcam.display", "pyisetcam.scene"],
+    },
+    "scripts/utility/s_initSO.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file only seeds `vcSESSION` with default scene/OI objects through `ieAddObject(...)`, so it remains a session-population script outside the explicit-object headless migration target.",
+        "module_hits": [],
+    },
+    "tutorials/display/t_displayIntroduction.m": {
+        "status": "parity",
+        "note": "The introductory display tutorial is already covered by the current headless `display_create/get/set(...)` helper surface plus display-backed `scene_from_file(...)` and `scene_adjust_illuminant(...)` regression coverage.",
+        "module_hits": ["pyisetcam.display", "pyisetcam.scene"],
+    },
+    "tutorials/display/t_displayRendering.m": {
+        "status": "parity",
+        "note": "The display-rendering tutorial is already covered by the current headless display rendering/accessor surface together with the multi-display `scene_from_file(...)` rendering workflow coverage used by the existing unit and parity-backed display regressions.",
+        "module_hits": ["pyisetcam.display", "pyisetcam.scene", "pyisetcam.ip"],
+    },
     "scripts/optics/chromAb/ChromAb.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a shell-driven external-binary workflow around `otf` and `pr_mat`, so it is treated as a legacy launcher rather than a supported headless Python API target.",

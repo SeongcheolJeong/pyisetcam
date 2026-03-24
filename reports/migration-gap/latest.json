@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-24T17:17:48.031668+00:00",
+  "generated_at": "2026-03-24T17:38:49.349229+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-24T17:17:48.031668+00:00",
+    "generated_at": "2026-03-24T17:38:49.349229+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 84,
       "missing": 37,
-      "out_of_scope": 172,
-      "parity": 658,
-      "partial": 425,
+      "out_of_scope": 173,
+      "parity": 663,
+      "partial": 419,
       "ported": 67
     },
     "kind_counts": {
@@ -22,18 +22,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 373,
+      "P1": 367,
       "P2": 173,
-      "P3": 897
+      "P3": 903
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": -6,
+        "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 2,
-        "parity": 0,
-        "partial": 0,
-        "ported": 4
+        "out_of_scope": 1,
+        "parity": 5,
+        "partial": -6,
+        "ported": 0
       },
       "kind_counts": {
         "api": 0,
@@ -44,8 +44,8 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": 0,
-        "P2": -6,
+        "P1": -6,
+        "P2": 0,
         "P3": 6
       }
     },
@@ -620,12 +620,12 @@
       "scripts/display": {
         "total": 3,
         "by_status": {
-          "partial": 3
+          "parity": 3
         },
         "by_kind": {
           "script": 3
         },
-        "highest_open_priority": "P1"
+        "highest_open_priority": "P3"
       },
       "scripts/faces": {
         "total": 1,
@@ -726,12 +726,12 @@
       "scripts/utility": {
         "total": 1,
         "by_status": {
-          "partial": 1
+          "out_of_scope": 1
         },
         "by_kind": {
           "script": 1
         },
-        "highest_open_priority": "P1"
+        "highest_open_priority": "P3"
       },
       "sensor": {
         "total": 56,
@@ -858,13 +858,12 @@
       "tutorials/display": {
         "total": 3,
         "by_status": {
-          "parity": 1,
-          "partial": 2
+          "parity": 3
         },
         "by_kind": {
           "tutorial": 3
         },
-        "highest_open_priority": "P1"
+        "highest_open_priority": "P3"
       },
       "tutorials/gui": {
         "total": 2,
@@ -1099,19 +1098,20 @@
         }
       },
       {
-        "family": "scripts/display",
-        "open_entries": 3,
-        "highest_open_priority": "P1",
-        "by_status": {
-          "partial": 3
-        }
-      },
-      {
         "family": "scripts/oneoverf",
         "open_entries": 3,
         "highest_open_priority": "P1",
         "by_status": {
           "missing": 3
+        }
+      },
+      {
+        "family": "tutorials/image",
+        "open_entries": 3,
+        "highest_open_priority": "P1",
+        "by_status": {
+          "parity": 1,
+          "partial": 3
         }
       }
     ],

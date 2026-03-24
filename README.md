@@ -183,7 +183,12 @@ also now treats the MATLAB OpenEXR MEX shim/build-script family as
 out-of-scope integration debt rather than a remaining headless API target,
 and it also classifies `sceneFluorescenceChart.m` as out of scope because
 the pinned upstream snapshot does not actually vendor the required
-`fluorescenceSignal` / `fluorescenceWeights` model helpers.
+`fluorescenceSignal` / `fluorescenceWeights` model helpers. It now also
+tracks the legacy display introduction/rendering tutorials and the
+`s_displayCompare` / `s_displayReflectanceCtemp` / `s_displaySurfaceReflectance`
+script workflows as covered by the existing headless display-scene
+regressions, while treating `s_initSO.m` as session-only `vcSESSION`
+scaffolding outside the explicit-object migration target.
 
 Run the initial metrics helpers:
 

@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-24T17:17:48.031668+00:00",
+  "generated_at": "2026-03-24T17:38:49.349229+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 84,
       "missing": 37,
-      "out_of_scope": 172,
-      "parity": 658,
-      "partial": 425,
+      "out_of_scope": 173,
+      "parity": 663,
+      "partial": 419,
       "ported": 67
     },
     "kind_counts": {
@@ -20,18 +20,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 373,
+      "P1": 367,
       "P2": 173,
-      "P3": 897
+      "P3": 903
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": -6,
+        "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 2,
-        "parity": 0,
-        "partial": 0,
-        "ported": 4
+        "out_of_scope": 1,
+        "parity": 5,
+        "partial": -6,
+        "ported": 0
       },
       "kind_counts": {
         "api": 0,
@@ -42,8 +42,8 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": 0,
-        "P2": -6,
+        "P1": -6,
+        "P2": 0,
         "P3": 6
       }
     },
@@ -618,12 +618,12 @@
       "scripts/display": {
         "total": 3,
         "by_status": {
-          "partial": 3
+          "parity": 3
         },
         "by_kind": {
           "script": 3
         },
-        "highest_open_priority": "P1"
+        "highest_open_priority": "P3"
       },
       "scripts/faces": {
         "total": 1,
@@ -724,12 +724,12 @@
       "scripts/utility": {
         "total": 1,
         "by_status": {
-          "partial": 1
+          "out_of_scope": 1
         },
         "by_kind": {
           "script": 1
         },
-        "highest_open_priority": "P1"
+        "highest_open_priority": "P3"
       },
       "sensor": {
         "total": 56,
@@ -856,13 +856,12 @@
       "tutorials/display": {
         "total": 3,
         "by_status": {
-          "parity": 1,
-          "partial": 2
+          "parity": 3
         },
         "by_kind": {
           "tutorial": 3
         },
-        "highest_open_priority": "P1"
+        "highest_open_priority": "P3"
       },
       "tutorials/gui": {
         "total": 2,
@@ -1097,19 +1096,20 @@
         }
       },
       {
-        "family": "scripts/display",
-        "open_entries": 3,
-        "highest_open_priority": "P1",
-        "by_status": {
-          "partial": 3
-        }
-      },
-      {
         "family": "scripts/oneoverf",
         "open_entries": 3,
         "highest_open_priority": "P1",
         "by_status": {
           "missing": 3
+        }
+      },
+      {
+        "family": "tutorials/image",
+        "open_entries": 3,
+        "highest_open_priority": "P1",
+        "by_status": {
+          "parity": 1,
+          "partial": 3
         }
       }
     ],
@@ -10022,40 +10022,43 @@
       "upstream_path": "scripts/display/s_displayCompare.m",
       "family": "scripts/display",
       "kind": "script",
-      "status": "partial",
+      "status": "parity",
       "python_surface": "pyisetcam.display, pyisetcam.scene, pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The display-comparison workflow is already covered by the current headless display/scene rendering surface and the existing display-driven `scene_from_file(...)` regression coverage across `OLED-Sony`, `LCD-Apple`, and `CRT-Dell`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/display/s_displayReflectanceCtemp.m",
       "family": "scripts/display",
       "kind": "script",
-      "status": "partial",
+      "status": "parity",
       "python_surface": "pyisetcam.display, pyisetcam.scene, pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The theoretical reflectance-display workflow is already covered by the current `display_reflectance(...)` / `displayReflectance(...)`, `scene_from_file(...)`, and `scene_adjust_illuminant(...)` compatibility surface with direct regression coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/display/s_displaySurfaceReflectance.m",
       "family": "scripts/display",
       "kind": "script",
-      "status": "partial",
+      "status": "parity",
       "python_surface": "pyisetcam.display, pyisetcam.scene, pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB reflectance-display construction walkthrough is already exercised by the current headless `display_create/get/set(...)` and display-backed `scene_from_file(...)` workflow coverage, so the script is tracked as covered tutorial evidence rather than open API debt.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/faces/s_faceDetectionDemo.m",
@@ -12258,14 +12261,14 @@
       "upstream_path": "scripts/utility/s_initSO.m",
       "family": "scripts/utility",
       "kind": "script",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.fileio, pyisetcam.plotting, pyisetcam.session",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file only seeds `vcSESSION` with default scene/OI objects through `ieAddObject(...)`, so it remains a session-population script outside the explicit-object headless migration target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "sensor/binning/binSensorCompute.m",
@@ -14660,27 +14663,29 @@
       "upstream_path": "tutorials/display/t_displayIntroduction.m",
       "family": "tutorials/display",
       "kind": "tutorial",
-      "status": "partial",
-      "python_surface": "pyisetcam.display",
+      "status": "parity",
+      "python_surface": "pyisetcam.display, pyisetcam.scene",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The introductory display tutorial is already covered by the current headless `display_create/get/set(...)` helper surface plus display-backed `scene_from_file(...)` and `scene_adjust_illuminant(...)` regression coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "tutorials/display/t_displayRendering.m",
       "family": "tutorials/display",
       "kind": "tutorial",
-      "status": "partial",
-      "python_surface": "pyisetcam.display",
+      "status": "parity",
+      "python_surface": "pyisetcam.display, pyisetcam.scene, pyisetcam.ip",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The display-rendering tutorial is already covered by the current headless display rendering/accessor surface together with the multi-display `scene_from_file(...)` rendering workflow coverage used by the existing unit and parity-backed display regressions.",
+      "priority": "P3"
     },
     {
       "upstream_path": "tutorials/gui/t_ROIDraw.m",
