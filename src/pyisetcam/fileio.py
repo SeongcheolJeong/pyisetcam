@@ -3,18 +3,21 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+import os
+import tempfile
+from datetime import datetime
 from pathlib import Path
 from typing import Any
-from datetime import datetime
 
 import numpy as np
-from scipy.io import loadmat, savemat
+from scipy.io import loadmat, savemat, whosmat
 from tifffile import TiffFile
 
+from .assets import AssetStore
 from .exceptions import UnsupportedOptionError
 from .session import ie_add_object, session_add_object, session_replace_object
 from .types import BaseISETObject, Camera, Display, ImageProcessor, OpticalImage, Scene, Sensor, SessionContext
-from .utils import param_format, quanta_to_energy
+from .utils import interp_spectra, param_format, quanta_to_energy
 
 _SAVE_KEY_BY_TYPE = {
     "scene": "scene",
@@ -208,10 +211,208 @@ def vc_load_object(
     return slot, str(path)
 
 
+def ie_image_type(full_name: str | Path) -> str:
+    path = Path(full_name)
+    full_name_str = str(path).lower()
+    image_path = str(path.parent).lower()
+    ext = path.suffix.lower()
+
+    if ext in {".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif", ".png"}:
+        if os.path.join("data", "images", "targets").replace("\\", "/") in full_name_str.replace("\\", "/"):
+            return "monochrome"
+        if "monochrome" in full_name_str:
+            return "monochrome"
+        return "rgb"
+
+    if "monochrome" in image_path:
+        return "monochrome"
+    if "multispectral" in image_path or "hyperspectral" in image_path:
+        return "multispectral"
+    if "rgb" in image_path:
+        return "rgb"
+    return ""
+
+
+def ie_tempfile(ext: str | None = None) -> tuple[str, str]:
+    suffix = ""
+    if ext:
+        normalized = str(ext)
+        suffix = normalized if normalized.startswith(".") else f".{normalized}"
+    descriptor, full_name = tempfile.mkstemp(prefix="ie_", suffix=suffix)
+    os.close(descriptor)
+    os.unlink(full_name)
+    path = Path(full_name)
+    return str(path), str(path.parent)
+
+
+def ie_var_in_file(fullname: str | Path | Any, var_name: str) -> bool:
+    if isinstance(fullname, (str, Path)):
+        variables = whosmat(str(fullname))
+    else:
+        variables = fullname
+
+    for variable in variables:
+        if isinstance(variable, dict):
+            name = variable.get("name")
+        elif hasattr(variable, "name"):
+            name = getattr(variable, "name")
+        elif isinstance(variable, tuple) and variable:
+            name = variable[0]
+        else:
+            name = None
+        if str(name) == var_name:
+            return True
+    return False
+
+
+def path_to_linux(input_path: str | Path) -> str:
+    source = str(input_path)
+    if len(source) > 2 and source[1:3] == ":\\":
+        source = source[2:]
+    return source.replace("\\", "/")
+
+
+def ie_save_spectral_file(
+    wavelength: Any,
+    data: Any,
+    comment: str | None = None,
+    fullpathname: str | Path | None = None,
+    d_format: str = "double",
+) -> str:
+    wave = np.asarray(wavelength, dtype=float).reshape(-1)
+    payload = np.asarray(data)
+    if payload.ndim == 3:
+        if payload.shape[2] != wave.size:
+            raise ValueError("The 3rd dimension of data must match number of wavelengths.")
+    elif payload.ndim <= 2:
+        if payload.ndim == 1:
+            payload = payload.reshape(-1, 1)
+        if payload.shape[0] != wave.size:
+            raise ValueError("The row dimension of data must match number of wavelengths.")
+    else:
+        raise ValueError("data must be 1D, 2D, or 3D.")
+
+    format_key = param_format(d_format)
+    if format_key == "double":
+        stored = np.asarray(payload, dtype=float)
+    elif format_key == "single":
+        stored = np.asarray(payload, dtype=np.float32)
+    else:
+        raise UnsupportedOptionError("ieSaveSpectralFile", d_format)
+
+    if fullpathname is None:
+        fullpathname, _ = ie_tempfile("mat")
+    path = _normalize_save_path(fullpathname)
+    savemat(
+        path,
+        {
+            "wavelength": wave,
+            "data": stored,
+            "comment": str(comment or ""),
+            "dFormat": str(d_format),
+        },
+        do_compression=True,
+    )
+    return str(path)
+
+
+def _resolve_spectra_path(
+    fname: str | Path,
+    *,
+    asset_store: AssetStore | None = None,
+) -> Path:
+    path = Path(fname)
+    if path.exists():
+        return path
+    store = asset_store or AssetStore.default()
+    return store._resolve_spectra_path(fname)
+
+
+def vc_read_spectra(
+    fname: str | Path,
+    wave: Any | None,
+    extrap_val: Any | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[np.ndarray, np.ndarray, str]:
+    path = _resolve_spectra_path(fname, asset_store=asset_store)
+    raw = loadmat(path, squeeze_me=True, struct_as_record=False)
+    source_wave = np.asarray(raw["wavelength"], dtype=float).reshape(-1)
+    spectra = np.asarray(raw["data"], dtype=float)
+    if spectra.ndim == 1:
+        spectra = spectra.reshape(-1, 1)
+    elif spectra.ndim == 2 and spectra.shape[0] != source_wave.size and spectra.shape[1] == source_wave.size:
+        spectra = spectra.T
+
+    target_wave = np.asarray(wave, dtype=float).reshape(-1) if wave is not None else np.asarray([], dtype=float)
+    if target_wave.size:
+        left_right = 0.0 if extrap_val is None else float(np.asarray(extrap_val, dtype=float).reshape(-1)[0])
+        spectra = interp_spectra(
+            source_wave,
+            spectra,
+            target_wave,
+            left=left_right,
+            right=left_right,
+        )
+        source_wave = target_wave
+
+    comment = raw.get("comment", "")
+    if isinstance(comment, np.ndarray) and comment.shape == ():
+        comment = comment.item()
+    return np.asarray(spectra, dtype=float), np.asarray(source_wave, dtype=float), str(comment)
+
+
+def vc_save_multispectral_image(
+    img_dir: str | Path,
+    fname: str | None,
+    mc_coef: Any,
+    basis: Mapping[str, Any],
+    basis_lights: Any | None = None,
+    illuminant: Mapping[str, Any] | None = None,
+    comment: str | None = None,
+    img_mean: Any | None = None,
+) -> str:
+    output_dir = Path(img_dir)
+    if not output_dir.exists():
+        raise ValueError("No such directory.")
+    full_name = output_dir / (fname or "multispectralImage.mat")
+    return ie_save_multispectral_image(
+        full_name,
+        mc_coef,
+        basis,
+        comment=comment,
+        img_mean=img_mean,
+        illuminant=illuminant,
+        basis_lights=basis_lights,
+    )
+
+
+def vc_import_object(
+    obj_type: str = "scene",
+    full_name: str | Path | None = None,
+    preserve_data_flag: bool | None = None,
+    *,
+    session: SessionContext | None = None,
+) -> tuple[Any, str]:
+    del preserve_data_flag
+    normalized = param_format(obj_type)
+    if normalized not in {"scene", "opticalimage", "oi", "isa", "sensor", "vcimage", "ip", "display", "camera"}:
+        raise UnsupportedOptionError("vcImportObject", obj_type)
+    return vc_load_object(normalized, full_name, session=session)
+
+
 # MATLAB-style aliases.
+ieImageType = ie_image_type
+ieSaveSpectralFile = ie_save_spectral_file
+ieTempfile = ie_tempfile
+ieVarInFile = ie_var_in_file
+pathToLinux = path_to_linux
 vcSaveObject = vc_save_object
 vcExportObject = vc_export_object
+vcImportObject = vc_import_object
 vcLoadObject = vc_load_object
+vcReadSpectra = vc_read_spectra
+vcSaveMultiSpectralImage = vc_save_multispectral_image
 
 
 def ie_save_si_data_file(
@@ -265,6 +466,7 @@ def ie_save_multispectral_image(
     fov: float = 10.0,
     dist: float = 1.2,
     name: str | None = None,
+    basis_lights: Any | None = None,
 ) -> str:
     """Write MATLAB-style basis-coded multispectral image data."""
 
@@ -316,6 +518,8 @@ def ie_save_multispectral_image(
     }
     if img_mean is not None:
         payload["imgMean"] = np.asarray(img_mean, dtype=float).reshape(-1)
+    if basis_lights is not None:
+        payload["basisLights"] = np.asarray(basis_lights, dtype=float)
 
     savemat(path, payload, do_compression=True)
     return str(path)

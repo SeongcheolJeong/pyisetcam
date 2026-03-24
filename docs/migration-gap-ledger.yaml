@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-03-24T21:38:54.286248+00:00",
+  "generated_at": "2026-03-24T22:05:16.914656+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 84,
       "missing": 21,
-      "out_of_scope": 183,
+      "out_of_scope": 186,
       "parity": 675,
-      "partial": 407,
-      "ported": 73
+      "partial": 396,
+      "ported": 81
     },
     "kind_counts": {
       "api": 661,
@@ -20,18 +20,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 342,
+      "P1": 331,
       "P2": 170,
-      "P3": 931
+      "P3": 942
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
-        "missing": -3,
-        "out_of_scope": 0,
+        "missing": 0,
+        "out_of_scope": 3,
         "parity": 0,
-        "partial": 0,
-        "ported": 3
+        "partial": -11,
+        "ported": 8
       },
       "kind_counts": {
         "api": 0,
@@ -42,9 +42,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": 0,
-        "P2": -3,
-        "P3": 3
+        "P1": -11,
+        "P2": 0,
+        "P3": 11
       }
     },
     "family_summary": {
@@ -941,7 +941,9 @@
         "total": 25,
         "by_status": {
           "headless_only": 11,
-          "partial": 14
+          "out_of_scope": 3,
+          "partial": 3,
+          "ported": 8
         },
         "by_kind": {
           "helper": 25
@@ -1033,15 +1035,6 @@
         }
       },
       {
-        "family": "utility/file",
-        "open_entries": 25,
-        "highest_open_priority": "P1",
-        "by_status": {
-          "headless_only": 11,
-          "partial": 14
-        }
-      },
-      {
         "family": "human",
         "open_entries": 20,
         "highest_open_priority": "P1",
@@ -1059,6 +1052,17 @@
           "parity": 2,
           "partial": 18,
           "ported": 1
+        }
+      },
+      {
+        "family": "utility/file",
+        "open_entries": 14,
+        "highest_open_priority": "P1",
+        "by_status": {
+          "headless_only": 11,
+          "out_of_scope": 3,
+          "partial": 3,
+          "ported": 8
         }
       },
       {
@@ -1145,7 +1149,7 @@
         "not_implemented_error_sites": 0
       },
       "fileio": {
-        "unsupported_option_error_sites": 2,
+        "unsupported_option_error_sites": 4,
         "not_implemented_error_sites": 0
       },
       "illuminant": {
@@ -16592,13 +16596,13 @@
       "upstream_path": "utility/file/ieImageType.m",
       "family": "utility/file",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.fileio, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_fileio.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB image-type probe is covered by the Python `ie_image_type(...)` / `ieImageType(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/file/ieReadColorFilter.m",
@@ -16616,13 +16620,13 @@
       "upstream_path": "utility/file/ieReadMultipleFileNames.m",
       "family": "utility/file",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.fileio",
       "tests": [
         "tests/unit/test_fileio.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is an interactive multi-file chooser built around MATLAB directory/list dialogs rather than a reusable supported headless API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/file/ieReadSpectra.m",
@@ -16688,37 +16692,37 @@
       "upstream_path": "utility/file/ieSaveSpectralFile.m",
       "family": "utility/file",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.fileio, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_fileio.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB spectral-data writer is covered by the Python `ie_save_spectral_file(...)` / `ieSaveSpectralFile(...)` compatibility wrapper for headless uncompressed spectral MAT payloads.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/file/ieTempfile.m",
       "family": "utility/file",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.fileio, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_fileio.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB temp-file helper is covered by the Python `ie_tempfile(...)` / `ieTempfile(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/file/ieVarInFile.m",
       "family": "utility/file",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.fileio, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_fileio.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB MAT-variable membership helper is covered by the Python `ie_var_in_file(...)` / `ieVarInFile(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/file/ieWebGet.m",
@@ -16748,13 +16752,13 @@
       "upstream_path": "utility/file/pathToLinux.m",
       "family": "utility/file",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.fileio, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_fileio.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The Windows-to-Linux path-normalization helper is covered by the Python `path_to_linux(...)` / `pathToLinux(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/file/vcExportObject.m",
@@ -16772,13 +16776,13 @@
       "upstream_path": "utility/file/vcImportObject.m",
       "family": "utility/file",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.fileio, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_fileio.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB object-import helper is covered for the headless core object types by the Python `vc_import_object(...)` / `vcImportObject(...)` compatibility wrapper on top of `vc_load_object(...)`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/file/vcLoadObject.m",
@@ -16808,25 +16812,25 @@
       "upstream_path": "utility/file/vcReadSpectra.m",
       "family": "utility/file",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.fileio, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_fileio.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The deprecated MATLAB spectral-reader alias is covered by the Python `vc_read_spectra(...)` / `vcReadSpectra(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/file/vcSaveMultiSpectralImage.m",
       "family": "utility/file",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.fileio, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_fileio.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB multispectral-image writer is covered by the Python `vc_save_multispectral_image(...)` / `vcSaveMultiSpectralImage(...)` compatibility wrapper on top of the existing basis-coded save path.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/file/vcSaveObject.m",
@@ -16844,25 +16848,25 @@
       "upstream_path": "utility/file/vcSelectDataFile.m",
       "family": "utility/file",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.fileio",
       "tests": [
         "tests/unit/test_fileio.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a persistent GUI file-picker around MATLAB `uigetfile` / `uiputfile` dialogs and remains outside the headless migration target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/file/vcSelectImage.m",
       "family": "utility/file",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.fileio",
       "tests": [
         "tests/unit/test_fileio.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a GUI image-picker wrapper around MATLAB file dialogs and remains outside the headless migration target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/gif/animatedGif.m",
@@ -19321,7 +19325,7 @@
       "family": "data/lights",
       "kind": "asset",
       "status": "partial",
-      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.parity, pyisetcam.scene",
+      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.fileio, pyisetcam.parity",
       "tests": [],
       "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
       "priority": "P2"

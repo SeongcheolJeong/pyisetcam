@@ -1,15 +1,28 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
+from scipy.io import loadmat, whosmat
 
 from pyisetcam import (
     Camera,
     Scene,
     camera_create,
+    ieImageType,
     ieDNGRead,
     ieDNGSimpleInfo,
+    ieSaveSpectralFile,
+    ieTempfile,
+    ieVarInFile,
     ie_dng_read,
     ie_dng_simple_info,
+    ie_image_type,
+    ie_save_spectral_file,
+    ie_tempfile,
+    ie_var_in_file,
+    pathToLinux,
+    path_to_linux,
     scene_create,
     sensorDNGRead,
     sensor_crop,
@@ -18,11 +31,17 @@ from pyisetcam import (
     session_create,
     session_get_selected,
     vcExportObject,
+    vcImportObject,
     vcLoadObject,
+    vcReadSpectra,
     vcSaveObject,
+    vcSaveMultiSpectralImage,
     vc_export_object,
+    vc_import_object,
     vc_load_object,
+    vc_read_spectra,
     vc_save_object,
+    vc_save_multispectral_image,
 )
 
 
@@ -154,3 +173,116 @@ def test_sensor_dng_read_supports_imx363_raw_tutorial_flow(asset_store) -> None:
     assert simple_info["isoSpeed"] == 64
     assert sensor_get(fractional, "size")[0] < sensor_get(sensor, "size")[0]
     assert sensor_get(fractional, "size")[1] < sensor_get(sensor, "size")[1]
+
+
+def test_legacy_spectral_file_helpers_round_trip(tmp_path) -> None:
+    wave = np.array([400.0, 500.0, 600.0], dtype=float)
+    data = np.array([[1.0, 10.0], [3.0, 30.0], [5.0, 50.0]], dtype=float)
+    path = tmp_path / "spectra.mat"
+
+    saved = ie_save_spectral_file(wave, data, "demo spectral data", path)
+    read_data, read_wave, comment = vc_read_spectra(saved, [400.0, 450.0, 500.0, 550.0, 600.0])
+
+    assert saved == str(path)
+    assert path.exists()
+    assert np.allclose(read_wave, np.array([400.0, 450.0, 500.0, 550.0, 600.0]))
+    assert np.allclose(
+        read_data,
+        np.array(
+            [
+                [1.0, 10.0],
+                [2.0, 20.0],
+                [3.0, 30.0],
+                [4.0, 40.0],
+                [5.0, 50.0],
+            ],
+            dtype=float,
+        ),
+    )
+    assert comment == "demo spectral data"
+    assert ieSaveSpectralFile(wave, data, "alias", tmp_path / "spectra_alias.mat").endswith(".mat")
+    alias_data, alias_wave, alias_comment = vcReadSpectra(saved, wave)
+    assert np.allclose(alias_data, data)
+    assert np.allclose(alias_wave, wave)
+    assert alias_comment == "demo spectral data"
+
+
+def test_legacy_path_tempfile_and_image_type_helpers(tmp_path) -> None:
+    full_name, temp_dir = ie_tempfile("mat")
+
+    assert full_name.endswith(".mat")
+    assert temp_dir == str(Path(full_name).parent)
+    assert Path(full_name).name.startswith("ie_")
+    assert not Path(full_name).exists()
+    assert ieTempfile("txt")[0].endswith(".txt")
+
+    rgb_name = tmp_path / "Fruit-hdrs.png"
+    mono_name = tmp_path / "Monochrome" / "target.png"
+    multi_name = tmp_path / "multispectral" / "Fruit-hdrs.mat"
+    mono_name.parent.mkdir()
+    multi_name.parent.mkdir()
+
+    assert ie_image_type(rgb_name) == "rgb"
+    assert ieImageType(mono_name) == "monochrome"
+    assert ie_image_type(multi_name) == "multispectral"
+    assert path_to_linux(r"C:\Users\alice\iset\data") == "/Users/alice/iset/data"
+    assert pathToLinux("/tmp/iset/data") == "/tmp/iset/data"
+
+
+def test_ie_var_in_file_accepts_path_and_whos_listing(tmp_path) -> None:
+    wave = np.array([400.0, 500.0, 600.0], dtype=float)
+    data = np.eye(3, dtype=float)
+    path = tmp_path / "vars.mat"
+    ie_save_spectral_file(wave, data, "vars", path)
+
+    assert ie_var_in_file(path, "data") is True
+    assert ieVarInFile(path, "missing") is False
+    assert ie_var_in_file(whosmat(path), "comment") is True
+
+
+def test_vc_save_multispectral_image_and_import_object_wrappers(tmp_path, asset_store) -> None:
+    wave = np.array([400.0, 500.0, 600.0], dtype=float)
+    basis = {"wave": wave, "basis": np.eye(3, dtype=float)}
+    basis_lights = np.array([[1.0, 0.5], [0.8, 0.4], [0.6, 0.3]], dtype=float)
+    illuminant = {"wave": wave, "data": np.array([1.0, 2.0, 3.0], dtype=float)}
+    mc_coef = np.ones((2, 2, 3), dtype=float)
+
+    saved_ms = vc_save_multispectral_image(
+        tmp_path,
+        "example-hdrs.mat",
+        mc_coef,
+        basis,
+        basis_lights,
+        illuminant,
+        "example comment",
+        np.array([0.1, 0.2, 0.3], dtype=float),
+    )
+    loaded_ms = loadmat(saved_ms, squeeze_me=True, struct_as_record=False)
+
+    assert Path(saved_ms).exists()
+    assert loaded_ms["comment"] == "example comment"
+    assert np.allclose(np.asarray(loaded_ms["basisLights"], dtype=float), basis_lights)
+    assert vcSaveMultiSpectralImage(
+        tmp_path,
+        "example-alias-hdrs.mat",
+        mc_coef,
+        basis,
+        basis_lights,
+        illuminant,
+        "alias comment",
+        None,
+    ).endswith(".mat")
+
+    scene = scene_create("uniform ee", 8, asset_store=asset_store)
+    object_path = tmp_path / "scene_import.mat"
+    vc_save_object(scene, object_path)
+    session = session_create()
+
+    slot, full_name = vc_import_object("scene", object_path, session=session)
+
+    assert slot == 1
+    assert full_name == str(object_path)
+    assert isinstance(session_get_selected(session, "scene"), Scene)
+    alias_slot, alias_name = vcImportObject("scene", object_path, session=session_create())
+    assert alias_slot == 1
+    assert alias_name == str(object_path)

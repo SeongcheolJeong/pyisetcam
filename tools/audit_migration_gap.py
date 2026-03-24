@@ -168,6 +168,61 @@ MID_PRIORITY_FAMILIES = {
 }
 
 UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
+    "utility/file/ieImageType.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB image-type probe is covered by the Python `ie_image_type(...)` / `ieImageType(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
+    },
+    "utility/file/ieReadMultipleFileNames.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is an interactive multi-file chooser built around MATLAB directory/list dialogs rather than a reusable supported headless API surface.",
+        "module_hits": [],
+    },
+    "utility/file/ieSaveSpectralFile.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB spectral-data writer is covered by the Python `ie_save_spectral_file(...)` / `ieSaveSpectralFile(...)` compatibility wrapper for headless uncompressed spectral MAT payloads.",
+        "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
+    },
+    "utility/file/ieTempfile.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB temp-file helper is covered by the Python `ie_tempfile(...)` / `ieTempfile(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
+    },
+    "utility/file/ieVarInFile.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB MAT-variable membership helper is covered by the Python `ie_var_in_file(...)` / `ieVarInFile(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
+    },
+    "utility/file/pathToLinux.m": {
+        "status": "ported",
+        "note": "The Windows-to-Linux path-normalization helper is covered by the Python `path_to_linux(...)` / `pathToLinux(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
+    },
+    "utility/file/vcImportObject.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB object-import helper is covered for the headless core object types by the Python `vc_import_object(...)` / `vcImportObject(...)` compatibility wrapper on top of `vc_load_object(...)`.",
+        "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
+    },
+    "utility/file/vcReadSpectra.m": {
+        "status": "ported",
+        "note": "The deprecated MATLAB spectral-reader alias is covered by the Python `vc_read_spectra(...)` / `vcReadSpectra(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
+    },
+    "utility/file/vcSaveMultiSpectralImage.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB multispectral-image writer is covered by the Python `vc_save_multispectral_image(...)` / `vcSaveMultiSpectralImage(...)` compatibility wrapper on top of the existing basis-coded save path.",
+        "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
+    },
+    "utility/file/vcSelectDataFile.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a persistent GUI file-picker around MATLAB `uigetfile` / `uiputfile` dialogs and remains outside the headless migration target.",
+        "module_hits": [],
+    },
+    "utility/file/vcSelectImage.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a GUI image-picker wrapper around MATLAB file dialogs and remains outside the headless migration target.",
+        "module_hits": [],
+    },
     "ISET.m": {
         "status": "ported",
         "note": "The legacy MATLAB startup script is covered by the headless Python `iset(...)` / `ISET(...)` compatibility wrapper on top of the optional session layer, without reproducing the MATLAB GUI launch.",

@@ -76,13 +76,21 @@ from .display import (
 from .fileio import (
     ie_dng_read,
     ie_dng_simple_info,
+    ie_image_type,
     ie_save_color_filter,
     ie_save_multispectral_image,
+    ie_save_spectral_file,
     ie_save_si_data_file,
+    ie_tempfile,
+    ie_var_in_file,
+    path_to_linux,
     sensor_dng_read,
     vc_export_object,
+    vc_import_object,
     vc_load_object,
+    vc_read_spectra,
     vc_save_object,
+    vc_save_multispectral_image,
 )
 from .illuminant import (
     illuminant_create,
@@ -886,10 +894,14 @@ __all__ = [
     "image_linear_transform",
     "ieMainClose",
     "ieRefreshWindow",
+    "ieImageType",
     "ieReadSpectra",
     "ieReadColorFilter",
     "ieSaveColorFilter",
     "ieSaveMultiSpectralImage",
+    "ieSaveSpectralFile",
+    "ieTempfile",
+    "ieVarInFile",
     "imageFlip",
     "imageIncreaseImageRGBSize",
     "image_flip",
@@ -913,10 +925,12 @@ __all__ = [
     "ie_mvnrnd",
     "ie_n_to_megapixel",
     "ie_reflectance_samples",
+    "ie_image_type",
     "ie_read_spectra",
     "ie_read_color_filter",
     "ie_save_color_filter",
     "ie_save_multispectral_image",
+    "ie_save_spectral_file",
     "ie_find_object_by_name",
     "ie_locs2_rect",
     "ie_parameter_otype",
@@ -935,8 +949,10 @@ __all__ = [
     "ie_dng_read",
     "ie_dng_simple_info",
     "ie_save_si_data_file",
+    "ie_tempfile",
     "ie_session_get",
     "ie_session_set",
+    "ie_var_in_file",
     "ie_windows_get",
     "ie_windows_set",
     "ie_select_object",
@@ -1698,17 +1714,25 @@ __all__ = [
     "vcNewObjectValue",
     "vcReplaceAndSelectObject",
     "vcReplaceObject",
+    "vcImportObject",
     "vcLoadObject",
+    "vcReadSpectra",
     "vcSaveObject",
+    "vcSaveMultiSpectralImage",
     "vcSelectFigure",
     "vcSetObjects",
     "vcSetSelectedObject",
     "vc_export_object",
+    "vc_import_object",
     "vc_get_roi_data",
     "vc_load_object",
+    "vc_read_spectra",
     "vc_rect2_locs",
     "vc_save_object",
+    "vc_save_multispectral_image",
     "vc_set_figure_handles",
+    "pathToLinux",
+    "path_to_linux",
     "sceCreate",
     "sceGet",
     "sce_create",
@@ -2245,6 +2269,7 @@ ieFitLine = ie_fit_line
 ieMvnrnd = ie_mvnrnd
 ieN2MegaPixel = ie_n_to_megapixel
 ieReflectanceSamples = ie_reflectance_samples
+ieImageType = ie_image_type
 ieReadColorFilter = ie_read_color_filter
 ieReadSpectra = ie_read_spectra
 ieLocs2Rect = ie_locs2_rect
@@ -2265,14 +2290,18 @@ ieDNGRead = ie_dng_read
 ieDNGSimpleInfo = ie_dng_simple_info
 ieSaveColorFilter = ie_save_color_filter
 ieSaveMultiSpectralImage = ie_save_multispectral_image
+ieSaveSpectralFile = ie_save_spectral_file
 ieSaveSIDataFile = ie_save_si_data_file
 ieSessionGet = ie_session_get
 ieSessionSet = ie_session_set
+ieTempfile = ie_tempfile
+ieVarInFile = ie_var_in_file
 ieWindowsGet = ie_windows_get
 ieWindowsSet = ie_windows_set
 ieSelectObject = ie_select_object
 isetPath = iset_path
 isetRootPath = iset_root_path
+pathToLinux = path_to_linux
 
 ipCreate = ip_create
 ipCompute = ip_compute
@@ -2342,6 +2371,7 @@ vcDeleteSomeObjects = session_delete_some_objects
 vcDeleteSelectedObject = session_delete_selected_object
 vcEquivalentObjtype = vc_equivalent_objtype
 vcExportObject = vc_export_object
+vcImportObject = vc_import_object
 vcGetObject = session_get_object_with_id
 vcGetROIData = vc_get_roi_data
 vcGetObjectType = session_get_object_type
@@ -2356,7 +2386,9 @@ vcRect2Locs = vc_rect2_locs
 vcReplaceAndSelectObject = session_replace_and_select_object
 vcReplaceObject = session_replace_object
 vcLoadObject = vc_load_object
+vcReadSpectra = vc_read_spectra
 vcSaveObject = vc_save_object
+vcSaveMultiSpectralImage = vc_save_multispectral_image
 vcSelectFigure = vc_select_figure
 vcSetFigureHandles = vc_set_figure_handles
 vcSetObjects = session_set_objects

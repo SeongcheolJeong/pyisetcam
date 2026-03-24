@@ -1743,6 +1743,13 @@ scratch-data bootstrap script is covered by a focused headless
 `scene -> oi -> sensor -> ip` initialization regression, while the face
 detection demo is explicitly out of scope because the vendored upstream file
 immediately returns and depends on MATLAB Vision Toolbox UI behavior.
+The small `utility/file` helper tail is cleaner too: headless wrappers now
+cover `ieImageType(...)`, `ieSaveSpectralFile(...)`, `ieTempfile(...)`,
+`ieVarInFile(...)`, `pathToLinux(...)`, `vcImportObject(...)`,
+`vcReadSpectra(...)`, and `vcSaveMultiSpectralImage(...)`, while the pure
+MATLAB file-picker helpers `ieReadMultipleFileNames.m`,
+`vcSelectDataFile.m`, and `vcSelectImage.m` are explicitly tracked as GUI
+out of scope rather than residual headless debt.
 The legacy startup/path trio is now covered too: `ISET.m`, `isetPath.m`,
 and `isetRootPath.m` are tracked against the optional headless session
 bootstrap wrappers `iset(...)`, `isetPath(...)`, and `isetRootPath(...)`
