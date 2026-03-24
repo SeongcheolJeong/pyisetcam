@@ -924,6 +924,13 @@ That same headless OI utility surface now also includes
 `oi_combine_depths(...)` / `oiCombineDepths(...)` for the legacy MATLAB
 OI depth-map padding, segmentation, and plane-combination helper
 mini-family.
+That same headless OI utility surface now also includes
+`oi_calculate_otf(...)` / `oiCalculateOTF(...)`,
+`oi_custom_compute(...)` / `oiCustomCompute(...)`,
+`oi_preview_video(...)` / `oiPreviewVideo(...)`, and
+`oi_wb_compute(...)` / `oiWBCompute(...)`, covering the legacy MATLAB
+OTF export, custom-compute detection, preview-animation rendering, and
+waveband-scene batch-compute helper surface.
 That same headless optics-object compatibility surface now also includes
 `optics_create(...)` / `opticsCreate(...)`,
 `optics_get(...)` / `opticsGet(...)`, `optics_set(...)` / `opticsSet(...)`,

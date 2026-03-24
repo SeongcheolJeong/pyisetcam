@@ -148,10 +148,12 @@ from pyisetcam import (
     airy_disk,
     oiAdd,
     oiAdjustIlluminance,
+    oiCalculateOTF,
     oiCalculateIrradiance,
     oi_calculate_illuminance,
     oiClearData,
     oiCombineDepths,
+    oiCustomCompute,
     oiDepthCombine,
     oiDepthSegmentMap,
     oi_diffuser,
@@ -172,6 +174,7 @@ from pyisetcam import (
     oiPadValue,
     oiPhotonNoise,
     oiPSF,
+    oiPreviewVideo,
     oiSaveImage,
     oiShowImage,
     oi_plot,
@@ -179,6 +182,7 @@ from pyisetcam import (
     oi_spatial_support,
     oi_spatial_resample,
     oi_set,
+    oiWBCompute,
     lsf2circularpsf,
     psf2lsf,
     psfAverageMultiple,
@@ -927,6 +931,62 @@ def test_oi_geometry_helpers_match_existing_getters(asset_store) -> None:
         dtype=float,
     )
     assert np.allclose(dpos, expected)
+
+
+def test_oi_wrapper_compatibility_surface(asset_store, tmp_path: Path) -> None:
+    scene = scene_create("uniform ee", np.array([8, 8], dtype=int), asset_store=asset_store)
+    scene = scene_set(scene, "fov", 4.0)
+    oi = oi_compute(oi_create("diffraction limited", asset_store=asset_store), scene)
+
+    wave = np.asarray(oi_get(oi, "wave"), dtype=float).reshape(-1)
+    support_mm = np.asarray(oi_get(oi, "frequency support", "mm"), dtype=float)
+    target_wave = float(wave[np.argmin(np.abs(wave - 550.0))])
+    target_index = int(np.argmin(np.abs(wave - target_wave)))
+
+    otf_plane, support = oiCalculateOTF(oi, target_wave, "mm")
+    otf_mm_all, support_mm_all = oiCalculateOTF(oi, wave, "mm")
+    otf_all, support_all = oiCalculateOTF(oi)
+
+    assert otf_plane.shape == otf_mm_all[:, :, target_index].shape
+    assert np.allclose(otf_plane, otf_mm_all[:, :, target_index], atol=1e-12, rtol=1e-12)
+    assert np.allclose(support, support_mm, atol=1e-12, rtol=1e-12)
+    assert np.allclose(support_mm_all, support_mm, atol=1e-12, rtol=1e-12)
+    assert otf_all.shape[2] == wave.size
+    assert np.allclose(support_all, np.asarray(oi_get(oi, "frequency support", "cyclesPerDegree"), dtype=float), atol=1e-12, rtol=1e-12)
+
+    custom_enabled, custom_method = oiCustomCompute(oi)
+    assert custom_enabled is False
+    assert custom_method is None
+    custom_oi = oi_set(oi.clone(), "custom compute method", "myCustomOI")
+    custom_enabled, custom_method = oiCustomCompute(custom_oi)
+    assert custom_enabled is True
+    assert custom_method == "myCustomOI"
+    assert bool(oi_get(custom_oi, "custom compute")) is True
+    assert oi_get(custom_oi, "custom compute method") == "myCustomOI"
+
+    wb_scene = scene_create("uniform ee", 4, np.array([500.0, 600.0], dtype=float), asset_store=asset_store)
+    wb_scene = scene_set(
+        wb_scene,
+        "photons",
+        np.arange(1, 4 * 4 * 2 + 1, dtype=float).reshape(4, 4, 2),
+    )
+    work_dir = Path(sceneWBCreate(wb_scene, tmp_path / "scene-wb"))
+    oi_dir = Path(oiWBCompute(work_dir, oi_create("diffraction limited", asset_store=asset_store), asset_store=asset_store))
+    oi_files = sorted(oi_dir.glob("oi*.mat"))
+
+    assert oi_dir == work_dir
+    assert len(oi_files) == 2
+    loaded_oi, loaded_path = vcLoadObject("oi", oi_files[0])
+    assert Path(loaded_path) == oi_files[0]
+    assert np.array_equal(np.asarray(oi_get(loaded_oi, "wave"), dtype=float).reshape(-1), np.array([500.0], dtype=float))
+
+    preview_path = Path(oiPreviewVideo(oi_dir, tmp_path / "oi-preview", asset_store=asset_store))
+    frames = list(iio.imiter(preview_path))
+
+    assert preview_path.suffix == ".gif"
+    assert preview_path.exists()
+    assert preview_path.stat().st_size > 0
+    assert len(frames) == len(oi_files)
 
 
 def test_oi_pad_value_matches_legacy_mean_zero_and_border_padding() -> None:

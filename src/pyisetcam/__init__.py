@@ -206,9 +206,11 @@ from .optics import (
     oi_calculate_irradiance,
     oi_diffuser,
     oi_compute,
+    oi_custom_compute,
     oi_clear_data,
     oi_crop,
     oi_create,
+    oi_calculate_otf,
     oi_combine_depths,
     oi_depth_combine,
     oi_depth_segment_map,
@@ -226,12 +228,14 @@ from .optics import (
     oi_pad_value,
     oi_photon_noise,
     oi_psf,
+    oi_preview_video,
     oi_save_image,
     oi_show_image,
     oi_space,
     oi_spatial_support,
     oi_spatial_resample,
     oi_set,
+    oi_wb_compute,
     sce_create,
     sce_get,
     lsf_to_circular_psf,
@@ -1007,7 +1011,9 @@ __all__ = [
     "optics_si_compute",
     "optics_to_wvf",
     "oiCalculateIlluminance",
+    "oiCalculateOTF",
     "oiClearData",
+    "oiCustomCompute",
     "oiDiffuser",
     "oiCompute",
     "oiCombineDepths",
@@ -1032,17 +1038,21 @@ __all__ = [
     "oiPadValue",
     "oiPhotonNoise",
     "oiPSF",
+    "oiPreviewVideo",
     "oiSaveImage",
     "oiShowImage",
     "oiSpace",
     "oiSpatialSupport",
     "oiSpatialResample",
     "oiSet",
+    "oiWBCompute",
     "oi_add",
     "oi_adjust_illuminance",
     "oi_calculate_illuminance",
+    "oi_calculate_otf",
     "oi_calculate_irradiance",
     "oi_clear_data",
+    "oi_custom_compute",
     "oi_diffuser",
     "oi_compute",
     "oi_combine_depths",
@@ -1065,12 +1075,14 @@ __all__ = [
     "oi_photon_noise",
     "oi_psf",
     "oi_plot",
+    "oi_preview_video",
     "oi_save_image",
     "oi_show_image",
     "oi_space",
     "oi_spatial_support",
     "oi_spatial_resample",
     "oi_set",
+    "oi_wb_compute",
     "optics_psf_to_otf",
     "lsf2circularpsf",
     "psf2lsf",
@@ -1676,11 +1688,13 @@ sensorDescription = sensor_description
 
 oiCreate = oi_create
 oiCompute = oi_compute
+oiCustomCompute = oi_custom_compute
 oiClearData = oi_clear_data
 oiCrop = oi_crop
 oiCombineDepths = oi_combine_depths
 oiAdd = oi_add
 oiAdjustIlluminance = oi_adjust_illuminance
+oiCalculateOTF = oi_calculate_otf
 oiCalculateIrradiance = oi_calculate_irradiance
 oiDepthCombine = oi_depth_combine
 oiDepthSegmentMap = oi_depth_segment_map
@@ -1698,12 +1712,14 @@ oiPadDepthMap = oi_pad_depth_map
 oiPadValue = oi_pad_value
 oiPhotonNoise = oi_photon_noise
 oiPSF = oi_psf
+oiPreviewVideo = oi_preview_video
 oiSaveImage = oi_save_image
 oiShowImage = oi_show_image
 oiSpace = oi_space
 oiSpatialSupport = oi_spatial_support
 oiSpatialResample = oi_spatial_resample
 oiSet = oi_set
+oiWBCompute = oi_wb_compute
 oiCalculateIlluminance = oi_calculate_illuminance
 oiDiffuser = oi_diffuser
 opticsPSF2OTF = optics_psf_to_otf

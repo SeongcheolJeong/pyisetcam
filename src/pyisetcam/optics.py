@@ -6401,11 +6401,20 @@ oiMakeEvenRowCol = oi_make_even_row_col
 opticsDefocusDepth = optics_defocus_depth
 
 
-def _oi_rgb_render(oi: OpticalImage, *, asset_store: AssetStore | None = None) -> np.ndarray | None:
-    store = _store(asset_store)
+def _oi_photon_cube(oi: OpticalImage) -> tuple[np.ndarray | None, np.ndarray]:
     photons = np.asarray(oi.data.get("photons", np.empty((0, 0, 0), dtype=float)), dtype=float)
     wave = np.asarray(oi.fields.get("wave", np.empty(0, dtype=float)), dtype=float).reshape(-1)
+    if photons.ndim == 2 and wave.size == 1:
+        photons = photons[:, :, np.newaxis]
     if photons.ndim != 3 or photons.size == 0 or wave.size == 0:
+        return None, wave
+    return photons, wave
+
+
+def _oi_rgb_render(oi: OpticalImage, *, asset_store: AssetStore | None = None) -> np.ndarray | None:
+    store = _store(asset_store)
+    photons, wave = _oi_photon_cube(oi)
+    if photons is None:
         return None
     energy = quanta_to_energy(photons, wave)
     xyz = xyz_from_energy(energy, wave, asset_store=store)
@@ -6432,8 +6441,8 @@ def oi_show_image(
     if method in {0, 1}:
         rgb = _oi_rgb_render(oi, asset_store=asset_store)
     elif method == 2:
-        photons = np.asarray(oi.data.get("photons", np.empty((0, 0, 0), dtype=float)), dtype=float)
-        if photons.ndim != 3 or photons.size == 0:
+        photons, _ = _oi_photon_cube(oi)
+        if photons is None:
             return None
         gray = np.mean(photons, axis=2, dtype=float)
         gray_min = float(np.min(gray))
@@ -6452,9 +6461,8 @@ def oi_show_image(
         from .scene import hdr_render
         from .utils import xyz_to_srgb
 
-        photons = np.asarray(oi.data.get("photons", np.empty((0, 0, 0), dtype=float)), dtype=float)
-        wave = np.asarray(oi.fields.get("wave", np.empty(0, dtype=float)), dtype=float).reshape(-1)
-        if photons.ndim != 3 or photons.size == 0 or wave.size == 0:
+        photons, wave = _oi_photon_cube(oi)
+        if photons is None:
             return None
         energy = quanta_to_energy(photons, wave)
         xyz = np.asarray(xyz_from_energy(energy, wave, asset_store=_store(asset_store)), dtype=float)
@@ -6492,6 +6500,238 @@ def oi_save_image(
 
     payload = np.clip(np.round(np.clip(np.asarray(rgb, dtype=float), 0.0, 1.0) * 255.0), 0.0, 255.0).astype(np.uint8)
     iio.imwrite(output_path, payload)
+    return str(output_path)
+
+
+def _normalize_waveband_scene(scene: Scene) -> Scene:
+    current = scene.clone()
+    current.fields["wave"] = np.asarray(scene_get(current, "wave"), dtype=float).reshape(-1)
+
+    photons = np.asarray(scene_get(current, "photons"), dtype=float)
+    if photons.ndim == 2:
+        current.data["photons"] = photons[:, :, np.newaxis]
+
+    for field_name in ("illuminant_photons", "illuminant_energy"):
+        if field_name not in current.fields:
+            continue
+        field_value = np.asarray(current.fields[field_name], dtype=float)
+        if field_value.ndim == 0:
+            current.fields[field_name] = field_value.reshape(1)
+        elif field_value.ndim == 2:
+            current.fields[field_name] = field_value[:, :, np.newaxis]
+    return current
+
+
+def oi_wb_compute(
+    work_dir: str | Path,
+    oi: OpticalImage | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> str:
+    """Convert a directory of `sceneXXX.mat` files into `oiXXX.mat` files."""
+
+    from .fileio import vc_load_object, vc_save_object
+
+    directory = Path(work_dir).expanduser()
+    if not directory.exists():
+        raise ValueError(f"Scene waveband directory does not exist: {directory}")
+
+    scene_files = sorted(directory.glob("scene*.mat"))
+    if not scene_files:
+        raise ValueError(f"No scene waveband files found in {directory}.")
+
+    current_oi = oi_create(asset_store=_store(asset_store)) if oi is None else oi
+    for scene_file in scene_files:
+        loaded_scene, _ = vc_load_object("scene", scene_file)
+        if not isinstance(loaded_scene, Scene):
+            raise ValueError(f"{scene_file} does not contain a scene object.")
+        current_scene = _normalize_waveband_scene(loaded_scene)
+        computed = oi_compute(current_oi.clone(), current_scene)
+        wavelength = float(np.asarray(scene_get(current_scene, "wave"), dtype=float).reshape(-1)[0])
+        vc_save_object(computed, directory / f"oi{int(np.rint(wavelength))}.mat")
+    return str(directory)
+
+
+def oi_calculate_otf(
+    oi: OpticalImage,
+    wave: Any | None = None,
+    unit: str = "cyclesPerDegree",
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return the current shift-invariant OTF on the OI frequency support."""
+
+    normalized_model = param_format(oi_get(oi, "model"))
+    normalized_unit = param_format(unit)
+    support = np.asarray(oi_get(oi, "frequency support", unit), dtype=float)
+    target_wave = np.asarray(oi_get(oi, "wave"), dtype=float).reshape(-1) if wave is None else np.asarray(wave, dtype=float).reshape(-1)
+    if target_wave.size == 0:
+        target_wave = np.asarray(oi_get(oi, "wave"), dtype=float).reshape(-1)
+
+    if normalized_model == "raytrace":
+        raise UnsupportedOptionError("oiCalculateOTF", "raytrace")
+
+    if normalized_model in {"diffractionlimited", "dlmtf"}:
+        optics = dict(oi.fields.get("optics", {}))
+        fx = np.asarray(support[:, :, 0], dtype=float)
+        fy = np.asarray(support[:, :, 1], dtype=float)
+        rho = np.sqrt(fx**2 + fy**2)
+        aperture_diameter = float(optics["focal_length_m"]) / max(float(optics["f_number"]), 1.0e-12)
+        focal_plane_distance = float(optics["focal_length_m"])
+        cutoff = (aperture_diameter / max(focal_plane_distance, 1.0e-12)) / np.maximum(target_wave * 1.0e-9, 1.0e-12)
+        if normalized_unit in {"cyclesperdegree", "cycperdeg"}:
+            cutoff = cutoff * float(oi_get(oi, "distance per degree", "meters"))
+        else:
+            unit_scale = {"meters": 1.0, "m": 1.0, "millimeters": 1.0e3, "mm": 1.0e3, "microns": 1.0e6, "um": 1.0e6}
+            if normalized_unit not in unit_scale:
+                raise KeyError(f"Unsupported oiCalculateOTF unit: {unit}")
+            cutoff = cutoff / unit_scale[normalized_unit]
+
+        otf = np.empty((support.shape[0], support.shape[1], target_wave.size), dtype=complex)
+        for band_index, cutoff_frequency in enumerate(cutoff):
+            normalized_rho = rho / max(float(cutoff_frequency), 1.0e-12)
+            clipped = np.clip(normalized_rho, 0.0, 1.0)
+            plane = (2.0 / np.pi) * (np.arccos(clipped) - clipped * np.sqrt(1.0 - clipped**2))
+            plane[normalized_rho >= 1.0] = 0.0
+            otf[:, :, band_index] = np.fft.ifftshift(np.asarray(plane, dtype=float))
+    else:
+        otf_bundle = _synthesized_shift_invariant_otf_bundle(oi)
+        if otf_bundle is None:
+            raise ValueError("Optical image does not provide a shift-invariant OTF.")
+
+        source_otf = np.asarray(otf_bundle["OTF"], dtype=complex)
+        source_wave = np.asarray(otf_bundle["wave"], dtype=float).reshape(-1)
+        source_fx = np.asarray(otf_bundle["fx"], dtype=float).reshape(-1)
+        source_fy = np.asarray(otf_bundle["fy"], dtype=float).reshape(-1)
+        query_fx = np.asarray(support[0, :, 0], dtype=float).reshape(-1)
+        query_fy = np.asarray(support[:, 0, 1], dtype=float).reshape(-1)
+        if normalized_unit in {"cyclesperdegree", "cycperdeg"}:
+            deg_per_mm = float(oi_get(oi, "degrees per distance", "mm"))
+            query_fx_mm = query_fx * deg_per_mm
+            query_fy_mm = query_fy * deg_per_mm
+        elif normalized_unit in {"meters", "m"}:
+            query_fx_mm = query_fx / 1.0e3
+            query_fy_mm = query_fy / 1.0e3
+        elif normalized_unit in {"millimeters", "mm"}:
+            query_fx_mm = query_fx
+            query_fy_mm = query_fy
+        elif normalized_unit in {"microns", "um"}:
+            query_fx_mm = query_fx * 1.0e3
+            query_fy_mm = query_fy * 1.0e3
+        else:
+            raise KeyError(f"Unsupported oiCalculateOTF unit: {unit}")
+
+        otf = np.empty((support.shape[0], support.shape[1], target_wave.size), dtype=complex)
+        for band_index, wavelength_nm in enumerate(target_wave):
+            plane = _stack_plane_at_wavelength(source_otf, source_wave, float(wavelength_nm))
+            otf[:, :, band_index] = _resample_complex_otf_on_support(
+                plane,
+                source_fx,
+                source_fy,
+                query_fx_mm,
+                query_fy_mm,
+            )
+
+    if target_wave.size == 1:
+        otf = np.asarray(otf[:, :, 0], dtype=complex)
+
+    return otf, support
+
+
+def oi_custom_compute(oi: OpticalImage | None = None) -> tuple[bool, str | None]:
+    """Return whether a non-standard custom OI compute method is selected."""
+
+    current = oi_create() if oi is None else oi
+    method = oi.fields.get("custom_compute_method", oi_get(current, "compute method"))
+    method_text = "" if method is None else str(method)
+    normalized = param_format(method_text)
+    is_custom = normalized not in {"", "opticspsf", "opticsotf", "humanmw", "skip"}
+    return bool(is_custom), (method_text if is_custom else None)
+
+
+def _load_oi_preview_sequence(input_oi_path: Any) -> list[OpticalImage]:
+    from .fileio import _deserialize_value, _reconstruct_object, vc_load_object
+
+    if isinstance(input_oi_path, (list, tuple)):
+        sequence = [item for item in input_oi_path if isinstance(item, OpticalImage)]
+        if not sequence:
+            raise ValueError("oiPreviewVideo input list must contain optical images.")
+        return sequence
+
+    path = Path(input_oi_path).expanduser()
+    if path.is_dir():
+        files = sorted(path.glob("oi*.mat"))
+        if not files:
+            raise ValueError(f"No oi*.mat files found in {path}.")
+        return [vc_load_object("oi", file_path)[0] for file_path in files]
+
+    try:
+        loaded, _ = vc_load_object("oi", path)
+        if isinstance(loaded, OpticalImage):
+            return [loaded]
+    except Exception:
+        pass
+
+    payload = loadmat(path, squeeze_me=True, struct_as_record=False)
+    scenes_to_save = payload.get("scenesToSave")
+    if scenes_to_save is None:
+        raise ValueError(f"Unable to load an OI preview sequence from {path}.")
+
+    rebuilt = _reconstruct_object(_deserialize_value(scenes_to_save))
+    if isinstance(rebuilt, OpticalImage):
+        return [rebuilt]
+    if isinstance(rebuilt, list):
+        sequence = [item for item in rebuilt if isinstance(item, OpticalImage)]
+        if sequence:
+            return sequence
+    raise ValueError(f"{path} does not contain a supported optical-image preview sequence.")
+
+
+def oi_preview_video(
+    input_oi_path: Any,
+    output_name: str | Path | None = None,
+    render_flag: int = -1,
+    gam: float = 1.0,
+    fps: float = 3.0,
+    *,
+    asset_store: AssetStore | None = None,
+) -> str:
+    """Render a headless preview animation from an OI file, folder, or sequence."""
+
+    oi_sequence = _load_oi_preview_sequence(input_oi_path)
+    if output_name is None:
+        if isinstance(input_oi_path, (str, Path)):
+            input_path = Path(input_oi_path).expanduser()
+            base = input_path / "oi-preview.gif" if input_path.is_dir() else input_path.with_suffix(".gif")
+        else:
+            base = Path.cwd() / "oi-preview.gif"
+        output_path = base
+    else:
+        output_path = Path(output_name).expanduser()
+
+    if output_path.suffix == "":
+        output_path = output_path.with_suffix(".gif")
+    if not output_path.is_absolute():
+        output_path = (Path.cwd() / output_path).resolve()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    rendered_frames: list[np.ndarray] = []
+    for current_oi in oi_sequence:
+        rendered = oi_show_image(current_oi, render_flag, gam, asset_store=asset_store)
+        if rendered is None:
+            raise ValueError("oiPreviewVideo encountered an OI without renderable photon data.")
+        rendered_frames.append(np.asarray(rendered, dtype=float))
+
+    max_value = max(float(np.max(frame)) for frame in rendered_frames) if rendered_frames else 0.0
+    scale = 1.0 if max_value <= 0.0 else max_value
+    frames = [
+        np.clip(np.rint(np.clip(frame / scale, 0.0, 1.0) * 255.0), 0.0, 255.0).astype(np.uint8)
+        for frame in rendered_frames
+    ]
+
+    stack = np.stack(frames, axis=0)
+    if output_path.suffix.lower() == ".gif":
+        iio.imwrite(output_path, stack, duration=1.0 / max(float(fps), 1.0e-12), loop=0)
+    else:
+        iio.imwrite(output_path, stack, fps=float(fps))
     return str(output_path)
 
 
@@ -8216,6 +8456,14 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         return oi.fields["optics"]["model"]
     if key in {"computemethod"}:
         return oi.fields["optics"].get("compute_method", oi.fields.get("compute_method"))
+    if key in {"customcompute"}:
+        method = oi.fields.get("custom_compute_method", oi.fields["optics"].get("compute_method", oi.fields.get("compute_method", "")))
+        normalized = param_format(method)
+        return normalized not in {"", "opticspsf", "opticsotf", "humanmw", "skip"}
+    if key in {"customcomputemethod"}:
+        if not bool(oi_get(oi, "custom compute")):
+            return None
+        return oi.fields.get("custom_compute_method", oi.fields["optics"].get("compute_method", oi.fields.get("compute_method")))
     if key in {"diffusermethod"}:
         return oi.fields.get("diffuser_method", "skip")
     if key in {"diffuserblur"}:
@@ -8630,6 +8878,25 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any, *args: Any) -> OpticalI
     if key in {"computemethod"}:
         oi.fields["compute_method"] = str(value)
         oi.fields["optics"]["compute_method"] = str(value)
+        return oi
+    if key in {"customcomputemethod"}:
+        oi.fields["custom_compute_method"] = str(value)
+        oi.fields["compute_method"] = str(value)
+        oi.fields["optics"]["compute_method"] = str(value)
+        return oi
+    if key in {"customcompute"}:
+        if bool(value):
+            current = oi.fields.get("custom_compute_method") or oi.fields["optics"].get("compute_method") or "customCompute"
+            oi.fields["custom_compute_method"] = str(current)
+            oi.fields["compute_method"] = str(current)
+            oi.fields["optics"]["compute_method"] = str(current)
+        else:
+            oi.fields.pop("custom_compute_method", None)
+            default_method = oi.fields["optics"].get("compute_method", oi.fields.get("compute_method", "opticspsf"))
+            if param_format(default_method) not in {"opticspsf", "opticsotf", "humanmw", "skip"}:
+                default_method = "opticspsf"
+            oi.fields["compute_method"] = str(default_method)
+            oi.fields["optics"]["compute_method"] = str(default_method)
         return oi
     if key in {"diffusermethod"}:
         oi.fields["diffuser_method"] = str(value)
