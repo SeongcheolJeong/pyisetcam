@@ -16,6 +16,7 @@ from pyisetcam.parity import run_python_case_with_context
 from pyisetcam.utils import energy_to_quanta, tile_pattern
 from pyisetcam.utils import quanta_to_energy
 from pyisetcam import (
+    ApplyFilters,
     analog2digital,
     blackbody,
     binNoiseColumnFPN,
@@ -340,7 +341,9 @@ from pyisetcam import (
     pad4conv,
     photometricExposure,
     preSCIELAB,
+    scApplyFilters,
     iePixelWellCapacity,
+    sc_apply_filters,
     binPixel,
     binPixelPost,
     pixelCenterFillPD,
@@ -9588,6 +9591,16 @@ def test_scielab_legacy_filter_helpers_match_internal_support() -> None:
     expected = convolve2d(pad4conv(expected, xkernels.shape[1], 1), xkernels.T, mode="full")
     expected = scResize(expected, image.shape)
     assert np.allclose(separableConv(image, xkernels), expected)
+
+    opponent = np.dstack((image, image + 10.0, image + 20.0))
+    identity_filters = [
+        np.pad(np.array([[1.0]], dtype=float), ((1, 1), (1, 1)), mode="constant"),
+        np.pad(np.array([[1.0]], dtype=float), ((1, 1), (1, 1)), mode="constant"),
+        np.pad(np.array([[1.0]], dtype=float), ((1, 1), (1, 1)), mode="constant"),
+    ]
+    expected_filtered = sc_apply_filters(opponent, identity_filters)
+    np.testing.assert_allclose(ApplyFilters(opponent, identity_filters), expected_filtered, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(scApplyFilters(opponent, identity_filters), expected_filtered, rtol=1e-10, atol=1e-12)
 
 
 def test_scielab_legacy_preprocess_and_plane_helpers() -> None:

@@ -826,10 +826,12 @@ def scielab_rgb(
     return error_image, scene1, scene2, display
 
 
+ApplyFilters = sc_apply_filters
 changeColorSpace = change_color_space
 colorTransformMatrix = color_transform_matrix
 ieConv2FFT = ie_conv2_fft
 preSCIELAB = pre_scielab
+scApplyFilters = sc_apply_filters
 scComputeSCIELAB = sc_compute_scielab
 scOpponentFilter = sc_opponent_filter
 scPrepareFilters = sc_prepare_filters

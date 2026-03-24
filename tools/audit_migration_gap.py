@@ -281,6 +281,21 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file only opens MATLAB object windows and remains outside the headless migration target.",
         "module_hits": [],
     },
+    "metrics/scielab/ApplyFilters.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB filter-application helper is covered by the Python `sc_apply_filters(...)` / `ApplyFilters(...)` / `scApplyFilters(...)` compatibility surface.",
+        "module_hits": ["pyisetcam.scielab", "pyisetcam.__init__"],
+    },
+    "metrics/scielab/gauss.m": {
+        "status": "ported",
+        "note": "The direct MATLAB Gaussian-kernel helper is covered by the Python `gauss(...)` compatibility wrapper in `pyisetcam.scielab`.",
+        "module_hits": ["pyisetcam.scielab", "pyisetcam.__init__"],
+    },
+    "metrics/scielab/scApplyFilters.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB S-CIELAB filter-application helper is covered by the Python `sc_apply_filters(...)` / `ApplyFilters(...)` / `scApplyFilters(...)` compatibility surface.",
+        "module_hits": ["pyisetcam.scielab", "pyisetcam.__init__"],
+    },
     "color/transforms/colorTransformMatrixCreate.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a script used to derive static transform matrices, not a reusable headless API surface.",

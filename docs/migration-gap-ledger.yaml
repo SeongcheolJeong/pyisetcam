@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-03-24T11:19:35.732454+00:00",
+  "generated_at": "2026-03-24T11:40:48.242271+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 92,
+      "headless_only": 90,
       "missing": 37,
       "out_of_scope": 163,
       "parity": 644,
-      "partial": 472,
-      "ported": 35
+      "partial": 471,
+      "ported": 38
     },
     "kind_counts": {
       "api": 661,
@@ -20,19 +20,19 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 44,
+      "P0": 43,
       "P1": 376,
-      "P2": 181,
-      "P3": 842
+      "P2": 179,
+      "P3": 845
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": 0,
+        "headless_only": -2,
         "missing": 0,
-        "out_of_scope": 3,
+        "out_of_scope": 0,
         "parity": 0,
-        "partial": -3,
-        "ported": 0
+        "partial": -1,
+        "ported": 3
       },
       "kind_counts": {
         "api": 0,
@@ -43,9 +43,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P0": -3,
+        "P0": -1,
         "P1": 0,
-        "P2": 0,
+        "P2": -2,
         "P3": 3
       }
     },
@@ -409,15 +409,13 @@
       "metrics/scielab": {
         "total": 25,
         "by_status": {
-          "headless_only": 2,
           "parity": 18,
-          "partial": 1,
-          "ported": 4
+          "ported": 7
         },
         "by_kind": {
           "api": 25
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "opticalimage": {
         "total": 37,
@@ -1026,17 +1024,6 @@
         }
       },
       {
-        "family": "metrics/scielab",
-        "open_entries": 3,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "headless_only": 2,
-          "parity": 18,
-          "partial": 1,
-          "ported": 4
-        }
-      },
-      {
         "family": "imgproc",
         "open_entries": 2,
         "highest_open_priority": "P0",
@@ -1131,6 +1118,15 @@
         "highest_open_priority": "P0",
         "by_status": {
           "parity": 19,
+          "partial": 1
+        }
+      },
+      {
+        "family": "scripts/scene",
+        "open_entries": 1,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "parity": 26,
           "partial": 1
         }
       }
@@ -5633,14 +5629,14 @@
       "upstream_path": "metrics/scielab/ApplyFilters.m",
       "family": "metrics/scielab",
       "kind": "api",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.scielab",
+      "status": "ported",
+      "python_surface": "pyisetcam.scielab, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_metrics.py",
         "tests/unit/test_pipeline.py"
       ],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB filter-application helper is covered by the Python `sc_apply_filters(...)` / `ApplyFilters(...)` / `scApplyFilters(...)` compatibility surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "metrics/scielab/ClipXYZImage.m",
@@ -5689,14 +5685,14 @@
       "upstream_path": "metrics/scielab/gauss.m",
       "family": "metrics/scielab",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.scielab",
+      "status": "ported",
+      "python_surface": "pyisetcam.scielab, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_metrics.py",
         "tests/unit/test_pipeline.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The direct MATLAB Gaussian-kernel helper is covered by the Python `gauss(...)` compatibility wrapper in `pyisetcam.scielab`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "metrics/scielab/gauss2.m",
@@ -5777,14 +5773,14 @@
       "upstream_path": "metrics/scielab/scApplyFilters.m",
       "family": "metrics/scielab",
       "kind": "api",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.scielab",
+      "status": "ported",
+      "python_surface": "pyisetcam.scielab, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_metrics.py",
         "tests/unit/test_pipeline.py"
       ],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB S-CIELAB filter-application helper is covered by the Python `sc_apply_filters(...)` / `ApplyFilters(...)` / `scApplyFilters(...)` compatibility surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "metrics/scielab/scComputeDifference.m",

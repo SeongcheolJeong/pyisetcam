@@ -341,6 +341,7 @@ from .plotting import ip_plot, oi_plot, scene_plot, sensor_plot, sensor_plot_fft
 from .ptable import IEPTable, ie_p_table
 from .roi import ie_locs2_rect, ie_rect2_locs, ie_rect2_vertices, ie_roi2_locs, vc_get_roi_data, vc_rect2_locs
 from .scielab import (
+    sc_apply_filters,
     change_color_space,
     cmatrix,
     color_transform_matrix,
@@ -996,6 +997,7 @@ __all__ = [
     "photometricExposure",
     "photometric_exposure",
     "edge_to_mtf",
+    "ApplyFilters",
     "changeColorSpace",
     "change_color_space",
     "cmatrix",
@@ -1007,11 +1009,13 @@ __all__ = [
     "pad4conv",
     "preSCIELAB",
     "pre_scielab",
+    "scApplyFilters",
     "scParams",
     "scComputeSCIELAB",
     "scOpponentFilter",
     "scPrepareFilters",
     "scResize",
+    "sc_apply_filters",
     "sc_resize",
     "separableConv",
     "separableFilters",
@@ -2130,10 +2134,12 @@ ieXYZFromPhotons = ie_xyz_from_photons
 ieLuminance2Radiance = ie_luminance_to_radiance
 ieScotopicLuminanceFromEnergy = ie_scotopic_luminance_from_energy
 ieResponsivityConvert = ie_responsivity_convert
+ApplyFilters = sc_apply_filters
 changeColorSpace = change_color_space
 getPlanes = get_planes
 ieConv2FFT = ie_conv2_fft
 preSCIELAB = pre_scielab
+scApplyFilters = sc_apply_filters
 scParams = sc_params
 scComputeSCIELAB = sc_compute_scielab
 scOpponentFilter = sc_opponent_filter
