@@ -334,6 +334,8 @@ from pyisetcam import (
     photometricExposure,
     preSCIELAB,
     iePixelWellCapacity,
+    binPixel,
+    binPixelPost,
     pixelCenterFillPD,
     pixelCreate,
     pixelDescription,
@@ -348,6 +350,8 @@ from pyisetcam import (
     ptInterfaceMatrix,
     ptPoyntingFactor,
     ptPropagationMatrix,
+    pvFullOverlap,
+    pvReduction,
     ptReflectionAndTransmission,
     ptScatteringMatrix,
     ptSnellsLaw,
@@ -6398,6 +6402,100 @@ def test_pixel_transmittance_scales_optical_image_by_spectral_tunnel_average() -
     assert np.allclose(filtered_oi.fields["pixel_transmittance"]["transmission"]["spectral"], tunnel["transmission"]["spectral"])
     assert np.array_equal(np.asarray(pixelGet(returned_pixel, "wave"), dtype=float), wave)
     assert np.isclose(float(returned_optics["f_number"]), float(optics["f_number"]))
+
+
+def test_pixel_vignetting_and_binning_wrappers_match_legacy_contracts(asset_store) -> None:
+    optics = opticsCreate(asset_store=asset_store)
+    pixel = pixelCreate("default", np.array([500.0, 600.0], dtype=float))
+
+    overlap, num_grid, num_grid_spot = pvFullOverlap(optics, pixel)
+    focal_length = float(opticsGet(optics, "focal length"))
+    diameter = float(opticsGet(optics, "aperture diameter"))
+    width = float(pixelGet(pixel, "width"))
+    depth = float(pixelGet(pixel, "depth"))
+    spot_diameter = diameter * (depth / focal_length)
+
+    expected_num_grid = int(np.floor(51.0 * width / spot_diameter))
+    if expected_num_grid % 2 == 0:
+        expected_num_grid += 1
+    diode_x, diode_y = np.meshgrid(
+        np.linspace(-width / 2.0, width / 2.0, expected_num_grid, dtype=float),
+        np.linspace(-width / 2.0, width / 2.0, expected_num_grid, dtype=float),
+    )
+    diode_mask = (np.abs(diode_x) < (width / 2.0)) & (np.abs(diode_y) < (width / 2.0))
+    diode_grid = diode_mask.astype(float)
+    diode_grid /= float(np.count_nonzero(diode_mask))
+
+    expected_num_grid_spot = int(np.floor(spot_diameter / (width / expected_num_grid)))
+    if expected_num_grid_spot % 2 == 0:
+        expected_num_grid_spot += 1
+    spot_x, spot_y = np.meshgrid(
+        np.linspace(-spot_diameter / 2.0, spot_diameter / 2.0, expected_num_grid_spot, dtype=float),
+        np.linspace(-spot_diameter / 2.0, spot_diameter / 2.0, expected_num_grid_spot, dtype=float),
+    )
+    spot_mask = np.sqrt(spot_x**2 + spot_y**2) < (spot_diameter / 2.0)
+    spot = spot_mask.astype(float)
+    spot /= float(np.count_nonzero(spot_mask))
+    expected_overlap = convolve2d(diode_grid, spot, mode="full")
+
+    assert num_grid == expected_num_grid
+    assert num_grid_spot == expected_num_grid_spot
+    np.testing.assert_allclose(overlap, expected_overlap, rtol=1e-10, atol=1e-12)
+
+    diode_location = np.array([[0.25e-6, -0.15e-6]], dtype=float)
+    outside_angle = np.array([[0.05, -0.03]], dtype=float)
+    ratio = float(pvReduction(overlap, num_grid, num_grid_spot, diode_location, outside_angle, optics, pixel))
+    offset_x = diode_location[0, 0] - (focal_length - depth) * np.tan(outside_angle[0, 0])
+    offset_y = diode_location[0, 1] - (focal_length - depth) * np.tan(outside_angle[0, 1])
+    index_offset_x = int(np.rint((offset_x / width) * num_grid))
+    index_offset_y = int(np.rint((offset_y / width) * num_grid))
+    index_center_x = ((expected_overlap.shape[1] - 1) / 2.0) + 1.0
+    index_center_y = ((expected_overlap.shape[0] - 1) / 2.0) + 1.0
+    support = np.arange(-(num_grid - 1) / 2.0, ((num_grid - 1) / 2.0) + 1.0, dtype=float)
+    index_range_x = np.rint(index_center_x - index_offset_x + support).astype(int)
+    index_range_y = np.rint(index_center_y - index_offset_y + support).astype(int)
+    index_range_x[index_range_x <= 0] = 1
+    index_range_y[index_range_y <= 0] = 1
+    index_range_x[index_range_x > expected_overlap.shape[1]] = 1
+    index_range_y[index_range_y > expected_overlap.shape[0]] = 1
+    expected_ratio = float(np.sum(expected_overlap[np.ix_(index_range_x - 1, index_range_y - 1)]))
+    assert np.isclose(ratio, expected_ratio)
+
+    sensor = sensor_create(asset_store=asset_store)
+    volts = np.arange(1.0, 65.0, dtype=float).reshape(8, 8) / 64.0
+    dv = np.arange(1.0, 65.0, dtype=float).reshape(8, 8)
+    sensor = sensor_set(sensor, "volts", volts)
+    sensor = sensor_set(sensor, "digital values", dv)
+
+    kodak = binPixel(sensor, "kodak2008")
+    expected_kodak = np.zeros((8, 4), dtype=float)
+    transform = np.array([[1.0, 0.0], [0.0, 1.0], [1.0, 0.0], [0.0, 1.0]], dtype=float)
+    for row in range(0, 8, 4):
+        for col in range(0, 8, 4):
+            expected_kodak[row : row + 4, col // 2 : col // 2 + 2] = volts[row : row + 4, col : col + 4] @ transform
+    np.testing.assert_allclose(np.asarray(sensor_get(kodak, "dv"), dtype=float), expected_kodak, rtol=1e-10, atol=1e-12)
+
+    add_adjacent = binPixel(sensor, "addAdjacentBlocks")
+    expected_add = np.zeros((4, 4), dtype=float)
+    left = np.array([[1.0, 0.0, 1.0, 0.0], [0.0, 1.0, 0.0, 1.0]], dtype=float)
+    for row in range(0, 8, 4):
+        for col in range(0, 8, 4):
+            expected_add[row // 2 : row // 2 + 2, col // 2 : col // 2 + 2] = left @ volts[row : row + 4, col : col + 4] @ left.T
+    np.testing.assert_allclose(np.asarray(sensor_get(add_adjacent, "dv"), dtype=float), expected_add, rtol=1e-10, atol=1e-12)
+
+    kodak_post = binPixelPost(kodak, "kodak2008")
+    expected_kodak_post = np.zeros((4, 4), dtype=float)
+    for row in range(0, 8, 4):
+        for col in range(0, 4, 2):
+            expected_kodak_post[row // 2 : row // 2 + 2, col : col + 2] = np.rint(0.5 * (left @ expected_kodak[row : row + 4, col : col + 2]))
+    np.testing.assert_allclose(np.asarray(sensor_get(kodak_post, "dv"), dtype=float), expected_kodak_post, rtol=1e-10, atol=1e-12)
+
+    averaged = binPixelPost(sensor, "averageAdjacentDigitalblocks")
+    expected_averaged = np.zeros((4, 4), dtype=float)
+    for row in range(0, 8, 4):
+        for col in range(0, 8, 4):
+            expected_averaged[row // 2 : row // 2 + 2, col // 2 : col // 2 + 2] = 0.25 * (left @ dv[row : row + 4, col : col + 4] @ left.T)
+    np.testing.assert_allclose(np.asarray(sensor_get(averaged, "dv"), dtype=float), expected_averaged, rtol=1e-10, atol=1e-12)
 
 
 def test_sensor_show_image_matches_sensor_rgb_rendering(asset_store) -> None:

@@ -404,6 +404,11 @@ plus headless
 and `ie_pixel_well_capacity(...)` / `iePixelWellCapacity(...)` for the
 legacy standalone pixel helper mini-family built on top of the same
 internal sensor-pixel state, plus headless
+`pv_full_overlap(...)` / `pvFullOverlap(...)`,
+`pv_reduction(...)` / `pvReduction(...)`, `bin_pixel(...)` /
+`binPixel(...)`, and `bin_pixel_post(...)` / `binPixelPost(...)` for the
+remaining reusable pixel-vignetting and binning helper surface, plus
+headless
 `pixel_position_pd(...)` / `pixelPositionPD(...)`,
 `pixel_center_fill_pd(...)` / `pixelCenterFillPD(...)`, and
 `pixel_description(...)` / `pixelDescription(...)` for the legacy

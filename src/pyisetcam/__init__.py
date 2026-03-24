@@ -489,6 +489,8 @@ from .sensor import (
     pixel_ideal,
     pixel_position_pd,
     pixel_transmittance,
+    bin_pixel,
+    bin_pixel_post,
     pixel_snr,
     pixel_snr_luxsec,
     pixel_sr,
@@ -497,6 +499,8 @@ from .sensor import (
     bin_noise_column_fpn,
     bin_noise_fpn,
     bin_noise_read,
+    pv_full_overlap,
+    pv_reduction,
     pt_interface_matrix,
     pt_poynting_factor,
     pt_propagation_matrix,
@@ -1416,9 +1420,13 @@ __all__ = [
     "pixelGet",
     "pixelIdeal",
     "pixelPositionPD",
+    "binPixel",
+    "binPixelPost",
     "pixelSet",
     "pixelSR",
     "pixelTransmittance",
+    "pvFullOverlap",
+    "pvReduction",
     "ptInterfaceMatrix",
     "ptPoyntingFactor",
     "ptPropagationMatrix",
@@ -1536,9 +1544,13 @@ __all__ = [
     "pixel_ideal",
     "pixel_position_pd",
     "pixel_transmittance",
+    "bin_pixel",
+    "bin_pixel_post",
     "pixelSNR",
     "pixel_set",
     "pixel_sr",
+    "pv_full_overlap",
+    "pv_reduction",
     "pt_interface_matrix",
     "pt_poynting_factor",
     "pt_propagation_matrix",
@@ -1962,9 +1974,13 @@ pixelDescription = pixel_description
 pixelGet = pixel_get
 pixelIdeal = pixel_ideal
 pixelPositionPD = pixel_position_pd
+binPixel = bin_pixel
+binPixelPost = bin_pixel_post
 pixelSet = pixel_set
 pixelSR = pixel_sr
 pixelTransmittance = pixel_transmittance
+pvFullOverlap = pv_full_overlap
+pvReduction = pv_reduction
 ptInterfaceMatrix = pt_interface_matrix
 ptPoyntingFactor = pt_poynting_factor
 ptPropagationMatrix = pt_propagation_matrix

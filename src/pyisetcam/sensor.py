@@ -2625,6 +2625,155 @@ def pixel_center_fill_pd(sensor_or_pixel: Any, fillfactor: float | int | None = 
     return pixel_position_pd(pixel, "center")
 
 
+def pv_full_overlap(optics: dict[str, Any], pixel: Any) -> tuple[np.ndarray, int, int]:
+    """Compute the legacy full photodiode/spot overlap kernel for pixel vignetting."""
+
+    from .optics import optics_get
+
+    focal_length = float(optics_get(optics, "focal length"))
+    diameter = float(optics_get(optics, "aperture diameter"))
+    width = float(pixel_get(pixel, "width"))
+    depth = float(pixel_get(pixel, "depth"))
+    spot_diameter = diameter * (depth / max(focal_length, 1e-30))
+
+    num_grid = int(np.floor(51.0 * width / max(spot_diameter, 1e-30)))
+    num_grid = max(num_grid, 1)
+    if num_grid % 2 == 0:
+        num_grid += 1
+
+    diode_grid = np.zeros((num_grid, num_grid), dtype=float)
+    x, y = np.meshgrid(
+        np.linspace(-width / 2.0, width / 2.0, num_grid, dtype=float),
+        np.linspace(-width / 2.0, width / 2.0, num_grid, dtype=float),
+    )
+    diode_mask = (np.abs(x) < (width / 2.0)) & (np.abs(y) < (width / 2.0))
+    diode_grid[diode_mask] = 1.0
+    diode_grid /= max(float(np.count_nonzero(diode_mask)), 1.0)
+
+    num_grid_spot = int(np.floor(spot_diameter / max(width / max(num_grid, 1), 1e-30)))
+    num_grid_spot = max(num_grid_spot, 1)
+    if num_grid_spot % 2 == 0:
+        num_grid_spot += 1
+
+    spot = np.zeros((num_grid_spot, num_grid_spot), dtype=float)
+    x, y = np.meshgrid(
+        np.linspace(-spot_diameter / 2.0, spot_diameter / 2.0, num_grid_spot, dtype=float),
+        np.linspace(-spot_diameter / 2.0, spot_diameter / 2.0, num_grid_spot, dtype=float),
+    )
+    spot_mask = np.sqrt(x**2 + y**2) < (spot_diameter / 2.0)
+    spot[spot_mask] = 1.0
+    spot /= max(float(np.count_nonzero(spot_mask)), 1.0)
+
+    overlap = convolve2d(diode_grid, spot, mode="full")
+    return np.asarray(overlap, dtype=float), num_grid, num_grid_spot
+
+
+def pv_reduction(
+    overlap: np.ndarray,
+    num_grid: int,
+    num_grid_spot: int,
+    diode_location: Any,
+    outside_angle: Any,
+    optics: dict[str, Any],
+    pixel: Any,
+) -> np.ndarray:
+    """Compute the legacy pixel-vignetting efficiency reduction for a diode position."""
+
+    from .optics import optics_get
+
+    _ = int(num_grid_spot)
+    focal_length = float(optics_get(optics, "focal length"))
+    width = float(pixel_get(pixel, "width"))
+    depth = float(pixel_get(pixel, "depth"))
+
+    overlap_array = np.asarray(overlap, dtype=float)
+    diode_center = np.asarray(diode_location, dtype=float)
+    if diode_center.ndim == 1:
+        diode_center = diode_center.reshape(1, -1)
+    angle = np.asarray(outside_angle, dtype=float)
+    if angle.ndim == 1:
+        angle = angle.reshape(1, -1)
+
+    diode_center_x = diode_center[:, 0]
+    diode_center_y = diode_center[:, 1]
+    spot_center_x = (focal_length - depth) * np.tan(angle[:, 0])
+    spot_center_y = (focal_length - depth) * np.tan(angle[:, 1])
+    offset_x = diode_center_x - spot_center_x
+    offset_y = diode_center_y - spot_center_y
+
+    index_offset_x = np.rint((offset_x / max(width, 1e-30)) * float(num_grid)).astype(int)
+    index_offset_y = np.rint((offset_y / max(width, 1e-30)) * float(num_grid)).astype(int)
+    index_center_x = ((overlap_array.shape[1] - 1) / 2.0) + 1.0
+    index_center_y = ((overlap_array.shape[0] - 1) / 2.0) + 1.0
+    support = np.arange(-(num_grid - 1) / 2.0, ((num_grid - 1) / 2.0) + 1.0, dtype=float)
+
+    ratios = np.empty(diode_center.shape[0], dtype=float)
+    for idx in range(diode_center.shape[0]):
+        index_range_x = np.rint(index_center_x - index_offset_x[idx] + support).astype(int)
+        index_range_y = np.rint(index_center_y - index_offset_y[idx] + support).astype(int)
+        index_range_x[index_range_x <= 0] = 1
+        index_range_y[index_range_y <= 0] = 1
+        index_range_x[index_range_x > overlap_array.shape[1]] = 1
+        index_range_y[index_range_y > overlap_array.shape[0]] = 1
+        overlap_view = overlap_array[np.ix_(index_range_x - 1, index_range_y - 1)]
+        ratios[idx] = float(np.sum(overlap_view))
+
+    return ratios if ratios.size > 1 else np.asarray(ratios[0], dtype=float)
+
+
+def _block_apply(array: np.ndarray, block_shape: tuple[int, int], fn: Any) -> np.ndarray:
+    rows, cols = array.shape[:2]
+    block_rows, block_cols = block_shape
+    pieces: list[np.ndarray] = []
+    for row_start in range(0, rows, block_rows):
+        row_blocks: list[np.ndarray] = []
+        for col_start in range(0, cols, block_cols):
+            block = np.asarray(array[row_start : row_start + block_rows, col_start : col_start + block_cols], dtype=float)
+            row_blocks.append(np.asarray(fn(block), dtype=float))
+        pieces.append(np.concatenate(row_blocks, axis=1))
+    return np.concatenate(pieces, axis=0)
+
+
+def bin_pixel(sensor: Sensor, b_method: str | None = None) -> Sensor:
+    """Apply the legacy first-stage pixel-binning transform to sensor image data."""
+
+    current = sensor.clone()
+    method = param_format(b_method or "kodak2008")
+
+    if method == "kodak2008":
+        volts = np.asarray(sensor_get(current, "volts"), dtype=float)
+        dv = _block_apply(volts, (4, 4), lambda x: x @ np.array([[1.0, 0.0], [0.0, 1.0], [1.0, 0.0], [0.0, 1.0]], dtype=float))
+        return sensor_set(current, "digitalValues", dv)
+    if method == "addadjacentblocks":
+        volts = np.asarray(sensor_get(current, "volts"), dtype=float)
+        left = np.array([[1.0, 0.0, 1.0, 0.0], [0.0, 1.0, 0.0, 1.0]], dtype=float)
+        right = left.T
+        dv = _block_apply(volts, (4, 4), lambda x: left @ x @ right)
+        return sensor_set(current, "digitalValues", dv)
+    if method == "averageadjacentdigitalblocks":
+        return sensor_set(current, "digitalValues", 1)
+    raise ValueError(f"Unknown binning method {b_method}")
+
+
+def bin_pixel_post(sensor: Sensor, b_method: str) -> Sensor:
+    """Apply the legacy second-stage digital pixel-binning transform."""
+
+    current = sensor.clone()
+    method = param_format(b_method)
+
+    if method == "kodak2008":
+        dv = np.asarray(sensor_get(current, "dv"), dtype=float)
+        left = np.array([[1.0, 0.0, 1.0, 0.0], [0.0, 1.0, 0.0, 1.0]], dtype=float)
+        reduced = _block_apply(dv, (4, 2), lambda x: np.rint(0.5 * (left @ x)))
+        return sensor_set(current, "digitalValues", reduced)
+    if method == "averageadjacentdigitalblocks":
+        dv = np.asarray(sensor_get(current, "dv"), dtype=float)
+        left = np.array([[1.0, 0.0, 1.0, 0.0], [0.0, 1.0, 0.0, 1.0]], dtype=float)
+        reduced = _block_apply(dv, (4, 4), lambda x: 0.25 * (left @ x @ left.T))
+        return sensor_set(current, "digitalValues", reduced)
+    return current
+
+
 def pixel_description(pixel: Any, sensor: Sensor | None = None) -> str:
     """Return a headless MATLAB-style pixel summary string."""
 
@@ -6571,6 +6720,10 @@ sensorInterleaved = sensor_interleaved
 sensorLightField = sensor_light_field
 sensorMT9V024 = sensor_mt9v024
 LoadRawSensorData = load_raw_sensor_data
+binPixel = bin_pixel
+binPixelPost = bin_pixel_post
+pvFullOverlap = pv_full_overlap
+pvReduction = pv_reduction
 pixelTransmittance = pixel_transmittance
 ptInterfaceMatrix = pt_interface_matrix
 ptPoyntingFactor = pt_poynting_factor
