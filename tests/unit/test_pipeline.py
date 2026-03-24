@@ -15091,6 +15091,79 @@ def test_scene_rgb2radiance_tutorial_workflow(asset_store) -> None:
     assert not np.allclose(payloads["LCD-Apple.mat"]["rgb_channel_means"], payloads["CRT-Dell.mat"]["rgb_channel_means"])
 
 
+def test_color_chromaticity_tutorial_workflow(asset_store) -> None:
+    display = display_create("lcdExample.mat", asset_store=asset_store)
+    wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)
+    spd = np.asarray(display_get(display, "spd"), dtype=float)
+    white_xyz = np.asarray(display_get(display, "white xyz"), dtype=float).reshape(-1)
+    white_xy = np.asarray(display_get(display, "white xy"), dtype=float).reshape(-1)
+
+    primary_xyz = np.asarray(
+        [
+            xyz_from_energy(spd[:, idx], wave, asset_store=asset_store)
+            for idx in range(spd.shape[1])
+        ],
+        dtype=float,
+    ).reshape(spd.shape[1], 3)
+    primary_xy = np.asarray(chromaticity_xy(primary_xyz), dtype=float).reshape(spd.shape[1], 2)
+
+    scene = scene_create(asset_store=asset_store)
+    scene_xyz = np.asarray(scene_get(scene, "xyz", asset_store=asset_store), dtype=float)
+    scene_xyz_xw, rows, cols, channels = rgb_to_xw_format(scene_xyz)
+    scene_xy = np.asarray(chromaticity_xy(scene_xyz_xw), dtype=float).reshape(rows * cols, 2)
+
+    assert spd.shape == (101, 3)
+    assert white_xyz.shape == (3,)
+    assert white_xy.shape == (2,)
+    assert primary_xyz.shape == (3, 3)
+    assert primary_xy.shape == (3, 2)
+    assert channels == 3
+    assert scene_xy.shape == (rows * cols, 2)
+    assert np.allclose(
+        white_xy,
+        np.asarray(chromaticity_xy(white_xyz), dtype=float).reshape(-1),
+        atol=1e-12,
+        rtol=1e-12,
+    )
+    assert np.all(np.isfinite(primary_xy))
+    assert np.all(np.isfinite(scene_xy))
+    assert np.all(primary_xy >= 0.0)
+    assert np.all(primary_xy <= 1.0)
+    assert np.all(scene_xy >= 0.0)
+    assert np.all(scene_xy <= 1.0)
+
+
+def test_color_energy_quanta_tutorial_workflow(asset_store) -> None:
+    wave = np.arange(400.0, 701.0, 5.0, dtype=float)
+    photons = np.ones(wave.size, dtype=float)
+    energy = np.asarray(quanta_to_energy(photons, wave), dtype=float).reshape(-1)
+
+    d65_energy = np.asarray(ie_read_spectra("D65.mat", wave, asset_store=asset_store), dtype=float).reshape(-1)
+    d65_xyz = np.asarray(xyz_from_energy(d65_energy, wave, asset_store=asset_store), dtype=float).reshape(-1)
+    d65_energy = d65_energy * 100.0 / max(float(d65_xyz[1]), 1.0e-12)
+    d65_photons = np.asarray(energy_to_quanta(d65_energy, wave), dtype=float).reshape(-1)
+
+    xyz_energy = np.asarray(ie_read_spectra("XYZ", wave, asset_store=asset_store), dtype=float)
+    xyz_photons = np.asarray(ie_read_spectra("XYZQuanta", wave, asset_store=asset_store), dtype=float)
+
+    xyz_from_energy_wrapper = np.asarray(xyz_from_energy(d65_energy, wave, asset_store=asset_store), dtype=float).reshape(-1)
+    xyz_from_photons_wrapper = np.asarray(ie_xyz_from_photons(d65_photons, wave, asset_store=asset_store), dtype=float).reshape(-1)
+
+    dnm = float(wave[1] - wave[0])
+    xyz_from_energy_manual = dnm * 683.0 * (xyz_energy.T @ d65_energy)
+    xyz_from_photons_manual = dnm * 683.0 * (xyz_photons.T @ d65_photons)
+
+    assert energy.shape == wave.shape
+    assert np.all(np.diff(energy) < 0.0)
+    assert d65_photons.shape == wave.shape
+    assert xyz_energy.shape == (wave.size, 3)
+    assert xyz_photons.shape == (wave.size, 3)
+    assert np.isclose(float(xyz_from_energy_wrapper[1]), 100.0, atol=1e-8, rtol=1e-8)
+    assert np.allclose(xyz_from_energy_wrapper, xyz_from_photons_wrapper, atol=1e-8, rtol=1e-8)
+    assert np.allclose(xyz_from_energy_manual, xyz_from_photons_manual, atol=1e-8, rtol=1e-8)
+    assert np.allclose(xyz_from_energy_manual, xyz_from_energy_wrapper, atol=1e-8, rtol=1e-8)
+
+
 def test_display_helper_compatibility_surface(asset_store) -> None:
     all_names = displayList(show=False, asset_store=asset_store)
     lcd_names = displayList(type="LCD", show=False, asset_store=asset_store)

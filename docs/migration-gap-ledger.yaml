@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-24T18:57:12.522878+00:00",
+  "generated_at": "2026-03-24T19:25:29.245740+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -7,8 +7,8 @@
       "headless_only": 84,
       "missing": 31,
       "out_of_scope": 181,
-      "parity": 664,
-      "partial": 415,
+      "parity": 666,
+      "partial": 413,
       "ported": 68
     },
     "kind_counts": {
@@ -20,17 +20,17 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 357,
+      "P1": 355,
       "P2": 173,
-      "P3": 913
+      "P3": 915
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 2,
-        "parity": 1,
-        "partial": -3,
+        "out_of_scope": 0,
+        "parity": 2,
+        "partial": -2,
         "ported": 0
       },
       "kind_counts": {
@@ -42,9 +42,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -3,
+        "P1": -2,
         "P2": 0,
-        "P3": 3
+        "P3": 2
       }
     },
     "family_summary": {
@@ -845,13 +845,12 @@
       "tutorials/color": {
         "total": 3,
         "by_status": {
-          "parity": 1,
-          "partial": 2
+          "parity": 3
         },
         "by_kind": {
           "tutorial": 3
         },
-        "highest_open_priority": "P1"
+        "highest_open_priority": "P3"
       },
       "tutorials/display": {
         "total": 3,
@@ -1088,15 +1087,6 @@
         }
       },
       {
-        "family": "tutorials/color",
-        "open_entries": 2,
-        "highest_open_priority": "P1",
-        "by_status": {
-          "parity": 1,
-          "partial": 2
-        }
-      },
-      {
         "family": "scripts/data",
         "open_entries": 1,
         "highest_open_priority": "P1",
@@ -1107,6 +1097,14 @@
       },
       {
         "family": "scripts/faces",
+        "open_entries": 1,
+        "highest_open_priority": "P1",
+        "by_status": {
+          "missing": 1
+        }
+      },
+      {
+        "family": "tutorials/printing",
         "open_entries": 1,
         "highest_open_priority": "P1",
         "by_status": {
@@ -14610,27 +14608,29 @@
       "upstream_path": "tutorials/color/t_colorChromaticity.m",
       "family": "tutorials/color",
       "kind": "tutorial",
-      "status": "partial",
-      "python_surface": "pyisetcam.color, pyisetcam.metrics",
+      "status": "parity",
+      "python_surface": "pyisetcam.color, pyisetcam.metrics, pyisetcam.display, pyisetcam.scene",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The chromaticity tutorial workflow is already covered by the current headless regression surface through `display_create/get(...)`, `chromaticity_xy(...)`, `xyz_from_energy(...)`, and `scene_create/get(...)` on the default Macbeth scene.",
+      "priority": "P3"
     },
     {
       "upstream_path": "tutorials/color/t_colorEnergyQuanta.m",
       "family": "tutorials/color",
       "kind": "tutorial",
-      "status": "partial",
+      "status": "parity",
       "python_surface": "pyisetcam.color, pyisetcam.metrics",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The energy-versus-quanta tutorial workflow is already covered by the current headless regression surface through `quanta_to_energy(...)`, `energy_to_quanta(...)`, `ie_read_spectra(...)`, `xyz_from_energy(...)`, and `ie_xyz_from_photons(...)`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "tutorials/color/t_colorSpectrum.m",

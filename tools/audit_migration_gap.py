@@ -387,6 +387,16 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is an explicit tinker script for dead-leaves-style spectrum experiments rather than a supported reusable API surface.",
         "module_hits": [],
     },
+    "tutorials/color/t_colorChromaticity.m": {
+        "status": "parity",
+        "note": "The chromaticity tutorial workflow is already covered by the current headless regression surface through `display_create/get(...)`, `chromaticity_xy(...)`, `xyz_from_energy(...)`, and `scene_create/get(...)` on the default Macbeth scene.",
+        "module_hits": ["pyisetcam.color", "pyisetcam.metrics", "pyisetcam.display", "pyisetcam.scene"],
+    },
+    "tutorials/color/t_colorEnergyQuanta.m": {
+        "status": "parity",
+        "note": "The energy-versus-quanta tutorial workflow is already covered by the current headless regression surface through `quanta_to_energy(...)`, `energy_to_quanta(...)`, `ie_read_spectra(...)`, `xyz_from_energy(...)`, and `ie_xyz_from_photons(...)`.",
+        "module_hits": ["pyisetcam.color", "pyisetcam.metrics"],
+    },
     "tutorials/image/t_ip.m": {
         "status": "parity",
         "note": "The introductory IP tutorial workflow is already covered by the current headless `scene -> oi -> sensor -> ip` regression path, including `MCC Optimized` sensor conversion, `gray world` illuminant correction, adaptive-Laplacian demosaic, and display-backed IP state.",

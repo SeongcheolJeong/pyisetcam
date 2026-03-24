@@ -1713,3 +1713,7 @@ the direct alias wrappers `ieLuminanceFromEnergy(...)`,
 `ieLuminanceFromPhotons(...)`, and `iePSNR(...)` are counted as covered
 compatibility surfaces. Plot-only stubs like `cameraPlot.m` and
 `psfPlotrange.m` are now classified as GUI-only out of scope.
+The remaining `tutorials/color` audit tail is closed too: the
+chromaticity and energy/quanta walkthroughs are now tracked as covered
+workflow evidence through focused headless regressions, while
+`t_colorSpectrum.m` remains backed by curated parity.
