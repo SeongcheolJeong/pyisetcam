@@ -21,6 +21,8 @@ from pyisetcam import (
     binNoiseColumnFPN,
     binNoiseFPN,
     binNoiseRead,
+    binSensorCompute,
+    binSensorComputeImage,
     camera_acutance,
     camera_color_accuracy,
     cameraClearData,
@@ -6232,6 +6234,48 @@ def test_sensor_binning_noise_wrappers_match_legacy_contracts(asset_store) -> No
     noisy_read, read_noise = binNoiseRead(sensor, seed=13)
     np.testing.assert_allclose(read_noise, expected_read_noise, rtol=1e-10, atol=1e-12)
     np.testing.assert_allclose(noisy_read, dv + expected_read_noise, rtol=1e-10, atol=1e-12)
+
+
+def test_bin_sensor_compute_wrappers_match_legacy_contracts(asset_store) -> None:
+    scene = scene_create("uniform ee", 8, np.array([500.0, 600.0, 700.0], dtype=float), asset_store=asset_store)
+    oi = oi_compute(oi_create(asset_store=asset_store), scene)
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 8)
+    sensor = sensor_set(sensor, "cols", 8)
+    sensor = sensor_set(sensor, "integration time", 0.01)
+    sensor = sensor_set(sensor, "noise flag", 0)
+    sensor = sensor_set(sensor, "analog gain", 2.0)
+    sensor = sensor_set(sensor, "analog offset", 0.05)
+    sensor = sensor_set(sensor, "quantization method", "linear")
+
+    dv_stage, volt_image, dsnu, prnu = binSensorComputeImage(oi, sensor, "kodak2008")
+    noise_free = sensorComputeNoiseFree(sensor, oi)
+    expected_volt_image = np.asarray(sensor_get(noise_free, "volts"), dtype=float)
+    expected_stage_sensor = binPixel(sensor_set(sensor.clone(), "volts", expected_volt_image), "kodak2008")
+    expected_dv_stage = np.asarray(sensor_get(expected_stage_sensor, "dv"), dtype=float)
+
+    np.testing.assert_allclose(volt_image, expected_volt_image, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(dv_stage, expected_dv_stage, rtol=1e-10, atol=1e-12)
+    assert dsnu is None
+    assert prnu is None
+
+    binned = binSensorCompute(sensor, oi, "kodak2008", 0)
+    voltage_swing = float(sensor_get(sensor, "pixel voltage swing"))
+    expected_linear = np.clip((expected_dv_stage + 0.05) / 2.0, 0.0, voltage_swing)
+    quant_sensor = sensor_set(sensor.clone(), "volts", expected_linear)
+    expected_quantized, _ = analog2digital(quant_sensor, "linear")
+    expected_post = np.asarray(
+        sensor_get(
+            binPixelPost(sensor_set(quant_sensor, "digital values", expected_quantized), "kodak2008"),
+            "dv",
+        ),
+        dtype=float,
+    )
+
+    np.testing.assert_allclose(np.asarray(sensor_get(binned, "volts"), dtype=float), expected_linear, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(np.asarray(sensor_get(binned, "dv"), dtype=float), expected_post, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(np.asarray(binned.fields["pre_binning_volts"], dtype=float), expected_volt_image, rtol=1e-10, atol=1e-12)
+    assert sensor_get(binned, "sensorcompute") == {"name": "binning", "method": "kodak2008"}
 
 
 def test_sensor_gain_offset_matches_legacy_voltage_formula(asset_store) -> None:

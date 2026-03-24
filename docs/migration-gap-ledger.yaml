@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-24T10:37:30.802724+00:00",
+  "generated_at": "2026-03-24T11:11:24.680687+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -7,8 +7,8 @@
       "headless_only": 92,
       "missing": 37,
       "out_of_scope": 160,
-      "parity": 642,
-      "partial": 477,
+      "parity": 644,
+      "partial": 475,
       "ported": 35
     },
     "kind_counts": {
@@ -20,10 +20,10 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P0": 49,
+      "P0": 47,
       "P1": 376,
       "P2": 181,
-      "P3": 837
+      "P3": 839
     },
     "delta_from_previous": {
       "status_counts": {
@@ -759,12 +759,12 @@
       "sensor/binning": {
         "total": 2,
         "by_status": {
-          "partial": 2
+          "parity": 2
         },
         "by_kind": {
           "api": 2
         },
-        "highest_open_priority": "P0"
+        "highest_open_priority": "P3"
       },
       "sensor/cfadesign": {
         "total": 5,
@@ -1085,14 +1085,6 @@
         }
       },
       {
-        "family": "sensor/binning",
-        "open_entries": 2,
-        "highest_open_priority": "P0",
-        "by_status": {
-          "partial": 2
-        }
-      },
-      {
         "family": "imgproc/binning",
         "open_entries": 1,
         "highest_open_priority": "P0",
@@ -1128,6 +1120,17 @@
         "by_status": {
           "parity": 1,
           "partial": 1
+        }
+      },
+      {
+        "family": "scene/pattern",
+        "open_entries": 1,
+        "highest_open_priority": "P0",
+        "by_status": {
+          "out_of_scope": 1,
+          "parity": 18,
+          "partial": 1,
+          "ported": 3
         }
       }
     ],
@@ -12278,27 +12281,29 @@
       "upstream_path": "sensor/binning/binSensorCompute.m",
       "family": "sensor/binning",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.sensor",
+      "status": "parity",
+      "python_surface": "pyisetcam.sensor, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "sensor/binning/binSensorComputeImage.m",
       "family": "sensor/binning",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.sensor",
+      "status": "parity",
+      "python_surface": "pyisetcam.sensor, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P0"
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "sensor/cfaDesign/cfaDesign.fig",

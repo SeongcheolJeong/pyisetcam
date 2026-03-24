@@ -3778,6 +3778,126 @@ def sensor_compute_image(
     )
 
 
+def bin_sensor_compute_image(
+    oi: OpticalImage,
+    sensor: Sensor,
+    b_method: str | None = None,
+    w_bar: Any | None = None,
+    *,
+    seed: int | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray | None, np.ndarray | None]:
+    """Return the legacy MATLAB binSensorComputeImage payloads."""
+
+    del w_bar
+    method = b_method or "kodak2008"
+    integration_time = np.asarray(sensor_get(sensor, "integration time"), dtype=float).reshape(-1)
+    if integration_time.size != 1:
+        raise ValueError("Pixel binning only runs with a single integration time.")
+
+    noise_flag = int(sensor_get(sensor, "noise flag"))
+    noise_free = sensor_compute_noise_free(sensor, oi, seed=seed)
+    volt_image = np.asarray(sensor_get(noise_free, "volts"), dtype=float).copy()
+    binned_input = volt_image.copy()
+
+    if noise_flag in {1, 2, -2}:
+        if seed is None:
+            seed_value = int(sensor.fields.get("noise_seed", 0))
+        else:
+            seed_value = int(seed)
+        rng = np.random.default_rng(seed_value)
+        pixel = sensor_get(sensor, "pixel")
+        conversion_gain = float(pixel_get(pixel, "conversionGain"))
+        if noise_flag == 2:
+            binned_input = binned_input + (float(pixel_get(pixel, "darkVoltage")) * float(integration_time[0]))
+        binned_input = _shot_noise_electrons(rng, binned_input / max(conversion_gain, 1e-12)) * conversion_gain
+
+    stage = sensor_set(sensor.clone(), "volts", binned_input)
+    stage = bin_pixel(stage, method)
+    dv = np.asarray(sensor_get(stage, "dv"), dtype=float)
+    dsnu = None
+    prnu = None
+
+    if noise_flag in {1, 2}:
+        noisy_stage = sensor_set(sensor.clone(), "volts", dv)
+        dv, dsnu, prnu = bin_noise_fpn(noisy_stage, seed=seed)
+        noisy_stage = sensor_set(noisy_stage, "volts", dv)
+        dv, _, _ = bin_noise_column_fpn(noisy_stage, seed=seed)
+
+    if noise_flag == 2:
+        read_stage = sensor_set(sensor.clone(), "digital values", dv)
+        dv, _ = bin_noise_read(read_stage, seed=seed)
+
+    return (
+        np.asarray(dv, dtype=float),
+        np.asarray(volt_image, dtype=float),
+        None if dsnu is None else np.asarray(dsnu, dtype=float).copy(),
+        None if prnu is None else np.asarray(prnu, dtype=float).copy(),
+    )
+
+
+def bin_sensor_compute(
+    sensor: Sensor,
+    optical_image: OpticalImage,
+    b_method: str | None = None,
+    show_wait_bar: Any = 1,
+    *,
+    seed: int | None = None,
+) -> Sensor:
+    """Compute the legacy MATLAB binSensorCompute sensor wrapper."""
+
+    del show_wait_bar
+    method = b_method or "kodak2008"
+    integration_time = np.asarray(sensor_get(sensor, "integration time"), dtype=float).reshape(-1)
+    if integration_time.size != 1:
+        raise ValueError("Pixel binning only runs with a single integration time.")
+
+    current = sensor_clear_data(sensor)
+    dv_stage, volt_image, dsnu, prnu = bin_sensor_compute_image(
+        optical_image,
+        current,
+        method,
+        None,
+        seed=seed,
+    )
+
+    dv_stage = np.asarray(dv_stage, dtype=float)
+    if bool(sensor_get(current, "cds")):
+        cds_sensor = sensor_set(current.clone(), "integration time", 0.0)
+        cds_stage, _, _, _ = bin_sensor_compute_image(
+            optical_image,
+            cds_sensor,
+            method,
+            None,
+            seed=seed,
+        )
+        dv_stage = np.clip(dv_stage - np.asarray(cds_stage, dtype=float), 0.0, None)
+
+    analog_gain = float(sensor_get(current, "analog gain"))
+    analog_offset = float(sensor_get(current, "analog offset"))
+    voltage_swing = float(sensor_get(current, "pixel voltage swing"))
+    dv_linear = np.clip((dv_stage + analog_offset) / max(analog_gain, 1e-12), 0.0, voltage_swing)
+
+    quant_sensor = sensor_set(current.clone(), "volts", dv_linear)
+    quantization_method = str(sensor_get(current, "quantization method"))
+    if param_format(quantization_method) == "analog":
+        quantized, _ = analog_to_digital(sensor_set(quant_sensor.clone(), "quantization method", "8 bit"), "linear")
+    else:
+        quantized, _ = analog_to_digital(quant_sensor, quantization_method)
+    quant_sensor = sensor_set(quant_sensor, "digital values", quantized)
+    quant_sensor = bin_pixel_post(quant_sensor, method)
+
+    result = current.clone()
+    result.fields["sensor_compute_method"] = {"name": "binning", "method": method}
+    result.data["volts"] = np.asarray(dv_linear, dtype=float).copy()
+    result.data["dv"] = np.asarray(sensor_get(quant_sensor, "dv"), dtype=float).copy()
+    if dsnu is not None:
+        result.fields["offset_fpn_image"] = np.asarray(dsnu, dtype=float).copy()
+    if prnu is not None:
+        result.fields["gain_fpn_image"] = np.asarray(prnu, dtype=float).copy()
+    result.fields["pre_binning_volts"] = np.asarray(volt_image, dtype=float).copy()
+    return result
+
+
 def sensor_compute_full_array(
     sensor: Sensor,
     oi: OpticalImage,
@@ -6835,6 +6955,8 @@ def sensor_ccm(
 sensorComputeSamples = sensor_compute_samples
 sensorComputeNoiseFree = sensor_compute_noise_free
 sensorAddNoise = sensor_add_noise
+binSensorCompute = bin_sensor_compute
+binSensorComputeImage = bin_sensor_compute_image
 sensorComputeImage = sensor_compute_image
 sensorComputeFullArray = sensor_compute_full_array
 sensorComputeMEV = sensor_compute_mev

@@ -535,6 +535,8 @@ from .sensor import (
     sensor_color_filter,
     sensor_compute_full_array,
     sensor_compute_image,
+    bin_sensor_compute,
+    bin_sensor_compute_image,
     sensor_compute_mev,
     sensor_compute_noise_free,
     sensor_compute_array,
@@ -1551,6 +1553,8 @@ __all__ = [
     "sensorWBCompute",
     "sensorComputeFullArray",
     "sensorComputeImage",
+    "binSensorCompute",
+    "binSensorComputeImage",
     "sensorComputeMEV",
     "sensorComputeNoiseFree",
     "sensorComputeSVFilters",
@@ -1560,6 +1564,8 @@ __all__ = [
     "sensor_compute",
     "sensor_compute_full_array",
     "sensor_compute_image",
+    "bin_sensor_compute",
+    "bin_sensor_compute_image",
     "sensor_compute_mev",
     "sensor_compute_noise_free",
     "sensor_wb_compute",
@@ -2001,6 +2007,8 @@ sensorCompute = sensor_compute
 sensorComputeArray = sensor_compute_array
 sensorComputeFullArray = sensor_compute_full_array
 sensorComputeImage = sensor_compute_image
+binSensorCompute = bin_sensor_compute
+binSensorComputeImage = bin_sensor_compute_image
 sensorComputeMEV = sensor_compute_mev
 sensorComputeNoiseFree = sensor_compute_noise_free
 sensorComputeSamples = sensor_compute_samples
