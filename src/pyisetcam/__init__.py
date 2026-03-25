@@ -357,9 +357,11 @@ from .optics import (
 from .parity import run_python_case, run_python_case_with_context
 from .plotting import (
     fise_plot_defaults,
+    hist2d,
     identity_line,
     ie_figure_format,
     ie_figure_resize,
+    ie_hist_image,
     ie_plane_from_vectors,
     ie_plot,
     ie_plot_jitter,
@@ -381,8 +383,10 @@ from .plotting import (
     plot_reflectance,
     plot_sensor_etendue,
     plot_sensor_snr,
+    plot_set_up_window,
     plot_spectrum_locus,
     plot_text_string,
+    scatplot,
     scene_plot,
     sensor_plot,
     sensor_plot_fft,
@@ -886,6 +890,7 @@ __all__ = [
     "ieFigureFormat",
     "ieFigureResize",
     "ieFormatFigure",
+    "ieHistImage",
     "iePlaneFromVectors",
     "iePlot",
     "iePlotJitter",
@@ -896,6 +901,7 @@ __all__ = [
     "image_data_xyz",
     "imageShowImage",
     "image_show_image",
+    "ie_hist_image",
     "ie_figure_format",
     "ie_figure_resize",
     "ie_plane_from_vectors",
@@ -1386,6 +1392,7 @@ __all__ = [
     "oi_psf",
     "fisePlotDefaults",
     "fise_plot_defaults",
+    "hist2d",
     "plotOI",
     "plotDisplayColor",
     "plotDisplayGamut",
@@ -1400,6 +1407,7 @@ __all__ = [
     "plotReflectance",
     "plotSensorEtendue",
     "plotSensorSNR",
+    "plotSetUpWindow",
     "plotSpectrumLocus",
     "plotTextString",
     "plot_contrast_histogram",
@@ -1415,6 +1423,7 @@ __all__ = [
     "plot_reflectance",
     "plot_sensor_etendue",
     "plot_sensor_snr",
+    "plot_set_up_window",
     "plot_spectrum_locus",
     "plot_text_string",
     "oi_plot",
@@ -1458,6 +1467,7 @@ __all__ = [
     "sensor_snr_luxsec",
     "sensorPlot",
     "sensorPlotHist",
+    "scatplot",
     "sensor_plot",
     "sensor_plot_fft",
     "sensor_plot_hist",
@@ -2167,6 +2177,7 @@ psfCircularlyAverage = psf_circularly_average
 psfAverageMultiple = psf_average_multiple
 psf2zcoeff = psf_to_zcoeff_error
 fisePlotDefaults = fise_plot_defaults
+hist2d = hist2d
 plotContrastHistogram = plot_contrast_histogram
 plotDisplayColor = plot_display_color
 plotDisplayGamut = plot_display_gamut
@@ -2178,6 +2189,7 @@ identityLine = identity_line
 ieFigureFormat = ie_figure_format
 ieFigureResize = ie_figure_resize
 ieFormatFigure = ie_figure_format
+ieHistImage = ie_hist_image
 iePlaneFromVectors = ie_plane_from_vectors
 iePlot = ie_plot
 iePlotJitter = ie_plot_jitter
@@ -2193,6 +2205,7 @@ plotRadiance = plot_radiance
 plotReflectance = plot_reflectance
 plotSensorEtendue = plot_sensor_etendue
 plotSensorSNR = plot_sensor_snr
+plotSetUpWindow = plot_set_up_window
 plotSpectrumLocus = plot_spectrum_locus
 plotTextString = plot_text_string
 plotScene = scene_plot
@@ -2203,6 +2216,7 @@ plotSensorFFT = sensor_plot_fft
 sensorPlot = sensor_plot
 sensorPlotHist = sensor_plot_hist
 sensorPlotLine = sensor_plot_line
+scatplot = scatplot
 wvfPlot = wvf_plot
 xaxisLine = xaxis_line
 yaxisLine = yaxis_line

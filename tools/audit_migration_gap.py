@@ -413,9 +413,19 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The MATLAB sensor-SNR plotting helper is covered by the Python `plot_sensor_snr(...)` / `plotSensorSNR(...)` compatibility wrapper on top of the existing `plotSensor(..., 'sensor snr')` payload.",
         "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
     },
+    "utility/plots/plotSetUpWindow.m": {
+        "status": "ported",
+        "note": "The MATLAB graph-window setup helper is covered by the Python `plot_set_up_window(...)` / `plotSetUpWindow(...)` wrapper, which returns the graph-window defaults headlessly.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
     "utility/plots/fise_plotDefaults.m": {
         "status": "ported",
         "note": "The MATLAB root-defaults script is covered by the Python `fise_plot_defaults(...)` / `fisePlotDefaults(...)` wrapper, which returns the same graphics-default property map headlessly.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/hist2d.m": {
+        "status": "ported",
+        "note": "The MATLAB 2-D histogram helper is covered by the Python `hist2d(...)` wrapper in `pyisetcam.plotting`, which returns the same nearest-support count matrix headlessly.",
         "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
     },
     "utility/plots/ieFigureFormat.m": {
@@ -431,6 +441,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
     "utility/plots/ieFormatFigure.m": {
         "status": "ported",
         "note": "The deprecated MATLAB `ieFormatFigure(...)` entry point is covered by the Python `ieFormatFigure(...)` compatibility alias on top of `ie_figure_format(...)` / `ieFigureFormat(...)`.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/ieHistImage.m": {
+        "status": "ported",
+        "note": "The MATLAB histogram-image helper is covered by the Python `ie_hist_image(...)` / `ieHistImage(...)` wrapper, which returns histogram-bin or scatter-density image payloads headlessly.",
         "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
     },
     "utility/plots/iePlot.m": {
@@ -506,6 +521,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
     "utility/plots/plotTextString.m": {
         "status": "ported",
         "note": "The MATLAB canonical text-placement helper is covered by the Python `plot_text_string(...)` / `plotTextString(...)` headless wrapper, which returns text position and style payloads from axis limits.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/scatplot.m": {
+        "status": "ported",
+        "note": "The MATLAB scatter-density helper is covered by the Python `scatplot(...)` wrapper in `pyisetcam.plotting`, which returns data-density, gridded-density, contour, and grouped-point payloads headlessly.",
         "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
     },
     "utility/plots/xaxisLine.m": {

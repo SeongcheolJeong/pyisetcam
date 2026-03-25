@@ -1787,6 +1787,11 @@ The adjacent figure-style plotting helpers are cleaner too:
 `ieShape(...)` now return the same graphics-default, figure-layout, line,
 background-patch, and analytic-shape payloads headlessly instead of
 opening or mutating MATLAB figure windows.
+The neighboring density/helper plotting slice is smaller too:
+`hist2d(...)`, `scatplot(...)`, `ieHistImage(...)`, and
+`plotSetUpWindow(...)` now return the same histogram-count, scatter-density,
+histogram-image, and graph-window-default payloads headlessly instead of
+opening MATLAB figures.
 The adjacent `utility/image` numeric helper tail is shrinking too:
 `ieFindWaveIndex(...)`, `ieWave2Index(...)`, `ieRadialMatrix(...)`,
 `imageBoundingBox(...)`, `imageCentroid(...)`, `imageCircular(...)`, and

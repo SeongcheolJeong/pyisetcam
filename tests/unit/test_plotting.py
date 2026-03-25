@@ -6,9 +6,11 @@ import pytest
 from pyisetcam import (
     airyDisk,
     fisePlotDefaults,
+    hist2d,
     ieFigureFormat,
     ieFigureResize,
     ieFormatFigure,
+    ieHistImage,
     iePlaneFromVectors,
     iePlot,
     iePlotJitter,
@@ -32,8 +34,10 @@ from pyisetcam import (
     plotReflectance,
     plotSensorEtendue,
     plotSensorSNR,
+    plotSetUpWindow,
     plotSpectrumLocus,
     plotTextString,
+    scatplot,
     ip_create,
     ip_get,
     ip_set,
@@ -1649,6 +1653,97 @@ def test_fise_plot_defaults_wrapper() -> None:
     assert np.isclose(defaults["DefaultAxesLineWidth"], 1.2)
     assert np.allclose(defaults["DefaultTextColor"], np.array([0.3, 0.3, 0.3]))
     assert defaults["DefaultLegendBox"] == "off"
+
+
+def test_hist2d_wrapper_counts_nearest_bins() -> None:
+    data = np.array([[0.0, 0.0], [1.0, 1.0], [0.9, 1.1]], dtype=float)
+
+    counts = hist2d(data, 3, 3, [0.0, 1.0], [0.0, 1.0])
+
+    expected = np.array(
+        [
+            [1.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 2.0],
+        ],
+        dtype=float,
+    )
+    assert np.allclose(counts, expected)
+
+
+def test_scatplot_wrapper_square_density() -> None:
+    payload = scatplot(
+        np.array([0.0, 0.0, 1.0], dtype=float),
+        np.array([0.0, 0.0, 1.0], dtype=float),
+        "squares",
+        0.25,
+        5,
+        3,
+        2,
+        4,
+        np.array([[0.0, 0.0, 0.0], [1.0, 1.0, 1.0]], dtype=float),
+    )
+
+    assert np.allclose(payload["dd"], np.array([8.0, 8.0, 4.0]))
+    assert payload["xi"].shape == (5, 5)
+    assert payload["yi"].shape == (5, 5)
+    assert payload["zi"].shape == (5, 5)
+    assert payload["zif"].shape == (5, 5)
+    assert "contour" in payload
+    assert len(payload["hs"]) >= 1
+
+
+def test_ie_hist_image_histcn_wrapper() -> None:
+    samples = np.array([[0.1, 0.1], [0.1, 0.9], [0.9, 0.1], [0.9, 0.9]], dtype=float)
+
+    img, xy, cmap, fhandle = ieHistImage(samples, "hist type", "histcn", "edges", [2, 2], "plot flag", False)
+
+    assert img.shape == (2, 2)
+    assert np.allclose(img, np.ones((2, 2), dtype=float))
+    assert np.allclose(xy[0], np.array([0.3, 0.7]))
+    assert np.allclose(xy[1], np.array([0.3, 0.7]))
+    assert cmap.shape == (256, 3)
+    assert fhandle is None
+
+
+def test_ie_hist_image_scatplot_wrapper() -> None:
+    samples = np.array([[0.0, 0.0], [0.1, 0.1], [0.2, 0.2], [1.0, 1.0], [1.1, 1.05]], dtype=float)
+
+    img, xy, cmap, fhandle = ieHistImage(
+        samples,
+        "hist type",
+        "scatplot",
+        "scatmethod",
+        "squares",
+        "scatradius",
+        0.25,
+        "plot flag",
+        False,
+    )
+
+    assert img.shape == (100, 100)
+    assert xy[0].shape == (100,)
+    assert xy[1].shape == (100,)
+    assert np.max(img) > 0.0
+    assert cmap.shape == (256, 3)
+    assert fhandle is None
+
+
+def test_plot_set_up_window_wrapper() -> None:
+    default_window = plotSetUpWindow()
+    selected_window = plotSetUpWindow(5)
+
+    assert default_window["figureId"] == "GRAPHWIN"
+    assert default_window["units"] == "Normalized"
+    assert np.allclose(default_window["position"], np.array([0.5769, 0.0308, 0.4200, 0.4200]))
+    assert default_window["name"] == "ISET GraphWin"
+    assert default_window["numberTitle"] == "off"
+    assert default_window["colormap"] == "default"
+    assert default_window["clear"] is True
+
+    assert selected_window["figureId"] == 5
+    assert selected_window["colormap"] == "default"
+    assert selected_window["clear"] is True
 
 
 def test_plot_normal_wrapper() -> None:

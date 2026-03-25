@@ -5,6 +5,9 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
+from scipy.interpolate import griddata as scipy_griddata
+from scipy.signal import convolve2d
+from scipy.spatial import Voronoi
 
 from .color import xyz_color_matching
 from .display import display_get
@@ -653,6 +656,267 @@ def fise_plot_defaults() -> dict[str, Any]:
         "DefaultLegendFontSize": 11.0,
         "DefaultLegendTextColor": np.array([0.2, 0.2, 0.2], dtype=float),
         "DefaultLegendBox": "off",
+    }
+
+
+def _gray_colormap(count: int = 256) -> np.ndarray:
+    levels = np.linspace(0.0, 1.0, int(count), dtype=float)
+    return np.repeat(levels[:, None], 3, axis=1)
+
+
+def _hist2d_prepare_input(data: Any) -> np.ndarray:
+    array = np.asarray(data)
+    if np.iscomplexobj(array):
+        return np.column_stack((np.real(array).reshape(-1), np.imag(array).reshape(-1)))
+    if array.ndim != 2:
+        raise ValueError("hist2d input must be a 2-column/2-row matrix or complex vector.")
+    if array.shape[0] < array.shape[1] and array.shape[0] > 1:
+        array = array.T
+    if array.shape[1] != 2:
+        raise ValueError("The input data matrix must have 2 rows or 2 columns.")
+    return np.asarray(array, dtype=float)
+
+
+def _polygon_area(vertices: np.ndarray) -> float:
+    x = vertices[:, 0]
+    y = vertices[:, 1]
+    return 0.5 * abs(np.dot(x, np.roll(y, -1)) - np.dot(y, np.roll(x, -1)))
+
+
+def hist2d(
+    D: Any,
+    Xn: int = 20,
+    Yn: int = 20,
+    Xrange: Any | None = None,
+    Yrange: Any | None = None,
+) -> np.ndarray:
+    """Return MATLAB-style 2-D histogram counts using nearest support bins."""
+
+    samples = _hist2d_prepare_input(D)
+    x_range = np.asarray(Xrange if Xrange is not None else [np.min(samples[:, 0]), np.max(samples[:, 0])], dtype=float)
+    y_range = np.asarray(Yrange if Yrange is not None else [np.min(samples[:, 1]), np.max(samples[:, 1])], dtype=float)
+    x_support = np.linspace(x_range[0], x_range[1], int(Xn), dtype=float)
+    y_support = np.linspace(y_range[0], y_range[1], int(Yn), dtype=float)
+    x_indices = np.argmin(np.abs(x_support[:, None] - samples[:, 0][None, :]), axis=0)
+    y_indices = np.argmin(np.abs(y_support[:, None] - samples[:, 1][None, :]), axis=0)
+    counts = np.zeros((int(Yn), int(Xn)), dtype=float)
+    np.add.at(counts, (y_indices, x_indices), 1.0)
+    return counts
+
+
+def _scatter_groups(x: np.ndarray, y: np.ndarray, density: np.ndarray, marker_size: float, colormap: np.ndarray) -> list[dict[str, Any]]:
+    color_map = np.asarray(colormap, dtype=float)
+    if color_map.ndim != 2 or color_map.shape[1] != 3:
+        raise ValueError("scatplot colormap must be an Nx3 array.")
+    finite_density = np.asarray(density, dtype=float)
+    minimum = float(np.nanmin(finite_density))
+    maximum = float(np.nanmax(finite_density))
+    if maximum <= minimum:
+        indices = np.zeros(finite_density.shape, dtype=int)
+    else:
+        scaled = (finite_density - minimum) / (maximum - minimum)
+        indices = np.clip(np.floor(scaled * (color_map.shape[0] - 1)).astype(int), 0, color_map.shape[0] - 1)
+    groups: list[dict[str, Any]] = []
+    for color_index in range(color_map.shape[0]):
+        mask = indices == color_index
+        if not np.any(mask):
+            continue
+        groups.append(
+            {
+                "x": np.asarray(x[mask], dtype=float).copy(),
+                "y": np.asarray(y[mask], dtype=float).copy(),
+                "color": color_map[color_index].copy(),
+                "marker": ".",
+                "markerSize": float(marker_size),
+            }
+        )
+    return groups
+
+
+def _griddata_linear_then_nearest(points: np.ndarray, values: np.ndarray, xi: Any) -> np.ndarray:
+    try:
+        return np.asarray(scipy_griddata(points, values, xi, method="linear", fill_value=np.nan), dtype=float)
+    except Exception:
+        return np.asarray(scipy_griddata(points, values, xi, method="nearest", fill_value=np.nan), dtype=float)
+
+
+def _scatplot_density(x: np.ndarray, y: np.ndarray, method: str, radius: float) -> np.ndarray:
+    mode = param_format(method)[:2]
+    count = x.size
+    density = np.zeros(count, dtype=float)
+    if mode == "sq":
+        for index in range(count):
+            mask = (x > (x[index] - radius)) & (x < (x[index] + radius)) & (y > (y[index] - radius)) & (y < (y[index] + radius))
+            density[index] = float(np.sum(mask))
+        return density / max((2.0 * radius) ** 2, 1.0e-30)
+    if mode == "ci":
+        for index in range(count):
+            mask = np.sqrt((x - x[index]) ** 2 + (y - y[index]) ** 2) < radius
+            density[index] = float(np.sum(mask))
+        return density / max(np.pi * radius**2, 1.0e-30)
+    if mode == "vo":
+        if count < 4:
+            return density
+        try:
+            voronoi = Voronoi(np.column_stack((x, y)))
+        except Exception:
+            return density
+        for index, region_index in enumerate(voronoi.point_region):
+            region = voronoi.regions[region_index]
+            if not region or any(vertex < 0 for vertex in region):
+                continue
+            vertices = np.asarray(voronoi.vertices[region], dtype=float)
+            area = _polygon_area(vertices)
+            if area > 0.0:
+                density[index] = 1.0 / area
+        return density
+    raise ValueError(f"Unknown scatplot method: {method}")
+
+
+def scatplot(
+    x: Any,
+    y: Any,
+    method: Any = "vo",
+    radius: float | None = None,
+    N: int = 100,
+    n: Any = 5,
+    po: int = 1,
+    ms: float = 4.0,
+    colormap: Any | None = None,
+) -> dict[str, Any]:
+    """Return MATLAB-style scatter-density payload without opening a figure."""
+
+    x_values = np.asarray(x, dtype=float).reshape(-1)
+    y_values = np.asarray(y, dtype=float).reshape(-1)
+    if x_values.size != y_values.size:
+        raise ValueError("x and y must have the same number of elements.")
+    finite_mask = np.isfinite(x_values) & np.isfinite(y_values)
+    clean_x = x_values[finite_mask]
+    clean_y = y_values[finite_mask]
+    if clean_x.size == 0:
+        raise ValueError("scatplot requires at least one finite point.")
+
+    color_map = _gray_colormap(256) if colormap is None else np.asarray(colormap, dtype=float)
+    if np.issubdtype(np.asarray(method).dtype, np.number):
+        density = np.asarray(method, dtype=float).reshape(-1)
+        groups = _scatter_groups(clean_x, clean_y, density[finite_mask], 2.0, color_map)
+        return {"dd": density.copy(), "hs": groups}
+
+    method_key = str(method)
+    filter_shape = np.asarray(n, dtype=int).reshape(-1)
+    if filter_shape.size == 0:
+        filter_shape = np.array([5], dtype=int)
+    if radius is None:
+        radius = float(np.sqrt((np.ptp(clean_x) / 30.0) ** 2 + (np.ptp(clean_y) / 30.0) ** 2))
+
+    dd_clean = _scatplot_density(clean_x, clean_y, method_key, float(radius))
+    xi = np.tile(np.linspace(np.min(clean_x), np.max(clean_x), int(N), dtype=float), (int(N), 1))
+    yi = np.tile(np.linspace(np.min(clean_y), np.max(clean_y), int(N), dtype=float).reshape(-1, 1), (1, int(N)))
+    sample_points = np.column_stack((clean_x, clean_y))
+    zi = _griddata_linear_then_nearest(sample_points, dd_clean, (xi, yi))
+    zi[np.isnan(zi)] = 0.0
+    coef = np.ones((int(filter_shape[0]),), dtype=float) / max(int(filter_shape[0]), 1)
+    kernel = np.outer(coef, coef)
+    zif = convolve2d(zi, kernel, mode="same")
+    if filter_shape.size > 1:
+        for _ in range(int(filter_shape[1])):
+            zif = convolve2d(zif, kernel, mode="same")
+
+    ddf_clean = _griddata_linear_then_nearest(
+        np.column_stack((xi.reshape(-1), yi.reshape(-1))),
+        zif.reshape(-1),
+        np.column_stack((clean_x, clean_y)),
+    ).reshape(-1)
+
+    dd = np.full(x_values.shape, np.nan, dtype=float)
+    ddf = np.full(x_values.shape, np.nan, dtype=float)
+    dd[finite_mask] = dd_clean
+    ddf[finite_mask] = ddf_clean
+
+    if int(po) in {1, 2}:
+        plot_density = ddf_clean
+        contour_source = zif
+    else:
+        plot_density = dd_clean
+        contour_source = zi
+
+    payload: dict[str, Any] = {
+        "dd": dd.copy(),
+        "ddf": ddf.copy(),
+        "radius": float(radius),
+        "xi": xi.copy(),
+        "yi": yi.copy(),
+        "zi": zi.copy(),
+        "zif": zif.copy(),
+        "hs": _scatter_groups(clean_x, clean_y, plot_density, float(ms), color_map),
+        "colorbar": True,
+    }
+    if int(po) in {2, 4}:
+        payload["contour"] = {"xi": xi.copy(), "yi": yi.copy(), "z": contour_source.copy()}
+    return payload
+
+
+def ie_hist_image(X: Any, *args: Any) -> tuple[np.ndarray, tuple[np.ndarray, np.ndarray], np.ndarray, Any]:
+    """Return MATLAB-style histogram-image payloads without opening a figure."""
+
+    samples = np.asarray(X, dtype=float)
+    if samples.ndim != 2 or samples.shape[1] != 2:
+        raise ValueError("ieHistImage expects an Nx2 matrix.")
+
+    plot_flag = bool(_plot_option(args, "plotflag", True))
+    fhandle = _plot_option(args, "fhandle", None)
+    edges = np.asarray(_plot_option(args, "edges", [32, 32]), dtype=int).reshape(-1)
+    if edges.size != 2:
+        raise ValueError("ieHistImage edges must have length 2.")
+    hist_type = param_format(_plot_option(args, "histtype", "scatplot"))
+
+    if hist_type == "histcn":
+        x = samples[:, 0]
+        y = samples[:, 1]
+        x_edges = np.linspace(np.min(x), np.max(x), int(edges[0]) + 1, dtype=float)
+        y_edges = np.linspace(np.min(y), np.max(y), int(edges[1]) + 1, dtype=float)
+        histogram, _, _ = np.histogram2d(x, y, bins=[x_edges, y_edges])
+        img = histogram.T.astype(float)
+        xy = (
+            0.5 * (x_edges[:-1] + x_edges[1:]),
+            0.5 * (y_edges[:-1] + y_edges[1:]),
+        )
+    elif hist_type == "scatplot":
+        x = samples[:, 0]
+        y = samples[:, 1]
+        method = _plot_option(args, "scatmethod", "voronoi")
+        radius = _plot_option(args, "scatradius", float(np.sqrt((np.ptp(x) / 30.0) ** 2 + (np.ptp(y) / 30.0) ** 2)))
+        scat_struct = scatplot(x, y, method, float(radius), 100, 5, 1, 4, _gray_colormap(256))
+        img = np.asarray(scat_struct["zif"], dtype=float)
+        xy = (
+            np.asarray(scat_struct["xi"][0, :], dtype=float).copy(),
+            np.asarray(scat_struct["yi"][:, 0], dtype=float).copy(),
+        )
+    else:
+        raise ValueError(f"Unknown histogram method {hist_type}.")
+
+    cmap = 0.4 + 0.6 * _gray_colormap(256)
+    returned_handle = fhandle if plot_flag else fhandle
+    return img, xy, cmap, returned_handle
+
+
+def plot_set_up_window(fig_num: Any | None = None) -> dict[str, Any]:
+    """Return MATLAB-style graph-window defaults without opening a figure."""
+
+    if fig_num is None:
+        return {
+            "figureId": "GRAPHWIN",
+            "units": "Normalized",
+            "position": np.array([0.5769, 0.0308, 0.4200, 0.4200], dtype=float),
+            "name": "ISET GraphWin",
+            "numberTitle": "off",
+            "colormap": "default",
+            "clear": True,
+        }
+    return {
+        "figureId": fig_num,
+        "colormap": "default",
+        "clear": True,
     }
 
 
@@ -2069,6 +2333,7 @@ ieFigureFormat = ie_figure_format
 ieFigureResize = ie_figure_resize
 ieFormatFigure = ie_figure_format
 iePlaneFromVectors = ie_plane_from_vectors
+ieHistImage = ie_hist_image
 iePlot = ie_plot
 iePlotJitter = ie_plot_jitter
 iePlotSet = ie_plot_set
@@ -2087,6 +2352,7 @@ plotRadiance = plot_radiance
 plotReflectance = plot_reflectance
 plotSensorEtendue = plot_sensor_etendue
 plotSensorSNR = plot_sensor_snr
+plotSetUpWindow = plot_set_up_window
 plotSpectrumLocus = plot_spectrum_locus
 plotTextString = plot_text_string
 wvfPlot = wvf_plot
