@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from math import factorial
 from pathlib import Path
 from typing import Any
 
@@ -52,6 +54,275 @@ def _default_wave(length: int) -> NDArray[np.float64]:
     if int(length) != int(DEFAULT_WAVE.size):
         raise ValueError("wave must be provided when SPD length does not match DEFAULT_WAVE.")
     return DEFAULT_WAVE.copy()
+
+
+def _matlab_round_scalar(value: float) -> int:
+    numeric = float(value)
+    if numeric >= 0.0:
+        return int(np.floor(numeric + 0.5))
+    return int(np.ceil(numeric - 0.5))
+
+
+def _maybe_scalar(value: NDArray[np.float64]) -> float | NDArray[np.float64]:
+    return float(value.reshape(-1)[0]) if value.ndim == 0 else value
+
+
+def _hwhm_to_sd(hwhm: float, dimensions: int = 2) -> float:
+    if dimensions == 1:
+        return float(hwhm) / (2.0 * np.sqrt(np.log(2.0)))
+    if dimensions == 2:
+        return float(hwhm) / np.sqrt(2.0 * np.log(2.0))
+    raise ValueError(f"Unsupported Gaussian dimensionality {dimensions}.")
+
+
+def _sum_gauss(params: NDArray[np.float64], dimension: int) -> NDArray[np.float64]:
+    width = int(np.ceil(float(params[0])))
+    n_gauss = int((params.size - 1) / 2)
+    if int(dimension) == 2:
+        x = np.arange(1, width + 1, dtype=float) - float(_matlab_round_scalar(width / 2.0))
+        xx, yy = np.meshgrid(x, x, indexing="xy")
+        kernel = np.zeros((width, width), dtype=float)
+        for index in range(n_gauss):
+            half_width = float(params[(2 * index) + 1])
+            weight = float(params[(2 * index) + 2])
+            sigma = _hwhm_to_sd(half_width, 2)
+            gaussian = np.exp(-0.5 * (np.square(xx / sigma) + np.square(yy / sigma)))
+            gaussian = gaussian / max(float(np.sum(gaussian, dtype=float)), 1.0e-12)
+            kernel += weight * gaussian
+    else:
+        x = np.arange(1, width + 1, dtype=float) - float(_matlab_round_scalar(width / 2.0))
+        kernel = np.zeros(width, dtype=float)
+        for index in range(n_gauss):
+            half_width = float(params[(2 * index) + 1])
+            weight = float(params[(2 * index) + 2])
+            sigma = _hwhm_to_sd(half_width, 1)
+            gaussian = np.exp(-np.square(x / (2.0 * sigma)))
+            gaussian = gaussian / max(float(np.sum(gaussian, dtype=float)), 1.0e-12)
+            kernel += weight * gaussian
+    return np.asarray(kernel / max(float(np.sum(kernel, dtype=float)), 1.0e-12), dtype=float)
+
+
+def human_pupil_size(
+    lum: Any = 100.0,
+    model: str = "wy",
+    params: Any | None = None,
+) -> tuple[float | NDArray[np.float64], float | NDArray[np.float64]]:
+    """Legacy MATLAB humanPupilSize() compatibility wrapper."""
+
+    luminance = np.asarray(lum, dtype=float)
+    normalized_model = param_format(model)
+
+    if normalized_model == "ms":
+        diameter = 4.9 - 3.0 * np.tanh(0.4 * np.log10(luminance) + 1.0)
+    elif normalized_model == "dg":
+        diameter = np.power(10.0, 0.8558 - 0.000401 * np.power(np.log10(luminance) + 8.6, 3.0))
+    elif normalized_model == "sd":
+        if params is None:
+            raise ValueError("humanPupilSize('sd') requires area in deg^2.")
+        area = float(np.asarray(params, dtype=float).reshape(-1)[0])
+        flux = luminance * area
+        numerator = np.power(flux / 846.0, 0.41)
+        diameter = 7.75 - 5.75 * numerator / (numerator + 2.0)
+    elif normalized_model == "wy":
+        if params is None:
+            raise ValueError("humanPupilSize('wy') requires a parameter mapping.")
+        mapping = dict(params) if isinstance(params, Mapping) else dict(np.asarray(params, dtype=object).item())
+        age = float(mapping.get("age", 28.0))
+        field_area = float(mapping.get("area", 4.0))
+        eye_num = int(mapping.get("eyeNum", 1))
+        monocular_factor = 0.1 if eye_num == 1 else 1.0
+        flux = luminance * field_area * monocular_factor
+        d_sd, _ = human_pupil_size(flux, "sd", 1.0)
+        d_sd_array = np.asarray(d_sd, dtype=float)
+        diameter = d_sd_array + (age - 28.58) * (0.02132 - 0.009562 * d_sd_array)
+    else:
+        raise UnsupportedOptionError("humanPupilSize", model)
+
+    pupil_area = np.pi * np.square(np.asarray(diameter, dtype=float) / 2.0)
+    return _maybe_scalar(np.asarray(diameter, dtype=float)), _maybe_scalar(np.asarray(pupil_area, dtype=float))
+
+
+def watson_impulse_response(
+    t: Any | None = None,
+    transient_factor: float = 0.5,
+) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
+    """Legacy MATLAB watsonImpulseResponse() compatibility wrapper."""
+
+    time = np.arange(0.001, 1.0001, 0.002, dtype=float) if t is None else _vector(t, name="t")
+    time = time[time > 0.0]
+    if time.size == 0:
+        raise ValueError("watsonImpulseResponse requires at least one positive time sample.")
+
+    tau = 0.00494
+    kappa = 1.33
+    n1 = 9
+    n2 = 10
+
+    h1 = np.power(time / tau, n1 - 1) * np.exp(-time / tau) / (time * factorial(n1 - 1))
+    h2 = np.power(time / (kappa * tau), n2 - 1) * np.exp(-time / (kappa * tau)) / (time * factorial(n2 - 1))
+    impulse_response = h1 - float(transient_factor) * h2
+    impulse_response = impulse_response / max(float(np.sum(impulse_response, dtype=float)), 1.0e-12)
+
+    t_mtf = np.abs(np.fft.fft(impulse_response))
+    frequency = (1.0 / max(float(np.max(time)), 1.0e-12)) * np.arange(1, time.size + 1, dtype=float)
+    return (
+        np.asarray(impulse_response, dtype=float),
+        np.asarray(time, dtype=float),
+        np.asarray(t_mtf, dtype=float),
+        np.asarray(frequency, dtype=float),
+    )
+
+
+def watson_rgc_spacing(
+    fov_cols: int,
+) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
+    """Legacy MATLAB watsonRGCSpacing() compatibility wrapper."""
+
+    params = np.array(
+        [
+            [0.9851, 1.058, 22.14],
+            [0.9935, 1.035, 16.35],
+            [0.9729, 1.084, 7.633],
+            [0.9960, 0.9932, 12.13],
+        ],
+        dtype=float,
+    )
+    r = np.arange(0.05, 100.0001, 0.1, dtype=float)
+    dgf0 = 33163.2
+
+    dgf = np.zeros((4, r.size), dtype=float)
+    for index in range(4):
+        dgf[index, :] = dgf0 * (
+            params[index, 0] * np.power(1.0 + r / params[index, 1], -2.0)
+            + (1.0 - params[index, 0]) * np.exp(-r / params[index, 2])
+        )
+    fr = (1.0 / 1.12) * np.power(1.0 + r / 41.03, -1.0)
+    dmf1d = fr[None, :] * dgf
+    smf1d = np.sqrt(2.0 / (np.sqrt(3.0) * dmf1d))
+
+    deg_arr = np.linspace(-float(fov_cols) / 2.0, float(fov_cols) / 2.0, int(fov_cols) + 1, dtype=float)
+    smf0 = np.zeros((deg_arr.size, deg_arr.size), dtype=float)
+    convert_density_factor = np.sqrt(2.0)
+
+    for x_index, x in enumerate(deg_arr):
+        for y_index, y in enumerate(deg_arr):
+            rxy = float(np.sqrt(x**2 + y**2))
+            if x <= 0 and y >= 0:
+                karr = (0, 1)
+            elif x > 0 and y > 0:
+                karr = (2, 1)
+            elif x > 0 and y < 0:
+                karr = (2, 3)
+            else:
+                karr = (0, 3)
+
+            smf_pair = np.zeros(2, dtype=float)
+            for pair_index, k in enumerate(karr):
+                dgf_e = dgf0 * (
+                    params[k, 0] * np.power(1.0 + rxy / params[k, 1], -2.0)
+                    + (1.0 - params[k, 0]) * np.exp(-rxy / params[k, 2])
+                )
+                fr_xy = (1.0 / 1.12) * np.power(1.0 + rxy / 41.03, -1.0)
+                dmf = fr_xy * dgf_e
+                smf_pair[pair_index] = np.sqrt(2.0 / (np.sqrt(3.0) * dmf))
+
+            if np.isclose(rxy, 0.0):
+                smf0[x_index, y_index] = convert_density_factor * np.sqrt(np.mean(np.square(smf_pair)))
+            else:
+                smf0[x_index, y_index] = convert_density_factor * (1.0 / rxy) * np.sqrt(
+                    (x**2) * (smf_pair[0] ** 2) + (y**2) * (smf_pair[1] ** 2)
+                )
+
+    return np.asarray(smf0, dtype=float), np.asarray(r, dtype=float), np.asarray(smf1d, dtype=float)
+
+
+def kelly_space_time(
+    fs: Any | None = None,
+    ft: Any | None = None,
+) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
+    """Legacy MATLAB kellySpaceTime() compatibility wrapper."""
+
+    spatial = np.power(10.0, np.arange(-0.5, 1.3001, 0.05, dtype=float)) if fs is None else _vector(fs, name="fs")
+    temporal = np.power(10.0, np.arange(-0.5, 1.7001, 0.05, dtype=float)) if ft is None else _vector(ft, name="ft")
+
+    temporal_grid, spatial_grid = np.meshgrid(temporal, spatial)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        alpha = 2.0 * np.pi * spatial_grid
+        velocity = temporal_grid / spatial_grid
+        k = 6.1 + 7.3 * np.power(np.abs(np.log10(velocity / 3.0)), 3.0)
+        amax = 45.9 / (velocity + 2.0)
+        sensitivity = k * velocity * np.square(alpha) * np.exp(-2.0 * alpha / amax)
+    sensitivity = np.asarray(sensitivity, dtype=float)
+    sensitivity[sensitivity < 1.0] = np.nan
+    sensitivity = sensitivity / 2.0
+    return sensitivity, np.asarray(spatial_grid, dtype=float), np.asarray(temporal_grid, dtype=float)
+
+
+def poirson_spatio_chromatic(
+    samp_per_deg: float = 241.0,
+    dimension: int = 2,
+) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
+    """Legacy MATLAB poirsonSpatioChromatic() compatibility wrapper."""
+
+    sampling = float(samp_per_deg)
+    if int(dimension) not in {1, 2}:
+        raise UnsupportedOptionError("poirsonSpatioChromatic", f"dimension={dimension}")
+
+    x1 = np.array([0.05, 0.9207, 0.225, 0.105, 7.0, -0.1080], dtype=float)
+    x2 = np.array([0.0685, 0.5310, 0.826, 0.33], dtype=float)
+    x3 = np.array([0.0920, 0.4877, 0.6451, 0.3711], dtype=float)
+    x1[[0, 2, 4]] *= sampling
+    x2[[0, 2]] *= sampling
+    x3[[0, 2]] *= sampling
+
+    width = int(np.ceil(sampling / 2.0) * 2 - 1)
+    lum = _sum_gauss(np.concatenate(([width], x1)), int(dimension))
+    rg = _sum_gauss(np.concatenate(([width], x2)), int(dimension))
+    by = _sum_gauss(np.concatenate(([width], x3)), int(dimension))
+
+    center = (width + 1) / 2.0
+    positions = (np.arange(1, width + 1, dtype=float) - center) * (1.0 / max(sampling, 1.0e-12))
+    return np.asarray(lum, dtype=float), np.asarray(rg, dtype=float), np.asarray(by, dtype=float), np.asarray(positions, dtype=float)
+
+
+def westheimer_lsf(x_sec: Any | None = None) -> NDArray[np.float64]:
+    """Legacy MATLAB westheimerLSF() compatibility wrapper."""
+
+    samples = np.arange(-300.0, 301.0, 1.0, dtype=float) if x_sec is None else _vector(x_sec, name="x_sec")
+    x_min = samples / 60.0
+    line_spread = 0.47 * np.exp(-3.3 * np.square(x_min)) + 0.53 * np.exp(-0.93 * np.abs(x_min))
+    line_spread = line_spread / max(float(np.sum(line_spread, dtype=float)), 1.0e-12)
+    return np.asarray(line_spread, dtype=float)
+
+
+def human_space_time(
+    model: str = "kelly79",
+    fs: Any | None = None,
+    ft: Any | None = None,
+) -> tuple[Any, NDArray[np.float64], NDArray[np.float64]]:
+    """Legacy MATLAB humanSpaceTime() compatibility wrapper."""
+
+    spatial = np.power(10.0, np.arange(-0.5, 1.3001, 0.05, dtype=float)) if fs is None or np.asarray(fs).size == 0 else _vector(fs, name="fs")
+    temporal = np.power(10.0, np.arange(-0.5, 1.7001, 0.05, dtype=float)) if ft is None or np.asarray(ft).size == 0 else _vector(ft, name="ft")
+    normalized_model = param_format(model)
+
+    if normalized_model in {"kelly79", "kellyspacetime", "kellyspacetimefrequencydomain"}:
+        sens, spatial_grid, temporal_grid = kelly_space_time(spatial, temporal)
+        return sens, spatial_grid, temporal_grid
+    if normalized_model == "watsonimpulseresponse":
+        response, time, _, _ = watson_impulse_response(temporal)
+        return response, np.asarray(spatial, dtype=float), time
+    if normalized_model == "watsontmtf":
+        lowest_frequency = float(np.min(temporal))
+        period = 1.0 if np.isclose(lowest_frequency, 0.0) else 1.0 / lowest_frequency
+        time = np.arange(0.001, period + 1.0e-12, 0.001, dtype=float)
+        _, _, t_mtf, all_temporal = watson_impulse_response(time)
+        sens = np.interp(temporal, all_temporal, t_mtf, left=np.nan, right=np.nan)
+        return np.asarray(sens, dtype=float), np.empty(0, dtype=float), np.asarray(temporal, dtype=float)
+    if normalized_model in {"poirsoncolor", "wandellpoirsoncolorspace"}:
+        lum, rg, by, positions = poirson_spatio_chromatic()
+        return {"lum": lum, "rg": rg, "by": by}, positions, np.asarray(temporal, dtype=float)
+    raise UnsupportedOptionError("humanSpaceTime", model)
 
 
 def xyz_from_energy(
@@ -1150,6 +1421,13 @@ deltaE94 = delta_e_94
 deltaEuv = delta_e_uv
 iePSNR = peak_signal_to_noise_ratio
 ieSQRI = ie_sqri
+humanPupilSize = human_pupil_size
+humanSpaceTime = human_space_time
+kellySpaceTime = kelly_space_time
+poirsonSpatioChromatic = poirson_spatio_chromatic
+watsonImpulseResponse = watson_impulse_response
+watsonRGCSpacing = watson_rgc_spacing
+westheimerLSF = westheimer_lsf
 metricsCamera = metrics_camera
 metricsCompareROI = metrics_compare_roi
 metricsCompute = metrics_compute

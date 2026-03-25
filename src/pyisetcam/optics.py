@@ -10,7 +10,7 @@ from typing import Any
 import imageio.v3 as iio
 import numpy as np
 from scipy.io import loadmat, savemat
-from scipy.interpolate import RegularGridInterpolator
+from scipy.interpolate import RegularGridInterpolator, interp1d
 from scipy.ndimage import map_coordinates, rotate, uniform_filter
 from scipy.signal import fftconvolve
 from scipy.special import jv
@@ -2732,6 +2732,203 @@ def _human_wave_defocus(wave_nm: Any) -> np.ndarray:
     q2 = 0.63346
     q3 = 0.21410
     return q1 - (q2 / (wave * 1e-3 - q3))
+
+
+def human_achromatic_otf(
+    sample_sf: Any | None = None,
+    model: str = "exp",
+    pupil_d: float | None = None,
+) -> np.ndarray:
+    """Legacy MATLAB humanAchromaticOTF() compatibility wrapper."""
+
+    spatial_frequency = np.arange(0.0, 51.0, 1.0, dtype=float) if sample_sf is None else np.asarray(sample_sf, dtype=float).reshape(-1)
+    normalized_model = param_format(model)
+
+    if normalized_model in {"exp", "exponential"}:
+        a = 0.1212
+        w1 = 0.3481
+        w2 = 0.6519
+        mtf = w1 * np.ones_like(spatial_frequency, dtype=float) + w2 * np.exp(-a * spatial_frequency)
+        return np.asarray(mtf, dtype=float)
+
+    if normalized_model in {"dl", "diffractionlimited"}:
+        if pupil_d is None:
+            raise ValueError("humanAchromaticOTF('dl') requires pupil diameter in mm.")
+        wavelength_nm = 555.0
+        u0 = float(pupil_d) * np.pi * 1e6 / wavelength_nm / 180.0
+        u_hat = spatial_frequency / max(u0, 1.0e-12)
+        inside = np.clip(1.0 - np.square(u_hat), 0.0, None)
+        mtf = (2.0 / np.pi) * (np.arccos(np.clip(u_hat, -1.0, 1.0)) - u_hat * np.sqrt(inside))
+        mtf[u_hat >= 1.0] = 0.0
+        return np.asarray(mtf, dtype=float)
+
+    if normalized_model == "watson":
+        if pupil_d is None:
+            raise ValueError("humanAchromaticOTF('watson') requires pupil diameter in mm.")
+        if float(pupil_d) > 6.0 or float(pupil_d) < 2.0:
+            pass
+        u1 = 21.95 - 5.512 * float(pupil_d) + 0.3922 * float(pupil_d) ** 2
+        mtf_dl = human_achromatic_otf(spatial_frequency, "dl", pupil_d)
+        mtf = np.power(1.0 + np.square(spatial_frequency / u1), -0.62) * np.sqrt(np.clip(mtf_dl, 0.0, None))
+        return np.asarray(mtf, dtype=float)
+
+    raise UnsupportedOptionError("humanAchromaticOTF", model)
+
+
+def human_core(
+    wave: Any,
+    sample_sf: Any,
+    p: float,
+    D0: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Legacy MATLAB humanCore() compatibility wrapper."""
+
+    wave_nm = np.asarray(wave, dtype=float).reshape(-1)
+    sample_sf_cpd = np.asarray(sample_sf, dtype=float).reshape(-1)
+    if wave_nm.size == 0 or sample_sf_cpd.size == 0:
+        raise ValueError("humanCore requires non-empty wavelength and sample spatial-frequency inputs.")
+
+    defocus = _human_wave_defocus(wave_nm)
+    w20 = (float(p) ** 2 / 2.0) * (float(D0) * defocus) / np.maximum(float(D0) + defocus, 1.0e-12)
+    deg_per_meter = 1.0 / (np.tan(np.deg2rad(1.0)) * (1.0 / float(D0)))
+    ach_otf = human_achromatic_otf(sample_sf_cpd)
+
+    otf = np.zeros((wave_nm.size, sample_sf_cpd.size), dtype=float)
+    wavelengths_m = wave_nm * 1e-9
+    for index, wavelength_m in enumerate(wavelengths_m):
+        reduced_sf = ((deg_per_meter * wavelength_m) / max(float(D0) * float(p), 1.0e-12)) * sample_sf_cpd
+        alpha = ((4.0 * np.pi) / max(wavelength_m, 1.0e-12)) * w20[index] * reduced_sf
+        otf[index, :] = _optics_defocused_mtf(reduced_sf, np.abs(alpha)) * ach_otf
+
+    return np.asarray(otf, dtype=float), np.asarray(ach_otf, dtype=float)
+
+
+def human_otf(
+    p_radius: float | None = None,
+    D0: float | None = None,
+    f_support: Any | None = None,
+    wave: Any | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Legacy MATLAB humanOTF() compatibility wrapper."""
+
+    pupil_radius_m = 0.0015 if p_radius is None else float(p_radius)
+    dioptric_power = 1.0 / 0.017 if D0 is None else float(D0)
+    wave_nm = np.arange(400.0, 701.0, 1.0, dtype=float) if wave is None else np.asarray(wave, dtype=float).reshape(-1)
+
+    if f_support is None:
+        max_frequency = 60
+        f_list = unit_frequency_list(max_frequency) * max_frequency
+        x_grid, y_grid = np.meshgrid(f_list, f_list, indexing="xy")
+        support = np.dstack((x_grid, y_grid))
+    else:
+        support = np.asarray(f_support, dtype=float)
+        if support.ndim != 3 or support.shape[2] != 2:
+            raise ValueError("humanOTF expects f_support with shape (rows, cols, 2).")
+
+    dist = np.sqrt(np.square(support[:, :, 0]) + np.square(support[:, :, 1]))
+    max_f1 = float(np.max(support[:, :, 0]))
+    max_f2 = float(np.max(support[:, :, 1]))
+    max_frequency = min(max_f1, max_f2)
+    sample_sf = (np.arange(40, dtype=float) / 39.0) * max_frequency
+    otf_rows, _ = human_core(wave_nm, sample_sf, pupil_radius_m, dioptric_power)
+
+    otf_2d = np.zeros(support.shape[:2] + (wave_nm.size,), dtype=complex)
+    outside = dist > max_frequency
+    for index in range(wave_nm.size):
+        interpolator = interp1d(sample_sf, otf_rows[index, :], kind="cubic", bounds_error=False, fill_value=0.0, assume_sorted=True)
+        plane = np.abs(np.asarray(interpolator(dist), dtype=float))
+        plane[outside] = 0.0
+        otf_2d[:, :, index] = np.fft.fftshift(plane)
+
+    return np.asarray(otf_2d, dtype=complex), np.asarray(support, dtype=float), np.asarray(wave_nm, dtype=float)
+
+
+def human_lsf(
+    pupil_radius: float | None = None,
+    dioptric_power: float | None = None,
+    unit: str = "mm",
+    wave: Any | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Legacy MATLAB humanLSF() compatibility wrapper."""
+
+    combined_otf, sample_sf, wavelengths = human_otf(pupil_radius, dioptric_power, None, wave)
+    n_wave = wavelengths.size
+    n_samples = combined_otf.shape[0]
+    line_spread = np.zeros((n_wave, n_samples), dtype=float)
+
+    for index in range(n_wave):
+        center_line = np.asarray(combined_otf[:, :, index], dtype=complex)[:, 0]
+        line_spread[index, :] = np.fft.fftshift(np.abs(np.fft.ifft(center_line)))
+
+    delta_space = 1.0 / (2.0 * max(float(np.max(sample_sf)), 1.0e-12))
+    spatial_extent_deg = delta_space * n_samples
+    x_dim = unit_frequency_list(n_samples) * spatial_extent_deg
+
+    mm_per_deg = 0.330
+    normalized_unit = param_format(unit)
+    if normalized_unit in {"mm", "default"}:
+        x_dim = x_dim * mm_per_deg
+    elif normalized_unit == "um":
+        x_dim = x_dim * mm_per_deg * 1e3
+    else:
+        raise UnsupportedOptionError("humanLSF", unit)
+
+    return np.asarray(line_spread, dtype=float), np.asarray(x_dim, dtype=float), np.asarray(wavelengths, dtype=float)
+
+
+def ijspeert(
+    age: float,
+    p: float,
+    m: float,
+    q: Any,
+    phi: Any | None = None,
+) -> tuple[np.ndarray, np.ndarray | None, np.ndarray | None]:
+    """Legacy MATLAB ijspeert() compatibility wrapper."""
+
+    sample_sf = np.asarray(q, dtype=float).reshape(-1)
+    D = 70.0
+    age_factor = 1.0 + (float(age) / D) ** 4
+    c_sa = 1.0 / (1.0 + age_factor / (1.0 / float(m) - 1.0))
+    c_la = 1.0 / (1.0 + (1.0 / float(m) - 1.0) / age_factor)
+
+    b = 9000.0 - 936.0 * np.sqrt(age_factor)
+    d = 3.2
+    e = np.sqrt(age_factor) / 2000.0
+
+    c = np.zeros(4, dtype=float)
+    beta = np.zeros(4, dtype=float)
+    c[0] = c_sa / (1.0 + (float(p) / d) ** 2)
+    c[1] = c_sa / (1.0 + (d / float(p)) ** 2)
+    beta[0] = (1.0 + (float(p) / d) ** 2) / (b * float(p))
+    beta[1] = (1.0 + (d / float(p)) ** 2) * (e - 1.0 / (b * float(p)))
+
+    c[2] = c_la / ((1.0 + 25.0 * float(m)) * (1.0 + 1.0 / age_factor))
+    c[3] = c_la - c[2]
+    beta[2] = 1.0 / (10.0 + 60.0 * float(m) - 5.0 / age_factor)
+    beta[3] = 1.0
+
+    m_beta = np.exp(-360.0 * beta[:, None] * sample_sf[None, :])
+    mtf = np.sum(c[:, None] * m_beta, axis=0)
+
+    psf: np.ndarray | None = None
+    lsf: np.ndarray | None = None
+    if phi is not None:
+        angles = np.asarray(phi, dtype=float).reshape(-1)
+        sinphi2 = np.square(np.sin(angles))
+        cosphi2 = np.square(np.cos(angles))
+        beta2 = np.square(beta)
+
+        f_beta = np.zeros((4, angles.size), dtype=float)
+        for index in range(4):
+            f_beta[index, :] = beta[index] / (2.0 * np.pi * np.power(sinphi2 + beta2[index] * cosphi2, 1.5))
+        psf = np.sum(c[:, None] * f_beta, axis=0)
+
+        l_beta = np.zeros((4, angles.size), dtype=float)
+        for index in range(4):
+            l_beta[index, :] = beta[index] / (np.pi * (sinphi2 + beta2[index] * cosphi2))
+        lsf = np.sum(c[:, None] * l_beta, axis=0)
+
+    return np.asarray(mtf, dtype=float), None if psf is None else np.asarray(psf, dtype=float), None if lsf is None else np.asarray(lsf, dtype=float)
 
 
 def _wvf_lca_from_wavelength_difference(

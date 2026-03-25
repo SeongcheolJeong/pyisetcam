@@ -182,6 +182,9 @@ from .metrics import (
     ieSQRI,
     ieXYZ2LAB,
     ieXYZFromEnergy,
+    human_pupil_size,
+    human_space_time,
+    kelly_space_time,
     mean_absolute_error,
     mean_relative_error,
     metrics_camera,
@@ -202,12 +205,16 @@ from .metrics import (
     metrics_show_metric,
     metrics_spd,
     mired_difference,
+    poirson_spatio_chromatic,
     iso_acutance,
     peak_signal_to_noise_ratio,
     photometric_exposure,
     root_mean_squared_error,
     spd_to_cct,
     srgb_to_color_temp,
+    watson_impulse_response,
+    watson_rgc_spacing,
+    westheimer_lsf,
     xyz_from_energy,
     xyz_to_lab,
     xyz_to_luv,
@@ -217,7 +224,12 @@ from .optics import (
     airy_disk,
     dl_core,
     dl_mtf,
+    human_achromatic_otf,
+    human_core,
+    human_lsf,
+    human_otf,
     ie_field_height_to_index,
+    ijspeert,
     lens_list,
     optics_build_2d_otf,
     optics_clear_data,
@@ -851,6 +863,8 @@ __all__ = [
     "deltaE2000",
     "deltaE94",
     "deltaEuv",
+    "humanPupilSize",
+    "humanSpaceTime",
     "dlCore",
     "dlMTF",
     "dl_core",
@@ -859,6 +873,17 @@ __all__ = [
     "delta_e_2000",
     "delta_e_94",
     "delta_e_uv",
+    "humanAchromaticOTF",
+    "humanCore",
+    "humanLSF",
+    "humanOTF",
+    "human_achromatic_otf",
+    "human_core",
+    "human_lsf",
+    "human_otf",
+    "human_pupil_size",
+    "human_space_time",
+    "ijspeert",
     "ieColorTransform",
     "ie_color_transform",
     "ie_lab_to_xyz",
@@ -1212,7 +1237,11 @@ __all__ = [
     "metrics_show_metric",
     "metricsSPD",
     "metrics_spd",
+    "kellySpaceTime",
+    "kelly_space_time",
     "mired_difference",
+    "poirsonSpatioChromatic",
+    "poirson_spatio_chromatic",
     "photometricExposure",
     "photometric_exposure",
     "edge_to_mtf",
@@ -1474,6 +1503,12 @@ __all__ = [
     "airyDisk",
     "psf_to_zcoeff_error",
     "root_mean_squared_error",
+    "watsonImpulseResponse",
+    "watsonRGCSpacing",
+    "watson_impulse_response",
+    "watson_rgc_spacing",
+    "westheimerLSF",
+    "westheimer_lsf",
     "scenePlot",
     "scene_plot",
     "pixel_snr",
@@ -2249,6 +2284,10 @@ opticsCreate = optics_create
 opticsCoC = optics_coc
 dlCore = dl_core
 dlMTF = dl_mtf
+humanAchromaticOTF = human_achromatic_otf
+humanCore = human_core
+humanLSF = human_lsf
+humanOTF = human_otf
 opticsDefocusCore = optics_defocus_core
 opticsDefocusDepth = optics_defocus_depth
 opticsDepthDefocus = optics_depth_defocus
@@ -2441,6 +2480,13 @@ sensorWBCompute = sensor_wb_compute
 spatialIntegration = spatial_integration
 
 metricsSPD = metrics_spd
+humanPupilSize = human_pupil_size
+humanSpaceTime = human_space_time
+kellySpaceTime = kelly_space_time
+poirsonSpatioChromatic = poirson_spatio_chromatic
+watsonImpulseResponse = watson_impulse_response
+watsonRGCSpacing = watson_rgc_spacing
+westheimerLSF = westheimer_lsf
 metricsCamera = metrics_camera
 metricsClose = metrics_close
 metricsCompute = metrics_compute

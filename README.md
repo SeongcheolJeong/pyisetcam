@@ -1843,3 +1843,13 @@ counted directly as ported headless session wrappers, while
 explicit compatibility wrappers in `pyisetcam.session` for main-window
 placeholder bootstrapping, session-summary text output, and headless
 GUI-state bookkeeping.
+The neighboring `human` helper slice is smaller now too:
+`humanPupilSize(...)`, `watsonImpulseResponse(...)`,
+`watsonRGCSpacing(...)`, `kellySpaceTime(...)`,
+`poirsonSpatioChromatic(...)`, `westheimerLSF(...)`,
+`humanSpaceTime(...)`, `humanAchromaticOTF(...)`, `humanCore(...)`,
+`humanOTF(...)`, `humanLSF(...)`, and `ijspeert(...)` now have direct
+headless compatibility wrappers across `pyisetcam.metrics` and
+`pyisetcam.optics`, with focused regressions covering pupil-size models,
+temporal impulse normalization, Kelly/Poirson dispatch, Westheimer line
+spread, human OTF/LSF payloads, and IJspeert MTF/PSF/LSF replay.

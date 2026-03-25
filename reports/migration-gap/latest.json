@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-03-25T06:11:31.037822+00:00",
+  "generated_at": "2026-03-25T07:07:38.356646+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-25T06:11:31.037822+00:00",
+    "generated_at": "2026-03-25T07:07:38.356646+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
@@ -10,8 +10,8 @@
       "missing": 21,
       "out_of_scope": 189,
       "parity": 679,
-      "partial": 327,
-      "ported": 167
+      "partial": 315,
+      "ported": 179
     },
     "kind_counts": {
       "api": 661,
@@ -22,18 +22,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 265,
+      "P1": 253,
       "P2": 143,
-      "P3": 1035
+      "P3": 1047
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": -4,
+        "headless_only": 0,
         "missing": 0,
         "out_of_scope": 0,
         "parity": 0,
-        "partial": -3,
-        "ported": 7
+        "partial": -12,
+        "ported": 12
       },
       "kind_counts": {
         "api": 0,
@@ -44,9 +44,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": 0,
-        "P2": -7,
-        "P3": 7
+        "P1": -12,
+        "P2": 0,
+        "P3": 12
       }
     },
     "family_summary": {
@@ -264,8 +264,8 @@
         "total": 24,
         "by_status": {
           "parity": 2,
-          "partial": 20,
-          "ported": 2
+          "partial": 8,
+          "ported": 14
         },
         "by_kind": {
           "api": 24
@@ -1014,16 +1014,6 @@
         }
       },
       {
-        "family": "human",
-        "open_entries": 20,
-        "highest_open_priority": "P1",
-        "by_status": {
-          "parity": 2,
-          "partial": 20,
-          "ported": 2
-        }
-      },
-      {
         "family": "scripts/image",
         "open_entries": 18,
         "highest_open_priority": "P1",
@@ -1040,6 +1030,16 @@
         "by_status": {
           "partial": 10,
           "ported": 1
+        }
+      },
+      {
+        "family": "human",
+        "open_entries": 8,
+        "highest_open_priority": "P1",
+        "by_status": {
+          "parity": 2,
+          "partial": 8,
+          "ported": 14
         }
       },
       {
@@ -1158,7 +1158,7 @@
         "not_implemented_error_sites": 0
       },
       "metrics": {
-        "unsupported_option_error_sites": 8,
+        "unsupported_option_error_sites": 11,
         "not_implemented_error_sites": 0
       },
       "octave_runner": {
@@ -1166,7 +1166,7 @@
         "not_implemented_error_sites": 0
       },
       "optics": {
-        "unsupported_option_error_sites": 27,
+        "unsupported_option_error_sites": 29,
         "not_implemented_error_sites": 0
       },
       "parity": {

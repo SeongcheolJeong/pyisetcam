@@ -109,6 +109,7 @@ FAMILY_TEST_MAP = {
     "camera": ["tests/unit/test_pipeline.py"],
     "color": ["tests/unit/test_pipeline.py", "tests/unit/test_metrics.py"],
     "displays": ["tests/unit/test_display.py", "tests/unit/test_pipeline.py"],
+    "human": ["tests/unit/test_human.py"],
     "imgproc": ["tests/unit/test_pipeline.py", "tests/unit/test_ip.py"],
     "main": ["tests/unit/test_session.py"],
     "metrics": ["tests/unit/test_metrics.py", "tests/unit/test_pipeline.py"],
@@ -1262,6 +1263,66 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "status": "out_of_scope",
         "note": "The upstream helper is internally incomplete, references undefined state, and does not expose a usable supported headless API surface.",
         "module_hits": [],
+    },
+    "human/humanAchromaticOTF.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB human achromatic OTF helper is covered by the Python `human_achromatic_otf(...)` / `humanAchromaticOTF(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "human/humanCore.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB wavelength-dependent human OTF core helper is covered by the Python `human_core(...)` / `humanCore(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "human/humanLSF.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB human line-spread helper is covered by the Python `human_lsf(...)` / `humanLSF(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "human/humanOTF.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB chromatic human OTF helper is covered by the Python `human_otf(...)` / `humanOTF(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "human/humanPupilSize.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB pupil-size helper is covered by the Python `human_pupil_size(...)` / `humanPupilSize(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.metrics", "pyisetcam.__init__"],
+    },
+    "human/humanSpaceTime.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB spatiotemporal sensitivity dispatcher is covered by the Python `human_space_time(...)` / `humanSpaceTime(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.metrics", "pyisetcam.__init__"],
+    },
+    "human/ijspeert.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB IJspeert ocular-scatter helper is covered by the Python `ijspeert(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "human/kellySpaceTime.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB Kelly spatiotemporal sensitivity helper is covered by the Python `kelly_space_time(...)` / `kellySpaceTime(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.metrics", "pyisetcam.__init__"],
+    },
+    "human/poirsonSpatioChromatic.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB Poirson spatiochromatic sensitivity helper is covered by the Python `poirson_spatio_chromatic(...)` / `poirsonSpatioChromatic(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.metrics", "pyisetcam.__init__"],
+    },
+    "human/watsonImpulseResponse.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB Watson temporal impulse-response helper is covered by the Python `watson_impulse_response(...)` / `watsonImpulseResponse(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.metrics", "pyisetcam.__init__"],
+    },
+    "human/watsonRGCSpacing.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB Watson retinal-ganglion-cell spacing helper is covered by the Python `watson_rgc_spacing(...)` / `watsonRGCSpacing(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.metrics", "pyisetcam.__init__"],
+    },
+    "human/westheimerLSF.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB Westheimer line-spread approximation is covered by the Python `westheimer_lsf(...)` / `westheimerLSF(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.metrics", "pyisetcam.__init__"],
     },
     "sensor/sensorUnitBlock.m": {
         "status": "out_of_scope",
