@@ -434,7 +434,9 @@ from .session import (
     ie_get_object,
     ie_get_selected_object,
     ie_init_session,
+    ie_main_w,
     ie_main_close,
+    ie_print_session_info,
     ie_refresh_window,
     ie_replace_object,
     ie_session_get,
@@ -442,6 +444,7 @@ from .session import (
     ie_windows_get,
     ie_windows_set,
     ie_select_object,
+    main_open,
     session_add_and_select_object,
     session_add_object,
     session_count_objects,
@@ -1095,7 +1098,9 @@ __all__ = [
     "ie_get_object",
     "ie_get_selected_object",
     "ie_init_session",
+    "ie_main_w",
     "ie_main_close",
+    "ie_print_session_info",
     "ie_refresh_window",
     "ie_rect2_locs",
     "ie_rect2_vertices",
@@ -1113,10 +1118,14 @@ __all__ = [
     "ie_select_object",
     "ISET",
     "iset",
+    "ieMainW",
+    "iePrintSessionInfo",
     "isetPath",
     "isetRootPath",
     "iset_path",
     "iset_root_path",
+    "mainOpen",
+    "main_open",
     "ieXYZ2LAB",
     "ieXYZFromEnergy",
     "illuminantCreate",
@@ -2563,7 +2572,9 @@ ieGetObject = ie_get_object
 ieGetSelectedObject = ie_get_selected_object
 ISET = iset
 ieInitSession = ie_init_session
+ieMainW = ie_main_w
 ieMainClose = ie_main_close
+iePrintSessionInfo = ie_print_session_info
 ieRefreshWindow = ie_refresh_window
 ieRect2Locs = ie_rect2_locs
 ieRect2Vertices = ie_rect2_vertices
@@ -2582,6 +2593,7 @@ ieVarInFile = ie_var_in_file
 ieWindowsGet = ie_windows_get
 ieWindowsSet = ie_windows_set
 ieSelectObject = ie_select_object
+mainOpen = main_open
 isetPath = iset_path
 isetRootPath = iset_root_path
 pathToLinux = path_to_linux

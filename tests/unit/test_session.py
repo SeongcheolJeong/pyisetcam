@@ -18,7 +18,9 @@ from pyisetcam import (
     ieGetObject,
     ieGetSelectedObject,
     ieInitSession,
+    ieMainW,
     ieMainClose,
+    iePrintSessionInfo,
     ieRefreshWindow,
     ieReplaceObject,
     ieSessionGet,
@@ -34,10 +36,12 @@ from pyisetcam import (
     ie_get_object,
     ie_get_selected_object,
     ie_init_session,
+    ie_main_w,
     ie_refresh_window,
     ie_replace_object,
     ie_session_get,
     ie_session_set,
+    ie_print_session_info,
     ie_windows_get,
     ie_windows_set,
     ie_select_object,
@@ -88,6 +92,8 @@ from pyisetcam import (
     vcSetSelectedObject,
     vc_equivalent_objtype,
     vc_set_figure_handles,
+    mainOpen,
+    main_open,
 )
 
 
@@ -845,3 +851,61 @@ def test_iset_initializes_headless_session_with_latest_saved_name(tmp_path) -> N
 
     assert named.name == "custom-session.mat"
     assert ie_session_get(named, "main window") is None
+
+
+def test_ie_main_w_and_main_open_manage_headless_main_window() -> None:
+    session = ie_init_session()
+
+    created = ieMainW(session)
+
+    assert created == {
+        "figure1": "main-figure-1",
+        "headless_placeholder": True,
+    }
+    assert ie_main_w(session) == created
+    assert session.gui["main_window"]["hObject"] == "main-figure-1"
+    assert session.gui["main_window"]["handles"]["output"] == "main-figure-1"
+
+    explicit = {"figure1": "main-figure-explicit", "menuBar": "headless"}
+    opened = mainOpen(session, explicit, {"event": 1}, {"menu": "main"})
+
+    assert opened is True
+    assert ieSessionGet(session, "main window") == explicit
+    assert session.gui["main_window"]["hObject"] == "main-figure-explicit"
+    assert session.gui["main_window"]["eventdata"] == {"event": 1}
+    assert session.gui["main_window"]["handles"] == {
+        "menu": "main",
+        "figure1": "main-figure-explicit",
+        "output": "main-figure-explicit",
+    }
+    assert main_open(session) is True
+
+
+def test_ie_print_session_info_formats_selected_objects(asset_store) -> None:
+    session = ie_init_session()
+    scene_one = scene_create("uniform ee", 8, asset_store=asset_store)
+    scene_two = scene_create("uniform d65", 8, asset_store=asset_store)
+    oi = oi_create(asset_store=asset_store)
+    sensor = sensor_create(asset_store=asset_store)
+    ip = ip_create(sensor=sensor, asset_store=asset_store)
+
+    session_add_object(session, scene_one)
+    session_add_object(session, scene_two)
+    session_set_selected(session, "scene", 2)
+    session_add_object(session, oi)
+    session_add_object(session, sensor)
+    session_add_object(session, ip)
+
+    summary = iePrintSessionInfo(session)
+    scene_only = ie_print_session_info(session, "scene")
+
+    assert "Scenes:  (* selected)" in summary
+    assert f" 1 {scene_one.name}" in summary
+    assert f" 2 {scene_two.name} *" in summary
+    assert f" 1 {oi.name} *" in summary
+    assert f" 1 {sensor.name} *" in summary
+    assert f" 1 {ip.name} *" in summary
+    assert "OIs  (* selected):" in summary
+    assert "Sensors (* selected):" in summary
+    assert "IPs  (* selected):" in summary
+    assert "OIs  (* selected):" not in scene_only

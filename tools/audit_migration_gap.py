@@ -643,6 +643,41 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is a GUI image-picker wrapper around MATLAB file dialogs and remains outside the headless migration target.",
         "module_hits": [],
     },
+    "main/ieInitSession.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB session initializer is covered by the Python `ie_init_session(...)` / `ieInitSession(...)` compatibility wrapper on top of the headless `SessionContext` object model.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "main/ieMainClose.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB main-window close helper is covered by the Python `ie_main_close(...)` / `ieMainClose(...)` compatibility wrapper, which clears the tracked window slots headlessly instead of deleting GUIDE figures.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "main/ieMainW.m": {
+        "status": "ported",
+        "note": "The GUIDE main-window launcher is covered headlessly by the Python `ie_main_w(...)` / `ieMainW(...)` compatibility wrapper, which creates or reuses the tracked main-window placeholder rather than opening a MATLAB figure.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "main/iePrintSessionInfo.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB session-summary printer is covered by the Python `ie_print_session_info(...)` / `iePrintSessionInfo(...)` compatibility wrapper, which returns the same object-list text payload headlessly.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "main/ieSessionGet.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB session getter is covered by the Python `ie_session_get(...)` / `ieSessionGet(...)` compatibility wrapper over the headless `SessionContext` state.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "main/ieSessionSet.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB session setter is covered by the Python `ie_session_set(...)` / `ieSessionSet(...)` compatibility wrapper over the headless `SessionContext` state.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "main/mainOpen.m": {
+        "status": "ported",
+        "note": "The GUIDE main-window bootstrap helper is covered headlessly by the Python `main_open(...)` / `mainOpen(...)` compatibility wrapper, which records the main-window placeholder and handle state without MATLAB license dialogs or GUI callbacks.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
     "ISET.m": {
         "status": "ported",
         "note": "The legacy MATLAB startup script is covered by the headless Python `iset(...)` / `ISET(...)` compatibility wrapper on top of the optional session layer, without reproducing the MATLAB GUI launch.",

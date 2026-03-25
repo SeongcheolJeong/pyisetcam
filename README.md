@@ -1836,3 +1836,10 @@ The legacy startup/path trio is now covered too: `ISET.m`, `isetPath.m`,
 and `isetRootPath.m` are tracked against the optional headless session
 bootstrap wrappers `iset(...)`, `isetPath(...)`, and `isetRootPath(...)`
 rather than remaining as anonymous top-level audit debt.
+The adjacent `main` family is closed too: `ieInitSession(...)`,
+`ieMainClose(...)`, `ieSessionGet(...)`, and `ieSessionSet(...)` are now
+counted directly as ported headless session wrappers, while
+`ieMainW(...)`, `iePrintSessionInfo(...)`, and `mainOpen(...)` now have
+explicit compatibility wrappers in `pyisetcam.session` for main-window
+placeholder bootstrapping, session-summary text output, and headless
+GUI-state bookkeeping.

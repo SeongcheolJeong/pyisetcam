@@ -930,6 +930,103 @@ def iset(
     return session
 
 
+def main_open(
+    session: SessionContext,
+    h_object: Any | None = None,
+    eventdata: Any | None = None,
+    handles: Any | None = None,
+) -> bool:
+    app = ie_session_get(session, "main window")
+    if app is None:
+        app = _create_headless_main_window_placeholder(session)
+
+    if h_object is not None:
+        if isinstance(h_object, dict) or hasattr(h_object, "figure1"):
+            app = h_object
+        else:
+            app = {"figure1": _extract_app_figure(h_object)}
+
+    figure_handle = _extract_app_figure(app)
+
+    if handles is None:
+        if isinstance(app, dict):
+            handles_state: Any = dict(app)
+        else:
+            handles_state = {"figure1": figure_handle}
+    else:
+        handles_state = handles
+
+    if isinstance(handles_state, dict):
+        handles_state = dict(handles_state)
+        handles_state.setdefault("figure1", figure_handle)
+        handles_state.setdefault("output", figure_handle)
+    elif handles_state is not None and getattr(handles_state, "output", None) is None:
+        setattr(handles_state, "output", figure_handle)
+
+    session.gui["main_window"] = {
+        "app": app,
+        "hObject": figure_handle,
+        "eventdata": eventdata,
+        "handles": handles_state,
+        "headless_placeholder": bool(
+            isinstance(app, dict) and app.get("headless_placeholder", False)
+        ),
+    }
+    return True
+
+
+def ie_main_w(session: SessionContext) -> Any:
+    main_open(session)
+    return ie_session_get(session, "main window")
+
+
+def ie_print_session_info(
+    session: SessionContext,
+    obj_type: str = "all",
+) -> str:
+    key = param_format(obj_type)
+    section_map = {
+        "all": ("scene", "oi", "sensor", "ip"),
+        "scene": ("scene",),
+        "scenes": ("scene",),
+        "oi": ("oi",),
+        "ois": ("oi",),
+        "sensor": ("sensor",),
+        "sensors": ("sensor",),
+        "isa": ("sensor",),
+        "ip": ("ip",),
+        "ips": ("ip",),
+        "vcimage": ("ip",),
+    }
+    if key not in section_map:
+        raise KeyError(f"Unknown session info object type: {obj_type}")
+
+    labels = {
+        "scene": ("Scenes:  (* selected)", "No Scenes."),
+        "oi": ("OIs  (* selected):", "No OIs."),
+        "sensor": ("Sensors (* selected):", "No Sensors."),
+        "ip": ("IPs  (* selected):", "No IP."),
+    }
+
+    blocks: list[str] = []
+    for section in section_map[key]:
+        title, empty_message = labels[section]
+        count = session_count_objects(session, section)
+        if count == 0:
+            blocks.append(empty_message)
+            continue
+
+        selected_id = session_get_selected_id(session, section)
+        names = session_get_object_names(session, section)
+        lines = [title, "------------"]
+        for index, name in enumerate(names, start=1):
+            marker = "*" if selected_id == index else ""
+            lines.append(f"{index:2d} {name} {marker}".rstrip())
+        blocks.append("\n".join(lines))
+
+    return "\n\n" + "\n\n".join(blocks) + "\n\n"
+
+
 def vc_select_figure(
     session: SessionContext,
     object_type: str,
@@ -1236,7 +1333,9 @@ ieAppGet = ie_app_get
 ieEquivalentObjtype = ie_equivalent_objtype
 ieFindObjectByName = ie_find_object_by_name
 ieInitSession = ie_init_session
+ieMainW = ie_main_w
 ieMainClose = ie_main_close
+iePrintSessionInfo = ie_print_session_info
 ieReplaceObject = ie_replace_object
 ieRefreshWindow = ie_refresh_window
 ieSessionGet = ie_session_get
@@ -1244,6 +1343,7 @@ ieSessionSet = ie_session_set
 ieWindowsGet = ie_windows_get
 ieWindowsSet = ie_windows_set
 ieSelectObject = ie_select_object
+mainOpen = main_open
 vcEquivalentObjtype = vc_equivalent_objtype
 vcGetFigure = vc_get_figure
 vcSetFigureHandles = vc_set_figure_handles
