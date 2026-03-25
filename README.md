@@ -1781,6 +1781,12 @@ MATLAB figure windows.
 That same sensor plotting family now also exposes the direct MATLAB entry
 points `plotPixelSNR(...)`, `plotSensorEtendue(...)`, and
 `plotSensorSNR(...)` on top of the existing `plotSensor(...)` payloads.
+The adjacent figure-style plotting helpers are cleaner too:
+`fisePlotDefaults(...)`, `ieFigureFormat(...)`, `ieFigureResize(...)`,
+`iePlot(...)`, `iePlotSet(...)`, `iePlotShadeBackground(...)`, and
+`ieShape(...)` now return the same graphics-default, figure-layout, line,
+background-patch, and analytic-shape payloads headlessly instead of
+opening or mutating MATLAB figure windows.
 The adjacent `utility/image` numeric helper tail is shrinking too:
 `ieFindWaveIndex(...)`, `ieWave2Index(...)`, `ieRadialMatrix(...)`,
 `imageBoundingBox(...)`, `imageCentroid(...)`, `imageCircular(...)`, and

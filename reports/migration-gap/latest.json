@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-03-25T03:35:23.829036+00:00",
+  "generated_at": "2026-03-25T03:56:32.153285+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-25T03:35:23.829036+00:00",
+    "generated_at": "2026-03-25T03:56:32.153285+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 67,
+      "headless_only": 66,
       "missing": 21,
       "out_of_scope": 189,
       "parity": 676,
-      "partial": 345,
-      "ported": 145
+      "partial": 338,
+      "ported": 153
     },
     "kind_counts": {
       "api": 661,
@@ -22,18 +22,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 280,
-      "P2": 153,
-      "P3": 1010
+      "P1": 273,
+      "P2": 152,
+      "P3": 1018
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": -2,
+        "headless_only": -1,
         "missing": 0,
         "out_of_scope": 0,
         "parity": 0,
-        "partial": -1,
-        "ported": 3
+        "partial": -7,
+        "ported": 8
       },
       "kind_counts": {
         "api": 0,
@@ -44,9 +44,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -1,
-        "P2": -2,
-        "P3": 3
+        "P1": -7,
+        "P2": -1,
+        "P3": 8
       }
     },
     "family_summary": {
@@ -968,10 +968,10 @@
       "utility/plots": {
         "total": 50,
         "by_status": {
-          "headless_only": 3,
+          "headless_only": 2,
           "out_of_scope": 2,
-          "partial": 14,
-          "ported": 31
+          "partial": 7,
+          "ported": 39
         },
         "by_kind": {
           "gui": 2,
@@ -1036,23 +1036,23 @@
         }
       },
       {
-        "family": "utility/plots",
-        "open_entries": 17,
-        "highest_open_priority": "P1",
-        "by_status": {
-          "headless_only": 3,
-          "out_of_scope": 2,
-          "partial": 14,
-          "ported": 31
-        }
-      },
-      {
         "family": "scripts/human",
         "open_entries": 10,
         "highest_open_priority": "P1",
         "by_status": {
           "partial": 10,
           "ported": 1
+        }
+      },
+      {
+        "family": "utility/plots",
+        "open_entries": 9,
+        "highest_open_priority": "P1",
+        "by_status": {
+          "headless_only": 2,
+          "out_of_scope": 2,
+          "partial": 7,
+          "ported": 39
         }
       },
       {

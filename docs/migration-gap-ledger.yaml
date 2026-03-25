@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-03-25T03:35:23.829036+00:00",
+  "generated_at": "2026-03-25T03:56:32.153285+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 67,
+      "headless_only": 66,
       "missing": 21,
       "out_of_scope": 189,
       "parity": 676,
-      "partial": 345,
-      "ported": 145
+      "partial": 338,
+      "ported": 153
     },
     "kind_counts": {
       "api": 661,
@@ -20,18 +20,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 280,
-      "P2": 153,
-      "P3": 1010
+      "P1": 273,
+      "P2": 152,
+      "P3": 1018
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": -2,
+        "headless_only": -1,
         "missing": 0,
         "out_of_scope": 0,
         "parity": 0,
-        "partial": -1,
-        "ported": 3
+        "partial": -7,
+        "ported": 8
       },
       "kind_counts": {
         "api": 0,
@@ -42,9 +42,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -1,
-        "P2": -2,
-        "P3": 3
+        "P1": -7,
+        "P2": -1,
+        "P3": 8
       }
     },
     "family_summary": {
@@ -966,10 +966,10 @@
       "utility/plots": {
         "total": 50,
         "by_status": {
-          "headless_only": 3,
+          "headless_only": 2,
           "out_of_scope": 2,
-          "partial": 14,
-          "ported": 31
+          "partial": 7,
+          "ported": 39
         },
         "by_kind": {
           "gui": 2,
@@ -1034,23 +1034,23 @@
         }
       },
       {
-        "family": "utility/plots",
-        "open_entries": 17,
-        "highest_open_priority": "P1",
-        "by_status": {
-          "headless_only": 3,
-          "out_of_scope": 2,
-          "partial": 14,
-          "ported": 31
-        }
-      },
-      {
         "family": "scripts/human",
         "open_entries": 10,
         "highest_open_priority": "P1",
         "by_status": {
           "partial": 10,
           "ported": 1
+        }
+      },
+      {
+        "family": "utility/plots",
+        "open_entries": 9,
+        "highest_open_priority": "P1",
+        "by_status": {
+          "headless_only": 2,
+          "out_of_scope": 2,
+          "partial": 7,
+          "ported": 39
         }
       },
       {
@@ -3234,7 +3234,7 @@
       "family": "gui",
       "kind": "gui",
       "status": "out_of_scope",
-      "python_surface": "",
+      "python_surface": "pyisetcam.__init__, pyisetcam.plotting",
       "tests": [],
       "notes": "GUI/App Designer and figure fidelity remain outside the headless migration target.",
       "priority": "P3"
@@ -17780,13 +17780,13 @@
       "upstream_path": "utility/plots/fise_plotDefaults.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB root-defaults script is covered by the Python `fise_plot_defaults(...)` / `fisePlotDefaults(...)` wrapper, which returns the same graphics-default property map headlessly.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/hist2d.m",
@@ -17816,37 +17816,37 @@
       "upstream_path": "utility/plots/ieFigureFormat.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB figure-format helper is covered by the Python `ie_figure_format(...)` / `ieFigureFormat(...)` headless wrapper, which returns the formatted figure and axes property payloads.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/ieFigureResize.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB figure-resize helper is covered by the Python `ie_figure_resize(...)` / `ieFigureResize(...)` headless wrapper, which returns the requested units and figure-position payload.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/ieFormatFigure.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The deprecated MATLAB `ieFormatFigure(...)` entry point is covered by the Python `ieFormatFigure(...)` compatibility alias on top of `ie_figure_format(...)` / `ieFigureFormat(...)`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/ieHistImage.m",
@@ -17876,13 +17876,13 @@
       "upstream_path": "utility/plots/iePlot.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "headless_only",
+      "status": "ported",
       "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The MATLAB generic `iePlot(...)` helper is covered by the Python `ie_plot(...)` / `iePlot(...)` headless wrapper, which returns parsed line-series payloads instead of opening a figure.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/iePlotJitter.m",
@@ -17900,37 +17900,37 @@
       "upstream_path": "utility/plots/iePlotSet.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB `iePlotSet(...)` helper is covered by the Python `ie_plot_set(...)` / `iePlotSet(...)` wrapper, which applies line-width updates to headless line-series payloads.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/iePlotShadeBackground.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB shaded-background helper is covered by the Python `ie_plot_shade_background(...)` / `iePlotShadeBackground(...)` wrapper, which returns the background patch and layer payload headlessly.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/ieShape.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB analytic-shape helper is covered by the Python `ie_shape(...)` / `ieShape(...)` wrapper for the current circle workflow.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/ipPlot.m",

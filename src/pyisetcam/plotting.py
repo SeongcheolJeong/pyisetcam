@@ -439,6 +439,223 @@ def plot_reflectance(
     }, None
 
 
+def _numeric_plot_vector(value: Any) -> np.ndarray | None:
+    try:
+        array = np.asarray(value, dtype=float)
+    except Exception:
+        return None
+    return np.asarray(array, dtype=float).reshape(-1)
+
+
+def ie_plot(*args: Any) -> tuple[dict[str, Any], None]:
+    """Return MATLAB-style `iePlot` series payload without opening a figure."""
+
+    if not args:
+        raise ValueError("iePlot requires at least one data vector.")
+
+    series: list[dict[str, Any]] = []
+    index = 0
+    while index < len(args):
+        first = _numeric_plot_vector(args[index])
+        if first is None:
+            raise ValueError("iePlot expects numeric plot vectors and optional style strings.")
+
+        if index + 1 < len(args):
+            second = _numeric_plot_vector(args[index + 1])
+        else:
+            second = None
+
+        if second is None:
+            y = first
+            x = np.arange(1.0, float(y.size) + 1.0, dtype=float)
+            index += 1
+        else:
+            x = first
+            y = second
+            index += 2
+        if x.size != y.size:
+            raise ValueError("iePlot x/y vectors must have the same number of samples.")
+
+        style = "-"
+        if index < len(args) and isinstance(args[index], str):
+            style = str(args[index])
+            index += 1
+
+        series.append(
+            {
+                "x": x.copy(),
+                "y": y.copy(),
+                "style": style,
+                "lineWidth": 0.5,
+            }
+        )
+
+    return {"series": series, "figureFactory": "ieFigure"}, None
+
+
+def ie_plot_set(ax: dict[str, Any], *args: Any) -> dict[str, Any]:
+    """Return MATLAB-style `iePlotSet` payload updates without mutating figures."""
+
+    if len(args) % 2 != 0:
+        raise ValueError("iePlotSet optional arguments must be key/value pairs.")
+
+    updated = dict(ax)
+    for index in range(0, len(args), 2):
+        key = param_format(args[index])
+        value = args[index + 1]
+        if key != "linewidth":
+            raise ValueError(f"Unknown parameter {args[index]}")
+        if "series" in updated:
+            updated["series"] = [
+                {**series, "lineWidth": float(value)} for series in updated.get("series", [])
+            ]
+        if "lines" in updated:
+            updated["lines"] = [{**line, "lineWidth": float(value)} for line in updated.get("lines", [])]
+    return updated
+
+
+def ie_plot_shade_background(ax: dict[str, Any], *args: Any) -> dict[str, Any]:
+    """Return MATLAB-style shaded-axis background payload without opening a figure."""
+
+    vertex_colors = np.asarray(
+        _plot_option(
+            args,
+            "vertexcolors",
+            np.array([[0.8, 0.8, 0.8], [0.8, 0.8, 0.8], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]], dtype=float),
+        ),
+        dtype=float,
+    )
+    grid_state = str(_plot_option(args, "grid", "on")).lower()
+    xlim = _axis_limits(ax, "xlim", (0.0, 1.0))
+    ylim = _axis_limits(ax, "ylim", (0.0, 1.0))
+    vertices = np.array(
+        [[xlim[0], ylim[0]], [xlim[1], ylim[0]], [xlim[1], ylim[1]], [xlim[0], ylim[1]]],
+        dtype=float,
+    )
+    updated = dict(ax)
+    updated["background"] = {
+        "vertices": vertices,
+        "faceVertexCData": vertex_colors.copy(),
+        "faceColor": "interp",
+        "edgeColor": "none",
+        "stack": "bottom",
+    }
+    if grid_state == "on":
+        updated["layer"] = "top"
+        updated["grid"] = True
+    else:
+        updated["grid"] = False
+    return updated
+
+
+def ie_shape(type: str = "circle", n_samp: int = 200, *args: Any) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return MATLAB-style `ieShape` samples for simple analytic shapes."""
+
+    shape_key = param_format(type)
+    count = int(n_samp)
+    x = np.zeros(count, dtype=float)
+    y = np.zeros(count, dtype=float)
+    z = np.zeros(count, dtype=float)
+    if shape_key in {"circle", "circ"}:
+        radius = 1.0 if not args else float(args[0])
+        theta = (2.0 * np.pi * np.arange(1, count + 1, dtype=float)) / float(max(count, 1))
+        x = radius * np.cos(theta)
+        y = radius * np.sin(theta)
+        return x, y, z
+    raise ValueError(f"Unknown type: {type}")
+
+
+def ie_figure_format(
+    fig: dict[str, Any] | None = None,
+    fontname: str = "Helvetica",
+    fontsize: Any = (18.0, 14.0),
+    figsize: Any = (6.5, 6.5),
+    border: Any = (1.0, 0.5),
+) -> dict[str, Any]:
+    """Return MATLAB-style formatted-figure properties without opening a figure."""
+
+    formatted = {} if fig is None else dict(fig)
+    fontsize_array = np.asarray(fontsize, dtype=float).reshape(-1)
+    if fontsize_array.size == 1:
+        fontsize_array = np.repeat(fontsize_array, 2)
+    figure_size = np.asarray(figsize, dtype=float).reshape(-1)
+    if figure_size.size == 1:
+        figure_size = np.repeat(figure_size, 2)
+    border_array = np.asarray(border, dtype=float).reshape(-1)
+    if border_array.size == 2:
+        border_array = np.array([border_array[0], border_array[0], border_array[1], border_array[1]], dtype=float)
+    if border_array.size != 4:
+        raise ValueError("border must have length 2 or 4.")
+
+    prior_position = np.asarray(formatted.get("position", [0.0, 0.0, 0.0, 0.0]), dtype=float).reshape(-1)
+    if param_format(formatted.get("units", "")) == "inches" and prior_position.size >= 2:
+        origin = prior_position[:2]
+    else:
+        origin = np.array([0.0, 0.0], dtype=float)
+
+    formatted["units"] = "inches"
+    formatted["position"] = np.array([origin[0], origin[1], figure_size[0], figure_size[1]], dtype=float)
+    formatted["paperPosition"] = np.array(
+        [4.25 - figure_size[0] / 2.0, 5.5 - figure_size[1] / 2.0, figure_size[0], figure_size[1]],
+        dtype=float,
+    )
+    formatted["color"] = np.array([1.0, 1.0, 1.0], dtype=float)
+    formatted["axes"] = {
+        **dict(formatted.get("axes", {})),
+        "fontName": str(fontname),
+        "titleFontSize": float(fontsize_array[0]),
+        "labelFontSize": float(fontsize_array[0]),
+        "tickFontSize": float(fontsize_array[1]),
+        "units": "inches",
+        "position": np.array(
+            [
+                border_array[0],
+                border_array[1],
+                figure_size[0] - border_array[0] - border_array[2],
+                figure_size[1] - border_array[1] - border_array[3],
+            ],
+            dtype=float,
+        ),
+    }
+    return formatted
+
+
+def ie_figure_resize(
+    fig_or_ax: dict[str, Any] | None = None,
+    figpos: Any = (0.0035, 0.4125, 0.3266, 0.4972),
+    units: str = "normalize",
+) -> dict[str, Any]:
+    """Return MATLAB-style figure-resize properties without opening a figure."""
+
+    resized = {} if fig_or_ax is None else dict(fig_or_ax)
+    resized["windowStyle"] = "normal"
+    resized["units"] = str(units)
+    resized["resize"] = "off"
+    resized["position"] = np.asarray(figpos, dtype=float).reshape(-1)
+    return resized
+
+
+def fise_plot_defaults() -> dict[str, Any]:
+    """Return the root graphics defaults from `fise_plotDefaults.m`."""
+
+    return {
+        "DefaultAxesFontName": "Georgia",
+        "DefaultAxesFontSize": 16.0,
+        "DefaultAxesBox": "off",
+        "DefaultAxesTickDir": "out",
+        "DefaultAxesLineWidth": 1.2,
+        "DefaultAxesXColor": np.array([0.3, 0.3, 0.3], dtype=float),
+        "DefaultAxesYColor": np.array([0.3, 0.3, 0.3], dtype=float),
+        "DefaultTextFontName": "Georgia",
+        "DefaultTextFontSize": 12.0,
+        "DefaultTextColor": np.array([0.3, 0.3, 0.3], dtype=float),
+        "DefaultLegendFontName": "Georgia",
+        "DefaultLegendFontSize": 11.0,
+        "DefaultLegendTextColor": np.array([0.2, 0.2, 0.2], dtype=float),
+        "DefaultLegendBox": "off",
+    }
+
+
 def _airy_disk_circle(radius: float, *, sample_count: int = 200) -> dict[str, np.ndarray]:
     theta = np.linspace(0.0, 2.0 * np.pi, int(sample_count), endpoint=False, dtype=float)
     return {
@@ -1847,8 +2064,16 @@ sensorPlotHist = sensor_plot_hist
 sensorPlotLine = sensor_plot_line
 ipPlot = ip_plot
 identityLine = identity_line
+fisePlotDefaults = fise_plot_defaults
+ieFigureFormat = ie_figure_format
+ieFigureResize = ie_figure_resize
+ieFormatFigure = ie_figure_format
 iePlaneFromVectors = ie_plane_from_vectors
+iePlot = ie_plot
 iePlotJitter = ie_plot_jitter
+iePlotSet = ie_plot_set
+iePlotShadeBackground = ie_plot_shade_background
+ieShape = ie_shape
 plotContrastHistogram = plot_contrast_histogram
 plotEtendueRatio = plot_etendue_ratio
 plotGaussianSpectrum = plot_gaussian_spectrum

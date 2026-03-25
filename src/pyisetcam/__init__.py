@@ -356,9 +356,16 @@ from .optics import (
 )
 from .parity import run_python_case, run_python_case_with_context
 from .plotting import (
+    fise_plot_defaults,
     identity_line,
+    ie_figure_format,
+    ie_figure_resize,
     ie_plane_from_vectors,
+    ie_plot,
     ie_plot_jitter,
+    ie_plot_set,
+    ie_plot_shade_background,
+    ie_shape,
     ip_plot,
     oi_plot,
     plot_contrast_histogram,
@@ -876,14 +883,27 @@ __all__ = [
     "ieGetSelectedObject",
     "ieInitSession",
     "ieInternal2Display",
+    "ieFigureFormat",
+    "ieFigureResize",
+    "ieFormatFigure",
     "iePlaneFromVectors",
+    "iePlot",
     "iePlotJitter",
+    "iePlotSet",
+    "iePlotShadeBackground",
+    "ieShape",
     "imageDataXYZ",
     "image_data_xyz",
     "imageShowImage",
     "image_show_image",
+    "ie_figure_format",
+    "ie_figure_resize",
     "ie_plane_from_vectors",
+    "ie_plot",
     "ie_plot_jitter",
+    "ie_plot_set",
+    "ie_plot_shade_background",
+    "ie_shape",
     "FaultyBilinear",
     "faulty_bilinear",
     "faultyInsert",
@@ -1364,6 +1384,8 @@ __all__ = [
     "oi_pad_value",
     "oi_photon_noise",
     "oi_psf",
+    "fisePlotDefaults",
+    "fise_plot_defaults",
     "plotOI",
     "plotDisplayColor",
     "plotDisplayGamut",
@@ -2144,6 +2166,7 @@ lsf2circularpsf = lsf_to_circular_psf
 psfCircularlyAverage = psf_circularly_average
 psfAverageMultiple = psf_average_multiple
 psf2zcoeff = psf_to_zcoeff_error
+fisePlotDefaults = fise_plot_defaults
 plotContrastHistogram = plot_contrast_histogram
 plotDisplayColor = plot_display_color
 plotDisplayGamut = plot_display_gamut
@@ -2152,8 +2175,15 @@ plotDisplaySPD = plot_display_spd
 plotEtendueRatio = plot_etendue_ratio
 plotGaussianSpectrum = plot_gaussian_spectrum
 identityLine = identity_line
+ieFigureFormat = ie_figure_format
+ieFigureResize = ie_figure_resize
+ieFormatFigure = ie_figure_format
 iePlaneFromVectors = ie_plane_from_vectors
+iePlot = ie_plot
 iePlotJitter = ie_plot_jitter
+iePlotSet = ie_plot_set
+iePlotShadeBackground = ie_plot_shade_background
+ieShape = ie_shape
 plotOI = oi_plot
 oiPlot = oi_plot
 ipPlot = ip_plot

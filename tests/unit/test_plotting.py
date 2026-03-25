@@ -5,8 +5,16 @@ import pytest
 
 from pyisetcam import (
     airyDisk,
+    fisePlotDefaults,
+    ieFigureFormat,
+    ieFigureResize,
+    ieFormatFigure,
     iePlaneFromVectors,
+    iePlot,
     iePlotJitter,
+    iePlotSet,
+    iePlotShadeBackground,
+    ieShape,
     ieXYZFromEnergy,
     identityLine,
     ipPlot,
@@ -1569,6 +1577,78 @@ def test_ie_plot_jitter_wrapper() -> None:
     assert payload["pSymbol"] == "or"
     assert np.allclose(payload["jx"], expected_jx)
     assert np.allclose(payload["jy"], expected_jy)
+
+
+def test_ie_shape_circle_wrapper() -> None:
+    x, y, z = ieShape("circle", 4, 2.0)
+
+    theta = (2.0 * np.pi * np.arange(1, 5, dtype=float)) / 4.0
+    assert np.allclose(x, 2.0 * np.cos(theta))
+    assert np.allclose(y, 2.0 * np.sin(theta))
+    assert np.allclose(z, np.zeros(4, dtype=float))
+
+
+def test_ie_plot_and_set_wrappers() -> None:
+    payload, handle = iePlot(np.array([1.0, 2.0, 3.0]), np.array([4.0, 5.0, 6.0]), "r-")
+    updated = iePlotSet(payload, "linewidth", 3.0)
+
+    assert handle is None
+    assert payload["figureFactory"] == "ieFigure"
+    assert len(payload["series"]) == 1
+    assert np.allclose(payload["series"][0]["x"], np.array([1.0, 2.0, 3.0]))
+    assert np.allclose(payload["series"][0]["y"], np.array([4.0, 5.0, 6.0]))
+    assert payload["series"][0]["style"] == "r-"
+    assert np.isclose(updated["series"][0]["lineWidth"], 3.0)
+
+
+def test_ie_plot_shade_background_wrapper() -> None:
+    ax = {"xlim": np.array([1.0, 4.0]), "ylim": np.array([-2.0, 3.0])}
+    colors = np.array([[0.0, 0.0, 0.0], [0.5, 0.5, 0.5], [1.0, 1.0, 1.0], [0.2, 0.3, 0.4]], dtype=float)
+
+    payload = iePlotShadeBackground(ax, "grid", "on", "vertexcolors", colors)
+
+    assert np.allclose(
+        payload["background"]["vertices"],
+        np.array([[1.0, -2.0], [4.0, -2.0], [4.0, 3.0], [1.0, 3.0]], dtype=float),
+    )
+    assert np.allclose(payload["background"]["faceVertexCData"], colors)
+    assert payload["background"]["faceColor"] == "interp"
+    assert payload["background"]["edgeColor"] == "none"
+    assert payload["background"]["stack"] == "bottom"
+    assert payload["layer"] == "top"
+    assert payload["grid"] is True
+
+
+def test_ie_figure_format_and_resize_wrappers() -> None:
+    figure = {"units": "inches", "position": np.array([1.0, 2.0, 3.0, 4.0])}
+
+    formatted = ieFigureFormat(figure, "Arial", [16.0, 12.0], [6.0, 4.0], [0.5, 0.25])
+    alias_formatted = ieFormatFigure(figure, "Arial", [16.0, 12.0], [6.0, 4.0], [0.5, 0.25])
+    resized = ieFigureResize({"type": "axes"}, [0.1, 0.2, 0.3, 0.4], "pixels")
+
+    assert np.allclose(formatted["position"], np.array([1.0, 2.0, 6.0, 4.0]))
+    assert np.allclose(formatted["paperPosition"], np.array([1.25, 3.5, 6.0, 4.0]))
+    assert np.allclose(formatted["axes"]["position"], np.array([0.5, 0.5, 5.25, 3.25]))
+    assert formatted["axes"]["fontName"] == "Arial"
+    assert np.isclose(formatted["axes"]["titleFontSize"], 16.0)
+    assert np.isclose(formatted["axes"]["tickFontSize"], 12.0)
+    assert np.allclose(alias_formatted["position"], formatted["position"])
+    assert resized["windowStyle"] == "normal"
+    assert resized["units"] == "pixels"
+    assert resized["resize"] == "off"
+    assert np.allclose(resized["position"], np.array([0.1, 0.2, 0.3, 0.4]))
+
+
+def test_fise_plot_defaults_wrapper() -> None:
+    defaults = fisePlotDefaults()
+
+    assert defaults["DefaultAxesFontName"] == "Georgia"
+    assert np.isclose(defaults["DefaultAxesFontSize"], 16.0)
+    assert defaults["DefaultAxesBox"] == "off"
+    assert defaults["DefaultAxesTickDir"] == "out"
+    assert np.isclose(defaults["DefaultAxesLineWidth"], 1.2)
+    assert np.allclose(defaults["DefaultTextColor"], np.array([0.3, 0.3, 0.3]))
+    assert defaults["DefaultLegendBox"] == "off"
 
 
 def test_plot_normal_wrapper() -> None:

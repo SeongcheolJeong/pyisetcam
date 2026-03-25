@@ -413,6 +413,46 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The MATLAB sensor-SNR plotting helper is covered by the Python `plot_sensor_snr(...)` / `plotSensorSNR(...)` compatibility wrapper on top of the existing `plotSensor(..., 'sensor snr')` payload.",
         "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
     },
+    "utility/plots/fise_plotDefaults.m": {
+        "status": "ported",
+        "note": "The MATLAB root-defaults script is covered by the Python `fise_plot_defaults(...)` / `fisePlotDefaults(...)` wrapper, which returns the same graphics-default property map headlessly.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/ieFigureFormat.m": {
+        "status": "ported",
+        "note": "The MATLAB figure-format helper is covered by the Python `ie_figure_format(...)` / `ieFigureFormat(...)` headless wrapper, which returns the formatted figure and axes property payloads.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/ieFigureResize.m": {
+        "status": "ported",
+        "note": "The MATLAB figure-resize helper is covered by the Python `ie_figure_resize(...)` / `ieFigureResize(...)` headless wrapper, which returns the requested units and figure-position payload.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/ieFormatFigure.m": {
+        "status": "ported",
+        "note": "The deprecated MATLAB `ieFormatFigure(...)` entry point is covered by the Python `ieFormatFigure(...)` compatibility alias on top of `ie_figure_format(...)` / `ieFigureFormat(...)`.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/iePlot.m": {
+        "status": "ported",
+        "note": "The MATLAB generic `iePlot(...)` helper is covered by the Python `ie_plot(...)` / `iePlot(...)` headless wrapper, which returns parsed line-series payloads instead of opening a figure.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/iePlotSet.m": {
+        "status": "ported",
+        "note": "The MATLAB `iePlotSet(...)` helper is covered by the Python `ie_plot_set(...)` / `iePlotSet(...)` wrapper, which applies line-width updates to headless line-series payloads.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/iePlotShadeBackground.m": {
+        "status": "ported",
+        "note": "The MATLAB shaded-background helper is covered by the Python `ie_plot_shade_background(...)` / `iePlotShadeBackground(...)` wrapper, which returns the background patch and layer payload headlessly.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/ieShape.m": {
+        "status": "ported",
+        "note": "The MATLAB analytic-shape helper is covered by the Python `ie_shape(...)` / `ieShape(...)` wrapper for the current circle workflow.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
     "utility/plots/plotContrastHistogram.m": {
         "status": "ported",
         "note": "The MATLAB contrast-histogram helper is covered by the Python `plot_contrast_histogram(...)` / `plotContrastHistogram(...)` wrapper, which returns histogram counts and bin centers headlessly.",
