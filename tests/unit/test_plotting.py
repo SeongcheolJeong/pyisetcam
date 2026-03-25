@@ -6,12 +6,14 @@ import pytest
 from pyisetcam import (
     airyDisk,
     ieXYZFromEnergy,
+    identityLine,
     ipPlot,
     plotDisplayColor,
     plotDisplayGamut,
     plotDisplayLine,
     plotDisplaySPD,
     plotOI,
+    plotTextString,
     ip_create,
     ip_get,
     ip_set,
@@ -42,9 +44,11 @@ from pyisetcam import (
     wvf_get,
     wvfPlot,
     wvf_to_oi,
+    xaxisLine,
     xyz_to_lab,
     xyz_to_luv,
     xyz_to_srgb,
+    yaxisLine,
 )
 from pyisetcam.exceptions import UnsupportedOptionError
 
@@ -1409,3 +1413,57 @@ def test_plot_aliases_and_sensor_hist_wrapper(asset_store) -> None:
     assert np.array_equal(sensor_alias_udata["roiLocs"], roi)
     assert np.allclose(hist_udata["data"], hist_alias_udata["data"], equal_nan=True)
     assert np.allclose(hist_udata["data"], sensor_alias_udata["data"], equal_nan=True)
+
+
+def test_identity_and_axis_line_wrappers() -> None:
+    ax = {"xlim": np.array([-2.0, 3.0]), "ylim": np.array([-1.0, 4.0]), "zlim": np.array([-5.0, 6.0])}
+
+    ident2d = identityLine(ax)
+    ident3d = identityLine(ax, True)
+    xline = xaxisLine(ax, 0.5, ":")
+    yline = yaxisLine(ax, -0.25)
+
+    assert np.allclose(ident2d["x"], np.array([-2.0, 4.0]))
+    assert np.allclose(ident2d["y"], np.array([-2.0, 4.0]))
+    assert ident2d["linestyle"] == "--"
+    assert np.isclose(ident2d["linewidth"], 2.0)
+
+    assert np.allclose(ident3d["x"], np.array([-5.0, 6.0]))
+    assert np.allclose(ident3d["y"], np.array([-5.0, 6.0]))
+    assert np.allclose(ident3d["z"], np.array([-5.0, 6.0]))
+
+    assert np.allclose(xline["x"], np.array([-2.0, 3.0]))
+    assert np.allclose(xline["y"], np.array([0.5, 0.5]))
+    assert xline["linestyle"] == ":"
+
+    assert np.allclose(yline["x"], np.array([-0.25, -0.25]))
+    assert np.allclose(yline["y"], np.array([-1.0, 4.0]))
+    assert yline["linestyle"] == "--"
+
+
+def test_plot_text_string_wrapper() -> None:
+    ax = {
+        "xlim": np.array([10.0, 30.0]),
+        "ylim": np.array([5.0, 25.0]),
+        "xscale": "log",
+        "yscale": "linear",
+    }
+
+    upper_left = plotTextString("Hello", "ul", [0.1, 0.25], 14, ax=ax)
+    lower_right = plotTextString("World", "lr", 0.2, ax=ax)
+
+    assert upper_left["text"] == "Hello"
+    assert upper_left["position"] == "ul"
+    assert np.isclose(upper_left["x"], 12.0)
+    assert np.isclose(upper_left["y"], 20.0)
+    assert np.isclose(upper_left["fontSize"], 14.0)
+    assert upper_left["background"] == "w"
+    assert np.allclose(upper_left["delta"], np.array([0.1, 0.25]))
+    assert upper_left["xscale"] == "log"
+    assert upper_left["yscale"] == "linear"
+
+    assert lower_right["text"] == "World"
+    assert np.isclose(lower_right["x"], 26.0)
+    assert np.isclose(lower_right["y"], 9.0)
+    assert np.isclose(lower_right["fontSize"], 12.0)
+    assert np.allclose(lower_right["delta"], np.array([0.2, 0.2]))

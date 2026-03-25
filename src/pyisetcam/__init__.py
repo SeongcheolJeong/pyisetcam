@@ -356,18 +356,22 @@ from .optics import (
 )
 from .parity import run_python_case, run_python_case_with_context
 from .plotting import (
+    identity_line,
     ip_plot,
     oi_plot,
     plot_display_color,
     plot_display_gamut,
     plot_display_line,
     plot_display_spd,
+    plot_text_string,
     scene_plot,
     sensor_plot,
     sensor_plot_fft,
     sensor_plot_hist,
     sensor_plot_line,
     wvf_plot,
+    xaxis_line,
+    yaxis_line,
 )
 from .ptable import IEPTable, ie_p_table, ie_table_get
 from .roi import ie_locs2_rect, ie_rect2_locs, ie_rect2_vertices, ie_roi2_locs, vc_get_roi_data, vc_rect2_locs
@@ -1103,6 +1107,8 @@ __all__ = [
     "ip_get",
     "ip_plot",
     "ip_set",
+    "identityLine",
+    "identity_line",
     "ie_luminance_to_radiance",
     "ie_responsivity_convert",
     "ie_scotopic_luminance_from_energy",
@@ -1347,10 +1353,12 @@ __all__ = [
     "plotDisplayGamut",
     "plotDisplayLine",
     "plotDisplaySPD",
+    "plotTextString",
     "plot_display_color",
     "plot_display_gamut",
     "plot_display_line",
     "plot_display_spd",
+    "plot_text_string",
     "oi_plot",
     "oi_preview_video",
     "oi_save_image",
@@ -1933,10 +1941,14 @@ __all__ = [
     "sensorPlotLine",
     "oiPlot",
     "wvfPlot",
+    "xaxisLine",
+    "xaxis_line",
     "xyz_from_energy",
     "xyz_to_lab",
     "xyz_to_luv",
     "xyz_to_uv",
+    "yaxisLine",
+    "yaxis_line",
     "xyz2luv",
     "zemaxLoad",
     "zemaxReadHeader",
@@ -2100,9 +2112,11 @@ plotDisplayColor = plot_display_color
 plotDisplayGamut = plot_display_gamut
 plotDisplayLine = plot_display_line
 plotDisplaySPD = plot_display_spd
+identityLine = identity_line
 plotOI = oi_plot
 oiPlot = oi_plot
 ipPlot = ip_plot
+plotTextString = plot_text_string
 plotScene = scene_plot
 scenePlot = scene_plot
 plotSensor = sensor_plot
@@ -2112,6 +2126,8 @@ sensorPlot = sensor_plot
 sensorPlotHist = sensor_plot_hist
 sensorPlotLine = sensor_plot_line
 wvfPlot = wvf_plot
+xaxisLine = xaxis_line
+yaxisLine = yaxis_line
 airyDisk = airy_disk
 opticsBuild2Dotf = optics_build_2d_otf
 lensList = lens_list

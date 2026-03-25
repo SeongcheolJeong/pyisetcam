@@ -1763,6 +1763,11 @@ The neighboring `utility/plots` gateway slice is cleaner too:
 wrapper coverage in `pyisetcam.plotting`, and the legacy alias entry points
 `plotOI(...)`, `scenePlot(...)`, and `sensorPlot(...)` are exported directly
 on top of the existing headless plotting gateways.
+That same plotting family now also covers the small axis-annotation helpers
+`identityLine(...)`, `xaxisLine(...)`, `yaxisLine(...)`, and
+`plotTextString(...)` through direct headless wrappers that return the line
+geometry, text placement, and styling payloads instead of MATLAB figure
+handles.
 The adjacent `utility/image` numeric helper tail is shrinking too:
 `ieFindWaveIndex(...)`, `ieWave2Index(...)`, `ieRadialMatrix(...)`,
 `imageBoundingBox(...)`, `imageCentroid(...)`, `imageCircular(...)`, and

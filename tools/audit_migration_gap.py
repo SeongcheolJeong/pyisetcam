@@ -398,6 +398,26 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The MATLAB display-gamut plotting helper is covered by the Python `plot_display_gamut(...)` / `plotDisplayGamut(...)` compatibility wrapper on top of display primary XYZ data.",
         "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
     },
+    "utility/plots/identityLine.m": {
+        "status": "ported",
+        "note": "The MATLAB axis-identity helper is covered by the Python `identity_line(...)` / `identityLine(...)` headless wrapper, which returns the canonical line geometry and styling payload.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/plotTextString.m": {
+        "status": "ported",
+        "note": "The MATLAB canonical text-placement helper is covered by the Python `plot_text_string(...)` / `plotTextString(...)` headless wrapper, which returns text position and style payloads from axis limits.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/xaxisLine.m": {
+        "status": "ported",
+        "note": "The MATLAB x-axis guide-line helper is covered by the Python `xaxis_line(...)` / `xaxisLine(...)` headless wrapper.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/yaxisLine.m": {
+        "status": "ported",
+        "note": "The MATLAB y-axis guide-line helper is covered by the Python `yaxis_line(...)` / `yaxisLine(...)` headless wrapper.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
     "utility/image/imageSetHarmonic.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a GUIDE-only harmonic-parameter dialog and remains outside the headless migration target.",

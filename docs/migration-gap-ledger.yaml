@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-25T01:56:42.530461+00:00",
+  "generated_at": "2026-03-25T02:20:42.406551+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -8,8 +8,8 @@
       "missing": 21,
       "out_of_scope": 189,
       "parity": 676,
-      "partial": 359,
-      "ported": 129
+      "partial": 355,
+      "ported": 133
     },
     "kind_counts": {
       "api": 661,
@@ -20,18 +20,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 294,
+      "P1": 290,
       "P2": 155,
-      "P3": 994
+      "P3": 998
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": -11,
+        "headless_only": 0,
         "missing": 0,
         "out_of_scope": 0,
         "parity": 0,
         "partial": -4,
-        "ported": 15
+        "ported": 4
       },
       "kind_counts": {
         "api": 0,
@@ -43,8 +43,8 @@
       },
       "priority_counts": {
         "P1": -4,
-        "P2": -11,
-        "P3": 15
+        "P2": 0,
+        "P3": 4
       }
     },
     "family_summary": {
@@ -968,8 +968,8 @@
         "by_status": {
           "headless_only": 5,
           "out_of_scope": 2,
-          "partial": 28,
-          "ported": 15
+          "partial": 24,
+          "ported": 19
         },
         "by_kind": {
           "gui": 2,
@@ -1015,13 +1015,13 @@
       },
       {
         "family": "utility/plots",
-        "open_entries": 33,
+        "open_entries": 29,
         "highest_open_priority": "P1",
         "by_status": {
           "headless_only": 5,
           "out_of_scope": 2,
-          "partial": 28,
-          "ported": 15
+          "partial": 24,
+          "ported": 19
         }
       },
       {
@@ -17804,13 +17804,13 @@
       "upstream_path": "utility/plots/identityLine.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB axis-identity helper is covered by the Python `identity_line(...)` / `identityLine(...)` headless wrapper, which returns the canonical line geometry and styling payload.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/ieFigureFormat.m",
@@ -18260,13 +18260,13 @@
       "upstream_path": "utility/plots/plotTextString.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB canonical text-placement helper is covered by the Python `plot_text_string(...)` / `plotTextString(...)` headless wrapper, which returns text position and style payloads from axis limits.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/scatplot.m",
@@ -18356,25 +18356,25 @@
       "upstream_path": "utility/plots/xaxisLine.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB x-axis guide-line helper is covered by the Python `xaxis_line(...)` / `xaxisLine(...)` headless wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/yaxisLine.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB y-axis guide-line helper is covered by the Python `yaxis_line(...)` / `yaxisLine(...)` headless wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/printing/FloydSteinberg.m",

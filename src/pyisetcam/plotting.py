@@ -58,6 +58,141 @@ def _plot_option(args: tuple[Any, ...], key: str, default: Any = None) -> Any:
     return default
 
 
+def _axis_limits(ax: Any | None, key: str, default: tuple[float, float]) -> np.ndarray:
+    if ax is None:
+        return np.asarray(default, dtype=float)
+    if isinstance(ax, dict):
+        value = ax.get(key, default)
+        return np.asarray(value, dtype=float).reshape(2)
+    if hasattr(ax, key):
+        return np.asarray(getattr(ax, key), dtype=float).reshape(2)
+    try:
+        value = ax[key]
+    except Exception:
+        value = default
+    return np.asarray(value, dtype=float).reshape(2)
+
+
+def _axis_scale(ax: Any | None, key: str, default: str) -> str:
+    if ax is None:
+        return default
+    if isinstance(ax, dict):
+        return str(ax.get(key, default))
+    if hasattr(ax, key):
+        return str(getattr(ax, key))
+    try:
+        return str(ax[key])
+    except Exception:
+        return default
+
+
+def identity_line(ax: Any | None = None, three_d: bool = False) -> dict[str, Any]:
+    """Return MATLAB-style `identityLine` line data without opening a figure."""
+
+    xlim = _axis_limits(ax, "xlim", (0.0, 1.0))
+    ylim = _axis_limits(ax, "ylim", (0.0, 1.0))
+    if three_d:
+        zlim = _axis_limits(ax, "zlim", (0.0, 1.0))
+        minimum = float(min(xlim[0], ylim[0], zlim[0]))
+        maximum = float(max(xlim[1], ylim[1], zlim[1]))
+        return {
+            "x": np.asarray([minimum, maximum], dtype=float),
+            "y": np.asarray([minimum, maximum], dtype=float),
+            "z": np.asarray([minimum, maximum], dtype=float),
+            "color": np.asarray([0.5, 0.5, 0.5], dtype=float),
+            "linestyle": "--",
+            "linewidth": 2.0,
+            "grid": True,
+        }
+
+    minimum = float(min(xlim[0], ylim[0]))
+    maximum = float(max(xlim[1], ylim[1]))
+    return {
+        "x": np.asarray([minimum, maximum], dtype=float),
+        "y": np.asarray([minimum, maximum], dtype=float),
+        "color": np.asarray([0.5, 0.5, 0.5], dtype=float),
+        "linestyle": "--",
+        "linewidth": 2.0,
+        "grid": True,
+    }
+
+
+def xaxis_line(ax: Any | None = None, yval: float = 0.0, linestyle: str = "--") -> dict[str, Any]:
+    """Return MATLAB-style `xaxisLine` line data without opening a figure."""
+
+    xlim = _axis_limits(ax, "xlim", (0.0, 1.0))
+    return {
+        "x": np.asarray(xlim, dtype=float).copy(),
+        "y": np.asarray([float(yval), float(yval)], dtype=float),
+        "color": np.asarray([0.3, 0.3, 0.3], dtype=float),
+        "linestyle": str(linestyle),
+        "linewidth": 2.0,
+        "grid": True,
+    }
+
+
+def yaxis_line(ax: Any | None = None, val: float = 0.0) -> dict[str, Any]:
+    """Return MATLAB-style `yaxisLine` line data without opening a figure."""
+
+    ylim = _axis_limits(ax, "ylim", (0.0, 1.0))
+    return {
+        "x": np.asarray([float(val), float(val)], dtype=float),
+        "y": np.asarray(ylim, dtype=float).copy(),
+        "color": np.asarray([0.3, 0.3, 0.3], dtype=float),
+        "linestyle": "--",
+        "linewidth": 2.0,
+        "grid": True,
+    }
+
+
+def plot_text_string(
+    text: str,
+    position: str = "ur",
+    delta: Any = (0.2, 0.2),
+    font_size: float = 12.0,
+    ax: Any | None = None,
+) -> dict[str, Any]:
+    """Return MATLAB-style `plotTextString` placement data without opening a figure."""
+
+    xlim = _axis_limits(ax, "xlim", (0.0, 1.0))
+    ylim = _axis_limits(ax, "ylim", (0.0, 1.0))
+    xscale = _axis_scale(ax, "xscale", "linear")
+    yscale = _axis_scale(ax, "yscale", "linear")
+    delta_array = np.asarray(delta, dtype=float).reshape(-1)
+    if delta_array.size == 1:
+        delta_array = np.repeat(delta_array, 2)
+    if delta_array.size != 2:
+        raise ValueError("plotTextString delta must be a scalar or length-2 sequence.")
+
+    pos_key = param_format(position)
+    if pos_key == "ul":
+        x = xlim[0] + (xlim[1] - xlim[0]) * delta_array[0]
+        y = ylim[1] - (ylim[1] - ylim[0]) * delta_array[1]
+    elif pos_key == "ll":
+        x = xlim[0] + (xlim[1] - xlim[0]) * delta_array[0]
+        y = ylim[0] + (ylim[1] - ylim[0]) * delta_array[1]
+    elif pos_key == "ur":
+        x = xlim[1] - (xlim[1] - xlim[0]) * delta_array[0]
+        y = ylim[1] - (ylim[1] - ylim[0]) * delta_array[1]
+    elif pos_key == "lr":
+        x = xlim[1] - (xlim[1] - xlim[0]) * delta_array[0]
+        y = ylim[0] + (ylim[1] - ylim[0]) * delta_array[1]
+    else:
+        raise ValueError("Unknown position")
+
+    return {
+        "text": str(text),
+        "position": str(position),
+        "x": float(x),
+        "y": float(y),
+        "fontSize": float(font_size),
+        "background": "w",
+        "delta": delta_array.astype(float).copy(),
+        "xscale": xscale,
+        "yscale": yscale,
+    }
+
+
 def _airy_disk_circle(radius: float, *, sample_count: int = 200) -> dict[str, np.ndarray]:
     theta = np.linspace(0.0, 2.0 * np.pi, int(sample_count), endpoint=False, dtype=float)
     return {
@@ -1447,8 +1582,12 @@ plotSensorHist = sensor_plot_hist
 sensorPlotHist = sensor_plot_hist
 sensorPlotLine = sensor_plot_line
 ipPlot = ip_plot
+identityLine = identity_line
 plotDisplaySPD = plot_display_spd
 plotDisplayLine = plot_display_line
 plotDisplayColor = plot_display_color
 plotDisplayGamut = plot_display_gamut
+plotTextString = plot_text_string
 wvfPlot = wvf_plot
+xaxisLine = xaxis_line
+yaxisLine = yaxis_line
