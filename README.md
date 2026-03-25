@@ -1769,6 +1769,12 @@ compatibility wrappers in `pyisetcam.utils`, with focused regressions over
 DAC lookup-table mapping, per-plane transpose, MATLAB-style left/up
 translation, bilinear resize shape/corner behavior, and the default
 harmonic-parameter structure.
+The remaining utility-image harmonic/montage tail is smaller now too:
+`imageGabor(...)`, `imageMakeMontage(...)`, and `imageMontage(...)` now
+have direct headless compatibility wrappers in `pyisetcam.utils`, while
+`imageShowImage(...)` is covered by a headless IP-render wrapper in
+`pyisetcam.ip`; the GUIDE-only `imageSetHarmonic.m` dialog is explicitly
+tracked as out of scope.
 The legacy startup/path trio is now covered too: `ISET.m`, `isetPath.m`,
 and `isetRootPath.m` are tracked against the optional headless session
 bootstrap wrappers `iset(...)`, `isetPath(...)`, and `isetRootPath(...)`

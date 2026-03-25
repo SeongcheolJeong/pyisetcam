@@ -17,6 +17,9 @@ from pyisetcam import (
     ieWave2Index,
     imageHparams,
     imageInterpolate,
+    imageGabor,
+    imageMakeMontage,
+    imageMontage,
     imageTranslate,
     imageTranspose,
     imageBoundingBox,
@@ -42,6 +45,9 @@ from pyisetcam.utils import (
     ie_wave2_index,
     image_hparams,
     image_interpolate,
+    image_gabor,
+    image_make_montage,
+    image_montage,
     image_translate,
     image_transpose,
     interp_spectra,
@@ -446,6 +452,46 @@ def test_image_hparams_matches_legacy_defaults_and_alias() -> None:
     }
     assert params == expected
     assert alias == expected
+
+
+def test_image_gabor_matches_legacy_range_shape_and_alias() -> None:
+    gabor = image_gabor(frequency=4, phase=0.0, spread=0.25, orientation=np.pi / 4.0, imagesize=6, contrast=1.0)
+    alias = imageGabor(frequency=4, phase=0.0, spread=0.25, orientation=np.pi / 4.0, imagesize=6, contrast=1.0)
+
+    assert gabor.shape == (7, 7)
+    assert float(np.min(gabor)) >= 0.0
+    assert float(np.max(gabor)) <= 1.0
+    assert gabor[3, 3] == pytest.approx(1.0)
+    assert np.allclose(alias, gabor)
+
+
+def test_image_make_montage_and_image_montage_match_legacy_tile_layout_aliases() -> None:
+    cube = np.stack(
+        (
+            np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float),
+            np.array([[5.0, 6.0], [7.0, 8.0]], dtype=float),
+            np.array([[9.0, 10.0], [11.0, 12.0]], dtype=float),
+        ),
+        axis=2,
+    )
+
+    montage, coords = image_make_montage(cube, [1, 3], n_cols=2, back_val=-1.0)
+    fig_h, montage_alias, cb_h = imageMontage(cube, [1, 3], 2)
+    headless = image_montage(cube, [1, 3], 2)
+
+    expected = np.array(
+        [
+            [1.0, 2.0, 9.0, 10.0],
+            [3.0, 4.0, 11.0, 12.0],
+        ],
+        dtype=float,
+    )
+    assert np.array_equal(montage, expected)
+    assert np.array_equal(coords, np.array([[1, 1], [3, 1]], dtype=int))
+    assert fig_h is None and cb_h is None
+    assert np.array_equal(montage_alias, expected)
+    assert headless[0] is None and headless[2] is None
+    assert np.array_equal(headless[1], expected)
 
 
 def test_ie_parameter_otype_handles_direct_prefix_and_unique_params() -> None:

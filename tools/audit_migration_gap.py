@@ -253,10 +253,35 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB harmonic-parameter default helper is covered by the Python `image_hparams(...)` / `imageHparams(...)` compatibility wrapper in `pyisetcam.utils`.",
         "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
     },
+    "utility/image/imageGabor.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB Gabor-pattern helper is covered by the Python `image_gabor(...)` / `imageGabor(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
     "utility/image/imageInterpolate.m": {
         "status": "ported",
         "note": "The legacy MATLAB image-resampling helper is covered by the Python `image_interpolate(...)` / `imageInterpolate(...)` compatibility wrapper in `pyisetcam.utils`.",
         "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/imageMakeMontage.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB hypercube montage builder is covered by the Python `image_make_montage(...)` / `imageMakeMontage(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/imageMontage.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB montage wrapper is covered headlessly by the Python `image_montage(...)` / `imageMontage(...)` compatibility wrapper, which returns the montage image and placeholder figure/colorbar handles instead of MATLAB GUI objects.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/imageSetHarmonic.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a GUIDE-only harmonic-parameter dialog and remains outside the headless migration target.",
+        "module_hits": [],
+    },
+    "utility/image/imageShowImage.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB IP-image renderer is covered headlessly by the Python `image_show_image(...)` / `imageShowImage(...)` compatibility wrapper on top of the existing image-processor render data.",
+        "module_hits": ["pyisetcam.ip", "pyisetcam.__init__"],
     },
     "utility/image/imageTranslate.m": {
         "status": "ported",

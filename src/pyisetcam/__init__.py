@@ -129,6 +129,7 @@ from .ip import (
     image_data_xyz,
     image_distort,
     image_esser_transform,
+    image_show_image,
     image_illuminant_correction,
     image_mcc_transform,
     image_rgb_to_xyz,
@@ -637,9 +638,12 @@ from .utils import (
     ie_n_to_megapixel,
     ie_radial_matrix,
     ie_wave2_index,
+    image_gabor,
     image_hparams,
     image_interpolate,
     image_linear_transform,
+    image_make_montage,
+    image_montage,
     image_bounding_box,
     image_centroid,
     image_circular,
@@ -833,6 +837,8 @@ __all__ = [
     "ieInternal2Display",
     "imageDataXYZ",
     "image_data_xyz",
+    "imageShowImage",
+    "image_show_image",
     "FaultyBilinear",
     "faulty_bilinear",
     "faultyInsert",
@@ -909,12 +915,18 @@ __all__ = [
     "pocs",
     "rgb2dac",
     "rgb_to_dac",
+    "imageGabor",
+    "image_gabor",
     "imageLinearTransform",
     "image_linear_transform",
     "imageHparams",
     "image_hparams",
     "imageInterpolate",
     "image_interpolate",
+    "imageMakeMontage",
+    "image_make_montage",
+    "imageMontage",
+    "image_montage",
     "ieCmap",
     "ie_cmap",
     "ieCropRect",
@@ -2305,8 +2317,11 @@ ieLUTInvert = ie_lut_invert
 ieLUTLinear = ie_lut_linear
 ieWave2Index = ie_wave2_index
 ieRadialMatrix = ie_radial_matrix
+imageGabor = image_gabor
 imageHparams = image_hparams
 imageInterpolate = image_interpolate
+imageMakeMontage = image_make_montage
+imageMontage = image_montage
 imageBoundingBox = image_bounding_box
 imageCentroid = image_centroid
 imageCircular = image_circular
@@ -2390,6 +2405,7 @@ ieInternal2Display = ie_internal_to_display
 ipHDRWhite = ip_hdr_white
 imageDistort = image_distort
 imageDataXYZ = image_data_xyz
+imageShowImage = image_show_image
 displayRender = display_render
 imageRGB2XYZ = image_rgb_to_xyz
 imageIlluminantCorrection = image_illuminant_correction

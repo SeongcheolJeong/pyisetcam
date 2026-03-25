@@ -31,9 +31,11 @@ from .utils import (
     linear_to_srgb,
     param_format,
     rgb_to_xw_format,
+    srgb_to_linear,
     split_prefixed_parameter,
     tile_pattern,
     xw_to_rgb_format,
+    xyz_to_srgb,
 )
 
 
@@ -1733,6 +1735,53 @@ def ip_save_image(
     return str(output_path)
 
 
+def image_show_image(
+    ip: ImageProcessor,
+    gam: float | None = None,
+    true_size_flag: bool = False,
+    app: Any = 0,
+) -> np.ndarray:
+    """Calculate the current IP image and return the headless display RGB."""
+
+    del true_size_flag, app
+    ip = _ensure_ip_state(ip)
+    if gam is None:
+        gam = float(ip.fields.get("render", {}).get("gamma", 1.0) or 1.0)
+
+    base = ip.data.get("srgb")
+    if base is None:
+        result = ip.data.get("result")
+        if result is not None:
+            base = linear_to_srgb(np.clip(np.asarray(result, dtype=float), 0.0, 1.0))
+        else:
+            xyz = image_data_xyz(ip)
+            if xyz is None:
+                raise ValueError("IP has no image data to render.")
+            base = xyz_to_srgb(np.asarray(xyz, dtype=float))
+
+    img = np.asarray(base, dtype=float)
+    render_flag = ip_get(ip, "render flag")
+    if render_flag in {2, "hdr"}:
+        from .scene import hdr_render
+
+        img = np.asarray(hdr_render(img), dtype=float)
+    elif render_flag in {3, "gray", "monochrome"}:
+        gray = np.mean(img, axis=2, keepdims=True)
+        img = np.repeat(gray, 3, axis=2)
+    elif render_flag not in {1, "rgb"}:
+        raise ValueError(f"Unsupported render flag {render_flag!r}.")
+    elif bool(ip_get(ip, "scale display")):
+        linear = srgb_to_linear(np.clip(img, 0.0, 1.0))
+        maximum = float(np.max(linear))
+        if maximum > 0.0:
+            img = linear_to_srgb(linear / maximum)
+
+    img = np.clip(np.asarray(img, dtype=float), 0.0, 1.0)
+    if float(gam) != 1.0:
+        img = np.power(img, float(gam))
+    return np.asarray(img, dtype=float)
+
+
 def image_mcc_transform(
     sensor_qe: np.ndarray,
     target_qe: np.ndarray,
@@ -2368,6 +2417,7 @@ displayRender = display_render  # noqa: N816
 ipClearData = ip_clear_data  # noqa: N816
 vcimageClearData = vcimage_clear_data  # noqa: N816
 ipSaveImage = ip_save_image  # noqa: N816
+imageShowImage = image_show_image  # noqa: N816
 imageMCCTransform = image_mcc_transform  # noqa: N816
 imageSensorTransform = image_sensor_transform  # noqa: N816
 imageEsserTransform = image_esser_transform  # noqa: N816

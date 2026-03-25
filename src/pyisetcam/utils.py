@@ -1485,6 +1485,112 @@ def image_hparams() -> dict[str, Any]:
 imageHparams = image_hparams
 
 
+def _f_image_to_f_pixel(n_cycles: float, image_size: Any, theta: float = 0.0) -> float:
+    size = np.asarray(image_size, dtype=float).reshape(-1)
+    if size.size == 1:
+        height = width = float(size[0])
+    elif size.size >= 2:
+        height = float(size[0])
+        width = float(size[1])
+    else:
+        raise ValueError("imageSize must contain at least one value.")
+    span = width * abs(np.cos(theta)) + height * abs(np.sin(theta))
+    if span <= 0.0:
+        raise ValueError("Image span must be positive.")
+    return float(n_cycles) / span
+
+
+def image_gabor(value: Any | None = None, /, **kwargs: Any) -> NDArray[np.float64]:
+    """Create a 2-D Gabor image using the legacy MATLAB parameter contract."""
+
+    normalized: dict[str, Any] = {}
+    if value is not None:
+        if isinstance(value, dict):
+            normalized.update({param_format(k): v for k, v in value.items()})
+        else:
+            normalized.update({param_format(k): v for k, v in dict(value).items()})
+    if kwargs:
+        normalized.update({param_format(k): v for k, v in kwargs.items()})
+
+    freq = float(normalized.get("freq", normalized.get("frequency", 5.0)))
+    phase = float(normalized.get("ph", normalized.get("phase", 0.0)))
+    sigma = float(normalized.get("gaborflag", normalized.get("spread", 0.2)))
+    theta = float(normalized.get("ang", normalized.get("orientation", 0.0)))
+    image_size = normalized.get("row", normalized.get("imagesize", 128))
+    contrast = float(normalized.get("contrast", 1.0))
+
+    half_size = max(1, int(np.rint(float(image_size) / 2.0)))
+    axis = np.arange(-half_size, half_size + 1, dtype=float)
+    x, y = np.meshgrid(axis, axis)
+    sample_count = axis.size
+    freq_per_pixel = _f_image_to_f_pixel(freq, [sample_count, sample_count], theta)
+    if sigma < 1.0:
+        sigma = round(sigma * half_size)
+    sigma = max(float(sigma), 1.0)
+
+    g_env = np.exp(-((x**2 + y**2) / (2.0 * sigma**2)))
+    x_prime = x * np.cos(theta) + y * np.sin(theta)
+    harmonic = np.cos((2.0 * np.pi * freq_per_pixel * x_prime) + phase)
+    gabor = contrast * g_env * harmonic
+    gabor = 0.5 * gabor + 0.5
+    return np.clip(np.asarray(gabor, dtype=float), 0.0, 1.0)
+
+
+imageGabor = image_gabor
+
+
+def image_make_montage(
+    hc: Any,
+    slice_list: Any | None = None,
+    n_cols: int | None = None,
+    back_val: float = 0.0,
+) -> tuple[NDArray[np.float64], NDArray[np.int_]]:
+    """Create a montage image from the slices of a hypercube."""
+
+    cube = np.asarray(hc)
+    if cube.ndim != 3:
+        raise ValueError("hypercube data required.")
+    if any(int(dim) > 10000 for dim in cube.shape):
+        raise ValueError("At least one dimension of input image is >10,000- refusing to continue...")
+
+    rows, cols, waves = cube.shape
+    slices = np.arange(1, waves + 1, dtype=int) if slice_list is None else np.asarray(slice_list, dtype=int).reshape(-1)
+    if slices.size == 0:
+        slices = np.arange(1, waves + 1, dtype=int)
+    count = int(slices.size)
+    num_cols = int(np.ceil(np.sqrt(count) * np.sqrt(rows / cols))) if n_cols in {None, 0} else int(n_cols)
+    num_cols = max(num_cols, 1)
+    num_rows = int(np.ceil(count / num_cols))
+
+    montage = np.ones((rows * num_rows, cols * num_cols), dtype=cube.dtype) * back_val
+    coords = np.zeros((count, 2), dtype=int)
+    for ii, cur_slice in enumerate(slices.tolist(), start=1):
+        x = ((ii - 1) % num_cols) * cols
+        y = ((ii - 1) // num_cols) * rows
+        montage[y : y + rows, x : x + cols] = cube[:, :, int(cur_slice) - 1]
+        coords[ii - 1, :] = np.array([x + 1, y + 1], dtype=int)
+    return np.asarray(montage, dtype=float), coords
+
+
+imageMakeMontage = image_make_montage
+
+
+def image_montage(
+    hc: Any,
+    slices: Any | None = None,
+    num_cols: int | None = None,
+    fig_num: Any | None = None,
+) -> tuple[None, NDArray[np.float64], None]:
+    """Headless montage wrapper that returns the montage image and placeholder handles."""
+
+    del fig_num
+    montage, _ = image_make_montage(hc, slices, num_cols, 0.0)
+    return None, montage, None
+
+
+imageMontage = image_montage
+
+
 def image_linear_transform(image: Any, transform: Any) -> NDArray[np.float64]:
     """Apply a linear color transform to an image cube."""
 

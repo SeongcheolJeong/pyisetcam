@@ -37,6 +37,7 @@ from pyisetcam import (
     imageIlluminantCorrection,
     imageMCCTransform,
     imageRGB2XYZ,
+    imageShowImage,
     imageSensorConversion,
     imageSensorCorrection,
     imageSensorTransform,
@@ -66,7 +67,8 @@ from pyisetcam import (
 )
 from pyisetcam.assets import ie_read_spectra
 from pyisetcam.color import sensor_to_target_matrix, xyz_color_matching
-from pyisetcam.utils import energy_to_quanta, rgb_to_xw_format, xw_to_rgb_format
+from pyisetcam.scene import hdr_render
+from pyisetcam.utils import energy_to_quanta, linear_to_srgb, rgb_to_xw_format, xw_to_rgb_format
 
 
 def _sparse_cfa_planes(sensor, full: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -84,6 +86,46 @@ def _sparse_cfa_planes(sensor, full: np.ndarray) -> tuple[np.ndarray, np.ndarray
         mask = tiled == (band + 1)
         sparse[:, :, band][mask] = full[:, :, band][mask]
     return sparse, tiled
+
+
+def test_image_show_image_matches_headless_rgb_and_gray_render_paths() -> None:
+    ip = ip_create()
+    linear = np.array(
+        [
+            [[0.2, 0.4, 0.6], [0.1, 0.2, 0.3]],
+        ],
+        dtype=float,
+    )
+    ip = ip_set(ip, "result", linear)
+    ip = ip_set(ip, "scale display", False)
+
+    rgb = imageShowImage(ip, 1.0, False, 0)
+    expected_rgb = linear_to_srgb(linear)
+    assert np.allclose(rgb, expected_rgb)
+
+    gray_ip = ip_set(ip, "render flag", "gray")
+    gray = imageShowImage(gray_ip, 1.0, False, 0)
+    expected_gray = np.mean(expected_rgb, axis=2, keepdims=True)
+    expected_gray = np.repeat(expected_gray, 3, axis=2)
+    assert np.allclose(gray, expected_gray)
+
+
+def test_image_show_image_matches_hdr_render_headlessly() -> None:
+    ip = ip_create()
+    linear = np.array(
+        [
+            [[0.1, 0.2, 0.3], [0.8, 0.7, 0.6]],
+            [[0.2, 0.1, 0.4], [0.5, 0.6, 0.9]],
+        ],
+        dtype=float,
+    )
+    ip = ip_set(ip, "result", linear)
+    ip = ip_set(ip, "scale display", False)
+    ip = ip_set(ip, "render flag", "hdr")
+
+    rendered = imageShowImage(ip, 1.0, False, 0)
+    expected = hdr_render(linear_to_srgb(linear))
+    assert np.allclose(rendered, expected)
 
 
 def test_ip_compute_supports_rgb_bayer_demosaic_methods(asset_store) -> None:
