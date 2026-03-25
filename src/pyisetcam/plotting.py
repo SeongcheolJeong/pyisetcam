@@ -193,6 +193,91 @@ def plot_text_string(
     }
 
 
+def plot_gaussian_spectrum(
+    wavelength: Any,
+    mu: float,
+    sig: float,
+    *,
+    asset_store: Any | None = None,
+) -> dict[str, Any]:
+    """Return MATLAB-style `plotGaussianSpectrum` payload without opening a figure."""
+
+    wave = np.asarray(wavelength, dtype=float).reshape(-1)
+    sigma = float(sig)
+    tran = np.exp(-((wave - float(mu)) ** 2) / max(2.0 * sigma**2, 1.0e-30))
+    xyz = np.asarray(xyz_color_matching(wave, energy=True, asset_store=asset_store), dtype=float)
+    if xyz.size:
+        scaled_xyz = xyz.copy()
+        max_y = float(np.max(scaled_xyz[:, 1]))
+        if max_y > 1.0:
+            scaled_xyz = scaled_xyz / max_y
+        if float(np.min(scaled_xyz)) < 0.0:
+            scaled_xyz = np.clip(scaled_xyz, 0.0, 1.0)
+        colors = linear_to_srgb(np.clip(xyz_to_linear_srgb(scaled_xyz), 0.0, 1.0))
+    else:
+        colors = np.zeros((wave.size, 3), dtype=float)
+    invisible = np.all(colors <= 0.0, axis=1)
+    if np.any(invisible):
+        colors[invisible] = 0.3
+    return {
+        "wavelength": wave.copy(),
+        "transmittance": tran.copy(),
+        "supportRGB": colors.copy(),
+        "xTick": np.array([], dtype=float),
+        "yTick": np.array([], dtype=float),
+    }
+
+
+def plot_spectrum_locus(*, asset_store: Any | None = None) -> dict[str, Any]:
+    """Return MATLAB-style `plotSpectrumLocus` payload without opening a figure."""
+
+    wave = np.arange(370.0, 731.0, dtype=float)
+    xyz = np.asarray(xyz_color_matching(wave, energy=True, asset_store=asset_store), dtype=float)
+    xy = np.asarray(chromaticity_xy(xyz), dtype=float)
+    closing = np.vstack((xy[0], xy[-1]))
+    return {
+        "wave": wave.copy(),
+        "xy": xy.copy(),
+        "closingLine": closing.copy(),
+        "axisEqual": True,
+        "grid": True,
+        "linestyle": "--",
+    }
+
+
+def plot_contrast_histogram(data: Any, bins: int = 10) -> tuple[np.ndarray, np.ndarray]:
+    """Return MATLAB-style `plotContrastHistogram` histogram outputs."""
+
+    values = np.asarray(data, dtype=float)
+    mean_value = float(np.mean(values))
+    contrast = (values.reshape(-1) - mean_value) / mean_value
+    counts, edges = np.histogram(contrast, bins=int(bins))
+    centers = 0.5 * (edges[:-1] + edges[1:])
+    return counts.astype(float), np.asarray(centers, dtype=float)
+
+
+def plot_etendue_ratio(
+    sensor: Sensor,
+    optimal: Any,
+    bare: Any,
+    z_label: str = "Etendue improvement (%)",
+) -> dict[str, Any]:
+    """Return MATLAB-style `plotEtendueRatio` payload without opening a figure."""
+
+    support = sensor_get(sensor, "spatial support", "microns")
+    optimal_array = np.asarray(optimal, dtype=float)
+    bare_array = np.asarray(bare, dtype=float)
+    ratio = (optimal_array / bare_array - 1.0) * 100.0
+    return {
+        "support": {
+            "x": np.asarray(support["x"], dtype=float).copy(),
+            "y": np.asarray(support["y"], dtype=float).copy(),
+        },
+        "Ratio": ratio.copy(),
+        "zLabel": str(z_label),
+    }
+
+
 def _airy_disk_circle(radius: float, *, sample_count: int = 200) -> dict[str, np.ndarray]:
     theta = np.linspace(0.0, 2.0 * np.pi, int(sample_count), endpoint=False, dtype=float)
     return {
@@ -1583,10 +1668,14 @@ sensorPlotHist = sensor_plot_hist
 sensorPlotLine = sensor_plot_line
 ipPlot = ip_plot
 identityLine = identity_line
+plotContrastHistogram = plot_contrast_histogram
+plotEtendueRatio = plot_etendue_ratio
+plotGaussianSpectrum = plot_gaussian_spectrum
 plotDisplaySPD = plot_display_spd
 plotDisplayLine = plot_display_line
 plotDisplayColor = plot_display_color
 plotDisplayGamut = plot_display_gamut
+plotSpectrumLocus = plot_spectrum_locus
 plotTextString = plot_text_string
 wvfPlot = wvf_plot
 xaxisLine = xaxis_line

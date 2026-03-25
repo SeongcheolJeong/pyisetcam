@@ -1768,6 +1768,11 @@ That same plotting family now also covers the small axis-annotation helpers
 `plotTextString(...)` through direct headless wrappers that return the line
 geometry, text placement, and styling payloads instead of MATLAB figure
 handles.
+The next standalone plotting helpers are covered too:
+`plotGaussianSpectrum(...)`, `plotSpectrumLocus(...)`,
+`plotContrastHistogram(...)`, and `plotEtendueRatio(...)` now return the
+same core spectral, chromaticity, histogram, and etendue payloads
+headlessly instead of opening MATLAB graph windows.
 The adjacent `utility/image` numeric helper tail is shrinking too:
 `ieFindWaveIndex(...)`, `ieWave2Index(...)`, `ieRadialMatrix(...)`,
 `imageBoundingBox(...)`, `imageCentroid(...)`, `imageCircular(...)`, and

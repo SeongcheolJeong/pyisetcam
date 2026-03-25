@@ -398,6 +398,26 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The MATLAB display-gamut plotting helper is covered by the Python `plot_display_gamut(...)` / `plotDisplayGamut(...)` compatibility wrapper on top of display primary XYZ data.",
         "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
     },
+    "utility/plots/plotContrastHistogram.m": {
+        "status": "ported",
+        "note": "The MATLAB contrast-histogram helper is covered by the Python `plot_contrast_histogram(...)` / `plotContrastHistogram(...)` wrapper, which returns histogram counts and bin centers headlessly.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/plotEtendueRatio.m": {
+        "status": "ported",
+        "note": "The MATLAB etendue-ratio mesh helper is covered by the Python `plot_etendue_ratio(...)` / `plotEtendueRatio(...)` wrapper, which returns sensor support and ratio payloads headlessly.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/plotGaussianSpectrum.m": {
+        "status": "ported",
+        "note": "The MATLAB Gaussian-spectrum plotting helper is covered by the Python `plot_gaussian_spectrum(...)` / `plotGaussianSpectrum(...)` wrapper, which returns transmittance and wavelength-color payloads headlessly.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/plotSpectrumLocus.m": {
+        "status": "ported",
+        "note": "The MATLAB spectrum-locus plotting helper is covered by the Python `plot_spectrum_locus(...)` / `plotSpectrumLocus(...)` wrapper, which returns chromaticity locus and closing-line payloads headlessly.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
     "utility/plots/identityLine.m": {
         "status": "ported",
         "note": "The MATLAB axis-identity helper is covered by the Python `identity_line(...)` / `identityLine(...)` headless wrapper, which returns the canonical line geometry and styling payload.",

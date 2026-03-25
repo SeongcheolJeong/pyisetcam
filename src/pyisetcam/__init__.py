@@ -359,10 +359,14 @@ from .plotting import (
     identity_line,
     ip_plot,
     oi_plot,
+    plot_contrast_histogram,
     plot_display_color,
     plot_display_gamut,
     plot_display_line,
     plot_display_spd,
+    plot_etendue_ratio,
+    plot_gaussian_spectrum,
+    plot_spectrum_locus,
     plot_text_string,
     scene_plot,
     sensor_plot,
@@ -1353,11 +1357,19 @@ __all__ = [
     "plotDisplayGamut",
     "plotDisplayLine",
     "plotDisplaySPD",
+    "plotContrastHistogram",
+    "plotEtendueRatio",
+    "plotGaussianSpectrum",
+    "plotSpectrumLocus",
     "plotTextString",
+    "plot_contrast_histogram",
     "plot_display_color",
     "plot_display_gamut",
     "plot_display_line",
     "plot_display_spd",
+    "plot_etendue_ratio",
+    "plot_gaussian_spectrum",
+    "plot_spectrum_locus",
     "plot_text_string",
     "oi_plot",
     "oi_preview_video",
@@ -2108,14 +2120,18 @@ lsf2circularpsf = lsf_to_circular_psf
 psfCircularlyAverage = psf_circularly_average
 psfAverageMultiple = psf_average_multiple
 psf2zcoeff = psf_to_zcoeff_error
+plotContrastHistogram = plot_contrast_histogram
 plotDisplayColor = plot_display_color
 plotDisplayGamut = plot_display_gamut
 plotDisplayLine = plot_display_line
 plotDisplaySPD = plot_display_spd
+plotEtendueRatio = plot_etendue_ratio
+plotGaussianSpectrum = plot_gaussian_spectrum
 identityLine = identity_line
 plotOI = oi_plot
 oiPlot = oi_plot
 ipPlot = ip_plot
+plotSpectrumLocus = plot_spectrum_locus
 plotTextString = plot_text_string
 plotScene = scene_plot
 scenePlot = scene_plot

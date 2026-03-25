@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-25T02:20:42.406551+00:00",
+  "generated_at": "2026-03-25T02:41:02.753151+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -8,8 +8,8 @@
       "missing": 21,
       "out_of_scope": 189,
       "parity": 676,
-      "partial": 355,
-      "ported": 133
+      "partial": 351,
+      "ported": 137
     },
     "kind_counts": {
       "api": 661,
@@ -20,9 +20,9 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 290,
+      "P1": 286,
       "P2": 155,
-      "P3": 998
+      "P3": 1002
     },
     "delta_from_previous": {
       "status_counts": {
@@ -968,8 +968,8 @@
         "by_status": {
           "headless_only": 5,
           "out_of_scope": 2,
-          "partial": 24,
-          "ported": 19
+          "partial": 20,
+          "ported": 23
         },
         "by_kind": {
           "gui": 2,
@@ -1015,13 +1015,13 @@
       },
       {
         "family": "utility/plots",
-        "open_entries": 29,
+        "open_entries": 25,
         "highest_open_priority": "P1",
         "by_status": {
           "headless_only": 5,
           "out_of_scope": 2,
-          "partial": 24,
-          "ported": 19
+          "partial": 20,
+          "ported": 23
         }
       },
       {
@@ -17960,13 +17960,13 @@
       "upstream_path": "utility/plots/plotContrastHistogram.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB contrast-histogram helper is covered by the Python `plot_contrast_histogram(...)` / `plotContrastHistogram(...)` wrapper, which returns histogram counts and bin centers headlessly.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/plotDisplayColor.m",
@@ -18020,25 +18020,25 @@
       "upstream_path": "utility/plots/plotEtendueRatio.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB etendue-ratio mesh helper is covered by the Python `plot_etendue_ratio(...)` / `plotEtendueRatio(...)` wrapper, which returns sensor support and ratio payloads headlessly.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/plotGaussianSpectrum.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB Gaussian-spectrum plotting helper is covered by the Python `plot_gaussian_spectrum(...)` / `plotGaussianSpectrum(...)` wrapper, which returns transmittance and wavelength-color payloads headlessly.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/plotML.m",
@@ -18248,13 +18248,13 @@
       "upstream_path": "utility/plots/plotSpectrumLocus.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB spectrum-locus plotting helper is covered by the Python `plot_spectrum_locus(...)` / `plotSpectrumLocus(...)` wrapper, which returns chromaticity locus and closing-line payloads headlessly.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/plotTextString.m",

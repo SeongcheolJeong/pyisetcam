@@ -8,11 +8,15 @@ from pyisetcam import (
     ieXYZFromEnergy,
     identityLine,
     ipPlot,
+    plotContrastHistogram,
     plotDisplayColor,
     plotDisplayGamut,
     plotDisplayLine,
     plotDisplaySPD,
+    plotEtendueRatio,
+    plotGaussianSpectrum,
     plotOI,
+    plotSpectrumLocus,
     plotTextString,
     ip_create,
     ip_get,
@@ -1467,3 +1471,62 @@ def test_plot_text_string_wrapper() -> None:
     assert np.isclose(lower_right["y"], 9.0)
     assert np.isclose(lower_right["fontSize"], 12.0)
     assert np.allclose(lower_right["delta"], np.array([0.2, 0.2]))
+
+
+def test_plot_gaussian_spectrum_wrapper(asset_store) -> None:
+    wave = np.array([400.0, 500.0, 800.0], dtype=float)
+
+    payload = plotGaussianSpectrum(wave, 500.0, 50.0, asset_store=asset_store)
+
+    expected = np.exp(-((wave - 500.0) ** 2) / (2.0 * 50.0**2))
+
+    assert np.allclose(payload["wavelength"], wave)
+    assert np.allclose(payload["transmittance"], expected)
+    assert payload["supportRGB"].shape == (wave.size, 3)
+    assert np.allclose(payload["supportRGB"][-1], np.array([0.3, 0.3, 0.3]))
+    assert payload["xTick"].size == 0
+    assert payload["yTick"].size == 0
+
+
+def test_plot_spectrum_locus_wrapper(asset_store) -> None:
+    payload = plotSpectrumLocus(asset_store=asset_store)
+
+    assert payload["wave"].shape == (361,)
+    assert payload["wave"][0] == 370.0
+    assert payload["wave"][-1] == 730.0
+    assert payload["xy"].shape == (361, 2)
+    assert np.all(np.isfinite(payload["xy"]))
+    assert np.allclose(payload["closingLine"][0], payload["xy"][0])
+    assert np.allclose(payload["closingLine"][1], payload["xy"][-1])
+    assert payload["axisEqual"] is True
+    assert payload["grid"] is True
+    assert payload["linestyle"] == "--"
+
+
+def test_plot_contrast_histogram_wrapper() -> None:
+    data = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float)
+
+    counts, centers = plotContrastHistogram(data)
+    expected_counts, edges = np.histogram((data.reshape(-1) - np.mean(data)) / np.mean(data), bins=10)
+    expected_centers = 0.5 * (edges[:-1] + edges[1:])
+
+    assert np.allclose(counts, expected_counts)
+    assert np.allclose(centers, expected_centers)
+    assert int(np.sum(counts)) == data.size
+
+
+def test_plot_etendue_ratio_wrapper(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 2)
+    sensor = sensor_set(sensor, "cols", 3)
+    optimal = np.array([[2.0, 3.0, 4.0], [5.0, 6.0, 7.0]], dtype=float)
+    bare = np.array([[1.0, 1.5, 2.0], [2.5, 3.0, 3.5]], dtype=float)
+
+    payload = plotEtendueRatio(sensor, optimal, bare, "Gain (%)")
+    expected_support = sensor_get(sensor, "spatial support", "microns")
+
+    assert payload["zLabel"] == "Gain (%)"
+    assert payload["Ratio"].shape == optimal.shape
+    assert np.allclose(payload["Ratio"], (optimal / bare - 1.0) * 100.0)
+    assert np.allclose(payload["support"]["x"], np.asarray(expected_support["x"], dtype=float))
+    assert np.allclose(payload["support"]["y"], np.asarray(expected_support["y"], dtype=float))
