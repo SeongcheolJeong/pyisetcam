@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-25T09:14:40.442330+00:00",
+  "generated_at": "2026-03-25T09:35:36.925345+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-25T09:14:40.442330+00:00",
+    "generated_at": "2026-03-25T09:35:36.925345+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 60,
       "missing": 21,
-      "out_of_scope": 193,
-      "parity": 685,
-      "partial": 297,
+      "out_of_scope": 206,
+      "parity": 690,
+      "partial": 279,
       "ported": 187
     },
     "kind_counts": {
@@ -22,17 +22,17 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 235,
+      "P1": 217,
       "P2": 143,
-      "P3": 1065
+      "P3": 1083
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 4,
-        "parity": 6,
-        "partial": -10,
+        "out_of_scope": 13,
+        "parity": 5,
+        "partial": -18,
         "ported": 0
       },
       "kind_counts": {
@@ -44,9 +44,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -10,
+        "P1": -18,
         "P2": 0,
-        "P3": 10
+        "P3": 18
       }
     },
     "family_summary": {
@@ -659,14 +659,14 @@
       "scripts/image": {
         "total": 21,
         "by_status": {
-          "parity": 2,
-          "partial": 18,
+          "out_of_scope": 13,
+          "parity": 7,
           "ported": 1
         },
         "by_kind": {
           "script": 21
         },
-        "highest_open_priority": "P1"
+        "highest_open_priority": "P3"
       },
       "scripts/metrics": {
         "total": 20,
@@ -1014,16 +1014,6 @@
         }
       },
       {
-        "family": "scripts/image",
-        "open_entries": 18,
-        "highest_open_priority": "P1",
-        "by_status": {
-          "parity": 2,
-          "partial": 18,
-          "ported": 1
-        }
-      },
-      {
         "family": "data/sensor",
         "open_entries": 17,
         "highest_open_priority": "P2",
@@ -1102,6 +1092,14 @@
       },
       {
         "family": "data/optics",
+        "open_entries": 3,
+        "highest_open_priority": "P2",
+        "by_status": {
+          "partial": 3
+        }
+      },
+      {
+        "family": "data/surfaces",
         "open_entries": 3,
         "highest_open_priority": "P2",
         "by_status": {

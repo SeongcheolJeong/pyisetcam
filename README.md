@@ -1875,3 +1875,9 @@ by a headless `display -> scene -> wvf OI -> cone mosaic sensor`
 regression, the lamp-safety scripts are counted against the existing
 `humanUVSafety(...)` / radiance-conversion coverage, and the deprecated or
 ISETBio-gated human notebooks are explicitly treated as out of scope.
+The adjacent `scripts/image` family is closed too: the remaining
+headless IP workflows are now counted directly against the current
+`ieN2MegaPixel(...)`, `imagehc2rgb(...)`, `imageSensorConversion(...)`,
+`imageIlluminantCorrection(...)`, and sRGB roundtrip regression surface,
+while the old standalone JPEG/DCT classroom helpers plus the GUI-heavy
+exploratory image scripts are explicitly treated as out of scope.

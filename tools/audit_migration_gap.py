@@ -979,6 +979,96 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file immediately exits unless ISETBio's `Lens` class is available, so it is treated as an ISETBio-dependent exploratory script rather than a supported standalone ISETCam workflow.",
         "module_hits": [],
     },
+    "scripts/image/jpegFiles/dctAlgorithm.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a figure-driven JPEG/DCT teaching notebook that saves TIFFs and visualizes intermediate blocks rather than a reusable supported pyisetcam workflow.",
+        "module_hits": [],
+    },
+    "scripts/image/jpegFiles/dctidct.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is part of the standalone JPEG/DCT teaching helper bundle used by the out-of-scope JPEG tutorials, not the supported ISET object pipeline.",
+        "module_hits": [],
+    },
+    "scripts/image/jpegFiles/entropy_file.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is part of the standalone JPEG/DCT teaching helper bundle used by the out-of-scope JPEG tutorials, not the supported ISET object pipeline.",
+        "module_hits": [],
+    },
+    "scripts/image/jpegFiles/jpegCoef.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is part of the standalone JPEG/DCT teaching helper bundle used by the out-of-scope JPEG tutorials, not the supported ISET object pipeline.",
+        "module_hits": [],
+    },
+    "scripts/image/jpegFiles/jpegRGB.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is part of the standalone JPEG/DCT teaching helper bundle used by the out-of-scope JPEG tutorials, not the supported ISET object pipeline.",
+        "module_hits": [],
+    },
+    "scripts/image/jpegFiles/jpeg_qtables.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is part of the standalone JPEG/DCT teaching helper bundle used by the out-of-scope JPEG tutorials, not the supported ISET object pipeline.",
+        "module_hits": [],
+    },
+    "scripts/image/jpegFiles/jpgread.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is only a MATLAB shim over external JPEG MEX bindings, so it remains outside the supported headless Python migration target.",
+        "module_hits": [],
+    },
+    "scripts/image/jpegFiles/jpgwrite.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is only a MATLAB shim over external JPEG MEX bindings, so it remains outside the supported headless Python migration target.",
+        "module_hits": [],
+    },
+    "scripts/image/jpegFiles/makeDctMatrix.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is part of the standalone JPEG/DCT teaching helper bundle used by the out-of-scope JPEG tutorials, not the supported ISET object pipeline.",
+        "module_hits": [],
+    },
+    "scripts/image/jpegFiles/makeQTable.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is part of the standalone JPEG/DCT teaching helper bundle used by the out-of-scope JPEG tutorials, not the supported ISET object pipeline.",
+        "module_hits": [],
+    },
+    "scripts/image/s_ipCircleMTF.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a figure-driven exploratory Mackay-circle analysis script built around interactive FFT/circle inspection rather than a stable supported headless workflow surface.",
+        "module_hits": [],
+    },
+    "scripts/image/s_ipDisplayResolution.m": {
+        "status": "parity",
+        "note": "The display-resolution sizing workflow is already covered by the current `ieN2MegaPixel(...)` regression surface and the documented sensor-versus-display megapixel sweep in the headless test suite.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "scripts/image/s_ipGamutReflectance.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is an exploratory GUI-heavy reflectance-gamut experiment built around `imageMultiview(...)` and interactive viewing rather than a supported reusable headless workflow.",
+        "module_hits": [],
+    },
+    "scripts/image/s_ipHC2RGB.m": {
+        "status": "parity",
+        "note": "The multispectral-waveband visualization workflow is already covered by the current `image_hc2rgb(...)` / `imagehc2rgb(...)` regression surface on both scene and optical-image objects.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "scripts/image/s_ipIlluminantCorrection.m": {
+        "status": "parity",
+        "note": "The illuminant-correction workflow is already covered by the current `imageSensorConversion(...)` and `imageIlluminantCorrection(...)` regression surface, including computed transform replay through headless IP objects.",
+        "module_hits": ["pyisetcam.ip", "pyisetcam.__init__"],
+    },
+    "scripts/image/s_ipSRGB.m": {
+        "status": "parity",
+        "note": "The sRGB reference-display workflow is already covered by the current `xyz2srgb(...)`, `srgb2xyz(...)`, and related headless color-transform regression surface on scene XYZ data.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.color", "pyisetcam.__init__"],
+    },
+    "scripts/image/s_ipSensorConversion.m": {
+        "status": "parity",
+        "note": "The sensor-conversion workflow is already covered by the current `imageSensorConversion(...)` regression surface, including transform estimation and corrected-versus-desired sensor/XYZ comparisons.",
+        "module_hits": ["pyisetcam.ip", "pyisetcam.__init__"],
+    },
+    "scripts/image/s_ipWrite.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is primarily a MATLAB `imwrite` usage example; the pyisetcam-specific part is already covered by headless `ipGet(..., 'srgb'/'result')`, while the file-write step itself is ordinary host-language image I/O rather than library migration debt.",
+        "module_hits": [],
+    },
     "tutorials/color/t_colorChromaticity.m": {
         "status": "parity",
         "note": "The chromaticity tutorial workflow is already covered by the current headless regression surface through `display_create/get(...)`, `chromaticity_xy(...)`, `xyz_from_energy(...)`, and `scene_create/get(...)` on the default Macbeth scene.",
