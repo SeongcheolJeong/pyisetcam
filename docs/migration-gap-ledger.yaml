@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-25T12:01:37.529275+00:00",
+  "generated_at": "2026-03-25T12:14:36.278164+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 46,
       "missing": 21,
-      "out_of_scope": 244,
+      "out_of_scope": 245,
       "parity": 697,
-      "partial": 234,
+      "partial": 233,
       "ported": 201
     },
     "kind_counts": {
@@ -21,16 +21,16 @@
     },
     "priority_counts": {
       "P1": 217,
-      "P2": 84,
-      "P3": 1142
+      "P2": 83,
+      "P3": 1143
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
         "out_of_scope": 1,
-        "parity": 2,
-        "partial": -3,
+        "parity": 0,
+        "partial": -1,
         "ported": 0
       },
       "kind_counts": {
@@ -43,8 +43,8 @@
       },
       "priority_counts": {
         "P1": 0,
-        "P2": -3,
-        "P3": 3
+        "P2": -1,
+        "P3": 1
       }
     },
     "family_summary": {
@@ -98,12 +98,12 @@
       "data/fluorescence": {
         "total": 1,
         "by_status": {
-          "partial": 1
+          "out_of_scope": 1
         },
         "by_kind": {
           "asset": 1
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "data/fonts": {
         "total": 1,
@@ -1082,14 +1082,6 @@
         }
       },
       {
-        "family": "data/fluorescence",
-        "open_entries": 1,
-        "highest_open_priority": "P2",
-        "by_status": {
-          "partial": 1
-        }
-      },
-      {
         "family": "data/fonts",
         "open_entries": 1,
         "highest_open_priority": "P2",
@@ -1099,6 +1091,14 @@
       },
       {
         "family": "data/microlens",
+        "open_entries": 1,
+        "highest_open_priority": "P2",
+        "by_status": {
+          "partial": 1
+        }
+      },
+      {
+        "family": "data/validation",
         "open_entries": 1,
         "highest_open_priority": "P2",
         "by_status": {
@@ -19463,11 +19463,11 @@
       "upstream_path": "data/fluorescence/",
       "family": "data/fluorescence",
       "kind": "asset",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "",
       "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "notes": "The pinned upstream snapshot only vendors fluorophore MAT assets, while the corresponding fluorescence-model helpers such as `fluorescenceSignal` and `fluorescenceWeights` are not part of the supported ISETCam migration target; the bundle is therefore tracked as external fluorescence-model data rather than active headless debt.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/fonts/",

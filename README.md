@@ -1846,6 +1846,10 @@ vendored optics bundle is counted directly against the current ray-trace
 loaders, flare assets, and Thibos virtual-eye coverage, while the old
 `VirtualEyesDemo.m` plotting script is explicitly treated as a provenance
 demo outside the headless migration target.
+The tiny `data/fluorescence` bundle is now explicitly tracked as out of
+scope: the pinned upstream snapshot only vendors fluorophore MAT assets,
+while the required fluorescence-model helpers live outside the supported
+ISETCam migration target.
 That same utility-image slice now also covers `ieCmap(...)`,
 `ieCropRect(...)`, `ieLUTDigital(...)`, `ieLUTInvert(...)`, and
 `ieLUTLinear(...)`, with direct regressions for the simple MATLAB color-map

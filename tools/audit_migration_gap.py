@@ -258,6 +258,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is a MATLAB asset-generation script that derives vendored XYZ or luminosity quanta tables already consumed by the current runtime.",
         "module_hits": [],
     },
+    "data/fluorescence/": {
+        "status": "out_of_scope",
+        "note": "The pinned upstream snapshot only vendors fluorophore MAT assets, while the corresponding fluorescence-model helpers such as `fluorescenceSignal` and `fluorescenceWeights` are not part of the supported ISETCam migration target; the bundle is therefore tracked as external fluorescence-model data rather than active headless debt.",
+        "module_hits": [],
+    },
     "data/lights/": {
         "status": "parity",
         "note": "The vendored illuminant-data bundle is already exercised by the current headless runtime through `AssetStore`, daylight generation, illuminant creation, scene illuminant adjustment, and focused unit or parity coverage over CIE daylight basis data, Gretag illuminants, and named daylight or horizon spectra.",
