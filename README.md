@@ -1861,3 +1861,10 @@ focused regressions over Stockman density defaults, energy/quanta cone
 contrast equivalence, display cone-isolating directions, macular
 transmittance updates on OIs, and the ISETBio `ifftshift` OTF storage
 contract.
+That same `human` family is now fully closed too: the deprecated
+`humanOI(...)` retinal-irradiance path is replayed through a thin
+headless wrapper over the existing OI compute stack, `humanUVSafety(...)`
+now covers the actinic/eye/blue-hazard and thermal threshold calculations
+against the vendored safety-standard spectra, and `ieConePlot(...)`
+returns the cone-grid and blurred RGB mosaic payload headlessly instead of
+opening a MATLAB figure window.

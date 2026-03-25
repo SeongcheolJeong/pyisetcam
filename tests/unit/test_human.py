@@ -11,14 +11,19 @@ from pyisetcam import (
     humanCore,
     humanLSF,
     humanMacularTransmittance,
+    humanOI,
     humanOpticalDensity,
     humanOTF,
     humanOTF_ibio,
     humanPupilSize,
     humanSpaceTime,
+    humanUVSafety,
+    ieConePlot,
     ijspeert,
     kellySpaceTime,
     poirsonSpatioChromatic,
+    sceneCreate,
+    sensorCreateConeMosaic,
     watsonImpulseResponse,
     watsonRGCSpacing,
     westheimerLSF,
@@ -221,6 +226,60 @@ def test_human_otf_ibio_and_macular_transmittance_match_headless_contracts() -> 
     assert float(transmittance[np.argmin(np.abs(current_wave - 460.0))]) < float(
         transmittance[np.argmin(np.abs(current_wave - 650.0))]
     )
+
+
+def test_human_oi_replays_scene_compute_with_human_otf() -> None:
+    scene = sceneCreate("macbeth d65")
+    oi = humanOI(scene, oiCreate("shift invariant"))
+
+    photons = np.asarray(oiGet(oi, "photons"), dtype=float)
+    illuminance = np.asarray(oiGet(oi, "illuminance"), dtype=float)
+
+    assert photons.ndim == 3
+    assert photons.shape[:2] == illuminance.shape
+    assert photons.shape[2] == np.asarray(oiGet(oi, "wave"), dtype=float).size
+    assert float(np.mean(illuminance)) > 0.0
+    assert str(oiGet(oi, "compute method")) == "humanmw"
+
+
+def test_ie_cone_plot_returns_headless_mosaic_payload() -> None:
+    _, xy, cone_type, _, _ = sensorCreateConeMosaic()
+    payload = ieConePlot(xy, cone_type)
+
+    assert set(payload.keys()) == {"support", "spread", "delta", "grid", "image"}
+    assert payload["grid"].ndim == 2
+    assert payload["image"].shape[:2] == payload["grid"].shape
+    assert payload["image"].shape[2] == 3
+    assert payload["spread"] > 0.0
+    assert payload["delta"] > 0.0
+    assert np.any(payload["image"][:, :, 0] > 0.0)
+    assert np.any(payload["image"][:, :, 1] > 0.0)
+    assert np.any(payload["image"][:, :, 2] > 0.0)
+
+
+def test_human_uv_safety_methods_match_expected_thresholds() -> None:
+    wave = np.arange(300.0, 701.0, 10.0, dtype=float)
+    energy = np.full(wave.shape, 1.0e-3, dtype=float)
+
+    safe_time, skin_level, skin_flag = humanUVSafety(energy, wave, method="skineye")
+    eye_ok, eye_level, eye_flag = humanUVSafety(energy, wave, method="eye", duration=10.0)
+    blue_time, blue_level, blue_flag = humanUVSafety(energy, wave, method="bluehazard", duration=10.0)
+    thermal_value, thermal_level, thermal_flag = humanUVSafety(energy, wave, method="thermalskin", duration=1.0)
+    threshold_value, threshold_level, threshold_flag = humanUVSafety(
+        energy,
+        wave,
+        method="skin thermal threshold",
+        duration=0.03,
+    )
+
+    assert np.isfinite(safe_time)
+    assert skin_level > 0.0
+    assert skin_flag is None
+    assert isinstance(eye_ok, bool) and eye_level > 0.0 and eye_flag == eye_ok
+    assert blue_level > 0.0 and isinstance(blue_flag, bool)
+    assert np.isfinite(blue_time) or np.isinf(blue_time)
+    assert thermal_value == thermal_level and isinstance(thermal_flag, bool)
+    assert threshold_value == threshold_level and isinstance(threshold_flag, bool)
 
 
 def test_ijspeert_returns_mtf_psf_and_lsf() -> None:

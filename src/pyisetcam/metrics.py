@@ -11,6 +11,7 @@ import imageio.v3 as iio
 import numpy as np
 from numpy.typing import NDArray
 from scipy.io import savemat
+from scipy.signal import fftconvolve
 from skimage.color import deltaE_ciede2000, deltaE_ciede94
 
 from .assets import AssetStore
@@ -255,6 +256,152 @@ def human_cone_isolating(display: Any) -> tuple[NDArray[np.float64], NDArray[np.
 
     spd = np.asarray(display_get(current_display, "spd"), dtype=float) @ cone_isolating
     return np.asarray(cone_isolating, dtype=float), np.asarray(spd, dtype=float)
+
+
+def _cone_plot_grid(xy: Any, cone_type: Any, delta: float) -> NDArray[np.int_]:
+    xy_array = np.asarray(xy, dtype=float)
+    if xy_array.ndim != 2:
+        raise ValueError("xy must be a 2D array of cone positions.")
+    if xy_array.shape[1] != 2 and xy_array.shape[0] == 2:
+        xy_array = xy_array.T
+    if xy_array.shape[1] != 2:
+        raise ValueError("xy must have shape (n, 2) or (2, n).")
+
+    cone_array = np.asarray(cone_type, dtype=int)
+    if cone_array.ndim == 2 and cone_array.size == xy_array.shape[0]:
+        return np.asarray(cone_array, dtype=int)
+    flat_types = cone_array.reshape(-1)
+    if flat_types.size != xy_array.shape[0]:
+        raise ValueError("coneType must align with xy positions.")
+
+    x_index = np.rint((xy_array[:, 0] - float(np.min(xy_array[:, 0]))) / max(float(delta), 1.0e-12)).astype(int)
+    y_index = np.rint((xy_array[:, 1] - float(np.min(xy_array[:, 1]))) / max(float(delta), 1.0e-12)).astype(int)
+    rows = int(np.max(y_index)) + 1
+    cols = int(np.max(x_index)) + 1
+    grid = np.zeros((rows, cols), dtype=int)
+    grid[y_index, x_index] = flat_types
+    return np.asarray(grid, dtype=int)
+
+
+def _gaussian_kernel(shape: tuple[int, int], sigma: float) -> NDArray[np.float64]:
+    rows = max(int(shape[0]), 1)
+    cols = max(int(shape[1]), 1)
+    yy = np.arange(rows, dtype=float) - (rows - 1.0) / 2.0
+    xx = np.arange(cols, dtype=float) - (cols - 1.0) / 2.0
+    x_grid, y_grid = np.meshgrid(xx, yy, indexing="xy")
+    kernel = np.exp(-0.5 * ((x_grid / max(float(sigma), 1.0e-12)) ** 2 + (y_grid / max(float(sigma), 1.0e-12)) ** 2))
+    return np.asarray(kernel / max(float(np.sum(kernel, dtype=float)), 1.0e-12), dtype=float)
+
+
+def ie_cone_plot(
+    xy: Any,
+    cone_type: Any,
+    support: Any | None = None,
+    spread: float | None = None,
+    delta: float = 0.4,
+) -> dict[str, Any]:
+    """Legacy MATLAB ieConePlot() compatibility wrapper returning headless image payloads."""
+
+    grid = _cone_plot_grid(xy, cone_type, float(delta))
+    if spread is None:
+        spread_pixels = None
+        for row in range(grid.shape[0]):
+            occupied = np.flatnonzero(grid[row, :] > 0)
+            if occupied.size >= 2:
+                spread_pixels = float(occupied[1] - occupied[0]) / 3.0
+                break
+        spread = (1.0 / 3.0) if spread_pixels is None else float(spread_pixels)
+    if support is None:
+        support_array = np.rint(3.0 * np.array([float(spread), float(spread)], dtype=float)).astype(int)
+    else:
+        support_array = np.asarray(support, dtype=int).reshape(-1)
+        if support_array.size == 1:
+            support_array = np.repeat(support_array, 2)
+    support_array = np.maximum(support_array, 1)
+
+    image = np.zeros(grid.shape + (3,), dtype=float)
+    image[grid == 2, 0] = 1.0
+    image[grid == 3, 1] = 1.0
+    image[grid == 4, 2] = 1.0
+
+    kernel = _gaussian_kernel((int(support_array[0]), int(support_array[1])), float(spread))
+    blurred = np.empty_like(image)
+    for index in range(3):
+        blurred[:, :, index] = fftconvolve(image[:, :, index], kernel, mode="same")
+
+    return {
+        "support": np.asarray(support_array, dtype=int),
+        "spread": float(spread),
+        "delta": float(delta),
+        "grid": np.asarray(grid, dtype=int),
+        "image": np.asarray(blurred, dtype=float),
+    }
+
+
+def human_uv_safety(
+    energy: Any,
+    wave: Any,
+    *,
+    method: str = "skineye",
+    duration: float = 1.0,
+    asset_store: AssetStore | None = None,
+) -> tuple[float | bool, float, bool | None]:
+    """Legacy MATLAB humanUVSafety() compatibility wrapper."""
+
+    energy_array = _vector(energy, name="energy")
+    wave_nm = _vector(wave, name="wave")
+    if energy_array.size != wave_nm.size:
+        raise ValueError("energy and wave must have the same length.")
+
+    if wave_nm.size == 1:
+        d_lambda = 10.0
+    else:
+        d_lambda = float(wave_nm[1] - wave_nm[0])
+
+    normalized_method = param_format(method)
+    store = asset_store or AssetStore.default()
+
+    if normalized_method == "skineye":
+        _, actinic = store.load_spectra("data/safetyStandards/Actinic.mat", wave_nm=wave_nm)
+        weights = np.asarray(actinic, dtype=float).reshape(-1)
+        wave_limit = wave_nm <= 400.0
+        level = float(np.dot(weights[wave_limit], energy_array[wave_limit]) * d_lambda)
+        if level <= 0.0:
+            return float(np.inf), 0.0, True
+        return float((30.0 / level) / 60.0), level, None
+
+    if normalized_method == "eye":
+        wave_limit = wave_nm <= 400.0
+        level = float(np.sum(energy_array[wave_limit]) * d_lambda)
+        safe = bool((float(duration) <= 1000.0 and level * float(duration) < 10000.0) or (float(duration) > 1000.0 and level < 10.0))
+        return safe, level, safe
+
+    if normalized_method == "bluehazard":
+        _, blue_hazard = store.load_spectra("data/safetyStandards/blueLightHazard.mat", wave_nm=wave_nm)
+        weights = np.asarray(blue_hazard, dtype=float).reshape(-1)
+        level = float(d_lambda * np.dot(weights, energy_array))
+        if float(duration) <= 1.0e4:
+            safe = bool(level * float(duration) < 1.0e6)
+        else:
+            safe = bool(level < 100.0)
+        if level > 100.0:
+            max_time_minutes = 0.0 if float(duration) > 1.0e4 else float(1.0e6 / level / 60.0)
+        else:
+            max_time_minutes = float(np.inf)
+        return max_time_minutes, level, safe
+
+    if normalized_method == "thermalskin":
+        level = float(np.sum(energy_array) * d_lambda * float(duration) ** 0.25)
+        safe = bool(float(duration) <= 10.0 and level < 20000.0 * float(duration) ** 0.25)
+        return level, level, safe
+
+    if normalized_method == "skinthermalthreshold":
+        val = float(np.sum(energy_array) * d_lambda * float(duration))
+        threshold = float(2.0 * float(duration) ** 0.25 * 1.0e4)
+        safe = bool(val < threshold)
+        return val, val, safe
+
+    raise UnsupportedOptionError("humanUVSafety", method)
 
 
 def watson_impulse_response(
@@ -1539,8 +1686,10 @@ ieSQRI = ie_sqri
 humanConeContrast = human_cone_contrast
 humanConeIsolating = human_cone_isolating
 humanOpticalDensity = human_optical_density
+humanUVSafety = human_uv_safety
 humanPupilSize = human_pupil_size
 humanSpaceTime = human_space_time
+ieConePlot = ie_cone_plot
 kellySpaceTime = kelly_space_time
 poirsonSpatioChromatic = poirson_spatio_chromatic
 watsonImpulseResponse = watson_impulse_response

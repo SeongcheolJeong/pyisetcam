@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-25T08:03:21.220562+00:00",
+  "generated_at": "2026-03-25T08:30:11.546960+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -8,8 +8,8 @@
       "missing": 21,
       "out_of_scope": 189,
       "parity": 679,
-      "partial": 310,
-      "ported": 184
+      "partial": 307,
+      "ported": 187
     },
     "kind_counts": {
       "api": 661,
@@ -20,9 +20,9 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 248,
+      "P1": 245,
       "P2": 143,
-      "P3": 1052
+      "P3": 1055
     },
     "delta_from_previous": {
       "status_counts": {
@@ -30,8 +30,8 @@
         "missing": 0,
         "out_of_scope": 0,
         "parity": 0,
-        "partial": -5,
-        "ported": 5
+        "partial": -3,
+        "ported": 3
       },
       "kind_counts": {
         "api": 0,
@@ -42,9 +42,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -5,
+        "P1": -3,
         "P2": 0,
-        "P3": 5
+        "P3": 3
       }
     },
     "family_summary": {
@@ -262,13 +262,12 @@
         "total": 24,
         "by_status": {
           "parity": 2,
-          "partial": 3,
-          "ported": 19
+          "ported": 22
         },
         "by_kind": {
           "api": 24
         },
-        "highest_open_priority": "P1"
+        "highest_open_priority": "P3"
       },
       "imgproc": {
         "total": 59,
@@ -1031,16 +1030,6 @@
         }
       },
       {
-        "family": "human",
-        "open_entries": 3,
-        "highest_open_priority": "P1",
-        "by_status": {
-          "parity": 2,
-          "partial": 3,
-          "ported": 19
-        }
-      },
-      {
         "family": "data/sensor",
         "open_entries": 17,
         "highest_open_priority": "P2",
@@ -1108,6 +1097,14 @@
         "by_status": {
           "partial": 4
         }
+      },
+      {
+        "family": "data/lens",
+        "open_entries": 4,
+        "highest_open_priority": "P2",
+        "by_status": {
+          "partial": 4
+        }
       }
     ],
     "exception_sites_by_module": {
@@ -1156,7 +1153,7 @@
         "not_implemented_error_sites": 0
       },
       "metrics": {
-        "unsupported_option_error_sites": 13,
+        "unsupported_option_error_sites": 14,
         "not_implemented_error_sites": 0
       },
       "octave_runner": {
@@ -3597,7 +3594,7 @@
       "family": "human",
       "kind": "api",
       "status": "parity",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_human.py",
         "tests/parity/cases.yaml",
@@ -3708,13 +3705,13 @@
       "upstream_path": "human/humanOI.m",
       "family": "human",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab",
+      "status": "ported",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_human.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The deprecated MATLAB human optical-image helper is covered by the Python `human_oi(...)` / `humanOI(...)` compatibility wrapper on top of the headless optical-image compute path.",
+      "priority": "P3"
     },
     {
       "upstream_path": "human/humanOTF.m",
@@ -3780,13 +3777,13 @@
       "upstream_path": "human/humanUVSafety.m",
       "family": "human",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab",
+      "status": "ported",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_human.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB UV and blue-light safety helper is covered by the Python `human_uv_safety(...)` / `humanUVSafety(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "human/humanWaveDefocus.m",
@@ -3804,13 +3801,13 @@
       "upstream_path": "human/ieConePlot.m",
       "family": "human",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab",
+      "status": "ported",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_human.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB cone-mosaic image helper is covered by the Python `ie_cone_plot(...)` / `ieConePlot(...)` headless payload wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "human/ijspeert.m",
@@ -19402,7 +19399,7 @@
       "family": "data/safetystandards",
       "kind": "asset",
       "status": "partial",
-      "python_surface": "",
+      "python_surface": "pyisetcam.metrics",
       "tests": [],
       "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
       "priority": "P2"

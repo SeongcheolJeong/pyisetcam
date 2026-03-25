@@ -1349,6 +1349,21 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB ISETBio OTF-storage variant is covered by the Python `human_otf_ibio(...)` / `humanOTF_ibio(...)` compatibility wrapper.",
         "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
     },
+    "human/humanOI.m": {
+        "status": "ported",
+        "note": "The deprecated MATLAB human optical-image helper is covered by the Python `human_oi(...)` / `humanOI(...)` compatibility wrapper on top of the headless optical-image compute path.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "human/humanUVSafety.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB UV and blue-light safety helper is covered by the Python `human_uv_safety(...)` / `humanUVSafety(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.metrics", "pyisetcam.__init__"],
+    },
+    "human/ieConePlot.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB cone-mosaic image helper is covered by the Python `ie_cone_plot(...)` / `ieConePlot(...)` headless payload wrapper.",
+        "module_hits": ["pyisetcam.metrics", "pyisetcam.__init__"],
+    },
     "sensor/sensorUnitBlock.m": {
         "status": "out_of_scope",
         "note": "The upstream file is explicitly marked obsolete and does not implement a usable headless API surface.",

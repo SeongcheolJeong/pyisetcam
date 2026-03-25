@@ -176,11 +176,13 @@ from .metrics import (
     delta_e_2000,
     delta_e_94,
     delta_e_uv,
+    human_uv_safety,
     human_cone_contrast,
     human_cone_isolating,
     human_optical_density,
     exposure_value,
     iePSNR,
+    ie_cone_plot,
     ie_sqri,
     ieSQRI,
     ieXYZ2LAB,
@@ -231,6 +233,7 @@ from .optics import (
     human_core,
     human_lsf,
     human_macular_transmittance,
+    human_oi,
     human_otf,
     human_otf_ibio,
     ie_field_height_to_index,
@@ -871,6 +874,7 @@ __all__ = [
     "humanConeContrast",
     "humanConeIsolating",
     "humanOpticalDensity",
+    "humanUVSafety",
     "humanPupilSize",
     "humanSpaceTime",
     "dlCore",
@@ -885,6 +889,7 @@ __all__ = [
     "humanCore",
     "humanLSF",
     "humanMacularTransmittance",
+    "humanOI",
     "humanOTF",
     "humanOTF_ibio",
     "human_achromatic_otf",
@@ -893,11 +898,15 @@ __all__ = [
     "human_core",
     "human_lsf",
     "human_macular_transmittance",
+    "human_oi",
     "human_otf",
     "human_otf_ibio",
     "human_optical_density",
     "human_pupil_size",
     "human_space_time",
+    "human_uv_safety",
+    "ieConePlot",
+    "ie_cone_plot",
     "ijspeert",
     "ieColorTransform",
     "ie_color_transform",
@@ -2303,6 +2312,7 @@ humanAchromaticOTF = human_achromatic_otf
 humanCore = human_core
 humanLSF = human_lsf
 humanMacularTransmittance = human_macular_transmittance
+humanOI = human_oi
 humanOTF = human_otf
 humanOTF_ibio = human_otf_ibio
 opticsDefocusCore = optics_defocus_core
@@ -2500,8 +2510,10 @@ metricsSPD = metrics_spd
 humanConeContrast = human_cone_contrast
 humanConeIsolating = human_cone_isolating
 humanOpticalDensity = human_optical_density
+humanUVSafety = human_uv_safety
 humanPupilSize = human_pupil_size
 humanSpaceTime = human_space_time
+ieConePlot = ie_cone_plot
 kellySpaceTime = kelly_space_time
 poirsonSpatioChromatic = poirson_spatio_chromatic
 watsonImpulseResponse = watson_impulse_response

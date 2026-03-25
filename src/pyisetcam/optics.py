@@ -2944,6 +2944,37 @@ def human_macular_transmittance(
     return current
 
 
+def human_oi(
+    scene: Scene,
+    oi: OpticalImage | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> OpticalImage:
+    """Legacy MATLAB humanOI() compatibility wrapper."""
+
+    if scene is None:
+        raise ValueError("Scene required.")
+
+    current = oi_create("shift invariant", asset_store=_store(asset_store)) if oi is None else oi.clone()
+    wave_nm = np.asarray(scene_get(scene, "wave"), dtype=float).reshape(-1)
+    otf, support, otf_wave = human_otf_ibio(wave=wave_nm)
+    otf_struct = {
+        "OTF": np.asarray(otf, dtype=complex),
+        "fx": np.asarray(support[0, :, 0], dtype=float).reshape(-1),
+        "fy": np.asarray(support[:, 0, 1], dtype=float).reshape(-1),
+        "wave": np.asarray(otf_wave, dtype=float).reshape(-1),
+        "function": "humanOTF_ibio",
+    }
+
+    current = oi_set(current, "wave", wave_nm)
+    current = oi_set(current, "fov", float(scene_get(scene, "wangular")))
+    current = oi_set(current, "otfstruct", otf_struct)
+    current = oi_set(current, "compute method", "humanmw")
+    current.fields["optics"]["name"] = "human"
+    current.fields["optics"]["otf_method"] = "human"
+    return oi_compute(current, scene)
+
+
 def ijspeert(
     age: float,
     p: float,
