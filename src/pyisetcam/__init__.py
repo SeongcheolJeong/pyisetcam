@@ -176,6 +176,9 @@ from .metrics import (
     delta_e_2000,
     delta_e_94,
     delta_e_uv,
+    human_cone_contrast,
+    human_cone_isolating,
+    human_optical_density,
     exposure_value,
     iePSNR,
     ie_sqri,
@@ -227,7 +230,9 @@ from .optics import (
     human_achromatic_otf,
     human_core,
     human_lsf,
+    human_macular_transmittance,
     human_otf,
+    human_otf_ibio,
     ie_field_height_to_index,
     ijspeert,
     lens_list,
@@ -863,6 +868,9 @@ __all__ = [
     "deltaE2000",
     "deltaE94",
     "deltaEuv",
+    "humanConeContrast",
+    "humanConeIsolating",
+    "humanOpticalDensity",
     "humanPupilSize",
     "humanSpaceTime",
     "dlCore",
@@ -876,11 +884,18 @@ __all__ = [
     "humanAchromaticOTF",
     "humanCore",
     "humanLSF",
+    "humanMacularTransmittance",
     "humanOTF",
+    "humanOTF_ibio",
     "human_achromatic_otf",
+    "human_cone_contrast",
+    "human_cone_isolating",
     "human_core",
     "human_lsf",
+    "human_macular_transmittance",
     "human_otf",
+    "human_otf_ibio",
+    "human_optical_density",
     "human_pupil_size",
     "human_space_time",
     "ijspeert",
@@ -2287,7 +2302,9 @@ dlMTF = dl_mtf
 humanAchromaticOTF = human_achromatic_otf
 humanCore = human_core
 humanLSF = human_lsf
+humanMacularTransmittance = human_macular_transmittance
 humanOTF = human_otf
+humanOTF_ibio = human_otf_ibio
 opticsDefocusCore = optics_defocus_core
 opticsDefocusDepth = optics_defocus_depth
 opticsDepthDefocus = optics_depth_defocus
@@ -2480,6 +2497,9 @@ sensorWBCompute = sensor_wb_compute
 spatialIntegration = spatial_integration
 
 metricsSPD = metrics_spd
+humanConeContrast = human_cone_contrast
+humanConeIsolating = human_cone_isolating
+humanOpticalDensity = human_optical_density
 humanPupilSize = human_pupil_size
 humanSpaceTime = human_space_time
 kellySpaceTime = kelly_space_time

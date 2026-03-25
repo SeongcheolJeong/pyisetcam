@@ -14,9 +14,9 @@ from scipy.io import savemat
 from skimage.color import deltaE_ciede2000, deltaE_ciede94
 
 from .assets import AssetStore
-from .color import xyz_color_matching
+from .color import xyz_color_matching, xyz_to_lms
 from .exceptions import UnsupportedOptionError
-from .utils import DEFAULT_WAVE, blackbody, param_format, rgb_to_xw_format, spectral_step, srgb_to_xyz
+from .utils import DEFAULT_WAVE, blackbody, param_format, quanta_to_energy, rgb_to_xw_format, spectral_step, srgb_to_xyz
 
 
 def _vector(value: Any, *, name: str) -> NDArray[np.float64]:
@@ -102,6 +102,73 @@ def _sum_gauss(params: NDArray[np.float64], dimension: int) -> NDArray[np.float6
     return np.asarray(kernel / max(float(np.sum(kernel, dtype=float)), 1.0e-12), dtype=float)
 
 
+def _spectra_wave_first(values: Any, wave_size: int, *, name: str) -> NDArray[np.float64]:
+    array = np.asarray(values, dtype=float)
+    if array.ndim == 1:
+        if array.size != int(wave_size):
+            raise ValueError(f"{name} must match the wavelength vector length.")
+        return np.asarray(array.reshape(-1, 1), dtype=float)
+    if array.ndim == 2:
+        if array.shape[0] == int(wave_size):
+            return np.asarray(array, dtype=float)
+        if array.shape[1] == int(wave_size):
+            return np.asarray(array.T, dtype=float)
+    raise ValueError(f"{name} must be wavelength-first or wavelength-last with one wavelength axis.")
+
+
+def human_optical_density(
+    visual_field: str = "fovea",
+    wave: Any | None = None,
+) -> dict[str, Any]:
+    """Legacy MATLAB humanOpticalDensity() compatibility wrapper."""
+
+    wave_nm = np.arange(390.0, 731.0, 1.0, dtype=float) if wave is None else _vector(wave, name="wave")
+    original_visual_field = "fovea" if visual_field is None else str(visual_field)
+    normalized_visual_field = param_format(original_visual_field)
+
+    inert_p: dict[str, Any] = {
+        "visfield": original_visual_field,
+        "wave": np.asarray(wave_nm, dtype=float).copy(),
+    }
+
+    if normalized_visual_field in {"f", "fov", "fovea", "stf", "stockmanfovea"}:
+        inert_p.update({"lens": 1.0, "macular": 0.28, "LPOD": 0.5, "MPOD": 0.5, "SPOD": 0.4, "melPOD": 0.5})
+    elif normalized_visual_field in {"p", "peri", "periphery", "stp", "stockmanperi", "stockmanperiphery"}:
+        inert_p.update({"lens": 1.0, "macular": 0.0, "LPOD": 0.38, "MPOD": 0.38, "SPOD": 0.3, "melPOD": 0.5})
+    elif normalized_visual_field == "s1f":
+        inert_p.update({"lens": 0.7467, "macular": 0.6910, "LPOD": 0.4964, "MPOD": 0.2250, "SPOD": 0.1480, "melPOD": 0.3239, "visfield": "f"})
+    elif normalized_visual_field == "s1p":
+        inert_p.update(
+            {
+                "lens": 0.7467,
+                "macular": 0.0,
+                "LPOD": (0.4964 / 0.5) * 0.38,
+                "MPOD": (0.2250 / 0.5) * 0.38,
+                "SPOD": (0.1480 / 0.4) * 0.3,
+                "melPOD": 0.3239,
+                "visfield": "p",
+            }
+        )
+    elif normalized_visual_field == "s2f":
+        inert_p.update({"lens": 0.7637, "macular": 0.5216, "LPOD": 0.4841, "MPOD": 0.2796, "SPOD": 0.2072, "melPOD": 0.3549, "visfield": "f"})
+    elif normalized_visual_field == "s2p":
+        inert_p.update(
+            {
+                "lens": 0.7637,
+                "macular": 0.0,
+                "LPOD": (0.4841 / 0.5) * 0.38,
+                "MPOD": (0.2796 / 0.5) * 0.38,
+                "SPOD": (0.2072 / 0.4) * 0.3,
+                "melPOD": 0.3549,
+                "visfield": "p",
+            }
+        )
+    else:
+        raise UnsupportedOptionError("humanOpticalDensity", visual_field)
+
+    return inert_p
+
+
 def human_pupil_size(
     lum: Any = 100.0,
     model: str = "wy",
@@ -140,6 +207,54 @@ def human_pupil_size(
 
     pupil_area = np.pi * np.square(np.asarray(diameter, dtype=float) / 2.0)
     return _maybe_scalar(np.asarray(diameter, dtype=float)), _maybe_scalar(np.asarray(pupil_area, dtype=float))
+
+
+def human_cone_contrast(
+    signal_spd: Any,
+    background_spd: Any,
+    wave: Any,
+    units: str = "energy",
+    *,
+    asset_store: AssetStore | None = None,
+) -> NDArray[np.float64]:
+    """Legacy MATLAB humanConeContrast() compatibility wrapper."""
+
+    wave_nm = _vector(wave, name="wave")
+    signal = _spectra_wave_first(signal_spd, wave_nm.size, name="signalSPD")
+    background = _spectra_wave_first(background_spd, wave_nm.size, name="backgroundSPD")
+    if background.shape[1] != 1:
+        raise ValueError("backgroundSPD must describe a single background spectrum.")
+
+    normalized_units = param_format(units)
+    if normalized_units in {"photons", "quanta"}:
+        signal = np.asarray(quanta_to_energy(signal, wave_nm), dtype=float)
+        background = np.asarray(quanta_to_energy(background, wave_nm), dtype=float)
+    elif normalized_units not in {"energy", "default", ""}:
+        raise UnsupportedOptionError("humanConeContrast", units)
+
+    _, cones = (asset_store or AssetStore.default()).load_spectra("stockman.mat", wave_nm=wave_nm)
+    cone_matrix = np.asarray(cones, dtype=float)
+    background_cones = cone_matrix.T @ background[:, 0]
+    signal_cones = cone_matrix.T @ signal
+    contrast = np.diag(1.0 / np.maximum(background_cones, 1.0e-12)) @ signal_cones
+    return np.asarray(contrast, dtype=float)
+
+
+def human_cone_isolating(display: Any) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Legacy MATLAB humanConeIsolating() compatibility wrapper."""
+
+    from .display import Display, display_create, display_get
+
+    current_display = display if isinstance(display, Display) else display_create(str(display))
+    rgb2xyz = np.asarray(display_get(current_display, "rgb2xyz"), dtype=float)
+    rgb2lms = np.asarray(xyz_to_lms(rgb2xyz), dtype=float)
+
+    cone_isolating = np.asarray(np.linalg.inv(rgb2lms).T, dtype=float)
+    maxima = np.max(np.abs(cone_isolating), axis=0)
+    cone_isolating = cone_isolating / (2.0 * np.where(maxima > 0.0, maxima, 1.0))
+
+    spd = np.asarray(display_get(current_display, "spd"), dtype=float) @ cone_isolating
+    return np.asarray(cone_isolating, dtype=float), np.asarray(spd, dtype=float)
 
 
 def watson_impulse_response(
@@ -1421,6 +1536,9 @@ deltaE94 = delta_e_94
 deltaEuv = delta_e_uv
 iePSNR = peak_signal_to_noise_ratio
 ieSQRI = ie_sqri
+humanConeContrast = human_cone_contrast
+humanConeIsolating = human_cone_isolating
+humanOpticalDensity = human_optical_density
 humanPupilSize = human_pupil_size
 humanSpaceTime = human_space_time
 kellySpaceTime = kelly_space_time

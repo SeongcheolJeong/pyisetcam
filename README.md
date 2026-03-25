@@ -1853,3 +1853,11 @@ headless compatibility wrappers across `pyisetcam.metrics` and
 `pyisetcam.optics`, with focused regressions covering pupil-size models,
 temporal impulse normalization, Kelly/Poirson dispatch, Westheimer line
 spread, human OTF/LSF payloads, and IJspeert MTF/PSF/LSF replay.
+That same `human` family now also covers the neighboring cone/macular
+helpers: `humanOpticalDensity(...)`, `humanConeContrast(...)`,
+`humanConeIsolating(...)`, `humanMacularTransmittance(...)`, and
+`humanOTF_ibio(...)` now have direct headless compatibility wrappers, with
+focused regressions over Stockman density defaults, energy/quanta cone
+contrast equivalence, display cone-isolating directions, macular
+transmittance updates on OIs, and the ISETBio `ifftshift` OTF storage
+contract.

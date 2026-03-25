@@ -1324,6 +1324,31 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB Westheimer line-spread approximation is covered by the Python `westheimer_lsf(...)` / `westheimerLSF(...)` compatibility wrapper.",
         "module_hits": ["pyisetcam.metrics", "pyisetcam.__init__"],
     },
+    "human/humanConeContrast.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB Stockman cone-contrast helper is covered by the Python `human_cone_contrast(...)` / `humanConeContrast(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.metrics", "pyisetcam.__init__"],
+    },
+    "human/humanConeIsolating.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB display cone-isolating helper is covered by the Python `human_cone_isolating(...)` / `humanConeIsolating(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.metrics", "pyisetcam.__init__"],
+    },
+    "human/humanMacularTransmittance.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB macular-pigment transmittance updater is covered by the Python `human_macular_transmittance(...)` / `humanMacularTransmittance(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
+    "human/humanOpticalDensity.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB human optical-density parameter helper is covered by the Python `human_optical_density(...)` / `humanOpticalDensity(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.metrics", "pyisetcam.__init__"],
+    },
+    "human/humanOTF_ibio.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB ISETBio OTF-storage variant is covered by the Python `human_otf_ibio(...)` / `humanOTF_ibio(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
     "sensor/sensorUnitBlock.m": {
         "status": "out_of_scope",
         "note": "The upstream file is explicitly marked obsolete and does not implement a usable headless API surface.",

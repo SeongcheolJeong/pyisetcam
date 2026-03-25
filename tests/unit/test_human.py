@@ -3,10 +3,17 @@ from __future__ import annotations
 import numpy as np
 
 from pyisetcam import (
+    displayCreate,
+    displayGet,
     humanAchromaticOTF,
+    humanConeContrast,
+    humanConeIsolating,
     humanCore,
     humanLSF,
+    humanMacularTransmittance,
+    humanOpticalDensity,
     humanOTF,
+    humanOTF_ibio,
     humanPupilSize,
     humanSpaceTime,
     ijspeert,
@@ -16,6 +23,9 @@ from pyisetcam import (
     watsonRGCSpacing,
     westheimerLSF,
 )
+from pyisetcam.assets import AssetStore
+from pyisetcam import oiCreate, oiGet
+from pyisetcam.utils import energy_to_quanta
 
 
 def test_human_pupil_size_models_match_analytic_forms() -> None:
@@ -38,6 +48,54 @@ def test_human_pupil_size_models_match_analytic_forms() -> None:
     assert np.isclose(area_dg, np.pi * (diameter_dg / 2.0) ** 2)
     assert np.isclose(area_sd, np.pi * (diameter_sd / 2.0) ** 2)
     assert np.isclose(area_wy, np.pi * (diameter_wy / 2.0) ** 2)
+
+
+def test_human_optical_density_matches_stockman_profiles() -> None:
+    fovea = humanOpticalDensity()
+    periphery = humanOpticalDensity("stockman periphery", np.arange(400.0, 701.0, 10.0, dtype=float))
+    subject = humanOpticalDensity("s1p")
+
+    assert fovea["visfield"] == "fovea"
+    assert np.isclose(fovea["macular"], 0.28)
+    assert periphery["wave"].shape == (31,)
+    assert np.isclose(periphery["LPOD"], 0.38)
+    assert np.isclose(periphery["SPOD"], 0.3)
+    assert subject["visfield"] == "p"
+    assert np.isclose(subject["macular"], 0.0)
+    assert np.isclose(subject["LPOD"], (0.4964 / 0.5) * 0.38)
+
+
+def test_human_cone_contrast_energy_and_quanta_agree() -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    background = np.full(wave.shape, 0.25, dtype=float)
+    signal = np.column_stack((background * 0.1, background * 0.2))
+
+    contrast_energy = humanConeContrast(signal, background, wave, "energy")
+    contrast_quanta = humanConeContrast(
+        energy_to_quanta(signal, wave),
+        energy_to_quanta(background, wave),
+        wave,
+        "quanta",
+    )
+
+    assert contrast_energy.shape == (3, 2)
+    np.testing.assert_allclose(contrast_quanta, contrast_energy)
+
+
+def test_human_cone_isolating_returns_scaled_isolating_directions() -> None:
+    display = displayCreate("LCD-Apple")
+    cone_isolating, spd = humanConeIsolating(display)
+
+    wave = np.asarray(displayGet(display, "wave"), dtype=float).reshape(-1)
+    _, cones = AssetStore.default().load_spectra("stockman.mat", wave_nm=wave)
+    isolation = np.asarray(cones, dtype=float).T @ spd
+    off_diagonal = isolation - np.diag(np.diag(isolation))
+
+    assert cone_isolating.shape == (3, 3)
+    assert spd.shape == (wave.size, 3)
+    np.testing.assert_allclose(np.max(np.abs(cone_isolating), axis=0), 0.5)
+    assert np.max(np.abs(off_diagonal)) < 2.0e-4
+    assert np.all(np.diag(isolation) > 0.0)
 
 
 def test_watson_impulse_response_is_normalized() -> None:
@@ -139,6 +197,30 @@ def test_human_otf_and_lsf_return_headless_payloads() -> None:
     assert line_spread_mm.shape[0] == 2
     np.testing.assert_allclose(x_um / 1000.0, x_mm)
     assert line_spread_um.shape == line_spread_mm.shape
+
+
+def test_human_otf_ibio_and_macular_transmittance_match_headless_contracts() -> None:
+    freq = np.linspace(-20.0, 20.0, 11, dtype=float)
+    fx, fy = np.meshgrid(freq, freq, indexing="xy")
+    support = np.dstack((fx, fy))
+
+    legacy_otf, returned_support, wave = humanOTF(0.0015, 60.0, support, np.array([550.0], dtype=float))
+    ibio_otf, returned_support_ibio, wave_ibio = humanOTF_ibio(0.0015, 60.0, support, np.array([550.0], dtype=float))
+
+    assert np.isclose(np.abs(ibio_otf[0, 0, 0]), 1.0)
+    np.testing.assert_allclose(returned_support_ibio, returned_support)
+    np.testing.assert_allclose(wave_ibio, wave)
+    np.testing.assert_allclose(np.fft.ifftshift(np.fft.ifftshift(legacy_otf[:, :, 0])), ibio_otf[:, :, 0])
+
+    oi = humanMacularTransmittance(oiCreate(), 0.35)
+    current_wave = np.asarray(oiGet(oi, "wave"), dtype=float).reshape(-1)
+    transmittance = np.asarray(oiGet(oi, "transmittance", current_wave), dtype=float).reshape(-1)
+    assert transmittance.shape == current_wave.shape
+    assert np.all(transmittance <= 1.0)
+    assert np.all(transmittance >= 0.0)
+    assert float(transmittance[np.argmin(np.abs(current_wave - 460.0))]) < float(
+        transmittance[np.argmin(np.abs(current_wave - 650.0))]
+    )
 
 
 def test_ijspeert_returns_mtf_psf_and_lsf() -> None:

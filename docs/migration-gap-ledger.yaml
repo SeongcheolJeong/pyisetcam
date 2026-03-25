@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-25T07:07:38.356646+00:00",
+  "generated_at": "2026-03-25T08:03:21.220562+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -8,8 +8,8 @@
       "missing": 21,
       "out_of_scope": 189,
       "parity": 679,
-      "partial": 315,
-      "ported": 179
+      "partial": 310,
+      "ported": 184
     },
     "kind_counts": {
       "api": 661,
@@ -20,9 +20,9 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 253,
+      "P1": 248,
       "P2": 143,
-      "P3": 1047
+      "P3": 1052
     },
     "delta_from_previous": {
       "status_counts": {
@@ -30,8 +30,8 @@
         "missing": 0,
         "out_of_scope": 0,
         "parity": 0,
-        "partial": -12,
-        "ported": 12
+        "partial": -5,
+        "ported": 5
       },
       "kind_counts": {
         "api": 0,
@@ -42,9 +42,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -12,
+        "P1": -5,
         "P2": 0,
-        "P3": 12
+        "P3": 5
       }
     },
     "family_summary": {
@@ -262,8 +262,8 @@
         "total": 24,
         "by_status": {
           "parity": 2,
-          "partial": 8,
-          "ported": 14
+          "partial": 3,
+          "ported": 19
         },
         "by_kind": {
           "api": 24
@@ -1032,12 +1032,12 @@
       },
       {
         "family": "human",
-        "open_entries": 8,
+        "open_entries": 3,
         "highest_open_priority": "P1",
         "by_status": {
           "parity": 2,
-          "partial": 8,
-          "ported": 14
+          "partial": 3,
+          "ported": 19
         }
       },
       {
@@ -1156,7 +1156,7 @@
         "not_implemented_error_sites": 0
       },
       "metrics": {
-        "unsupported_option_error_sites": 11,
+        "unsupported_option_error_sites": 13,
         "not_implemented_error_sites": 0
       },
       "octave_runner": {
@@ -1973,7 +1973,7 @@
       "family": "color",
       "kind": "api",
       "status": "parity",
-      "python_surface": "pyisetcam.color, pyisetcam.illuminant, pyisetcam.__init__, pyisetcam.parity, pyisetcam.scielab, pyisetcam.utils",
+      "python_surface": "pyisetcam.color, pyisetcam.illuminant, pyisetcam.__init__, pyisetcam.metrics, pyisetcam.parity, pyisetcam.scielab",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_metrics.py",
@@ -2316,7 +2316,7 @@
       "family": "data/human",
       "kind": "asset",
       "status": "partial",
-      "python_surface": "",
+      "python_surface": "pyisetcam.__init__, pyisetcam.metrics, pyisetcam.optics",
       "tests": [],
       "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
       "priority": "P2"
@@ -2724,7 +2724,7 @@
       "family": "displays",
       "kind": "api",
       "status": "parity",
-      "python_surface": "pyisetcam.display, pyisetcam.__init__, pyisetcam.ip, pyisetcam.optics",
+      "python_surface": "pyisetcam.display, pyisetcam.__init__, pyisetcam.ip, pyisetcam.metrics",
       "tests": [
         "tests/unit/test_display.py",
         "tests/unit/test_pipeline.py",
@@ -3622,25 +3622,25 @@
       "upstream_path": "human/humanConeContrast.m",
       "family": "human",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab",
+      "status": "ported",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_human.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB Stockman cone-contrast helper is covered by the Python `human_cone_contrast(...)` / `humanConeContrast(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "human/humanConeIsolating.m",
       "family": "human",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab",
+      "status": "ported",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_human.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB display cone-isolating helper is covered by the Python `human_cone_isolating(...)` / `humanConeIsolating(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "human/humanConeMosaic.m",
@@ -3696,13 +3696,13 @@
       "upstream_path": "human/humanMacularTransmittance.m",
       "family": "human",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab",
+      "status": "ported",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_human.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB macular-pigment transmittance updater is covered by the Python `human_macular_transmittance(...)` / `humanMacularTransmittance(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "human/humanOI.m",
@@ -3732,25 +3732,25 @@
       "upstream_path": "human/humanOTF_ibio.m",
       "family": "human",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab",
+      "status": "ported",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.optics, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_human.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB ISETBio OTF-storage variant is covered by the Python `human_otf_ibio(...)` / `humanOTF_ibio(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "human/humanOpticalDensity.m",
       "family": "human",
       "kind": "api",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab",
+      "status": "ported",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_human.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB human optical-density parameter helper is covered by the Python `human_optical_density(...)` / `humanOpticalDensity(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "human/humanPupilSize.m",
@@ -17813,7 +17813,7 @@
       "family": "utility",
       "kind": "helper",
       "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.color, pyisetcam.iso",
+      "python_surface": "pyisetcam.utils, pyisetcam.color, pyisetcam.iso, pyisetcam.metrics",
       "tests": [],
       "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
       "priority": "P2"

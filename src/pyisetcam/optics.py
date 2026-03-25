@@ -2803,32 +2803,38 @@ def human_core(
     return np.asarray(otf, dtype=float), np.asarray(ach_otf, dtype=float)
 
 
-def human_otf(
+def _human_otf_support(
+    f_support: Any | None = None,
+) -> tuple[np.ndarray, float]:
+    if f_support is None:
+        max_frequency = 60.0
+        f_list = unit_frequency_list(int(max_frequency)) * max_frequency
+        x_grid, y_grid = np.meshgrid(f_list, f_list, indexing="xy")
+        support = np.dstack((x_grid, y_grid))
+        return np.asarray(support, dtype=float), float(max_frequency)
+
+    support = np.asarray(f_support, dtype=float)
+    if support.ndim != 3 or support.shape[2] != 2:
+        raise ValueError("humanOTF expects f_support with shape (rows, cols, 2).")
+    max_f1 = float(np.max(support[:, :, 0]))
+    max_f2 = float(np.max(support[:, :, 1]))
+    return support, min(max_f1, max_f2)
+
+
+def _human_otf_stack(
     p_radius: float | None = None,
     D0: float | None = None,
     f_support: Any | None = None,
     wave: Any | None = None,
+    *,
+    storage: str = "legacy",
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Legacy MATLAB humanOTF() compatibility wrapper."""
-
     pupil_radius_m = 0.0015 if p_radius is None else float(p_radius)
     dioptric_power = 1.0 / 0.017 if D0 is None else float(D0)
     wave_nm = np.arange(400.0, 701.0, 1.0, dtype=float) if wave is None else np.asarray(wave, dtype=float).reshape(-1)
-
-    if f_support is None:
-        max_frequency = 60
-        f_list = unit_frequency_list(max_frequency) * max_frequency
-        x_grid, y_grid = np.meshgrid(f_list, f_list, indexing="xy")
-        support = np.dstack((x_grid, y_grid))
-    else:
-        support = np.asarray(f_support, dtype=float)
-        if support.ndim != 3 or support.shape[2] != 2:
-            raise ValueError("humanOTF expects f_support with shape (rows, cols, 2).")
+    support, max_frequency = _human_otf_support(f_support)
 
     dist = np.sqrt(np.square(support[:, :, 0]) + np.square(support[:, :, 1]))
-    max_f1 = float(np.max(support[:, :, 0]))
-    max_f2 = float(np.max(support[:, :, 1]))
-    max_frequency = min(max_f1, max_f2)
     sample_sf = (np.arange(40, dtype=float) / 39.0) * max_frequency
     otf_rows, _ = human_core(wave_nm, sample_sf, pupil_radius_m, dioptric_power)
 
@@ -2838,9 +2844,34 @@ def human_otf(
         interpolator = interp1d(sample_sf, otf_rows[index, :], kind="cubic", bounds_error=False, fill_value=0.0, assume_sorted=True)
         plane = np.abs(np.asarray(interpolator(dist), dtype=float))
         plane[outside] = 0.0
-        otf_2d[:, :, index] = np.fft.fftshift(plane)
+        if param_format(storage) == "ibio":
+            otf_2d[:, :, index] = np.fft.ifftshift(plane)
+        else:
+            otf_2d[:, :, index] = np.fft.fftshift(plane)
 
     return np.asarray(otf_2d, dtype=complex), np.asarray(support, dtype=float), np.asarray(wave_nm, dtype=float)
+
+
+def human_otf(
+    p_radius: float | None = None,
+    D0: float | None = None,
+    f_support: Any | None = None,
+    wave: Any | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Legacy MATLAB humanOTF() compatibility wrapper."""
+
+    return _human_otf_stack(p_radius, D0, f_support, wave, storage="legacy")
+
+
+def human_otf_ibio(
+    p_radius: float | None = None,
+    D0: float | None = None,
+    f_support: Any | None = None,
+    wave: Any | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Legacy MATLAB humanOTF_ibio() compatibility wrapper."""
+
+    return _human_otf_stack(p_radius, D0, f_support, wave, storage="ibio")
 
 
 def human_lsf(
@@ -2874,6 +2905,43 @@ def human_lsf(
         raise UnsupportedOptionError("humanLSF", unit)
 
     return np.asarray(line_spread, dtype=float), np.asarray(x_dim, dtype=float), np.asarray(wavelengths, dtype=float)
+
+
+def _macular_profile(
+    density: float,
+    wave_nm: np.ndarray,
+    *,
+    asset_store: AssetStore | None = None,
+) -> dict[str, np.ndarray]:
+    _, profile = _store(asset_store).load_spectra("macularPigment.mat", wave_nm=np.asarray(wave_nm, dtype=float).reshape(-1))
+    base_density = np.asarray(profile, dtype=float).reshape(-1)
+    unit_density = base_density / 0.3521
+    actual_density = unit_density * float(density)
+    transmittance = np.power(10.0, -actual_density)
+    absorption = 1.0 - transmittance
+    return {
+        "wave": np.asarray(wave_nm, dtype=float).reshape(-1).copy(),
+        "unitDensity": np.asarray(unit_density, dtype=float),
+        "density": np.asarray(actual_density, dtype=float),
+        "transmittance": np.asarray(transmittance, dtype=float),
+        "absorption": np.asarray(absorption, dtype=float),
+    }
+
+
+def human_macular_transmittance(
+    oi: OpticalImage | None = None,
+    dens: float = 0.35,
+    *,
+    asset_store: AssetStore | None = None,
+) -> OpticalImage:
+    """Legacy MATLAB humanMacularTransmittance() compatibility wrapper."""
+
+    current = oi_create(asset_store=_store(asset_store)) if oi is None else oi.clone()
+    wave_nm = np.asarray(oi_get(current, "wave"), dtype=float).reshape(-1)
+    profile = _macular_profile(float(dens), wave_nm, asset_store=asset_store)
+    current = oi_set(current, "transmittance wave", profile["wave"])
+    current = oi_set(current, "transmittance", profile["transmittance"])
+    return current
 
 
 def ijspeert(
