@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-25T02:41:02.753151+00:00",
+  "generated_at": "2026-03-25T03:12:23.506995+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -8,8 +8,8 @@
       "missing": 21,
       "out_of_scope": 189,
       "parity": 676,
-      "partial": 351,
-      "ported": 137
+      "partial": 346,
+      "ported": 142
     },
     "kind_counts": {
       "api": 661,
@@ -20,9 +20,9 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 286,
+      "P1": 281,
       "P2": 155,
-      "P3": 1002
+      "P3": 1007
     },
     "delta_from_previous": {
       "status_counts": {
@@ -30,8 +30,8 @@
         "missing": 0,
         "out_of_scope": 0,
         "parity": 0,
-        "partial": -4,
-        "ported": 4
+        "partial": -5,
+        "ported": 5
       },
       "kind_counts": {
         "api": 0,
@@ -42,9 +42,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -4,
+        "P1": -5,
         "P2": 0,
-        "P3": 4
+        "P3": 5
       }
     },
     "family_summary": {
@@ -968,8 +968,8 @@
         "by_status": {
           "headless_only": 5,
           "out_of_scope": 2,
-          "partial": 20,
-          "ported": 23
+          "partial": 15,
+          "ported": 28
         },
         "by_kind": {
           "gui": 2,
@@ -1014,17 +1014,6 @@
         }
       },
       {
-        "family": "utility/plots",
-        "open_entries": 25,
-        "highest_open_priority": "P1",
-        "by_status": {
-          "headless_only": 5,
-          "out_of_scope": 2,
-          "partial": 20,
-          "ported": 23
-        }
-      },
-      {
         "family": "human",
         "open_entries": 20,
         "highest_open_priority": "P1",
@@ -1032,6 +1021,17 @@
           "parity": 2,
           "partial": 20,
           "ported": 2
+        }
+      },
+      {
+        "family": "utility/plots",
+        "open_entries": 20,
+        "highest_open_priority": "P1",
+        "by_status": {
+          "headless_only": 5,
+          "out_of_scope": 2,
+          "partial": 15,
+          "ported": 28
         }
       },
       {
@@ -17864,37 +17864,37 @@
       "upstream_path": "utility/plots/iePlaneFromVectors.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB plane-from-vectors helper is covered by the Python `ie_plane_from_vectors(...)` / `iePlaneFromVectors(...)` wrapper in `pyisetcam.plotting`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/iePlot.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "headless_only",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
+      "priority": "P2"
     },
     {
       "upstream_path": "utility/plots/iePlotJitter.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB jittered-scatter helper is covered by the Python `ie_plot_jitter(...)` / `iePlotJitter(...)` wrapper, which returns the jittered point payload headlessly.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/iePlotSet.m",
@@ -18068,13 +18068,13 @@
       "upstream_path": "utility/plots/plotNormal.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB normal-distribution plotting helper is covered by the Python `plot_normal(...)` / `plotNormal(...)` wrapper, which returns the sampled PDF payloads headlessly.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/plotOI.m",
@@ -18104,25 +18104,25 @@
       "upstream_path": "utility/plots/plotRadiance.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB spectral-radiance plotting helper is covered by the Python `plot_radiance(...)` / `plotRadiance(...)` wrapper, which returns wavelength-aligned line payloads headlessly.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/plotReflectance.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.plotting, pyisetcam.parity",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The MATLAB spectral-reflectance plotting helper is covered by the Python `plot_reflectance(...)` / `plotReflectance(...)` wrapper, which returns wavelength-aligned line payloads headlessly.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/plotScene.m",

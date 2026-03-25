@@ -418,6 +418,31 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The MATLAB spectrum-locus plotting helper is covered by the Python `plot_spectrum_locus(...)` / `plotSpectrumLocus(...)` wrapper, which returns chromaticity locus and closing-line payloads headlessly.",
         "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
     },
+    "utility/plots/iePlaneFromVectors.m": {
+        "status": "ported",
+        "note": "The MATLAB plane-from-vectors helper is covered by the Python `ie_plane_from_vectors(...)` / `iePlaneFromVectors(...)` wrapper in `pyisetcam.plotting`.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/iePlotJitter.m": {
+        "status": "ported",
+        "note": "The MATLAB jittered-scatter helper is covered by the Python `ie_plot_jitter(...)` / `iePlotJitter(...)` wrapper, which returns the jittered point payload headlessly.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/plotNormal.m": {
+        "status": "ported",
+        "note": "The MATLAB normal-distribution plotting helper is covered by the Python `plot_normal(...)` / `plotNormal(...)` wrapper, which returns the sampled PDF payloads headlessly.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/plotRadiance.m": {
+        "status": "ported",
+        "note": "The MATLAB spectral-radiance plotting helper is covered by the Python `plot_radiance(...)` / `plotRadiance(...)` wrapper, which returns wavelength-aligned line payloads headlessly.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/plotReflectance.m": {
+        "status": "ported",
+        "note": "The MATLAB spectral-reflectance plotting helper is covered by the Python `plot_reflectance(...)` / `plotReflectance(...)` wrapper, which returns wavelength-aligned line payloads headlessly.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
     "utility/plots/identityLine.m": {
         "status": "ported",
         "note": "The MATLAB axis-identity helper is covered by the Python `identity_line(...)` / `identityLine(...)` headless wrapper, which returns the canonical line geometry and styling payload.",

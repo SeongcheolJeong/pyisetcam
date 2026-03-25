@@ -5,6 +5,8 @@ import pytest
 
 from pyisetcam import (
     airyDisk,
+    iePlaneFromVectors,
+    iePlotJitter,
     ieXYZFromEnergy,
     identityLine,
     ipPlot,
@@ -15,7 +17,10 @@ from pyisetcam import (
     plotDisplaySPD,
     plotEtendueRatio,
     plotGaussianSpectrum,
+    plotNormal,
     plotOI,
+    plotRadiance,
+    plotReflectance,
     plotSpectrumLocus,
     plotTextString,
     ip_create,
@@ -1530,3 +1535,88 @@ def test_plot_etendue_ratio_wrapper(asset_store) -> None:
     assert np.allclose(payload["Ratio"], (optimal / bare - 1.0) * 100.0)
     assert np.allclose(payload["support"]["x"], np.asarray(expected_support["x"], dtype=float))
     assert np.allclose(payload["support"]["y"], np.asarray(expected_support["y"], dtype=float))
+
+
+def test_ie_plane_from_vectors_wrapper() -> None:
+    basis = np.array(
+        [
+            [1.0, 0.0],
+            [0.0, 1.0],
+            [1.0, 1.0],
+        ],
+        dtype=float,
+    )
+
+    x, y, z = iePlaneFromVectors(basis, [-2.0, 2.0], 6)
+
+    assert x.shape == (6, 10)
+    assert y.shape == (6, 10)
+    assert z.shape == (6, 10)
+    assert np.allclose(z, x + y)
+
+
+def test_ie_plot_jitter_wrapper() -> None:
+    payload = iePlotJitter([0.0, 1.0], [2.0, 3.0], fig=-1, p_symbol="or")
+    expected_rng = np.random.default_rng(0)
+    expected_jx = np.array([0.0, 1.0], dtype=float) + expected_rng.random(2) * (1.0 / 200.0)
+    expected_jy = np.array([2.0, 3.0], dtype=float) + expected_rng.random(2) * (1.0 / 200.0)
+
+    assert np.isclose(payload["f"], 1.0 / 200.0)
+    assert payload["figure"] == -1
+    assert payload["pSymbol"] == "or"
+    assert np.allclose(payload["jx"], expected_jx)
+    assert np.allclose(payload["jy"], expected_jy)
+
+
+def test_plot_normal_wrapper() -> None:
+    payload = plotNormal([1.0, 2.0], [0.5, 1.0], color=["k", "r"])
+
+    assert payload["x"].shape == (200,)
+    assert payload["pdf"].shape == (2, 200)
+    assert np.all(payload["pdf"] >= 0.0)
+    assert np.allclose(payload["mean"], np.array([1.0, 2.0]))
+    assert np.allclose(payload["sigma"], np.array([0.5, 1.0]))
+    assert payload["color"] == ["k", "r"]
+    assert payload["xlabel"] == "x"
+    assert payload["ylabel"] == "Probability Density"
+    assert payload["grid"] is True
+    assert payload["axisTight"] is True
+
+
+def test_plot_radiance_wrapper_transposes_columnwise_input() -> None:
+    wave = np.array([500.0, 600.0, 700.0], dtype=float)
+    radiance = np.array([[1.0, 2.0], [10.0, 20.0], [100.0, 200.0]], dtype=float)
+
+    payload, handle = plotRadiance(wave, radiance.T, color="r", linewidth=3.0, title="Demo")
+
+    assert handle is None
+    assert np.allclose(payload["wavelength"], wave)
+    assert np.allclose(payload["radiance"], radiance)
+    assert payload["title"] == "Demo"
+    assert payload["color"] == "r"
+    assert np.isclose(payload["linewidth"], 3.0)
+    assert payload["ylabel"] == "Radiance (watts/sr/nm/m^2)"
+    assert payload["grid"] is True
+
+
+def test_plot_reflectance_wrapper_transposes_rowwise_input() -> None:
+    wave = np.array([500.0, 600.0, 700.0], dtype=float)
+    reflectance = np.array(
+        [
+            [0.1, 0.2],
+            [0.3, 0.4],
+            [0.5, 0.6],
+        ],
+        dtype=float,
+    )
+
+    payload, handle = plotReflectance(wave, reflectance.T, color=[0.1, 0.2, 0.3], linewidth=1.5, linestyle=":")
+
+    assert handle is None
+    assert np.allclose(payload["wavelength"], wave)
+    assert np.allclose(payload["reflectance"], reflectance)
+    assert np.allclose(payload["color"], np.array([0.1, 0.2, 0.3]))
+    assert np.isclose(payload["linewidth"], 1.5)
+    assert payload["linestyle"] == ":"
+    assert payload["ylabel"] == "Reflectance"
+    assert payload["grid"] is True

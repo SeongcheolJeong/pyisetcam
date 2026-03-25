@@ -278,6 +278,167 @@ def plot_etendue_ratio(
     }
 
 
+def _coerce_spectral_lines(wavelength: Any, values: Any) -> tuple[np.ndarray, np.ndarray]:
+    wave = np.asarray(wavelength, dtype=float).reshape(-1)
+    array = np.asarray(values, dtype=float)
+    if wave.size == array.shape[0]:
+        return wave.copy(), array.copy()
+    if array.ndim >= 2 and wave.size == array.shape[1]:
+        return wave.copy(), np.swapaxes(array, 0, 1).copy()
+    raise ValueError("Wavelength support must match one dimension of the data array.")
+
+
+def ie_plane_from_vectors(
+    A: Any,
+    xylimits: tuple[float, float] | list[float] | np.ndarray = (-1.0, 1.0),
+    npoints: int = 10,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return MATLAB-style plane points from two 3-D vectors."""
+
+    basis = np.asarray(A, dtype=float)
+    if basis.shape != (3, 2):
+        raise ValueError("iePlaneFromVectors expects a 3x2 input matrix.")
+
+    limits = np.asarray(xylimits, dtype=float).reshape(-1)
+    if limits.size != 2:
+        raise ValueError("xylimits must contain exactly two values.")
+
+    point1 = basis[:, 0]
+    point2 = basis[:, 1]
+    normal_vector = np.cross(point1, point2)
+    a, b, c = normal_vector
+    if abs(float(c)) < 1.0e-12:
+        raise ValueError("The input vectors do not define a plane with finite z support.")
+
+    x, y = np.meshgrid(
+        np.linspace(limits[0], limits[1], 10, dtype=float),
+        np.linspace(limits[0], limits[1], int(npoints), dtype=float),
+    )
+    z = -(a * x + b * y) / c
+    return x, y, np.asarray(z, dtype=float)
+
+
+def ie_plot_jitter(
+    x: Any,
+    y: Any,
+    f: float | None = None,
+    fig: int = -1,
+    p_symbol: str = ".k",
+    *,
+    rng: np.random.Generator | None = None,
+) -> dict[str, Any]:
+    """Return MATLAB-style jittered point payload without opening a figure."""
+
+    x_values = np.asarray(x, dtype=float).reshape(-1)
+    y_values = np.asarray(y, dtype=float).reshape(-1)
+    if x_values.size != y_values.size:
+        raise ValueError("x and y must have the same number of elements.")
+
+    if f is None:
+        mx = max(float(np.max(x_values) - np.min(x_values)), float(np.max(y_values) - np.min(y_values)))
+        f = mx / 200.0
+    generator = rng if rng is not None else np.random.default_rng(0)
+    jx = x_values + generator.random(x_values.size) * float(f)
+    jy = y_values + generator.random(y_values.size) * float(f)
+    return {
+        "jx": jx.astype(float).copy(),
+        "jy": jy.astype(float).copy(),
+        "f": float(f),
+        "figure": int(fig),
+        "pSymbol": str(p_symbol),
+    }
+
+
+def plot_normal(
+    m: Any,
+    s: Any,
+    *,
+    color: list[str] | tuple[str, ...] | None = None,
+    sample_count: int = 200,
+) -> dict[str, Any]:
+    """Return MATLAB-style normal-distribution plot payload without opening a figure."""
+
+    means = np.asarray(m, dtype=float).reshape(-1)
+    sigmas = np.asarray(s, dtype=float).reshape(-1)
+    if means.size != sigmas.size:
+        raise ValueError("Mean and sigma vectors must have the same length.")
+    if np.any(sigmas <= 0.0):
+        raise ValueError("All standard deviations must be positive.")
+
+    x = np.linspace(
+        float(np.min(means) - 4.0 * np.max(sigmas)),
+        float(np.max(means) + 4.0 * np.max(sigmas)),
+        int(sample_count),
+        dtype=float,
+    )
+    pdf = np.empty((means.size, x.size), dtype=float)
+    for index, (mean_value, sigma_value) in enumerate(zip(means, sigmas, strict=False)):
+        pdf[index] = (1.0 / (sigma_value * np.sqrt(2.0 * np.pi))) * np.exp(
+            -((x - mean_value) ** 2) / (2.0 * sigma_value**2)
+        )
+
+    curve_colors = list(color) if color is not None else []
+    return {
+        "x": x.copy(),
+        "pdf": pdf.copy(),
+        "mean": means.copy(),
+        "sigma": sigmas.copy(),
+        "color": curve_colors,
+        "xlabel": "x",
+        "ylabel": "Probability Density",
+        "grid": True,
+        "axisTight": True,
+    }
+
+
+def plot_radiance(
+    wavelength: Any,
+    radiance: Any,
+    *,
+    title: str = "Spectral radiance",
+    color: Any = "",
+    linewidth: float = 2.0,
+) -> tuple[dict[str, Any], None]:
+    """Return MATLAB-style `plotRadiance` payload without opening a figure."""
+
+    wave, lines = _coerce_spectral_lines(wavelength, radiance)
+    return {
+        "wavelength": wave.copy(),
+        "radiance": np.asarray(lines, dtype=float).copy(),
+        "title": str(title),
+        "color": color,
+        "linewidth": float(linewidth),
+        "xlabel": "Wavelength (nm)",
+        "ylabel": "Radiance (watts/sr/nm/m^2)",
+        "grid": True,
+    }, None
+
+
+def plot_reflectance(
+    wavelength: Any,
+    reflectance: Any,
+    *,
+    title: str = "Spectral reflectance",
+    color: Any = None,
+    linewidth: float = 2.0,
+    linestyle: str = "-",
+) -> tuple[dict[str, Any], None]:
+    """Return MATLAB-style `plotReflectance` payload without opening a figure."""
+
+    wave, lines = _coerce_spectral_lines(wavelength, reflectance)
+    return {
+        "wavelength": wave.copy(),
+        "reflectance": np.asarray(lines, dtype=float).copy(),
+        "title": str(title),
+        "color": color,
+        "linewidth": float(linewidth),
+        "linestyle": str(linestyle),
+        "xlabel": "Wavelength (nm)",
+        "ylabel": "Reflectance",
+        "grid": True,
+    }, None
+
+
 def _airy_disk_circle(radius: float, *, sample_count: int = 200) -> dict[str, np.ndarray]:
     theta = np.linspace(0.0, 2.0 * np.pi, int(sample_count), endpoint=False, dtype=float)
     return {
@@ -1668,6 +1829,8 @@ sensorPlotHist = sensor_plot_hist
 sensorPlotLine = sensor_plot_line
 ipPlot = ip_plot
 identityLine = identity_line
+iePlaneFromVectors = ie_plane_from_vectors
+iePlotJitter = ie_plot_jitter
 plotContrastHistogram = plot_contrast_histogram
 plotEtendueRatio = plot_etendue_ratio
 plotGaussianSpectrum = plot_gaussian_spectrum
@@ -1675,6 +1838,9 @@ plotDisplaySPD = plot_display_spd
 plotDisplayLine = plot_display_line
 plotDisplayColor = plot_display_color
 plotDisplayGamut = plot_display_gamut
+plotNormal = plot_normal
+plotRadiance = plot_radiance
+plotReflectance = plot_reflectance
 plotSpectrumLocus = plot_spectrum_locus
 plotTextString = plot_text_string
 wvfPlot = wvf_plot

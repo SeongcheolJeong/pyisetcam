@@ -357,6 +357,8 @@ from .optics import (
 from .parity import run_python_case, run_python_case_with_context
 from .plotting import (
     identity_line,
+    ie_plane_from_vectors,
+    ie_plot_jitter,
     ip_plot,
     oi_plot,
     plot_contrast_histogram,
@@ -366,6 +368,9 @@ from .plotting import (
     plot_display_spd,
     plot_etendue_ratio,
     plot_gaussian_spectrum,
+    plot_normal,
+    plot_radiance,
+    plot_reflectance,
     plot_spectrum_locus,
     plot_text_string,
     scene_plot,
@@ -868,10 +873,14 @@ __all__ = [
     "ieGetSelectedObject",
     "ieInitSession",
     "ieInternal2Display",
+    "iePlaneFromVectors",
+    "iePlotJitter",
     "imageDataXYZ",
     "image_data_xyz",
     "imageShowImage",
     "image_show_image",
+    "ie_plane_from_vectors",
+    "ie_plot_jitter",
     "FaultyBilinear",
     "faulty_bilinear",
     "faultyInsert",
@@ -1360,6 +1369,9 @@ __all__ = [
     "plotContrastHistogram",
     "plotEtendueRatio",
     "plotGaussianSpectrum",
+    "plotNormal",
+    "plotRadiance",
+    "plotReflectance",
     "plotSpectrumLocus",
     "plotTextString",
     "plot_contrast_histogram",
@@ -1369,6 +1381,9 @@ __all__ = [
     "plot_display_spd",
     "plot_etendue_ratio",
     "plot_gaussian_spectrum",
+    "plot_normal",
+    "plot_radiance",
+    "plot_reflectance",
     "plot_spectrum_locus",
     "plot_text_string",
     "oi_plot",
@@ -2128,9 +2143,14 @@ plotDisplaySPD = plot_display_spd
 plotEtendueRatio = plot_etendue_ratio
 plotGaussianSpectrum = plot_gaussian_spectrum
 identityLine = identity_line
+iePlaneFromVectors = ie_plane_from_vectors
+iePlotJitter = ie_plot_jitter
 plotOI = oi_plot
 oiPlot = oi_plot
 ipPlot = ip_plot
+plotNormal = plot_normal
+plotRadiance = plot_radiance
+plotReflectance = plot_reflectance
 plotSpectrumLocus = plot_spectrum_locus
 plotTextString = plot_text_string
 plotScene = scene_plot

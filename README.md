@@ -1773,6 +1773,11 @@ The next standalone plotting helpers are covered too:
 `plotContrastHistogram(...)`, and `plotEtendueRatio(...)` now return the
 same core spectral, chromaticity, histogram, and etendue payloads
 headlessly instead of opening MATLAB graph windows.
+The adjacent standalone plotting helpers are cleaner too:
+`iePlaneFromVectors(...)`, `iePlotJitter(...)`, `plotNormal(...)`,
+`plotRadiance(...)`, and `plotReflectance(...)` now return the same plane,
+jitter, PDF, and wavelength-line payloads headlessly instead of opening
+MATLAB figure windows.
 The adjacent `utility/image` numeric helper tail is shrinking too:
 `ieFindWaveIndex(...)`, `ieWave2Index(...)`, `ieRadialMatrix(...)`,
 `imageBoundingBox(...)`, `imageCentroid(...)`, `imageCircular(...)`, and
