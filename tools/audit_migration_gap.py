@@ -193,6 +193,16 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB MAT-variable membership helper is covered by the Python `ie_var_in_file(...)` / `ieVarInFile(...)` compatibility wrapper.",
         "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
     },
+    "utility/file/ieWebGet.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB Stanford-repository download helper is covered headlessly by the Python `ie_web_get(...)` / `ieWebGet(...)` compatibility wrapper, including list/browse metadata plus local download/unzip behavior without opening a browser.",
+        "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
+    },
+    "utility/file/ieXL2ColorFilter.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB spreadsheet-to-filter converter is covered by the Python `ie_xl2_color_filter(...)` / `ieXL2ColorFilter(...)` compatibility wrapper for headless CSV/XLSX spectral and color-filter payloads.",
+        "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
+    },
     "utility/file/pathToLinux.m": {
         "status": "ported",
         "note": "The Windows-to-Linux path-normalization helper is covered by the Python `path_to_linux(...)` / `pathToLinux(...)` compatibility wrapper.",
@@ -206,6 +216,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
     "utility/file/vcReadSpectra.m": {
         "status": "ported",
         "note": "The deprecated MATLAB spectral-reader alias is covered by the Python `vc_read_spectra(...)` / `vcReadSpectra(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
+    },
+    "utility/file/vcReadImage.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB image-reader helper is covered by the Python `vc_read_image(...)` / `vcReadImage(...)` compatibility wrapper on top of the current `scene_from_file(...)` multispectral and emissive-display paths.",
         "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
     },
     "utility/file/vcSaveMultiSpectralImage.m": {

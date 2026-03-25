@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+import csv
 import os
 import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
+from urllib.request import Request, urlopen
+import xml.etree.ElementTree as ET
+import zipfile
 
 import numpy as np
 from scipy.io import loadmat, savemat, whosmat
@@ -53,6 +58,22 @@ _OBJECT_CLASS_BY_TYPE = {
     "vcimage": ImageProcessor,
     "display": Display,
     "camera": Camera,
+}
+
+_IE_WEB_GET_RESOURCES = {
+    "bitterli": "https://stacks.stanford.edu/file/rq335tn9587/ISETCam%20scenes%20rendered/bitterli",
+    "isetcambitterli": "https://stacks.stanford.edu/file/rq335tn9587/ISETCam%20scenes%20rendered/bitterli",
+    "pbrtv4": "https://stacks.stanford.edu/file/rq335tn9587/ISETCam%20scenes%20rendered/pbrtv4",
+    "isetcampharr": "https://stacks.stanford.edu/file/rq335tn9587/ISETCam%20scenes%20rendered/pbrtv4",
+    "isetcamiset3d": "https://stacks.stanford.edu/file/rq335tn9587/ISETCam%20scenes%20rendered/iset3d",
+    "iset3d": "https://stacks.stanford.edu/file/rq335tn9587/ISETCam%20scenes%20rendered/iset3d",
+    "iset3dscenes": "https://stacks.stanford.edu/file/rq335tn9587/ISETCam%20scenes%20rendered/iset3d",
+}
+
+_IE_WEB_GET_COLLECTIONS = {
+    "vistalabcollection": "https://purl.stanford.edu/rq335tn9587",
+    "isetmultispectralcollection": "https://purl.stanford.edu/hx650kw3903",
+    "isethyperspectralcollection": "https://purl.stanford.edu/kh752sm9123",
 }
 
 
@@ -328,6 +349,118 @@ def _resolve_spectra_path(
     return store._resolve_spectra_path(fname)
 
 
+def _coerce_comment_text(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="ignore")
+    if isinstance(value, np.ndarray):
+        if value.shape == ():
+            return _coerce_comment_text(value.item())
+        flattened = [_coerce_comment_text(item) for item in value.reshape(-1).tolist()]
+        return "\n".join(text for text in flattened if text)
+    if isinstance(value, (list, tuple)):
+        flattened = [_coerce_comment_text(item) for item in value]
+        return "\n".join(text for text in flattened if text)
+    return str(value)
+
+
+def _column_index_from_a1(reference: str) -> int:
+    letters = "".join(character for character in reference if character.isalpha()).upper()
+    index = 0
+    for character in letters:
+        index = index * 26 + (ord(character) - ord("A") + 1)
+    return max(index - 1, 0)
+
+
+def _xlsx_shared_strings(archive: zipfile.ZipFile) -> list[str]:
+    try:
+        xml_bytes = archive.read("xl/sharedStrings.xml")
+    except KeyError:
+        return []
+    root = ET.fromstring(xml_bytes)
+    namespace = {"main": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+    strings: list[str] = []
+    for item in root.findall("main:si", namespace):
+        fragments = [node.text or "" for node in item.findall(".//main:t", namespace)]
+        strings.append("".join(fragments))
+    return strings
+
+
+def _read_xlsx_cells(path: Path) -> list[list[str]]:
+    with zipfile.ZipFile(path) as archive:
+        shared_strings = _xlsx_shared_strings(archive)
+        worksheet_name = "xl/worksheets/sheet1.xml"
+        if worksheet_name not in archive.namelist():
+            worksheets = sorted(name for name in archive.namelist() if name.startswith("xl/worksheets/sheet"))
+            if not worksheets:
+                raise ValueError("No worksheet found in spreadsheet.")
+            worksheet_name = worksheets[0]
+        root = ET.fromstring(archive.read(worksheet_name))
+
+    namespace = {"main": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+    rows: list[list[str]] = []
+    for row in root.findall(".//main:sheetData/main:row", namespace):
+        values: dict[int, str] = {}
+        max_col = -1
+        for cell in row.findall("main:c", namespace):
+            reference = cell.attrib.get("r", "")
+            col_index = _column_index_from_a1(reference)
+            max_col = max(max_col, col_index)
+            cell_type = cell.attrib.get("t", "")
+            if cell_type == "s":
+                raw = cell.findtext("main:v", default="", namespaces=namespace)
+                text = shared_strings[int(raw)] if raw else ""
+            elif cell_type == "inlineStr":
+                text = cell.findtext("main:is/main:t", default="", namespaces=namespace)
+            else:
+                text = cell.findtext("main:v", default="", namespaces=namespace)
+            values[col_index] = text
+        if max_col >= 0:
+            rows.append([values.get(index, "") for index in range(max_col + 1)])
+    return rows
+
+
+def _read_delimited_cells(path: Path) -> list[list[str]]:
+    sample = path.read_text(encoding="utf-8", errors="ignore")
+    try:
+        dialect = csv.Sniffer().sniff(sample[:2048], delimiters=",\t;")
+    except csv.Error:
+        dialect = csv.excel
+    with path.open("r", encoding="utf-8", errors="ignore", newline="") as handle:
+        return [list(row) for row in csv.reader(handle, dialect)]
+
+
+def _spreadsheet_cells(path: Path) -> list[list[str]]:
+    suffix = path.suffix.lower()
+    if suffix == ".xlsx":
+        return _read_xlsx_cells(path)
+    if suffix in {".csv", ".tsv", ".txt"}:
+        return _read_delimited_cells(path)
+    raise ValueError(f"Unsupported spreadsheet format '{path.suffix}'.")
+
+
+def _spreadsheet_numeric_and_text(path: Path) -> tuple[np.ndarray, list[list[str]]]:
+    cells = _spreadsheet_cells(path)
+    if not cells:
+        return np.zeros((0, 0), dtype=float), []
+
+    width = max(len(row) for row in cells)
+    numeric = np.full((len(cells), width), np.nan, dtype=float)
+    for row_index, row in enumerate(cells):
+        for col_index, value in enumerate(row):
+            text = str(value).strip()
+            if not text:
+                continue
+            try:
+                numeric[row_index, col_index] = float(text)
+            except ValueError:
+                continue
+    return numeric, cells
+
+
 def vc_read_spectra(
     fname: str | Path,
     wave: Any | None,
@@ -401,16 +534,214 @@ def vc_import_object(
     return vc_load_object(normalized, full_name, session=session)
 
 
+def ie_web_get(*args: Any, **kwargs: Any) -> tuple[str, list[str]] | dict[str, list[str]] | str:
+    """Download a file from a known remote resource using a MATLAB-style contract."""
+
+    if args and isinstance(args[0], str):
+        command = param_format(args[0])
+        if command == "list":
+            return {
+                "deposits": sorted(_IE_WEB_GET_RESOURCES),
+                "collections": sorted(_IE_WEB_GET_COLLECTIONS),
+            }
+        if command == "browse":
+            deposit_name = str(args[1]) if len(args) > 1 else "pbrtv4"
+            deposit_key = param_format(deposit_name)
+            if deposit_key in _IE_WEB_GET_RESOURCES:
+                return str(_IE_WEB_GET_RESOURCES[deposit_key])
+            if deposit_key in _IE_WEB_GET_COLLECTIONS:
+                return str(_IE_WEB_GET_COLLECTIONS[deposit_key])
+            valid = ", ".join(sorted(set(_IE_WEB_GET_RESOURCES) | set(_IE_WEB_GET_COLLECTIONS)))
+            raise ValueError(f"Invalid deposit name. Please choose from: {valid}")
+
+    if len(args) % 2 != 0:
+        raise ValueError("ieWebGet expects key/value pairs.")
+    options = {param_format(args[index]): args[index + 1] for index in range(0, len(args), 2)}
+    options.update({param_format(key): value for key, value in kwargs.items()})
+
+    deposit_name = str(options.get("depositname", options.get("resourcetype", "pbrtv4")))
+    deposit_key = param_format(deposit_name)
+    if deposit_key not in _IE_WEB_GET_RESOURCES:
+        valid = ", ".join(sorted(_IE_WEB_GET_RESOURCES))
+        raise ValueError(f"Invalid deposit name. Please choose from: {valid}")
+
+    deposit_file = str(options.get("depositfile", options.get("resourcefile", ""))).strip()
+    if not deposit_file:
+        raise ValueError("ieWebGet requires a deposit file/resource file in headless mode.")
+
+    base_url = str(_IE_WEB_GET_RESOURCES[deposit_key]).rstrip("/")
+    remote_name = Path(deposit_file).name
+    local_name = str(options.get("localname", remote_name) or remote_name)
+    download_dir = Path(options.get("downloaddir", Path.cwd())).expanduser()
+    unzip_flag = bool(options.get("unzip", True))
+    remove_zip_flag = bool(options.get("removezipfile", True))
+
+    download_dir.mkdir(parents=True, exist_ok=True)
+    local_file = download_dir / local_name
+    if not local_file.exists():
+        remote_url = f"{base_url}/{quote(remote_name)}"
+        request = Request(remote_url, headers={"User-Agent": "pyisetcam/0.1.0"})
+        with urlopen(request) as response, local_file.open("wb") as handle:
+            handle.write(response.read())
+
+    if unzip_flag and local_file.suffix.lower() == ".zip":
+        target_dir = download_dir / local_file.stem
+        target_dir.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(local_file) as archive:
+            archive.extractall(target_dir)
+            filenames = sorted(str((target_dir / name).resolve()) for name in archive.namelist() if not name.endswith("/"))
+        if remove_zip_flag and local_file.exists():
+            local_file.unlink()
+        return str(target_dir), filenames
+
+    return str(local_file), []
+
+
+def ie_xl2_color_filter(
+    xl_fname: str | Path,
+    vc_fname: str | Path | None = None,
+    d_type: str = "colorfilter",
+    filter_names: Any | None = None,
+) -> tuple[str, np.ndarray, np.ndarray, str]:
+    """Convert spreadsheet-like color-filter or spectral data into a MATLAB file."""
+
+    path = Path(xl_fname).expanduser()
+    numeric, cells = _spreadsheet_numeric_and_text(path)
+    if numeric.size == 0 or numeric.shape[1] < 2:
+        raise ValueError("Spreadsheet must contain wavelength plus at least one data column.")
+
+    wavelength = np.asarray(numeric[:, 0], dtype=float)
+    valid_wave = ~np.isnan(wavelength)
+    wavelength = wavelength[valid_wave]
+
+    data_columns: list[np.ndarray] = []
+    data_indices: list[int] = []
+    for col_index in range(1, numeric.shape[1]):
+        column = np.asarray(numeric[:, col_index], dtype=float)
+        valid = ~np.isnan(column)
+        if int(np.sum(valid)) > 0:
+            trimmed = column[valid]
+            if trimmed.size != wavelength.size:
+                raise ValueError("Data and wavelength must be the same length.")
+            data_columns.append(trimmed)
+            data_indices.append(col_index)
+    if not data_columns:
+        raise ValueError("Spreadsheet does not contain spectral data columns.")
+    data = np.column_stack(data_columns).astype(float)
+
+    header = cells[0] if cells else []
+    inferred_names = [
+        str(header[index]).strip()
+        for index in data_indices
+        if index < len(header) and str(header[index]).strip()
+    ]
+    comment = str(path.name)
+
+    normalized_type = param_format(d_type)
+    if normalized_type == "colorfilter":
+        if np.max(data) > 1.0:
+            data = data / 100.0
+        if filter_names is None:
+            if len(inferred_names) == data.shape[1]:
+                resolved_names = inferred_names
+            else:
+                from .sensor import sensor_color_order
+
+                ordering, _ = sensor_color_order("cell")
+                resolved_names = [f"{ordering[index % len(ordering)]}Filter" for index in range(data.shape[1])]
+        else:
+            resolved_names = [str(value) for value in np.atleast_1d(filter_names).tolist()]
+        if len(resolved_names) != data.shape[1]:
+            raise ValueError("filter_names must match the number of spectral columns.")
+
+        output = _normalize_save_path(vc_fname or path.with_suffix(".mat"))
+        savemat(
+            output,
+            {
+                "wavelength": wavelength,
+                "data": data,
+                "comment": comment,
+                "filterNames": np.asarray(resolved_names, dtype=object),
+            },
+            do_compression=True,
+        )
+        return str(output), wavelength, data, comment
+
+    if normalized_type in {"spectraldata", "spectral"}:
+        output = ie_save_spectral_file(wavelength, data, comment, vc_fname or path.with_suffix(".mat"))
+        return str(output), wavelength, data, comment
+
+    raise UnsupportedOptionError("ieXL2ColorFilter", d_type)
+
+
+def vc_read_image(
+    fullname: str | Path | Any,
+    image_type: str = "rgb",
+    *args: Any,
+    asset_store: AssetStore | None = None,
+) -> tuple[np.ndarray, dict[str, Any] | None, dict[str, Any] | None, str, np.ndarray | None]:
+    """Read image or multispectral data and return MATLAB-style photons plus metadata."""
+
+    if fullname is None or (isinstance(fullname, str) and fullname == ""):
+        return np.asarray([]), None, None, "", None
+
+    normalized = param_format(image_type or "rgb")
+    from .scene import scene_from_file
+
+    if normalized in {"rgb", "unispectral", "monochrome"}:
+        display = args[0] if args else None
+        requested_type = "monochrome" if normalized in {"unispectral", "monochrome"} else "rgb"
+        scene = scene_from_file(fullname, requested_type, None, display, asset_store=asset_store)
+        illuminant = {
+            "wave": np.asarray(scene.fields["wave"], dtype=float).copy(),
+            "data": np.asarray(scene.fields["illuminant_energy"], dtype=float).copy(),
+            "photons": np.asarray(scene.fields["illuminant_photons"], dtype=float).copy(),
+            "comment": str(scene.fields.get("illuminant_comment", "")),
+        }
+        return np.asarray(scene.data["photons"], dtype=float), illuminant, None, "", None
+
+    if normalized not in {"spectral", "multispectral", "hyperspectral"}:
+        raise UnsupportedOptionError("vcReadImage", image_type)
+
+    wave = args[0] if args else None
+    scene = scene_from_file(fullname, normalized, None, None, wave, asset_store=asset_store)
+    illuminant = {
+        "wave": np.asarray(scene.fields["wave"], dtype=float).copy(),
+        "data": np.asarray(scene.fields["illuminant_energy"], dtype=float).copy(),
+        "photons": np.asarray(scene.fields["illuminant_photons"], dtype=float).copy(),
+        "comment": str(scene.fields.get("illuminant_comment", "")),
+    }
+
+    basis = None
+    comment = ""
+    mc_coef = None
+    if isinstance(fullname, (str, Path)):
+        raw = loadmat(str(fullname), squeeze_me=True, struct_as_record=False)
+        if "basis" in raw:
+            basis = _deserialize_value(raw["basis"])
+        if "comment" in raw:
+            comment = _coerce_comment_text(raw["comment"])
+        if "mcCOEF" in raw:
+            mc_coef = np.asarray(raw["mcCOEF"], dtype=float)
+        if "illuminant" in raw:
+            illuminant = _deserialize_value(raw["illuminant"])
+
+    return np.asarray(scene.data["photons"], dtype=float), illuminant, basis, comment, mc_coef
+
+
 # MATLAB-style aliases.
 ieImageType = ie_image_type
 ieSaveSpectralFile = ie_save_spectral_file
 ieTempfile = ie_tempfile
 ieVarInFile = ie_var_in_file
+ieWebGet = ie_web_get
+ieXL2ColorFilter = ie_xl2_color_filter
 pathToLinux = path_to_linux
 vcSaveObject = vc_save_object
 vcExportObject = vc_export_object
 vcImportObject = vc_import_object
 vcLoadObject = vc_load_object
+vcReadImage = vc_read_image
 vcReadSpectra = vc_read_spectra
 vcSaveMultiSpectralImage = vc_save_multispectral_image
 

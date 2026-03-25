@@ -77,6 +77,8 @@ from .fileio import (
     ie_dng_read,
     ie_dng_simple_info,
     ie_image_type,
+    ie_web_get,
+    ie_xl2_color_filter,
     ie_save_color_filter,
     ie_save_multispectral_image,
     ie_save_spectral_file,
@@ -88,6 +90,7 @@ from .fileio import (
     vc_export_object,
     vc_import_object,
     vc_load_object,
+    vc_read_image,
     vc_read_spectra,
     vc_save_object,
     vc_save_multispectral_image,
@@ -971,6 +974,8 @@ __all__ = [
     "ieMainClose",
     "ieRefreshWindow",
     "ieImageType",
+    "ieWebGet",
+    "ieXL2ColorFilter",
     "ieFindWaveIndex",
     "ie_find_wave_index",
     "ieLUTDigital",
@@ -988,6 +993,8 @@ __all__ = [
     "ieSaveSpectralFile",
     "ieTempfile",
     "ieVarInFile",
+    "ie_web_get",
+    "ie_xl2_color_filter",
     "imageFlip",
     "imageIncreaseImageRGBSize",
     "image_flip",
@@ -1804,6 +1811,7 @@ __all__ = [
     "vcReplaceObject",
     "vcImportObject",
     "vcLoadObject",
+    "vcReadImage",
     "vcReadSpectra",
     "vcSaveObject",
     "vcSaveMultiSpectralImage",
@@ -1814,6 +1822,7 @@ __all__ = [
     "vc_import_object",
     "vc_get_roi_data",
     "vc_load_object",
+    "vc_read_image",
     "vc_read_spectra",
     "vc_rect2_locs",
     "vc_save_object",
@@ -2386,6 +2395,8 @@ ieMvnrnd = ie_mvnrnd
 ieN2MegaPixel = ie_n_to_megapixel
 ieReflectanceSamples = ie_reflectance_samples
 ieImageType = ie_image_type
+ieWebGet = ie_web_get
+ieXL2ColorFilter = ie_xl2_color_filter
 ieReadColorFilter = ie_read_color_filter
 ieReadSpectra = ie_read_spectra
 ieLocs2Rect = ie_locs2_rect
@@ -2503,6 +2514,7 @@ vcRect2Locs = vc_rect2_locs
 vcReplaceAndSelectObject = session_replace_and_select_object
 vcReplaceObject = session_replace_object
 vcLoadObject = vc_load_object
+vcReadImage = vc_read_image
 vcReadSpectra = vc_read_spectra
 vcSaveObject = vc_save_object
 vcSaveMultiSpectralImage = vc_save_multispectral_image

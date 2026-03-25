@@ -1750,6 +1750,13 @@ cover `ieImageType(...)`, `ieSaveSpectralFile(...)`, `ieTempfile(...)`,
 MATLAB file-picker helpers `ieReadMultipleFileNames.m`,
 `vcSelectDataFile.m`, and `vcSelectImage.m` are explicitly tracked as GUI
 out of scope rather than residual headless debt.
+That same compatibility layer now also covers `ieWebGet(...)`,
+`ieXL2ColorFilter(...)`, and `vcReadImage(...)`: `ieWebGet(...)` stays
+headless by returning list or browse metadata plus local download or unzip
+results without opening a browser, the spreadsheet importer now supports CSV
+plus simple XLSX color-filter and spectral payloads, and the image reader
+replays legacy RGB and basis-coded multispectral contracts on top of
+`sceneFromFile(...)`.
 The adjacent `utility/image` numeric helper tail is shrinking too:
 `ieFindWaveIndex(...)`, `ieWave2Index(...)`, `ieRadialMatrix(...)`,
 `imageBoundingBox(...)`, `imageCentroid(...)`, `imageCircular(...)`, and

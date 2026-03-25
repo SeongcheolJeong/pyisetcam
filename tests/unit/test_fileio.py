@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import zipfile
 
 import numpy as np
 from scipy.io import loadmat, whosmat
@@ -9,21 +10,27 @@ from pyisetcam import (
     Camera,
     Scene,
     camera_create,
+    display_create,
     ieImageType,
     ieDNGRead,
     ieDNGSimpleInfo,
     ieSaveSpectralFile,
     ieTempfile,
     ieVarInFile,
+    ieWebGet,
+    ieXL2ColorFilter,
     ie_dng_read,
     ie_dng_simple_info,
     ie_image_type,
     ie_save_spectral_file,
     ie_tempfile,
     ie_var_in_file,
+    ie_web_get,
+    ie_xl2_color_filter,
     pathToLinux,
     path_to_linux,
     scene_create,
+    scene_from_file,
     sensorDNGRead,
     sensor_crop,
     sensor_dng_read,
@@ -33,12 +40,14 @@ from pyisetcam import (
     vcExportObject,
     vcImportObject,
     vcLoadObject,
+    vcReadImage,
     vcReadSpectra,
     vcSaveObject,
     vcSaveMultiSpectralImage,
     vc_export_object,
     vc_import_object,
     vc_load_object,
+    vc_read_image,
     vc_read_spectra,
     vc_save_object,
     vc_save_multispectral_image,
@@ -286,3 +295,128 @@ def test_vc_save_multispectral_image_and_import_object_wrappers(tmp_path, asset_
     alias_slot, alias_name = vcImportObject("scene", object_path, session=session_create())
     assert alias_slot == 1
     assert alias_name == str(object_path)
+
+
+def test_ie_web_get_supports_list_browse_and_zip_download(tmp_path, monkeypatch) -> None:
+    remote_dir = tmp_path / "remote"
+    remote_dir.mkdir()
+    archive_path = remote_dir / "payload.zip"
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr("data/example.txt", "demo")
+
+    monkeypatch.setattr(
+        "pyisetcam.fileio._IE_WEB_GET_RESOURCES",
+        {"testdeposit": remote_dir.as_uri()},
+    )
+    monkeypatch.setattr("pyisetcam.fileio._IE_WEB_GET_COLLECTIONS", {"testcollection": "https://example.com/collection"})
+
+    listed = ie_web_get("list")
+    browse_url = ieWebGet("browse", "testdeposit")
+    local_dir, files = ie_web_get(
+        "deposit name",
+        "testdeposit",
+        "deposit file",
+        "payload.zip",
+        "download dir",
+        tmp_path / "downloaded",
+        "confirm",
+        False,
+    )
+    zip_only, zip_files = ieWebGet(
+        "deposit name",
+        "testdeposit",
+        "deposit file",
+        "payload.zip",
+        "download dir",
+        tmp_path / "zip-only",
+        "unzip",
+        False,
+    )
+
+    assert "testdeposit" in listed["deposits"]
+    assert "testcollection" in listed["collections"]
+    assert browse_url == remote_dir.as_uri()
+    assert Path(local_dir).is_dir()
+    assert len(files) == 1
+    assert Path(files[0]).read_text() == "demo"
+    assert Path(zip_only).is_file()
+    assert zip_files == []
+
+
+def test_ie_xl2_color_filter_reads_csv_and_saves_payloads(tmp_path) -> None:
+    color_csv = tmp_path / "filters.csv"
+    color_csv.write_text(
+        "wavelength,rFilter,gFilter\n400,10,20\n500,30,40\n600,50,60\n",
+        encoding="utf-8",
+    )
+
+    saved_filter, wavelength, data, comment = ie_xl2_color_filter(color_csv, tmp_path / "filters.mat")
+    payload = loadmat(saved_filter, squeeze_me=True, struct_as_record=False)
+
+    assert comment == "filters.csv"
+    assert np.allclose(wavelength, np.array([400.0, 500.0, 600.0], dtype=float))
+    assert np.allclose(data, np.array([[0.10, 0.20], [0.30, 0.40], [0.50, 0.60]], dtype=float))
+    assert np.allclose(np.asarray(payload["data"], dtype=float), data)
+    assert list(np.atleast_1d(payload["filterNames"]).tolist()) == ["rFilter", "gFilter"]
+
+    spectral_csv = tmp_path / "spectral.csv"
+    spectral_csv.write_text(
+        "wavelength,a,b\n400,1,2\n500,3,4\n600,5,6\n",
+        encoding="utf-8",
+    )
+    saved_spectral, _, spectral_data, _ = ieXL2ColorFilter(spectral_csv, tmp_path / "spectral.mat", "spectraldata")
+    spectral_payload = loadmat(saved_spectral, squeeze_me=True, struct_as_record=False)
+
+    assert np.allclose(spectral_data, np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]], dtype=float))
+    assert np.allclose(np.asarray(spectral_payload["data"], dtype=float), spectral_data)
+
+
+def test_vc_read_image_matches_scene_from_file_and_multispectral_metadata(tmp_path, asset_store) -> None:
+    rgb = np.array(
+        [
+            [[0.1, 0.2, 0.3], [0.7, 0.5, 0.2]],
+            [[0.9, 0.4, 0.1], [0.3, 0.6, 0.8]],
+        ],
+        dtype=float,
+    )
+    display = display_create(asset_store=asset_store)
+    photons, illuminant, basis, comment, mc_coef = vc_read_image(rgb, "rgb", display, asset_store=asset_store)
+    scene = scene_from_file(rgb, "rgb", None, display, asset_store=asset_store)
+
+    assert basis is None
+    assert comment == ""
+    assert mc_coef is None
+    assert illuminant is not None
+    assert np.allclose(photons, np.asarray(scene.data["photons"], dtype=float))
+    assert np.allclose(np.asarray(illuminant["wave"], dtype=float), np.asarray(scene.fields["wave"], dtype=float))
+
+    wave = np.array([400.0, 500.0, 600.0], dtype=float)
+    basis_payload = {"wave": wave, "basis": np.eye(3, dtype=float)}
+    illuminant_payload = {"wave": wave, "data": np.array([1.0, 2.0, 3.0], dtype=float)}
+    mc_coef_payload = np.ones((2, 2, 3), dtype=float)
+    multispectral_path = tmp_path / "basis_scene.mat"
+    vc_save_multispectral_image(
+        tmp_path,
+        multispectral_path.name,
+        mc_coef_payload,
+        basis_payload,
+        None,
+        illuminant_payload,
+        "basis comment",
+        None,
+    )
+
+    photons_ms, illuminant_ms, basis_ms, comment_ms, mc_coef_ms = vcReadImage(
+        multispectral_path,
+        "multispectral",
+        wave,
+        asset_store=asset_store,
+    )
+    expected_scene = scene_from_file(multispectral_path, "multispectral", None, None, wave, asset_store=asset_store)
+
+    assert illuminant_ms is not None
+    assert basis_ms is not None
+    assert comment_ms == "basis comment"
+    assert np.allclose(photons_ms, np.asarray(expected_scene.data["photons"], dtype=float))
+    assert np.allclose(np.asarray(basis_ms["wave"], dtype=float), wave)
+    assert np.allclose(np.asarray(mc_coef_ms, dtype=float), mc_coef_payload)
