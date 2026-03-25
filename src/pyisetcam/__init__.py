@@ -355,7 +355,20 @@ from .optics import (
     zemax_read_header,
 )
 from .parity import run_python_case, run_python_case_with_context
-from .plotting import ip_plot, oi_plot, scene_plot, sensor_plot, sensor_plot_fft, sensor_plot_line, wvf_plot
+from .plotting import (
+    ip_plot,
+    oi_plot,
+    plot_display_color,
+    plot_display_gamut,
+    plot_display_line,
+    plot_display_spd,
+    scene_plot,
+    sensor_plot,
+    sensor_plot_fft,
+    sensor_plot_hist,
+    sensor_plot_line,
+    wvf_plot,
+)
 from .ptable import IEPTable, ie_p_table, ie_table_get
 from .roi import ie_locs2_rect, ie_rect2_locs, ie_rect2_vertices, ie_roi2_locs, vc_get_roi_data, vc_rect2_locs
 from .scielab import (
@@ -1329,6 +1342,15 @@ __all__ = [
     "oi_pad_value",
     "oi_photon_noise",
     "oi_psf",
+    "plotOI",
+    "plotDisplayColor",
+    "plotDisplayGamut",
+    "plotDisplayLine",
+    "plotDisplaySPD",
+    "plot_display_color",
+    "plot_display_gamut",
+    "plot_display_line",
+    "plot_display_spd",
     "oi_plot",
     "oi_preview_video",
     "oi_save_image",
@@ -1361,14 +1383,18 @@ __all__ = [
     "airyDisk",
     "psf_to_zcoeff_error",
     "root_mean_squared_error",
+    "scenePlot",
     "scene_plot",
     "pixel_snr",
     "pixel_snr_luxsec",
     "pixel_v_per_lux_sec",
     "sensor_snr",
     "sensor_snr_luxsec",
+    "sensorPlot",
+    "sensorPlotHist",
     "sensor_plot",
     "sensor_plot_fft",
+    "sensor_plot_hist",
     "sensor_plot_line",
     "session_add_and_select_object",
     "session_add_object",
@@ -1903,6 +1929,7 @@ __all__ = [
     "plotScene",
     "plotSensor",
     "plotSensorFFT",
+    "plotSensorHist",
     "sensorPlotLine",
     "oiPlot",
     "wvfPlot",
@@ -2069,11 +2096,20 @@ lsf2circularpsf = lsf_to_circular_psf
 psfCircularlyAverage = psf_circularly_average
 psfAverageMultiple = psf_average_multiple
 psf2zcoeff = psf_to_zcoeff_error
+plotDisplayColor = plot_display_color
+plotDisplayGamut = plot_display_gamut
+plotDisplayLine = plot_display_line
+plotDisplaySPD = plot_display_spd
+plotOI = oi_plot
 oiPlot = oi_plot
 ipPlot = ip_plot
 plotScene = scene_plot
+scenePlot = scene_plot
 plotSensor = sensor_plot
+plotSensorHist = sensor_plot_hist
 plotSensorFFT = sensor_plot_fft
+sensorPlot = sensor_plot
+sensorPlotHist = sensor_plot_hist
 sensorPlotLine = sensor_plot_line
 wvfPlot = wvf_plot
 airyDisk = airy_disk

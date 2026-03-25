@@ -1757,6 +1757,12 @@ results without opening a browser, the spreadsheet importer now supports CSV
 plus simple XLSX color-filter and spectral payloads, and the image reader
 replays legacy RGB and basis-coded multispectral contracts on top of
 `sceneFromFile(...)`.
+The neighboring `utility/plots` gateway slice is cleaner too:
+`plotDisplaySPD(...)`, `plotDisplayLine(...)`, `plotDisplayColor(...)`,
+`plotDisplayGamut(...)`, and `plotSensorHist(...)` now have direct headless
+wrapper coverage in `pyisetcam.plotting`, and the legacy alias entry points
+`plotOI(...)`, `scenePlot(...)`, and `sensorPlot(...)` are exported directly
+on top of the existing headless plotting gateways.
 The adjacent `utility/image` numeric helper tail is shrinking too:
 `ieFindWaveIndex(...)`, `ieWave2Index(...)`, `ieRadialMatrix(...)`,
 `imageBoundingBox(...)`, `imageCentroid(...)`, `imageCircular(...)`, and

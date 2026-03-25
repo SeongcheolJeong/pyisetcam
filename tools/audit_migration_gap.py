@@ -323,6 +323,81 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB multispectral-waveband visualizer is covered by the Python `image_hc2rgb(...)` / `imagehc2rgb(...)` compatibility wrapper in `pyisetcam.utils`.",
         "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
     },
+    "utility/plots/ipPlot.m": {
+        "status": "ported",
+        "note": "The MATLAB image-processor plotting gateway is covered by the headless Python `ip_plot(...)` / `ipPlot(...)` wrapper with direct plotting regressions over line, chromaticity, RGB, luminance, and CIELAB/LUV payloads.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__", "pyisetcam.parity"],
+    },
+    "utility/plots/oiPlot.m": {
+        "status": "ported",
+        "note": "The MATLAB optical-image plotting gateway is covered by the headless Python `oi_plot(...)` / `oiPlot(...)` wrapper with direct plotting regressions over ROI, line, PSF, and wavelength-domain payloads.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__", "pyisetcam.parity"],
+    },
+    "utility/plots/plotOI.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB `plotOI(...)` entry point is covered by the Python `plotOI(...)` compatibility alias on top of `oi_plot(...)` / `oiPlot(...)`.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/plotScene.m": {
+        "status": "ported",
+        "note": "The MATLAB scene plotting gateway is covered by the headless Python `scene_plot(...)` / `plotScene(...)` wrapper with direct plotting regressions over radiance, illuminant, and chromaticity payloads.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__", "pyisetcam.parity"],
+    },
+    "utility/plots/scenePlot.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB `scenePlot(...)` entry point is covered by the Python `scenePlot(...)` compatibility alias on top of `scene_plot(...)` / `plotScene(...)`.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/plotSensor.m": {
+        "status": "ported",
+        "note": "The MATLAB sensor plotting gateway is covered by the headless Python `sensor_plot(...)` / `plotSensor(...)` wrapper with direct plotting regressions over line, histogram, SNR, FFT, and CFA payloads.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__", "pyisetcam.parity"],
+    },
+    "utility/plots/sensorPlot.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB `sensorPlot(...)` entry point is covered by the Python `sensorPlot(...)` compatibility alias on top of `sensor_plot(...)` / `plotSensor(...)`.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/plotSensorFFT.m": {
+        "status": "ported",
+        "note": "The MATLAB sensor FFT plotting gateway is covered by the Python `sensor_plot_fft(...)` / `plotSensorFFT(...)` compatibility wrapper with direct FFT payload regressions.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/plotSensorHist.m": {
+        "status": "ported",
+        "note": "The MATLAB sensor histogram plotting helper is covered by the Python `sensor_plot_hist(...)` / `plotSensorHist(...)` compatibility wrapper over ROI volts, electrons, and DV histogram payloads.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/sensorPlotHist.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB `sensorPlotHist(...)` entry point is covered by the Python `sensorPlotHist(...)` compatibility alias on top of `sensor_plot_hist(...)` / `plotSensorHist(...)`.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/sensorPlotLine.m": {
+        "status": "ported",
+        "note": "The MATLAB sensor line plotting helper is covered by the Python `sensor_plot_line(...)` / `sensorPlotLine(...)` compatibility wrapper with direct space-domain and FFT payload regressions.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__", "pyisetcam.parity"],
+    },
+    "utility/plots/plotDisplaySPD.m": {
+        "status": "ported",
+        "note": "The MATLAB display primary-SPD plotting helper is covered by the Python `plot_display_spd(...)` / `plotDisplaySPD(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/plotDisplayLine.m": {
+        "status": "ported",
+        "note": "The MATLAB display line plotting helper is covered by the Python `plot_display_line(...)` / `plotDisplayLine(...)` compatibility wrapper, including MATLAB-style analog or quantized line payloads.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/plotDisplayColor.m": {
+        "status": "ported",
+        "note": "The MATLAB display color-analysis helper is covered by the Python `plot_display_color(...)` / `plotDisplayColor(...)` compatibility wrapper over RGB, chromaticity, luminance, and CIELAB/LUV payloads.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/plotDisplayGamut.m": {
+        "status": "ported",
+        "note": "The MATLAB display-gamut plotting helper is covered by the Python `plot_display_gamut(...)` / `plotDisplayGamut(...)` compatibility wrapper on top of display primary XYZ data.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
     "utility/image/imageSetHarmonic.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a GUIDE-only harmonic-parameter dialog and remains outside the headless migration target.",

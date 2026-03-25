@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-03-25T01:05:29.392353+00:00",
+  "generated_at": "2026-03-25T01:56:42.530461+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 80,
+      "headless_only": 69,
       "missing": 21,
       "out_of_scope": 189,
       "parity": 676,
-      "partial": 363,
-      "ported": 114
+      "partial": 359,
+      "ported": 129
     },
     "kind_counts": {
       "api": 661,
@@ -20,18 +20,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 298,
-      "P2": 166,
-      "P3": 979
+      "P1": 294,
+      "P2": 155,
+      "P3": 994
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": 0,
+        "headless_only": -11,
         "missing": 0,
         "out_of_scope": 0,
         "parity": 0,
-        "partial": -3,
-        "ported": 3
+        "partial": -4,
+        "ported": 15
       },
       "kind_counts": {
         "api": 0,
@@ -42,9 +42,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -3,
-        "P2": 0,
-        "P3": 3
+        "P1": -4,
+        "P2": -11,
+        "P3": 15
       }
     },
     "family_summary": {
@@ -966,9 +966,10 @@
       "utility/plots": {
         "total": 50,
         "by_status": {
-          "headless_only": 16,
+          "headless_only": 5,
           "out_of_scope": 2,
-          "partial": 32
+          "partial": 28,
+          "ported": 15
         },
         "by_kind": {
           "gui": 2,
@@ -1014,12 +1015,13 @@
       },
       {
         "family": "utility/plots",
-        "open_entries": 48,
+        "open_entries": 33,
         "highest_open_priority": "P1",
         "by_status": {
-          "headless_only": 16,
+          "headless_only": 5,
           "out_of_scope": 2,
-          "partial": 32
+          "partial": 28,
+          "ported": 15
         }
       },
       {
@@ -1177,7 +1179,7 @@
         "not_implemented_error_sites": 0
       },
       "plotting": {
-        "unsupported_option_error_sites": 14,
+        "unsupported_option_error_sites": 17,
         "not_implemented_error_sites": 0
       },
       "ptable": {
@@ -2976,7 +2978,7 @@
       "family": "displays",
       "kind": "gui",
       "status": "out_of_scope",
-      "python_surface": "pyisetcam.display, pyisetcam.session",
+      "python_surface": "pyisetcam.display, pyisetcam.plotting, pyisetcam.session",
       "tests": [
         "tests/unit/test_display.py",
         "tests/unit/test_pipeline.py"
@@ -17934,25 +17936,25 @@
       "upstream_path": "utility/plots/ipPlot.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "headless_only",
+      "status": "ported",
       "python_surface": "pyisetcam.plotting, pyisetcam.__init__, pyisetcam.parity",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The MATLAB image-processor plotting gateway is covered by the headless Python `ip_plot(...)` / `ipPlot(...)` wrapper with direct plotting regressions over line, chromaticity, RGB, luminance, and CIELAB/LUV payloads.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/oiPlot.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "headless_only",
+      "status": "ported",
       "python_surface": "pyisetcam.plotting, pyisetcam.__init__, pyisetcam.parity",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The MATLAB optical-image plotting gateway is covered by the headless Python `oi_plot(...)` / `oiPlot(...)` wrapper with direct plotting regressions over ROI, line, PSF, and wavelength-domain payloads.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/plotContrastHistogram.m",
@@ -17970,49 +17972,49 @@
       "upstream_path": "utility/plots/plotDisplayColor.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB display color-analysis helper is covered by the Python `plot_display_color(...)` / `plotDisplayColor(...)` compatibility wrapper over RGB, chromaticity, luminance, and CIELAB/LUV payloads.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/plotDisplayGamut.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB display-gamut plotting helper is covered by the Python `plot_display_gamut(...)` / `plotDisplayGamut(...)` compatibility wrapper on top of display primary XYZ data.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/plotDisplayLine.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB display line plotting helper is covered by the Python `plot_display_line(...)` / `plotDisplayLine(...)` compatibility wrapper, including MATLAB-style analog or quantized line payloads.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/plotDisplaySPD.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB display primary-SPD plotting helper is covered by the Python `plot_display_spd(...)` / `plotDisplaySPD(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/plotEtendueRatio.m",
@@ -18078,13 +18080,13 @@
       "upstream_path": "utility/plots/plotOI.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.plotting, pyisetcam.__init__, pyisetcam.parity",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB `plotOI(...)` entry point is covered by the Python `plotOI(...)` compatibility alias on top of `oi_plot(...)` / `oiPlot(...)`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/plotPixelSNR.m",
@@ -18126,13 +18128,13 @@
       "upstream_path": "utility/plots/plotScene.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "headless_only",
+      "status": "ported",
       "python_surface": "pyisetcam.plotting, pyisetcam.__init__, pyisetcam.parity",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The MATLAB scene plotting gateway is covered by the headless Python `scene_plot(...)` / `plotScene(...)` wrapper with direct plotting regressions over radiance, illuminant, and chromaticity payloads.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/plotSceneTest.m",
@@ -18150,13 +18152,13 @@
       "upstream_path": "utility/plots/plotSensor.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "headless_only",
+      "status": "ported",
       "python_surface": "pyisetcam.plotting, pyisetcam.__init__, pyisetcam.parity",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The MATLAB sensor plotting gateway is covered by the headless Python `sensor_plot(...)` / `plotSensor(...)` wrapper with direct plotting regressions over line, histogram, SNR, FFT, and CFA payloads.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/plotSensorEtendue.m",
@@ -18174,25 +18176,25 @@
       "upstream_path": "utility/plots/plotSensorFFT.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "headless_only",
+      "status": "ported",
       "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The MATLAB sensor FFT plotting gateway is covered by the Python `sensor_plot_fft(...)` / `plotSensorFFT(...)` compatibility wrapper with direct FFT payload regressions.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/plotSensorHist.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The MATLAB sensor histogram plotting helper is covered by the Python `sensor_plot_hist(...)` / `plotSensorHist(...)` compatibility wrapper over ROI volts, electrons, and DV histogram payloads.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/plotSensorSNR.m",
@@ -18282,13 +18284,13 @@
       "upstream_path": "utility/plots/scenePlot.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.plotting, pyisetcam.__init__, pyisetcam.parity",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB `scenePlot(...)` entry point is covered by the Python `scenePlot(...)` compatibility alias on top of `scene_plot(...)` / `plotScene(...)`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/sensorChannelImage.mlapp",
@@ -18306,13 +18308,13 @@
       "upstream_path": "utility/plots/sensorPlot.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.plotting, pyisetcam.__init__, pyisetcam.iso, pyisetcam.parity",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB `sensorPlot(...)` entry point is covered by the Python `sensorPlot(...)` compatibility alias on top of `sensor_plot(...)` / `plotSensor(...)`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/sensorPlotColor.m",
@@ -18330,25 +18332,25 @@
       "upstream_path": "utility/plots/sensorPlotHist.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB `sensorPlotHist(...)` entry point is covered by the Python `sensorPlotHist(...)` compatibility alias on top of `sensor_plot_hist(...)` / `plotSensorHist(...)`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/sensorPlotLine.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "headless_only",
+      "status": "ported",
       "python_surface": "pyisetcam.plotting, pyisetcam.__init__, pyisetcam.parity",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The MATLAB sensor line plotting helper is covered by the Python `sensor_plot_line(...)` / `sensorPlotLine(...)` compatibility wrapper with direct space-domain and FFT payload regressions.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/xaxisLine.m",

@@ -7,9 +7,10 @@ from typing import Any
 import numpy as np
 
 from .color import xyz_color_matching
+from .display import display_get
 from .exceptions import UnsupportedOptionError
 from .ip import ip_get
-from .metrics import xyz_from_energy, xyz_to_lab, xyz_to_luv
+from .metrics import chromaticity_xy, xyz_from_energy, xyz_to_lab, xyz_to_luv
 from .optics import airy_disk, oi_get, wvf_get
 from .scene import scene_get
 from .sensor import pixel_snr, sensor_get, sensor_snr
@@ -1229,6 +1230,26 @@ def sensor_plot_line(
     raise UnsupportedOptionError("sensorPlotLine", s_or_t)
 
 
+def sensor_plot_hist(
+    sensor: Sensor,
+    unit_type: str = "electrons",
+    roi_locs: Any | None = None,
+) -> tuple[dict[str, Any], None]:
+    """Return MATLAB-style `sensorPlotHist` user-data without opening a figure."""
+
+    roi = _roi_required("sensorPlotHist", unit_type, roi_locs)
+    key = param_format(unit_type)
+    if key in {"v", "volts"}:
+        data_type = "volts"
+    elif key in {"e", "electrons"}:
+        data_type = "electrons"
+    elif key in {"dv", "digitalvalues"}:
+        data_type = "dv"
+    else:
+        raise UnsupportedOptionError("sensorPlotHist", unit_type)
+    return _sensor_plot_histogram(sensor, data_type, roi), None
+
+
 def ip_plot(
     ip: ImageProcessor,
     p_type: str = "horizontal line",
@@ -1306,10 +1327,128 @@ def ip_plot(
     raise UnsupportedOptionError("ipPlot", p_type)
 
 
+def _display_line_payload(ip: ImageProcessor, orientation: str, xy: Any) -> dict[str, Any]:
+    line_index, xy_array = _line_index("plotDisplayLine", orientation, xy, orientation)
+    result = ip_get(ip, "result")
+    if result is None:
+        raise ValueError("Results not computed in display window.")
+
+    values = np.asarray(result, dtype=float)
+    if values.ndim != 3 or values.shape[2] != 3:
+        raise ValueError("Display line plotting requires RGB result data.")
+
+    quantization = ip.data.get("quantization")
+    method = "analog"
+    n_bits = 8
+    if isinstance(quantization, dict):
+        method = param_format(quantization.get("method", "analog"))
+        n_bits = int(quantization.get("bits", n_bits))
+    elif quantization is not None:
+        method = param_format(quantization)
+    if method != "analog":
+        values = values * float(2 ** int(n_bits))
+        data_type = "digital"
+    else:
+        data_type = "analog"
+
+    if orientation == "h":
+        if line_index < 1 or line_index > values.shape[0]:
+            raise IndexError("Horizontal display line index is out of range.")
+        line_values = np.asarray(values[line_index - 1, :, :], dtype=float)
+    else:
+        if line_index < 1 or line_index > values.shape[1]:
+            raise IndexError("Vertical display line index is out of range.")
+        line_values = np.asarray(values[:, line_index - 1, :], dtype=float)
+
+    return {
+        "xy": xy_array.copy(),
+        "ori": orientation,
+        "pos": np.arange(1, line_values.shape[0] + 1, dtype=float),
+        "values": line_values.copy(),
+        "dataType": data_type,
+    }
+
+
+def plot_display_spd(ip: ImageProcessor) -> tuple[dict[str, Any], None]:
+    """Return MATLAB-style `plotDisplaySPD` user-data without opening a figure."""
+
+    display = ip_get(ip, "display")
+    wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)
+    spd = np.asarray(display_get(display, "spd"), dtype=float)
+    return {"wave": wave.copy(), "spd": spd.copy()}, None
+
+
+def plot_display_line(
+    ip: ImageProcessor,
+    ori: str = "h",
+    xy: Any | None = None,
+) -> tuple[dict[str, Any], None]:
+    """Return MATLAB-style `plotDisplayLine` user-data without opening a figure."""
+
+    orientation_key = param_format(ori)
+    if orientation_key in {"h", "horizontal"}:
+        orientation = "h"
+    elif orientation_key in {"v", "vertical"}:
+        orientation = "v"
+    else:
+        raise UnsupportedOptionError("plotDisplayLine", ori)
+    selector = _roi_required("plotDisplayLine", ori, xy)
+    return _display_line_payload(ip, orientation, selector), None
+
+
+def plot_display_color(
+    ip: ImageProcessor,
+    data_type: str = "rgb histogram",
+    roi_locs: Any | None = None,
+) -> tuple[Any, None]:
+    """Return MATLAB-style `plotDisplayColor` user-data without opening a figure."""
+
+    key = param_format(data_type)
+    roi = _roi_required("plotDisplayColor", data_type, roi_locs)
+    if key in {"rgb", "rgbhistogram"}:
+        return ip_plot(ip, "rgb histogram", roi)
+    if key == "rgb3d":
+        return ip_plot(ip, "rgb3d", roi)
+    if key in {"xy", "chromaticity"}:
+        payload, _ = ip_plot(ip, "chromaticity", roi)
+        payload["xy"] = np.column_stack((np.asarray(payload["x"], dtype=float), np.asarray(payload["y"], dtype=float)))
+        return payload, None
+    if key == "luminance":
+        return ip_plot(ip, "luminance", roi)
+    if key == "cielab":
+        payload, _ = ip_plot(ip, "cielab", roi)
+        return np.asarray(payload["LAB"], dtype=float).copy(), None
+    if key == "cieluv":
+        payload, _ = ip_plot(ip, "cieluv", roi)
+        return np.asarray(payload["LUV"], dtype=float).copy(), None
+    raise UnsupportedOptionError("plotDisplayColor", data_type)
+
+
+def plot_display_gamut(ip: ImageProcessor) -> tuple[dict[str, Any], None]:
+    """Return MATLAB-style `plotDisplayGamut` user-data without opening a figure."""
+
+    display = ip_get(ip, "display")
+    rgb2xyz = np.asarray(display_get(display, "rgb2xyz"), dtype=float)
+    xy = np.asarray(chromaticity_xy(rgb2xyz), dtype=float)
+    return {
+        "xy": xy.copy(),
+        "peakLuminance": float(display_get(display, "max luminance")),
+    }, None
+
+
 plotScene = scene_plot
+scenePlot = scene_plot
+plotOI = oi_plot
 oiPlot = oi_plot
 plotSensor = sensor_plot
+sensorPlot = sensor_plot
 plotSensorFFT = sensor_plot_fft
+plotSensorHist = sensor_plot_hist
+sensorPlotHist = sensor_plot_hist
 sensorPlotLine = sensor_plot_line
 ipPlot = ip_plot
+plotDisplaySPD = plot_display_spd
+plotDisplayLine = plot_display_line
+plotDisplayColor = plot_display_color
+plotDisplayGamut = plot_display_gamut
 wvfPlot = wvf_plot

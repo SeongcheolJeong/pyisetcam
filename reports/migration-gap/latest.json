@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-03-25T01:05:29.392353+00:00",
+  "generated_at": "2026-03-25T01:56:42.530461+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-25T01:05:29.392353+00:00",
+    "generated_at": "2026-03-25T01:56:42.530461+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 80,
+      "headless_only": 69,
       "missing": 21,
       "out_of_scope": 189,
       "parity": 676,
-      "partial": 363,
-      "ported": 114
+      "partial": 359,
+      "ported": 129
     },
     "kind_counts": {
       "api": 661,
@@ -22,18 +22,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 298,
-      "P2": 166,
-      "P3": 979
+      "P1": 294,
+      "P2": 155,
+      "P3": 994
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": 0,
+        "headless_only": -11,
         "missing": 0,
         "out_of_scope": 0,
         "parity": 0,
-        "partial": -3,
-        "ported": 3
+        "partial": -4,
+        "ported": 15
       },
       "kind_counts": {
         "api": 0,
@@ -44,9 +44,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -3,
-        "P2": 0,
-        "P3": 3
+        "P1": -4,
+        "P2": -11,
+        "P3": 15
       }
     },
     "family_summary": {
@@ -968,9 +968,10 @@
       "utility/plots": {
         "total": 50,
         "by_status": {
-          "headless_only": 16,
+          "headless_only": 5,
           "out_of_scope": 2,
-          "partial": 32
+          "partial": 28,
+          "ported": 15
         },
         "by_kind": {
           "gui": 2,
@@ -1016,12 +1017,13 @@
       },
       {
         "family": "utility/plots",
-        "open_entries": 48,
+        "open_entries": 33,
         "highest_open_priority": "P1",
         "by_status": {
-          "headless_only": 16,
+          "headless_only": 5,
           "out_of_scope": 2,
-          "partial": 32
+          "partial": 28,
+          "ported": 15
         }
       },
       {
@@ -1179,7 +1181,7 @@
         "not_implemented_error_sites": 0
       },
       "plotting": {
-        "unsupported_option_error_sites": 14,
+        "unsupported_option_error_sites": 17,
         "not_implemented_error_sites": 0
       },
       "ptable": {

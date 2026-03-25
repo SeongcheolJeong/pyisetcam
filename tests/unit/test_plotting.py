@@ -7,6 +7,11 @@ from pyisetcam import (
     airyDisk,
     ieXYZFromEnergy,
     ipPlot,
+    plotDisplayColor,
+    plotDisplayGamut,
+    plotDisplayLine,
+    plotDisplaySPD,
+    plotOI,
     ip_create,
     ip_get,
     ip_set,
@@ -19,6 +24,10 @@ from pyisetcam import (
     plotScene,
     plotSensor,
     plotSensorFFT,
+    plotSensorHist,
+    scenePlot,
+    sensorPlot,
+    sensorPlotHist,
     sensorPlotLine,
     scene_create,
     scene_get,
@@ -1282,3 +1291,121 @@ def test_plot_sensor_fft_rejects_invalid_capture(asset_store) -> None:
 
     with pytest.raises(IndexError):
         plotSensorFFT(sensor, "h", "volts", np.array([1, 1], dtype=int), "capture", 3)
+
+
+def test_plot_display_spd_and_gamut(asset_store) -> None:
+    ip = ip_create(asset_store=asset_store)
+
+    spd_udata, spd_handle = plotDisplaySPD(ip)
+    gamut_udata, gamut_handle = plotDisplayGamut(ip)
+
+    expected_wave = np.asarray(ip_get(ip, "display wave"), dtype=float)
+    expected_spd = np.asarray(ip_get(ip, "display spd"), dtype=float)
+    expected_rgb2xyz = np.asarray(ip_get(ip, "display rgb2xyz"), dtype=float)
+    expected_xy = expected_rgb2xyz[:, :2] / np.sum(expected_rgb2xyz, axis=1, keepdims=True)
+
+    assert spd_handle is None
+    assert gamut_handle is None
+    assert np.allclose(spd_udata["wave"], expected_wave)
+    assert np.allclose(spd_udata["spd"], expected_spd)
+    assert np.allclose(gamut_udata["xy"], expected_xy)
+    assert np.isclose(gamut_udata["peakLuminance"], float(ip_get(ip, "display max luminance")))
+
+
+def test_plot_display_line_and_color_wrappers(asset_store) -> None:
+    ip = ip_create(asset_store=asset_store)
+    result = np.array(
+        [
+            [[0.10, 0.20, 0.30], [0.40, 0.50, 0.60], [0.70, 0.80, 0.90]],
+            [[0.15, 0.25, 0.35], [0.45, 0.55, 0.65], [0.75, 0.85, 0.95]],
+        ],
+        dtype=float,
+    )
+    xyz = np.array(
+        [
+            [[0.20, 0.30, 0.10], [0.50, 0.60, 0.20], [0.80, 0.90, 0.30]],
+            [[0.25, 0.35, 0.15], [0.55, 0.65, 0.25], [0.85, 0.95, 0.35]],
+        ],
+        dtype=float,
+    )
+    ip = ip_set(ip, "result", result)
+    ip = ip_set(ip, "quantization", {"method": "8 bit", "bits": 8})
+    ip = ip_set(ip, "data white point", np.array([0.95, 1.0, 1.09], dtype=float))
+    ip.data["xyz"] = xyz
+
+    roi = np.array([1, 1, 3, 2], dtype=int)
+    line_udata, line_handle = plotDisplayLine(ip, "h", np.array([1, 2], dtype=int))
+    hist_udata, hist_handle = plotDisplayColor(ip, "rgb histogram", roi)
+    chroma_udata, chroma_handle = plotDisplayColor(ip, "chromaticity", roi)
+    luminance_udata, luminance_handle = plotDisplayColor(ip, "luminance", roi)
+    lab_udata, lab_handle = plotDisplayColor(ip, "cielab", roi)
+
+    expected_rgb = np.asarray(ip_get(ip, "roi data", roi), dtype=float)
+    expected_xyz = np.asarray(ip_get(ip, "roi xyz", roi), dtype=float)
+    expected_line = result[1, :, :] * 256.0
+    expected_luminance = expected_xyz[:, 1]
+
+    assert line_handle is None
+    assert hist_handle is None
+    assert chroma_handle is None
+    assert luminance_handle is None
+    assert lab_handle is None
+
+    assert np.array_equal(line_udata["xy"], np.array([1, 2], dtype=int))
+    assert line_udata["ori"] == "h"
+    assert line_udata["dataType"] == "digital"
+    assert np.allclose(line_udata["values"], expected_line)
+    assert np.allclose(line_udata["pos"], np.array([1.0, 2.0, 3.0], dtype=float))
+
+    assert np.array_equal(hist_udata["rect"], roi)
+    assert np.allclose(hist_udata["RGB"], expected_rgb)
+    assert np.allclose(hist_udata["meanRGB"], np.mean(expected_rgb, axis=0))
+
+    assert np.array_equal(chroma_udata["rect"], roi)
+    assert chroma_udata["xy"].shape == (expected_rgb.shape[0], 2)
+    assert np.allclose(chroma_udata["XYZ"], expected_xyz)
+
+    assert np.array_equal(luminance_udata["rect"], roi)
+    assert np.allclose(luminance_udata["luminance"], expected_luminance)
+    assert np.isclose(luminance_udata["meanL"], float(np.mean(expected_luminance)))
+    assert np.isclose(luminance_udata["stdLum"], float(np.std(expected_luminance)))
+
+    assert lab_udata.shape == (expected_rgb.shape[0], 3)
+
+
+def test_plot_aliases_and_sensor_hist_wrapper(asset_store) -> None:
+    scene = scene_create("uniform d65", 4, asset_store=asset_store)
+    scene_alias, scene_alias_handle = scenePlot(scene, "illuminant energy")
+    scene_base, scene_base_handle = plotScene(scene, "illuminant energy")
+
+    oi = oi_create("diffraction limited", asset_store=asset_store)
+    oi_alias, oi_alias_handle = plotOI(oi, "otf wavelength")
+    oi_base, oi_base_handle = oiPlot(oi, "otf wavelength")
+
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 2)
+    sensor = sensor_set(sensor, "cols", 2)
+    sensor = sensor_set(sensor, "volts", np.array([[0.10, 0.20], [0.30, 0.40]], dtype=float))
+    roi = np.array([1, 1, 2, 2], dtype=int)
+    hist_udata, hist_handle = plotSensorHist(sensor, "volts", roi)
+    hist_alias_udata, hist_alias_handle = sensorPlotHist(sensor, "volts", roi)
+    sensor_alias_udata, sensor_alias_handle = sensorPlot(sensor, "volts histogram", roi)
+
+    assert scene_alias_handle is None
+    assert scene_base_handle is None
+    assert np.allclose(scene_alias["wave"], scene_base["wave"])
+    assert np.allclose(scene_alias["energy"], scene_base["energy"])
+
+    assert oi_alias_handle is None
+    assert oi_base_handle is None
+    assert np.allclose(oi_alias["fSupport"], oi_base["fSupport"])
+    assert np.allclose(oi_alias["otf"], oi_base["otf"])
+
+    assert hist_handle is None
+    assert hist_alias_handle is None
+    assert sensor_alias_handle is None
+    assert np.array_equal(hist_udata["roiLocs"], roi)
+    assert np.array_equal(hist_alias_udata["roiLocs"], roi)
+    assert np.array_equal(sensor_alias_udata["roiLocs"], roi)
+    assert np.allclose(hist_udata["data"], hist_alias_udata["data"], equal_nan=True)
+    assert np.allclose(hist_udata["data"], sensor_alias_udata["data"], equal_nan=True)
