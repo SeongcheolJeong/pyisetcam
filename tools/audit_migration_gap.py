@@ -47,6 +47,7 @@ SHORT_SIGNAL_PREFIXES = (
 FAMILY_SURFACE_MAP = {
     "camera": ["pyisetcam.camera"],
     "color": ["pyisetcam.color", "pyisetcam.illuminant"],
+    "data/sensor": ["pyisetcam.assets", "pyisetcam.sensor", "pyisetcam.camera"],
     "displays": ["pyisetcam.display"],
     "human": ["pyisetcam.metrics", "pyisetcam.scielab"],
     "imgproc": ["pyisetcam.ip"],
@@ -108,6 +109,7 @@ FAMILY_SURFACE_MAP = {
 FAMILY_TEST_MAP = {
     "camera": ["tests/unit/test_pipeline.py"],
     "color": ["tests/unit/test_pipeline.py", "tests/unit/test_metrics.py"],
+    "data/sensor": ["tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],
     "displays": ["tests/unit/test_display.py", "tests/unit/test_pipeline.py"],
     "human": ["tests/unit/test_human.py"],
     "imgproc": ["tests/unit/test_pipeline.py", "tests/unit/test_ip.py"],
@@ -169,6 +171,91 @@ MID_PRIORITY_FAMILIES = {
 }
 
 UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
+    "data/sensor/": {
+        "status": "parity",
+        "note": "The vendored sensor asset bundle is already exercised by the current headless runtime through `AssetStore`, sensor-model loaders, and parity or unit regressions over MT9V024, AR0132AT, IMX490, IMEC, IR-filter, and MCC sensor assets.",
+        "module_hits": ["pyisetcam.assets", "pyisetcam.sensor", "pyisetcam.camera", "pyisetcam.parity"],
+    },
+    "data/sensor/auto/MT9V024Create.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB authoring script that derives vendored MT9V024 filter and sensor MAT assets already consumed by the current runtime; recreating the provenance notebook is outside the headless migration target.",
+        "module_hits": [],
+    },
+    "data/sensor/auto/ar0132atCreate.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB authoring script that derives vendored AR0132AT filter and sensor MAT assets already consumed by the current runtime; recreating the provenance notebook is outside the headless migration target.",
+        "module_hits": [],
+    },
+    "data/sensor/colorfilters/CMYGCreate.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB color-filter authoring script for vendored sensor-filter assets, not a runtime API required by the headless migration target.",
+        "module_hits": [],
+    },
+    "data/sensor/colorfilters/OVT/s_ovtColorfilters.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB data-preparation notebook for OVT filter assets already vendored in the runtime bundle, rather than a supported runtime API surface.",
+        "module_hits": [],
+    },
+    "data/sensor/colorfilters/auto/SONY/s_imx490QEdata.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB QE-data preparation script for the vendored IMX490 filter assets already exercised by the current headless runtime.",
+        "module_hits": [],
+    },
+    "data/sensor/colorfilters/fourChannelCreate.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB color-filter authoring script for vendored sensor-filter assets, not a runtime API required by the headless migration target.",
+        "module_hits": [],
+    },
+    "data/sensor/colorfilters/gaussianCreate.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB filter-generation notebook for archived sensor-filter assets, not a required runtime API surface.",
+        "module_hits": [],
+    },
+    "data/sensor/colorfilters/s_radiometerCreate.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB authoring script for vendored radiometer-filter assets rather than a runtime API required by the headless port.",
+        "module_hits": [],
+    },
+    "data/sensor/colorfilters/sixChannelCreate.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB color-filter authoring script for vendored sensor-filter assets, not a runtime API required by the headless migration target.",
+        "module_hits": [],
+    },
+    "data/sensor/imec/cornell_thomas.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is an IMEC asset-analysis notebook rather than a reusable runtime API surface for the headless migration target.",
+        "module_hits": [],
+    },
+    "data/sensor/imec/generateImecQEfile.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB authoring script that derives the vendored IMEC QE asset already consumed by the current runtime.",
+        "module_hits": [],
+    },
+    "data/sensor/imec/multispectral_pbrt.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is an IMEC asset-generation notebook rather than a reusable runtime API required by the headless port.",
+        "module_hits": [],
+    },
+    "data/sensor/imec/s_imecSensorTestScene.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB exploratory script for IMEC scene preparation, not a supported runtime API surface.",
+        "module_hits": [],
+    },
+    "data/sensor/imec/v_imec.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB visualization notebook for IMEC sensor assets rather than a reusable runtime API surface.",
+        "module_hits": [],
+    },
+    "data/sensor/irfilters/irPassFilterSave.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB authoring script that generates a vendored IR-pass filter asset already consumed by the current runtime.",
+        "module_hits": [],
+    },
+    "data/sensor/mccGBRGSensorData.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB asset-conversion script that produces the vendored GBRG MCC TIFF used by existing parity coverage, rather than a runtime API surface.",
+        "module_hits": [],
+    },
     "utility/file/ieImageType.m": {
         "status": "ported",
         "note": "The legacy MATLAB image-type probe is covered by the Python `ie_image_type(...)` / `ieImageType(...)` compatibility wrapper.",

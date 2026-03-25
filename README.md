@@ -1817,6 +1817,11 @@ surface is covered by `ie_field_height_to_index(...)` /
 `ieFieldHeight2Index(...)` in `pyisetcam.optics` plus the new
 `image_dead_leaves(...)` / `imageDeadLeaves(...)` and
 `image_vernier(...)` / `imageVernier(...)` wrappers in `pyisetcam.scene`.
+The adjacent `data/sensor` family is now cleaned up too: the vendored sensor
+asset bundle is counted directly against the current `AssetStore` and
+sensor-model runtime coverage, while the old MATLAB asset-authoring scripts
+that generated those MAT or TIFF files are explicitly treated as provenance
+notebooks outside the headless migration target.
 That same utility-image slice now also covers `ieCmap(...)`,
 `ieCropRect(...)`, `ieLUTDigital(...)`, `ieLUTInvert(...)`, and
 `ieLUTLinear(...)`, with direct regressions for the simple MATLAB color-map

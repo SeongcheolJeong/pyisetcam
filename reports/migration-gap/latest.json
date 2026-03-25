@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-25T10:34:33.381962+00:00",
+  "generated_at": "2026-03-25T10:52:08.429595+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-25T10:34:33.381962+00:00",
+    "generated_at": "2026-03-25T10:52:08.429595+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 46,
       "missing": 21,
-      "out_of_scope": 206,
-      "parity": 690,
-      "partial": 279,
+      "out_of_scope": 222,
+      "parity": 691,
+      "partial": 262,
       "ported": 201
     },
     "kind_counts": {
@@ -23,17 +23,17 @@
     },
     "priority_counts": {
       "P1": 217,
-      "P2": 129,
-      "P3": 1097
+      "P2": 112,
+      "P3": 1114
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": -3,
+        "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 0,
-        "parity": 0,
-        "partial": 0,
-        "ported": 3
+        "out_of_scope": 16,
+        "parity": 1,
+        "partial": -17,
+        "ported": 0
       },
       "kind_counts": {
         "api": 0,
@@ -45,8 +45,8 @@
       },
       "priority_counts": {
         "P1": 0,
-        "P2": -3,
-        "P3": 3
+        "P2": -17,
+        "P3": 17
       }
     },
     "family_summary": {
@@ -200,12 +200,13 @@
       "data/sensor": {
         "total": 17,
         "by_status": {
-          "partial": 17
+          "out_of_scope": 16,
+          "parity": 1
         },
         "by_kind": {
           "asset": 17
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "data/surfaces": {
         "total": 3,
@@ -1012,14 +1013,6 @@
         }
       },
       {
-        "family": "data/sensor",
-        "open_entries": 17,
-        "highest_open_priority": "P2",
-        "by_status": {
-          "partial": 17
-        }
-      },
-      {
         "family": "data/human",
         "open_entries": 13,
         "highest_open_priority": "P2",
@@ -1096,6 +1089,14 @@
       },
       {
         "family": "data/images",
+        "open_entries": 2,
+        "highest_open_priority": "P2",
+        "by_status": {
+          "partial": 2
+        }
+      },
+      {
+        "family": "data/safetystandards",
         "open_entries": 2,
         "highest_open_priority": "P2",
         "by_status": {

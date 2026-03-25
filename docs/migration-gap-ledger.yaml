@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-25T10:34:33.381962+00:00",
+  "generated_at": "2026-03-25T10:52:08.429595+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 46,
       "missing": 21,
-      "out_of_scope": 206,
-      "parity": 690,
-      "partial": 279,
+      "out_of_scope": 222,
+      "parity": 691,
+      "partial": 262,
       "ported": 201
     },
     "kind_counts": {
@@ -21,17 +21,17 @@
     },
     "priority_counts": {
       "P1": 217,
-      "P2": 129,
-      "P3": 1097
+      "P2": 112,
+      "P3": 1114
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": -3,
+        "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 0,
-        "parity": 0,
-        "partial": 0,
-        "ported": 3
+        "out_of_scope": 16,
+        "parity": 1,
+        "partial": -17,
+        "ported": 0
       },
       "kind_counts": {
         "api": 0,
@@ -43,8 +43,8 @@
       },
       "priority_counts": {
         "P1": 0,
-        "P2": -3,
-        "P3": 3
+        "P2": -17,
+        "P3": 17
       }
     },
     "family_summary": {
@@ -198,12 +198,13 @@
       "data/sensor": {
         "total": 17,
         "by_status": {
-          "partial": 17
+          "out_of_scope": 16,
+          "parity": 1
         },
         "by_kind": {
           "asset": 17
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "data/surfaces": {
         "total": 3,
@@ -1010,14 +1011,6 @@
         }
       },
       {
-        "family": "data/sensor",
-        "open_entries": 17,
-        "highest_open_priority": "P2",
-        "by_status": {
-          "partial": 17
-        }
-      },
-      {
         "family": "data/human",
         "open_entries": 13,
         "highest_open_priority": "P2",
@@ -1094,6 +1087,14 @@
       },
       {
         "family": "data/images",
+        "open_entries": 2,
+        "highest_open_priority": "P2",
+        "by_status": {
+          "partial": 2
+        }
+      },
+      {
+        "family": "data/safetystandards",
         "open_entries": 2,
         "highest_open_priority": "P2",
         "by_status": {
@@ -2506,161 +2507,209 @@
       "upstream_path": "data/sensor/auto/MT9V024Create.m",
       "family": "data/sensor",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.sensor, pyisetcam.camera",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB authoring script that derives vendored MT9V024 filter and sensor MAT assets already consumed by the current runtime; recreating the provenance notebook is outside the headless migration target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/sensor/auto/ar0132atCreate.m",
       "family": "data/sensor",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.sensor, pyisetcam.camera",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB authoring script that derives vendored AR0132AT filter and sensor MAT assets already consumed by the current runtime; recreating the provenance notebook is outside the headless migration target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/sensor/colorfilters/CMYGCreate.m",
       "family": "data/sensor",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.sensor, pyisetcam.camera",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB color-filter authoring script for vendored sensor-filter assets, not a runtime API required by the headless migration target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/sensor/colorfilters/OVT/s_ovtColorfilters.m",
       "family": "data/sensor",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.sensor, pyisetcam.camera",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB data-preparation notebook for OVT filter assets already vendored in the runtime bundle, rather than a supported runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/sensor/colorfilters/auto/SONY/s_imx490QEdata.m",
       "family": "data/sensor",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.sensor, pyisetcam.camera",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB QE-data preparation script for the vendored IMX490 filter assets already exercised by the current headless runtime.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/sensor/colorfilters/fourChannelCreate.m",
       "family": "data/sensor",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.sensor, pyisetcam.camera",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB color-filter authoring script for vendored sensor-filter assets, not a runtime API required by the headless migration target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/sensor/colorfilters/gaussianCreate.m",
       "family": "data/sensor",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.sensor, pyisetcam.camera",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB filter-generation notebook for archived sensor-filter assets, not a required runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/sensor/colorfilters/s_radiometerCreate.m",
       "family": "data/sensor",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.sensor, pyisetcam.camera",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB authoring script for vendored radiometer-filter assets rather than a runtime API required by the headless port.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/sensor/colorfilters/sixChannelCreate.m",
       "family": "data/sensor",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.sensor, pyisetcam.camera",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB color-filter authoring script for vendored sensor-filter assets, not a runtime API required by the headless migration target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/sensor/imec/cornell_thomas.m",
       "family": "data/sensor",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.sensor, pyisetcam.camera",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is an IMEC asset-analysis notebook rather than a reusable runtime API surface for the headless migration target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/sensor/imec/generateImecQEfile.m",
       "family": "data/sensor",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.sensor, pyisetcam.camera",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB authoring script that derives the vendored IMEC QE asset already consumed by the current runtime.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/sensor/imec/multispectral_pbrt.m",
       "family": "data/sensor",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.sensor, pyisetcam.camera",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is an IMEC asset-generation notebook rather than a reusable runtime API required by the headless port.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/sensor/imec/s_imecSensorTestScene.m",
       "family": "data/sensor",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.sensor, pyisetcam.camera",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB exploratory script for IMEC scene preparation, not a supported runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/sensor/imec/v_imec.m",
       "family": "data/sensor",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.sensor, pyisetcam.camera",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB visualization notebook for IMEC sensor assets rather than a reusable runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/sensor/irfilters/irPassFilterSave.m",
       "family": "data/sensor",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.sensor, pyisetcam.camera",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB authoring script that generates a vendored IR-pass filter asset already consumed by the current runtime.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/sensor/mccGBRGSensorData.m",
       "family": "data/sensor",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.sensor, pyisetcam.camera",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB asset-conversion script that produces the vendored GBRG MCC TIFF used by existing parity coverage, rather than a runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/surfaces/charts/esser/esserReflectance.m",
@@ -19423,11 +19472,15 @@
       "upstream_path": "data/sensor/",
       "family": "data/sensor",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "pyisetcam.__init__, pyisetcam.assets, pyisetcam.camera, pyisetcam.color",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "parity",
+      "python_surface": "pyisetcam.assets, pyisetcam.sensor, pyisetcam.camera, pyisetcam.parity",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
+      ],
+      "notes": "The vendored sensor asset bundle is already exercised by the current headless runtime through `AssetStore`, sensor-model loaders, and parity or unit regressions over MT9V024, AR0132AT, IMX490, IMEC, IR-filter, and MCC sensor assets.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/surfaces/",
