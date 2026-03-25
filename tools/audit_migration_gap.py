@@ -57,6 +57,7 @@ FAMILY_SURFACE_MAP = {
     ],
     "data/lens": ["pyisetcam.optics"],
     "data/lights": ["pyisetcam.assets", "pyisetcam.color", "pyisetcam.illuminant", "pyisetcam.scene"],
+    "data/optics": ["pyisetcam.assets", "pyisetcam.optics", "pyisetcam.utils"],
     "data/sensor": ["pyisetcam.assets", "pyisetcam.sensor", "pyisetcam.camera"],
     "displays": ["pyisetcam.display"],
     "human": ["pyisetcam.metrics", "pyisetcam.scielab"],
@@ -122,6 +123,7 @@ FAMILY_TEST_MAP = {
     "data/human": ["tests/unit/test_human.py", "tests/unit/test_pipeline.py", "tests/unit/test_ip.py"],
     "data/lens": ["tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],
     "data/lights": ["tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],
+    "data/optics": ["tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],
     "data/sensor": ["tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],
     "displays": ["tests/unit/test_display.py", "tests/unit/test_pipeline.py"],
     "human": ["tests/unit/test_human.py"],
@@ -320,6 +322,21 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
     "data/lens/s_lensUpdateFormat.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a MATLAB metadata-maintenance script that rewrites vendored lens JSON descriptors in place, rather than a supported headless runtime API surface.",
+        "module_hits": [],
+    },
+    "data/optics/": {
+        "status": "parity",
+        "note": "The vendored optics-data bundle is already exercised by the current headless runtime through `AssetStore`, ray-trace optics loaders, flare assets, and the Thibos virtual-eye path covered by `wvfLoadThibosVirtualEyes(...)`, `ieMvnrnd(...)`, and focused unit or parity regressions.",
+        "module_hits": ["pyisetcam.assets", "pyisetcam.optics", "pyisetcam.utils", "pyisetcam.parity"],
+    },
+    "data/optics/thibosvirtualeyes/VirtualEyes.m": {
+        "status": "parity",
+        "note": "The upstream Thibos virtual-eye sampler is already covered numerically by `wvfLoadThibosVirtualEyes(...)` together with `ieMvnrnd(...)`, plus focused unit and parity coverage over the same vendored IAS statistics tables and multivariate-normal sampling contract.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.utils", "pyisetcam.parity"],
+    },
+    "data/optics/thibosvirtualeyes/VirtualEyesDemo.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB demonstration script for plotting means and confidence ranges of sampled Thibos virtual eyes, not a reusable headless runtime API surface.",
         "module_hits": [],
     },
     "data/sensor/": {

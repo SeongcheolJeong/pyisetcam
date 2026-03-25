@@ -1841,6 +1841,11 @@ the vendored lens JSON bundle is counted directly against the current
 focus-table and metadata-maintenance notebooks around those lens files are
 explicitly treated as provenance or analysis assets outside the headless
 migration target.
+The adjacent `data/optics` family is now cleaned up the same way too: the
+vendored optics bundle is counted directly against the current ray-trace
+loaders, flare assets, and Thibos virtual-eye coverage, while the old
+`VirtualEyesDemo.m` plotting script is explicitly treated as a provenance
+demo outside the headless migration target.
 That same utility-image slice now also covers `ieCmap(...)`,
 `ieCropRect(...)`, `ieLUTDigital(...)`, `ieLUTInvert(...)`, and
 `ieLUTLinear(...)`, with direct regressions for the simple MATLAB color-map
