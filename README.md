@@ -1828,6 +1828,13 @@ vendored human spectral assets are counted directly against the current
 runtime coverage, while the old MATLAB creator notebooks and plotting
 artifacts are explicitly treated as provenance assets outside the headless
 migration target.
+The adjacent `data/lights` family is now cleaned up the same way as well:
+the vendored illuminant bundle is counted directly against the current
+`AssetStore`, daylight generation, illuminant creation, scene illuminant
+adjustment, and Gretag or daylight regression coverage, while the MATLAB
+data-import and comparison notebooks that authored those MAT files are
+explicitly treated as provenance assets outside the headless migration
+target.
 That same utility-image slice now also covers `ieCmap(...)`,
 `ieCropRect(...)`, `ieLUTDigital(...)`, `ieLUTInvert(...)`, and
 `ieLUTLinear(...)`, with direct regressions for the simple MATLAB color-map

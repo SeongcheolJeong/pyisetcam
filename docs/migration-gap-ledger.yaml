@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-25T11:11:11.023515+00:00",
+  "generated_at": "2026-03-25T11:26:41.828816+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 46,
       "missing": 21,
-      "out_of_scope": 233,
-      "parity": 693,
-      "partial": 249,
+      "out_of_scope": 240,
+      "parity": 694,
+      "partial": 241,
       "ported": 201
     },
     "kind_counts": {
@@ -21,16 +21,16 @@
     },
     "priority_counts": {
       "P1": 217,
-      "P2": 99,
-      "P3": 1127
+      "P2": 91,
+      "P3": 1135
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 11,
-        "parity": 2,
-        "partial": -13,
+        "out_of_scope": 7,
+        "parity": 1,
+        "partial": -8,
         "ported": 0
       },
       "kind_counts": {
@@ -43,8 +43,8 @@
       },
       "priority_counts": {
         "P1": 0,
-        "P2": -13,
-        "P3": 13
+        "P2": -8,
+        "P3": 8
       }
     },
     "family_summary": {
@@ -149,12 +149,13 @@
       "data/lights": {
         "total": 8,
         "by_status": {
-          "partial": 8
+          "out_of_scope": 7,
+          "parity": 1
         },
         "by_kind": {
           "asset": 8
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "data/microlens": {
         "total": 1,
@@ -1022,14 +1023,6 @@
         }
       },
       {
-        "family": "data/lights",
-        "open_entries": 8,
-        "highest_open_priority": "P2",
-        "by_status": {
-          "partial": 8
-        }
-      },
-      {
         "family": "web",
         "open_entries": 6,
         "highest_open_priority": "P2",
@@ -1100,6 +1093,14 @@
         "highest_open_priority": "P2",
         "by_status": {
           "partial": 2
+        }
+      },
+      {
+        "family": "data/fluorescence",
+        "open_entries": 1,
+        "highest_open_priority": "P2",
+        "by_status": {
+          "partial": 1
         }
       }
     ],
@@ -2448,71 +2449,92 @@
       "upstream_path": "data/lights/daylight/d_daylightBasis.m",
       "family": "data/lights",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.illuminant, pyisetcam.scene",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB data-management notebook that imports or compares CIE daylight basis tables before rewriting the vendored `cieDaylightBasis.mat` asset already consumed by the current runtime.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/lights/daylight/d_daylightStanford.m",
       "family": "data/lights",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.illuminant, pyisetcam.scene",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB daylight-database preparation notebook for the external Stanford DiCarlo daylight corpus rather than a reusable headless runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/lights/daylight/d_granada.m",
       "family": "data/lights",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.illuminant, pyisetcam.scene",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB data-conversion notebook that imports Granada daylight measurements into a vendored MAT asset, not a supported headless runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/lights/daylight/d_rochester.m",
       "family": "data/lights",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.illuminant, pyisetcam.scene",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB data-conversion notebook that imports Rochester daylight spreadsheet data into a vendored MAT asset, not a reusable headless runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/lights/gretag/s_dataGretag.m",
       "family": "data/lights",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.illuminant, pyisetcam.scene",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB illuminant-inspection notebook that plots or compares already-vendored Gretag lightbox spectra rather than providing a reusable headless runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/lights/s_dataLamps.m",
       "family": "data/lights",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.illuminant, pyisetcam.scene",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a large MATLAB asset-authoring notebook that pastes external lamp spectra into vendored MAT files, not a supported headless runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/lights/solar/d_solarFraunhofer.m",
       "family": "data/lights",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.illuminant, pyisetcam.scene",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB solar-spectrum preparation notebook that imports CSV source data and annotates Fraunhofer lines before writing the vendored solar asset bundle, not a reusable headless runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/optics/thibosvirtualeyes/VirtualEyes.m",
@@ -19479,11 +19501,15 @@
       "upstream_path": "data/lights/",
       "family": "data/lights",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.fileio, pyisetcam.parity",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "parity",
+      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.illuminant, pyisetcam.scene, pyisetcam.parity",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
+      ],
+      "notes": "The vendored illuminant-data bundle is already exercised by the current headless runtime through `AssetStore`, daylight generation, illuminant creation, scene illuminant adjustment, and focused unit or parity coverage over CIE daylight basis data, Gretag illuminants, and named daylight or horizon spectra.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/microlens/",

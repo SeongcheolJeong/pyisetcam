@@ -55,6 +55,7 @@ FAMILY_SURFACE_MAP = {
         "pyisetcam.sensor",
         "pyisetcam.optics",
     ],
+    "data/lights": ["pyisetcam.assets", "pyisetcam.color", "pyisetcam.illuminant", "pyisetcam.scene"],
     "data/sensor": ["pyisetcam.assets", "pyisetcam.sensor", "pyisetcam.camera"],
     "displays": ["pyisetcam.display"],
     "human": ["pyisetcam.metrics", "pyisetcam.scielab"],
@@ -118,6 +119,7 @@ FAMILY_TEST_MAP = {
     "camera": ["tests/unit/test_pipeline.py"],
     "color": ["tests/unit/test_pipeline.py", "tests/unit/test_metrics.py"],
     "data/human": ["tests/unit/test_human.py", "tests/unit/test_pipeline.py", "tests/unit/test_ip.py"],
+    "data/lights": ["tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],
     "data/sensor": ["tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],
     "displays": ["tests/unit/test_display.py", "tests/unit/test_pipeline.py"],
     "human": ["tests/unit/test_human.py"],
@@ -250,6 +252,52 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
     "data/human/xyzQuantaCreate.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a MATLAB asset-generation script that derives vendored XYZ or luminosity quanta tables already consumed by the current runtime.",
+        "module_hits": [],
+    },
+    "data/lights/": {
+        "status": "parity",
+        "note": "The vendored illuminant-data bundle is already exercised by the current headless runtime through `AssetStore`, daylight generation, illuminant creation, scene illuminant adjustment, and focused unit or parity coverage over CIE daylight basis data, Gretag illuminants, and named daylight or horizon spectra.",
+        "module_hits": [
+            "pyisetcam.assets",
+            "pyisetcam.color",
+            "pyisetcam.illuminant",
+            "pyisetcam.scene",
+            "pyisetcam.parity",
+        ],
+    },
+    "data/lights/daylight/d_daylightBasis.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB data-management notebook that imports or compares CIE daylight basis tables before rewriting the vendored `cieDaylightBasis.mat` asset already consumed by the current runtime.",
+        "module_hits": [],
+    },
+    "data/lights/daylight/d_daylightStanford.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB daylight-database preparation notebook for the external Stanford DiCarlo daylight corpus rather than a reusable headless runtime API surface.",
+        "module_hits": [],
+    },
+    "data/lights/daylight/d_granada.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB data-conversion notebook that imports Granada daylight measurements into a vendored MAT asset, not a supported headless runtime API surface.",
+        "module_hits": [],
+    },
+    "data/lights/daylight/d_rochester.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB data-conversion notebook that imports Rochester daylight spreadsheet data into a vendored MAT asset, not a reusable headless runtime API surface.",
+        "module_hits": [],
+    },
+    "data/lights/gretag/s_dataGretag.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB illuminant-inspection notebook that plots or compares already-vendored Gretag lightbox spectra rather than providing a reusable headless runtime API surface.",
+        "module_hits": [],
+    },
+    "data/lights/s_dataLamps.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a large MATLAB asset-authoring notebook that pastes external lamp spectra into vendored MAT files, not a supported headless runtime API surface.",
+        "module_hits": [],
+    },
+    "data/lights/solar/d_solarFraunhofer.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB solar-spectrum preparation notebook that imports CSV source data and annotates Fraunhofer lines before writing the vendored solar asset bundle, not a reusable headless runtime API surface.",
         "module_hits": [],
     },
     "data/sensor/": {

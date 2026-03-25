@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-25T11:11:11.023515+00:00",
+  "generated_at": "2026-03-25T11:26:41.828816+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-25T11:11:11.023515+00:00",
+    "generated_at": "2026-03-25T11:26:41.828816+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 46,
       "missing": 21,
-      "out_of_scope": 233,
-      "parity": 693,
-      "partial": 249,
+      "out_of_scope": 240,
+      "parity": 694,
+      "partial": 241,
       "ported": 201
     },
     "kind_counts": {
@@ -23,16 +23,16 @@
     },
     "priority_counts": {
       "P1": 217,
-      "P2": 99,
-      "P3": 1127
+      "P2": 91,
+      "P3": 1135
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 11,
-        "parity": 2,
-        "partial": -13,
+        "out_of_scope": 7,
+        "parity": 1,
+        "partial": -8,
         "ported": 0
       },
       "kind_counts": {
@@ -45,8 +45,8 @@
       },
       "priority_counts": {
         "P1": 0,
-        "P2": -13,
-        "P3": 13
+        "P2": -8,
+        "P3": 8
       }
     },
     "family_summary": {
@@ -151,12 +151,13 @@
       "data/lights": {
         "total": 8,
         "by_status": {
-          "partial": 8
+          "out_of_scope": 7,
+          "parity": 1
         },
         "by_kind": {
           "asset": 8
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "data/microlens": {
         "total": 1,
@@ -1024,14 +1025,6 @@
         }
       },
       {
-        "family": "data/lights",
-        "open_entries": 8,
-        "highest_open_priority": "P2",
-        "by_status": {
-          "partial": 8
-        }
-      },
-      {
         "family": "web",
         "open_entries": 6,
         "highest_open_priority": "P2",
@@ -1102,6 +1095,14 @@
         "highest_open_priority": "P2",
         "by_status": {
           "partial": 2
+        }
+      },
+      {
+        "family": "data/fluorescence",
+        "open_entries": 1,
+        "highest_open_priority": "P2",
+        "by_status": {
+          "partial": 1
         }
       }
     ],
