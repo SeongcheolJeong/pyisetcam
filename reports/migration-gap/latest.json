@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-03-24T23:54:14.386260+00:00",
+  "generated_at": "2026-03-25T00:32:37.011875+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-24T23:54:14.386260+00:00",
+    "generated_at": "2026-03-25T00:32:37.011875+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 80,
       "missing": 21,
-      "out_of_scope": 187,
+      "out_of_scope": 189,
       "parity": 676,
-      "partial": 376,
-      "ported": 103
+      "partial": 366,
+      "ported": 111
     },
     "kind_counts": {
       "api": 661,
@@ -22,18 +22,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 311,
+      "P1": 301,
       "P2": 166,
-      "P3": 966
+      "P3": 976
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": -1,
+        "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 1,
-        "parity": 1,
-        "partial": -5,
-        "ported": 4
+        "out_of_scope": 2,
+        "parity": 0,
+        "partial": -10,
+        "ported": 8
       },
       "kind_counts": {
         "api": 0,
@@ -44,9 +44,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -5,
-        "P2": -1,
-        "P3": 6
+        "P1": -10,
+        "P2": 0,
+        "P3": 10
       }
     },
     "family_summary": {
@@ -956,16 +956,15 @@
         "total": 46,
         "by_status": {
           "headless_only": 3,
-          "out_of_scope": 3,
+          "out_of_scope": 5,
           "parity": 8,
-          "partial": 10,
-          "ported": 22
+          "ported": 30
         },
         "by_kind": {
           "gui": 2,
           "helper": 44
         },
-        "highest_open_priority": "P1"
+        "highest_open_priority": "P2"
       },
       "utility/plots": {
         "total": 50,
@@ -1058,18 +1057,6 @@
         }
       },
       {
-        "family": "utility/image",
-        "open_entries": 13,
-        "highest_open_priority": "P1",
-        "by_status": {
-          "headless_only": 3,
-          "out_of_scope": 3,
-          "parity": 8,
-          "partial": 10,
-          "ported": 22
-        }
-      },
-      {
         "family": "scripts/human",
         "open_entries": 10,
         "highest_open_priority": "P1",
@@ -1120,6 +1107,15 @@
           "headless_only": 4,
           "out_of_scope": 3,
           "partial": 3
+        }
+      },
+      {
+        "family": "web",
+        "open_entries": 6,
+        "highest_open_priority": "P2",
+        "by_status": {
+          "missing": 6,
+          "out_of_scope": 1
         }
       }
     ],

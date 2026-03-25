@@ -6,6 +6,7 @@ import pytest
 from pyisetcam import (
     FloydSteinberg,
     HalfToneImage,
+    convolvecirc,
     ieCmap,
     ieCropRect,
     ieFindWaveIndex,
@@ -15,21 +16,33 @@ from pyisetcam import (
     ieParameterOtype,
     ieRadialMatrix,
     ieWave2Index,
+    ieXYZFromPhotons,
     imageHparams,
+    imageSPD,
+    imageSPD2RGB,
     imageInterpolate,
     imageGabor,
     imageMakeMontage,
     imageMontage,
+    imageSlantedEdge,
     imageTranslate,
     imageTranspose,
+    imagehc2rgb,
     imageBoundingBox,
     imageCentroid,
     imageCircular,
     imageContrast,
+    imagescM,
+    imagescOPP,
+    imagescRGB,
     rgb2dac,
+    sceneCreate,
+    sceneGet,
+    xyz2srgb,
 )
 from pyisetcam.utils import (
     blackbody,
+    convolve_circ,
     energy_to_quanta,
     floyd_steinberg,
     half_tone_image,
@@ -44,12 +57,19 @@ from pyisetcam.utils import (
     ie_radial_matrix,
     ie_wave2_index,
     image_hparams,
+    image_hc2rgb,
     image_interpolate,
     image_gabor,
     image_make_montage,
     image_montage,
+    image_slanted_edge,
+    image_spd,
+    image_spd2rgb,
     image_translate,
     image_transpose,
+    imagesc_m,
+    imagesc_opp,
+    imagesc_rgb,
     interp_spectra,
     image_bounding_box,
     image_centroid,
@@ -58,6 +78,7 @@ from pyisetcam.utils import (
     param_format,
     quanta_to_energy,
     rgb_to_dac,
+    rgb_to_xw_format,
     unit_frequency_list,
 )
 
@@ -953,3 +974,108 @@ def test_ie_parameter_otype_handles_direct_prefix_and_unique_params() -> None:
 def test_ie_parameter_otype_returns_empty_type_for_ambiguous_or_unknown_params() -> None:
     assert ie_parameter_otype("size") == ("", "size")
     assert ie_parameter_otype("mystery parameter") == ("", "mysteryparameter")
+
+
+def test_convolvecirc_and_image_slanted_edge_match_legacy_aliases() -> None:
+    image = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float)
+    kernel = np.array([[1.0, 2.0], [0.0, 1.0]], dtype=float)
+
+    expected_conv = np.array([[9.0, 7.0], [13.0, 11.0]], dtype=float)
+    assert np.allclose(convolve_circ(image, kernel), expected_conv)
+    assert np.allclose(convolvecirc(image, kernel), expected_conv)
+
+    edge = image_slanted_edge([4, 6], 1.0, 0.25)
+    alias = imageSlantedEdge([4, 6], 1.0, 0.25)
+    assert edge.shape == (5, 7)
+    assert np.allclose(alias, edge)
+    assert float(edge[0, -1]) == pytest.approx(0.25)
+    assert float(edge[-1, 0]) == pytest.approx(1.0)
+
+
+def test_imagesc_helpers_match_headless_scaling_and_aliases() -> None:
+    rgb = np.array(
+        [
+            [[-0.5, 0.5, 1.0], [0.25, 0.75, 0.5]],
+            [[0.0, 0.1, 0.2], [0.8, 0.6, 0.4]],
+        ],
+        dtype=float,
+    )
+    handle, scaled_rgb = imagesc_rgb(rgb, 0.5)
+    alias_handle, alias_scaled = imagescRGB(rgb, 0.5)
+    assert handle is None
+    assert alias_handle is None
+    assert scaled_rgb.shape == rgb.shape
+    assert np.allclose(alias_scaled, scaled_rgb)
+    assert np.all((scaled_rgb >= 0.0) & (scaled_rgb <= 1.0))
+
+    xw, rows, cols, _ = rgb_to_xw_format(np.clip(rgb, 0.0, None))
+    _, scaled_xw = imagescRGB(xw, rows, cols, 1.0)
+    assert scaled_xw.shape == rgb.shape
+
+    opp = np.dstack(
+        (
+            np.array([[0.0, 1.0], [2.0, 3.0]], dtype=float),
+            np.array([[-1.0, 0.0], [1.0, 0.5]], dtype=float),
+            np.array([[1.0, -1.0], [0.5, -0.5]], dtype=float),
+        )
+    )
+    res, cmap = imagesc_opp(opp, 0.4, 8)
+    alias_res, alias_cmap = imagescOPP(opp, 0.4, 8)
+    assert res.shape == opp.shape
+    assert cmap.shape == (8, 3, 3)
+    assert np.allclose(alias_res, res)
+    assert np.allclose(alias_cmap, cmap)
+
+    mono = np.arange(4.0, dtype=float).reshape(2, 2)
+    payload = imagesc_m(mono, bar_dir="eastoutside")
+    alias_payload = imagescM(mono, bar_dir="eastoutside")
+    assert payload is not None
+    assert alias_payload is not None
+    assert payload["scaled"] is True
+    assert payload["colorbar"]["direction"] == "eastoutside"
+    assert np.allclose(alias_payload["image"], mono)
+
+
+def test_image_spd_visible_gray_and_spd2rgb_match_aliases() -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    spd = np.zeros((2, 2, wave.size), dtype=float)
+    spd[:, :, 10] = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float)
+    spd[:, :, 20] = np.array([[0.5, 0.25], [0.75, 1.5]], dtype=float)
+
+    visible = image_spd(spd, wave, 1.0, display_flag=-1)
+    alias_visible = imageSPD(spd, wave, 1.0, 2, 2, -1)
+    expected_xyz = np.asarray(ieXYZFromPhotons(spd, wave), dtype=float)
+    expected_xyz = expected_xyz / float(np.max(expected_xyz))
+    expected_visible = xyz2srgb(expected_xyz)
+    assert np.allclose(visible, expected_visible)
+    assert np.allclose(alias_visible, expected_visible)
+
+    gray = image_spd(spd, wave, 1.0, 2, 2, -2)
+    expected_gray = np.mean(spd, axis=2)
+    expected_gray = expected_gray / float(np.max(expected_gray))
+    expected_gray = np.repeat(expected_gray[:, :, np.newaxis], 3, axis=2)
+    assert np.allclose(gray, expected_gray)
+
+    spd_xw, _, _, _ = rgb_to_xw_format(spd)
+    rgb_xw = image_spd2rgb(spd_xw, wave, 1.0)
+    alias_rgb_xw = imageSPD2RGB(spd_xw, wave, 1.0)
+    visible_xw, _, _, _ = rgb_to_xw_format(expected_visible)
+    assert np.allclose(rgb_xw, visible_xw)
+    assert np.allclose(alias_rgb_xw, visible_xw)
+
+
+def test_image_hc2rgb_returns_waveband_stack_and_overlay(asset_store) -> None:
+    scene = sceneCreate("slanted bar", 64, asset_store=asset_store)
+    rows = int(sceneGet(scene, "rows"))
+    cols = int(sceneGet(scene, "cols"))
+
+    rgb_images, overlay = image_hc2rgb(scene, 3, [10, 10])
+    alias_images, alias_overlay = imagehc2rgb(scene, 3, [10, 10])
+
+    assert rgb_images.shape == (rows, cols, 3, 3)
+    assert overlay.shape[0] > rows
+    assert overlay.shape[1] > cols
+    assert np.all((rgb_images >= 0.0) & (rgb_images <= 1.0))
+    assert np.all((overlay >= 0.0) & (overlay <= 1.0))
+    assert np.allclose(alias_images, rgb_images)
+    assert np.allclose(alias_overlay, overlay)

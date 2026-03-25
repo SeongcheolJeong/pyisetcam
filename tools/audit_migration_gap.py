@@ -248,6 +248,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB linear-RGB-to-DAC helper is covered by the Python `ie_lut_linear(...)` / `ieLUTLinear(...)` compatibility wrapper in `pyisetcam.utils`.",
         "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
     },
+    "utility/image/convolvecirc.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB circular-convolution helper is covered by the Python `convolve_circ(...)` / `convolvecirc(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
     "utility/image/imageHparams.m": {
         "status": "ported",
         "note": "The legacy MATLAB harmonic-parameter default helper is covered by the Python `image_hparams(...)` / `imageHparams(...)` compatibility wrapper in `pyisetcam.utils`.",
@@ -268,9 +273,39 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB hypercube montage builder is covered by the Python `image_make_montage(...)` / `imageMakeMontage(...)` compatibility wrapper in `pyisetcam.utils`.",
         "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
     },
+    "utility/image/ieMontages.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a local PNG report-generator that captures labeled montage pages from the current folder rather than a reusable numeric API surface for the headless pipeline.",
+        "module_hits": [],
+    },
     "utility/image/imageMontage.m": {
         "status": "ported",
         "note": "The legacy MATLAB montage wrapper is covered headlessly by the Python `image_montage(...)` / `imageMontage(...)` compatibility wrapper, which returns the montage image and placeholder figure/colorbar handles instead of MATLAB GUI objects.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/imageMultiview.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB session/object-browser window orchestrator built around `listdlg`, figure creation, and subplot layout rather than a reusable headless API surface.",
+        "module_hits": [],
+    },
+    "utility/image/imageSlantedEdge.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB slanted-edge target helper is covered by the Python `image_slanted_edge(...)` / `imageSlantedEdge(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/imageSPD.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB spectral-image renderer is covered headlessly by the Python `image_spd(...)` / `imageSPD(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/imageSPD2RGB.m": {
+        "status": "ported",
+        "note": "The obsolete MATLAB SPD-to-RGB helper is covered by the Python `image_spd2rgb(...)` / `imageSPD2RGB(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/imagehc2rgb.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB multispectral-waveband visualizer is covered by the Python `image_hc2rgb(...)` / `imagehc2rgb(...)` compatibility wrapper in `pyisetcam.utils`.",
         "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
     },
     "utility/image/imageSetHarmonic.m": {
@@ -291,6 +326,21 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
     "utility/image/imageTranspose.m": {
         "status": "ported",
         "note": "The legacy MATLAB per-plane transpose helper is covered by the Python `image_transpose(...)` / `imageTranspose(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/imagescM.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB monochrome-display helper is covered headlessly by the Python `imagesc_m(...)` / `imagescM(...)` compatibility wrapper, which returns a display payload instead of MATLAB graphics handles.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/imagescOPP.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB opponent-image display helper is covered headlessly by the Python `imagesc_opp(...)` / `imagescOPP(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/imagescRGB.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB RGB display helper is covered headlessly by the Python `imagesc_rgb(...)` / `imagescRGB(...)` compatibility wrapper in `pyisetcam.utils`.",
         "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
     },
     "utility/image/ieRadialMatrix.m": {

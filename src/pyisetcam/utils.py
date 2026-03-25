@@ -8,6 +8,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 from scipy.ndimage import gaussian_filter, shift as ndi_shift, zoom
+from scipy.signal import convolve2d
 
 DEFAULT_WAVE = np.arange(400.0, 701.0, 10.0, dtype=float)
 
@@ -1589,6 +1590,333 @@ def image_montage(
 
 
 imageMontage = image_montage
+
+
+def convolve_circ(x: Any, h: Any) -> NDArray[np.float64]:
+    """Perform MATLAB-style 2-D circular convolution with a same-size result."""
+
+    image = np.asarray(x, dtype=float)
+    kernel = np.asarray(h, dtype=float)
+    if image.ndim != 2 or kernel.ndim != 2:
+        raise ValueError("convolvecirc expects 2-D image and kernel inputs.")
+
+    rows, cols = image.shape
+    result = np.asarray(convolve2d(image, kernel, mode="full"), dtype=float)
+    full_rows, full_cols = result.shape
+    result[: full_rows - rows, :] += result[rows:, :]
+    result[:, : full_cols - cols] += result[:, cols:]
+    return np.asarray(result[:rows, :cols], dtype=float)
+
+
+convolvecirc = convolve_circ
+
+
+def image_slanted_edge(
+    im_size: Any | None = None,
+    slope: float = 2.6,
+    darklevel: float = 0.0,
+) -> NDArray[np.float64]:
+    """Create a MATLAB-style slanted-edge target image."""
+
+    if im_size is None:
+        size = np.array([384.0, 384.0], dtype=float)
+    else:
+        size = np.asarray(im_size, dtype=float).reshape(-1)
+        if size.size == 0:
+            size = np.array([384.0, 384.0], dtype=float)
+        elif size.size == 1:
+            size = np.repeat(size, 2)
+        else:
+            size = size[:2]
+
+    half_size = np.rint(size / 2.0).astype(int)
+    x, y = np.meshgrid(
+        np.arange(-half_size[1], half_size[1] + 1, dtype=float),
+        np.arange(-half_size[0], half_size[0] + 1, dtype=float),
+    )
+    image = np.full(x.shape, float(darklevel), dtype=float)
+    image[y > float(slope) * x] = 1.0
+    return np.asarray(image, dtype=float)
+
+
+imageSlantedEdge = image_slanted_edge
+
+
+def _clip_and_scale_unit(image: Any) -> NDArray[np.float64]:
+    scaled = np.clip(np.asarray(image, dtype=float), 0.0, None)
+    maximum = float(np.max(scaled)) if scaled.size else 0.0
+    if maximum > 0.0:
+        scaled = scaled / maximum
+    return np.asarray(scaled, dtype=float)
+
+
+def imagesc_rgb(rgbim: Any, *args: Any) -> tuple[None, NDArray[np.float64]]:
+    """Scale an RGB or XW image to unit range for headless MATLAB-style display."""
+
+    scaled = _clip_and_scale_unit(rgbim)
+    if scaled.ndim == 2:
+        if len(args) < 2:
+            raise ValueError("2-D input requires row and col arguments.")
+        row = int(args[0])
+        col = int(args[1])
+        gamma = None if len(args) < 3 else float(args[2])
+        scaled = xw_to_rgb_format(scaled, row, col)
+    elif scaled.ndim == 3:
+        gamma = None if len(args) < 1 else float(args[0])
+    else:
+        raise ValueError("Bad image input")
+
+    if gamma is not None:
+        scaled = np.power(np.clip(scaled, 0.0, 1.0), float(gamma))
+    return None, np.asarray(scaled, dtype=float)
+
+
+imagescRGB = imagesc_rgb
+
+
+def imagesc_opp(
+    opp_img: Any,
+    gam: float = 0.3,
+    n_table: int = 256,
+    *args: Any,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Create MATLAB-style opponent-image display payloads without GUI drawing."""
+
+    del args
+    opp = np.asarray(opp_img, dtype=float)
+    if opp.ndim != 3 or opp.shape[2] != 3:
+        raise ValueError("imagescOPP expects an RGB-format opponent image.")
+
+    n_colors = max(int(n_table), 1)
+    result = np.zeros_like(opp, dtype=float)
+    cmap = np.zeros((n_colors, 3, 3), dtype=float)
+    color_maps = ("bw", "rg", "by")
+    for idx, name in enumerate(color_maps):
+        cmap[:, :, idx] = ie_cmap(name, n_colors, gam)
+        plane = opp[:, :, idx]
+        maximum = float(np.max(np.abs(plane))) if plane.size else 0.0
+        if maximum <= 0.0:
+            result[:, :, idx] = 0.0 if idx == 0 else 0.5 * n_colors
+            continue
+        if idx == 0:
+            result[:, :, idx] = (plane / maximum) * n_colors
+        else:
+            result[:, :, idx] = (0.5 * (plane / maximum) + 0.5) * n_colors
+    return np.asarray(result, dtype=float), np.asarray(cmap, dtype=float)
+
+
+imagescOPP = imagesc_opp
+
+
+def imagesc_m(
+    img: Any,
+    mp: Any | None = None,
+    bar_dir: str = "none",
+    no_scale: bool | int = False,
+) -> dict[str, Any] | None:
+    """Return a headless MATLAB-style monochrome-display payload."""
+
+    array = np.asarray(img, dtype=float)
+    if array.size == 0:
+        return None
+
+    if mp is None:
+        values = np.linspace(0.0, 1.0, 256, dtype=float)
+        cmap = np.repeat(values[:, np.newaxis], 3, axis=1)
+    else:
+        cmap = np.asarray(mp, dtype=float)
+
+    colorbar_direction = str(bar_dir).strip().lower()
+    return {
+        "image": np.asarray(array, dtype=float),
+        "colormap": np.asarray(cmap, dtype=float),
+        "scaled": not bool(no_scale),
+        "colorbar": None if colorbar_direction == "none" else {"direction": colorbar_direction},
+    }
+
+
+imagescM = imagesc_m
+
+
+def _default_spd_wave_list(n_wave: int) -> NDArray[np.float64]:
+    if n_wave == 31:
+        return np.arange(400.0, 701.0, 10.0, dtype=float)
+    if n_wave == 301:
+        return np.arange(400.0, 701.0, 1.0, dtype=float)
+    if n_wave == 37:
+        return np.arange(370.0, 731.0, 10.0, dtype=float)
+    raise ValueError("wList is required when SPD band count is not a supported legacy default.")
+
+
+def image_spd(
+    spd: Any,
+    w_list: Any | None = None,
+    gam: float = 1.0,
+    row: int | None = None,
+    col: int | None = None,
+    display_flag: int = 1,
+    xcoords: Any | None = None,
+    ycoords: Any | None = None,
+    this_w: Any | None = None,
+) -> NDArray[np.float64]:
+    """Render spectral photon data into a headless RGB image."""
+
+    del xcoords, ycoords, this_w
+    photons = np.asarray(spd, dtype=float)
+    if photons.ndim == 2:
+        if row is None or col is None:
+            raise ValueError("XW-format SPD input requires row and col arguments.")
+        cube = xw_to_rgb_format(photons, int(row), int(col))
+    elif photons.ndim == 3:
+        cube = photons
+        row = int(cube.shape[0])
+        col = int(cube.shape[1])
+    else:
+        raise ValueError("imageSPD expects XW or RGB-format spectral data.")
+
+    wave = _default_spd_wave_list(int(cube.shape[2])) if w_list is None else np.asarray(w_list, dtype=float).reshape(-1)
+    if wave.size != int(cube.shape[2]):
+        raise ValueError("SPD wavelength list must match the spectral dimension.")
+
+    mode = abs(int(display_flag))
+    clip_level = 90.0 if mode == 5 else 99.5
+    if mode == 5:
+        mode = 4
+
+    if mode in {0, 1}:
+        from .color import ie_xyz_from_photons
+
+        xyz = np.asarray(ie_xyz_from_photons(cube, wave), dtype=float)
+        maximum = float(np.max(xyz)) if xyz.size else 0.0
+        if maximum > 0.0:
+            xyz = xyz / maximum
+        rgb = xyz_to_srgb(xyz)
+    elif mode == 2:
+        gray = np.mean(cube, axis=2)
+        maximum = float(np.max(gray)) if gray.size else 0.0
+        if maximum > 0.0:
+            gray = gray / maximum
+        rgb = np.repeat(np.asarray(gray, dtype=float)[:, :, np.newaxis], 3, axis=2)
+    elif mode in {3, 4}:
+        from .color import ie_xyz_from_photons
+        from .scene import hdr_render
+
+        xyz = np.asarray(ie_xyz_from_photons(cube, wave), dtype=float)
+        if mode == 4:
+            clip_value = float(np.percentile(np.asarray(xyz[:, :, 1], dtype=float), clip_level))
+            xyz = np.clip(xyz, 0.0, clip_value)
+        maximum = float(np.max(xyz)) if xyz.size else 0.0
+        if maximum > 0.0:
+            xyz = xyz / maximum
+        rgb = np.asarray(hdr_render(xyz_to_srgb(xyz)), dtype=float)
+    else:
+        raise ValueError(f"Unknown display flag value: {display_flag}")
+
+    rgb = np.clip(np.asarray(rgb, dtype=float), 0.0, 1.0)
+    if float(gam) != 1.0:
+        rgb = np.power(rgb, float(gam))
+    return np.asarray(rgb, dtype=float)
+
+
+imageSPD = image_spd
+
+
+def image_spd2rgb(spd: Any, w_list: Any, gam: float = 1.0) -> NDArray[np.float64]:
+    """Convert spectral photon data to XW-format visible RGB."""
+
+    photons = np.asarray(spd, dtype=float)
+    wave = np.asarray(w_list, dtype=float).reshape(-1)
+    if photons.ndim == 3:
+        rgb = image_spd(photons, wave, gam, display_flag=-1)
+        rgb_xw, _, _, _ = rgb_to_xw_format(rgb)
+        return np.asarray(rgb_xw, dtype=float)
+    if photons.ndim != 2:
+        raise ValueError("imageSPD2RGB expects XW or RGB-format spectral data.")
+
+    from .color import ie_xyz_from_photons
+
+    xyz = np.asarray(ie_xyz_from_photons(photons, wave), dtype=float)
+    maximum = float(np.max(xyz)) if xyz.size else 0.0
+    if maximum > 0.0:
+        xyz = xyz / maximum
+    rgb = linear_to_srgb(np.clip(xyz_to_linear_srgb(xyz), 0.0, None))
+    if float(gam) != 1.0:
+        rgb = np.power(np.asarray(rgb, dtype=float), float(gam))
+    return np.asarray(rgb, dtype=float)
+
+
+imageSPD2RGB = image_spd2rgb
+
+
+def image_hc2rgb(
+    obj: Any,
+    n_bands: int = 5,
+    delta_percent: Any = (10, 10),
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Create MATLAB-style waveband RGB images and an overlay composite."""
+
+    if obj is None:
+        from .scene import scene_create
+
+        obj = scene_create()
+
+    if not hasattr(obj, "type"):
+        raise ValueError("imagehc2rgb expects a scene or optical image object.")
+
+    object_type = str(getattr(obj, "type", "")).lower()
+    if object_type == "scene":
+        from .scene import scene_get, scene_interpolate_w
+
+        wave = np.asarray(scene_get(obj, "wave"), dtype=float)
+        rows = int(scene_get(obj, "rows"))
+        cols = int(scene_get(obj, "cols"))
+        interpolator = scene_interpolate_w
+        photon_getter = lambda current: np.asarray(scene_get(current, "photons"), dtype=float)
+    elif object_type == "opticalimage":
+        from .optics import oi_get, oi_interpolate_w
+
+        wave = np.asarray(oi_get(obj, "wave"), dtype=float)
+        rows = int(oi_get(obj, "rows"))
+        cols = int(oi_get(obj, "cols"))
+        interpolator = oi_interpolate_w
+        photon_getter = lambda current: np.asarray(oi_get(current, "photons"), dtype=float)
+    else:
+        raise ValueError(f"Bad object type {getattr(obj, 'type', object_type)!r}")
+
+    bands = max(int(n_bands), 1)
+    wave_starts = np.zeros(bands, dtype=float)
+    band_width = max(int(np.floor(wave.size / bands)), 1)
+    for index in range(bands):
+        wave_starts[index] = wave[min(index * band_width, wave.size - 1)]
+
+    rgb_images = np.zeros((rows, cols, 3, bands), dtype=float)
+    delta = np.asarray(delta_percent, dtype=float).reshape(-1)
+    if delta.size == 1:
+        delta = np.repeat(delta, 2)
+
+    wave_step = float(wave[1] - wave[0]) if wave.size > 1 else 10.0
+    for index in range(bands):
+        if index == bands - 1:
+            wave_list = np.arange(wave_starts[index], wave[-1] + 0.5 * wave_step, wave_step, dtype=float)
+        else:
+            wave_list = np.arange(wave_starts[index], wave_starts[index + 1] + 0.5 * wave_step, wave_step, dtype=float)
+        current = interpolator(obj.clone(), wave_list)
+        rgb_images[:, :, :, index] = image_spd(photon_getter(current), wave_list, 1.0, rows, cols, -1)
+
+    row_step = int(np.rint(rows * float(delta[0]) / 100.0))
+    col_step = int(np.rint(rows * float(delta[1]) / 100.0))
+    overlay_rows = rows + (bands + 1) * row_step
+    overlay_cols = cols + (bands + 1) * col_step
+    overlay = np.ones((overlay_rows, overlay_cols, 3), dtype=float)
+    for index in range(bands - 1, -1, -1):
+        row_start = int((bands - index - 1) * row_step + row_step)
+        col_start = int(index * col_step + col_step)
+        overlay[row_start : row_start + rows, col_start : col_start + cols, :] = rgb_images[:, :, :, index]
+
+    return np.asarray(rgb_images, dtype=float), np.asarray(overlay, dtype=float)
+
+
+imagehc2rgb = image_hc2rgb
 
 
 def image_linear_transform(image: Any, transform: Any) -> NDArray[np.float64]:

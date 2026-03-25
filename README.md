@@ -1775,6 +1775,13 @@ have direct headless compatibility wrappers in `pyisetcam.utils`, while
 `imageShowImage(...)` is covered by a headless IP-render wrapper in
 `pyisetcam.ip`; the GUIDE-only `imageSetHarmonic.m` dialog is explicitly
 tracked as out of scope.
+That same utility-image display/spectral slice is smaller now as well:
+`convolvecirc(...)`, `imageSlantedEdge(...)`, `imageSPD(...)`,
+`imageSPD2RGB(...)`, `imagehc2rgb(...)`, `imagescRGB(...)`,
+`imagescOPP(...)`, and `imagescM(...)` now have direct headless
+compatibility wrappers in `pyisetcam.utils`, while the local PNG report
+generator `ieMontages.m` and the session/window browser `imageMultiview.m`
+are explicitly treated as out of scope.
 The legacy startup/path trio is now covered too: `ISET.m`, `isetPath.m`,
 and `isetRootPath.m` are tracked against the optional headless session
 bootstrap wrappers `iset(...)`, `isetPath(...)`, and `isetRootPath(...)`

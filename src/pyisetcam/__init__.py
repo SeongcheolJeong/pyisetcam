@@ -623,6 +623,8 @@ from .utils import (
     FloydSteinberg,
     HalfToneImage,
     blackbody,
+    convolve_circ,
+    convolvecirc,
     dac_to_rgb,
     floyd_steinberg,
     hc_basis,
@@ -638,12 +640,16 @@ from .utils import (
     ie_n_to_megapixel,
     ie_radial_matrix,
     ie_wave2_index,
+    image_hc2rgb,
     image_gabor,
     image_hparams,
     image_interpolate,
     image_linear_transform,
     image_make_montage,
     image_montage,
+    image_slanted_edge,
+    image_spd,
+    image_spd2rgb,
     image_bounding_box,
     image_centroid,
     image_circular,
@@ -652,6 +658,9 @@ from .utils import (
     image_increase_image_rgb_size,
     image_translate,
     image_transpose,
+    imagesc_m,
+    imagesc_opp,
+    imagesc_rgb,
     ie_parameter_otype,
     param_format,
     rgb_to_dac,
@@ -913,10 +922,14 @@ __all__ = [
     "demosaic_rccc",
     "Pocs",
     "pocs",
+    "convolvecirc",
+    "convolve_circ",
     "rgb2dac",
     "rgb_to_dac",
     "imageGabor",
     "image_gabor",
+    "imagehc2rgb",
+    "image_hc2rgb",
     "imageLinearTransform",
     "image_linear_transform",
     "imageHparams",
@@ -927,10 +940,22 @@ __all__ = [
     "image_make_montage",
     "imageMontage",
     "image_montage",
+    "imageSlantedEdge",
+    "image_slanted_edge",
+    "imageSPD",
+    "image_spd",
+    "imageSPD2RGB",
+    "image_spd2rgb",
     "ieCmap",
     "ie_cmap",
     "ieCropRect",
     "ie_crop_rect",
+    "imagescM",
+    "imagesc_m",
+    "imagescOPP",
+    "imagesc_opp",
+    "imagescRGB",
+    "imagesc_rgb",
     "imageBoundingBox",
     "image_bounding_box",
     "imageCentroid",
@@ -2308,6 +2333,7 @@ RGB2XWFormat = rgb_to_xw_format
 XW2RGBFormat = xw_to_rgb_format
 hcBasis = hc_basis
 dac2rgb = dac_to_rgb
+convolvecirc = convolve_circ
 rgb2dac = rgb_to_dac
 ieCmap = ie_cmap
 ieCropRect = ie_crop_rect
@@ -2318,10 +2344,17 @@ ieLUTLinear = ie_lut_linear
 ieWave2Index = ie_wave2_index
 ieRadialMatrix = ie_radial_matrix
 imageGabor = image_gabor
+imagehc2rgb = image_hc2rgb
 imageHparams = image_hparams
 imageInterpolate = image_interpolate
 imageMakeMontage = image_make_montage
 imageMontage = image_montage
+imageSlantedEdge = image_slanted_edge
+imageSPD = image_spd
+imageSPD2RGB = image_spd2rgb
+imagescM = imagesc_m
+imagescOPP = imagesc_opp
+imagescRGB = imagesc_rgb
 imageBoundingBox = image_bounding_box
 imageCentroid = image_centroid
 imageCircular = image_circular

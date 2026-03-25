@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-03-24T23:54:14.386260+00:00",
+  "generated_at": "2026-03-25T00:32:37.011875+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 80,
       "missing": 21,
-      "out_of_scope": 187,
+      "out_of_scope": 189,
       "parity": 676,
-      "partial": 376,
-      "ported": 103
+      "partial": 366,
+      "ported": 111
     },
     "kind_counts": {
       "api": 661,
@@ -20,18 +20,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 311,
+      "P1": 301,
       "P2": 166,
-      "P3": 966
+      "P3": 976
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": -1,
+        "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 1,
-        "parity": 1,
-        "partial": -5,
-        "ported": 4
+        "out_of_scope": 2,
+        "parity": 0,
+        "partial": -10,
+        "ported": 8
       },
       "kind_counts": {
         "api": 0,
@@ -42,9 +42,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -5,
-        "P2": -1,
-        "P3": 6
+        "P1": -10,
+        "P2": 0,
+        "P3": 10
       }
     },
     "family_summary": {
@@ -954,16 +954,15 @@
         "total": 46,
         "by_status": {
           "headless_only": 3,
-          "out_of_scope": 3,
+          "out_of_scope": 5,
           "parity": 8,
-          "partial": 10,
-          "ported": 22
+          "ported": 30
         },
         "by_kind": {
           "gui": 2,
           "helper": 44
         },
-        "highest_open_priority": "P1"
+        "highest_open_priority": "P2"
       },
       "utility/plots": {
         "total": 50,
@@ -1056,18 +1055,6 @@
         }
       },
       {
-        "family": "utility/image",
-        "open_entries": 13,
-        "highest_open_priority": "P1",
-        "by_status": {
-          "headless_only": 3,
-          "out_of_scope": 3,
-          "parity": 8,
-          "partial": 10,
-          "ported": 22
-        }
-      },
-      {
         "family": "scripts/human",
         "open_entries": 10,
         "highest_open_priority": "P1",
@@ -1118,6 +1105,15 @@
           "headless_only": 4,
           "out_of_scope": 3,
           "partial": 3
+        }
+      },
+      {
+        "family": "web",
+        "open_entries": 6,
+        "highest_open_priority": "P2",
+        "by_status": {
+          "missing": 6,
+          "out_of_scope": 1
         }
       }
     ],
@@ -1761,7 +1757,7 @@
       "family": "color",
       "kind": "api",
       "status": "parity",
-      "python_surface": "pyisetcam.color, pyisetcam.illuminant, pyisetcam.__init__",
+      "python_surface": "pyisetcam.color, pyisetcam.illuminant, pyisetcam.__init__, pyisetcam.utils",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_metrics.py",
@@ -6500,7 +6496,7 @@
       "family": "opticalimage",
       "kind": "api",
       "status": "parity",
-      "python_surface": "pyisetcam.optics, pyisetcam.__init__",
+      "python_surface": "pyisetcam.optics, pyisetcam.__init__, pyisetcam.utils",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py",
@@ -8297,7 +8293,7 @@
       "family": "scene/gui",
       "kind": "gui",
       "status": "out_of_scope",
-      "python_surface": "pyisetcam.scene, pyisetcam.__init__, pyisetcam.parity",
+      "python_surface": "pyisetcam.scene, pyisetcam.__init__, pyisetcam.parity, pyisetcam.utils",
       "tests": [
         "tests/unit/test_scene.py",
         "tests/unit/test_pipeline.py",
@@ -8311,7 +8307,7 @@
       "family": "scene/gui",
       "kind": "gui",
       "status": "out_of_scope",
-      "python_surface": "pyisetcam.scene, pyisetcam.__init__, pyisetcam.parity",
+      "python_surface": "pyisetcam.scene, pyisetcam.__init__, pyisetcam.parity, pyisetcam.utils",
       "tests": [
         "tests/unit/test_scene.py",
         "tests/unit/test_pipeline.py",
@@ -9602,7 +9598,7 @@
       "family": "scene",
       "kind": "api",
       "status": "parity",
-      "python_surface": "pyisetcam.scene, pyisetcam.__init__, pyisetcam.parity",
+      "python_surface": "pyisetcam.scene, pyisetcam.__init__, pyisetcam.parity, pyisetcam.utils",
       "tests": [
         "tests/unit/test_scene.py",
         "tests/unit/test_pipeline.py",
@@ -17087,11 +17083,11 @@
       "upstream_path": "utility/image/convolvecirc.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB circular-convolution helper is covered by the Python `convolve_circ(...)` / `convolvecirc(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/dac2rgb.m",
@@ -17190,11 +17186,11 @@
       "upstream_path": "utility/image/ieMontages.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils, pyisetcam.fileio",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a local PNG report-generator that captures labeled montage pages from the current folder rather than a reusable numeric API surface for the headless pipeline.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/ieRadialMatrix.m",
@@ -17398,11 +17394,11 @@
       "upstream_path": "utility/image/imageMultiview.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils, pyisetcam.fileio",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a MATLAB session/object-browser window orchestrator built around `listdlg`, figure creation, and subplot layout rather than a reusable headless API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/imageRotate.m",
@@ -17421,21 +17417,21 @@
       "upstream_path": "utility/image/imageSPD.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB spectral-image renderer is covered headlessly by the Python `image_spd(...)` / `imageSPD(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/imageSPD2RGB.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The obsolete MATLAB SPD-to-RGB helper is covered by the Python `image_spd2rgb(...)` / `imageSPD2RGB(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/imageSetHarmonic.fig",
@@ -17481,11 +17477,11 @@
       "upstream_path": "utility/image/imageSlantedEdge.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB slanted-edge target helper is covered by the Python `image_slanted_edge(...)` / `imageSlantedEdge(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/imageTranslate.m",
@@ -17521,41 +17517,41 @@
       "upstream_path": "utility/image/imagehc2rgb.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB multispectral-waveband visualizer is covered by the Python `image_hc2rgb(...)` / `imagehc2rgb(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/imagescM.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB monochrome-display helper is covered headlessly by the Python `imagesc_m(...)` / `imagescM(...)` compatibility wrapper, which returns a display payload instead of MATLAB graphics handles.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/imagescOPP.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB opponent-image display helper is covered headlessly by the Python `imagesc_opp(...)` / `imagescOPP(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/imagescRGB.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB RGB display helper is covered headlessly by the Python `imagesc_rgb(...)` / `imagescRGB(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/rgb2dac.m",
