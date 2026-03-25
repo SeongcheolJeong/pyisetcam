@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import subprocess
 import zipfile
 
 import numpy as np
@@ -14,6 +15,7 @@ from pyisetcam import (
     ieImageType,
     ieDNGRead,
     ieDNGSimpleInfo,
+    ieSCP,
     ieSaveSpectralFile,
     ieTempfile,
     ieVarInFile,
@@ -22,6 +24,7 @@ from pyisetcam import (
     ie_dng_read,
     ie_dng_simple_info,
     ie_image_type,
+    ie_scp,
     ie_save_spectral_file,
     ie_tempfile,
     ie_var_in_file,
@@ -247,6 +250,32 @@ def test_ie_var_in_file_accepts_path_and_whos_listing(tmp_path) -> None:
     assert ie_var_in_file(path, "data") is True
     assert ieVarInFile(path, "missing") is False
     assert ie_var_in_file(whosmat(path), "comment") is True
+
+
+def test_ie_scp_builds_recursive_command_and_handles_missing_binary(tmp_path, monkeypatch, capsys) -> None:
+    local_path = tmp_path / "download"
+
+    def fake_run(command: list[str], check: bool = False) -> subprocess.CompletedProcess[str]:
+        assert command == ["scp", "-r", "-q", "alice@example.com:/remote/data", str(local_path)]
+        assert check is False
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr("pyisetcam.fileio.subprocess.run", fake_run)
+    command, status = ie_scp("alice", "example.com", "/remote/data", local_path, "quiet", True)
+
+    assert status == 0
+    assert command == f"scp -r -q alice@example.com:/remote/data {local_path}"
+    assert capsys.readouterr().out == ""
+
+    def missing_run(command: list[str], check: bool = False) -> subprocess.CompletedProcess[str]:
+        raise FileNotFoundError("scp")
+
+    monkeypatch.setattr("pyisetcam.fileio.subprocess.run", missing_run)
+    alias_command, alias_status = ieSCP("alice", "example.com", "/remote/data", local_path)
+
+    assert alias_status == 127
+    assert alias_command == f"scp -r alice@example.com:/remote/data {local_path}"
+    assert "Error during remote secure copy" in capsys.readouterr().out
 
 
 def test_vc_save_multispectral_image_and_import_object_wrappers(tmp_path, asset_store) -> None:

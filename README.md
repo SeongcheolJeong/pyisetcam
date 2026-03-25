@@ -1757,6 +1757,11 @@ results without opening a browser, the spreadsheet importer now supports CSV
 plus simple XLSX color-filter and spectral payloads, and the image reader
 replays legacy RGB and basis-coded multispectral contracts on top of
 `sceneFromFile(...)`.
+That `utility/file` family is now fully closed: direct wrappers also cover
+`ieDNGRead(...)`, `ieDNGSimpleInfo(...)`, `ieReadColorFilter(...)`,
+`ieReadSpectra(...)`, `ieSCP(...)`, `ieSaveColorFilter(...)`,
+`ieSaveMultiSpectralImage(...)`, `ieSaveSIDataFile(...)`, `vcExportObject(...)`,
+`vcLoadObject(...)`, and `vcSaveObject(...)`.
 The neighboring `utility/plots` gateway slice is cleaner too:
 `plotDisplaySPD(...)`, `plotDisplayLine(...)`, `plotDisplayColor(...)`,
 `plotDisplayGamut(...)`, and `plotSensorHist(...)` now have direct headless

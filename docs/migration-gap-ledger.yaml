@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-03-25T09:35:36.925345+00:00",
+  "generated_at": "2026-03-25T10:05:06.994568+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 60,
+      "headless_only": 49,
       "missing": 21,
       "out_of_scope": 206,
       "parity": 690,
       "partial": 279,
-      "ported": 187
+      "ported": 198
     },
     "kind_counts": {
       "api": 661,
@@ -21,17 +21,17 @@
     },
     "priority_counts": {
       "P1": 217,
-      "P2": 143,
-      "P3": 1083
+      "P2": 132,
+      "P3": 1094
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": 0,
+        "headless_only": -11,
         "missing": 0,
-        "out_of_scope": 13,
-        "parity": 5,
-        "partial": -18,
-        "ported": 0
+        "out_of_scope": 0,
+        "parity": 0,
+        "partial": 0,
+        "ported": 11
       },
       "kind_counts": {
         "api": 0,
@@ -42,9 +42,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -18,
-        "P2": 0,
-        "P3": 18
+        "P1": 0,
+        "P2": -11,
+        "P3": 11
       }
     },
     "family_summary": {
@@ -939,14 +939,13 @@
       "utility/file": {
         "total": 25,
         "by_status": {
-          "headless_only": 11,
           "out_of_scope": 3,
-          "ported": 11
+          "ported": 22
         },
         "by_kind": {
           "helper": 25
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "utility/image": {
         "total": 46,
@@ -1028,16 +1027,6 @@
         }
       },
       {
-        "family": "utility/file",
-        "open_entries": 11,
-        "highest_open_priority": "P2",
-        "by_status": {
-          "headless_only": 11,
-          "out_of_scope": 3,
-          "ported": 11
-        }
-      },
-      {
         "family": "cp",
         "open_entries": 10,
         "highest_open_priority": "P2",
@@ -1103,6 +1092,17 @@
         "by_status": {
           "partial": 3
         }
+      },
+      {
+        "family": "utility/image",
+        "open_entries": 3,
+        "highest_open_priority": "P2",
+        "by_status": {
+          "headless_only": 3,
+          "out_of_scope": 5,
+          "parity": 8,
+          "ported": 30
+        }
       }
     ],
     "exception_sites_by_module": {
@@ -1135,7 +1135,7 @@
         "not_implemented_error_sites": 0
       },
       "fileio": {
-        "unsupported_option_error_sites": 6,
+        "unsupported_option_error_sites": 7,
         "not_implemented_error_sites": 0
       },
       "illuminant": {
@@ -16618,25 +16618,25 @@
       "upstream_path": "utility/file/ieDNGRead.m",
       "family": "utility/file",
       "kind": "helper",
-      "status": "headless_only",
+      "status": "ported",
       "python_surface": "pyisetcam.fileio, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_fileio.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB DNG reader is covered by the Python `ie_dng_read(...)` / `ieDNGRead(...)` compatibility wrapper for raw, RGB, and metadata-only replay.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/file/ieDNGSimpleInfo.m",
       "family": "utility/file",
       "kind": "helper",
-      "status": "headless_only",
+      "status": "ported",
       "python_surface": "pyisetcam.fileio, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_fileio.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The reduced DNG metadata helper is covered by the Python `ie_dng_simple_info(...)` / `ieDNGSimpleInfo(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/file/ieImageType.m",
@@ -16654,13 +16654,13 @@
       "upstream_path": "utility/file/ieReadColorFilter.m",
       "family": "utility/file",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.fileio, pyisetcam.__init__, pyisetcam.assets, pyisetcam.color, pyisetcam.parity",
+      "status": "ported",
+      "python_surface": "pyisetcam.fileio, pyisetcam.assets, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_fileio.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB color-filter reader is covered by the Python `ie_read_color_filter(...)` / `ieReadColorFilter(...)` compatibility wrapper on top of the current asset pipeline.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/file/ieReadMultipleFileNames.m",
@@ -16678,61 +16678,61 @@
       "upstream_path": "utility/file/ieReadSpectra.m",
       "family": "utility/file",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.fileio, pyisetcam.__init__, pyisetcam.assets, pyisetcam.camera, pyisetcam.display",
+      "status": "ported",
+      "python_surface": "pyisetcam.fileio, pyisetcam.assets, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_fileio.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB spectral-reader helper is covered by the Python `ie_read_spectra(...)` / `ieReadSpectra(...)` compatibility wrapper on top of the current asset pipeline.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/file/ieSCP.m",
       "family": "utility/file",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.fileio, pyisetcam.parity",
+      "status": "ported",
+      "python_surface": "pyisetcam.fileio, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_fileio.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The remote-copy helper is covered by the Python `ie_scp(...)` / `ieSCP(...)` compatibility wrapper over a headless recursive `scp` call.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/file/ieSaveColorFilter.m",
       "family": "utility/file",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.fileio, pyisetcam.__init__, pyisetcam.parity",
+      "status": "ported",
+      "python_surface": "pyisetcam.fileio, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_fileio.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB color-filter writer is covered by the Python `ie_save_color_filter(...)` / `ieSaveColorFilter(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/file/ieSaveMultiSpectralImage.m",
       "family": "utility/file",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.fileio, pyisetcam.__init__, pyisetcam.parity, pyisetcam.scene",
+      "status": "ported",
+      "python_surface": "pyisetcam.fileio, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_fileio.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The basis-coded multispectral-image writer is covered by the Python `ie_save_multispectral_image(...)` / `ieSaveMultiSpectralImage(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/file/ieSaveSIDataFile.m",
       "family": "utility/file",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.fileio, pyisetcam.__init__, pyisetcam.parity",
+      "status": "ported",
+      "python_surface": "pyisetcam.fileio, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_fileio.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The shift-invariant PSF-data writer is covered by the Python `ie_save_si_data_file(...)` / `ieSaveSIDataFile(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/file/ieSaveSpectralFile.m",
@@ -16810,13 +16810,13 @@
       "upstream_path": "utility/file/vcExportObject.m",
       "family": "utility/file",
       "kind": "helper",
-      "status": "headless_only",
+      "status": "ported",
       "python_surface": "pyisetcam.fileio, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_fileio.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB object-export helper is covered by the Python `vc_export_object(...)` / `vcExportObject(...)` compatibility wrapper.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/file/vcImportObject.m",
@@ -16834,13 +16834,13 @@
       "upstream_path": "utility/file/vcLoadObject.m",
       "family": "utility/file",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.fileio, pyisetcam.__init__, pyisetcam.optics, pyisetcam.sensor",
+      "status": "ported",
+      "python_surface": "pyisetcam.fileio, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_fileio.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB object-loader helper is covered by the Python `vc_load_object(...)` / `vcLoadObject(...)` compatibility wrapper for the core ISET object types.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/file/vcReadImage.m",
@@ -16882,13 +16882,13 @@
       "upstream_path": "utility/file/vcSaveObject.m",
       "family": "utility/file",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.fileio, pyisetcam.__init__, pyisetcam.optics, pyisetcam.scene",
+      "status": "ported",
+      "python_surface": "pyisetcam.fileio, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_fileio.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB object-save helper is covered by the Python `vc_save_object(...)` / `vcSaveObject(...)` compatibility wrapper for the core ISET object types.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/file/vcSelectDataFile.m",

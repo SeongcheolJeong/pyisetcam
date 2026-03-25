@@ -174,10 +174,50 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB image-type probe is covered by the Python `ie_image_type(...)` / `ieImageType(...)` compatibility wrapper.",
         "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
     },
+    "utility/file/ieDNGRead.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB DNG reader is covered by the Python `ie_dng_read(...)` / `ieDNGRead(...)` compatibility wrapper for raw, RGB, and metadata-only replay.",
+        "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
+    },
+    "utility/file/ieDNGSimpleInfo.m": {
+        "status": "ported",
+        "note": "The reduced DNG metadata helper is covered by the Python `ie_dng_simple_info(...)` / `ieDNGSimpleInfo(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
+    },
+    "utility/file/ieReadColorFilter.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB color-filter reader is covered by the Python `ie_read_color_filter(...)` / `ieReadColorFilter(...)` compatibility wrapper on top of the current asset pipeline.",
+        "module_hits": ["pyisetcam.assets", "pyisetcam.__init__"],
+    },
     "utility/file/ieReadMultipleFileNames.m": {
         "status": "out_of_scope",
         "note": "The upstream file is an interactive multi-file chooser built around MATLAB directory/list dialogs rather than a reusable supported headless API surface.",
         "module_hits": [],
+    },
+    "utility/file/ieReadSpectra.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB spectral-reader helper is covered by the Python `ie_read_spectra(...)` / `ieReadSpectra(...)` compatibility wrapper on top of the current asset pipeline.",
+        "module_hits": ["pyisetcam.assets", "pyisetcam.__init__"],
+    },
+    "utility/file/ieSCP.m": {
+        "status": "ported",
+        "note": "The remote-copy helper is covered by the Python `ie_scp(...)` / `ieSCP(...)` compatibility wrapper over a headless recursive `scp` call.",
+        "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
+    },
+    "utility/file/ieSaveColorFilter.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB color-filter writer is covered by the Python `ie_save_color_filter(...)` / `ieSaveColorFilter(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
+    },
+    "utility/file/ieSaveMultiSpectralImage.m": {
+        "status": "ported",
+        "note": "The basis-coded multispectral-image writer is covered by the Python `ie_save_multispectral_image(...)` / `ieSaveMultiSpectralImage(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
+    },
+    "utility/file/ieSaveSIDataFile.m": {
+        "status": "ported",
+        "note": "The shift-invariant PSF-data writer is covered by the Python `ie_save_si_data_file(...)` / `ieSaveSIDataFile(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
     },
     "utility/file/ieSaveSpectralFile.m": {
         "status": "ported",
@@ -214,6 +254,16 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB object-import helper is covered for the headless core object types by the Python `vc_import_object(...)` / `vcImportObject(...)` compatibility wrapper on top of `vc_load_object(...)`.",
         "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
     },
+    "utility/file/vcExportObject.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB object-export helper is covered by the Python `vc_export_object(...)` / `vcExportObject(...)` compatibility wrapper.",
+        "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
+    },
+    "utility/file/vcLoadObject.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB object-loader helper is covered by the Python `vc_load_object(...)` / `vcLoadObject(...)` compatibility wrapper for the core ISET object types.",
+        "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
+    },
     "utility/file/vcReadSpectra.m": {
         "status": "ported",
         "note": "The deprecated MATLAB spectral-reader alias is covered by the Python `vc_read_spectra(...)` / `vcReadSpectra(...)` compatibility wrapper.",
@@ -227,6 +277,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
     "utility/file/vcSaveMultiSpectralImage.m": {
         "status": "ported",
         "note": "The legacy MATLAB multispectral-image writer is covered by the Python `vc_save_multispectral_image(...)` / `vcSaveMultiSpectralImage(...)` compatibility wrapper on top of the existing basis-coded save path.",
+        "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
+    },
+    "utility/file/vcSaveObject.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB object-save helper is covered by the Python `vc_save_object(...)` / `vcSaveObject(...)` compatibility wrapper for the core ISET object types.",
         "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
     },
     "utility/image/ieFindWaveIndex.m": {

@@ -77,6 +77,7 @@ from .fileio import (
     ie_dng_read,
     ie_dng_simple_info,
     ie_image_type,
+    ie_scp,
     ie_web_get,
     ie_xl2_color_filter,
     ie_save_color_filter,
@@ -1102,6 +1103,7 @@ __all__ = [
     "ie_radial_matrix",
     "ieReadSpectra",
     "ieReadColorFilter",
+    "ieSCP",
     "ieSaveColorFilter",
     "ieSaveMultiSpectralImage",
     "ieSaveSpectralFile",
@@ -1133,6 +1135,7 @@ __all__ = [
     "ie_n_to_megapixel",
     "ie_reflectance_samples",
     "ie_image_type",
+    "ie_scp",
     "ie_read_spectra",
     "ie_read_color_filter",
     "ie_save_color_filter",
@@ -2638,6 +2641,7 @@ ieMvnrnd = ie_mvnrnd
 ieN2MegaPixel = ie_n_to_megapixel
 ieReflectanceSamples = ie_reflectance_samples
 ieImageType = ie_image_type
+ieSCP = ie_scp
 ieWebGet = ie_web_get
 ieXL2ColorFilter = ie_xl2_color_filter
 ieReadColorFilter = ie_read_color_filter

@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 import csv
 import os
+import shlex
+import subprocess
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -729,8 +731,53 @@ def vc_read_image(
     return np.asarray(scene.data["photons"], dtype=float), illuminant, basis, comment, mc_coef
 
 
+def ie_scp(
+    user: str,
+    host: str,
+    src: str | Path,
+    destination_path: str | Path,
+    *args: Any,
+    quiet: bool = False,
+) -> tuple[str, int]:
+    """Mirror MATLAB ieSCP() with a thin headless `scp -r` wrapper."""
+
+    if len(args) % 2 != 0:
+        raise ValueError("ieSCP expects key/value pairs.")
+    for index in range(0, len(args), 2):
+        parameter = param_format(args[index])
+        value = args[index + 1]
+        if parameter == "quiet":
+            quiet = bool(value)
+        else:
+            raise UnsupportedOptionError("ieSCP", str(args[index]))
+
+    command_parts = ["scp", "-r"]
+    if quiet:
+        command_parts.append("-q")
+    command_parts.extend(
+        [
+            f"{str(user)}@{str(host)}:{Path(src).as_posix() if isinstance(src, Path) else str(src)}",
+            str(destination_path),
+        ]
+    )
+    command = shlex.join(command_parts)
+
+    try:
+        status = int(subprocess.run(command_parts, check=False).returncode)
+    except FileNotFoundError:
+        status = 127
+
+    if not quiet:
+        if status == 0:
+            print("File copied successfully!")
+        else:
+            print("Error during remote secure copy. Check connection and paths.")
+    return command, status
+
+
 # MATLAB-style aliases.
 ieImageType = ie_image_type
+ieSCP = ie_scp
 ieSaveSpectralFile = ie_save_spectral_file
 ieTempfile = ie_tempfile
 ieVarInFile = ie_var_in_file
