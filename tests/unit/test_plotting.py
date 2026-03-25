@@ -19,8 +19,11 @@ from pyisetcam import (
     plotGaussianSpectrum,
     plotNormal,
     plotOI,
+    plotPixelSNR,
     plotRadiance,
     plotReflectance,
+    plotSensorEtendue,
+    plotSensorSNR,
     plotSpectrumLocus,
     plotTextString,
     ip_create,
@@ -1620,3 +1623,38 @@ def test_plot_reflectance_wrapper_transposes_rowwise_input() -> None:
     assert payload["linestyle"] == ":"
     assert payload["ylabel"] == "Reflectance"
     assert payload["grid"] is True
+
+
+def test_direct_sensor_plot_wrappers_match_plot_sensor(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+
+    pixel_payload, pixel_handle = plotPixelSNR(sensor)
+    expected_pixel, _ = plotSensor(sensor, "pixel snr")
+    etendue_payload, etendue_handle = plotSensorEtendue(sensor)
+    expected_etendue, _ = plotSensor(sensor, "etendue")
+    sensor_snr_payload, sensor_snr_handle = plotSensorSNR(sensor)
+    expected_sensor_snr, _ = plotSensor(sensor, "sensor snr")
+
+    assert pixel_handle is None
+    assert etendue_handle is None
+    assert sensor_snr_handle is None
+
+    assert np.allclose(pixel_payload["volts"], expected_pixel["volts"])
+    assert np.allclose(pixel_payload["snr"], expected_pixel["snr"])
+    assert np.allclose(pixel_payload["snrShot"], expected_pixel["snrShot"])
+    assert np.allclose(pixel_payload["snrRead"], expected_pixel["snrRead"])
+    assert pixel_payload["legend"] == expected_pixel["legend"]
+    assert pixel_payload["titleString"] == expected_pixel["titleString"]
+
+    assert np.allclose(etendue_payload["support"]["x"], expected_etendue["support"]["x"])
+    assert np.allclose(etendue_payload["support"]["y"], expected_etendue["support"]["y"])
+    assert np.allclose(etendue_payload["sensorEtendue"], expected_etendue["sensorEtendue"])
+    assert etendue_payload["zLabel"] == "Relative illumination"
+
+    assert np.allclose(sensor_snr_payload["volts"], expected_sensor_snr["volts"])
+    assert np.allclose(sensor_snr_payload["snr"], expected_sensor_snr["snr"])
+    assert np.allclose(sensor_snr_payload["snrShot"], expected_sensor_snr["snrShot"])
+    assert np.allclose(sensor_snr_payload["snrRead"], expected_sensor_snr["snrRead"])
+    assert np.allclose(sensor_snr_payload["snrDSNU"], expected_sensor_snr["snrDSNU"])
+    assert np.allclose(sensor_snr_payload["snrPRNU"], expected_sensor_snr["snrPRNU"])
+    assert sensor_snr_payload["legend"] == expected_sensor_snr["legend"]

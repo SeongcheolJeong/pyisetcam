@@ -1631,6 +1631,24 @@ def sensor_plot_hist(
     return _sensor_plot_histogram(sensor, data_type, roi), None
 
 
+def plot_pixel_snr(sensor: Sensor) -> tuple[dict[str, Any], None]:
+    """Return MATLAB-style `plotPixelSNR` payload without opening a figure."""
+
+    return sensor_plot(sensor, "pixel snr")
+
+
+def plot_sensor_etendue(sensor: Sensor) -> tuple[dict[str, Any], None]:
+    """Return MATLAB-style `plotSensorEtendue` payload without opening a figure."""
+
+    return sensor_plot(sensor, "etendue")
+
+
+def plot_sensor_snr(sensor: Sensor) -> tuple[dict[str, Any], None]:
+    """Return MATLAB-style `plotSensorSNR` payload without opening a figure."""
+
+    return sensor_plot(sensor, "sensor snr")
+
+
 def ip_plot(
     ip: ImageProcessor,
     p_type: str = "horizontal line",
@@ -1839,8 +1857,11 @@ plotDisplayLine = plot_display_line
 plotDisplayColor = plot_display_color
 plotDisplayGamut = plot_display_gamut
 plotNormal = plot_normal
+plotPixelSNR = plot_pixel_snr
 plotRadiance = plot_radiance
 plotReflectance = plot_reflectance
+plotSensorEtendue = plot_sensor_etendue
+plotSensorSNR = plot_sensor_snr
 plotSpectrumLocus = plot_spectrum_locus
 plotTextString = plot_text_string
 wvfPlot = wvf_plot

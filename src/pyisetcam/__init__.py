@@ -369,8 +369,11 @@ from .plotting import (
     plot_etendue_ratio,
     plot_gaussian_spectrum,
     plot_normal,
+    plot_pixel_snr,
     plot_radiance,
     plot_reflectance,
+    plot_sensor_etendue,
+    plot_sensor_snr,
     plot_spectrum_locus,
     plot_text_string,
     scene_plot,
@@ -1370,8 +1373,11 @@ __all__ = [
     "plotEtendueRatio",
     "plotGaussianSpectrum",
     "plotNormal",
+    "plotPixelSNR",
     "plotRadiance",
     "plotReflectance",
+    "plotSensorEtendue",
+    "plotSensorSNR",
     "plotSpectrumLocus",
     "plotTextString",
     "plot_contrast_histogram",
@@ -1382,8 +1388,11 @@ __all__ = [
     "plot_etendue_ratio",
     "plot_gaussian_spectrum",
     "plot_normal",
+    "plot_pixel_snr",
     "plot_radiance",
     "plot_reflectance",
+    "plot_sensor_etendue",
+    "plot_sensor_snr",
     "plot_spectrum_locus",
     "plot_text_string",
     "oi_plot",
@@ -2149,8 +2158,11 @@ plotOI = oi_plot
 oiPlot = oi_plot
 ipPlot = ip_plot
 plotNormal = plot_normal
+plotPixelSNR = plot_pixel_snr
 plotRadiance = plot_radiance
 plotReflectance = plot_reflectance
+plotSensorEtendue = plot_sensor_etendue
+plotSensorSNR = plot_sensor_snr
 plotSpectrumLocus = plot_spectrum_locus
 plotTextString = plot_text_string
 plotScene = scene_plot

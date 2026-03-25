@@ -398,6 +398,21 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The MATLAB display-gamut plotting helper is covered by the Python `plot_display_gamut(...)` / `plotDisplayGamut(...)` compatibility wrapper on top of display primary XYZ data.",
         "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
     },
+    "utility/plots/plotPixelSNR.m": {
+        "status": "ported",
+        "note": "The MATLAB pixel-SNR plotting helper is covered by the Python `plot_pixel_snr(...)` / `plotPixelSNR(...)` compatibility wrapper on top of the existing `plotSensor(..., 'pixel snr')` payload.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/plotSensorEtendue.m": {
+        "status": "ported",
+        "note": "The MATLAB sensor-etendue plotting helper is covered by the Python `plot_sensor_etendue(...)` / `plotSensorEtendue(...)` compatibility wrapper on top of the existing `plotSensor(..., 'etendue')` payload.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/plotSensorSNR.m": {
+        "status": "ported",
+        "note": "The MATLAB sensor-SNR plotting helper is covered by the Python `plot_sensor_snr(...)` / `plotSensorSNR(...)` compatibility wrapper on top of the existing `plotSensor(..., 'sensor snr')` payload.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
     "utility/plots/plotContrastHistogram.m": {
         "status": "ported",
         "note": "The MATLAB contrast-histogram helper is covered by the Python `plot_contrast_histogram(...)` / `plotContrastHistogram(...)` wrapper, which returns histogram counts and bin centers headlessly.",

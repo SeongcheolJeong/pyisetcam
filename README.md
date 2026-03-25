@@ -1778,6 +1778,9 @@ The adjacent standalone plotting helpers are cleaner too:
 `plotRadiance(...)`, and `plotReflectance(...)` now return the same plane,
 jitter, PDF, and wavelength-line payloads headlessly instead of opening
 MATLAB figure windows.
+That same sensor plotting family now also exposes the direct MATLAB entry
+points `plotPixelSNR(...)`, `plotSensorEtendue(...)`, and
+`plotSensorSNR(...)` on top of the existing `plotSensor(...)` payloads.
 The adjacent `utility/image` numeric helper tail is shrinking too:
 `ieFindWaveIndex(...)`, `ieWave2Index(...)`, `ieRadialMatrix(...)`,
 `imageBoundingBox(...)`, `imageCentroid(...)`, `imageCircular(...)`, and
