@@ -85,6 +85,8 @@ from pyisetcam import (
     imgSquareArray,
     imgSweep,
     imgZonePlate,
+    imageDeadLeaves,
+    imageVernier,
     image_flip,
     image_increase_image_rgb_size,
     image_linear_transform,
@@ -116,6 +118,7 @@ from pyisetcam import (
     ie_iso12233,
     ieISO12233v1,
     ie_xyz_from_photons,
+    ieFieldHeight2Index,
     ie_field_height_to_index,
     ie_rect2_locs,
     ieCookTorrance,
@@ -15710,6 +15713,37 @@ def test_scene_vernier_wrapper_surface(asset_store) -> None:
     assert np.max(np.asarray(scene_get(object_scene, "luminance", asset_store=asset_store), dtype=float)) > np.min(
         np.asarray(scene_get(object_scene, "luminance", asset_store=asset_store), dtype=float)
     )
+
+
+def test_remaining_utility_image_wrapper_surface() -> None:
+    field_heights = np.array([0.1, 0.3, 0.7], dtype=float)
+    leaves_options = {
+        "rmin": 0.25,
+        "rmax": 0.25,
+        "nbr_iter": 2,
+        "shape": "square",
+        "rseed": 17,
+        "random_samples": np.array(
+            [
+                [0.0, 0.25, 0.25, 0.2],
+                [0.0, 0.75, 0.75, 0.8],
+            ],
+            dtype=float,
+        ),
+    }
+
+    leaves, rseed = imageDeadLeaves([8, 8], 2.0, leaves_options)
+    vernier, params = imageVernier({"sceneSz": 8, "barWidth": 2, "offset": 1, "gap": 2, "barColor": 1.0, "bgColor": 0.25})
+
+    assert ieFieldHeight2Index(field_heights, 0.6) == ie_field_height_to_index(field_heights, 0.6) == 3
+    assert rseed == 17
+    assert np.allclose(leaves, imgDeadleaves([8, 8], 2.0, leaves_options))
+    assert vernier.shape == (8, 8, 3)
+    assert tuple(np.asarray(params["sceneSz"], dtype=int)) == (8, 8)
+    assert params["barLength"] == 8
+    assert params["gap"] == 2
+    assert np.any(np.isclose(vernier, 1.0))
+    assert np.any(np.isclose(vernier, 0.25))
 
 
 def test_scene_export_wrapper_surface(asset_store, tmp_path: Path) -> None:

@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-03-25T10:05:06.994568+00:00",
+  "generated_at": "2026-03-25T10:34:33.381962+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 49,
+      "headless_only": 46,
       "missing": 21,
       "out_of_scope": 206,
       "parity": 690,
       "partial": 279,
-      "ported": 198
+      "ported": 201
     },
     "kind_counts": {
       "api": 661,
@@ -21,17 +21,17 @@
     },
     "priority_counts": {
       "P1": 217,
-      "P2": 132,
-      "P3": 1094
+      "P2": 129,
+      "P3": 1097
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": -11,
+        "headless_only": -3,
         "missing": 0,
         "out_of_scope": 0,
         "parity": 0,
         "partial": 0,
-        "ported": 11
+        "ported": 3
       },
       "kind_counts": {
         "api": 0,
@@ -43,8 +43,8 @@
       },
       "priority_counts": {
         "P1": 0,
-        "P2": -11,
-        "P3": 11
+        "P2": -3,
+        "P3": 3
       }
     },
     "family_summary": {
@@ -950,16 +950,15 @@
       "utility/image": {
         "total": 46,
         "by_status": {
-          "headless_only": 3,
           "out_of_scope": 5,
           "parity": 8,
-          "ported": 30
+          "ported": 33
         },
         "by_kind": {
           "gui": 2,
           "helper": 44
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "utility/plots": {
         "total": 50,
@@ -1094,14 +1093,11 @@
         }
       },
       {
-        "family": "utility/image",
-        "open_entries": 3,
+        "family": "data/images",
+        "open_entries": 2,
         "highest_open_priority": "P2",
         "by_status": {
-          "headless_only": 3,
-          "out_of_scope": 5,
-          "parity": 8,
-          "ported": 30
+          "partial": 2
         }
       }
     ],
@@ -17174,11 +17170,11 @@
       "upstream_path": "utility/image/ieFieldHeight2Index.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.__init__",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.optics, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB field-height index helper is covered by the Python `ie_field_height_to_index(...)` / `ieFieldHeight2Index(...)` compatibility wrapper in `pyisetcam.optics`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/ieFindWaveIndex.m",
@@ -17330,11 +17326,11 @@
       "upstream_path": "utility/image/imageDeadLeaves.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.scene",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.scene, pyisetcam.__init__",
       "tests": [],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "notes": "The deprecated MATLAB dead-leaves helper is covered by the Python `image_dead_leaves(...)` / `imageDeadLeaves(...)` compatibility wrapper on top of the current dead-leaves generator.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/imageFlip.m",
@@ -17555,11 +17551,11 @@
       "upstream_path": "utility/image/imageVernier.m",
       "family": "utility/image",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.scene",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.scene, pyisetcam.__init__",
       "tests": [],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB Vernier-image helper is covered by the Python `image_vernier(...)` / `imageVernier(...)` compatibility wrapper in `pyisetcam.scene`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/imagehc2rgb.m",

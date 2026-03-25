@@ -1812,6 +1812,11 @@ The adjacent `utility/image` numeric helper tail is shrinking too:
 `pyisetcam.utils` with focused regressions over MATLAB-style 1-based
 indexing, radial support, centered aperture masking, centroid rounding, and
 per-channel contrast normalization.
+That `utility/image` family is now fully closed too: the remaining direct
+surface is covered by `ie_field_height_to_index(...)` /
+`ieFieldHeight2Index(...)` in `pyisetcam.optics` plus the new
+`image_dead_leaves(...)` / `imageDeadLeaves(...)` and
+`image_vernier(...)` / `imageVernier(...)` wrappers in `pyisetcam.scene`.
 That same utility-image slice now also covers `ieCmap(...)`,
 `ieCropRect(...)`, `ieLUTDigital(...)`, `ieLUTInvert(...)`, and
 `ieLUTLinear(...)`, with direct regressions for the simple MATLAB color-map

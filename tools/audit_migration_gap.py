@@ -299,6 +299,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB FOV crop-rectangle helper is covered by the Python `ie_crop_rect(...)` / `ieCropRect(...)` compatibility wrapper in `pyisetcam.utils`.",
         "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
     },
+    "utility/image/ieFieldHeight2Index.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB field-height index helper is covered by the Python `ie_field_height_to_index(...)` / `ieFieldHeight2Index(...)` compatibility wrapper in `pyisetcam.optics`.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.__init__"],
+    },
     "utility/image/ieLUTDigital.m": {
         "status": "ported",
         "note": "The legacy MATLAB DAC-to-linear-RGB helper is covered by the Python `ie_lut_digital(...)` / `ieLUTDigital(...)` compatibility wrapper in `pyisetcam.utils`.",
@@ -354,6 +359,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB montage wrapper is covered headlessly by the Python `image_montage(...)` / `imageMontage(...)` compatibility wrapper, which returns the montage image and placeholder figure/colorbar handles instead of MATLAB GUI objects.",
         "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
     },
+    "utility/image/imageDeadLeaves.m": {
+        "status": "ported",
+        "note": "The deprecated MATLAB dead-leaves helper is covered by the Python `image_dead_leaves(...)` / `imageDeadLeaves(...)` compatibility wrapper on top of the current dead-leaves generator.",
+        "module_hits": ["pyisetcam.scene", "pyisetcam.__init__"],
+    },
     "utility/image/imageMultiview.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a MATLAB session/object-browser window orchestrator built around `listdlg`, figure creation, and subplot layout rather than a reusable headless API surface.",
@@ -378,6 +388,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "status": "ported",
         "note": "The legacy MATLAB multispectral-waveband visualizer is covered by the Python `image_hc2rgb(...)` / `imagehc2rgb(...)` compatibility wrapper in `pyisetcam.utils`.",
         "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/image/imageVernier.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB Vernier-image helper is covered by the Python `image_vernier(...)` / `imageVernier(...)` compatibility wrapper in `pyisetcam.scene`.",
+        "module_hits": ["pyisetcam.scene", "pyisetcam.__init__"],
     },
     "utility/plots/ipPlot.m": {
         "status": "ported",

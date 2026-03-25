@@ -500,6 +500,8 @@ from .scene import (
     fot_params,
     gabor_p,
     hdr_render,
+    image_dead_leaves,
+    image_vernier,
     img_deadleaves,
     img_disk_array,
     img_mackay,
@@ -1637,6 +1639,8 @@ __all__ = [
     "hdr_render",
     "FOTParams",
     "gaborP",
+    "imageDeadLeaves",
+    "imageVernier",
     "imgDeadleaves",
     "imgDiskArray",
     "imgMackay",
@@ -1744,6 +1748,8 @@ __all__ = [
     "scene_wb_create",
     "fot_params",
     "gabor_p",
+    "image_dead_leaves",
+    "image_vernier",
     "img_deadleaves",
     "img_disk_array",
     "img_mackay",
@@ -2170,6 +2176,8 @@ sceneCalculateLuminance = scene_calculate_luminance
 sceneSPDScale = scene_spd_scale
 FOTParams = fot_params
 gaborP = gabor_p
+imageDeadLeaves = image_dead_leaves
+imageVernier = image_vernier
 imgDeadleaves = img_deadleaves
 imgDiskArray = img_disk_array
 imgMackay = img_mackay

@@ -2220,6 +2220,8 @@ def _dead_leaves_options(value: Any | None) -> dict[str, Any]:
     }
     if "seed" in normalized:
         options["seed"] = int(np.rint(normalized["seed"]))
+    elif "rseed" in normalized:
+        options["seed"] = int(np.rint(normalized["rseed"]))
     if "random_samples" in normalized and normalized["random_samples"] is not None:
         options["random_samples"] = np.asarray(normalized["random_samples"], dtype=float)
     return options
@@ -2784,6 +2786,27 @@ def img_deadleaves(n: Any = 256, sigma: float = 3.0, options: Any | None = None)
     return _dead_leaves_image(n, sigma, options)
 
 
+def image_dead_leaves(
+    n: Any = 256,
+    sigma: float = 3.0,
+    options: Any | None = None,
+) -> tuple[np.ndarray, int | None]:
+    """Create the legacy MATLAB dead-leaves image plus replay seed."""
+
+    normalized = _normalized_parameter_dict(options)
+    returned_seed: int | None
+    if "seed" in normalized:
+        returned_seed = int(np.rint(normalized["seed"]))
+    elif "rseed" in normalized:
+        returned_seed = int(np.rint(normalized["rseed"]))
+    elif normalized.get("random_samples") is None:
+        returned_seed = int(np.random.SeedSequence().entropy)
+        normalized["seed"] = returned_seed
+    else:
+        returned_seed = None
+    return _dead_leaves_image(n, sigma, normalized), returned_seed
+
+
 def img_disk_array(img_size: Any = 512, disk_radius: int = 16, array_size: Any | None = None) -> np.ndarray:
     """Create the legacy MATLAB disk-array grayscale image."""
 
@@ -2845,6 +2868,7 @@ def img_zone_plate(sz: Any | None = None, amp: float = 1.0, ph: float = 0.0) -> 
 
 
 imgDeadleaves = img_deadleaves
+imageDeadLeaves = image_dead_leaves
 imgDiskArray = img_disk_array
 imgMackay = img_mackay
 imgRadialRamp = img_radial_ramp
@@ -3149,33 +3173,126 @@ def scene_radiance_chart(
 
 
 def _vernier_image(params: dict[str, Any]) -> np.ndarray:
-    scene_size = params.get("scenesz", 64)
-    if np.isscalar(scene_size):
-        rows = cols = int(scene_size)
-    else:
-        size_array = np.asarray(scene_size, dtype=int).reshape(-1)
-        rows = int(size_array[0])
-        cols = int(size_array[1])
-    bar_width = int(params.get("barwidth", 1))
-    offset = int(params.get("offset", 1))
-    bar_length = int(params.get("barlength", rows // 2))
-    bar_color = np.asarray(params.get("barcolor", np.ones(3, dtype=float)), dtype=float).reshape(3)
-    bg_color = np.asarray(params.get("bgcolor", np.zeros(3, dtype=float)), dtype=float).reshape(3)
+    return image_vernier(params)[0]
 
-    image = np.broadcast_to(bg_color.reshape(1, 1, 3), (rows, cols, 3)).copy()
-    center_col = int(np.rint((cols - bar_width) / 2.0))
-    top_cols = np.arange(center_col - int(np.floor(offset / 2.0)), center_col - int(np.floor(offset / 2.0)) + bar_width)
-    bottom_cols = top_cols + offset
-    top_cols = np.clip(top_cols, 0, cols - 1)
-    bottom_cols = np.clip(bottom_cols, 0, cols - 1)
-    top_half = rows // 2
-    top_start = max(int(np.rint((top_half - bar_length) / 2.0)), 0)
-    top_end = min(top_start + bar_length, top_half)
-    bot_start = top_half
-    bot_end = min(bot_start + bar_length, rows)
-    image[top_start:top_end, top_cols, :] = bar_color.reshape(1, 1, 3)
-    image[bot_start:bot_end, bottom_cols, :] = bar_color.reshape(1, 1, 3)
-    return image
+
+def _coerce_rgb_triplet(value: Any, default: float) -> np.ndarray:
+    if value is None:
+        return np.repeat(float(default), 3)
+    array = np.asarray(value, dtype=float).reshape(-1)
+    if array.size == 1:
+        return np.repeat(float(array[0]), 3)
+    if array.size != 3:
+        raise ValueError("Color parameters must be scalar or RGB triplets.")
+    return array.astype(float, copy=False)
+
+
+def _vernier_parameter_payload(params: Any | None, *args: Any, **kwargs: Any) -> dict[str, Any]:
+    normalized = _normalized_parameter_dict(params)
+    if len(args) % 2 != 0:
+        raise ValueError("imageVernier expects key/value pairs after the parameter struct.")
+    for index in range(0, len(args), 2):
+        normalized[param_format(str(args[index]))] = args[index + 1]
+    if kwargs:
+        normalized.update(_normalized_parameter_dict(kwargs))
+
+    scene_size_value = normalized.get("scenesz", 64)
+    if np.isscalar(scene_size_value):
+        scene_size = np.repeat(int(scene_size_value), 2)
+    else:
+        scene_size_array = np.asarray(scene_size_value, dtype=int).reshape(-1)
+        if scene_size_array.size == 1:
+            scene_size = np.repeat(int(scene_size_array[0]), 2)
+        elif scene_size_array.size >= 2:
+            scene_size = scene_size_array[:2].astype(int, copy=False)
+        else:
+            raise ValueError("sceneSz must be scalar or length two.")
+
+    return {
+        "sceneSz": scene_size.copy(),
+        "barWidth": int(normalized.get("barwidth", 1)),
+        "barLength": int(normalized.get("barlength", scene_size[0])),
+        "offset": int(normalized.get("offset", 1)),
+        "gap": int(normalized.get("gap", 0)),
+        "barColor": _coerce_rgb_triplet(normalized.get("barcolor", 1.0), 1.0),
+        "bgColor": _coerce_rgb_triplet(normalized.get("bgcolor", 0.0), 0.0),
+        "pattern": normalized.get("pattern"),
+    }
+
+
+def _insert_vernier_gap(image: np.ndarray, gap: int) -> np.ndarray:
+    if gap == 0:
+        return image
+    rows = image.shape[0]
+    if (rows % 2) != (gap % 2):
+        raise ValueError(f"Bad row size {rows}, gap size {gap} pair.")
+    if rows % 2 == 1:
+        middle = (rows - 1) // 2
+        offsets = np.arange(gap, dtype=int) - gap // 2
+        gap_rows = middle + offsets
+    else:
+        middle = rows // 2
+        gap_rows = np.arange(gap, dtype=int) - (gap // 2) + middle
+    with_gap = image.copy()
+    with_gap[gap_rows, :, :] = np.nan
+    return with_gap
+
+
+def image_vernier(
+    params: Any | None = None,
+    *args: Any,
+    **kwargs: Any,
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """Create the legacy MATLAB Vernier image and return the resolved parameters."""
+
+    resolved = _vernier_parameter_payload(params, *args, **kwargs)
+    scene_size = np.asarray(resolved["sceneSz"], dtype=int).reshape(2)
+    rows = int(scene_size[0])
+    cols = int(scene_size[1])
+    bar_width = int(resolved["barWidth"])
+    bar_length = int(resolved["barLength"])
+    gap = int(resolved["gap"])
+    offset = int(resolved["offset"])
+    bar_color = np.asarray(resolved["barColor"], dtype=float).reshape(3)
+    bg_color = np.asarray(resolved["bgColor"], dtype=float).reshape(3)
+
+    pattern = resolved["pattern"]
+    if pattern is None:
+        base = np.broadcast_to(bg_color.reshape(1, 1, 3), (1, cols, 3)).copy()
+        bar_start = _matlab_round_scalar((cols - bar_width) / 2.0)
+        bar_stop = bar_start + bar_width
+        base[:, max(bar_start, 0) : min(bar_stop, cols), :] = bar_color.reshape(1, 1, 3)
+    else:
+        pattern_array = np.asarray(pattern, dtype=float)
+        if pattern_array.ndim == 1:
+            base = np.repeat(pattern_array.reshape(1, -1, 1), 3, axis=2)
+        elif pattern_array.ndim == 2:
+            base = np.repeat(pattern_array[:, :, np.newaxis], 3, axis=2)
+        elif pattern_array.ndim == 3:
+            base = pattern_array.astype(float, copy=True)
+        else:
+            raise ValueError("pattern must be 1-D, 2-D, or 3-D.")
+    image = np.tile(base, (bar_length, 1, 1))
+    image = _insert_vernier_gap(image, gap)
+
+    half_rows = int(np.rint(image.shape[0] / 2.0))
+    image[:half_rows, :, :] = np.roll(image[:half_rows, :, :], shift=offset, axis=1)
+
+    pad_rows = max(int(np.ceil((rows - image.shape[0]) / 2.0)), 0)
+    if pad_rows > 0:
+        image = np.pad(image, ((pad_rows, pad_rows), (0, 0), (0, 0)), mode="constant", constant_values=np.nan)
+    image = image[:rows, :, :]
+    if image.shape[0] < rows:
+        missing = rows - image.shape[0]
+        image = np.pad(image, ((0, missing), (0, 0), (0, 0)), mode="constant", constant_values=np.nan)
+    for channel in range(3):
+        channel_view = image[:, :, channel]
+        channel_view[np.isnan(channel_view)] = bg_color[channel]
+        image[:, :, channel] = channel_view
+    return image, resolved
+
+
+imageVernier = image_vernier
 
 
 def scene_vernier(
