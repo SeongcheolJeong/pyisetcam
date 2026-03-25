@@ -1792,6 +1792,14 @@ The neighboring density/helper plotting slice is smaller too:
 `plotSetUpWindow(...)` now return the same histogram-count, scatter-density,
 histogram-image, and graph-window-default payloads headlessly instead of
 opening MATLAB figures.
+That same `utility/plots` family now also covers the last direct plotting
+tail: `plotML(...)`, `plotMetrics(...)`, and `sensorPlotColor(...)` now have
+direct headless compatibility wrappers in `pyisetcam.plotting`, returning
+microlens irradiance/offset meshes, metrics-ROI histogram summaries, and
+demosaiced channel-scatter payloads plus blackbody reference loci. The
+legacy `plotSceneTest.m` and `plotSensorTest.m` workflows are now tracked
+against focused plotting regressions instead of remaining as anonymous open
+audit debt.
 The adjacent `utility/image` numeric helper tail is shrinking too:
 `ieFindWaveIndex(...)`, `ieWave2Index(...)`, `ieRadialMatrix(...)`,
 `imageBoundingBox(...)`, `imageCentroid(...)`, `imageCircular(...)`, and

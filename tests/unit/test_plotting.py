@@ -5,6 +5,7 @@ import pytest
 
 from pyisetcam import (
     airyDisk,
+    blackbody,
     fisePlotDefaults,
     hist2d,
     ieFigureFormat,
@@ -27,6 +28,8 @@ from pyisetcam import (
     plotDisplaySPD,
     plotEtendueRatio,
     plotGaussianSpectrum,
+    plotMetrics,
+    plotML,
     plotNormal,
     plotOI,
     plotPixelSNR,
@@ -58,10 +61,15 @@ from pyisetcam import (
     scene_create,
     scene_get,
     scene_set,
+    sensorPlotColor,
+    sensor_compute,
     sensor_create,
     sensor_get,
     sensor_snr,
     sensor_set,
+    ml_radiance,
+    mlens_create,
+    mlens_get,
     vc_get_roi_data,
     wvf_compute,
     wvf_create,
@@ -1833,3 +1841,160 @@ def test_direct_sensor_plot_wrappers_match_plot_sensor(asset_store) -> None:
     assert np.allclose(sensor_snr_payload["snrDSNU"], expected_sensor_snr["snrDSNU"])
     assert np.allclose(sensor_snr_payload["snrPRNU"], expected_sensor_snr["snrPRNU"])
     assert sensor_snr_payload["legend"] == expected_sensor_snr["legend"]
+
+
+def test_plot_ml_wrapper_payloads(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    oi = oi_create(asset_store=asset_store)
+    microlens = ml_radiance(mlens_create(sensor, oi, asset_store=asset_store), sensor, asset_store=asset_store)
+
+    offsets_payload, offsets_handle = plotML(microlens, "offsets", sensor)
+    mesh_payload, mesh_handle = plotML(microlens, "mesh pixel irradiance")
+    image_payload, image_handle = plotML(microlens, "image pixel irradiance")
+
+    expected_support = sensor_get(sensor, "spatial support", "mm")
+    expected_offsets = np.asarray(mlens_get(microlens, "optimal offsets", sensor), dtype=float)
+    expected_irradiance = np.asarray(mlens_get(microlens, "pixel irradiance"), dtype=float)
+    expected_x = np.asarray(mlens_get(microlens, "x coordinate"), dtype=float)
+    pixel_width_um = float(mlens_get(microlens, "diameter", "microns"))
+    positive_index = int(np.argmin(np.abs(expected_x - (pixel_width_um / 2.0))))
+    negative_index = int(np.argmin(np.abs((-expected_x) - (pixel_width_um / 2.0))))
+
+    assert offsets_handle is None
+    assert mesh_handle is None
+    assert image_handle is None
+    np.testing.assert_allclose(offsets_payload["support"]["x"], np.asarray(expected_support["x"], dtype=float))
+    np.testing.assert_allclose(offsets_payload["support"]["y"], np.asarray(expected_support["y"], dtype=float))
+    np.testing.assert_allclose(offsets_payload["optimalOffsets"], expected_offsets)
+    assert offsets_payload["command"] == "mesh(support.y, support.x, optimalOffsets)"
+
+    np.testing.assert_allclose(mesh_payload["x"], expected_x)
+    np.testing.assert_allclose(mesh_payload["y"], expected_x)
+    np.testing.assert_allclose(mesh_payload["pixelIrradiance"], expected_irradiance)
+    assert mesh_payload["colormap"].shape == (191, 3)
+
+    np.testing.assert_allclose(image_payload["pixelIrradiance"], expected_irradiance)
+    assert image_payload["image"][positive_index, :].min() == pytest.approx(1.0)
+    assert image_payload["image"][:, positive_index].min() == pytest.approx(1.0)
+    assert image_payload["image"][negative_index, :].min() == pytest.approx(1.0)
+    assert image_payload["image"][:, negative_index].min() == pytest.approx(1.0)
+    np.testing.assert_array_equal(image_payload["boundaryIndices"], np.array([negative_index + 1, positive_index + 1]))
+    np.testing.assert_allclose(image_payload["colorbarTicks"], np.arange(0.0, 1.01, 0.25))
+
+
+def test_plot_metrics_wrapper_histogram_payload() -> None:
+    metric_image = np.arange(1.0, 17.0, dtype=float).reshape(4, 4)
+    handles = {
+        "image1_name": "first",
+        "image2_name": "second",
+        "current_metric": "dEab",
+        "metric_image": metric_image,
+        "img1_rect": np.array([2, 2, 1, 1], dtype=int),
+    }
+
+    payload, handle = plotMetrics(handles)
+
+    expected_data = np.array([6.0, 7.0, 10.0, 11.0], dtype=float)
+    expected_hist, expected_edges = np.histogram(expected_data, bins=10)
+
+    assert handle is None
+    np.testing.assert_array_equal(payload["rect"], np.array([2, 2, 1, 1]))
+    np.testing.assert_allclose(payload["data"], expected_data)
+    assert payload["metricName"] == "dEab"
+    assert payload["titleString"] == "ROI: first and second "
+    assert payload["nBins"] == 10
+    np.testing.assert_allclose(payload["histogram"], expected_hist)
+    np.testing.assert_allclose(payload["binEdges"], expected_edges)
+    assert payload["stats"]["mean"] == pytest.approx(float(np.mean(expected_data)))
+    assert "Mean" in payload["annotation"]["text"]
+    assert payload["grid"] is True
+
+
+def test_sensor_plot_color_wrapper(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    volts = np.array(
+        [
+            [0.1, 0.2, 0.3, 0.4],
+            [0.2, 0.3, 0.4, 0.5],
+            [0.3, 0.4, 0.5, 0.6],
+            [0.4, 0.5, 0.6, 0.7],
+        ],
+        dtype=float,
+    )
+    sensor = sensor_set(sensor, "volts", volts)
+
+    payload, handle = sensorPlotColor(sensor, "rg")
+
+    wave = np.asarray(sensor_get(sensor, "wave"), dtype=float)
+    spectral_qe = np.asarray(sensor_get(sensor, "spectral qe"), dtype=float)
+    d = float(payload["xlim"][1])
+    rgb_6500 = np.asarray(spectral_qe.T @ np.asarray(blackbody(wave, 6500.0, kind="quanta"), dtype=float), dtype=float)
+    rgb_6500 = 0.9 * d * (rgb_6500 / np.linalg.norm(rgb_6500[:2]))
+
+    assert handle is None
+    assert payload["type"] == "rg"
+    assert payload["labels"] == ["Red sensor", "Green sensor"]
+    assert payload["x"].size == payload["y"].size == 16
+    assert len(payload["referencePoints"]) == 9
+    assert payload["titleString"] == "Sensor Color Balance"
+    np.testing.assert_allclose(payload["xlim"], payload["ylim"])
+    assert payload["axisEqual"] is True
+    np.testing.assert_allclose(payload["referencePoints"][6]["point"], rgb_6500[:2])
+
+
+def test_plot_scene_test_workflow(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    roi_rect = np.array([6, 6, 4, 4], dtype=int)
+    line_selector = np.array([1, max(int(scene_get(scene, "rows")) // 2, 1)], dtype=int)
+
+    luminance_line, line_handle = plotScene(scene, "luminance hline", line_selector, asset_store=asset_store)
+    photons_roi, photons_handle = plotScene(scene, "illuminant photons roi", asset_store=asset_store)
+    reflectance_roi, reflectance_handle = plotScene(scene, "reflectance roi", roi_rect, asset_store=asset_store)
+    chromaticity_roi, chroma_handle = plotScene(scene, "chromaticity", roi_rect, asset_store=asset_store)
+    illuminant_photons, illuminant_handle = plotScene(scene, "illuminant photons", asset_store=asset_store)
+
+    assert line_handle is None
+    assert photons_handle is None
+    assert reflectance_handle is None
+    assert chroma_handle is None
+    assert illuminant_handle is None
+    assert "data" in luminance_line
+    assert "photons" in photons_roi
+    assert "reflectance" in reflectance_roi
+    assert chromaticity_roi["x"].size == chromaticity_roi["y"].size
+    np.testing.assert_allclose(illuminant_photons["wave"], np.asarray(scene_get(scene, "wave"), dtype=float))
+
+
+def test_plot_sensor_test_workflow(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    scene = scene_set(scene, "fov", 4.0)
+    oi = oi_compute(oi_create(asset_store=asset_store), scene)
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "qmethod", "10 bit")
+    sensor = sensor_compute(sensor, oi)
+    roi_rect = np.array([4, 4, 3, 3], dtype=int)
+    line_selector = np.array([20, 20], dtype=int)
+
+    electrons_line, _ = plotSensor(sensor, "electrons hline", line_selector)
+    volts_vline, _ = plotSensor(sensor, "volts vline", line_selector)
+    volts_hline, _ = plotSensor(sensor, "volts hline", line_selector)
+    dv_hline, _ = plotSensor(sensor, "dv hline", line_selector)
+    sensor_snr_payload, _ = plotSensor(sensor, "sensor snr")
+    electrons_hist, _ = plotSensor(sensor, "electrons hist", roi_rect)
+    pixel_snr_payload, _ = plotSensor(sensor, "pixel snr")
+    cfa_block, _ = plotSensor(sensor, "cfa block")
+    cfa_full, _ = plotSensor(sensor, "cfa full")
+    etendue_payload, _ = plotSensor(sensor, "etendue")
+    color_filters, _ = plotSensor(sensor, "color filters")
+
+    np.testing.assert_array_equal(electrons_line["xy"], line_selector)
+    assert volts_vline["ori"] == "v"
+    assert volts_hline["ori"] == "h"
+    assert dv_hline["dataType"] == "dv"
+    assert sensor_snr_payload["titleString"] == "Sensor SNR over response range"
+    assert "data" in electrons_hist
+    assert pixel_snr_payload["titleString"] == "Pixel SNR over response range"
+    assert "pattern" in cfa_block
+    assert cfa_full["mode"] == "full"
+    assert "sensorEtendue" in etendue_payload
+    assert "x" in color_filters and "y" in color_filters

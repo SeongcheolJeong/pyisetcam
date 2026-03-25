@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-03-25T04:23:22.946211+00:00",
+  "generated_at": "2026-03-25T05:23:14.334375+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 66,
+      "headless_only": 64,
       "missing": 21,
       "out_of_scope": 189,
-      "parity": 677,
-      "partial": 333,
-      "ported": 157
+      "parity": 679,
+      "partial": 330,
+      "ported": 160
     },
     "kind_counts": {
       "api": 661,
@@ -20,18 +20,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 268,
-      "P2": 152,
-      "P3": 1023
+      "P1": 265,
+      "P2": 150,
+      "P3": 1028
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": 0,
+        "headless_only": -2,
         "missing": 0,
         "out_of_scope": 0,
-        "parity": 1,
-        "partial": -5,
-        "ported": 4
+        "parity": 2,
+        "partial": -3,
+        "ported": 3
       },
       "kind_counts": {
         "api": 0,
@@ -42,8 +42,8 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -5,
-        "P2": 0,
+        "P1": -3,
+        "P2": -2,
         "P3": 5
       }
     },
@@ -966,16 +966,15 @@
       "utility/plots": {
         "total": 50,
         "by_status": {
-          "headless_only": 2,
           "out_of_scope": 2,
-          "partial": 3,
-          "ported": 43
+          "parity": 2,
+          "ported": 46
         },
         "by_kind": {
           "gui": 2,
           "helper": 48
         },
-        "highest_open_priority": "P1"
+        "highest_open_priority": "P3"
       },
       "utility/tablebase": {
         "total": 1,
@@ -1043,17 +1042,6 @@
         }
       },
       {
-        "family": "utility/plots",
-        "open_entries": 5,
-        "highest_open_priority": "P1",
-        "by_status": {
-          "headless_only": 2,
-          "out_of_scope": 2,
-          "partial": 3,
-          "ported": 43
-        }
-      },
-      {
         "family": "data/sensor",
         "open_entries": 17,
         "highest_open_priority": "P2",
@@ -1114,6 +1102,14 @@
         "by_status": {
           "missing": 6,
           "out_of_scope": 1
+        }
+      },
+      {
+        "family": "fonts",
+        "open_entries": 5,
+        "highest_open_priority": "P2",
+        "by_status": {
+          "missing": 5
         }
       }
     ],
@@ -1179,7 +1175,7 @@
         "not_implemented_error_sites": 0
       },
       "plotting": {
-        "unsupported_option_error_sites": 17,
+        "unsupported_option_error_sites": 19,
         "not_implemented_error_sites": 0
       },
       "ptable": {
@@ -3878,7 +3874,7 @@
       "family": "imgproc",
       "kind": "api",
       "status": "parity",
-      "python_surface": "pyisetcam.ip, pyisetcam.__init__, pyisetcam.parity, pyisetcam.ptable",
+      "python_surface": "pyisetcam.ip, pyisetcam.__init__, pyisetcam.parity, pyisetcam.plotting",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/unit/test_ip.py",
@@ -5388,7 +5384,7 @@
       "family": "metrics",
       "kind": "api",
       "status": "parity",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso, pyisetcam.__init__",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso, pyisetcam.__init__, pyisetcam.plotting",
       "tests": [
         "tests/unit/test_metrics.py",
         "tests/unit/test_pipeline.py",
@@ -5448,7 +5444,7 @@
       "family": "metrics",
       "kind": "api",
       "status": "parity",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso, pyisetcam.__init__",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.iso, pyisetcam.__init__, pyisetcam.plotting",
       "tests": [
         "tests/unit/test_metrics.py",
         "tests/unit/test_pipeline.py",
@@ -6163,7 +6159,7 @@
       "family": "opticalimage/microlens",
       "kind": "gui",
       "status": "out_of_scope",
-      "python_surface": "pyisetcam.optics, pyisetcam.ip, pyisetcam.parity, pyisetcam.sensor, pyisetcam.utils",
+      "python_surface": "pyisetcam.optics, pyisetcam.ip, pyisetcam.parity, pyisetcam.plotting, pyisetcam.sensor",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
@@ -6176,7 +6172,7 @@
       "family": "opticalimage/microlens",
       "kind": "api",
       "status": "parity",
-      "python_surface": "pyisetcam.optics, pyisetcam.ip, pyisetcam.parity, pyisetcam.sensor, pyisetcam.utils",
+      "python_surface": "pyisetcam.optics, pyisetcam.ip, pyisetcam.parity, pyisetcam.plotting, pyisetcam.sensor",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py",
@@ -12657,7 +12653,7 @@
       "family": "sensor/microlens",
       "kind": "api",
       "status": "parity",
-      "python_surface": "pyisetcam.sensor, pyisetcam.__init__",
+      "python_surface": "pyisetcam.sensor, pyisetcam.__init__, pyisetcam.plotting",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py",
@@ -12819,7 +12815,7 @@
       "family": "sensor/microlens",
       "kind": "api",
       "status": "parity",
-      "python_surface": "pyisetcam.sensor, pyisetcam.__init__, pyisetcam.parity",
+      "python_surface": "pyisetcam.sensor, pyisetcam.__init__, pyisetcam.parity, pyisetcam.plotting",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py",
@@ -18047,25 +18043,25 @@
       "upstream_path": "utility/plots/plotML.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB microlens plotting gateway is covered by the Python `plot_ml(...)` / `plotML(...)` compatibility wrapper, including offsets, mesh pixel-irradiance, and image pixel-irradiance payloads without opening a figure.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/plotMetrics.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB metrics histogram helper is covered by the Python `plot_metrics(...)` / `plotMetrics(...)` compatibility wrapper, which returns ROI histogram counts, bin edges, and summary-stat annotation payloads headlessly.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/plotNormal.m",
@@ -18143,13 +18139,15 @@
       "upstream_path": "utility/plots/plotSceneTest.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.plotting, pyisetcam.parity",
+      "status": "parity",
+      "python_surface": "pyisetcam.plotting",
       "tests": [
-        "tests/unit/test_plotting.py"
+        "tests/unit/test_plotting.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The legacy scene-plot workflow is now exercised directly by the focused `test_plot_scene_test_workflow(...)` regression in `tests/unit/test_plotting.py`, which covers the supported headless `plotScene(...)` luminance-line, illuminant, reflectance, and chromaticity paths used by the upstream test script.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/plotSensor.m",
@@ -18215,13 +18213,15 @@
       "upstream_path": "utility/plots/plotSensorTest.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "partial",
+      "status": "parity",
       "python_surface": "pyisetcam.plotting",
       "tests": [
-        "tests/unit/test_plotting.py"
+        "tests/unit/test_plotting.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy sensor-plot workflow is now exercised directly by the focused `test_plot_sensor_test_workflow(...)` regression in `tests/unit/test_plotting.py`, covering the supported headless `plotSensor(...)` line, histogram, SNR, CFA, etendue, and color-filter paths from the upstream test script.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/plotSetUpWindow.m",
@@ -18323,13 +18323,13 @@
       "upstream_path": "utility/plots/sensorPlotColor.m",
       "family": "utility/plots",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.plotting",
+      "status": "ported",
+      "python_surface": "pyisetcam.plotting, pyisetcam.__init__",
       "tests": [
         "tests/unit/test_plotting.py"
       ],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The MATLAB sensor cross-correlation plotting helper is covered by the Python `sensor_plot_color(...)` / `sensorPlotColor(...)` compatibility wrapper, which returns demosaiced channel-scatter payloads plus blackbody reference loci headlessly.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/sensorPlotHist.m",
@@ -19339,7 +19339,7 @@
       "family": "data/microlens",
       "kind": "asset",
       "status": "partial",
-      "python_surface": "pyisetcam.ip, pyisetcam.parity, pyisetcam.sensor, pyisetcam.utils",
+      "python_surface": "pyisetcam.ip, pyisetcam.parity, pyisetcam.plotting, pyisetcam.sensor",
       "tests": [],
       "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
       "priority": "P2"

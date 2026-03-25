@@ -12,13 +12,13 @@ from scipy.spatial import Voronoi
 from .color import xyz_color_matching
 from .display import display_get
 from .exceptions import UnsupportedOptionError
-from .ip import ip_get
-from .metrics import chromaticity_xy, xyz_from_energy, xyz_to_lab, xyz_to_luv
+from .ip import demosaic, ip_create, ip_get
+from .metrics import chromaticity_xy, metrics_get, metrics_roi, xyz_from_energy, xyz_to_lab, xyz_to_luv
 from .optics import airy_disk, oi_get, wvf_get
 from .scene import scene_get
-from .sensor import pixel_snr, sensor_get, sensor_snr
+from .sensor import ml_get_current, mlens_get, pixel_snr, sensor_get, sensor_snr
 from .types import ImageProcessor, OpticalImage, Scene, Sensor
-from .utils import linear_to_srgb, param_format, tile_pattern, xw_to_rgb_format, xyz_to_linear_srgb, xyz_to_srgb
+from .utils import blackbody, linear_to_srgb, param_format, tile_pattern, xw_to_rgb_format, xyz_to_linear_srgb, xyz_to_srgb
 
 
 def _roi_required(function_name: str, plot_type: str, roi_locs: Any | None) -> Any:
@@ -87,6 +87,17 @@ def _axis_scale(ax: Any | None, key: str, default: str) -> str:
         return str(ax[key])
     except Exception:
         return default
+
+
+def _hot_colormap(count: int = 64) -> np.ndarray:
+    a = np.linspace(0.0, 1.0, int(count), dtype=float)
+    return np.column_stack(
+        (
+            np.clip(3.0 * a, 0.0, 1.0),
+            np.clip(3.0 * a - 1.0, 0.0, 1.0),
+            np.clip(3.0 * a - 2.0, 0.0, 1.0),
+        )
+    )
 
 
 def identity_line(ax: Any | None = None, three_d: bool = False) -> dict[str, Any]:
@@ -2130,6 +2141,216 @@ def plot_sensor_snr(sensor: Sensor) -> tuple[dict[str, Any], None]:
     return sensor_plot(sensor, "sensor snr")
 
 
+def plot_ml(
+    ml: dict[str, Any] | None = None,
+    p_type: str = "offsets",
+    sensor: Sensor | None = None,
+    *,
+    session: Any | None = None,
+) -> tuple[dict[str, Any], None]:
+    """Return MATLAB-style `plotML` payloads without opening a figure."""
+
+    current_ml = ml if ml is not None else ml_get_current(sensor, session=session)
+    if current_ml is None:
+        raise ValueError("plotML requires a microlens payload.")
+
+    current_sensor = sensor
+    if current_sensor is None and session is not None:
+        from .session import session_get_selected
+
+        selected = session_get_selected(session, "sensor")
+        if isinstance(selected, Sensor):
+            current_sensor = selected
+
+    key = param_format(p_type)
+    if key == "offsets":
+        if current_sensor is None:
+            raise ValueError("plotML(..., 'offsets') requires an explicit sensor or a session with a selected sensor.")
+        support = sensor_get(current_sensor, "spatial support", "mm")
+        optimal_offsets = np.asarray(mlens_get(current_ml, "optimal offsets", current_sensor), dtype=float)
+        return {
+            "support": {
+                "x": np.asarray(support["x"], dtype=float).copy(),
+                "y": np.asarray(support["y"], dtype=float).copy(),
+            },
+            "optimalOffsets": optimal_offsets.copy(),
+            "xLabel": "Position (mm)",
+            "yLabel": "Position (mm)",
+            "zLabel": "Optimal offset (um) toward center",
+            "command": "mesh(support.y, support.x, optimalOffsets)",
+        }, None
+
+    if key in {"meshpixelirradiance", "pixelirradiance"}:
+        irradiance = np.asarray(mlens_get(current_ml, "pixel irradiance"), dtype=float)
+        x = np.asarray(mlens_get(current_ml, "x coordinate"), dtype=float).reshape(-1)
+        return {
+            "x": x.copy(),
+            "y": x.copy(),
+            "pixelIrradiance": irradiance.copy(),
+            "xLabel": "Position (um)",
+            "yLabel": "Position (um)",
+            "zLabel": "Relative irradiance",
+            "colormap": _hot_colormap(256)[29:220].copy(),
+        }, None
+
+    if key == "imagepixelirradiance":
+        irradiance = np.asarray(mlens_get(current_ml, "pixel irradiance"), dtype=float)
+        x = np.asarray(mlens_get(current_ml, "x coordinate"), dtype=float).reshape(-1)
+        pixel_width_um = float(mlens_get(current_ml, "diameter", "microns"))
+        image = irradiance.copy()
+        positive_index = int(np.argmin(np.abs(x - (pixel_width_um / 2.0))))
+        negative_index = int(np.argmin(np.abs((-x) - (pixel_width_um / 2.0))))
+        for index in {positive_index, negative_index}:
+            image[index, :] = 1.0
+            image[:, index] = 1.0
+        return {
+            "x": x.copy(),
+            "y": x.copy(),
+            "pixelIrradiance": irradiance.copy(),
+            "image": image,
+            "boundaryIndices": np.asarray([negative_index + 1, positive_index + 1], dtype=int),
+            "colormap": _hot_colormap(64),
+            "axis": "image",
+            "xLabel": "Position (um)",
+            "titleString": "Pixel efficiency (normalized)",
+            "colorbarTicks": np.arange(0.0, 1.01, 0.25, dtype=float),
+        }, None
+
+    raise UnsupportedOptionError("plotML", p_type)
+
+
+def plot_metrics(
+    handles: Any,
+    plot_type: str | None = None,
+    rect: Any | None = None,
+) -> tuple[dict[str, Any], None]:
+    """Return MATLAB-style `plotMetrics` histogram payload without opening a figure."""
+
+    metric_name = str(metrics_get(handles, "currentmetric") if plot_type is None else plot_type)
+    image1_name = str(metrics_get(handles, "image1name"))
+    image2_name = str(metrics_get(handles, "image2name"))
+    roi_locs = np.asarray(metrics_roi(handles, "img1", rect), dtype=int)
+    metric_image = np.asarray(metrics_get(handles, "metricdata"), dtype=float)
+    if metric_image.ndim != 2:
+        metric_image = np.asarray(np.squeeze(metric_image), dtype=float)
+    if metric_image.ndim != 2:
+        raise ValueError("plotMetrics expects a 2D metric image.")
+
+    row_index = np.clip(roi_locs[:, 0] - 1, 0, metric_image.shape[0] - 1)
+    col_index = np.clip(roi_locs[:, 1] - 1, 0, metric_image.shape[1] - 1)
+    data = np.asarray(metric_image[row_index, col_index], dtype=float).reshape(-1)
+    n_bins = max(10, int(np.ceil(data.size / 10.0)))
+    counts, edges = np.histogram(data, bins=n_bins)
+    centers = 0.5 * (edges[:-1] + edges[1:])
+
+    stats = {
+        "mean": float(np.mean(data)) if data.size else 0.0,
+        "median": float(np.median(data)) if data.size else 0.0,
+        "std": float(np.std(data)) if data.size else 0.0,
+        "min": float(np.min(data)) if data.size else 0.0,
+        "max": float(np.max(data)) if data.size else 0.0,
+    }
+    annotation = plot_text_string(
+        (
+            f"Mean   {stats['mean']:.02f}\n"
+            f"Median {stats['median']:.02f}\n"
+            f"SD     {stats['std']:.02f}\n"
+            f"Min    {stats['min']:.02f}\n"
+            f"Max   {stats['max']:.02f}"
+        ),
+        "ur",
+        ax={
+            "xlim": (
+                float(edges[0]) if edges.size else 0.0,
+                float(edges[-1]) if edges.size else 1.0,
+            ),
+            "ylim": (
+                0.0,
+                float(np.max(counts)) if counts.size and float(np.max(counts)) > 0.0 else 1.0,
+            ),
+        },
+    )
+
+    payload = _roi_payload(roi_locs)
+    payload.update(
+        {
+            "metricName": metric_name,
+            "image1Name": image1_name,
+            "image2Name": image2_name,
+            "data": data.copy(),
+            "nBins": int(n_bins),
+            "histogram": counts.astype(float).copy(),
+            "binEdges": edges.astype(float).copy(),
+            "binCenters": centers.astype(float).copy(),
+            "xLabel": metric_name,
+            "yLabel": "Count",
+            "titleString": f"ROI: {image1_name} and {image2_name} ",
+            "annotation": annotation,
+            "stats": stats,
+            "grid": True,
+        }
+    )
+    return payload, None
+
+
+def sensor_plot_color(sensor: Sensor, plot_type: str = "rg") -> tuple[dict[str, Any], None]:
+    """Return MATLAB-style `sensorPlotColor` payload without opening a figure."""
+
+    key = param_format(plot_type)
+    if key == "rg":
+        indices = (0, 1)
+    elif key == "rb":
+        indices = (0, 2)
+    else:
+        raise UnsupportedOptionError("sensorPlotColor", plot_type)
+
+    ip = ip_create(sensor=sensor)
+    demosaiced = np.asarray(demosaic(ip, sensor), dtype=float)
+    if demosaiced.ndim != 3 or demosaiced.shape[2] < 3:
+        raise ValueError("sensorPlotColor requires a demosaiced RGB sensor result.")
+
+    labels = ["Red sensor", "Green sensor", "Blue sensor"]
+
+    d1 = np.asarray(demosaiced[:, :, indices[0]], dtype=float)
+    d2 = np.asarray(demosaiced[:, :, indices[1]], dtype=float)
+    d = float(np.max(np.sqrt(d1 * d1 + d2 * d2))) if d1.size else 0.0
+    wave = np.asarray(sensor_get(sensor, "wave"), dtype=float).reshape(-1)
+    spectral_qe = np.asarray(sensor_get(sensor, "spectral qe"), dtype=float)
+    ctemps = np.asarray([2500, 3000, 3500, 4000, 4500, 5500, 6500, 8000, 10500], dtype=float)
+    reference_points: list[dict[str, Any]] = []
+    for ctemp in ctemps:
+        spec = np.asarray(blackbody(wave, ctemp, kind="quanta"), dtype=float).reshape(-1)
+        rgb = np.asarray(spectral_qe.T @ spec, dtype=float).reshape(-1)
+        denom = float(np.linalg.norm(rgb[list(indices)]))
+        if denom > 0.0 and d > 0.0:
+            rgb = 0.9 * d * (rgb / denom)
+        else:
+            rgb = np.zeros_like(rgb, dtype=float)
+        reference_points.append(
+            {
+                "temperatureK": float(ctemp),
+                "point": np.asarray([rgb[indices[0]], rgb[indices[1]]], dtype=float),
+                "label": f"{round(ctemp / 100.0) / 10.0:.1f}K",
+            }
+        )
+
+    return {
+        "name": "sensorColorPlot",
+        "type": str(plot_type),
+        "x": d1.reshape(-1).copy(),
+        "y": d2.reshape(-1).copy(),
+        "d1": d1.copy(),
+        "d2": d2.copy(),
+        "labels": [labels[indices[0]], labels[indices[1]]],
+        "referencePoints": reference_points,
+        "xlim": np.asarray([0.0, d], dtype=float),
+        "ylim": np.asarray([0.0, d], dtype=float),
+        "axisEqual": True,
+        "grid": True,
+        "titleString": "Sensor Color Balance",
+    }, None
+
+
 def ip_plot(
     ip: ImageProcessor,
     p_type: str = "horizontal line",
@@ -2346,6 +2567,8 @@ plotDisplaySPD = plot_display_spd
 plotDisplayLine = plot_display_line
 plotDisplayColor = plot_display_color
 plotDisplayGamut = plot_display_gamut
+plotML = plot_ml
+plotMetrics = plot_metrics
 plotNormal = plot_normal
 plotPixelSNR = plot_pixel_snr
 plotRadiance = plot_radiance
@@ -2355,6 +2578,7 @@ plotSensorSNR = plot_sensor_snr
 plotSetUpWindow = plot_set_up_window
 plotSpectrumLocus = plot_spectrum_locus
 plotTextString = plot_text_string
+sensorPlotColor = sensor_plot_color
 wvfPlot = wvf_plot
 xaxisLine = xaxis_line
 yaxisLine = yaxis_line

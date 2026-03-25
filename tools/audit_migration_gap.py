@@ -483,6 +483,16 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The MATLAB Gaussian-spectrum plotting helper is covered by the Python `plot_gaussian_spectrum(...)` / `plotGaussianSpectrum(...)` wrapper, which returns transmittance and wavelength-color payloads headlessly.",
         "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
     },
+    "utility/plots/plotML.m": {
+        "status": "ported",
+        "note": "The MATLAB microlens plotting gateway is covered by the Python `plot_ml(...)` / `plotML(...)` compatibility wrapper, including offsets, mesh pixel-irradiance, and image pixel-irradiance payloads without opening a figure.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/plotMetrics.m": {
+        "status": "ported",
+        "note": "The MATLAB metrics histogram helper is covered by the Python `plot_metrics(...)` / `plotMetrics(...)` compatibility wrapper, which returns ROI histogram counts, bin edges, and summary-stat annotation payloads headlessly.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
     "utility/plots/plotSpectrumLocus.m": {
         "status": "ported",
         "note": "The MATLAB spectrum-locus plotting helper is covered by the Python `plot_spectrum_locus(...)` / `plotSpectrumLocus(...)` wrapper, which returns chromaticity locus and closing-line payloads headlessly.",
@@ -526,6 +536,21 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
     "utility/plots/scatplot.m": {
         "status": "ported",
         "note": "The MATLAB scatter-density helper is covered by the Python `scatplot(...)` wrapper in `pyisetcam.plotting`, which returns data-density, gridded-density, contour, and grouped-point payloads headlessly.",
+        "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
+    },
+    "utility/plots/plotSceneTest.m": {
+        "status": "parity",
+        "note": "The legacy scene-plot workflow is now exercised directly by the focused `test_plot_scene_test_workflow(...)` regression in `tests/unit/test_plotting.py`, which covers the supported headless `plotScene(...)` luminance-line, illuminant, reflectance, and chromaticity paths used by the upstream test script.",
+        "module_hits": ["pyisetcam.plotting"],
+    },
+    "utility/plots/plotSensorTest.m": {
+        "status": "parity",
+        "note": "The legacy sensor-plot workflow is now exercised directly by the focused `test_plot_sensor_test_workflow(...)` regression in `tests/unit/test_plotting.py`, covering the supported headless `plotSensor(...)` line, histogram, SNR, CFA, etendue, and color-filter paths from the upstream test script.",
+        "module_hits": ["pyisetcam.plotting"],
+    },
+    "utility/plots/sensorPlotColor.m": {
+        "status": "ported",
+        "note": "The MATLAB sensor cross-correlation plotting helper is covered by the Python `sensor_plot_color(...)` / `sensorPlotColor(...)` compatibility wrapper, which returns demosaiced channel-scatter payloads plus blackbody reference loci headlessly.",
         "module_hits": ["pyisetcam.plotting", "pyisetcam.__init__"],
     },
     "utility/plots/xaxisLine.m": {

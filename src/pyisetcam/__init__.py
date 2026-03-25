@@ -377,6 +377,8 @@ from .plotting import (
     plot_display_spd,
     plot_etendue_ratio,
     plot_gaussian_spectrum,
+    plot_metrics,
+    plot_ml,
     plot_normal,
     plot_pixel_snr,
     plot_radiance,
@@ -388,6 +390,7 @@ from .plotting import (
     plot_text_string,
     scatplot,
     scene_plot,
+    sensor_plot_color,
     sensor_plot,
     sensor_plot_fft,
     sensor_plot_hist,
@@ -1417,6 +1420,10 @@ __all__ = [
     "plot_display_spd",
     "plot_etendue_ratio",
     "plot_gaussian_spectrum",
+    "plotMetrics",
+    "plotML",
+    "plot_metrics",
+    "plot_ml",
     "plot_normal",
     "plot_pixel_snr",
     "plot_radiance",
@@ -1465,7 +1472,9 @@ __all__ = [
     "pixel_v_per_lux_sec",
     "sensor_snr",
     "sensor_snr_luxsec",
+    "sensor_plot_color",
     "sensorPlot",
+    "sensorPlotColor",
     "sensorPlotHist",
     "scatplot",
     "sensor_plot",
@@ -2185,6 +2194,8 @@ plotDisplayLine = plot_display_line
 plotDisplaySPD = plot_display_spd
 plotEtendueRatio = plot_etendue_ratio
 plotGaussianSpectrum = plot_gaussian_spectrum
+plotMetrics = plot_metrics
+plotML = plot_ml
 identityLine = identity_line
 ieFigureFormat = ie_figure_format
 ieFigureResize = ie_figure_resize
@@ -2215,6 +2226,7 @@ plotSensorHist = sensor_plot_hist
 plotSensorFFT = sensor_plot_fft
 sensorPlot = sensor_plot
 sensorPlotHist = sensor_plot_hist
+sensorPlotColor = sensor_plot_color
 sensorPlotLine = sensor_plot_line
 scatplot = scatplot
 wvfPlot = wvf_plot
