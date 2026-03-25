@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-25T11:26:41.828816+00:00",
+  "generated_at": "2026-03-25T11:46:09.224798+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 46,
       "missing": 21,
-      "out_of_scope": 240,
-      "parity": 694,
-      "partial": 241,
+      "out_of_scope": 243,
+      "parity": 695,
+      "partial": 237,
       "ported": 201
     },
     "kind_counts": {
@@ -21,16 +21,16 @@
     },
     "priority_counts": {
       "P1": 217,
-      "P2": 91,
-      "P3": 1135
+      "P2": 87,
+      "P3": 1139
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 7,
+        "out_of_scope": 3,
         "parity": 1,
-        "partial": -8,
+        "partial": -4,
         "ported": 0
       },
       "kind_counts": {
@@ -43,8 +43,8 @@
       },
       "priority_counts": {
         "P1": 0,
-        "P2": -8,
-        "P3": 8
+        "P2": -4,
+        "P3": 4
       }
     },
     "family_summary": {
@@ -139,12 +139,13 @@
       "data/lens": {
         "total": 4,
         "by_status": {
-          "partial": 4
+          "out_of_scope": 3,
+          "parity": 1
         },
         "by_kind": {
           "asset": 4
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "data/lights": {
         "total": 8,
@@ -1048,14 +1049,6 @@
         }
       },
       {
-        "family": "data/lens",
-        "open_entries": 4,
-        "highest_open_priority": "P2",
-        "by_status": {
-          "partial": 4
-        }
-      },
-      {
         "family": "data/optics",
         "open_entries": 3,
         "highest_open_priority": "P2",
@@ -1097,6 +1090,14 @@
       },
       {
         "family": "data/fluorescence",
+        "open_entries": 1,
+        "highest_open_priority": "P2",
+        "by_status": {
+          "partial": 1
+        }
+      },
+      {
+        "family": "data/fonts",
         "open_entries": 1,
         "highest_open_priority": "P2",
         "by_status": {
@@ -2419,31 +2420,40 @@
       "upstream_path": "data/lens/s_closestFocalDistance.m",
       "family": "data/lens",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.optics",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB lens-analysis notebook that scans precomputed focus tables and plots the closest focal distance across vendored lens files, not a reusable headless runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/lens/s_focusLensTable.m",
       "family": "data/lens",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.optics",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB asset-generation notebook that precomputes legacy `.FL.mat` focus tables from vendored lens JSON descriptors, and its own header marks the workflow as obsolete in favor of on-the-fly focus calculation.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/lens/s_lensUpdateFormat.m",
       "family": "data/lens",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.optics",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB metadata-maintenance script that rewrites vendored lens JSON descriptors in place, rather than a supported headless runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/lights/daylight/d_daylightBasis.m",
@@ -19491,11 +19501,15 @@
       "upstream_path": "data/lens/",
       "family": "data/lens",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "parity",
+      "python_surface": "pyisetcam.optics, pyisetcam.parity",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
+      ],
+      "notes": "The vendored lens-data bundle is already exercised by the current headless runtime through `lensList(...)`, the ray-trace optics import and filename-normalization path, and focused unit or parity coverage over pinned upstream lens JSON descriptors.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/lights/",

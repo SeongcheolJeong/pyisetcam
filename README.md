@@ -1835,6 +1835,12 @@ adjustment, and Gretag or daylight regression coverage, while the MATLAB
 data-import and comparison notebooks that authored those MAT files are
 explicitly treated as provenance assets outside the headless migration
 target.
+The neighboring `data/lens` family is now cleaned up in the same style:
+the vendored lens JSON bundle is counted directly against the current
+`lensList(...)` and ray-trace optics import coverage, while the MATLAB
+focus-table and metadata-maintenance notebooks around those lens files are
+explicitly treated as provenance or analysis assets outside the headless
+migration target.
 That same utility-image slice now also covers `ieCmap(...)`,
 `ieCropRect(...)`, `ieLUTDigital(...)`, `ieLUTInvert(...)`, and
 `ieLUTLinear(...)`, with direct regressions for the simple MATLAB color-map

@@ -55,6 +55,7 @@ FAMILY_SURFACE_MAP = {
         "pyisetcam.sensor",
         "pyisetcam.optics",
     ],
+    "data/lens": ["pyisetcam.optics"],
     "data/lights": ["pyisetcam.assets", "pyisetcam.color", "pyisetcam.illuminant", "pyisetcam.scene"],
     "data/sensor": ["pyisetcam.assets", "pyisetcam.sensor", "pyisetcam.camera"],
     "displays": ["pyisetcam.display"],
@@ -119,6 +120,7 @@ FAMILY_TEST_MAP = {
     "camera": ["tests/unit/test_pipeline.py"],
     "color": ["tests/unit/test_pipeline.py", "tests/unit/test_metrics.py"],
     "data/human": ["tests/unit/test_human.py", "tests/unit/test_pipeline.py", "tests/unit/test_ip.py"],
+    "data/lens": ["tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],
     "data/lights": ["tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],
     "data/sensor": ["tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],
     "displays": ["tests/unit/test_display.py", "tests/unit/test_pipeline.py"],
@@ -298,6 +300,26 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
     "data/lights/solar/d_solarFraunhofer.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a MATLAB solar-spectrum preparation notebook that imports CSV source data and annotates Fraunhofer lines before writing the vendored solar asset bundle, not a reusable headless runtime API surface.",
+        "module_hits": [],
+    },
+    "data/lens/": {
+        "status": "parity",
+        "note": "The vendored lens-data bundle is already exercised by the current headless runtime through `lensList(...)`, the ray-trace optics import and filename-normalization path, and focused unit or parity coverage over pinned upstream lens JSON descriptors.",
+        "module_hits": ["pyisetcam.optics", "pyisetcam.parity"],
+    },
+    "data/lens/s_closestFocalDistance.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB lens-analysis notebook that scans precomputed focus tables and plots the closest focal distance across vendored lens files, not a reusable headless runtime API surface.",
+        "module_hits": [],
+    },
+    "data/lens/s_focusLensTable.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB asset-generation notebook that precomputes legacy `.FL.mat` focus tables from vendored lens JSON descriptors, and its own header marks the workflow as obsolete in favor of on-the-fly focus calculation.",
+        "module_hits": [],
+    },
+    "data/lens/s_lensUpdateFormat.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB metadata-maintenance script that rewrites vendored lens JSON descriptors in place, rather than a supported headless runtime API surface.",
         "module_hits": [],
     },
     "data/sensor/": {
