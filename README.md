@@ -1868,3 +1868,10 @@ now covers the actinic/eye/blue-hazard and thermal threshold calculations
 against the vendored safety-standard spectra, and `ieConePlot(...)`
 returns the cone-grid and blurred RGB mosaic payload headlessly instead of
 opening a MATLAB figure window.
+The adjacent `scripts/human` family is closed too: the Brettel
+color-blind workflow is now covered by direct `xyz2lms(..., cbType,
+whiteXYZ)` regression coverage, the display-point-spread script is backed
+by a headless `display -> scene -> wvf OI -> cone mosaic sensor`
+regression, the lamp-safety scripts are counted against the existing
+`humanUVSafety(...)` / radiance-conversion coverage, and the deprecated or
+ISETBio-gated human notebooks are explicitly treated as out of scope.

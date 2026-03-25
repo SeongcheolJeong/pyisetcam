@@ -159,6 +159,12 @@ def _color_transform_matrix(matrix_type: str, space_type: int = 10) -> NDArray[n
         if key == "opp2xyz":
             matrix = np.linalg.inv(matrix)
         return matrix.T
+    if key in {"xyz2lms", "lms2xyz"}:
+        from .color import _stockman_xyz_matrices
+
+        xyz_to_lms_matrix, lms_to_xyz_matrix = _stockman_xyz_matrices()
+        matrix = xyz_to_lms_matrix if key == "xyz2lms" else lms_to_xyz_matrix
+        return np.asarray(matrix, dtype=float)
     raise UnsupportedOptionError("colorTransformMatrix", matrix_type)
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 from pyisetcam import (
+    colorTransformMatrix,
     displayCreate,
     displayGet,
     humanAchromaticOTF,
@@ -18,15 +19,24 @@ from pyisetcam import (
     humanPupilSize,
     humanSpaceTime,
     humanUVSafety,
+    imageLinearTransform,
     ieConePlot,
     ijspeert,
     kellySpaceTime,
+    oiCompute,
     poirsonSpatioChromatic,
     sceneCreate,
+    sceneFromFile,
+    sceneGet,
+    sensorCompute,
     sensorCreateConeMosaic,
+    sensorGet,
+    sensorSet,
     watsonImpulseResponse,
     watsonRGCSpacing,
     westheimerLSF,
+    xyz2lms,
+    xyz2srgb,
 )
 from pyisetcam.assets import AssetStore
 from pyisetcam import oiCreate, oiGet
@@ -240,6 +250,53 @@ def test_human_oi_replays_scene_compute_with_human_otf() -> None:
     assert photons.shape[2] == np.asarray(oiGet(oi, "wave"), dtype=float).size
     assert float(np.mean(illuminance)) > 0.0
     assert str(oiGet(oi, "compute method")) == "humanmw"
+
+
+def test_s_human_color_blind_workflow_replays_brettel_projection() -> None:
+    scene = sceneCreate("macbeth d65")
+    xyz = np.asarray(sceneGet(scene, "xyz"), dtype=float)
+    white_xyz = np.asarray(sceneGet(scene, "illuminant xyz"), dtype=float).reshape(-1)
+    baseline_lms = np.asarray(xyz2lms(xyz), dtype=float)
+
+    for cb_type, preserved in ((1, (1, 2)), (2, (0, 2)), (3, (0, 1))):
+        lms = np.asarray(xyz2lms(xyz, cb_type, white_xyz), dtype=float)
+        cb_xyz = np.asarray(imageLinearTransform(lms, colorTransformMatrix("lms2xyz")), dtype=float)
+        cb_rgb = np.asarray(xyz2srgb(cb_xyz), dtype=float)
+
+        assert cb_rgb.shape == xyz.shape
+        assert np.all(np.isfinite(cb_rgb))
+        np.testing.assert_allclose(lms[..., preserved], baseline_lms[..., preserved], atol=1.0e-7)
+        assert float(np.max(np.abs(lms[..., cb_type - 1] - baseline_lms[..., cb_type - 1]))) > 1.0e-4
+
+
+def test_s_human_display_psf_workflow_replays_headlessly(asset_store) -> None:
+    display = displayCreate("LCD-Apple")
+    image = np.zeros((51, 51, 3), dtype=float)
+    image[25, 25, 1] = 1.0
+
+    scene = sceneFromFile(image, "rgb", None, display, asset_store=asset_store)
+    oi = oiCompute(oiCreate("wvf"), scene)
+    sensor, _, cone_type, _, _ = sensorCreateConeMosaic(
+        None,
+        [128, 128],
+        [0.0, 0.0, 1.0, 0.0],
+        [1.0e-6, 1.0e-6],
+        7,
+        asset_store=asset_store,
+    )
+    sensor = sensorSet(sensor, "fov", sceneGet(scene, "fov"), oi)
+    sensor = sensorSet(sensor, "noise flag", 0)
+    sensor = sensorCompute(sensor, oi, seed=0)
+
+    volts = np.asarray(sensorGet(sensor, "volts"), dtype=float)
+
+    assert np.all(np.asarray(cone_type, dtype=int) == 3)
+    assert volts.ndim == 2
+    assert float(np.max(volts)) > 0.0
+    assert np.isclose(
+        float(volts[volts.shape[0] // 2, volts.shape[1] // 2]),
+        float(np.max(volts)),
+    )
 
 
 def test_ie_cone_plot_returns_headless_mosaic_payload() -> None:

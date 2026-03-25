@@ -262,19 +262,92 @@ def _apply_tristimulus_transform(values: NDArray[np.float64], matrix: NDArray[np
 def xyz_to_lms(
     xyz: NDArray[np.float64],
     cb_type: int = 0,
-    extrap_val: float = 0.0,
+    extrap_val: Any = 0.0,
     *,
     asset_store: AssetStore | None = None,
 ) -> NDArray[np.float64]:
-    """Convert XYZ values to Stockman LMS using the direct MATLAB xyz2lms() path."""
+    """Convert XYZ values to Stockman LMS, including MATLAB's Brettel dichromat path."""
 
     cb = int(cb_type)
-    if cb > 0:
-        raise UnsupportedOptionError("xyz2lms", f"cbType={cb_type}")
-    xyz_to_lms_matrix, _ = _stockman_xyz_matrices(asset_store=asset_store)
+    store = asset_store or AssetStore.default()
+    xyz_to_lms_matrix, _ = _stockman_xyz_matrices(asset_store=store)
     lms = np.asarray(_apply_tristimulus_transform(np.asarray(xyz, dtype=float), xyz_to_lms_matrix), dtype=float)
     if cb == 0:
         return lms
+    if cb > 0:
+        white_xyz = np.asarray(extrap_val, dtype=float).reshape(-1)
+        if white_xyz.size < 3:
+            raise ValueError("xyz2lms requires whiteXYZ when cbType > 0.")
+        anchor_e = np.asarray(white_xyz[:3] @ xyz_to_lms_matrix, dtype=float).reshape(3)
+        _, anchor_values = store.load_spectra(
+            "stockman.mat",
+            wave_nm=np.array([475.0, 485.0, 575.0, 660.0], dtype=float),
+        )
+        anchors = np.asarray(anchor_values, dtype=float).reshape(4, 3)
+        anchor_475, anchor_485, anchor_575, anchor_660 = anchors
+
+        if lms.ndim >= 1 and lms.shape[-1] == 3:
+            L = np.asarray(lms[..., 0], dtype=float).copy()
+            M = np.asarray(lms[..., 1], dtype=float).copy()
+            S = np.asarray(lms[..., 2], dtype=float).copy()
+            layout = "last"
+        elif lms.ndim == 2 and lms.shape[0] == 3 and lms.shape[1] != 3:
+            L = np.asarray(lms[0, :], dtype=float).copy()
+            M = np.asarray(lms[1, :], dtype=float).copy()
+            S = np.asarray(lms[2, :], dtype=float).copy()
+            layout = "first"
+        else:
+            raise ValueError("xyz2lms expects an RGB-format image or a 3xN array.")
+
+        def _safe_ratio(numerator: NDArray[np.float64], denominator: NDArray[np.float64]) -> NDArray[np.float64]:
+            return np.divide(
+                numerator,
+                denominator,
+                out=np.full_like(numerator, np.inf, dtype=float),
+                where=np.abs(denominator) > np.finfo(float).eps,
+            )
+
+        if cb in {1, 2}:
+            a1 = anchor_e[1] * anchor_575[2] - anchor_e[2] * anchor_575[1]
+            b1 = anchor_e[2] * anchor_575[0] - anchor_e[0] * anchor_575[2]
+            c1 = anchor_e[0] * anchor_575[1] - anchor_e[1] * anchor_575[0]
+            a2 = anchor_e[1] * anchor_475[2] - anchor_e[2] * anchor_475[1]
+            b2 = anchor_e[2] * anchor_475[0] - anchor_e[0] * anchor_475[2]
+            c2 = anchor_e[0] * anchor_475[1] - anchor_e[1] * anchor_475[0]
+            if cb == 1:
+                inflection = anchor_e[2] / anchor_e[1]
+                lst = _safe_ratio(S, M) < inflection
+                L[lst] = -(b1 * M[lst] + c1 * S[lst]) / a1
+                L[~lst] = -(b2 * M[~lst] + c2 * S[~lst]) / a2
+            else:
+                inflection = anchor_e[2] / anchor_e[0]
+                lst = _safe_ratio(S, L) < inflection
+                M[lst] = -(a1 * L[lst] + c1 * S[lst]) / b1
+                M[~lst] = -(a2 * L[~lst] + c2 * S[~lst]) / b2
+        elif cb == 3:
+            a1 = anchor_e[1] * anchor_660[2] - anchor_e[2] * anchor_660[1]
+            b1 = anchor_e[2] * anchor_660[0] - anchor_e[0] * anchor_660[2]
+            c1 = anchor_e[0] * anchor_660[1] - anchor_e[1] * anchor_660[0]
+            a2 = anchor_e[1] * anchor_485[2] - anchor_e[2] * anchor_485[1]
+            b2 = anchor_e[2] * anchor_485[0] - anchor_e[0] * anchor_485[2]
+            c2 = anchor_e[0] * anchor_485[1] - anchor_e[1] * anchor_485[0]
+            inflection = anchor_e[1] / anchor_e[0]
+            lst = _safe_ratio(M, L) < inflection
+            S[lst] = -(a1 * L[lst] + b1 * M[lst]) / c1
+            S[~lst] = -(a2 * L[~lst] + b2 * M[~lst]) / c2
+        else:
+            raise UnsupportedOptionError("xyz2lms", f"cbType={cb_type}")
+
+        updated = np.asarray(lms, dtype=float).copy()
+        if layout == "last":
+            updated[..., 0] = L
+            updated[..., 1] = M
+            updated[..., 2] = S
+        else:
+            updated[0, :] = L
+            updated[1, :] = M
+            updated[2, :] = S
+        return updated
     channel_index = abs(cb) - 1
     if channel_index not in {0, 1, 2}:
         raise UnsupportedOptionError("xyz2lms", f"cbType={cb_type}")

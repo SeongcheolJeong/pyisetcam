@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-25T08:30:11.546960+00:00",
+  "generated_at": "2026-03-25T09:14:40.442330+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 60,
       "missing": 21,
-      "out_of_scope": 189,
-      "parity": 679,
-      "partial": 307,
+      "out_of_scope": 193,
+      "parity": 685,
+      "partial": 297,
       "ported": 187
     },
     "kind_counts": {
@@ -20,18 +20,18 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 245,
+      "P1": 235,
       "P2": 143,
-      "P3": 1055
+      "P3": 1065
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 0,
-        "parity": 0,
-        "partial": -3,
-        "ported": 3
+        "out_of_scope": 4,
+        "parity": 6,
+        "partial": -10,
+        "ported": 0
       },
       "kind_counts": {
         "api": 0,
@@ -42,9 +42,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -3,
+        "P1": -10,
         "P2": 0,
-        "P3": 3
+        "P3": 10
       }
     },
     "family_summary": {
@@ -645,13 +645,14 @@
       "scripts/human": {
         "total": 11,
         "by_status": {
-          "partial": 10,
+          "out_of_scope": 4,
+          "parity": 6,
           "ported": 1
         },
         "by_kind": {
           "script": 11
         },
-        "highest_open_priority": "P1"
+        "highest_open_priority": "P3"
       },
       "scripts/image": {
         "total": 21,
@@ -1021,15 +1022,6 @@
         }
       },
       {
-        "family": "scripts/human",
-        "open_entries": 10,
-        "highest_open_priority": "P1",
-        "by_status": {
-          "partial": 10,
-          "ported": 1
-        }
-      },
-      {
         "family": "data/sensor",
         "open_entries": 17,
         "highest_open_priority": "P2",
@@ -1104,6 +1096,14 @@
         "highest_open_priority": "P2",
         "by_status": {
           "partial": 4
+        }
+      },
+      {
+        "family": "data/optics",
+        "open_entries": 3,
+        "highest_open_priority": "P2",
+        "by_status": {
+          "partial": 3
         }
       }
     ],
@@ -10150,131 +10150,137 @@
       "upstream_path": "scripts/human/s_humanColorBlind.m",
       "family": "scripts/human",
       "kind": "script",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab",
+      "status": "parity",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.color, pyisetcam.utils",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The Brettel/Vienot/Mollon color-blind rendering workflow is covered by the focused headless regression for `xyz2lms(..., cbType, whiteXYZ)`, `colorTransformMatrix('lms2xyz')`, `imageLinearTransform(...)`, and `xyz2srgb(...)` on a scene XYZ image.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/human/s_humanConeAbsorptions.m",
       "family": "scripts/human",
       "kind": "script",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.metrics, pyisetcam.scielab",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is explicitly deprecated and redirects users to later calibration/ISETBio workflows instead of exposing a maintained standalone ISETCam script surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/human/s_humanDisplayPSF.m",
       "family": "scripts/human",
       "kind": "script",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab",
+      "status": "parity",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.display, pyisetcam.scene, pyisetcam.optics, pyisetcam.sensor",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The display point-spread workflow is covered by the focused headless regression that replays `displayCreate(...)`, `sceneFromFile(..., 'rgb', ..., display)`, `oiCreate('wvf')`, `sensorCreateConeMosaic(...)`, and `sensorCompute(...)` on a point-primary display scene.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/human/s_humanPhotonCalculator.m",
       "family": "scripts/human",
       "kind": "script",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.metrics, pyisetcam.scielab",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is explicitly deprecated and only prints a redirect to `s_calibrationPugh`, so it is treated as retired teaching material rather than actionable headless migration debt.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/human/s_humanPupilSizeBlur.m",
       "family": "scripts/human",
       "kind": "script",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.metrics, pyisetcam.scielab",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream script immediately exits without ISETBio and is framed as exploratory analysis of a known pupil-size limitation, so it is treated as ISETBio-dependent notebook-style material rather than a supported standalone headless workflow.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/human/s_humanSafetyBlueLight.m",
       "family": "scripts/human",
       "kind": "script",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab",
+      "status": "parity",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.color, pyisetcam.utils",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The blue-light and related lamp-safety workflow is covered headlessly by the current `humanUVSafety(...)`, `ieLuminance2Radiance(...)`, `ieLuminanceFromEnergy(...)`, and `blackbody(...)` regression surface against the vendored safety-standard spectra.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/human/s_humanSafetyLuminance.m",
       "family": "scripts/human",
       "kind": "script",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab",
+      "status": "parity",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.color",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The monochromatic-luminance safety workflow is covered headlessly by the current `ieLuminance2Radiance(...)` plus `humanUVSafety(...)` regression surface against the vendored actinic hazard spectra.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/human/s_humanSafetyThermal.m",
       "family": "scripts/human",
       "kind": "script",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab",
+      "status": "parity",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.color",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The thermal-hazard script path is covered headlessly by the current `humanUVSafety(...)` regression surface, which exercises the thermal safety modes together with the same radiance-to-irradiance contract used by the MATLAB workflow.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/human/s_humanSafetyUVExposure.m",
       "family": "scripts/human",
       "kind": "script",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.scielab",
+      "status": "parity",
+      "python_surface": "pyisetcam.metrics, pyisetcam.scielab, pyisetcam.color, pyisetcam.utils",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The UV-exposure workflow is covered headlessly by the current `humanUVSafety(...)`, `ieLuminance2Radiance(...)`, `ieLuminanceFromEnergy(...)`, and `blackbody(...)` regression surface across the actinic, eye, blue-hazard, and thermal safety branches.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/human/s_humanSceneStatistics.m",
       "family": "scripts/human",
       "kind": "script",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.metrics, pyisetcam.scielab",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py"
       ],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file immediately exits unless ISETBio's `Lens` class is available, so it is treated as an ISETBio-dependent exploratory script rather than a supported standalone ISETCam workflow.",
+      "priority": "P3"
     },
     {
       "upstream_path": "scripts/human/s_humanSensor.m",

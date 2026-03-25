@@ -929,6 +929,56 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is an explicit tinker script for dead-leaves-style spectrum experiments rather than a supported reusable API surface.",
         "module_hits": [],
     },
+    "scripts/human/s_humanColorBlind.m": {
+        "status": "parity",
+        "note": "The Brettel/Vienot/Mollon color-blind rendering workflow is covered by the focused headless regression for `xyz2lms(..., cbType, whiteXYZ)`, `colorTransformMatrix('lms2xyz')`, `imageLinearTransform(...)`, and `xyz2srgb(...)` on a scene XYZ image.",
+        "module_hits": ["pyisetcam.color", "pyisetcam.utils"],
+    },
+    "scripts/human/s_humanConeAbsorptions.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is explicitly deprecated and redirects users to later calibration/ISETBio workflows instead of exposing a maintained standalone ISETCam script surface.",
+        "module_hits": [],
+    },
+    "scripts/human/s_humanDisplayPSF.m": {
+        "status": "parity",
+        "note": "The display point-spread workflow is covered by the focused headless regression that replays `displayCreate(...)`, `sceneFromFile(..., 'rgb', ..., display)`, `oiCreate('wvf')`, `sensorCreateConeMosaic(...)`, and `sensorCompute(...)` on a point-primary display scene.",
+        "module_hits": ["pyisetcam.display", "pyisetcam.scene", "pyisetcam.optics", "pyisetcam.sensor"],
+    },
+    "scripts/human/s_humanPhotonCalculator.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is explicitly deprecated and only prints a redirect to `s_calibrationPugh`, so it is treated as retired teaching material rather than actionable headless migration debt.",
+        "module_hits": [],
+    },
+    "scripts/human/s_humanPupilSizeBlur.m": {
+        "status": "out_of_scope",
+        "note": "The upstream script immediately exits without ISETBio and is framed as exploratory analysis of a known pupil-size limitation, so it is treated as ISETBio-dependent notebook-style material rather than a supported standalone headless workflow.",
+        "module_hits": [],
+    },
+    "scripts/human/s_humanSafetyBlueLight.m": {
+        "status": "parity",
+        "note": "The blue-light and related lamp-safety workflow is covered headlessly by the current `humanUVSafety(...)`, `ieLuminance2Radiance(...)`, `ieLuminanceFromEnergy(...)`, and `blackbody(...)` regression surface against the vendored safety-standard spectra.",
+        "module_hits": ["pyisetcam.metrics", "pyisetcam.color", "pyisetcam.utils"],
+    },
+    "scripts/human/s_humanSafetyLuminance.m": {
+        "status": "parity",
+        "note": "The monochromatic-luminance safety workflow is covered headlessly by the current `ieLuminance2Radiance(...)` plus `humanUVSafety(...)` regression surface against the vendored actinic hazard spectra.",
+        "module_hits": ["pyisetcam.metrics", "pyisetcam.color"],
+    },
+    "scripts/human/s_humanSafetyThermal.m": {
+        "status": "parity",
+        "note": "The thermal-hazard script path is covered headlessly by the current `humanUVSafety(...)` regression surface, which exercises the thermal safety modes together with the same radiance-to-irradiance contract used by the MATLAB workflow.",
+        "module_hits": ["pyisetcam.metrics", "pyisetcam.color"],
+    },
+    "scripts/human/s_humanSafetyUVExposure.m": {
+        "status": "parity",
+        "note": "The UV-exposure workflow is covered headlessly by the current `humanUVSafety(...)`, `ieLuminance2Radiance(...)`, `ieLuminanceFromEnergy(...)`, and `blackbody(...)` regression surface across the actinic, eye, blue-hazard, and thermal safety branches.",
+        "module_hits": ["pyisetcam.metrics", "pyisetcam.color", "pyisetcam.utils"],
+    },
+    "scripts/human/s_humanSceneStatistics.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file immediately exits unless ISETBio's `Lens` class is available, so it is treated as an ISETBio-dependent exploratory script rather than a supported standalone ISETCam workflow.",
+        "module_hits": [],
+    },
     "tutorials/color/t_colorChromaticity.m": {
         "status": "parity",
         "note": "The chromaticity tutorial workflow is already covered by the current headless regression surface through `display_create/get(...)`, `chromaticity_xy(...)`, `xyz_from_energy(...)`, and `scene_create/get(...)` on the default Macbeth scene.",
