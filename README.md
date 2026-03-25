@@ -1822,6 +1822,12 @@ asset bundle is counted directly against the current `AssetStore` and
 sensor-model runtime coverage, while the old MATLAB asset-authoring scripts
 that generated those MAT or TIFF files are explicitly treated as provenance
 notebooks outside the headless migration target.
+The neighboring `data/human` family is now cleaned up the same way: the
+vendored human spectral assets are counted directly against the current
+`AssetStore` readers plus the XYZ, luminosity, rods, Stockman, and macular
+runtime coverage, while the old MATLAB creator notebooks and plotting
+artifacts are explicitly treated as provenance assets outside the headless
+migration target.
 That same utility-image slice now also covers `ieCmap(...)`,
 `ieCropRect(...)`, `ieLUTDigital(...)`, `ieLUTInvert(...)`, and
 `ieLUTLinear(...)`, with direct regressions for the simple MATLAB color-map

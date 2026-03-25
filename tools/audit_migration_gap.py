@@ -47,6 +47,14 @@ SHORT_SIGNAL_PREFIXES = (
 FAMILY_SURFACE_MAP = {
     "camera": ["pyisetcam.camera"],
     "color": ["pyisetcam.color", "pyisetcam.illuminant"],
+    "data/human": [
+        "pyisetcam.assets",
+        "pyisetcam.color",
+        "pyisetcam.display",
+        "pyisetcam.camera",
+        "pyisetcam.sensor",
+        "pyisetcam.optics",
+    ],
     "data/sensor": ["pyisetcam.assets", "pyisetcam.sensor", "pyisetcam.camera"],
     "displays": ["pyisetcam.display"],
     "human": ["pyisetcam.metrics", "pyisetcam.scielab"],
@@ -109,6 +117,7 @@ FAMILY_SURFACE_MAP = {
 FAMILY_TEST_MAP = {
     "camera": ["tests/unit/test_pipeline.py"],
     "color": ["tests/unit/test_pipeline.py", "tests/unit/test_metrics.py"],
+    "data/human": ["tests/unit/test_human.py", "tests/unit/test_pipeline.py", "tests/unit/test_ip.py"],
     "data/sensor": ["tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],
     "displays": ["tests/unit/test_display.py", "tests/unit/test_pipeline.py"],
     "human": ["tests/unit/test_human.py"],
@@ -171,6 +180,78 @@ MID_PRIORITY_FAMILIES = {
 }
 
 UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
+    "data/human/": {
+        "status": "parity",
+        "note": "The vendored human-data asset bundle is already exercised by the current headless runtime through `AssetStore`, spectral readers, and unit coverage over XYZ or XYZQuanta, luminosity, rods, Stockman cone fundamentals, and macular-pigment assets.",
+        "module_hits": [
+            "pyisetcam.assets",
+            "pyisetcam.color",
+            "pyisetcam.display",
+            "pyisetcam.camera",
+            "pyisetcam.sensor",
+            "pyisetcam.optics",
+        ],
+    },
+    "data/human/absoluteEfficiency.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB asset-authoring notebook that derives archived absolute-efficiency tables from vendored Stockman fundamentals, not a reusable headless runtime API surface.",
+        "module_hits": [],
+    },
+    "data/human/conemosaic/convertFiles2M.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB data-conversion notebook that imports external Hofer or Williams spreadsheets and text PSFs into archived cone-mosaic MAT assets, rather than a supported headless runtime API surface.",
+        "module_hits": [],
+    },
+    "data/human/conemosaic/s_HoferPlot.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB exploratory cone-mosaic plotting script rather than a reusable headless runtime API surface.",
+        "module_hits": [],
+    },
+    "data/human/cones/innerSegmentDTutten.fig": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a saved MATLAB figure artifact for cone inner-segment visualization, not a runtime asset or supported headless API surface.",
+        "module_hits": [],
+    },
+    "data/human/ieRodSpectralSensitivity.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB asset-generation script that derives the vendored rod-sensitivity MAT asset already consumed by the current runtime, rather than a supported headless API surface.",
+        "module_hits": [],
+    },
+    "data/human/lensDensity.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB asset-authoring helper that writes the vendored lens-density MAT asset, not a reusable headless runtime API surface.",
+        "module_hits": [],
+    },
+    "data/human/luminosityJuddCreate.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB asset-generation script for luminosity or Judd luminosity tables already vendored in the runtime bundle, rather than a supported headless API surface.",
+        "module_hits": [],
+    },
+    "data/human/macular.m": {
+        "status": "parity",
+        "note": "The current headless runtime already covers the upstream macular-pigment math through `_macular_profile(...)` and `humanMacularTransmittance(...)`, both backed by the same vendored `macularPigment.mat` asset and focused unit regression coverage.",
+        "module_hits": ["pyisetcam.optics"],
+    },
+    "data/human/macularPigmentCreate.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB asset-authoring script that embeds the macular-pigment source table and writes the vendored `macularPigment.mat` asset already used by the runtime.",
+        "module_hits": [],
+    },
+    "data/human/melanopsin/s_melanopsinCIE.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB data-preparation notebook that converts CIE melanopsin source tables into archived MAT assets, not a supported headless runtime API surface.",
+        "module_hits": [],
+    },
+    "data/human/stockmanQuantaCreate.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB asset-generation script that derives the vendored `stockmanQuanta.mat` cone-fundamental table already consumed by the current runtime.",
+        "module_hits": [],
+    },
+    "data/human/xyzQuantaCreate.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB asset-generation script that derives vendored XYZ or luminosity quanta tables already consumed by the current runtime.",
+        "module_hits": [],
+    },
     "data/sensor/": {
         "status": "parity",
         "note": "The vendored sensor asset bundle is already exercised by the current headless runtime through `AssetStore`, sensor-model loaders, and parity or unit regressions over MT9V024, AR0132AT, IMX490, IMEC, IR-filter, and MCC sensor assets.",

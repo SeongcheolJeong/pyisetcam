@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-25T10:52:08.429595+00:00",
+  "generated_at": "2026-03-25T11:11:11.023515+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 46,
       "missing": 21,
-      "out_of_scope": 222,
-      "parity": 691,
-      "partial": 262,
+      "out_of_scope": 233,
+      "parity": 693,
+      "partial": 249,
       "ported": 201
     },
     "kind_counts": {
@@ -21,16 +21,16 @@
     },
     "priority_counts": {
       "P1": 217,
-      "P2": 112,
-      "P3": 1114
+      "P2": 99,
+      "P3": 1127
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 16,
-        "parity": 1,
-        "partial": -17,
+        "out_of_scope": 11,
+        "parity": 2,
+        "partial": -13,
         "ported": 0
       },
       "kind_counts": {
@@ -43,8 +43,8 @@
       },
       "priority_counts": {
         "P1": 0,
-        "P2": -17,
-        "P3": 17
+        "P2": -13,
+        "P3": 13
       }
     },
     "family_summary": {
@@ -118,12 +118,13 @@
       "data/human": {
         "total": 13,
         "by_status": {
-          "partial": 13
+          "out_of_scope": 11,
+          "parity": 2
         },
         "by_kind": {
           "asset": 13
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "data/images": {
         "total": 2,
@@ -1011,14 +1012,6 @@
         }
       },
       {
-        "family": "data/human",
-        "open_entries": 13,
-        "highest_open_priority": "P2",
-        "by_status": {
-          "partial": 13
-        }
-      },
-      {
         "family": "cp",
         "open_entries": 10,
         "highest_open_priority": "P2",
@@ -1095,6 +1088,14 @@
       },
       {
         "family": "data/safetystandards",
+        "open_entries": 2,
+        "highest_open_priority": "P2",
+        "by_status": {
+          "partial": 2
+        }
+      },
+      {
+        "family": "data/scenes",
         "open_entries": 2,
         "highest_open_priority": "P2",
         "by_status": {
@@ -2237,121 +2238,171 @@
       "upstream_path": "data/human/absoluteEfficiency.m",
       "family": "data/human",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.display, pyisetcam.camera, pyisetcam.sensor, pyisetcam.optics",
+      "tests": [
+        "tests/unit/test_human.py",
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
+      ],
+      "notes": "The upstream file is a MATLAB asset-authoring notebook that derives archived absolute-efficiency tables from vendored Stockman fundamentals, not a reusable headless runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/human/conemosaic/convertFiles2M.m",
       "family": "data/human",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.display, pyisetcam.camera, pyisetcam.sensor, pyisetcam.optics",
+      "tests": [
+        "tests/unit/test_human.py",
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
+      ],
+      "notes": "The upstream file is a MATLAB data-conversion notebook that imports external Hofer or Williams spreadsheets and text PSFs into archived cone-mosaic MAT assets, rather than a supported headless runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/human/conemosaic/s_HoferPlot.m",
       "family": "data/human",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.display, pyisetcam.camera, pyisetcam.sensor, pyisetcam.optics",
+      "tests": [
+        "tests/unit/test_human.py",
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
+      ],
+      "notes": "The upstream file is a MATLAB exploratory cone-mosaic plotting script rather than a reusable headless runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/human/cones/innerSegmentDTutten.fig",
       "family": "data/human",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.display, pyisetcam.camera, pyisetcam.sensor, pyisetcam.optics",
+      "tests": [
+        "tests/unit/test_human.py",
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
+      ],
+      "notes": "The upstream file is a saved MATLAB figure artifact for cone inner-segment visualization, not a runtime asset or supported headless API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/human/ieRodSpectralSensitivity.m",
       "family": "data/human",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.display, pyisetcam.camera, pyisetcam.sensor, pyisetcam.optics",
+      "tests": [
+        "tests/unit/test_human.py",
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
+      ],
+      "notes": "The upstream file is a MATLAB asset-generation script that derives the vendored rod-sensitivity MAT asset already consumed by the current runtime, rather than a supported headless API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/human/lensDensity.m",
       "family": "data/human",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.display, pyisetcam.camera, pyisetcam.sensor, pyisetcam.optics",
+      "tests": [
+        "tests/unit/test_human.py",
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
+      ],
+      "notes": "The upstream file is a MATLAB asset-authoring helper that writes the vendored lens-density MAT asset, not a reusable headless runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/human/luminosityJuddCreate.m",
       "family": "data/human",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.display, pyisetcam.camera, pyisetcam.sensor, pyisetcam.optics",
+      "tests": [
+        "tests/unit/test_human.py",
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
+      ],
+      "notes": "The upstream file is a MATLAB asset-generation script for luminosity or Judd luminosity tables already vendored in the runtime bundle, rather than a supported headless API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/human/macular.m",
       "family": "data/human",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "pyisetcam.__init__, pyisetcam.metrics, pyisetcam.optics",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "parity",
+      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.display, pyisetcam.camera, pyisetcam.sensor, pyisetcam.optics",
+      "tests": [
+        "tests/unit/test_human.py",
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The current headless runtime already covers the upstream macular-pigment math through `_macular_profile(...)` and `humanMacularTransmittance(...)`, both backed by the same vendored `macularPigment.mat` asset and focused unit regression coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/human/macularPigmentCreate.m",
       "family": "data/human",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.display, pyisetcam.camera, pyisetcam.sensor, pyisetcam.optics",
+      "tests": [
+        "tests/unit/test_human.py",
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
+      ],
+      "notes": "The upstream file is a MATLAB asset-authoring script that embeds the macular-pigment source table and writes the vendored `macularPigment.mat` asset already used by the runtime.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/human/melanopsin/s_melanopsinCIE.m",
       "family": "data/human",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.display, pyisetcam.camera, pyisetcam.sensor, pyisetcam.optics",
+      "tests": [
+        "tests/unit/test_human.py",
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
+      ],
+      "notes": "The upstream file is a MATLAB data-preparation notebook that converts CIE melanopsin source tables into archived MAT assets, not a supported headless runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/human/stockmanQuantaCreate.m",
       "family": "data/human",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.display, pyisetcam.camera, pyisetcam.sensor, pyisetcam.optics",
+      "tests": [
+        "tests/unit/test_human.py",
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
+      ],
+      "notes": "The upstream file is a MATLAB asset-generation script that derives the vendored `stockmanQuanta.mat` cone-fundamental table already consumed by the current runtime.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/human/xyzQuantaCreate.m",
       "family": "data/human",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.display, pyisetcam.camera, pyisetcam.sensor, pyisetcam.optics",
+      "tests": [
+        "tests/unit/test_human.py",
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py"
+      ],
+      "notes": "The upstream file is a MATLAB asset-generation script that derives vendored XYZ or luminosity quanta tables already consumed by the current runtime.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/images/faces/s_dataFaces.m",
@@ -19392,11 +19443,17 @@
       "upstream_path": "data/human/",
       "family": "data/human",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "parity",
+      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.display, pyisetcam.camera, pyisetcam.sensor, pyisetcam.optics",
+      "tests": [
+        "tests/unit/test_human.py",
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_ip.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The vendored human-data asset bundle is already exercised by the current headless runtime through `AssetStore`, spectral readers, and unit coverage over XYZ or XYZQuanta, luminosity, rods, Stockman cone fundamentals, and macular-pigment assets.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/images/",
