@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-03-26T13:24:37.511313+00:00",
+  "generated_at": "2026-03-26T13:58:07.705279+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-26T13:24:37.511313+00:00",
+    "generated_at": "2026-03-26T13:58:07.705279+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 46,
-      "missing": 21,
+      "headless_only": 47,
+      "missing": 16,
       "out_of_scope": 254,
-      "parity": 701,
-      "partial": 218,
+      "parity": 707,
+      "partial": 216,
       "ported": 203
     },
     "kind_counts": {
@@ -22,16 +22,16 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 217,
-      "P2": 68,
-      "P3": 1158
+      "P1": 216,
+      "P2": 63,
+      "P3": 1164
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": 0,
-        "missing": 0,
-        "out_of_scope": 2,
-        "parity": 0,
+        "headless_only": 1,
+        "missing": -5,
+        "out_of_scope": 0,
+        "parity": 6,
         "partial": -2,
         "ported": 0
       },
@@ -44,9 +44,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": 0,
-        "P2": -2,
-        "P3": 2
+        "P1": -1,
+        "P2": -5,
+        "P3": 6
       }
     },
     "family_summary": {
@@ -112,12 +112,12 @@
       "data/fonts": {
         "total": 1,
         "by_status": {
-          "partial": 1
+          "parity": 1
         },
         "by_kind": {
           "asset": 1
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "data/human": {
         "total": 13,
@@ -253,12 +253,12 @@
       "fonts": {
         "total": 5,
         "by_status": {
-          "missing": 5
+          "parity": 5
         },
         "by_kind": {
           "api": 5
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "gui": {
         "total": 52,
@@ -936,10 +936,10 @@
       "utility": {
         "total": 279,
         "by_status": {
-          "headless_only": 46,
+          "headless_only": 47,
           "out_of_scope": 1,
           "parity": 13,
-          "partial": 217,
+          "partial": 216,
           "ported": 2
         },
         "by_kind": {
@@ -1014,10 +1014,10 @@
         "open_entries": 263,
         "highest_open_priority": "P1",
         "by_status": {
-          "headless_only": 46,
+          "headless_only": 47,
           "out_of_scope": 1,
           "parity": 13,
-          "partial": 217,
+          "partial": 216,
           "ported": 2
         }
       },
@@ -1038,22 +1038,6 @@
         "by_status": {
           "missing": 6,
           "out_of_scope": 1
-        }
-      },
-      {
-        "family": "fonts",
-        "open_entries": 5,
-        "highest_open_priority": "P2",
-        "by_status": {
-          "missing": 5
-        }
-      },
-      {
-        "family": "data/fonts",
-        "open_entries": 1,
-        "highest_open_priority": "P2",
-        "by_status": {
-          "partial": 1
         }
       },
       {
@@ -1095,6 +1079,14 @@
         }
       },
       {
+        "family": "data/fonts",
+        "open_entries": 0,
+        "highest_open_priority": "P3",
+        "by_status": {
+          "parity": 1
+        }
+      },
+      {
         "family": "data/human",
         "open_entries": 0,
         "highest_open_priority": "P3",
@@ -1118,6 +1110,15 @@
         "highest_open_priority": "P3",
         "by_status": {
           "out_of_scope": 3,
+          "parity": 1
+        }
+      },
+      {
+        "family": "data/lights",
+        "open_entries": 0,
+        "highest_open_priority": "P3",
+        "by_status": {
+          "out_of_scope": 7,
           "parity": 1
         }
       }
@@ -1153,6 +1154,10 @@
       },
       "fileio": {
         "unsupported_option_error_sites": 7,
+        "not_implemented_error_sites": 0
+      },
+      "fonts": {
+        "unsupported_option_error_sites": 0,
         "not_implemented_error_sites": 0
       },
       "illuminant": {

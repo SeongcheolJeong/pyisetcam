@@ -1883,6 +1883,11 @@ tracked as out of scope too: the former only vendors standalone microlens
 design JSON presets that the current analytic microlens workflow does not
 import, and the latter only vendors archived MATLAB validation payloads
 rather than runtime assets or headless APIs.
+The neighboring `fonts` and `data/fonts` pair are now covered together:
+`fontBitmapGet(...)`, `fontCreate(...)`, `fontGet(...)`, `fontSet(...)`,
+and `sceneFromFont(...)` now exist as direct headless wrappers, and the
+vendored Georgia glyph bitmaps are exercised directly as the runtime font
+cache rather than left as standalone asset debt.
 That same utility-image slice now also covers `ieCmap(...)`,
 `ieCropRect(...)`, `ieLUTDigital(...)`, `ieLUTInvert(...)`, and
 `ieLUTLinear(...)`, with direct regressions for the simple MATLAB color-map

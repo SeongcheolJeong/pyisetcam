@@ -98,6 +98,13 @@ from .fileio import (
     vc_save_object,
     vc_save_multispectral_image,
 )
+from .fonts import (
+    font_bitmap_get,
+    font_create,
+    font_get,
+    font_set,
+    scene_from_font,
+)
 from .illuminant import (
     illuminant_create,
     illuminant_get,
@@ -871,6 +878,16 @@ __all__ = [
     "mperdot2dpi",
     "render_lcd_samsung_rgbw",
     "render_oled_samsung",
+    "fontBitmapGet",
+    "fontCreate",
+    "fontGet",
+    "fontSet",
+    "sceneFromFont",
+    "font_bitmap_get",
+    "font_create",
+    "font_get",
+    "font_set",
+    "scene_from_font",
     "ensure_upstream_snapshot",
     "comparison_metrics",
     "correlated_color_temperature",
@@ -2216,6 +2233,11 @@ displaySetWhitePoint = display_set_white_point
 displayShowImage = display_show_image
 ieCalculateMonitorDPI = ie_calculate_monitor_dpi
 mperdot2dpi = mperdot2dpi
+fontBitmapGet = font_bitmap_get
+fontCreate = font_create
+fontGet = font_get
+fontSet = font_set
+sceneFromFont = scene_from_font
 sensorDescription = sensor_description
 
 oiCreate = oi_create
