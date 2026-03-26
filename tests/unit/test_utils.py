@@ -8,11 +8,14 @@ from pyisetcam import (
     HalfToneImage,
     convolvecirc,
     dpi2mperdot,
+    getMiddleMatrix,
     ieCmap,
+    ieClip,
     ieCropRect,
     ieDataList,
     ieDpi2Mperdot,
     ieFindWaveIndex,
+    ieHwhm2SD,
     ieLightList,
     ieLUTDigital,
     ieLUTInvert,
@@ -20,6 +23,8 @@ from pyisetcam import (
     ieParameterOtype,
     ieRadialMatrix,
     ieReflectanceList,
+    ieScale,
+    ieScaleColumns,
     ieSpace2Amp,
     ieUnitScaleFactor,
     ieWave2Index,
@@ -42,11 +47,16 @@ from pyisetcam import (
     imagescM,
     imagescOPP,
     imagescRGB,
+    isodd,
     rgb2dac,
+    rotationMatrix3d,
     sample2space,
     sceneCreate,
     sceneGet,
     space2sample,
+    unpadarray,
+    upperQuad2FullMatrix,
+    vectorLength,
     xyz2srgb,
 )
 from pyisetcam.utils import (
@@ -54,13 +64,16 @@ from pyisetcam.utils import (
     convolve_circ,
     energy_to_quanta,
     floyd_steinberg,
+    get_middle_matrix,
     half_tone_image,
     ie_cmap,
+    ie_clip,
     ie_crop_rect,
     ie_data_list,
     ie_dpi2_mperdot,
     ie_fit_line,
     ie_find_wave_index,
+    ie_hwhm_to_sd,
     ie_light_list,
     ie_lut_digital,
     ie_lut_invert,
@@ -68,6 +81,8 @@ from pyisetcam.utils import (
     ie_parameter_otype,
     ie_radial_matrix,
     ie_reflectance_list,
+    ie_scale,
+    ie_scale_columns,
     ie_space_to_amp,
     ie_unit_scale_factor,
     ie_wave2_index,
@@ -94,9 +109,13 @@ from pyisetcam.utils import (
     quanta_to_energy,
     rgb_to_dac,
     rgb_to_xw_format,
+    rotation_matrix_3d,
     sample2space as sample2space_fn,
     space2sample as space2sample_fn,
     dpi2mperdot as dpi2mperdot_fn,
+    unpadarray as unpadarray_fn,
+    upper_quad_to_full_matrix,
+    vector_length,
     unit_frequency_list,
 )
 
@@ -319,6 +338,79 @@ def test_ie_light_and_reflectance_lists_and_dispatch_match_aliases() -> None:
 
     with pytest.raises(ValueError, match="Unsupported ieDataList type"):
         ie_data_list("sensorqe")
+
+
+def test_numerical_helper_wrappers_match_matlab_scaling_and_clipping_aliases() -> None:
+    clipped_default = ieClip(np.array([-1.0, 0.5, 2.0], dtype=float))
+    clipped_symmetric = ie_clip(np.array([-2.0, -0.5, 0.5, 2.0], dtype=float), 1.5)
+    clipped_upper_only = ie_clip(np.array([-2.0, 0.5, 2.0], dtype=float), None, 1.0)
+
+    assert np.allclose(clipped_default, np.array([0.0, 0.5, 1.0], dtype=float))
+    assert np.allclose(clipped_symmetric, np.array([-1.5, -0.5, 0.5, 1.5], dtype=float))
+    assert np.allclose(clipped_upper_only, np.array([-2.0, 0.5, 1.0], dtype=float))
+
+    data = np.array([-10.0, 20.0, 50.0], dtype=float)
+    scaled, mn, mx = ie_scale(data, 20.0, 90.0)
+    peak_scaled, _, _ = ieScale(data, 1.0)
+    column_scaled = ie_scale_columns(np.column_stack((data, 2.0 * data)), 0.0, 1.0)
+    alias_columns = ieScaleColumns(np.column_stack((data, 2.0 * data)), 0.0, 1.0)
+
+    assert mn == pytest.approx(-10.0)
+    assert mx == pytest.approx(50.0)
+    assert np.allclose(scaled, np.array([20.0, 55.0, 90.0], dtype=float))
+    assert np.allclose(peak_scaled, np.array([-0.2, 0.4, 1.0], dtype=float))
+    assert np.allclose(column_scaled[:, 0], np.array([0.0, 0.5, 1.0], dtype=float))
+    assert np.allclose(column_scaled[:, 1], np.array([0.0, 0.5, 1.0], dtype=float))
+    assert np.allclose(alias_columns, column_scaled)
+
+
+def test_numerical_helper_wrappers_match_matlab_geometry_and_norm_aliases() -> None:
+    matrix = np.arange(1.0, 82.0, dtype=float).reshape((9, 9), order="F")
+    middle, center = get_middle_matrix(matrix, 3)
+    alias_middle, alias_center = getMiddleMatrix(matrix, 3)
+
+    assert np.array_equal(center[:2], np.array([5, 5], dtype=int))
+    assert np.array_equal(alias_center[:2], center[:2])
+    assert np.array_equal(middle, matrix[2:7, 2:7])
+    assert np.array_equal(alias_middle, middle)
+
+    padded = np.arange(1.0, 26.0, dtype=float).reshape(5, 5)
+    expected_unpadded = np.array([[7.0, 8.0, 9.0], [12.0, 13.0, 14.0], [17.0, 18.0, 19.0]], dtype=float)
+    assert np.array_equal(unpadarray_fn(padded, [1, 1]), expected_unpadded)
+    assert np.array_equal(unpadarray(padded, [1, 1]), expected_unpadded)
+
+    assert vector_length(np.array([1.0, 1.0], dtype=float)) == pytest.approx(np.sqrt(2.0))
+    assert np.array_equal(vectorLength(np.array([[1.0, np.nan], [np.nan, np.nan]], dtype=float), 1), np.array([1.0, 0.0]))
+
+
+def test_numerical_helper_wrappers_match_matlab_rotation_quadrant_and_oddness_aliases() -> None:
+    rot = rotation_matrix_3d([0.0, 0.0, np.pi / 2.0])
+    alias_rot = rotationMatrix3d([0.0, 0.0, np.pi / 2.0], 2.0)
+    expected_rot = np.array([[0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]], dtype=float)
+
+    assert np.allclose(rot, expected_rot, atol=1e-12)
+    assert np.allclose(alias_rot, 2.0 * expected_rot, atol=1e-12)
+
+    upper_right = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]], dtype=float)
+    expected_full = np.array(
+        [
+            [3.0, 2.0, 1.0, 1.0, 2.0, 3.0],
+            [6.0, 5.0, 4.0, 4.0, 5.0, 6.0],
+            [9.0, 8.0, 7.0, 7.0, 8.0, 9.0],
+            [6.0, 5.0, 4.0, 4.0, 5.0, 6.0],
+            [3.0, 2.0, 1.0, 1.0, 2.0, 3.0],
+        ],
+        dtype=float,
+    )
+    assert np.array_equal(upper_quad_to_full_matrix(upper_right, 5, 6), expected_full)
+    assert np.array_equal(upperQuad2FullMatrix(upper_right, 5, 6), expected_full)
+    assert isodd(3) is True
+    assert np.array_equal(isodd(np.array([1, 2, 3], dtype=int)), np.array([True, False, True]))
+
+
+def test_ie_hwhm_to_sd_matches_matlab_formulas_alias() -> None:
+    assert ie_hwhm_to_sd(10.0, 1) == pytest.approx(10.0 / (2.0 * np.sqrt(np.log(2.0))))
+    assert ieHwhm2SD(10.0, 2) == pytest.approx(10.0 / np.sqrt(2.0 * np.log(2.0)))
 
 
 def test_ie_fit_line_matches_matlab_one_line_and_multiple_lines() -> None:

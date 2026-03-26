@@ -725,6 +725,8 @@ from .utils import (
     ie_dpi2_mperdot,
     ie_fit_line,
     ie_find_wave_index,
+    ie_clip,
+    ie_hwhm_to_sd,
     ie_light_list,
     ie_lut_digital,
     ie_lut_invert,
@@ -733,9 +735,12 @@ from .utils import (
     ie_n_to_megapixel,
     ie_radial_matrix,
     ie_reflectance_list,
+    ie_scale,
+    ie_scale_columns,
     ie_space_to_amp,
     ie_unit_scale_factor,
     ie_wave2_index,
+    get_middle_matrix,
     image_hc2rgb,
     image_gabor,
     image_hparams,
@@ -758,13 +763,18 @@ from .utils import (
     imagesc_opp,
     imagesc_rgb,
     ie_parameter_otype,
+    isodd,
     param_format,
     rgb_to_dac,
     rgb_to_xw_format,
+    rotation_matrix_3d,
     sample2space,
     srgb_to_linear,
     srgb_to_xyz,
     space2sample,
+    unpadarray,
+    upper_quad_to_full_matrix,
+    vector_length,
     xw_to_rgb_format,
     xyz_to_srgb,
 )
@@ -971,10 +981,12 @@ __all__ = [
     "ieDeleteObject",
     "ieDNGRead",
     "ieDNGSimpleInfo",
+    "ieClip",
     "ieEquivalentObjtype",
     "ieFieldHeight2Index",
     "ieFitLine",
     "ieCXcorr",
+    "ieHwhm2SD",
     "ieLuminanceFromEnergy",
     "ieLuminanceFromPhotons",
     "ieMvnrnd",
@@ -1005,6 +1017,8 @@ __all__ = [
     "iePlotSet",
     "iePlotShadeBackground",
     "ieShape",
+    "ieScale",
+    "ieScaleColumns",
     "imageDataXYZ",
     "image_data_xyz",
     "imageShowImage",
@@ -1095,6 +1109,9 @@ __all__ = [
     "convolvecirc",
     "convolve_circ",
     "dpi2mperdot",
+    "getMiddleMatrix",
+    "get_middle_matrix",
+    "isodd",
     "rgb2dac",
     "rgb_to_dac",
     "imageGabor",
@@ -1182,12 +1199,14 @@ __all__ = [
     "ieSelectObject",
     "ie_add_object",
     "ie_app_get",
+    "ie_clip",
     "ie_data_list",
     "ie_delete_object",
     "ie_dpi2_mperdot",
     "ie_equivalent_objtype",
     "ie_fit_line",
     "ie_cxcorr",
+    "ie_hwhm_to_sd",
     "ie_light_list",
     "ie_mvnrnd",
     "ie_n_to_megapixel",
@@ -1217,6 +1236,8 @@ __all__ = [
     "ie_rect2_vertices",
     "ie_roi2_locs",
     "ie_replace_object",
+    "ie_scale",
+    "ie_scale_columns",
     "ie_space_to_amp",
     "ie_unit_scale_factor",
     "ie_dng_read",
@@ -1576,6 +1597,8 @@ __all__ = [
     "psfCenter",
     "psfFindCriterionRadius",
     "psfFindPeak",
+    "rotationMatrix3d",
+    "rotation_matrix_3d",
     "psfVolume",
     "lsf_to_circular_psf",
     "psf_average_multiple",
@@ -1587,10 +1610,15 @@ __all__ = [
     "psf_volume",
     "param_format",
     "peak_signal_to_noise_ratio",
+    "unpadarray",
+    "upperQuad2FullMatrix",
+    "upper_quad_to_full_matrix",
     "psf2zcoeff",
     "airyDisk",
     "psf_to_zcoeff_error",
     "root_mean_squared_error",
+    "vectorLength",
+    "vector_length",
     "watsonImpulseResponse",
     "watsonRGCSpacing",
     "watson_impulse_response",
@@ -2665,6 +2693,7 @@ rgb2dac = rgb_to_dac
 ieCmap = ie_cmap
 ieCropRect = ie_crop_rect
 ieFindWaveIndex = ie_find_wave_index
+getMiddleMatrix = get_middle_matrix
 ieLUTDigital = ie_lut_digital
 ieLUTInvert = ie_lut_invert
 ieLUTLinear = ie_lut_linear
@@ -2691,6 +2720,9 @@ imageTranslate = image_translate
 imageTranspose = image_transpose
 imageFlip = image_flip
 imageIncreaseImageRGBSize = image_increase_image_rgb_size
+rotationMatrix3d = rotation_matrix_3d
+upperQuad2FullMatrix = upper_quad_to_full_matrix
+vectorLength = vector_length
 srgb2xyz = srgb_to_xyz
 xyz2srgb = xyz_to_srgb
 xyy2xyz = xyy_to_xyz
@@ -2705,17 +2737,21 @@ ieLuminanceFromPhotons = luminance_from_photons
 
 ieAddObject = ie_add_object
 ieAppGet = ie_app_get
+ieClip = ie_clip
 ieDeleteObject = ie_delete_object
 ieEquivalentObjtype = ie_equivalent_objtype
 ieDataList = ie_data_list
 ieDpi2Mperdot = ie_dpi2_mperdot
 ieFindObjectByName = ie_find_object_by_name
 ieFitLine = ie_fit_line
+ieHwhm2SD = ie_hwhm_to_sd
 ieLightList = ie_light_list
 ieMvnrnd = ie_mvnrnd
 ieN2MegaPixel = ie_n_to_megapixel
 ieReflectanceList = ie_reflectance_list
 ieReflectanceSamples = ie_reflectance_samples
+ieScale = ie_scale
+ieScaleColumns = ie_scale_columns
 ieSpace2Amp = ie_space_to_amp
 ieUnitScaleFactor = ie_unit_scale_factor
 ieImageType = ie_image_type

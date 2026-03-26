@@ -1983,3 +1983,11 @@ covers `dpi2mperdot(...)`, `ieDpi2Mperdot(...)`, `ieN2MegaPixel(...)`,
 `space2sample(...)`, including the MATLAB default-microns scaling,
 truncated mean-to-Nyquist FFT support, centered sample geometry, and the
 obsolete zero-based inverse-spacing contract.
+That same broad `utility` family is smaller again: the adjacent
+`utility/numerical` helper slice now also covers
+`getMiddleMatrix(...)`, `ieClip(...)`, `ieHwhm2SD(...)`, `ieScale(...)`,
+`ieScaleColumns(...)`, `ieCXcorr(...)`, `ieFitLine(...)`, `isodd(...)`,
+`rotationMatrix3d(...)`, `unpadarray(...)`, `upperQuad2FullMatrix(...)`,
+and `vectorLength(...)`, with direct headless wrappers for centered
+matrix extraction, bounded clipping/scaling, Gaussian-width conversion,
+rotation matrices, quadrant mirroring, and NaN-tolerant vector norms.

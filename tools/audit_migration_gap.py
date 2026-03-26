@@ -731,6 +731,66 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB reflectance catalog helper is covered by the Python `ie_reflectance_list(...)` / `ieReflectanceList(...)` compatibility wrapper over the vendored surface datasets, including basis-file skipping and reflectance-range filtering.",
         "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
     },
+    "utility/numerical/getMiddleMatrix.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB centered matrix-extraction helper is covered by the Python `get_middle_matrix(...)` / `getMiddleMatrix(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/numerical/ieClip.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB clipping helper is covered by the Python `ie_clip(...)` / `ieClip(...)` compatibility wrapper in `pyisetcam.utils`, including default [0,1], symmetric single-bound, and upper-only clipping behavior.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/numerical/ieCXcorr.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB cross-correlation helper is covered directly by the Python `ie_cxcorr(...)` / `ieCXcorr(...)` compatibility wrapper in `pyisetcam.iso`.",
+        "module_hits": ["pyisetcam.iso", "pyisetcam.__init__"],
+    },
+    "utility/numerical/ieFitLine.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB least-squares line-fit helper is covered directly by the Python `ie_fit_line(...)` / `ieFitLine(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/numerical/ieHwhm2SD.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB half-width-half-max conversion helper is covered by the Python `ie_hwhm_to_sd(...)` / `ieHwhm2SD(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/numerical/ieScale.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB range-scaling helper is covered by the Python `ie_scale(...)` / `ieScale(...)` compatibility wrapper in `pyisetcam.utils`, including peak scaling and bounded remapping behavior.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/numerical/ieScaleColumns.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB per-column scaling helper is covered by the Python `ie_scale_columns(...)` / `ieScaleColumns(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/numerical/isodd.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB oddness helper is covered by the Python `isodd(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/numerical/rotationMatrix3d.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB 3D rotation helper is covered by the Python `rotation_matrix_3d(...)` / `rotationMatrix3d(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/numerical/unpadarray.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB padding-inverse helper is covered by the Python `unpadarray(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/numerical/upperQuad2FullMatrix.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB quadrant-mirroring helper is covered by the Python `upper_quad_to_full_matrix(...)` / `upperQuad2FullMatrix(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/numerical/vectorLength.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB vector-norm helper is covered by the Python `vector_length(...)` / `vectorLength(...)` compatibility wrapper in `pyisetcam.utils`, including NaN-as-zero behavior.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
     "utility/image/ieFindWaveIndex.m": {
         "status": "ported",
         "note": "The legacy MATLAB wavelength-membership helper is covered by the Python `ie_find_wave_index(...)` / `ieFindWaveIndex(...)` compatibility wrapper in `pyisetcam.utils`.",

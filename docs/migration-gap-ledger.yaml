@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-26T15:52:17.670195+00:00",
+  "generated_at": "2026-03-26T16:23:21.860732+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 45,
+      "headless_only": 42,
       "out_of_scope": 265,
       "parity": 709,
-      "partial": 207,
-      "ported": 217
+      "partial": 198,
+      "ported": 229
     },
     "kind_counts": {
       "api": 661,
@@ -19,17 +19,17 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 207,
-      "P2": 45,
-      "P3": 1191
+      "P1": 198,
+      "P2": 42,
+      "P3": 1203
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": -2,
+        "headless_only": -3,
         "out_of_scope": 0,
-        "parity": 1,
-        "partial": -8,
-        "ported": 9
+        "parity": 0,
+        "partial": -9,
+        "ported": 12
       },
       "kind_counts": {
         "api": 0,
@@ -40,9 +40,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -8,
-        "P2": -2,
-        "P3": 10
+        "P1": -9,
+        "P2": -3,
+        "P3": 12
       }
     },
     "family_summary": {
@@ -930,11 +930,11 @@
       "utility": {
         "total": 279,
         "by_status": {
-          "headless_only": 45,
+          "headless_only": 42,
           "out_of_scope": 1,
           "parity": 14,
-          "partial": 207,
-          "ported": 12
+          "partial": 198,
+          "ported": 24
         },
         "by_kind": {
           "gui": 1,
@@ -1005,14 +1005,14 @@
     "top_open_families": [
       {
         "family": "utility",
-        "open_entries": 252,
+        "open_entries": 240,
         "highest_open_priority": "P1",
         "by_status": {
-          "headless_only": 45,
+          "headless_only": 42,
           "out_of_scope": 1,
           "parity": 14,
-          "partial": 207,
-          "ported": 12
+          "partial": 198,
+          "ported": 24
         }
       },
       {
@@ -17861,31 +17861,31 @@
       "upstream_path": "utility/numerical/getMiddleMatrix.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB centered matrix-extraction helper is covered by the Python `get_middle_matrix(...)` / `getMiddleMatrix(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/numerical/ieCXcorr.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.iso",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.iso, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB cross-correlation helper is covered directly by the Python `ie_cxcorr(...)` / `ieCXcorr(...)` compatibility wrapper in `pyisetcam.iso`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/numerical/ieClip.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB clipping helper is covered by the Python `ie_clip(...)` / `ieClip(...)` compatibility wrapper in `pyisetcam.utils`, including default [0,1], symmetric single-bound, and upper-only clipping behavior.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/numerical/ieCompressData.m",
@@ -17901,21 +17901,21 @@
       "upstream_path": "utility/numerical/ieFitLine.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.parity",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB least-squares line-fit helper is covered directly by the Python `ie_fit_line(...)` / `ieFitLine(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/numerical/ieHwhm2SD.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB half-width-half-max conversion helper is covered by the Python `ie_hwhm_to_sd(...)` / `ieHwhm2SD(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/numerical/ieLineAlign.m",
@@ -17931,21 +17931,21 @@
       "upstream_path": "utility/numerical/ieScale.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB range-scaling helper is covered by the Python `ie_scale(...)` / `ieScale(...)` compatibility wrapper in `pyisetcam.utils`, including peak scaling and bounded remapping behavior.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/numerical/ieScaleColumns.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB per-column scaling helper is covered by the Python `ie_scale_columns(...)` / `ieScaleColumns(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/numerical/ieTikhonov.m",
@@ -17961,11 +17961,11 @@
       "upstream_path": "utility/numerical/isodd.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB oddness helper is covered by the Python `isodd(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/numerical/qinterp2.m",
@@ -17981,11 +17981,11 @@
       "upstream_path": "utility/numerical/rotationMatrix3d.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB 3D rotation helper is covered by the Python `rotation_matrix_3d(...)` / `rotationMatrix3d(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/numerical/unitLength.m",
@@ -18004,31 +18004,31 @@
       "upstream_path": "utility/numerical/unpadarray.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB padding-inverse helper is covered by the Python `unpadarray(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/numerical/upperQuad2FullMatrix.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB quadrant-mirroring helper is covered by the Python `upper_quad_to_full_matrix(...)` / `upperQuad2FullMatrix(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/numerical/vectorLength.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.color, pyisetcam.iso, pyisetcam.metrics",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB vector-norm helper is covered by the Python `vector_length(...)` / `vectorLength(...)` compatibility wrapper in `pyisetcam.utils`, including NaN-as-zero behavior.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/plots/fise_plotDefaults.m",

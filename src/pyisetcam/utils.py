@@ -867,6 +867,186 @@ def ie_data_list(
     raise ValueError(f"Unsupported ieDataList type: {data_type}")
 
 
+def get_middle_matrix(
+    m: Any,
+    sz: Any,
+) -> tuple[NDArray[np.float64], NDArray[np.int64]]:
+    """Mirror MATLAB getMiddleMatrix() centered extraction behavior."""
+
+    matrix = np.asarray(m, dtype=float)
+    size_array = np.asarray(matrix.shape, dtype=float)
+    center = _matlab_round(size_array / 2.0).astype(int)
+
+    half_sizes = np.asarray(sz, dtype=float).reshape(-1)
+    half_sizes = _matlab_round(half_sizes / 2.0).astype(int)
+    if half_sizes.size == 1:
+        half_sizes = np.array([half_sizes[0], half_sizes[0]], dtype=int)
+
+    row_min = max(1, int(center[0] - half_sizes[0]))
+    row_max = min(matrix.shape[0], int(center[0] + half_sizes[0]))
+    col_min = max(1, int(center[1] - half_sizes[1]))
+    col_max = min(matrix.shape[1], int(center[1] + half_sizes[1]))
+
+    row_slice = slice(row_min - 1, row_max)
+    col_slice = slice(col_min - 1, col_max)
+    if matrix.ndim >= 3:
+        middle = np.asarray(matrix[row_slice, col_slice, :], dtype=float)
+    else:
+        middle = np.asarray(matrix[row_slice, col_slice], dtype=float)
+    return middle, center
+
+
+def ie_clip(im: Any, lower_bound: Any | None = None, upper_bound: Any | None = None) -> NDArray[np.float64]:
+    """Mirror MATLAB ieClip() clipping conventions."""
+
+    clipped = np.asarray(im, dtype=float).copy()
+    if lower_bound is None and upper_bound is None:
+        lower = 0.0
+        upper = 1.0
+    elif upper_bound is None:
+        bound = abs(float(lower_bound))
+        lower = -bound
+        upper = bound
+    else:
+        lower = None if lower_bound is None else float(lower_bound)
+        upper = None if upper_bound is None else float(upper_bound)
+
+    if lower is not None:
+        clipped[clipped < lower] = lower
+    if upper is not None:
+        clipped[clipped > upper] = upper
+    return clipped
+
+
+def ie_hwhm_to_sd(h: float, g_dim: int = 2) -> float:
+    """Convert half-width-half-max to Gaussian standard deviation."""
+
+    if int(g_dim) == 1:
+        return float(h) / (2.0 * np.sqrt(np.log(2.0)))
+    if int(g_dim) == 2:
+        return float(h) / np.sqrt(2.0 * np.log(2.0))
+    raise ValueError(f"Not implemented for {g_dim} dimensional Gaussian.")
+
+
+def ie_scale(im: Any, b1: Any | None = None, b2: Any | None = None) -> tuple[NDArray[np.float64], float, float]:
+    """Mirror MATLAB ieScale() range and peak scaling behavior."""
+
+    data = np.asarray(im, dtype=float)
+    mx = float(np.max(data))
+    mn = float(np.min(data))
+
+    if b1 is not None and b2 is None:
+        scaled = np.asarray(data * (float(b1) / mx), dtype=float)
+        return scaled, mn, mx
+
+    if np.isclose(mx, mn):
+        normalized = np.zeros_like(data, dtype=float)
+    else:
+        normalized = (data - mn) / (mx - mn)
+
+    low = 0.0 if b1 is None else float(b1)
+    high = 1.0 if b2 is None else float(b2)
+    if low >= high:
+        raise ValueError("ieScale: bad bounds values.")
+    scaled = (high - low) * normalized + low
+    return np.asarray(scaled, dtype=float), mn, mx
+
+
+def ie_scale_columns(X: Any, b1: Any = 1, b2: Any | None = None) -> NDArray[np.float64]:
+    """Mirror MATLAB ieScaleColumns() by scaling each column independently."""
+
+    array = np.asarray(X, dtype=float)
+    scaled = np.zeros_like(array, dtype=float)
+    for column in range(array.shape[1]):
+        if b2 is None:
+            scaled[:, column] = ie_scale(array[:, column], b1)[0]
+        else:
+            scaled[:, column] = ie_scale(array[:, column], b1, b2)[0]
+    return scaled
+
+
+def isodd(x: Any) -> bool | NDArray[np.bool_]:
+    """Return whether values are odd, following MATLAB isodd() semantics."""
+
+    values = np.asarray(x)
+    result = np.mod(values, 2) != 0
+    if result.ndim == 0:
+        return bool(result)
+    return np.asarray(result, dtype=bool)
+
+
+def rotation_matrix_3d(angle_list: Any, scale: Any | None = None) -> NDArray[np.float64]:
+    """Mirror MATLAB rotationMatrix3d() axis-order and scaling behavior."""
+
+    angles = np.asarray(angle_list, dtype=float).reshape(-1)
+    if angles.size != 3:
+        raise ValueError("Must have 3 angles in the angle list.")
+
+    if scale is None:
+        scale_matrix = np.eye(3, dtype=float)
+    else:
+        scale_values = np.asarray(scale, dtype=float).reshape(-1)
+        if scale_values.size == 1:
+            scale_matrix = np.eye(3, dtype=float) * float(scale_values[0])
+        elif scale_values.size == 3:
+            scale_matrix = np.diag(scale_values.astype(float))
+        else:
+            raise ValueError("Scale must be a scalar or 1x3.")
+
+    tx, ty, tz = [float(value) for value in angles]
+    rot_x = np.array(
+        [[1.0, 0.0, 0.0], [0.0, np.cos(tx), -np.sin(tx)], [0.0, np.sin(tx), np.cos(tx)]],
+        dtype=float,
+    )
+    rot_y = np.array(
+        [[np.cos(ty), 0.0, -np.sin(ty)], [0.0, 1.0, 0.0], [np.sin(ty), 0.0, np.cos(ty)]],
+        dtype=float,
+    )
+    rot_z = np.array(
+        [[np.cos(tz), -np.sin(tz), 0.0], [np.sin(tz), np.cos(tz), 0.0], [0.0, 0.0, 1.0]],
+        dtype=float,
+    )
+    return rot_x @ rot_y @ rot_z @ scale_matrix
+
+
+def unpadarray(in_array: Any, unpad_size: Any) -> NDArray[np.float64]:
+    """Mirror MATLAB unpadarray() symmetric crop behavior."""
+
+    array = np.asarray(in_array, dtype=float)
+    padding = np.asarray(unpad_size, dtype=int).reshape(-1)
+    if padding.size < 2:
+        padding = np.array([padding[0], 0], dtype=int)
+    row_slice = slice(int(padding[0]), array.shape[0] - int(padding[0]))
+    col_slice = slice(int(padding[1]), array.shape[1] - int(padding[1]))
+    if array.ndim == 3:
+        return np.asarray(array[row_slice, col_slice, :], dtype=float)
+    return np.asarray(array[row_slice, col_slice], dtype=float)
+
+
+def upper_quad_to_full_matrix(upper_right: Any, n_rows: int, n_cols: int) -> NDArray[np.float64]:
+    """Mirror MATLAB upperQuad2FullMatrix() quadrant reflection rules."""
+
+    upper = np.asarray(upper_right, dtype=float)
+    _, cols = upper.shape
+    upper_left = np.fliplr(upper[:, 1:cols]) if isodd(n_cols) else np.fliplr(upper)
+    lower_right = np.flipud(upper[:-1, :]) if isodd(n_rows) else np.flipud(upper)
+    lower_left = np.flipud(upper_left[:-1, :]) if isodd(n_rows) else np.flipud(upper_left)
+    return np.asarray(np.block([[upper_left, upper], [lower_left, lower_right]]), dtype=float)
+
+
+def vector_length(m: Any, dim: int | None = None) -> float | NDArray[np.float64]:
+    """Mirror MATLAB vectorLength() with NaN-as-zero handling."""
+
+    values = np.asarray(m, dtype=float)
+    if values.size == 0:
+        return np.array([], dtype=float)
+    safe = values.copy()
+    safe[np.isnan(safe)] = 0.0
+    if dim is None:
+        return float(np.sqrt(np.dot(safe.reshape(-1), safe.reshape(-1))))
+    return np.sqrt(np.sum(np.square(safe), axis=int(dim) - 1))
+
+
 def ie_fit_line(
     x: NDArray[np.float64] | list[float] | tuple[float, ...],
     y: NDArray[np.float64] | list[float] | tuple[float, ...],
