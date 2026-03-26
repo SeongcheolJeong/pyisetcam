@@ -1962,3 +1962,9 @@ headless IP workflows are now counted directly against the current
 `imageIlluminantCorrection(...)`, and sRGB roundtrip regression surface,
 while the old standalone JPEG/DCT classroom helpers plus the GUI-heavy
 exploratory image scripts are explicitly treated as out of scope.
+The small `web` family is now closed too: `webData`, `webFlickr`,
+`webLOC`, `webPixabay`, and `webCreateThumbnails(...)` now have direct
+headless compatibility coverage for catalog search, remote image fetch,
+scene replay, and local thumbnail generation, while the scratch
+`dngImport.m` notebook is explicitly treated as out of scope because the
+supported DNG runtime path already lives under `ieDNGRead(...)`.

@@ -521,6 +521,36 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is a MATLAB asset-conversion script that produces the vendored GBRG MCC TIFF used by existing parity coverage, rather than a runtime API surface.",
         "module_hits": [],
     },
+    "web/dngImport.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is explicitly labeled a scratch DNG-import notebook and redirects callers to `ieDNGRead`-style helpers rather than exposing a maintained web/runtime API surface.",
+        "module_hits": ["pyisetcam.fileio"],
+    },
+    "web/webCreateThumbnails.m": {
+        "status": "ported",
+        "note": "The multispectral thumbnail helper is covered by the Python `webCreateThumbnails(...)` / `web_create_thumbnails(...)` wrapper, which replays `sceneFromFile(...)` plus `sceneSaveImage(...)` headlessly for local MAT scenes.",
+        "module_hits": ["pyisetcam.web", "pyisetcam.__init__"],
+    },
+    "web/webData.m": {
+        "status": "ported",
+        "note": "The JSON-backed scene-catalog helper is covered by the Python `webData` compatibility wrapper, including keyword search, thumbnail fetch, remote MAT download, and `sceneFromFile(...)` replay for the vendored catalog entries.",
+        "module_hits": ["pyisetcam.web", "pyisetcam.__init__"],
+    },
+    "web/webFlickr.m": {
+        "status": "ported",
+        "note": "The Flickr search helper is covered by the Python `webFlickr` compatibility wrapper, including search, image URL construction, image fetch, and display-scene replay through `sceneFromFile(...)`.",
+        "module_hits": ["pyisetcam.web", "pyisetcam.__init__"],
+    },
+    "web/webLOC.m": {
+        "status": "ported",
+        "note": "The Library of Congress search helper is covered by the Python `webLOC` compatibility wrapper, including result filtering, URL normalization, image fetch, and display-scene replay through `sceneFromFile(...)`.",
+        "module_hits": ["pyisetcam.web", "pyisetcam.__init__"],
+    },
+    "web/webPixabay.m": {
+        "status": "ported",
+        "note": "The Pixabay search helper is covered by the Python `webPixabay` compatibility wrapper, including search, preview or large-image URL access, image fetch, and display-scene replay through `sceneFromFile(...)`.",
+        "module_hits": ["pyisetcam.web", "pyisetcam.__init__"],
+    },
     "utility/file/ieImageType.m": {
         "status": "ported",
         "note": "The legacy MATLAB image-type probe is covered by the Python `ie_image_type(...)` / `ieImageType(...)` compatibility wrapper.",

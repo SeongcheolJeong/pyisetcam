@@ -105,6 +105,14 @@ from .fonts import (
     font_set,
     scene_from_font,
 )
+from .web import (
+    web_create_thumbnails,
+    webCreateThumbnails,
+    webData,
+    webFlickr,
+    webLOC,
+    webPixabay,
+)
 from .illuminant import (
     illuminant_create,
     illuminant_get,
@@ -888,6 +896,12 @@ __all__ = [
     "font_get",
     "font_set",
     "scene_from_font",
+    "webCreateThumbnails",
+    "webData",
+    "webFlickr",
+    "webLOC",
+    "webPixabay",
+    "web_create_thumbnails",
     "ensure_upstream_snapshot",
     "comparison_metrics",
     "correlated_color_temperature",
