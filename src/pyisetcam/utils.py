@@ -8,7 +8,8 @@ from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.ndimage import gaussian_filter, shift as ndi_shift, zoom
+from scipy.ndimage import gaussian_filter, map_coordinates, shift as ndi_shift, zoom
+from scipy.optimize import fmin
 from scipy.signal import convolve2d
 
 DEFAULT_WAVE = np.arange(400.0, 701.0, 10.0, dtype=float)
@@ -773,6 +774,8 @@ def _normalize_legacy_kwargs(args: tuple[Any, ...], kwargs: dict[str, Any]) -> d
     for index in range(0, len(args), 2):
         normalized[param_format(str(args[index]))] = args[index + 1]
     for key, value in kwargs.items():
+        if value is None:
+            continue
         normalized[param_format(str(key))] = value
     return normalized
 
@@ -1045,6 +1048,295 @@ def vector_length(m: Any, dim: int | None = None) -> float | NDArray[np.float64]
     if dim is None:
         return float(np.sqrt(np.dot(safe.reshape(-1), safe.reshape(-1))))
     return np.sqrt(np.sum(np.square(safe), axis=int(dim) - 1))
+
+
+def ffndgrid(
+    x: Any,
+    f: Any,
+    delta: Any | None = None,
+    limits: Any | None = None,
+    aver: Any | None = 1,
+) -> tuple[NDArray[np.float64], list[NDArray[np.float64]]]:
+    """Mirror MATLAB ffndgrid() for headless uneven-sample gridding."""
+
+    x_array = np.asarray(x, dtype=float)
+    was_row_vector = x_array.ndim == 2 and x_array.shape[0] == 1
+    if x_array.ndim == 1:
+        x_array = x_array.reshape(-1, 1)
+    elif x_array.ndim == 2 and x_array.shape[0] == 1:
+        x_array = x_array.reshape(-1, 1)
+    elif x_array.ndim != 2:
+        raise ValueError("x must be a vector or an N x D coordinate matrix.")
+
+    n_samples, n_dims = x_array.shape
+    f_array = np.asarray(f, dtype=float).reshape(-1)
+    if f_array.size == 1:
+        f_array = np.repeat(f_array, n_samples)
+    elif f_array.size != n_samples:
+        raise ValueError("The length of f must equal size(x,1).")
+
+    dx = np.full(n_dims, -75.0, dtype=float)
+    pad = 0.0
+    xyz = np.zeros((2 * n_dims) + 3, dtype=float)
+    xyz[0 : 2 * n_dims : 2] = np.min(x_array, axis=0)
+    xyz[1 : 2 * n_dims : 2] = np.max(x_array, axis=0)
+    xyz[-3] = float(np.min(f_array))
+    xyz[-2] = float(np.max(f_array))
+    xyz[-1] = 0.0
+
+    if limits is not None:
+        limit_array = np.asarray(limits, dtype=float).reshape(-1)
+        count = min(limit_array.size, xyz.size)
+        valid = ~np.isnan(limit_array[:count])
+        xyz[:count][valid] = limit_array[:count][valid]
+
+    if delta is not None:
+        delta_array = np.asarray(delta).reshape(-1)
+        if delta_array.size == 1:
+            delta_array = np.repeat(delta_array, n_dims)
+        delta_array = delta_array[: min(delta_array.size, n_dims)]
+        valid = ~(np.isnan(np.real(delta_array)) | (np.real(delta_array) == 0))
+        if np.any(valid):
+            dx[: delta_array.size][valid] = np.real(delta_array)[valid]
+            pad = float(np.imag(delta_array[0]))
+
+    x_lower = xyz[0 : 2 * n_dims : 2]
+    x_upper = xyz[1 : 2 * n_dims : 2]
+    f_lower = float(xyz[-3])
+    f_upper = float(xyz[-2])
+    min_count = float(xyz[-1])
+
+    negative = dx < 0.0
+    if np.any(negative):
+        if not np.allclose(dx[negative], _matlab_round(dx[negative])):
+            raise ValueError("Some of Nx1,...NxD in delta are not an integer.")
+        dx[negative] = (x_upper[negative] - x_lower[negative]) / (np.abs(dx[negative]) - 1.0)
+
+    bin_index = _matlab_round((x_array - x_lower.reshape(1, -1)) / dx.reshape(1, -1)).astype(int) + 1
+
+    xvec: list[NDArray[np.float64]] = []
+    grid_shape = np.ones(max(n_dims, 2), dtype=int)
+    for dim in range(n_dims):
+        step = float(dx[dim])
+        count = int(np.floor(((x_upper[dim] - x_lower[dim]) / step) + 0.5)) + 1
+        axis = x_lower[dim] + (np.arange(count, dtype=float) * step)
+        xvec.append(np.asarray(axis, dtype=float))
+        grid_shape[dim] = axis.size
+
+    valid = np.all((bin_index >= 1) & (bin_index <= grid_shape[:n_dims].reshape(1, -1)), axis=1)
+    valid &= (f_array >= f_lower) & (f_array <= f_upper)
+    bin_index = bin_index[valid, :]
+    f_array = f_array[valid]
+    n_valid = int(bin_index.shape[0])
+
+    if n_valid == 0:
+        empty = np.zeros(tuple(grid_shape[:n_dims]), dtype=float)
+        if n_dims == 2:
+            empty = empty.T
+        elif n_dims == 3:
+            empty = np.transpose(empty, (1, 0, 2))
+        if was_row_vector:
+            empty = empty.reshape(1, -1)
+        return np.asarray(empty, dtype=float), xvec
+
+    accum = np.zeros(tuple(grid_shape[:n_dims]), dtype=float)
+    counts = np.zeros(tuple(grid_shape[:n_dims]), dtype=float)
+    zero_based = tuple((bin_index - 1).T)
+    np.add.at(accum, zero_based, f_array)
+    np.add.at(counts, zero_based, 1.0)
+
+    if min_count != 0.0 or bool(aver):
+        if min_count < 0.0:
+            min_count = -min_count * n_valid
+        if min_count != 0.0:
+            reject = counts <= min_count
+            accum[reject] = 0.0
+            counts[reject] = 0.0
+        if bool(aver):
+            nonzero = counts > 0.0
+            accum[nonzero] = accum[nonzero] / counts[nonzero]
+
+    if pad != 0.0:
+        accum[counts == 0.0] = pad
+
+    if was_row_vector:
+        output = accum.reshape(1, -1)
+    else:
+        output = accum.reshape(tuple(grid_shape[:n_dims]))
+        if n_dims == 2:
+            output = output.T
+        elif n_dims == 3:
+            output = np.transpose(output, (1, 0, 2))
+    return np.asarray(output, dtype=float), xvec
+
+
+def ie_compress_data(
+    data: Any,
+    bit_depth: int,
+    mn: float | None = None,
+    mx: float | None = None,
+) -> tuple[NDArray[np.uint16] | NDArray[np.uint32], float, float]:
+    """Mirror MATLAB ieCompressData() quantized compression behavior."""
+
+    data_array = np.asarray(data, dtype=float)
+    min_value = float(np.min(data_array)) if mn is None else float(mn)
+    max_value = float(np.max(data_array)) if mx is None else float(mx)
+    if min_value > max_value:
+        raise ValueError("Min/Max error.")
+
+    max_compress = (2**int(bit_depth)) - 1
+    if np.isclose(min_value, max_value):
+        compressed_values = np.zeros_like(data_array, dtype=float)
+    else:
+        scale = max_value - min_value
+        compressed_values = _matlab_round(max_compress * (data_array - min_value) / scale)
+
+    if int(bit_depth) == 32:
+        return np.asarray(compressed_values, dtype=np.uint32), min_value, max_value
+    if int(bit_depth) == 16:
+        return np.asarray(compressed_values, dtype=np.uint16), min_value, max_value
+    raise ValueError("Unknown bit depth.")
+
+
+def ie_line_align(D1: Any, D2: Any) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Mirror MATLAB ieLineAlign() scale-and-shift alignment."""
+
+    x1 = np.asarray(D1["x"], dtype=float).reshape(-1)
+    y1 = np.asarray(D1["y"], dtype=float).reshape(-1)
+    x2 = np.asarray(D2["x"], dtype=float).reshape(-1)
+    y2 = np.asarray(D2["y"], dtype=float).reshape(-1)
+
+    def _estimate(p: NDArray[np.float64]) -> tuple[float, NDArray[np.float64]]:
+        transformed = np.asarray(p[0], dtype=float) * (x2 - float(p[1]))
+        order = np.argsort(transformed)
+        transformed = transformed[order]
+        observed = y2[order]
+        unique_x, unique_index = np.unique(transformed, return_index=True)
+        observed = observed[unique_index]
+        est = np.interp(x1, unique_x, observed, left=np.nan, right=np.nan)
+        valid = ~np.isnan(est)
+        return float(np.sum((y1[valid] - est[valid]) ** 2)), est
+
+    start = np.array([1.0, 0.0], dtype=float)
+    est_p = np.asarray(fmin(lambda p: _estimate(np.asarray(p, dtype=float))[0], start, disp=False), dtype=float)
+    _, est_y = _estimate(est_p)
+    return est_p, np.asarray(est_y, dtype=float)
+
+
+def ie_tikhonov(
+    A: Any,
+    b: Any,
+    *args: Any,
+    minnorm: float = 0.0,
+    smoothness: float = 0.0,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Mirror MATLAB ieTikhonov() ridge and smoothness regularization."""
+
+    options = {"minnorm": float(minnorm), "smoothness": float(smoothness)}
+    if len(args) % 2 != 0:
+        raise ValueError("Legacy key/value arguments must come in pairs.")
+    for index in range(0, len(args), 2):
+        options[param_format(str(args[index]))] = float(args[index + 1])
+    lambda1 = float(options.get("minnorm", 0.0))
+    lambda2 = float(options.get("smoothness", 0.0))
+    matrix = np.asarray(A, dtype=float)
+    vector = np.asarray(b, dtype=float).reshape(-1)
+    d2 = np.diff(np.eye(matrix.shape[1], dtype=float), 2, axis=0)
+    system = (matrix.T @ matrix) + (lambda1 * np.eye(matrix.shape[1], dtype=float)) + (lambda2 * (d2.T @ d2))
+    rhs = matrix.T @ vector
+    x = np.linalg.solve(system, rhs)
+    x_ols = np.linalg.lstsq(matrix, vector, rcond=None)[0]
+    return np.asarray(x, dtype=float), np.asarray(x_ols, dtype=float)
+
+
+def qinterp2(
+    X: Any,
+    Y: Any,
+    Z: Any,
+    xi: Any,
+    yi: Any,
+    methodflag: int | None = None,
+) -> NDArray[np.float64]:
+    """Mirror MATLAB qinterp2() for nearest, triangular, and bilinear interpolation."""
+
+    xi_array = np.asarray(xi, dtype=float)
+    yi_array = np.asarray(yi, dtype=float)
+    if xi_array.shape != yi_array.shape:
+        if xi_array.ndim == 1 and yi_array.ndim == 1:
+            xi_array, yi_array = np.meshgrid(xi_array, yi_array)
+        else:
+            raise ValueError(f"{'xi'} and {'yi'} must be equal size")
+
+    x_grid = np.asarray(X, dtype=float)
+    y_grid = np.asarray(Y, dtype=float)
+    if x_grid.ndim == 1 and y_grid.ndim == 1:
+        x_grid, y_grid = np.meshgrid(x_grid, y_grid)
+    if x_grid.shape != y_grid.shape:
+        raise ValueError(f"{'X'} and {'Y'} must have the same size")
+
+    z_grid = np.asarray(Z, dtype=float)
+    library_rows, library_cols = x_grid.shape
+    method = 2 if methodflag is None else int(methodflag)
+
+    ndx = 1.0 / float(x_grid[0, 1] - x_grid[0, 0])
+    ndy = 1.0 / float(y_grid[1, 0] - y_grid[0, 0])
+    xi_index = (xi_array - float(x_grid[0, 0])) * ndx
+    yi_index = (yi_array - float(y_grid[0, 0])) * ndy
+    zi = np.full(xi_index.shape, np.nan, dtype=float)
+
+    if method == 0:
+        rxi = _matlab_round(xi_index).astype(int) + 1
+        ryi = _matlab_round(yi_index).astype(int) + 1
+        valid = (
+            (rxi > 0)
+            & (rxi <= library_cols)
+            & np.isfinite(rxi)
+            & (ryi > 0)
+            & (ryi <= library_rows)
+            & np.isfinite(ryi)
+        )
+        zi[valid] = z_grid[ryi[valid] - 1, rxi[valid] - 1]
+        return zi
+
+    fxi = np.floor(xi_index).astype(int) + 1
+    fyi = np.floor(yi_index).astype(int) + 1
+    dfxi = xi_index - fxi + 1
+    dfyi = yi_index - fyi + 1
+    valid = (
+        (fxi > 0)
+        & (fxi < library_cols)
+        & np.isfinite(fxi)
+        & (fyi > 0)
+        & (fyi < library_rows)
+        & np.isfinite(fyi)
+    )
+
+    if method == 1:
+        compare = dfxi >= dfyi
+        flag1 = valid & compare
+        flag2 = valid & ~compare
+        zi[flag1] = (
+            z_grid[fyi[flag1] - 1, fxi[flag1] - 1] * (1.0 - dfxi[flag1])
+            + z_grid[fyi[flag1] - 1, fxi[flag1]] * (dfxi[flag1] - dfyi[flag1])
+            + z_grid[fyi[flag1], fxi[flag1]] * dfyi[flag1]
+        )
+        zi[flag2] = (
+            z_grid[fyi[flag2] - 1, fxi[flag2] - 1] * (1.0 - dfyi[flag2])
+            + z_grid[fyi[flag2], fxi[flag2] - 1] * (dfyi[flag2] - dfxi[flag2])
+            + z_grid[fyi[flag2], fxi[flag2]] * dfxi[flag2]
+        )
+        return zi
+
+    if method == 2:
+        zi[valid] = (
+            z_grid[fyi[valid] - 1, fxi[valid] - 1] * (1.0 - dfxi[valid]) * (1.0 - dfyi[valid])
+            + z_grid[fyi[valid] - 1, fxi[valid]] * dfxi[valid] * (1.0 - dfyi[valid])
+            + z_grid[fyi[valid], fxi[valid] - 1] * (1.0 - dfxi[valid]) * dfyi[valid]
+            + z_grid[fyi[valid], fxi[valid]] * dfxi[valid] * dfyi[valid]
+        )
+        return zi
+
+    raise ValueError("Invalid method flag")
 
 
 def ie_fit_line(

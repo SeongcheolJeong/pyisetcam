@@ -8,14 +8,17 @@ from pyisetcam import (
     HalfToneImage,
     convolvecirc,
     dpi2mperdot,
+    ffndgrid,
     getMiddleMatrix,
     ieCmap,
     ieClip,
+    ieCompressData,
     ieCropRect,
     ieDataList,
     ieDpi2Mperdot,
     ieFindWaveIndex,
     ieHwhm2SD,
+    ieLineAlign,
     ieLightList,
     ieLUTDigital,
     ieLUTInvert,
@@ -54,6 +57,7 @@ from pyisetcam import (
     sceneCreate,
     sceneGet,
     space2sample,
+    qinterp2,
     unpadarray,
     upperQuad2FullMatrix,
     vectorLength,
@@ -63,17 +67,20 @@ from pyisetcam.utils import (
     blackbody,
     convolve_circ,
     energy_to_quanta,
+    ffndgrid as ffndgrid_fn,
     floyd_steinberg,
     get_middle_matrix,
     half_tone_image,
     ie_cmap,
     ie_clip,
+    ie_compress_data,
     ie_crop_rect,
     ie_data_list,
     ie_dpi2_mperdot,
     ie_fit_line,
     ie_find_wave_index,
     ie_hwhm_to_sd,
+    ie_line_align,
     ie_light_list,
     ie_lut_digital,
     ie_lut_invert,
@@ -106,6 +113,7 @@ from pyisetcam.utils import (
     image_circular,
     image_contrast,
     param_format,
+    qinterp2 as qinterp2_fn,
     quanta_to_energy,
     rgb_to_dac,
     rgb_to_xw_format,
@@ -113,6 +121,7 @@ from pyisetcam.utils import (
     sample2space as sample2space_fn,
     space2sample as space2sample_fn,
     dpi2mperdot as dpi2mperdot_fn,
+    ie_tikhonov,
     unpadarray as unpadarray_fn,
     upper_quad_to_full_matrix,
     vector_length,
@@ -411,6 +420,117 @@ def test_numerical_helper_wrappers_match_matlab_rotation_quadrant_and_oddness_al
 def test_ie_hwhm_to_sd_matches_matlab_formulas_alias() -> None:
     assert ie_hwhm_to_sd(10.0, 1) == pytest.approx(10.0 / (2.0 * np.sqrt(np.log(2.0))))
     assert ieHwhm2SD(10.0, 2) == pytest.approx(10.0 / np.sqrt(2.0 * np.log(2.0)))
+
+
+def test_ffndgrid_matches_average_and_axis_orientation() -> None:
+    x = np.array(
+        [
+            [0.0, 0.0],
+            [0.0, 1.0],
+            [1.0, 0.0],
+            [1.0, 1.0],
+            [1.0, 1.0],
+        ],
+        dtype=float,
+    )
+    f = np.array([1.0, 2.0, 3.0, 4.0, 6.0], dtype=float)
+
+    grid, axes = ffndgrid_fn(x, f, [-2, -2], None, 1)
+    alias_grid, alias_axes = ffndgrid(x, f, [-2, -2], None, 1)
+
+    expected = np.array([[1.0, 3.0], [2.0, 5.0]], dtype=float)
+    assert np.array_equal(grid, expected)
+    assert np.array_equal(alias_grid, expected)
+    assert np.array_equal(axes[0], np.array([0.0, 1.0], dtype=float))
+    assert np.array_equal(axes[1], np.array([0.0, 1.0], dtype=float))
+    assert np.array_equal(alias_axes[0], axes[0])
+    assert np.array_equal(alias_axes[1], axes[1])
+
+
+def test_ie_compress_data_matches_uint_quantization_alias() -> None:
+    data = np.array([[[0.0], [0.5]], [[1.0], [0.25]]], dtype=float)
+
+    compressed16, mn16, mx16 = ie_compress_data(data, 16)
+    alias16, alias_mn16, alias_mx16 = ieCompressData(data, 16)
+    compressed32, _, _ = ie_compress_data(data, 32)
+
+    expected16 = np.array([[[0], [32768]], [[65535], [16384]]], dtype=np.uint16)
+    expected32 = np.array([[[0], [2147483648]], [[4294967295], [1073741824]]], dtype=np.uint32)
+    assert mn16 == pytest.approx(0.0)
+    assert mx16 == pytest.approx(1.0)
+    assert alias_mn16 == pytest.approx(mn16)
+    assert alias_mx16 == pytest.approx(mx16)
+    assert np.array_equal(compressed16, expected16)
+    assert np.array_equal(alias16, expected16)
+    assert np.array_equal(compressed32, expected32)
+
+
+def test_ie_line_align_recovers_shift_scale_alias() -> None:
+    def func(values: np.ndarray) -> np.ndarray:
+        return 0.3 * values**2 + 1.2 * values - 0.5
+
+    d1 = {"x": np.linspace(-1.0, 1.0, 81, dtype=float)}
+    d1["y"] = func(d1["x"])
+    true_scale = 0.8
+    true_shift = 0.1
+    d2 = {"x": np.linspace(-2.0, 2.0, 161, dtype=float)}
+    d2["y"] = func(true_scale * (d2["x"] - true_shift))
+
+    estimated, est_y = ie_line_align(d1, d2)
+    alias_estimated, alias_est_y = ieLineAlign(d1, d2)
+
+    valid = ~np.isnan(est_y)
+    assert estimated[0] == pytest.approx(true_scale, rel=1e-2, abs=1e-2)
+    assert estimated[1] == pytest.approx(true_shift, rel=1e-2, abs=1e-2)
+    assert np.allclose(est_y[valid], d1["y"][valid], atol=1e-4)
+    assert np.allclose(alias_estimated, estimated, atol=1e-6)
+    assert np.allclose(alias_est_y[valid], est_y[valid], atol=1e-6)
+
+
+def test_ie_tikhonov_matches_closed_form_and_lstsq() -> None:
+    matrix = np.array(
+        [
+            [1.0, 0.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [1.0, 1.0, 1.0],
+            [1.0, 2.0, 1.0],
+        ],
+        dtype=float,
+    )
+    vector = np.array([1.0, 2.0, 2.5, 3.0], dtype=float)
+    x, x_ols = ie_tikhonov(matrix, vector, "minnorm", 0.5, "smoothness", 0.25)
+
+    d2 = np.diff(np.eye(matrix.shape[1], dtype=float), 2, axis=0)
+    expected = np.linalg.solve(
+        (matrix.T @ matrix) + (0.5 * np.eye(matrix.shape[1], dtype=float)) + (0.25 * (d2.T @ d2)),
+        matrix.T @ vector,
+    )
+    expected_ols = np.linalg.lstsq(matrix, vector, rcond=None)[0]
+
+    assert np.allclose(x, expected)
+    assert np.allclose(x_ols, expected_ols)
+
+
+def test_qinterp2_matches_nearest_triangle_and_bilinear_alias() -> None:
+    x = np.array([0.0, 1.0, 2.0], dtype=float)
+    y = np.array([0.0, 1.0, 2.0], dtype=float)
+    X, Y = np.meshgrid(x, y)
+    Z = X + (10.0 * Y)
+
+    query_x = np.array([0.5, 1.5, 3.0], dtype=float)
+    query_y = np.array([0.5, 1.5, 0.5], dtype=float)
+
+    nearest = qinterp2_fn(X, Y, Z, query_x, query_y, 0)
+    triangle = qinterp2_fn(X, Y, Z, query_x, query_y, 1)
+    bilinear = qinterp2_fn(X, Y, Z, query_x, query_y, 2)
+
+    assert np.allclose(nearest[:2], np.array([11.0, 22.0], dtype=float))
+    assert np.isnan(nearest[2])
+    assert np.allclose(triangle[:2], np.array([5.5, 16.5], dtype=float))
+    assert np.isnan(triangle[2])
+    assert np.allclose(bilinear[:2], np.array([5.5, 16.5], dtype=float))
+    assert np.isnan(bilinear[2])
+    assert np.allclose(qinterp2(X, Y, Z, query_x, query_y, 2), bilinear, equal_nan=True)
 
 
 def test_ie_fit_line_matches_matlab_one_line_and_multiple_lines() -> None:

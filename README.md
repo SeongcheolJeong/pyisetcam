@@ -1991,3 +1991,10 @@ That same broad `utility` family is smaller again: the adjacent
 and `vectorLength(...)`, with direct headless wrappers for centered
 matrix extraction, bounded clipping/scaling, Gaussian-width conversion,
 rotation matrices, quadrant mirroring, and NaN-tolerant vector norms.
+That same `utility/numerical` family is now closed too: the remaining
+tail is covered by direct headless wrappers for `ffndgrid(...)`,
+`ieCompressData(...)`, `ieLineAlign(...)`, `ieTikhonov(...)`, and
+`qinterp2(...)`, which handle uneven-sample gridding, uint16/uint32 data
+compression, shift-and-scale line alignment, ridge-plus-smoothness
+regularization, and nearest/triangular/bilinear 2-D interpolation
+without relying on MATLAB figures or toolbox state.

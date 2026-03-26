@@ -776,6 +776,31 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB 3D rotation helper is covered by the Python `rotation_matrix_3d(...)` / `rotationMatrix3d(...)` compatibility wrapper in `pyisetcam.utils`.",
         "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
     },
+    "utility/numerical/ffndgrid.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB uneven-sample gridding helper is covered by the Python `ffndgrid(...)` compatibility wrapper in `pyisetcam.utils`, including averaged bin filling, negative-grid-count spacing, and MATLAB meshgrid orientation for 2-D outputs.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/numerical/ieCompressData.m": {
+        "status": "ported",
+        "note": "The deprecated MATLAB quantization helper is covered by the Python `ie_compress_data(...)` / `ieCompressData(...)` compatibility wrapper in `pyisetcam.utils`, including uint16 and uint32 compression paths.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/numerical/ieLineAlign.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB line-alignment helper is covered by the Python `ie_line_align(...)` / `ieLineAlign(...)` compatibility wrapper in `pyisetcam.utils`, using the same shift-and-scale interpolation objective.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/numerical/ieTikhonov.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB ridge and smoothness regularizer is covered by the Python `ie_tikhonov(...)` / `ieTikhonov(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/numerical/qinterp2.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB fast 2-D interpolation helper is covered by the Python `qinterp2(...)` compatibility wrapper in `pyisetcam.utils`, including nearest-neighbor, triangular, and bilinear modes.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
     "utility/numerical/unpadarray.m": {
         "status": "ported",
         "note": "The legacy MATLAB padding-inverse helper is covered by the Python `unpadarray(...)` compatibility wrapper in `pyisetcam.utils`.",
