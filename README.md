@@ -2038,3 +2038,9 @@ the remaining files are MATLAB batch `publish(...)` notebooks for
 generating local HTML or PDF artifacts from script and tutorial
 directories, which is documentation-build behavior rather than a
 supported pyisetcam runtime API.
+The neighboring `utility/video` family is now closed as audit-only scope
+too: the remaining `ieMovie.m` helper is a generic MATLAB figure/video
+writer built around `imagesc`, `drawnow`, `getframe`, and `VideoWriter`,
+while the supported pyisetcam runtime already handles object-pipeline
+animation through higher-level headless helpers such as
+`scene_make_video(...)` and `oi_preview_video(...)`.

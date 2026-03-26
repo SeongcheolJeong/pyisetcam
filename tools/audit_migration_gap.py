@@ -726,6 +726,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is a MATLAB batch publishing notebook that runs `publish(...)` over tutorial directories to generate local HTML or PDF artifacts, not a supported pyisetcam runtime surface.",
         "module_hits": [],
     },
+    "utility/video/ieMovie.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a generic MATLAB figure or video writer for array movies, built around `axes`, `imagesc`, `drawnow`, `getframe`, and `VideoWriter`, while the supported pyisetcam runtime already handles object-pipeline animation through higher-level headless helpers such as `scene_make_video(...)` and `oi_preview_video(...)`.",
+        "module_hits": [],
+    },
     "utility/xml/ieStruct2XML.m": {
         "status": "ported",
         "note": "The legacy MATLAB XML writer is covered by the Python `ie_struct2xml(...)` / `ieStruct2XML(...)` compatibility wrapper, including MATLAB-style `_dash_`, `_colon_`, and `_dot_` name escaping plus nested repeated-element replay.",

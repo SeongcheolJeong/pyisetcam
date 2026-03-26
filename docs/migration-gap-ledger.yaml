@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-03-26T20:03:31.388993+00:00",
+  "generated_at": "2026-03-26T20:16:52.782269+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 38,
-      "out_of_scope": 280,
+      "out_of_scope": 281,
       "parity": 712,
-      "partial": 156,
+      "partial": 155,
       "ported": 257
     },
     "kind_counts": {
@@ -19,16 +19,16 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 156,
+      "P1": 155,
       "P2": 38,
-      "P3": 1249
+      "P3": 1250
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
-        "out_of_scope": 2,
+        "out_of_scope": 1,
         "parity": 0,
-        "partial": -2,
+        "partial": -1,
         "ported": 0
       },
       "kind_counts": {
@@ -40,9 +40,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -2,
+        "P1": -1,
         "P2": 0,
-        "P3": 2
+        "P3": 1
       }
     },
     "family_summary": {
@@ -931,9 +931,9 @@
         "total": 279,
         "by_status": {
           "headless_only": 38,
-          "out_of_scope": 16,
+          "out_of_scope": 17,
           "parity": 16,
-          "partial": 156,
+          "partial": 155,
           "ported": 53
         },
         "by_kind": {
@@ -1005,13 +1005,13 @@
     "top_open_families": [
       {
         "family": "utility",
-        "open_entries": 194,
+        "open_entries": 193,
         "highest_open_priority": "P1",
         "by_status": {
           "headless_only": 38,
-          "out_of_scope": 16,
+          "out_of_scope": 17,
           "parity": 16,
-          "partial": 156,
+          "partial": 155,
           "ported": 53
         }
       },
@@ -19431,11 +19431,11 @@
       "upstream_path": "utility/video/ieMovie.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a generic MATLAB figure or video writer for array movies, built around `axes`, `imagesc`, `drawnow`, `getframe`, and `VideoWriter`, while the supported pyisetcam runtime already handles object-pipeline animation through higher-level headless helpers such as `scene_make_video(...)` and `oi_preview_video(...)`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/xml/ieStruct2XML.m",
