@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-26T11:32:41.959553+00:00",
+  "generated_at": "2026-03-26T11:48:29.342589+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 46,
       "missing": 21,
-      "out_of_scope": 246,
-      "parity": 698,
-      "partial": 231,
+      "out_of_scope": 247,
+      "parity": 699,
+      "partial": 229,
       "ported": 201
     },
     "kind_counts": {
@@ -21,8 +21,8 @@
     },
     "priority_counts": {
       "P1": 217,
-      "P2": 81,
-      "P3": 1145
+      "P2": 79,
+      "P3": 1147
     },
     "delta_from_previous": {
       "status_counts": {
@@ -129,12 +129,13 @@
       "data/images": {
         "total": 2,
         "by_status": {
-          "partial": 2
+          "out_of_scope": 1,
+          "parity": 1
         },
         "by_kind": {
           "asset": 2
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "data/lens": {
         "total": 4,
@@ -1059,14 +1060,6 @@
         }
       },
       {
-        "family": "data/images",
-        "open_entries": 2,
-        "highest_open_priority": "P2",
-        "by_status": {
-          "partial": 2
-        }
-      },
-      {
         "family": "data/scenes",
         "open_entries": 2,
         "highest_open_priority": "P2",
@@ -1106,6 +1099,16 @@
           "out_of_scope": 3,
           "parity": 11,
           "ported": 2
+        }
+      },
+      {
+        "family": "color",
+        "open_entries": 0,
+        "highest_open_priority": "P3",
+        "by_status": {
+          "out_of_scope": 1,
+          "parity": 40,
+          "ported": 3
         }
       }
     ],
@@ -2414,11 +2417,16 @@
       "upstream_path": "data/images/faces/s_dataFaces.m",
       "family": "data/images",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.scene, pyisetcam.fileio, pyisetcam.camera, pyisetcam.parity",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_scene.py",
+        "tests/unit/test_fileio.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB download and visualization notebook for spectral face assets fetched through `ieWebGet`, not a reusable headless runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/lens/s_closestFocalDistance.m",
@@ -19504,11 +19512,17 @@
       "upstream_path": "data/images/",
       "family": "data/images",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "pyisetcam.__init__, pyisetcam.camera, pyisetcam.color, pyisetcam.description",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "parity",
+      "python_surface": "pyisetcam.scene, pyisetcam.fileio, pyisetcam.camera, pyisetcam.parity",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_scene.py",
+        "tests/unit/test_fileio.py",
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
+      ],
+      "notes": "The vendored image bundle is already exercised broadly by the current headless runtime through `sceneFromFile(...)`, raw-image and multispectral import paths, camera scene loading, and focused unit or parity coverage over RGB, raw DNG, and multispectral scene assets such as StuffedAnimals, Feng Office, eagle, faceMale, and MCC-centered.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/lens/",

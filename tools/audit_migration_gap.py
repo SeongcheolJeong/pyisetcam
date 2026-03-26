@@ -55,6 +55,7 @@ FAMILY_SURFACE_MAP = {
         "pyisetcam.sensor",
         "pyisetcam.optics",
     ],
+    "data/images": ["pyisetcam.scene", "pyisetcam.fileio", "pyisetcam.camera", "pyisetcam.parity"],
     "data/lens": ["pyisetcam.optics"],
     "data/lights": ["pyisetcam.assets", "pyisetcam.color", "pyisetcam.illuminant", "pyisetcam.scene"],
     "data/optics": ["pyisetcam.assets", "pyisetcam.optics", "pyisetcam.utils"],
@@ -122,6 +123,7 @@ FAMILY_TEST_MAP = {
     "camera": ["tests/unit/test_pipeline.py"],
     "color": ["tests/unit/test_pipeline.py", "tests/unit/test_metrics.py"],
     "data/human": ["tests/unit/test_human.py", "tests/unit/test_pipeline.py", "tests/unit/test_ip.py"],
+    "data/images": ["tests/unit/test_pipeline.py", "tests/unit/test_scene.py", "tests/unit/test_fileio.py", "tests/parity/test_parity_harness.py"],
     "data/lens": ["tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],
     "data/lights": ["tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],
     "data/optics": ["tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],
@@ -263,6 +265,16 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
     "data/fluorescence/": {
         "status": "out_of_scope",
         "note": "The pinned upstream snapshot only vendors fluorophore MAT assets, while the corresponding fluorescence-model helpers such as `fluorescenceSignal` and `fluorescenceWeights` are not part of the supported ISETCam migration target; the bundle is therefore tracked as external fluorescence-model data rather than active headless debt.",
+        "module_hits": [],
+    },
+    "data/images/": {
+        "status": "parity",
+        "note": "The vendored image bundle is already exercised broadly by the current headless runtime through `sceneFromFile(...)`, raw-image and multispectral import paths, camera scene loading, and focused unit or parity coverage over RGB, raw DNG, and multispectral scene assets such as StuffedAnimals, Feng Office, eagle, faceMale, and MCC-centered.",
+        "module_hits": ["pyisetcam.scene", "pyisetcam.fileio", "pyisetcam.camera", "pyisetcam.parity"],
+    },
+    "data/images/faces/s_dataFaces.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB download and visualization notebook for spectral face assets fetched through `ieWebGet`, not a reusable headless runtime API surface.",
         "module_hits": [],
     },
     "data/safetyStandards/": {

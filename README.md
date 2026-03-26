@@ -1855,6 +1855,12 @@ the vendored hazard spectra are already exercised by the current
 `humanUVSafety(...)` path, while the old MATLAB EN62471 transcription
 notebook that produced those MAT files is explicitly treated as provenance
 outside the headless migration target.
+The neighboring `data/images` bundle is now counted directly too: the
+vendored RGB, raw, and multispectral image assets are already exercised
+through the current `sceneFromFile(...)`, raw-image import, and camera or
+parity workflows, while the old spectral-face download notebook is
+explicitly treated as a provenance demo outside the headless migration
+target.
 That same utility-image slice now also covers `ieCmap(...)`,
 `ieCropRect(...)`, `ieLUTDigital(...)`, `ieLUTInvert(...)`, and
 `ieLUTLinear(...)`, with direct regressions for the simple MATLAB color-map
