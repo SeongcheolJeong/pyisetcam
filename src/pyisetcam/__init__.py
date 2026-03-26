@@ -80,7 +80,9 @@ from .fileio import (
     ie_dng_simple_info,
     ie_image_type,
     ie_scp,
+    ie_struct2xml,
     ie_web_get,
+    ie_xml2struct,
     ie_xl2_color_filter,
     ie_save_color_filter,
     ie_save_multispectral_image,
@@ -1292,9 +1294,12 @@ __all__ = [
     "ieSaveColorFilter",
     "ieSaveMultiSpectralImage",
     "ieSaveSpectralFile",
+    "ieStruct2XML",
     "ieTempfile",
     "ieVarInFile",
+    "ieXML2struct",
     "ie_web_get",
+    "ie_xml2struct",
     "ie_xl2_color_filter",
     "imageFlip",
     "imageIncreaseImageRGBSize",
@@ -1334,6 +1339,7 @@ __all__ = [
     "ie_save_color_filter",
     "ie_save_multispectral_image",
     "ie_save_spectral_file",
+    "ie_struct2xml",
     "ie_find_object_by_name",
     "ie_locs2_rect",
     "ie_parameter_otype",
@@ -1360,9 +1366,11 @@ __all__ = [
     "ie_dng_simple_info",
     "ie_save_si_data_file",
     "ie_tempfile",
+    "struct2xml",
     "ie_session_get",
     "ie_session_set",
     "ie_var_in_file",
+    "xml2struct",
     "ie_windows_get",
     "ie_windows_set",
     "ie_select_object",
@@ -2923,11 +2931,13 @@ ieDNGSimpleInfo = ie_dng_simple_info
 ieSaveColorFilter = ie_save_color_filter
 ieSaveMultiSpectralImage = ie_save_multispectral_image
 ieSaveSpectralFile = ie_save_spectral_file
+ieStruct2XML = ie_struct2xml
 ieSaveSIDataFile = ie_save_si_data_file
 ieSessionGet = ie_session_get
 ieSessionSet = ie_session_set
 ieTempfile = ie_tempfile
 ieVarInFile = ie_var_in_file
+ieXML2struct = ie_xml2struct
 ieWindowsGet = ie_windows_get
 ieWindowsSet = ie_windows_set
 ieSelectObject = ie_select_object
@@ -2935,6 +2945,8 @@ mainOpen = main_open
 isetPath = iset_path
 isetRootPath = iset_root_path
 pathToLinux = path_to_linux
+struct2xml = ie_struct2xml
+xml2struct = ie_xml2struct
 
 ipCreate = ip_create
 ipCompute = ip_compute

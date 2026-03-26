@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 import csv
+import io
 import os
 import shlex
 import subprocess
@@ -293,6 +294,221 @@ def path_to_linux(input_path: str | Path) -> str:
     if len(source) > 2 and source[1:3] == ":\\":
         source = source[2:]
     return source.replace("\\", "/")
+
+
+def _xml_decode_name(value: str) -> str:
+    decoded = str(value)
+    decoded = decoded.replace("-", "_dash_")
+    decoded = decoded.replace(":", "_colon_")
+    decoded = decoded.replace(".", "_dot_")
+    return decoded
+
+
+def _xml_encode_name(value: str) -> str:
+    encoded = str(value)
+    encoded = encoded.replace("_dash_", "-")
+    encoded = encoded.replace("_colon_", ":")
+    encoded = encoded.replace("_dot_", ".")
+    return encoded
+
+
+def _xml_scalar_text(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, np.ndarray):
+        if value.shape == ():
+            return _xml_scalar_text(value.item())
+        flattened = np.asarray(value).reshape(-1)
+        return " ".join(_xml_scalar_text(item) for item in flattened.tolist())
+    if isinstance(value, (list, tuple)):
+        return " ".join(_xml_scalar_text(item) for item in value)
+    if isinstance(value, np.generic):
+        return str(value.item())
+    return str(value)
+
+
+def _xml_namespace_prefixes(payload: Any) -> set[str]:
+    prefixes: set[str] = set()
+    if isinstance(payload, Mapping):
+        for key, value in payload.items():
+            if key == "Attributes" and isinstance(value, Mapping):
+                for attr_name in value:
+                    raw = _xml_encode_name(str(attr_name))
+                    if ":" in raw:
+                        prefixes.add(raw.split(":", 1)[0])
+                continue
+            raw = _xml_encode_name(str(key))
+            if key not in {"Attributes", "Text"} and ":" in raw:
+                prefixes.add(raw.split(":", 1)[0])
+            prefixes.update(_xml_namespace_prefixes(value))
+    elif isinstance(payload, list):
+        for item in payload:
+            prefixes.update(_xml_namespace_prefixes(item))
+    return prefixes
+
+
+def _xml_qualified_name(value: str, namespace_map: Mapping[str, str]) -> str:
+    encoded = _xml_encode_name(value)
+    if ":" not in encoded:
+        return encoded
+    prefix, local = encoded.split(":", 1)
+    uri = namespace_map[prefix]
+    return f"{{{uri}}}{local}"
+
+
+def _xml_decode_name_with_namespaces(value: str, uri_to_prefix: Mapping[str, str]) -> str:
+    raw = str(value)
+    if raw.startswith("{") and "}" in raw:
+        uri, local = raw[1:].split("}", 1)
+        prefix = uri_to_prefix.get(uri, "")
+        if prefix:
+            return _xml_decode_name(f"{prefix}:{local}")
+        return _xml_decode_name(local)
+    return _xml_decode_name(raw)
+
+
+def _xml_parse_with_namespaces(source: str | bytes | Path) -> tuple[ET.Element, dict[str, str]]:
+    uri_to_prefix: dict[str, str] = {}
+    if isinstance(source, Path):
+        iterator = ET.iterparse(source, events=("start", "start-ns"))
+    else:
+        data = source if isinstance(source, bytes) else str(source).encode("utf-8")
+        iterator = ET.iterparse(io.BytesIO(data), events=("start", "start-ns"))
+
+    root: ET.Element | None = None
+    for event, value in iterator:
+        if event == "start-ns":
+            prefix, uri = value
+            uri_to_prefix[str(uri)] = str(prefix or "")
+        elif event == "start" and root is None:
+            root = value
+    if root is None:
+        raise ValueError("XML payload does not contain a root element.")
+    return root, uri_to_prefix
+
+
+def _xml_element_to_struct(element: ET.Element, uri_to_prefix: Mapping[str, str]) -> dict[str, Any]:
+    payload: dict[str, Any] = {}
+    if element.attrib:
+        payload["Attributes"] = {
+            _xml_decode_name_with_namespaces(name, uri_to_prefix): str(value) for name, value in element.attrib.items()
+        }
+
+    child_elements = [child for child in list(element) if isinstance(child.tag, str)]
+    if child_elements:
+        text_parts: list[str] = []
+        if element.text and element.text.strip():
+            text_parts.append(element.text.strip())
+        for child in child_elements:
+            child_name = _xml_decode_name_with_namespaces(child.tag, uri_to_prefix)
+            child_value = _xml_element_to_struct(child, uri_to_prefix)
+            existing = payload.get(child_name)
+            if existing is None:
+                payload[child_name] = child_value
+            elif isinstance(existing, list):
+                existing.append(child_value)
+            else:
+                payload[child_name] = [existing, child_value]
+            if child.tail and child.tail.strip():
+                text_parts.append(child.tail.strip())
+        if text_parts:
+            payload["Text"] = "".join(text_parts)
+        return payload
+
+    if element.text and element.text.strip():
+        payload["Text"] = element.text.strip()
+    return payload
+
+
+def _xml_append_payload(element: ET.Element, payload: Any, namespace_map: Mapping[str, str]) -> None:
+    if isinstance(payload, Mapping):
+        attributes = payload.get("Attributes")
+        if isinstance(attributes, Mapping):
+            for name, value in attributes.items():
+                element.set(_xml_qualified_name(str(name), namespace_map), _xml_scalar_text(value))
+        text_value = payload.get("Text")
+        if text_value is not None:
+            element.text = _xml_scalar_text(text_value)
+        for key, value in payload.items():
+            if key in {"Attributes", "Text"}:
+                continue
+            child_name = _xml_qualified_name(str(key), namespace_map)
+            items = value if isinstance(value, list) else [value]
+            for item in items:
+                child = ET.SubElement(element, child_name)
+                _xml_append_payload(child, item, namespace_map)
+        return
+
+    element.text = _xml_scalar_text(payload)
+
+
+def ie_xml2struct(file: str | Path | ET.ElementTree | ET.Element) -> dict[str, Any]:
+    """Convert XML into a MATLAB-style nested structure payload."""
+
+    root: ET.Element
+    uri_to_prefix: dict[str, str]
+    if isinstance(file, ET.ElementTree):
+        root, uri_to_prefix = _xml_parse_with_namespaces(ET.tostring(file.getroot(), encoding="utf-8"))
+    elif isinstance(file, ET.Element):
+        root, uri_to_prefix = _xml_parse_with_namespaces(ET.tostring(file, encoding="utf-8"))
+    else:
+        source = str(file)
+        candidate = Path(source)
+        if candidate.exists():
+            root, uri_to_prefix = _xml_parse_with_namespaces(candidate)
+        else:
+            with_xml = candidate.with_suffix(".xml") if candidate.suffix.lower() != ".xml" else candidate
+            if with_xml.exists():
+                root, uri_to_prefix = _xml_parse_with_namespaces(with_xml)
+            else:
+                try:
+                    root, uri_to_prefix = _xml_parse_with_namespaces(source)
+                except ET.ParseError as exc:
+                    raise FileNotFoundError(f"The file {source} could not be found") from exc
+
+    return {
+        _xml_decode_name_with_namespaces(root.tag, uri_to_prefix): _xml_element_to_struct(root, uri_to_prefix)
+    }
+
+
+def ie_struct2xml(payload: Mapping[str, Any], file: str | Path | None = None) -> str:
+    """Convert a MATLAB-style nested structure payload into XML text or a file."""
+
+    if not isinstance(payload, Mapping):
+        raise TypeError("payload must be a mapping")
+    names = list(payload.keys())
+    if len(names) != 1:
+        raise ValueError("There should be a single field in the main structure.")
+
+    root_name = str(names[0])
+    namespace_map = {
+        prefix: f"urn:pyisetcam:{prefix}"
+        for prefix in sorted(_xml_namespace_prefixes(payload))
+    }
+    for prefix, uri in namespace_map.items():
+        ET.register_namespace(prefix, uri)
+
+    root = ET.Element(_xml_qualified_name(root_name, namespace_map))
+    _xml_append_payload(root, payload[root_name], namespace_map)
+    tree = ET.ElementTree(root)
+    try:
+        ET.indent(tree, space="  ")
+    except AttributeError:
+        pass
+    xml_text = ET.tostring(root, encoding="unicode")
+    xml_text = "<?xml version='1.0' encoding='utf-8'?>\n" + xml_text
+
+    if file is None:
+        return xml_text
+
+    path = Path(file)
+    if not str(path):
+        raise ValueError("Filename can not be empty")
+    if path.suffix.lower() != ".xml":
+        path = path.with_suffix(".xml")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(xml_text, encoding="utf-8")
+    return str(path)
 
 
 def ie_save_spectral_file(
@@ -779,9 +995,13 @@ def ie_scp(
 ieImageType = ie_image_type
 ieSCP = ie_scp
 ieSaveSpectralFile = ie_save_spectral_file
+ieStruct2XML = ie_struct2xml
 ieTempfile = ie_tempfile
 ieVarInFile = ie_var_in_file
 ieWebGet = ie_web_get
+ieXML2struct = ie_xml2struct
+struct2xml = ie_struct2xml
+xml2struct = ie_xml2struct
 ieXL2ColorFilter = ie_xl2_color_filter
 pathToLinux = path_to_linux
 vcSaveObject = vc_save_object

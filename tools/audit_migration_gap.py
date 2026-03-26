@@ -716,6 +716,16 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB object-save helper is covered by the Python `vc_save_object(...)` / `vcSaveObject(...)` compatibility wrapper for the core ISET object types.",
         "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
     },
+    "utility/xml/ieStruct2XML.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB XML writer is covered by the Python `ie_struct2xml(...)` / `ieStruct2XML(...)` compatibility wrapper, including MATLAB-style `_dash_`, `_colon_`, and `_dot_` name escaping plus nested repeated-element replay.",
+        "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
+    },
+    "utility/xml/ieXML2struct.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB XML reader is covered by the Python `ie_xml2struct(...)` / `ieXML2struct(...)` compatibility wrapper, including MATLAB-style `_dash_`, `_colon_`, and `_dot_` name decoding plus repeated-element list replay.",
+        "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
+    },
     "utility/list/ieDataList.m": {
         "status": "ported",
         "note": "The lightweight MATLAB data-list dispatcher is covered by the Python `ie_data_list(...)` / `ieDataList(...)` compatibility wrapper, which replays the implemented reflectance and light branches headlessly.",

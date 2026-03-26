@@ -17,18 +17,22 @@ from pyisetcam import (
     ieDNGSimpleInfo,
     ieSCP,
     ieSaveSpectralFile,
+    ieStruct2XML,
     ieTempfile,
     ieVarInFile,
     ieWebGet,
+    ieXML2struct,
     ieXL2ColorFilter,
     ie_dng_read,
     ie_dng_simple_info,
     ie_image_type,
     ie_scp,
     ie_save_spectral_file,
+    ie_struct2xml,
     ie_tempfile,
     ie_var_in_file,
     ie_web_get,
+    ie_xml2struct,
     ie_xl2_color_filter,
     pathToLinux,
     path_to_linux,
@@ -54,6 +58,8 @@ from pyisetcam import (
     vc_read_spectra,
     vc_save_object,
     vc_save_multispectral_image,
+    struct2xml,
+    xml2struct,
 )
 
 
@@ -449,3 +455,46 @@ def test_vc_read_image_matches_scene_from_file_and_multispectral_metadata(tmp_pa
     assert np.allclose(photons_ms, np.asarray(expected_scene.data["photons"], dtype=float))
     assert np.allclose(np.asarray(basis_ms["wave"], dtype=float), wave)
     assert np.allclose(np.asarray(mc_coef_ms, dtype=float), mc_coef_payload)
+
+
+def test_xml_helpers_round_trip_nested_payload_and_aliases(tmp_path) -> None:
+    payload = {
+        "Root_dash_node": {
+            "Attributes": {"ns_colon_id": "17", "part_dot_name": "demo"},
+            "Element": {"Text": "Some text"},
+            "DifferentElement": [
+                {"Attributes": {"attrib2": "2"}, "Text": "Some more text"},
+                {"Attributes": {"attrib3": "2", "attrib4": "1"}, "Text": "Even more text"},
+            ],
+            "Nested_dot_child": {"Sub_dash_item": {"Text": "leaf"}},
+        }
+    }
+
+    xml_text = ie_struct2xml(payload)
+    parsed = ie_xml2struct(xml_text)
+
+    assert "<?xml version='1.0' encoding='utf-8'?>" in xml_text
+    assert "<Root-node" in xml_text
+    assert 'ns:id="17"' in xml_text
+    assert 'part.name="demo"' in xml_text
+    assert parsed == payload
+    assert ieXML2struct(xml_text) == payload
+    assert xml2struct(xml_text) == payload
+    assert struct2xml(payload).startswith("<?xml version='1.0' encoding='utf-8'?>")
+
+    saved = ieStruct2XML(payload, tmp_path / "demo_payload")
+    assert saved.endswith(".xml")
+    assert Path(saved).exists()
+    assert ie_xml2struct(tmp_path / "demo_payload") == payload
+
+
+def test_xml_helpers_accept_file_input_and_attributes(tmp_path) -> None:
+    xml_path = tmp_path / "simple.xml"
+    xml_path.write_text(
+        "<?xml version='1.0' encoding='utf-8'?><Root><Node attr='1'>value</Node></Root>",
+        encoding="utf-8",
+    )
+
+    parsed = ie_xml2struct(xml_path)
+
+    assert parsed == {"Root": {"Node": {"Attributes": {"attr": "1"}, "Text": "value"}}}

@@ -2027,3 +2027,9 @@ the remaining files are generic MATLAB GIF or figure-export helpers built
 around `imwrite`, `getframe`, `export_fig`, or `exportgraphics`, while the
 supported pyisetcam runtime already handles object-pipeline GIF export
 through higher-level headless video paths.
+The neighboring `utility/xml` family is now closed too: direct headless
+wrappers now cover `ieXML2struct(...)` / `xml2struct(...)` and
+`ieStruct2XML(...)` / `struct2xml(...)`, including MATLAB-style
+`_dash_`, `_colon_`, and `_dot_` field-name escaping, repeated-element
+list replay, XML-string or file parsing, and `.xml` extension fallback on
+save/load without any Java or MATLAB DOM dependencies.
