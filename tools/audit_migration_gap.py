@@ -836,6 +836,36 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream rasterization helper is covered by the Python `rasterize_text(...)` / `RasterizeText(...)` compatibility wrapper in `pyisetcam.fonts`, including control-character cleanup, space-and-newline layout, and missing-character validation against bitmap-font payloads.",
         "module_hits": ["pyisetcam.fonts", "pyisetcam.__init__"],
     },
+    "utility/external/ImageConvFrequencyDomain.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a generic standalone FFT-convolution utility from an external source rather than an ISETCam runtime API surface; the supported headless runtime already uses native NumPy or SciPy convolution primitives where needed instead of vendoring this helper as public compatibility debt.",
+        "module_hits": [],
+    },
+    "utility/external/arrow3/arrow3.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a third-party MATLAB 2D or 3D arrow plotting helper for figures, so it is treated as visualization-only external baggage rather than a supported pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/external/bluewhitered/bluewhitered.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a third-party diverging colormap helper for MATLAB figures, so it is treated as visualization-only external baggage rather than a supported pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/external/cprintf.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file only colors text in the MATLAB command window, which is host-console UI behavior rather than a supported headless pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/external/cpuinfo/cpuinfo.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a host-machine CPU probe for MATLAB environments, which is deployment or diagnostics baggage rather than a supported pyisetcam runtime API surface.",
+        "module_hits": [],
+    },
+    "utility/external/insertInImage/insertInImage.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB figure and Image Processing Toolbox annotation helper that rasterizes plot or text objects into images, so it is treated as GUI-heavy external baggage rather than a supported headless pyisetcam runtime surface.",
+        "module_hits": [],
+    },
     "utility/xml/ieStruct2XML.m": {
         "status": "ported",
         "note": "The legacy MATLAB XML writer is covered by the Python `ie_struct2xml(...)` / `ieStruct2XML(...)` compatibility wrapper, including MATLAB-style `_dash_`, `_colon_`, and `_dot_` name escaping plus nested repeated-element replay.",

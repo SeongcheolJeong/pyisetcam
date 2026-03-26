@@ -2062,4 +2062,9 @@ coverage only for the checked-in DNG path via `ie_dng_read(...)` and
 covered directly instead: `BitmapFont(...)`, `RasterizeText(...)`,
 `AddTextToImage(...)`, and `AddTextToImageWithBorder(...)` all have
 headless compatibility wrappers in `pyisetcam.fonts`, while the two demo
-scripts remain out of scope.
+scripts remain out of scope. The next tier of tiny one-off external
+helpers is now tracked as out of scope too: `ImageConvFrequencyDomain.m`,
+`arrow3.m`, `bluewhitered.m`, `cprintf.m`, `cpuinfo.m`, and
+`insertInImage.m` are generic third-party plotting, host-diagnostics, or
+figure-annotation utilities rather than supported pyisetcam runtime
+surfaces.
