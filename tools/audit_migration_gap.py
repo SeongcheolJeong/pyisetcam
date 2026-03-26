@@ -61,6 +61,7 @@ FAMILY_SURFACE_MAP = {
     "data/optics": ["pyisetcam.assets", "pyisetcam.optics", "pyisetcam.utils"],
     "data/safetystandards": ["pyisetcam.metrics", "pyisetcam.assets"],
     "data/sensor": ["pyisetcam.assets", "pyisetcam.sensor", "pyisetcam.camera"],
+    "data/surfaces": ["pyisetcam.assets", "pyisetcam.scene", "pyisetcam.color", "pyisetcam.ip", "pyisetcam.parity"],
     "displays": ["pyisetcam.display"],
     "human": ["pyisetcam.metrics", "pyisetcam.scielab"],
     "imgproc": ["pyisetcam.ip"],
@@ -129,6 +130,7 @@ FAMILY_TEST_MAP = {
     "data/optics": ["tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],
     "data/safetystandards": ["tests/unit/test_human.py"],
     "data/sensor": ["tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],
+    "data/surfaces": ["tests/unit/test_pipeline.py", "tests/unit/test_scene.py", "tests/unit/test_ip.py", "tests/parity/test_parity_harness.py"],
     "displays": ["tests/unit/test_display.py", "tests/unit/test_pipeline.py"],
     "human": ["tests/unit/test_human.py"],
     "imgproc": ["tests/unit/test_pipeline.py", "tests/unit/test_ip.py"],
@@ -275,6 +277,21 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
     "data/images/faces/s_dataFaces.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a MATLAB download and visualization notebook for spectral face assets fetched through `ieWebGet`, not a reusable headless runtime API surface.",
+        "module_hits": [],
+    },
+    "data/surfaces/": {
+        "status": "parity",
+        "note": "The vendored surface-reflectance bundle is already exercised by the current headless runtime through `surfaceReflectance(...)`, `sceneCreate(...)`, chart and skin-reflectance loaders, Esser-chart paths, and focused unit or parity coverage over Munsell, Food, skin, and Esser assets.",
+        "module_hits": ["pyisetcam.assets", "pyisetcam.scene", "pyisetcam.color", "pyisetcam.ip", "pyisetcam.parity"],
+    },
+    "data/surfaces/charts/esser/esserReflectance.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB provenance notebook that derives the vendored Esser chart reflectance table from archived radiance captures, rather than a reusable headless runtime API surface.",
+        "module_hits": [],
+    },
+    "data/surfaces/reflectances/skin/absorbances/d_hemoglobin.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB data-authoring notebook that converts external hemoglobin extinction tables into vendored absorbance assets already consumed by the current runtime.",
         "module_hits": [],
     },
     "data/safetyStandards/": {

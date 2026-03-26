@@ -1861,6 +1861,12 @@ through the current `sceneFromFile(...)`, raw-image import, and camera or
 parity workflows, while the old spectral-face download notebook is
 explicitly treated as a provenance demo outside the headless migration
 target.
+The adjacent `data/surfaces` bundle is now counted directly too: the
+vendored reflectance and chart assets are already exercised through the
+current `surfaceReflectance(...)`, `sceneCreate(...)`, Esser-chart, skin,
+and curated `s_surfaceMunsell.m` parity workflows, while the old Esser and
+hemoglobin authoring notebooks are explicitly treated as provenance data
+generation outside the headless migration target.
 That same utility-image slice now also covers `ieCmap(...)`,
 `ieCropRect(...)`, `ieLUTDigital(...)`, `ieLUTInvert(...)`, and
 `ieLUTLinear(...)`, with direct regressions for the simple MATLAB color-map

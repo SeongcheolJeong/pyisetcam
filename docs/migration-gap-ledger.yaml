@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-26T11:48:29.342589+00:00",
+  "generated_at": "2026-03-26T12:15:58.313186+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 46,
       "missing": 21,
-      "out_of_scope": 247,
-      "parity": 699,
-      "partial": 229,
+      "out_of_scope": 249,
+      "parity": 700,
+      "partial": 226,
       "ported": 201
     },
     "kind_counts": {
@@ -21,16 +21,16 @@
     },
     "priority_counts": {
       "P1": 217,
-      "P2": 79,
-      "P3": 1147
+      "P2": 76,
+      "P3": 1150
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 1,
+        "out_of_scope": 2,
         "parity": 1,
-        "partial": -2,
+        "partial": -3,
         "ported": 0
       },
       "kind_counts": {
@@ -43,8 +43,8 @@
       },
       "priority_counts": {
         "P1": 0,
-        "P2": -2,
-        "P3": 2
+        "P2": -3,
+        "P3": 3
       }
     },
     "family_summary": {
@@ -215,12 +215,13 @@
       "data/surfaces": {
         "total": 3,
         "by_status": {
-          "partial": 3
+          "out_of_scope": 2,
+          "parity": 1
         },
         "by_kind": {
           "asset": 3
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "data/validation": {
         "total": 1,
@@ -1052,14 +1053,6 @@
         }
       },
       {
-        "family": "data/surfaces",
-        "open_entries": 3,
-        "highest_open_priority": "P2",
-        "by_status": {
-          "partial": 3
-        }
-      },
-      {
         "family": "data/scenes",
         "open_entries": 2,
         "highest_open_priority": "P2",
@@ -1109,6 +1102,14 @@
           "out_of_scope": 1,
           "parity": 40,
           "ported": 3
+        }
+      },
+      {
+        "family": "data/fluorescence",
+        "open_entries": 0,
+        "highest_open_priority": "P3",
+        "by_status": {
+          "out_of_scope": 1
         }
       }
     ],
@@ -2819,21 +2820,31 @@
       "upstream_path": "data/surfaces/charts/esser/esserReflectance.m",
       "family": "data/surfaces",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "pyisetcam.color, pyisetcam.ip, pyisetcam.parity",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.scene, pyisetcam.color, pyisetcam.ip, pyisetcam.parity",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_scene.py",
+        "tests/unit/test_ip.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB provenance notebook that derives the vendored Esser chart reflectance table from archived radiance captures, rather than a reusable headless runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/surfaces/reflectances/skin/absorbances/d_hemoglobin.m",
       "family": "data/surfaces",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.scene, pyisetcam.color, pyisetcam.ip, pyisetcam.parity",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_scene.py",
+        "tests/unit/test_ip.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB data-authoring notebook that converts external hemoglobin extinction tables into vendored absorbance assets already consumed by the current runtime.",
+      "priority": "P3"
     },
     {
       "upstream_path": "displays/displayCompute.m",
@@ -19618,11 +19629,17 @@
       "upstream_path": "data/surfaces/",
       "family": "data/surfaces",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "pyisetcam.assets, pyisetcam.color, pyisetcam.ip, pyisetcam.parity",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "parity",
+      "python_surface": "pyisetcam.assets, pyisetcam.scene, pyisetcam.color, pyisetcam.ip, pyisetcam.parity",
+      "tests": [
+        "tests/unit/test_pipeline.py",
+        "tests/unit/test_scene.py",
+        "tests/unit/test_ip.py",
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
+      ],
+      "notes": "The vendored surface-reflectance bundle is already exercised by the current headless runtime through `surfaceReflectance(...)`, `sceneCreate(...)`, chart and skin-reflectance loaders, Esser-chart paths, and focused unit or parity coverage over Munsell, Food, skin, and Esser assets.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/validation/",
