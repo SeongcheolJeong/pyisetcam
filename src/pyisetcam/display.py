@@ -42,6 +42,28 @@ def _flatten_struct_sequence(value: Any) -> list[Any]:
     return [value]
 
 
+def _normalize_render_function(value: Any) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    item = getattr(value, "item", None)
+    if callable(item):
+        try:
+            value = item()
+        except Exception:
+            return value
+    function_handle = getattr(value, "function_handle", None)
+    if function_handle is not None:
+        function = getattr(function_handle, "function", None)
+        if function:
+            return str(function)
+    function = getattr(value, "function", None)
+    if function:
+        return str(function)
+    return value
+
+
 def _display_to_mat_payload(display: Display) -> dict[str, Any]:
     payload = {
         "name": display.name,
@@ -75,7 +97,10 @@ def _mat_display_to_display(display_struct: Any) -> Display:
             "renderFunc": "render_function",
         }.items():
             if hasattr(dixel_struct, matlab_key):
-                dixel[field_key] = getattr(dixel_struct, matlab_key)
+                field_value = getattr(dixel_struct, matlab_key)
+                if field_key == "render_function":
+                    field_value = _normalize_render_function(field_value)
+                dixel[field_key] = field_value
     display.fields["wave"] = np.asarray(getattr(display_struct, "wave"), dtype=float)
     display.fields["spd"] = np.asarray(getattr(display_struct, "spd"), dtype=float)
     display.fields["gamma"] = np.asarray(getattr(display_struct, "gamma"), dtype=float)
@@ -458,6 +483,103 @@ def display_show_image(
         return rgb
     scene = scene_from_file(rgb, "rgb", None, display, asset_store=_store(asset_store))
     return np.asarray(scene_get(scene, "rgb"), dtype=float)
+
+
+def _display_control_map(
+    display: Display,
+    *,
+    target_size: tuple[int, int] | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    pixels_per_dixel = np.asarray(display_get(display, "pixels per dixel"), dtype=int).reshape(2)
+    control_map = np.asarray(display_get(display, "dixel control map"))
+    if control_map.ndim != 3:
+        raise ValueError("Display dixel control map must be a 3-D array.")
+    if target_size is None:
+        return pixels_per_dixel, control_map
+    target_rows, target_cols = (int(target_size[0]), int(target_size[1]))
+    row_idx = np.clip(np.rint(np.linspace(0.0, control_map.shape[0] - 1.0, target_rows)).astype(int), 0, control_map.shape[0] - 1)
+    col_idx = np.clip(np.rint(np.linspace(0.0, control_map.shape[1] - 1.0, target_cols)).astype(int), 0, control_map.shape[1] - 1)
+    return pixels_per_dixel, control_map[row_idx][:, col_idx, :]
+
+
+def render_oled_samsung(
+    in_img: Any,
+    display: Display | None = None,
+    sz: Any | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> np.ndarray:
+    if in_img is None:
+        raise ValueError("input image required")
+    current_display = display_create("OLED-Samsung", asset_store=asset_store) if display is None else display
+    image = np.asarray(in_img, dtype=float)
+    if image.ndim != 3:
+        raise ValueError("render_oled_samsung expects an HxWxC image.")
+    target_size = None if sz is None else tuple(np.asarray(sz, dtype=int).reshape(2))
+    pixels_per_dixel, control_map = _display_control_map(current_display, target_size=target_size)
+    if image.shape[0] % pixels_per_dixel[0] != 0 or image.shape[1] % pixels_per_dixel[1] != 0:
+        raise ValueError("Input image dimensions must be divisible by pixels per dixel.")
+    tile_rows, tile_cols = control_map.shape[:2]
+    output = np.zeros(
+        (
+            (image.shape[0] // pixels_per_dixel[0]) * tile_rows,
+            (image.shape[1] // pixels_per_dixel[1]) * tile_cols,
+            image.shape[2],
+        ),
+        dtype=float,
+    )
+    for primary in range(image.shape[2]):
+        control = np.asarray(control_map[:, :, primary], dtype=int) - 1
+        for row in range(0, image.shape[0], pixels_per_dixel[0]):
+            out_row = (row // pixels_per_dixel[0]) * tile_rows
+            for col in range(0, image.shape[1], pixels_per_dixel[1]):
+                out_col = (col // pixels_per_dixel[1]) * tile_cols
+                block = image[row : row + pixels_per_dixel[0], col : col + pixels_per_dixel[1], primary]
+                output[out_row : out_row + tile_rows, out_col : out_col + tile_cols, primary] = block.reshape(-1, order="F")[control]
+    return output
+
+
+def render_lcd_samsung_rgbw(
+    in_img: Any,
+    display: Display | None = None,
+    sz: Any | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> np.ndarray:
+    if in_img is None:
+        raise ValueError("input image required")
+    current_display = display_create("LCD-Samsung-RGBW", asset_store=asset_store) if display is None else display
+    image = np.asarray(in_img, dtype=float)
+    if image.ndim != 3:
+        raise ValueError("render_lcd_samsung_rgbw expects an HxWxC image.")
+    target_size = None if sz is None else tuple(np.asarray(sz, dtype=int).reshape(2))
+    pixels_per_dixel, control_map = _display_control_map(current_display, target_size=target_size)
+    if image.shape[0] % pixels_per_dixel[0] != 0 or image.shape[1] % pixels_per_dixel[1] != 0:
+        raise ValueError("Input image dimensions must be divisible by pixels per dixel.")
+    tile_rows, tile_cols = control_map.shape[:2]
+    n_primaries = image.shape[2]
+    output = np.zeros(
+        (
+            (image.shape[0] // pixels_per_dixel[0]) * tile_rows,
+            (image.shape[1] // pixels_per_dixel[1]) * tile_cols,
+            n_primaries,
+        ),
+        dtype=float,
+    )
+    for row in range(0, image.shape[0], pixels_per_dixel[0]):
+        out_row = (row // pixels_per_dixel[0]) * tile_rows
+        for col in range(0, image.shape[1], pixels_per_dixel[1]):
+            out_col = (col // pixels_per_dixel[1]) * tile_cols
+            block = image[row : row + pixels_per_dixel[0], col : col + pixels_per_dixel[1], :]
+            rgb_levels = block[:, :, : min(3, n_primaries)].reshape(-1, order="F")[:3]
+            white_level = float(np.min(rgb_levels))
+            for primary in range(n_primaries):
+                control = np.asarray(control_map[:, :, primary], dtype=float)
+                if primary < 3:
+                    output[out_row : out_row + tile_rows, out_col : out_col + tile_cols, primary] = (rgb_levels[primary] - white_level) * control
+                else:
+                    output[out_row : out_row + tile_rows, out_col : out_col + tile_cols, primary] = white_level * control
+    return output
 
 
 def display_set_max_luminance(display: Display, max_luminance: float) -> Display:

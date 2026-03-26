@@ -55,6 +55,7 @@ FAMILY_SURFACE_MAP = {
         "pyisetcam.sensor",
         "pyisetcam.optics",
     ],
+    "data/displays": ["pyisetcam.assets", "pyisetcam.display", "pyisetcam.scene", "pyisetcam.parity"],
     "data/images": ["pyisetcam.scene", "pyisetcam.fileio", "pyisetcam.camera", "pyisetcam.parity"],
     "data/lens": ["pyisetcam.optics"],
     "data/lights": ["pyisetcam.assets", "pyisetcam.color", "pyisetcam.illuminant", "pyisetcam.scene"],
@@ -124,6 +125,7 @@ FAMILY_TEST_MAP = {
     "camera": ["tests/unit/test_pipeline.py"],
     "color": ["tests/unit/test_pipeline.py", "tests/unit/test_metrics.py"],
     "data/human": ["tests/unit/test_human.py", "tests/unit/test_pipeline.py", "tests/unit/test_ip.py"],
+    "data/displays": ["tests/unit/test_display.py", "tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],
     "data/images": ["tests/unit/test_pipeline.py", "tests/unit/test_scene.py", "tests/unit/test_fileio.py", "tests/parity/test_parity_harness.py"],
     "data/lens": ["tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],
     "data/lights": ["tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],
@@ -268,6 +270,26 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "status": "out_of_scope",
         "note": "The pinned upstream snapshot only vendors fluorophore MAT assets, while the corresponding fluorescence-model helpers such as `fluorescenceSignal` and `fluorescenceWeights` are not part of the supported ISETCam migration target; the bundle is therefore tracked as external fluorescence-model data rather than active headless debt.",
         "module_hits": [],
+    },
+    "data/displays/": {
+        "status": "parity",
+        "note": "The vendored display bundle is already exercised by the current headless runtime through `displayCreate(...)`, scene and IP display-backed workflows, and focused unit or parity coverage over CRT, LCD, OLED, and reflectance display assets.",
+        "module_hits": ["pyisetcam.assets", "pyisetcam.display", "pyisetcam.scene", "pyisetcam.parity"],
+    },
+    "data/displays/ieBarcoSign.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB authoring notebook that derives the vendored `LED-BarcoC8.mat` display from an existing OLED calibration, not a reusable headless runtime API surface.",
+        "module_hits": [],
+    },
+    "data/displays/render_lcd_samsung_rgbw.m": {
+        "status": "ported",
+        "note": "The upstream display render helper now has a direct headless wrapper in `pyisetcam.display.render_lcd_samsung_rgbw(...)`, with focused regression coverage over the RGBW white-extraction contract and normalized render-function metadata from the vendored display MAT files.",
+        "module_hits": ["pyisetcam.display"],
+    },
+    "data/displays/render_oled_samsung.m": {
+        "status": "ported",
+        "note": "The upstream display render helper now has a direct headless wrapper in `pyisetcam.display.render_oled_samsung(...)`, with focused regression coverage over the MATLAB control-map replay semantics and normalized render-function metadata from the vendored display MAT files.",
+        "module_hits": ["pyisetcam.display"],
     },
     "data/images/": {
         "status": "parity",

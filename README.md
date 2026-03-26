@@ -1871,6 +1871,13 @@ The neighboring `data/scenes` family is now explicitly tracked as out of
 scope: the pinned upstream snapshot does not vendor reusable scene assets
 there at all, only an empty placeholder plus the old `d_sceneICVL.m`
 local-path ingest notebook for the external ICVL repository.
+The adjacent `data/displays` bundle is now counted directly too: the
+vendored CRT, LCD, OLED, and reflectance display calibrations are already
+exercised through `displayCreate(...)` plus scene or IP display-backed
+workflows, `render_oled_samsung(...)` and `render_lcd_samsung_rgbw(...)`
+now exist as direct headless wrappers for the Samsung dixel helpers, and
+the old `ieBarcoSign.m` calibration-authoring notebook is explicitly
+treated as provenance outside the headless migration target.
 That same utility-image slice now also covers `ieCmap(...)`,
 `ieCropRect(...)`, `ieLUTDigital(...)`, `ieLUTInvert(...)`, and
 `ieLUTLinear(...)`, with direct regressions for the simple MATLAB color-map

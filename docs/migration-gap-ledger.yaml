@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-03-26T12:34:27.305900+00:00",
+  "generated_at": "2026-03-26T13:04:53.788178+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 46,
       "missing": 21,
-      "out_of_scope": 251,
-      "parity": 700,
-      "partial": 224,
-      "ported": 201
+      "out_of_scope": 252,
+      "parity": 701,
+      "partial": 220,
+      "ported": 203
     },
     "kind_counts": {
       "api": 661,
@@ -21,17 +21,17 @@
     },
     "priority_counts": {
       "P1": 217,
-      "P2": 74,
-      "P3": 1152
+      "P2": 70,
+      "P3": 1156
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 2,
-        "parity": 0,
-        "partial": -2,
-        "ported": 0
+        "out_of_scope": 1,
+        "parity": 1,
+        "partial": -4,
+        "ported": 2
       },
       "kind_counts": {
         "api": 0,
@@ -43,8 +43,8 @@
       },
       "priority_counts": {
         "P1": 0,
-        "P2": -2,
-        "P3": 2
+        "P2": -4,
+        "P3": 4
       }
     },
     "family_summary": {
@@ -88,12 +88,14 @@
       "data/displays": {
         "total": 4,
         "by_status": {
-          "partial": 4
+          "out_of_scope": 1,
+          "parity": 1,
+          "ported": 2
         },
         "by_kind": {
           "asset": 4
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "data/fluorescence": {
         "total": 1,
@@ -1045,14 +1047,6 @@
         }
       },
       {
-        "family": "data/displays",
-        "open_entries": 4,
-        "highest_open_priority": "P2",
-        "by_status": {
-          "partial": 4
-        }
-      },
-      {
         "family": "data/fonts",
         "open_entries": 1,
         "highest_open_priority": "P2",
@@ -1094,6 +1088,16 @@
           "out_of_scope": 1,
           "parity": 40,
           "ported": 3
+        }
+      },
+      {
+        "family": "data/displays",
+        "open_entries": 0,
+        "highest_open_priority": "P3",
+        "by_status": {
+          "out_of_scope": 1,
+          "parity": 1,
+          "ported": 2
         }
       },
       {
@@ -2219,31 +2223,43 @@
       "upstream_path": "data/displays/ieBarcoSign.m",
       "family": "data/displays",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.assets, pyisetcam.display, pyisetcam.scene, pyisetcam.parity",
+      "tests": [
+        "tests/unit/test_display.py",
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream file is a MATLAB authoring notebook that derives the vendored `LED-BarcoC8.mat` display from an existing OLED calibration, not a reusable headless runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/displays/render_lcd_samsung_rgbw.m",
       "family": "data/displays",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "ported",
+      "python_surface": "pyisetcam.assets, pyisetcam.display, pyisetcam.scene, pyisetcam.parity",
+      "tests": [
+        "tests/unit/test_display.py",
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream display render helper now has a direct headless wrapper in `pyisetcam.display.render_lcd_samsung_rgbw(...)`, with focused regression coverage over the RGBW white-extraction contract and normalized render-function metadata from the vendored display MAT files.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/displays/render_oled_samsung.m",
       "family": "data/displays",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "ported",
+      "python_surface": "pyisetcam.assets, pyisetcam.display, pyisetcam.scene, pyisetcam.parity",
+      "tests": [
+        "tests/unit/test_display.py",
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream display render helper now has a direct headless wrapper in `pyisetcam.display.render_oled_samsung(...)`, with focused regression coverage over the MATLAB control-map replay semantics and normalized render-function metadata from the vendored display MAT files.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/human/absoluteEfficiency.m",
@@ -19478,11 +19494,16 @@
       "upstream_path": "data/displays/",
       "family": "data/displays",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "pyisetcam.__init__, pyisetcam.assets, pyisetcam.color, pyisetcam.display",
-      "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "status": "parity",
+      "python_surface": "pyisetcam.assets, pyisetcam.display, pyisetcam.scene, pyisetcam.parity",
+      "tests": [
+        "tests/unit/test_display.py",
+        "tests/unit/test_pipeline.py",
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
+      ],
+      "notes": "The vendored display bundle is already exercised by the current headless runtime through `displayCreate(...)`, scene and IP display-backed workflows, and focused unit or parity coverage over CRT, LCD, OLED, and reflectance display assets.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/fluorescence/",

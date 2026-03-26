@@ -72,6 +72,8 @@ from .display import (
     display_show_image,
     ie_calculate_monitor_dpi,
     mperdot2dpi,
+    render_lcd_samsung_rgbw,
+    render_oled_samsung,
 )
 from .fileio import (
     ie_dng_read,
@@ -867,6 +869,8 @@ __all__ = [
     "display_show_image",
     "ieCalculateMonitorDPI",
     "mperdot2dpi",
+    "render_lcd_samsung_rgbw",
+    "render_oled_samsung",
     "ensure_upstream_snapshot",
     "comparison_metrics",
     "correlated_color_temperature",

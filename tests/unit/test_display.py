@@ -12,6 +12,8 @@ from pyisetcam import (
     display_create,
     display_get,
     display_set,
+    render_lcd_samsung_rgbw,
+    render_oled_samsung,
 )
 
 
@@ -64,6 +66,59 @@ def test_display_set_resamples_ambient_and_tracks_dixel_metadata(asset_store) ->
     assert display_get(display, "pixels per dixel") == [1, 1]
     assert display_get(display, "dixel size") == (2, 3)
     assert np.array_equal(display_get(display, "dixel control map"), control)
+
+
+def test_display_create_normalizes_render_function_names(asset_store) -> None:
+    oled = display_create("OLED-Samsung.mat", asset_store=asset_store)
+    rgbw = display_create("LCD-Samsung-RGBW.mat", asset_store=asset_store)
+    barco = display_create("LED-BarcoC8.mat", asset_store=asset_store)
+
+    assert display_get(oled, "render function") == "render_oled_samsung"
+    assert display_get(rgbw, "render function") == "render_lcd_samsung_rgbw"
+    assert display_get(barco, "render function") is None
+
+
+def test_render_oled_samsung_matches_control_map_replay(asset_store) -> None:
+    display = display_create("OLED-Samsung.mat", asset_store=asset_store)
+    image = np.arange(1.0, 1.0 + 2 * 4 * 4, dtype=float).reshape(2, 4, 4, order="F")
+    control_map = np.asarray(display_get(display, "dixel control map"), dtype=int)
+    pixels_per_dixel = np.asarray(display_get(display, "pixels per dixel"), dtype=int).reshape(2)
+
+    actual = render_oled_samsung(image, display)
+
+    tile_rows, tile_cols = control_map.shape[:2]
+    expected = np.zeros((tile_rows, tile_cols * 2, 4), dtype=float)
+    for primary in range(image.shape[2]):
+        control = control_map[:, :, primary] - 1
+        for block_index, col in enumerate(range(0, image.shape[1], pixels_per_dixel[1])):
+            block = image[:, col : col + pixels_per_dixel[1], primary]
+            expected[:, block_index * tile_cols : (block_index + 1) * tile_cols, primary] = block.reshape(-1, order="F")[control]
+
+    np.testing.assert_allclose(actual, expected, rtol=0.0, atol=0.0)
+
+
+def test_render_lcd_samsung_rgbw_matches_white_extraction(asset_store) -> None:
+    display = display_create("LCD-Samsung-RGBW.mat", asset_store=asset_store)
+    image = np.array(
+        [[[0.4, 0.1, 0.7, 0.9], [0.8, 0.3, 0.5, 0.2]]],
+        dtype=float,
+    )
+    control_map = np.asarray(display_get(display, "dixel control map"), dtype=float)
+
+    actual = render_lcd_samsung_rgbw(image, display)
+
+    tile_rows, tile_cols = control_map.shape[:2]
+    expected = np.zeros((tile_rows, tile_cols * image.shape[1], image.shape[2]), dtype=float)
+    for col in range(image.shape[1]):
+        rgb_levels = image[0, col, :3]
+        white_level = float(np.min(rgb_levels))
+        for primary in range(image.shape[2]):
+            tile = white_level * control_map[:, :, primary]
+            if primary < 3:
+                tile = (rgb_levels[primary] - white_level) * control_map[:, :, primary]
+            expected[:, col * tile_cols : (col + 1) * tile_cols, primary] = tile
+
+    np.testing.assert_allclose(actual, expected, rtol=0.0, atol=0.0)
 
 
 def test_display_conversion_wrappers_match_legacy_contracts(asset_store, tmp_path) -> None:
