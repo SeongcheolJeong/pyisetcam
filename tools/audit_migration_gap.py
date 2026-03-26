@@ -58,6 +58,7 @@ FAMILY_SURFACE_MAP = {
     "data/lens": ["pyisetcam.optics"],
     "data/lights": ["pyisetcam.assets", "pyisetcam.color", "pyisetcam.illuminant", "pyisetcam.scene"],
     "data/optics": ["pyisetcam.assets", "pyisetcam.optics", "pyisetcam.utils"],
+    "data/safetystandards": ["pyisetcam.metrics", "pyisetcam.assets"],
     "data/sensor": ["pyisetcam.assets", "pyisetcam.sensor", "pyisetcam.camera"],
     "displays": ["pyisetcam.display"],
     "human": ["pyisetcam.metrics", "pyisetcam.scielab"],
@@ -124,6 +125,7 @@ FAMILY_TEST_MAP = {
     "data/lens": ["tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],
     "data/lights": ["tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],
     "data/optics": ["tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],
+    "data/safetystandards": ["tests/unit/test_human.py"],
     "data/sensor": ["tests/unit/test_pipeline.py", "tests/parity/test_parity_harness.py"],
     "displays": ["tests/unit/test_display.py", "tests/unit/test_pipeline.py"],
     "human": ["tests/unit/test_human.py"],
@@ -261,6 +263,16 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
     "data/fluorescence/": {
         "status": "out_of_scope",
         "note": "The pinned upstream snapshot only vendors fluorophore MAT assets, while the corresponding fluorescence-model helpers such as `fluorescenceSignal` and `fluorescenceWeights` are not part of the supported ISETCam migration target; the bundle is therefore tracked as external fluorescence-model data rather than active headless debt.",
+        "module_hits": [],
+    },
+    "data/safetyStandards/": {
+        "status": "parity",
+        "note": "The vendored safety-standard spectra are already exercised by the current headless runtime through `humanUVSafety(...)`, which reads the Actinic and blue-light hazard curves directly and is covered by focused human-safety regressions.",
+        "module_hits": ["pyisetcam.metrics", "pyisetcam.assets"],
+    },
+    "data/safetyStandards/s_safetyStandards.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB data-authoring notebook that transcribes EN62471 safety-standard tables into vendored MAT assets already consumed by the current runtime, rather than a reusable headless API surface.",
         "module_hits": [],
     },
     "data/lights/": {

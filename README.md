@@ -1850,6 +1850,11 @@ The tiny `data/fluorescence` bundle is now explicitly tracked as out of
 scope: the pinned upstream snapshot only vendors fluorophore MAT assets,
 while the required fluorescence-model helpers live outside the supported
 ISETCam migration target.
+The adjacent `data/safetystandards` bundle is now counted directly too:
+the vendored hazard spectra are already exercised by the current
+`humanUVSafety(...)` path, while the old MATLAB EN62471 transcription
+notebook that produced those MAT files is explicitly treated as provenance
+outside the headless migration target.
 That same utility-image slice now also covers `ieCmap(...)`,
 `ieCropRect(...)`, `ieLUTDigital(...)`, `ieLUTInvert(...)`, and
 `ieLUTLinear(...)`, with direct regressions for the simple MATLAB color-map
