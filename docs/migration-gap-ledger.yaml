@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-26T12:15:58.313186+00:00",
+  "generated_at": "2026-03-26T12:34:27.305900+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 46,
       "missing": 21,
-      "out_of_scope": 249,
+      "out_of_scope": 251,
       "parity": 700,
-      "partial": 226,
+      "partial": 224,
       "ported": 201
     },
     "kind_counts": {
@@ -21,16 +21,16 @@
     },
     "priority_counts": {
       "P1": 217,
-      "P2": 76,
-      "P3": 1150
+      "P2": 74,
+      "P3": 1152
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
         "out_of_scope": 2,
-        "parity": 1,
-        "partial": -3,
+        "parity": 0,
+        "partial": -2,
         "ported": 0
       },
       "kind_counts": {
@@ -43,8 +43,8 @@
       },
       "priority_counts": {
         "P1": 0,
-        "P2": -3,
-        "P3": 3
+        "P2": -2,
+        "P3": 2
       }
     },
     "family_summary": {
@@ -194,12 +194,12 @@
       "data/scenes": {
         "total": 2,
         "by_status": {
-          "partial": 2
+          "out_of_scope": 2
         },
         "by_kind": {
           "asset": 2
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "data/sensor": {
         "total": 17,
@@ -1053,14 +1053,6 @@
         }
       },
       {
-        "family": "data/scenes",
-        "open_entries": 2,
-        "highest_open_priority": "P2",
-        "by_status": {
-          "partial": 2
-        }
-      },
-      {
         "family": "data/fonts",
         "open_entries": 1,
         "highest_open_priority": "P2",
@@ -1110,6 +1102,15 @@
         "highest_open_priority": "P3",
         "by_status": {
           "out_of_scope": 1
+        }
+      },
+      {
+        "family": "data/human",
+        "open_entries": 0,
+        "highest_open_priority": "P3",
+        "by_status": {
+          "out_of_scope": 11,
+          "parity": 2
         }
       }
     ],
@@ -2602,11 +2603,11 @@
       "upstream_path": "data/scenes/d_sceneICVL.m",
       "family": "data/scenes",
       "kind": "asset",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "",
       "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "notes": "The upstream file is a MATLAB local-path or web-ingest notebook for the external ICVL hyperspectral repository, not a reusable headless runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/sensor/auto/MT9V024Create.m",
@@ -19605,11 +19606,11 @@
       "upstream_path": "data/scenes/",
       "family": "data/scenes",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "pyisetcam.__init__, pyisetcam.camera, pyisetcam.display, pyisetcam.fileio",
+      "status": "out_of_scope",
+      "python_surface": "",
       "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "notes": "The pinned upstream snapshot does not vendor any reusable scene assets in this directory; it only preserves a placeholder folder for externally hosted scene collections, so there is no headless runtime bundle to migrate here.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/sensor/",

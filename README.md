@@ -1867,6 +1867,10 @@ current `surfaceReflectance(...)`, `sceneCreate(...)`, Esser-chart, skin,
 and curated `s_surfaceMunsell.m` parity workflows, while the old Esser and
 hemoglobin authoring notebooks are explicitly treated as provenance data
 generation outside the headless migration target.
+The neighboring `data/scenes` family is now explicitly tracked as out of
+scope: the pinned upstream snapshot does not vendor reusable scene assets
+there at all, only an empty placeholder plus the old `d_sceneICVL.m`
+local-path ingest notebook for the external ICVL repository.
 That same utility-image slice now also covers `ieCmap(...)`,
 `ieCropRect(...)`, `ieLUTDigital(...)`, `ieLUTInvert(...)`, and
 `ieLUTLinear(...)`, with direct regressions for the simple MATLAB color-map

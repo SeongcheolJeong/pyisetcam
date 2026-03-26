@@ -279,6 +279,16 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is a MATLAB download and visualization notebook for spectral face assets fetched through `ieWebGet`, not a reusable headless runtime API surface.",
         "module_hits": [],
     },
+    "data/scenes/": {
+        "status": "out_of_scope",
+        "note": "The pinned upstream snapshot does not vendor any reusable scene assets in this directory; it only preserves a placeholder folder for externally hosted scene collections, so there is no headless runtime bundle to migrate here.",
+        "module_hits": [],
+    },
+    "data/scenes/d_sceneICVL.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB local-path or web-ingest notebook for the external ICVL hyperspectral repository, not a reusable headless runtime API surface.",
+        "module_hits": [],
+    },
     "data/surfaces/": {
         "status": "parity",
         "note": "The vendored surface-reflectance bundle is already exercised by the current headless runtime through `surfaceReflectance(...)`, `sceneCreate(...)`, chart and skin-reflectance loaders, Esser-chart paths, and focused unit or parity coverage over Munsell, Food, skin, and Esser assets.",
