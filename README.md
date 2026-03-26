@@ -1998,3 +1998,13 @@ tail is covered by direct headless wrappers for `ffndgrid(...)`,
 compression, shift-and-scale line alignment, ridge-plus-smoothness
 regularization, and nearest/triangular/bilinear 2-D interpolation
 without relying on MATLAB figures or toolbox state.
+The neighboring `utility/statistics` family is now closed too: direct
+headless wrappers now cover `biNormal(...)`, `expRand(...)`,
+`gammaPDF(...)`, `getGaussian(...)`, `ieExprnd(...)`, `ieMvnrnd(...)`,
+`ieNormpdf(...)`, `ieOneOverF(...)`, `iePoisson(...)`, `iePrcomp(...)`,
+`iePrctile(...)`, `lorentzSum(...)`, `ieFractalDrawgrid(...)`, and
+`ieFractaldim(...)`, including separable bivariate Gaussians, RF-support
+Gaussian normalization, deterministic exponential and multivariate-normal
+sampling, percentile fallback interpolation, radial 1/f spectra,
+box-count fractal slopes, and magenta grid overlays without opening
+MATLAB figures.

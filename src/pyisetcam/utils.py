@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import math
 import re
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.ndimage import gaussian_filter, map_coordinates, shift as ndi_shift, zoom
+from PIL import Image
+from scipy.ndimage import gaussian_filter, map_coordinates, rotate as ndi_rotate, shift as ndi_shift, zoom
 from scipy.optimize import fmin
 from scipy.signal import convolve2d
 
@@ -780,6 +782,68 @@ def _normalize_legacy_kwargs(args: tuple[Any, ...], kwargs: dict[str, Any]) -> d
     return normalized
 
 
+def _coerce_matlab_shape(
+    size_spec: Any,
+    *,
+    scalar_means_square: bool = True,
+) -> tuple[int, ...]:
+    """Convert MATLAB size arguments into a Python shape tuple."""
+
+    if isinstance(size_spec, tuple):
+        if len(size_spec) == 0:
+            return ()
+        if len(size_spec) == 1:
+            size_spec = size_spec[0]
+        else:
+            values = np.asarray(size_spec, dtype=int).reshape(-1)
+            if np.any(values < 0):
+                raise ValueError("Size arguments must be non-negative.")
+            return tuple(int(value) for value in values)
+
+    if np.isscalar(size_spec):
+        values = np.asarray([size_spec], dtype=int)
+    else:
+        values = np.asarray(size_spec, dtype=int).reshape(-1)
+
+    if np.any(values < 0):
+        raise ValueError("Size arguments must be non-negative.")
+    if values.size == 0:
+        return ()
+    if values.size == 1 and scalar_means_square:
+        value = int(values[0])
+        return (value, value)
+    return tuple(int(value) for value in values)
+
+
+def _load_image_array(image_or_path: Any) -> NDArray[Any]:
+    if isinstance(image_or_path, (str, Path)):
+        with Image.open(image_or_path) as image:
+            return np.asarray(image)
+    return np.asarray(image_or_path)
+
+
+def _to_grayscale(image: Any) -> NDArray[np.float64]:
+    image_array = np.asarray(image, dtype=float)
+    if image_array.ndim == 2:
+        return image_array
+    if image_array.ndim == 3 and image_array.shape[2] == 1:
+        return np.asarray(image_array[:, :, 0], dtype=float)
+    if image_array.ndim != 3 or image_array.shape[2] < 3:
+        raise ValueError("Image data must be grayscale or RGB.")
+    return np.asarray(
+        0.2989 * image_array[:, :, 0] + 0.5870 * image_array[:, :, 1] + 0.1140 * image_array[:, :, 2],
+        dtype=float,
+    )
+
+
+def _binarize_grayscale(image: Any) -> NDArray[np.float64]:
+    gray = _to_grayscale(image)
+    if gray.dtype == np.bool_:
+        return np.asarray(gray, dtype=float)
+    threshold = 0.5 * (float(np.min(gray)) + float(np.max(gray)))
+    return np.asarray(gray > threshold, dtype=float)
+
+
 def ie_light_list(
     *args: Any,
     wave: NDArray[np.float64] | list[float] | tuple[float, ...] | None = None,
@@ -1450,6 +1514,430 @@ def ie_mvnrnd(
             raise ValueError("standard_normal_samples must match the expanded mu shape.")
 
     return np.asarray(standard_normal, dtype=float) @ upper + mu_array
+
+
+def bi_normal(
+    xSpread: float,
+    ySpread: float,
+    theta: float = 0.0,
+    N: int = 128,
+) -> NDArray[np.float64]:
+    """Mirror ISETCam's biNormal() separable bivariate Gaussian helper."""
+
+    size = int(N)
+    if size <= 0:
+        raise ValueError("N must be positive.")
+
+    def _gaussian_kernel(length: int, sigma: float) -> NDArray[np.float64]:
+        if float(sigma) <= 0.0:
+            kernel = np.zeros(length, dtype=float)
+            kernel[(length - 1) // 2] = 1.0
+            return kernel
+        coords = np.arange(length, dtype=float) - (float(length) - 1.0) / 2.0
+        kernel = np.exp(-(coords**2) / (2.0 * float(sigma) ** 2))
+        kernel /= float(np.sum(kernel))
+        return kernel
+
+    x_kernel = _gaussian_kernel(size, float(xSpread))
+    y_kernel = _gaussian_kernel(size, float(ySpread))
+    gaussian = np.outer(y_kernel, x_kernel)
+    if float(theta) != 0.0:
+        gaussian = ndi_rotate(gaussian, float(theta), reshape=False, order=1, mode="constant", cval=0.0)
+    return np.asarray(gaussian, dtype=float)
+
+
+biNormal = bi_normal
+
+
+def exp_rand(
+    mn: float = 1.0,
+    S: Any = 1,
+    *,
+    rng: np.random.Generator | None = None,
+    uniform_samples: Any | None = None,
+) -> NDArray[np.float64]:
+    """Mirror the MATLAB expRand() inverse-CDF exponential sampler."""
+
+    shape = _coerce_matlab_shape(S)
+    if uniform_samples is None:
+        generator = np.random.default_rng() if rng is None else rng
+        uniform = generator.random(shape)
+    else:
+        uniform = np.asarray(uniform_samples, dtype=float)
+        if uniform.shape != shape:
+            raise ValueError("uniform_samples must match the requested MATLAB-style size.")
+    return np.asarray(-float(mn) * np.log(uniform), dtype=float)
+
+
+expRand = exp_rand
+
+
+def gamma_pdf(t: Any, n: int, tau: Any) -> NDArray[np.float64]:
+    """Mirror ISETCam's gammaPDF() helper, including its last-tau overwrite behavior."""
+
+    t_array = np.asarray(t, dtype=float)
+    if int(n) <= 0:
+        raise ValueError("n must be positive.")
+    tau_values = np.asarray(tau, dtype=float).reshape(-1)
+    if tau_values.size == 0:
+        raise ValueError("tau must contain at least one value.")
+
+    result = np.zeros_like(t_array, dtype=float)
+    factorial = float(math.factorial(int(n) - 1))
+    for tau_value in tau_values:
+        result = ((t_array / float(tau_value)) ** (int(n) - 1)) * np.exp(-t_array / float(tau_value))
+        result = result / (float(tau_value) * factorial)
+    total = float(np.sum(result))
+    if total != 0.0:
+        result = result / total
+    return np.asarray(result, dtype=float)
+
+
+gammaPDF = gamma_pdf
+
+
+def get_gaussian(cov: Any, rf_support: Any) -> NDArray[np.float64]:
+    """Mirror the MATLAB getGaussian() RF-support helper."""
+
+    covariance = np.asarray(cov, dtype=float)
+    if covariance.shape != (2, 2):
+        raise ValueError("cov must be a 2x2 covariance matrix.")
+
+    if isinstance(rf_support, dict):
+        x_support = rf_support.get("X", rf_support.get("x"))
+        y_support = rf_support.get("Y", rf_support.get("y"))
+    else:
+        x_support = getattr(rf_support, "X", getattr(rf_support, "x", None))
+        y_support = getattr(rf_support, "Y", getattr(rf_support, "y", None))
+    if x_support is None or y_support is None:
+        raise ValueError("rf_support must expose X and Y support vectors.")
+
+    x_values = np.asarray(x_support, dtype=float).reshape(-1)
+    y_values = np.asarray(y_support, dtype=float).reshape(-1)
+    X, Y = np.meshgrid(x_values, y_values)
+    xy = np.column_stack((X.reshape(-1, order="F"), Y.reshape(-1, order="F")))
+    inv_covariance = np.linalg.inv(covariance)
+    exponent = -0.5 * np.sum((xy @ inv_covariance) * xy, axis=1)
+    gaussian = np.exp(exponent) / (2.0 * np.pi * np.sqrt(np.linalg.det(covariance)))
+    gaussian = gaussian.reshape((x_values.size, y_values.size), order="F")
+
+    dx = float(np.mean(np.diff(x_values))) if x_values.size > 1 else 1.0
+    dy = float(np.mean(np.diff(y_values))) if y_values.size > 1 else 1.0
+    volume = float(np.sum(gaussian)) * dx * dy
+    if volume != 0.0:
+        gaussian = gaussian / volume
+    return np.asarray(gaussian, dtype=float)
+
+
+getGaussian = get_gaussian
+
+
+def ie_exprnd(
+    mu: Any,
+    *varargin: Any,
+    rng: np.random.Generator | None = None,
+    uniform_samples: Any | None = None,
+) -> NDArray[np.float64]:
+    """Mirror ISETCam's ieExprnd() exponential sampler."""
+
+    mu_array = np.asarray(mu, dtype=float)
+    if np.any(mu_array < 0.0):
+        raise ValueError("Exponential parameter less than zero.")
+
+    if len(varargin) == 0:
+        shape = mu_array.shape if mu_array.ndim > 0 else ()
+    else:
+        shape = _coerce_matlab_shape(varargin)
+
+    if uniform_samples is None:
+        generator = np.random.default_rng() if rng is None else rng
+        uniform = generator.random(shape)
+    else:
+        uniform = np.asarray(uniform_samples, dtype=float)
+        if uniform.shape != shape:
+            raise ValueError("uniform_samples must match the requested MATLAB-style size.")
+    return np.asarray(-mu_array * np.log(uniform), dtype=float)
+
+
+ieExprnd = ie_exprnd
+
+
+def ie_normpdf(x: Any, mu: Any = 0.0, sigma: Any = 1.0) -> NDArray[np.float64]:
+    """Mirror the documented ieNormpdf() broadcasting behavior headlessly."""
+
+    x_array = np.asarray(x, dtype=float)
+    mu_array = np.asarray(mu, dtype=float)
+    sigma_array = np.asarray(sigma, dtype=float)
+    try:
+        x_b, mu_b, sigma_b = np.broadcast_arrays(x_array, mu_array, sigma_array)
+    except ValueError as exc:
+        raise ValueError("Requires arguments to match in size.") from exc
+    if np.any(sigma_b <= 0.0):
+        raise ValueError("Sigma must be > 0")
+    xn = (x_b - mu_b) / sigma_b
+    return np.asarray(np.exp(-0.5 * xn**2) / (np.sqrt(2.0 * np.pi) * sigma_b), dtype=float)
+
+
+ieNormpdf = ie_normpdf
+
+
+def ie_one_over_f(rgb_image: Any, gamma: float = 2.2) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Mirror ISETCam's radial FFT spectrum helper for 1/f image analysis."""
+
+    image = np.asarray(rgb_image, dtype=float)
+    if image.ndim == 2:
+        gray_image = image
+    elif image.ndim == 3 and image.shape[2] >= 3:
+        linear_rgb = image**float(gamma)
+        gray_image = (
+            0.2989 * linear_rgb[:, :, 0] + 0.5870 * linear_rgb[:, :, 1] + 0.1140 * linear_rgb[:, :, 2]
+        )
+    else:
+        raise ValueError("rgb_image must be a 2D grayscale image or an RGB image.")
+
+    amplitude = np.abs(np.fft.fftshift(np.fft.fft2(np.asarray(gray_image, dtype=float))))
+    rows, cols = gray_image.shape
+    x_coords, y_coords = np.meshgrid(np.arange(1, cols + 1), np.arange(1, rows + 1))
+    center_x = int(np.ceil(cols / 2.0))
+    center_y = int(np.ceil(rows / 2.0))
+    distances = np.sqrt((x_coords - center_x) ** 2 + (y_coords - center_y) ** 2)
+    distance_bins = np.floor(distances + 0.5).astype(int)
+    max_distance = int(np.floor(min(rows, cols) / 2.0))
+
+    amplitude_spectrum = np.zeros(max_distance, dtype=float)
+    counts = np.zeros(max_distance, dtype=float)
+    valid = (distance_bins > 0) & (distance_bins <= max_distance)
+    for radius in range(1, max_distance + 1):
+        mask = valid & (distance_bins == radius)
+        if np.any(mask):
+            amplitude_spectrum[radius - 1] = float(np.sum(amplitude[mask]))
+            counts[radius - 1] = float(np.sum(mask))
+    amplitude_spectrum = np.divide(
+        amplitude_spectrum,
+        counts,
+        out=np.zeros_like(amplitude_spectrum),
+        where=counts > 0,
+    )
+    spatial_frequencies = np.arange(1, max_distance + 1, dtype=float) / float(max(rows, cols))
+    return np.asarray(spatial_frequencies, dtype=float), np.asarray(amplitude_spectrum, dtype=float)
+
+
+ieOneOverF = ie_one_over_f
+
+
+def ie_poisson(
+    lambda_: Any,
+    *args: Any,
+    n_samp: Any = 1,
+    noise_flag: str = "random",
+    seed: Any = 1,
+) -> tuple[NDArray[np.float64], Any]:
+    """Mirror ISETCam's iePoisson() sampler and seed bookkeeping."""
+
+    options = _normalize_legacy_kwargs(
+        args,
+        {
+            "nSamp": None,
+            "noiseFlag": None,
+            "seed": None,
+        },
+    )
+    lambda_array = np.asarray(lambda_, dtype=float)
+    n_samp_value = options.get("nsamp", n_samp)
+    noise_mode = str(options.get("noiseflag", noise_flag)).lower()
+    seed_value = options.get("seed", seed)
+
+    if noise_mode == "frozen":
+        generator = np.random.default_rng(int(seed_value))
+        seed_out: Any = int(seed_value)
+    elif noise_mode == "random":
+        generator = np.random.default_rng()
+        seed_out = generator.bit_generator.state
+    elif noise_mode == "donotset":
+        generator = np.random.default_rng()
+        seed_out = seed_value
+    else:
+        raise ValueError("noiseFlag must be 'random', 'frozen', or 'donotset'.")
+
+    if lambda_array.ndim == 0:
+        size = _coerce_matlab_shape(n_samp_value)
+        values = generator.poisson(float(lambda_array), size=size)
+    else:
+        values = generator.poisson(lambda_array)
+    return np.asarray(values, dtype=float), seed_out
+
+
+iePoisson = ie_poisson
+
+
+def ie_prcomp(
+    data: Any,
+    flag: str = "basic",
+    n: int | None = None,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Mirror ISETCam's iePrcomp() covariance-SVD principal components."""
+
+    data_array = np.asarray(data, dtype=float)
+    mean = np.array([], dtype=float)
+    mode = param_format(flag)
+
+    if mode == "basic":
+        covariance = data_array @ data_array.T
+    elif mode == "removemean":
+        mean = np.mean(data_array, axis=1)
+        centered = data_array - mean[:, np.newaxis]
+        covariance = centered @ centered.T
+    else:
+        raise ValueError(f"Unknown flag {flag}")
+
+    components, _, _ = np.linalg.svd(covariance, full_matrices=True)
+    if n is not None:
+        components = components[:, : int(n)]
+    return np.asarray(components, dtype=float), np.asarray(mean, dtype=float)
+
+
+iePrcomp = ie_prcomp
+
+
+def ie_prctile(x: Any, p: Any) -> float | NDArray[np.float64]:
+    """Mirror the fallback percentile interpolation in ISETCam's iePrctile()."""
+
+    p_array = np.asarray(p, dtype=float)
+    if p_array.ndim > 2 or (p_array.ndim == 2 and min(p_array.shape) != 1):
+        raise ValueError("P must be a scalar or a vector.")
+    if np.any((p_array < 0.0) | (p_array > 100.0)):
+        raise ValueError("P must take values between 0 and 100")
+    p_vector = p_array.reshape(-1)
+
+    x_array = np.asarray(x, dtype=float)
+    if x_array.ndim == 1 or 1 in x_array.shape:
+        values = x_array.reshape(-1, order="F")
+        m = values.size
+        if m == 1:
+            result = np.full((p_vector.size,), float(values[0]), dtype=float)
+        else:
+            sorted_values = np.sort(values)
+            q = 100.0 * np.arange(0.5, float(m), 1.0) / float(m)
+            support = np.concatenate(([0.0], q, [100.0]))
+            padded = np.concatenate(([float(np.min(values))], sorted_values, [float(np.max(values))]))
+            result = np.interp(p_vector, support, padded)
+        if p_array.ndim == 0:
+            return float(result[0])
+        return np.asarray(result, dtype=float)
+
+    sorted_values = np.sort(x_array, axis=0)
+    m = x_array.shape[0]
+    q = 100.0 * np.arange(0.5, float(m), 1.0) / float(m)
+    support = np.concatenate(([0.0], q, [100.0]))
+    padded = np.vstack((np.min(x_array, axis=0), sorted_values, np.max(x_array, axis=0)))
+    result = np.empty((p_vector.size, x_array.shape[1]), dtype=float)
+    for column in range(x_array.shape[1]):
+        result[:, column] = np.interp(p_vector, support, padded[:, column])
+    if p_array.ndim == 0:
+        return np.asarray(result[0, :], dtype=float)
+    return np.asarray(result, dtype=float)
+
+
+iePrctile = ie_prctile
+
+
+def lorentz_sum(x: Any, params: Any) -> NDArray[np.float64]:
+    """Mirror ISETCam's lorentzSum() helper."""
+
+    x_array = np.asarray(x, dtype=float)
+    parameter_rows = np.abs(np.asarray(params, dtype=float))
+    if parameter_rows.ndim == 1:
+        parameter_rows = parameter_rows.reshape(1, -1)
+    if parameter_rows.shape[1] != 3:
+        raise ValueError("params must contain [f, S, n] rows.")
+
+    result = np.zeros_like(x_array, dtype=float)
+    for frequency, scale, power in parameter_rows:
+        result = result + scale / (1.0 + (x_array / frequency) ** 2) ** power
+    return np.asarray(result, dtype=float)
+
+
+lorentzSum = lorentz_sum
+
+
+def ie_fractal_drawgrid(image_or_path: Any, boxwidth: int) -> NDArray[Any]:
+    """Mirror the legacy fractal drawgrid helper without opening a figure."""
+
+    step = int(boxwidth)
+    if step <= 0:
+        raise ValueError("boxwidth must be positive.")
+
+    image = _load_image_array(image_or_path)
+    grid_image = np.array(image, copy=True)
+    if grid_image.ndim == 2:
+        grid_image = np.repeat(grid_image[:, :, np.newaxis], 3, axis=2)
+    elif grid_image.ndim == 3 and grid_image.shape[2] == 1:
+        grid_image = np.repeat(grid_image, 3, axis=2)
+    elif grid_image.ndim != 3:
+        raise ValueError("Image data must be 2D grayscale or RGB.")
+
+    if np.issubdtype(grid_image.dtype, np.integer):
+        max_value = np.iinfo(grid_image.dtype).max
+    else:
+        max_value = 1.0
+
+    grid_image[::step, :, :] = max_value
+    grid_image[::step, :, 1] = 0
+    grid_image[:, ::step, :] = max_value
+    grid_image[:, ::step, 1] = 0
+    return grid_image
+
+
+ieFractalDrawgrid = ie_fractal_drawgrid
+
+
+def ie_fractal_dim(
+    image_or_path: Any,
+    boxwidth_start: int,
+    boxwidth_end: int,
+    boxwidth_incr: int,
+) -> float:
+    """Mirror the box-counting slope in ISETCam's ieFractaldim()."""
+
+    start = int(boxwidth_start)
+    stop = int(boxwidth_end)
+    incr = int(boxwidth_incr)
+    if start <= 0 or stop <= 0 or incr <= 0:
+        raise ValueError("Box widths must be positive.")
+
+    image = _load_image_array(image_or_path)
+    binary = _binarize_grayscale(image)
+    input_matrix = 1.0 - binary
+    sum_matrix = np.cumsum(np.cumsum(input_matrix, axis=0), axis=1)
+
+    def _submatrix_sum(i: int, j: int, k: int, l: int) -> float:
+        total = float(sum_matrix[k, l])
+        if i > 0:
+            total -= float(sum_matrix[i - 1, l])
+        if j > 0:
+            total -= float(sum_matrix[k, j - 1])
+        if i > 0 and j > 0:
+            total += float(sum_matrix[i - 1, j - 1])
+        return total
+
+    rows, cols = input_matrix.shape
+    x_values: list[float] = []
+    y_values: list[float] = []
+    for boxwidth in range(start, stop + 1, incr):
+        count = 0
+        for row in range(0, rows, boxwidth):
+            row_end = min(row + boxwidth - 1, rows - 1)
+            for col in range(0, cols, boxwidth):
+                col_end = min(col + boxwidth - 1, cols - 1)
+                if _submatrix_sum(row, col, row_end, col_end) > 0.0:
+                    count += 1
+        x_values.append(float(np.log(1.0 / float(boxwidth))))
+        y_values.append(float(np.log(float(count))))
+    coefficients = np.polyfit(np.asarray(x_values, dtype=float), np.asarray(y_values, dtype=float), 1)
+    return float(coefficients[0])
+
+
+ieFractaldim = ie_fractal_dim
 
 
 def ie_n_to_megapixel(n: Any, precision: int = 1) -> float | NDArray[np.float64]:

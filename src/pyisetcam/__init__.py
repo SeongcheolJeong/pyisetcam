@@ -711,13 +711,17 @@ from .utils import (
     DEFAULT_WAVE,
     FloydSteinberg,
     HalfToneImage,
+    bi_normal,
     blackbody,
     convolve_circ,
     convolvecirc,
     dac_to_rgb,
     dpi2mperdot,
+    exp_rand,
     ffndgrid,
     floyd_steinberg,
+    gamma_pdf,
+    get_gaussian,
     hc_basis,
     half_tone_image,
     ie_cmap,
@@ -727,7 +731,10 @@ from .utils import (
     ie_dpi2_mperdot,
     ie_fit_line,
     ie_find_wave_index,
+    ie_fractal_dim,
+    ie_fractal_drawgrid,
     ie_clip,
+    ie_exprnd,
     ie_hwhm_to_sd,
     ie_line_align,
     ie_light_list,
@@ -736,6 +743,11 @@ from .utils import (
     ie_lut_linear,
     ie_mvnrnd,
     ie_n_to_megapixel,
+    ie_normpdf,
+    ie_one_over_f,
+    ie_poisson,
+    ie_prcomp,
+    ie_prctile,
     ie_radial_matrix,
     ie_reflectance_list,
     ie_scale,
@@ -768,6 +780,7 @@ from .utils import (
     imagesc_rgb,
     ie_parameter_otype,
     isodd,
+    lorentz_sum,
     param_format,
     qinterp2,
     rgb_to_dac,
@@ -802,6 +815,8 @@ __all__ = [
     "Scene",
     "Sensor",
     "SessionContext",
+    "biNormal",
+    "bi_normal",
     "blackbody",
     "ISOAcutance",
     "cameraCompute",
@@ -867,7 +882,13 @@ __all__ = [
     "dac2rgb",
     "dac_to_rgb",
     "daylight",
+    "expRand",
+    "exp_rand",
     "floyd_steinberg",
+    "gammaPDF",
+    "gamma_pdf",
+    "getGaussian",
+    "get_gaussian",
     "ieCovEllipsoid",
     "ieCirclePoints",
     "ieCTemp2SRGB",
@@ -989,8 +1010,14 @@ __all__ = [
     "ieCompressData",
     "ieClip",
     "ieEquivalentObjtype",
+    "ieExprnd",
+    "ie_exprnd",
     "ieFieldHeight2Index",
     "ieFitLine",
+    "ieFractalDrawgrid",
+    "ie_fractal_drawgrid",
+    "ieFractaldim",
+    "ie_fractal_dim",
     "ieCXcorr",
     "ieHwhm2SD",
     "ieLineAlign",
@@ -998,6 +1025,16 @@ __all__ = [
     "ieLuminanceFromPhotons",
     "ieMvnrnd",
     "ieN2MegaPixel",
+    "ieNormpdf",
+    "ie_normpdf",
+    "ieOneOverF",
+    "ie_one_over_f",
+    "iePoisson",
+    "ie_poisson",
+    "iePrcomp",
+    "ie_prcomp",
+    "iePrctile",
+    "ie_prctile",
     "ieDataList",
     "ieDpi2Mperdot",
     "ieLightList",
@@ -1117,10 +1154,36 @@ __all__ = [
     "convolvecirc",
     "convolve_circ",
     "dpi2mperdot",
+    "biNormal",
+    "bi_normal",
+    "expRand",
+    "exp_rand",
     "ffndgrid",
+    "gammaPDF",
+    "gamma_pdf",
     "getMiddleMatrix",
     "get_middle_matrix",
+    "getGaussian",
+    "get_gaussian",
     "isodd",
+    "ieExprnd",
+    "ie_exprnd",
+    "ieFractalDrawgrid",
+    "ie_fractal_drawgrid",
+    "ieFractaldim",
+    "ie_fractal_dim",
+    "ieNormpdf",
+    "ie_normpdf",
+    "ieOneOverF",
+    "ie_one_over_f",
+    "iePoisson",
+    "ie_poisson",
+    "iePrcomp",
+    "ie_prcomp",
+    "iePrctile",
+    "ie_prctile",
+    "lorentzSum",
+    "lorentz_sum",
     "rgb2dac",
     "rgb_to_dac",
     "imageGabor",
@@ -1321,6 +1384,8 @@ __all__ = [
     "exposureValue",
     "exposure_value",
     "lrgb2srgb",
+    "lorentzSum",
+    "lorentz_sum",
     "luminance_from_energy",
     "luminance_from_photons",
     "mean_absolute_error",
@@ -2750,19 +2815,31 @@ ieLuminanceFromPhotons = luminance_from_photons
 
 ieAddObject = ie_add_object
 ieAppGet = ie_app_get
+biNormal = bi_normal
+expRand = exp_rand
+gammaPDF = gamma_pdf
+getGaussian = get_gaussian
 ieClip = ie_clip
 ieCompressData = ie_compress_data
 ieDeleteObject = ie_delete_object
 ieEquivalentObjtype = ie_equivalent_objtype
 ieDataList = ie_data_list
 ieDpi2Mperdot = ie_dpi2_mperdot
+ieExprnd = ie_exprnd
 ieFindObjectByName = ie_find_object_by_name
 ieFitLine = ie_fit_line
+ieFractalDrawgrid = ie_fractal_drawgrid
+ieFractaldim = ie_fractal_dim
 ieHwhm2SD = ie_hwhm_to_sd
 ieLineAlign = ie_line_align
 ieLightList = ie_light_list
 ieMvnrnd = ie_mvnrnd
 ieN2MegaPixel = ie_n_to_megapixel
+ieNormpdf = ie_normpdf
+ieOneOverF = ie_one_over_f
+iePoisson = ie_poisson
+iePrcomp = ie_prcomp
+iePrctile = ie_prctile
 ieReflectanceList = ie_reflectance_list
 ieReflectanceSamples = ie_reflectance_samples
 ieScale = ie_scale
@@ -2770,6 +2847,7 @@ ieScaleColumns = ie_scale_columns
 ieSpace2Amp = ie_space_to_amp
 ieTikhonov = ie_tikhonov
 ieUnitScaleFactor = ie_unit_scale_factor
+lorentzSum = lorentz_sum
 ieImageType = ie_image_type
 ieSCP = ie_scp
 ieWebGet = ie_web_get

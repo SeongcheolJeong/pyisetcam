@@ -816,6 +816,76 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB vector-norm helper is covered by the Python `vector_length(...)` / `vectorLength(...)` compatibility wrapper in `pyisetcam.utils`, including NaN-as-zero behavior.",
         "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
     },
+    "utility/statistics/biNormal.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB separable bivariate-Gaussian helper is covered by the Python `bi_normal(...)` / `biNormal(...)` compatibility wrapper in `pyisetcam.utils`, including optional in-place rotation over cropped support.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/statistics/expRand.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB exponential random sampler is covered by the Python `exp_rand(...)` / `expRand(...)` compatibility wrapper in `pyisetcam.utils`, including MATLAB-style size parsing and inverse-CDF sampling.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/statistics/fractal/ieFractalDrawgrid.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB fractal-grid overlay helper is covered by the Python `ie_fractal_drawgrid(...)` / `ieFractalDrawgrid(...)` compatibility wrapper in `pyisetcam.utils`, returning the magenta grid image headlessly instead of opening a figure window.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/statistics/fractal/ieFractaldim.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB box-count fractal-dimension helper is covered by the Python `ie_fractal_dim(...)` / `ieFractaldim(...)` compatibility wrapper in `pyisetcam.utils`, including grayscale binarization, integral-image box counting, and best-fit slope calculation headlessly.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/statistics/gammaPDF.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB gamma-kernel helper is covered by the Python `gamma_pdf(...)` / `gammaPDF(...)` compatibility wrapper in `pyisetcam.utils`, including the normalized discrete gamma-form curve construction used upstream.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/statistics/getGaussian.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB receptive-field Gaussian helper is covered by the Python `get_gaussian(...)` / `getGaussian(...)` compatibility wrapper in `pyisetcam.utils`, including RF-support mesh construction and unit-volume normalization.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/statistics/ieExprnd.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB exponential-distribution sampler is covered by the Python `ie_exprnd(...)` / `ieExprnd(...)` compatibility wrapper in `pyisetcam.utils`, including MATLAB-style size parsing and inverse-CDF sampling.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/statistics/ieMvnrnd.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB multivariate-normal sampler is covered directly by the Python `ie_mvnrnd(...)` / `ieMvnrnd(...)` compatibility wrapper in `pyisetcam.utils`, with focused deterministic regression coverage over the Cholesky sampling contract.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__", "pyisetcam.parity"],
+    },
+    "utility/statistics/ieNormpdf.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB normal-density helper is covered by the Python `ie_normpdf(...)` / `ieNormpdf(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/statistics/ieOneOverF.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB radial 1/f spectrum helper is covered by the Python `ie_one_over_f(...)` / `ieOneOverF(...)` compatibility wrapper in `pyisetcam.utils`, including gamma-linearization, BT.601 grayscale conversion, FFT centering, and radial amplitude averaging.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/statistics/iePoisson.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB Poisson sampler is covered by the Python `ie_poisson(...)` / `iePoisson(...)` compatibility wrapper in `pyisetcam.utils`, including scalar-vs-matrix lambda handling and frozen/random seed bookkeeping.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/statistics/iePrcomp.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB principal-component helper is covered by the Python `ie_prcomp(...)` / `iePrcomp(...)` compatibility wrapper in `pyisetcam.utils`, including the basic and remove-mean covariance-SVD modes.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/statistics/iePrctile.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB percentile helper is covered by the Python `ie_prctile(...)` / `iePrctile(...)` compatibility wrapper in `pyisetcam.utils`, including the fallback sorted-sample interpolation path used without the Statistics Toolbox.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/statistics/lorentzSum.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB Lorentzian-sum helper is covered by the Python `lorentz_sum(...)` / `lorentzSum(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
     "utility/image/ieFindWaveIndex.m": {
         "status": "ported",
         "note": "The legacy MATLAB wavelength-membership helper is covered by the Python `ie_find_wave_index(...)` / `ieFindWaveIndex(...)` compatibility wrapper in `pyisetcam.utils`.",

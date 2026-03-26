@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-26T16:57:52.258576+00:00",
+  "generated_at": "2026-03-26T18:01:18.174255+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 42,
+      "headless_only": 40,
       "out_of_scope": 265,
-      "parity": 709,
-      "partial": 193,
-      "ported": 234
+      "parity": 710,
+      "partial": 181,
+      "ported": 247
     },
     "kind_counts": {
       "api": 661,
@@ -19,17 +19,17 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 193,
-      "P2": 42,
-      "P3": 1208
+      "P1": 181,
+      "P2": 40,
+      "P3": 1222
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": 0,
+        "headless_only": -2,
         "out_of_scope": 0,
-        "parity": 0,
-        "partial": -5,
-        "ported": 5
+        "parity": 1,
+        "partial": -12,
+        "ported": 13
       },
       "kind_counts": {
         "api": 0,
@@ -40,9 +40,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -5,
-        "P2": 0,
-        "P3": 5
+        "P1": -12,
+        "P2": -2,
+        "P3": 14
       }
     },
     "family_summary": {
@@ -409,8 +409,8 @@
       "metrics/scielab": {
         "total": 25,
         "by_status": {
-          "parity": 18,
-          "ported": 7
+          "parity": 19,
+          "ported": 6
         },
         "by_kind": {
           "api": 25
@@ -930,11 +930,11 @@
       "utility": {
         "total": 279,
         "by_status": {
-          "headless_only": 42,
+          "headless_only": 40,
           "out_of_scope": 1,
           "parity": 14,
-          "partial": 193,
-          "ported": 29
+          "partial": 181,
+          "ported": 43
         },
         "by_kind": {
           "gui": 1,
@@ -1005,14 +1005,14 @@
     "top_open_families": [
       {
         "family": "utility",
-        "open_entries": 235,
+        "open_entries": 221,
         "highest_open_priority": "P1",
         "by_status": {
-          "headless_only": 42,
+          "headless_only": 40,
           "out_of_scope": 1,
           "parity": 14,
-          "partial": 193,
-          "ported": 29
+          "partial": 181,
+          "ported": 43
         }
       },
       {
@@ -6192,13 +6192,15 @@
       "upstream_path": "metrics/scielab/sumGauss.m",
       "family": "metrics/scielab",
       "kind": "api",
-      "status": "ported",
-      "python_surface": "pyisetcam.scielab, pyisetcam.metrics, pyisetcam.parity",
+      "status": "parity",
+      "python_surface": "pyisetcam.scielab, pyisetcam.metrics, pyisetcam.parity, pyisetcam.utils",
       "tests": [
         "tests/unit/test_metrics.py",
-        "tests/unit/test_pipeline.py"
+        "tests/unit/test_pipeline.py",
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
       ],
-      "notes": "A direct Python implementation surface was detected for this upstream path.",
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
       "priority": "P3"
     },
     {
@@ -19188,141 +19190,141 @@
       "upstream_path": "utility/statistics/biNormal.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.optics",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB separable bivariate-Gaussian helper is covered by the Python `bi_normal(...)` / `biNormal(...)` compatibility wrapper in `pyisetcam.utils`, including optional in-place rotation over cropped support.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/statistics/expRand.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB exponential random sampler is covered by the Python `exp_rand(...)` / `expRand(...)` compatibility wrapper in `pyisetcam.utils`, including MATLAB-style size parsing and inverse-CDF sampling.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/statistics/fractal/ieFractalDrawgrid.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB fractal-grid overlay helper is covered by the Python `ie_fractal_drawgrid(...)` / `ieFractalDrawgrid(...)` compatibility wrapper in `pyisetcam.utils`, returning the magenta grid image headlessly instead of opening a figure window.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/statistics/fractal/ieFractaldim.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB box-count fractal-dimension helper is covered by the Python `ie_fractal_dim(...)` / `ieFractaldim(...)` compatibility wrapper in `pyisetcam.utils`, including grayscale binarization, integral-image box counting, and best-fit slope calculation headlessly.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/statistics/gammaPDF.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB gamma-kernel helper is covered by the Python `gamma_pdf(...)` / `gammaPDF(...)` compatibility wrapper in `pyisetcam.utils`, including the normalized discrete gamma-form curve construction used upstream.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/statistics/getGaussian.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB receptive-field Gaussian helper is covered by the Python `get_gaussian(...)` / `getGaussian(...)` compatibility wrapper in `pyisetcam.utils`, including RF-support mesh construction and unit-volume normalization.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/statistics/ieExprnd.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB exponential-distribution sampler is covered by the Python `ie_exprnd(...)` / `ieExprnd(...)` compatibility wrapper in `pyisetcam.utils`, including MATLAB-style size parsing and inverse-CDF sampling.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/statistics/ieMvnrnd.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
+      "status": "ported",
       "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.parity",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB multivariate-normal sampler is covered directly by the Python `ie_mvnrnd(...)` / `ieMvnrnd(...)` compatibility wrapper in `pyisetcam.utils`, with focused deterministic regression coverage over the Cholesky sampling contract.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/statistics/ieNormpdf.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB normal-density helper is covered by the Python `ie_normpdf(...)` / `ieNormpdf(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/statistics/ieOneOverF.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB radial 1/f spectrum helper is covered by the Python `ie_one_over_f(...)` / `ieOneOverF(...)` compatibility wrapper in `pyisetcam.utils`, including gamma-linearization, BT.601 grayscale conversion, FFT centering, and radial amplitude averaging.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/statistics/iePoisson.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB Poisson sampler is covered by the Python `ie_poisson(...)` / `iePoisson(...)` compatibility wrapper in `pyisetcam.utils`, including scalar-vs-matrix lambda handling and frozen/random seed bookkeeping.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/statistics/iePrcomp.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB principal-component helper is covered by the Python `ie_prcomp(...)` / `iePrcomp(...)` compatibility wrapper in `pyisetcam.utils`, including the basic and remove-mean covariance-SVD modes.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/statistics/iePrctile.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB percentile helper is covered by the Python `ie_prctile(...)` / `iePrctile(...)` compatibility wrapper in `pyisetcam.utils`, including the fallback sorted-sample interpolation path used without the Statistics Toolbox.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/statistics/lorentzSum.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB Lorentzian-sum helper is covered by the Python `lorentz_sum(...)` / `lorentzSum(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/tablebase/ieTableGet.m",

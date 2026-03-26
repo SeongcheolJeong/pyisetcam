@@ -1,29 +1,44 @@
 from __future__ import annotations
 
+import math
+
 import numpy as np
 import pytest
 
 from pyisetcam import (
     FloydSteinberg,
     HalfToneImage,
+    biNormal,
     convolvecirc,
     dpi2mperdot,
+    expRand,
     ffndgrid,
+    gammaPDF,
     getMiddleMatrix,
+    getGaussian,
     ieCmap,
     ieClip,
     ieCompressData,
     ieCropRect,
     ieDataList,
     ieDpi2Mperdot,
+    ieExprnd,
     ieFindWaveIndex,
+    ieFractalDrawgrid,
+    ieFractaldim,
     ieHwhm2SD,
     ieLineAlign,
     ieLightList,
     ieLUTDigital,
     ieLUTInvert,
     ieLUTLinear,
+    ieMvnrnd,
+    ieNormpdf,
+    ieOneOverF,
     ieParameterOtype,
+    iePoisson,
+    iePrcomp,
+    iePrctile,
     ieRadialMatrix,
     ieReflectanceList,
     ieScale,
@@ -62,14 +77,19 @@ from pyisetcam import (
     upperQuad2FullMatrix,
     vectorLength,
     xyz2srgb,
+    lorentzSum,
 )
 from pyisetcam.utils import (
     blackbody,
+    bi_normal,
     convolve_circ,
     energy_to_quanta,
+    exp_rand,
     ffndgrid as ffndgrid_fn,
     floyd_steinberg,
+    gamma_pdf,
     get_middle_matrix,
+    get_gaussian,
     half_tone_image,
     ie_cmap,
     ie_clip,
@@ -77,8 +97,11 @@ from pyisetcam.utils import (
     ie_crop_rect,
     ie_data_list,
     ie_dpi2_mperdot,
+    ie_exprnd,
     ie_fit_line,
     ie_find_wave_index,
+    ie_fractal_dim,
+    ie_fractal_drawgrid,
     ie_hwhm_to_sd,
     ie_line_align,
     ie_light_list,
@@ -86,6 +109,12 @@ from pyisetcam.utils import (
     ie_lut_invert,
     ie_lut_linear,
     ie_parameter_otype,
+    ie_mvnrnd,
+    ie_normpdf,
+    ie_one_over_f,
+    ie_poisson,
+    ie_prcomp,
+    ie_prctile,
     ie_radial_matrix,
     ie_reflectance_list,
     ie_scale,
@@ -122,6 +151,7 @@ from pyisetcam.utils import (
     space2sample as space2sample_fn,
     dpi2mperdot as dpi2mperdot_fn,
     ie_tikhonov,
+    lorentz_sum,
     unpadarray as unpadarray_fn,
     upper_quad_to_full_matrix,
     vector_length,
@@ -1391,3 +1421,121 @@ def test_image_hc2rgb_returns_waveband_stack_and_overlay(asset_store) -> None:
     assert np.all((overlay >= 0.0) & (overlay <= 1.0))
     assert np.allclose(alias_images, rgb_images)
     assert np.allclose(alias_overlay, overlay)
+
+
+def test_statistics_gaussian_helpers_match_legacy_aliases() -> None:
+    gaussian = bi_normal(1.0, 2.0, 0.0, 5)
+    alias_gaussian = biNormal(1.0, 2.0, 0.0, 5)
+    assert gaussian.shape == (5, 5)
+    assert np.allclose(alias_gaussian, gaussian)
+    assert float(np.sum(gaussian)) == pytest.approx(1.0)
+
+    t = np.arange(5.0, dtype=float)
+    gamma_values = gamma_pdf(t, 2, 1.0)
+    alias_gamma = gammaPDF(t, 2, 1.0)
+    expected_gamma = (t**1) * np.exp(-t) / math.factorial(1)
+    expected_gamma = expected_gamma / float(np.sum(expected_gamma))
+    assert np.allclose(gamma_values, expected_gamma)
+    assert np.allclose(alias_gamma, expected_gamma)
+
+    rf_support = {"X": np.array([-1.0, 0.0, 1.0]), "Y": np.array([-1.0, 0.0, 1.0])}
+    gaussian_rf = get_gaussian(np.eye(2, dtype=float), rf_support)
+    alias_rf = getGaussian(np.eye(2, dtype=float), rf_support)
+    assert gaussian_rf.shape == (3, 3)
+    assert np.allclose(alias_rf, gaussian_rf)
+    assert float(np.sum(gaussian_rf)) == pytest.approx(1.0, rel=1e-6)
+
+    norm_values = ie_normpdf(np.array([-1.0, 0.0, 1.0], dtype=float))
+    alias_norm = ieNormpdf(np.array([-1.0, 0.0, 1.0], dtype=float))
+    expected_norm = np.exp(-0.5 * np.array([1.0, 0.0, 1.0])) / np.sqrt(2.0 * np.pi)
+    assert np.allclose(norm_values, expected_norm)
+    assert np.allclose(alias_norm, expected_norm)
+
+
+def test_statistics_random_helpers_match_legacy_aliases() -> None:
+    expected = np.array([[1.0, 2.0, 3.0]], dtype=float)
+    uniform = np.exp(-expected / 2.0)
+    exp_values = exp_rand(2.0, [1, 3], uniform_samples=uniform)
+    alias_exp = expRand(2.0, [1, 3], uniform_samples=uniform)
+    assert np.allclose(exp_values, expected)
+    assert np.allclose(alias_exp, expected)
+
+    exprnd_values = ie_exprnd(2.0, 1, 3, uniform_samples=uniform)
+    alias_exprnd = ieExprnd(2.0, 1, 3, uniform_samples=uniform)
+    assert np.allclose(exprnd_values, expected)
+    assert np.allclose(alias_exprnd, expected)
+
+    z_samples = np.array([[0.0, 1.0], [1.0, -1.0]], dtype=float)
+    mvn = ie_mvnrnd([1.0, 2.0], [[1.0, 0.0], [0.0, 4.0]], standard_normal_samples=z_samples)
+    alias_mvn = ieMvnrnd([1.0, 2.0], [[1.0, 0.0], [0.0, 4.0]], standard_normal_samples=z_samples)
+    expected_mvn = np.array([[1.0, 4.0], [2.0, 0.0]], dtype=float)
+    assert np.allclose(mvn, expected_mvn)
+    assert np.allclose(alias_mvn, expected_mvn)
+
+    lam = np.array([[1.0, 4.0], [2.0, 3.0]], dtype=float)
+    poisson_values, poisson_seed = ie_poisson(lam, "noiseFlag", "frozen", "seed", 17)
+    alias_values, alias_seed = iePoisson(lam, "noiseFlag", "frozen", "seed", 17)
+    repeat_values, repeat_seed = ie_poisson(lam, "noiseFlag", "frozen", "seed", 17)
+    assert poisson_seed == 17
+    assert alias_seed == 17
+    assert repeat_seed == 17
+    assert np.array_equal(poisson_values, repeat_values)
+    assert np.array_equal(alias_values, repeat_values)
+
+
+def test_statistics_spectral_and_percentile_helpers_match_legacy_aliases() -> None:
+    rgb = np.dstack(
+        (
+            np.array([[0.1, 0.5], [0.7, 0.9]], dtype=float),
+            np.array([[0.2, 0.4], [0.6, 0.8]], dtype=float),
+            np.array([[0.3, 0.1], [0.5, 0.7]], dtype=float),
+        )
+    )
+    frequencies, amplitudes = ie_one_over_f(rgb, gamma=1.0)
+    alias_frequencies, alias_amplitudes = ieOneOverF(rgb, gamma=1.0)
+    assert frequencies.shape == amplitudes.shape
+    assert np.allclose(alias_frequencies, frequencies)
+    assert np.allclose(alias_amplitudes, amplitudes)
+    assert np.all(frequencies > 0.0)
+    assert np.all(amplitudes >= 0.0)
+
+    data = np.array([[1.0, 3.0, 5.0], [2.0, 4.0, 8.0]], dtype=float)
+    pcs, mean = ie_prcomp(data, "remove mean", 1)
+    alias_pcs, alias_mean = iePrcomp(data, "remove mean", 1)
+    assert pcs.shape == (2, 1)
+    assert np.allclose(alias_pcs, pcs)
+    assert np.allclose(mean, np.array([3.0, 14.0 / 3.0], dtype=float))
+    assert np.allclose(alias_mean, mean)
+    assert float(np.linalg.norm(pcs[:, 0])) == pytest.approx(1.0)
+
+    percentiles = ie_prctile(np.array([1.0, 2.0, 3.0, 4.0], dtype=float), [0.0, 50.0, 100.0])
+    alias_percentiles = iePrctile(np.array([1.0, 2.0, 3.0, 4.0], dtype=float), [0.0, 50.0, 100.0])
+    assert np.allclose(percentiles, np.array([1.0, 2.5, 4.0], dtype=float))
+    assert np.allclose(alias_percentiles, percentiles)
+
+    x = np.array([0.0, 1.0, 2.0], dtype=float)
+    params = np.array([[2.0, 3.0, 1.0], [1.0, 1.0, 2.0]], dtype=float)
+    lorentz = lorentz_sum(x, params)
+    alias_lorentz = lorentzSum(x, params)
+    expected_lorentz = 3.0 / (1.0 + (x / 2.0) ** 2) + 1.0 / (1.0 + x**2) ** 2
+    assert np.allclose(lorentz, expected_lorentz)
+    assert np.allclose(alias_lorentz, expected_lorentz)
+
+
+def test_statistics_fractal_helpers_match_legacy_aliases() -> None:
+    image = np.full((4, 4), 255, dtype=np.uint8)
+    image[:2, :2] = 0
+
+    grid = ie_fractal_drawgrid(image, 2)
+    alias_grid = ieFractalDrawgrid(image, 2)
+    assert grid.shape == (4, 4, 3)
+    assert np.array_equal(alias_grid, grid)
+    assert np.all(grid[0, :, 0] == 255)
+    assert np.all(grid[:, 0, 2] == 255)
+    assert np.all(grid[::2, :, 1] == 0)
+    assert np.all(grid[:, ::2, 1] == 0)
+
+    fractal_dimension = ie_fractal_dim(image, 1, 2, 1)
+    alias_fractal_dimension = ieFractaldim(image, 1, 2, 1)
+    assert fractal_dimension == pytest.approx(2.0)
+    assert alias_fractal_dimension == pytest.approx(2.0)
