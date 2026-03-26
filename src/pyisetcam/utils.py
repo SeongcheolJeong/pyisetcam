@@ -3248,6 +3248,321 @@ def hc_basis(
     return np.asarray(img_mean, dtype=float), basis, coefficients, var_explained
 
 
+def hc_blur(hc: Any, sd: int = 3) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Blur each hypercube plane with MATLAB-style Gaussian convolution."""
+
+    cube = np.asarray(hc)
+    if cube.ndim != 3:
+        raise ValueError("Hypercube data required.")
+    size = int(sd)
+    if size <= 0:
+        raise ValueError("sd must be positive.")
+
+    sigma = 0.5
+    coords = np.arange(size, dtype=float) - (float(size) - 1.0) / 2.0
+    x_grid, y_grid = np.meshgrid(coords, coords)
+    blur = np.exp(-(x_grid**2 + y_grid**2) / (2.0 * sigma**2))
+    blur = blur / float(np.sum(blur))
+
+    blurred = np.empty(cube.shape, dtype=float)
+    for index in range(cube.shape[2]):
+        blurred[:, :, index] = convolve2d(np.asarray(cube[:, :, index], dtype=float), blur, mode="same")
+    return np.asarray(blurred, dtype=float), np.asarray(blur, dtype=float)
+
+
+hcBlur = hc_blur
+
+
+def hc_illuminant_scale(hc_illuminant: Any) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Estimate relative illuminant scale across a hypercube image."""
+
+    cube = np.asarray(hc_illuminant, dtype=float)
+    if cube.ndim != 3:
+        raise ValueError("hypercube illuminant required")
+    xw, rows, cols, _ = rgb_to_xw_format(cube)
+    mean_spd = np.mean(xw, axis=0, dtype=float)
+    ill_scale = np.asarray(xw @ np.linalg.pinv(mean_spd.reshape(-1, 1).T), dtype=float).reshape(rows, cols, order="F")
+    maximum = float(np.max(ill_scale))
+    if maximum > 0.0:
+        ill_scale = ill_scale / maximum
+        mean_spd = mean_spd * maximum
+    return np.asarray(ill_scale, dtype=float), np.asarray(mean_spd, dtype=float)
+
+
+hcIlluminantScale = hc_illuminant_scale
+
+
+_ENVI_DATA_TYPE_MAP: dict[int, np.dtype[Any]] = {
+    1: np.dtype("u1"),
+    2: np.dtype("i2"),
+    3: np.dtype("i4"),
+    4: np.dtype("f4"),
+    5: np.dtype("f8"),
+    12: np.dtype("u2"),
+    13: np.dtype("u4"),
+    14: np.dtype("i8"),
+    15: np.dtype("u8"),
+}
+
+
+def hc_read_hyspex_imginfo(filename: str | Path) -> dict[str, Any]:
+    """Read ENVI header metadata in the format expected by hcReadHyspex()."""
+
+    path = Path(filename)
+    if path.suffix.lower() != ".hdr":
+        path = path.with_suffix(".hdr")
+    if not path.exists():
+        raise ValueError(f"No file {path} found")
+
+    lines = path.read_text(encoding="utf-8").splitlines()
+    if not lines or lines[0].strip() != "ENVI":
+        raise ValueError(f"{path} is not an ENVI header file!")
+
+    info: dict[str, Any] = {}
+    index = 1
+    while index < len(lines):
+        current = lines[index].strip()
+        index += 1
+        if not current or "=" not in current:
+            continue
+        field, value = current.split("=", 1)
+        field_name = field.strip().replace(" ", "_")
+        value = value.strip()
+
+        if value.startswith("{"):
+            collected = [value[1:]]
+            while "}" not in collected[-1] and index < len(lines):
+                collected.append(lines[index].strip())
+                index += 1
+            joined = " ".join(collected)
+            joined = joined.split("}", 1)[0].strip()
+            if field_name.lower() == "description":
+                parsed_value: Any = joined
+            else:
+                parts = [part.strip() for part in joined.split(",") if part.strip()]
+                numeric_parts: list[Any] = []
+                all_numeric = True
+                for part in parts:
+                    try:
+                        numeric_parts.append(int(part))
+                    except ValueError:
+                        try:
+                            numeric_parts.append(float(part))
+                        except ValueError:
+                            numeric_parts.append(part)
+                            all_numeric = False
+                if all_numeric:
+                    parsed_value = np.asarray(numeric_parts)
+                else:
+                    parsed_value = numeric_parts
+        else:
+            scalar = value
+            try:
+                parsed_value = int(scalar)
+            except ValueError:
+                try:
+                    parsed_value = float(scalar)
+                except ValueError:
+                    parsed_value = scalar
+        info[field_name] = parsed_value
+
+    if "data_type" in info:
+        code = int(np.asarray(info["data_type"]).reshape(-1)[0])
+        if code not in _ENVI_DATA_TYPE_MAP:
+            raise ValueError("Data type not supported!")
+        dtype = _ENVI_DATA_TYPE_MAP[code]
+        byte_order = int(np.asarray(info.get("byte_order", 0)).reshape(-1)[0])
+        dtype = dtype.newbyteorder(">" if byte_order == 1 else "<")
+        info["data_type"] = dtype
+    if "byte_order" in info:
+        byte_order = int(np.asarray(info["byte_order"]).reshape(-1)[0])
+        info["byte_order"] = "ieee-be" if byte_order == 1 else "ieee-le"
+    return info
+
+
+hcReadHyspexImginfo = hc_read_hyspex_imginfo
+
+
+def hc_read_hyspex(
+    filename: str | Path,
+    lines: Any | None = None,
+    samples: Any | None = None,
+    bands: Any | None = None,
+) -> tuple[NDArray[Any], dict[str, Any]]:
+    """Read ENVI image data using the legacy hcReadHyspex() contract."""
+
+    data_path = Path(filename)
+    info = hc_read_hyspex_imginfo(data_path)
+
+    n_lines = int(info["lines"])
+    n_samples = int(info["samples"])
+    n_bands = int(info["bands"])
+    dtype = np.dtype(info["data_type"])
+    header_offset = int(info.get("header_offset", 0))
+    interleave = str(info.get("interleave", "bsq")).strip().lower()
+
+    total = n_lines * n_samples * n_bands
+    data = np.fromfile(data_path, dtype=dtype, count=total, offset=header_offset)
+    if data.size != total:
+        raise ValueError("Unexpected ENVI payload size.")
+
+    if interleave == "bsq":
+        cube = data.reshape((n_bands, n_lines, n_samples)).transpose(1, 2, 0)
+    elif interleave == "bil":
+        cube = data.reshape((n_lines, n_bands, n_samples)).transpose(0, 2, 1)
+    elif interleave == "bip":
+        cube = data.reshape((n_lines, n_samples, n_bands))
+    else:
+        raise ValueError(f"Unsupported interleave format {interleave!r}.")
+
+    if lines is None:
+        row_indices = np.arange(n_lines, dtype=int)
+    else:
+        row_indices = np.asarray(lines, dtype=int).reshape(-1) - 1
+    if samples is None:
+        col_indices = np.arange(n_samples, dtype=int)
+    else:
+        col_indices = np.asarray(samples, dtype=int).reshape(-1) - 1
+    if bands is None:
+        band_indices = np.arange(n_bands, dtype=int)
+    elif isinstance(bands, str) and bands.lower() == "default":
+        default_bands = np.asarray(info.get("default_bands", np.arange(1, n_bands + 1)), dtype=int).reshape(-1)
+        band_indices = default_bands - 1
+    else:
+        band_indices = np.asarray(bands, dtype=int).reshape(-1) - 1
+
+    image = cube[np.ix_(row_indices, col_indices, band_indices)]
+    return np.asarray(image), info
+
+
+hcReadHyspex = hc_read_hyspex
+
+
+def hc_image(
+    hc: Any,
+    display_type: str = "mean gray",
+    slices: Any | None = None,
+) -> Any:
+    """Return headless payloads for the legacy hcimage() display helper."""
+
+    cube = np.asarray(hc, dtype=float)
+    if cube.ndim != 3:
+        raise ValueError("hypercube image data required")
+    dtype_key = param_format(display_type)
+
+    if dtype_key == "meangray":
+        return np.asarray(np.mean(cube, axis=2, dtype=float), dtype=float)
+    if dtype_key in {"imagemontage", "montage"}:
+        selection = np.arange(1, cube.shape[2] + 1, dtype=int) if slices is None else np.asarray(slices, dtype=int).reshape(-1)
+        return image_montage(cube, selection)
+    if dtype_key == "movie":
+        max_value = float(np.max(cube))
+        scaled = np.zeros_like(cube, dtype=float) if max_value == 0.0 else 256.0 * cube / max_value
+        return {"frames": np.asarray(scaled, dtype=float), "title": f"Hypercube wavebands: {cube.shape[2]}", "type": "movie"}
+    raise ValueError(f"Unknown hc image display type: {display_type}")
+
+
+hcimage = hc_image
+
+
+def hc_image_crop(
+    img: Any,
+    rect: Any | None = None,
+    cPlane: int = 1,
+) -> tuple[NDArray[Any], NDArray[np.int64]]:
+    """Crop a hypercube image using MATLAB rect semantics."""
+
+    cube = np.asarray(img)
+    if cube.ndim != 3:
+        raise ValueError("hyper cube image required")
+    _ = int(cPlane)
+    rows, cols, _ = cube.shape
+
+    if rect is None:
+        crop_rect = np.array([1, 1, cols - 1, rows - 1], dtype=int)
+    else:
+        crop_rect = np.rint(np.asarray(rect, dtype=float).reshape(-1)).astype(int)
+        if crop_rect.size != 4:
+            raise ValueError("ROI rect must contain [col, row, width, height].")
+
+    col_min = max(int(crop_rect[0]), 1)
+    row_min = max(int(crop_rect[1]), 1)
+    col_max = min(col_min + int(crop_rect[2]), cols)
+    row_max = min(row_min + int(crop_rect[3]), rows)
+    cropped = cube[row_min - 1 : row_max, col_min - 1 : col_max, ...]
+    normalized_rect = np.array([col_min, row_min, max(col_max - col_min, 0), max(row_max - row_min, 0)], dtype=int)
+    return np.asarray(cropped), normalized_rect
+
+
+hcimageCrop = hc_image_crop
+
+
+def hc_image_rotate_clip(
+    hc: Any,
+    clipPrctile: float = 99.9,
+    nRot: int = 1,
+) -> tuple[NDArray[Any], NDArray[np.float64]]:
+    """Rotate and percentile-clip each plane of a hypercube image."""
+
+    cube = np.asarray(hc)
+    if cube.ndim != 3:
+        raise ValueError("hyper cube image required")
+
+    rotated_first = np.rot90(np.asarray(cube[:, :, 0], dtype=float), int(nRot)) if int(nRot) != 0 else np.asarray(cube[:, :, 0], dtype=float)
+    out_shape = (*rotated_first.shape, cube.shape[2])
+    if np.issubdtype(cube.dtype, np.integer):
+        clipped_cube = np.zeros(out_shape, dtype=cube.dtype)
+    else:
+        clipped_cube = np.zeros(out_shape, dtype=float)
+    clipped_pixels = np.zeros(rotated_first.shape, dtype=float)
+
+    for index in range(cube.shape[2]):
+        plane = np.asarray(cube[:, :, index], dtype=float)
+        if int(nRot) != 0:
+            plane = np.rot90(plane, int(nRot))
+        if float(clipPrctile) < 100.0:
+            maximum = float(np.percentile(plane.reshape(-1), float(clipPrctile)))
+            mask = plane > maximum
+            clipped_pixels = clipped_pixels + mask.astype(float)
+            plane = plane.copy()
+            plane[mask] = 0.0
+        if np.issubdtype(clipped_cube.dtype, np.integer):
+            clipped_cube[:, :, index] = np.rint(plane).astype(clipped_cube.dtype)
+        else:
+            clipped_cube[:, :, index] = plane
+    return np.asarray(clipped_cube), np.asarray(clipped_pixels, dtype=float)
+
+
+hcimageRotateClip = hc_image_rotate_clip
+
+
+def hc_viewer(image_cube: Any, slice_map: Any | None = None) -> dict[str, Any]:
+    """Return a headless payload for the legacy hcViewer() slider UI."""
+
+    cube = np.asarray(image_cube, dtype=float)
+    if cube.ndim != 3:
+        raise ValueError("Image cube required.")
+    mapping = (
+        np.arange(1, cube.shape[2] + 1, dtype=float)
+        if slice_map is None
+        else np.asarray(slice_map, dtype=float).reshape(-1)
+    )
+    if mapping.size != cube.shape[2]:
+        raise ValueError("slice_map must match the number of planes in image_cube.")
+    return {
+        "cube": cube.copy(),
+        "current_slice": 1,
+        "image": np.asarray(cube[:, :, 0], dtype=float),
+        "slice_map": mapping.copy(),
+        "label": f"Slice: {mapping[0]:g}",
+        "colormap": "gray",
+        "title": "Image Cube Viewer",
+    }
+
+
+hcViewer = hc_viewer
+
+
 imageFlip = image_flip
 imageIncreaseImageRGBSize = image_increase_image_rgb_size
 

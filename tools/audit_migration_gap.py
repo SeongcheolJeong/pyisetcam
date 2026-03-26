@@ -816,6 +816,51 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB vector-norm helper is covered by the Python `vector_length(...)` / `vectorLength(...)` compatibility wrapper in `pyisetcam.utils`, including NaN-as-zero behavior.",
         "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
     },
+    "utility/hypercube/hcBlur.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB per-plane hypercube blur helper is covered by the Python `hc_blur(...)` / `hcBlur(...)` compatibility wrapper in `pyisetcam.utils`, including the default `fspecial('gaussian',[sd sd])` kernel and same-sized convolution behavior.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/hypercube/hcIlluminantScale.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB hypercube illuminant-scaling helper is covered by the Python `hc_illuminant_scale(...)` / `hcIlluminantScale(...)` compatibility wrapper in `pyisetcam.utils`, including the mean-SPD pseudoinverse projection and normalized scale-map contract.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/hypercube/hcReadHyspex.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB ENVI hypercube reader is covered by the Python `hc_read_hyspex(...)` / `hcReadHyspex(...)` compatibility wrapper in `pyisetcam.utils`, including line, sample, and band subsetting plus `default bands` selection.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/hypercube/hcReadHyspexImginfo.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB ENVI header parser is covered by the Python `hc_read_hyspex_imginfo(...)` / `hcReadHyspexImginfo(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/hypercube/hcRedFISh.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a standalone external-dataset notebook for the Grenoble ReDFISh HDF5 bundle and scene-construction demos, not a reusable headless runtime API surface within the pinned ISETCam snapshot.",
+        "module_hits": [],
+    },
+    "utility/hypercube/hcViewer.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB slider-based hypercube viewer is covered by the Python `hc_viewer(...)` / `hcViewer(...)` compatibility wrapper in `pyisetcam.utils`, returning the initial slice payload headlessly instead of opening a UI control.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/hypercube/hcimage.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB hypercube display helper is covered by the Python `hc_image(...)` / `hcimage(...)` compatibility wrapper in `pyisetcam.utils`, including mean-gray, montage, and movie payload modes.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/hypercube/hcimageCrop.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB hypercube crop helper is covered by the Python `hc_image_crop(...)` / `hcimageCrop(...)` compatibility wrapper in `pyisetcam.utils`, using the same `[col,row,width,height]` rect semantics headlessly.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/hypercube/hcimageRotateClip.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB hypercube rotate-and-clip helper is covered by the Python `hc_image_rotate_clip(...)` / `hcimageRotateClip(...)` compatibility wrapper in `pyisetcam.utils`, including `rot90` replay, percentile clipping, and clipped-pixel counting.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
     "utility/statistics/biNormal.m": {
         "status": "ported",
         "note": "The legacy MATLAB separable bivariate-Gaussian helper is covered by the Python `bi_normal(...)` / `biNormal(...)` compatibility wrapper in `pyisetcam.utils`, including optional in-place rotation over cropped support.",

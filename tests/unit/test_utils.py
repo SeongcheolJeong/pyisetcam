@@ -4,6 +4,7 @@ import math
 
 import numpy as np
 import pytest
+from scipy.signal import convolve2d
 
 from pyisetcam import (
     FloydSteinberg,
@@ -16,6 +17,15 @@ from pyisetcam import (
     gammaPDF,
     getMiddleMatrix,
     getGaussian,
+    hcBasis,
+    hcBlur,
+    hcIlluminantScale,
+    hcReadHyspex,
+    hcReadHyspexImginfo,
+    hcViewer,
+    hcimage,
+    hcimageCrop,
+    hcimageRotateClip,
     ieCmap,
     ieClip,
     ieCompressData,
@@ -90,6 +100,15 @@ from pyisetcam.utils import (
     gamma_pdf,
     get_middle_matrix,
     get_gaussian,
+    hc_basis,
+    hc_blur,
+    hc_illuminant_scale,
+    hc_image,
+    hc_image_crop,
+    hc_image_rotate_clip,
+    hc_read_hyspex,
+    hc_read_hyspex_imginfo,
+    hc_viewer,
     half_tone_image,
     ie_cmap,
     ie_clip,
@@ -1539,3 +1558,126 @@ def test_statistics_fractal_helpers_match_legacy_aliases() -> None:
     alias_fractal_dimension = ieFractaldim(image, 1, 2, 1)
     assert fractal_dimension == pytest.approx(2.0)
     assert alias_fractal_dimension == pytest.approx(2.0)
+
+
+def test_hypercube_blur_and_illuminant_scale_match_aliases() -> None:
+    cube = np.zeros((3, 3, 2), dtype=float)
+    cube[1, 1, 0] = 1.0
+    cube[:, :, 1] = np.array(
+        [
+            [1.0, 2.0, 3.0],
+            [4.0, 5.0, 6.0],
+            [7.0, 8.0, 9.0],
+        ],
+        dtype=float,
+    )
+
+    blurred, kernel = hc_blur(cube, 3)
+    alias_blurred, alias_kernel = hcBlur(cube, 3)
+    coords = np.arange(3, dtype=float) - 1.0
+    x_grid, y_grid = np.meshgrid(coords, coords)
+    expected_kernel = np.exp(-(x_grid**2 + y_grid**2) / (2.0 * 0.5**2))
+    expected_kernel /= float(np.sum(expected_kernel))
+    assert np.allclose(kernel, expected_kernel)
+    assert np.allclose(alias_kernel, expected_kernel)
+    assert np.allclose(alias_blurred, blurred)
+    assert np.allclose(blurred[:, :, 0], convolve2d(cube[:, :, 0], expected_kernel, mode="same"))
+
+    spd = np.array([2.0, 4.0, 8.0], dtype=float)
+    weights = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float)
+    illuminant_cube = weights[:, :, np.newaxis] * spd[np.newaxis, np.newaxis, :]
+    scale, mean_spd = hc_illuminant_scale(illuminant_cube)
+    alias_scale, alias_mean_spd = hcIlluminantScale(illuminant_cube)
+    expected_scale = weights / float(np.max(weights))
+    assert np.allclose(scale, expected_scale)
+    assert np.allclose(alias_scale, expected_scale)
+    assert np.allclose(mean_spd, np.max(weights) * spd)
+    assert np.allclose(alias_mean_spd, mean_spd)
+
+
+def test_hypercube_envi_readers_match_aliases(tmp_path) -> None:
+    cube = np.arange(1, 1 + 2 * 3 * 4, dtype=np.uint16).reshape(2, 3, 4)
+    image_path = tmp_path / "sample.img"
+    header_path = tmp_path / "sample.hdr"
+
+    bil_payload = cube.transpose(0, 2, 1).reshape(-1)
+    bil_payload.tofile(image_path)
+    header_path.write_text(
+        "\n".join(
+            [
+                "ENVI",
+                "samples = 3",
+                "lines = 2",
+                "bands = 4",
+                "header offset = 0",
+                "file type = ENVI Standard",
+                "data type = 12",
+                "interleave = bil",
+                "byte order = 0",
+                "default bands = {4, 2, 1}",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    info = hc_read_hyspex_imginfo(image_path)
+    alias_info = hcReadHyspexImginfo(image_path)
+    assert info["lines"] == 2
+    assert info["samples"] == 3
+    assert info["bands"] == 4
+    assert info["byte_order"] == "ieee-le"
+    assert np.array_equal(info["default_bands"], np.array([4, 2, 1]))
+    assert alias_info["interleave"] == "bil"
+
+    loaded, loaded_info = hc_read_hyspex(image_path)
+    alias_loaded, alias_loaded_info = hcReadHyspex(image_path)
+    assert np.array_equal(loaded, cube)
+    assert np.array_equal(alias_loaded, cube)
+    assert loaded_info["interleave"] == "bil"
+    assert alias_loaded_info["interleave"] == "bil"
+
+    subset, _ = hc_read_hyspex(image_path, [2], [1, 3], "default")
+    expected_subset = cube[np.ix_(np.array([1]), np.array([0, 2]), np.array([3, 1, 0]))]
+    assert np.array_equal(subset, expected_subset)
+
+
+def test_hypercube_display_helpers_match_aliases() -> None:
+    cube = np.arange(1, 1 + 3 * 4 * 3, dtype=float).reshape(3, 4, 3)
+
+    mean_gray = hc_image(cube, "mean gray")
+    alias_mean_gray = hcimage(cube, "mean gray")
+    assert np.allclose(mean_gray, np.mean(cube, axis=2))
+    assert np.allclose(alias_mean_gray, mean_gray)
+
+    montage = hc_image(cube, "image montage", [1, 3])
+    alias_montage = hcimage(cube, "image montage", [1, 3])
+    assert montage[0] is None
+    assert montage[2] is None
+    assert montage[1].ndim == 2
+    assert np.allclose(alias_montage[1], montage[1])
+
+    movie = hc_image(cube, "movie")
+    assert movie["type"] == "movie"
+    assert movie["frames"].shape == cube.shape
+    assert movie["title"] == "Hypercube wavebands: 3"
+
+    cropped, rect = hc_image_crop(cube, [2, 1, 1, 1])
+    alias_cropped, alias_rect = hcimageCrop(cube, [2, 1, 1, 1])
+    assert cropped.shape == (2, 2, 3)
+    assert np.array_equal(rect, np.array([2, 1, 1, 1]))
+    assert np.array_equal(alias_rect, rect)
+    assert np.array_equal(alias_cropped, cropped)
+
+    rotated, clipped = hc_image_rotate_clip(cube, 50.0, 1)
+    alias_rotated, alias_clipped = hcimageRotateClip(cube, 50.0, 1)
+    assert rotated.shape == (4, 3, 3)
+    assert clipped.shape == (4, 3)
+    assert np.array_equal(alias_rotated, rotated)
+    assert np.array_equal(alias_clipped, clipped)
+
+    viewer = hc_viewer(cube, [500.0, 600.0, 700.0])
+    alias_viewer = hcViewer(cube, [500.0, 600.0, 700.0])
+    assert viewer["current_slice"] == 1
+    assert viewer["label"] == "Slice: 500"
+    assert np.array_equal(viewer["image"], cube[:, :, 0])
+    assert np.array_equal(alias_viewer["slice_map"], np.array([500.0, 600.0, 700.0]))

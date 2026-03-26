@@ -2008,3 +2008,12 @@ Gaussian normalization, deterministic exponential and multivariate-normal
 sampling, percentile fallback interpolation, radial 1/f spectra,
 box-count fractal slopes, and magenta grid overlays without opening
 MATLAB figures.
+The adjacent `utility/hypercube` family is now closed too: direct
+headless wrappers now cover `hcBlur(...)`, `hcIlluminantScale(...)`,
+`hcReadHyspex(...)`, `hcReadHyspexImginfo(...)`, `hcViewer(...)`,
+`hcimage(...)`, `hcimageCrop(...)`, and `hcimageRotateClip(...)`,
+including ENVI header parsing and band-subset replay, per-plane Gaussian
+blur, illuminant scale-map estimation, headless mean-gray/montage/movie
+payloads, rect-based hypercube cropping, and percentile-clipped
+rotation. The external ReDFISh notebook is explicitly treated as out of
+scope.

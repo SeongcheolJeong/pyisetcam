@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-26T18:01:18.174255+00:00",
+  "generated_at": "2026-03-26T18:39:07.729290+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 40,
-      "out_of_scope": 265,
+      "out_of_scope": 266,
       "parity": 710,
-      "partial": 181,
-      "ported": 247
+      "partial": 172,
+      "ported": 255
     },
     "kind_counts": {
       "api": 661,
@@ -19,17 +19,17 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 181,
+      "P1": 172,
       "P2": 40,
-      "P3": 1222
+      "P3": 1231
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": -2,
-        "out_of_scope": 0,
-        "parity": 1,
-        "partial": -12,
-        "ported": 13
+        "headless_only": 0,
+        "out_of_scope": 1,
+        "parity": 0,
+        "partial": -9,
+        "ported": 8
       },
       "kind_counts": {
         "api": 0,
@@ -40,9 +40,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -12,
-        "P2": -2,
-        "P3": 14
+        "P1": -9,
+        "P2": 0,
+        "P3": 9
       }
     },
     "family_summary": {
@@ -931,10 +931,10 @@
         "total": 279,
         "by_status": {
           "headless_only": 40,
-          "out_of_scope": 1,
+          "out_of_scope": 2,
           "parity": 14,
-          "partial": 181,
-          "ported": 43
+          "partial": 172,
+          "ported": 51
         },
         "by_kind": {
           "gui": 1,
@@ -1005,14 +1005,14 @@
     "top_open_families": [
       {
         "family": "utility",
-        "open_entries": 221,
+        "open_entries": 212,
         "highest_open_priority": "P1",
         "by_status": {
           "headless_only": 40,
-          "out_of_scope": 1,
+          "out_of_scope": 2,
           "parity": 14,
-          "partial": 181,
-          "ported": 43
+          "partial": 172,
+          "ported": 51
         }
       },
       {
@@ -17179,91 +17179,91 @@
       "upstream_path": "utility/hypercube/hcBlur.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB per-plane hypercube blur helper is covered by the Python `hc_blur(...)` / `hcBlur(...)` compatibility wrapper in `pyisetcam.utils`, including the default `fspecial('gaussian',[sd sd])` kernel and same-sized convolution behavior.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/hypercube/hcIlluminantScale.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB hypercube illuminant-scaling helper is covered by the Python `hc_illuminant_scale(...)` / `hcIlluminantScale(...)` compatibility wrapper in `pyisetcam.utils`, including the mean-SPD pseudoinverse projection and normalized scale-map contract.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/hypercube/hcReadHyspex.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB ENVI hypercube reader is covered by the Python `hc_read_hyspex(...)` / `hcReadHyspex(...)` compatibility wrapper in `pyisetcam.utils`, including line, sample, and band subsetting plus `default bands` selection.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/hypercube/hcReadHyspexImginfo.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB ENVI header parser is covered by the Python `hc_read_hyspex_imginfo(...)` / `hcReadHyspexImginfo(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/hypercube/hcRedFISh.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a standalone external-dataset notebook for the Grenoble ReDFISh HDF5 bundle and scene-construction demos, not a reusable headless runtime API surface within the pinned ISETCam snapshot.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/hypercube/hcViewer.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB slider-based hypercube viewer is covered by the Python `hc_viewer(...)` / `hcViewer(...)` compatibility wrapper in `pyisetcam.utils`, returning the initial slice payload headlessly instead of opening a UI control.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/hypercube/hcimage.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB hypercube display helper is covered by the Python `hc_image(...)` / `hcimage(...)` compatibility wrapper in `pyisetcam.utils`, including mean-gray, montage, and movie payload modes.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/hypercube/hcimageCrop.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB hypercube crop helper is covered by the Python `hc_image_crop(...)` / `hcimageCrop(...)` compatibility wrapper in `pyisetcam.utils`, using the same `[col,row,width,height]` rect semantics headlessly.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/hypercube/hcimageRotateClip.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB hypercube rotate-and-clip helper is covered by the Python `hc_image_rotate_clip(...)` / `hcimageRotateClip(...)` compatibility wrapper in `pyisetcam.utils`, including `rot90` replay, percentile clipping, and clipped-pixel counting.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/ieFindFiles.m",

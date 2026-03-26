@@ -720,9 +720,17 @@ from .utils import (
     exp_rand,
     ffndgrid,
     floyd_steinberg,
+    hc_blur,
     gamma_pdf,
     get_gaussian,
     hc_basis,
+    hc_illuminant_scale,
+    hc_image,
+    hc_image_crop,
+    hc_image_rotate_clip,
+    hc_read_hyspex,
+    hc_read_hyspex_imginfo,
+    hc_viewer,
     half_tone_image,
     ie_cmap,
     ie_compress_data,
@@ -900,8 +908,24 @@ __all__ = [
     "initDefaultSpectrum",
     "init_default_spectrum",
     "HeadlessDescriptionHandle",
+    "hcBlur",
     "hcBasis",
+    "hcIlluminantScale",
+    "hcReadHyspex",
+    "hcReadHyspexImginfo",
+    "hcViewer",
+    "hc_blur",
     "hc_basis",
+    "hc_illuminant_scale",
+    "hc_image",
+    "hc_image_crop",
+    "hc_image_rotate_clip",
+    "hc_read_hyspex",
+    "hc_read_hyspex_imginfo",
+    "hc_viewer",
+    "hcimage",
+    "hcimageCrop",
+    "hcimageRotateClip",
     "half_tone_image",
     "displayCreate",
     "displayConvert",
@@ -1165,6 +1189,22 @@ __all__ = [
     "get_middle_matrix",
     "getGaussian",
     "get_gaussian",
+    "hcBlur",
+    "hcIlluminantScale",
+    "hcReadHyspex",
+    "hcReadHyspexImginfo",
+    "hcViewer",
+    "hc_blur",
+    "hc_image",
+    "hc_image_crop",
+    "hc_image_rotate_clip",
+    "hc_illuminant_scale",
+    "hc_read_hyspex",
+    "hc_read_hyspex_imginfo",
+    "hc_viewer",
+    "hcimage",
+    "hcimageCrop",
+    "hcimageRotateClip",
     "isodd",
     "ieExprnd",
     "ie_exprnd",
@@ -2765,6 +2805,14 @@ mkInvGammaTable = mk_inv_gamma_table
 RGB2XWFormat = rgb_to_xw_format
 XW2RGBFormat = xw_to_rgb_format
 hcBasis = hc_basis
+hcBlur = hc_blur
+hcIlluminantScale = hc_illuminant_scale
+hcReadHyspex = hc_read_hyspex
+hcReadHyspexImginfo = hc_read_hyspex_imginfo
+hcViewer = hc_viewer
+hcimage = hc_image
+hcimageCrop = hc_image_crop
+hcimageRotateClip = hc_image_rotate_clip
 dac2rgb = dac_to_rgb
 convolvecirc = convolve_circ
 rgb2dac = rgb_to_dac
