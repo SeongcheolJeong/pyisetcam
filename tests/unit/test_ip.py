@@ -30,6 +30,8 @@ from pyisetcam import (
     ip2lightfield,
     ieColorTransform,
     ieInternal2Display,
+    iePixelWellCapacity,
+    ieRadiance2IP,
     imageColorBalance,
     imageDataXYZ,
     imageDistort,
@@ -50,8 +52,10 @@ from pyisetcam import (
     ip_set,
     ipClearData,
     ipSaveImage,
+    ie_radiance_to_ip,
     oi_compute,
     oi_create,
+    oi_get,
     scene_create,
     scene_get,
     scene_set,
@@ -1000,6 +1004,71 @@ def test_vcimage_srgb_matches_manual_pipeline(asset_store) -> None:
         np.asarray(ip_get(generated, "sensor conversion matrix"), dtype=float),
         np.asarray(ip_get(manual, "sensor conversion matrix"), dtype=float),
     )
+
+
+def test_ie_radiance_to_ip_scene_matches_manual_pipeline(asset_store) -> None:
+    scene = scene_create("macbethD65", asset_store=asset_store)
+
+    generated_ip, generated_sensor = ieRadiance2IP(scene, asset_store=asset_store)
+    assert generated_ip is not None
+
+    manual_oi = oi_compute(oi_create("pinhole", scene_get(scene, "wave"), asset_store=asset_store), scene)
+    pixel_size_um = float(oi_get(manual_oi, "width spatial resolution")) * 1e6
+    well_capacity, _ = iePixelWellCapacity(pixel_size_um, asset_store=asset_store)
+
+    manual_sensor = sensor_create(asset_store=asset_store)
+    manual_sensor = sensor_set(manual_sensor, "pixel read noise volts", 2.0e-3)
+    manual_sensor = sensor_set(manual_sensor, "pixel voltage swing", 1.0)
+    manual_sensor = sensor_set(manual_sensor, "pixel dark voltage", 2.0e-3)
+    manual_sensor = sensor_set(manual_sensor, "pixel conversion gain", 1.0 / float(well_capacity))
+    manual_sensor = sensor_set(manual_sensor, "quantization method", "12 bit")
+    manual_sensor = sensor_set(manual_sensor, "analog gain", 1.0)
+    manual_sensor = sensor_set(manual_sensor, "pixel size same fill factor", pixel_size_um * 1e-6)
+    manual_sensor = sensor_set(manual_sensor, "match oi", manual_oi)
+    manual_sensor = sensor_set(manual_sensor, "auto exposure", True)
+    manual_sensor = sensor_set(manual_sensor, "noise flag", 2)
+    manual_sensor = sensor_compute(manual_sensor, manual_oi)
+
+    manual_ip = ip_create(sensor=manual_sensor, asset_store=asset_store)
+    manual_ip = ip_set(manual_ip, "conversion method sensor", "MCC Optimized")
+    manual_ip = ip_set(manual_ip, "illuminant correction method", "gray world")
+    manual_ip = ip_set(manual_ip, "demosaic method", "Adaptive Laplacian")
+    manual_ip = ip_compute(manual_ip, manual_sensor, asset_store=asset_store)
+    manual_ip.metadata["eT"] = float(sensor_get(manual_sensor, "integration time"))
+
+    assert np.isclose(float(sensor_get(generated_sensor, "integration time")), float(sensor_get(manual_sensor, "integration time")))
+    assert np.allclose(np.asarray(ip_get(generated_ip, "result"), dtype=float), np.asarray(ip_get(manual_ip, "result"), dtype=float))
+    assert np.allclose(np.asarray(ip_get(generated_ip, "srgb"), dtype=float), np.asarray(ip_get(manual_ip, "srgb"), dtype=float))
+    assert generated_ip.fields["demosaic_method"] == "adaptive laplacian"
+    assert generated_ip.fields["illuminant_correction_method"] == "gray world"
+    assert generated_ip.fields["conversion_method_sensor"] == "MCC Optimized"
+    assert np.isclose(float(generated_ip.metadata["eT"]), float(sensor_get(generated_sensor, "integration time")))
+
+
+def test_ie_radiance_to_ip_reuses_sensor_and_copies_metadata(asset_store) -> None:
+    scene = scene_create("macbethD65", asset_store=asset_store)
+    oi = oi_compute(oi_create("pinhole", scene_get(scene, "wave"), asset_store=asset_store), scene)
+    provided_sensor = sensor_create(asset_store=asset_store)
+    provided_sensor.metadata["source"] = "provided"
+
+    generated_ip, generated_sensor = ie_radiance_to_ip(
+        oi,
+        "sensor",
+        provided_sensor,
+        "etime",
+        0.01,
+        "noise flag",
+        0,
+        asset_store=asset_store,
+    )
+
+    assert generated_ip is not None
+    assert generated_sensor is not provided_sensor
+    assert generated_sensor.metadata["source"] == "provided"
+    assert np.isclose(float(sensor_get(generated_sensor, "integration time")), 0.01)
+    assert generated_ip.metadata["source"] == "provided"
+    assert np.isclose(float(generated_ip.metadata["eT"]), 0.01)
+    assert generated_ip.fields["demosaic_method"] == "adaptive laplacian"
 
 
 def test_vcimage_iso_mtf_matches_camera_mtf_vci(asset_store) -> None:

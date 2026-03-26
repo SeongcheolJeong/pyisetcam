@@ -19,12 +19,21 @@ from .color import internal_to_display_matrix, sensor_to_target_matrix, xyz_colo
 from .display import Display, display_create, display_get, display_set
 from .exceptions import UnsupportedOptionError
 from .metrics import chromaticity_xy, xyz_from_energy
-from .optics import oi_compute, oi_create
+from .fileio import vc_load_object
+from .optics import oi_compute, oi_create, oi_get
 from .scene import scene_create
-from .sensor import sensor_compute, sensor_create, sensor_determine_cfa, sensor_get, sensor_set
+from .sensor import (
+    ie_pixel_well_capacity,
+    sensor_compute,
+    sensor_create,
+    sensor_determine_cfa,
+    sensor_get,
+    sensor_set,
+)
 from .session import track_ip_session_state, track_session_object
-from .types import ImageProcessor, OpticalImage, Sensor, SessionContext
+from .types import ImageProcessor, OpticalImage, Scene, Sensor, SessionContext
 from .utils import (
+    _normalize_legacy_kwargs,
     energy_to_quanta,
     image_linear_transform,
     invert_gamma_table,
@@ -365,6 +374,143 @@ def vcimage_srgb(
     ip = ip_set(ip, "internalCS", "XYZ", session=session)
     ip = ip_set(ip, "colorconversionmethod", "MCC Optimized", session=session)
     return ip_compute(ip, working_sensor, asset_store=store, session=session)
+
+
+def _ie_radiance_to_ip_oi(
+    radiance: Scene | OpticalImage,
+    pixel_size_um: float | None,
+    *,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> OpticalImage:
+    store = _store(asset_store)
+    normalized_type = param_format(getattr(radiance, "type", ""))
+    if isinstance(radiance, OpticalImage) or normalized_type == "opticalimage":
+        return radiance.clone()
+    if isinstance(radiance, Scene) or normalized_type == "scene":
+        scene = radiance.clone()
+        wave = np.asarray(scene.fields["wave"], dtype=float).reshape(-1)
+        oi = oi_create("pinhole", wave, asset_store=store, session=session)
+        compute_kwargs: dict[str, Any] = {}
+        if pixel_size_um is not None:
+            compute_kwargs["pixel_size"] = float(pixel_size_um) * 1e-6
+        return oi_compute(oi, scene, session=session, **compute_kwargs)
+    raise ValueError("ieRadiance2IP requires a scene or optical image input.")
+
+
+def _ie_radiance_to_ip_default_sensor(
+    oi: OpticalImage,
+    pixel_size_um: float | None,
+    analog_gain: float,
+    quantization: str,
+    conversion_gain: float | None,
+    *,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> Sensor:
+    store = _store(asset_store)
+    sensor = sensor_create(asset_store=store, session=session)
+    effective_pixel_size_um = (
+        float(pixel_size_um)
+        if pixel_size_um is not None
+        else float(oi_get(oi, "width spatial resolution")) * 1e6
+    )
+    well_capacity, _ = ie_pixel_well_capacity(effective_pixel_size_um, asset_store=store)
+    sensor = sensor_set(sensor, "pixel read noise volts", 2.0e-3)
+    sensor = sensor_set(sensor, "pixel voltage swing", 1.0)
+    sensor = sensor_set(sensor, "pixel dark voltage", 2.0e-3)
+    gain_value = float(conversion_gain) if conversion_gain is not None else 1.0 / max(float(well_capacity), 1.0e-12)
+    sensor = sensor_set(sensor, "pixel conversion gain", gain_value)
+    sensor = sensor_set(sensor, "quantization method", str(quantization))
+    sensor = sensor_set(sensor, "analog gain", float(analog_gain))
+    if np.isfinite(effective_pixel_size_um) and effective_pixel_size_um > 0.0:
+        sensor = sensor_set(sensor, "pixel size same fill factor", effective_pixel_size_um * 1e-6)
+    return sensor
+
+
+def ie_radiance_to_ip(
+    radiance: Scene | OpticalImage,
+    *args: Any,
+    sensor: Sensor | str | Path | None = None,
+    pixel_size: float | None = None,
+    film_diagonal: float = 5.0,
+    etime: float | None = None,
+    noise_flag: int = 2,
+    conversion_gain: float | None = None,
+    analog_gain: float = 1.0,
+    quantization: str = "12 bit",
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> tuple[ImageProcessor | None, Sensor]:
+    """Convert a scene or optical image into a headless IP/sensor pair."""
+
+    del film_diagonal
+    store = _store(asset_store)
+    options = _normalize_legacy_kwargs(
+        args,
+        {
+            "sensor": sensor,
+            "pixel size": pixel_size,
+            "etime": etime,
+            "noise flag": noise_flag,
+            "conversion gain": conversion_gain,
+            "analog gain": analog_gain,
+            "quantization": quantization,
+        },
+    )
+    pixel_size_um = (
+        None
+        if options.get("pixelsize") is None
+        else float(np.asarray(options["pixelsize"], dtype=float).reshape(-1)[0])
+    )
+    oi = _ie_radiance_to_ip_oi(radiance, pixel_size_um, asset_store=store, session=session)
+
+    sensor_spec = options.get("sensor")
+    if sensor_spec is None or (isinstance(sensor_spec, str) and sensor_spec == ""):
+        working_sensor = _ie_radiance_to_ip_default_sensor(
+            oi,
+            pixel_size_um,
+            float(options.get("analoggain", 1.0)),
+            str(options.get("quantization", "12 bit")),
+            None if options.get("conversiongain") is None else float(options["conversiongain"]),
+            asset_store=store,
+            session=session,
+        )
+    elif isinstance(sensor_spec, Sensor) or param_format(getattr(sensor_spec, "type", "")) == "sensor":
+        working_sensor = sensor_spec.clone()
+    else:
+        loaded_sensor, _ = vc_load_object("sensor", sensor_spec, session=None)
+        if not isinstance(loaded_sensor, Sensor):
+            raise ValueError("ieRadiance2IP sensor input must resolve to a sensor object.")
+        working_sensor = loaded_sensor
+
+    working_sensor = sensor_set(working_sensor, "match oi", oi)
+    if options.get("etime") is None:
+        working_sensor = sensor_set(working_sensor, "auto exposure", True)
+    else:
+        working_sensor = sensor_set(working_sensor, "exp time", float(options["etime"]))
+    working_sensor = sensor_set(working_sensor, "noise flag", int(options.get("noiseflag", 2)))
+    working_sensor = sensor_compute(working_sensor, oi, session=session)
+
+    filter_names = list(sensor_get(working_sensor, "filter names"))
+    if len(filter_names) > 3:
+        return None, working_sensor
+
+    ip = ip_create(sensor=working_sensor, asset_store=store, session=session)
+    ip = ip_set(ip, "conversion method sensor", "MCC Optimized", session=session)
+    ip = ip_set(ip, "illuminant correction method", "gray world", session=session)
+    ip = ip_set(ip, "demosaic method", "Adaptive Laplacian", session=session)
+    ip = ip_compute(ip, working_sensor, asset_store=store, session=session)
+
+    if working_sensor.metadata:
+        ip.metadata = _copy_metadata_value(working_sensor.metadata)
+    integration_time = np.asarray(sensor_get(working_sensor, "integration time"), dtype=float)
+    ip.metadata["eT"] = (
+        float(integration_time.reshape(-1)[0])
+        if integration_time.size == 1
+        else integration_time.copy()
+    )
+    return ip, working_sensor
 
 
 def vcimage_iso_mtf(
@@ -2443,6 +2589,7 @@ imageSensorConversion = image_sensor_conversion  # noqa: N816
 imageSensorCorrection = image_sensor_correction  # noqa: N816
 imageIlluminantCorrection = image_illuminant_correction  # noqa: N816
 imageColorBalance = image_color_balance  # noqa: N816
+ieRadiance2IP = ie_radiance_to_ip  # noqa: N816
 vcimageSRGB = vcimage_srgb  # noqa: N816
 vcimageISOMTF = vcimage_iso_mtf  # noqa: N816
 vcimageVSNR = vcimage_vsnr  # noqa: N816

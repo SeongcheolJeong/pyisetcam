@@ -156,6 +156,7 @@ from .ip import (
     image_illuminant_correction,
     image_mcc_transform,
     image_rgb_to_xyz,
+    ie_radiance_to_ip,
     image_sensor_conversion,
     image_sensor_correction,
     image_sensor_transform,
@@ -1129,6 +1130,8 @@ __all__ = [
     "display_render",
     "imageRGB2XYZ",
     "image_rgb_to_xyz",
+    "ieRadiance2IP",
+    "ie_radiance_to_ip",
     "imageIlluminantCorrection",
     "image_illuminant_correction",
     "imageColorBalance",
@@ -2982,6 +2985,7 @@ imageMCCTransform = image_mcc_transform
 imageSensorTransform = image_sensor_transform
 imageEsserTransform = image_esser_transform
 ieInternal2Display = ie_internal_to_display
+ieRadiance2IP = ie_radiance_to_ip
 ipHDRWhite = ip_hdr_white
 imageDistort = image_distort
 imageDataXYZ = image_data_xyz

@@ -741,6 +741,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB startup script is covered by the Python `ie_init(...)` / `ieInit(...)` compatibility wrapper on top of the current headless session bootstrap, including `ieMainClose(...)` replay, fresh session creation, and default hidden-main-window behavior.",
         "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
     },
+    "utility/ieRadiance2IP.m": {
+        "status": "ported",
+        "note": "The scene-or-OI convenience wrapper is covered by the Python `ie_radiance_to_ip(...)` / `ieRadiance2IP(...)` compatibility surface in `pyisetcam.ip`, which replays the headless OI -> sensor -> IP path with default auto exposure, default sensor tuning, and sensor-metadata carry-through.",
+        "module_hits": ["pyisetcam.ip", "pyisetcam.__init__"],
+    },
     "utility/ieManualViewer.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a browser-launch helper for GitHub wiki and source-tree pages, which is documentation navigation rather than a supported pyisetcam runtime surface.",
