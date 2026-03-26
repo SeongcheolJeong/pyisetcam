@@ -2058,4 +2058,8 @@ runtime surface. The neighboring `dcraw` package is tracked the same way:
 it is only MATLAB glue around external platform-specific `dcraw`
 executables plus a demo script, while pyisetcam keeps direct headless
 coverage only for the checked-in DNG path via `ie_dng_read(...)` and
-`sensor_dng_read(...)`.
+`sensor_dng_read(...)`. The smaller `AddTextToImage` package is now
+covered directly instead: `BitmapFont(...)`, `RasterizeText(...)`,
+`AddTextToImage(...)`, and `AddTextToImageWithBorder(...)` all have
+headless compatibility wrappers in `pyisetcam.fonts`, while the two demo
+scripts remain out of scope.

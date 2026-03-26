@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import copy
+import string
 import warnings
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+from scipy.signal import convolve2d
 
 from .assets import AssetStore
 from .display import display_create, display_get, display_set
@@ -44,14 +46,7 @@ def _font_bitmap_from_asset(font: dict[str, Any], store: AssetStore) -> np.ndarr
     return bitmap
 
 
-def _font_bitmap_from_pillow(font: dict[str, Any]) -> np.ndarray:
-    character = str(font_get(font, "character"))
-    family = str(font_get(font, "family"))
-    size = int(font_get(font, "size"))
-    dpi = int(font_get(font, "dpi"))
-    scaled_size = max(int(round(size * max(float(dpi) / 72.0, 1.0))), 1)
-
-    pil_font = None
+def _load_pillow_font(family: str, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     candidate_names = [
         family,
         f"{family}.ttf",
@@ -63,12 +58,19 @@ def _font_bitmap_from_pillow(font: dict[str, Any]) -> np.ndarray:
     ]
     for candidate in candidate_names:
         try:
-            pil_font = ImageFont.truetype(candidate, scaled_size)
-            break
+            return ImageFont.truetype(candidate, max(int(size), 1))
         except OSError:
             continue
-    if pil_font is None:
-        pil_font = ImageFont.load_default()
+    return ImageFont.load_default()
+
+
+def _font_bitmap_from_pillow(font: dict[str, Any]) -> np.ndarray:
+    character = str(font_get(font, "character"))
+    family = str(font_get(font, "family"))
+    size = int(font_get(font, "size"))
+    dpi = int(font_get(font, "dpi"))
+    scaled_size = max(int(round(size * max(float(dpi) / 72.0, 1.0))), 1)
+    pil_font = _load_pillow_font(family, scaled_size)
 
     canvas_side = max(scaled_size * 6, 64)
     image = Image.new("L", (canvas_side, canvas_side), color=255)
@@ -86,6 +88,68 @@ def _font_bitmap_from_pillow(font: dict[str, Any]) -> np.ndarray:
         bitmap_gray = bitmap_gray[rows[0] : rows[-1] + 1, cols[0] : cols[-1] + 1]
     bitmap = (bitmap_gray > 127.0).astype(float)
     return np.repeat(bitmap[:, :, np.newaxis], 3, axis=2)
+
+
+def _bitmap_font_characters_to_string(characters: Any | None) -> str:
+    if characters is None:
+        return string.ascii_letters + string.digits + string.punctuation
+    if isinstance(characters, str):
+        return characters
+    if isinstance(characters, np.ndarray):
+        flat = characters.reshape(-1).tolist()
+        return "".join(str(char) for char in flat)
+    if isinstance(characters, (list, tuple)):
+        return "".join(str(char) for char in characters)
+    return str(characters)
+
+
+def _bitmap_font_default_padding(size: int, padding: Any | None) -> int:
+    if padding is None:
+        return int(np.ceil(0.02 * float(size)))
+    return int(np.ceil(float(padding)))
+
+
+def _bitmap_font_struct(font: dict[str, Any]) -> dict[str, Any]:
+    if "Characters" in font and "Bitmaps" in font and "Size" in font:
+        return {
+            "Name": str(font.get("Name", font.get("name", "Courier New"))),
+            "Size": int(font["Size"]),
+            "Characters": _bitmap_font_characters_to_string(font["Characters"]),
+            "Bitmaps": [np.asarray(bitmap, dtype=bool) for bitmap in font["Bitmaps"]],
+        }
+    if font.get("type") == "font":
+        return bitmap_font(
+            str(font.get("family", "Georgia")),
+            int(font.get("size", 14)),
+            str(font.get("character", "g")),
+            0,
+        )
+    raise TypeError("Font must be a BitmapFont struct or font name.")
+
+
+def _bitmap_font_render_character(name: str, size: int, character: str, padding: int) -> np.ndarray:
+    pil_font = _load_pillow_font(name, size)
+    canvas_side = max(int(size) * 6, 64)
+    image = Image.new("L", (canvas_side, canvas_side), color=255)
+    draw = ImageDraw.Draw(image)
+    bbox = draw.textbbox((0, 0), character, font=pil_font)
+    offset_x = max(8 - bbox[0], 0)
+    offset_y = max(8 - bbox[1], 0)
+    draw.text((offset_x, offset_y), character, fill=0, font=pil_font)
+
+    bitmap = np.asarray(image, dtype=float)
+    occupied = bitmap < 255.0
+    if np.any(occupied):
+        rows = np.where(np.any(occupied, axis=1))[0]
+        cols = np.where(np.any(occupied, axis=0))[0]
+        bitmap = bitmap[rows[0] : rows[-1] + 1, cols[0] : cols[-1] + 1]
+    else:
+        bitmap = np.zeros((int(size), 1), dtype=float)
+
+    mask = bitmap < 160.0
+    if padding > 0:
+        mask = np.pad(mask, ((0, 0), (0, padding)), constant_values=False)
+    return np.asarray(mask, dtype=bool)
 
 
 def _oversample_pair(value: Any | None) -> tuple[int, int]:
@@ -108,6 +172,189 @@ def _display_compute_simple(display: Any, image: np.ndarray, oversample: tuple[i
     image = np.repeat(image, oversample[0], axis=0)
     image = np.repeat(image, oversample[1], axis=1)
     return np.asarray(image, dtype=float)
+
+
+def bitmap_font(
+    name: str = "Courier New",
+    size: int = 32,
+    characters: Any | None = None,
+    padding: Any | None = None,
+) -> dict[str, Any]:
+    font_size = int(np.ceil(float(size)))
+    font_padding = _bitmap_font_default_padding(font_size, padding)
+    glyphs = _bitmap_font_characters_to_string(characters)
+    bitmaps = [
+        _bitmap_font_render_character(str(name), font_size, character, font_padding)
+        for character in glyphs
+    ]
+    return {
+        "Name": str(name),
+        "Size": font_size,
+        "Characters": glyphs,
+        "Bitmaps": bitmaps,
+    }
+
+
+def rasterize_text(
+    text: str = "No string specified.",
+    font: dict[str, Any] | str = "Arial",
+    font_size: int = 32,
+) -> np.ndarray:
+    normalized = str(text).replace("\t", "    ").replace("\r\n", "\n")
+    control_chars = {chr(index) for index in list(range(0, 10)) + list(range(11, 32)) + [127]}
+    normalized = "".join(character for character in normalized if character not in control_chars)
+
+    characters = "".join(
+        dict.fromkeys(character for character in normalized if character not in {" ", "\n"})
+    )
+    if isinstance(font, dict):
+        font_struct = _bitmap_font_struct(font)
+    else:
+        font_struct = bitmap_font(str(font), font_size, characters)
+
+    missing = set(characters) - set(font_struct["Characters"])
+    if missing:
+        raise ValueError("The font provided is missing some of the necessary characters.")
+
+    line = 0
+    x_position = 0
+    space_size = int(np.ceil(0.33 * float(font_struct["Size"])))
+    placements: list[tuple[int, int, np.ndarray]] = []
+    height = 0
+    width = 0
+
+    for character in normalized:
+        if character == " ":
+            x_position += space_size
+            height = max(height, line * int(font_struct["Size"]) + int(font_struct["Size"]))
+            width = max(width, x_position)
+            continue
+        if character == "\n":
+            line += 1
+            x_position = 0
+            height = max(height, line * int(font_struct["Size"]) + int(font_struct["Size"]))
+            continue
+
+        index = font_struct["Characters"].index(character)
+        bitmap = np.asarray(font_struct["Bitmaps"][index], dtype=bool)
+        placements.append((line * int(font_struct["Size"]), x_position, bitmap))
+        x_position += int(bitmap.shape[1])
+        height = max(height, line * int(font_struct["Size"]) + int(bitmap.shape[0]))
+        width = max(width, x_position)
+
+    if height <= 0 or width <= 0:
+        return np.zeros((0, 0), dtype=bool)
+
+    image = np.zeros((height, width), dtype=bool)
+    for row, col, bitmap in placements:
+        row_end = row + bitmap.shape[0]
+        col_end = col + bitmap.shape[1]
+        image[row:row_end, col:col_end] |= bitmap
+    return image
+
+
+def add_text_to_image(
+    image: np.ndarray | None = None,
+    text: str = "No string specified.",
+    position: Any | None = None,
+    color: Any | None = None,
+    font: dict[str, Any] | str = "Arial",
+    font_size: int = 32,
+) -> np.ndarray:
+    if image is None:
+        sample = np.outer(np.linspace(0.0, 1.0, 500), np.linspace(0.0, 1.0, 500))
+        image = np.dstack((sample, np.rot90(sample), np.rot90(sample, 2)))
+    if position is None:
+        position = [1, 1]
+    if color is None:
+        color = [1, 1, 0]
+
+    output = np.array(image, copy=True)
+    image_rows, image_cols = output.shape[:2]
+    text_mask = np.asarray(rasterize_text(text, font, font_size), dtype=bool)
+    if text_mask.size == 0:
+        return output
+
+    row_offset, col_offset = np.asarray(position, dtype=int).reshape(-1)[:2]
+    row_start = max(int(row_offset), 0)
+    col_start = max(int(col_offset), 0)
+    src_row_start = max(-int(row_offset), 0)
+    src_col_start = max(-int(col_offset), 0)
+    row_end = min(int(row_offset) + text_mask.shape[0], image_rows)
+    col_end = min(int(col_offset) + text_mask.shape[1], image_cols)
+    if row_start >= row_end or col_start >= col_end:
+        return output
+
+    mask = text_mask[src_row_start : src_row_start + (row_end - row_start), src_col_start : src_col_start + (col_end - col_start)]
+    scale_factor = 255 if output.dtype == np.uint8 else 1
+    color_values = np.asarray(color, dtype=float).reshape(-1)
+    if output.ndim == 2:
+        color_values = np.asarray([float(np.mean(color_values))], dtype=float)
+    elif color_values.size == 1:
+        color_values = np.repeat(color_values, output.shape[2])
+
+    for channel_index in range(color_values.size):
+        if output.ndim == 2:
+            plane = output
+        else:
+            plane = output[:, :, channel_index]
+        region = plane[row_start:row_end, col_start:col_end]
+        region[mask] = scale_factor * float(color_values[channel_index])
+        if output.ndim == 2:
+            output = plane
+        else:
+            output[:, :, channel_index] = plane
+    return output
+
+
+def add_text_to_image_with_border(
+    image: np.ndarray | None = None,
+    text: str = "No string specified.",
+    position: Any | None = None,
+    color: Any | None = None,
+    font: dict[str, Any] | str = "Arial",
+    font_size: int = 32,
+    border_width: int = 1,
+    border_color: Any = 0,
+) -> np.ndarray:
+    if int(border_width) == 0:
+        return add_text_to_image(image, text, position, color, font, font_size)
+    if image is None:
+        image = np.zeros((64, 64, 3), dtype=float)
+
+    base_shape = image.shape[:2]
+    mask = add_text_to_image(
+        np.zeros(base_shape, dtype=bool),
+        text,
+        position,
+        1,
+        font,
+        font_size,
+    )
+    width = int(border_width)
+    coordinates_x, coordinates_y = np.meshgrid(np.arange(1, 2 * width + 2), np.arange(1, 2 * width + 2))
+    kernel = ((coordinates_x - (width + 0.5) - 0.5) ** 2 + (coordinates_y - (width + 0.5) - 0.5) ** 2) <= (width + 0.5) ** 2
+    outline = np.logical_xor(convolve2d(mask.astype(float), kernel.astype(float), mode="same") != 0, mask)
+
+    output = add_text_to_image(image, text, position, color, font, font_size)
+    scale_factor = 255 if output.dtype == np.uint8 else 1
+    border_values = np.asarray(border_color, dtype=float).reshape(-1)
+    if output.ndim == 2:
+        border_values = np.asarray([float(np.mean(border_values))], dtype=float)
+    elif border_values.size == 1:
+        border_values = np.repeat(border_values, output.shape[2])
+
+    for channel_index in range(border_values.size):
+        if output.ndim == 2:
+            plane = output
+        else:
+            plane = output[:, :, channel_index]
+        plane[outline] = scale_factor * float(border_values[channel_index])
+        if output.ndim == 2:
+            output = plane
+        else:
+            output[:, :, channel_index] = plane
+    return output
 
 
 def font_bitmap_get(
@@ -283,6 +530,10 @@ def scene_from_font(
     return track_session_object(session, current_scene)
 
 
+AddTextToImage = add_text_to_image
+AddTextToImageWithBorder = add_text_to_image_with_border
+BitmapFont = bitmap_font
+RasterizeText = rasterize_text
 fontBitmapGet = font_bitmap_get
 fontCreate = font_create
 fontGet = font_get

@@ -806,6 +806,36 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is a MATLAB demonstration notebook for the external `dcraw` integration, not a supported pyisetcam runtime API surface.",
         "module_hits": [],
     },
+    "utility/external/AddTextToImage/AddTextToImage.m": {
+        "status": "ported",
+        "note": "The upstream text-overlay helper is covered headlessly by the Python `add_text_to_image(...)` / `AddTextToImage(...)` compatibility wrapper in `pyisetcam.fonts`, including zero-based placement, grayscale-or-RGB color replay, and cropped overlay semantics.",
+        "module_hits": ["pyisetcam.fonts", "pyisetcam.__init__"],
+    },
+    "utility/external/AddTextToImage/AddTextToImageDemo.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is only a MATLAB demonstration notebook for the AddTextToImage package, not a supported pyisetcam runtime API surface.",
+        "module_hits": [],
+    },
+    "utility/external/AddTextToImage/AddTextToImageWithBorder.m": {
+        "status": "ported",
+        "note": "The upstream bordered text-overlay helper is covered headlessly by the Python `add_text_to_image_with_border(...)` / `AddTextToImageWithBorder(...)` compatibility wrapper in `pyisetcam.fonts`, including circular outline growth and per-channel border-color replay.",
+        "module_hits": ["pyisetcam.fonts", "pyisetcam.__init__"],
+    },
+    "utility/external/AddTextToImage/AddTextToImageWithBorderDemo.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is only a MATLAB demonstration notebook for the bordered AddTextToImage workflow, not a supported pyisetcam runtime API surface.",
+        "module_hits": [],
+    },
+    "utility/external/AddTextToImage/BitmapFont.m": {
+        "status": "ported",
+        "note": "The upstream bitmap-font builder is covered by the Python `bitmap_font(...)` / `BitmapFont(...)` compatibility wrapper in `pyisetcam.fonts`, which rasterizes per-character boolean glyph masks without depending on MATLAB figures or screenshots.",
+        "module_hits": ["pyisetcam.fonts", "pyisetcam.__init__"],
+    },
+    "utility/external/AddTextToImage/RasterizeText.m": {
+        "status": "ported",
+        "note": "The upstream rasterization helper is covered by the Python `rasterize_text(...)` / `RasterizeText(...)` compatibility wrapper in `pyisetcam.fonts`, including control-character cleanup, space-and-newline layout, and missing-character validation against bitmap-font payloads.",
+        "module_hits": ["pyisetcam.fonts", "pyisetcam.__init__"],
+    },
     "utility/xml/ieStruct2XML.m": {
         "status": "ported",
         "note": "The legacy MATLAB XML writer is covered by the Python `ie_struct2xml(...)` / `ieStruct2XML(...)` compatibility wrapper, including MATLAB-style `_dash_`, `_colon_`, and `_dot_` name escaping plus nested repeated-element replay.",

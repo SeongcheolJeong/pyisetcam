@@ -3,14 +3,23 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
+import pytest
 from scipy.io import loadmat
 
 from pyisetcam import (
+    AddTextToImage,
+    AddTextToImageWithBorder,
+    BitmapFont,
+    RasterizeText,
+    add_text_to_image,
+    add_text_to_image_with_border,
+    bitmap_font,
     display_create,
     display_get,
     font_create,
     font_get,
     font_set,
+    rasterize_text,
     scene_from_font,
     scene_get,
 )
@@ -86,3 +95,77 @@ def test_scene_from_font_matches_display_wave_and_geometry(asset_store) -> None:
     assert scene_get(scene, "distance") == 0.5
     assert scene_get(scene, "fov") == expected_fov
     assert float(scene_get(scene, "mean luminance", asset_store=asset_store)) > 0.0
+
+
+def test_bitmap_font_and_rasterize_text_replay_package_contract() -> None:
+    font = bitmap_font("Courier New", 12, "AB", 2)
+    alias_font = BitmapFont("Courier New", 12, "AB", 2)
+
+    assert font["Name"] == "Courier New"
+    assert font["Size"] == 12
+    assert font["Characters"] == "AB"
+    assert len(font["Bitmaps"]) == 2
+    assert font["Bitmaps"][0].dtype == bool
+    assert np.all(font["Bitmaps"][0][:, -2:] == 0)
+    assert alias_font["Characters"] == font["Characters"]
+
+    mask = rasterize_text("A B\nB", font)
+    alias_mask = RasterizeText("A B\nB", alias_font)
+    assert mask.dtype == bool
+    assert mask.ndim == 2
+    assert mask.shape[0] >= 2 * font["Size"]
+    assert mask.shape[1] >= font["Bitmaps"][0].shape[1] + int(np.ceil(0.33 * font["Size"])) + font["Bitmaps"][1].shape[1]
+    np.testing.assert_array_equal(alias_mask, mask)
+
+    with pytest.raises(ValueError):
+        rasterize_text("C", font)
+
+
+def test_add_text_to_image_overlays_zero_based_mask() -> None:
+    font = bitmap_font("Courier New", 12, "A", 0)
+    mask = rasterize_text("A", font)
+    image = np.zeros((mask.shape[0] + 2, mask.shape[1] + 3, 3), dtype=float)
+
+    result = add_text_to_image(image, "A", [0, 1], [1.0, 0.5, 0.25], font)
+    alias_result = AddTextToImage(image, "A", [0, 1], [1.0, 0.5, 0.25], font)
+    expected = np.zeros_like(image)
+    expected_slice = expected[0 : mask.shape[0], 1 : 1 + mask.shape[1], :]
+    expected_slice[:, :, 0][mask] = 1.0
+    expected_slice[:, :, 1][mask] = 0.5
+    expected_slice[:, :, 2][mask] = 0.25
+
+    np.testing.assert_allclose(result, expected, rtol=0.0, atol=0.0)
+    np.testing.assert_allclose(alias_result, expected, rtol=0.0, atol=0.0)
+
+
+def test_add_text_to_image_with_border_colors_outline_only() -> None:
+    font = bitmap_font("Courier New", 12, "A", 0)
+    mask = rasterize_text("A", font)
+    image = np.zeros((mask.shape[0] + 4, mask.shape[1] + 4, 3), dtype=float)
+
+    plain = add_text_to_image(image, "A", [1, 1], [1.0, 0.0, 0.0], font)
+    bordered = add_text_to_image_with_border(
+        image,
+        "A",
+        [1, 1],
+        [1.0, 0.0, 0.0],
+        font,
+        border_width=1,
+        border_color=[0.0, 0.0, 1.0],
+    )
+    alias_bordered = AddTextToImageWithBorder(
+        image,
+        "A",
+        [1, 1],
+        [1.0, 0.0, 0.0],
+        font,
+        border_width=1,
+        border_color=[0.0, 0.0, 1.0],
+    )
+
+    text_pixels = plain[:, :, 0] > 0
+    border_pixels = bordered[:, :, 2] > 0
+    assert np.any(border_pixels & ~text_pixels)
+    assert not np.any(border_pixels & text_pixels)
+    np.testing.assert_allclose(bordered[:, :, 0][text_pixels], 1.0, rtol=0.0, atol=0.0)
+    np.testing.assert_allclose(alias_bordered, bordered, rtol=0.0, atol=0.0)

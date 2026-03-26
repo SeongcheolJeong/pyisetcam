@@ -101,10 +101,14 @@ from .fileio import (
     vc_save_multispectral_image,
 )
 from .fonts import (
+    add_text_to_image,
+    add_text_to_image_with_border,
+    bitmap_font,
     font_bitmap_get,
     font_create,
     font_get,
     font_set,
+    rasterize_text,
     scene_from_font,
 )
 from .web import (
@@ -962,15 +966,23 @@ __all__ = [
     "mperdot2dpi",
     "render_lcd_samsung_rgbw",
     "render_oled_samsung",
+    "AddTextToImage",
+    "AddTextToImageWithBorder",
+    "BitmapFont",
+    "RasterizeText",
     "fontBitmapGet",
     "fontCreate",
     "fontGet",
     "fontSet",
     "sceneFromFont",
+    "add_text_to_image",
+    "add_text_to_image_with_border",
+    "bitmap_font",
     "font_bitmap_get",
     "font_create",
     "font_get",
     "font_set",
+    "rasterize_text",
     "scene_from_font",
     "webCreateThumbnails",
     "webData",
@@ -2442,6 +2454,10 @@ displaySetWhitePoint = display_set_white_point
 displayShowImage = display_show_image
 ieCalculateMonitorDPI = ie_calculate_monitor_dpi
 mperdot2dpi = mperdot2dpi
+AddTextToImage = add_text_to_image
+AddTextToImageWithBorder = add_text_to_image_with_border
+BitmapFont = bitmap_font
+RasterizeText = rasterize_text
 fontBitmapGet = font_bitmap_get
 fontCreate = font_create
 fontGet = font_get

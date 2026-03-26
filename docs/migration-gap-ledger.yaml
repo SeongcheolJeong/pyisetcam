@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-26T22:35:54.550281+00:00",
+  "generated_at": "2026-03-26T23:04:37.404578+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 36,
-      "out_of_scope": 291,
-      "parity": 712,
-      "partial": 142,
-      "ported": 262
+      "headless_only": 35,
+      "out_of_scope": 293,
+      "parity": 713,
+      "partial": 136,
+      "ported": 266
     },
     "kind_counts": {
       "api": 661,
@@ -19,17 +19,17 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 142,
-      "P2": 36,
-      "P3": 1265
+      "P1": 136,
+      "P2": 35,
+      "P3": 1272
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": 0,
-        "out_of_scope": 4,
-        "parity": 0,
-        "partial": -4,
-        "ported": 0
+        "headless_only": -1,
+        "out_of_scope": 2,
+        "parity": 1,
+        "partial": -6,
+        "ported": 4
       },
       "kind_counts": {
         "api": 0,
@@ -40,9 +40,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -4,
-        "P2": 0,
-        "P3": 4
+        "P1": -6,
+        "P2": -1,
+        "P3": 7
       }
     },
     "family_summary": {
@@ -930,11 +930,11 @@
       "utility": {
         "total": 279,
         "by_status": {
-          "headless_only": 36,
-          "out_of_scope": 27,
-          "parity": 16,
-          "partial": 142,
-          "ported": 58
+          "headless_only": 35,
+          "out_of_scope": 29,
+          "parity": 17,
+          "partial": 136,
+          "ported": 62
         },
         "by_kind": {
           "gui": 1,
@@ -1005,14 +1005,14 @@
     "top_open_families": [
       {
         "family": "utility",
-        "open_entries": 178,
+        "open_entries": 171,
         "highest_open_priority": "P1",
         "by_status": {
-          "headless_only": 36,
-          "out_of_scope": 27,
-          "parity": 16,
-          "partial": 142,
-          "ported": 58
+          "headless_only": 35,
+          "out_of_scope": 29,
+          "parity": 17,
+          "partial": 136,
+          "ported": 62
         }
       },
       {
@@ -9464,7 +9464,7 @@
       "family": "scene",
       "kind": "api",
       "status": "parity",
-      "python_surface": "pyisetcam.scene, pyisetcam.__init__, pyisetcam.parity",
+      "python_surface": "pyisetcam.scene, pyisetcam.__init__, pyisetcam.fonts, pyisetcam.parity",
       "tests": [
         "tests/unit/test_scene.py",
         "tests/unit/test_pipeline.py",
@@ -15313,61 +15313,61 @@
       "upstream_path": "utility/external/AddTextToImage/AddTextToImage.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fonts, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream text-overlay helper is covered headlessly by the Python `add_text_to_image(...)` / `AddTextToImage(...)` compatibility wrapper in `pyisetcam.fonts`, including zero-based placement, grayscale-or-RGB color replay, and cropped overlay semantics.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/AddTextToImage/AddTextToImageDemo.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is only a MATLAB demonstration notebook for the AddTextToImage package, not a supported pyisetcam runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/AddTextToImage/AddTextToImageWithBorder.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fonts, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream bordered text-overlay helper is covered headlessly by the Python `add_text_to_image_with_border(...)` / `AddTextToImageWithBorder(...)` compatibility wrapper in `pyisetcam.fonts`, including circular outline growth and per-channel border-color replay.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/AddTextToImage/AddTextToImageWithBorderDemo.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is only a MATLAB demonstration notebook for the bordered AddTextToImage workflow, not a supported pyisetcam runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/AddTextToImage/BitmapFont.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.fonts",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fonts, pyisetcam.__init__",
       "tests": [],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "notes": "The upstream bitmap-font builder is covered by the Python `bitmap_font(...)` / `BitmapFont(...)` compatibility wrapper in `pyisetcam.fonts`, which rasterizes per-character boolean glyph masks without depending on MATLAB figures or screenshots.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/AddTextToImage/RasterizeText.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.fonts, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream rasterization helper is covered by the Python `rasterize_text(...)` / `RasterizeText(...)` compatibility wrapper in `pyisetcam.fonts`, including control-character cleanup, space-and-newline layout, and missing-character validation against bitmap-font payloads.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/DataHash_20190519/DataHash.m",
@@ -18666,11 +18666,14 @@
       "upstream_path": "utility/programming/addText.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
-      "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "status": "parity",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.fonts",
+      "tests": [
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/appendStruct.m",
