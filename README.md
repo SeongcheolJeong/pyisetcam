@@ -2033,3 +2033,8 @@ wrappers now cover `ieXML2struct(...)` / `xml2struct(...)` and
 `_dash_`, `_colon_`, and `_dot_` field-name escaping, repeated-element
 list replay, XML-string or file parsing, and `.xml` extension fallback on
 save/load without any Java or MATLAB DOM dependencies.
+The adjacent `utility/publish` family is now closed as audit-only scope:
+the remaining files are MATLAB batch `publish(...)` notebooks for
+generating local HTML or PDF artifacts from script and tutorial
+directories, which is documentation-build behavior rather than a
+supported pyisetcam runtime API.

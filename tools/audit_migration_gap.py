@@ -716,6 +716,16 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB object-save helper is covered by the Python `vc_save_object(...)` / `vcSaveObject(...)` compatibility wrapper for the core ISET object types.",
         "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
     },
+    "utility/publish/s_publishScripts.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB batch publishing notebook that runs `publish(...)` over script directories to generate local HTML or PDF artifacts, not a supported pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/publish/s_publishTutorials.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB batch publishing notebook that runs `publish(...)` over tutorial directories to generate local HTML or PDF artifacts, not a supported pyisetcam runtime surface.",
+        "module_hits": [],
+    },
     "utility/xml/ieStruct2XML.m": {
         "status": "ported",
         "note": "The legacy MATLAB XML writer is covered by the Python `ie_struct2xml(...)` / `ieStruct2XML(...)` compatibility wrapper, including MATLAB-style `_dash_`, `_colon_`, and `_dot_` name escaping plus nested repeated-element replay.",
