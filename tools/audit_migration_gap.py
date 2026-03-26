@@ -301,6 +301,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is a MATLAB download and visualization notebook for spectral face assets fetched through `ieWebGet`, not a reusable headless runtime API surface.",
         "module_hits": [],
     },
+    "data/microlens/": {
+        "status": "out_of_scope",
+        "note": "The pinned upstream snapshot only vendors standalone microlens design JSON presets here, while the supported headless migration target uses the current analytic `mlens_create(...)` and microlens-radiance workflow instead of importing these external preset files.",
+        "module_hits": [],
+    },
     "data/scenes/": {
         "status": "out_of_scope",
         "note": "The pinned upstream snapshot does not vendor any reusable scene assets in this directory; it only preserves a placeholder folder for externally hosted scene collections, so there is no headless runtime bundle to migrate here.",
@@ -334,6 +339,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
     "data/safetyStandards/s_safetyStandards.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a MATLAB data-authoring notebook that transcribes EN62471 safety-standard tables into vendored MAT assets already consumed by the current runtime, rather than a reusable headless API surface.",
+        "module_hits": [],
+    },
+    "data/validation/": {
+        "status": "out_of_scope",
+        "note": "The pinned upstream snapshot only vendors archived MATLAB validation payloads in this directory, such as `v_data_sceneFromRGB.mat`, which are reference artifacts rather than runtime assets or supported headless APIs.",
         "module_hits": [],
     },
     "data/lights/": {

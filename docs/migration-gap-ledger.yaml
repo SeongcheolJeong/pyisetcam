@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-26T13:04:53.788178+00:00",
+  "generated_at": "2026-03-26T13:24:37.511313+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 46,
       "missing": 21,
-      "out_of_scope": 252,
+      "out_of_scope": 254,
       "parity": 701,
-      "partial": 220,
+      "partial": 218,
       "ported": 203
     },
     "kind_counts": {
@@ -21,17 +21,17 @@
     },
     "priority_counts": {
       "P1": 217,
-      "P2": 70,
-      "P3": 1156
+      "P2": 68,
+      "P3": 1158
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
         "missing": 0,
-        "out_of_scope": 1,
-        "parity": 1,
-        "partial": -4,
-        "ported": 2
+        "out_of_scope": 2,
+        "parity": 0,
+        "partial": -2,
+        "ported": 0
       },
       "kind_counts": {
         "api": 0,
@@ -43,8 +43,8 @@
       },
       "priority_counts": {
         "P1": 0,
-        "P2": -4,
-        "P3": 4
+        "P2": -2,
+        "P3": 2
       }
     },
     "family_summary": {
@@ -164,12 +164,12 @@
       "data/microlens": {
         "total": 1,
         "by_status": {
-          "partial": 1
+          "out_of_scope": 1
         },
         "by_kind": {
           "asset": 1
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "data/optics": {
         "total": 3,
@@ -228,12 +228,12 @@
       "data/validation": {
         "total": 1,
         "by_status": {
-          "partial": 1
+          "out_of_scope": 1
         },
         "by_kind": {
           "asset": 1
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "displays": {
         "total": 23,
@@ -1055,22 +1055,6 @@
         }
       },
       {
-        "family": "data/microlens",
-        "open_entries": 1,
-        "highest_open_priority": "P2",
-        "by_status": {
-          "partial": 1
-        }
-      },
-      {
-        "family": "data/validation",
-        "open_entries": 1,
-        "highest_open_priority": "P2",
-        "by_status": {
-          "partial": 1
-        }
-      },
-      {
         "family": "camera",
         "open_entries": 0,
         "highest_open_priority": "P3",
@@ -1115,6 +1099,24 @@
         "by_status": {
           "out_of_scope": 11,
           "parity": 2
+        }
+      },
+      {
+        "family": "data/images",
+        "open_entries": 0,
+        "highest_open_priority": "P3",
+        "by_status": {
+          "out_of_scope": 1,
+          "parity": 1
+        }
+      },
+      {
+        "family": "data/lens",
+        "open_entries": 0,
+        "highest_open_priority": "P3",
+        "by_status": {
+          "out_of_scope": 3,
+          "parity": 1
         }
       }
     ],
@@ -19589,11 +19591,11 @@
       "upstream_path": "data/microlens/",
       "family": "data/microlens",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "pyisetcam.ip, pyisetcam.parity, pyisetcam.plotting, pyisetcam.sensor",
+      "status": "out_of_scope",
+      "python_surface": "",
       "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "notes": "The pinned upstream snapshot only vendors standalone microlens design JSON presets here, while the supported headless migration target uses the current analytic `mlens_create(...)` and microlens-radiance workflow instead of importing these external preset files.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/optics/",
@@ -19667,11 +19669,11 @@
       "upstream_path": "data/validation/",
       "family": "data/validation",
       "kind": "asset",
-      "status": "partial",
-      "python_surface": "pyisetcam.metrics, pyisetcam.parity",
+      "status": "out_of_scope",
+      "python_surface": "",
       "tests": [],
-      "notes": "Runtime still relies on the upstream asset bundle rather than a fully migrated Python-native asset pipeline.",
-      "priority": "P2"
+      "notes": "The pinned upstream snapshot only vendors archived MATLAB validation payloads in this directory, such as `v_data_sceneFromRGB.mat`, which are reference artifacts rather than runtime assets or supported headless APIs.",
+      "priority": "P3"
     }
   ]
 }

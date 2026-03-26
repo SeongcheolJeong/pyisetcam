@@ -1878,6 +1878,11 @@ workflows, `render_oled_samsung(...)` and `render_lcd_samsung_rgbw(...)`
 now exist as direct headless wrappers for the Samsung dixel helpers, and
 the old `ieBarcoSign.m` calibration-authoring notebook is explicitly
 treated as provenance outside the headless migration target.
+The tiny `data/microlens` and `data/validation` bundles are now explicitly
+tracked as out of scope too: the former only vendors standalone microlens
+design JSON presets that the current analytic microlens workflow does not
+import, and the latter only vendors archived MATLAB validation payloads
+rather than runtime assets or headless APIs.
 That same utility-image slice now also covers `ieCmap(...)`,
 `ieCropRect(...)`, `ieLUTDigital(...)`, `ieLUTInvert(...)`, and
 `ieLUTLinear(...)`, with direct regressions for the simple MATLAB color-map
