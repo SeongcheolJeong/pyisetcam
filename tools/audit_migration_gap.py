@@ -551,6 +551,56 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The Pixabay search helper is covered by the Python `webPixabay` compatibility wrapper, including search, preview or large-image URL access, image fetch, and display-scene replay through `sceneFromFile(...)`.",
         "module_hits": ["pyisetcam.web", "pyisetcam.__init__"],
     },
+    "cp/cpBurstCamera.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a prototype computational-camera orchestrator for multi-frame HDR, burst, focus-stack, and video capture on top of the external ISET3d/PBRT `cpScene` rendering path rather than a supported standalone pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "cp/cpBurstIP.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is an experimental multi-frame computational-photography IP prototype tied to the external `cp` burst stack, including HDR registration, `makehdr`, and focus-stack behavior rather than a supported standalone pyisetcam surface.",
+        "module_hits": [],
+    },
+    "cp/cpCModule.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a PBRT/ISET3d computational-camera module wrapper that couples sensors, optics, scene rendering, and focus-stack defocus replay rather than a supported standalone pyisetcam runtime API.",
+        "module_hits": [],
+    },
+    "cp/cpCamera.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is the base class for the experimental PBRT/ISET3d computational-camera prototype, not a supported standalone ISETCam headless API surface for pyisetcam.",
+        "module_hits": [],
+    },
+    "cp/cpIP.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a thin wrapper around MATLAB `ipCompute(...)` for the experimental `cp` prototype, including multi-sensor merge semantics specific to the external computational-camera stack rather than a supported standalone pyisetcam API.",
+        "module_hits": [],
+    },
+    "cp/cpScene.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is an ISET3d/PBRT scene-orchestration layer built around `piRecipe`, Docker rendering, camera or object motion, and external recipe assets rather than a supported standalone pyisetcam scene API surface.",
+        "module_hits": [],
+    },
+    "cp/s_cpAssembleScene.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a PBRT asset-assembly demo built around `piRecipeMerge`, `piAssetLoad`, and interactive preview windows rather than a reusable supported pyisetcam workflow.",
+        "module_hits": [],
+    },
+    "cp/s_cpImageRegistration.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is an exploratory image-registration notebook generated from MATLAB Registration Estimator and depends on the Computer Vision Toolbox rather than a supported standalone pyisetcam workflow.",
+        "module_hits": [],
+    },
+    "cp/s_demoVideo.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a GPU or PBRT demo-video notebook built around ISET3d rendering, camera-motion recipes, and MATLAB `VideoWriter` rather than a supported standalone pyisetcam workflow.",
+        "module_hits": [],
+    },
+    "cp/utilities/cpCompareImages.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a simple MATLAB figure helper for side-by-side image display, built around `imshowpair` and text overlays rather than a reusable supported headless pyisetcam API surface.",
+        "module_hits": [],
+    },
     "utility/file/ieImageType.m": {
         "status": "ported",
         "note": "The legacy MATLAB image-type probe is covered by the Python `ie_image_type(...)` / `ieImageType(...)` compatibility wrapper.",

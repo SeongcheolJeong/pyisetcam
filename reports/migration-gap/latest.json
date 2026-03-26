@@ -1,14 +1,13 @@
 {
-  "generated_at": "2026-03-26T14:45:18.734060+00:00",
+  "generated_at": "2026-03-26T15:07:29.273329+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-26T14:45:18.734060+00:00",
+    "generated_at": "2026-03-26T15:07:29.273329+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 47,
-      "missing": 10,
-      "out_of_scope": 255,
+      "out_of_scope": 265,
       "parity": 708,
       "partial": 215,
       "ported": 208
@@ -23,17 +22,17 @@
     },
     "priority_counts": {
       "P1": 215,
-      "P2": 57,
-      "P3": 1171
+      "P2": 47,
+      "P3": 1181
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
-        "missing": -6,
-        "out_of_scope": 1,
-        "parity": 1,
-        "partial": -1,
-        "ported": 5
+        "missing": -10,
+        "out_of_scope": 10,
+        "parity": 0,
+        "partial": 0,
+        "ported": 0
       },
       "kind_counts": {
         "api": 0,
@@ -44,9 +43,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -1,
-        "P2": -6,
-        "P3": 7
+        "P1": 0,
+        "P2": -10,
+        "P3": 10
       }
     },
     "family_summary": {
@@ -77,15 +76,14 @@
       "cp": {
         "total": 12,
         "by_status": {
-          "missing": 10,
-          "out_of_scope": 1,
+          "out_of_scope": 11,
           "parity": 1
         },
         "by_kind": {
           "gui": 1,
           "helper": 11
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "data/displays": {
         "total": 4,
@@ -1022,16 +1020,6 @@
         }
       },
       {
-        "family": "cp",
-        "open_entries": 10,
-        "highest_open_priority": "P2",
-        "by_status": {
-          "missing": 10,
-          "out_of_scope": 1,
-          "parity": 1
-        }
-      },
-      {
         "family": "camera",
         "open_entries": 0,
         "highest_open_priority": "P3",
@@ -1049,6 +1037,15 @@
           "out_of_scope": 1,
           "parity": 40,
           "ported": 3
+        }
+      },
+      {
+        "family": "cp",
+        "open_entries": 0,
+        "highest_open_priority": "P3",
+        "by_status": {
+          "out_of_scope": 11,
+          "parity": 1
         }
       },
       {

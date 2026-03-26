@@ -1968,3 +1968,9 @@ headless compatibility coverage for catalog search, remote image fetch,
 scene replay, and local thumbnail generation, while the scratch
 `dngImport.m` notebook is explicitly treated as out of scope because the
 supported DNG runtime path already lives under `ieDNGRead(...)`.
+The neighboring `cp` family is now closed as audit-only scope: the
+remaining `cpCamera`, `cpScene`, `cpCModule`, burst-IP, and demo-script
+entries are all prototype computational-photography wrappers built around
+external ISET3d or PBRT recipe rendering, MATLAB video export, or toolbox
+registration workflows rather than supported standalone pyisetcam runtime
+surfaces.

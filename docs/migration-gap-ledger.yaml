@@ -1,12 +1,11 @@
 {
-  "generated_at": "2026-03-26T14:45:18.734060+00:00",
+  "generated_at": "2026-03-26T15:07:29.273329+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 47,
-      "missing": 10,
-      "out_of_scope": 255,
+      "out_of_scope": 265,
       "parity": 708,
       "partial": 215,
       "ported": 208
@@ -21,17 +20,17 @@
     },
     "priority_counts": {
       "P1": 215,
-      "P2": 57,
-      "P3": 1171
+      "P2": 47,
+      "P3": 1181
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
-        "missing": -6,
-        "out_of_scope": 1,
-        "parity": 1,
-        "partial": -1,
-        "ported": 5
+        "missing": -10,
+        "out_of_scope": 10,
+        "parity": 0,
+        "partial": 0,
+        "ported": 0
       },
       "kind_counts": {
         "api": 0,
@@ -42,9 +41,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -1,
-        "P2": -6,
-        "P3": 7
+        "P1": 0,
+        "P2": -10,
+        "P3": 10
       }
     },
     "family_summary": {
@@ -75,15 +74,14 @@
       "cp": {
         "total": 12,
         "by_status": {
-          "missing": 10,
-          "out_of_scope": 1,
+          "out_of_scope": 11,
           "parity": 1
         },
         "by_kind": {
           "gui": 1,
           "helper": 11
         },
-        "highest_open_priority": "P2"
+        "highest_open_priority": "P3"
       },
       "data/displays": {
         "total": 4,
@@ -1020,16 +1018,6 @@
         }
       },
       {
-        "family": "cp",
-        "open_entries": 10,
-        "highest_open_priority": "P2",
-        "by_status": {
-          "missing": 10,
-          "out_of_scope": 1,
-          "parity": 1
-        }
-      },
-      {
         "family": "camera",
         "open_entries": 0,
         "highest_open_priority": "P3",
@@ -1047,6 +1035,15 @@
           "out_of_scope": 1,
           "parity": 40,
           "ported": 3
+        }
+      },
+      {
+        "family": "cp",
+        "open_entries": 0,
+        "highest_open_priority": "P3",
+        "by_status": {
+          "out_of_scope": 11,
+          "parity": 1
         }
       },
       {
@@ -2110,41 +2107,41 @@
       "upstream_path": "cp/cpBurstCamera.m",
       "family": "cp",
       "kind": "helper",
-      "status": "missing",
+      "status": "out_of_scope",
       "python_surface": "",
       "tests": [],
-      "notes": "No usable Python surface was detected for this upstream path.",
-      "priority": "P2"
+      "notes": "The upstream file is a prototype computational-camera orchestrator for multi-frame HDR, burst, focus-stack, and video capture on top of the external ISET3d/PBRT `cpScene` rendering path rather than a supported standalone pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "cp/cpBurstIP.m",
       "family": "cp",
       "kind": "helper",
-      "status": "missing",
+      "status": "out_of_scope",
       "python_surface": "",
       "tests": [],
-      "notes": "No usable Python surface was detected for this upstream path.",
-      "priority": "P2"
+      "notes": "The upstream file is an experimental multi-frame computational-photography IP prototype tied to the external `cp` burst stack, including HDR registration, `makehdr`, and focus-stack behavior rather than a supported standalone pyisetcam surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "cp/cpCModule.m",
       "family": "cp",
       "kind": "helper",
-      "status": "missing",
+      "status": "out_of_scope",
       "python_surface": "",
       "tests": [],
-      "notes": "No usable Python surface was detected for this upstream path.",
-      "priority": "P2"
+      "notes": "The upstream file is a PBRT/ISET3d computational-camera module wrapper that couples sensors, optics, scene rendering, and focus-stack defocus replay rather than a supported standalone pyisetcam runtime API.",
+      "priority": "P3"
     },
     {
       "upstream_path": "cp/cpCamera.m",
       "family": "cp",
       "kind": "helper",
-      "status": "missing",
+      "status": "out_of_scope",
       "python_surface": "",
       "tests": [],
-      "notes": "No usable Python surface was detected for this upstream path.",
-      "priority": "P2"
+      "notes": "The upstream file is the base class for the experimental PBRT/ISET3d computational-camera prototype, not a supported standalone ISETCam headless API surface for pyisetcam.",
+      "priority": "P3"
     },
     {
       "upstream_path": "cp/cpCameraWindow.mlapp",
@@ -2160,51 +2157,51 @@
       "upstream_path": "cp/cpIP.m",
       "family": "cp",
       "kind": "helper",
-      "status": "missing",
+      "status": "out_of_scope",
       "python_surface": "",
       "tests": [],
-      "notes": "No usable Python surface was detected for this upstream path.",
-      "priority": "P2"
+      "notes": "The upstream file is a thin wrapper around MATLAB `ipCompute(...)` for the experimental `cp` prototype, including multi-sensor merge semantics specific to the external computational-camera stack rather than a supported standalone pyisetcam API.",
+      "priority": "P3"
     },
     {
       "upstream_path": "cp/cpScene.m",
       "family": "cp",
       "kind": "helper",
-      "status": "missing",
+      "status": "out_of_scope",
       "python_surface": "",
       "tests": [],
-      "notes": "No usable Python surface was detected for this upstream path.",
-      "priority": "P2"
+      "notes": "The upstream file is an ISET3d/PBRT scene-orchestration layer built around `piRecipe`, Docker rendering, camera or object motion, and external recipe assets rather than a supported standalone pyisetcam scene API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "cp/s_cpAssembleScene.m",
       "family": "cp",
       "kind": "helper",
-      "status": "missing",
+      "status": "out_of_scope",
       "python_surface": "",
       "tests": [],
-      "notes": "No usable Python surface was detected for this upstream path.",
-      "priority": "P2"
+      "notes": "The upstream file is a PBRT asset-assembly demo built around `piRecipeMerge`, `piAssetLoad`, and interactive preview windows rather than a reusable supported pyisetcam workflow.",
+      "priority": "P3"
     },
     {
       "upstream_path": "cp/s_cpImageRegistration.m",
       "family": "cp",
       "kind": "helper",
-      "status": "missing",
+      "status": "out_of_scope",
       "python_surface": "",
       "tests": [],
-      "notes": "No usable Python surface was detected for this upstream path.",
-      "priority": "P2"
+      "notes": "The upstream file is an exploratory image-registration notebook generated from MATLAB Registration Estimator and depends on the Computer Vision Toolbox rather than a supported standalone pyisetcam workflow.",
+      "priority": "P3"
     },
     {
       "upstream_path": "cp/s_demoVideo.m",
       "family": "cp",
       "kind": "helper",
-      "status": "missing",
+      "status": "out_of_scope",
       "python_surface": "",
       "tests": [],
-      "notes": "No usable Python surface was detected for this upstream path.",
-      "priority": "P2"
+      "notes": "The upstream file is a GPU or PBRT demo-video notebook built around ISET3d rendering, camera-motion recipes, and MATLAB `VideoWriter` rather than a supported standalone pyisetcam workflow.",
+      "priority": "P3"
     },
     {
       "upstream_path": "cp/testluminance.m",
@@ -2223,11 +2220,11 @@
       "upstream_path": "cp/utilities/cpCompareImages.m",
       "family": "cp",
       "kind": "helper",
-      "status": "missing",
+      "status": "out_of_scope",
       "python_surface": "",
       "tests": [],
-      "notes": "No usable Python surface was detected for this upstream path.",
-      "priority": "P2"
+      "notes": "The upstream file is a simple MATLAB figure helper for side-by-side image display, built around `imshowpair` and text overlays rather than a reusable supported headless pyisetcam API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "data/displays/ieBarcoSign.m",
