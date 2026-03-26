@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-26T20:16:52.782269+00:00",
+  "generated_at": "2026-03-26T21:00:45.618901+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 38,
-      "out_of_scope": 281,
+      "headless_only": 37,
+      "out_of_scope": 283,
       "parity": 712,
-      "partial": 155,
-      "ported": 257
+      "partial": 150,
+      "ported": 261
     },
     "kind_counts": {
       "api": 661,
@@ -19,17 +19,17 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 155,
-      "P2": 38,
-      "P3": 1250
+      "P1": 150,
+      "P2": 37,
+      "P3": 1256
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": 0,
-        "out_of_scope": 1,
+        "headless_only": -1,
+        "out_of_scope": 2,
         "parity": 0,
-        "partial": -1,
-        "ported": 0
+        "partial": -5,
+        "ported": 4
       },
       "kind_counts": {
         "api": 0,
@@ -40,9 +40,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -1,
-        "P2": 0,
-        "P3": 1
+        "P1": -5,
+        "P2": -1,
+        "P3": 6
       }
     },
     "family_summary": {
@@ -930,11 +930,11 @@
       "utility": {
         "total": 279,
         "by_status": {
-          "headless_only": 38,
-          "out_of_scope": 17,
+          "headless_only": 37,
+          "out_of_scope": 19,
           "parity": 16,
-          "partial": 155,
-          "ported": 53
+          "partial": 150,
+          "ported": 57
         },
         "by_kind": {
           "gui": 1,
@@ -1005,14 +1005,14 @@
     "top_open_families": [
       {
         "family": "utility",
-        "open_entries": 193,
+        "open_entries": 187,
         "highest_open_priority": "P1",
         "by_status": {
-          "headless_only": 38,
-          "out_of_scope": 17,
+          "headless_only": 37,
+          "out_of_scope": 19,
           "parity": 16,
-          "partial": 155,
-          "ported": 53
+          "partial": 150,
+          "ported": 57
         }
       },
       {
@@ -17275,71 +17275,71 @@
       "upstream_path": "utility/ieFindFiles.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The recursive file-finder helper is covered by the Python `ie_find_files(...)` / `ieFindFiles(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/ieInit.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB startup script is covered by the Python `ie_init(...)` / `ieInit(...)` compatibility wrapper on top of the current headless session bootstrap, including `ieMainClose(...)` replay, fresh session creation, and default hidden-main-window behavior.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/ieManualViewer.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a browser-launch helper for GitHub wiki and source-tree pages, which is documentation navigation rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/ieRadiance2IP.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "headless_only",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
+      "priority": "P2"
     },
     {
       "upstream_path": "utility/ieTikhonovRidge.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils",
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "notes": "The upstream file is an exploratory MATLAB ridge-regression notebook with plotting and handwritten examples rather than a reusable runtime API; the supported headless solver surface is `ie_tikhonov(...)` / `ieTikhonov(...)`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/ieTone.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The MATLAB tone helper is covered headlessly by the Python `ie_tone(...)` / `ieTone(...)` compatibility wrapper, which replays the waveform synthesis and parameter payload without depending on MATLAB audio playback.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/ieUncompressData.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The inverse quantization helper is covered by the Python `ie_uncompress_data(...)` / `ieUncompressData(...)` compatibility wrapper in `pyisetcam.utils`, matching the `ieCompressData(...)` inversion formula for scene or OI payloads.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/image/convolvecirc.m",

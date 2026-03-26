@@ -33,6 +33,7 @@ from pyisetcam import (
     ieDataList,
     ieDpi2Mperdot,
     ieExprnd,
+    ieFindFiles,
     ieFindWaveIndex,
     ieFractalDrawgrid,
     ieFractaldim,
@@ -54,7 +55,9 @@ from pyisetcam import (
     ieScale,
     ieScaleColumns,
     ieSpace2Amp,
+    ieTone,
     ieUnitScaleFactor,
+    ieUncompressData,
     ieWave2Index,
     ieXYZFromPhotons,
     imageHparams,
@@ -117,6 +120,7 @@ from pyisetcam.utils import (
     ie_data_list,
     ie_dpi2_mperdot,
     ie_exprnd,
+    ie_find_files,
     ie_fit_line,
     ie_find_wave_index,
     ie_fractal_dim,
@@ -139,7 +143,9 @@ from pyisetcam.utils import (
     ie_scale,
     ie_scale_columns,
     ie_space_to_amp,
+    ie_tone,
     ie_unit_scale_factor,
+    ie_uncompress_data,
     ie_wave2_index,
     image_hparams,
     image_hc2rgb,
@@ -514,6 +520,17 @@ def test_ie_compress_data_matches_uint_quantization_alias() -> None:
     assert np.array_equal(compressed32, expected32)
 
 
+def test_ie_uncompress_data_inverts_quantization_alias() -> None:
+    data = np.array([[[0.0], [0.5]], [[1.0], [0.25]]], dtype=float)
+    compressed16, mn16, mx16 = ie_compress_data(data, 16)
+
+    restored = ie_uncompress_data(compressed16, mn16, mx16, 16)
+    alias_restored = ieUncompressData(compressed16, mn16, mx16, 16)
+
+    assert np.allclose(restored, data, atol=1.0 / 65535.0)
+    assert np.allclose(alias_restored, restored, atol=0.0)
+
+
 def test_ie_line_align_recovers_shift_scale_alias() -> None:
     def func(values: np.ndarray) -> np.ndarray:
         return 0.3 * values**2 + 1.2 * values - 0.5
@@ -558,6 +575,36 @@ def test_ie_tikhonov_matches_closed_form_and_lstsq() -> None:
 
     assert np.allclose(x, expected)
     assert np.allclose(x_ols, expected_ols)
+
+
+def test_ie_find_files_recurses_and_normalizes_extension_alias(tmp_path) -> None:
+    nested = tmp_path / "a" / "b"
+    nested.mkdir(parents=True)
+    first = tmp_path / "root.mat"
+    second = nested / "child.mat"
+    third = nested / "ignore.txt"
+    first.write_text("root", encoding="utf-8")
+    second.write_text("child", encoding="utf-8")
+    third.write_text("ignore", encoding="utf-8")
+
+    found = ie_find_files(tmp_path, "mat")
+    alias_found = ieFindFiles(tmp_path, ".mat")
+
+    expected = [str(second), str(first)]
+    assert found == expected
+    assert alias_found == expected
+
+
+def test_ie_tone_synthesizes_waveform_and_alias() -> None:
+    params, waveform = ie_tone("Frequency", 512, "Amplitude", 0.5, "Duration", 0.1)
+    alias_params, alias_waveform = ieTone({"Frequency": 512, "Amplitude": 0.5, "Duration": 0.1})
+
+    assert params == {"Amplitude": 0.5, "Duration": 0.1, "Frequency": 512.0}
+    assert alias_params == params
+    assert waveform.shape == (820,)
+    assert waveform[0] == pytest.approx(0.0)
+    assert float(np.max(np.abs(waveform))) <= 0.5 + 1e-12
+    assert np.allclose(alias_waveform, waveform)
 
 
 def test_qinterp2_matches_nearest_triangle_and_bilinear_alias() -> None:

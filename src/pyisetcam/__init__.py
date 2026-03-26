@@ -473,6 +473,7 @@ from .session import (
     ie_find_object_by_name,
     ie_get_object,
     ie_get_selected_object,
+    ie_init,
     ie_init_session,
     ie_main_w,
     ie_main_close,
@@ -739,6 +740,7 @@ from .utils import (
     ie_crop_rect,
     ie_data_list,
     ie_dpi2_mperdot,
+    ie_find_files,
     ie_fit_line,
     ie_find_wave_index,
     ie_fractal_dim,
@@ -763,8 +765,10 @@ from .utils import (
     ie_scale,
     ie_scale_columns,
     ie_space_to_amp,
+    ie_tone,
     ie_tikhonov,
     ie_unit_scale_factor,
+    ie_uncompress_data,
     ie_wave2_index,
     get_middle_matrix,
     image_hc2rgb,
@@ -1038,6 +1042,8 @@ __all__ = [
     "ieEquivalentObjtype",
     "ieExprnd",
     "ie_exprnd",
+    "ieFindFiles",
+    "ie_find_files",
     "ieFieldHeight2Index",
     "ieFitLine",
     "ieFractalDrawgrid",
@@ -1067,7 +1073,9 @@ __all__ = [
     "ieReflectanceList",
     "ieReflectanceSamples",
     "ieSpace2Amp",
+    "ieTone",
     "ieTikhonov",
+    "ieUncompressData",
     "ieUnitScaleFactor",
     "ieFindObjectByName",
     "ieLocs2Rect",
@@ -1076,6 +1084,8 @@ __all__ = [
     "ieTableGet",
     "ieGetObject",
     "ieGetSelectedObject",
+    "ieInit",
+    "ie_init",
     "ieInitSession",
     "ieInternal2Display",
     "ieFigureFormat",
@@ -1323,6 +1333,7 @@ __all__ = [
     "ie_delete_object",
     "ie_dpi2_mperdot",
     "ie_equivalent_objtype",
+    "ie_find_files",
     "ie_fit_line",
     "ie_cxcorr",
     "ie_hwhm_to_sd",
@@ -1348,6 +1359,7 @@ __all__ = [
     "ie_field_height_to_index",
     "ie_get_object",
     "ie_get_selected_object",
+    "ie_init",
     "ie_init_session",
     "ie_main_w",
     "ie_main_close",
@@ -1360,7 +1372,9 @@ __all__ = [
     "ie_scale",
     "ie_scale_columns",
     "ie_space_to_amp",
+    "ie_tone",
     "ie_tikhonov",
+    "ie_uncompress_data",
     "ie_unit_scale_factor",
     "ie_dng_read",
     "ie_dng_simple_info",
@@ -2882,6 +2896,7 @@ ieEquivalentObjtype = ie_equivalent_objtype
 ieDataList = ie_data_list
 ieDpi2Mperdot = ie_dpi2_mperdot
 ieExprnd = ie_exprnd
+ieFindFiles = ie_find_files
 ieFindObjectByName = ie_find_object_by_name
 ieFitLine = ie_fit_line
 ieFractalDrawgrid = ie_fractal_drawgrid
@@ -2901,7 +2916,9 @@ ieReflectanceSamples = ie_reflectance_samples
 ieScale = ie_scale
 ieScaleColumns = ie_scale_columns
 ieSpace2Amp = ie_space_to_amp
+ieTone = ie_tone
 ieTikhonov = ie_tikhonov
+ieUncompressData = ie_uncompress_data
 ieUnitScaleFactor = ie_unit_scale_factor
 lorentzSum = lorentz_sum
 ieImageType = ie_image_type
@@ -2917,6 +2934,7 @@ ieTableGet = ie_table_get
 ieGetObject = ie_get_object
 ieGetSelectedObject = ie_get_selected_object
 ISET = iset
+ieInit = ie_init
 ieInitSession = ie_init_session
 ieMainW = ie_main_w
 ieMainClose = ie_main_close

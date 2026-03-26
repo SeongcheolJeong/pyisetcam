@@ -17,6 +17,7 @@ from pyisetcam import (
     ieFindObjectByName,
     ieGetObject,
     ieGetSelectedObject,
+    ieInit,
     ieInitSession,
     ieMainW,
     ieMainClose,
@@ -35,6 +36,7 @@ from pyisetcam import (
     ie_find_object_by_name,
     ie_get_object,
     ie_get_selected_object,
+    ie_init,
     ie_init_session,
     ie_main_w,
     ie_refresh_window,
@@ -757,6 +759,25 @@ def test_ie_main_close_clears_window_slots() -> None:
     assert ieSessionGet(session, "ip window") is None
     assert ieSessionGet(session, "display window") is None
     assert ieSessionGet(session, "metrics window") is None
+
+
+def test_ie_init_returns_fresh_headless_session_and_alias(tmp_path, asset_store) -> None:
+    session = ie_init_session(directory=tmp_path)
+    scene = scene_create("uniform ee", 8, asset_store=asset_store)
+    ieAddObject(session, scene)
+    ieSessionSet(session, "scene window", {"figure1": "scene-figure", "sceneImage": "scene-axis"})
+    ieSessionSet(session, "init clear", "on")
+
+    fresh = ie_init(session, directory=tmp_path)
+    alias = ieInit(directory=tmp_path, create_main_window=True)
+
+    assert fresh is not session
+    assert fresh.directory == str(tmp_path)
+    assert fresh.version == "4.0"
+    assert session_count_objects(fresh, "scene") == 0
+    assert ieSessionGet(fresh, "main window") is None
+    assert ieSessionGet(fresh, "init clear") is True
+    assert ieSessionGet(alias, "main window") is not None
 
 
 def test_session_set_objects_and_new_object_value_follow_matlab_style(asset_store) -> None:

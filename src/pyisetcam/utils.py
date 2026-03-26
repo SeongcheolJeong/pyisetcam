@@ -822,6 +822,64 @@ def _load_image_array(image_or_path: Any) -> NDArray[Any]:
     return np.asarray(image_or_path)
 
 
+def ie_find_files(root_dir: str | Path, ext: str) -> list[str]:
+    """Recursively find files with a given extension under a root directory."""
+
+    root = Path(root_dir)
+    if not root.exists():
+        raise FileNotFoundError(f"Root directory does not exist: {root}")
+
+    suffix = str(ext)
+    if not suffix.startswith("."):
+        suffix = f".{suffix}"
+
+    matches = [
+        str(path)
+        for path in sorted(root.rglob("*"))
+        if path.is_file() and path.name.endswith(suffix)
+    ]
+    return matches
+
+
+ieFindFiles = ie_find_files
+
+
+def ie_tone(*args: Any, frequency: float = 256.0, amplitude: float = 0.2, duration: float = 0.25) -> tuple[dict[str, float], NDArray[np.float64]]:
+    """Synthesize MATLAB-style ieTone() output headlessly without playback."""
+
+    options: dict[str, Any] = {}
+    if len(args) == 1 and isinstance(args[0], dict):
+        for key, value in args[0].items():
+            options[param_format(key)] = value
+    else:
+        options = _normalize_legacy_kwargs(
+            args,
+            {
+                "Frequency": None,
+                "Amplitude": None,
+                "Duration": None,
+            },
+        )
+
+    frequency_value = float(options.get("frequency", frequency))
+    amplitude_value = float(options.get("amplitude", amplitude))
+    duration_value = float(options.get("duration", duration))
+
+    fs = 8192.0
+    n_samples = max(int(np.floor(fs * duration_value)), 0)
+    times = np.arange(n_samples + 1, dtype=float) / fs
+    tone = amplitude_value * np.sin(2.0 * np.pi * frequency_value * times)
+    params = {
+        "Amplitude": amplitude_value,
+        "Duration": duration_value,
+        "Frequency": frequency_value,
+    }
+    return params, np.asarray(tone, dtype=float)
+
+
+ieTone = ie_tone
+
+
 def _to_grayscale(image: Any) -> NDArray[np.float64]:
     image_array = np.asarray(image, dtype=float)
     if image_array.ndim == 2:
@@ -1260,6 +1318,35 @@ def ie_compress_data(
     if int(bit_depth) == 16:
         return np.asarray(compressed_values, dtype=np.uint16), min_value, max_value
     raise ValueError("Unknown bit depth.")
+
+
+def ie_uncompress_data(
+    c_data: Any,
+    mn: float,
+    mx: float,
+    bit_depth: int,
+) -> NDArray[np.float64]:
+    """Mirror MATLAB ieUncompressData() inverse quantization behavior."""
+
+    min_value = float(mn)
+    max_value = float(mx)
+    if min_value > max_value:
+        raise ValueError("Min/Max error.")
+
+    max_compress = float((2**int(bit_depth)) - 1)
+    if min_value == max_value:
+        scale = max_value
+    else:
+        scale = max_value - min_value
+
+    values = np.asarray(c_data)
+    try:
+        return np.asarray((float(scale) / max_compress) * values.astype(float) + float(min_value), dtype=float)
+    except MemoryError:
+        return np.asarray((np.float32(scale) / np.float32(max_compress)) * values.astype(np.float32) + np.float32(min_value), dtype=np.float32)
+
+
+ieUncompressData = ie_uncompress_data
 
 
 def ie_line_align(D1: Any, D2: Any) -> tuple[NDArray[np.float64], NDArray[np.float64]]:

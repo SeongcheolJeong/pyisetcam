@@ -930,6 +930,34 @@ def iset(
     return session
 
 
+def ie_init(
+    session: SessionContext | None = None,
+    *,
+    directory: str | Path | None = None,
+    name: str | None = None,
+    version: str | float | None = None,
+    create_main_window: bool = False,
+) -> SessionContext:
+    """Headless ieInit() compatibility wrapper."""
+
+    session_dir = Path.cwd() if directory is None else Path(directory)
+    init_clear = False
+    resolved_version: str | float = "4.0" if version is None else version
+    if session is not None:
+        init_clear = bool(ie_session_get(session, "init clear"))
+        resolved_version = session.version or resolved_version
+        ie_main_close(session)
+
+    fresh = iset(
+        directory=session_dir,
+        name=name,
+        version=resolved_version,
+        create_main_window=create_main_window,
+    )
+    fresh.preferences["initclear"] = init_clear
+    return fresh
+
+
 def main_open(
     session: SessionContext,
     h_object: Any | None = None,
@@ -1332,6 +1360,7 @@ ieGetSelectedObject = ie_get_selected_object
 ieAppGet = ie_app_get
 ieEquivalentObjtype = ie_equivalent_objtype
 ieFindObjectByName = ie_find_object_by_name
+ieInit = ie_init
 ieInitSession = ie_init_session
 ieMainW = ie_main_w
 ieMainClose = ie_main_close

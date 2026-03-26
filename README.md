@@ -2044,3 +2044,10 @@ writer built around `imagesc`, `drawnow`, `getframe`, and `VideoWriter`,
 while the supported pyisetcam runtime already handles object-pipeline
 animation through higher-level headless helpers such as
 `scene_make_video(...)` and `oi_preview_video(...)`.
+That same top-level utility helper tail is now mostly closed too: direct
+headless wrappers now cover `ieFindFiles(...)`, `ieTone(...)`, and
+`ieUncompressData(...)`, while `ieInit(...)` now has an explicit session
+bootstrap wrapper on top of the headless `vcSESSION` layer. The remaining
+browser-only `ieManualViewer.m` and ridge-regression notebook
+`ieTikhonovRidge.m` are explicitly treated as out of scope, leaving only
+`ieRadiance2IP.m` as the remaining top-level utility helper.
