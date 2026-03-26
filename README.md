@@ -1974,3 +1974,12 @@ entries are all prototype computational-photography wrappers built around
 external ISET3d or PBRT recipe rendering, MATLAB video export, or toolbox
 registration workflows rather than supported standalone pyisetcam runtime
 surfaces.
+The broad `utility` family is smaller too: the `utility/list` catalog
+helpers `ieDataList(...)`, `ieLightList(...)`, and
+`ieReflectanceList(...)` now have direct headless compatibility wrappers
+in `pyisetcam.utils`, and the neighboring `utility/units` slice now also
+covers `dpi2mperdot(...)`, `ieDpi2Mperdot(...)`, `ieN2MegaPixel(...)`,
+`ieSpace2Amp(...)`, `ieUnitScaleFactor(...)`, `sample2space(...)`, and
+`space2sample(...)`, including the MATLAB default-microns scaling,
+truncated mean-to-Nyquist FFT support, centered sample geometry, and the
+obsolete zero-based inverse-spacing contract.

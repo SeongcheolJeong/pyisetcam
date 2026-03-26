@@ -7,14 +7,21 @@ from pyisetcam import (
     FloydSteinberg,
     HalfToneImage,
     convolvecirc,
+    dpi2mperdot,
     ieCmap,
     ieCropRect,
+    ieDataList,
+    ieDpi2Mperdot,
     ieFindWaveIndex,
+    ieLightList,
     ieLUTDigital,
     ieLUTInvert,
     ieLUTLinear,
     ieParameterOtype,
     ieRadialMatrix,
+    ieReflectanceList,
+    ieSpace2Amp,
+    ieUnitScaleFactor,
     ieWave2Index,
     ieXYZFromPhotons,
     imageHparams,
@@ -36,8 +43,10 @@ from pyisetcam import (
     imagescOPP,
     imagescRGB,
     rgb2dac,
+    sample2space,
     sceneCreate,
     sceneGet,
+    space2sample,
     xyz2srgb,
 )
 from pyisetcam.utils import (
@@ -48,13 +57,19 @@ from pyisetcam.utils import (
     half_tone_image,
     ie_cmap,
     ie_crop_rect,
+    ie_data_list,
+    ie_dpi2_mperdot,
     ie_fit_line,
     ie_find_wave_index,
+    ie_light_list,
     ie_lut_digital,
     ie_lut_invert,
     ie_lut_linear,
     ie_parameter_otype,
     ie_radial_matrix,
+    ie_reflectance_list,
+    ie_space_to_amp,
+    ie_unit_scale_factor,
     ie_wave2_index,
     image_hparams,
     image_hc2rgb,
@@ -79,6 +94,9 @@ from pyisetcam.utils import (
     quanta_to_energy,
     rgb_to_dac,
     rgb_to_xw_format,
+    sample2space as sample2space_fn,
+    space2sample as space2sample_fn,
+    dpi2mperdot as dpi2mperdot_fn,
     unit_frequency_list,
 )
 
@@ -219,6 +237,88 @@ def test_floyd_steinberg_matches_legacy_error_diffusion_and_alias() -> None:
 def test_unit_frequency_list_matches_matlab_even_and_odd() -> None:
     assert np.allclose(unit_frequency_list(4), np.array([-1.0, -0.5, 0.0, 0.5]))
     assert np.allclose(unit_frequency_list(5), np.array([-1.0, -0.5, 0.0, 0.5, 1.0]))
+
+
+def test_ie_unit_scale_factor_and_dpi2mperdot_match_matlab_aliases() -> None:
+    assert ie_unit_scale_factor("um") == pytest.approx(1.0e6)
+    assert ieUnitScaleFactor("deg") == pytest.approx(180.0 / np.pi)
+    assert dpi2mperdot_fn(100.0) == pytest.approx(254.0)
+    assert dpi2mperdot(100.0) == pytest.approx(254.0)
+    assert ie_dpi2_mperdot(100.0, "mm") == pytest.approx(0.254)
+    assert ieDpi2Mperdot(100.0, "mm") == pytest.approx(0.254)
+
+
+def test_ie_space_to_amp_matches_matlab_frequency_truncation_alias() -> None:
+    pos = np.array([0.0, 1.0, 2.0, 3.0], dtype=float)
+    data = np.array([1.0, 1.0, 1.0, 1.0], dtype=float)
+
+    freq, f_data = ie_space_to_amp(pos, data)
+    alias_freq, alias_f_data = ieSpace2Amp(pos, data, True)
+
+    assert np.allclose(freq, np.array([0.0, 1.0 / 3.0], dtype=float))
+    assert np.allclose(f_data, np.array([4.0, 0.0], dtype=float))
+    assert np.allclose(alias_freq, freq)
+    assert np.allclose(alias_f_data, np.array([1.0, 0.0], dtype=float))
+
+
+def test_sample2space_and_space2sample_match_centered_zero_based_aliases() -> None:
+    row_support, col_support = sample2space_fn(np.arange(1, 5), np.arange(1, 5), 5.0, 10.0)
+    alias_row_support, alias_col_support = sample2space(np.arange(1, 5), np.arange(1, 5), 5.0, 10.0)
+
+    assert np.allclose(row_support, np.array([-7.5, -2.5, 2.5, 7.5], dtype=float))
+    assert np.allclose(col_support, np.array([-15.0, -5.0, 5.0, 15.0], dtype=float))
+    assert np.allclose(alias_row_support, row_support)
+    assert np.allclose(alias_col_support, col_support)
+
+    row_samples, col_samples = space2sample_fn(row_support, col_support, 5.0, 10.0)
+    alias_row_samples, alias_col_samples = space2sample(row_support, col_support, 5.0, 10.0)
+
+    assert np.allclose(row_samples, np.array([0.0, 1.0, 2.0, 3.0], dtype=float))
+    assert np.allclose(col_samples, np.array([0.0, 1.0, 2.0, 3.0], dtype=float))
+    assert np.allclose(alias_row_samples, row_samples)
+    assert np.allclose(alias_col_samples, col_samples)
+
+
+def test_ie_light_and_reflectance_lists_and_dispatch_match_aliases() -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+
+    light_names, light_data, light_samples = ie_light_list(wave=wave)
+    alias_light_names, alias_light_data, alias_light_samples = ieLightList("wave", wave)
+
+    assert "D65.mat" in light_names
+    d65_index = light_names.index("D65.mat")
+    assert light_data[d65_index].shape[0] == wave.size
+    assert light_samples[d65_index] == light_data[d65_index].shape[1]
+    assert np.min(light_data[d65_index]) > 0.0
+    assert alias_light_names == light_names
+    assert np.array_equal(alias_light_samples, light_samples)
+    assert np.allclose(alias_light_data[d65_index], light_data[d65_index])
+
+    reflectance_names, reflectance_data, reflectance_samples = ie_reflectance_list(wave=wave)
+    alias_reflectance_names, alias_reflectance_data, alias_reflectance_samples = ieReflectanceList("wave", wave)
+
+    assert "reflectanceBasis.mat" not in reflectance_names
+    assert "macbethChart.mat" in reflectance_names
+    macbeth_index = reflectance_names.index("macbethChart.mat")
+    assert reflectance_data[macbeth_index].shape[0] == wave.size
+    assert reflectance_samples[macbeth_index] == reflectance_data[macbeth_index].shape[1]
+    assert float(np.max(reflectance_data[macbeth_index])) <= 1.0
+    assert alias_reflectance_names == reflectance_names
+    assert np.array_equal(alias_reflectance_samples, reflectance_samples)
+    assert np.allclose(alias_reflectance_data[macbeth_index], reflectance_data[macbeth_index])
+
+    data_names, data_values, data_samples = ie_data_list("refl", "wave", wave)
+    alias_names, alias_values, alias_samples = ieDataList("light", "wave", wave)
+
+    assert data_names == reflectance_names
+    assert np.array_equal(data_samples, reflectance_samples)
+    assert np.allclose(data_values[macbeth_index], reflectance_data[macbeth_index])
+    assert alias_names == light_names
+    assert np.array_equal(alias_samples, light_samples)
+    assert np.allclose(alias_values[d65_index], light_data[d65_index])
+
+    with pytest.raises(ValueError, match="Unsupported ieDataList type"):
+        ie_data_list("sensorqe")
 
 
 def test_ie_fit_line_matches_matlab_one_line_and_multiple_lines() -> None:

@@ -716,6 +716,21 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB object-save helper is covered by the Python `vc_save_object(...)` / `vcSaveObject(...)` compatibility wrapper for the core ISET object types.",
         "module_hits": ["pyisetcam.fileio", "pyisetcam.__init__"],
     },
+    "utility/list/ieDataList.m": {
+        "status": "ported",
+        "note": "The lightweight MATLAB data-list dispatcher is covered by the Python `ie_data_list(...)` / `ieDataList(...)` compatibility wrapper, which replays the implemented reflectance and light branches headlessly.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/list/ieLightList.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB illuminant catalog helper is covered by the Python `ie_light_list(...)` / `ieLightList(...)` compatibility wrapper over the vendored light asset tree, including `cct.mat` skipping and zero-floor replacement.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/list/ieReflectanceList.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB reflectance catalog helper is covered by the Python `ie_reflectance_list(...)` / `ieReflectanceList(...)` compatibility wrapper over the vendored surface datasets, including basis-file skipping and reflectance-range filtering.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
     "utility/image/ieFindWaveIndex.m": {
         "status": "ported",
         "note": "The legacy MATLAB wavelength-membership helper is covered by the Python `ie_find_wave_index(...)` / `ieFindWaveIndex(...)` compatibility wrapper in `pyisetcam.utils`.",
@@ -1134,6 +1149,41 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
     "utility/image/rgb2dac.m": {
         "status": "ported",
         "note": "The legacy MATLAB RGB-to-DAC helper is covered by the Python `rgb_to_dac(...)` / `rgb2dac(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/units/dpi2mperdot.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB dots-per-inch conversion helper is covered by the Python `dpi2mperdot(...)` compatibility wrapper in `pyisetcam.utils`, including the default microns-per-dot return scale.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/units/ieDpi2Mperdot.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB DPI conversion alias is covered by the Python `ie_dpi2_mperdot(...)` / `ieDpi2Mperdot(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/units/ieN2MegaPixel.m": {
+        "status": "ported",
+        "note": "The display-resolution sizing helper is covered directly by the Python `ie_n_to_megapixel(...)` / `ieN2MegaPixel(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/units/ieSpace2Amp.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB spatial-FFT helper is covered by the Python `ie_space_to_amp(...)` / `ieSpace2Amp(...)` compatibility wrapper in `pyisetcam.utils`, including the truncated mean-to-Nyquist support contract.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/units/ieUnitScaleFactor.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB unit-scaling helper is covered by the Python `ie_unit_scale_factor(...)` / `ieUnitScaleFactor(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/units/sample2space.m": {
+        "status": "ported",
+        "note": "The legacy MATLAB centered-support helper is covered by the Python `sample2space(...)` compatibility wrapper in `pyisetcam.utils`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/units/space2sample.m": {
+        "status": "ported",
+        "note": "The obsolete MATLAB inverse support helper is covered by the Python `space2sample(...)` compatibility wrapper in `pyisetcam.utils`, preserving the zero-based offset contract used upstream.",
         "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
     },
     "utility/file/vcSelectDataFile.m": {

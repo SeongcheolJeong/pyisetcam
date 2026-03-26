@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-26T15:07:29.273329+00:00",
+  "generated_at": "2026-03-26T15:52:17.670195+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 47,
+      "headless_only": 45,
       "out_of_scope": 265,
-      "parity": 708,
-      "partial": 215,
-      "ported": 208
+      "parity": 709,
+      "partial": 207,
+      "ported": 217
     },
     "kind_counts": {
       "api": 661,
@@ -19,18 +19,17 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 215,
-      "P2": 47,
-      "P3": 1181
+      "P1": 207,
+      "P2": 45,
+      "P3": 1191
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": 0,
-        "missing": -10,
-        "out_of_scope": 10,
-        "parity": 0,
-        "partial": 0,
-        "ported": 0
+        "headless_only": -2,
+        "out_of_scope": 0,
+        "parity": 1,
+        "partial": -8,
+        "ported": 9
       },
       "kind_counts": {
         "api": 0,
@@ -41,8 +40,8 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": 0,
-        "P2": -10,
+        "P1": -8,
+        "P2": -2,
         "P3": 10
       }
     },
@@ -666,8 +665,7 @@
         "total": 21,
         "by_status": {
           "out_of_scope": 13,
-          "parity": 7,
-          "ported": 1
+          "parity": 8
         },
         "by_kind": {
           "script": 21
@@ -932,11 +930,11 @@
       "utility": {
         "total": 279,
         "by_status": {
-          "headless_only": 47,
+          "headless_only": 45,
           "out_of_scope": 1,
           "parity": 14,
-          "partial": 215,
-          "ported": 2
+          "partial": 207,
+          "ported": 12
         },
         "by_kind": {
           "gui": 1,
@@ -1007,14 +1005,14 @@
     "top_open_families": [
       {
         "family": "utility",
-        "open_entries": 262,
+        "open_entries": 252,
         "highest_open_priority": "P1",
         "by_status": {
-          "headless_only": 47,
+          "headless_only": 45,
           "out_of_scope": 1,
           "parity": 14,
-          "partial": 215,
-          "ported": 2
+          "partial": 207,
+          "ported": 12
         }
       },
       {
@@ -10659,13 +10657,14 @@
       "upstream_path": "scripts/image/jpegFiles/truncate.m",
       "family": "scripts/image",
       "kind": "script",
-      "status": "ported",
+      "status": "parity",
       "python_surface": "pyisetcam.ip, pyisetcam.fileio",
       "tests": [
         "tests/unit/test_pipeline.py",
-        "tests/parity/test_parity_harness.py"
+        "tests/parity/test_parity_harness.py",
+        "tests/parity/cases.yaml"
       ],
-      "notes": "A direct Python implementation surface was detected for this upstream path.",
+      "notes": "Curated parity or direct script/tutorial evidence exists for this upstream workflow.",
       "priority": "P3"
     },
     {
@@ -17822,31 +17821,31 @@
       "upstream_path": "utility/list/ieDataList.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The lightweight MATLAB data-list dispatcher is covered by the Python `ie_data_list(...)` / `ieDataList(...)` compatibility wrapper, which replays the implemented reflectance and light branches headlessly.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/list/ieLightList.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB illuminant catalog helper is covered by the Python `ie_light_list(...)` / `ieLightList(...)` compatibility wrapper over the vendored light asset tree, including `cct.mat` skipping and zero-floor replacement.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/list/ieReflectanceList.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB reflectance catalog helper is covered by the Python `ie_reflectance_list(...)` / `ieReflectanceList(...)` compatibility wrapper over the vendored surface datasets, including basis-file skipping and reflectance-range filtering.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/numerical/ffndgrid.m",
@@ -19341,71 +19340,71 @@
       "upstream_path": "utility/units/dpi2mperdot.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB dots-per-inch conversion helper is covered by the Python `dpi2mperdot(...)` compatibility wrapper in `pyisetcam.utils`, including the default microns-per-dot return scale.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/units/ieDpi2Mperdot.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB DPI conversion alias is covered by the Python `ie_dpi2_mperdot(...)` / `ieDpi2Mperdot(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/units/ieN2MegaPixel.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
+      "status": "ported",
       "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The display-resolution sizing helper is covered directly by the Python `ie_n_to_megapixel(...)` / `ieN2MegaPixel(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/units/ieSpace2Amp.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB spatial-FFT helper is covered by the Python `ie_space_to_amp(...)` / `ieSpace2Amp(...)` compatibility wrapper in `pyisetcam.utils`, including the truncated mean-to-Nyquist support contract.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/units/ieUnitScaleFactor.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The legacy MATLAB unit-scaling helper is covered by the Python `ie_unit_scale_factor(...)` / `ieUnitScaleFactor(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/units/sample2space.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.sensor",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "notes": "The legacy MATLAB centered-support helper is covered by the Python `sample2space(...)` compatibility wrapper in `pyisetcam.utils`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/units/space2sample.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The obsolete MATLAB inverse support helper is covered by the Python `space2sample(...)` compatibility wrapper in `pyisetcam.utils`, preserving the zero-based offset contract used upstream.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/units/unitFrequencyList.m",

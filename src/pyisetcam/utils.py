@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -627,6 +628,243 @@ def unit_frequency_list(sample_count: int) -> NDArray[np.float64]:
     coordinates = np.arange(1, count + 1, dtype=float)
     coordinates = coordinates - coordinates[middle - 1]
     return coordinates / np.max(np.abs(coordinates))
+
+
+def ie_unit_scale_factor(unit_name: str) -> float:
+    """Mirror MATLAB ieUnitScaleFactor() conversions from meters/seconds/radians."""
+
+    if unit_name is None or str(unit_name).strip() == "":
+        raise ValueError("Unit name must be defined.")
+
+    normalized = param_format(unit_name)
+    scale_map = {
+        "nm": 1.0e9,
+        "nanometer": 1.0e9,
+        "nanometers": 1.0e9,
+        "micron": 1.0e6,
+        "micrometer": 1.0e6,
+        "um": 1.0e6,
+        "microns": 1.0e6,
+        "mm": 1.0e3,
+        "millimeter": 1.0e3,
+        "millimeters": 1.0e3,
+        "cm": 1.0e2,
+        "centimeter": 1.0e2,
+        "centimeters": 1.0e2,
+        "m": 1.0,
+        "meter": 1.0,
+        "meters": 1.0,
+        "km": 1.0e-3,
+        "kilometer": 1.0e-3,
+        "kilometers": 1.0e-3,
+        "inch": 39.37007874,
+        "inches": 39.37007874,
+        "foot": 3.280839895,
+        "feet": 3.280839895,
+        "s": 1.0,
+        "second": 1.0,
+        "sec": 1.0,
+        "ms": 1.0e3,
+        "millisecond": 1.0e3,
+        "us": 1.0e6,
+        "microsecond": 1.0e6,
+        "degrees": 180.0 / np.pi,
+        "deg": 180.0 / np.pi,
+        "arcmin": (180.0 / np.pi) * 60.0,
+        "minutes": (180.0 / np.pi) * 60.0,
+        "min": (180.0 / np.pi) * 60.0,
+        "arcsec": (180.0 / np.pi) * 3600.0,
+    }
+    if normalized not in scale_map:
+        raise ValueError("Unknown spatial unit specification.")
+    return float(scale_map[normalized])
+
+
+def dpi2mperdot(dpi: Any, unit: str = "um") -> float | NDArray[np.float64]:
+    """Convert dots-per-inch to meters-per-dot scaled to the requested MATLAB unit."""
+
+    dpi_values = np.asarray(dpi, dtype=float)
+    if np.any(dpi_values <= 0.0):
+        raise ValueError("dpi must be positive.")
+    scaled = (0.0254 / dpi_values) * ie_unit_scale_factor(unit)
+    if scaled.ndim == 0:
+        return float(scaled)
+    return np.asarray(scaled, dtype=float)
+
+
+def ie_dpi2_mperdot(dpi: Any, unit: str = "um") -> float | NDArray[np.float64]:
+    """Alias for MATLAB ieDpi2Mperdot()."""
+
+    return dpi2mperdot(dpi, unit)
+
+
+def ie_space_to_amp(
+    pos: NDArray[np.float64] | list[float] | tuple[float, ...],
+    data: NDArray[np.float64] | list[float] | tuple[float, ...],
+    scale_data: bool = False,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Mirror MATLAB ieSpace2Amp() FFT amplitude support."""
+
+    pos_array = np.asarray(pos, dtype=float).reshape(-1)
+    data_array = np.asarray(data, dtype=float).reshape(-1)
+    if pos_array.size == 0:
+        raise ValueError("You must define positions.")
+    if data_array.size == 0:
+        raise ValueError("You must define a vector of data.")
+    if pos_array.size != data_array.size:
+        raise ValueError("pos and data must have the same number of samples.")
+
+    f_data = np.abs(np.fft.fft(data_array))
+    if scale_data:
+        peak = float(np.max(f_data)) if f_data.size else 0.0
+        if peak > 0.0:
+            f_data = f_data / peak
+
+    unit_per_image = float(np.max(pos_array) - np.min(pos_array))
+    if unit_per_image <= 0.0:
+        raise ValueError("pos must span a non-zero spatial support.")
+
+    n_samp = data_array.size
+    freq = np.arange(n_samp, dtype=float) / unit_per_image
+    n_freq = int(np.rint((n_samp - 1) / 2.0))
+    return freq[:n_freq].copy(), np.asarray(f_data[:n_freq], dtype=float)
+
+
+def sample2space(
+    r_samples: NDArray[np.float64] | list[float] | tuple[float, ...],
+    c_samples: NDArray[np.float64] | list[float] | tuple[float, ...],
+    row_delta: float,
+    col_delta: float,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Mirror MATLAB sample2space() centered-support behavior."""
+
+    row_samples = np.asarray(r_samples, dtype=float).reshape(-1)
+    col_samples = np.asarray(c_samples, dtype=float).reshape(-1)
+    r_center = float(np.mean(row_samples))
+    c_center = float(np.mean(col_samples))
+    return (
+        np.asarray((row_samples - r_center) * float(row_delta), dtype=float),
+        np.asarray((col_samples - c_center) * float(col_delta), dtype=float),
+    )
+
+
+def space2sample(
+    r_microns: NDArray[np.float64] | list[float] | tuple[float, ...],
+    c_microns: NDArray[np.float64] | list[float] | tuple[float, ...],
+    pixel_height: float,
+    pixel_width: float,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Mirror MATLAB's obsolete space2sample() zero-based offset convention."""
+
+    row_positions = np.asarray(r_microns, dtype=float).reshape(-1)
+    col_positions = np.asarray(c_microns, dtype=float).reshape(-1)
+    row = row_positions / float(pixel_height)
+    col = col_positions / float(pixel_width)
+    return (
+        np.asarray(row - row[0], dtype=float),
+        np.asarray(col - col[0], dtype=float),
+    )
+
+
+def _normalize_legacy_kwargs(args: tuple[Any, ...], kwargs: dict[str, Any]) -> dict[str, Any]:
+    if len(args) % 2 != 0:
+        raise ValueError("Legacy key/value arguments must come in pairs.")
+    normalized: dict[str, Any] = {}
+    for index in range(0, len(args), 2):
+        normalized[param_format(str(args[index]))] = args[index + 1]
+    for key, value in kwargs.items():
+        normalized[param_format(str(key))] = value
+    return normalized
+
+
+def ie_light_list(
+    *args: Any,
+    wave: NDArray[np.float64] | list[float] | tuple[float, ...] | None = None,
+    lightdir: str | Path | None = None,
+) -> tuple[list[str], list[NDArray[np.float64]], NDArray[np.int64]]:
+    """Mirror MATLAB ieLightList() over the vendored light asset tree."""
+
+    options = _normalize_legacy_kwargs(args, {"wave": wave, "lightdir": lightdir})
+    wave_nm = np.arange(400.0, 701.0, 10.0, dtype=float) if options.get("wave") is None else np.asarray(
+        options["wave"], dtype=float
+    ).reshape(-1)
+
+    from .assets import AssetStore, ie_read_spectra
+
+    store = AssetStore.default()
+    root = store.ensure()
+    if options.get("lightdir") is None:
+        search_root = root / "data" / "lights"
+    else:
+        candidate = Path(options["lightdir"])
+        search_root = candidate if candidate.is_absolute() else root / candidate
+    light_files = sorted(search_root.rglob("*.mat"))
+
+    names: list[str] = []
+    data: list[NDArray[np.float64]] = []
+    n_samples: list[int] = []
+    for light_file in light_files:
+        if light_file.name == "cct.mat":
+            continue
+        spectra = np.asarray(ie_read_spectra(light_file.name, wave_nm, asset_store=store), dtype=float)
+        spectra[spectra == 0.0] = 1.0e-8
+        names.append(light_file.name)
+        data.append(spectra)
+        n_samples.append(int(spectra.shape[1]))
+    return names, data, np.asarray(n_samples, dtype=int)
+
+
+def ie_reflectance_list(
+    *args: Any,
+    wave: NDArray[np.float64] | list[float] | tuple[float, ...] | None = None,
+) -> tuple[list[str], list[NDArray[np.float64]], NDArray[np.int64]]:
+    """Mirror MATLAB ieReflectanceList() over the vendored reflectance asset tree."""
+
+    options = _normalize_legacy_kwargs(args, {"wave": wave})
+    wave_nm = np.arange(400.0, 701.0, 10.0, dtype=float) if options.get("wave") is None else np.asarray(
+        options["wave"], dtype=float
+    ).reshape(-1)
+
+    from .assets import AssetStore, ie_read_spectra
+
+    store = AssetStore.default()
+    root = store.ensure()
+    search_files = [
+        *(root / "data" / "surfaces" / "reflectances").glob("*.mat"),
+        *(root / "data" / "surfaces" / "reflectances" / "skin").glob("*.mat"),
+        *(root / "data" / "surfaces" / "reflectances" / "esser").glob("esserChart.mat"),
+    ]
+
+    names: list[str] = []
+    data: list[NDArray[np.float64]] = []
+    n_samples: list[int] = []
+    for reflectance_file in sorted(search_files):
+        if reflectance_file.name == "reflectanceBasis.mat":
+            continue
+        spectra = np.asarray(ie_read_spectra(reflectance_file.name, wave_nm, asset_store=store), dtype=float)
+        if spectra.size == 0 or float(np.max(spectra)) > 1.0:
+            continue
+        names.append(reflectance_file.name)
+        data.append(spectra)
+        n_samples.append(int(spectra.shape[1]))
+    return names, data, np.asarray(n_samples, dtype=int)
+
+
+def ie_data_list(
+    data_type: str,
+    *args: Any,
+    wave: NDArray[np.float64] | list[float] | tuple[float, ...] | None = None,
+) -> tuple[list[str], list[NDArray[np.float64]], NDArray[np.int64]]:
+    """Mirror the implemented MATLAB ieDataList() dispatch surface."""
+
+    options = _normalize_legacy_kwargs(args, {"wave": wave})
+    wave_nm = options.get("wave")
+    normalized = param_format(data_type)
+    if normalized in {"refl", "reflectance"}:
+        return ie_reflectance_list(wave=wave_nm)
+    if normalized == "light":
+        return ie_light_list(wave=wave_nm)
+    raise ValueError(f"Unsupported ieDataList type: {data_type}")
 
 
 def ie_fit_line(

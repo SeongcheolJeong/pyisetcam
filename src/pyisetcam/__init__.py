@@ -715,19 +715,26 @@ from .utils import (
     convolve_circ,
     convolvecirc,
     dac_to_rgb,
+    dpi2mperdot,
     floyd_steinberg,
     hc_basis,
     half_tone_image,
     ie_cmap,
     ie_crop_rect,
+    ie_data_list,
+    ie_dpi2_mperdot,
     ie_fit_line,
     ie_find_wave_index,
+    ie_light_list,
     ie_lut_digital,
     ie_lut_invert,
     ie_lut_linear,
     ie_mvnrnd,
     ie_n_to_megapixel,
     ie_radial_matrix,
+    ie_reflectance_list,
+    ie_space_to_amp,
+    ie_unit_scale_factor,
     ie_wave2_index,
     image_hc2rgb,
     image_gabor,
@@ -754,8 +761,10 @@ from .utils import (
     param_format,
     rgb_to_dac,
     rgb_to_xw_format,
+    sample2space,
     srgb_to_linear,
     srgb_to_xyz,
+    space2sample,
     xw_to_rgb_format,
     xyz_to_srgb,
 )
@@ -970,7 +979,13 @@ __all__ = [
     "ieLuminanceFromPhotons",
     "ieMvnrnd",
     "ieN2MegaPixel",
+    "ieDataList",
+    "ieDpi2Mperdot",
+    "ieLightList",
+    "ieReflectanceList",
     "ieReflectanceSamples",
+    "ieSpace2Amp",
+    "ieUnitScaleFactor",
     "ieFindObjectByName",
     "ieLocs2Rect",
     "ieParameterOtype",
@@ -1079,6 +1094,7 @@ __all__ = [
     "pocs",
     "convolvecirc",
     "convolve_circ",
+    "dpi2mperdot",
     "rgb2dac",
     "rgb_to_dac",
     "imageGabor",
@@ -1123,6 +1139,8 @@ __all__ = [
     "image_translate",
     "imageTranspose",
     "image_transpose",
+    "sample2space",
+    "space2sample",
     "ieMainClose",
     "ieRefreshWindow",
     "ieImageType",
@@ -1164,12 +1182,16 @@ __all__ = [
     "ieSelectObject",
     "ie_add_object",
     "ie_app_get",
+    "ie_data_list",
     "ie_delete_object",
+    "ie_dpi2_mperdot",
     "ie_equivalent_objtype",
     "ie_fit_line",
     "ie_cxcorr",
+    "ie_light_list",
     "ie_mvnrnd",
     "ie_n_to_megapixel",
+    "ie_reflectance_list",
     "ie_reflectance_samples",
     "ie_image_type",
     "ie_scp",
@@ -1195,6 +1217,8 @@ __all__ = [
     "ie_rect2_vertices",
     "ie_roi2_locs",
     "ie_replace_object",
+    "ie_space_to_amp",
+    "ie_unit_scale_factor",
     "ie_dng_read",
     "ie_dng_simple_info",
     "ie_save_si_data_file",
@@ -2683,11 +2707,17 @@ ieAddObject = ie_add_object
 ieAppGet = ie_app_get
 ieDeleteObject = ie_delete_object
 ieEquivalentObjtype = ie_equivalent_objtype
+ieDataList = ie_data_list
+ieDpi2Mperdot = ie_dpi2_mperdot
 ieFindObjectByName = ie_find_object_by_name
 ieFitLine = ie_fit_line
+ieLightList = ie_light_list
 ieMvnrnd = ie_mvnrnd
 ieN2MegaPixel = ie_n_to_megapixel
+ieReflectanceList = ie_reflectance_list
 ieReflectanceSamples = ie_reflectance_samples
+ieSpace2Amp = ie_space_to_amp
+ieUnitScaleFactor = ie_unit_scale_factor
 ieImageType = ie_image_type
 ieSCP = ie_scp
 ieWebGet = ie_web_get
