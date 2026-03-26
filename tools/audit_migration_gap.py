@@ -901,6 +901,26 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is a MATLAB MEX build script for the legacy `md5` binary, not a supported headless runtime API surface.",
         "module_hits": [],
     },
+    "utility/gif/animatedGif.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a generic MATLAB grayscale-volume GIF writer around `imwrite`, while the supported pyisetcam runtime already handles object-pipeline GIF export through higher-level headless paths such as `scene_make_video(...)` and `oi_preview_video(...)`.",
+        "module_hits": [],
+    },
+    "utility/gif/gif/doc/gif_documentation.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is standalone documentation for an external generic MATLAB `gif` helper, not a reusable headless pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/gif/gif/gif.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a generic MATLAB figure-to-GIF helper built around `getframe`, `export_fig`, and persistent figure state, not a supported pyisetcam runtime API.",
+        "module_hits": [],
+    },
+    "utility/gif/ie3dGIF.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a figure-rotation export helper for oscillating 3-D MATLAB plots into GIFs, built around figure handles and `exportgraphics`, rather than a supported headless pyisetcam runtime surface.",
+        "module_hits": [],
+    },
     "utility/statistics/biNormal.m": {
         "status": "ported",
         "note": "The legacy MATLAB separable bivariate-Gaussian helper is covered by the Python `bi_normal(...)` / `biNormal(...)` compatibility wrapper in `pyisetcam.utils`, including optional in-place rotation over cropped support.",

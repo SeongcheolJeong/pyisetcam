@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-03-26T18:56:40.603109+00:00",
+  "generated_at": "2026-03-26T19:09:36.686595+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 40,
-      "out_of_scope": 274,
-      "parity": 710,
-      "partial": 164,
+      "headless_only": 38,
+      "out_of_scope": 278,
+      "parity": 712,
+      "partial": 160,
       "ported": 255
     },
     "kind_counts": {
@@ -19,16 +19,16 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 164,
-      "P2": 40,
-      "P3": 1239
+      "P1": 160,
+      "P2": 38,
+      "P3": 1245
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": 0,
-        "out_of_scope": 8,
-        "parity": 0,
-        "partial": -8,
+        "headless_only": -2,
+        "out_of_scope": 4,
+        "parity": 2,
+        "partial": -4,
         "ported": 0
       },
       "kind_counts": {
@@ -40,9 +40,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -8,
-        "P2": 0,
-        "P3": 8
+        "P1": -4,
+        "P2": -2,
+        "P3": 6
       }
     },
     "family_summary": {
@@ -930,10 +930,10 @@
       "utility": {
         "total": 279,
         "by_status": {
-          "headless_only": 40,
-          "out_of_scope": 10,
-          "parity": 14,
-          "partial": 164,
+          "headless_only": 38,
+          "out_of_scope": 14,
+          "parity": 16,
+          "partial": 160,
           "ported": 51
         },
         "by_kind": {
@@ -1005,13 +1005,13 @@
     "top_open_families": [
       {
         "family": "utility",
-        "open_entries": 204,
+        "open_entries": 198,
         "highest_open_priority": "P1",
         "by_status": {
-          "headless_only": 40,
-          "out_of_scope": 10,
-          "parity": 14,
-          "partial": 164,
+          "headless_only": 38,
+          "out_of_scope": 14,
+          "parity": 16,
+          "partial": 160,
           "ported": 51
         }
       },
@@ -15763,11 +15763,14 @@
       "upstream_path": "utility/external/facetracker/+lib/+data/@video/getFrame.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
+      "status": "parity",
       "python_surface": "pyisetcam.utils, pyisetcam.sensor",
-      "tests": [],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "tests": [
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+data/@video/video.m",
@@ -15783,11 +15786,14 @@
       "upstream_path": "utility/external/facetracker/+lib/+data/@videoFrames/getFrame.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
+      "status": "parity",
       "python_surface": "pyisetcam.utils, pyisetcam.sensor",
-      "tests": [],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "tests": [
+        "tests/parity/cases.yaml",
+        "tests/parity/test_parity_harness.py"
+      ],
+      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+data/@videoFrames/videoFrames.m",
@@ -17126,41 +17132,41 @@
       "upstream_path": "utility/gif/animatedGif.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a generic MATLAB grayscale-volume GIF writer around `imwrite`, while the supported pyisetcam runtime already handles object-pipeline GIF export through higher-level headless paths such as `scene_make_video(...)` and `oi_preview_video(...)`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/gif/gif/doc/gif_documentation.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is standalone documentation for an external generic MATLAB `gif` helper, not a reusable headless pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/gif/gif/gif.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a generic MATLAB figure-to-GIF helper built around `getframe`, `export_fig`, and persistent figure state, not a supported pyisetcam runtime API.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/gif/ie3dGIF.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a figure-rotation export helper for oscillating 3-D MATLAB plots into GIFs, built around figure handles and `exportgraphics`, rather than a supported headless pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/hypercube/hcBasis.m",

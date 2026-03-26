@@ -2022,3 +2022,8 @@ the remaining entries are deployment-era MATLAB MEX path selectors,
 compiler helpers, Visual C++ redistribution installers, and host
 MAC-address or licensing probes rather than supported standalone
 pyisetcam runtime surfaces.
+The adjacent `utility/gif` family is now closed as audit-only scope too:
+the remaining files are generic MATLAB GIF or figure-export helpers built
+around `imwrite`, `getframe`, `export_fig`, or `exportgraphics`, while the
+supported pyisetcam runtime already handles object-pipeline GIF export
+through higher-level headless video paths.
