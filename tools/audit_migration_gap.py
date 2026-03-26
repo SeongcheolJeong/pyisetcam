@@ -861,6 +861,46 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The legacy MATLAB hypercube rotate-and-clip helper is covered by the Python `hc_image_rotate_clip(...)` / `hcimageRotateClip(...)` compatibility wrapper in `pyisetcam.utils`, including `rot90` replay, percentile clipping, and clipped-pixel counting.",
         "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
     },
+    "utility/dll70/dll70Path.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB deployment-path helper for selecting legacy `dll70` MEX directories by MATLAB version, not a supported headless pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/dll70/ieCInterp3/ieCinterp3.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is only the MATLAB help stub for a legacy compiled `ieCinterp3` MEX interpolation routine; the actual implementation is external compiled code rather than a vendored headless API surface in this snapshot.",
+        "module_hits": [],
+    },
+    "utility/dll70/ieCompileMex.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a local MATLAB MEX build and install script for legacy `md5` and `ieGetMACAddress` binaries, not a supported headless runtime API surface.",
+        "module_hits": [],
+    },
+    "utility/dll70/ieGetMACAddress.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a license-era host MAC-address probe that shells out to `ipconfig` or `ifconfig`; it is deployment-specific infrastructure rather than a supported pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/dll70/ieGetMACAddress2.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is an alternate Windows-only MAC-address probe for legacy licensing workflows, not a supported headless pyisetcam runtime API.",
+        "module_hits": [],
+    },
+    "utility/dll70/ieInstall.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB verification and installer script for legacy `md5` and `ieGetMACAddress` MEX dependencies, not a reusable headless runtime surface.",
+        "module_hits": [],
+    },
+    "utility/dll70/ieVCRedistribution.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a platform-specific Microsoft Visual C++ redistributable installer for legacy MATLAB MEX binaries, outside the supported pyisetcam runtime target.",
+        "module_hits": [],
+    },
+    "utility/dll70/md5Mex.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB MEX build script for the legacy `md5` binary, not a supported headless runtime API surface.",
+        "module_hits": [],
+    },
     "utility/statistics/biNormal.m": {
         "status": "ported",
         "note": "The legacy MATLAB separable bivariate-Gaussian helper is covered by the Python `bi_normal(...)` / `biNormal(...)` compatibility wrapper in `pyisetcam.utils`, including optional in-place rotation over cropped support.",

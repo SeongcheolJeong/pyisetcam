@@ -2017,3 +2017,8 @@ blur, illuminant scale-map estimation, headless mean-gray/montage/movie
 payloads, rect-based hypercube cropping, and percentile-clipped
 rotation. The external ReDFISh notebook is explicitly treated as out of
 scope.
+The neighboring `utility/dll70` family is now closed as audit-only scope:
+the remaining entries are deployment-era MATLAB MEX path selectors,
+compiler helpers, Visual C++ redistribution installers, and host
+MAC-address or licensing probes rather than supported standalone
+pyisetcam runtime surfaces.

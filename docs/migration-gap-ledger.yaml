@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-03-26T18:39:07.729290+00:00",
+  "generated_at": "2026-03-26T18:56:40.603109+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 40,
-      "out_of_scope": 266,
+      "out_of_scope": 274,
       "parity": 710,
-      "partial": 172,
+      "partial": 164,
       "ported": 255
     },
     "kind_counts": {
@@ -19,17 +19,17 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 172,
+      "P1": 164,
       "P2": 40,
-      "P3": 1231
+      "P3": 1239
     },
     "delta_from_previous": {
       "status_counts": {
         "headless_only": 0,
-        "out_of_scope": 1,
+        "out_of_scope": 8,
         "parity": 0,
-        "partial": -9,
-        "ported": 8
+        "partial": -8,
+        "ported": 0
       },
       "kind_counts": {
         "api": 0,
@@ -40,9 +40,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -9,
+        "P1": -8,
         "P2": 0,
-        "P3": 9
+        "P3": 8
       }
     },
     "family_summary": {
@@ -931,9 +931,9 @@
         "total": 279,
         "by_status": {
           "headless_only": 40,
-          "out_of_scope": 2,
+          "out_of_scope": 10,
           "parity": 14,
-          "partial": 172,
+          "partial": 164,
           "ported": 51
         },
         "by_kind": {
@@ -1005,13 +1005,13 @@
     "top_open_families": [
       {
         "family": "utility",
-        "open_entries": 212,
+        "open_entries": 204,
         "highest_open_priority": "P1",
         "by_status": {
           "headless_only": 40,
-          "out_of_scope": 2,
+          "out_of_scope": 10,
           "parity": 14,
-          "partial": 172,
+          "partial": 164,
           "ported": 51
         }
       },
@@ -15233,81 +15233,81 @@
       "upstream_path": "utility/dll70/dll70Path.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a MATLAB deployment-path helper for selecting legacy `dll70` MEX directories by MATLAB version, not a supported headless pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/dll70/ieCInterp3/ieCinterp3.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is only the MATLAB help stub for a legacy compiled `ieCinterp3` MEX interpolation routine; the actual implementation is external compiled code rather than a vendored headless API surface in this snapshot.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/dll70/ieCompileMex.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a local MATLAB MEX build and install script for legacy `md5` and `ieGetMACAddress` binaries, not a supported headless runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/dll70/ieGetMACAddress.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a license-era host MAC-address probe that shells out to `ipconfig` or `ifconfig`; it is deployment-specific infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/dll70/ieGetMACAddress2.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is an alternate Windows-only MAC-address probe for legacy licensing workflows, not a supported headless pyisetcam runtime API.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/dll70/ieInstall.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a MATLAB verification and installer script for legacy `md5` and `ieGetMACAddress` MEX dependencies, not a reusable headless runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/dll70/ieVCRedistribution.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a platform-specific Microsoft Visual C++ redistributable installer for legacy MATLAB MEX binaries, outside the supported pyisetcam runtime target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/dll70/md5Mex.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a MATLAB MEX build script for the legacy `md5` binary, not a supported headless runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/AddTextToImage/AddTextToImage.m",
