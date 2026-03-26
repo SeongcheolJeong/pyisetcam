@@ -2054,4 +2054,8 @@ remaining utility debt is now concentrated in the broader
 standalone top-level helpers. Inside `utility/external`, the vendored
 `JSONio` package is now explicitly tracked as out of scope because it is a
 generic third-party MATLAB JSON integration layer rather than an ISETCam
-runtime surface.
+runtime surface. The neighboring `dcraw` package is tracked the same way:
+it is only MATLAB glue around external platform-specific `dcraw`
+executables plus a demo script, while pyisetcam keeps direct headless
+coverage only for the checked-in DNG path via `ie_dng_read(...)` and
+`sensor_dng_read(...)`.

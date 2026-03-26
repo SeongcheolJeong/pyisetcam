@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-03-26T22:18:40.347333+00:00",
+  "generated_at": "2026-03-26T22:35:54.550281+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 36,
-      "out_of_scope": 287,
+      "out_of_scope": 291,
       "parity": 712,
-      "partial": 146,
+      "partial": 142,
       "ported": 262
     },
     "kind_counts": {
@@ -19,9 +19,9 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 146,
+      "P1": 142,
       "P2": 36,
-      "P3": 1261
+      "P3": 1265
     },
     "delta_from_previous": {
       "status_counts": {
@@ -931,9 +931,9 @@
         "total": 279,
         "by_status": {
           "headless_only": 36,
-          "out_of_scope": 23,
+          "out_of_scope": 27,
           "parity": 16,
-          "partial": 146,
+          "partial": 142,
           "ported": 58
         },
         "by_kind": {
@@ -1005,13 +1005,13 @@
     "top_open_families": [
       {
         "family": "utility",
-        "open_entries": 182,
+        "open_entries": 178,
         "highest_open_priority": "P1",
         "by_status": {
           "headless_only": 36,
-          "out_of_scope": 23,
+          "out_of_scope": 27,
           "parity": 16,
-          "partial": 146,
+          "partial": 142,
           "ported": 58
         }
       },
@@ -15543,41 +15543,41 @@
       "upstream_path": "utility/external/dcraw/dcrawInfo.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is only a thin MATLAB wrapper around an external platform-specific `dcraw` executable; the supported pyisetcam runtime covers the checked-in DNG workflows through `ie_dng_read(...)` and `sensor_dng_read(...)` instead of vendoring generic host-binary raw decoders.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/dcraw/dcrawInit.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file registers external `dcraw` executables into MATLAB `imformats`, which is host-environment integration for a third-party binary rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/dcraw/dcrawRead.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file shells out to an external `dcraw` executable to decode arbitrary camera RAW files, while the supported pyisetcam runtime only maintains direct headless coverage for the vendored DNG path through `ie_dng_read(...)` and `sensor_dng_read(...)`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/dcraw/t_dcraw.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a MATLAB demonstration notebook for the external `dcraw` integration, not a supported pyisetcam runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/exiftool/exiftoolDepthFromFile.m",

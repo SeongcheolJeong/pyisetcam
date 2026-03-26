@@ -786,6 +786,26 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is the vendored JSONio package's own MATLAB unit test suite, which is package-maintenance coverage for a third-party dependency rather than a pyisetcam runtime target.",
         "module_hits": [],
     },
+    "utility/external/dcraw/dcrawInfo.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is only a thin MATLAB wrapper around an external platform-specific `dcraw` executable; the supported pyisetcam runtime covers the checked-in DNG workflows through `ie_dng_read(...)` and `sensor_dng_read(...)` instead of vendoring generic host-binary raw decoders.",
+        "module_hits": [],
+    },
+    "utility/external/dcraw/dcrawInit.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file registers external `dcraw` executables into MATLAB `imformats`, which is host-environment integration for a third-party binary rather than a supported pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/external/dcraw/dcrawRead.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file shells out to an external `dcraw` executable to decode arbitrary camera RAW files, while the supported pyisetcam runtime only maintains direct headless coverage for the vendored DNG path through `ie_dng_read(...)` and `sensor_dng_read(...)`.",
+        "module_hits": [],
+    },
+    "utility/external/dcraw/t_dcraw.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB demonstration notebook for the external `dcraw` integration, not a supported pyisetcam runtime API surface.",
+        "module_hits": [],
+    },
     "utility/xml/ieStruct2XML.m": {
         "status": "ported",
         "note": "The legacy MATLAB XML writer is covered by the Python `ie_struct2xml(...)` / `ieStruct2XML(...)` compatibility wrapper, including MATLAB-style `_dash_`, `_colon_`, and `_dot_` name escaping plus nested repeated-element replay.",
