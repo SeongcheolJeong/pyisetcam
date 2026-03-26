@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-03-26T21:45:15.671326+00:00",
+  "generated_at": "2026-03-26T22:18:40.347333+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
-    "generated_at": "2026-03-26T21:45:15.671326+00:00",
+    "generated_at": "2026-03-26T22:18:40.347333+00:00",
     "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 36,
-      "out_of_scope": 283,
+      "out_of_scope": 287,
       "parity": 712,
-      "partial": 150,
+      "partial": 146,
       "ported": 262
     },
     "kind_counts": {
@@ -21,17 +21,17 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 150,
+      "P1": 146,
       "P2": 36,
-      "P3": 1257
+      "P3": 1261
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": -1,
-        "out_of_scope": 0,
+        "headless_only": 0,
+        "out_of_scope": 4,
         "parity": 0,
-        "partial": 0,
-        "ported": 1
+        "partial": -4,
+        "ported": 0
       },
       "kind_counts": {
         "api": 0,
@@ -42,9 +42,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": 0,
-        "P2": -1,
-        "P3": 1
+        "P1": -4,
+        "P2": 0,
+        "P3": 4
       }
     },
     "family_summary": {
@@ -933,9 +933,9 @@
         "total": 279,
         "by_status": {
           "headless_only": 36,
-          "out_of_scope": 19,
+          "out_of_scope": 23,
           "parity": 16,
-          "partial": 150,
+          "partial": 146,
           "ported": 58
         },
         "by_kind": {
@@ -1007,13 +1007,13 @@
     "top_open_families": [
       {
         "family": "utility",
-        "open_entries": 186,
+        "open_entries": 182,
         "highest_open_priority": "P1",
         "by_status": {
           "headless_only": 36,
-          "out_of_scope": 19,
+          "out_of_scope": 23,
           "parity": 16,
-          "partial": 150,
+          "partial": 146,
           "ported": 58
         }
       },

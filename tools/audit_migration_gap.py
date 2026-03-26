@@ -766,6 +766,26 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The inverse quantization helper is covered by the Python `ie_uncompress_data(...)` / `ieUncompressData(...)` compatibility wrapper in `pyisetcam.utils`, matching the `ieCompressData(...)` inversion formula for scene or OI payloads.",
         "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
     },
+    "utility/external/JSONio/jsonread.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is only the MATLAB help stub for the external compiled `jsonread.c` MEX parser; the supported pyisetcam runtime relies on Python's built-in JSON tooling instead of vendoring MATLAB's third-party JSONio integration layer.",
+        "module_hits": [],
+    },
+    "utility/external/JSONio/jsonwrite.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a generic third-party JSON serializer from JSONio rather than an ISET-specific runtime surface; the supported headless runtime already uses Python's built-in JSON support where JSON serialization is needed.",
+        "module_hits": [],
+    },
+    "utility/external/JSONio/test_jsonread.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is the vendored JSONio package's own MATLAB unit test suite, which is package-maintenance coverage for a third-party dependency rather than a pyisetcam runtime target.",
+        "module_hits": [],
+    },
+    "utility/external/JSONio/test_jsonwrite.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is the vendored JSONio package's own MATLAB unit test suite, which is package-maintenance coverage for a third-party dependency rather than a pyisetcam runtime target.",
+        "module_hits": [],
+    },
     "utility/xml/ieStruct2XML.m": {
         "status": "ported",
         "note": "The legacy MATLAB XML writer is covered by the Python `ie_struct2xml(...)` / `ieStruct2XML(...)` compatibility wrapper, including MATLAB-style `_dash_`, `_colon_`, and `_dot_` name escaping plus nested repeated-element replay.",

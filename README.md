@@ -2051,4 +2051,7 @@ browser-only `ieManualViewer.m` and ridge-regression notebook
 `ieTikhonovRidge.m` are explicitly treated as out of scope, so the
 remaining utility debt is now concentrated in the broader
 `utility/programming` and `utility/external` families instead of the
-standalone top-level helpers.
+standalone top-level helpers. Inside `utility/external`, the vendored
+`JSONio` package is now explicitly tracked as out of scope because it is a
+generic third-party MATLAB JSON integration layer rather than an ISETCam
+runtime surface.
