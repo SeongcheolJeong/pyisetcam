@@ -916,6 +916,16 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream non-decimated pyramid dispatcher is covered by the Python `build_pyramid(...)` / `buildPyramid(...)` compatibility wrapper in `pyisetcam.scene`, with focused regression coverage over the supported Haar and QMF branches.",
         "module_hits": ["pyisetcam.scene", "pyisetcam.__init__"],
     },
+    "utility/external/hdr/buildFullSFpyr2_o.m": {
+        "status": "out_of_scope",
+        "note": "The upstream oversampled steerable-pyramid builder depends on external Simoncelli MatlabPyrTools routines such as `rcosFn`, `pointOp`, and `steer2HarmMtx`, and the vendored HDR README explicitly requires installing that toolbox for the `steerable` path, so this branch is treated as external-toolbox scope rather than a supported standalone pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/external/hdr/buildSFpyrLevs_o.m": {
+        "status": "out_of_scope",
+        "note": "The upstream recursive steerable-pyramid level builder depends on the external Simoncelli MatlabPyrTools masking utilities referenced by the vendored HDR README, so it is treated as external-toolbox scope rather than a supported standalone pyisetcam runtime surface.",
+        "module_hits": [],
+    },
     "utility/external/hdr/final_touch.m": {
         "status": "ported",
         "note": "The upstream histogram-equalized HDR finishing helper is covered by the Python `final_touch(...)` / `finalTouch(...)` compatibility wrapper in `pyisetcam.scene`, with focused regression coverage over the vendored global equalization replay.",
@@ -961,6 +971,16 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream grayscale HDR range-compression helper is covered by the Python `range_compression_lum(...)` / `rangeCompressionLum(...)` compatibility wrapper in `pyisetcam.scene`, with focused regression coverage over the current headless Haar path.",
         "module_hits": ["pyisetcam.scene", "pyisetcam.__init__"],
     },
+    "utility/external/hdr/reconFullSFpyr2_o.m": {
+        "status": "out_of_scope",
+        "note": "The upstream oversampled steerable-pyramid reconstructor depends on external Simoncelli MatlabPyrTools routines such as `rcosFn`, `pointOp`, and `pyrBand`, and the vendored HDR README explicitly requires installing that toolbox for the `steerable` path, so this branch is treated as external-toolbox scope rather than a supported standalone pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/external/hdr/reconSFpyrLevs_o.m": {
+        "status": "out_of_scope",
+        "note": "The upstream recursive steerable-pyramid reconstruction helper depends on external Simoncelli MatlabPyrTools masking and band-access utilities referenced by the vendored HDR README, so it is treated as external-toolbox scope rather than a supported standalone pyisetcam runtime surface.",
+        "module_hits": [],
+    },
     "utility/external/hdr/recons_haar_pyramid.m": {
         "status": "ported",
         "note": "The upstream oversampled Haar-pyramid reconstructor is covered by the Python `recons_haar_pyramid(...)` / `reconsHaarPyramid(...)` compatibility wrapper in `pyisetcam.scene`, with focused regression coverage over exact inverse replay.",
@@ -975,6 +995,16 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "status": "ported",
         "note": "The upstream oversampled QMF-pyramid reconstructor is covered by the Python `recons_qmf_pyramid(...)` / `reconsQmfPyramid(...)` compatibility wrapper in `pyisetcam.scene`, with focused regression coverage over exact inverse replay.",
         "module_hits": ["pyisetcam.scene", "pyisetcam.__init__"],
+    },
+    "utility/external/hdr/recons_steerable_pyramid_full.m": {
+        "status": "out_of_scope",
+        "note": "The upstream steerable-pyramid compatibility wrapper delegates straight into the external Simoncelli MatlabPyrTools reconstruction stack required by the vendored HDR README, so it is treated as external-toolbox scope rather than a supported standalone pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/external/hdr/steerable_pyramid_full.m": {
+        "status": "out_of_scope",
+        "note": "The upstream steerable-pyramid compatibility wrapper delegates straight into the external Simoncelli MatlabPyrTools build stack required by the vendored HDR README, so it is treated as external-toolbox scope rather than a supported standalone pyisetcam runtime surface.",
+        "module_hits": [],
     },
     "utility/external/fstack/fstackdemo.m": {
         "status": "out_of_scope",

@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-03-27T02:14:33.964187+00:00",
+  "generated_at": "2026-03-27T02:22:51.340852+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 1,
-      "out_of_scope": 321,
+      "out_of_scope": 327,
       "parity": 712,
-      "partial": 81,
+      "partial": 75,
       "ported": 328
     },
     "kind_counts": {
@@ -19,17 +19,17 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 81,
+      "P1": 75,
       "P2": 1,
-      "P3": 1361
+      "P3": 1367
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": -5,
-        "out_of_scope": 0,
+        "headless_only": 0,
+        "out_of_scope": 6,
         "parity": 0,
-        "partial": -8,
-        "ported": 13
+        "partial": -6,
+        "ported": 0
       },
       "kind_counts": {
         "api": 0,
@@ -40,9 +40,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -8,
-        "P2": -5,
-        "P3": 13
+        "P1": -6,
+        "P2": 0,
+        "P3": 6
       }
     },
     "family_summary": {
@@ -931,9 +931,9 @@
         "total": 279,
         "by_status": {
           "headless_only": 1,
-          "out_of_scope": 57,
+          "out_of_scope": 63,
           "parity": 16,
-          "partial": 81,
+          "partial": 75,
           "ported": 124
         },
         "by_kind": {
@@ -1005,13 +1005,13 @@
     "top_open_families": [
       {
         "family": "utility",
-        "open_entries": 82,
+        "open_entries": 76,
         "highest_open_priority": "P1",
         "by_status": {
           "headless_only": 1,
-          "out_of_scope": 57,
+          "out_of_scope": 63,
           "parity": 16,
-          "partial": 81,
+          "partial": 75,
           "ported": 124
         }
       },
@@ -16553,21 +16553,21 @@
       "upstream_path": "utility/external/hdr/buildFullSFpyr2_o.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream oversampled steerable-pyramid builder depends on external Simoncelli MatlabPyrTools routines such as `rcosFn`, `pointOp`, and `steer2HarmMtx`, and the vendored HDR README explicitly requires installing that toolbox for the `steerable` path, so this branch is treated as external-toolbox scope rather than a supported standalone pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/hdr/buildSFpyrLevs_o.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream recursive steerable-pyramid level builder depends on the external Simoncelli MatlabPyrTools masking utilities referenced by the vendored HDR README, so it is treated as external-toolbox scope rather than a supported standalone pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/hdr/build_pyramid.m",
@@ -16686,21 +16686,21 @@
       "upstream_path": "utility/external/hdr/reconFullSFpyr2_o.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream oversampled steerable-pyramid reconstructor depends on external Simoncelli MatlabPyrTools routines such as `rcosFn`, `pointOp`, and `pyrBand`, and the vendored HDR README explicitly requires installing that toolbox for the `steerable` path, so this branch is treated as external-toolbox scope rather than a supported standalone pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/hdr/reconSFpyrLevs_o.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream recursive steerable-pyramid reconstruction helper depends on external Simoncelli MatlabPyrTools masking and band-access utilities referenced by the vendored HDR README, so it is treated as external-toolbox scope rather than a supported standalone pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/hdr/recons_haar_pyramid.m",
@@ -16736,21 +16736,21 @@
       "upstream_path": "utility/external/hdr/recons_steerable_pyramid_full.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream steerable-pyramid compatibility wrapper delegates straight into the external Simoncelli MatlabPyrTools reconstruction stack required by the vendored HDR README, so it is treated as external-toolbox scope rather than a supported standalone pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/hdr/steerable_pyramid_full.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream steerable-pyramid compatibility wrapper delegates straight into the external Simoncelli MatlabPyrTools build stack required by the vendored HDR README, so it is treated as external-toolbox scope rather than a supported standalone pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/histcn/histcn.m",
