@@ -4942,6 +4942,308 @@ def hdr_render(
     return np.clip(result, 0.0, 1.0)
 
 
+def modulate_flip_shift(lfilt: Any) -> np.ndarray:
+    """Construct the QMF high-pass filter from a low-pass prototype."""
+
+    filt = np.asarray(lfilt, dtype=float).reshape(-1)
+    size = int(filt.size)
+    center = int(np.ceil(size / 2.0))
+    one_based = np.arange(size, 0, -1, dtype=int)
+    return np.asarray(filt[::-1] * np.power(-1.0, one_based - center), dtype=float)
+
+
+def qmf_pyramid(pic: np.ndarray, nlevels: int, qmf_length: int = 9) -> np.ndarray:
+    """Build an oversampled QMF pyramid using the vendored MATLAB contract."""
+
+    image = np.asarray(pic, dtype=float)
+    if image.ndim != 2:
+        raise ValueError("qmf_pyramid expects a 2-D image.")
+
+    if qmf_length == 9:
+        filt_low = np.asarray(
+            [0.02807382, -0.060944743, -0.073386624, 0.41472545, 0.7973934, 0.41472545, -0.073386624, -0.060944743, 0.02807382],
+            dtype=float,
+        ) / np.sqrt(2.0)
+    elif qmf_length == 13:
+        filt_low = np.asarray(
+            [
+                -0.014556438,
+                0.021651438,
+                0.039045125,
+                -0.09800052,
+                -0.057827797,
+                0.42995453,
+                0.7737113,
+                0.42995453,
+                -0.057827797,
+                -0.09800052,
+                0.039045125,
+                0.021651438,
+                -0.014556438,
+            ],
+            dtype=float,
+        ) / np.sqrt(2.0)
+    else:
+        raise ValueError("qmf_length can only be 9 or 13.")
+
+    height, width = image.shape
+    lowpass_prev = image
+    pyramid = np.zeros((height, width, 3 * int(nlevels) + 1), dtype=float)
+    band = 0
+    qmf_halflen = int(np.floor(qmf_length / 2))
+    plus_filt = filt_low[::2]
+    minus_filt = filt_low[1::2]
+
+    for level in range(1, int(nlevels) + 1):
+        if level == 1:
+            extend_space = qmf_halflen
+            step = 1
+        else:
+            extend_space = qmf_halflen * (2 ** (level - 1))
+            step = 2 ** (level - 1)
+
+        extended = _pad_reflect(lowpass_prev, extend_space)
+        ext_height, _ = extended.shape
+
+        plus_row = np.zeros((ext_height, width), dtype=float)
+        minus_row = np.zeros((ext_height, width), dtype=float)
+        plus_col_low = np.zeros((height, width), dtype=float)
+        minus_col_low = np.zeros((height, width), dtype=float)
+        plus_col_high = np.zeros((height, width), dtype=float)
+        minus_col_high = np.zeros((height, width), dtype=float)
+
+        start = 0
+        for coeff in plus_filt:
+            plus_row += extended[:, start : start + width] * float(coeff)
+            start += step * 2
+
+        start = step
+        for coeff in minus_filt:
+            minus_row += extended[:, start : start + width] * float(coeff)
+            start += step * 2
+
+        lowpass_row = plus_row + minus_row
+        hipass_row = plus_row - minus_row
+
+        start = 0
+        for coeff in plus_filt:
+            plus_col_low += lowpass_row[start : start + height, :] * float(coeff)
+            plus_col_high += hipass_row[start : start + height, :] * float(coeff)
+            start += step * 2
+
+        start = step
+        for coeff in minus_filt:
+            minus_col_low += lowpass_row[start : start + height, :] * float(coeff)
+            minus_col_high += hipass_row[start : start + height, :] * float(coeff)
+            start += step * 2
+
+        lowpass_prev = plus_col_low + minus_col_low
+        pyramid[:, :, band] = plus_col_low - minus_col_low
+        pyramid[:, :, band + 1] = plus_col_high + minus_col_high
+        pyramid[:, :, band + 2] = plus_col_high - minus_col_high
+        band += 3
+
+    pyramid[:, :, band] = lowpass_prev
+    return pyramid
+
+
+def recons_qmf_pyramid(pyr: np.ndarray, qmf_length: int = 9) -> np.ndarray:
+    """Reconstruct an image from a non-decimated QMF pyramid."""
+
+    pyramid = np.asarray(pyr, dtype=float)
+    if pyramid.ndim != 3:
+        raise ValueError("recons_qmf_pyramid expects a 3-D pyramid volume.")
+
+    if qmf_length == 9:
+        filt_low = np.asarray(
+            [0.02807382, -0.060944743, -0.073386624, 0.41472545, 0.7973934, 0.41472545, -0.073386624, -0.060944743, 0.02807382],
+            dtype=float,
+        ) / np.sqrt(2.0)
+    elif qmf_length == 13:
+        filt_low = np.asarray(
+            [
+                -0.014556438,
+                0.021651438,
+                0.039045125,
+                -0.09800052,
+                -0.057827797,
+                0.42995453,
+                0.7737113,
+                0.42995453,
+                -0.057827797,
+                -0.09800052,
+                0.039045125,
+                0.021651438,
+                -0.014556438,
+            ],
+            dtype=float,
+        ) / np.sqrt(2.0)
+    else:
+        raise ValueError("qmf_length can only be 9 or 13.")
+
+    filt_high = modulate_flip_shift(filt_low)
+    qmf_halflen = int(np.floor(qmf_length / 2))
+    height, width, nbands = pyramid.shape
+    lowpass_prev = pyramid[:, :, nbands - 1]
+    band_idx = nbands - 2
+    nlevels = int(np.floor(nbands / 3))
+
+    for level in range(nlevels, 0, -1):
+        if level == 1:
+            extend_space = qmf_halflen
+            step = 1
+        else:
+            extend_space = qmf_halflen * (2 ** (level - 1))
+            step = 2 ** (level - 1)
+
+        extend_lo_lo = _pad_reflect(lowpass_prev, extend_space)
+        extend_hi_hi = _pad_reflect(pyramid[:, :, band_idx], extend_space)
+        band_idx -= 1
+        extend_hi_lo = _pad_reflect(pyramid[:, :, band_idx], extend_space)
+        band_idx -= 1
+        extend_lo_hi = _pad_reflect(pyramid[:, :, band_idx], extend_space)
+        band_idx -= 1
+
+        ext_height, _ = extend_lo_lo.shape
+        lo_lo_row = np.zeros((ext_height, width), dtype=float)
+        hi_hi_row = np.zeros((ext_height, width), dtype=float)
+        hi_lo_row = np.zeros((ext_height, width), dtype=float)
+        lo_hi_row = np.zeros((ext_height, width), dtype=float)
+
+        start = 0
+        for idx in range(int(qmf_length)):
+            lo_lo_row += extend_lo_lo[:, start : start + width] * filt_low[idx]
+            hi_hi_row += extend_hi_hi[:, start : start + width] * filt_high[idx]
+            hi_lo_row += extend_hi_lo[:, start : start + width] * filt_high[idx]
+            lo_hi_row += extend_lo_hi[:, start : start + width] * filt_low[idx]
+            start += step
+
+        lo_lo = np.zeros((height, width), dtype=float)
+        lo_hi = np.zeros((height, width), dtype=float)
+        hi_lo = np.zeros((height, width), dtype=float)
+        hi_hi = np.zeros((height, width), dtype=float)
+        start = 0
+        for idx in range(int(qmf_length)):
+            lo_lo += lo_lo_row[start : start + height, :] * filt_low[idx]
+            lo_hi += lo_hi_row[start : start + height, :] * filt_high[idx]
+            hi_lo += hi_lo_row[start : start + height, :] * filt_low[idx]
+            hi_hi += hi_hi_row[start : start + height, :] * filt_high[idx]
+            start += step
+
+        lowpass_prev = lo_lo + lo_hi + hi_lo + hi_hi
+
+    return lowpass_prev
+
+
+def build_pyramid(im: np.ndarray, nlevels: int, filt_type: str = "haar") -> tuple[np.ndarray, int]:
+    """Build a non-decimated HDR pyramid for the supported filter families."""
+
+    normalized = param_format(filt_type)
+    if normalized == "haar":
+        return _haar_pyramid(im, nlevels), 3
+    if normalized == "qmf":
+        return qmf_pyramid(im, nlevels), 3
+    if normalized == "steerable":
+        raise UnsupportedOptionError("buildPyramid", f"filt_type {filt_type}")
+    raise ValueError('filt_type can only be "haar", "qmf", or "steerable".')
+
+
+def recons_pyramid(pyr: np.ndarray, filt_num: int | None = None, filt_type: str = "haar") -> np.ndarray:
+    """Reconstruct a non-decimated HDR pyramid for the supported filter families."""
+
+    del filt_num
+    normalized = param_format(filt_type)
+    if normalized == "haar":
+        return _recons_haar_pyramid(pyr)
+    if normalized == "qmf":
+        return recons_qmf_pyramid(pyr)
+    if normalized == "steerable":
+        raise UnsupportedOptionError("reconsPyramid", f"filt_type {filt_type}")
+    raise ValueError('filt_type can only be "haar", "qmf", or "steerable".')
+
+
+def im_norm(im: np.ndarray) -> np.ndarray:
+    """Normalize an array to the [0, 1] range."""
+
+    image = np.asarray(im, dtype=float)
+    low = float(np.min(image))
+    high = float(np.max(image))
+    if high <= low:
+        return np.zeros_like(image, dtype=float)
+    return np.asarray((image - low) / (high - low), dtype=float)
+
+
+def final_touch(im: np.ndarray) -> np.ndarray:
+    """Apply the vendored final HDR touch-up layer."""
+
+    image = np.asarray(im, dtype=float)
+    return np.asarray(image + 0.15 * _hist_equalize_global(np.real(image)), dtype=float)
+
+
+def getpfmraw(filename: str | Path) -> np.ndarray:
+    """Read a color PFM raw image using the vendored MATLAB contract."""
+
+    path = Path(filename)
+    with path.open("rb") as handle:
+        code = handle.readline().strip()
+        if code != b"P7":
+            raise ValueError("Not a PFM (raw) image")
+
+        def _next_token() -> bytes:
+            while True:
+                line = handle.readline()
+                if line == b"":
+                    raise ValueError("Unexpected end of PFM header")
+                stripped = line.strip()
+                if not stripped or stripped.startswith(b"#"):
+                    continue
+                return stripped
+
+        width_height = _next_token().split()
+        if len(width_height) >= 2:
+            width = int(width_height[0])
+            height = int(width_height[1])
+        else:
+            width = int(width_height[0])
+            height = int(_next_token().split()[0])
+        _ = float(_next_token().split()[0])
+        payload = handle.read()
+
+    values = np.frombuffer(payload, dtype=np.float32)
+    expected = 3 * width * height
+    if values.size != expected:
+        raise ValueError("PFM payload size does not match header dimensions.")
+
+    channels = values.reshape(3, width * height)
+    image = np.empty((height, width, 3), dtype=np.float32)
+    for channel_index in range(3):
+        plane = np.reshape(channels[channel_index], (width, height), order="F").T
+        image[:, :, channel_index] = plane
+    return image[::-1, :, :]
+
+
+pad_reflect = _pad_reflect
+pad_reflect_neg = _pad_reflect_neg
+haar_pyramid = _haar_pyramid
+recons_haar_pyramid = _recons_haar_pyramid
+range_compression_lum = _range_compression_lum
+
+buildPyramid = build_pyramid
+finalTouch = final_touch
+getPFMraw = getpfmraw
+haarPyramid = haar_pyramid
+imNorm = im_norm
+modulateFlip = modulate_flip_shift
+modulateFlipShift = modulate_flip_shift
+padReflect = pad_reflect
+padReflectNeg = pad_reflect_neg
+qmfPyramid = qmf_pyramid
+rangeCompressionLum = range_compression_lum
+reconsHaarPyramid = recons_haar_pyramid
+reconsPyramid = recons_pyramid
+reconsQmfPyramid = recons_qmf_pyramid
+
+
 def _scene_rgb_from_xyz(xyz: np.ndarray) -> np.ndarray:
     xyz = np.asarray(xyz, dtype=float)
     if xyz.ndim != 3 or xyz.shape[2] != 3:

@@ -7,10 +7,37 @@ import pyisetcam.scene as scene_module
 
 from pyisetcam import (
     blackbody,
+    buildPyramid,
+    build_pyramid,
     display_create,
     display_get,
     exiftool_depth_from_file,
     exiftool_info,
+    finalTouch,
+    final_touch,
+    getPFMraw,
+    getpfmraw,
+    haarPyramid,
+    haar_pyramid,
+    imNorm,
+    im_norm,
+    modulateFlip,
+    modulateFlipShift,
+    modulate_flip_shift,
+    padReflect,
+    padReflectNeg,
+    pad_reflect,
+    pad_reflect_neg,
+    qmfPyramid,
+    qmf_pyramid,
+    rangeCompressionLum,
+    range_compression_lum,
+    reconsHaarPyramid,
+    reconsPyramid,
+    reconsQmfPyramid,
+    recons_haar_pyramid,
+    recons_pyramid,
+    recons_qmf_pyramid,
     scene_adjust_illuminant,
     scene_create,
     scene_from_ddf_file,
@@ -130,6 +157,99 @@ def test_exiftool_depth_from_file_decodes_meter_payload(monkeypatch, tmp_path) -
     expected = 1.0 + (encoded.astype(float) / 255.0) * 4.0
 
     np.testing.assert_allclose(depth, expected, rtol=0.0, atol=1e-6)
+
+
+def test_hdr_helper_wrappers_cover_padding_and_pyramid_reconstruction() -> None:
+    small = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float)
+    expected_pad = np.array(
+        [
+            [4.0, 3.0, 4.0, 3.0],
+            [2.0, 1.0, 2.0, 1.0],
+            [4.0, 3.0, 4.0, 3.0],
+            [2.0, 1.0, 2.0, 1.0],
+        ],
+        dtype=float,
+    )
+    expected_pad_neg = np.array(
+        [
+            [-4.0, 3.0, 4.0, -3.0],
+            [-2.0, 1.0, 2.0, -1.0],
+            [-4.0, 3.0, 4.0, -3.0],
+            [-2.0, 1.0, 2.0, -1.0],
+        ],
+        dtype=float,
+    )
+
+    np.testing.assert_allclose(pad_reflect(small, 1), expected_pad)
+    np.testing.assert_allclose(padReflect(small, 1), expected_pad)
+    np.testing.assert_allclose(pad_reflect_neg(small, 1, 1, 1, 0), expected_pad_neg)
+    np.testing.assert_allclose(padReflectNeg(small, 1, 1, 1, 0), expected_pad_neg)
+
+    image = np.arange(1.0, 65.0, dtype=float).reshape(8, 8) / 64.0
+    haar = haar_pyramid(image, 2)
+    alias_haar = haarPyramid(image, 2)
+    built_haar, filt_num = build_pyramid(image, 2, "haar")
+    alias_built_haar, alias_filt_num = buildPyramid(image, 2, "haar")
+
+    assert filt_num == 3
+    assert alias_filt_num == 3
+    np.testing.assert_allclose(alias_haar, haar)
+    np.testing.assert_allclose(built_haar, haar)
+    np.testing.assert_allclose(alias_built_haar, haar)
+    haar_reconstructed = recons_haar_pyramid(haar)
+    alias_haar_reconstructed = reconsHaarPyramid(haar)
+    dispatch_haar_reconstructed = recons_pyramid(haar, 3, "haar")
+    alias_dispatch_haar_reconstructed = reconsPyramid(haar, 3, "haar")
+    np.testing.assert_allclose(alias_haar_reconstructed, haar_reconstructed, atol=1e-10, rtol=1e-10)
+    np.testing.assert_allclose(dispatch_haar_reconstructed, haar_reconstructed, atol=1e-10, rtol=1e-10)
+    np.testing.assert_allclose(alias_dispatch_haar_reconstructed, haar_reconstructed, atol=1e-10, rtol=1e-10)
+    np.testing.assert_allclose(haar_reconstructed[1:, 1:], image[1:, 1:], atol=1e-10, rtol=1e-10)
+    np.testing.assert_allclose(haar_reconstructed[0, 1:] - image[0, 1:], np.full(7, 1.0 / 16.0), atol=1e-10, rtol=1e-10)
+    np.testing.assert_allclose(haar_reconstructed[1:, 0] - image[1:, 0], np.full(7, 1.0 / 128.0), atol=1e-10, rtol=1e-10)
+    assert np.isclose(float(haar_reconstructed[0, 0] - image[0, 0]), 9.0 / 128.0, atol=1e-10, rtol=1e-10)
+
+    qmf = qmf_pyramid(image, 2)
+    alias_qmf = qmfPyramid(image, 2)
+    built_qmf, qmf_filt_num = build_pyramid(image, 2, "qmf")
+    np.testing.assert_allclose(alias_qmf, qmf)
+    np.testing.assert_allclose(built_qmf, qmf)
+    assert qmf_filt_num == 3
+    np.testing.assert_allclose(recons_qmf_pyramid(qmf), image, atol=6e-4, rtol=6e-4)
+    np.testing.assert_allclose(reconsQmfPyramid(qmf), image, atol=6e-4, rtol=6e-4)
+    np.testing.assert_allclose(recons_pyramid(qmf, 3, "qmf"), image, atol=6e-4, rtol=6e-4)
+    np.testing.assert_allclose(reconsPyramid(qmf, 3, "qmf"), image, atol=6e-4, rtol=6e-4)
+
+    with pytest.raises(NotImplementedError):
+        build_pyramid(image, 2, "steerable")
+    with pytest.raises(NotImplementedError):
+        recons_pyramid(haar, 3, "steerable")
+
+
+def test_hdr_helper_wrappers_cover_normalization_range_touch_filter_and_pfm(tmp_path) -> None:
+    image = np.array([[1.0, 3.0], [2.0, 5.0]], dtype=float)
+    expected_norm = (image - 1.0) / 4.0
+    expected_touch = image + 0.15 * scene_module._hist_equalize_global(np.real(image))
+    grayscale = np.linspace(0.1, 1.6, 64, dtype=float).reshape(8, 8)
+    expected_range = scene_module._range_compression_lum(grayscale, filt_type="haar", beta=0.6, alpha_a=0.2, ifsharp=0)
+
+    np.testing.assert_allclose(im_norm(image), expected_norm)
+    np.testing.assert_allclose(imNorm(image), expected_norm)
+    np.testing.assert_allclose(final_touch(image), expected_touch)
+    np.testing.assert_allclose(finalTouch(image), expected_touch)
+    np.testing.assert_allclose(range_compression_lum(grayscale), expected_range)
+    np.testing.assert_allclose(rangeCompressionLum(grayscale), expected_range)
+    np.testing.assert_allclose(modulate_flip_shift([1.0, 2.0, 3.0, 4.0]), np.array([4.0, -3.0, 2.0, -1.0]))
+    np.testing.assert_allclose(modulateFlip([1.0, 2.0, 3.0, 4.0]), np.array([4.0, -3.0, 2.0, -1.0]))
+    np.testing.assert_allclose(modulateFlipShift([1.0, 2.0, 3.0, 4.0]), np.array([4.0, -3.0, 2.0, -1.0]))
+
+    rgb = (np.arange(1.0, 13.0, dtype=np.float32).reshape(2, 2, 3)) / 12.0
+    flipped = rgb[::-1, :, :]
+    payload = np.concatenate([np.reshape(flipped[:, :, channel].T, -1, order="F") for channel in range(3)]).astype(np.float32)
+    pfm_path = tmp_path / "sample.pfm"
+    pfm_path.write_bytes(b"P7\n2 2\n1.0\n" + payload.tobytes())
+
+    np.testing.assert_allclose(getpfmraw(pfm_path), rgb, atol=1e-7, rtol=1e-7)
+    np.testing.assert_allclose(getPFMraw(pfm_path), rgb, atol=1e-7, rtol=1e-7)
 
 
 def test_scene_sdr_prefers_local_cache_for_mat_and_png(tmp_path, asset_store) -> None:

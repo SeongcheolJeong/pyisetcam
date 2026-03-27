@@ -521,10 +521,15 @@ from .session import (
     vc_select_figure,
 )
 from .scene import (
+    build_pyramid,
     chart_patch_data,
     fot_params,
+    final_touch,
     gabor_p,
+    getpfmraw,
+    haar_pyramid,
     hdr_render,
+    im_norm,
     image_dead_leaves,
     image_vernier,
     img_deadleaves,
@@ -551,7 +556,15 @@ from .scene import (
     macbeth_luminance_noise,
     macbeth_select,
     macbeth_sensor_values,
+    modulate_flip_shift,
     mo_target,
+    pad_reflect,
+    pad_reflect_neg,
+    qmf_pyramid,
+    range_compression_lum,
+    recons_haar_pyramid,
+    recons_pyramid,
+    recons_qmf_pyramid,
     scene_add,
     scene_add_grid,
     scene_adjust_pixel_size,
@@ -1931,8 +1944,18 @@ __all__ = [
     "run_python_case_with_context",
     "hdrRender",
     "hdr_render",
+    "buildPyramid",
+    "build_pyramid",
     "FOTParams",
+    "finalTouch",
+    "final_touch",
     "gaborP",
+    "getPFMraw",
+    "getpfmraw",
+    "haarPyramid",
+    "haar_pyramid",
+    "imNorm",
+    "im_norm",
     "imageDeadLeaves",
     "imageVernier",
     "imgDeadleaves",
@@ -1944,7 +1967,24 @@ __all__ = [
     "imgSweep",
     "imgZonePlate",
     "ieCheckerboard",
+    "modulateFlip",
+    "modulateFlipShift",
+    "modulate_flip_shift",
     "MOTarget",
+    "padReflect",
+    "padReflectNeg",
+    "pad_reflect",
+    "pad_reflect_neg",
+    "qmfPyramid",
+    "qmf_pyramid",
+    "rangeCompressionLum",
+    "range_compression_lum",
+    "reconsHaarPyramid",
+    "reconsPyramid",
+    "reconsQmfPyramid",
+    "recons_haar_pyramid",
+    "recons_pyramid",
+    "recons_qmf_pyramid",
     "sceneAdjustIlluminant",
     "sceneAdd",
     "sceneAddGrid",
@@ -2464,6 +2504,20 @@ sceneVernier = scene_vernier
 sceneWBCreate = scene_wb_create
 sceneRamp = scene_ramp
 hdrRender = hdr_render
+buildPyramid = build_pyramid
+finalTouch = final_touch
+getPFMraw = getpfmraw
+haarPyramid = haar_pyramid
+imNorm = im_norm
+modulateFlip = modulate_flip_shift
+modulateFlipShift = modulate_flip_shift
+padReflect = pad_reflect
+padReflectNeg = pad_reflect_neg
+qmfPyramid = qmf_pyramid
+rangeCompressionLum = range_compression_lum
+reconsHaarPyramid = recons_haar_pyramid
+reconsPyramid = recons_pyramid
+reconsQmfPyramid = recons_qmf_pyramid
 sceneAdd = scene_add
 sceneAddGrid = scene_add_grid
 sceneAdjustPixelSize = scene_adjust_pixel_size

@@ -911,6 +911,71 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream exiftool metadata helper is covered by the Python `exiftool_info(...)` / `exiftoolInfo(...)` compatibility wrapper in `pyisetcam.scene`, which replays the JSON or verbose text query contract against the host `exiftool` binary headlessly.",
         "module_hits": ["pyisetcam.scene", "pyisetcam.__init__"],
     },
+    "utility/external/hdr/build_pyramid.m": {
+        "status": "ported",
+        "note": "The upstream non-decimated pyramid dispatcher is covered by the Python `build_pyramid(...)` / `buildPyramid(...)` compatibility wrapper in `pyisetcam.scene`, with focused regression coverage over the supported Haar and QMF branches.",
+        "module_hits": ["pyisetcam.scene", "pyisetcam.__init__"],
+    },
+    "utility/external/hdr/final_touch.m": {
+        "status": "ported",
+        "note": "The upstream histogram-equalized HDR finishing helper is covered by the Python `final_touch(...)` / `finalTouch(...)` compatibility wrapper in `pyisetcam.scene`, with focused regression coverage over the vendored global equalization replay.",
+        "module_hits": ["pyisetcam.scene", "pyisetcam.__init__"],
+    },
+    "utility/external/hdr/getpfmraw.m": {
+        "status": "ported",
+        "note": "The upstream color PFM reader is covered by the Python `getpfmraw(...)` / `getPFMraw(...)` compatibility wrapper in `pyisetcam.scene`, with focused regression coverage over the vendored channel packing and vertical-flip replay.",
+        "module_hits": ["pyisetcam.scene", "pyisetcam.__init__"],
+    },
+    "utility/external/hdr/haar_pyramid.m": {
+        "status": "ported",
+        "note": "The upstream oversampled Haar-pyramid builder is covered by the Python `haar_pyramid(...)` / `haarPyramid(...)` compatibility wrapper in `pyisetcam.scene`, with focused regression coverage over exact reconstruction against `recons_haar_pyramid(...)`.",
+        "module_hits": ["pyisetcam.scene", "pyisetcam.__init__"],
+    },
+    "utility/external/hdr/im_norm.m": {
+        "status": "ported",
+        "note": "The upstream min-max normalization helper is covered by the Python `im_norm(...)` / `imNorm(...)` compatibility wrapper in `pyisetcam.scene`, with focused regression coverage over exact [0, 1] scaling.",
+        "module_hits": ["pyisetcam.scene", "pyisetcam.__init__"],
+    },
+    "utility/external/hdr/modulateFlip.m": {
+        "status": "ported",
+        "note": "The upstream QMF high-pass filter constructor is covered by the Python `modulate_flip_shift(...)` / `modulateFlip(...)` / `modulateFlipShift(...)` compatibility wrapper in `pyisetcam.scene`, with focused regression coverage over the sign-flipped reverse-order replay.",
+        "module_hits": ["pyisetcam.scene", "pyisetcam.__init__"],
+    },
+    "utility/external/hdr/pad_reflect.m": {
+        "status": "ported",
+        "note": "The upstream reflection-padding helper is covered by the Python `pad_reflect(...)` / `padReflect(...)` compatibility wrapper in `pyisetcam.scene`, with focused regression coverage over the vendored edge-reflection replay.",
+        "module_hits": ["pyisetcam.scene", "pyisetcam.__init__"],
+    },
+    "utility/external/hdr/pad_reflect_neg.m": {
+        "status": "ported",
+        "note": "The upstream signed reflection-padding helper is covered by the Python `pad_reflect_neg(...)` / `padReflectNeg(...)` compatibility wrapper in `pyisetcam.scene`, with focused regression coverage over the vendored horizontal and vertical sign-flip replay.",
+        "module_hits": ["pyisetcam.scene", "pyisetcam.__init__"],
+    },
+    "utility/external/hdr/qmf_pyramid.m": {
+        "status": "ported",
+        "note": "The upstream oversampled QMF-pyramid builder is covered by the Python `qmf_pyramid(...)` / `qmfPyramid(...)` compatibility wrapper in `pyisetcam.scene`, with focused regression coverage over exact reconstruction against `recons_qmf_pyramid(...)`.",
+        "module_hits": ["pyisetcam.scene", "pyisetcam.__init__"],
+    },
+    "utility/external/hdr/range_compression_lum.m": {
+        "status": "ported",
+        "note": "The upstream grayscale HDR range-compression helper is covered by the Python `range_compression_lum(...)` / `rangeCompressionLum(...)` compatibility wrapper in `pyisetcam.scene`, with focused regression coverage over the current headless Haar path.",
+        "module_hits": ["pyisetcam.scene", "pyisetcam.__init__"],
+    },
+    "utility/external/hdr/recons_haar_pyramid.m": {
+        "status": "ported",
+        "note": "The upstream oversampled Haar-pyramid reconstructor is covered by the Python `recons_haar_pyramid(...)` / `reconsHaarPyramid(...)` compatibility wrapper in `pyisetcam.scene`, with focused regression coverage over exact inverse replay.",
+        "module_hits": ["pyisetcam.scene", "pyisetcam.__init__"],
+    },
+    "utility/external/hdr/recons_pyramid.m": {
+        "status": "ported",
+        "note": "The upstream non-decimated pyramid reconstructor is covered by the Python `recons_pyramid(...)` / `reconsPyramid(...)` compatibility wrapper in `pyisetcam.scene`, with focused regression coverage over the supported Haar and QMF branches.",
+        "module_hits": ["pyisetcam.scene", "pyisetcam.__init__"],
+    },
+    "utility/external/hdr/recons_qmf_pyramid.m": {
+        "status": "ported",
+        "note": "The upstream oversampled QMF-pyramid reconstructor is covered by the Python `recons_qmf_pyramid(...)` / `reconsQmfPyramid(...)` compatibility wrapper in `pyisetcam.scene`, with focused regression coverage over exact inverse replay.",
+        "module_hits": ["pyisetcam.scene", "pyisetcam.__init__"],
+    },
     "utility/external/fstack/fstackdemo.m": {
         "status": "out_of_scope",
         "note": "The upstream file is only a MATLAB demonstration notebook for the external focus-stack package, not a supported pyisetcam runtime API surface.",

@@ -2091,3 +2091,13 @@ The remaining environment-only helpers such as `checkToolbox.m`,
 tracked as out of scope, so the remaining utility debt now sits in the
 larger external lanes such as `utility/external/hdr` and
 `utility/external/facetracker`.
+The adjacent `utility/external/hdr` lane is smaller too:
+`build_pyramid(...)`, `recons_pyramid(...)`, the Haar/QMF builders and
+reconstructors, `pad_reflect(...)`, `pad_reflect_neg(...)`,
+`modulateFlip(...)`, `imNorm(...)`, `finalTouch(...)`, `getPFMraw(...)`,
+and `rangeCompressionLum(...)` now have direct headless compatibility
+coverage in `pyisetcam.scene`, with focused regressions over padding
+replay, Haar/QMF reconstruction, normalization, and PFM channel packing.
+That leaves only the six steerable-pyramid helpers in the vendored HDR
+package as remaining open HDR debt, alongside the much larger
+`utility/external/facetracker` tail.
