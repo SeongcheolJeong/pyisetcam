@@ -15,6 +15,7 @@ from pyisetcam import (
     exiftool_info,
     finalTouch,
     final_touch,
+    font_create,
     getPFMraw,
     getpfmraw,
     haarPyramid,
@@ -24,6 +25,7 @@ from pyisetcam import (
     modulateFlip,
     modulateFlipShift,
     modulate_flip_shift,
+    mo_target,
     padReflect,
     padReflectNeg,
     pad_reflect,
@@ -71,6 +73,66 @@ def test_scene_adjust_illuminant_preserves_mean(asset_store) -> None:
         scene_get(scene, "mean luminance", asset_store=asset_store),
         rtol=1e-2,
     )
+
+
+def test_scene_create_supports_macbeth_illuminant_variants(asset_store) -> None:
+    wave = np.arange(400.0, 701.0, 30.0, dtype=float)
+    ir_wave = np.arange(700.0, 901.0, 40.0, dtype=float)
+
+    d50 = scene_create("macbeth d50", 8, wave, asset_store=asset_store)
+    illc = scene_create("macbeth illc", 8, wave, asset_store=asset_store)
+    fluor = scene_create("macbeth fluor", 8, wave, asset_store=asset_store)
+    custom = scene_create("macbeth custom reflectance", 8, wave, "macbethChart.mat", asset_store=asset_store)
+    ee_ir = scene_create("macbeth ee_ir", 8, ir_wave, asset_store=asset_store)
+
+    assert scene_get(d50, "name") == "Macbeth D50"
+    assert scene_get(illc, "name") == "Macbeth Ill C"
+    assert scene_get(fluor, "name") == "Macbeth Fluorescent"
+    assert scene_get(custom, "name") == "Macbeth D65"
+    assert scene_get(ee_ir, "name") == "Macbeth IR"
+    assert scene_get(d50, "illuminant comment") == "D50.mat"
+    assert scene_get(illc, "illuminant comment") == "illuminantC.mat"
+    assert scene_get(fluor, "illuminant comment") == "Fluorescent.mat"
+    assert scene_get(custom, "illuminant comment") == "D65.mat"
+    assert scene_get(ee_ir, "illuminant comment") == "equalEnergy"
+    assert scene_get(d50, "photons").shape == (32, 48, wave.size)
+    assert scene_get(ee_ir, "photons").shape == (32, 48, ir_wave.size)
+    np.testing.assert_array_equal(np.asarray(scene_get(ee_ir, "wave"), dtype=float), ir_wave)
+    assert np.isclose(scene_get(d50, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
+    assert np.isclose(scene_get(ee_ir, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
+    assert not np.allclose(scene_get(d50, "illuminant energy"), scene_get(custom, "illuminant energy"))
+    assert not np.allclose(scene_get(illc, "illuminant energy"), scene_get(custom, "illuminant energy"))
+    assert np.allclose(
+        np.asarray(scene_get(ee_ir, "illuminant energy"), dtype=float),
+        float(np.asarray(scene_get(ee_ir, "illuminant energy"), dtype=float).reshape(-1)[0]),
+    )
+
+
+def test_scene_create_moire_orient_replays_green_target_plane(asset_store) -> None:
+    params = {"sceneSize": 96, "f": 1.0 / 1200.0}
+    scene = scene_create("moire orient", params, asset_store=asset_store)
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+    expected = np.clip(np.asarray(mo_target("sinusoidalim", params), dtype=float)[:, :, 1], 1.0e-4, 1.0)
+    expected = expected / np.max(expected)
+    actual = photons[:, :, 0] / np.max(photons[:, :, 0])
+
+    assert scene_get(scene, "name") == "MOTarget"
+    assert photons.shape[:2] == (96, 96)
+    np.testing.assert_allclose(photons[:, :, 0], photons[:, :, -1], atol=1e-10, rtol=1e-10)
+    np.testing.assert_allclose(actual, expected, atol=1e-7, rtol=1e-7)
+    assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
+
+
+def test_scene_create_letter_branch_reuses_font_pipeline(asset_store) -> None:
+    font = font_create("A", "Georgia", 18, asset_store=asset_store)
+    scene = scene_create("letter", font, "LCD-Apple", asset_store=asset_store)
+    photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+
+    assert scene_get(scene, "name") == font["name"]
+    assert photons.ndim == 3
+    assert photons.shape[2] == scene_get(scene, "nwave")
+    assert float(np.max(photons)) > float(np.min(photons))
+    assert scene_get(scene, "fov") > 0.0
 
 
 def test_scene_from_file_supports_multispectral_mat_files(asset_store) -> None:

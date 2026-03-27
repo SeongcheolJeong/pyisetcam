@@ -505,7 +505,12 @@ def scene_from_font(
         warnings.warn("Adjusting display dpi to match font", stacklevel=2)
         display = display_set(display, "dpi", float(font_get(current_font, "dpi")))
 
-    padded_bitmap = np.asarray(font_get(current_font, "padded bitmap", pad_size, pad_val), dtype=float)
+    if pad_size is None and pad_val is None:
+        padded_bitmap = np.asarray(font_get(current_font, "padded bitmap"), dtype=float)
+    elif pad_val is None:
+        padded_bitmap = np.asarray(font_get(current_font, "padded bitmap", pad_size), dtype=float)
+    else:
+        padded_bitmap = np.asarray(font_get(current_font, "padded bitmap", pad_size, pad_val), dtype=float)
     display_image = _display_compute_simple(display, padded_bitmap, oversample)
     display_xw, rows, cols, _ = rgb_to_xw_format(display_image)
     spd = np.asarray(display_get(display, "spd"), dtype=float)

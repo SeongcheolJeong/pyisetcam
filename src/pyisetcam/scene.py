@@ -67,7 +67,7 @@ Supported Python sceneCreate families include:
   macbeth d65 / d50 / illc / fluorescent / tungsten / ee_ir
   reflectance chart
   multispectral / rgb / uniform monochromatic
-  rings rays / harmonic / sweep frequency / freq orient pattern
+  rings rays / harmonic / sweep frequency / freq orient pattern / moire orient
   line d65 / line ee / line ep / bar / vernier
   point array / grid lines / radial lines / slanted edge / checkerboard
   zone plate / linear intensity ramp
@@ -1711,10 +1711,32 @@ def _create_macbeth_scene(
     else:
         from .illuminant import illuminant_create, illuminant_get
 
-        illuminant = illuminant_create(illuminant_type, wave, 100.0, asset_store=asset_store)
+        if illuminant_key == "d50":
+            illuminant_name = "d50"
+            scene_name = "Macbeth D50"
+            illuminant_comment = "D50.mat"
+        elif illuminant_key in {"c", "illc", "illuminantc"}:
+            illuminant_name = "illuminantc"
+            scene_name = "Macbeth Ill C"
+            illuminant_comment = "illuminantC.mat"
+        elif illuminant_key in {"fluorescent", "fluor"}:
+            illuminant_name = "fluorescent"
+            scene_name = "Macbeth Fluorescent"
+            illuminant_comment = "Fluorescent.mat"
+        elif illuminant_key == "tungsten":
+            illuminant_name = "tungsten"
+            scene_name = "Macbeth Tungsten"
+            illuminant_comment = "tungsten"
+        elif illuminant_key in {"ir", "eeir", "equalenergyinfrared"}:
+            illuminant_name = "equalEnergy"
+            scene_name = "Macbeth IR"
+            illuminant_comment = "equalEnergy"
+        else:
+            illuminant_name = illuminant_type
+            scene_name = f"Macbeth {illuminant_type}"
+            illuminant_comment = str(illuminant_type)
+        illuminant = illuminant_create(illuminant_name, wave, 100.0, asset_store=asset_store)
         illuminant_energy = np.asarray(illuminant_get(illuminant, "energy"), dtype=float).reshape(-1)
-        scene_name = f"Macbeth {illuminant_type}"
-        illuminant_comment = str(illuminant_get(illuminant, "name"))
     illuminant_photons = energy_to_quanta(illuminant_energy, wave)
     scene = Scene(name=scene_name)
     scene.fields["wave"] = wave
@@ -2950,6 +2972,15 @@ def mo_target(pattern: str = "sinusoidalim", parms: Any | None = None) -> np.nda
     return np.repeat(image[:, :, None], 3, axis=2)
 
 
+def _mo_target_scene(parms: Any | None, *, asset_store: AssetStore) -> Scene:
+    wave = _wave_or_default(None)
+    target = np.asarray(mo_target("sinusoidalim", parms), dtype=float)
+    image = np.clip(target[:, :, 1], 1.0e-4, 1.0)
+    scene = _equal_photon_pattern_scene("MOTarget", image, wave, fov_deg=DEFAULT_FOV_DEG, asset_store=asset_store)
+    scene.fields["mo_target_params"] = _normalized_parameter_dict(parms)
+    return scene
+
+
 def scene_hdr_chart(
     d_range: float = 1.0e4,
     n_levels: int = 12,
@@ -3746,7 +3777,7 @@ def scene_create(
     store = _store(asset_store)
     name = param_format(scene_name)
 
-    if name in {"default", "macbeth", "macbethd65"}:
+    if name in {"default", "macbeth", "macbethd65", "macbethcustomreflectance"}:
         patch_size = int(args[0]) if len(args) > 0 else 16
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
         surface_file = str(args[2]) if len(args) > 2 else "macbethChart.mat"
@@ -3754,6 +3785,57 @@ def scene_create(
         return track_session_object(
             session,
             _create_macbeth_scene(patch_size, wave, surface_file, black_border, asset_store=store),
+        )
+
+    if name == "macbethd50":
+        patch_size = int(args[0]) if len(args) > 0 else 16
+        wave = _wave_or_default(args[1] if len(args) > 1 else None)
+        surface_file = str(args[2]) if len(args) > 2 else "macbethChart.mat"
+        black_border = bool(args[3]) if len(args) > 3 else False
+        return track_session_object(
+            session,
+            _create_macbeth_scene(
+                patch_size,
+                wave,
+                surface_file,
+                black_border,
+                illuminant_type="d50",
+                asset_store=store,
+            ),
+        )
+
+    if name in {"macbethc", "macbethillc"}:
+        patch_size = int(args[0]) if len(args) > 0 else 16
+        wave = _wave_or_default(args[1] if len(args) > 1 else None)
+        surface_file = str(args[2]) if len(args) > 2 else "macbethChart.mat"
+        black_border = bool(args[3]) if len(args) > 3 else False
+        return track_session_object(
+            session,
+            _create_macbeth_scene(
+                patch_size,
+                wave,
+                surface_file,
+                black_border,
+                illuminant_type="illuminantc",
+                asset_store=store,
+            ),
+        )
+
+    if name in {"macbethfluorescent", "macbethfluor"}:
+        patch_size = int(args[0]) if len(args) > 0 else 16
+        wave = _wave_or_default(args[1] if len(args) > 1 else None)
+        surface_file = str(args[2]) if len(args) > 2 else "macbethChart.mat"
+        black_border = bool(args[3]) if len(args) > 3 else False
+        return track_session_object(
+            session,
+            _create_macbeth_scene(
+                patch_size,
+                wave,
+                surface_file,
+                black_border,
+                illuminant_type="fluorescent",
+                asset_store=store,
+            ),
         )
 
     if name in {"macbethtungsten", "macbethtung"}:
@@ -3769,6 +3851,23 @@ def scene_create(
                 surface_file,
                 black_border,
                 illuminant_type="tungsten",
+                asset_store=store,
+            ),
+        )
+
+    if name in {"macbethee_ir", "macbethequalenergyinfrared"}:
+        patch_size = int(args[0]) if len(args) > 0 else 16
+        wave = _wave_or_default(args[1] if len(args) > 1 else None)
+        surface_file = str(args[2]) if len(args) > 2 else "macbethChart.mat"
+        black_border = bool(args[3]) if len(args) > 3 else False
+        return track_session_object(
+            session,
+            _create_macbeth_scene(
+                patch_size,
+                wave,
+                surface_file,
+                black_border,
+                illuminant_type="ir",
                 asset_store=store,
             ),
         )
@@ -3952,6 +4051,10 @@ def scene_create(
         scene.fields["frequency_orientation_params"] = params
         return track_session_object(session, scene)
 
+    if name == "moireorient":
+        params = args[0] if len(args) > 0 else None
+        return track_session_object(session, _mo_target_scene(params, asset_store=store))
+
     if name in {"harmonic", "sinusoid"}:
         params = _harmonic_parameters(args[0] if len(args) > 0 else None)
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
@@ -4115,6 +4218,13 @@ def scene_create(
             session,
             _slanted_bar_scene(image_size, edge_slope, wave, fov_deg, dark_level, asset_store=store),
         )
+
+    if name in {"letter", "font"}:
+        from .fonts import font_create, scene_from_font
+
+        font = args[0] if len(args) > 0 else font_create(asset_store=store)
+        display = args[1] if len(args) > 1 else None
+        return track_session_object(session, scene_from_font(font, display, asset_store=store))
 
     raise UnsupportedOptionError("sceneCreate", scene_name)
 

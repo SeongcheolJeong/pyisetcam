@@ -250,7 +250,11 @@ monochrome inputs backed by emissive display calibration, the classic test
 scene catalog has been expanded with script-driven patterns such as
 `harmonic`, `frequency orientation` / `freq orient`, and
 `sweep frequency`, `star pattern`, plus script-driven `reflectance chart` support with
-explicit sample-list recreation, and `sensor_create` now includes generic
+explicit sample-list recreation. The first post-milestone `sceneCreate(...)`
+expansion slice is now in place too: extra Macbeth illuminant variants
+(`d50`, `illc`, `fluorescent`, `ee_ir`, and `custom reflectance`), the
+legacy `moire orient` target, and `letter` / `font` scenes now dispatch
+through the same headless scene core. `sensor_create` now includes generic
 `rgbw` / `rccc` presets plus upstream-backed `mt9v024` and `ar0132at`
 RGBW/RCCC variants. `camera_create(...)` now forwards those expanded
 sensor presets too, so camera constructors can directly target `rgbw`,
