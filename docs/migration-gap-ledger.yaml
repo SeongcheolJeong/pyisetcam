@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-27T00:46:46.642209+00:00",
+  "generated_at": "2026-03-27T01:21:49.889392+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 34,
-      "out_of_scope": 311,
+      "headless_only": 6,
+      "out_of_scope": 321,
       "parity": 712,
-      "partial": 111,
-      "ported": 275
+      "partial": 90,
+      "ported": 314
     },
     "kind_counts": {
       "api": 661,
@@ -19,17 +19,17 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 111,
-      "P2": 34,
-      "P3": 1298
+      "P1": 90,
+      "P2": 6,
+      "P3": 1347
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": 0,
-        "out_of_scope": 8,
-        "parity": -1,
-        "partial": -12,
-        "ported": 5
+        "headless_only": -28,
+        "out_of_scope": 10,
+        "parity": 0,
+        "partial": -21,
+        "ported": 39
       },
       "kind_counts": {
         "api": 0,
@@ -40,9 +40,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -12,
-        "P2": 0,
-        "P3": 12
+        "P1": -21,
+        "P2": -28,
+        "P3": 49
       }
     },
     "family_summary": {
@@ -930,11 +930,11 @@
       "utility": {
         "total": 279,
         "by_status": {
-          "headless_only": 34,
-          "out_of_scope": 47,
+          "headless_only": 6,
+          "out_of_scope": 57,
           "parity": 16,
-          "partial": 111,
-          "ported": 71
+          "partial": 90,
+          "ported": 110
         },
         "by_kind": {
           "gui": 1,
@@ -1005,14 +1005,14 @@
     "top_open_families": [
       {
         "family": "utility",
-        "open_entries": 145,
+        "open_entries": 96,
         "highest_open_priority": "P1",
         "by_status": {
-          "headless_only": 34,
-          "out_of_scope": 47,
+          "headless_only": 6,
+          "out_of_scope": 57,
           "parity": 16,
-          "partial": 111,
-          "ported": 71
+          "partial": 90,
+          "ported": 110
         }
       },
       {
@@ -18676,171 +18676,171 @@
       "upstream_path": "utility/programming/appendStruct.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream struct-append helper is covered by the Python `append_struct(...)` / `appendStruct(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over duplicate-key overwrite behavior from the latter mapping.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/cellDelete.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream 1-based cell-array deletion helper is covered by the Python `cell_delete(...)` / `cellDelete(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over MATLAB-style index deletion.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/cellMerge.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream cell-array concatenation helper is covered by the Python `cell_merge(...)` / `cellMerge(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over empty-input handling and ordered merge replay.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/checkToolbox.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file queries installed MATLAB toolboxes through `ver`, which is host-environment bookkeeping specific to MATLAB rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/checkfields.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream nested-struct field-presence helper is covered by the Python `checkfields(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over nested mapping traversal.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/clx.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a MATLAB workspace and figure cleanup script built around `clear`, `close all`, and hidden-window teardown, so it is treated as environment-reset baggage rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/compareFields.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream top-level struct-field equality helper is covered by the Python `compare_fields(...)` / `compareFields(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over field-name and value equality replay.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/gatherStruct.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream recursive gather helper is covered by the Python `gather_struct(...)` / `gatherStruct(...)` compatibility wrapper in `pyisetcam.utils`, which recursively normalizes struct-like containers headlessly.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/hiddenHandle.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a MATLAB `classdef` shim that hides `handle` methods from tab completion, which is MATLAB class-system ergonomics rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/ieAddObject.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.fileio, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream session-registration helper is covered by the Python `ie_add_object(...)` / `ieAddObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over session slot assignment and camera subobject registration.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/ieAppGet.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream window-handle lookup helper is covered by the Python `ie_app_get(...)` / `ieAppGet(...)` wrapper in `pyisetcam.session`, with direct regression coverage over scene, OI, sensor, IP, and display window payload lookup.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/ieContains.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream pre-`contains()` string helper is covered by the Python `ie_contains(...)` / `ieContains(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over scalar and list-like string replay.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/ieDeleteObject.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream session deletion helper is covered by the Python `ie_delete_object(...)` / `ieDeleteObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over object removal and remaining-count replay.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/ieEquivalentObjtype.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream object-type canonicalizer is covered by the Python `ie_equivalent_objtype(...)` / `ieEquivalentObjtype(...)` wrapper in `pyisetcam.session`, with regression coverage over MATLAB-style ISA or VCI aliases.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/ieFindCallback.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a GUI-only MATLAB menu-callback inspection helper and is marked `Not working` upstream, so it is treated as unsupported figure-debugging baggage rather than a pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/ieGetObject.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream object lookup helper is covered by the Python `ie_get_object(...)` / `ieGetObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over returned-object and object-id replay.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/ieGetSelectedObject.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream selected-object lookup helper is covered by the Python `ie_get_selected_object(...)` / `ieGetSelectedObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over selected object-id and object replay.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/ieHash.m",
@@ -18856,321 +18856,321 @@
       "upstream_path": "utility/programming/ieMemoryCheck.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file sums `whos` results from the MATLAB caller or base workspace, which is workspace introspection specific to MATLAB rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/ieMemorySize.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file estimates object size through MATLAB property reflection and `whos(varname(...))`, which is MATLAB workspace introspection rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/ieNotDefined.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file inspects the MATLAB caller workspace by variable name string through `evalin`, so it is treated as MATLAB introspection baggage rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/iePTable.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.description, pyisetcam.ptable",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.ptable, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream property-table helper is covered by the Python `ie_p_table(...)` / `iePTable(...)` wrapper in `pyisetcam.ptable`, with direct regression coverage over embedded headless table construction.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/ieParamFormat.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.parity",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream parameter-normalization helper is covered by the Python `param_format(...)` behavior exported as `ieParamFormat(...)`, with focused regression coverage over string and alternating key/value list normalization.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/ieParameterOtype.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.sensor",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream object-type parameter parser is covered by the Python `ie_parameter_otype(...)` / `ieParameterOtype(...)` helper in `pyisetcam.utils`, with focused regression coverage over split object or parameter parsing.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/ieQuestdlg.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file opens an interactive MATLAB dialog and waits on user input through `uiwait`, so it is treated as GUI-only baggage rather than a supported headless pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/ieRemovePathDir.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file edits MATLAB path strings for startup bootstrap and VCS-folder filtering, which is superseded by the current Python path bootstrap layer rather than a standalone runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/ieReplaceObject.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream session replacement helper is covered by the Python `ie_replace_object(...)` / `ieReplaceObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over slot-preserving replacement.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/ieSelectObject.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream session-selection helper is covered by the Python `ie_select_object(...)` / `ieSelectObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over MATLAB-style current-object selection.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/ieStructCompare.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream recursive struct-difference helper is covered by the Python `ie_struct_compare(...)` / `ieStructCompare(...)` wrapper in `pyisetcam.utils`, with focused regression coverage over nested field-path difference reporting and `comp_struct(...)` passthrough outputs.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/ieStructRemoveEmptyField.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream empty-field pruning helper is covered by the Python `ie_struct_remove_empty_field(...)` / `ieStructRemoveEmptyField(...)` wrapper in `pyisetcam.utils`, with focused regression coverage over empty-string, empty-list, and empty-array field removal.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/notDefined.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file inspects the MATLAB caller workspace and optional nested struct fields by variable name string, which is MATLAB introspection rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/replaceNaN.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream NaN replacement helper is covered by the Python `replace_nan(...)` / `replaceNaN(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over numeric array replacement.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/struct2pairs.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream struct-to-pairs helper is covered by the Python `struct2pairs(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over alternating key/value replay.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/vcAddAndSelectObject.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream add-and-select session helper is covered by the Python `vcAddAndSelectObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over returned ids and selected-object replay.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/vcCountObjects.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream session counting helper is covered by the Python `vcCountObjects(...)` wrapper in `pyisetcam.session`, with direct regression coverage over current-object family counts.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/vcDeleteObject.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "notes": "The upstream session deletion helper is covered by the Python `vcDeleteObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over deletion and remaining-count replay.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/vcDeleteSelectedObject.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "notes": "The upstream selected-object deletion helper is covered by the Python `vcDeleteSelectedObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over selected-slot deletion replay.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/vcDeleteSomeObjects.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream partial deletion helper is covered by the Python `vcDeleteSomeObjects(...)` wrapper in `pyisetcam.session`, with direct regression coverage over MATLAB-style selected-id list deletion.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/vcEquivalentObjtype.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream object-type alias helper is covered by the Python `vcEquivalentObjtype(...)` wrapper in `pyisetcam.session`, with regression coverage over canonical ISET object-type names.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/vcGetObject.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream object lookup helper is covered by the Python `vcGetObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over returned-object and object-id replay.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/vcGetObjectNames.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream object-name listing helper is covered by the Python `vcGetObjectNames(...)` wrapper in `pyisetcam.session`, with direct regression coverage over current object-name replay.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/vcGetObjectType.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream object-type helper is covered by the Python `vcGetObjectType(...)` wrapper in `pyisetcam.session`, with direct regression coverage over canonical type naming for IP objects.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/vcGetObjects.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream object-list lookup helper is covered by the Python `vcGetObjects(...)` wrapper in `pyisetcam.session`, with direct regression coverage over ordered object-list replay.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/vcGetSelectedObject.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream selected-object lookup helper is covered by the Python `vcGetSelectedObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over selected object-id and object replay.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/vcNewObjectName.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream new-object naming helper is covered by the Python `vcNewObjectName(...)` wrapper in `pyisetcam.session`, with direct regression coverage over MATLAB-style incremental name generation.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/vcNewObjectValue.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream new-object slot helper is covered by the Python `vcNewObjectValue(...)` wrapper in `pyisetcam.session`, with direct regression coverage over scene and camera tuple replay.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/vcReplaceAndSelectObject.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream replace-and-select helper is covered by the Python `vcReplaceAndSelectObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over replacement and selection replay.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/vcReplaceObject.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream object replacement helper is covered by the Python `vcReplaceObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over slot-preserving replacement.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/vcSetObjects.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream bulk-object replacement helper is covered by the Python `vcSetObjects(...)` wrapper in `pyisetcam.session`, with direct regression coverage over reindexing and stale-selection clearing.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/vcSetSelectedObject.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.session",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.session, pyisetcam.__init__",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream selection helper is covered by the Python `vcSetSelectedObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over current selected-id mutation and clearing.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/publish/s_publishScripts.m",

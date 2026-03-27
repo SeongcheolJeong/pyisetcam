@@ -971,6 +971,251 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream radial Zernike polynomial helper is covered by the Python `zernpol(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over known low-order polynomial values and normalization handling.",
         "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
     },
+    "utility/programming/appendStruct.m": {
+        "status": "ported",
+        "note": "The upstream struct-append helper is covered by the Python `append_struct(...)` / `appendStruct(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over duplicate-key overwrite behavior from the latter mapping.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/programming/cellDelete.m": {
+        "status": "ported",
+        "note": "The upstream 1-based cell-array deletion helper is covered by the Python `cell_delete(...)` / `cellDelete(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over MATLAB-style index deletion.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/programming/cellMerge.m": {
+        "status": "ported",
+        "note": "The upstream cell-array concatenation helper is covered by the Python `cell_merge(...)` / `cellMerge(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over empty-input handling and ordered merge replay.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/programming/checkToolbox.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file queries installed MATLAB toolboxes through `ver`, which is host-environment bookkeeping specific to MATLAB rather than a supported pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/programming/checkfields.m": {
+        "status": "ported",
+        "note": "The upstream nested-struct field-presence helper is covered by the Python `checkfields(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over nested mapping traversal.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/programming/clx.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB workspace and figure cleanup script built around `clear`, `close all`, and hidden-window teardown, so it is treated as environment-reset baggage rather than a supported pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/programming/compareFields.m": {
+        "status": "ported",
+        "note": "The upstream top-level struct-field equality helper is covered by the Python `compare_fields(...)` / `compareFields(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over field-name and value equality replay.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/programming/gatherStruct.m": {
+        "status": "ported",
+        "note": "The upstream recursive gather helper is covered by the Python `gather_struct(...)` / `gatherStruct(...)` compatibility wrapper in `pyisetcam.utils`, which recursively normalizes struct-like containers headlessly.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/programming/hiddenHandle.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a MATLAB `classdef` shim that hides `handle` methods from tab completion, which is MATLAB class-system ergonomics rather than a supported pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/programming/ieAddObject.m": {
+        "status": "ported",
+        "note": "The upstream session-registration helper is covered by the Python `ie_add_object(...)` / `ieAddObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over session slot assignment and camera subobject registration.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/ieAppGet.m": {
+        "status": "ported",
+        "note": "The upstream window-handle lookup helper is covered by the Python `ie_app_get(...)` / `ieAppGet(...)` wrapper in `pyisetcam.session`, with direct regression coverage over scene, OI, sensor, IP, and display window payload lookup.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/ieContains.m": {
+        "status": "ported",
+        "note": "The upstream pre-`contains()` string helper is covered by the Python `ie_contains(...)` / `ieContains(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over scalar and list-like string replay.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/programming/ieDeleteObject.m": {
+        "status": "ported",
+        "note": "The upstream session deletion helper is covered by the Python `ie_delete_object(...)` / `ieDeleteObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over object removal and remaining-count replay.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/ieEquivalentObjtype.m": {
+        "status": "ported",
+        "note": "The upstream object-type canonicalizer is covered by the Python `ie_equivalent_objtype(...)` / `ieEquivalentObjtype(...)` wrapper in `pyisetcam.session`, with regression coverage over MATLAB-style ISA or VCI aliases.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/ieFindCallback.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a GUI-only MATLAB menu-callback inspection helper and is marked `Not working` upstream, so it is treated as unsupported figure-debugging baggage rather than a pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/programming/ieGetObject.m": {
+        "status": "ported",
+        "note": "The upstream object lookup helper is covered by the Python `ie_get_object(...)` / `ieGetObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over returned-object and object-id replay.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/ieGetSelectedObject.m": {
+        "status": "ported",
+        "note": "The upstream selected-object lookup helper is covered by the Python `ie_get_selected_object(...)` / `ieGetSelectedObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over selected object-id and object replay.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/ieMemoryCheck.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file sums `whos` results from the MATLAB caller or base workspace, which is workspace introspection specific to MATLAB rather than a supported pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/programming/ieMemorySize.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file estimates object size through MATLAB property reflection and `whos(varname(...))`, which is MATLAB workspace introspection rather than a supported pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/programming/ieNotDefined.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file inspects the MATLAB caller workspace by variable name string through `evalin`, so it is treated as MATLAB introspection baggage rather than a supported pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/programming/iePTable.m": {
+        "status": "ported",
+        "note": "The upstream property-table helper is covered by the Python `ie_p_table(...)` / `iePTable(...)` wrapper in `pyisetcam.ptable`, with direct regression coverage over embedded headless table construction.",
+        "module_hits": ["pyisetcam.ptable", "pyisetcam.__init__"],
+    },
+    "utility/programming/ieParamFormat.m": {
+        "status": "ported",
+        "note": "The upstream parameter-normalization helper is covered by the Python `param_format(...)` behavior exported as `ieParamFormat(...)`, with focused regression coverage over string and alternating key/value list normalization.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/programming/ieParameterOtype.m": {
+        "status": "ported",
+        "note": "The upstream object-type parameter parser is covered by the Python `ie_parameter_otype(...)` / `ieParameterOtype(...)` helper in `pyisetcam.utils`, with focused regression coverage over split object or parameter parsing.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/programming/ieQuestdlg.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file opens an interactive MATLAB dialog and waits on user input through `uiwait`, so it is treated as GUI-only baggage rather than a supported headless pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/programming/ieRemovePathDir.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file edits MATLAB path strings for startup bootstrap and VCS-folder filtering, which is superseded by the current Python path bootstrap layer rather than a standalone runtime surface.",
+        "module_hits": [],
+    },
+    "utility/programming/ieReplaceObject.m": {
+        "status": "ported",
+        "note": "The upstream session replacement helper is covered by the Python `ie_replace_object(...)` / `ieReplaceObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over slot-preserving replacement.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/ieSelectObject.m": {
+        "status": "ported",
+        "note": "The upstream session-selection helper is covered by the Python `ie_select_object(...)` / `ieSelectObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over MATLAB-style current-object selection.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/ieStructCompare.m": {
+        "status": "ported",
+        "note": "The upstream recursive struct-difference helper is covered by the Python `ie_struct_compare(...)` / `ieStructCompare(...)` wrapper in `pyisetcam.utils`, with focused regression coverage over nested field-path difference reporting and `comp_struct(...)` passthrough outputs.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/programming/ieStructRemoveEmptyField.m": {
+        "status": "ported",
+        "note": "The upstream empty-field pruning helper is covered by the Python `ie_struct_remove_empty_field(...)` / `ieStructRemoveEmptyField(...)` wrapper in `pyisetcam.utils`, with focused regression coverage over empty-string, empty-list, and empty-array field removal.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/programming/notDefined.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file inspects the MATLAB caller workspace and optional nested struct fields by variable name string, which is MATLAB introspection rather than a supported pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/programming/replaceNaN.m": {
+        "status": "ported",
+        "note": "The upstream NaN replacement helper is covered by the Python `replace_nan(...)` / `replaceNaN(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over numeric array replacement.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/programming/struct2pairs.m": {
+        "status": "ported",
+        "note": "The upstream struct-to-pairs helper is covered by the Python `struct2pairs(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over alternating key/value replay.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/programming/vcAddAndSelectObject.m": {
+        "status": "ported",
+        "note": "The upstream add-and-select session helper is covered by the Python `vcAddAndSelectObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over returned ids and selected-object replay.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/vcCountObjects.m": {
+        "status": "ported",
+        "note": "The upstream session counting helper is covered by the Python `vcCountObjects(...)` wrapper in `pyisetcam.session`, with direct regression coverage over current-object family counts.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/vcDeleteObject.m": {
+        "status": "ported",
+        "note": "The upstream session deletion helper is covered by the Python `vcDeleteObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over deletion and remaining-count replay.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/vcDeleteSelectedObject.m": {
+        "status": "ported",
+        "note": "The upstream selected-object deletion helper is covered by the Python `vcDeleteSelectedObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over selected-slot deletion replay.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/vcDeleteSomeObjects.m": {
+        "status": "ported",
+        "note": "The upstream partial deletion helper is covered by the Python `vcDeleteSomeObjects(...)` wrapper in `pyisetcam.session`, with direct regression coverage over MATLAB-style selected-id list deletion.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/vcEquivalentObjtype.m": {
+        "status": "ported",
+        "note": "The upstream object-type alias helper is covered by the Python `vcEquivalentObjtype(...)` wrapper in `pyisetcam.session`, with regression coverage over canonical ISET object-type names.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/vcGetObject.m": {
+        "status": "ported",
+        "note": "The upstream object lookup helper is covered by the Python `vcGetObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over returned-object and object-id replay.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/vcGetObjectNames.m": {
+        "status": "ported",
+        "note": "The upstream object-name listing helper is covered by the Python `vcGetObjectNames(...)` wrapper in `pyisetcam.session`, with direct regression coverage over current object-name replay.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/vcGetObjectType.m": {
+        "status": "ported",
+        "note": "The upstream object-type helper is covered by the Python `vcGetObjectType(...)` wrapper in `pyisetcam.session`, with direct regression coverage over canonical type naming for IP objects.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/vcGetObjects.m": {
+        "status": "ported",
+        "note": "The upstream object-list lookup helper is covered by the Python `vcGetObjects(...)` wrapper in `pyisetcam.session`, with direct regression coverage over ordered object-list replay.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/vcGetSelectedObject.m": {
+        "status": "ported",
+        "note": "The upstream selected-object lookup helper is covered by the Python `vcGetSelectedObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over selected object-id and object replay.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/vcNewObjectName.m": {
+        "status": "ported",
+        "note": "The upstream new-object naming helper is covered by the Python `vcNewObjectName(...)` wrapper in `pyisetcam.session`, with direct regression coverage over MATLAB-style incremental name generation.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/vcNewObjectValue.m": {
+        "status": "ported",
+        "note": "The upstream new-object slot helper is covered by the Python `vcNewObjectValue(...)` wrapper in `pyisetcam.session`, with direct regression coverage over scene and camera tuple replay.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/vcReplaceAndSelectObject.m": {
+        "status": "ported",
+        "note": "The upstream replace-and-select helper is covered by the Python `vcReplaceAndSelectObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over replacement and selection replay.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/vcReplaceObject.m": {
+        "status": "ported",
+        "note": "The upstream object replacement helper is covered by the Python `vcReplaceObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over slot-preserving replacement.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/vcSetObjects.m": {
+        "status": "ported",
+        "note": "The upstream bulk-object replacement helper is covered by the Python `vcSetObjects(...)` wrapper in `pyisetcam.session`, with direct regression coverage over reindexing and stale-selection clearing.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
+    "utility/programming/vcSetSelectedObject.m": {
+        "status": "ported",
+        "note": "The upstream selection helper is covered by the Python `vcSetSelectedObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over current selected-id mutation and clearing.",
+        "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
+    },
     "utility/xml/ieStruct2XML.m": {
         "status": "ported",
         "note": "The legacy MATLAB XML writer is covered by the Python `ie_struct2xml(...)` / `ieStruct2XML(...)` compatibility wrapper, including MATLAB-style `_dash_`, `_colon_`, and `_dot_` name escaping plus nested repeated-element replay.",

@@ -80,10 +80,16 @@ from pyisetcam import (
     session_set_selected,
     vcGetFigure,
     vcAddAndSelectObject,
+    vcCountObjects,
+    vcDeleteObject,
+    vcDeleteSelectedObject,
     vcGetObject,
+    vcGetObjectNames,
     vcGetObjectType,
     vcGetObjects,
     vcGetSelectedObject,
+    vcReplaceAndSelectObject,
+    vcReplaceObject,
     vcSelectFigure,
     vcDeleteSomeObjects,
     vcEquivalentObjtype,
@@ -803,6 +809,33 @@ def test_session_set_objects_and_new_object_value_follow_matlab_style(asset_stor
     assert session_object_id(camera) == 1
     assert session_get_object_type(ip) == "vcimage"
     assert vcGetObjectType(ip) == "vcimage"
+
+
+def test_session_wrapper_aliases_cover_counts_names_replace_and_delete(asset_store) -> None:
+    session = session_create()
+    scene_one = scene_create("uniform ee", 8, asset_store=asset_store, session=session)
+    scene_two = scene_create("uniform d65", 8, asset_store=asset_store, session=session)
+
+    assert vcCountObjects(session, "scene") == 2
+    assert vcGetObjectNames(session, "scene") == [scene_one.name, scene_two.name]
+
+    replacement = scene_create("checkerboard", 4, 4, asset_store=asset_store)
+    replaced = vcReplaceObject(session, replacement, 1, select=False)
+    assert replaced is replacement
+    assert vcGetObject(session, "scene", 1) == (replacement, 1)
+
+    replacement_two = scene_create("point array", 4, 4, asset_store=asset_store)
+    vcReplaceAndSelectObject(session, replacement_two, 2)
+    assert vcGetSelectedObject(session, "scene") == (2, replacement_two)
+
+    remaining_after_selected_delete = vcDeleteSelectedObject(session, "scene")
+    assert remaining_after_selected_delete == 1
+    assert vcCountObjects(session, "scene") == 1
+    assert vcGetSelectedObject(session, "scene") == (1, replacement)
+
+    remaining = vcDeleteObject(session, "scene")
+    assert remaining == 0
+    assert vcGetObjects(session, "scene") == []
 
 
 def test_vcsetobjects_reindexes_and_clears_invalid_selection(asset_store) -> None:

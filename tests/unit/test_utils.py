@@ -9,7 +9,11 @@ from scipy.signal import convolve2d
 from pyisetcam import (
     FloydSteinberg,
     HalfToneImage,
+    appendStruct,
     biNormal,
+    cellDelete,
+    cellMerge,
+    compareFields,
     compStruct,
     convolvecirc,
     dpi2mperdot,
@@ -18,6 +22,7 @@ from pyisetcam import (
     gammaPDF,
     getMiddleMatrix,
     getGaussian,
+    gatherStruct,
     hcBasis,
     hcBlur,
     hcIlluminantScale,
@@ -30,6 +35,7 @@ from pyisetcam import (
     ieCmap,
     ieClip,
     ieCompressData,
+    ieContains,
     ieCropRect,
     ieDataList,
     ieDpi2Mperdot,
@@ -61,6 +67,8 @@ from pyisetcam import (
     ieUncompressData,
     ieWave2Index,
     ieXYZFromPhotons,
+    ieStructCompare,
+    ieStructRemoveEmptyField,
     imageHparams,
     imageSPD,
     imageSPD2RGB,
@@ -95,19 +103,27 @@ from pyisetcam import (
     lorentzSum,
     max2,
     min2,
+    replaceNaN,
+    struct2pairs,
     zernfun,
     zernfun2,
     zernpol,
 )
 from pyisetcam.utils import (
+    append_struct,
     blackbody,
     bi_normal,
+    cell_delete,
+    cell_merge,
+    checkfields,
+    compare_fields,
     comp_struct,
     convolve_circ,
     energy_to_quanta,
     exp_rand,
     ffndgrid as ffndgrid_fn,
     floyd_steinberg,
+    gather_struct,
     gamma_pdf,
     get_middle_matrix,
     get_gaussian,
@@ -121,6 +137,7 @@ from pyisetcam.utils import (
     hc_read_hyspex_imginfo,
     hc_viewer,
     half_tone_image,
+    ie_contains,
     ie_cmap,
     ie_clip,
     ie_compress_data,
@@ -151,6 +168,8 @@ from pyisetcam.utils import (
     ie_scale,
     ie_scale_columns,
     ie_space_to_amp,
+    ie_struct_compare,
+    ie_struct_remove_empty_field,
     ie_tone,
     ie_unit_scale_factor,
     ie_uncompress_data,
@@ -178,11 +197,13 @@ from pyisetcam.utils import (
     param_format,
     qinterp2 as qinterp2_fn,
     quanta_to_energy,
+    replace_nan,
     rgb_to_dac,
     rgb_to_xw_format,
     rotation_matrix_3d,
     sample2space as sample2space_fn,
     space2sample as space2sample_fn,
+    struct2pairs as struct2pairs_fn,
     dpi2mperdot as dpi2mperdot_fn,
     ie_tikhonov,
     lorentz_sum,
@@ -1848,3 +1869,69 @@ def test_zernike_wrappers_match_known_polynomials_and_single_index_mapping() -> 
     alias_single_index = zernfun2([0, 1, 2, 3], radius, theta)
     assert np.allclose(single_index, expected_single_index)
     assert np.allclose(alias_single_index, expected_single_index)
+
+
+def test_programming_helper_wrappers_cover_struct_and_cell_utilities() -> None:
+    merged = cell_merge(["a", "b"], ("c",), [])
+    alias_merged = cellMerge(["a"], ["b", "c"])
+    deleted = cell_delete(["a", "b", "c", "d"], [1, 3])
+    alias_deleted = cellDelete(["a", "b", "c", "d"], [2, 4])
+
+    assert merged == ["a", "b", "c"]
+    assert alias_merged == ["a", "b", "c"]
+    assert deleted == ["b", "d"]
+    assert alias_deleted == ["a", "c"]
+
+    appended = append_struct({"a": 1, "b": 2}, {"b": 3, "c": 4})
+    alias_appended = appendStruct({"x": 1}, {"x": 2, "y": 3})
+    assert appended == {"a": 1, "b": 3, "c": 4}
+    assert alias_appended == {"x": 2, "y": 3}
+
+    assert checkfields({"pixel": {"OP": {"pd": {"type": "default"}}}}, "pixel", "OP", "pd", "type")
+    assert not checkfields({"pixel": {"OP": {}}}, "pixel", "OP", "pd", "type")
+    assert compare_fields({"a": 1, "b": 2}, {"b": 2, "a": 1})
+    assert not compareFields({"a": 1}, {"a": 2})
+
+
+def test_programming_helper_wrappers_cover_string_and_struct_utilities() -> None:
+    contains_vector = ie_contains(["help", "he", 4], "he")
+    alias_contains = ieContains("help", "lp")
+    replaced = replace_nan(np.array([1.0, np.nan, 3.0]), 5.0)
+    alias_replaced = replaceNaN(np.array([np.nan, 2.0]), 7.0)
+    pairs = struct2pairs_fn({"a": 1, "b": 2})
+    alias_pairs = struct2pairs({"x": 3, "y": 4})
+    gathered = gather_struct({"a": [1, {"b": 2}]})
+    alias_gathered = gatherStruct({"a": {"b": 2}})
+
+    assert np.array_equal(contains_vector, np.array([True, True, False]))
+    assert alias_contains is True
+    assert np.array_equal(replaced, np.array([1.0, 5.0, 3.0]))
+    assert np.array_equal(alias_replaced, np.array([7.0, 2.0]))
+    assert pairs == ["a", 1, "b", 2]
+    assert alias_pairs == ["x", 3, "y", 4]
+    assert gathered == {"a": [1, {"b": 2}]}
+    assert alias_gathered == {"a": {"b": 2}}
+
+
+def test_programming_helper_wrappers_cover_struct_compare_and_empty_field_cleanup() -> None:
+    left = {"root": {"value": 1, "cell": [{"inner": 1}, {"inner": 2}]}, "keep": 1}
+    right = {"root": {"value": 2, "cell": [{"inner": 1}, {"inner": 3}]}, "keep": 1}
+
+    differences, common, d1, d2 = ie_struct_compare(left, right, "rootStruct")
+    alias_differences, alias_common, alias_d1, alias_d2 = ieStructCompare(left, right, "rootStruct")
+    cleaned = ie_struct_remove_empty_field({"a": 1, "b": None, "c": "", "d": [], "e": np.array([])})
+    alias_cleaned = ieStructRemoveEmptyField({"keep": "x", "drop": []})
+
+    assert differences == [
+        "Path: rootStruct.root.cell{2}.inner | Difference: Values are not equal (Value A: 2, Value B: 3)",
+        "Path: rootStruct.root.value | Difference: Values are not equal (Value A: 1, Value B: 2)",
+    ]
+    assert alias_differences == differences
+    assert common == {"root": {"cell": [{"inner": 1}, None]}, "keep": 1}
+    assert alias_common == common
+    assert d1 == {"root": {"cell": [None, {"inner": 2}], "value": 1}}
+    assert d2 == {"root": {"cell": [None, {"inner": 3}], "value": 2}}
+    assert alias_d1 == d1
+    assert alias_d2 == d2
+    assert cleaned == {"a": 1}
+    assert alias_cleaned == {"keep": "x"}

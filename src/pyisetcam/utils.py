@@ -1281,6 +1281,268 @@ def zernfun2(p: Any, r: Any, theta: Any, nflag: Any | None = None) -> NDArray[np
     return zernfun(n_vector, m_vector, r, theta, nflag)
 
 
+def ie_contains(value: Any, pattern: str) -> bool | NDArray[np.bool_]:
+    """Return whether a string or string collection contains a substring."""
+
+    if isinstance(value, (list, tuple)):
+        return np.asarray(
+            [
+                isinstance(item, (str, np.str_)) and pattern in str(item)
+                for item in value
+            ],
+            dtype=bool,
+        )
+    if not isinstance(value, (str, np.str_)):
+        return False
+    return pattern in str(value)
+
+
+ieContains = ie_contains
+
+
+def replace_nan(data: Any, value: float | int) -> NDArray[Any]:
+    """Replace NaN entries with a constant value."""
+
+    array = np.array(data, copy=True)
+    mask = np.isnan(np.asarray(array, dtype=float))
+    array[mask] = value
+    return array
+
+
+replaceNaN = replace_nan
+
+
+def struct2pairs(structure: Any) -> list[Any]:
+    """Convert a scalar struct-like mapping into alternating key/value pairs."""
+
+    if isinstance(structure, (list, tuple)):
+        return list(structure)
+    if not isinstance(structure, Mapping):
+        raise ValueError("Input must be a scalar struct or cell")
+    pairs: list[Any] = []
+    for key, value in structure.items():
+        pairs.extend([key, value])
+    return pairs
+
+
+def append_struct(a_struct: Mapping[str, Any] | None, b_struct: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Append two mappings while keeping values from the latter mapping on duplicates."""
+
+    if not a_struct:
+        return {} if b_struct is None else dict(b_struct)
+    if not b_struct:
+        return dict(a_struct)
+    combined = dict(a_struct)
+    for key, value in b_struct.items():
+        combined[key] = value
+    return combined
+
+
+appendStruct = append_struct
+
+
+def cell_delete(cell_values: list[Any] | tuple[Any, ...], delete_list: Any) -> list[Any]:
+    """Delete 1-based entries from a cell-like Python list."""
+
+    values = list(cell_values)
+    indices = np.asarray(delete_list, dtype=int).reshape(-1)
+    if indices.size == 0:
+        return values
+    if np.any(indices < 1) or np.any(indices > len(values)):
+        raise ValueError("Bad dList")
+    for index in sorted(set(indices.tolist()), reverse=True):
+        del values[index - 1]
+    return values
+
+
+cellDelete = cell_delete
+
+
+def cell_merge(*args: Any) -> list[Any]:
+    """Merge cell-like Python sequences into a single list."""
+
+    if len(args) == 0:
+        return []
+    merged: list[Any] = []
+    for value in args:
+        if value is None or value == []:
+            continue
+        if not isinstance(value, (list, tuple)):
+            raise ValueError("All arguments must be cell arrays")
+        merged.extend(list(value))
+    return merged
+
+
+cellMerge = cell_merge
+
+
+def checkfields(structure: Any, *fields: str) -> bool:
+    """Check whether nested mapping or attribute fields exist."""
+
+    if len(fields) == 0:
+        raise ValueError("At least one field is required.")
+    current = structure
+    for field in fields:
+        if isinstance(current, Mapping):
+            if field not in current:
+                return False
+            current = current[field]
+            continue
+        if hasattr(current, field):
+            current = getattr(current, field)
+            continue
+        return False
+    return True
+
+
+def compare_fields(a: Any, b: Any) -> bool:
+    """Compare top-level mapping fields for exact equality."""
+
+    if not isinstance(a, Mapping) or not isinstance(b, Mapping):
+        return False
+    if sorted(a.keys()) != sorted(b.keys()):
+        return False
+    for key in sorted(a.keys()):
+        if not _values_equal_with_tol(a[key], b[key], 0.0):
+            return False
+    return True
+
+
+compareFields = compare_fields
+
+
+def _gather_value(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {key: _gather_value(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_gather_value(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_gather_value(item) for item in value)
+    if hasattr(value, "get") and callable(getattr(value, "get")) and not isinstance(value, (str, bytes)):
+        try:
+            return value.get()
+        except Exception:
+            return value
+    return value
+
+
+def gather_struct(obj: Any) -> Any:
+    """Recursively gather struct-like data into ordinary Python containers."""
+
+    return _gather_value(obj)
+
+
+gatherStruct = gather_struct
+
+
+def _value_summary(value: Any) -> str | None:
+    if isinstance(value, str):
+        return repr(value.strip())
+    if isinstance(value, np.ndarray) and value.size == 1:
+        return str(value.reshape(-1)[0])
+    if isinstance(value, (int, float, np.integer, np.floating)):
+        return str(value)
+    return None
+
+
+def _ie_struct_compare_recursive(struct_a: Any, struct_b: Any, prefix: str) -> list[str]:
+    differences: list[str] = []
+
+    if hasattr(struct_a, "__dict__") and not isinstance(struct_a, Mapping):
+        struct_a = vars(struct_a)
+    if hasattr(struct_b, "__dict__") and not isinstance(struct_b, Mapping):
+        struct_b = vars(struct_b)
+
+    if not isinstance(struct_a, Mapping) or not isinstance(struct_b, Mapping):
+        if not _values_equal_with_tol(struct_a, struct_b, 0.0):
+            summary_a = _value_summary(struct_a)
+            summary_b = _value_summary(struct_b)
+            message = f"Path: {prefix} | Difference: Values are not equal"
+            if summary_a is not None and summary_b is not None:
+                message = f"{message} (Value A: {summary_a}, Value B: {summary_b})"
+            differences.append(message)
+        return differences
+
+    fields_a = set(struct_a.keys())
+    fields_b = set(struct_b.keys())
+    missing_in_b = sorted(fields_a - fields_b)
+    missing_in_a = sorted(fields_b - fields_a)
+    if missing_in_b:
+        differences.append(
+            f"Path: {prefix} | Difference: Field(s) missing in second struct: {', '.join(missing_in_b)}"
+        )
+    if missing_in_a:
+        differences.append(
+            f"Path: {prefix} | Difference: Field(s) missing in first struct: {', '.join(missing_in_a)}"
+        )
+
+    for field in sorted(fields_a & fields_b):
+        new_prefix = f"{prefix}.{field}"
+        value_a = struct_a[field]
+        value_b = struct_b[field]
+        if isinstance(value_a, Mapping) and isinstance(value_b, Mapping):
+            differences.extend(_ie_struct_compare_recursive(value_a, value_b, new_prefix))
+            continue
+        if isinstance(value_a, list) and isinstance(value_b, list):
+            if len(value_a) != len(value_b):
+                differences.append(
+                    f"Path: {new_prefix} | Difference: Cell array size mismatch ({len(value_a)} vs {len(value_b)})"
+                )
+            else:
+                for index, (item_a, item_b) in enumerate(zip(value_a, value_b), start=1):
+                    if isinstance(item_a, Mapping) and isinstance(item_b, Mapping):
+                        differences.extend(
+                            _ie_struct_compare_recursive(item_a, item_b, f"{new_prefix}{{{index}}}")
+                        )
+                    elif not _values_equal_with_tol(item_a, item_b, 0.0):
+                        differences.append(
+                            f"Path: {new_prefix}{{{index}}} | Difference: Cell element values are not equal"
+                        )
+            continue
+        if not _values_equal_with_tol(value_a, value_b, 0.0):
+            summary_a = _value_summary(value_a)
+            summary_b = _value_summary(value_b)
+            message = f"Path: {new_prefix} | Difference: Values are not equal"
+            if summary_a is not None and summary_b is not None:
+                message = f"{message} (Value A: {summary_a}, Value B: {summary_b})"
+            differences.append(message)
+
+    return differences
+
+
+def ie_struct_compare(struct_a: Any, struct_b: Any, prefix: str | None = None) -> tuple[list[str], Any, Any, Any]:
+    """Recursively compare two struct-like values and return difference summaries."""
+
+    root_prefix = "structA" if prefix is None else str(prefix)
+    differences = _ie_struct_compare_recursive(struct_a, struct_b, root_prefix)
+    common, d1, d2 = comp_struct(struct_a, struct_b)
+    return differences, common, d1, d2
+
+
+ieStructCompare = ie_struct_compare
+
+
+def _is_programming_empty(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return value == ""
+    if isinstance(value, np.ndarray):
+        return value.size == 0
+    if isinstance(value, (list, tuple, dict, set)):
+        return len(value) == 0
+    return False
+
+
+def ie_struct_remove_empty_field(structure: Mapping[str, Any]) -> dict[str, Any]:
+    """Remove empty-valued fields from a struct-like mapping."""
+
+    return {key: value for key, value in structure.items() if not _is_programming_empty(value)}
+
+
+ieStructRemoveEmptyField = ie_struct_remove_empty_field
+
+
 def _to_grayscale(image: Any) -> NDArray[np.float64]:
     image_array = np.asarray(image, dtype=float)
     if image_array.ndim == 2:

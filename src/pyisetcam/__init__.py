@@ -721,8 +721,13 @@ from .utils import (
     DEFAULT_WAVE,
     FloydSteinberg,
     HalfToneImage,
+    append_struct,
     bi_normal,
     blackbody,
+    cell_delete,
+    cell_merge,
+    checkfields,
+    compare_fields,
     comp_struct,
     convolve_circ,
     convolvecirc,
@@ -743,8 +748,10 @@ from .utils import (
     hc_read_hyspex_imginfo,
     hc_viewer,
     half_tone_image,
+    gather_struct,
     max2,
     min2,
+    ie_contains,
     ie_cmap,
     ie_compress_data,
     ie_crop_rect,
@@ -775,6 +782,8 @@ from .utils import (
     ie_scale,
     ie_scale_columns,
     ie_space_to_amp,
+    ie_struct_compare,
+    ie_struct_remove_empty_field,
     ie_tone,
     ie_tikhonov,
     ie_unit_scale_factor,
@@ -808,6 +817,7 @@ from .utils import (
     lorentz_sum,
     param_format,
     qinterp2,
+    replace_nan,
     rgb_to_dac,
     rgb_to_xw_format,
     rotation_matrix_3d,
@@ -815,6 +825,7 @@ from .utils import (
     srgb_to_linear,
     srgb_to_xyz,
     space2sample,
+    struct2pairs,
     unpadarray,
     upper_quad_to_full_matrix,
     vector_length,
@@ -843,9 +854,18 @@ __all__ = [
     "Scene",
     "Sensor",
     "SessionContext",
+    "appendStruct",
+    "append_struct",
     "biNormal",
     "bi_normal",
     "blackbody",
+    "cellDelete",
+    "cellMerge",
+    "cell_delete",
+    "cell_merge",
+    "checkfields",
+    "compareFields",
+    "compare_fields",
     "compStruct",
     "comp_struct",
     "ISOAcutance",
@@ -1229,6 +1249,8 @@ __all__ = [
     "get_middle_matrix",
     "getGaussian",
     "get_gaussian",
+    "gatherStruct",
+    "gather_struct",
     "hcBlur",
     "hcIlluminantScale",
     "hcReadHyspex",
@@ -1246,6 +1268,8 @@ __all__ = [
     "hcimageCrop",
     "hcimageRotateClip",
     "isodd",
+    "ieContains",
+    "ie_contains",
     "ieExprnd",
     "ie_exprnd",
     "ieFractalDrawgrid",
@@ -1311,8 +1335,11 @@ __all__ = [
     "image_translate",
     "imageTranspose",
     "image_transpose",
+    "replaceNaN",
+    "replace_nan",
     "sample2space",
     "space2sample",
+    "struct2pairs",
     "ieMainClose",
     "ieRefreshWindow",
     "ieImageType",
@@ -1334,13 +1361,17 @@ __all__ = [
     "ieSaveColorFilter",
     "ieSaveMultiSpectralImage",
     "ieSaveSpectralFile",
+    "ieStructCompare",
     "ieStruct2XML",
+    "ieStructRemoveEmptyField",
     "ieTempfile",
     "ieVarInFile",
     "ieXML2struct",
     "ie_web_get",
     "ie_xml2struct",
     "ie_xl2_color_filter",
+    "ie_struct_compare",
+    "ie_struct_remove_empty_field",
     "imageFlip",
     "imageIncreaseImageRGBSize",
     "image_flip",
@@ -2928,13 +2959,19 @@ ieLuminanceFromPhotons = luminance_from_photons
 
 ieAddObject = ie_add_object
 ieAppGet = ie_app_get
+appendStruct = append_struct
 biNormal = bi_normal
+cellDelete = cell_delete
+cellMerge = cell_merge
+compareFields = compare_fields
 compStruct = comp_struct
 expRand = exp_rand
 gammaPDF = gamma_pdf
+gatherStruct = gather_struct
 getGaussian = get_gaussian
 ieClip = ie_clip
 ieCompressData = ie_compress_data
+ieContains = ie_contains
 ieDeleteObject = ie_delete_object
 ieEquivalentObjtype = ie_equivalent_objtype
 ieDataList = ie_data_list
@@ -2994,7 +3031,9 @@ ieDNGSimpleInfo = ie_dng_simple_info
 ieSaveColorFilter = ie_save_color_filter
 ieSaveMultiSpectralImage = ie_save_multispectral_image
 ieSaveSpectralFile = ie_save_spectral_file
+ieStructCompare = ie_struct_compare
 ieStruct2XML = ie_struct2xml
+ieStructRemoveEmptyField = ie_struct_remove_empty_field
 ieSaveSIDataFile = ie_save_si_data_file
 ieSessionGet = ie_session_get
 ieSessionSet = ie_session_set
@@ -3008,6 +3047,7 @@ mainOpen = main_open
 isetPath = iset_path
 isetRootPath = iset_root_path
 pathToLinux = path_to_linux
+replaceNaN = replace_nan
 struct2xml = ie_struct2xml
 xml2struct = ie_xml2struct
 
