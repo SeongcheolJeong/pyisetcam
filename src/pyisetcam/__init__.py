@@ -565,6 +565,8 @@ from .scene import (
     scene_description,
     scene_crop,
     scene_extract_waveband,
+    exiftool_depth_from_file,
+    exiftool_info,
     scene_from_basis,
     scene_from_ddf_file,
     scene_from_file,
@@ -740,6 +742,8 @@ from .utils import (
     hc_read_hyspex_imginfo,
     hc_viewer,
     half_tone_image,
+    max2,
+    min2,
     ie_cmap,
     ie_compress_data,
     ie_crop_rect,
@@ -1090,6 +1094,8 @@ __all__ = [
     "ieTikhonov",
     "ieUncompressData",
     "ieUnitScaleFactor",
+    "max2",
+    "min2",
     "ieFindObjectByName",
     "ieLocs2Rect",
     "ieParameterOtype",
@@ -1907,6 +1913,8 @@ __all__ = [
     "sceneDescription",
     "sceneCrop",
     "sceneExtractWaveband",
+    "exiftoolDepthFromFile",
+    "exiftoolInfo",
     "sceneFromBasis",
     "sceneFromDDFFile",
     "sceneFromFile",
@@ -1952,6 +1960,8 @@ __all__ = [
     "scene_description",
     "scene_crop",
     "scene_extract_waveband",
+    "exiftool_depth_from_file",
+    "exiftool_info",
     "scene_energy_from_vector",
     "scene_frequency_support",
     "scene_from_basis",
@@ -2359,6 +2369,8 @@ sceneCreate = scene_create
 sceneDescription = scene_description
 sceneCrop = scene_crop
 sceneExtractWaveband = scene_extract_waveband
+exiftoolDepthFromFile = exiftool_depth_from_file
+exiftoolInfo = exiftool_info
 sceneFromBasis = scene_from_basis
 sceneFromDDFFile = scene_from_ddf_file
 sceneFromFile = scene_from_file

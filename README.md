@@ -2067,4 +2067,8 @@ helpers is now tracked as out of scope too: `ImageConvFrequencyDomain.m`,
 `arrow3.m`, `bluewhitered.m`, `cprintf.m`, `cpuinfo.m`, and
 `insertInImage.m` are generic third-party plotting, host-diagnostics, or
 figure-annotation utilities rather than supported pyisetcam runtime
-surfaces.
+surfaces. The neighboring micro-packages are smaller too: the vendored
+`DataHash_20190519` package and the GUI-only `fstack` preview or demo
+files are explicitly out of scope, while `exiftoolInfo(...)`,
+`exiftoolDepthFromFile(...)`, `max2(...)`, and `min2(...)` now have direct
+headless compatibility coverage in the current runtime.

@@ -4205,43 +4205,13 @@ def scene_from_file(
 
 def _scene_ddf_depth_map(file_name: Any) -> np.ndarray | None:
     path = Path(file_name).expanduser()
-    exiftool = shutil.which("exiftool")
-    if exiftool is None or not path.is_file():
+    info = exiftool_info(path, format="json")
+    depth_payload = _exiftool_depth_payload(path)
+    if info is None or depth_payload is None:
         return None
-
     try:
-        trailer = subprocess.run(
-            [exiftool, "-b", "-trailer", str(path)],
-            check=False,
-            capture_output=True,
-        )
-        if trailer.returncode != 0 or not trailer.stdout:
-            return None
-
-        depth_payload = subprocess.run(
-            [exiftool, "-", "-b", "-trailer"],
-            check=False,
-            input=trailer.stdout,
-            capture_output=True,
-        )
-        if depth_payload.returncode != 0 or not depth_payload.stdout:
-            return None
-
-        info_result = subprocess.run(
-            [exiftool, "-j", str(path)],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
-        if info_result.returncode != 0 or not info_result.stdout.strip():
-            return None
-        info_list = json.loads(info_result.stdout)
-        if not info_list:
-            return None
-        info = info_list[0]
-
         with tempfile.NamedTemporaryFile(suffix=".png") as handle:
-            handle.write(depth_payload.stdout)
+            handle.write(depth_payload)
             handle.flush()
             depth_map = np.asarray(iio.imread(handle.name), dtype=np.float32)
     except Exception:
@@ -4284,6 +4254,86 @@ def _scene_ddf_depth_map(file_name: Any) -> np.ndarray | None:
         return None
 
     return np.asarray(depth_map, dtype=float)
+
+
+def exiftool_info(fname: Any, *args: Any, format: str = "text") -> Any:
+    path = Path(fname).expanduser()
+    exiftool = shutil.which("exiftool")
+    if exiftool is None or not path.is_file():
+        return None
+
+    normalized = param_format(format)
+    if args:
+        for index in range(0, len(args), 2):
+            key = param_format(args[index])
+            if key == "format" and index + 1 < len(args):
+                normalized = param_format(args[index + 1])
+
+    try:
+        if normalized == "json":
+            result = subprocess.run(
+                [exiftool, "-j", str(path)],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode != 0 or not result.stdout.strip():
+                return None
+            info = json.loads(result.stdout)
+            if not info:
+                return None
+            return info[0]
+
+        option = "-v"
+        result = subprocess.run(
+            [exiftool, option, str(path)],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            return None
+        return result.stdout
+    except Exception:
+        return None
+
+
+def _exiftool_depth_payload(path: Path) -> bytes | None:
+    exiftool = shutil.which("exiftool")
+    if exiftool is None or not path.is_file():
+        return None
+
+    try:
+        trailer = subprocess.run(
+            [exiftool, "-b", "-trailer", str(path)],
+            check=False,
+            capture_output=True,
+        )
+        if trailer.returncode != 0 or not trailer.stdout:
+            return None
+        depth_payload = subprocess.run(
+            [exiftool, "-", "-b", "-trailer"],
+            check=False,
+            input=trailer.stdout,
+            capture_output=True,
+        )
+        if depth_payload.returncode != 0 or not depth_payload.stdout:
+            return None
+        return bytes(depth_payload.stdout)
+    except Exception:
+        return None
+
+
+def exiftool_depth_from_file(f_name: Any, *args: Any, type: str = "GooglePixel") -> np.ndarray | None:
+    normalized_type = param_format(type)
+    if args:
+        for index in range(0, len(args), 2):
+            key = param_format(args[index])
+            if key == "type" and index + 1 < len(args):
+                normalized_type = param_format(args[index + 1])
+    if normalized_type not in {"googlepixel", "pixel", "google"}:
+        return None
+    return _scene_ddf_depth_map(f_name)
 
 
 def scene_from_ddf_file(

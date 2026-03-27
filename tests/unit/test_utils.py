@@ -91,6 +91,8 @@ from pyisetcam import (
     vectorLength,
     xyz2srgb,
     lorentzSum,
+    max2,
+    min2,
 )
 from pyisetcam.utils import (
     blackbody,
@@ -177,6 +179,8 @@ from pyisetcam.utils import (
     dpi2mperdot as dpi2mperdot_fn,
     ie_tikhonov,
     lorentz_sum,
+    max2 as max2_fn,
+    min2 as min2_fn,
     unpadarray as unpadarray_fn,
     upper_quad_to_full_matrix,
     vector_length,
@@ -1728,3 +1732,39 @@ def test_hypercube_display_helpers_match_aliases() -> None:
     assert viewer["label"] == "Slice: 500"
     assert np.array_equal(viewer["image"], cube[:, :, 0])
     assert np.array_equal(alias_viewer["slice_map"], np.array([500.0, 600.0, 700.0]))
+
+
+def test_max2_supports_restricted_search() -> None:
+    matrix = np.array(
+        [
+            [16.0, 2.0, 3.0, 13.0],
+            [5.0, 11.0, 10.0, 8.0],
+            [9.0, 7.0, 6.0, 12.0],
+            [4.0, 14.0, 15.0, 1.0],
+        ]
+    )
+    value, ij = max2_fn(matrix, [1, 2, 3], [2, 3])
+    alias_value, alias_ij = max2(matrix, [1, 2, 3], [2, 3])
+
+    assert value == 11.0
+    assert np.array_equal(ij, np.array([2, 2]))
+    assert alias_value == value
+    assert np.array_equal(alias_ij, ij)
+
+
+def test_min2_supports_restricted_search() -> None:
+    matrix = np.array(
+        [
+            [16.0, 2.0, 3.0, 13.0],
+            [5.0, 11.0, 10.0, 8.0],
+            [9.0, 7.0, 6.0, 12.0],
+            [4.0, 14.0, 15.0, 1.0],
+        ]
+    )
+    value, ij = min2_fn(matrix, [1, 2, 3], [2, 3])
+    alias_value, alias_ij = min2(matrix, [1, 2, 3], [2, 3])
+
+    assert value == 2.0
+    assert np.array_equal(ij, np.array([1, 2]))
+    assert alias_value == value
+    assert np.array_equal(alias_ij, ij)

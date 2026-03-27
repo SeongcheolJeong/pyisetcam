@@ -3,11 +3,14 @@ from __future__ import annotations
 import imageio.v3 as iio
 import numpy as np
 import pytest
+import pyisetcam.scene as scene_module
 
 from pyisetcam import (
     blackbody,
     display_create,
     display_get,
+    exiftool_depth_from_file,
+    exiftool_info,
     scene_adjust_illuminant,
     scene_create,
     scene_from_ddf_file,
@@ -79,6 +82,54 @@ def test_scene_from_ddf_file_matches_scene_from_file_without_embedded_depth(tmp_
         rtol=1e-10,
         atol=1e-10,
     )
+
+
+def test_exiftool_info_supports_json_format(monkeypatch, tmp_path) -> None:
+    image_path = tmp_path / "sample.jpg"
+    image_path.write_bytes(b"jpg")
+
+    class Result:
+        def __init__(self, stdout: str) -> None:
+            self.returncode = 0
+            self.stdout = stdout
+
+    def fake_run(command, check=False, capture_output=True, text=True):  # type: ignore[no-untyped-def]
+        del check, capture_output, text
+        assert command[:2] == ["/usr/bin/exiftool", "-j"]
+        return Result('[{"Orientation":"Rotate 90 CW","DepthMapNear":1.0}]')
+
+    monkeypatch.setattr(scene_module.shutil, "which", lambda name: "/usr/bin/exiftool")
+    monkeypatch.setattr(scene_module.subprocess, "run", fake_run)
+
+    info = exiftool_info(image_path, "format", "json")
+    assert info["Orientation"] == "Rotate 90 CW"
+    assert np.isclose(float(info["DepthMapNear"]), 1.0)
+
+
+def test_exiftool_depth_from_file_decodes_meter_payload(monkeypatch, tmp_path) -> None:
+    image_path = tmp_path / "sample.jpg"
+    image_path.write_bytes(b"jpg")
+    payload_path = tmp_path / "depth.png"
+    encoded = np.array([[0, 255], [128, 64]], dtype=np.uint8)
+    iio.imwrite(payload_path, encoded)
+
+    monkeypatch.setattr(
+        scene_module,
+        "exiftool_info",
+        lambda *args, **kwargs: {
+            "DepthMapUnits": "Meters",
+            "DepthMapNear": 1.0,
+            "DepthMapFar": 5.0,
+            "ImageHeight": 2,
+            "ImageWidth": 2,
+        },
+    )
+    monkeypatch.setattr(scene_module, "_exiftool_depth_payload", lambda path: payload_path.read_bytes())
+
+    depth = exiftool_depth_from_file(image_path, "type", "GooglePixel")
+    expected = 1.0 + (encoded.astype(float) / 255.0) * 4.0
+
+    np.testing.assert_allclose(depth, expected, rtol=0.0, atol=1e-6)
 
 
 def test_scene_sdr_prefers_local_cache_for_mat_and_png(tmp_path, asset_store) -> None:

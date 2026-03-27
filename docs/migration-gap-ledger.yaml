@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-26T23:29:13.194215+00:00",
+  "generated_at": "2026-03-27T00:09:39.327228+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 35,
-      "out_of_scope": 299,
+      "headless_only": 34,
+      "out_of_scope": 303,
       "parity": 713,
-      "partial": 130,
-      "ported": 266
+      "partial": 123,
+      "ported": 270
     },
     "kind_counts": {
       "api": 661,
@@ -19,17 +19,17 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 130,
-      "P2": 35,
-      "P3": 1278
+      "P1": 123,
+      "P2": 34,
+      "P3": 1286
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": 0,
-        "out_of_scope": 6,
+        "headless_only": -1,
+        "out_of_scope": 4,
         "parity": 0,
-        "partial": -6,
-        "ported": 0
+        "partial": -7,
+        "ported": 4
       },
       "kind_counts": {
         "api": 0,
@@ -40,9 +40,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -6,
-        "P2": 0,
-        "P3": 6
+        "P1": -7,
+        "P2": -1,
+        "P3": 8
       }
     },
     "family_summary": {
@@ -930,11 +930,11 @@
       "utility": {
         "total": 279,
         "by_status": {
-          "headless_only": 35,
-          "out_of_scope": 35,
+          "headless_only": 34,
+          "out_of_scope": 39,
           "parity": 17,
-          "partial": 130,
-          "ported": 62
+          "partial": 123,
+          "ported": 66
         },
         "by_kind": {
           "gui": 1,
@@ -1005,14 +1005,14 @@
     "top_open_families": [
       {
         "family": "utility",
-        "open_entries": 165,
+        "open_entries": 157,
         "highest_open_priority": "P1",
         "by_status": {
-          "headless_only": 35,
-          "out_of_scope": 35,
+          "headless_only": 34,
+          "out_of_scope": 39,
           "parity": 17,
-          "partial": 130,
-          "ported": 62
+          "partial": 123,
+          "ported": 66
         }
       },
       {
@@ -15373,21 +15373,21 @@
       "upstream_path": "utility/external/DataHash_20190519/DataHash.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a vendored third-party generic hashing implementation retained as provenance for the canonical ISET `ieHash` helper, so it is tracked as external package baggage rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/DataHash_20190519/uTest_DataHash.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is the vendored DataHash package's own MATLAB unit-test suite, which is third-party package maintenance coverage rather than a pyisetcam runtime target.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/ImageConvFrequencyDomain.m",
@@ -15583,21 +15583,21 @@
       "upstream_path": "utility/external/exiftool/exiftoolDepthFromFile.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.scene, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream Dynamic Depth Format extractor is covered by the Python `exiftool_depth_from_file(...)` / `exiftoolDepthFromFile(...)` compatibility wrapper in `pyisetcam.scene`, together with the existing `sceneFromDDFFile(...)` workflow and focused regression coverage over meter-scaled embedded depth payload replay.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/exiftool/exiftoolInfo.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.scene, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream exiftool metadata helper is covered by the Python `exiftool_info(...)` / `exiftoolInfo(...)` compatibility wrapper in `pyisetcam.scene`, which replays the JSON or verbose text query contract against the host `exiftool` binary headlessly.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+alignment/+parser/@ShotParser/ShotParser.m",
@@ -16536,21 +16536,21 @@
       "upstream_path": "utility/external/fstack/fstackdemo.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is only a MATLAB demonstration notebook for the external focus-stack package, not a supported pyisetcam runtime API surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/fstack/showimages.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
-      "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.parity, pyisetcam.scene, pyisetcam.sensor",
+      "status": "out_of_scope",
+      "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The MATLAB workflow is covered through headless/session wrappers instead of GUI fidelity.",
-      "priority": "P2"
+      "notes": "The upstream file is a GUI-only MATLAB image preview helper built around `imshow`, `text`, `rectangle`, and `pause`, so it is treated as visualization baggage rather than a supported headless pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/hdr/buildFullSFpyr2_o.m",
@@ -16782,21 +16782,21 @@
       "upstream_path": "utility/external/max/max2.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream restricted maximum helper is covered by the Python `max2(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over row or column subset selection and MATLAB-style first-hit index replay.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/max/min2.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream restricted minimum helper is covered by the Python `min2(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over row or column subset selection and MATLAB-style first-hit index replay.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/zernike/zernfun.m",

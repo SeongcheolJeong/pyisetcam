@@ -861,10 +861,50 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is a host-machine CPU probe for MATLAB environments, which is deployment or diagnostics baggage rather than a supported pyisetcam runtime API surface.",
         "module_hits": [],
     },
+    "utility/external/DataHash_20190519/DataHash.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a vendored third-party generic hashing implementation retained as provenance for the canonical ISET `ieHash` helper, so it is tracked as external package baggage rather than a supported pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/external/DataHash_20190519/uTest_DataHash.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is the vendored DataHash package's own MATLAB unit-test suite, which is third-party package maintenance coverage rather than a pyisetcam runtime target.",
+        "module_hits": [],
+    },
+    "utility/external/exiftool/exiftoolDepthFromFile.m": {
+        "status": "ported",
+        "note": "The upstream Dynamic Depth Format extractor is covered by the Python `exiftool_depth_from_file(...)` / `exiftoolDepthFromFile(...)` compatibility wrapper in `pyisetcam.scene`, together with the existing `sceneFromDDFFile(...)` workflow and focused regression coverage over meter-scaled embedded depth payload replay.",
+        "module_hits": ["pyisetcam.scene", "pyisetcam.__init__"],
+    },
+    "utility/external/exiftool/exiftoolInfo.m": {
+        "status": "ported",
+        "note": "The upstream exiftool metadata helper is covered by the Python `exiftool_info(...)` / `exiftoolInfo(...)` compatibility wrapper in `pyisetcam.scene`, which replays the JSON or verbose text query contract against the host `exiftool` binary headlessly.",
+        "module_hits": ["pyisetcam.scene", "pyisetcam.__init__"],
+    },
+    "utility/external/fstack/fstackdemo.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is only a MATLAB demonstration notebook for the external focus-stack package, not a supported pyisetcam runtime API surface.",
+        "module_hits": [],
+    },
+    "utility/external/fstack/showimages.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a GUI-only MATLAB image preview helper built around `imshow`, `text`, `rectangle`, and `pause`, so it is treated as visualization baggage rather than a supported headless pyisetcam runtime surface.",
+        "module_hits": [],
+    },
     "utility/external/insertInImage/insertInImage.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a MATLAB figure and Image Processing Toolbox annotation helper that rasterizes plot or text objects into images, so it is treated as GUI-heavy external baggage rather than a supported headless pyisetcam runtime surface.",
         "module_hits": [],
+    },
+    "utility/external/max/max2.m": {
+        "status": "ported",
+        "note": "The upstream restricted maximum helper is covered by the Python `max2(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over row or column subset selection and MATLAB-style first-hit index replay.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/external/max/min2.m": {
+        "status": "ported",
+        "note": "The upstream restricted minimum helper is covered by the Python `min2(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over row or column subset selection and MATLAB-style first-hit index replay.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
     },
     "utility/xml/ieStruct2XML.m": {
         "status": "ported",

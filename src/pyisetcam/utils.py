@@ -880,6 +880,72 @@ def ie_tone(*args: Any, frequency: float = 256.0, amplitude: float = 0.2, durati
 ieTone = ie_tone
 
 
+def max2(matrix: Any, userows: Any | None = None, usecols: Any | None = None) -> tuple[float, NDArray[np.int_]]:
+    array = np.asarray(matrix)
+    if array.ndim > 2:
+        raise ValueError("M must be a 2-d array or a vector")
+    if array.ndim == 1:
+        array = array.reshape(1, -1)
+
+    n_rows, n_cols = array.shape
+    row_indices = (
+        np.arange(1, n_rows + 1, dtype=int)
+        if userows is None or np.asarray(userows).size == 0
+        else np.unique(np.asarray(userows, dtype=int).reshape(-1))
+    )
+    col_indices = (
+        np.arange(1, n_cols + 1, dtype=int)
+        if usecols is None or np.asarray(usecols).size == 0
+        else np.unique(np.asarray(usecols, dtype=int).reshape(-1))
+    )
+
+    if np.any(row_indices < 1) or np.any(row_indices > n_rows):
+        raise ValueError("userows must be a valid set of indices into the rows of M")
+    if np.any(col_indices < 1) or np.any(col_indices > n_cols):
+        raise ValueError("usecols must be a valid set of indices into the columns of M")
+
+    restricted = array[row_indices - 1][:, col_indices - 1]
+    column_maxima = np.max(restricted, axis=0)
+    row_argmax = np.argmax(restricted, axis=0)
+    column_argmax = int(np.argmax(column_maxima))
+    value = float(column_maxima[column_argmax])
+    ij = np.array([row_indices[row_argmax[column_argmax]], col_indices[column_argmax]], dtype=int)
+    return value, ij
+
+
+def min2(matrix: Any, userows: Any | None = None, usecols: Any | None = None) -> tuple[float, NDArray[np.int_]]:
+    array = np.asarray(matrix)
+    if array.ndim > 2:
+        raise ValueError("M must be a 2-d array or a vector")
+    if array.ndim == 1:
+        array = array.reshape(1, -1)
+
+    n_rows, n_cols = array.shape
+    row_indices = (
+        np.arange(1, n_rows + 1, dtype=int)
+        if userows is None or np.asarray(userows).size == 0
+        else np.unique(np.asarray(userows, dtype=int).reshape(-1))
+    )
+    col_indices = (
+        np.arange(1, n_cols + 1, dtype=int)
+        if usecols is None or np.asarray(usecols).size == 0
+        else np.unique(np.asarray(usecols, dtype=int).reshape(-1))
+    )
+
+    if np.any(row_indices < 1) or np.any(row_indices > n_rows):
+        raise ValueError("userows must be a valid set of indices into the rows of M")
+    if np.any(col_indices < 1) or np.any(col_indices > n_cols):
+        raise ValueError("usecols must be a valid set of indices into the columns of M")
+
+    restricted = array[row_indices - 1][:, col_indices - 1]
+    column_minima = np.min(restricted, axis=0)
+    row_argmin = np.argmin(restricted, axis=0)
+    column_argmin = int(np.argmin(column_minima))
+    value = float(column_minima[column_argmin])
+    ij = np.array([row_indices[row_argmin[column_argmin]], col_indices[column_argmin]], dtype=int)
+    return value, ij
+
+
 def _to_grayscale(image: Any) -> NDArray[np.float64]:
     image_array = np.asarray(image, dtype=float)
     if image_array.ndim == 2:
