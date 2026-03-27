@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import copy
 import math
 import re
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -944,6 +946,339 @@ def min2(matrix: Any, userows: Any | None = None, usecols: Any | None = None) ->
     value = float(column_minima[column_argmin])
     ij = np.array([row_indices[row_argmin[column_argmin]], col_indices[column_argmin]], dtype=int)
     return value, ij
+
+
+def _is_struct_mapping(value: Any) -> bool:
+    return isinstance(value, Mapping)
+
+
+def _is_struct_array(value: Any) -> bool:
+    return isinstance(value, (list, tuple)) and all(_is_struct_mapping(item) for item in value)
+
+
+def _is_empty_struct_value(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, Mapping):
+        return len(value) == 0
+    if isinstance(value, list):
+        return all(_is_empty_struct_value(item) for item in value)
+    return False
+
+
+def _copy_struct_value(value: Any) -> Any:
+    if isinstance(value, np.ndarray):
+        return np.array(value, copy=True)
+    return copy.deepcopy(value)
+
+
+def _callable_signature(value: Any) -> Any:
+    code = getattr(value, "__code__", None)
+    closure = getattr(value, "__closure__", None)
+    closure_values = None
+    if closure is not None:
+        closure_values = tuple(cell.cell_contents for cell in closure)
+    return (
+        getattr(value, "__module__", None),
+        getattr(value, "__qualname__", None),
+        getattr(code, "co_code", None),
+        getattr(code, "co_consts", None),
+        getattr(code, "co_names", None),
+        getattr(value, "__defaults__", None),
+        closure_values,
+    )
+
+
+def _values_equal_with_tol(value1: Any, value2: Any, tol: float) -> bool:
+    if _is_struct_mapping(value1) or _is_struct_mapping(value2):
+        return False
+    if _is_struct_array(value1) or _is_struct_array(value2):
+        return False
+
+    if isinstance(value1, np.ndarray) or isinstance(value2, np.ndarray):
+        if not (isinstance(value1, np.ndarray) and isinstance(value2, np.ndarray)):
+            return False
+        if value1.shape != value2.shape or value1.dtype != value2.dtype:
+            return False
+        if np.issubdtype(value1.dtype, np.floating) or np.issubdtype(value1.dtype, np.complexfloating):
+            return bool(np.allclose(value1, value2, atol=tol, rtol=0.0, equal_nan=True))
+        return bool(np.array_equal(value1, value2))
+
+    if isinstance(value1, (list, tuple)) or isinstance(value2, (list, tuple)):
+        if type(value1) is not type(value2):
+            return False
+        if len(value1) != len(value2):
+            return False
+        return all(_values_equal_with_tol(left, right, tol) for left, right in zip(value1, value2))
+
+    if callable(value1) or callable(value2):
+        if not (callable(value1) and callable(value2)):
+            return False
+        return _callable_signature(value1) == _callable_signature(value2)
+
+    if isinstance(value1, np.generic) or isinstance(value2, np.generic):
+        if not (isinstance(value1, np.generic) and isinstance(value2, np.generic)):
+            return False
+        if value1.dtype != value2.dtype:
+            return False
+        if np.issubdtype(value1.dtype, np.floating) or np.issubdtype(value1.dtype, np.complexfloating):
+            return bool(abs(value1.item() - value2.item()) < tol)
+        return bool(value1.item() == value2.item())
+
+    if isinstance(value1, (float, complex)) or isinstance(value2, (float, complex)):
+        if type(value1) is not type(value2):
+            return False
+        return bool(abs(value1 - value2) < tol)
+
+    if type(value1) is not type(value2):
+        return False
+    return bool(value1 == value2)
+
+
+def _comp_struct_recursive(s1: Any, s2: Any, tol: float) -> tuple[Any, Any, Any]:
+    if _is_struct_mapping(s1) and _is_struct_mapping(s2):
+        common: dict[str, Any] = {}
+        d1: dict[str, Any] = {}
+        d2: dict[str, Any] = {}
+
+        for key in s1.keys():
+            if key not in s2:
+                d1[key] = _copy_struct_value(s1[key])
+                continue
+            child_common, child_d1, child_d2 = _comp_struct_recursive(s1[key], s2[key], tol)
+            if not _is_empty_struct_value(child_common):
+                common[key] = child_common
+            if not _is_empty_struct_value(child_d1):
+                d1[key] = child_d1
+            if not _is_empty_struct_value(child_d2):
+                d2[key] = child_d2
+
+        for key in s2.keys():
+            if key not in s1:
+                d2[key] = _copy_struct_value(s2[key])
+
+        return (
+            None if len(common) == 0 else common,
+            None if len(d1) == 0 else d1,
+            None if len(d2) == 0 else d2,
+        )
+
+    if _is_struct_array(s1) and _is_struct_array(s2):
+        max_length = max(len(s1), len(s2))
+        common_items: list[Any] = []
+        d1_items: list[Any] = []
+        d2_items: list[Any] = []
+        for index in range(max_length):
+            if index < len(s1) and index < len(s2):
+                child_common, child_d1, child_d2 = _comp_struct_recursive(s1[index], s2[index], tol)
+            elif index < len(s1):
+                child_common, child_d1, child_d2 = None, _copy_struct_value(s1[index]), None
+            else:
+                child_common, child_d1, child_d2 = None, None, _copy_struct_value(s2[index])
+            common_items.append(child_common)
+            d1_items.append(child_d1)
+            d2_items.append(child_d2)
+
+        return (
+            None if all(_is_empty_struct_value(item) for item in common_items) else common_items,
+            None if all(_is_empty_struct_value(item) for item in d1_items) else d1_items,
+            None if all(_is_empty_struct_value(item) for item in d2_items) else d2_items,
+        )
+
+    if _values_equal_with_tol(s1, s2, tol):
+        return _copy_struct_value(s1), None, None
+    return None, _copy_struct_value(s1), _copy_struct_value(s2)
+
+
+def comp_struct(
+    s1: Any,
+    s2: Any,
+    prt: int | None = 0,
+    pse: int | None = 0,
+    tol: float | None = 1e-20,
+    n1: str | None = None,
+    n2: str | None = None,
+) -> tuple[Any, Any, Any]:
+    """Compare nested struct-like Python data using the legacy MATLAB contract."""
+
+    del prt, pse, n1, n2
+    if s2 is None:
+        raise ValueError("s2 is required")
+    tolerance = 1e-20 if tol is None else float(tol)
+    return _comp_struct_recursive(s1, s2, tolerance)
+
+
+compStruct = comp_struct
+
+
+def _stringify_list_struct_value(value: Any) -> str:
+    if isinstance(value, np.ndarray):
+        return np.array2string(value)
+    return str(value)
+
+
+def list_struct(s1: Any, v: int = 0, n1: str = "s1") -> list[str]:
+    """Return headless field listings for the legacy MATLAB list_struct() helper."""
+
+    if v not in (0, 1):
+        v = 0
+
+    lines: list[str] = []
+    if _is_struct_mapping(s1):
+        for key in s1.keys():
+            lines.extend(list_struct(s1[key], v, f"{n1}.{key}"))
+        return lines
+
+    if _is_struct_array(s1):
+        for index, item in enumerate(s1, start=1):
+            lines.extend(list_struct(item, v, f"{n1}({index})"))
+        return lines
+
+    if isinstance(s1, list) and s1 and all(_is_struct_mapping(item) for item in s1):
+        for index, item in enumerate(s1, start=1):
+            for key in item.keys():
+                lines.extend(list_struct(item[key], v, f"{n1}{{{index}}}.{key}"))
+        return lines
+
+    if v:
+        lines.append(f"Field:\t{n1} = {_stringify_list_struct_value(s1)}")
+    else:
+        lines.append(f"Field:\t{n1}")
+    return lines
+
+
+listStruct = list_struct
+
+
+def _prepare_zernike_nm(n: Any, m: Any) -> tuple[NDArray[np.int_], NDArray[np.int_]]:
+    n_array = np.asarray(n)
+    m_array = np.asarray(m)
+    if n_array.ndim > 1 or m_array.ndim > 1:
+        raise ValueError("N and M must be vectors.")
+    n_vector = np.asarray(n_array, dtype=int).reshape(-1)
+    m_vector = np.asarray(m_array, dtype=int).reshape(-1)
+    if n_vector.size != m_vector.size:
+        raise ValueError("N and M must be the same length.")
+    if np.any((n_vector - m_vector) % 2 != 0):
+        raise ValueError("All N and M must differ by multiples of 2 (including 0).")
+    if np.any(np.abs(m_vector) > n_vector):
+        raise ValueError("Each M must be less than or equal to its corresponding N.")
+    return n_vector, m_vector
+
+
+def _prepare_zernike_radius(r: Any, *, allow_theta: bool = False, theta: Any | None = None) -> tuple[NDArray[np.float64], NDArray[np.float64] | None]:
+    r_array = np.asarray(r, dtype=float)
+    if r_array.ndim > 1:
+        raise ValueError("R must be a vector.")
+    r_vector = r_array.reshape(-1)
+    if np.any((r_vector < 0.0) | (r_vector > 1.0)):
+        raise ValueError("All R must be between 0 and 1.")
+    if not allow_theta:
+        return r_vector, None
+
+    theta_array = np.asarray(theta, dtype=float)
+    if theta_array.ndim > 1:
+        raise ValueError("R and THETA must be vectors.")
+    theta_vector = theta_array.reshape(-1)
+    if r_vector.size != theta_vector.size:
+        raise ValueError("The number of R- and THETA-values must be equal.")
+    return r_vector, theta_vector
+
+
+def _zernike_rpowers(n_vector: NDArray[np.int_], m_vector: NDArray[np.int_]) -> NDArray[np.int_]:
+    powers: list[int] = []
+    for n_value, m_value in zip(n_vector.tolist(), m_vector.tolist()):
+        powers.extend(range(abs(m_value), n_value + 1, 2))
+    return np.asarray(sorted(set(powers)), dtype=int)
+
+
+def _zernike_power_matrix(r_vector: NDArray[np.float64], powers: NDArray[np.int_]) -> NDArray[np.float64]:
+    if powers.size == 0:
+        return np.zeros((r_vector.size, 0), dtype=float)
+    matrix = np.empty((r_vector.size, powers.size), dtype=float)
+    for index, power in enumerate(powers.tolist()):
+        matrix[:, index] = 1.0 if power == 0 else np.power(r_vector, power)
+    return matrix
+
+
+def _parse_zernike_norm_flag(nflag: Any | None) -> bool:
+    if nflag is None:
+        return False
+    if isinstance(nflag, str) and nflag.lower() == "norm":
+        return True
+    raise ValueError("Unrecognized normalization flag.")
+
+
+def zernpol(n: Any, m: Any, r: Any, nflag: Any | None = None) -> NDArray[np.float64]:
+    """Evaluate radial Zernike polynomials using the vendored MATLAB contract."""
+
+    n_vector, m_vector = _prepare_zernike_nm(n, m)
+    if np.any(m_vector < 0):
+        raise ValueError("All M must be positive.")
+    r_vector, _ = _prepare_zernike_radius(r)
+    isnorm = _parse_zernike_norm_flag(nflag)
+
+    powers = _zernike_rpowers(n_vector, m_vector)
+    power_matrix = _zernike_power_matrix(r_vector, powers)
+    z = np.zeros((r_vector.size, n_vector.size), dtype=float)
+
+    for column, (n_value, m_value) in enumerate(zip(n_vector.tolist(), m_vector.tolist())):
+        s_values = range(0, (n_value - m_value) // 2 + 1)
+        pows = list(range(n_value, m_value - 1, -2))
+        for s_value, power in zip(reversed(tuple(s_values)), reversed(pows)):
+            coefficient = (
+                (-1) ** s_value
+                * math.factorial(n_value - s_value)
+                / (
+                    math.factorial(s_value)
+                    * math.factorial((n_value - m_value) // 2 - s_value)
+                    * math.factorial((n_value + m_value) // 2 - s_value)
+                )
+            )
+            power_index = int(np.where(powers == power)[0][0])
+            z[:, column] = z[:, column] + coefficient * power_matrix[:, power_index]
+        if isnorm:
+            z[:, column] = z[:, column] * math.sqrt(2.0 * (n_value + 1.0))
+
+    return z
+
+
+def zernfun(n: Any, m: Any, r: Any, theta: Any, nflag: Any | None = None) -> NDArray[np.float64]:
+    """Evaluate Zernike functions on the unit circle using the vendored MATLAB contract."""
+
+    n_vector, m_vector = _prepare_zernike_nm(n, m)
+    r_vector, theta_vector = _prepare_zernike_radius(r, allow_theta=True, theta=theta)
+    isnorm = _parse_zernike_norm_flag(nflag)
+
+    radial = zernpol(n_vector, np.abs(m_vector), r_vector, "norm" if isnorm else None)
+    if isnorm:
+        radial = radial / np.sqrt(2.0 * (n_vector.reshape(1, -1) + 1.0))
+
+    z = np.asarray(radial, dtype=float)
+    positive = m_vector > 0
+    negative = m_vector < 0
+    if np.any(positive):
+        z[:, positive] = z[:, positive] * np.cos(np.outer(theta_vector, np.abs(m_vector[positive])))
+    if np.any(negative):
+        z[:, negative] = z[:, negative] * np.sin(np.outer(theta_vector, np.abs(m_vector[negative])))
+    if isnorm:
+        scale = np.sqrt((1.0 + (m_vector != 0).astype(float)) * (n_vector + 1.0) / math.pi)
+        z = z * scale.reshape(1, -1)
+    return z
+
+
+def zernfun2(p: Any, r: Any, theta: Any, nflag: Any | None = None) -> NDArray[np.float64]:
+    """Evaluate the first 36 single-index Zernike functions."""
+
+    p_array = np.asarray(p)
+    if p_array.ndim > 1:
+        raise ValueError("Input P must be vector.")
+    p_vector = np.asarray(p_array, dtype=int).reshape(-1)
+    if np.any(p_vector < 0) or np.any(p_vector > 35):
+        raise ValueError("ZERNFUN2 only computes the first 36 Zernike functions (P = 0 to 35).")
+    n_vector = np.ceil((-3.0 + np.sqrt(9.0 + 8.0 * p_vector)) / 2.0).astype(int)
+    m_vector = (2 * p_vector - n_vector * (n_vector + 2)).astype(int)
+    return zernfun(n_vector, m_vector, r, theta, nflag)
 
 
 def _to_grayscale(image: Any) -> NDArray[np.float64]:

@@ -2071,4 +2071,9 @@ surfaces. The neighboring micro-packages are smaller too: the vendored
 `DataHash_20190519` package and the GUI-only `fstack` preview or demo
 files are explicitly out of scope, while `exiftoolInfo(...)`,
 `exiftoolDepthFromFile(...)`, `max2(...)`, and `min2(...)` now have direct
-headless compatibility coverage in the current runtime.
+headless compatibility coverage in the current runtime. The next tier is
+smaller too: `comp_struct(...)`, `list_struct(...)`, `zernfun(...)`,
+`zernfun2(...)`, and `zernpol(...)` now have direct headless compatibility
+wrappers in `pyisetcam.utils`, while the third-party `Inpaint_nans`
+numerical package and the GUI-only `freezeColors` figure helpers are
+explicitly treated as out of scope.

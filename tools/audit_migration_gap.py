@@ -871,6 +871,36 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is the vendored DataHash package's own MATLAB unit-test suite, which is third-party package maintenance coverage rather than a pyisetcam runtime target.",
         "module_hits": [],
     },
+    "utility/external/Inpaint_nans/doc/methods_of_inpaint_nans.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is the third-party Inpaint_nans package's own methods documentation notebook, which is external package prose rather than a supported pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/external/Inpaint_nans/inpaint_nans.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a vendored third-party NaN inpainting solver that is not referenced by the supported pyisetcam runtime, so it is tracked as external numerical baggage rather than compatibility debt.",
+        "module_hits": [],
+    },
+    "utility/external/Inpaint_nans/inpaint_nans_bc.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is the boundary-condition variant of the third-party Inpaint_nans solver and is treated the same way as external numerical baggage rather than a supported pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/external/comp_struct/comp_struct.m": {
+        "status": "ported",
+        "note": "The upstream nested-struct comparison helper is covered by the Python `comp_struct(...)` / `compStruct(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over nested common-field extraction, tolerance-based numeric equality, and mismatch extraction.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/external/comp_struct/comp_struct_test.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is a manual MATLAB exploratory script that opens figures and prompts through menu dialogs while exercising the comp_struct package, so it is tracked as interactive maintenance coverage rather than a supported pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/external/comp_struct/list_struct.m": {
+        "status": "ported",
+        "note": "The upstream recursive struct-listing helper is covered by the Python `list_struct(...)` / `listStruct(...)` compatibility wrapper in `pyisetcam.utils`, which returns headless field-path payloads instead of printing to a MATLAB console.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
     "utility/external/exiftool/exiftoolDepthFromFile.m": {
         "status": "ported",
         "note": "The upstream Dynamic Depth Format extractor is covered by the Python `exiftool_depth_from_file(...)` / `exiftoolDepthFromFile(...)` compatibility wrapper in `pyisetcam.scene`, together with the existing `sceneFromDDFFile(...)` workflow and focused regression coverage over meter-scaled embedded depth payload replay.",
@@ -891,6 +921,26 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream file is a GUI-only MATLAB image preview helper built around `imshow`, `text`, `rectangle`, and `pause`, so it is treated as visualization baggage rather than a supported headless pyisetcam runtime surface.",
         "module_hits": [],
     },
+    "utility/external/freezeColors/Contents.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is only the index page for the third-party freezeColors figure-helper package, which is GUI-only plotting baggage rather than a supported pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/external/freezeColors/freezeColors.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file rewrites MATLAB figure and axis CData so multiple colormaps can coexist in one interactive figure, making it GUI-only visualization baggage rather than a supported headless pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/external/freezeColors/test/t_freezeColors.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file is an interactive MATLAB figure test for the third-party freezeColors package, so it is treated as GUI maintenance coverage rather than a supported pyisetcam runtime surface.",
+        "module_hits": [],
+    },
+    "utility/external/freezeColors/unfreezeColors.m": {
+        "status": "out_of_scope",
+        "note": "The upstream file restores indexed colors for interactive MATLAB plot handles and depends entirely on figure-state mutation, so it is treated as GUI-only visualization baggage rather than a supported headless pyisetcam runtime surface.",
+        "module_hits": [],
+    },
     "utility/external/insertInImage/insertInImage.m": {
         "status": "out_of_scope",
         "note": "The upstream file is a MATLAB figure and Image Processing Toolbox annotation helper that rasterizes plot or text objects into images, so it is treated as GUI-heavy external baggage rather than a supported headless pyisetcam runtime surface.",
@@ -904,6 +954,21 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
     "utility/external/max/min2.m": {
         "status": "ported",
         "note": "The upstream restricted minimum helper is covered by the Python `min2(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over row or column subset selection and MATLAB-style first-hit index replay.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/external/zernike/zernfun.m": {
+        "status": "ported",
+        "note": "The upstream unit-circle Zernike basis helper is covered by the Python `zernfun(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over known polynomial values, cosine-or-sine angular replay, and the single-index mapping used by `zernfun2(...)`.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/external/zernike/zernfun2.m": {
+        "status": "ported",
+        "note": "The upstream single-index Zernike helper is covered by the Python `zernfun2(...)` compatibility wrapper in `pyisetcam.utils`, which replays the vendored `P -> (N,M)` mapping for the first 36 modes.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
+    "utility/external/zernike/zernpol.m": {
+        "status": "ported",
+        "note": "The upstream radial Zernike polynomial helper is covered by the Python `zernpol(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over known low-order polynomial values and normalization handling.",
         "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
     },
     "utility/xml/ieStruct2XML.m": {

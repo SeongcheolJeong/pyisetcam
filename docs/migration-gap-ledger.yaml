@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-03-27T00:09:39.327228+00:00",
+  "generated_at": "2026-03-27T00:46:46.642209+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
       "headless_only": 34,
-      "out_of_scope": 303,
-      "parity": 713,
-      "partial": 123,
-      "ported": 270
+      "out_of_scope": 311,
+      "parity": 712,
+      "partial": 111,
+      "ported": 275
     },
     "kind_counts": {
       "api": 661,
@@ -19,17 +19,17 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 123,
+      "P1": 111,
       "P2": 34,
-      "P3": 1286
+      "P3": 1298
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": -1,
-        "out_of_scope": 4,
-        "parity": 0,
-        "partial": -7,
-        "ported": 4
+        "headless_only": 0,
+        "out_of_scope": 8,
+        "parity": -1,
+        "partial": -12,
+        "ported": 5
       },
       "kind_counts": {
         "api": 0,
@@ -40,9 +40,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -7,
-        "P2": -1,
-        "P3": 8
+        "P1": -12,
+        "P2": 0,
+        "P3": 12
       }
     },
     "family_summary": {
@@ -931,10 +931,10 @@
         "total": 279,
         "by_status": {
           "headless_only": 34,
-          "out_of_scope": 39,
-          "parity": 17,
-          "partial": 123,
-          "ported": 66
+          "out_of_scope": 47,
+          "parity": 16,
+          "partial": 111,
+          "ported": 71
         },
         "by_kind": {
           "gui": 1,
@@ -1005,14 +1005,14 @@
     "top_open_families": [
       {
         "family": "utility",
-        "open_entries": 157,
+        "open_entries": 145,
         "highest_open_priority": "P1",
         "by_status": {
           "headless_only": 34,
-          "out_of_scope": 39,
-          "parity": 17,
-          "partial": 123,
-          "ported": 66
+          "out_of_scope": 47,
+          "parity": 16,
+          "partial": 111,
+          "ported": 71
         }
       },
       {
@@ -10502,7 +10502,7 @@
       "family": "scripts/image",
       "kind": "script",
       "status": "parity",
-      "python_surface": "pyisetcam.ip, pyisetcam.fileio",
+      "python_surface": "pyisetcam.ip, pyisetcam.fileio, pyisetcam.utils",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py",
@@ -11686,7 +11686,7 @@
       "family": "scripts/scene",
       "kind": "script",
       "status": "parity",
-      "python_surface": "pyisetcam.scene",
+      "python_surface": "pyisetcam.scene, pyisetcam.utils",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py",
@@ -14920,7 +14920,7 @@
       "family": "tutorials/display",
       "kind": "tutorial",
       "status": "parity",
-      "python_surface": "pyisetcam.display",
+      "python_surface": "pyisetcam.display, pyisetcam.utils",
       "tests": [
         "tests/unit/test_pipeline.py",
         "tests/parity/test_parity_harness.py",
@@ -15403,31 +15403,31 @@
       "upstream_path": "utility/external/Inpaint_nans/doc/methods_of_inpaint_nans.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is the third-party Inpaint_nans package's own methods documentation notebook, which is external package prose rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/Inpaint_nans/inpaint_nans.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a vendored third-party NaN inpainting solver that is not referenced by the supported pyisetcam runtime, so it is tracked as external numerical baggage rather than compatibility debt.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/Inpaint_nans/inpaint_nans_bc.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is the boundary-condition variant of the third-party Inpaint_nans solver and is treated the same way as external numerical baggage rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/JSONio/jsonread.m",
@@ -15493,31 +15493,31 @@
       "upstream_path": "utility/external/comp_struct/comp_struct.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream nested-struct comparison helper is covered by the Python `comp_struct(...)` / `compStruct(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over nested common-field extraction, tolerance-based numeric equality, and mismatch extraction.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/comp_struct/comp_struct_test.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is a manual MATLAB exploratory script that opens figures and prompts through menu dialogs while exercising the comp_struct package, so it is tracked as interactive maintenance coverage rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/comp_struct/list_struct.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream recursive struct-listing helper is covered by the Python `list_struct(...)` / `listStruct(...)` compatibility wrapper in `pyisetcam.utils`, which returns headless field-path payloads instead of printing to a MATLAB console.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/cprintf.m",
@@ -16480,44 +16480,41 @@
       "upstream_path": "utility/external/freezeColors/Contents.m",
       "family": "utility",
       "kind": "helper",
-      "status": "parity",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
-      "tests": [
-        "tests/parity/cases.yaml",
-        "tests/parity/test_parity_harness.py"
-      ],
-      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "tests": [],
+      "notes": "The upstream file is only the index page for the third-party freezeColors figure-helper package, which is GUI-only plotting baggage rather than a supported pyisetcam runtime surface.",
       "priority": "P3"
     },
     {
       "upstream_path": "utility/external/freezeColors/freezeColors.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file rewrites MATLAB figure and axis CData so multiple colormaps can coexist in one interactive figure, making it GUI-only visualization baggage rather than a supported headless pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/freezeColors/test/t_freezeColors.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file is an interactive MATLAB figure test for the third-party freezeColors package, so it is treated as GUI maintenance coverage rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/freezeColors/unfreezeColors.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream file restores indexed colors for interactive MATLAB plot handles and depends entirely on figure-state mutation, so it is treated as GUI-only visualization baggage rather than a supported headless pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/fstack/fstack.m",
@@ -16802,31 +16799,31 @@
       "upstream_path": "utility/external/zernike/zernfun.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream unit-circle Zernike basis helper is covered by the Python `zernfun(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over known polynomial values, cosine-or-sine angular replay, and the single-index mapping used by `zernfun2(...)`.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/zernike/zernfun2.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream single-index Zernike helper is covered by the Python `zernfun2(...)` compatibility wrapper in `pyisetcam.utils`, which replays the vendored `P -> (N,M)` mapping for the first 36 modes.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/zernike/zernpol.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream radial Zernike polynomial helper is covered by the Python `zernpol(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over known low-order polynomial values and normalization handling.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/file/ieDNGRead.m",

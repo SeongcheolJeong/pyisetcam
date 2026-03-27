@@ -10,6 +10,7 @@ from pyisetcam import (
     FloydSteinberg,
     HalfToneImage,
     biNormal,
+    compStruct,
     convolvecirc,
     dpi2mperdot,
     expRand,
@@ -70,6 +71,7 @@ from pyisetcam import (
     imageSlantedEdge,
     imageTranslate,
     imageTranspose,
+    listStruct,
     imagehc2rgb,
     imageBoundingBox,
     imageCentroid,
@@ -93,10 +95,14 @@ from pyisetcam import (
     lorentzSum,
     max2,
     min2,
+    zernfun,
+    zernfun2,
+    zernpol,
 )
 from pyisetcam.utils import (
     blackbody,
     bi_normal,
+    comp_struct,
     convolve_circ,
     energy_to_quanta,
     exp_rand,
@@ -158,6 +164,7 @@ from pyisetcam.utils import (
     image_slanted_edge,
     image_spd,
     image_spd2rgb,
+    list_struct,
     image_translate,
     image_transpose,
     imagesc_m,
@@ -185,6 +192,9 @@ from pyisetcam.utils import (
     upper_quad_to_full_matrix,
     vector_length,
     unit_frequency_list,
+    zernfun as zernfun_fn,
+    zernfun2 as zernfun2_fn,
+    zernpol as zernpol_fn,
 )
 
 
@@ -1768,3 +1778,73 @@ def test_min2_supports_restricted_search() -> None:
     assert np.array_equal(ij, np.array([1, 2]))
     assert alias_value == value
     assert np.array_equal(alias_ij, ij)
+
+
+def test_comp_struct_replays_nested_common_and_differences() -> None:
+    struct_a = {
+        "a": 1,
+        "b": {
+            "c": np.array([1.0, 2.0], dtype=float),
+            "d": "left",
+        },
+    }
+    struct_b = {
+        "a": 1,
+        "b": {
+            "c": np.array([1.0, 2.0005], dtype=float),
+            "e": "right",
+        },
+    }
+
+    common, d1, d2 = comp_struct(struct_a, struct_b, tol=1e-3)
+    alias_common, alias_d1, alias_d2 = compStruct(struct_a, struct_b, tol=1e-3)
+
+    assert common["a"] == 1
+    assert np.allclose(common["b"]["c"], np.array([1.0, 2.0]))
+    assert d1 == {"b": {"d": "left"}}
+    assert d2 == {"b": {"e": "right"}}
+    assert alias_common["a"] == common["a"]
+    assert np.allclose(alias_common["b"]["c"], common["b"]["c"])
+    assert alias_d1 == d1
+    assert alias_d2 == d2
+
+
+def test_list_struct_returns_headless_field_listing() -> None:
+    fields = list_struct([{"a": 1}, {"a": 2}], 0, "sample")
+    alias_fields = listStruct({"nested": {"value": "x"}}, 1, "root")
+
+    assert fields == ["Field:\tsample(1).a", "Field:\tsample(2).a"]
+    assert alias_fields == ["Field:\troot.nested.value = x"]
+
+
+def test_zernike_wrappers_match_known_polynomials_and_single_index_mapping() -> None:
+    radius = np.array([0.0, 0.5, 1.0], dtype=float)
+    theta = np.array([0.0, np.pi / 2.0, np.pi], dtype=float)
+
+    radial = zernpol_fn([2, 4], [0, 2], radius)
+    alias_radial = zernpol([2, 4], [0, 2], radius)
+    expected_radial = np.column_stack(
+        [
+            2.0 * radius**2 - 1.0,
+            4.0 * radius**4 - 3.0 * radius**2,
+        ]
+    )
+    assert np.allclose(radial, expected_radial)
+    assert np.allclose(alias_radial, expected_radial)
+
+    functions = zernfun_fn([1, 1], [-1, 1], radius, theta)
+    alias_functions = zernfun([1, 1], [-1, 1], radius, theta)
+    expected_functions = np.column_stack(
+        [
+            radius * np.sin(theta),
+            radius * np.cos(theta),
+        ]
+    )
+    assert np.allclose(functions, expected_functions)
+    assert np.allclose(alias_functions, expected_functions)
+
+    expected_single_index = zernfun_fn([0, 1, 1, 2], [0, -1, 1, -2], radius, theta)
+    single_index = zernfun2_fn([0, 1, 2, 3], radius, theta)
+    alias_single_index = zernfun2([0, 1, 2, 3], radius, theta)
+    assert np.allclose(single_index, expected_single_index)
+    assert np.allclose(alias_single_index, expected_single_index)

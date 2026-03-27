@@ -723,6 +723,7 @@ from .utils import (
     HalfToneImage,
     bi_normal,
     blackbody,
+    comp_struct,
     convolve_circ,
     convolvecirc,
     dac_to_rgb,
@@ -790,6 +791,7 @@ from .utils import (
     image_slanted_edge,
     image_spd,
     image_spd2rgb,
+    list_struct,
     image_bounding_box,
     image_centroid,
     image_circular,
@@ -818,6 +820,9 @@ from .utils import (
     vector_length,
     xw_to_rgb_format,
     xyz_to_srgb,
+    zernfun,
+    zernfun2,
+    zernpol,
 )
 
 __all__ = [
@@ -841,6 +846,8 @@ __all__ = [
     "biNormal",
     "bi_normal",
     "blackbody",
+    "compStruct",
+    "comp_struct",
     "ISOAcutance",
     "cameraCompute",
     "cameraComputeSequence",
@@ -1257,6 +1264,8 @@ __all__ = [
     "ie_prctile",
     "lorentzSum",
     "lorentz_sum",
+    "listStruct",
+    "list_struct",
     "rgb2dac",
     "rgb_to_dac",
     "imageGabor",
@@ -1582,6 +1591,9 @@ __all__ = [
     "xyz_to_srgb",
     "xyz_to_lms",
     "xyz_to_vsnr",
+    "zernfun",
+    "zernfun2",
+    "zernpol",
     "xyy2xyz",
     "xyy_to_xyz",
     "Y2Lstar",
@@ -2917,6 +2929,7 @@ ieLuminanceFromPhotons = luminance_from_photons
 ieAddObject = ie_add_object
 ieAppGet = ie_app_get
 biNormal = bi_normal
+compStruct = comp_struct
 expRand = exp_rand
 gammaPDF = gamma_pdf
 getGaussian = get_gaussian
@@ -2952,6 +2965,7 @@ ieTikhonov = ie_tikhonov
 ieUncompressData = ie_uncompress_data
 ieUnitScaleFactor = ie_unit_scale_factor
 lorentzSum = lorentz_sum
+listStruct = list_struct
 ieImageType = ie_image_type
 ieSCP = ie_scp
 ieWebGet = ie_web_get
