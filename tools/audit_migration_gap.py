@@ -3267,6 +3267,16 @@ def _status_and_note(
             "standalone headless Python APIs.",
             module_hits,
         )
+    if entry.upstream_path.startswith("utility/external/facetracker/"):
+        return (
+            "out_of_scope",
+            "The vendored Oxford VGG facetracker package is a standalone external MATLAB "
+            "video-processing stack built around ffmpeg frame extraction, classdef packages, "
+            "pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ "
+            "extensions, so it is treated as third-party toolbox infrastructure rather than a "
+            "supported pyisetcam runtime surface.",
+            module_hits,
+        )
     if entry.family.startswith("opticalimage/raytrace"):
         if explicit_hit and entry.kind in {"script", "tutorial"}:
             return (

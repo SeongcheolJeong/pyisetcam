@@ -1,13 +1,11 @@
 {
-  "generated_at": "2026-03-27T02:22:51.340852+00:00",
+  "generated_at": "2026-03-27T11:54:37.433952+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
     "status_counts": {
-      "headless_only": 1,
-      "out_of_scope": 327,
-      "parity": 712,
-      "partial": 75,
+      "out_of_scope": 412,
+      "parity": 703,
       "ported": 328
     },
     "kind_counts": {
@@ -19,16 +17,14 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 75,
-      "P2": 1,
-      "P3": 1367
+      "P3": 1443
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": 0,
-        "out_of_scope": 6,
-        "parity": 0,
-        "partial": -6,
+        "headless_only": -1,
+        "out_of_scope": 85,
+        "parity": -9,
+        "partial": -75,
         "ported": 0
       },
       "kind_counts": {
@@ -40,9 +36,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -6,
-        "P2": 0,
-        "P3": 6
+        "P1": -75,
+        "P2": -1,
+        "P3": 76
       }
     },
     "family_summary": {
@@ -930,17 +926,15 @@
       "utility": {
         "total": 279,
         "by_status": {
-          "headless_only": 1,
-          "out_of_scope": 63,
-          "parity": 16,
-          "partial": 75,
+          "out_of_scope": 148,
+          "parity": 7,
           "ported": 124
         },
         "by_kind": {
           "gui": 1,
           "helper": 278
         },
-        "highest_open_priority": "P1"
+        "highest_open_priority": "P3"
       },
       "utility/file": {
         "total": 25,
@@ -1003,18 +997,6 @@
       }
     },
     "top_open_families": [
-      {
-        "family": "utility",
-        "open_entries": 76,
-        "highest_open_priority": "P1",
-        "by_status": {
-          "headless_only": 1,
-          "out_of_scope": 63,
-          "parity": 16,
-          "partial": 75,
-          "ported": 124
-        }
-      },
       {
         "family": "camera",
         "open_entries": 0,
@@ -1112,6 +1094,15 @@
         "highest_open_priority": "P3",
         "by_status": {
           "out_of_scope": 1
+        }
+      },
+      {
+        "family": "data/optics",
+        "open_entries": 0,
+        "highest_open_priority": "P3",
+        "by_status": {
+          "out_of_scope": 1,
+          "parity": 2
         }
       }
     ],
@@ -15603,878 +15594,851 @@
       "upstream_path": "utility/external/facetracker/+lib/+alignment/+parser/@ShotParser/ShotParser.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+alignment/+parser/@ShotParser/parseShots.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+alignment/+parser/@SubtitleParser/SubtitleParser.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+alignment/+parser/@SubtitleParser/parseSubTitles.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+alignment/+parser/@SubtitleParser/subtitleTimeToFrame.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+alignment/+parser/@TranscriptParser/TranscriptParser.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+alignment/+parser/@TranscriptParser/parseChunk.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+alignment/+parser/@TranscriptParser/parseTranscript.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+alignment/+parser/@TranscriptParserBBC/TranscriptParser.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+alignment/+parser/@TranscriptParserBBC/parseChunk.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+alignment/+parser/@TranscriptParserBBC/parseTranscript.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+alignment/+processor/@DataProcessor/DataProcessor.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+alignment/+processor/@DataProcessor/doAlign.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+alignment/+processor/@DataProcessor/loadSubtitles.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+alignment/+processor/@DataProcessor/populateShotInfo.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+alignment/+processor/@DataProcessor/writeShotInfo.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+data/@video/getFrame.m",
       "family": "utility",
       "kind": "helper",
-      "status": "parity",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils, pyisetcam.sensor",
-      "tests": [
-        "tests/parity/cases.yaml",
-        "tests/parity/test_parity_harness.py"
-      ],
-      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "tests": [],
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
       "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+data/@video/video.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+data/@videoFrames/getFrame.m",
       "family": "utility",
       "kind": "helper",
-      "status": "parity",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils, pyisetcam.sensor",
-      "tests": [
-        "tests/parity/cases.yaml",
-        "tests/parity/test_parity_harness.py"
-      ],
-      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "tests": [],
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
       "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+data/@videoFrames/videoFrames.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+data/@videoOut/videoOut.m",
       "family": "utility",
       "kind": "helper",
-      "status": "headless_only",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils, pyisetcam.scene",
       "tests": [],
-      "notes": "A headless Python/session wrapper exists, but not full MATLAB GUI parity.",
-      "priority": "P2"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+facedesc/@ConvNet/ConvNet.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+facedesc/@ConvNet/compute.m",
       "family": "utility",
       "kind": "helper",
-      "status": "parity",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.camera, pyisetcam.color, pyisetcam.display",
-      "tests": [
-        "tests/parity/cases.yaml",
-        "tests/parity/test_parity_harness.py"
-      ],
-      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "tests": [],
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
       "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+facedesc/@ConvNet/computeFrame.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+facedesc/@FKEncoder2/FKEncoder2.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+facedesc/@FKEncoder2/encode.m",
       "family": "utility",
       "kind": "helper",
-      "status": "parity",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils, pyisetcam.fileio, pyisetcam.web",
-      "tests": [
-        "tests/parity/cases.yaml",
-        "tests/parity/test_parity_harness.py"
-      ],
-      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "tests": [],
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
       "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+facedesc/@FKEncoder2/get_assignments.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+facedesc/@IterDSiftExtractor/IterDSiftExtractor.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+facedesc/@IterDSiftExtractor/compute.m",
       "family": "utility",
       "kind": "helper",
-      "status": "parity",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.camera, pyisetcam.color, pyisetcam.display",
-      "tests": [
-        "tests/parity/cases.yaml",
-        "tests/parity/test_parity_harness.py"
-      ],
-      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "tests": [],
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
       "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+facedesc/@poolFVTrackJitt/compute.m",
       "family": "utility",
       "kind": "helper",
-      "status": "parity",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils, pyisetcam.__init__, pyisetcam.camera, pyisetcam.color, pyisetcam.display",
-      "tests": [
-        "tests/parity/cases.yaml",
-        "tests/parity/test_parity_harness.py"
-      ],
-      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "tests": [],
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
       "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+facedesc/@poolFVTrackJitt/poolFVTrackJitt.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+facedet/@dpmCascadeDetector/cascade_detect.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+facedet/@dpmCascadeDetector/detect.m",
       "family": "utility",
       "kind": "helper",
-      "status": "parity",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils, pyisetcam.parity, pyisetcam.sensor",
-      "tests": [
-        "tests/parity/cases.yaml",
-        "tests/parity/test_parity_harness.py"
-      ],
-      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "tests": [],
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
       "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+facedet/@dpmCascadeDetector/dpmCascadeDetector.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+facedet/@dpmCascadeDetector/featpyramid.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+labelling/@utils/utils.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+process/+video/+info/@videoInfo/videoInfo.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+shots/@shotThreads/detect.m",
       "family": "utility",
       "kind": "helper",
-      "status": "parity",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils, pyisetcam.parity, pyisetcam.sensor",
-      "tests": [
-        "tests/parity/cases.yaml",
-        "tests/parity/test_parity_harness.py"
-      ],
-      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "tests": [],
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
       "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+shots/@shotThreads/shotThreads.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+shots/@shots/detect.m",
       "family": "utility",
       "kind": "helper",
-      "status": "parity",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils, pyisetcam.parity, pyisetcam.sensor",
-      "tests": [
-        "tests/parity/cases.yaml",
-        "tests/parity/test_parity_harness.py"
-      ],
-      "notes": "The upstream API surface is referenced by the current parity-backed migration coverage.",
+      "tests": [],
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
       "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+shots/@shots/shots.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+tracking/@kltTracker/aggClust.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+tracking/@kltTracker/kltSelFeats.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+tracking/@kltTracker/kltTrack.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+tracking/@kltTracker/kltTracker.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+tracking/@kltTracker/track.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+tracking/@kltTracker/trackInShots.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+tracking/@postProcessor/interpolateTrack.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+tracking/@postProcessor/postProcessor.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+tracking/@postProcessor/smoothRects.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+tracking/@postProcessor/smoothTrack.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+utils/@imgPlot/imgPlot.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+video_converters/@frameExtractor/frameExtractor.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+lib/+video_converters/@mjpegConverter/mjpegConverter.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/compute_cnn_features.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/compute_features.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/compute_grad_feats.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/compute_landmarks.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/compute_threads.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/compute_ub.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/convert_video.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/detect_faces.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/detect_faces_frame.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/detect_shots.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/detect_shots_frames.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/extract_frames.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/interpolate_smooth_tracks.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/join_tracks.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/label_preprocess.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/plot_tracks.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/process_text.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/show_detectionss.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/show_tracks.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/show_tracks_frame.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/track_faces.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/track_faces_axes.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/track_faces_frame.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/write_anno_tracks.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/write_anno_tracks_frame.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/write_frames_tracks.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/write_shots_frame.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/write_track.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/+manager/+detection/write_video_smooth.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/launch_process.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/facetracker/process_demo.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
+      "status": "out_of_scope",
       "python_surface": "pyisetcam.utils",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The vendored Oxford VGG facetracker package is a standalone external MATLAB video-processing stack built around ffmpeg frame extraction, classdef packages, pretrained detector models, `parfor`, `VideoReader`, and multiple MEX/C++ extensions, so it is treated as third-party toolbox infrastructure rather than a supported pyisetcam runtime surface.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/external/freezeColors/Contents.m",

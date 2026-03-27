@@ -2088,9 +2088,11 @@ direct headless compatibility coverage now explicitly tracks
 The remaining environment-only helpers such as `checkToolbox.m`,
 `clx.m`, `hiddenHandle.m`, `ieFindCallback.m`, `ieMemoryCheck.m`,
 `ieMemorySize.m`, `ieQuestdlg.m`, and `notDefined.m` remain explicitly
-tracked as out of scope, so the remaining utility debt now sits in the
-larger external lanes such as `utility/external/hdr` and
-`utility/external/facetracker`.
+tracked as out of scope. The last large external utility lane, the
+vendored Oxford VGG facetracker package, is now explicitly treated as
+out of scope too because it is a standalone ffmpeg or `VideoReader`,
+`classdef`, `parfor`, pretrained-model, and MEX-backed video-processing
+stack rather than a supported pyisetcam runtime surface.
 The adjacent `utility/external/hdr` lane is now fully closed too:
 `build_pyramid(...)`, `recons_pyramid(...)`, the Haar/QMF builders and
 reconstructors, `pad_reflect(...)`, `pad_reflect_neg(...)`,
@@ -2102,6 +2104,8 @@ The remaining steerable-pyramid files in the vendored HDR package are now
 explicitly tracked as out of scope because the upstream README requires
 Eero Simoncelli's external MatlabPyrTools toolbox for that branch, and
 the pinned ISETCam snapshot does not vendor the required helpers such as
-`rcosFn`, `pointOp`, `steer2HarmMtx`, or `pyrBand`. The remaining utility
-debt therefore sits in the larger external lanes such as
-`utility/external/facetracker`.
+`rcosFn`, `pointOp`, `steer2HarmMtx`, or `pyrBand`. With the facetracker
+package also closed as external-toolbox scope, the pinned migration-gap
+ledger is now fully closed at `703` parity entries, `328` ported
+wrappers, and `412` out-of-scope paths, with no remaining open audit
+entries.
