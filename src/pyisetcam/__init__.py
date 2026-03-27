@@ -760,6 +760,7 @@ from .utils import (
     ie_find_files,
     ie_fit_line,
     ie_find_wave_index,
+    ie_hash,
     ie_fractal_dim,
     ie_fractal_drawgrid,
     ie_clip,
@@ -1270,6 +1271,8 @@ __all__ = [
     "isodd",
     "ieContains",
     "ie_contains",
+    "ieHash",
+    "ie_hash",
     "ieExprnd",
     "ie_exprnd",
     "ieFractalDrawgrid",
@@ -2972,6 +2975,7 @@ getGaussian = get_gaussian
 ieClip = ie_clip
 ieCompressData = ie_compress_data
 ieContains = ie_contains
+ieHash = ie_hash
 ieDeleteObject = ie_delete_object
 ieEquivalentObjtype = ie_equivalent_objtype
 ieDataList = ie_data_list

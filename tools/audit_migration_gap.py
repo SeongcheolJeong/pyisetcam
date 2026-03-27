@@ -1056,6 +1056,11 @@ UPSTREAM_STATUS_OVERRIDES: dict[str, dict[str, Any]] = {
         "note": "The upstream selected-object lookup helper is covered by the Python `ie_get_selected_object(...)` / `ieGetSelectedObject(...)` wrapper in `pyisetcam.session`, with direct regression coverage over selected object-id and object replay.",
         "module_hits": ["pyisetcam.session", "pyisetcam.__init__"],
     },
+    "utility/programming/ieHash.m": {
+        "status": "ported",
+        "note": "The upstream recursive hashing helper is covered by the Python `ie_hash(...)` / `ieHash(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over the upstream array, binary, ASCII, file, and output-format examples.",
+        "module_hits": ["pyisetcam.utils", "pyisetcam.__init__"],
+    },
     "utility/programming/ieMemoryCheck.m": {
         "status": "out_of_scope",
         "note": "The upstream file sums `whos` results from the MATLAB caller or base workspace, which is workspace introspection specific to MATLAB rather than a supported pyisetcam runtime surface.",

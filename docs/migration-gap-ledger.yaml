@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-27T01:21:49.889392+00:00",
+  "generated_at": "2026-03-27T01:47:36.869749+00:00",
   "upstream_snapshot": "/Users/seongcheoljeong/Documents/CameraE2E/.cache/upstream/isetcam/412b9f9bdb3262f2552b96f0e769b5ad6cdff821",
   "summary": {
     "entry_count": 1443,
@@ -7,8 +7,8 @@
       "headless_only": 6,
       "out_of_scope": 321,
       "parity": 712,
-      "partial": 90,
-      "ported": 314
+      "partial": 89,
+      "ported": 315
     },
     "kind_counts": {
       "api": 661,
@@ -19,17 +19,17 @@
       "tutorial": 32
     },
     "priority_counts": {
-      "P1": 90,
+      "P1": 89,
       "P2": 6,
-      "P3": 1347
+      "P3": 1348
     },
     "delta_from_previous": {
       "status_counts": {
-        "headless_only": -28,
-        "out_of_scope": 10,
+        "headless_only": 0,
+        "out_of_scope": 0,
         "parity": 0,
-        "partial": -21,
-        "ported": 39
+        "partial": -1,
+        "ported": 1
       },
       "kind_counts": {
         "api": 0,
@@ -40,9 +40,9 @@
         "tutorial": 0
       },
       "priority_counts": {
-        "P1": -21,
-        "P2": -28,
-        "P3": 49
+        "P1": -1,
+        "P2": 0,
+        "P3": 1
       }
     },
     "family_summary": {
@@ -933,8 +933,8 @@
           "headless_only": 6,
           "out_of_scope": 57,
           "parity": 16,
-          "partial": 90,
-          "ported": 110
+          "partial": 89,
+          "ported": 111
         },
         "by_kind": {
           "gui": 1,
@@ -1005,14 +1005,14 @@
     "top_open_families": [
       {
         "family": "utility",
-        "open_entries": 96,
+        "open_entries": 95,
         "highest_open_priority": "P1",
         "by_status": {
           "headless_only": 6,
           "out_of_scope": 57,
           "parity": 16,
-          "partial": 90,
-          "ported": 110
+          "partial": 89,
+          "ported": 111
         }
       },
       {
@@ -18846,11 +18846,11 @@
       "upstream_path": "utility/programming/ieHash.m",
       "family": "utility",
       "kind": "helper",
-      "status": "partial",
-      "python_surface": "pyisetcam.utils",
+      "status": "ported",
+      "python_surface": "pyisetcam.utils, pyisetcam.__init__",
       "tests": [],
-      "notes": "The family has a Python surface, but this specific path lacks explicit parity or direct implementation evidence.",
-      "priority": "P1"
+      "notes": "The upstream recursive hashing helper is covered by the Python `ie_hash(...)` / `ieHash(...)` compatibility wrapper in `pyisetcam.utils`, with focused regression coverage over the upstream array, binary, ASCII, file, and output-format examples.",
+      "priority": "P3"
     },
     {
       "upstream_path": "utility/programming/ieMemoryCheck.m",

@@ -2077,16 +2077,17 @@ smaller too: `comp_struct(...)`, `list_struct(...)`, `zernfun(...)`,
 wrappers in `pyisetcam.utils`, while the third-party `Inpaint_nans`
 numerical package and the GUI-only `freezeColors` figure helpers are
 explicitly treated as out of scope.
-The neighboring `utility/programming` family is now nearly closed too:
+The neighboring `utility/programming` family is now fully closed too:
 direct headless compatibility coverage now explicitly tracks
 `appendStruct(...)`, `cellDelete(...)`, `cellMerge(...)`, `checkfields(...)`,
 `compareFields(...)`, `gatherStruct(...)`, `ieContains(...)`,
 `replaceNaN(...)`, `struct2pairs(...)`, `ieStructCompare(...)`,
-`ieStructRemoveEmptyField(...)`, and the broader `vc*` / `ie*`
-session-object helper surface against the current `pyisetcam.utils`,
-`pyisetcam.session`, and `pyisetcam.ptable` runtime. The remaining
-environment-only helpers such as `checkToolbox.m`, `clx.m`,
-`hiddenHandle.m`, `ieFindCallback.m`, `ieMemoryCheck.m`,
-`ieMemorySize.m`, `ieQuestdlg.m`, and `notDefined.m` are explicitly
-tracked as out of scope, leaving only `ieHash.m` as the final open
-`utility/programming` entry.
+`ieStructRemoveEmptyField(...)`, `ieHash(...)`, and the broader `vc*` /
+`ie*` session-object helper surface against the current
+`pyisetcam.utils`, `pyisetcam.session`, and `pyisetcam.ptable` runtime.
+The remaining environment-only helpers such as `checkToolbox.m`,
+`clx.m`, `hiddenHandle.m`, `ieFindCallback.m`, `ieMemoryCheck.m`,
+`ieMemorySize.m`, `ieQuestdlg.m`, and `notDefined.m` remain explicitly
+tracked as out of scope, so the remaining utility debt now sits in the
+larger external lanes such as `utility/external/hdr` and
+`utility/external/facetracker`.

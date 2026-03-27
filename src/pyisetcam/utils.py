@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import base64
 import copy
+import hashlib
 import math
 import re
 from collections.abc import Mapping
@@ -1279,6 +1281,320 @@ def zernfun2(p: Any, r: Any, theta: Any, nflag: Any | None = None) -> NDArray[np
     n_vector = np.ceil((-3.0 + np.sqrt(9.0 + 8.0 * p_vector)) / 2.0).astype(int)
     m_vector = (2 * p_vector - n_vector * (n_vector + 2)).astype(int)
     return zernfun(n_vector, m_vector, r, theta, nflag)
+
+
+_IE_HASH_MISSING = object()
+_IE_HASH_VERSION = 4
+_IE_HASH_DATE = [2018, 5, 19]
+_IE_HASH_METHOD_ALIASES = {
+    "MD2": "md2",
+    "MD5": "md5",
+    "SHA1": "sha1",
+    "SHA-1": "sha1",
+    "SHA224": "sha224",
+    "SHA-224": "sha224",
+    "SHA256": "sha256",
+    "SHA-256": "sha256",
+    "SHA384": "sha384",
+    "SHA-384": "sha384",
+    "SHA512": "sha512",
+    "SHA-512": "sha512",
+}
+_IE_HASH_CANONICAL_METHODS = [
+    ("MD2", "md2"),
+    ("MD5", "md5"),
+    ("SHA-1", "sha1"),
+    ("SHA-224", "sha224"),
+    ("SHA-256", "sha256"),
+    ("SHA-384", "sha384"),
+    ("SHA-512", "sha512"),
+]
+
+
+def _ie_hash_version() -> dict[str, Any]:
+    available = {name.lower() for name in hashlib.algorithms_available}
+    methods = [label for label, algorithm in _IE_HASH_CANONICAL_METHODS if algorithm in available]
+    return {
+        "HashVersion": _IE_HASH_VERSION,
+        "Date": list(_IE_HASH_DATE),
+        "HashMethod": methods,
+    }
+
+
+def _ie_hash_normalize_method(method: str) -> tuple[str, str]:
+    key = str(method).strip().upper()
+    algorithm = _IE_HASH_METHOD_ALIASES.get(key)
+    if algorithm is None:
+        normalized = key.replace("_", "").replace("-", "")
+        algorithm = _IE_HASH_METHOD_ALIASES.get(normalized)
+    if algorithm is None:
+        raise ValueError(f"Invalid hashing algorithm: [{method}]")
+    try:
+        hashlib.new(algorithm)
+    except ValueError as exc:
+        raise ValueError(f"Invalid hashing algorithm: [{method}]") from exc
+    for label, candidate in _IE_HASH_CANONICAL_METHODS:
+        if candidate == algorithm:
+            return label, algorithm
+    return key, algorithm
+
+
+def _ie_hash_scalar_array(data: Any) -> np.ndarray:
+    array = np.asarray(data)
+    if array.ndim == 0:
+        return array.reshape((1, 1))
+    if array.ndim == 1:
+        return array.reshape((1, array.size))
+    return array
+
+
+def _ie_hash_class_name(array: np.ndarray) -> str:
+    dtype = np.asarray(array).dtype
+    if dtype == np.bool_:
+        return "logical"
+    if dtype.kind == "u":
+        return f"uint{dtype.itemsize * 8}"
+    if dtype.kind == "i":
+        return f"int{dtype.itemsize * 8}"
+    if dtype.kind == "f":
+        if dtype.itemsize == 4:
+            return "single"
+        if dtype.itemsize == 8:
+            return "double"
+    if dtype.kind == "c":
+        if dtype.itemsize == 8:
+            return "single"
+        if dtype.itemsize == 16:
+            return "double"
+    raise ValueError(f"Data type not handled: {dtype}")
+
+
+def _ie_hash_shape(array: np.ndarray) -> tuple[int, ...]:
+    if array.ndim == 0:
+        return (1, 1)
+    if array.ndim == 1:
+        return (1, int(array.size))
+    return tuple(int(value) for value in array.shape)
+
+
+def _ie_hash_metadata_bytes(class_name: str, shape: tuple[int, ...]) -> bytes:
+    dimensions = np.asarray([len(shape), *shape], dtype="<u8")
+    return class_name.encode("ascii") + dimensions.tobytes()
+
+
+def _ie_hash_numeric_bytes(array: np.ndarray) -> bytes:
+    flat = np.ravel(np.asarray(array), order="F")
+    native = flat.astype(flat.dtype.newbyteorder("="), copy=False)
+    return native.tobytes()
+
+
+def _ie_hash_char_units(text: str) -> np.ndarray:
+    return np.frombuffer(str(text).encode("utf-16le"), dtype="<u2")
+
+
+def _ie_hash_function_payload(func: Any) -> dict[str, Any]:
+    return {
+        "function": getattr(func, "__name__", repr(func)),
+        "module": getattr(func, "__module__", ""),
+        "qualname": getattr(func, "__qualname__", getattr(func, "__name__", repr(func))),
+    }
+
+
+def _ie_hash_update_array(hasher: Any, data: Any) -> None:
+    if isinstance(data, Mapping):
+        hasher.update(_ie_hash_metadata_bytes("struct", (1, 1)))
+        for key in sorted(str(name) for name in data.keys()):
+            hasher.update(key.encode("utf-8"))
+            _ie_hash_update_array(hasher, data[key])
+        return
+
+    if isinstance(data, (list, tuple)):
+        values = list(data)
+        hasher.update(_ie_hash_metadata_bytes("cell", (1, len(values))))
+        for item in values:
+            _ie_hash_update_array(hasher, item)
+        return
+
+    if isinstance(data, (str, np.str_)):
+        units = _ie_hash_char_units(str(data))
+        hasher.update(_ie_hash_metadata_bytes("char", (1, int(units.size))))
+        if units.size:
+            hasher.update(units.tobytes())
+        return
+
+    if isinstance(data, (bytes, bytearray, memoryview)):
+        values = np.frombuffer(bytes(data), dtype=np.uint8)
+        hasher.update(_ie_hash_metadata_bytes("uint8", (1, int(values.size))))
+        if values.size:
+            hasher.update(values.tobytes())
+        return
+
+    if isinstance(data, np.ndarray):
+        if data.dtype == object or data.dtype.kind in {"U", "S"}:
+            shape = _ie_hash_shape(data)
+            hasher.update(_ie_hash_metadata_bytes("cell", shape))
+            for item in np.ravel(data, order="F"):
+                _ie_hash_update_array(hasher, item.item() if hasattr(item, "item") else item)
+            return
+        array = _ie_hash_scalar_array(data)
+        class_name = _ie_hash_class_name(array)
+        shape = _ie_hash_shape(array)
+        hasher.update(_ie_hash_metadata_bytes(class_name, shape))
+        if array.size == 0:
+            return
+        if np.iscomplexobj(array):
+            hasher.update(_ie_hash_numeric_bytes(np.real(array)))
+            hasher.update(_ie_hash_numeric_bytes(np.imag(array)))
+        elif array.dtype == np.bool_:
+            hasher.update(np.ravel(array.astype(np.uint8, copy=False), order="F").tobytes())
+        else:
+            hasher.update(_ie_hash_numeric_bytes(array))
+        return
+
+    if isinstance(data, (bool, np.bool_)):
+        _ie_hash_update_array(hasher, np.asarray(data, dtype=np.bool_))
+        return
+
+    if isinstance(data, (int, np.integer, float, np.floating, complex, np.complexfloating)):
+        _ie_hash_update_array(hasher, np.asarray(data))
+        return
+
+    if callable(data):
+        hasher.update(_ie_hash_metadata_bytes("function_handle", (1, 1)))
+        _ie_hash_update_array(hasher, _ie_hash_function_payload(data))
+        return
+
+    if hasattr(data, "__dict__"):
+        hasher.update(_ie_hash_metadata_bytes(data.__class__.__name__, (1, 1)))
+        _ie_hash_update_array(hasher, vars(data))
+        return
+
+    raise ValueError(f"Cannot create elementary array for type: {type(data).__name__}")
+
+
+def _ie_hash_update_bin(hasher: Any, data: Any) -> None:
+    if isinstance(data, (str, np.str_)):
+        units = _ie_hash_char_units(str(data))
+        if units.size:
+            hasher.update(units.tobytes())
+        return
+
+    if isinstance(data, (bytes, bytearray, memoryview)):
+        payload = bytes(data)
+        if payload:
+            hasher.update(payload)
+        return
+
+    array = np.asarray(data)
+    if array.dtype.kind in {"U", "S", "O"}:
+        raise ValueError("[Bin] input needs data type: numeric, CHAR, LOGICAL, STRING.")
+    if array.size == 0:
+        return
+    if np.iscomplexobj(array):
+        hasher.update(_ie_hash_numeric_bytes(np.real(array)))
+        hasher.update(_ie_hash_numeric_bytes(np.imag(array)))
+        return
+    if array.dtype == np.bool_:
+        hasher.update(np.ravel(array.astype(np.uint8, copy=False), order="F").tobytes())
+        return
+    hasher.update(_ie_hash_numeric_bytes(array))
+
+
+def _ie_hash_prepare_ascii_data(data: Any) -> np.ndarray:
+    if not isinstance(data, (str, np.str_)):
+        raise ValueError("ASCII method: Data must be a CHAR or scalar STRING.")
+    text = str(data)
+    values = np.asarray([ord(character) & 0xFF for character in text], dtype=np.uint8)
+    return values.reshape((1, values.size))
+
+
+def _ie_hash_parse_input(data: Any, *args: Any) -> tuple[str, str, bool, bool, Any]:
+    method = "MD5"
+    out_format = "hex"
+    is_file = False
+    is_bin = False
+
+    options: list[Any] = list(args)
+    if len(options) == 1 and isinstance(options[0], Mapping):
+        struct_options = options[0]
+        options = []
+        for key in ("Input", "Method", "OutFormat"):
+            if key in struct_options:
+                options.append(struct_options[key])
+
+    for option in options:
+        if not isinstance(option, str):
+            raise ValueError("[Opt] must be a struct or chars.")
+        lowered = option.lower()
+        if lowered == "file":
+            is_file = True
+            continue
+        if lowered in {"bin", "binary"}:
+            array = np.asarray(data)
+            if isinstance(data, (bytes, bytearray, memoryview)):
+                pass
+            elif array.dtype.kind in {"U", "S", "O"} and not isinstance(data, (str, np.str_)):
+                raise ValueError("[Bin] input needs data type: numeric, CHAR, LOGICAL, STRING.")
+            is_bin = True
+            continue
+        if lowered == "array":
+            is_bin = False
+            continue
+        if lowered in {"asc", "ascii"}:
+            data = _ie_hash_prepare_ascii_data(data)
+            is_bin = True
+            continue
+        if lowered == "hex":
+            out_format = "HEX" if option.startswith("H") else "hex"
+            continue
+        if lowered in {"double", "uint8", "short", "base64"}:
+            out_format = lowered
+            continue
+        method = option.upper()
+
+    return method, out_format, is_file, is_bin, data
+
+
+def ie_hash(data: Any = _IE_HASH_MISSING, *args: Any) -> Any:
+    """Create a MATLAB-compatible hash for arrays, structs, cells, or files."""
+
+    if data is _IE_HASH_MISSING:
+        return _ie_hash_version()
+
+    method_label, out_format, is_file, is_bin, prepared = _ie_hash_parse_input(data, *args)
+    _, algorithm = _ie_hash_normalize_method(method_label)
+    hasher = hashlib.new(algorithm)
+
+    if is_file:
+        file_path = Path(prepared)
+        with file_path.open("rb") as stream:
+            while True:
+                chunk = stream.read(1_000_000)
+                if not chunk:
+                    break
+                hasher.update(chunk)
+    elif is_bin:
+        _ie_hash_update_bin(hasher, prepared)
+    else:
+        _ie_hash_update_array(hasher, prepared)
+
+    digest = hasher.digest()
+    if out_format == "hex":
+        return digest.hex()
+    if out_format == "HEX":
+        return digest.hex().upper()
+    if out_format == "double":
+        return np.frombuffer(digest, dtype=np.uint8).astype(float)
+    if out_format == "uint8":
+        return np.frombuffer(digest, dtype=np.uint8).copy()
+    if out_format == "base64":
+        return base64.b64encode(digest).decode("ascii")
+    if out_format == "short":
+        return base64.b64encode(digest).decode("ascii").rstrip("=")
+    raise ValueError("[Opt.Format] must be: HEX, hex, uint8, double, base64.")
+
+
+ieHash = ie_hash
 
 
 def ie_contains(value: Any, pattern: str) -> bool | NDArray[np.bool_]:

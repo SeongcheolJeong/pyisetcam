@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import hashlib
 import math
 
 import numpy as np
@@ -36,6 +38,7 @@ from pyisetcam import (
     ieClip,
     ieCompressData,
     ieContains,
+    ieHash,
     ieCropRect,
     ieDataList,
     ieDpi2Mperdot,
@@ -137,6 +140,7 @@ from pyisetcam.utils import (
     hc_read_hyspex_imginfo,
     hc_viewer,
     half_tone_image,
+    ie_hash,
     ie_contains,
     ie_cmap,
     ie_clip,
@@ -1935,3 +1939,36 @@ def test_programming_helper_wrappers_cover_struct_compare_and_empty_field_cleanu
     assert alias_d2 == d2
     assert cleaned == {"a": 1}
     assert alias_cleaned == {"keep": "x"}
+
+
+def test_iehash_matches_upstream_examples_and_output_formats(tmp_path) -> None:
+    version = ie_hash()
+    empty_double = np.empty((0, 0), dtype=np.float64)
+    binary_vector = np.arange(1.0, 9.0, dtype=np.float64)
+    md5_digest = hashlib.md5(b"abc").digest()
+    payload_path = tmp_path / "payload.bin"
+    payload_path.write_bytes(b"camera-e2e")
+
+    assert version["HashVersion"] == 4
+    assert version["Date"] == [2018, 5, 19]
+    assert "MD5" in version["HashMethod"]
+    assert ie_hash(empty_double) == "5b302b7b2099a97ba2a276640a192485"
+    assert ieHash(binary_vector, "SHA-1", "bin") == "826cf9d3a5d74bbe415e97d4cecf03f445f69225"
+    assert ie_hash("abc", {"Input": "ascii", "Method": "SHA-256", "OutFormat": "hex"}) == (
+        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    )
+    assert np.array_equal(
+        ie_hash(np.frombuffer(b"abc", dtype=np.uint8), "MD5", "bin", "uint8"),
+        np.frombuffer(md5_digest, dtype=np.uint8),
+    )
+    assert np.array_equal(
+        ieHash(np.frombuffer(b"abc", dtype=np.uint8), "MD5", "bin", "double"),
+        np.frombuffer(md5_digest, dtype=np.uint8).astype(float),
+    )
+    assert ie_hash(np.frombuffer(b"abc", dtype=np.uint8), "MD5", "bin", "base64") == base64.b64encode(md5_digest).decode(
+        "ascii"
+    )
+    assert ie_hash(np.frombuffer(b"abc", dtype=np.uint8), "MD5", "bin", "short") == base64.b64encode(md5_digest).decode(
+        "ascii"
+    ).rstrip("=")
+    assert ie_hash(payload_path, "file", "MD5") == hashlib.md5(b"camera-e2e").hexdigest()
