@@ -4118,9 +4118,9 @@ def scene_create(
                 scene_vernier(scene_create("empty", asset_store=store), vernier_type, params, asset_store=store),
             )
 
-        size = args[0] if len(args) > 0 else 64
-        width = int(args[1]) if len(args) > 1 else 0
-        offset = int(args[2]) if len(args) > 2 else 1
+        size = args[0] if len(args) > 0 else 65
+        width = int(args[1]) if len(args) > 1 else 3
+        offset = int(args[2]) if len(args) > 2 else 3
         line_reflectance = float(args[3]) if len(args) > 3 else 0.6
         back_reflectance = float(args[4]) if len(args) > 4 else 0.3
         params = {

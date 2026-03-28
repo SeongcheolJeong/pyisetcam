@@ -289,6 +289,10 @@ and
 arguments onto the same headless parameter path as the existing struct-style
 moire target form,
 and
+the numeric `sceneCreate('vernier', ...)` shortcut now replays the upstream
+MATLAB defaults of `65` pixels, `3`-pixel bars, and `3`-pixel offset instead
+of the lower-level helper defaults,
+and
 `sceneCreate('letter', 'g', fontSize, fontName, display)` now replays the
 documented text shorthand on top of the existing font-object path. The
 same scene lane now also accepts the documented `sceneCreate('vernier',

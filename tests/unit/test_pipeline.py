@@ -16026,6 +16026,13 @@ def test_scene_vernier_wrapper_surface(asset_store) -> None:
         asset_store=asset_store,
     )
     legacy_alias = scene_create("vernier", 64, 3, 2, 0.7, 0.2, asset_store=asset_store)
+    default_reference = sceneVernier(
+        scene_create("empty", asset_store=asset_store),
+        "object",
+        {"sceneSz": 65, "barWidth": 3, "offset": 3, "barReflect": 0.6, "bgReflect": 0.3},
+        asset_store=asset_store,
+    )
+    default_alias = scene_create("vernier", asset_store=asset_store)
 
     assert tuple(scene_get(display_scene, "size")) == (64, 64)
     assert np.isclose(float(scene_get(display_scene, "mean luminance", asset_store=asset_store)), 10.0, atol=1e-6, rtol=1e-6)
@@ -16033,9 +16040,11 @@ def test_scene_vernier_wrapper_surface(asset_store) -> None:
     assert tuple(scene_get(object_alias, "size")) == (64, 65)
     assert tuple(scene_get(shorthand_alias, "size")) == (64, 65)
     assert tuple(scene_get(legacy_alias, "size")) == (64, 65)
+    assert tuple(scene_get(default_alias, "size")) == (65, 65)
     assert object_scene.name == "vernier-2"
     assert shorthand_alias.name == "vernier-2"
     assert legacy_alias.name == "vernier-2"
+    assert default_alias.name == "vernier-3"
     assert np.isclose(float(scene_get(object_scene, "mean luminance", asset_store=asset_store)), 12.0, atol=1e-6, rtol=1e-6)
     assert np.max(np.asarray(scene_get(object_scene, "luminance", asset_store=asset_store), dtype=float)) > np.min(
         np.asarray(scene_get(object_scene, "luminance", asset_store=asset_store), dtype=float)
@@ -16049,6 +16058,12 @@ def test_scene_vernier_wrapper_surface(asset_store) -> None:
     np.testing.assert_allclose(
         np.asarray(scene_get(legacy_alias, "photons"), dtype=float),
         np.asarray(scene_get(legacy_reference, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    np.testing.assert_allclose(
+        np.asarray(scene_get(default_alias, "photons"), dtype=float),
+        np.asarray(scene_get(default_reference, "photons"), dtype=float),
         rtol=0.0,
         atol=0.0,
     )
