@@ -208,6 +208,29 @@ def test_scene_create_letter_branch_reuses_font_pipeline(asset_store) -> None:
     )
 
 
+def test_uniform_family_accepts_empty_size_placeholders(asset_store) -> None:
+    wave = np.array([450.0, 550.0, 650.0], dtype=float)
+
+    uniform_placeholder = scene_create("uniform", [], wave, asset_store=asset_store)
+    uniform_reference = scene_create("uniform", 32, wave, asset_store=asset_store)
+    d65_placeholder = scene_create("uniform d65", np.array([], dtype=float), wave, asset_store=asset_store)
+    d65_reference = scene_create("uniform d65", 32, wave, asset_store=asset_store)
+    ep_placeholder = scene_create("uniform ep", [], wave, asset_store=asset_store)
+    ep_reference = scene_create("uniform ep", 32, wave, asset_store=asset_store)
+    bb_placeholder = scene_create("uniform bb", [], 4500, wave, asset_store=asset_store)
+    bb_reference = scene_create("uniform bb", 32, 4500, wave, asset_store=asset_store)
+
+    np.testing.assert_allclose(scene_get(uniform_placeholder, "photons"), scene_get(uniform_reference, "photons"), rtol=0.0, atol=0.0)
+    np.testing.assert_allclose(scene_get(d65_placeholder, "photons"), scene_get(d65_reference, "photons"), rtol=0.0, atol=0.0)
+    np.testing.assert_allclose(scene_get(ep_placeholder, "photons"), scene_get(ep_reference, "photons"), rtol=0.0, atol=0.0)
+    np.testing.assert_allclose(scene_get(bb_placeholder, "photons"), scene_get(bb_reference, "photons"), rtol=0.0, atol=0.0)
+    assert tuple(scene_get(uniform_placeholder, "size")) == (32, 32)
+    assert tuple(scene_get(d65_placeholder, "size")) == (32, 32)
+    assert tuple(scene_get(ep_placeholder, "size")) == (32, 32)
+    assert tuple(scene_get(bb_placeholder, "size")) == (32, 32)
+    np.testing.assert_array_equal(np.asarray(scene_get(bb_placeholder, "wave"), dtype=float), wave)
+
+
 def test_scene_from_file_supports_multispectral_mat_files(asset_store) -> None:
     scene = scene_from_file(
         asset_store.resolve("data/images/multispectral/Feng_Office-hdrs.mat"),

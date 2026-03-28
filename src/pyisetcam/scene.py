@@ -1660,6 +1660,8 @@ def _scene_size_2d(size: Any, *, default: int) -> tuple[int, int]:
         side = int(size)
         return (side, side)
     values = np.asarray(size, dtype=int).reshape(-1)
+    if values.size == 0:
+        return (int(default), int(default))
     if values.size == 1:
         side = int(values[0])
         return (side, side)

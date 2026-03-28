@@ -277,6 +277,11 @@ width)` now replays the documented equal-energy bar alias,
 documented square-array shorthand, and the slanted-bar dispatcher now also
 accepts empty field-of-view placeholders in documented forms like
 `sceneCreate('iso12233', imageSize, slope, [], wave, darklevel)`, and
+the same scene-size parser now also replays empty size placeholders for the
+uniform-family constructors such as `sceneCreate('uniform', [], wave)`,
+`sceneCreate('uniform d65', [], wave)`, `sceneCreate('uniform ep', [], wave)`,
+and `sceneCreate('uniform bb', [], cTemp, wave)`,
+preserving the upstream default `32 x 32` scene size, while
 `sceneCreate('letter', 'g', fontSize, fontName, display)` now replays the
 documented text shorthand on top of the existing font-object path. The
 same scene lane now also accepts the documented `sceneCreate('vernier',
