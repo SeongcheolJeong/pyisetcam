@@ -4137,7 +4137,7 @@ def scene_create(
         }
         return track_session_object(session, scene)
 
-    if name == "ramp":
+    if name in {"ramp", "rampequalphoton"}:
         size = args[0] if len(args) > 0 else 128
         dynamic_range = float(args[1]) if len(args) > 1 else 256.0
         wave = _wave_or_default(args[2] if len(args) > 2 else None)

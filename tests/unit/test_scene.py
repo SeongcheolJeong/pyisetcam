@@ -90,6 +90,21 @@ def test_scene_create_rgb_multispectral_and_monochrome_shells(asset_store) -> No
     assert scene_get(resized, "fov") == scene_get(rgb, "fov")
 
 
+def test_scene_create_ramp_equal_photon_alias_matches_ramp(asset_store) -> None:
+    ramp = scene_create("ramp", 32, 128.0, asset_store=asset_store)
+    alias = scene_create("ramp equal photon", 32, 128.0, asset_store=asset_store)
+
+    assert scene_get(alias, "name") == scene_get(ramp, "name")
+    np.testing.assert_array_equal(scene_get(alias, "wave"), scene_get(ramp, "wave"))
+    np.testing.assert_allclose(np.asarray(scene_get(alias, "photons"), dtype=float), np.asarray(scene_get(ramp, "photons"), dtype=float))
+    assert np.isclose(
+        scene_get(alias, "mean luminance", asset_store=asset_store),
+        scene_get(ramp, "mean luminance", asset_store=asset_store),
+        rtol=1e-10,
+        atol=1e-10,
+    )
+
+
 def test_scene_adjust_illuminant_preserves_mean(asset_store) -> None:
     scene = scene_create(asset_store=asset_store)
     wave = scene_get(scene, "wave")
