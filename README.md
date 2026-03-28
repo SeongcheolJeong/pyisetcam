@@ -311,6 +311,13 @@ placeholders in `sceneCreate('disk array', imageSize, [], arraySize, wave)`
 and `sceneCreate('square array', imageSize, [], arraySize, wave)`, preserving
 the upstream default disk radius of `128` pixels and square size of `16`
 pixels,
+while the same helper-backed pattern lane now also honors MATLAB-style empty
+placeholders in `sceneCreate('whitenoise', imageSize, [], wave)`,
+`sceneCreate('rings rays', [], imageSize, wave)`,
+`sceneCreate('rings rays', radialFreq, [], wave)`, and
+`sceneCreate('slanted bar', [], [], [], wave, [])`, preserving the upstream
+default contrast, radial frequency, image size, slope, field of view, and
+dark level instead of crashing on `[]`,
 and
 `sceneCreate('moire orient', imageSize, f)` now maps the positional
 arguments onto the same headless parameter path as the existing struct-style

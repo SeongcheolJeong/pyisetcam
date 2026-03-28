@@ -700,6 +700,36 @@ def test_zone_plate_dispatch_accepts_optional_field_of_view_and_wave(asset_store
     )
 
 
+def test_noise_mackay_and_slanted_bar_dispatch_accept_empty_optional_placeholders(asset_store) -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+
+    noise_placeholder = scene_create("whitenoise", 128, [], wave, asset_store=asset_store)
+    noise_explicit = scene_create("whitenoise", 128, 20.0, wave, asset_store=asset_store)
+    mackay_radfreq_placeholder = scene_create("rings rays", [], 256, wave, asset_store=asset_store)
+    mackay_radfreq_explicit = scene_create("rings rays", 8.0, 256, wave, asset_store=asset_store)
+    mackay_size_placeholder = scene_create("rings rays", 8.0, [], wave, asset_store=asset_store)
+    mackay_size_explicit = scene_create("rings rays", 8.0, 256, wave, asset_store=asset_store)
+    slanted_placeholder = scene_create("slanted bar", [], [], [], wave, [], asset_store=asset_store)
+    slanted_explicit = scene_create("slanted bar", 384, 2.6, 2.0, wave, 0.0, asset_store=asset_store)
+
+    for placeholder, explicit in (
+        (noise_placeholder, noise_explicit),
+        (mackay_radfreq_placeholder, mackay_radfreq_explicit),
+        (mackay_size_placeholder, mackay_size_explicit),
+        (slanted_placeholder, slanted_explicit),
+    ):
+        np.testing.assert_allclose(
+            np.asarray(scene_get(placeholder, "photons"), dtype=float),
+            np.asarray(scene_get(explicit, "photons"), dtype=float),
+            rtol=0.0,
+            atol=0.0,
+        )
+        assert np.array_equal(
+            np.asarray(scene_get(placeholder, "wave"), dtype=float),
+            np.asarray(scene_get(explicit, "wave"), dtype=float),
+        )
+
+
 def test_point_array_and_grid_lines_follow_spacing(asset_store) -> None:
     point_array = scene_create("point array", 32, 8, "ep", 1, asset_store=asset_store)
     grid_lines = scene_create("grid lines", 32, 8, "ep", 1, asset_store=asset_store)
