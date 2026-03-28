@@ -6084,36 +6084,52 @@ def test_sensor_model_wrappers_match_legacy_vendor_contracts(asset_store) -> Non
     assert len(sensor_get(imec, "filter names")) == 16
 
     imec_dispatch = sensor_create("imec44", None, [8, 12], asset_store=asset_store)
+    imec_dispatch_placeholder = sensor_create("imec44", [], [8, 12], asset_store=asset_store)
     imec_dispatch_overload = sensor_create("imec44", [8, 12], asset_store=asset_store)
     assert imec_dispatch.name == "IMEC SSM"
+    assert imec_dispatch_placeholder.name == "IMEC SSM"
     assert imec_dispatch_overload.name == "IMEC SSM"
     assert imec_dispatch.fields["size"] == (8, 12)
+    assert imec_dispatch_placeholder.fields["size"] == (8, 12)
     assert imec_dispatch_overload.fields["size"] == (8, 12)
     assert sensor_get(imec_dispatch, "quantizationmethod") == "10 bit"
+    assert sensor_get(imec_dispatch_placeholder, "quantizationmethod") == "10 bit"
     assert sensor_get(imec_dispatch_overload, "quantizationmethod") == "10 bit"
     assert np.array_equal(sensor_get(imec_dispatch, "pattern"), sensor_get(imec, "pattern"))
+    assert np.array_equal(sensor_get(imec_dispatch_placeholder, "pattern"), sensor_get(imec, "pattern"))
     assert np.array_equal(sensor_get(imec_dispatch_overload, "pattern"), sensor_get(imec, "pattern"))
 
     custom_wave = np.array([500.0, 600.0, 700.0], dtype=float)
     custom_dispatch = sensor_create("custom", None, pattern, filter_struct, [6, 8], custom_wave, asset_store=asset_store)
+    custom_placeholder = sensor_create("custom", [], pattern, filter_struct, [6, 8], custom_wave, asset_store=asset_store)
     custom_overload = sensor_create("custom", pattern, filter_struct, [6, 8], custom_wave, asset_store=asset_store)
     fourcolor = sensor_create("fourcolor", None, pattern, filter_struct, asset_store=asset_store)
+    fourcolor_placeholder = sensor_create("fourcolor", [], pattern, filter_struct, asset_store=asset_store)
 
     assert custom_dispatch.name == "custom"
+    assert custom_placeholder.name == "custom"
     assert custom_overload.name == "custom"
     assert custom_dispatch.fields["size"] == (6, 8)
+    assert custom_placeholder.fields["size"] == (6, 8)
     assert custom_overload.fields["size"] == (6, 8)
     assert np.array_equal(np.asarray(sensor_get(custom_dispatch, "wave"), dtype=float), custom_wave)
+    assert np.array_equal(np.asarray(sensor_get(custom_placeholder, "wave"), dtype=float), custom_wave)
     assert np.array_equal(np.asarray(sensor_get(custom_overload, "wave"), dtype=float), custom_wave)
     assert np.array_equal(sensor_get(custom_dispatch, "pattern"), pattern)
+    assert np.array_equal(sensor_get(custom_placeholder, "pattern"), pattern)
     assert np.array_equal(sensor_get(custom_overload, "pattern"), pattern)
     assert sensor_get(custom_dispatch, "filter names") == ["c1", "c2", "c3"]
+    assert sensor_get(custom_placeholder, "filter names") == ["c1", "c2", "c3"]
     assert sensor_get(custom_overload, "filter names") == ["c1", "c2", "c3"]
 
     assert fourcolor.name == "fourcolor"
+    assert fourcolor_placeholder.name == "fourcolor"
     assert fourcolor.fields["size"] == sensor_create(asset_store=asset_store).fields["size"]
+    assert fourcolor_placeholder.fields["size"] == sensor_create(asset_store=asset_store).fields["size"]
     assert np.array_equal(sensor_get(fourcolor, "pattern"), pattern)
+    assert np.array_equal(sensor_get(fourcolor_placeholder, "pattern"), pattern)
     assert sensor_get(fourcolor, "filter names") == ["c1", "c2", "c3"]
+    assert sensor_get(fourcolor_placeholder, "filter names") == ["c1", "c2", "c3"]
 
     nikon = sensor_create("Nikon D100", asset_store=asset_store)
     assert nikon.name == "Nikon-D100"
@@ -11042,17 +11058,21 @@ def test_sensor_create_supports_ovt_vendor_presets(asset_store) -> None:
 def test_sensor_create_supports_monochrome_array_dispatch(asset_store) -> None:
     default_array = sensor_create("monochrome array", asset_store=asset_store)
     explicit = sensor_create("monochrome array", None, 5, asset_store=asset_store)
+    placeholder = sensor_create("monochrome array", [], 5, asset_store=asset_store)
     overloaded = sensor_create("monochrome array", 4, asset_store=asset_store)
 
     assert isinstance(default_array, list)
     assert isinstance(explicit, list)
+    assert isinstance(placeholder, list)
     assert isinstance(overloaded, list)
     assert len(default_array) == 3
     assert len(explicit) == 5
+    assert len(placeholder) == 5
     assert len(overloaded) == 4
     assert explicit[0] is not explicit[1]
+    assert placeholder[0] is not placeholder[1]
 
-    for current in explicit + overloaded + default_array:
+    for current in explicit + placeholder + overloaded + default_array:
         assert sensor_get(current, "name") == "monochrome"
         assert sensor_get(current, "filter names") == ["w"]
         np.testing.assert_array_equal(

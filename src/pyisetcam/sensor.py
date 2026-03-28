@@ -224,6 +224,14 @@ def _default_pixel(pixel: dict[str, Any] | None) -> dict[str, Any]:
     return merged
 
 
+def _is_empty_dispatch_placeholder(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, (list, tuple, np.ndarray)):
+        return np.asarray(value).size == 0
+    return False
+
+
 def _sensor_base(
     name: str,
     wave: np.ndarray,
@@ -1801,13 +1809,13 @@ def sensor_create(
     if normalized == "dualpixel" and isinstance(pixel, OpticalImage):
         args = (pixel, *args)
         pixel = None
-    if normalized == "monochromearray" and pixel is not None and not isinstance(pixel, dict):
+    if normalized == "monochromearray" and pixel is not None and not isinstance(pixel, dict) and not _is_empty_dispatch_placeholder(pixel):
         args = (pixel, *args)
         pixel = None
-    if normalized == "imec44" and pixel is not None and not isinstance(pixel, dict):
+    if normalized == "imec44" and pixel is not None and not isinstance(pixel, dict) and not _is_empty_dispatch_placeholder(pixel):
         args = (pixel, *args)
         pixel = None
-    if normalized in {"custom", "fourcolor"} and pixel is not None and not isinstance(pixel, dict):
+    if normalized in {"custom", "fourcolor"} and pixel is not None and not isinstance(pixel, dict) and not _is_empty_dispatch_placeholder(pixel):
         args = (pixel, *args)
         pixel = None
     if normalized in {"mt9v024", "ar0132at"} and isinstance(pixel, str):

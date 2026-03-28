@@ -296,7 +296,10 @@ reuse the current headless custom filter-pattern helper.
 `sensorCreate('human', pixel, params)` form now also replay the upstream
 human-cone parameter-struct flow on top of the existing
 `pixelCreate('human')` and `sensorCreateConeMosaic(...)` helpers. The same
-dispatcher lane now also exposes the legacy
+dispatcher lane now also replays the documented empty-placeholder `[]`
+forms for `sensorCreate('imec44', [], rowcol)`,
+`sensorCreate('monochrome array', [], N)`, and the `custom` /
+`fourcolor` constructors, and it also exposes the legacy
 `sensorCreate('Nikon D100')` preset from the vendored Nikon MAT asset. The
 dispatcher also now accepts the remaining parenthesized Bayer CFA aliases
 from upstream, including `bayer(grbg)`, `bayer(rggb)`, and `bayer(bggr)`.
