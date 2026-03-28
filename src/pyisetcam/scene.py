@@ -4291,7 +4291,7 @@ def scene_create(
 
     if name in {"bar", "baree"}:
         size = args[0] if len(args) > 0 else 64
-        width = int(args[1]) if len(args) > 1 else 3
+        width = int(args[1]) if len(args) > 1 else 5
         wave = _wave_or_default(args[2] if len(args) > 2 else None)
         return track_session_object(session, _bar_scene(size, width, wave, asset_store=store))
 

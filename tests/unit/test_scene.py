@@ -583,6 +583,19 @@ def test_bar_ee_alias_matches_bar_scene(asset_store) -> None:
     assert tuple(scene_get(alias, "size")) == (33, 33)
 
 
+def test_bar_dispatch_replays_matlab_default_width(asset_store) -> None:
+    default_bar = scene_create("bar", asset_store=asset_store)
+    explicit_bar = scene_create("bar", 64, 5, asset_store=asset_store)
+
+    np.testing.assert_allclose(
+        np.asarray(scene_get(default_bar, "photons"), dtype=float),
+        np.asarray(scene_get(explicit_bar, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    assert tuple(scene_get(default_bar, "size")) == (64, 64)
+
+
 def test_squares_alias_matches_square_array_scene(asset_store) -> None:
     canonical = scene_create("square array", 64, 8, np.array([2, 2], dtype=int), asset_store=asset_store)
     alias = scene_create("squares", 64, 8, np.array([2, 2], dtype=int), asset_store=asset_store)

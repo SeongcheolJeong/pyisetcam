@@ -293,6 +293,9 @@ the numeric `sceneCreate('vernier', ...)` shortcut now replays the upstream
 MATLAB defaults of `65` pixels, `3`-pixel bars, and `3`-pixel offset instead
 of the lower-level helper defaults,
 and
+the plain `sceneCreate('bar')` shortcut now replays MATLAB's default
+5-pixel bar width instead of the narrower helper-era default,
+and
 `sceneCreate('letter', 'g', fontSize, fontName, display)` now replays the
 documented text shorthand on top of the existing font-object path. The
 same scene lane now also accepts the documented `sceneCreate('vernier',
