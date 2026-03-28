@@ -14126,8 +14126,12 @@ def test_run_python_case_supports_scene_macbeth_tungsten_parity_case(asset_store
 
 def test_scene_empty_workflow(asset_store) -> None:
     scene = scene_create("empty", asset_store=asset_store)
+    custom_wave = np.array([500.0, 600.0, 700.0], dtype=float)
+    custom = scene_create("empty", None, custom_wave, asset_store=asset_store)
     photons = np.asarray(scene_get(scene, "photons"), dtype=float)
     illuminant_energy = np.asarray(scene_get(scene, "illuminant energy"), dtype=float)
+    custom_photons = np.asarray(scene_get(custom, "photons"), dtype=float)
+    custom_illuminant_energy = np.asarray(scene_get(custom, "illuminant energy"), dtype=float)
 
     assert tuple(scene_get(scene, "size")) == (64, 96)
     assert photons.shape == (64, 96, 31)
@@ -14136,6 +14140,13 @@ def test_scene_empty_workflow(asset_store) -> None:
     assert np.allclose(photons, 0.0, atol=0.0, rtol=0.0)
     assert illuminant_energy.shape == (31,)
     assert np.all(illuminant_energy > 0.0)
+    assert tuple(scene_get(custom, "size")) == (64, 96)
+    assert custom_photons.shape == (64, 96, 3)
+    assert np.array_equal(np.asarray(scene_get(custom, "wave"), dtype=float), custom_wave)
+    assert np.isclose(scene_get(custom, "mean luminance", asset_store=asset_store), 0.0, atol=1e-12, rtol=1e-12)
+    assert np.allclose(custom_photons, 0.0, atol=0.0, rtol=0.0)
+    assert custom_illuminant_energy.shape == (3,)
+    assert np.all(custom_illuminant_energy > 0.0)
 
 
 def test_run_python_case_supports_scene_empty_small_parity_case(asset_store) -> None:
