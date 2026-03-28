@@ -847,6 +847,8 @@ def test_pattern_scene_dispatches_accept_empty_optional_placeholders(asset_store
         ("bar ee", (64, [], wave), (64, 3, wave)),
         ("point array", (128, 16, [], [], wave), (128, 16, "ep", 1, wave)),
         ("grid lines", (128, 16, [], [], wave), (128, 16, "ep", 1, wave)),
+        ("checkerboard", ([], 8, "ep", wave), (16, 8, "ep", wave)),
+        ("checkerboard", (16, [], "ep", wave), (16, 8, "ep", wave)),
         ("star pattern", (256, [], [], wave), (256, "ep", 8, wave)),
     ]
 

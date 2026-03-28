@@ -303,6 +303,8 @@ placeholders in optional positional slots such as
 `sceneCreate('bar', imageSize, [], wave)`,
 `sceneCreate('point array', imageSize, spacing, [], [], wave)`,
 `sceneCreate('grid lines', imageSize, spacing, [], [], wave)`, and
+`sceneCreate('checkerboard', [], nCheckPairs, spectralType, wave)`,
+`sceneCreate('checkerboard', checkPeriod, [], spectralType, wave)`, and
 `sceneCreate('star pattern', imageSize, [], [], wave)`, reusing the
 documented default offset, width, spectral type, thickness, point size, and
 line-count values instead of crashing on `[]`,

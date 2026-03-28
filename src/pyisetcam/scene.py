@@ -4399,8 +4399,8 @@ def scene_create(
         )
 
     if name == "checkerboard":
-        pixels_per_check = int(args[0]) if len(args) > 0 else 16
-        number_of_checks = int(args[1]) if len(args) > 1 else 8
+        pixels_per_check = _scene_dispatch_int_arg(args[0] if len(args) > 0 else None, 16)
+        number_of_checks = _scene_dispatch_int_arg(args[1] if len(args) > 1 else None, 8)
         spectral_type = str(args[2]) if len(args) > 2 and isinstance(args[2], str) else "ep"
         wave_arg = args[3] if len(args) > 3 else (args[2] if len(args) > 2 and not isinstance(args[2], str) else None)
         wave = _wave_or_default(wave_arg)
