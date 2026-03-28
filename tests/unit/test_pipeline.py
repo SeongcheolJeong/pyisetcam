@@ -15807,11 +15807,26 @@ def test_macbeth_sensor_and_gretag_wrappers(asset_store) -> None:
 def test_scene_pattern_wrapper_surface(asset_store) -> None:
     hdr_chart = sceneHDRChart(1.0e3, 5, 4, 50.0, asset_store=asset_store)
     hdr_chart_alias = scene_create("hdr chart", 1.0e3, 5, 4, 50.0, asset_store=asset_store)
+    hdr_chart_kv = scene_create(
+        "hdr chart",
+        "d range",
+        1.0e3,
+        "n levels",
+        5,
+        "cols per level",
+        4,
+        asset_store=asset_store,
+    )
 
     hdr_luminance = np.asarray(scene_get(hdr_chart, "luminance", asset_store=asset_store), dtype=float)
     assert tuple(scene_get(hdr_chart, "size")) == (20, 20)
     assert np.isclose(float(np.max(hdr_luminance)), 50.0, atol=1e-6, rtol=1e-6)
     assert tuple(scene_get(hdr_chart_alias, "size")) == (20, 20)
+    assert tuple(scene_get(hdr_chart_kv, "size")) == (20, 20)
+    hdr_chart_params = scene_get(hdr_chart_kv, "chart parameters")
+    assert int(hdr_chart_params["nLevels"]) == 5
+    assert int(hdr_chart_params["colsPerLevel"]) == 4
+    assert float(hdr_chart_params["dRange"]) == pytest.approx(1.0e3)
 
     hdr_scene, hdr_background = sceneHDRImage(
         3,
@@ -15829,12 +15844,37 @@ def test_scene_pattern_wrapper_surface(asset_store) -> None:
         {"background": "", "image size": [96, 96], "dynamic range": 2.0, "patch shape": "circle", "patch size": 8, "row": 40},
         asset_store=asset_store,
     )
+    hdr_scene_kv = scene_create(
+        "hdr image",
+        "n patches",
+        3,
+        "background",
+        "",
+        "image size",
+        [96, 96],
+        "dynamic range",
+        2.0,
+        "patch shape",
+        "circle",
+        "patch size",
+        8,
+        "row",
+        40,
+        asset_store=asset_store,
+    )
 
     assert tuple(scene_get(hdr_scene, "size")) == (96, 96)
     assert tuple(scene_get(hdr_background, "size")) == (96, 96)
     assert tuple(scene_get(hdr_scene_alias, "size")) == (96, 96)
+    assert tuple(scene_get(hdr_scene_kv, "size")) == (96, 96)
     assert np.max(np.asarray(scene_get(hdr_scene, "luminance", asset_store=asset_store), dtype=float)) > 50.0
     assert np.allclose(np.asarray(scene_get(hdr_background, "photons"), dtype=float), 0.0, atol=1e-12, rtol=0.0)
+    np.testing.assert_allclose(
+        np.asarray(scene_get(hdr_scene_kv, "photons"), dtype=float),
+        np.asarray(scene_get(hdr_scene_alias, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
 
     wave = np.arange(400.0, 701.0, 10.0, dtype=float)
     radiance = np.linspace(1.0e12, 5.0e12, wave.size * 4, dtype=float).reshape(wave.size, 4, order="F")

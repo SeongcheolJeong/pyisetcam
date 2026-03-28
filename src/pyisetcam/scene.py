@@ -2605,6 +2605,15 @@ def _normalized_parameter_dict(value: Any) -> dict[str, Any]:
     return {param_format(str(key)): item for key, item in raw.items()}
 
 
+def _normalized_key_value_args(args: tuple[Any, ...]) -> dict[str, Any]:
+    if len(args) % 2 != 0:
+        raise ValueError("Legacy key/value arguments must come in pairs.")
+    normalized: dict[str, Any] = {}
+    for index in range(0, len(args), 2):
+        normalized[param_format(str(args[index]))] = args[index + 1]
+    return normalized
+
+
 def _scene_scale_peak_luminance(
     scene: Scene,
     target_luminance: float,
@@ -4000,18 +4009,30 @@ def scene_create(
         return track_session_object(session, _hdr_lights_scene(params, asset_store=store))
 
     if name in {"hdrchart", "hdr chart".replace(" ", "")}:
-        d_range = float(args[0]) if len(args) > 0 else 1.0e4
-        n_levels = int(args[1]) if len(args) > 1 else 12
-        cols_per_level = int(args[2]) if len(args) > 2 else 8
-        max_l = None if len(args) <= 3 else float(args[3]) if args[3] is not None else None
-        illuminant = args[4] if len(args) > 4 else None
+        if args and isinstance(args[0], str):
+            params = _normalized_key_value_args(args)
+            d_range = float(params.get("drange", 1.0e4))
+            n_levels = int(params.get("nlevels", 12))
+            cols_per_level = int(params.get("colsperlevel", 8))
+            max_l = None if params.get("maxl") is None else float(params["maxl"])
+            illuminant = params.get("illuminant")
+        else:
+            d_range = float(args[0]) if len(args) > 0 else 1.0e4
+            n_levels = int(args[1]) if len(args) > 1 else 12
+            cols_per_level = int(args[2]) if len(args) > 2 else 8
+            max_l = None if len(args) <= 3 else float(args[3]) if args[3] is not None else None
+            illuminant = args[4] if len(args) > 4 else None
         return track_session_object(session, scene_hdr_chart(d_range, n_levels, cols_per_level, max_l, illuminant, asset_store=store))
 
     if name in {"hdrimage", "hdr image".replace(" ", "")}:
-        n_patches = int(args[0]) if len(args) > 0 else 5
-        params = _normalized_parameter_dict(args[1]) if len(args) > 1 and hasattr(args[1], "items") else {}
-        if len(args) > 1 and not hasattr(args[1], "items"):
-            params["background"] = args[1]
+        if args and isinstance(args[0], str):
+            params = _normalized_key_value_args(args)
+            n_patches = int(params.get("npatches", 8))
+        else:
+            n_patches = int(args[0]) if len(args) > 0 else 5
+            params = _normalized_parameter_dict(args[1]) if len(args) > 1 and hasattr(args[1], "items") else {}
+            if len(args) > 1 and not hasattr(args[1], "items"):
+                params["background"] = args[1]
         scene, _ = scene_hdr_image(
             n_patches,
             background=params.get("background", "PsychBuilding.png"),
