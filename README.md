@@ -288,6 +288,10 @@ preserving the upstream default `32 x 32` scene size, while
 `sceneCreate('uniform monochromatic', sz, wave)` now also replays the
 documented size-first shorthand in addition to the existing wave-first form,
 and
+`sceneCreate('sweep frequency', [], maxFrequency, [], yContrast)` now
+honors MATLAB-style empty placeholders for the size and wavelength slots
+instead of crashing on `[]`,
+and
 `sceneCreate('moire orient', imageSize, f)` now maps the positional
 arguments onto the same headless parameter path as the existing struct-style
 moire target form,

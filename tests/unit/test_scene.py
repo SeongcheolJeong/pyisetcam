@@ -734,6 +734,23 @@ def test_sweep_frequency_scene_supports_custom_frequency_and_contrast_profile(as
     assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
 
 
+def test_sweep_frequency_dispatch_accepts_empty_size_and_wave_placeholders(asset_store) -> None:
+    placeholder = scene_create("sweep frequency", [], 12.0, [], [], asset_store=asset_store)
+    explicit = scene_create("sweep frequency", 128, 12.0, None, None, asset_store=asset_store)
+
+    np.testing.assert_allclose(
+        np.asarray(scene_get(placeholder, "photons"), dtype=float),
+        np.asarray(scene_get(explicit, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    assert tuple(scene_get(placeholder, "size")) == (128, 128)
+    assert np.array_equal(
+        np.asarray(scene_get(placeholder, "wave"), dtype=float),
+        np.asarray(scene_get(explicit, "wave"), dtype=float),
+    )
+
+
 def test_reflectance_chart_scene_supports_explicit_sample_lists(asset_store) -> None:
     scene = scene_create(
         "reflectance chart",

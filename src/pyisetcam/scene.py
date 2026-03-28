@@ -4234,15 +4234,16 @@ def scene_create(
         return track_session_object(session, scene)
 
     if name in {"sweep", "sweepfrequency"}:
-        size = args[0] if len(args) > 0 else 128
+        size = 128 if len(args) == 0 or _is_empty_scene_dispatch_placeholder(args[0]) else args[0]
         if np.isscalar(size):
             default_max_frequency = float(size) / 16.0
         else:
             size_vec = np.asarray(size, dtype=float).reshape(-1)
             default_max_frequency = float(size_vec[1] if size_vec.size > 1 else size_vec[0]) / 16.0
         max_frequency = float(args[1]) if len(args) > 1 else default_max_frequency
-        wave = _wave_or_default(args[2] if len(args) > 2 else None)
-        y_contrast = args[3] if len(args) > 3 else None
+        wave_arg = None if len(args) <= 2 or _is_empty_scene_dispatch_placeholder(args[2]) else args[2]
+        wave = _wave_or_default(wave_arg)
+        y_contrast = None if len(args) <= 3 or _is_empty_scene_dispatch_placeholder(args[3]) else args[3]
         image = _sweep_frequency_image(size, max_frequency, y_contrast)
         scene = _equal_photon_pattern_scene("sweep", image, wave, fov_deg=DEFAULT_FOV_DEG, asset_store=store)
         scene.fields["sweep_params"] = {
