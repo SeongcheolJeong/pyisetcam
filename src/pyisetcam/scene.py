@@ -96,6 +96,24 @@ def _macbeth_patch_size_arg(value: Any | None) -> int | None:
     return int(np.rint(float(array.reshape(-1)[0])))
 
 
+def _looks_like_scene_size_arg(value: Any | None) -> bool:
+    if value is None:
+        return False
+    if np.isscalar(value):
+        return float(np.asarray(value, dtype=float)) > 0.0
+    array = np.asarray(value, dtype=float).reshape(-1)
+    return 0 < array.size <= 2 and bool(np.all(array > 0.0))
+
+
+def _looks_like_wave_arg(value: Any | None) -> bool:
+    if value is None:
+        return False
+    array = np.asarray(value, dtype=float).reshape(-1)
+    if array.size == 0:
+        return False
+    return bool(np.all(array >= 100.0))
+
+
 def _scene_image_input(input_data: Any, *, asset_store: AssetStore | None = None) -> tuple[np.ndarray, str, str]:
     if isinstance(input_data, (str, Path)):
         path = Path(input_data).expanduser()
@@ -4013,8 +4031,12 @@ def scene_create(
         return track_session_object(session, _uniform_blackbody_scene(size, temperature_k, wave, asset_store=store))
 
     if name in {"uniformmonochromatic", "narrowband"}:
-        wavelength = args[0] if len(args) > 0 else 500.0
-        size = args[1] if len(args) > 1 else 128
+        if len(args) >= 2 and _looks_like_scene_size_arg(args[0]) and _looks_like_wave_arg(args[1]):
+            size = args[0]
+            wavelength = args[1]
+        else:
+            wavelength = args[0] if len(args) > 0 else 500.0
+            size = args[1] if len(args) > 1 else 128
         return track_session_object(session, _uniform_monochromatic_scene(size, wavelength, asset_store=store))
 
     if name in {"hdrlights", "highdynamicrange", "hdr"}:

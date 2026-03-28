@@ -231,6 +231,16 @@ def test_uniform_family_accepts_empty_size_placeholders(asset_store) -> None:
     np.testing.assert_array_equal(np.asarray(scene_get(bb_placeholder, "wave"), dtype=float), wave)
 
 
+def test_uniform_monochromatic_dispatch_accepts_size_first_docs_form(asset_store) -> None:
+    size_first = scene_create("uniform monochromatic", 12, 550, asset_store=asset_store)
+    wave_first = scene_create("uniform monochromatic", 550, 12, asset_store=asset_store)
+
+    np.testing.assert_allclose(scene_get(size_first, "photons"), scene_get(wave_first, "photons"), rtol=0.0, atol=0.0)
+    assert tuple(scene_get(size_first, "size")) == (12, 12)
+    np.testing.assert_array_equal(np.asarray(scene_get(size_first, "wave"), dtype=float), np.array([550.0], dtype=float))
+    assert np.isclose(scene_get(size_first, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
+
+
 def test_scene_from_file_supports_multispectral_mat_files(asset_store) -> None:
     scene = scene_from_file(
         asset_store.resolve("data/images/multispectral/Feng_Office-hdrs.mat"),
