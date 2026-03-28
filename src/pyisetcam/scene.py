@@ -3942,7 +3942,8 @@ def scene_create(
         return track_session_object(session, _lstar_steps_scene(bar_size, n_bars, delta_e, wave, asset_store=store))
 
     if name == "empty":
-        wave = _wave_or_default(args[1] if len(args) > 1 else None)
+        wave_arg = args[1] if len(args) > 1 else (args[0] if len(args) > 0 else None)
+        wave = _wave_or_default(wave_arg)
         scene = _create_macbeth_scene(16, wave, "macbethChart.mat", False, asset_store=store)
         return track_session_object(session, scene_clear_data(scene))
 

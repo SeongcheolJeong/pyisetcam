@@ -259,9 +259,9 @@ slice is now landed too: `sceneCreate('list'/'scenelist')`,
 `sceneCreate('rgb')`, `sceneCreate('multispectral'/'hyperspectral')`, and
 `sceneCreate('monochrome'/'unispectral')` now expose the same safe shell
 objects the headless `sceneFromFile(...)` path uses before filling in
-radiance data, and `sceneCreate('empty', [], wave)` now replays the legacy
-second-positional wavelength override instead of forcing the default
-400:10:700 grid. The same scene dispatcher now also accepts MATLAB-style
+radiance data, and both `sceneCreate('empty', wave)` and
+`sceneCreate('empty', [], wave)` now replay the legacy wavelength override
+instead of forcing the default 400:10:700 grid. The same scene dispatcher now also accepts MATLAB-style
 key/value forms for `sceneCreate('hdr chart', ...)` and
 `sceneCreate('hdr image', ...)`, and the same compatibility lane now also
 replays MATLAB-style key/value dispatch for `sceneCreate('hdr lights', ...)`
