@@ -155,6 +155,22 @@ def test_scene_create_supports_macbeth_illuminant_variants(asset_store) -> None:
     )
 
 
+def test_macbeth_dispatch_accepts_empty_patch_size_placeholder(asset_store) -> None:
+    wave = np.array([450.0, 550.0, 650.0], dtype=float)
+
+    default_placeholder = scene_create("default", None, wave, asset_store=asset_store)
+    default_reference = scene_create("default", 16, wave, asset_store=asset_store)
+    macbeth_placeholder = scene_create("macbeth", np.array([], dtype=float), wave, asset_store=asset_store)
+    macbeth_reference = scene_create("macbeth", 16, wave, asset_store=asset_store)
+
+    np.testing.assert_allclose(scene_get(default_placeholder, "photons"), scene_get(default_reference, "photons"), rtol=0.0, atol=0.0)
+    np.testing.assert_allclose(scene_get(macbeth_placeholder, "photons"), scene_get(macbeth_reference, "photons"), rtol=0.0, atol=0.0)
+    assert tuple(scene_get(default_placeholder, "size")) == (64, 96)
+    assert tuple(scene_get(macbeth_placeholder, "size")) == (64, 96)
+    assert np.array_equal(np.asarray(scene_get(default_placeholder, "wave"), dtype=float), wave)
+    assert np.array_equal(np.asarray(scene_get(macbeth_placeholder, "wave"), dtype=float), wave)
+
+
 def test_scene_create_moire_orient_replays_green_target_plane(asset_store) -> None:
     params = {"sceneSize": 96, "f": 1.0 / 1200.0}
     scene = scene_create("moire orient", params, asset_store=asset_store)

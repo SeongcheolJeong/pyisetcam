@@ -87,6 +87,15 @@ def _wave_or_default(wave: Any | None) -> np.ndarray:
     return np.asarray(wave, dtype=float).reshape(-1)
 
 
+def _macbeth_patch_size_arg(value: Any | None) -> int | None:
+    if value is None:
+        return None
+    array = np.asarray(value)
+    if array.size == 0:
+        return None
+    return int(np.rint(float(array.reshape(-1)[0])))
+
+
 def _scene_image_input(input_data: Any, *, asset_store: AssetStore | None = None) -> tuple[np.ndarray, str, str]:
     if isinstance(input_data, (str, Path)):
         path = Path(input_data).expanduser()
@@ -1695,7 +1704,7 @@ def _spectral_illuminant(
 
 
 def _create_macbeth_scene(
-    patch_size: int,
+    patch_size: int | None,
     wave: np.ndarray,
     surface_file: str,
     black_border: bool,
@@ -1703,6 +1712,7 @@ def _create_macbeth_scene(
     *,
     asset_store: AssetStore,
 ) -> Scene:
+    patch_size_value = 16 if patch_size is None else int(np.rint(float(patch_size)))
     _, reflectances = asset_store.load_reflectances(surface_file, wave_nm=wave)
     illuminant_key = param_format(illuminant_type)
     if illuminant_key == "d65":
@@ -1750,7 +1760,7 @@ def _create_macbeth_scene(
     scene.data["photons"] = _macbeth_cube(
         reflectances,
         illuminant_photons,
-        patch_size,
+        patch_size_value,
         black_border=black_border,
     )
     _update_scene_geometry(scene)
@@ -3822,7 +3832,7 @@ def scene_create(
         return scene_list()
 
     if name in {"default", "macbeth", "macbethd65", "macbethcustomreflectance"}:
-        patch_size = int(args[0]) if len(args) > 0 else 16
+        patch_size = _macbeth_patch_size_arg(args[0] if len(args) > 0 else None)
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
         surface_file = str(args[2]) if len(args) > 2 else "macbethChart.mat"
         black_border = bool(args[3]) if len(args) > 3 else False
@@ -3832,7 +3842,7 @@ def scene_create(
         )
 
     if name == "macbethd50":
-        patch_size = int(args[0]) if len(args) > 0 else 16
+        patch_size = _macbeth_patch_size_arg(args[0] if len(args) > 0 else None)
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
         surface_file = str(args[2]) if len(args) > 2 else "macbethChart.mat"
         black_border = bool(args[3]) if len(args) > 3 else False
@@ -3849,7 +3859,7 @@ def scene_create(
         )
 
     if name in {"macbethc", "macbethillc"}:
-        patch_size = int(args[0]) if len(args) > 0 else 16
+        patch_size = _macbeth_patch_size_arg(args[0] if len(args) > 0 else None)
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
         surface_file = str(args[2]) if len(args) > 2 else "macbethChart.mat"
         black_border = bool(args[3]) if len(args) > 3 else False
@@ -3866,7 +3876,7 @@ def scene_create(
         )
 
     if name in {"macbethfluorescent", "macbethfluor"}:
-        patch_size = int(args[0]) if len(args) > 0 else 16
+        patch_size = _macbeth_patch_size_arg(args[0] if len(args) > 0 else None)
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
         surface_file = str(args[2]) if len(args) > 2 else "macbethChart.mat"
         black_border = bool(args[3]) if len(args) > 3 else False
@@ -3883,7 +3893,7 @@ def scene_create(
         )
 
     if name in {"macbethtungsten", "macbethtung"}:
-        patch_size = int(args[0]) if len(args) > 0 else 16
+        patch_size = _macbeth_patch_size_arg(args[0] if len(args) > 0 else None)
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
         surface_file = str(args[2]) if len(args) > 2 else "macbethChart.mat"
         black_border = bool(args[3]) if len(args) > 3 else False
@@ -3900,7 +3910,7 @@ def scene_create(
         )
 
     if name in {"macbethee_ir", "macbethequalenergyinfrared"}:
-        patch_size = int(args[0]) if len(args) > 0 else 16
+        patch_size = _macbeth_patch_size_arg(args[0] if len(args) > 0 else None)
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
         surface_file = str(args[2]) if len(args) > 2 else "macbethChart.mat"
         black_border = bool(args[3]) if len(args) > 3 else False

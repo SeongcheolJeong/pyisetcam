@@ -261,7 +261,10 @@ slice is now landed too: `sceneCreate('list'/'scenelist')`,
 objects the headless `sceneFromFile(...)` path uses before filling in
 radiance data, and both `sceneCreate('empty', wave)` and
 `sceneCreate('empty', [], wave)` now replay the legacy wavelength override
-instead of forcing the default 400:10:700 grid. The same scene dispatcher now also accepts MATLAB-style
+instead of forcing the default 400:10:700 grid. The same Macbeth/default
+scene dispatcher now also accepts placeholder patch-size slots such as
+`sceneCreate('default', [], wave)` and `sceneCreate('macbeth', [], wave)`
+without losing the default 16-pixel patch size. The same scene dispatcher now also accepts MATLAB-style
 key/value forms for `sceneCreate('hdr chart', ...)` and
 `sceneCreate('hdr image', ...)`, and the same compatibility lane now also
 replays MATLAB-style key/value dispatch for `sceneCreate('hdr lights', ...)`
