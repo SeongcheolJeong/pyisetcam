@@ -121,6 +121,29 @@ def test_ramp_family_dispatch_replays_matlab_default_size(asset_store) -> None:
     assert tuple(scene_get(exp_default, "size")) == (256, 256)
 
 
+def test_ramp_family_dispatch_accepts_empty_size_and_dynamic_range_placeholders(asset_store) -> None:
+    wave = np.array([450.0, 550.0, 650.0], dtype=float)
+
+    placeholder_cases = (
+        ("ramp", ([], [], wave), (128, 256.0, wave)),
+        ("linear intensity ramp", ([], [], wave), (128, 256.0, wave)),
+        ("exponential intensity ramp", ([], [], wave), (128, 256.0, wave)),
+    )
+
+    for name, placeholder_args, explicit_args in placeholder_cases:
+        placeholder = scene_create(name, *placeholder_args, asset_store=asset_store)
+        explicit = scene_create(name, *explicit_args, asset_store=asset_store)
+
+        np.testing.assert_allclose(
+            np.asarray(scene_get(placeholder, "photons"), dtype=float),
+            np.asarray(scene_get(explicit, "photons"), dtype=float),
+            rtol=0.0,
+            atol=0.0,
+        )
+        assert tuple(scene_get(placeholder, "size")) == (128, 128)
+        np.testing.assert_array_equal(np.asarray(scene_get(placeholder, "wave"), dtype=float), wave)
+
+
 def test_scene_adjust_illuminant_preserves_mean(asset_store) -> None:
     scene = scene_create(asset_store=asset_store)
     wave = scene_get(scene, "wave")

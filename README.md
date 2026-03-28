@@ -323,6 +323,15 @@ placeholders in `sceneCreate('whitenoise', imageSize, [], wave)`,
 `sceneCreate('slanted bar', [], [], [], wave, [])`, preserving the upstream
 default contrast, radial frequency, image size, slope, field of view, and
 dark level instead of crashing on `[]`,
+and the same ramp/vernier dispatch lane now also preserves MATLAB's
+distinction between omitted arguments and explicit empty placeholders, so
+`sceneCreate('ramp', [], [], wave)`, `sceneCreate('linear intensity ramp', [], [], wave)`,
+and `sceneCreate('exponential intensity ramp', [], [], wave)` now replay the
+helper-level `128 x 128` and `256` dynamic-range defaults, while
+`sceneCreate('vernier', [], [], [], [], [])` and
+`sceneCreate('vernier', 65, [], [], [], [])` now reuse the lower-level
+`sceneVernier(...)` placeholder defaults for size, bar width, and offset
+instead of crashing on `[]`,
 and
 `sceneCreate('moire orient', imageSize, f)` now maps the positional
 arguments onto the same headless parameter path as the existing struct-style

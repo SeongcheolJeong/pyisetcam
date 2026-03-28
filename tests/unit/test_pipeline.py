@@ -16047,6 +16047,10 @@ def test_scene_vernier_wrapper_surface(asset_store) -> None:
         asset_store=asset_store,
     )
     legacy_alias = scene_create("vernier", 64, 3, 2, 0.7, 0.2, asset_store=asset_store)
+    placeholder_reference = scene_create("vernier", 65, 0, 1, 0.6, 0.3, asset_store=asset_store)
+    placeholder_alias = scene_create("vernier", 65, [], [], [], [], asset_store=asset_store)
+    fully_placeholder_reference = scene_create("vernier", 64, 0, 1, 0.6, 0.3, asset_store=asset_store)
+    fully_placeholder_alias = scene_create("vernier", [], [], [], [], [], asset_store=asset_store)
     default_reference = sceneVernier(
         scene_create("empty", asset_store=asset_store),
         "object",
@@ -16061,10 +16065,14 @@ def test_scene_vernier_wrapper_surface(asset_store) -> None:
     assert tuple(scene_get(object_alias, "size")) == (64, 65)
     assert tuple(scene_get(shorthand_alias, "size")) == (64, 65)
     assert tuple(scene_get(legacy_alias, "size")) == (64, 65)
+    assert tuple(scene_get(placeholder_alias, "size")) == (65, 65)
+    assert tuple(scene_get(fully_placeholder_alias, "size")) == (64, 65)
     assert tuple(scene_get(default_alias, "size")) == (65, 65)
     assert object_scene.name == "vernier-2"
     assert shorthand_alias.name == "vernier-2"
     assert legacy_alias.name == "vernier-2"
+    assert placeholder_alias.name == "vernier-1"
+    assert fully_placeholder_alias.name == "vernier-1"
     assert default_alias.name == "vernier-3"
     assert np.isclose(float(scene_get(object_scene, "mean luminance", asset_store=asset_store)), 12.0, atol=1e-6, rtol=1e-6)
     assert np.max(np.asarray(scene_get(object_scene, "luminance", asset_store=asset_store), dtype=float)) > np.min(
@@ -16079,6 +16087,18 @@ def test_scene_vernier_wrapper_surface(asset_store) -> None:
     np.testing.assert_allclose(
         np.asarray(scene_get(legacy_alias, "photons"), dtype=float),
         np.asarray(scene_get(legacy_reference, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    np.testing.assert_allclose(
+        np.asarray(scene_get(placeholder_alias, "photons"), dtype=float),
+        np.asarray(scene_get(placeholder_reference, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    np.testing.assert_allclose(
+        np.asarray(scene_get(fully_placeholder_alias, "photons"), dtype=float),
+        np.asarray(scene_get(fully_placeholder_reference, "photons"), dtype=float),
         rtol=0.0,
         atol=0.0,
     )
