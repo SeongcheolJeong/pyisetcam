@@ -10937,6 +10937,29 @@ def test_sensor_create_supports_ovt_vendor_presets(asset_store) -> None:
     assert float(sensor_get(small, "pixel fill factor")) == pytest.approx(1e-2)
 
 
+def test_sensor_create_supports_dual_pixel_dispatch(asset_store) -> None:
+    scene = scene_create("uniform d65", asset_store=asset_store)
+    oi = oi_compute(oi_create(), scene)
+    microlens_size = np.array([6, 7], dtype=int)
+
+    dual = sensor_create("dual pixel", None, oi, microlens_size, asset_store=asset_store)
+    overloaded = sensor_create("dual pixel", oi, microlens_size, asset_store=asset_store)
+    sample_spacing = np.asarray(oi_get(oi, "sample spacing", "m"), dtype=float).reshape(-1)
+
+    assert tuple(np.asarray(sensor_get(dual, "size"), dtype=int)) == (6, 14)
+    assert tuple(np.asarray(sensor_get(overloaded, "size"), dtype=int)) == (6, 14)
+    assert float(sensor_get(dual, "pixel height")) == pytest.approx(2.0 * float(sample_spacing[0]))
+    assert float(sensor_get(dual, "pixel width")) == pytest.approx(float(sample_spacing[0]))
+    np.testing.assert_array_equal(
+        np.asarray(sensor_get(dual, "pattern"), dtype=int),
+        np.array([[2, 2, 1, 1], [3, 3, 2, 2]], dtype=int),
+    )
+    np.testing.assert_array_equal(
+        np.asarray(sensor_get(overloaded, "pattern"), dtype=int),
+        np.array([[2, 2, 1, 1], [3, 3, 2, 2]], dtype=int),
+    )
+
+
 def test_sensor_compute_array_supports_ovt_saturated_flow(asset_store) -> None:
     scene = scene_create("uniform ee", np.array([32, 48], dtype=int), asset_store=asset_store)
     scene = scene_set(scene, "fov", 8.0)

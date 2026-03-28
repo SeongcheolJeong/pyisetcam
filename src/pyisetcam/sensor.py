@@ -1779,6 +1779,9 @@ def sensor_create(
     if normalized == "lightfield" and isinstance(pixel, OpticalImage):
         args = (pixel, *args)
         pixel = None
+    if normalized == "dualpixel" and isinstance(pixel, OpticalImage):
+        args = (pixel, *args)
+        pixel = None
     if normalized in {"mt9v024", "ar0132at"} and isinstance(pixel, str):
         args = (pixel, *args)
         pixel = None
@@ -1845,6 +1848,23 @@ def sensor_create(
             raise ValueError("sensorCreate('light field', ...) requires an optical image.")
         sensor = sensor_light_field(oi, asset_store=store)
         sensor = sensor_set(sensor, "name", str(oi_get(oi, "name")))
+        return track_session_object(session, sensor)
+
+    if normalized == "dualpixel":
+        if len(args) < 2:
+            raise ValueError("sensorCreate('dual pixel', ...) requires an optical image and microlens size.")
+        oi = args[0]
+        n_microlens = np.rint(np.asarray(args[1], dtype=float).reshape(-1)[:2]).astype(int)
+        if not isinstance(oi, OpticalImage):
+            raise ValueError("sensorCreate('dual pixel', ...) requires an optical image.")
+        if n_microlens.size != 2:
+            raise ValueError("sensorCreate('dual pixel', ...) requires a [rows cols] microlens size.")
+        sample_spacing = np.asarray(oi_get(oi, "sample spacing", "m"), dtype=float).reshape(-1)
+        sensor = sensor_create(asset_store=store)
+        sensor = sensor_set(sensor, "pixel height", 2.0 * float(sample_spacing[0]))
+        sensor = sensor_set(sensor, "pixel width", float(sample_spacing[0]))
+        sensor = sensor_set(sensor, "size", (int(n_microlens[0]), int(2 * n_microlens[1])))
+        sensor = sensor_set(sensor, "pattern", np.array([[2, 2, 1, 1], [3, 3, 2, 2]], dtype=int))
         return track_session_object(session, sensor)
 
     if normalized == "mt9v024":

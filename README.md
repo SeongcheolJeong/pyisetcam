@@ -264,8 +264,10 @@ radiance data. `sensor_create` now includes generic
 RGBW/RCCC variants. The next sensorCreate dispatcher slice is now landed
 too: `sensorCreate('light field', oi)` and `sensorCreate('light field',
 pixel, oi)` reuse the headless light-field helper with MATLAB-style OI
-name replay, and direct `sensorCreate('ovt-large')` /
-`sensorCreate('ovt-small')` now expose the existing OVT vendor presets.
+name replay, `sensorCreate('dual pixel', [], oi, nMicrolens)` now mirrors
+the upstream OI-sampled split-pixel geometry contract, and direct
+`sensorCreate('ovt-large')` / `sensorCreate('ovt-small')` now expose the
+existing OVT vendor presets.
 `camera_create(...)` now forwards those expanded
 sensor presets too, so camera constructors can directly target `rgbw`,
 `rccc`, `mt9v024`, and `ar0132at` sensor variants. The first
