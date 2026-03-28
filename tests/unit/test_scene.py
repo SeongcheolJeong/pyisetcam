@@ -601,7 +601,7 @@ def test_bar_ee_alias_matches_bar_scene(asset_store) -> None:
 
 def test_bar_dispatch_replays_matlab_default_width(asset_store) -> None:
     default_bar = scene_create("bar", asset_store=asset_store)
-    explicit_bar = scene_create("bar", 64, 5, asset_store=asset_store)
+    explicit_bar = scene_create("bar", 64, 3, asset_store=asset_store)
 
     np.testing.assert_allclose(
         np.asarray(scene_get(default_bar, "photons"), dtype=float),

@@ -294,7 +294,7 @@ MATLAB defaults of `65` pixels, `3`-pixel bars, and `3`-pixel offset instead
 of the lower-level helper defaults,
 and
 the plain `sceneCreate('bar')` shortcut now replays MATLAB's default
-5-pixel bar width instead of the narrower helper-era default,
+3-pixel bar width instead of inheriting the wider helper-level default,
 and
 the `ramp` / `linear intensity ramp` / `exponential intensity ramp`
 shortcuts now replay the upstream default `256 x 256` scene size instead of
