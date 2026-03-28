@@ -1692,6 +1692,19 @@ def _apply_sensor_settings(sensor: Sensor, settings: list[tuple[str, Any]]) -> S
     return updated
 
 
+def _track_sensor_sequence(
+    session: SessionContext | None,
+    sensors: list[Sensor],
+) -> list[Sensor]:
+    if session is None:
+        return sensors
+    tracked: list[Sensor] = []
+    last_index = len(sensors) - 1
+    for index, sensor in enumerate(sensors):
+        tracked.append(track_session_object(session, sensor, select=index == last_index))
+    return tracked
+
+
 def _sensor_create_ovt_large_pair(*, asset_store: AssetStore) -> tuple[Sensor, Sensor]:
     common_settings = [
         ("size", np.array([968, 1288], dtype=int)),
@@ -1763,6 +1776,9 @@ def sensor_create(
 
     store = _store(asset_store)
     normalized = param_format(sensor_type)
+    if normalized == "lightfield" and isinstance(pixel, OpticalImage):
+        args = (pixel, *args)
+        pixel = None
     if normalized in {"mt9v024", "ar0132at"} and isinstance(pixel, str):
         args = (pixel, *args)
         pixel = None
@@ -1818,6 +1834,19 @@ def sensor_create(
         sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle("cym", wave, asset_store=store)
         return track_session_object(session, sensor)
 
+    if normalized == "lightfield":
+        if args:
+            oi = args[0]
+        elif isinstance(pixel, OpticalImage):
+            oi = pixel
+        else:
+            raise ValueError("sensorCreate('light field', ...) requires an optical image.")
+        if not isinstance(oi, OpticalImage):
+            raise ValueError("sensorCreate('light field', ...) requires an optical image.")
+        sensor = sensor_light_field(oi, asset_store=store)
+        sensor = sensor_set(sensor, "name", str(oi_get(oi, "name")))
+        return track_session_object(session, sensor)
+
     if normalized == "mt9v024":
         return track_session_object(session, _sensor_vendor_mt9v024(_sensor_variant_name(args, "rgb"), asset_store=store))
 
@@ -1860,6 +1889,13 @@ def sensor_create(
 
     if normalized in {"imx490small", "imx490-small"}:
         return track_session_object(session, _sensor_vendor_imx490("small", asset_store=store))
+
+    if normalized in {"ovtlarge", "ovt-large"}:
+        large_lcg, large_hcg = _sensor_create_ovt_large_pair(asset_store=store)
+        return _track_sensor_sequence(session, [large_lcg, large_hcg])
+
+    if normalized in {"ovtsmall", "ovt-small"}:
+        return track_session_object(session, _sensor_create_ovt_small(asset_store=store))
 
     if normalized == "ideal":
         return sensor_create_ideal("xyz", None, asset_store=store, session=session)

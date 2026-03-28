@@ -261,7 +261,12 @@ slice is now landed too: `sceneCreate('list'/'scenelist')`,
 objects the headless `sceneFromFile(...)` path uses before filling in
 radiance data. `sensor_create` now includes generic
 `rgbw` / `rccc` presets plus upstream-backed `mt9v024` and `ar0132at`
-RGBW/RCCC variants. `camera_create(...)` now forwards those expanded
+RGBW/RCCC variants. The next sensorCreate dispatcher slice is now landed
+too: `sensorCreate('light field', oi)` and `sensorCreate('light field',
+pixel, oi)` reuse the headless light-field helper with MATLAB-style OI
+name replay, and direct `sensorCreate('ovt-large')` /
+`sensorCreate('ovt-small')` now expose the existing OVT vendor presets.
+`camera_create(...)` now forwards those expanded
 sensor presets too, so camera constructors can directly target `rgbw`,
 `rccc`, `mt9v024`, and `ar0132at` sensor variants. The first
 metrics/validation slice is also in place:

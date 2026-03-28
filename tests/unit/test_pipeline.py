@@ -5357,13 +5357,22 @@ def test_sensor_human_legacy_wrappers_and_light_field(asset_store) -> None:
 
     scene = scene_create("uniform d65", asset_store=asset_store)
     oi = oi_compute(oi_create(), scene)
+    oi = oi_set(oi, "name", "lightfield-dispatch")
     lf_sensor = sensorLightField(oi, asset_store=asset_store)
+    dispatched = sensor_create("light field", oi, asset_store=asset_store)
+    overloaded = sensor_create("light field", {"size": (5, 7)}, oi, asset_store=asset_store)
     oi_size = np.asarray(oi_get(oi, "size"), dtype=int).reshape(-1)
     sample_spacing = np.asarray(oi_get(oi, "sample spacing", "m"), dtype=float).reshape(-1)
 
     assert np.array_equal(np.asarray(sensor_get(lf_sensor, "size"), dtype=int), oi_size[:2])
     assert np.allclose(np.asarray(sensor_get(lf_sensor, "pixel size"), dtype=float), sample_spacing[0])
     assert sensor_get(lf_sensor, "name") == "lightfield"
+    assert np.array_equal(np.asarray(sensor_get(dispatched, "size"), dtype=int), oi_size[:2])
+    assert np.array_equal(np.asarray(sensor_get(overloaded, "size"), dtype=int), oi_size[:2])
+    assert np.allclose(np.asarray(sensor_get(dispatched, "pixel size"), dtype=float), sample_spacing[0])
+    assert np.allclose(np.asarray(sensor_get(overloaded, "pixel size"), dtype=float), sample_spacing[0])
+    assert sensor_get(dispatched, "name") == "lightfield-dispatch"
+    assert sensor_get(overloaded, "name") == "lightfield-dispatch"
 
 
 def test_sensor_get_set_supports_legacy_scene_and_lens_metadata_aliases(asset_store) -> None:
@@ -10908,6 +10917,24 @@ def test_ie_read_color_filter_handles_ovt_hdf_orientation(asset_store) -> None:
     assert filters.shape == (wave.size, 3)
     assert names == ["r", "g", "b"]
     assert np.all(filters >= 0.0)
+
+
+def test_sensor_create_supports_ovt_vendor_presets(asset_store) -> None:
+    large = sensor_create("ovt-large", asset_store=asset_store)
+    small = sensor_create("ovt-small", asset_store=asset_store)
+
+    assert isinstance(large, list)
+    assert len(large) == 2
+    assert [sensor_get(sensor, "name") for sensor in large] == ["ovt-LPDLCG", "ovt-LPDHCG"]
+    assert all(tuple(np.asarray(sensor_get(sensor, "size"), dtype=int)) == (968, 1288) for sensor in large)
+    assert all(sensor_get(sensor, "filter names") == ["r", "g", "b"] for sensor in large)
+    assert float(sensor_get(large[0], "analog gain")) == pytest.approx(1.0)
+    assert float(sensor_get(large[1], "analog gain")) == pytest.approx(49.0 / 200.0)
+
+    assert tuple(np.asarray(sensor_get(small, "size"), dtype=int)) == (968, 1288)
+    assert sensor_get(small, "name") == "ovt-SPDLCG"
+    assert sensor_get(small, "filter names") == ["r", "g", "b"]
+    assert float(sensor_get(small, "pixel fill factor")) == pytest.approx(1e-2)
 
 
 def test_sensor_compute_array_supports_ovt_saturated_flow(asset_store) -> None:
