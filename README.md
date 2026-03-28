@@ -266,8 +266,9 @@ key/value forms for `sceneCreate('hdr chart', ...)` and
 `sceneCreate('hdr image', ...)`, and the same compatibility lane now also
 replays MATLAB-style key/value dispatch for `sceneCreate('hdr lights', ...)`
 instead of only positional or dict-based Python calls. The adjacent
-`scene_create('radiance chart', wave, radiance, ...)` wrapper now accepts the
-same MATLAB-style key/value arguments too. `sensor_create` now includes generic
+`scene_create('radiance chart', wave, radiance, ...)` and
+`sceneCreate('reflectance chart', ...)` wrappers now accept the same
+MATLAB-style key/value arguments too. `sensor_create` now includes generic
 `rgbw` / `rccc` presets plus upstream-backed `mt9v024` and `ar0132at`
 RGBW/RCCC variants. The next sensorCreate dispatcher slice is now landed
 too: `sensorCreate('light field', oi)` and `sensorCreate('light field',

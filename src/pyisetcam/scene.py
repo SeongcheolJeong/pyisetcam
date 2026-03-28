@@ -4096,6 +4096,8 @@ def scene_create(
     if name in {"reflectancechart", "reflectance"}:
         if args and isinstance(args[0], dict):
             params = _reflectance_chart_parameters(args[0])
+        elif args and isinstance(args[0], str):
+            params = _reflectance_chart_parameters(_normalized_key_value_args(args))
         elif len(args) == 1 and hasattr(args[0], "items"):
             params = _reflectance_chart_parameters(args[0])
         else:

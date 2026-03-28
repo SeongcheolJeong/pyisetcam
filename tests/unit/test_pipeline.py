@@ -13400,7 +13400,22 @@ def test_scene_reflectance_charts_script_workflow(asset_store) -> None:
     p_size = 24
 
     custom_scene = scene_create("reflectance chart", p_size, s_samples, s_files, None, False, "no replacement", asset_store=asset_store)
+    custom_scene_kv = scene_create(
+        "reflectance chart",
+        "p size",
+        p_size,
+        "s samples",
+        s_samples,
+        "s files",
+        s_files,
+        "gray flag",
+        False,
+        "sampling",
+        "no replacement",
+        asset_store=asset_store,
+    )
     custom_chart = scene_get(custom_scene, "chart parameters")
+    custom_chart_kv = scene_get(custom_scene_kv, "chart parameters")
     wave = np.asarray(scene_get(custom_scene, "wave"), dtype=float).reshape(-1)
 
     d65_scene = scene_adjust_illuminant(custom_scene.clone(), "D65", asset_store=asset_store)
@@ -13430,9 +13445,13 @@ def test_scene_reflectance_charts_script_workflow(asset_store) -> None:
     assert [len(item) for item in default_chart["sSamples"]] == [50, 40, 10]
     assert np.isclose(scene_get(default_scene, "mean luminance", asset_store=asset_store), 100.0, rtol=1e-8, atol=1e-8)
     assert tuple(scene_get(custom_scene, "size")) == (216, 192)
+    assert tuple(scene_get(custom_scene_kv, "size")) == (216, 192)
     assert tuple(custom_chart["rowcol"]) == (9, 8)
+    assert tuple(custom_chart_kv["rowcol"]) == (9, 8)
     assert [len(item) for item in custom_chart["sSamples"]] == [12, 12, 24, 24]
+    assert [len(item) for item in custom_chart_kv["sSamples"]] == [12, 12, 24, 24]
     assert np.array_equal(np.unique(custom_chart["rIdxMap"]), np.arange(1, 73, dtype=int))
+    assert np.array_equal(np.asarray(scene_get(custom_scene_kv, "photons"), dtype=float), np.asarray(scene_get(custom_scene, "photons"), dtype=float))
     assert np.isclose(scene_get(d65_scene, "mean luminance", asset_store=asset_store), 100.0, rtol=1e-8, atol=1e-8)
     assert d65_illuminant.shape == (31,)
     assert tuple(scene_get(gray_scene, "size")) == (216, 216)
