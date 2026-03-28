@@ -4237,7 +4237,7 @@ def scene_create(
         return track_session_object(session, scene)
 
     if name in {"ramp", "rampequalphoton"}:
-        size = args[0] if len(args) > 0 else 128
+        size = args[0] if len(args) > 0 else 256
         dynamic_range = float(args[1]) if len(args) > 1 else 256.0
         wave = _wave_or_default(args[2] if len(args) > 2 else None)
         base_scene = Scene(name="ramp")
@@ -4247,7 +4247,7 @@ def scene_create(
         return track_session_object(session, scene_ramp(base_scene, size, dynamic_range, asset_store=store))
 
     if name in {"linearintensityramp", "linearramp"}:
-        size = args[0] if len(args) > 0 else 128
+        size = args[0] if len(args) > 0 else 256
         dynamic_range = float(args[1]) if len(args) > 1 else 256.0
         wave = _wave_or_default(args[2] if len(args) > 2 else None)
         image = _linear_intensity_ramp_image(size, dynamic_range)
@@ -4257,7 +4257,7 @@ def scene_create(
         )
 
     if name in {"exponentialintensityramp", "expintensityramp", "expramp"}:
-        size = args[0] if len(args) > 0 else 128
+        size = args[0] if len(args) > 0 else 256
         dynamic_range = float(args[1]) if len(args) > 1 else 256.0
         wave = _wave_or_default(args[2] if len(args) > 2 else None)
         image = _exponential_intensity_ramp_image(size, dynamic_range)

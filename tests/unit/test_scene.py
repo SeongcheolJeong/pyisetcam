@@ -105,6 +105,22 @@ def test_scene_create_ramp_equal_photon_alias_matches_ramp(asset_store) -> None:
     )
 
 
+def test_ramp_family_dispatch_replays_matlab_default_size(asset_store) -> None:
+    ramp_default = scene_create("ramp", asset_store=asset_store)
+    ramp_explicit = scene_create("ramp", 256, 256.0, asset_store=asset_store)
+    linear_default = scene_create("linear intensity ramp", asset_store=asset_store)
+    linear_explicit = scene_create("linear intensity ramp", 256, 256.0, asset_store=asset_store)
+    exp_default = scene_create("exponential intensity ramp", asset_store=asset_store)
+    exp_explicit = scene_create("exponential intensity ramp", 256, 256.0, asset_store=asset_store)
+
+    np.testing.assert_allclose(np.asarray(scene_get(ramp_default, "photons"), dtype=float), np.asarray(scene_get(ramp_explicit, "photons"), dtype=float), rtol=0.0, atol=0.0)
+    np.testing.assert_allclose(np.asarray(scene_get(linear_default, "photons"), dtype=float), np.asarray(scene_get(linear_explicit, "photons"), dtype=float), rtol=0.0, atol=0.0)
+    np.testing.assert_allclose(np.asarray(scene_get(exp_default, "photons"), dtype=float), np.asarray(scene_get(exp_explicit, "photons"), dtype=float), rtol=0.0, atol=0.0)
+    assert tuple(scene_get(ramp_default, "size")) == (256, 256)
+    assert tuple(scene_get(linear_default, "size")) == (256, 256)
+    assert tuple(scene_get(exp_default, "size")) == (256, 256)
+
+
 def test_scene_adjust_illuminant_preserves_mean(asset_store) -> None:
     scene = scene_create(asset_store=asset_store)
     wave = scene_get(scene, "wave")
