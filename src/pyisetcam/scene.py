@@ -4314,7 +4314,7 @@ def scene_create(
 
     if name in {"diskarray", "disk array".replace(" ", "")}:
         size = args[0] if len(args) > 0 else 128
-        radius = int(args[1]) if len(args) > 1 else 16
+        radius = int(args[1]) if len(args) > 1 else 128
         array_size = args[2] if len(args) > 2 else np.array([1, 1], dtype=int)
         wave = _wave_or_default(args[3] if len(args) > 3 else None)
         return track_session_object(

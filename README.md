@@ -300,6 +300,9 @@ the `ramp` / `linear intensity ramp` / `exponential intensity ramp`
 shortcuts now replay the upstream default `256 x 256` scene size instead of
 the smaller helper-era default,
 and
+the plain `sceneCreate('disk array')` shortcut now replays MATLAB's default
+`128`-pixel disk radius instead of the smaller helper-era default,
+and
 `sceneCreate('letter', 'g', fontSize, fontName, display)` now replays the
 documented text shorthand on top of the existing font-object path. The
 same scene lane now also accepts the documented `sceneCreate('vernier',

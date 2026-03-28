@@ -625,6 +625,19 @@ def test_squares_alias_matches_square_array_scene(asset_store) -> None:
     assert tuple(scene_get(alias, "size")) == (64, 64)
 
 
+def test_disk_array_dispatch_replays_matlab_default_radius(asset_store) -> None:
+    default_scene = scene_create("disk array", asset_store=asset_store)
+    explicit_scene = scene_create("disk array", 128, 128, np.array([1, 1], dtype=int), asset_store=asset_store)
+
+    np.testing.assert_allclose(
+        np.asarray(scene_get(default_scene, "photons"), dtype=float),
+        np.asarray(scene_get(explicit_scene, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    assert tuple(scene_get(default_scene, "size")) == (128, 128)
+
+
 def test_point_array_and_grid_lines_follow_spacing(asset_store) -> None:
     point_array = scene_create("point array", 32, 8, "ep", 1, asset_store=asset_store)
     grid_lines = scene_create("grid lines", 32, 8, "ep", 1, asset_store=asset_store)
