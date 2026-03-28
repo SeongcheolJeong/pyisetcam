@@ -271,7 +271,7 @@ instead of only positional or dict-based Python calls. The adjacent
 MATLAB-style key/value arguments too, and `sceneCreate('letter', 'g',
 fontSize, fontName, display)` now replays the documented text shorthand on
 top of the existing font-object path. `sensor_create` now includes generic
-`rgbw` / `rccc` presets plus upstream-backed `mt9v024` and `ar0132at`
+`rgbw` / `grbc` / `rccc` presets plus upstream-backed `mt9v024` and `ar0132at`
 RGBW/RCCC variants. The next sensorCreate dispatcher slice is now landed
 too: `sensorCreate('light field', oi)` and `sensorCreate('light field',
 pixel, oi)` reuse the headless light-field helper with MATLAB-style OI

@@ -5958,6 +5958,7 @@ def test_sensor_set_cfa_round_trips_matlab_style_struct(asset_store) -> None:
 
 def test_sensor_create_rgbw_and_rccc_presets_expose_multichannel_cfas(asset_store) -> None:
     rgbw = sensor_create("rgbw", asset_store=asset_store)
+    grbc = sensor_create("grbc", asset_store=asset_store)
     rccc = sensor_create("rccc", asset_store=asset_store)
 
     assert sensor_get(rgbw, "nfilters") == 4
@@ -5965,6 +5966,13 @@ def test_sensor_create_rgbw_and_rccc_presets_expose_multichannel_cfas(asset_stor
     assert sensor_get(rgbw, "filtercolorletterscell") == ["r", "g", "b", "w"]
     assert sensor_get(rgbw, "filterplotcolors") == "rgbk"
     assert np.array_equal(sensor_get(rgbw, "patterncolors"), np.array([["r", "g"], ["b", "w"]], dtype="<U1"))
+
+    assert sensor_get(grbc, "nfilters") == 4
+    assert sensor_get(grbc, "filtercolorletters") == "grbc"
+    assert sensor_get(grbc, "filtercolorletterscell") == ["g", "r", "b", "c"]
+    assert sensor_get(grbc, "filterplotcolors") == "grbc"
+    assert np.array_equal(sensor_get(grbc, "patterncolors"), np.array([["g", "r"], ["b", "c"]], dtype="<U1"))
+    assert sensor_get(grbc, "cfaname") == "Other"
 
     assert sensor_get(rccc, "nfilters") == 2
     assert sensor_get(rccc, "filtercolorletters") == "rw"

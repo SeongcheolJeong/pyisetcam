@@ -1865,6 +1865,12 @@ def sensor_create(
         sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle("interleavedrgbw", wave, asset_store=store)
         return track_session_object(session, sensor)
 
+    if normalized == "grbc":
+        sensor = _sensor_base("grbc", wave, size, pixel_dict)
+        sensor.fields["pattern"] = np.array([[1, 2], [3, 4]], dtype=int)
+        sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle("grbc", wave, asset_store=store)
+        return track_session_object(session, sensor)
+
     if normalized == "rccc":
         sensor = _sensor_base("rccc", wave, size, pixel_dict)
         sensor.fields["pattern"] = np.array([[2, 2], [2, 1]], dtype=int)
