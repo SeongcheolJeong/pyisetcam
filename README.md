@@ -289,6 +289,10 @@ and
 arguments onto the same headless parameter path as the existing struct-style
 moire target form,
 and
+`sceneCreate('zone plate', imageSize, fieldOfView, wave)` now accepts the
+optional field-of-view positional slot while preserving the existing
+wave-only shorthand and default `4 deg` behavior,
+and
 the numeric `sceneCreate('vernier', ...)` shortcut now replays the upstream
 MATLAB defaults of `65` pixels, `3`-pixel bars, and `3`-pixel offset instead
 of the lower-level helper defaults,

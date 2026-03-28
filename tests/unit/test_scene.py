@@ -638,6 +638,30 @@ def test_disk_array_dispatch_replays_matlab_default_radius(asset_store) -> None:
     assert tuple(scene_get(default_scene, "size")) == (128, 128)
 
 
+def test_zone_plate_dispatch_accepts_optional_field_of_view_and_wave(asset_store) -> None:
+    wave = np.array([450.0, 550.0, 650.0], dtype=float)
+    explicit_fov = scene_create("zone plate", 96, 7.5, wave, asset_store=asset_store)
+    placeholder_fov = scene_create("zone plate", 96, [], wave, asset_store=asset_store)
+    wave_only = scene_create("zone plate", 96, wave, asset_store=asset_store)
+
+    assert tuple(scene_get(explicit_fov, "size")) == (96, 96)
+    assert tuple(scene_get(placeholder_fov, "size")) == (96, 96)
+    assert tuple(scene_get(wave_only, "size")) == (96, 96)
+    assert np.isclose(scene_get(explicit_fov, "fov"), 7.5, atol=1e-12, rtol=1e-12)
+    assert np.isclose(scene_get(placeholder_fov, "fov"), 4.0, atol=1e-12, rtol=1e-12)
+    assert np.isclose(scene_get(wave_only, "fov"), 4.0, atol=1e-12, rtol=1e-12)
+    assert np.array_equal(np.asarray(scene_get(explicit_fov, "wave"), dtype=float), wave)
+    assert np.array_equal(np.asarray(scene_get(placeholder_fov, "wave"), dtype=float), wave)
+    assert np.array_equal(np.asarray(scene_get(wave_only, "wave"), dtype=float), wave)
+    assert np.asarray(scene_get(explicit_fov, "photons"), dtype=float).shape == (96, 96, 3)
+    np.testing.assert_allclose(
+        np.asarray(scene_get(placeholder_fov, "photons"), dtype=float),
+        np.asarray(scene_get(wave_only, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+
+
 def test_point_array_and_grid_lines_follow_spacing(asset_store) -> None:
     point_array = scene_create("point array", 32, 8, "ep", 1, asset_store=asset_store)
     grid_lines = scene_create("grid lines", 32, 8, "ep", 1, asset_store=asset_store)

@@ -2262,6 +2262,7 @@ def _zone_plate_image(size: Any, amplitude: float = 1.0, phase: float = 0.0) -> 
 def _zone_plate_scene(
     size: Any,
     wave: np.ndarray,
+    fov_deg: float = 4.0,
     *,
     asset_store: AssetStore,
 ) -> Scene:
@@ -2274,7 +2275,7 @@ def _zone_plate_scene(
     scene.fields["illuminant_photons"] = illuminant_photons
     scene.fields["illuminant_comment"] = "equal photons"
     scene.fields["distance_m"] = DEFAULT_DISTANCE_M
-    scene.fields["fov_deg"] = 4.0
+    scene.fields["fov_deg"] = float(fov_deg)
     scene.data["photons"] = image[:, :, None] * illuminant_photons.reshape(1, 1, -1)
     _update_scene_geometry(scene)
     return scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
@@ -4286,8 +4287,19 @@ def scene_create(
 
     if name == "zoneplate":
         size = args[0] if len(args) > 0 else 384
-        wave = _wave_or_default(args[1] if len(args) > 1 else None)
-        return track_session_object(session, _zone_plate_scene(size, wave, asset_store=store))
+        second_arg = args[1] if len(args) > 1 else None
+        if _looks_like_wave_arg(second_arg):
+            fov_deg = 4.0
+            wave_arg = second_arg
+        else:
+            if second_arg is None or (isinstance(second_arg, (list, tuple, np.ndarray)) and np.asarray(second_arg).size == 0):
+                fov_source = None
+            else:
+                fov_source = second_arg
+            fov_deg = 4.0 if fov_source is None else float(np.asarray(fov_source, dtype=float).reshape(-1)[0])
+            wave_arg = args[2] if len(args) > 2 else None
+        wave = _wave_or_default(wave_arg)
+        return track_session_object(session, _zone_plate_scene(size, wave, fov_deg=fov_deg, asset_store=store))
 
     if name in {"bar", "baree"}:
         size = args[0] if len(args) > 0 else 64
