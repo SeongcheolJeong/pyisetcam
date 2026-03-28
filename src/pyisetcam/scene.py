@@ -1984,12 +1984,19 @@ def _line_scene(
     return scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
 
 
-def _bar_scene(size: Any, width: int, wave: np.ndarray, *, asset_store: AssetStore) -> Scene:
+def _bar_scene(
+    size: Any,
+    width: int,
+    wave: np.ndarray,
+    spectral_type: str = "ep",
+    *,
+    asset_store: AssetStore,
+) -> Scene:
     rows, cols = _scene_size_2d(size, default=64)
     bar_width = max(int(width), 1)
     start = _matlab_round_scalar((cols - bar_width) / 2.0)
     stop = min(start + bar_width, cols)
-    illuminant_energy, illuminant_photons = _spectral_illuminant("ep", wave, asset_store=asset_store)
+    illuminant_energy, illuminant_photons = _spectral_illuminant(spectral_type, wave, asset_store=asset_store)
     photons = np.full((rows, cols, wave.size), 1e-8, dtype=float)
     photons[:, start:stop, :] = 1.0
     photons = photons * illuminant_photons.reshape(1, 1, -1)
@@ -4301,11 +4308,17 @@ def scene_create(
         wave = _wave_or_default(wave_arg)
         return track_session_object(session, _zone_plate_scene(size, wave, fov_deg=fov_deg, asset_store=store))
 
-    if name in {"bar", "baree"}:
+    if name == "bar":
         size = args[0] if len(args) > 0 else 64
         width = int(args[1]) if len(args) > 1 else 3
         wave = _wave_or_default(args[2] if len(args) > 2 else None)
-        return track_session_object(session, _bar_scene(size, width, wave, asset_store=store))
+        return track_session_object(session, _bar_scene(size, width, wave, "ep", asset_store=store))
+
+    if name == "baree":
+        size = args[0] if len(args) > 0 else 64
+        width = int(args[1]) if len(args) > 1 else 3
+        wave = _wave_or_default(args[2] if len(args) > 2 else None)
+        return track_session_object(session, _bar_scene(size, width, wave, "ee", asset_store=store))
 
     if name in {"whitenoise", "noise"}:
         size = args[0] if len(args) > 0 else 128

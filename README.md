@@ -299,6 +299,8 @@ of the lower-level helper defaults,
 and
 the plain `sceneCreate('bar')` shortcut now replays MATLAB's default
 3-pixel bar width instead of inheriting the wider helper-level default,
+while the documented `sceneCreate('bar ee', ...)` alias now uses the
+equal-energy bar spectrum instead of collapsing onto plain `bar`,
 and
 the `ramp` / `linear intensity ramp` / `exponential intensity ramp`
 shortcuts now replay the upstream default `256 x 256` scene size instead of

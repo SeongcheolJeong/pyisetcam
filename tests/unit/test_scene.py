@@ -586,17 +586,26 @@ def test_line_and_bar_patterns_have_centered_bright_features(asset_store) -> Non
     assert np.array_equal(np.sort(np.argsort(bar_column_energy)[-3:]), np.array([15, 16, 17]))
 
 
-def test_bar_ee_alias_matches_bar_scene(asset_store) -> None:
+def test_bar_ee_alias_uses_equal_energy_spectrum(asset_store) -> None:
     canonical = scene_create("bar", 33, 3, asset_store=asset_store)
     alias = scene_create("bar ee", 33, 3, asset_store=asset_store)
 
-    np.testing.assert_allclose(
-        scene_get(alias, "photons"),
-        scene_get(canonical, "photons"),
-        rtol=0.0,
-        atol=0.0,
+    canonical_energy = np.asarray(scene_get(canonical, "illuminant energy"), dtype=float).reshape(-1)
+    alias_energy = np.asarray(scene_get(alias, "illuminant energy"), dtype=float).reshape(-1)
+    canonical_plane = np.asarray(scene_get(canonical, "photons"), dtype=float)[:, :, 0]
+    alias_plane = np.asarray(scene_get(alias, "photons"), dtype=float)[:, :, 0]
+
+    assert np.array_equal(
+        np.sort(np.argsort(np.sum(canonical_plane, axis=0))[-3:]),
+        np.array([15, 16, 17], dtype=int),
+    )
+    assert np.array_equal(
+        np.sort(np.argsort(np.sum(alias_plane, axis=0))[-3:]),
+        np.array([15, 16, 17], dtype=int),
     )
     assert tuple(scene_get(alias, "size")) == (33, 33)
+    assert not np.allclose(alias_energy, canonical_energy, atol=0.0, rtol=1.0e-10)
+    assert np.allclose(alias_energy / alias_energy[0], np.ones_like(alias_energy), atol=1.0e-12, rtol=1.0e-12)
 
 
 def test_bar_dispatch_replays_matlab_default_width(asset_store) -> None:
