@@ -1817,7 +1817,7 @@ def sensor_create(
     wave = np.asarray(pixel_dict.get("wave", DEFAULT_WAVE), dtype=float)
     size = tuple(pixel_dict.get("size", (72, 88)))
 
-    if normalized in {"default", "color", "bayer", "rgb", "bayergrbg", "bayer-grbg"}:
+    if normalized in {"default", "color", "bayer", "rgb", "bayergrbg", "bayer-grbg", "bayer(grbg)"}:
         sensor = _sensor_base("bayer-grbg", wave, size, pixel_dict)
         sensor.fields["pattern"] = np.array([[2, 1], [3, 2]], dtype=int)
         sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle("RGB", wave, asset_store=store)
@@ -1829,9 +1829,15 @@ def sensor_create(
         sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle("RGB", wave, asset_store=store)
         return track_session_object(session, sensor)
 
-    if normalized in {"bayerrggb", "bayer-rggb"}:
+    if normalized in {"bayerrggb", "bayer-rggb", "bayer(rggb)"}:
         sensor = _sensor_base("bayer-rggb", wave, size, pixel_dict)
         sensor.fields["pattern"] = np.array([[1, 2], [2, 3]], dtype=int)
+        sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle("RGB", wave, asset_store=store)
+        return track_session_object(session, sensor)
+
+    if normalized in {"bayerbggr", "bayer-bggr", "bayer(bggr)"}:
+        sensor = _sensor_base("bayer-bggr", wave, size, pixel_dict)
+        sensor.fields["pattern"] = np.array([[3, 2], [2, 1]], dtype=int)
         sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle("RGB", wave, asset_store=store)
         return track_session_object(session, sensor)
 

@@ -5973,6 +5973,19 @@ def test_sensor_create_rgbw_and_rccc_presets_expose_multichannel_cfas(asset_stor
     assert np.array_equal(sensor_get(rccc, "patterncolors"), np.array([["w", "w"], ["w", "r"]], dtype="<U1"))
 
 
+def test_sensor_create_supports_parenthesized_bayer_aliases(asset_store) -> None:
+    grbg = sensor_create("bayer(grbg)", asset_store=asset_store)
+    rggb = sensor_create("bayer(rggb)", asset_store=asset_store)
+    bggr = sensor_create("bayer(bggr)", asset_store=asset_store)
+
+    assert np.array_equal(sensor_get(grbg, "pattern"), np.array([[2, 1], [3, 2]], dtype=int))
+    assert np.array_equal(sensor_get(rggb, "pattern"), np.array([[1, 2], [2, 3]], dtype=int))
+    assert np.array_equal(sensor_get(bggr, "pattern"), np.array([[3, 2], [2, 1]], dtype=int))
+    assert sensor_get(grbg, "filtercolorletters") == "rgb"
+    assert sensor_get(rggb, "filtercolorletters") == "rgb"
+    assert sensor_get(bggr, "filtercolorletters") == "rgb"
+
+
 def test_sensor_create_vendor_models_load_upstream_rgbw_and_rccc_metadata(asset_store) -> None:
     mt9v024_rgbw = sensor_create("mt9v024", "rgbw", asset_store=asset_store)
     mt9v024_rccc = sensor_create("mt9v024", None, "rccc", asset_store=asset_store)
