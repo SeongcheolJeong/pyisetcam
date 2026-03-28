@@ -319,6 +319,12 @@ MATLAB-style cell/list variant payloads for calls such as
 `sensorCreate('MT9V024', [], {'rgbw'})` and
 `sensorCreate('ar0132at', [], {'rccc'})` onto the existing vendor preset
 builders,
+while the custom multispectral sensor lane now preserves the explicit pixel
+object and MATLAB-style empty placeholders in
+`sensorCreate('custom', pixel, filterPattern, filterFile, [], [])`, so the
+default sensor size comes from the CFA pattern and the wavelength grid stays
+attached to the provided pixel instead of crashing or falling back to the
+default pixel,
 and
 the `ramp` / `linear intensity ramp` / `exponential intensity ramp`
 shortcuts now replay the upstream default `256 x 256` scene size instead of

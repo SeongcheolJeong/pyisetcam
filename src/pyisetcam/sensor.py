@@ -1724,17 +1724,21 @@ def _sensor_custom_dispatch(
     filter_pattern: Any,
     filter_file: Any,
     *,
+    pixel: dict[str, Any] | None = None,
     sensor_size: Any | None = None,
     wave: Any | None = None,
     name: str,
     asset_store: AssetStore,
 ) -> Sensor:
-    current = sensor_create(asset_store=asset_store)
-    if wave is not None:
-        current = sensor_set(current, "wave", np.asarray(wave, dtype=float).reshape(-1))
+    pixel_dict = _default_pixel(pixel)
+    current_wave = np.asarray(pixel_dict.get("wave", DEFAULT_WAVE), dtype=float).reshape(-1)
+    if wave is not None and not _is_empty_dispatch_placeholder(wave):
+        current_wave = np.asarray(wave, dtype=float).reshape(-1)
+    current_size = tuple(pixel_dict.get("size", (72, 88)))
+    current = _sensor_base(name, current_wave, current_size, pixel_dict)
     current = sensor_interleaved(current, filter_pattern, filter_file, asset_store=asset_store)
     current = sensor_set(current, "name", name)
-    if sensor_size is not None:
+    if sensor_size is not None and not _is_empty_dispatch_placeholder(sensor_size):
         current = sensor_set(current, "size", sensor_size)
     return current
 
@@ -2027,7 +2031,7 @@ def sensor_create(
     if normalized == "fourcolor":
         if len(args) < 2:
             raise ValueError("sensorCreate('fourcolor', ...) requires a filter pattern and filter file.")
-        sensor = _sensor_custom_dispatch(args[0], args[1], name="fourcolor", asset_store=store)
+        sensor = _sensor_custom_dispatch(args[0], args[1], pixel=pixel, name="fourcolor", asset_store=store)
         return track_session_object(session, sensor)
 
     if normalized == "custom":
@@ -2035,11 +2039,16 @@ def sensor_create(
             raise ValueError("sensorCreate('custom', ...) requires a filter pattern and filter file.")
         filter_pattern = args[0]
         filter_file = args[1]
-        sensor_size = args[2] if len(args) > 2 and args[2] is not None else np.asarray(filter_pattern, dtype=int).shape
-        wave_override = args[3] if len(args) > 3 else None
+        sensor_size = (
+            args[2]
+            if len(args) > 2 and not _is_empty_dispatch_placeholder(args[2])
+            else np.asarray(filter_pattern, dtype=int).shape
+        )
+        wave_override = args[3] if len(args) > 3 and not _is_empty_dispatch_placeholder(args[3]) else None
         sensor = _sensor_custom_dispatch(
             filter_pattern,
             filter_file,
+            pixel=pixel,
             sensor_size=sensor_size,
             wave=wave_override,
             name="custom",

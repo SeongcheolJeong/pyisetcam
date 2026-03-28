@@ -6117,24 +6117,31 @@ def test_sensor_model_wrappers_match_legacy_vendor_contracts(asset_store) -> Non
     custom_dispatch = sensor_create("custom", None, pattern, filter_struct, [6, 8], custom_wave, asset_store=asset_store)
     custom_placeholder = sensor_create("custom", [], pattern, filter_struct, [6, 8], custom_wave, asset_store=asset_store)
     custom_overload = sensor_create("custom", pattern, filter_struct, [6, 8], custom_wave, asset_store=asset_store)
+    custom_pixel = pixelCreate("default", custom_wave)
+    custom_pixel_placeholder = sensor_create("custom", custom_pixel, pattern, filter_struct, [], [], asset_store=asset_store)
     fourcolor = sensor_create("fourcolor", None, pattern, filter_struct, asset_store=asset_store)
     fourcolor_placeholder = sensor_create("fourcolor", [], pattern, filter_struct, asset_store=asset_store)
 
     assert custom_dispatch.name == "custom"
     assert custom_placeholder.name == "custom"
     assert custom_overload.name == "custom"
+    assert custom_pixel_placeholder.name == "custom"
     assert custom_dispatch.fields["size"] == (6, 8)
     assert custom_placeholder.fields["size"] == (6, 8)
     assert custom_overload.fields["size"] == (6, 8)
+    assert custom_pixel_placeholder.fields["size"] == pattern.shape
     assert np.array_equal(np.asarray(sensor_get(custom_dispatch, "wave"), dtype=float), custom_wave)
     assert np.array_equal(np.asarray(sensor_get(custom_placeholder, "wave"), dtype=float), custom_wave)
     assert np.array_equal(np.asarray(sensor_get(custom_overload, "wave"), dtype=float), custom_wave)
+    assert np.array_equal(np.asarray(sensor_get(custom_pixel_placeholder, "wave"), dtype=float), custom_wave)
     assert np.array_equal(sensor_get(custom_dispatch, "pattern"), pattern)
     assert np.array_equal(sensor_get(custom_placeholder, "pattern"), pattern)
     assert np.array_equal(sensor_get(custom_overload, "pattern"), pattern)
+    assert np.array_equal(sensor_get(custom_pixel_placeholder, "pattern"), pattern)
     assert sensor_get(custom_dispatch, "filter names") == ["c1", "c2", "c3"]
     assert sensor_get(custom_placeholder, "filter names") == ["c1", "c2", "c3"]
     assert sensor_get(custom_overload, "filter names") == ["c1", "c2", "c3"]
+    assert sensor_get(custom_pixel_placeholder, "filter names") == ["c1", "c2", "c3"]
 
     assert fourcolor.name == "fourcolor"
     assert fourcolor_placeholder.name == "fourcolor"
