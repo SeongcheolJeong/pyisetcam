@@ -269,7 +269,9 @@ instead of only positional or dict-based Python calls. The adjacent
 `scene_create('radiance chart', wave, radiance, ...)` and
 `sceneCreate('reflectance chart', ...)` wrappers now accept the same
 MATLAB-style key/value arguments too, `sceneCreate('bar ee', imageSize,
-width)` now replays the documented equal-energy bar alias, and
+width)` now replays the documented equal-energy bar alias,
+`sceneCreate('squares', imageSize, squareSize, arraySize)` now replays the
+documented square-array shorthand, and
 `sceneCreate('letter', 'g', fontSize, fontName, display)` now replays the
 documented text shorthand on top of the existing font-object path. The
 same scene lane now also accepts the documented `sceneCreate('vernier',

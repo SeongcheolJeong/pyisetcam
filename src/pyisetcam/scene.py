@@ -4281,7 +4281,7 @@ def scene_create(
             _disk_array_scene(size, radius, array_size, wave, asset_store=store),
         )
 
-    if name in {"squarearray", "square array".replace(" ", "")}:
+    if name in {"squarearray", "square array".replace(" ", ""), "squares"}:
         size = args[0] if len(args) > 0 else 128
         square_size = int(args[1]) if len(args) > 1 else 16
         array_size = args[2] if len(args) > 2 else np.array([1, 1], dtype=int)

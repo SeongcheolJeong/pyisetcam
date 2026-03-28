@@ -516,6 +516,19 @@ def test_bar_ee_alias_matches_bar_scene(asset_store) -> None:
     assert tuple(scene_get(alias, "size")) == (33, 33)
 
 
+def test_squares_alias_matches_square_array_scene(asset_store) -> None:
+    canonical = scene_create("square array", 64, 8, np.array([2, 2], dtype=int), asset_store=asset_store)
+    alias = scene_create("squares", 64, 8, np.array([2, 2], dtype=int), asset_store=asset_store)
+
+    np.testing.assert_allclose(
+        scene_get(alias, "photons"),
+        scene_get(canonical, "photons"),
+        rtol=0.0,
+        atol=0.0,
+    )
+    assert tuple(scene_get(alias, "size")) == (64, 64)
+
+
 def test_point_array_and_grid_lines_follow_spacing(asset_store) -> None:
     point_array = scene_create("point array", 32, 8, "ep", 1, asset_store=asset_store)
     grid_lines = scene_create("grid lines", 32, 8, "ep", 1, asset_store=asset_store)

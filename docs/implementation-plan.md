@@ -9,6 +9,7 @@
 - That same post-milestone scene-constructor lane now also accepts MATLAB-style key/value forms for `sceneCreate('hdr chart', ...)`, `sceneCreate('hdr image', ...)`, and `sceneCreate('hdr lights', ...)`, rather than requiring only positional arguments or Python dict payloads.
 - The adjacent scene-pattern wrapper lane now also accepts MATLAB-style key/value arguments for `scene_create('radiance chart', wave, radiance, ...)`, matching the reusable `sceneRadianceChart(...)` helper instead of requiring a Python dict payload.
 - That same post-milestone scene-pattern lane now also accepts the documented `sceneCreate('bar ee', imageSize, width)` alias on top of the existing equal-energy `bar` scene builder.
+- That same post-milestone scene-pattern lane now also accepts the documented `sceneCreate('squares', imageSize, squareSize, arraySize)` alias on top of the existing `square array` builder.
 - That same post-milestone scene-constructor lane now also accepts the documented text shorthand `sceneCreate('letter', 'g', fontSize, fontName, display)`, on top of the existing font-object `sceneCreate('letter', font, display)` path.
 - That same post-milestone scene-constructor lane now also accepts the documented `sceneCreate('vernier', type, params)` shorthand on top of the existing `sceneVernier(scene, type, params)` helper path.
 - That same post-milestone scene-constructor lane now also replays the older numeric `sceneCreate('vernier', sz, width, offset, lineReflectance, backReflectance)` shortcut on top of the current headless `sceneVernier(...)` object path.
