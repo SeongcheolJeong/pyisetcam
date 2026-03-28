@@ -647,6 +647,35 @@ def test_disk_array_dispatch_replays_matlab_default_radius(asset_store) -> None:
     assert tuple(scene_get(default_scene, "size")) == (128, 128)
 
 
+def test_disk_and_square_array_dispatch_accept_empty_size_placeholders(asset_store) -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    disk_placeholder = scene_create("disk array", 96, [], [2, 1], wave, asset_store=asset_store)
+    disk_explicit = scene_create("disk array", 96, 128, [2, 1], wave, asset_store=asset_store)
+    square_placeholder = scene_create("square array", 96, [], [2, 1], wave, asset_store=asset_store)
+    square_explicit = scene_create("square array", 96, 16, [2, 1], wave, asset_store=asset_store)
+
+    np.testing.assert_allclose(
+        np.asarray(scene_get(disk_placeholder, "photons"), dtype=float),
+        np.asarray(scene_get(disk_explicit, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    np.testing.assert_allclose(
+        np.asarray(scene_get(square_placeholder, "photons"), dtype=float),
+        np.asarray(scene_get(square_explicit, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    assert np.array_equal(
+        np.asarray(scene_get(disk_placeholder, "wave"), dtype=float),
+        np.asarray(scene_get(disk_explicit, "wave"), dtype=float),
+    )
+    assert np.array_equal(
+        np.asarray(scene_get(square_placeholder, "wave"), dtype=float),
+        np.asarray(scene_get(square_explicit, "wave"), dtype=float),
+    )
+
+
 def test_zone_plate_dispatch_accepts_optional_field_of_view_and_wave(asset_store) -> None:
     wave = np.array([450.0, 550.0, 650.0], dtype=float)
     explicit_fov = scene_create("zone plate", 96, 7.5, wave, asset_store=asset_store)
