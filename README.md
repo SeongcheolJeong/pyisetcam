@@ -323,7 +323,10 @@ the upstream OI-sampled split-pixel geometry contract, and direct
 existing OVT vendor presets. `sensorCreate('imec44', rowcol)` is now
 also routed through the existing IMEC 4x4 multispectral builder, and
 `sensorCreate('custom', ...)` / `sensorCreate('fourcolor', ...)` now
-reuse the current headless custom filter-pattern helper.
+reuse the current headless custom filter-pattern helper. The same vendor
+lane now also accepts the practical overload
+`sensor_create('imx363', 'row col', [rows, cols], ...)` on top of the
+already-supported explicit placeholder form.
 `sensorCreate('human', params)` plus the explicit
 `sensorCreate('human', pixel, params)` form now also replay the upstream
 human-cone parameter-struct flow on top of the existing

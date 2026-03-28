@@ -1821,6 +1821,9 @@ def sensor_create(
     if normalized in {"mt9v024", "ar0132at"} and isinstance(pixel, str):
         args = (pixel, *args)
         pixel = None
+    if normalized in {"imx363", "googlepixel4a"} and isinstance(pixel, str):
+        args = (pixel, *args)
+        pixel = None
     pixel_dict = _default_pixel(pixel)
     wave = np.asarray(pixel_dict.get("wave", DEFAULT_WAVE), dtype=float)
     size = tuple(pixel_dict.get("size", (72, 88)))

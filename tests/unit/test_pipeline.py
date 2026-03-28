@@ -6041,9 +6041,13 @@ def test_sensor_model_wrappers_match_legacy_vendor_contracts(asset_store) -> Non
 
     imx363 = sensorIMX363V2(None, "row col", [12, 16], asset_store=asset_store)
     direct_imx363 = sensor_create("imx363", None, "row col", [12, 16], asset_store=asset_store)
+    overload_imx363 = sensor_create("imx363", "row col", [12, 16], asset_store=asset_store)
     assert imx363.name == direct_imx363.name
+    assert imx363.name == overload_imx363.name
     assert imx363.fields["size"] == direct_imx363.fields["size"]
+    assert imx363.fields["size"] == overload_imx363.fields["size"]
     assert sensor_get(imx363, "quantizationmethod") == sensor_get(direct_imx363, "quantizationmethod")
+    assert sensor_get(imx363, "quantizationmethod") == sensor_get(overload_imx363, "quantizationmethod")
 
     filter_struct = {
         "data": np.array(
