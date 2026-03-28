@@ -173,13 +173,23 @@ def test_scene_create_moire_orient_replays_green_target_plane(asset_store) -> No
 def test_scene_create_letter_branch_reuses_font_pipeline(asset_store) -> None:
     font = font_create("A", "Georgia", 18, asset_store=asset_store)
     scene = scene_create("letter", font, "LCD-Apple", asset_store=asset_store)
+    shortcut = scene_create("letter", "A", 18, "Georgia", "LCD-Apple", asset_store=asset_store)
     photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+    shortcut_photons = np.asarray(scene_get(shortcut, "photons"), dtype=float)
 
     assert scene_get(scene, "name") == font["name"]
+    assert scene_get(shortcut, "name") == font["name"]
     assert photons.ndim == 3
     assert photons.shape[2] == scene_get(scene, "nwave")
     assert float(np.max(photons)) > float(np.min(photons))
     assert scene_get(scene, "fov") > 0.0
+    np.testing.assert_allclose(shortcut_photons, photons, atol=0.0, rtol=0.0)
+    np.testing.assert_allclose(
+        np.asarray(scene_get(shortcut, "wave"), dtype=float),
+        np.asarray(scene_get(scene, "wave"), dtype=float),
+        atol=0.0,
+        rtol=0.0,
+    )
 
 
 def test_scene_from_file_supports_multispectral_mat_files(asset_store) -> None:

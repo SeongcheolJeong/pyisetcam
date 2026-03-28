@@ -4325,8 +4325,15 @@ def scene_create(
     if name in {"letter", "font"}:
         from .fonts import font_create, scene_from_font
 
-        font = args[0] if len(args) > 0 else font_create(asset_store=store)
-        display = args[1] if len(args) > 1 else None
+        if args and isinstance(args[0], str):
+            letter = str(args[0])
+            font_size = int(args[1]) if len(args) > 1 else 14
+            font_name = str(args[2]) if len(args) > 2 else "Georgia"
+            display = args[3] if len(args) > 3 else None
+            font = font_create(letter, font_name, font_size, asset_store=store)
+        else:
+            font = args[0] if len(args) > 0 else font_create(asset_store=store)
+            display = args[1] if len(args) > 1 else None
         return track_session_object(session, scene_from_font(font, display, asset_store=store))
 
     raise UnsupportedOptionError("sceneCreate", scene_name)
