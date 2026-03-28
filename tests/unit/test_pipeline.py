@@ -6025,6 +6025,17 @@ def test_sensor_model_wrappers_match_legacy_vendor_contracts(asset_store) -> Non
     assert sensor_get(imec, "nfilters") == 16
     assert len(sensor_get(imec, "filter names")) == 16
 
+    imec_dispatch = sensor_create("imec44", None, [8, 12], asset_store=asset_store)
+    imec_dispatch_overload = sensor_create("imec44", [8, 12], asset_store=asset_store)
+    assert imec_dispatch.name == "IMEC SSM"
+    assert imec_dispatch_overload.name == "IMEC SSM"
+    assert imec_dispatch.fields["size"] == (8, 12)
+    assert imec_dispatch_overload.fields["size"] == (8, 12)
+    assert sensor_get(imec_dispatch, "quantizationmethod") == "10 bit"
+    assert sensor_get(imec_dispatch_overload, "quantizationmethod") == "10 bit"
+    assert np.array_equal(sensor_get(imec_dispatch, "pattern"), sensor_get(imec, "pattern"))
+    assert np.array_equal(sensor_get(imec_dispatch_overload, "pattern"), sensor_get(imec, "pattern"))
+
 
 def test_sensor_create_imx363_and_crop_support_raw_tutorial_flow(asset_store) -> None:
     sensor = sensor_create("IMX363", None, "row col", [12, 16], asset_store=asset_store)

@@ -267,7 +267,8 @@ pixel, oi)` reuse the headless light-field helper with MATLAB-style OI
 name replay, `sensorCreate('dual pixel', [], oi, nMicrolens)` now mirrors
 the upstream OI-sampled split-pixel geometry contract, and direct
 `sensorCreate('ovt-large')` / `sensorCreate('ovt-small')` now expose the
-existing OVT vendor presets.
+existing OVT vendor presets. `sensorCreate('imec44', rowcol)` is now
+also routed through the existing IMEC 4x4 multispectral builder.
 `camera_create(...)` now forwards those expanded
 sensor presets too, so camera constructors can directly target `rgbw`,
 `rccc`, `mt9v024`, and `ar0132at` sensor variants. The first

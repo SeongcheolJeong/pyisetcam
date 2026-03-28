@@ -1782,6 +1782,9 @@ def sensor_create(
     if normalized == "dualpixel" and isinstance(pixel, OpticalImage):
         args = (pixel, *args)
         pixel = None
+    if normalized == "imec44" and pixel is not None and not isinstance(pixel, dict):
+        args = (pixel, *args)
+        pixel = None
     if normalized in {"mt9v024", "ar0132at"} and isinstance(pixel, str):
         args = (pixel, *args)
         pixel = None
@@ -1916,6 +1919,10 @@ def sensor_create(
 
     if normalized in {"ovtsmall", "ovt-small"}:
         return track_session_object(session, _sensor_create_ovt_small(asset_store=store))
+
+    if normalized == "imec44":
+        row_col = args[0] if args else np.array([400, 400], dtype=int)
+        return sensor_create_imec_ssm_4x4_vis("row col", row_col, asset_store=store, session=session)
 
     if normalized == "ideal":
         return sensor_create_ideal("xyz", None, asset_store=store, session=session)
