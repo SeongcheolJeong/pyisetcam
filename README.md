@@ -270,7 +270,10 @@ the upstream OI-sampled split-pixel geometry contract, and direct
 existing OVT vendor presets. `sensorCreate('imec44', rowcol)` is now
 also routed through the existing IMEC 4x4 multispectral builder, and
 `sensorCreate('custom', ...)` / `sensorCreate('fourcolor', ...)` now
-reuse the current headless custom filter-pattern helper.
+reuse the current headless custom filter-pattern helper. `sensorCreate('human',
+params)` now also replays the upstream human-cone parameter-struct flow on
+top of the existing `pixelCreate('human')` and `sensorCreateConeMosaic(...)`
+helpers.
 `camera_create(...)` now forwards those expanded
 sensor presets too, so camera constructors can directly target `rgbw`,
 `rccc`, `mt9v024`, and `ar0132at` sensor variants. The first

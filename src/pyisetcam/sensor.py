@@ -1801,6 +1801,9 @@ def sensor_create(
     if normalized == "dualpixel" and isinstance(pixel, OpticalImage):
         args = (pixel, *args)
         pixel = None
+    if normalized == "human" and pixel is not None:
+        args = (pixel, *args)
+        pixel = None
     if normalized == "imec44" and pixel is not None and not isinstance(pixel, dict):
         args = (pixel, *args)
         pixel = None
@@ -1945,6 +1948,31 @@ def sensor_create(
     if normalized == "imec44":
         row_col = args[0] if args else np.array([400, 400], dtype=int)
         return sensor_create_imec_ssm_4x4_vis("row col", row_col, asset_store=store, session=session)
+
+    if normalized == "human":
+        params_source = args[0] if args and hasattr(args[0], "items") else {}
+        params = dict(params_source) if isinstance(params_source, dict) else dict(vars(params_source)) if hasattr(params_source, "__dict__") else {}
+        wave = np.asarray(params.get("wave", np.arange(400.0, 701.0, 10.0)), dtype=float).reshape(-1)
+        base = sensor_create(asset_store=store)
+        base = sensor_set(base, "wave", wave)
+        base = sensor_set(base, "pixel", pixel_create("human", wave))
+        current, xy, cone_type, resolved_seed, corrected_densities = sensor_create_cone_mosaic(
+            base,
+            params.get("sz"),
+            params.get("rgbDensities"),
+            params.get("coneAperture"),
+            params.get("rSeed"),
+            "human",
+            asset_store=store,
+        )
+        human_pixel = pixel_set(sensor_get(current, "pixel"), "voltage swing", 1.0)
+        current = sensor_set(current, "pixel", human_pixel)
+        current = sensor_set(current, "exposure time", 1.0)
+        current = sensor_set(current, "cone locs", xy)
+        current = sensor_set(current, "cone type", cone_type)
+        current = sensor_set(current, "densities", corrected_densities)
+        current = sensor_set(current, "rSeed", resolved_seed)
+        return track_session_object(session, current)
 
     if normalized == "fourcolor":
         if len(args) < 2:
