@@ -6035,9 +6035,19 @@ def test_sensor_create_vendor_models_load_upstream_rgbw_and_rccc_metadata(asset_
 def test_sensor_model_wrappers_match_legacy_vendor_contracts(asset_store) -> None:
     mt9v024 = sensorMT9V024(None, "rgbw", asset_store=asset_store)
     direct_mt9v024 = sensor_create("mt9v024", "rgbw", asset_store=asset_store)
+    list_mt9v024 = sensor_create("mt9v024", [], ["rgbw"], asset_store=asset_store)
     assert mt9v024.name == direct_mt9v024.name
+    assert mt9v024.name == list_mt9v024.name
     assert mt9v024.fields["size"] == direct_mt9v024.fields["size"]
+    assert mt9v024.fields["size"] == list_mt9v024.fields["size"]
     assert np.array_equal(sensor_get(mt9v024, "pattern"), sensor_get(direct_mt9v024, "pattern"))
+    assert np.array_equal(sensor_get(mt9v024, "pattern"), sensor_get(list_mt9v024, "pattern"))
+
+    direct_ar0132at = sensor_create("ar0132at", "rccc", asset_store=asset_store)
+    tuple_ar0132at = sensor_create("ar0132at", [], ("rccc",), asset_store=asset_store)
+    assert direct_ar0132at.name == tuple_ar0132at.name
+    assert direct_ar0132at.fields["size"] == tuple_ar0132at.fields["size"]
+    assert np.array_equal(sensor_get(direct_ar0132at, "pattern"), sensor_get(tuple_ar0132at, "pattern"))
 
     imx363 = sensorIMX363V2(None, "row col", [12, 16], asset_store=asset_store)
     direct_imx363 = sensor_create("imx363", None, "row col", [12, 16], asset_store=asset_store)

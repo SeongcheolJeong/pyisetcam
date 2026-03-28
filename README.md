@@ -314,6 +314,11 @@ the plain `sceneCreate('bar')` shortcut now replays MATLAB's default
 3-pixel bar width instead of inheriting the wider helper-level default,
 while the documented `sceneCreate('bar ee', ...)` alias now uses the
 equal-energy bar spectrum instead of collapsing onto plain `bar`,
+while the vendor sensor dispatcher now also unwraps single-entry
+MATLAB-style cell/list variant payloads for calls such as
+`sensorCreate('MT9V024', [], {'rgbw'})` and
+`sensorCreate('ar0132at', [], {'rccc'})` onto the existing vendor preset
+builders,
 and
 the `ramp` / `linear intensity ramp` / `exponential intensity ramp`
 shortcuts now replay the upstream default `256 x 256` scene size instead of

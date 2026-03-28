@@ -1549,7 +1549,14 @@ def _sensor_from_upstream_model(
 def _sensor_variant_name(args: tuple[Any, ...], default: str) -> str:
     if not args:
         return default
-    return str(args[0])
+    variant = args[0]
+    if isinstance(variant, (list, tuple, np.ndarray)):
+        values = np.asarray(variant, dtype=object).reshape(-1)
+        if values.size == 0:
+            return default
+        if values.size == 1:
+            return str(values[0])
+    return str(variant)
 
 
 def _human_cone_mosaic(
