@@ -4051,7 +4051,12 @@ def scene_create(
     if name in {"radiancechart", "radiance chart".replace(" ", "")}:
         if len(args) < 2:
             raise ValueError("sceneCreate('radiance chart', ...) requires wave and radiance.")
-        params = _normalized_parameter_dict(args[2]) if len(args) > 2 and hasattr(args[2], "items") else {}
+        if len(args) > 2 and hasattr(args[2], "items"):
+            params = _normalized_parameter_dict(args[2])
+        elif len(args) > 2:
+            params = _normalized_key_value_args(tuple(args[2:]))
+        else:
+            params = {}
         scene, _ = scene_radiance_chart(
             args[0],
             args[1],

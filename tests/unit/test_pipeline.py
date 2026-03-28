@@ -15898,13 +15898,32 @@ def test_scene_pattern_wrapper_surface(asset_store) -> None:
     radiance = np.linspace(1.0e12, 5.0e12, wave.size * 4, dtype=float).reshape(wave.size, 4, order="F")
     radiance_scene, rc_size = sceneRadianceChart(wave, radiance, rowcol=[2, 2], patch_size=6, gray_fill=True, asset_store=asset_store)
     radiance_alias = scene_create("radiance chart", wave, radiance, {"rowcol": [2, 2], "patch size": 6, "gray fill": True}, asset_store=asset_store)
+    radiance_kv = scene_create(
+        "radiance chart",
+        wave,
+        radiance,
+        "rowcol",
+        [2, 2],
+        "patch size",
+        6,
+        "gray fill",
+        True,
+        asset_store=asset_store,
+    )
 
     chart_parameters = scene_get(radiance_scene, "chart parameters")
     assert tuple(rc_size) == (2, 3)
     assert tuple(scene_get(radiance_scene, "size")) == (12, 18)
     assert tuple(scene_get(radiance_alias, "size")) == (12, 18)
+    assert tuple(scene_get(radiance_kv, "size")) == (12, 18)
     assert tuple(np.asarray(chart_parameters["rowcol"], dtype=int)) == (2, 3)
     assert np.asarray(scene_get(radiance_scene, "photons"), dtype=float).shape == (12, 18, 31)
+    np.testing.assert_allclose(
+        np.asarray(scene_get(radiance_kv, "photons"), dtype=float),
+        np.asarray(scene_get(radiance_alias, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
 
 
 def test_scene_vernier_wrapper_surface(asset_store) -> None:
