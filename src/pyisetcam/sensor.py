@@ -1804,6 +1804,9 @@ def sensor_create(
     if normalized == "human" and pixel is not None:
         args = (pixel, *args)
         pixel = None
+    if normalized == "monochromearray" and pixel is not None and not isinstance(pixel, dict):
+        args = (pixel, *args)
+        pixel = None
     if normalized == "imec44" and pixel is not None and not isinstance(pixel, dict):
         args = (pixel, *args)
         pixel = None
@@ -1846,6 +1849,15 @@ def sensor_create(
         sensor.fields["pattern"] = np.array([[1]], dtype=int)
         sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle("monochrome", wave, asset_store=store)
         return track_session_object(session, sensor)
+
+    if normalized == "monochromearray":
+        count_source = args[0] if args and args[0] is not None else 3
+        count = int(np.rint(np.asarray(count_source, dtype=float).reshape(-1)[0]))
+        if count < 1:
+            raise ValueError("sensorCreate('monochrome array', ...) requires a positive sensor count.")
+        template = sensor_create("monochrome", pixel, asset_store=store)
+        sensors = [copy.deepcopy(template) for _ in range(count)]
+        return _track_sensor_sequence(session, sensors)
 
     if normalized in {"rgbw", "interleaved"}:
         sensor = _sensor_base("rgbw", wave, size, pixel_dict)

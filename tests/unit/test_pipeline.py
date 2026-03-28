@@ -11008,6 +11008,28 @@ def test_sensor_create_supports_ovt_vendor_presets(asset_store) -> None:
     assert float(sensor_get(small, "pixel fill factor")) == pytest.approx(1e-2)
 
 
+def test_sensor_create_supports_monochrome_array_dispatch(asset_store) -> None:
+    default_array = sensor_create("monochrome array", asset_store=asset_store)
+    explicit = sensor_create("monochrome array", None, 5, asset_store=asset_store)
+    overloaded = sensor_create("monochrome array", 4, asset_store=asset_store)
+
+    assert isinstance(default_array, list)
+    assert isinstance(explicit, list)
+    assert isinstance(overloaded, list)
+    assert len(default_array) == 3
+    assert len(explicit) == 5
+    assert len(overloaded) == 4
+    assert explicit[0] is not explicit[1]
+
+    for current in explicit + overloaded + default_array:
+        assert sensor_get(current, "name") == "monochrome"
+        assert sensor_get(current, "filter names") == ["w"]
+        np.testing.assert_array_equal(
+            np.asarray(sensor_get(current, "pattern"), dtype=int),
+            np.array([[1]], dtype=int),
+        )
+
+
 def test_sensor_create_supports_dual_pixel_dispatch(asset_store) -> None:
     scene = scene_create("uniform d65", asset_store=asset_store)
     oi = oi_compute(oi_create(), scene)
