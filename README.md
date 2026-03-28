@@ -271,7 +271,10 @@ replays MATLAB-style key/value dispatch for `sceneCreate('hdr lights', ...)`
 instead of only positional or dict-based Python calls. The adjacent
 `scene_create('radiance chart', wave, radiance, ...)` and
 `sceneCreate('reflectance chart', ...)` wrappers now accept the same
-MATLAB-style key/value arguments too, `sceneCreate('bar ee', imageSize,
+MATLAB-style key/value arguments too, and the positional
+`sceneCreate('reflectance chart', pSize, sSamples, sFiles, wave, grayFlag, sampling)`
+form now also honors MATLAB-style empty placeholders for the optional
+patch-size, wavelength, gray-strip, and sampling slots. `sceneCreate('bar ee', imageSize,
 width)` now replays the documented equal-energy bar alias,
 `sceneCreate('squares', imageSize, squareSize, arraySize)` now replays the
 documented square-array shorthand, and the slanted-bar dispatcher now also

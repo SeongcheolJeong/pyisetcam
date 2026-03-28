@@ -762,6 +762,49 @@ def test_reflectance_chart_scene_supports_explicit_sample_lists(asset_store) -> 
     assert np.array_equal(chart_parameters["sSamples"][2], np.array([1]))
 
 
+def test_reflectance_chart_dispatch_accepts_matlab_empty_placeholders(asset_store) -> None:
+    s_files = [
+        "MunsellSamples_Vhrel.mat",
+        "Food_Vhrel.mat",
+        "skin/HyspexSkinReflectance.mat",
+    ]
+    s_samples = [2, 2, 1]
+
+    explicit = scene_create(
+        "reflectance chart",
+        24,
+        s_samples,
+        s_files,
+        None,
+        True,
+        "r",
+        asset_store=asset_store,
+    )
+    placeholder = scene_create(
+        "reflectance chart",
+        [],
+        s_samples,
+        s_files,
+        [],
+        [],
+        [],
+        asset_store=asset_store,
+    )
+
+    np.testing.assert_allclose(
+        np.asarray(scene_get(placeholder, "photons"), dtype=float),
+        np.asarray(scene_get(explicit, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    placeholder_chart = scene_get(placeholder, "chart parameters")
+    explicit_chart = scene_get(explicit, "chart parameters")
+    assert placeholder_chart["pSize"] == explicit_chart["pSize"] == 24
+    assert placeholder_chart["grayFlag"] == explicit_chart["grayFlag"] is True
+    assert placeholder_chart["sampling"] == explicit_chart["sampling"] == "r"
+    assert np.array_equal(np.asarray(scene_get(placeholder, "wave"), dtype=float), np.asarray(scene_get(explicit, "wave"), dtype=float))
+
+
 def test_reflectance_chart_scene_supports_struct_parameters_and_absolute_paths(asset_store) -> None:
     params = {
         "pSize": 8,

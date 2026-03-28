@@ -96,6 +96,14 @@ def _macbeth_patch_size_arg(value: Any | None) -> int | None:
     return int(np.rint(float(array.reshape(-1)[0])))
 
 
+def _is_empty_scene_dispatch_placeholder(value: Any | None) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, (list, tuple, np.ndarray)):
+        return np.asarray(value).size == 0
+    return False
+
+
 def _looks_like_scene_size_arg(value: Any | None) -> bool:
     if value is None:
         return False
@@ -4152,17 +4160,17 @@ def scene_create(
             params = _reflectance_chart_parameters(args[0])
         else:
             params = _reflectance_chart_parameters(None)
-            if len(args) > 0:
+            if len(args) > 0 and not _is_empty_scene_dispatch_placeholder(args[0]):
                 params["psize"] = max(int(np.rint(args[0])), 1)
             if len(args) > 1:
                 params["ssamples"] = args[1]
             if len(args) > 2:
                 params["sfiles"] = _reflectance_chart_sources(args[2])
-            if len(args) > 3:
+            if len(args) > 3 and not _is_empty_scene_dispatch_placeholder(args[3]):
                 params["wave"] = _wave_or_default(args[3])
-            if len(args) > 4:
+            if len(args) > 4 and not _is_empty_scene_dispatch_placeholder(args[4]):
                 params["grayflag"] = bool(args[4])
-            if len(args) > 5:
+            if len(args) > 5 and not _is_empty_scene_dispatch_placeholder(args[5]):
                 params["sampling"] = str(args[5])
         return track_session_object(
             session,
