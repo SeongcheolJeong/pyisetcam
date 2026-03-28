@@ -15923,16 +15923,62 @@ def test_scene_pattern_wrapper_surface(asset_store) -> None:
         4,
         asset_store=asset_store,
     )
+    hdr_chart_default = scene_create("hdr chart", asset_store=asset_store)
+    hdr_chart_default_explicit = scene_create(
+        "hdr chart",
+        "d range",
+        10**3.5,
+        "n levels",
+        16,
+        "cols per level",
+        12,
+        asset_store=asset_store,
+    )
+    hdr_chart_placeholder = scene_create("hdr chart", [], [], [], [], [], asset_store=asset_store)
+    hdr_chart_placeholder_kv = scene_create(
+        "hdr chart",
+        "d range",
+        [],
+        "n levels",
+        [],
+        "cols per level",
+        [],
+        "max l",
+        [],
+        "illuminant",
+        [],
+        asset_store=asset_store,
+    )
+    hdr_chart_placeholder_explicit = sceneHDRChart(1.0e4, 12, 8, None, None, asset_store=asset_store)
 
     hdr_luminance = np.asarray(scene_get(hdr_chart, "luminance", asset_store=asset_store), dtype=float)
     assert tuple(scene_get(hdr_chart, "size")) == (20, 20)
     assert np.isclose(float(np.max(hdr_luminance)), 50.0, atol=1e-6, rtol=1e-6)
     assert tuple(scene_get(hdr_chart_alias, "size")) == (20, 20)
     assert tuple(scene_get(hdr_chart_kv, "size")) == (20, 20)
+    assert tuple(scene_get(hdr_chart_default, "size")) == (192, 192)
     hdr_chart_params = scene_get(hdr_chart_kv, "chart parameters")
     assert int(hdr_chart_params["nLevels"]) == 5
     assert int(hdr_chart_params["colsPerLevel"]) == 4
     assert float(hdr_chart_params["dRange"]) == pytest.approx(1.0e3)
+    np.testing.assert_allclose(
+        np.asarray(scene_get(hdr_chart_default, "photons"), dtype=float),
+        np.asarray(scene_get(hdr_chart_default_explicit, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    np.testing.assert_allclose(
+        np.asarray(scene_get(hdr_chart_placeholder, "photons"), dtype=float),
+        np.asarray(scene_get(hdr_chart_placeholder_explicit, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    np.testing.assert_allclose(
+        np.asarray(scene_get(hdr_chart_placeholder_kv, "photons"), dtype=float),
+        np.asarray(scene_get(hdr_chart_placeholder_explicit, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
 
     hdr_scene, hdr_background = sceneHDRImage(
         3,
@@ -15968,6 +16014,30 @@ def test_scene_pattern_wrapper_surface(asset_store) -> None:
         40,
         asset_store=asset_store,
     )
+    hdr_scene_default = scene_create("hdr image", asset_store=asset_store)
+    hdr_scene_default_explicit = scene_create("hdr image", "n patches", 8, asset_store=asset_store)
+    hdr_scene_placeholder = scene_create(
+        "hdr image",
+        [],
+        {"background": "", "image size": [96, 96]},
+        asset_store=asset_store,
+    )
+    hdr_scene_placeholder_kv = scene_create(
+        "hdr image",
+        "n patches",
+        [],
+        "background",
+        "",
+        "image size",
+        [96, 96],
+        asset_store=asset_store,
+    )
+    hdr_scene_placeholder_explicit = scene_create(
+        "hdr image",
+        8,
+        {"background": "", "image size": [96, 96]},
+        asset_store=asset_store,
+    )
 
     assert tuple(scene_get(hdr_scene, "size")) == (96, 96)
     assert tuple(scene_get(hdr_background, "size")) == (96, 96)
@@ -15978,6 +16048,25 @@ def test_scene_pattern_wrapper_surface(asset_store) -> None:
     np.testing.assert_allclose(
         np.asarray(scene_get(hdr_scene_kv, "photons"), dtype=float),
         np.asarray(scene_get(hdr_scene_alias, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    assert int(scene_get(hdr_scene_default, "chart parameters")["nPatches"]) == 8
+    np.testing.assert_allclose(
+        np.asarray(scene_get(hdr_scene_default, "photons"), dtype=float),
+        np.asarray(scene_get(hdr_scene_default_explicit, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    np.testing.assert_allclose(
+        np.asarray(scene_get(hdr_scene_placeholder, "photons"), dtype=float),
+        np.asarray(scene_get(hdr_scene_placeholder_explicit, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    np.testing.assert_allclose(
+        np.asarray(scene_get(hdr_scene_placeholder_kv, "photons"), dtype=float),
+        np.asarray(scene_get(hdr_scene_placeholder_explicit, "photons"), dtype=float),
         rtol=0.0,
         atol=0.0,
     )

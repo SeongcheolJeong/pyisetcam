@@ -4086,36 +4086,36 @@ def scene_create(
     if name in {"hdrchart", "hdr chart".replace(" ", "")}:
         if args and isinstance(args[0], str):
             params = _normalized_key_value_args(args)
-            d_range = float(params.get("drange", 1.0e4))
-            n_levels = int(params.get("nlevels", 12))
-            cols_per_level = int(params.get("colsperlevel", 8))
-            max_l = None if params.get("maxl") is None else float(params["maxl"])
-            illuminant = params.get("illuminant")
+            d_range = _scene_dispatch_float_arg(params["drange"], 1.0e4) if "drange" in params else 10.0**3.5
+            n_levels = _scene_dispatch_int_arg(params["nlevels"], 12) if "nlevels" in params else 16
+            cols_per_level = _scene_dispatch_int_arg(params["colsperlevel"], 8) if "colsperlevel" in params else 12
+            max_l = None if "maxl" not in params or _is_empty_scene_dispatch_placeholder(params["maxl"]) else float(params["maxl"])
+            illuminant = None if "illuminant" not in params or _is_empty_scene_dispatch_placeholder(params["illuminant"]) else params["illuminant"]
         else:
-            d_range = float(args[0]) if len(args) > 0 else 1.0e4
-            n_levels = int(args[1]) if len(args) > 1 else 12
-            cols_per_level = int(args[2]) if len(args) > 2 else 8
-            max_l = None if len(args) <= 3 else float(args[3]) if args[3] is not None else None
-            illuminant = args[4] if len(args) > 4 else None
+            d_range = _scene_dispatch_float_arg(args[0], 1.0e4) if len(args) > 0 and _is_empty_scene_dispatch_placeholder(args[0]) else (float(args[0]) if len(args) > 0 else 10.0**3.5)
+            n_levels = _scene_dispatch_int_arg(args[1], 12) if len(args) > 1 and _is_empty_scene_dispatch_placeholder(args[1]) else (int(args[1]) if len(args) > 1 else 16)
+            cols_per_level = _scene_dispatch_int_arg(args[2], 8) if len(args) > 2 and _is_empty_scene_dispatch_placeholder(args[2]) else (int(args[2]) if len(args) > 2 else 12)
+            max_l = None if len(args) <= 3 or _is_empty_scene_dispatch_placeholder(args[3]) else float(args[3])
+            illuminant = None if len(args) <= 4 or _is_empty_scene_dispatch_placeholder(args[4]) else args[4]
         return track_session_object(session, scene_hdr_chart(d_range, n_levels, cols_per_level, max_l, illuminant, asset_store=store))
 
     if name in {"hdrimage", "hdr image".replace(" ", "")}:
         if args and isinstance(args[0], str):
             params = _normalized_key_value_args(args)
-            n_patches = int(params.get("npatches", 8))
+            n_patches = _scene_dispatch_int_arg(params["npatches"], 8) if "npatches" in params else 8
         else:
-            n_patches = int(args[0]) if len(args) > 0 else 5
+            n_patches = _scene_dispatch_int_arg(args[0], 8) if len(args) > 0 else 8
             params = _normalized_parameter_dict(args[1]) if len(args) > 1 and hasattr(args[1], "items") else {}
             if len(args) > 1 and not hasattr(args[1], "items"):
-                params["background"] = args[1]
+                params["background"] = None if _is_empty_scene_dispatch_placeholder(args[1]) else args[1]
         scene, _ = scene_hdr_image(
             n_patches,
-            background=params.get("background", "PsychBuilding.png"),
+            background="PsychBuilding.png" if "background" not in params else (None if _is_empty_scene_dispatch_placeholder(params.get("background")) else params.get("background")),
             image_size=params.get("imagesize"),
-            dynamic_range=float(params.get("dynamicrange", 3.0)),
-            patch_shape=str(params.get("patchshape", "square")),
-            patch_size=None if params.get("patchsize") is None else int(params.get("patchsize")),
-            row=None if params.get("row") is None else int(params.get("row")),
+            dynamic_range=3.0 if _is_empty_scene_dispatch_placeholder(params.get("dynamicrange")) else float(params.get("dynamicrange", 3.0)),
+            patch_shape="square" if _is_empty_scene_dispatch_placeholder(params.get("patchshape")) else str(params.get("patchshape", "square")),
+            patch_size=None if _is_empty_scene_dispatch_placeholder(params.get("patchsize")) else int(params.get("patchsize")),
+            row=None if _is_empty_scene_dispatch_placeholder(params.get("row")) else int(params.get("row")),
             asset_store=store,
         )
         return track_session_object(session, scene)

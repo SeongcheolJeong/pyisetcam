@@ -332,6 +332,12 @@ helper-level `128 x 128` and `256` dynamic-range defaults, while
 `sceneCreate('vernier', 65, [], [], [], [])` now reuse the lower-level
 `sceneVernier(...)` placeholder defaults for size, bar width, and offset
 instead of crashing on `[]`,
+while the adjacent HDR constructor lane now also replays the upstream
+`sceneCreate(...)` defaults for `hdr chart` and `hdr image`, so no-argument
+calls match the MATLAB dispatcher’s `10^3.5` / `16` / `12` strip-chart
+defaults and `8`-patch HDR-image default, while explicit empty placeholders
+in the public wrapper forms reuse the helper-level defaults instead of
+crashing,
 and
 `sceneCreate('moire orient', imageSize, f)` now maps the positional
 arguments onto the same headless parameter path as the existing struct-style
