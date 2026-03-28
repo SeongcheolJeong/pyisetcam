@@ -463,6 +463,19 @@ def test_supported_pattern_scenes(asset_store) -> None:
     assert np.isclose(scene_get(white_noise, "fov"), 1.0)
 
 
+def test_iso12233_dispatch_accepts_empty_fov_placeholder(asset_store) -> None:
+    wave = np.array([400.0, 500.0, 600.0], dtype=float)
+
+    none_placeholder = scene_create("iso12233", 64, 1.33, None, wave, 0.3, asset_store=asset_store)
+    empty_placeholder = scene_create("iso12233", 64, 1.33, [], wave, 0.3, asset_store=asset_store)
+    explicit_default = scene_create("iso12233", 64, 1.33, 2.0, wave, 0.3, asset_store=asset_store)
+
+    np.testing.assert_allclose(scene_get(none_placeholder, "photons"), scene_get(explicit_default, "photons"), rtol=0.0, atol=0.0)
+    np.testing.assert_allclose(scene_get(empty_placeholder, "photons"), scene_get(explicit_default, "photons"), rtol=0.0, atol=0.0)
+    assert np.isclose(float(scene_get(none_placeholder, "fov")), 2.0)
+    assert np.isclose(float(scene_get(empty_placeholder, "fov")), 2.0)
+
+
 def test_mackay_scene_has_center_mask_and_radial_alias(asset_store) -> None:
     rings = scene_create("rings rays", asset_store=asset_store)
     mackay = scene_create("mackay", asset_store=asset_store)

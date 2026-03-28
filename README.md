@@ -274,7 +274,9 @@ instead of only positional or dict-based Python calls. The adjacent
 MATLAB-style key/value arguments too, `sceneCreate('bar ee', imageSize,
 width)` now replays the documented equal-energy bar alias,
 `sceneCreate('squares', imageSize, squareSize, arraySize)` now replays the
-documented square-array shorthand, and
+documented square-array shorthand, and the slanted-bar dispatcher now also
+accepts empty field-of-view placeholders in documented forms like
+`sceneCreate('iso12233', imageSize, slope, [], wave, darklevel)`, and
 `sceneCreate('letter', 'g', fontSize, fontName, display)` now replays the
 documented text shorthand on top of the existing font-object path. The
 same scene lane now also accepts the documented `sceneCreate('vernier',
