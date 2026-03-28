@@ -263,8 +263,9 @@ radiance data, and `sceneCreate('empty', [], wave)` now replays the legacy
 second-positional wavelength override instead of forcing the default
 400:10:700 grid. The same scene dispatcher now also accepts MATLAB-style
 key/value forms for `sceneCreate('hdr chart', ...)` and
-`sceneCreate('hdr image', ...)` instead of only positional or dict-based
-Python calls. `sensor_create` now includes generic
+`sceneCreate('hdr image', ...)`, and the same compatibility lane now also
+replays MATLAB-style key/value dispatch for `sceneCreate('hdr lights', ...)`
+instead of only positional or dict-based Python calls. `sensor_create` now includes generic
 `rgbw` / `rccc` presets plus upstream-backed `mt9v024` and `ar0132at`
 RGBW/RCCC variants. The next sensorCreate dispatcher slice is now landed
 too: `sensorCreate('light field', oi)` and `sensorCreate('light field',

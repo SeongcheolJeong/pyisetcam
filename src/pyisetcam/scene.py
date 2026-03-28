@@ -4005,7 +4005,10 @@ def scene_create(
         return track_session_object(session, _uniform_monochromatic_scene(size, wavelength, asset_store=store))
 
     if name in {"hdrlights", "highdynamicrange", "hdr"}:
-        params = _hdr_lights_parameters(args[0] if len(args) > 0 else None)
+        if args and isinstance(args[0], str):
+            params = _hdr_lights_parameters(_normalized_key_value_args(args))
+        else:
+            params = _hdr_lights_parameters(args[0] if len(args) > 0 else None)
         return track_session_object(session, _hdr_lights_scene(params, asset_store=store))
 
     if name in {"hdrchart", "hdr chart".replace(" ", "")}:

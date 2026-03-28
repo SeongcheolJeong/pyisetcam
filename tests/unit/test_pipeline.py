@@ -15805,6 +15805,24 @@ def test_macbeth_sensor_and_gretag_wrappers(asset_store) -> None:
 
 
 def test_scene_pattern_wrapper_surface(asset_store) -> None:
+    hdr_lights = scene_create("hdr lights", asset_store=asset_store)
+    hdr_lights_kv = scene_create(
+        "hdr lights",
+        "n circles",
+        4,
+        "radius",
+        [0.01, 0.01, 0.01, 0.01],
+        "circle colors",
+        ["white"],
+        asset_store=asset_store,
+    )
+
+    assert tuple(scene_get(hdr_lights, "size")) == (384, 384)
+    assert tuple(scene_get(hdr_lights_kv, "size")) == (384, 384)
+    assert np.max(np.asarray(scene_get(hdr_lights_kv, "luminance", asset_store=asset_store), dtype=float)) > np.min(
+        np.asarray(scene_get(hdr_lights_kv, "luminance", asset_store=asset_store), dtype=float)
+    )
+
     hdr_chart = sceneHDRChart(1.0e3, 5, 4, 50.0, asset_store=asset_store)
     hdr_chart_alias = scene_create("hdr chart", 1.0e3, 5, 4, 50.0, asset_store=asset_store)
     hdr_chart_kv = scene_create(
