@@ -297,6 +297,15 @@ across the common optional-wave pattern constructors such as
 `sceneCreate('bar', ...)`, `sceneCreate('bar ee', ...)`,
 `sceneCreate('point array', ...)`, `sceneCreate('grid lines', ...)`,
 `sceneCreate('checkerboard', ...)`, and `sceneCreate('star pattern', ...)`,
+while the same scene-pattern lane now also honors MATLAB-style empty
+placeholders in optional positional slots such as
+`sceneCreate('line ee', imageSize, [], wave)`,
+`sceneCreate('bar', imageSize, [], wave)`,
+`sceneCreate('point array', imageSize, spacing, [], [], wave)`,
+`sceneCreate('grid lines', imageSize, spacing, [], [], wave)`, and
+`sceneCreate('star pattern', imageSize, [], [], wave)`, reusing the
+documented default offset, width, spectral type, thickness, point size, and
+line-count values instead of crashing on `[]`,
 and
 `sceneCreate('moire orient', imageSize, f)` now maps the positional
 arguments onto the same headless parameter path as the existing struct-style

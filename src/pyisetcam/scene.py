@@ -107,6 +107,18 @@ def _is_empty_scene_dispatch_placeholder(value: Any | None) -> bool:
     return False
 
 
+def _scene_dispatch_int_arg(value: Any | None, default: int) -> int:
+    if _is_empty_scene_dispatch_placeholder(value):
+        return int(default)
+    return int(np.rint(np.asarray(value, dtype=float).reshape(-1)[0]))
+
+
+def _scene_dispatch_text_arg(value: Any | None, default: str) -> str:
+    if _is_empty_scene_dispatch_placeholder(value):
+        return str(default)
+    return str(value)
+
+
 def _looks_like_scene_size_arg(value: Any | None) -> bool:
     if value is None:
         return False
@@ -4195,13 +4207,13 @@ def scene_create(
 
     if name in {"lineee", "impulse1dee"}:
         size = args[0] if len(args) > 0 else 64
-        offset = int(args[1]) if len(args) > 1 else 0
+        offset = _scene_dispatch_int_arg(args[1] if len(args) > 1 else None, 0)
         wave = _wave_or_default(args[2] if len(args) > 2 else None)
         return track_session_object(session, _line_scene("ee", size, offset, wave, asset_store=store))
 
     if name in {"lineequalphoton", "lineep"}:
         size = args[0] if len(args) > 0 else 64
-        offset = int(args[1]) if len(args) > 1 else 0
+        offset = _scene_dispatch_int_arg(args[1] if len(args) > 1 else None, 0)
         wave = _wave_or_default(args[2] if len(args) > 2 else None)
         return track_session_object(session, _line_scene("ep", size, offset, wave, asset_store=store))
 
@@ -4287,9 +4299,9 @@ def scene_create(
         )
 
     if name in {"starpattern", "radiallines"}:
-        image_size = int(args[0]) if len(args) > 0 else 256
-        spectral_type = str(args[1]) if len(args) > 1 else "ep"
-        n_lines = int(args[2]) if len(args) > 2 else 8
+        image_size = _scene_dispatch_int_arg(args[0] if len(args) > 0 else None, 256)
+        spectral_type = _scene_dispatch_text_arg(args[1] if len(args) > 1 else None, "ep")
+        n_lines = _scene_dispatch_int_arg(args[2] if len(args) > 2 else None, 8)
         wave = _wave_or_default(args[3] if len(args) > 3 else None)
         return track_session_object(
             session,
@@ -4322,13 +4334,13 @@ def scene_create(
 
     if name == "bar":
         size = args[0] if len(args) > 0 else 64
-        width = int(args[1]) if len(args) > 1 else 3
+        width = _scene_dispatch_int_arg(args[1] if len(args) > 1 else None, 3)
         wave = _wave_or_default(args[2] if len(args) > 2 else None)
         return track_session_object(session, _bar_scene(size, width, wave, "ep", asset_store=store))
 
     if name == "baree":
         size = args[0] if len(args) > 0 else 64
-        width = int(args[1]) if len(args) > 1 else 3
+        width = _scene_dispatch_int_arg(args[1] if len(args) > 1 else None, 3)
         wave = _wave_or_default(args[2] if len(args) > 2 else None)
         return track_session_object(session, _bar_scene(size, width, wave, "ee", asset_store=store))
 
@@ -4340,9 +4352,9 @@ def scene_create(
 
     if name in {"pointarray", "manypoints", "point array".replace(" ", "")}:
         size = args[0] if len(args) > 0 else 128
-        spacing = int(args[1]) if len(args) > 1 else 16
-        spectral_type = str(args[2]) if len(args) > 2 else "ep"
-        point_size = int(args[3]) if len(args) > 3 else 1
+        spacing = _scene_dispatch_int_arg(args[1] if len(args) > 1 else None, 16)
+        spectral_type = _scene_dispatch_text_arg(args[2] if len(args) > 2 else None, "ep")
+        point_size = _scene_dispatch_int_arg(args[3] if len(args) > 3 else None, 1)
         wave = _wave_or_default(args[4] if len(args) > 4 else None)
         return track_session_object(
             session,
@@ -4371,9 +4383,9 @@ def scene_create(
 
     if name in {"gridlines", "distortiongrid", "grid lines".replace(" ", "")}:
         size = args[0] if len(args) > 0 else 128
-        spacing = int(args[1]) if len(args) > 1 else 16
-        spectral_type = str(args[2]) if len(args) > 2 else "ep"
-        thickness = int(args[3]) if len(args) > 3 else 1
+        spacing = _scene_dispatch_int_arg(args[1] if len(args) > 1 else None, 16)
+        spectral_type = _scene_dispatch_text_arg(args[2] if len(args) > 2 else None, "ep")
+        thickness = _scene_dispatch_int_arg(args[3] if len(args) > 3 else None, 1)
         wave = _wave_or_default(args[4] if len(args) > 4 else None)
         return track_session_object(
             session,
