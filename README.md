@@ -288,10 +288,12 @@ the upstream OI-sampled split-pixel geometry contract, and direct
 existing OVT vendor presets. `sensorCreate('imec44', rowcol)` is now
 also routed through the existing IMEC 4x4 multispectral builder, and
 `sensorCreate('custom', ...)` / `sensorCreate('fourcolor', ...)` now
-reuse the current headless custom filter-pattern helper. `sensorCreate('human',
-params)` now also replays the upstream human-cone parameter-struct flow on
-top of the existing `pixelCreate('human')` and `sensorCreateConeMosaic(...)`
-helpers. The same dispatcher lane now also exposes the legacy
+reuse the current headless custom filter-pattern helper.
+`sensorCreate('human', params)` plus the explicit
+`sensorCreate('human', pixel, params)` form now also replay the upstream
+human-cone parameter-struct flow on top of the existing
+`pixelCreate('human')` and `sensorCreateConeMosaic(...)` helpers. The same
+dispatcher lane now also exposes the legacy
 `sensorCreate('Nikon D100')` preset from the vendored Nikon MAT asset. The
 dispatcher also now accepts the remaining parenthesized Bayer CFA aliases
 from upstream, including `bayer(grbg)`, `bayer(rggb)`, and `bayer(bggr)`.

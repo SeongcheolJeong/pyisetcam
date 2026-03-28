@@ -5364,22 +5364,33 @@ def test_sensor_human_legacy_wrappers_and_light_field(asset_store) -> None:
 
     dispatched = sensor_create("human", None, params, asset_store=asset_store)
     overloaded = sensor_create("human", params, asset_store=asset_store)
+    explicit_pixel = pixelCreate("human", params["wave"])
+    explicit = sensor_create("human", explicit_pixel, params, asset_store=asset_store)
     assert sensorCheckHuman(dispatched) is True
     assert sensorCheckHuman(overloaded) is True
+    assert sensorCheckHuman(explicit) is True
     assert np.array_equal(np.asarray(sensor_get(dispatched, "wave"), dtype=float), params["wave"])
     assert np.array_equal(np.asarray(sensor_get(overloaded, "wave"), dtype=float), params["wave"])
+    assert np.array_equal(np.asarray(sensor_get(explicit, "wave"), dtype=float), params["wave"])
     assert np.array_equal(np.asarray(sensor_get(dispatched, "pattern"), dtype=int), np.asarray(sensor_get(overloaded, "pattern"), dtype=int))
     assert np.array_equal(np.asarray(sensor_get(dispatched, "humanconetype"), dtype=int), np.asarray(sensor_get(overloaded, "humanconetype"), dtype=int))
+    assert np.array_equal(np.asarray(sensor_get(dispatched, "humanconetype"), dtype=int), np.asarray(sensor_get(explicit, "humanconetype"), dtype=int))
     assert np.array_equal(np.asarray(sensor_get(dispatched, "humanconelocs"), dtype=float), np.asarray(sensor_get(overloaded, "humanconelocs"), dtype=float))
+    assert np.array_equal(np.asarray(sensor_get(dispatched, "humanconelocs"), dtype=float), np.asarray(sensor_get(explicit, "humanconelocs"), dtype=float))
     assert np.allclose(np.asarray(sensor_get(dispatched, "humanconedensities"), dtype=float), np.asarray(sensor_get(overloaded, "humanconedensities"), dtype=float))
+    assert np.allclose(np.asarray(sensor_get(dispatched, "humanconedensities"), dtype=float), np.asarray(sensor_get(explicit, "humanconedensities"), dtype=float))
     assert sensor_get(dispatched, "humanrseed") == params["rSeed"]
     assert sensor_get(overloaded, "humanrseed") == params["rSeed"]
+    assert sensor_get(explicit, "humanrseed") == params["rSeed"]
     assert np.isclose(float(pixelGet(sensor_get(dispatched, "pixel"), "voltage swing")), 1.0)
     assert np.isclose(float(pixelGet(sensor_get(overloaded, "pixel"), "voltage swing")), 1.0)
+    assert np.isclose(float(pixelGet(sensor_get(explicit, "pixel"), "voltage swing")), 1.0)
     assert np.isclose(float(sensor_get(dispatched, "integration time")), 1.0)
     assert np.isclose(float(sensor_get(overloaded, "integration time")), 1.0)
+    assert np.isclose(float(sensor_get(explicit, "integration time")), 1.0)
     assert sensor_get(dispatched, "filter names")[0] == "kBlack"
     assert sensor_get(overloaded, "filter names")[0] == "kBlack"
+    assert sensor_get(explicit, "filter names")[0] == "kBlack"
 
     scene = scene_create("uniform d65", asset_store=asset_store)
     oi = oi_compute(oi_create(), scene)

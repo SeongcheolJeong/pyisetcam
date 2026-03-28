@@ -1801,9 +1801,6 @@ def sensor_create(
     if normalized == "dualpixel" and isinstance(pixel, OpticalImage):
         args = (pixel, *args)
         pixel = None
-    if normalized == "human" and pixel is not None:
-        args = (pixel, *args)
-        pixel = None
     if normalized == "monochromearray" and pixel is not None and not isinstance(pixel, dict):
         args = (pixel, *args)
         pixel = None
@@ -1980,7 +1977,12 @@ def sensor_create(
         return sensor_create_imec_ssm_4x4_vis("row col", row_col, asset_store=store, session=session)
 
     if normalized == "human":
-        params_source = args[0] if args and hasattr(args[0], "items") else {}
+        if args and hasattr(args[0], "items"):
+            params_source = args[0]
+        elif pixel is not None and hasattr(pixel, "items"):
+            params_source = pixel
+        else:
+            params_source = {}
         params = dict(params_source) if isinstance(params_source, dict) else dict(vars(params_source)) if hasattr(params_source, "__dict__") else {}
         wave = np.asarray(params.get("wave", np.arange(400.0, 701.0, 10.0)), dtype=float).reshape(-1)
         base = sensor_create(asset_store=store)
