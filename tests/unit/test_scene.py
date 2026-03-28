@@ -503,6 +503,19 @@ def test_line_and_bar_patterns_have_centered_bright_features(asset_store) -> Non
     assert np.array_equal(np.sort(np.argsort(bar_column_energy)[-3:]), np.array([15, 16, 17]))
 
 
+def test_bar_ee_alias_matches_bar_scene(asset_store) -> None:
+    canonical = scene_create("bar", 33, 3, asset_store=asset_store)
+    alias = scene_create("bar ee", 33, 3, asset_store=asset_store)
+
+    np.testing.assert_allclose(
+        scene_get(alias, "photons"),
+        scene_get(canonical, "photons"),
+        rtol=0.0,
+        atol=0.0,
+    )
+    assert tuple(scene_get(alias, "size")) == (33, 33)
+
+
 def test_point_array_and_grid_lines_follow_spacing(asset_store) -> None:
     point_array = scene_create("point array", 32, 8, "ep", 1, asset_store=asset_store)
     grid_lines = scene_create("grid lines", 32, 8, "ep", 1, asset_store=asset_store)
