@@ -4040,10 +4040,28 @@ def scene_create(
         return track_session_object(session, scene)
 
     if name == "vernier":
-        base_scene = args[0] if args and isinstance(args[0], Scene) else scene_create("empty", asset_store=store)
-        vernier_type = str(args[1]) if len(args) > 1 else "display"
-        params = args[2] if len(args) > 2 and hasattr(args[2], "items") else {}
-        return track_session_object(session, scene_vernier(base_scene, vernier_type, params, asset_store=store))
+        if args and isinstance(args[0], Scene):
+            base_scene = args[0]
+            vernier_type = str(args[1]) if len(args) > 1 else "display"
+            params = args[2] if len(args) > 2 and hasattr(args[2], "items") else {}
+            return track_session_object(session, scene_vernier(base_scene, vernier_type, params, asset_store=store))
+
+        size = args[0] if len(args) > 0 else 64
+        width = int(args[1]) if len(args) > 1 else 0
+        offset = int(args[2]) if len(args) > 2 else 1
+        line_reflectance = float(args[3]) if len(args) > 3 else 0.6
+        back_reflectance = float(args[4]) if len(args) > 4 else 0.3
+        params = {
+            "sceneSz": size,
+            "barWidth": width,
+            "offset": offset,
+            "barReflect": line_reflectance,
+            "bgReflect": back_reflectance,
+        }
+        return track_session_object(
+            session,
+            scene_vernier(scene_create("empty", asset_store=store), "object", params, asset_store=store),
+        )
 
     if name in {"reflectancechart", "reflectance"}:
         if args and isinstance(args[0], dict):

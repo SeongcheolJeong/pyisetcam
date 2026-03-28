@@ -279,7 +279,9 @@ dispatcher also now accepts the remaining parenthesized Bayer CFA aliases
 from upstream, including `bayer(grbg)`, `bayer(rggb)`, and `bayer(bggr)`.
 It also now replays the upstream `sensorCreate('monochrome array', [], N)`
 shortcut, including the default 3-sensor case and the practical Python
-overload.
+overload. The scene-constructor lane now also replays the older numeric
+`sceneCreate('vernier', sz, width, offset, lineReflectance, backReflectance)`
+shortcut on top of the current headless `sceneVernier(...)` object path.
 `camera_create(...)` now forwards those expanded
 sensor presets too, so camera constructors can directly target `rgbw`,
 `rccc`, `mt9v024`, and `ar0132at` sensor variants. The first
