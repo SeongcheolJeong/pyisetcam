@@ -4076,6 +4076,13 @@ def scene_create(
             vernier_type = str(args[1]) if len(args) > 1 else "display"
             params = args[2] if len(args) > 2 and hasattr(args[2], "items") else {}
             return track_session_object(session, scene_vernier(base_scene, vernier_type, params, asset_store=store))
+        if args and isinstance(args[0], str):
+            vernier_type = str(args[0])
+            params = args[1] if len(args) > 1 and hasattr(args[1], "items") else {}
+            return track_session_object(
+                session,
+                scene_vernier(scene_create("empty", asset_store=store), vernier_type, params, asset_store=store),
+            )
 
         size = args[0] if len(args) > 0 else 64
         width = int(args[1]) if len(args) > 1 else 0

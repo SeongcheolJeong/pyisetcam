@@ -15982,6 +15982,12 @@ def test_scene_vernier_wrapper_surface(asset_store) -> None:
         {"sceneSz": 64, "barWidth": 3, "offset": 2, "barReflect": 0.7, "bgReflect": 0.2, "meanLum": 12.0},
         asset_store=asset_store,
     )
+    shorthand_alias = scene_create(
+        "vernier",
+        "object",
+        {"sceneSz": 64, "barWidth": 3, "offset": 2, "barReflect": 0.7, "bgReflect": 0.2, "meanLum": 12.0},
+        asset_store=asset_store,
+    )
     legacy_reference = sceneVernier(
         scene_create("empty", asset_store=asset_store),
         "object",
@@ -15994,12 +16000,20 @@ def test_scene_vernier_wrapper_surface(asset_store) -> None:
     assert np.isclose(float(scene_get(display_scene, "mean luminance", asset_store=asset_store)), 10.0, atol=1e-6, rtol=1e-6)
     assert tuple(scene_get(object_scene, "size")) == (64, 65)
     assert tuple(scene_get(object_alias, "size")) == (64, 65)
+    assert tuple(scene_get(shorthand_alias, "size")) == (64, 65)
     assert tuple(scene_get(legacy_alias, "size")) == (64, 65)
     assert object_scene.name == "vernier-2"
+    assert shorthand_alias.name == "vernier-2"
     assert legacy_alias.name == "vernier-2"
     assert np.isclose(float(scene_get(object_scene, "mean luminance", asset_store=asset_store)), 12.0, atol=1e-6, rtol=1e-6)
     assert np.max(np.asarray(scene_get(object_scene, "luminance", asset_store=asset_store), dtype=float)) > np.min(
         np.asarray(scene_get(object_scene, "luminance", asset_store=asset_store), dtype=float)
+    )
+    np.testing.assert_allclose(
+        np.asarray(scene_get(shorthand_alias, "photons"), dtype=float),
+        np.asarray(scene_get(object_alias, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
     )
     np.testing.assert_allclose(
         np.asarray(scene_get(legacy_alias, "photons"), dtype=float),

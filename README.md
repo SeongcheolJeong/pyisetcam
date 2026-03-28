@@ -270,7 +270,10 @@ instead of only positional or dict-based Python calls. The adjacent
 `sceneCreate('reflectance chart', ...)` wrappers now accept the same
 MATLAB-style key/value arguments too, and `sceneCreate('letter', 'g',
 fontSize, fontName, display)` now replays the documented text shorthand on
-top of the existing font-object path. `sensor_create` now includes generic
+top of the existing font-object path. The same scene lane now also accepts
+the documented `sceneCreate('vernier', type, params)` shorthand on top of
+the lower-level `sceneVernier(scene, type, params)` helper path.
+`sensor_create` now includes generic
 `rgbw` / `grbc` / `rccc` presets plus upstream-backed `mt9v024` and `ar0132at`
 RGBW/RCCC variants. The next sensorCreate dispatcher slice is now landed
 too: `sensorCreate('light field', oi)` and `sensorCreate('light field',
