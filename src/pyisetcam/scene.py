@@ -63,10 +63,11 @@ _SCENE_SDR_DEFAULT_DIR = Path(__file__).resolve().parents[2] / "data" / "scenes"
 _SCENE_LIST_TEXT = """ISETCam scene types with optional parameters
 
 Supported Python sceneCreate families include:
+  list / scenelist
   empty
   macbeth d65 / d50 / illc / fluorescent / tungsten / ee_ir
   reflectance chart
-  multispectral / rgb / uniform monochromatic
+  monochrome / unispectral / multispectral / hyperspectral / rgb
   rings rays / harmonic / sweep frequency / freq orient pattern / moire orient
   line d65 / line ee / line ep / bar / vernier
   point array / grid lines / radial lines / slanted edge / checkerboard
@@ -1754,6 +1755,37 @@ def _create_macbeth_scene(
     )
     _update_scene_geometry(scene)
     return scene_adjust_luminance(scene, 100.0, asset_store=asset_store)
+
+
+def _scene_shell(
+    name: str,
+    wave: np.ndarray,
+    *,
+    asset_store: AssetStore,
+    illuminant_type: str = "d65",
+) -> Scene:
+    illuminant_key = param_format(illuminant_type)
+    if illuminant_key == "d65":
+        illuminant_energy, _ = _load_d65(wave, asset_store)
+        illuminant_comment = "D65.mat"
+    else:
+        from .illuminant import illuminant_create, illuminant_get
+
+        illuminant = illuminant_create(illuminant_type, wave, 100.0, asset_store=asset_store)
+        illuminant_energy = np.asarray(illuminant_get(illuminant, "energy"), dtype=float).reshape(-1)
+        illuminant_comment = str(illuminant_get(illuminant, "name"))
+
+    scene = Scene(name=name)
+    scene.fields["wave"] = np.asarray(wave, dtype=float).reshape(-1)
+    scene.fields["illuminant_format"] = "spectral"
+    scene.fields["illuminant_energy"] = np.asarray(illuminant_energy, dtype=float).reshape(-1)
+    scene.fields["illuminant_photons"] = energy_to_quanta(scene.fields["illuminant_energy"], scene.fields["wave"])
+    scene.fields["illuminant_comment"] = illuminant_comment
+    scene.fields["distance_m"] = DEFAULT_DISTANCE_M
+    scene.fields["fov_deg"] = DEFAULT_FOV_DEG
+    scene.data["photons"] = np.zeros((1, 1, scene.fields["wave"].size), dtype=float)
+    _update_scene_geometry(scene)
+    return scene
 
 
 def _uniform_scene(
@@ -3777,6 +3809,9 @@ def scene_create(
     store = _store(asset_store)
     name = param_format(scene_name)
 
+    if name in {"list", "scenelist"}:
+        return scene_list()
+
     if name in {"default", "macbeth", "macbethd65", "macbethcustomreflectance"}:
         patch_size = int(args[0]) if len(args) > 0 else 16
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
@@ -3870,6 +3905,24 @@ def scene_create(
                 illuminant_type="ir",
                 asset_store=store,
             ),
+        )
+
+    if name in {"monochrome", "unispectral"}:
+        return track_session_object(
+            session,
+            _scene_shell("monochrome", np.array([550.0], dtype=float), asset_store=store),
+        )
+
+    if name in {"multispectral", "hyperspectral"}:
+        return track_session_object(
+            session,
+            _scene_shell("multispectral", _wave_or_default(None), asset_store=store),
+        )
+
+    if name == "rgb":
+        return track_session_object(
+            session,
+            _scene_shell("rgb", _wave_or_default(None), asset_store=store),
         )
 
     if name == "lstar":
@@ -4252,8 +4305,7 @@ def scene_from_file(
 
     if normalized_type in {"spectral", "multispectral", "hyperspectral"}:
         multispectral = _multispectral_scene_input(input_data, requested_wave, asset_store=store)
-        scene = Scene(name=str(multispectral["source_name"]))
-        scene.fields["wave"] = np.asarray(multispectral["wave"], dtype=float)
+        scene = _scene_shell(str(multispectral["source_name"]), np.asarray(multispectral["wave"], dtype=float), asset_store=store)
         scene.fields["illuminant_format"] = str(multispectral["illuminant_format"])
         scene.fields["illuminant_energy"] = np.asarray(multispectral["illuminant_energy"], dtype=float)
         scene.fields["illuminant_photons"] = np.asarray(multispectral["illuminant_photons"], dtype=float)
@@ -4285,9 +4337,7 @@ def scene_from_file(
     energy = linear_rgb.reshape(-1, n_primaries) @ spd.T
     photons = energy_to_quanta(energy, wave_nm).reshape(prepared.shape[0], prepared.shape[1], wave_nm.size)
 
-    scene = Scene(name=f"{source_name} - {current_display.name}")
-    scene.fields["wave"] = wave_nm
-    scene.fields["illuminant_format"] = "spectral"
+    scene = _scene_shell(f"{source_name} - {current_display.name}", wave_nm, asset_store=store)
     if illuminant_energy is None:
         source_illuminant_energy = np.sum(spd, axis=1)
         illuminant_comment = current_display.name

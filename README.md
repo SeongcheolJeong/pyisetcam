@@ -254,7 +254,12 @@ explicit sample-list recreation. The first post-milestone `sceneCreate(...)`
 expansion slice is now in place too: extra Macbeth illuminant variants
 (`d50`, `illc`, `fluorescent`, `ee_ir`, and `custom reflectance`), the
 legacy `moire orient` target, and `letter` / `font` scenes now dispatch
-through the same headless scene core. `sensor_create` now includes generic
+through the same headless scene core. The adjacent file-backed constructor
+slice is now landed too: `sceneCreate('list'/'scenelist')`,
+`sceneCreate('rgb')`, `sceneCreate('multispectral'/'hyperspectral')`, and
+`sceneCreate('monochrome'/'unispectral')` now expose the same safe shell
+objects the headless `sceneFromFile(...)` path uses before filling in
+radiance data. `sensor_create` now includes generic
 `rgbw` / `rccc` presets plus upstream-backed `mt9v024` and `ar0132at`
 RGBW/RCCC variants. `camera_create(...)` now forwards those expanded
 sensor presets too, so camera constructors can directly target `rgbw`,

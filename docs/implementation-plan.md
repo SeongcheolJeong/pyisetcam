@@ -4,6 +4,7 @@
 - Milestone one is complete in the repository: the curated Octave parity suite is green and the handoff docs/examples are in place.
 - Current execution focus has moved into post-milestone expansion on broader scene support, sensor presets, metrics, and ray-trace optics.
 - The first post-milestone scene-expansion slice is now landed: `sceneCreate(...)` covers the remaining reusable Macbeth illuminant variants (`d50`, `illc`, `fluorescent`, `ee_ir`, and `custom reflectance`) plus `moire orient` and `letter` / `font`, all routed through the existing headless scene and font helpers.
+- The adjacent file-backed scene constructor slice is now landed too: `sceneCreate('list'/'scenelist')`, `sceneCreate('rgb')`, `sceneCreate('multispectral'/'hyperspectral')`, and `sceneCreate('monochrome'/'unispectral')` now expose the same shell objects used by the headless `sceneFromFile(...)` path before image or basis data is loaded.
 - Phase 4 metrics coverage is now started with `src/pyisetcam/iso.py`, headless `ISOFindSlantedBar(...)` / `ieCXcorr(...)` / `edge_to_mtf(...)` for `s_metricsEdge2MTF.m`, and the shared `scene_create('slanted bar', ...)` path now matches upstream MATLAB's odd-sized, origin-centered construction.
 - That same Phase 4 metrics wave now also includes headless `ISO12233(...)` / `ieISO12233(...)` for `s_metricsMTFSlantedBar.m`, with curated Octave parity on the direct RGB slanted-bar path, the `ieISO12233(ip, sensor, ...)` sensor-space path, and the monochrome direct path using case-scoped normalized-MAE / relative contracts on the ESF, LSF, MTF, MTF50, and aliasing summaries.
 - That same metrics compatibility surface now also includes legacy `ISO12233v1(...)` / `ieISO12233v1(...)` wrapper names on top of the current headless slanted-edge implementation, so the older MATLAB file surface is covered without carrying a second ISO algorithm fork in Python.
@@ -623,7 +624,7 @@
 - If parity exposes a numerically unstable MATLAB path, reproduce the documented outputs of the curated cases first rather than widening scope to match every historical edge case immediately.
 
 ## Post-Milestone Expansion Order
-- Continue adding more scene patterns and `sceneFromFile`; the first slice now covers extra Macbeth variants plus `moire orient` and `letter` / `font`.
+- Continue adding more scene patterns and `sceneFromFile`; the first slices now cover extra Macbeth variants, `moire orient`, `letter` / `font`, and the file-backed `rgb` / `multispectral` / `monochrome` scene shells.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.
 - Expand ray-trace optics support from the current upstream-backed geometry / angle-aware PSF slice to fuller MATLAB fidelity beyond the newly landed whole-optics/raw-struct/psfStruct export, staged wrapper and OI-helper surface, padding/output bookkeeping, raw-table setter semantics, whole-struct optics replacement semantics, and the core PSF metadata `oiGet/oiSet` surface.

@@ -45,6 +45,8 @@ from pyisetcam import (
     scene_from_ddf_file,
     scene_from_file,
     scene_get,
+    scene_list,
+    scene_set,
     scene_sdr,
     scene_to_file,
 )
@@ -56,6 +58,36 @@ def test_scene_create_default_macbeth(asset_store) -> None:
     wave = scene_get(scene, "wave")
     assert photons.shape == (64, 96, wave.size)
     assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
+
+
+def test_scene_create_list_alias_matches_public_listing() -> None:
+    listing = scene_create("scene list")
+    assert isinstance(listing, str)
+    assert listing == scene_list()
+    assert "letter" in listing
+    assert "multispectral" in listing
+
+
+def test_scene_create_rgb_multispectral_and_monochrome_shells(asset_store) -> None:
+    rgb = scene_create("rgb", asset_store=asset_store)
+    multispectral = scene_create("hyperspectral", asset_store=asset_store)
+    monochrome = scene_create("unispectral", asset_store=asset_store)
+
+    assert scene_get(rgb, "name") == "rgb"
+    assert scene_get(multispectral, "name") == "multispectral"
+    assert scene_get(monochrome, "name") == "monochrome"
+    assert scene_get(rgb, "photons").shape == (1, 1, 31)
+    assert scene_get(multispectral, "photons").shape == (1, 1, 31)
+    assert scene_get(monochrome, "photons").shape == (1, 1, 1)
+    np.testing.assert_array_equal(scene_get(monochrome, "wave"), np.array([550.0]))
+    assert scene_get(rgb, "illuminant comment") == "D65.mat"
+    assert scene_get(multispectral, "illuminant comment") == "D65.mat"
+    assert scene_get(monochrome, "illuminant comment") == "D65.mat"
+    assert np.isclose(scene_get(rgb, "mean luminance", asset_store=asset_store), 0.0, atol=1e-12)
+
+    resized = scene_set(rgb.clone(), "photons", np.ones((2, 3, scene_get(rgb, "nwave")), dtype=float))
+    assert tuple(scene_get(resized, "size")) == (2, 3)
+    assert scene_get(resized, "fov") == scene_get(rgb, "fov")
 
 
 def test_scene_adjust_illuminant_preserves_mean(asset_store) -> None:
