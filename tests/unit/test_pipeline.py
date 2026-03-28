@@ -6096,6 +6096,18 @@ def test_sensor_model_wrappers_match_legacy_vendor_contracts(asset_store) -> Non
     assert np.array_equal(sensor_get(fourcolor, "pattern"), pattern)
     assert sensor_get(fourcolor, "filter names") == ["c1", "c2", "c3"]
 
+    nikon = sensor_create("Nikon D100", asset_store=asset_store)
+    assert nikon.name == "Nikon-D100"
+    assert tuple(np.asarray(sensor_get(nikon, "size"), dtype=int)) == (288, 352)
+    assert float(sensor_get(nikon, "pixel width")) == pytest.approx(2.8e-6)
+    assert sensor_get(nikon, "quantizationmethod") == "analog"
+    assert np.array_equal(sensor_get(nikon, "pattern"), np.array([[2, 1], [3, 2]], dtype=int))
+    assert sensor_get(nikon, "filter names") == ["y_custom_", "g_custom_", "b_custom_"]
+    np.testing.assert_array_equal(
+        np.asarray(sensor_get(nikon, "wave"), dtype=float),
+        np.arange(400.0, 701.0, 10.0, dtype=float),
+    )
+
 
 def test_sensor_create_imx363_and_crop_support_raw_tutorial_flow(asset_store) -> None:
     sensor = sensor_create("IMX363", None, "row col", [12, 16], asset_store=asset_store)

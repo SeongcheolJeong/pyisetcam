@@ -273,11 +273,13 @@ also routed through the existing IMEC 4x4 multispectral builder, and
 reuse the current headless custom filter-pattern helper. `sensorCreate('human',
 params)` now also replays the upstream human-cone parameter-struct flow on
 top of the existing `pixelCreate('human')` and `sensorCreateConeMosaic(...)`
-helpers. The dispatcher also now accepts the remaining parenthesized Bayer
-CFA aliases from upstream, including `bayer(grbg)`, `bayer(rggb)`, and
-`bayer(bggr)`. It also now replays the upstream `sensorCreate('monochrome
-array', [], N)` shortcut, including the default 3-sensor case and the
-practical Python overload.
+helpers. The same dispatcher lane now also exposes the legacy
+`sensorCreate('Nikon D100')` preset from the vendored Nikon MAT asset. The
+dispatcher also now accepts the remaining parenthesized Bayer CFA aliases
+from upstream, including `bayer(grbg)`, `bayer(rggb)`, and `bayer(bggr)`.
+It also now replays the upstream `sensorCreate('monochrome array', [], N)`
+shortcut, including the default 3-sensor case and the practical Python
+overload.
 `camera_create(...)` now forwards those expanded
 sensor presets too, so camera constructors can directly target `rgbw`,
 `rccc`, `mt9v024`, and `ar0132at` sensor variants. The first

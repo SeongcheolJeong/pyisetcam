@@ -1509,8 +1509,8 @@ def _sensor_from_upstream_model(
     sensor.fields["filter_names"] = _matlab_string_list(model.color.filterNames)
     sensor.fields["pixel_qe"] = np.asarray(getattr(model.pixel, "spectralQE", np.ones(wave.size)), dtype=float).reshape(-1)
     sensor.fields["ir_filter"] = np.asarray(getattr(model.color, "irFilter", np.ones(wave.size)), dtype=float).reshape(-1)
-    sensor.fields["analog_gain"] = float(model.analogGain)
-    sensor.fields["analog_offset"] = float(model.analogOffset)
+    sensor.fields["analog_gain"] = float(getattr(model, "analogGain", 1.0))
+    sensor.fields["analog_offset"] = float(getattr(model, "analogOffset", 0.0))
     quantization = getattr(model, "quantization", "analog")
     if hasattr(quantization, "bits") and hasattr(quantization, "method"):
         bits_value = np.asarray(quantization.bits, dtype=float).reshape(-1)
@@ -1523,9 +1523,9 @@ def _sensor_from_upstream_model(
         sensor.fields["nbits"] = bits
     else:
         sensor.fields["quantization"] = str(quantization)
-    sensor.fields["integration_time"] = float(model.integrationTime)
-    sensor.fields["auto_exposure"] = bool(model.AE)
-    sensor.fields["noise_flag"] = int(model.noiseFlag)
+    sensor.fields["integration_time"] = float(getattr(model, "integrationTime", 0.0))
+    sensor.fields["auto_exposure"] = bool(getattr(model, "AE", False))
+    sensor.fields["noise_flag"] = int(getattr(model, "noiseFlag", 0))
     sensor.fields["cds"] = bool(getattr(model, "CDS", False))
     if hasattr(model, "sigmaOffsetFPN"):
         sensor.fields["pixel"]["dsnu_sigma_v"] = float(model.sigmaOffsetFPN)
@@ -1955,6 +1955,12 @@ def sensor_create(
 
     if normalized in {"imx490small", "imx490-small"}:
         return track_session_object(session, _sensor_vendor_imx490("small", asset_store=store))
+
+    if normalized == "nikond100":
+        sensor = _sensor_from_upstream_model("data/sensor/nikon/NikonD100Sensor.mat", asset_store=store)
+        sensor = sensor_set(sensor, "size", np.array([72, 88], dtype=int) * 4)
+        sensor = sensor_set(sensor, "name", "Nikon-D100")
+        return track_session_object(session, sensor)
 
     if normalized in {"ovtlarge", "ovt-large"}:
         large_lcg, large_hcg = _sensor_create_ovt_large_pair(asset_store=store)
