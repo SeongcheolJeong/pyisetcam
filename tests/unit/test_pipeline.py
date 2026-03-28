@@ -6036,6 +6036,27 @@ def test_sensor_model_wrappers_match_legacy_vendor_contracts(asset_store) -> Non
     assert np.array_equal(sensor_get(imec_dispatch, "pattern"), sensor_get(imec, "pattern"))
     assert np.array_equal(sensor_get(imec_dispatch_overload, "pattern"), sensor_get(imec, "pattern"))
 
+    custom_wave = np.array([500.0, 600.0, 700.0], dtype=float)
+    custom_dispatch = sensor_create("custom", None, pattern, filter_struct, [6, 8], custom_wave, asset_store=asset_store)
+    custom_overload = sensor_create("custom", pattern, filter_struct, [6, 8], custom_wave, asset_store=asset_store)
+    fourcolor = sensor_create("fourcolor", None, pattern, filter_struct, asset_store=asset_store)
+
+    assert custom_dispatch.name == "custom"
+    assert custom_overload.name == "custom"
+    assert custom_dispatch.fields["size"] == (6, 8)
+    assert custom_overload.fields["size"] == (6, 8)
+    assert np.array_equal(np.asarray(sensor_get(custom_dispatch, "wave"), dtype=float), custom_wave)
+    assert np.array_equal(np.asarray(sensor_get(custom_overload, "wave"), dtype=float), custom_wave)
+    assert np.array_equal(sensor_get(custom_dispatch, "pattern"), pattern)
+    assert np.array_equal(sensor_get(custom_overload, "pattern"), pattern)
+    assert sensor_get(custom_dispatch, "filter names") == ["c1", "c2", "c3"]
+    assert sensor_get(custom_overload, "filter names") == ["c1", "c2", "c3"]
+
+    assert fourcolor.name == "fourcolor"
+    assert fourcolor.fields["size"] == sensor_create(asset_store=asset_store).fields["size"]
+    assert np.array_equal(sensor_get(fourcolor, "pattern"), pattern)
+    assert sensor_get(fourcolor, "filter names") == ["c1", "c2", "c3"]
+
 
 def test_sensor_create_imx363_and_crop_support_raw_tutorial_flow(asset_store) -> None:
     sensor = sensor_create("IMX363", None, "row col", [12, 16], asset_store=asset_store)

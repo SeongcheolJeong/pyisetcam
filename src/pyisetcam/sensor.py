@@ -1705,6 +1705,25 @@ def _track_sensor_sequence(
     return tracked
 
 
+def _sensor_custom_dispatch(
+    filter_pattern: Any,
+    filter_file: Any,
+    *,
+    sensor_size: Any | None = None,
+    wave: Any | None = None,
+    name: str,
+    asset_store: AssetStore,
+) -> Sensor:
+    current = sensor_create(asset_store=asset_store)
+    if wave is not None:
+        current = sensor_set(current, "wave", np.asarray(wave, dtype=float).reshape(-1))
+    current = sensor_interleaved(current, filter_pattern, filter_file, asset_store=asset_store)
+    current = sensor_set(current, "name", name)
+    if sensor_size is not None:
+        current = sensor_set(current, "size", sensor_size)
+    return current
+
+
 def _sensor_create_ovt_large_pair(*, asset_store: AssetStore) -> tuple[Sensor, Sensor]:
     common_settings = [
         ("size", np.array([968, 1288], dtype=int)),
@@ -1783,6 +1802,9 @@ def sensor_create(
         args = (pixel, *args)
         pixel = None
     if normalized == "imec44" and pixel is not None and not isinstance(pixel, dict):
+        args = (pixel, *args)
+        pixel = None
+    if normalized in {"custom", "fourcolor"} and pixel is not None and not isinstance(pixel, dict):
         args = (pixel, *args)
         pixel = None
     if normalized in {"mt9v024", "ar0132at"} and isinstance(pixel, str):
@@ -1923,6 +1945,29 @@ def sensor_create(
     if normalized == "imec44":
         row_col = args[0] if args else np.array([400, 400], dtype=int)
         return sensor_create_imec_ssm_4x4_vis("row col", row_col, asset_store=store, session=session)
+
+    if normalized == "fourcolor":
+        if len(args) < 2:
+            raise ValueError("sensorCreate('fourcolor', ...) requires a filter pattern and filter file.")
+        sensor = _sensor_custom_dispatch(args[0], args[1], name="fourcolor", asset_store=store)
+        return track_session_object(session, sensor)
+
+    if normalized == "custom":
+        if len(args) < 2:
+            raise ValueError("sensorCreate('custom', ...) requires a filter pattern and filter file.")
+        filter_pattern = args[0]
+        filter_file = args[1]
+        sensor_size = args[2] if len(args) > 2 and args[2] is not None else np.asarray(filter_pattern, dtype=int).shape
+        wave_override = args[3] if len(args) > 3 else None
+        sensor = _sensor_custom_dispatch(
+            filter_pattern,
+            filter_file,
+            sensor_size=sensor_size,
+            wave=wave_override,
+            name="custom",
+            asset_store=store,
+        )
+        return track_session_object(session, sensor)
 
     if normalized == "ideal":
         return sensor_create_ideal("xyz", None, asset_store=store, session=session)
