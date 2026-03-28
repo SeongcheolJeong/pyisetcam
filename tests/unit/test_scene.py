@@ -573,6 +573,23 @@ def test_uniform_blackbody_and_monochromatic_scenes(asset_store) -> None:
     assert np.array_equal(scene_get(mono, "wave"), np.array([550.0]))
 
 
+def test_uniform_blackbody_dispatch_accepts_empty_temperature_placeholder(asset_store) -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    placeholder = scene_create("uniform bb", 32, [], wave, asset_store=asset_store)
+    explicit = scene_create("uniform bb", 32, 5000.0, wave, asset_store=asset_store)
+
+    np.testing.assert_allclose(
+        np.asarray(scene_get(placeholder, "photons"), dtype=float),
+        np.asarray(scene_get(explicit, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    assert np.array_equal(
+        np.asarray(scene_get(placeholder, "wave"), dtype=float),
+        np.asarray(scene_get(explicit, "wave"), dtype=float),
+    )
+
+
 def test_line_and_bar_patterns_have_centered_bright_features(asset_store) -> None:
     line = scene_create("line ee", 33, 1, asset_store=asset_store)
     bar = scene_create("bar", 33, 3, asset_store=asset_store)

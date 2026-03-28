@@ -4063,7 +4063,7 @@ def scene_create(
 
     if name in {"uniformbb", "uniformblackbody"}:
         size = args[0] if len(args) > 0 else 32
-        temperature_k = float(args[1]) if len(args) > 1 else 5000.0
+        temperature_k = _scene_dispatch_float_arg(args[1] if len(args) > 1 else None, 5000.0)
         wave = _wave_or_default(args[2] if len(args) > 2 else None)
         return track_session_object(session, _uniform_blackbody_scene(size, temperature_k, wave, asset_store=store))
 

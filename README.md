@@ -297,6 +297,9 @@ across the common optional-wave pattern constructors such as
 `sceneCreate('bar', ...)`, `sceneCreate('bar ee', ...)`,
 `sceneCreate('point array', ...)`, `sceneCreate('grid lines', ...)`,
 `sceneCreate('checkerboard', ...)`, and `sceneCreate('star pattern', ...)`,
+while the same uniform-scene lane now also honors MATLAB-style empty
+color-temperature placeholders in `sceneCreate('uniform bb', sceneSize, [], wave)`,
+preserving the upstream default `5000 K` blackbody illuminant,
 while the same scene-pattern lane now also honors MATLAB-style empty
 placeholders in optional positional slots such as
 `sceneCreate('line ee', imageSize, [], wave)`,
