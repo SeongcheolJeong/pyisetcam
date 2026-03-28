@@ -174,14 +174,19 @@ def test_macbeth_dispatch_accepts_empty_patch_size_placeholder(asset_store) -> N
 def test_scene_create_moire_orient_replays_green_target_plane(asset_store) -> None:
     params = {"sceneSize": 96, "f": 1.0 / 1200.0}
     scene = scene_create("moire orient", params, asset_store=asset_store)
+    positional = scene_create("moire orient", 96, 1.0 / 1200.0, asset_store=asset_store)
     photons = np.asarray(scene_get(scene, "photons"), dtype=float)
+    positional_photons = np.asarray(scene_get(positional, "photons"), dtype=float)
     expected = np.clip(np.asarray(mo_target("sinusoidalim", params), dtype=float)[:, :, 1], 1.0e-4, 1.0)
     expected = expected / np.max(expected)
     actual = photons[:, :, 0] / np.max(photons[:, :, 0])
 
     assert scene_get(scene, "name") == "MOTarget"
+    assert scene_get(positional, "name") == "MOTarget"
     assert photons.shape[:2] == (96, 96)
+    assert positional_photons.shape[:2] == (96, 96)
     np.testing.assert_allclose(photons[:, :, 0], photons[:, :, -1], atol=1e-10, rtol=1e-10)
+    np.testing.assert_allclose(positional_photons, photons, atol=0.0, rtol=0.0)
     np.testing.assert_allclose(actual, expected, atol=1e-7, rtol=1e-7)
     assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
 

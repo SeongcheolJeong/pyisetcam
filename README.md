@@ -285,6 +285,10 @@ preserving the upstream default `32 x 32` scene size, while
 `sceneCreate('uniform monochromatic', sz, wave)` now also replays the
 documented size-first shorthand in addition to the existing wave-first form,
 and
+`sceneCreate('moire orient', imageSize, f)` now maps the positional
+arguments onto the same headless parameter path as the existing struct-style
+moire target form,
+and
 `sceneCreate('letter', 'g', fontSize, fontName, display)` now replays the
 documented text shorthand on top of the existing font-object path. The
 same scene lane now also accepts the documented `sceneCreate('vernier',

@@ -4197,7 +4197,14 @@ def scene_create(
         return track_session_object(session, scene)
 
     if name == "moireorient":
-        params = args[0] if len(args) > 0 else None
+        if args and (hasattr(args[0], "items") or hasattr(args[0], "__dict__")):
+            params = args[0]
+        elif args:
+            params = {"sceneSize": args[0]}
+            if len(args) > 1:
+                params["f"] = args[1]
+        else:
+            params = None
         return track_session_object(session, _mo_target_scene(params, asset_store=store))
 
     if name in {"harmonic", "sinusoid"}:
