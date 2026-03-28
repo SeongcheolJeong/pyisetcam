@@ -84,7 +84,10 @@ def _store(asset_store: AssetStore | None) -> AssetStore:
 def _wave_or_default(wave: Any | None) -> np.ndarray:
     if wave is None:
         return DEFAULT_WAVE.copy()
-    return np.asarray(wave, dtype=float).reshape(-1)
+    array = np.asarray(wave, dtype=float).reshape(-1)
+    if array.size == 0:
+        return DEFAULT_WAVE.copy()
+    return array
 
 
 def _macbeth_patch_size_arg(value: Any | None) -> int | None:

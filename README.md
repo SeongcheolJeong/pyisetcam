@@ -291,6 +291,12 @@ and
 `sceneCreate('sweep frequency', [], maxFrequency, [], yContrast)` now
 honors MATLAB-style empty placeholders for the size and wavelength slots
 instead of crashing on `[]`,
+and the same empty-wave placeholder handling now also replays correctly
+across the common optional-wave pattern constructors such as
+`sceneCreate('line ee', ...)`, `sceneCreate('line ep', ...)`,
+`sceneCreate('bar', ...)`, `sceneCreate('bar ee', ...)`,
+`sceneCreate('point array', ...)`, `sceneCreate('grid lines', ...)`,
+`sceneCreate('checkerboard', ...)`, and `sceneCreate('star pattern', ...)`,
 and
 `sceneCreate('moire orient', imageSize, f)` now maps the positional
 arguments onto the same headless parameter path as the existing struct-style

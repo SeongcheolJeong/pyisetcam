@@ -751,6 +751,34 @@ def test_sweep_frequency_dispatch_accepts_empty_size_and_wave_placeholders(asset
     )
 
 
+def test_pattern_scene_dispatches_accept_empty_wave_placeholders(asset_store) -> None:
+    placeholder_cases = [
+        ("line ee", (64, 2, []), (64, 2)),
+        ("line ep", (64, 2, []), (64, 2)),
+        ("bar", (64, 3, []), (64, 3)),
+        ("bar ee", (64, 3, []), (64, 3)),
+        ("point array", (64, 8, "ep", 1, []), (64, 8, "ep", 1)),
+        ("grid lines", (64, 8, "ep", 1, []), (64, 8, "ep", 1)),
+        ("checkerboard", (8, 4, "ep", []), (8, 4, "ep")),
+        ("star pattern", (64, "ep", 8, []), (64, "ep", 8)),
+    ]
+
+    for name, placeholder_args, explicit_args in placeholder_cases:
+        placeholder = scene_create(name, *placeholder_args, asset_store=asset_store)
+        explicit = scene_create(name, *explicit_args, asset_store=asset_store)
+
+        np.testing.assert_allclose(
+            np.asarray(scene_get(placeholder, "photons"), dtype=float),
+            np.asarray(scene_get(explicit, "photons"), dtype=float),
+            rtol=0.0,
+            atol=0.0,
+        )
+        assert np.array_equal(
+            np.asarray(scene_get(placeholder, "wave"), dtype=float),
+            np.asarray(scene_get(explicit, "wave"), dtype=float),
+        )
+
+
 def test_reflectance_chart_scene_supports_explicit_sample_lists(asset_store) -> None:
     scene = scene_create(
         "reflectance chart",
