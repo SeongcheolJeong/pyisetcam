@@ -51,6 +51,19 @@ def _store(asset_store: AssetStore | None) -> AssetStore:
     return asset_store or AssetStore.default()
 
 
+def _track_camera_sequence(
+    session: SessionContext | None,
+    cameras: list[Camera],
+) -> list[Camera]:
+    if session is None:
+        return cameras
+    tracked: list[Camera] = []
+    last_index = len(cameras) - 1
+    for index, camera in enumerate(cameras):
+        tracked.append(track_camera_session_state(session, camera, select=index == last_index))
+    return tracked
+
+
 @dataclass
 class CameraMTFResult:
     """Headless payload returned by camera_mtf()."""
@@ -152,7 +165,7 @@ def camera_create(
     *args: Any,
     asset_store: AssetStore | None = None,
     session: SessionContext | None = None,
-) -> Camera:
+) -> Camera | list[Camera]:
     """Create a supported camera."""
 
     store = _store(asset_store)
@@ -177,6 +190,16 @@ def camera_create(
             sensor = sensor_create(camera_type, *args, asset_store=store, session=session)
         except UnsupportedOptionError as exc:
             raise UnsupportedOptionError("cameraCreate", camera_type) from exc
+
+    if isinstance(sensor, list):
+        cameras: list[Camera] = []
+        for sensor_item in sensor:
+            current = Camera(name=str(camera_type))
+            current.fields["oi"] = oi_create(session=session)
+            current.fields["sensor"] = sensor_item
+            current.fields["ip"] = ip_create(sensor=sensor_item, asset_store=store, session=session)
+            cameras.append(current)
+        return _track_camera_sequence(session, cameras)
 
     camera.fields["oi"] = oi
     camera.fields["sensor"] = sensor

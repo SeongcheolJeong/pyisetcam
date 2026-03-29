@@ -7568,11 +7568,25 @@ def test_camera_create_supports_rgbw_and_rccc_sensor_variants(asset_store) -> No
 def test_camera_create_supports_vendor_sensor_variants(asset_store) -> None:
     mt9v024_rgbw = camera_create("mt9v024", "rgbw", asset_store=asset_store)
     ar0132at_rccc = camera_create("ar0132at", "rccc", asset_store=asset_store)
+    mt9v024_multi = camera_create("mt9v024", ["rgb", "mono"], asset_store=asset_store)
+    ar0132at_multi = camera_create("ar0132at", ("rgb", "rgbw"), asset_store=asset_store)
+    ovt_large = camera_create("ovt-large", asset_store=asset_store)
 
     assert mt9v024_rgbw.fields["sensor"].name == "MTV9V024-RGBW"
     assert camera_get(mt9v024_rgbw, "sensor filter color letters") == "rgbw"
     assert ar0132at_rccc.fields["sensor"].name == "AR0132AT-RCCC"
     assert camera_get(ar0132at_rccc, "sensor filter color letters") == "rw"
+    assert [camera.fields["sensor"].name for camera in mt9v024_multi] == ["MTV9V024-RGB", "MTV9V024-Mono"]
+    assert [camera_get(camera, "sensor filter color letters") for camera in mt9v024_multi] == ["rgb", "w"]
+    assert [camera.fields["sensor"].name for camera in ar0132at_multi] == ["AR0132AT-RGB", "AR0132AT-RGBW"]
+    assert [camera_get(camera, "sensor filter color letters") for camera in ar0132at_multi] == ["rgb", "rgbw"]
+    assert [camera.fields["sensor"].name for camera in ovt_large] == ["ovt-LPDLCG", "ovt-LPDHCG"]
+    assert mt9v024_multi[0].fields["oi"] is not mt9v024_multi[1].fields["oi"]
+    assert mt9v024_multi[0].fields["ip"] is not mt9v024_multi[1].fields["ip"]
+    assert ar0132at_multi[0].fields["oi"] is not ar0132at_multi[1].fields["oi"]
+    assert ar0132at_multi[0].fields["ip"] is not ar0132at_multi[1].fields["ip"]
+    assert ovt_large[0].fields["oi"] is not ovt_large[1].fields["oi"]
+    assert ovt_large[0].fields["ip"] is not ovt_large[1].fields["ip"]
 
 
 def test_camera_compute_supports_vendor_sensor_variants(asset_store) -> None:

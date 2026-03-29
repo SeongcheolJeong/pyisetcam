@@ -391,7 +391,11 @@ and `sensorCreate('ar0132at', [], {'rgb','rgbw','rccc'})` now return
 tracked sensor lists in the requested order, and direct
 `sensorCreate('ovt-large')` / `sensorCreate('ovt-small')` now expose the
 existing OVT vendor presets. `sensorCreate('imec44', rowcol)` is now
-also routed through the existing IMEC 4x4 multispectral builder, and
+mirrored by the adjacent camera wrapper too, so `cameraCreate(...)` now
+accepts those multi-variant vendor payloads and the `ovt-large` dual-sensor
+preset by returning per-sensor camera lists with matching OI, sensor, and IP
+objects instead of crashing on list-backed sensor constructors. It is also
+routed through the existing IMEC 4x4 multispectral builder, and
 `sensorCreate('custom', ...)` / `sensorCreate('fourcolor', ...)` now
 reuse the current headless custom filter-pattern helper. The same vendor
 lane now also accepts the practical overload

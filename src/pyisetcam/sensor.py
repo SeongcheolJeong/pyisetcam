@@ -1832,7 +1832,7 @@ def sensor_create(
     if normalized in {"custom", "fourcolor"} and pixel is not None and not isinstance(pixel, dict) and not _is_empty_dispatch_placeholder(pixel):
         args = (pixel, *args)
         pixel = None
-    if normalized in {"mt9v024", "ar0132at"} and isinstance(pixel, str):
+    if normalized in {"mt9v024", "ar0132at"} and pixel is not None and not isinstance(pixel, dict) and not _is_empty_dispatch_placeholder(pixel):
         args = (pixel, *args)
         pixel = None
     if normalized in {"imx363", "googlepixel4a"} and isinstance(pixel, str):
