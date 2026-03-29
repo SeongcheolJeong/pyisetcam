@@ -4112,9 +4112,13 @@ def scene_create(
         )
 
     if name == "lstar":
-        bar_size = args[0] if len(args) > 0 else np.array([128, 20], dtype=float)
-        n_bars = int(args[1]) if len(args) > 1 else 10
-        delta_e = float(args[2]) if len(args) > 2 else 10.0
+        bar_size = (
+            np.array([128, 20], dtype=float)
+            if len(args) == 0 or _is_empty_scene_dispatch_placeholder(args[0])
+            else args[0]
+        )
+        n_bars = _scene_dispatch_int_arg(args[1] if len(args) > 1 else None, 10)
+        delta_e = _scene_dispatch_float_arg(args[2] if len(args) > 2 else None, 10.0)
         wave = _wave_or_default(args[3] if len(args) > 3 else None)
         return track_session_object(session, _lstar_steps_scene(bar_size, n_bars, delta_e, wave, asset_store=store))
 
@@ -4448,8 +4452,8 @@ def scene_create(
         )
 
     if name == "deadleaves":
-        size = args[0] if len(args) > 0 else 256
-        sigma = float(args[1]) if len(args) > 1 else 2.0
+        size = _scene_dispatch_int_arg(args[0] if len(args) > 0 else None, 256)
+        sigma = _scene_dispatch_float_arg(args[1] if len(args) > 1 else None, 2.0)
         options = args[2] if len(args) > 2 and hasattr(args[2], "items") else None
         if len(args) > 2 and _is_empty_scene_dispatch_placeholder(args[2]):
             wave_arg = args[3] if len(args) > 3 else None

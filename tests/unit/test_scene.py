@@ -715,6 +715,27 @@ def test_lstar_scene_creates_monotonic_bar_steps(asset_store) -> None:
     assert np.all(np.diff(bar_means) > 0.0)
 
 
+def test_lstar_dispatch_accepts_empty_placeholders(asset_store) -> None:
+    default_scene = scene_create("l star", asset_store=asset_store)
+    placeholder_scene = scene_create("l star", [], [], [], asset_store=asset_store)
+    partial_placeholder_scene = scene_create("l star", [128, 20], [], [], asset_store=asset_store)
+
+    np.testing.assert_allclose(
+        np.asarray(scene_get(placeholder_scene, "photons"), dtype=float),
+        np.asarray(scene_get(default_scene, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    np.testing.assert_allclose(
+        np.asarray(scene_get(partial_placeholder_scene, "photons"), dtype=float),
+        np.asarray(scene_get(default_scene, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    assert tuple(scene_get(placeholder_scene, "size")) == tuple(scene_get(default_scene, "size"))
+    assert tuple(scene_get(partial_placeholder_scene, "size")) == tuple(scene_get(default_scene, "size"))
+
+
 def test_star_pattern_scene_matches_radial_lines_alias(asset_store) -> None:
     star = scene_create("star pattern", 64, "ee", 6, asset_store=asset_store)
     radial = scene_create("radial lines", 64, "ee", 6, asset_store=asset_store)
@@ -1042,6 +1063,22 @@ def test_sweep_frequency_dispatch_accepts_empty_placeholders(asset_store) -> Non
 def test_dead_leaves_dispatch_ignores_empty_third_placeholder(asset_store) -> None:
     default_scene = scene_create("dead leaves", 96, 3.0, asset_store=asset_store)
     placeholder_scene = scene_create("dead leaves", 96, 3.0, [], asset_store=asset_store)
+
+    assert np.array_equal(
+        np.asarray(scene_get(placeholder_scene, "wave"), dtype=float),
+        np.asarray(scene_get(default_scene, "wave"), dtype=float),
+    )
+    assert tuple(scene_get(placeholder_scene, "size")) == tuple(scene_get(default_scene, "size"))
+    assert np.isclose(scene_get(placeholder_scene, "fov"), scene_get(default_scene, "fov"), atol=1e-12, rtol=1e-12)
+    assert np.asarray(scene_get(placeholder_scene, "photons"), dtype=float).shape == np.asarray(
+        scene_get(default_scene, "photons"),
+        dtype=float,
+    ).shape
+
+
+def test_dead_leaves_dispatch_accepts_empty_size_and_sigma_placeholders(asset_store) -> None:
+    default_scene = scene_create("dead leaves", asset_store=asset_store)
+    placeholder_scene = scene_create("dead leaves", [], [], [], asset_store=asset_store)
 
     assert np.array_equal(
         np.asarray(scene_get(placeholder_scene, "wave"), dtype=float),
