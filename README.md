@@ -394,8 +394,11 @@ existing OVT vendor presets. `sensorCreate('imec44', rowcol)` is now
 mirrored by the adjacent camera wrapper too, so `cameraCreate(...)` now
 accepts those multi-variant vendor payloads and the `ovt-large` dual-sensor
 preset by returning per-sensor camera lists with matching OI, sensor, and IP
-objects instead of crashing on list-backed sensor constructors. It is also
-routed through the existing IMEC 4x4 multispectral builder, and
+objects instead of crashing on list-backed sensor constructors. The same
+camera wrapper lane now also accepts `cameraCreate('current')`, reusing the
+currently selected session `oi`, `sensor`, and `ip` independently and falling
+back to defaults only for the missing pieces. It is also routed through the
+existing IMEC 4x4 multispectral builder, and
 `sensorCreate('custom', ...)` / `sensorCreate('fourcolor', ...)` now
 reuse the current headless custom filter-pattern helper. The same vendor
 lane now also accepts the practical overload

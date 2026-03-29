@@ -19,7 +19,7 @@ from .metrics import delta_e_ab, iso_acutance, xyz_from_energy, xyz_to_lab
 from .optics import oi_clear_data, oi_compute, oi_create, oi_get, oi_set
 from .scene import Scene, scene_adjust_illuminant, scene_adjust_luminance, scene_create, scene_from_file, scene_get, scene_set
 from .scielab import scielab
-from .session import track_camera_session_state, track_session_object
+from .session import ie_get_object, track_camera_session_state, track_session_object
 from .sensor import (
     _chart_rectangles,
     _chart_roi,
@@ -175,6 +175,25 @@ def camera_create(
     if normalized in {"default"}:
         oi = oi_create(session=session)
         sensor = sensor_create(asset_store=store, session=session)
+    elif normalized in {"current"}:
+        if session is None:
+            oi = oi_create()
+            sensor = sensor_create(asset_store=store)
+            ip = ip_create(asset_store=store)
+        else:
+            current_oi = ie_get_object(session, "oi")
+            oi = oi_create(session=session) if current_oi is None else current_oi
+
+            current_sensor = ie_get_object(session, "sensor")
+            sensor = sensor_create(asset_store=store, session=session) if current_sensor is None else current_sensor
+
+            current_ip = ie_get_object(session, "ip")
+            ip = ip_create(asset_store=store, session=session) if current_ip is None else current_ip
+
+        camera.fields["oi"] = oi
+        camera.fields["sensor"] = sensor
+        camera.fields["ip"] = ip
+        return track_camera_session_state(session, camera)
     elif normalized in {"ideal"}:
         oi = oi_create(session=session)
         sensor = sensor_create_ideal("xyz", asset_store=store, session=session)

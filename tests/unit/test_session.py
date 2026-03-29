@@ -142,6 +142,52 @@ def test_camera_create_registers_session_subobjects(asset_store) -> None:
     assert session_object_id(camera.fields["ip"]) == 1
 
 
+def test_camera_create_current_reuses_selected_session_objects(asset_store) -> None:
+    session = session_create()
+    oi = oi_create("pinhole", session=session)
+    sensor = sensor_create("monochrome", asset_store=asset_store, session=session)
+    ip = ip_create(sensor=sensor, asset_store=asset_store, session=session)
+
+    oi_id = session_object_id(oi)
+    sensor_id = session_object_id(sensor)
+    ip_id = session_object_id(ip)
+
+    camera = camera_create("current", asset_store=asset_store, session=session)
+
+    assert camera.fields["oi"] is oi
+    assert camera.fields["sensor"] is sensor
+    assert camera.fields["ip"] is ip
+    assert session_object_id(camera.fields["oi"]) == oi_id
+    assert session_object_id(camera.fields["sensor"]) == sensor_id
+    assert session_object_id(camera.fields["ip"]) == ip_id
+    assert session_get_selected(session, "camera") is camera
+    assert session_get_selected(session, "oi") is oi
+    assert session_get_selected(session, "sensor") is sensor
+    assert session_get_selected(session, "ip") is ip
+
+
+def test_camera_create_current_falls_back_only_for_missing_selected_objects(asset_store) -> None:
+    session = session_create()
+    oi = oi_create("pinhole", session=session)
+    stale_sensor = sensor_create("monochrome", asset_store=asset_store, session=session)
+    stale_ip = ip_create(sensor=stale_sensor, asset_store=asset_store, session=session)
+
+    session_set_selected(session, "sensor", None)
+    session_set_selected(session, "ip", None)
+
+    camera = camera_create("current", asset_store=asset_store, session=session)
+
+    assert camera.fields["oi"] is oi
+    assert camera.fields["sensor"] is not stale_sensor
+    assert camera.fields["ip"] is not stale_ip
+    assert session_count_objects(session, "sensor") == 2
+    assert session_count_objects(session, "ip") == 2
+    assert session_get_selected(session, "camera") is camera
+    assert session_get_selected(session, "oi") is oi
+    assert session_get_selected(session, "sensor") is camera.fields["sensor"]
+    assert session_get_selected(session, "ip") is camera.fields["ip"]
+
+
 def test_camera_compute_updates_registered_session_objects(asset_store) -> None:
     session = session_create()
     scene = scene_create(asset_store=asset_store, session=session)
