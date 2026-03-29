@@ -6158,10 +6158,16 @@ def test_sensor_model_wrappers_match_legacy_vendor_contracts(asset_store) -> Non
 
     wave = np.arange(460.0, 481.0, dtype=float)
     imec = sensorCreateIMECSSM4x4vis("row col", [8, 12], "wave", wave, asset_store=asset_store)
+    imec_default = sensorCreateIMECSSM4x4vis(asset_store=asset_store)
+    imec_default_placeholder = sensorCreateIMECSSM4x4vis("row col", [], asset_store=asset_store)
     assert imec.name == "IMEC SSM"
     assert imec.fields["size"] == (8, 12)
+    assert imec_default.fields["size"] == (1016, 2040)
+    assert imec_default_placeholder.fields["size"] == (1016, 2040)
     assert sensor_get(imec, "quantizationmethod") == "10 bit"
+    assert sensor_get(imec_default_placeholder, "quantizationmethod") == "10 bit"
     assert np.array_equal(sensor_get(imec, "pattern"), np.arange(1, 17, dtype=int).reshape(4, 4).T)
+    assert np.array_equal(sensor_get(imec_default_placeholder, "pattern"), np.arange(1, 17, dtype=int).reshape(4, 4).T)
     assert np.array_equal(np.asarray(sensor_get(imec, "wave"), dtype=float), wave)
     assert sensor_get(imec, "nfilters") == 16
     assert len(sensor_get(imec, "filter names")) == 16
@@ -6169,18 +6175,23 @@ def test_sensor_model_wrappers_match_legacy_vendor_contracts(asset_store) -> Non
     imec_dispatch = sensor_create("imec44", None, [8, 12], asset_store=asset_store)
     imec_dispatch_placeholder = sensor_create("imec44", [], [8, 12], asset_store=asset_store)
     imec_dispatch_overload = sensor_create("imec44", [8, 12], asset_store=asset_store)
+    imec_dispatch_empty_rowcol = sensor_create("imec44", [], [], asset_store=asset_store)
     assert imec_dispatch.name == "IMEC SSM"
     assert imec_dispatch_placeholder.name == "IMEC SSM"
     assert imec_dispatch_overload.name == "IMEC SSM"
+    assert imec_dispatch_empty_rowcol.name == "IMEC SSM"
     assert imec_dispatch.fields["size"] == (8, 12)
     assert imec_dispatch_placeholder.fields["size"] == (8, 12)
     assert imec_dispatch_overload.fields["size"] == (8, 12)
+    assert imec_dispatch_empty_rowcol.fields["size"] == (1016, 2040)
     assert sensor_get(imec_dispatch, "quantizationmethod") == "10 bit"
     assert sensor_get(imec_dispatch_placeholder, "quantizationmethod") == "10 bit"
     assert sensor_get(imec_dispatch_overload, "quantizationmethod") == "10 bit"
+    assert sensor_get(imec_dispatch_empty_rowcol, "quantizationmethod") == "10 bit"
     assert np.array_equal(sensor_get(imec_dispatch, "pattern"), sensor_get(imec, "pattern"))
     assert np.array_equal(sensor_get(imec_dispatch_placeholder, "pattern"), sensor_get(imec, "pattern"))
     assert np.array_equal(sensor_get(imec_dispatch_overload, "pattern"), sensor_get(imec, "pattern"))
+    assert np.array_equal(sensor_get(imec_dispatch_empty_rowcol, "pattern"), sensor_get(imec_default, "pattern"))
 
     custom_wave = np.array([500.0, 600.0, 700.0], dtype=float)
     custom_dispatch = sensor_create("custom", None, pattern, filter_struct, [6, 8], custom_wave, asset_store=asset_store)

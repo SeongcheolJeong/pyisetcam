@@ -2308,8 +2308,11 @@ def sensor_create(
         return track_session_object(session, _sensor_create_ovt_small(asset_store=store))
 
     if normalized == "imec44":
-        row_col = args[0] if args else np.array([400, 400], dtype=int)
-        return sensor_create_imec_ssm_4x4_vis("row col", row_col, asset_store=store, session=session)
+        if args and not _is_empty_dispatch_placeholder(args[0]):
+            return sensor_create_imec_ssm_4x4_vis("row col", args[0], asset_store=store, session=session)
+        if args:
+            return sensor_create_imec_ssm_4x4_vis(asset_store=store, session=session)
+        return sensor_create_imec_ssm_4x4_vis("row col", np.array([400, 400], dtype=int), asset_store=store, session=session)
 
     if normalized == "human":
         if args and hasattr(args[0], "items"):
@@ -2625,7 +2628,10 @@ def sensor_create_imec_ssm_4x4_vis(
 
     store = _store(asset_store)
     settings = dict(_matlab_kv_pairs(args, function_name="sensorCreateIMECSSM4x4vis"))
-    row_col = np.asarray(settings.get("rowcol", [1016, 2040]), dtype=int).reshape(-1)
+    row_col_source = settings.get("rowcol", [1016, 2040])
+    if _is_empty_dispatch_placeholder(row_col_source):
+        row_col_source = [1016, 2040]
+    row_col = np.asarray(row_col_source, dtype=int).reshape(-1)
     pixel_size = float(settings.get("pixelsize", 5.5e-6))
     quantization = str(settings.get("quantization", "10 bit"))
     dsnu = float(settings.get("dsnu", 0.0))
