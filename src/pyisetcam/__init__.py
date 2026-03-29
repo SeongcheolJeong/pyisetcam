@@ -851,6 +851,7 @@ from .utils import (
     srgb_to_linear,
     srgb_to_xyz,
     space2sample,
+    unit_frequency_list,
     struct2pairs,
     unpadarray,
     upper_quad_to_full_matrix,
@@ -1373,6 +1374,8 @@ __all__ = [
     "replace_nan",
     "sample2space",
     "space2sample",
+    "unit_frequency_list",
+    "unitFrequencyList",
     "struct2pairs",
     "ieMainClose",
     "ieRefreshWindow",
@@ -3107,6 +3110,7 @@ ieTone = ie_tone
 ieTikhonov = ie_tikhonov
 ieUncompressData = ie_uncompress_data
 ieUnitScaleFactor = ie_unit_scale_factor
+unitFrequencyList = unit_frequency_list
 lorentzSum = lorentz_sum
 listStruct = list_struct
 ieImageType = ie_image_type

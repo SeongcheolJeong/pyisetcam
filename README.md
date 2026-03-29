@@ -2278,7 +2278,10 @@ covers `dpi2mperdot(...)`, `ieDpi2Mperdot(...)`, `ieN2MegaPixel(...)`,
 `ieSpace2Amp(...)`, `ieUnitScaleFactor(...)`, `sample2space(...)`, and
 `space2sample(...)`, including the MATLAB default-microns scaling,
 truncated mean-to-Nyquist FFT support, centered sample geometry, and the
-obsolete zero-based inverse-spacing contract.
+obsolete zero-based inverse-spacing contract. That same utility-units lane
+now also exposes the direct package-root `unit_frequency_list(...)` helper
+plus the MATLAB-style alias `unitFrequencyList(...)` instead of leaving the
+helper only in `pyisetcam.utils`.
 That same broad `utility` family is smaller again: the adjacent
 `utility/numerical` helper slice now also covers
 `getMiddleMatrix(...)`, `ieClip(...)`, `ieHwhm2SD(...)`, `ieScale(...)`,
