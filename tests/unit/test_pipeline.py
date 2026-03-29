@@ -6322,6 +6322,18 @@ def test_camera_create_ideal_returns_xyz_camera_array(asset_store) -> None:
     assert all(np.array_equal(np.asarray(camera_get(camera, "sensor pattern"), dtype=int), np.array([[1]], dtype=int)) for camera in ideal)
 
 
+def test_camera_create_ideal_monochrome_replays_legacy_camera_name(asset_store) -> None:
+    compact = camera_create("idealmonochrome", asset_store=asset_store)
+    spaced = camera_create("ideal monochrome", asset_store=asset_store)
+
+    assert compact.name == "ideal monochrome"
+    assert spaced.name == "ideal monochrome"
+    assert compact.fields["sensor"].name == "ideal-monochrome"
+    assert spaced.fields["sensor"].name == "ideal-monochrome"
+    assert camera_get(compact, "sensor filter names") == ["w"]
+    assert camera_get(spaced, "sensor filter names") == ["w"]
+
+
 def test_sensor_create_imx363_and_crop_support_raw_tutorial_flow(asset_store) -> None:
     sensor = sensor_create("IMX363", None, "row col", [12, 16], asset_store=asset_store)
 

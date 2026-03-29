@@ -474,7 +474,10 @@ ideal-array families
 the OVT split-pixel lane. The deprecated top-level
 `sensorCreate('ideal')` shim now also matches upstream by throwing an
 explicit redirect to `sensorCreateIdeal(...)` instead of silently building
-an XYZ ideal sensor.
+an XYZ ideal sensor. Adjacent camera creation now also replays the
+upstream `cameraCreate('idealmonochrome')` naming contract, returning an
+`ideal monochrome` camera instead of leaking the compact dispatcher token
+into `camera.name`.
 the dispatcher also exposes the legacy
 `sensorCreate('Nikon D100')` preset from the vendored Nikon MAT asset. The
 dispatcher also now accepts the remaining parenthesized Bayer CFA aliases

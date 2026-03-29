@@ -271,6 +271,7 @@ def camera_create(
         oi = oi_create(session=session)
         sensor = sensor_create("monochrome", asset_store=store, session=session)
     elif normalized in {"idealmonochrome"}:
+        camera.name = "ideal monochrome"
         oi = oi_create(session=session)
         sensor = sensor_create_ideal("monochrome", asset_store=store, session=session)
     else:
