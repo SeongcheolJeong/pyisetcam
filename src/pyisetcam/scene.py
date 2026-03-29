@@ -4256,8 +4256,16 @@ def scene_create(
             raise ValueError("sceneCreate('radiance chart', ...) requires wave and radiance.")
         if len(args) > 2 and hasattr(args[2], "items"):
             params = _normalized_parameter_dict(args[2])
-        elif len(args) > 2:
+        elif len(args) > 2 and isinstance(args[2], str):
             params = _normalized_key_value_args(tuple(args[2:]))
+        elif len(args) > 2:
+            params = {
+                "rowcol": None if _is_empty_scene_dispatch_placeholder(args[2]) else args[2],
+                "patchsize": [] if len(args) <= 3 else args[3],
+                "grayfill": [] if len(args) <= 4 else args[4],
+                "sampling": [] if len(args) <= 5 else args[5],
+                "illuminant": [] if len(args) <= 6 else args[6],
+            }
         else:
             params = {}
         scene, _ = scene_radiance_chart(

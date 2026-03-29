@@ -297,7 +297,10 @@ instead of only positional or dict-based Python calls. The adjacent
 MATLAB-style key/value arguments too, and the positional
 `sceneCreate('reflectance chart', pSize, sSamples, sFiles, wave, grayFlag, sampling)`
 form now also honors MATLAB-style empty placeholders for the optional
-patch-size, wavelength, gray-strip, and sampling slots. `sceneCreate('bar ee', imageSize,
+patch-size, wavelength, gray-strip, and sampling slots. The same
+`sceneCreate('radiance chart', wave, radiance, rowcol, patchSize, grayFill, ...)`
+wrapper now also accepts positional optional slots with MATLAB-style empty
+placeholders instead of forcing only dict or key/value extras. `sceneCreate('bar ee', imageSize,
 width)` now replays the documented equal-energy bar alias,
 `sceneCreate('squares', imageSize, squareSize, arraySize)` now replays the
 documented square-array shorthand, and the slanted-bar dispatcher now also
