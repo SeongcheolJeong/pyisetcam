@@ -8,6 +8,7 @@ from pyisetcam import (
     displayGet,
     humanAchromaticOTF,
     humanConeContrast,
+    humanCones,
     humanConeMosaic,
     humanConeIsolating,
     humanCore,
@@ -143,6 +144,27 @@ def test_human_wave_defocus_matches_thibos_formula() -> None:
     expected = 1.7312 - (0.63346 / (wave * 1.0e-3 - 0.21410))
 
     np.testing.assert_allclose(humanWaveDefocus(wave), expected)
+
+
+def test_human_cones_replays_defaults_and_macular_density_adjustment() -> None:
+    cones_default, correction_default, wave_default = humanCones()
+    cones_placeholder, correction_placeholder, wave_placeholder = humanCones([], [], [], [])
+
+    np.testing.assert_allclose(wave_default, np.arange(370.0, 731.0, 1.0, dtype=float))
+    np.testing.assert_allclose(wave_placeholder, wave_default)
+    np.testing.assert_allclose(cones_placeholder, cones_default)
+    np.testing.assert_allclose(correction_default, np.ones_like(correction_default))
+    np.testing.assert_allclose(correction_placeholder, correction_default)
+
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    cones_adjusted, macular_correction, returned_wave = humanCones("stockmanAbs", wave, 0.0, 0.35)
+    _, base_cones = AssetStore.default().load_spectra("stockmanAbs", wave_nm=wave)
+    _, profile = AssetStore.default().load_spectra("macularPigment.mat", wave_nm=wave)
+    expected_correction = np.power(10.0, -((np.asarray(profile, dtype=float).reshape(-1) / 0.3521) * (0.0 - 0.35)))
+
+    np.testing.assert_allclose(returned_wave, wave)
+    np.testing.assert_allclose(macular_correction, expected_correction)
+    np.testing.assert_allclose(cones_adjusted, np.asarray(base_cones, dtype=float) * expected_correction[:, np.newaxis])
 
 
 def test_watson_impulse_response_is_normalized() -> None:

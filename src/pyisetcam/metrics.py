@@ -57,6 +57,14 @@ def _default_wave(length: int) -> NDArray[np.float64]:
     return DEFAULT_WAVE.copy()
 
 
+def _empty_placeholder(value: Any) -> Any | None:
+    if value is None:
+        return None
+    if isinstance(value, (str, Path, Mapping)):
+        return value
+    return None if np.asarray(value, dtype=object).size == 0 else value
+
+
 def _matlab_round_scalar(value: float) -> int:
     numeric = float(value)
     if numeric >= 0.0:
@@ -208,6 +216,41 @@ def human_pupil_size(
 
     pupil_area = np.pi * np.square(np.asarray(diameter, dtype=float) / 2.0)
     return _maybe_scalar(np.asarray(diameter, dtype=float)), _maybe_scalar(np.asarray(pupil_area, dtype=float))
+
+
+def human_cones(
+    file_name: Any | None = "stockmanAbs",
+    wave: Any | None = None,
+    macular_density: Any | None = None,
+    included_density: Any | None = 0.35,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
+    """Legacy MATLAB humanCones() compatibility wrapper."""
+
+    resolved_file_name = "stockmanAbs" if _empty_placeholder(file_name) is None else str(file_name)
+    wave_value = _empty_placeholder(wave)
+    macular_density_value = _empty_placeholder(macular_density)
+    included_density_value = _empty_placeholder(included_density)
+
+    wave_nm = np.arange(370.0, 731.0, 1.0, dtype=float) if wave_value is None else _vector(wave_value, name="wave")
+    included = 0.35 if included_density_value is None else float(np.asarray(included_density_value, dtype=float).reshape(-1)[0])
+    store = asset_store or AssetStore.default()
+    returned_wave, cones = store.load_spectra(resolved_file_name, wave_nm=wave_nm)
+    cone_array = np.asarray(cones, dtype=float)
+
+    if macular_density_value is None:
+        return cone_array, np.ones(returned_wave.shape, dtype=float), np.asarray(returned_wave, dtype=float)
+
+    _, profile = store.load_spectra("macularPigment.mat", wave_nm=returned_wave)
+    unit_density = np.asarray(profile, dtype=float).reshape(-1) / 0.3521
+    target_density = float(np.asarray(macular_density_value, dtype=float).reshape(-1)[0])
+    macular_correction = np.power(10.0, -(unit_density * (target_density - included)))
+    return (
+        np.asarray(macular_correction[:, np.newaxis] * cone_array, dtype=float),
+        np.asarray(macular_correction, dtype=float),
+        np.asarray(returned_wave, dtype=float),
+    )
 
 
 def human_cone_contrast(

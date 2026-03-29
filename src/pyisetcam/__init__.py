@@ -201,6 +201,7 @@ from .metrics import (
     delta_e_2000,
     delta_e_94,
     delta_e_uv,
+    human_cones,
     human_uv_safety,
     human_cone_contrast,
     human_cone_isolating,
@@ -1059,6 +1060,7 @@ __all__ = [
     "delta_e_94",
     "delta_e_uv",
     "humanAchromaticOTF",
+    "humanCones",
     "humanCore",
     "humanLSF",
     "humanMacularTransmittance",
@@ -1067,6 +1069,7 @@ __all__ = [
     "humanOTF_ibio",
     "humanWaveDefocus",
     "human_achromatic_otf",
+    "human_cones",
     "human_cone_contrast",
     "human_cone_isolating",
     "human_core",
@@ -2889,6 +2892,7 @@ sensorWBCompute = sensor_wb_compute
 spatialIntegration = spatial_integration
 
 metricsSPD = metrics_spd
+humanCones = human_cones
 humanConeContrast = human_cone_contrast
 humanConeIsolating = human_cone_isolating
 humanOpticalDensity = human_optical_density
