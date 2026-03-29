@@ -469,7 +469,9 @@ sensor-example slot instead of crashing. The monochrome ideal sensor now
 also reuses the upstream `Monochrome` sensor name instead of the older
 Python-only `ideal-monochrome` label, and both ideal constructors now
 accept either scalar or `[row, col]` pixel-size vectors like the vendored
-MATLAB `idealPixel(...)` helper. Non-empty
+MATLAB `idealPixel(...)` helper. The adjacent standalone
+`pixelCreate('ideal', wave, pixelSizeM)` path now also accepts either
+form instead of only square scalar pixels. Non-empty
 `sensorCreateIdeal('monochrome', sensorExample, ...)` calls now also match
 upstream by failing instead of silently templating from that example.
 `sensorCreateArray(...)` now also supports the

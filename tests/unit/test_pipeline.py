@@ -6952,6 +6952,7 @@ def test_pixel_create_get_set_and_ideal_match_legacy_contract() -> None:
     noisy = pixelSet(noisy, "darkVoltage", 3.0e-3)
     idealized = pixelIdeal(noisy)
     created_ideal = pixelCreate("ideal", wave, 1.5e-6)
+    created_ideal_rect = pixelCreate("ideal", wave, np.array([1.5e-6, 1.8e-6], dtype=float))
 
     assert np.isclose(float(pixelGet(resized, "width")), 1.5e-6)
     assert np.isclose(float(pixelGet(resized, "height")), 1.5e-6)
@@ -6964,6 +6965,10 @@ def test_pixel_create_get_set_and_ideal_match_legacy_contract() -> None:
     assert np.isclose(float(pixelGet(created_ideal, "pdwidth")), 1.5e-6)
     assert np.isclose(float(pixelGet(created_ideal, "pdheight")), 1.5e-6)
     assert np.isclose(float(pixelGet(created_ideal, "fill factor")), 1.0)
+    assert np.isclose(float(pixelGet(created_ideal_rect, "height")), 1.5e-6)
+    assert np.isclose(float(pixelGet(created_ideal_rect, "width")), 1.8e-6)
+    assert np.isclose(float(pixelGet(created_ideal_rect, "pdheight")), 1.5e-6)
+    assert np.isclose(float(pixelGet(created_ideal_rect, "pdwidth")), 1.8e-6)
 
 
 def test_pixel_sr_matches_closed_form_responsivity() -> None:

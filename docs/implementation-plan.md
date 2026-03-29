@@ -63,6 +63,7 @@
 - That same ideal-sensor lane now also restores the upstream bare `sensorCreateIdeal()` default contract, so the no-argument form returns the ideal monochrome sensor unless an explicit ideal type is passed.
 - That same ideal-sensor lane now also reuses the upstream `Monochrome` sensor name for `sensorCreateIdeal('monochrome')`, instead of the older Python-only `ideal-monochrome` label.
 - That same ideal-sensor lane now also accepts either scalar or 2-element `[row, col]` pixel-size vectors for both `sensorCreateIdeal('monochrome', ..., pixelSizeM)` and `sensorCreateIdeal('xyz', ..., pixelSizeM)`, matching the vendored MATLAB `idealPixel(...)` helper contract.
+- The adjacent standalone pixel helper now also matches that same `idealPixel(...)` contract, so `pixelCreate('ideal', wave, pixelSizeM)` accepts either a scalar or a 2-element `[row, col]` pixel-size vector.
 - That same ideal-sensor lane now also honors the documented empty-placeholder sensor-example forms `sensorCreateIdeal('monochrome', [], pixelSizeM)` and `sensorCreateIdeal('xyz', [], pixelSizeM)`, instead of trying to treat `[]` as a concrete sensor object.
 - That same ideal-sensor lane now also rejects non-empty `sensorCreateIdeal('monochrome', sensorExample, ...)` calls with the upstream error, instead of silently using the example as a monochrome template.
 - That same compatibility cleanup now also makes the deprecated `sensorCreate('ideal')` shim fail with the upstream redirect to `sensorCreateIdeal(...)` instead of silently constructing an XYZ ideal sensor.

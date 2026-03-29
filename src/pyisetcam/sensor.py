@@ -2839,7 +2839,7 @@ def _pixel_payload_from_sensor(sensor: Sensor) -> dict[str, Any]:
 def pixel_create(
     pixel_type: str = "default",
     wave: Any | None = None,
-    pixel_size_m: float = 2.8e-6,
+    pixel_size_m: Any = 2.8e-6,
 ) -> dict[str, Any]:
     """Create a standalone MATLAB-style pixel payload."""
 
@@ -2880,12 +2880,13 @@ def pixel_create(
         )
         _sync_pixel_pd_state(payload)
     elif normalized == "ideal":
+        ideal_size_m = _normalize_pixel_size_m(pixel_size_m, default=(2.8e-6, 2.8e-6))
         payload = _default_pixel(
             {
                 "name": "aps",
                 "type": "pixel",
-                "size_m": np.array([float(pixel_size_m), float(pixel_size_m)], dtype=float),
-                "pd_size_m": np.array([float(pixel_size_m), float(pixel_size_m)], dtype=float),
+                "size_m": ideal_size_m.copy(),
+                "pd_size_m": ideal_size_m.copy(),
                 "fill_factor": 1.0,
             }
         )
