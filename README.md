@@ -465,7 +465,10 @@ again by returning the ideal monochrome sensor unless an explicit ideal
 type is requested. `sensorCreateArray(...)` now also supports the
 ideal-array families
 `'xyz'`, `'matchxyz'`, `'match'`, and `'monochrome'` instead of stopping at
-the OVT split-pixel lane.
+the OVT split-pixel lane. The deprecated top-level
+`sensorCreate('ideal')` shim now also matches upstream by throwing an
+explicit redirect to `sensorCreateIdeal(...)` instead of silently building
+an XYZ ideal sensor.
 the dispatcher also exposes the legacy
 `sensorCreate('Nikon D100')` preset from the vendored Nikon MAT asset. The
 dispatcher also now accepts the remaining parenthesized Bayer CFA aliases

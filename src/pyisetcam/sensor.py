@@ -2150,7 +2150,7 @@ def sensor_create(
         return track_session_object(session, sensor)
 
     if normalized == "ideal":
-        return sensor_create_ideal("xyz", None, asset_store=store, session=session)
+        raise ValueError("sensorCreate('ideal') is deprecated. Use sensorCreateIdeal")
 
     raise UnsupportedOptionError("sensorCreate", sensor_type)
 

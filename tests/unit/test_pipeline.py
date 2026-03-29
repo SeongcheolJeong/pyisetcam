@@ -6248,6 +6248,11 @@ def test_sensor_create_ideal_defaults_to_monochrome(asset_store) -> None:
     assert np.array_equal(np.asarray(sensor_get(implicit, "wave"), dtype=float), np.asarray(sensor_get(explicit, "wave"), dtype=float))
 
 
+def test_sensor_create_ideal_dispatcher_is_deprecated(asset_store) -> None:
+    with pytest.raises(ValueError, match=r"sensorCreate\('ideal'\) is deprecated\. Use sensorCreateIdeal"):
+        sensor_create("ideal", asset_store=asset_store)
+
+
 def test_camera_create_ideal_returns_xyz_camera_array(asset_store) -> None:
     ideal = camera_create("ideal", asset_store=asset_store)
 
