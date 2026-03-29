@@ -4461,13 +4461,13 @@ def scene_create(
 
     if name == "bar":
         size = args[0] if len(args) > 0 else 64
-        width = _scene_dispatch_int_arg(args[1] if len(args) > 1 else None, 3)
+        width = _scene_dispatch_int_arg(args[1] if len(args) > 1 else None, 5) if len(args) > 1 else 3
         wave = _wave_or_default(args[2] if len(args) > 2 else None)
         return track_session_object(session, _bar_scene(size, width, wave, "ep", asset_store=store))
 
     if name == "baree":
         size = args[0] if len(args) > 0 else 64
-        width = _scene_dispatch_int_arg(args[1] if len(args) > 1 else None, 3)
+        width = _scene_dispatch_int_arg(args[1] if len(args) > 1 else None, 5) if len(args) > 1 else 3
         wave = _wave_or_default(args[2] if len(args) > 2 else None)
         return track_session_object(session, _bar_scene(size, width, wave, "ee", asset_store=store))
 

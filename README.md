@@ -298,6 +298,9 @@ and now also honors MATLAB-style empty placeholders in that size-first
 shorthand, so `sceneCreate('uniform monochromatic', 12, [])` preserves the
 default `500 nm` wavelength and `sceneCreate('uniform monochromatic', [], 550)`
 preserves the default `128 x 128` size,
+while `sceneCreate('bar', 64, [])` and `sceneCreate('bar ee', 64, [])` now
+replay the lower-level helper default bar width of `5` pixels instead of
+reusing the wrapper's omitted-argument default of `3`,
 and
 `sceneCreate('sweep frequency', [], maxFrequency, [], yContrast)` now
 honors MATLAB-style empty placeholders for the size and wavelength slots

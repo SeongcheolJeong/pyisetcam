@@ -1002,8 +1002,8 @@ def test_pattern_scene_dispatches_accept_empty_optional_placeholders(asset_store
     placeholder_cases = [
         ("line ee", (64, [], wave), (64, 0, wave)),
         ("line ep", (64, [], wave), (64, 0, wave)),
-        ("bar", (64, [], wave), (64, 3, wave)),
-        ("bar ee", (64, [], wave), (64, 3, wave)),
+        ("bar", (64, [], wave), (64, 5, wave)),
+        ("bar ee", (64, [], wave), (64, 5, wave)),
         ("point array", (128, 16, [], [], wave), (128, 16, "ep", 1, wave)),
         ("grid lines", (128, 16, [], [], wave), (128, 16, "ep", 1, wave)),
         ("checkerboard", ([], 8, "ep", wave), (16, 8, "ep", wave)),
