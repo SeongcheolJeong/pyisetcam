@@ -4326,8 +4326,10 @@ def scene_create(
         if args and (hasattr(args[0], "items") or hasattr(args[0], "__dict__")):
             params = args[0]
         elif args:
-            params = {"sceneSize": args[0]}
-            if len(args) > 1:
+            params = {}
+            if len(args) > 0 and not _is_empty_scene_dispatch_placeholder(args[0]):
+                params["sceneSize"] = args[0]
+            if len(args) > 1 and not _is_empty_scene_dispatch_placeholder(args[1]):
                 params["f"] = args[1]
         else:
             params = None

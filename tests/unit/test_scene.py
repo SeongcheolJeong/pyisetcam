@@ -271,8 +271,12 @@ def test_scene_create_moire_orient_replays_green_target_plane(asset_store) -> No
     params = {"sceneSize": 96, "f": 1.0 / 1200.0}
     scene = scene_create("moire orient", params, asset_store=asset_store)
     positional = scene_create("moire orient", 96, 1.0 / 1200.0, asset_store=asset_store)
+    placeholder_frequency = scene_create("moire orient", 96, [], asset_store=asset_store)
+    default_frequency = scene_create("moire orient", {"sceneSize": 96}, asset_store=asset_store)
     photons = np.asarray(scene_get(scene, "photons"), dtype=float)
     positional_photons = np.asarray(scene_get(positional, "photons"), dtype=float)
+    placeholder_photons = np.asarray(scene_get(placeholder_frequency, "photons"), dtype=float)
+    default_photons = np.asarray(scene_get(default_frequency, "photons"), dtype=float)
     expected = np.clip(np.asarray(mo_target("sinusoidalim", params), dtype=float)[:, :, 1], 1.0e-4, 1.0)
     expected = expected / np.max(expected)
     actual = photons[:, :, 0] / np.max(photons[:, :, 0])
@@ -283,6 +287,7 @@ def test_scene_create_moire_orient_replays_green_target_plane(asset_store) -> No
     assert positional_photons.shape[:2] == (96, 96)
     np.testing.assert_allclose(photons[:, :, 0], photons[:, :, -1], atol=1e-10, rtol=1e-10)
     np.testing.assert_allclose(positional_photons, photons, atol=0.0, rtol=0.0)
+    np.testing.assert_allclose(placeholder_photons, default_photons, atol=0.0, rtol=0.0)
     np.testing.assert_allclose(actual, expected, atol=1e-7, rtol=1e-7)
     assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
 
