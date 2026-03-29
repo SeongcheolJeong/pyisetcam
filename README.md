@@ -362,8 +362,9 @@ moire target form,
 and
 `sceneCreate('zone plate', imageSize, fieldOfView, wave)` now accepts the
 optional field-of-view positional slot while preserving the existing
-wave-only shorthand and the upstream default `256 x 256`, `4 deg`
-behavior,
+wave-only shorthand and the upstream MATLAB distinction between the
+omitted-size wrapper default `384 x 384` and the empty-placeholder helper
+default `256 x 256`, both at `4 deg`,
 and
 the numeric `sceneCreate('vernier', ...)` shortcut now replays the upstream
 MATLAB defaults of `65` pixels, `3`-pixel bars, and `3`-pixel offset instead

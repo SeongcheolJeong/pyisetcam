@@ -4444,7 +4444,7 @@ def scene_create(
         return track_session_object(session, _dead_leaves_scene(size, sigma, options, wave, asset_store=store))
 
     if name == "zoneplate":
-        size = args[0] if len(args) > 0 else 256
+        size = args[0] if len(args) > 0 else 384
         second_arg = args[1] if len(args) > 1 else None
         if _looks_like_wave_arg(second_arg):
             fov_deg = 4.0
