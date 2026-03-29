@@ -1888,6 +1888,22 @@ def _sensor_create_ovt_small(*, asset_store: AssetStore) -> Sensor:
     return _apply_sensor_settings(sensor_create(asset_store=asset_store), settings)
 
 
+def _sensor_create_imx490_quad(*, asset_store: AssetStore) -> tuple[Sensor, Sensor, Sensor, Sensor]:
+    large_lcg = sensor_set(_sensor_vendor_imx490("large", asset_store=asset_store), "pixel size same fill factor", 2.8e-6)
+    large_hcg = sensor_set(
+        large_lcg.clone(),
+        "pixel conversion gain",
+        4.0 * float(sensor_get(large_lcg, "pixel conversion gain")),
+    )
+    small_lcg = sensor_set(_sensor_vendor_imx490("small", asset_store=asset_store), "pixel size same fill factor", 2.8e-6)
+    small_hcg = sensor_set(
+        small_lcg.clone(),
+        "pixel conversion gain",
+        4.0 * float(sensor_get(small_lcg, "pixel conversion gain")),
+    )
+    return large_lcg, large_hcg, small_lcg, small_hcg
+
+
 def sensor_create(
     sensor_type: str = "default",
     pixel: dict[str, Any] | None = None,
@@ -2452,12 +2468,13 @@ def sensor_create_split_pixel(
         shared_settings.append((parameter, value))
 
     normalized_array_type = param_format(array_type)
-    if normalized_array_type != "ovt":
+    if normalized_array_type == "ovt":
+        sensors = _sensor_create_ovt_large_pair(asset_store=store) + (_sensor_create_ovt_small(asset_store=store),)
+    elif normalized_array_type == "imx490":
+        sensors = _sensor_create_imx490_quad(asset_store=store)
+    else:
         raise UnsupportedOptionError("sensorCreateSplitPixel", array_type)
-
-    large_lcg, large_hcg = _sensor_create_ovt_large_pair(asset_store=store)
-    small_lcg = _sensor_create_ovt_small(asset_store=store)
-    return [_apply_sensor_settings(sensor.clone(), shared_settings) for sensor in (large_lcg, large_hcg, small_lcg)]
+    return [_apply_sensor_settings(sensor.clone(), shared_settings) for sensor in sensors]
 
 
 def sensor_create_array(
@@ -2483,7 +2500,7 @@ def sensor_create_array(
         shared_settings.append((parameter, value))
 
     normalized_array_type = param_format(array_type)
-    if normalized_array_type == "ovt":
+    if normalized_array_type in {"ovt", "imx490"}:
         forward_args: list[Any] = ["arraytype", array_type]
         for parameter, value in shared_settings:
             forward_args.extend((parameter, value))

@@ -11367,6 +11367,40 @@ def test_sensor_compute_array_supports_ovt_saturated_flow(asset_store) -> None:
     assert np.any(np.sum(saturated, axis=(0, 1)) > 0)
 
 
+def test_sensor_create_array_supports_imx490_split_pixel_type(asset_store) -> None:
+    sensor_array = sensor_create_array(
+        "array type",
+        "imx490",
+        "exp time",
+        0.01,
+        "pixel size same fill factor",
+        1.4e-6,
+        "size",
+        np.array([64, 96], dtype=int),
+        asset_store=asset_store,
+    )
+
+    assert isinstance(sensor_array, list)
+    assert len(sensor_array) == 4
+    assert [sensor_get(current, "name") for current in sensor_array] == [
+        "imx490-large",
+        "imx490-large",
+        "imx490-small",
+        "imx490-small",
+    ]
+    assert all(tuple(np.asarray(sensor_get(current, "size"), dtype=int)) == (64, 96) for current in sensor_array)
+    assert all(np.isclose(float(sensor_get(current, "exp time")), 0.01) for current in sensor_array)
+    assert all(np.isclose(float(sensor_get(current, "pixel width")), 1.4e-6) for current in sensor_array)
+    assert np.isclose(
+        float(sensor_get(sensor_array[1], "pixel conversion gain")),
+        4.0 * float(sensor_get(sensor_array[0], "pixel conversion gain")),
+    )
+    assert np.isclose(
+        float(sensor_get(sensor_array[3], "pixel conversion gain")),
+        4.0 * float(sensor_get(sensor_array[2], "pixel conversion gain")),
+    )
+
+
 def test_sensor_create_array_supports_ideal_array_types(asset_store) -> None:
     xyz_array = sensor_create_array("array type", "xyz", "size", np.array([20, 24], dtype=int), asset_store=asset_store)
 

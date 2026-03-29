@@ -477,7 +477,11 @@ explicit redirect to `sensorCreateIdeal(...)` instead of silently building
 an XYZ ideal sensor. Adjacent camera creation now also replays the
 upstream `cameraCreate('idealmonochrome')` naming contract, returning an
 `ideal monochrome` camera instead of leaking the compact dispatcher token
-into `camera.name`.
+into `camera.name`. The adjacent split-pixel array layer now also replays
+the upstream `sensorCreateArray('array type','imx490', ...)` /
+`sensorCreateSplitPixel('array type','imx490', ...)` four-capture
+constructor, including the `large LCG`, `large HCG`, `small LCG`, `small HCG`
+ordering and the 4x high-conversion-gain replay.
 the dispatcher also exposes the legacy
 `sensorCreate('Nikon D100')` preset from the vendored Nikon MAT asset. The
 dispatcher also now accepts the remaining parenthesized Bayer CFA aliases
