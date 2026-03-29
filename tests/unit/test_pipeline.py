@@ -391,6 +391,7 @@ from pyisetcam import (
     sensorComputeFullArray,
     sensorComputeImage,
     sensorComputeMEV,
+    sensorComputeNoise,
     sensorComputeNoiseFree,
     sensorComputeSVFilters,
     sensor_add_noise,
@@ -6608,6 +6609,16 @@ def test_sensor_simulation_legacy_wrappers(asset_store) -> None:
     assert np.asarray(noisy_a.fields["gain_fpn_image"], dtype=float).shape == tuple(sensor_get(sensor, "size"))
     assert np.asarray(noisy_a.fields["column_offset_fpn"], dtype=float).reshape(-1).size == int(sensor_get(sensor, "cols"))
     assert np.asarray(noisy_a.fields["column_gain_fpn"], dtype=float).reshape(-1).size == int(sensor_get(sensor, "cols"))
+
+    noise_stage = sensorComputeNoise(noise_free, [], seed=11)
+    expected_volts = np.clip(
+        (np.asarray(sensor_get(noisy_a, "volts"), dtype=float) + 0.05) / 2.0,
+        0.0,
+        float(sensor_get(sensor, "pixel voltage swing")),
+    )
+    expected_dv, _ = analog2digital(sensor_set(noisy_a.clone(), "volts", expected_volts), "linear")
+    assert np.allclose(np.asarray(sensor_get(noise_stage, "volts"), dtype=float), expected_volts)
+    assert np.array_equal(np.asarray(sensor_get(noise_stage, "digital values"), dtype=float), np.asarray(expected_dv, dtype=float))
 
     volt_image, dsnu, prnu = sensorComputeImage(oi, sensor)
     expected_noisy = sensorAddNoise(sensorComputeNoiseFree(sensor, oi))

@@ -4303,6 +4303,44 @@ def sensor_add_noise(sensor: Sensor, *, seed: int | None = None) -> Sensor:
     return updated
 
 
+def sensor_compute_noise(
+    sensor: Sensor,
+    w_bar: Any | None = None,
+    *,
+    seed: int | None = None,
+) -> Sensor:
+    """Apply the legacy noise, gain/offset, clip, and quantization stage."""
+
+    del w_bar
+
+    updated = sensor_add_noise(sensor, seed=seed)
+    analog_gain = float(sensor_get(updated, "analog gain"))
+    analog_offset = float(sensor_get(updated, "analog offset"))
+    voltage_swing = float(sensor_get(updated, "pixel voltage swing"))
+
+    volts = np.asarray(sensor_get(updated, "volts"), dtype=float)
+    volts = np.clip((volts + analog_offset) / max(analog_gain, 1e-12), 0.0, voltage_swing)
+    updated = sensor_set(updated, "volts", volts)
+
+    quantization_method = str(sensor_get(updated, "quantization method"))
+    normalized_quantization = param_format(quantization_method)
+    if normalized_quantization == "analog":
+        updated.data["dv"] = None
+    elif normalized_quantization in {"lin", "linear"} or normalized_quantization.endswith("bit"):
+        quantized, _ = analog_to_digital(updated, "linear")
+        updated = sensor_set(updated, "digital values", quantized)
+    elif normalized_quantization in {"sqrt", "sqrtsq"}:
+        quantized, _ = analog_to_digital(updated, "sqrt")
+        updated = sensor_set(updated, "digital values", quantized)
+    elif normalized_quantization in {"lut", "gamma"}:
+        updated.data["dv"] = None
+    else:
+        quantized, _ = analog_to_digital(updated, "linear")
+        updated = sensor_set(updated, "digital values", quantized)
+
+    return updated
+
+
 def sensor_compute_image(
     oi: OpticalImage,
     sensor: Sensor,
@@ -7554,6 +7592,7 @@ sensorIMX363V2 = sensor_imx363_v2
 sensorInterleaved = sensor_interleaved
 sensorLightField = sensor_light_field
 sensorMT9V024 = sensor_mt9v024
+sensorComputeNoise = sensor_compute_noise
 LoadRawSensorData = load_raw_sensor_data
 binPixel = bin_pixel
 binPixelPost = bin_pixel_post
