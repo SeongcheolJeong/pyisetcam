@@ -297,6 +297,31 @@ def test_scene_create_moire_orient_replays_green_target_plane(asset_store) -> No
     assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
 
 
+@pytest.mark.parametrize(
+    ("scene_name", "params"),
+    [
+        ("frequency orientation", {"blockSize": [], "contrast": [], "angles": [], "freqs": []}),
+        ("harmonic", {"row": [], "col": [], "ang": [], "contrast": [], "freq": [], "ph": [], "center": [], "gaborFlag": []}),
+        ("hdr lights", {"imageSize": [], "nCircles": [], "radius": [], "circleColors": [], "nLines": [], "lineLength": [], "lineColors": []}),
+        ("moire orient", {"sceneSize": [], "f": []}),
+    ],
+)
+def test_scene_create_empty_parameter_fields_match_default_dispatch(scene_name, params, asset_store) -> None:
+    default_scene = scene_create(scene_name, asset_store=asset_store)
+    placeholder_scene = scene_create(scene_name, params, asset_store=asset_store)
+
+    np.testing.assert_allclose(
+        np.asarray(scene_get(placeholder_scene, "photons"), dtype=float),
+        np.asarray(scene_get(default_scene, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    assert np.array_equal(
+        np.asarray(scene_get(placeholder_scene, "wave"), dtype=float),
+        np.asarray(scene_get(default_scene, "wave"), dtype=float),
+    )
+
+
 def test_scene_create_letter_branch_reuses_font_pipeline(asset_store) -> None:
     font = font_create("A", "Georgia", 18, asset_store=asset_store)
     scene = scene_create("letter", font, "LCD-Apple", asset_store=asset_store)

@@ -109,6 +109,14 @@ def _is_empty_scene_dispatch_placeholder(value: Any | None) -> bool:
     return False
 
 
+def _is_empty_scene_dispatch_collection_placeholder(value: Any | None) -> bool:
+    if isinstance(value, np.ndarray):
+        return value.size == 0
+    if isinstance(value, (list, tuple)):
+        return len(value) == 0
+    return False
+
+
 def _scene_dispatch_int_arg(value: Any | None, default: int) -> int:
     if _is_empty_scene_dispatch_placeholder(value):
         return int(default)
@@ -2738,7 +2746,11 @@ def _normalized_parameter_dict(value: Any) -> dict[str, Any]:
         raw = vars(value)
     else:
         return {"imagesize": value}
-    return {param_format(str(key)): item for key, item in raw.items()}
+    return {
+        param_format(str(key)): item
+        for key, item in raw.items()
+        if not _is_empty_scene_dispatch_collection_placeholder(item)
+    }
 
 
 def _normalized_key_value_args(args: tuple[Any, ...]) -> dict[str, Any]:
