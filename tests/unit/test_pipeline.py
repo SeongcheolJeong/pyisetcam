@@ -6238,8 +6238,8 @@ def test_sensor_create_ideal_defaults_to_monochrome(asset_store) -> None:
     explicit = sensor_create_ideal("monochrome", asset_store=asset_store)
 
     assert isinstance(implicit, sensor_module.Sensor)
-    assert implicit.name == "ideal-monochrome"
-    assert explicit.name == "ideal-monochrome"
+    assert implicit.name == "Monochrome"
+    assert explicit.name == "Monochrome"
     assert np.array_equal(np.asarray(sensor_get(implicit, "pattern"), dtype=int), np.array([[1]], dtype=int))
     assert np.array_equal(np.asarray(sensor_get(implicit, "pattern"), dtype=int), np.asarray(sensor_get(explicit, "pattern"), dtype=int))
     assert sensor_get(implicit, "filter names") == ["w"]
@@ -6253,8 +6253,8 @@ def test_sensor_create_ideal_accepts_empty_placeholder_for_pixel_size(asset_stor
     monochrome_explicit = sensor_create_ideal("monochrome", None, 3e-6, asset_store=asset_store)
 
     assert isinstance(monochrome_placeholder, sensor_module.Sensor)
-    assert monochrome_placeholder.name == "ideal-monochrome"
-    assert monochrome_explicit.name == "ideal-monochrome"
+    assert monochrome_placeholder.name == "Monochrome"
+    assert monochrome_explicit.name == "Monochrome"
     assert sensor_get(monochrome_placeholder, "filter names") == ["w"]
     assert sensor_get(monochrome_placeholder, "filter names") == sensor_get(monochrome_explicit, "filter names")
     np.testing.assert_allclose(
@@ -6314,7 +6314,7 @@ def test_camera_create_ideal_returns_monochrome_camera(asset_store) -> None:
 
     assert not isinstance(ideal, list)
     assert ideal.name == "ideal"
-    assert ideal.fields["sensor"].name == "ideal-monochrome"
+    assert ideal.fields["sensor"].name == "Monochrome"
     assert camera_get(ideal, "sensor filter names") == ["w"]
     assert np.array_equal(np.asarray(camera_get(ideal, "sensor pattern"), dtype=int), np.array([[1]], dtype=int))
 
@@ -6326,8 +6326,8 @@ def test_camera_create_ideal_monochrome_replays_legacy_camera_name(asset_store) 
 
     assert compact.name == "ideal monochrome"
     assert spaced.name == "ideal monochrome"
-    assert compact.fields["sensor"].name == "ideal-monochrome"
-    assert spaced.fields["sensor"].name == "ideal-monochrome"
+    assert compact.fields["sensor"].name == "Monochrome"
+    assert spaced.fields["sensor"].name == "Monochrome"
     assert compact.fields["sensor"].name == ideal.fields["sensor"].name
     assert spaced.fields["sensor"].name == ideal.fields["sensor"].name
     assert camera_get(compact, "sensor filter names") == ["w"]
