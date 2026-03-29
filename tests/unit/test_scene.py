@@ -236,6 +236,37 @@ def test_macbeth_dispatch_accepts_empty_patch_size_placeholder(asset_store) -> N
     assert np.array_equal(np.asarray(scene_get(macbeth_placeholder, "wave"), dtype=float), wave)
 
 
+def test_macbeth_dispatch_accepts_empty_surface_and_border_placeholders(asset_store) -> None:
+    wave = np.array([450.0, 550.0, 650.0], dtype=float)
+
+    default_placeholder = scene_create("default", 16, wave, [], [], asset_store=asset_store)
+    default_reference = scene_create("default", 16, wave, "macbethChart.mat", False, asset_store=asset_store)
+    tungsten_placeholder = scene_create("macbeth tungsten", 16, wave, [], [], asset_store=asset_store)
+    tungsten_reference = scene_create(
+        "macbeth tungsten",
+        16,
+        wave,
+        "macbethChart.mat",
+        False,
+        asset_store=asset_store,
+    )
+
+    np.testing.assert_allclose(
+        np.asarray(scene_get(default_placeholder, "photons"), dtype=float),
+        np.asarray(scene_get(default_reference, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    np.testing.assert_allclose(
+        np.asarray(scene_get(tungsten_placeholder, "photons"), dtype=float),
+        np.asarray(scene_get(tungsten_reference, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    assert scene_get(default_placeholder, "illuminant comment") == "D65.mat"
+    assert scene_get(tungsten_placeholder, "illuminant comment") == "tungsten"
+
+
 def test_scene_create_moire_orient_replays_green_target_plane(asset_store) -> None:
     params = {"sceneSize": 96, "f": 1.0 / 1200.0}
     scene = scene_create("moire orient", params, asset_store=asset_store)

@@ -125,6 +125,12 @@ def _scene_dispatch_text_arg(value: Any | None, default: str) -> str:
     return str(value)
 
 
+def _scene_dispatch_path_arg(value: Any | None, default: str) -> str:
+    if _is_empty_scene_dispatch_placeholder(value):
+        return str(default)
+    return str(value)
+
+
 def _looks_like_scene_size_arg(value: Any | None) -> bool:
     if value is None:
         return False
@@ -3943,8 +3949,10 @@ def scene_create(
     if name in {"default", "macbeth", "macbethd65", "macbethcustomreflectance"}:
         patch_size = _macbeth_patch_size_arg(args[0] if len(args) > 0 else None)
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
-        surface_file = str(args[2]) if len(args) > 2 else "macbethChart.mat"
-        black_border = bool(args[3]) if len(args) > 3 else False
+        surface_file = _scene_dispatch_path_arg(args[2] if len(args) > 2 else None, "macbethChart.mat")
+        black_border = (
+            False if len(args) <= 3 or _is_empty_scene_dispatch_placeholder(args[3]) else bool(args[3])
+        )
         return track_session_object(
             session,
             _create_macbeth_scene(patch_size, wave, surface_file, black_border, asset_store=store),
@@ -3953,8 +3961,10 @@ def scene_create(
     if name == "macbethd50":
         patch_size = _macbeth_patch_size_arg(args[0] if len(args) > 0 else None)
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
-        surface_file = str(args[2]) if len(args) > 2 else "macbethChart.mat"
-        black_border = bool(args[3]) if len(args) > 3 else False
+        surface_file = _scene_dispatch_path_arg(args[2] if len(args) > 2 else None, "macbethChart.mat")
+        black_border = (
+            False if len(args) <= 3 or _is_empty_scene_dispatch_placeholder(args[3]) else bool(args[3])
+        )
         return track_session_object(
             session,
             _create_macbeth_scene(
@@ -3970,8 +3980,10 @@ def scene_create(
     if name in {"macbethc", "macbethillc"}:
         patch_size = _macbeth_patch_size_arg(args[0] if len(args) > 0 else None)
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
-        surface_file = str(args[2]) if len(args) > 2 else "macbethChart.mat"
-        black_border = bool(args[3]) if len(args) > 3 else False
+        surface_file = _scene_dispatch_path_arg(args[2] if len(args) > 2 else None, "macbethChart.mat")
+        black_border = (
+            False if len(args) <= 3 or _is_empty_scene_dispatch_placeholder(args[3]) else bool(args[3])
+        )
         return track_session_object(
             session,
             _create_macbeth_scene(
@@ -3987,8 +3999,10 @@ def scene_create(
     if name in {"macbethfluorescent", "macbethfluor"}:
         patch_size = _macbeth_patch_size_arg(args[0] if len(args) > 0 else None)
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
-        surface_file = str(args[2]) if len(args) > 2 else "macbethChart.mat"
-        black_border = bool(args[3]) if len(args) > 3 else False
+        surface_file = _scene_dispatch_path_arg(args[2] if len(args) > 2 else None, "macbethChart.mat")
+        black_border = (
+            False if len(args) <= 3 or _is_empty_scene_dispatch_placeholder(args[3]) else bool(args[3])
+        )
         return track_session_object(
             session,
             _create_macbeth_scene(
@@ -4004,8 +4018,10 @@ def scene_create(
     if name in {"macbethtungsten", "macbethtung"}:
         patch_size = _macbeth_patch_size_arg(args[0] if len(args) > 0 else None)
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
-        surface_file = str(args[2]) if len(args) > 2 else "macbethChart.mat"
-        black_border = bool(args[3]) if len(args) > 3 else False
+        surface_file = _scene_dispatch_path_arg(args[2] if len(args) > 2 else None, "macbethChart.mat")
+        black_border = (
+            False if len(args) <= 3 or _is_empty_scene_dispatch_placeholder(args[3]) else bool(args[3])
+        )
         return track_session_object(
             session,
             _create_macbeth_scene(
@@ -4021,8 +4037,10 @@ def scene_create(
     if name in {"macbethee_ir", "macbethequalenergyinfrared"}:
         patch_size = _macbeth_patch_size_arg(args[0] if len(args) > 0 else None)
         wave = _wave_or_default(args[1] if len(args) > 1 else None)
-        surface_file = str(args[2]) if len(args) > 2 else "macbethChart.mat"
-        black_border = bool(args[3]) if len(args) > 3 else False
+        surface_file = _scene_dispatch_path_arg(args[2] if len(args) > 2 else None, "macbethChart.mat")
+        black_border = (
+            False if len(args) <= 3 or _is_empty_scene_dispatch_placeholder(args[3]) else bool(args[3])
+        )
         return track_session_object(
             session,
             _create_macbeth_scene(
