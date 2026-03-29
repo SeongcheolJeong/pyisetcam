@@ -16134,6 +16134,32 @@ def test_scene_pattern_wrapper_surface(asset_store) -> None:
         True,
         asset_store=asset_store,
     )
+    radiance_placeholder = scene_create(
+        "radiance chart",
+        wave,
+        radiance,
+        "rowcol",
+        [],
+        "patch size",
+        [],
+        "gray fill",
+        [],
+        asset_store=asset_store,
+    )
+    radiance_placeholder_struct = scene_create(
+        "radiance chart",
+        wave,
+        radiance,
+        {"rowcol": [], "patch size": [], "gray fill": []},
+        asset_store=asset_store,
+    )
+    radiance_placeholder_explicit = scene_create(
+        "radiance chart",
+        wave,
+        radiance,
+        {"patch size": 10, "gray fill": True},
+        asset_store=asset_store,
+    )
 
     chart_parameters = scene_get(radiance_scene, "chart parameters")
     assert tuple(rc_size) == (2, 3)
@@ -16145,6 +16171,18 @@ def test_scene_pattern_wrapper_surface(asset_store) -> None:
     np.testing.assert_allclose(
         np.asarray(scene_get(radiance_kv, "photons"), dtype=float),
         np.asarray(scene_get(radiance_alias, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    np.testing.assert_allclose(
+        np.asarray(scene_get(radiance_placeholder, "photons"), dtype=float),
+        np.asarray(scene_get(radiance_placeholder_explicit, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    np.testing.assert_allclose(
+        np.asarray(scene_get(radiance_placeholder_struct, "photons"), dtype=float),
+        np.asarray(scene_get(radiance_placeholder_explicit, "photons"), dtype=float),
         rtol=0.0,
         atol=0.0,
     )

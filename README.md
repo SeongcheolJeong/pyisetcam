@@ -398,6 +398,11 @@ font metadata. The same positional moire-target shorthand now also treats
 an empty second argument as “use the default frequency”, so
 `sceneCreate('moire orient', imageSize, [])` reuses the helper's default
 `f` parameter instead of attempting `float([])`.
+The same `sceneCreate('radiance chart', wave, radiance, ...)` wrapper now
+also honors MATLAB-style empty placeholders in optional `rowcol`,
+`patch size`, and `gray fill` slots for both dict and key/value forms,
+reusing the helper defaults instead of attempting `int([])` or passing an
+empty layout through to the chart core.
 `sensor_create` now includes generic
 `rgbw` / `grbc` / `rccc` presets plus upstream-backed `mt9v024` and `ar0132at`
 RGBW/RCCC variants. The next sensorCreate dispatcher slice is now landed

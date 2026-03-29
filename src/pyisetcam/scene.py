@@ -4221,11 +4221,11 @@ def scene_create(
         scene, _ = scene_radiance_chart(
             args[0],
             args[1],
-            rowcol=params.get("rowcol"),
-            patch_size=int(params.get("patchsize", 10)),
-            gray_fill=bool(params.get("grayfill", True)),
-            sampling=str(params.get("sampling", "r")),
-            illuminant=params.get("illuminant"),
+            rowcol=None if _is_empty_scene_dispatch_placeholder(params.get("rowcol")) else params.get("rowcol"),
+            patch_size=10 if _is_empty_scene_dispatch_placeholder(params.get("patchsize")) else int(params.get("patchsize", 10)),
+            gray_fill=True if _is_empty_scene_dispatch_placeholder(params.get("grayfill")) else bool(params.get("grayfill", True)),
+            sampling="r" if _is_empty_scene_dispatch_placeholder(params.get("sampling")) else str(params.get("sampling", "r")),
+            illuminant=None if _is_empty_scene_dispatch_placeholder(params.get("illuminant")) else params.get("illuminant"),
             asset_store=store,
         )
         return track_session_object(session, scene)
