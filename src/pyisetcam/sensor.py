@@ -2506,7 +2506,7 @@ def sensor_create_array(
             forward_args.extend((parameter, value))
         return sensor_create_split_pixel(*forward_args, asset_store=store)
     if normalized_array_type == "monochrome":
-        sensor = sensor_create_ideal("monochrome", asset_store=store)
+        sensor = sensor_create_ideal("monochrome", sensor_example, asset_store=store)
         return _apply_sensor_settings(sensor, shared_settings)
     if normalized_array_type == "xyz":
         sensors = _sensor_create_ideal_xyz_sequence(asset_store=store)

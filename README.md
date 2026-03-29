@@ -481,7 +481,10 @@ into `camera.name`. The adjacent split-pixel array layer now also replays
 the upstream `sensorCreateArray('array type','imx490', ...)` /
 `sensorCreateSplitPixel('array type','imx490', ...)` four-capture
 constructor, including the `large LCG`, `large HCG`, `small LCG`, `small HCG`
-ordering and the 4x high-conversion-gain replay.
+ordering and the 4x high-conversion-gain replay. The same ideal-array
+wrapper now also surfaces the upstream error for
+`sensorCreateArray('array type','monochrome','sensor example', sensor)`
+instead of silently ignoring the provided example.
 the dispatcher also exposes the legacy
 `sensorCreate('Nikon D100')` preset from the vendored Nikon MAT asset. The
 dispatcher also now accepts the remaining parenthesized Bayer CFA aliases
