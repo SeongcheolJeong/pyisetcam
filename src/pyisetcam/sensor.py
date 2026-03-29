@@ -1658,6 +1658,25 @@ def human_cone_mosaic(
     )
 
 
+def sensor_roi(sensor: Sensor, roi_type: Any | None = "center") -> np.ndarray:
+    """Return a standard sensor ROI in MATLAB roiLocs form."""
+
+    from .roi import ie_rect2_locs
+
+    normalized = "center" if _is_empty_dispatch_placeholder(roi_type) else param_format(str(roi_type))
+    if normalized != "center":
+        raise UnsupportedOptionError("sensorROI", str(roi_type))
+
+    size = np.asarray(sensor_get(sensor, "size"), dtype=float).reshape(-1)
+    if size.size != 2:
+        raise ValueError("sensorROI requires a 2-D sensor size.")
+
+    rect = _matlab_round_to_int(
+        np.array([size[1] / 4.0, size[0] / 4.0, size[1] / 2.0, size[0] / 2.0], dtype=float)
+    )
+    return ie_rect2_locs(rect)
+
+
 def _sensor_vendor_mt9v024(variant: str, *, asset_store: AssetStore) -> Sensor:
     normalized = param_format(variant)
     mapping = {
@@ -7482,6 +7501,7 @@ sensorShowImage = sensor_show_image
 sensorSaveImage = sensor_save_image
 sensorCheckHuman = sensor_check_human
 humanConeMosaic = human_cone_mosaic
+sensorROI = sensor_roi
 sensorCreateIMX490 = sensor_create_imx490
 sensorCreateConeMosaic = sensor_create_cone_mosaic
 sensorHumanResize = sensor_human_resize

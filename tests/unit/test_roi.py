@@ -20,6 +20,7 @@ from pyisetcam import (
     scene_set,
     sensor_create,
     sensor_get,
+    sensorROI,
     sensor_set,
     vcGetROIData,
     vcRect2Locs,
@@ -45,6 +46,16 @@ def test_ie_rect2_vertices_supports_closed_polygon() -> None:
 
     assert np.array_equal(xv, np.array([3, 3, 5, 5, 3], dtype=int))
     assert np.array_equal(yv, np.array([5, 9, 9, 5, 5], dtype=int))
+
+
+def test_sensor_roi_returns_center_roi_locs(asset_store) -> None:
+    sensor = sensor_create("default", asset_store=asset_store)
+    sensor = sensor_set(sensor, "size", np.array([8, 12], dtype=int))
+
+    roi_locs = sensorROI(sensor)
+
+    expected = ieRect2Locs(np.array([3, 2, 6, 4], dtype=int))
+    assert np.array_equal(roi_locs, expected)
 
 
 def test_vc_get_roi_data_scene_rect_returns_xw_illuminant_energy(asset_store) -> None:

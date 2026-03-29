@@ -718,6 +718,7 @@ from .sensor import (
     sensor_read_filter,
     sensor_rescale,
     sensor_resample_wave,
+    sensor_roi,
     sensor_replace_filter,
     sensor_set,
     sensor_set_size_to_fov,
@@ -2156,6 +2157,7 @@ __all__ = [
     "sensorCreateSplitPixel",
     "sensorFormats",
     "sensorGet",
+    "sensorROI",
     "LoadRawSensorData",
     "sensorAddFilter",
     "sensorCfaSave",
@@ -2290,6 +2292,7 @@ __all__ = [
     "sensor_from_file",
     "load_raw_sensor_data",
     "sensor_get",
+    "sensor_roi",
     "sensor_rescale",
     "sensor_resample_wave",
     "sensor_color_order",
@@ -2823,6 +2826,7 @@ sensorAddNoise = sensor_add_noise
 sensorCfaSave = sensor_cfa_save
 sensorCFANameList = sensor_cfa_name_list
 sensorCCM = sensor_ccm
+sensorROI = sensor_roi
 sensorCheckArray = sensor_check_array
 sensorCheckHuman = sensor_check_human
 sensorClearData = sensor_clear_data
