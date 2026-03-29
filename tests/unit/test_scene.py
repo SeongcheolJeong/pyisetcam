@@ -829,10 +829,18 @@ def test_disk_and_square_array_dispatch_accept_empty_size_placeholders(asset_sto
 
 def test_zone_plate_dispatch_accepts_optional_field_of_view_and_wave(asset_store) -> None:
     wave = np.array([450.0, 550.0, 650.0], dtype=float)
+    default_zone = scene_create("zone plate", asset_store=asset_store)
+    placeholder_size = scene_create("zone plate", [], asset_store=asset_store)
     explicit_fov = scene_create("zone plate", 96, 7.5, wave, asset_store=asset_store)
     placeholder_fov = scene_create("zone plate", 96, [], wave, asset_store=asset_store)
     wave_only = scene_create("zone plate", 96, wave, asset_store=asset_store)
 
+    assert tuple(scene_get(default_zone, "size")) == (256, 256)
+    assert tuple(scene_get(placeholder_size, "size")) == (256, 256)
+    assert np.isclose(scene_get(default_zone, "fov"), 4.0, atol=1e-12, rtol=1e-12)
+    assert np.isclose(scene_get(placeholder_size, "fov"), 4.0, atol=1e-12, rtol=1e-12)
+    assert np.asarray(scene_get(default_zone, "photons"), dtype=float).shape == (256, 256, 31)
+    assert np.asarray(scene_get(placeholder_size, "photons"), dtype=float).shape == (256, 256, 31)
     assert tuple(scene_get(explicit_fov, "size")) == (96, 96)
     assert tuple(scene_get(placeholder_fov, "size")) == (96, 96)
     assert tuple(scene_get(wave_only, "size")) == (96, 96)
