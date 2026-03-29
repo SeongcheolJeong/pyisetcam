@@ -5393,6 +5393,56 @@ def test_sensor_human_legacy_wrappers_and_light_field(asset_store) -> None:
     assert sensor_get(overloaded, "filter names")[0] == "kBlack"
     assert sensor_get(explicit, "filter names")[0] == "kBlack"
 
+
+def test_sensor_human_empty_param_fields_replay_default_dispatch(asset_store) -> None:
+    base = sensor_create("default", asset_store=asset_store)
+    default_mosaic, default_xy, default_cone_type, default_seed, default_densities = sensorCreateConeMosaic(
+        base,
+        asset_store=asset_store,
+    )
+    placeholder_mosaic, placeholder_xy, placeholder_cone_type, placeholder_seed, placeholder_densities = sensorCreateConeMosaic(
+        base,
+        [],
+        [],
+        [],
+        [],
+        asset_store=asset_store,
+    )
+
+    np.testing.assert_array_equal(np.asarray(sensor_get(placeholder_mosaic, "wave"), dtype=float), np.asarray(sensor_get(default_mosaic, "wave"), dtype=float))
+    np.testing.assert_array_equal(np.asarray(sensor_get(placeholder_mosaic, "pattern"), dtype=int), np.asarray(sensor_get(default_mosaic, "pattern"), dtype=int))
+    np.testing.assert_array_equal(placeholder_xy, default_xy)
+    np.testing.assert_array_equal(placeholder_cone_type, default_cone_type)
+    np.testing.assert_allclose(placeholder_densities, default_densities, rtol=0.0, atol=0.0)
+    assert placeholder_seed == default_seed
+
+    default_sensor = sensor_create("human", asset_store=asset_store)
+    placeholder_sensor = sensor_create(
+        "human",
+        {
+            "sz": [],
+            "rgbDensities": [],
+            "coneAperture": [],
+            "rSeed": [],
+            "wave": [],
+        },
+        asset_store=asset_store,
+    )
+
+    np.testing.assert_array_equal(np.asarray(sensor_get(placeholder_sensor, "wave"), dtype=float), np.asarray(sensor_get(default_sensor, "wave"), dtype=float))
+    np.testing.assert_array_equal(np.asarray(sensor_get(placeholder_sensor, "pattern"), dtype=int), np.asarray(sensor_get(default_sensor, "pattern"), dtype=int))
+    np.testing.assert_array_equal(
+        np.asarray(sensor_get(placeholder_sensor, "humanconelocs"), dtype=float),
+        np.asarray(sensor_get(default_sensor, "humanconelocs"), dtype=float),
+    )
+    np.testing.assert_allclose(
+        np.asarray(sensor_get(placeholder_sensor, "humanconedensities"), dtype=float),
+        np.asarray(sensor_get(default_sensor, "humanconedensities"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    assert sensor_get(placeholder_sensor, "humanrseed") == sensor_get(default_sensor, "humanrseed")
+
     scene = scene_create("uniform d65", asset_store=asset_store)
     oi = oi_compute(oi_create(), scene)
     oi = oi_set(oi, "name", "lightfield-dispatch")

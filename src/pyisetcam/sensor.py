@@ -232,6 +232,10 @@ def _is_empty_dispatch_placeholder(value: Any) -> bool:
     return False
 
 
+def _empty_dispatch_placeholder_to_none(value: Any) -> Any:
+    return None if _is_empty_dispatch_placeholder(value) else value
+
+
 def _normalize_pixel_size_m(
     pixel_size_m: Any | None,
     *,
@@ -2130,16 +2134,17 @@ def sensor_create(
         else:
             params_source = {}
         params = dict(params_source) if isinstance(params_source, dict) else dict(vars(params_source)) if hasattr(params_source, "__dict__") else {}
-        wave = np.asarray(params.get("wave", np.arange(400.0, 701.0, 10.0)), dtype=float).reshape(-1)
+        wave_source = _empty_dispatch_placeholder_to_none(params.get("wave"))
+        wave = np.asarray(np.arange(400.0, 701.0, 10.0) if wave_source is None else wave_source, dtype=float).reshape(-1)
         base = sensor_create(asset_store=store)
         base = sensor_set(base, "wave", wave)
         base = sensor_set(base, "pixel", pixel_create("human", wave))
         current, xy, cone_type, resolved_seed, corrected_densities = sensor_create_cone_mosaic(
             base,
-            params.get("sz"),
-            params.get("rgbDensities"),
-            params.get("coneAperture"),
-            params.get("rSeed"),
+            _empty_dispatch_placeholder_to_none(params.get("sz")),
+            _empty_dispatch_placeholder_to_none(params.get("rgbDensities")),
+            _empty_dispatch_placeholder_to_none(params.get("coneAperture")),
+            _empty_dispatch_placeholder_to_none(params.get("rSeed")),
             "human",
             asset_store=store,
         )
@@ -2258,6 +2263,11 @@ def sensor_create_cone_mosaic(
         raise UnsupportedOptionError("sensorCreateConeMosaic", species)
 
     current = sensor_create(asset_store=store, session=session) if sensor is None else sensor.clone()
+    sz = _empty_dispatch_placeholder_to_none(sz)
+    densities = _empty_dispatch_placeholder_to_none(densities)
+    cone_aperture = _empty_dispatch_placeholder_to_none(cone_aperture)
+    r_seed = _empty_dispatch_placeholder_to_none(r_seed)
+
     mosaic_size = np.asarray([72, 88] if sz is None else sz, dtype=int).reshape(-1)
     aperture = np.asarray([1.5e-6, 1.5e-6] if cone_aperture is None else cone_aperture, dtype=float).reshape(-1)
     if aperture.size == 1:
