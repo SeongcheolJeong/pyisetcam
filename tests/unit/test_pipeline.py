@@ -6251,10 +6251,12 @@ def test_sensor_create_ideal_defaults_to_monochrome(asset_store) -> None:
 def test_sensor_create_ideal_accepts_empty_placeholder_for_pixel_size(asset_store) -> None:
     monochrome_placeholder = sensor_create_ideal("monochrome", [], 3e-6, asset_store=asset_store)
     monochrome_explicit = sensor_create_ideal("monochrome", None, 3e-6, asset_store=asset_store)
+    monochrome_vector = sensor_create_ideal("monochrome", [], [2e-6, 3e-6], asset_store=asset_store)
 
     assert isinstance(monochrome_placeholder, sensor_module.Sensor)
     assert monochrome_placeholder.name == "Monochrome"
     assert monochrome_explicit.name == "Monochrome"
+    assert monochrome_vector.name == "Monochrome"
     assert sensor_get(monochrome_placeholder, "filter names") == ["w"]
     assert sensor_get(monochrome_placeholder, "filter names") == sensor_get(monochrome_explicit, "filter names")
     np.testing.assert_allclose(
@@ -6269,17 +6271,29 @@ def test_sensor_create_ideal_accepts_empty_placeholder_for_pixel_size(asset_stor
         rtol=0.0,
         atol=0.0,
     )
+    np.testing.assert_allclose(
+        np.asarray(sensor_get(monochrome_vector, "pixel")["size_m"], dtype=float),
+        np.array([2e-6, 3e-6], dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
 
     xyz_placeholder = sensor_create_ideal("xyz", [], 3e-6, asset_store=asset_store)
     xyz_explicit = sensor_create_ideal("xyz", None, 3e-6, asset_store=asset_store)
+    xyz_vector = sensor_create_ideal("xyz", [], [2e-6, 3e-6], asset_store=asset_store)
 
     assert isinstance(xyz_placeholder, list)
     assert isinstance(xyz_explicit, list)
+    assert isinstance(xyz_vector, list)
     assert [sensor.name for sensor in xyz_placeholder] == ["CIE-X-ideal", "CIE-Y-ideal", "CIE-Z-ideal"]
     assert [sensor.name for sensor in xyz_placeholder] == [sensor.name for sensor in xyz_explicit]
+    assert [sensor.name for sensor in xyz_placeholder] == [sensor.name for sensor in xyz_vector]
     assert [sensor_get(sensor, "filter names") for sensor in xyz_placeholder] == [["rX"], ["gY"], ["bZ"]]
     assert [sensor_get(sensor, "filter names") for sensor in xyz_placeholder] == [
         sensor_get(sensor, "filter names") for sensor in xyz_explicit
+    ]
+    assert [sensor_get(sensor, "filter names") for sensor in xyz_placeholder] == [
+        sensor_get(sensor, "filter names") for sensor in xyz_vector
     ]
 
     for placeholder_sensor, explicit_sensor in zip(xyz_placeholder, xyz_explicit, strict=False):
@@ -6292,6 +6306,13 @@ def test_sensor_create_ideal_accepts_empty_placeholder_for_pixel_size(asset_stor
         np.testing.assert_allclose(
             np.asarray(sensor_get(placeholder_sensor, "pixel")["size_m"], dtype=float),
             np.asarray(sensor_get(explicit_sensor, "pixel")["size_m"], dtype=float),
+            rtol=0.0,
+            atol=0.0,
+        )
+    for vector_sensor in xyz_vector:
+        np.testing.assert_allclose(
+            np.asarray(sensor_get(vector_sensor, "pixel")["size_m"], dtype=float),
+            np.array([2e-6, 3e-6], dtype=float),
             rtol=0.0,
             atol=0.0,
         )

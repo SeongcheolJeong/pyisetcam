@@ -467,7 +467,9 @@ type is requested, and the documented MATLAB placeholder forms
 `sensorCreateIdeal('xyz', [], pixelSizeM)` now honor the empty
 sensor-example slot instead of crashing. The monochrome ideal sensor now
 also reuses the upstream `Monochrome` sensor name instead of the older
-Python-only `ideal-monochrome` label. Non-empty
+Python-only `ideal-monochrome` label, and both ideal constructors now
+accept either scalar or `[row, col]` pixel-size vectors like the vendored
+MATLAB `idealPixel(...)` helper. Non-empty
 `sensorCreateIdeal('monochrome', sensorExample, ...)` calls now also match
 upstream by failing instead of silently templating from that example.
 `sensorCreateArray(...)` now also supports the

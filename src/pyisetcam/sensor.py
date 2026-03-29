@@ -232,6 +232,22 @@ def _is_empty_dispatch_placeholder(value: Any) -> bool:
     return False
 
 
+def _normalize_pixel_size_m(
+    pixel_size_m: Any | None,
+    *,
+    default: tuple[float, float] | None = None,
+) -> np.ndarray:
+    if pixel_size_m is None or _is_empty_dispatch_placeholder(pixel_size_m):
+        if default is None:
+            raise ValueError("pixel size required")
+        return np.asarray(default, dtype=float)
+
+    size = np.asarray(pixel_size_m, dtype=float).reshape(-1)
+    if size.size == 1:
+        return np.array([float(size[0]), float(size[0])], dtype=float)
+    return np.array([float(size[0]), float(size[1])], dtype=float)
+
+
 def _sensor_base(
     name: str,
     wave: np.ndarray,
@@ -1779,12 +1795,11 @@ def _sensor_create_ideal_match_sequence(
 def _sensor_create_ideal_xyz_sequence(
     *,
     asset_store: AssetStore,
-    pixel_size_m: float | None = None,
+    pixel_size_m: Any | None = None,
 ) -> list[Sensor]:
     wave = DEFAULT_WAVE.copy()
     pixel = _default_pixel(None)
-    resolved_pixel_size = 2.8e-6 if pixel_size_m is None else float(pixel_size_m)
-    pixel["size_m"] = np.array([resolved_pixel_size, resolved_pixel_size], dtype=float)
+    pixel["size_m"] = _normalize_pixel_size_m(pixel_size_m, default=(2.8e-6, 2.8e-6))
     pixel["fill_factor"] = 1.0
     pixel["dark_voltage_v_per_sec"] = 0.0
     pixel["read_noise_v"] = 0.0
@@ -2174,7 +2189,7 @@ def sensor_create(
 def sensor_create_ideal(
     ideal_type: str = "monochrome",
     sensor_example: Sensor | None = None,
-    pixel_size_m: float | None = None,
+    pixel_size_m: Any | None = None,
     *,
     asset_store: AssetStore | None = None,
     session: SessionContext | None = None,
@@ -2187,7 +2202,7 @@ def sensor_create_ideal(
         sensor_example = None
     pixel = _default_pixel(sensor_example.fields["pixel"] if sensor_example is not None else None)
     if pixel_size_m is not None:
-        pixel["size_m"] = np.array([pixel_size_m, pixel_size_m], dtype=float)
+        pixel["size_m"] = _normalize_pixel_size_m(pixel_size_m)
     pixel["fill_factor"] = 1.0
     size = sensor_example.fields["size"] if sensor_example is not None else (72, 88)
     wave = sensor_example.fields["wave"] if sensor_example is not None else DEFAULT_WAVE.copy()
