@@ -2167,6 +2167,8 @@ def sensor_create_ideal(
 
     store = _store(asset_store)
     normalized = param_format(ideal_type)
+    if sensor_example is not None and _is_empty_dispatch_placeholder(sensor_example):
+        sensor_example = None
     pixel = _default_pixel(sensor_example.fields["pixel"] if sensor_example is not None else None)
     if pixel_size_m is not None:
         pixel["size_m"] = np.array([pixel_size_m, pixel_size_m], dtype=float)

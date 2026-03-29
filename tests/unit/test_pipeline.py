@@ -6248,6 +6248,55 @@ def test_sensor_create_ideal_defaults_to_monochrome(asset_store) -> None:
     assert np.array_equal(np.asarray(sensor_get(implicit, "wave"), dtype=float), np.asarray(sensor_get(explicit, "wave"), dtype=float))
 
 
+def test_sensor_create_ideal_accepts_empty_placeholder_for_pixel_size(asset_store) -> None:
+    monochrome_placeholder = sensor_create_ideal("monochrome", [], 3e-6, asset_store=asset_store)
+    monochrome_explicit = sensor_create_ideal("monochrome", None, 3e-6, asset_store=asset_store)
+
+    assert isinstance(monochrome_placeholder, sensor_module.Sensor)
+    assert monochrome_placeholder.name == "ideal-monochrome"
+    assert monochrome_explicit.name == "ideal-monochrome"
+    assert sensor_get(monochrome_placeholder, "filter names") == ["w"]
+    assert sensor_get(monochrome_placeholder, "filter names") == sensor_get(monochrome_explicit, "filter names")
+    np.testing.assert_allclose(
+        np.asarray(sensor_get(monochrome_placeholder, "pixel")["size_m"], dtype=float),
+        np.array([3e-6, 3e-6], dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    np.testing.assert_allclose(
+        np.asarray(sensor_get(monochrome_placeholder, "pixel")["size_m"], dtype=float),
+        np.asarray(sensor_get(monochrome_explicit, "pixel")["size_m"], dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+
+    xyz_placeholder = sensor_create_ideal("xyz", [], 3e-6, asset_store=asset_store)
+    xyz_explicit = sensor_create_ideal("xyz", None, 3e-6, asset_store=asset_store)
+
+    assert isinstance(xyz_placeholder, list)
+    assert isinstance(xyz_explicit, list)
+    assert [sensor.name for sensor in xyz_placeholder] == ["CIE-X-ideal", "CIE-Y-ideal", "CIE-Z-ideal"]
+    assert [sensor.name for sensor in xyz_placeholder] == [sensor.name for sensor in xyz_explicit]
+    assert [sensor_get(sensor, "filter names") for sensor in xyz_placeholder] == [["rX"], ["gY"], ["bZ"]]
+    assert [sensor_get(sensor, "filter names") for sensor in xyz_placeholder] == [
+        sensor_get(sensor, "filter names") for sensor in xyz_explicit
+    ]
+
+    for placeholder_sensor, explicit_sensor in zip(xyz_placeholder, xyz_explicit, strict=False):
+        np.testing.assert_allclose(
+            np.asarray(sensor_get(placeholder_sensor, "pixel")["size_m"], dtype=float),
+            np.array([3e-6, 3e-6], dtype=float),
+            rtol=0.0,
+            atol=0.0,
+        )
+        np.testing.assert_allclose(
+            np.asarray(sensor_get(placeholder_sensor, "pixel")["size_m"], dtype=float),
+            np.asarray(sensor_get(explicit_sensor, "pixel")["size_m"], dtype=float),
+            rtol=0.0,
+            atol=0.0,
+        )
+
+
 def test_sensor_create_ideal_dispatcher_is_deprecated(asset_store) -> None:
     with pytest.raises(ValueError, match=r"sensorCreate\('ideal'\) is deprecated\. Use sensorCreateIdeal"):
         sensor_create("ideal", asset_store=asset_store)

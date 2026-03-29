@@ -462,7 +462,10 @@ three-sensor `CIE-X/Y/Z-ideal` array, and `cameraCreate('ideal')` now
 returns the matching XYZ camera array instead of collapsing to a single
 sensor. Bare `sensorCreateIdeal()` now also follows the upstream default
 again by returning the ideal monochrome sensor unless an explicit ideal
-type is requested. `sensorCreateArray(...)` now also supports the
+type is requested, and the documented MATLAB placeholder forms
+`sensorCreateIdeal('monochrome', [], pixelSizeM)` and
+`sensorCreateIdeal('xyz', [], pixelSizeM)` now honor the empty
+sensor-example slot instead of crashing. `sensorCreateArray(...)` now also supports the
 ideal-array families
 `'xyz'`, `'matchxyz'`, `'match'`, and `'monochrome'` instead of stopping at
 the OVT split-pixel lane. The deprecated top-level
