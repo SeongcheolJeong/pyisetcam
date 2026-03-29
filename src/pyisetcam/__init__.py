@@ -201,6 +201,7 @@ from .metrics import (
     delta_e_2000,
     delta_e_94,
     delta_e_uv,
+    cone_plot,
     human_cones,
     human_uv_safety,
     human_cone_contrast,
@@ -1059,6 +1060,8 @@ __all__ = [
     "delta_e_2000",
     "delta_e_94",
     "delta_e_uv",
+    "conePlot",
+    "cone_plot",
     "humanAchromaticOTF",
     "humanCones",
     "humanCore",
@@ -2892,6 +2895,7 @@ sensorWBCompute = sensor_wb_compute
 spatialIntegration = spatial_integration
 
 metricsSPD = metrics_spd
+conePlot = cone_plot
 humanCones = human_cones
 humanConeContrast = human_cone_contrast
 humanConeIsolating = human_cone_isolating

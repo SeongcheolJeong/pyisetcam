@@ -4,6 +4,7 @@ import numpy as np
 
 from pyisetcam import (
     colorTransformMatrix,
+    conePlot,
     displayCreate,
     displayGet,
     humanAchromaticOTF,
@@ -366,6 +367,21 @@ def test_ie_cone_plot_returns_headless_mosaic_payload() -> None:
     assert np.any(payload["image"][:, :, 0] > 0.0)
     assert np.any(payload["image"][:, :, 1] > 0.0)
     assert np.any(payload["image"][:, :, 2] > 0.0)
+
+
+def test_cone_plot_alias_matches_ie_cone_plot_payload() -> None:
+    _, xy, cone_type, _, _ = sensorCreateConeMosaic()
+    payload = conePlot(xy, cone_type, 18.0, 1.1, 0.5)
+    expected = ieConePlot(xy, cone_type, 18.0, 1.1, 0.5)
+
+    assert payload.keys() == expected.keys()
+    for key in payload:
+        value = payload[key]
+        expected_value = expected[key]
+        if isinstance(value, np.ndarray):
+            np.testing.assert_allclose(value, expected_value)
+        else:
+            assert value == expected_value
 
 
 def test_human_uv_safety_methods_match_expected_thresholds() -> None:

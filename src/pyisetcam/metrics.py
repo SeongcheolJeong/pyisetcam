@@ -381,6 +381,18 @@ def ie_cone_plot(
     }
 
 
+def cone_plot(
+    xy: Any,
+    cone_type: Any,
+    support: Any | None = None,
+    spread: float | None = None,
+    delta: float = 0.4,
+) -> dict[str, Any]:
+    """Legacy MATLAB conePlot() compatibility wrapper returning headless image payloads."""
+
+    return ie_cone_plot(xy, cone_type, support=support, spread=spread, delta=delta)
+
+
 def human_uv_safety(
     energy: Any,
     wave: Any,
@@ -1726,6 +1738,7 @@ deltaE94 = delta_e_94
 deltaEuv = delta_e_uv
 iePSNR = peak_signal_to_noise_ratio
 ieSQRI = ie_sqri
+conePlot = cone_plot
 humanConeContrast = human_cone_contrast
 humanConeIsolating = human_cone_isolating
 humanOpticalDensity = human_optical_density
