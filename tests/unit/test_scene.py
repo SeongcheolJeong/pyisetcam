@@ -366,6 +366,36 @@ def test_uniform_monochromatic_dispatch_accepts_size_first_docs_form(asset_store
     assert np.isclose(scene_get(size_first, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
 
 
+def test_uniform_monochromatic_dispatch_accepts_size_first_placeholders(asset_store) -> None:
+    placeholder_wave = scene_create("uniform monochromatic", 12, [], asset_store=asset_store)
+    explicit_default_wave = scene_create("uniform monochromatic", 12, 500, asset_store=asset_store)
+    placeholder_size = scene_create("uniform monochromatic", [], 550, asset_store=asset_store)
+    explicit_default_size = scene_create("uniform monochromatic", 128, 550, asset_store=asset_store)
+
+    np.testing.assert_allclose(
+        scene_get(placeholder_wave, "photons"),
+        scene_get(explicit_default_wave, "photons"),
+        rtol=0.0,
+        atol=0.0,
+    )
+    np.testing.assert_allclose(
+        scene_get(placeholder_size, "photons"),
+        scene_get(explicit_default_size, "photons"),
+        rtol=0.0,
+        atol=0.0,
+    )
+    assert tuple(scene_get(placeholder_wave, "size")) == (12, 12)
+    assert tuple(scene_get(placeholder_size, "size")) == (128, 128)
+    np.testing.assert_array_equal(
+        np.asarray(scene_get(placeholder_wave, "wave"), dtype=float),
+        np.array([500.0], dtype=float),
+    )
+    np.testing.assert_array_equal(
+        np.asarray(scene_get(placeholder_size, "wave"), dtype=float),
+        np.array([550.0], dtype=float),
+    )
+
+
 def test_scene_from_file_supports_multispectral_mat_files(asset_store) -> None:
     scene = scene_from_file(
         asset_store.resolve("data/images/multispectral/Feng_Office-hdrs.mat"),

@@ -151,6 +151,15 @@ def _looks_like_wave_arg(value: Any | None) -> bool:
     return bool(np.all(array >= 100.0))
 
 
+def _looks_like_monochromatic_wavelength_arg(value: Any | None) -> bool:
+    if value is None:
+        return False
+    array = np.asarray(value, dtype=float).reshape(-1)
+    if array.size == 0:
+        return False
+    return bool(np.all(array >= 300.0))
+
+
 def _scene_image_input(input_data: Any, *, asset_store: AssetStore | None = None) -> tuple[np.ndarray, str, str]:
     if isinstance(input_data, (str, Path)):
         path = Path(input_data).expanduser()
@@ -4157,12 +4166,29 @@ def scene_create(
         return track_session_object(session, _uniform_blackbody_scene(size, temperature_k, wave, asset_store=store))
 
     if name in {"uniformmonochromatic", "narrowband"}:
-        if len(args) >= 2 and _looks_like_scene_size_arg(args[0]) and _looks_like_wave_arg(args[1]):
-            size = args[0]
-            wavelength = args[1]
+        default_wavelength = 500.0
+        default_size = 128
+        if len(args) >= 2:
+            first_arg = args[0]
+            second_arg = args[1]
+            first_empty = _is_empty_scene_dispatch_placeholder(first_arg)
+            second_empty = _is_empty_scene_dispatch_placeholder(second_arg)
+            first_size_like = _looks_like_scene_size_arg(first_arg)
+            first_wave_like = _looks_like_monochromatic_wavelength_arg(first_arg)
+            second_wave_like = _looks_like_monochromatic_wavelength_arg(second_arg)
+
+            if first_empty and second_wave_like:
+                size = default_size
+                wavelength = second_arg
+            elif first_size_like and (second_wave_like or second_empty) and not first_wave_like:
+                size = first_arg
+                wavelength = default_wavelength if second_empty else second_arg
+            else:
+                wavelength = default_wavelength if first_empty else first_arg
+                size = default_size if second_empty else second_arg
         else:
-            wavelength = args[0] if len(args) > 0 else 500.0
-            size = args[1] if len(args) > 1 else 128
+            wavelength = default_wavelength if len(args) == 0 or _is_empty_scene_dispatch_placeholder(args[0]) else args[0]
+            size = default_size
         return track_session_object(session, _uniform_monochromatic_scene(size, wavelength, asset_store=store))
 
     if name in {"hdrlights", "highdynamicrange", "hdr"}:

@@ -294,6 +294,10 @@ and `sceneCreate('uniform bb', [], cTemp, wave)`,
 preserving the upstream default `32 x 32` scene size, while
 `sceneCreate('uniform monochromatic', sz, wave)` now also replays the
 documented size-first shorthand in addition to the existing wave-first form,
+and now also honors MATLAB-style empty placeholders in that size-first
+shorthand, so `sceneCreate('uniform monochromatic', 12, [])` preserves the
+default `500 nm` wavelength and `sceneCreate('uniform monochromatic', [], 550)`
+preserves the default `128 x 128` size,
 and
 `sceneCreate('sweep frequency', [], maxFrequency, [], yContrast)` now
 honors MATLAB-style empty placeholders for the size and wavelength slots
