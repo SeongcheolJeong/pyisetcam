@@ -8,6 +8,7 @@ from pyisetcam import (
     displayGet,
     humanAchromaticOTF,
     humanConeContrast,
+    humanConeMosaic,
     humanConeIsolating,
     humanCore,
     humanLSF,
@@ -111,6 +112,29 @@ def test_human_cone_isolating_returns_scaled_isolating_directions() -> None:
     np.testing.assert_allclose(np.max(np.abs(cone_isolating), axis=0), 0.5)
     assert np.max(np.abs(off_diagonal)) < 2.0e-4
     assert np.all(np.diag(isolation) > 0.0)
+
+
+def test_human_cone_mosaic_replays_defaults_and_lms_density_patchup() -> None:
+    default_xy, default_cone_type, default_densities, default_seed = humanConeMosaic([6, 8])
+    placeholder_xy, placeholder_cone_type, placeholder_densities, placeholder_seed = humanConeMosaic(
+        [6, 8],
+        [],
+        [],
+        [],
+    )
+
+    assert default_xy.shape == (48, 2)
+    assert default_cone_type.shape == (6, 8)
+    np.testing.assert_allclose(placeholder_xy, default_xy)
+    np.testing.assert_array_equal(placeholder_cone_type, default_cone_type)
+    np.testing.assert_allclose(placeholder_densities, default_densities)
+    assert np.isclose(np.sum(default_densities), 1.0)
+    assert placeholder_seed == default_seed == 0
+
+    _, _, corrected_densities, corrected_seed = humanConeMosaic([4, 5], [1.0, 1.0, 1.0], [], 7)
+
+    np.testing.assert_allclose(corrected_densities, np.array([0.0, 1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0]))
+    assert corrected_seed == 7
 
 
 def test_watson_impulse_response_is_normalized() -> None:

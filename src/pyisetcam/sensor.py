@@ -1638,6 +1638,26 @@ def _human_cone_mosaic(
     return xy, cone_type, density_array, seed_value
 
 
+def human_cone_mosaic(
+    sz: Any,
+    densities: Any | None = None,
+    um_cone_width: Any | None = None,
+    r_seed: Any | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, int]:
+    """Create the standalone human cone-mosaic payload."""
+
+    densities = _empty_dispatch_placeholder_to_none(densities)
+    um_cone_width = _empty_dispatch_placeholder_to_none(um_cone_width)
+    r_seed = _empty_dispatch_placeholder_to_none(r_seed)
+
+    return _human_cone_mosaic(
+        sz,
+        densities=densities,
+        um_cone_width=2.0 if um_cone_width is None else float(np.asarray(um_cone_width).reshape(-1)[0]),
+        r_seed=r_seed,
+    )
+
+
 def _sensor_vendor_mt9v024(variant: str, *, asset_store: AssetStore) -> Sensor:
     normalized = param_format(variant)
     mapping = {
@@ -7353,6 +7373,7 @@ sensorShowCFAWeights = sensor_show_cfa_weights
 sensorShowImage = sensor_show_image
 sensorSaveImage = sensor_save_image
 sensorCheckHuman = sensor_check_human
+humanConeMosaic = human_cone_mosaic
 sensorCreateConeMosaic = sensor_create_cone_mosaic
 sensorHumanResize = sensor_human_resize
 sensorCreateIMECSSM4x4vis = sensor_create_imec_ssm_4x4_vis

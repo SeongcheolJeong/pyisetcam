@@ -683,6 +683,7 @@ from .sensor import (
     sensor_compute,
     sensor_crop,
     sensor_dr,
+    human_cone_mosaic,
     sensor_create_array,
     sensor_create_cone_mosaic,
     sensor_create,
@@ -2195,6 +2196,8 @@ __all__ = [
     "sensor_check_array",
     "sensor_check_human",
     "sensor_clear_data",
+    "humanConeMosaic",
+    "human_cone_mosaic",
     "sensorColorFilter",
     "sensor_color_filter",
     "sensor_add_filter",
@@ -2772,6 +2775,7 @@ zemaxReadHeader = zemax_read_header
 
 sensorCreate = sensor_create
 sensorCreateArray = sensor_create_array
+humanConeMosaic = human_cone_mosaic
 sensorCreateConeMosaic = sensor_create_cone_mosaic
 sensorCreateSplitPixel = sensor_create_split_pixel
 sensorDNGRead = sensor_dng_read
