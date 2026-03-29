@@ -4439,7 +4439,10 @@ def scene_create(
         size = args[0] if len(args) > 0 else 256
         sigma = float(args[1]) if len(args) > 1 else 2.0
         options = args[2] if len(args) > 2 and hasattr(args[2], "items") else None
-        wave_arg = args[3] if len(args) > 3 else (args[2] if len(args) > 2 and not hasattr(args[2], "items") else None)
+        if len(args) > 2 and _is_empty_scene_dispatch_placeholder(args[2]):
+            wave_arg = args[3] if len(args) > 3 else None
+        else:
+            wave_arg = args[3] if len(args) > 3 else (args[2] if len(args) > 2 and not hasattr(args[2], "items") else None)
         wave = None if wave_arg is None else _wave_or_default(wave_arg)
         return track_session_object(session, _dead_leaves_scene(size, sigma, options, wave, asset_store=store))
 

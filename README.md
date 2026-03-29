@@ -419,6 +419,10 @@ also inherit that same empty-payload fallback through the shared
 parameter normalizer, so `sceneCreate('moire orient', [])`,
 `sceneCreate('hdr lights', [])`, and `sceneCreate('harmonic', [])`
 now replay the same defaults as their no-argument upstream forms.
+The adjacent `sceneCreate('dead leaves', imageSize, nFactor, [])`
+wrapper now also ignores that explicit empty third slot the same way the
+vendored MATLAB dispatcher does, instead of misreading it as a wavelength
+override and changing the scene spectrum.
 The same `sceneCreate('radiance chart', wave, radiance, ...)` wrapper now
 also honors MATLAB-style empty placeholders in optional `rowcol`,
 `patch size`, and `gray fill` slots for both dict and key/value forms,

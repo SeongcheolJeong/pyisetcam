@@ -1014,6 +1014,22 @@ def test_sweep_frequency_dispatch_accepts_empty_placeholders(asset_store) -> Non
     )
 
 
+def test_dead_leaves_dispatch_ignores_empty_third_placeholder(asset_store) -> None:
+    default_scene = scene_create("dead leaves", 96, 3.0, asset_store=asset_store)
+    placeholder_scene = scene_create("dead leaves", 96, 3.0, [], asset_store=asset_store)
+
+    assert np.array_equal(
+        np.asarray(scene_get(placeholder_scene, "wave"), dtype=float),
+        np.asarray(scene_get(default_scene, "wave"), dtype=float),
+    )
+    assert tuple(scene_get(placeholder_scene, "size")) == tuple(scene_get(default_scene, "size"))
+    assert np.isclose(scene_get(placeholder_scene, "fov"), scene_get(default_scene, "fov"), atol=1e-12, rtol=1e-12)
+    assert np.asarray(scene_get(placeholder_scene, "photons"), dtype=float).shape == np.asarray(
+        scene_get(default_scene, "photons"),
+        dtype=float,
+    ).shape
+
+
 def test_pattern_scene_dispatches_accept_empty_wave_placeholders(asset_store) -> None:
     placeholder_cases = [
         ("line ee", (64, 2, []), (64, 2)),
