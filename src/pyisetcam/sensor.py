@@ -2198,15 +2198,8 @@ def sensor_create_ideal(
         )
 
     if normalized == "xyz":
-        sensor = _sensor_base("ideal-xyz", np.asarray(wave, dtype=float), size, pixel)
-        sensor.fields["pattern"] = np.array([[1, 2, 3]], dtype=int)
-        sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle("xyz", np.asarray(wave, dtype=float), asset_store=store)
-        sensor.fields["noise_flag"] = 0
-        sensor.fields["mosaic"] = False
-        sensor.fields["pixel"]["dark_voltage_v_per_sec"] = 0.0
-        sensor.fields["pixel"]["read_noise_v"] = 0.0
-        sensor.fields["pixel"]["voltage_swing"] = 1e6
-        return track_session_object(session, sensor)
+        sensors = _sensor_create_ideal_xyz_sequence(asset_store=store, pixel_size_m=pixel_size_m)
+        return _track_sensor_sequence(session, sensors)
 
     raise UnsupportedOptionError("sensorCreateIdeal", ideal_type)
 

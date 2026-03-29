@@ -456,8 +456,11 @@ forms for `sensorCreate('imec44', [], rowcol)`,
 `fourcolor` constructors. Direct `sensorCreateIdeal('match', sensor)` and
 `sensorCreateIdeal('match xyz', sensor)` now also replay the upstream
 array-of-monochrome contract, preserving the example pixel and shared
-exposure time while splitting filters into per-channel ideal sensors, and
-`sensorCreateArray(...)` now also supports the ideal-array families
+exposure time while splitting filters into per-channel ideal sensors.
+Direct `sensorCreateIdeal('xyz')` now also replays the upstream
+three-sensor `CIE-X/Y/Z-ideal` array, and `cameraCreate('ideal')` now
+returns the matching XYZ camera array instead of collapsing to a single
+sensor. `sensorCreateArray(...)` now also supports the ideal-array families
 `'xyz'`, `'matchxyz'`, `'match'`, and `'monochrome'` instead of stopping at
 the OVT split-pixel lane.
 the dispatcher also exposes the legacy

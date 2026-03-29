@@ -6208,8 +6208,9 @@ def test_sensor_create_ideal_match_and_match_xyz_replay_legacy_contract(asset_st
     assert all(np.isclose(float(sensor_get(current, "exp time")), 0.05) for current in matched_auto)
 
     xyz_reference = sensor_create_ideal("xyz", asset_store=asset_store)
-    xyz_filters = np.asarray(sensor_get(xyz_reference, "filter spectra"), dtype=float)
-    xyz_names = list(sensor_get(xyz_reference, "filter names"))
+    assert isinstance(xyz_reference, list)
+    xyz_filters = np.column_stack([np.asarray(sensor_get(current, "filter spectra"), dtype=float).reshape(-1) for current in xyz_reference])
+    xyz_names = [sensor_get(current, "filter names")[0] for current in xyz_reference]
     matched_xyz = sensor_create_ideal("match xyz", example, asset_store=asset_store)
 
     assert isinstance(matched_xyz, list)
@@ -6230,6 +6231,19 @@ def test_sensor_create_ideal_match_and_match_xyz_replay_legacy_contract(asset_st
         current_pixel = sensor_get(current, "pixel")
         assert np.allclose(np.asarray(current_pixel["size_m"], dtype=float), np.asarray(source_pixel["size_m"], dtype=float))
         assert np.isclose(float(current_pixel["fill_factor"]), float(source_pixel["fill_factor"]))
+
+
+def test_camera_create_ideal_returns_xyz_camera_array(asset_store) -> None:
+    ideal = camera_create("ideal", asset_store=asset_store)
+
+    assert isinstance(ideal, list)
+    assert len(ideal) == 3
+    assert [camera.fields["sensor"].name for camera in ideal] == ["CIE-X-ideal", "CIE-Y-ideal", "CIE-Z-ideal"]
+    assert [camera_get(camera, "sensor filter names") for camera in ideal] == [["rX"], ["gY"], ["bZ"]]
+    assert all(camera.name == "ideal" for camera in ideal)
+    assert all(camera.fields["oi"] is not ideal[0].fields["oi"] for camera in ideal[1:])
+    assert all(camera.fields["ip"] is not ideal[0].fields["ip"] for camera in ideal[1:])
+    assert all(np.array_equal(np.asarray(camera_get(camera, "sensor pattern"), dtype=int), np.array([[1]], dtype=int)) for camera in ideal)
 
 
 def test_sensor_create_imx363_and_crop_support_raw_tutorial_flow(asset_store) -> None:
