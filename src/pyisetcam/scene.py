@@ -1847,6 +1847,58 @@ def _scene_shell(
     return scene
 
 
+def _seeded_scene_shell(
+    name: str,
+    spectral_type: str,
+    seed: Scene | None,
+    *,
+    asset_store: AssetStore,
+    illuminant_type: str = "d65",
+) -> Scene:
+    if seed is None:
+        if param_format(spectral_type) == "monochrome":
+            wave = np.array([550.0], dtype=float)
+        else:
+            wave = _wave_or_default(None)
+        return _scene_shell(name, wave, asset_store=asset_store, illuminant_type=illuminant_type)
+
+    current = init_default_spectrum(seed, spectral_type)
+    current.name = str(name)
+    current.type = "scene"
+    wave = np.asarray(current.fields.get("wave", DEFAULT_WAVE), dtype=float).reshape(-1)
+
+    illuminant_key = param_format(illuminant_type)
+    if illuminant_key == "d65":
+        illuminant_energy, _ = _load_d65(wave, asset_store)
+        illuminant_comment = "D65.mat"
+    else:
+        from .illuminant import illuminant_create, illuminant_get
+
+        illuminant = illuminant_create(illuminant_type, wave, 100.0, asset_store=asset_store)
+        illuminant_energy = np.asarray(illuminant_get(illuminant, "energy"), dtype=float).reshape(-1)
+        illuminant_comment = str(illuminant_get(illuminant, "name"))
+
+    current.fields["illuminant_format"] = "spectral"
+    current.fields["illuminant_energy"] = illuminant_energy
+    current.fields["illuminant_photons"] = energy_to_quanta(illuminant_energy, wave)
+    current.fields["illuminant_comment"] = illuminant_comment
+    current.fields["distance_m"] = float(current.fields.get("distance_m", DEFAULT_DISTANCE_M))
+    current.fields["fov_deg"] = float(current.fields.get("fov_deg", DEFAULT_FOV_DEG))
+
+    photons = current.data.get("photons")
+    if photons is None:
+        current.data["photons"] = np.zeros((1, 1, wave.size), dtype=float)
+    else:
+        photon_array = np.asarray(photons, dtype=float)
+        if photon_array.ndim != 3 or photon_array.shape[2] != wave.size:
+            current.data["photons"] = np.zeros((1, 1, wave.size), dtype=float)
+        else:
+            current.data["photons"] = photon_array.copy()
+
+    _update_scene_geometry(current)
+    return current
+
+
 def _uniform_scene(
     name: str,
     size: Any,
@@ -3986,19 +4038,34 @@ def scene_create(
     if name in {"monochrome", "unispectral"}:
         return track_session_object(
             session,
-            _scene_shell("monochrome", np.array([550.0], dtype=float), asset_store=store),
+            _seeded_scene_shell(
+                "monochrome",
+                "monochrome",
+                args[0] if args and isinstance(args[0], Scene) else None,
+                asset_store=store,
+            ),
         )
 
     if name in {"multispectral", "hyperspectral"}:
         return track_session_object(
             session,
-            _scene_shell("multispectral", _wave_or_default(None), asset_store=store),
+            _seeded_scene_shell(
+                "multispectral",
+                "multispectral",
+                args[0] if args and isinstance(args[0], Scene) else None,
+                asset_store=store,
+            ),
         )
 
     if name == "rgb":
         return track_session_object(
             session,
-            _scene_shell("rgb", _wave_or_default(None), asset_store=store),
+            _seeded_scene_shell(
+                "rgb",
+                "hyperspectral",
+                args[0] if args and isinstance(args[0], Scene) else None,
+                asset_store=store,
+            ),
         )
 
     if name == "lstar":

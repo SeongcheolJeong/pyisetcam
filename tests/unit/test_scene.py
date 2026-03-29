@@ -50,6 +50,7 @@ from pyisetcam import (
     scene_sdr,
     scene_to_file,
 )
+from pyisetcam.types import Scene
 
 
 def test_scene_create_default_macbeth(asset_store) -> None:
@@ -88,6 +89,31 @@ def test_scene_create_rgb_multispectral_and_monochrome_shells(asset_store) -> No
     resized = scene_set(rgb.clone(), "photons", np.ones((2, 3, scene_get(rgb, "nwave")), dtype=float))
     assert tuple(scene_get(resized, "size")) == (2, 3)
     assert scene_get(resized, "fov") == scene_get(rgb, "fov")
+
+
+def test_scene_create_shells_accept_scene_seed(asset_store) -> None:
+    seed = Scene(name="seed")
+    seed.metadata["marker"] = "kept"
+    seed.fields["custom_field"] = 17
+    seed.fields["wave"] = np.array([500.0], dtype=float)
+    seed.data["photons"] = np.ones((2, 2, 1), dtype=float)
+
+    rgb = scene_create("rgb", seed, asset_store=asset_store)
+    multispectral = scene_create("multispectral", seed, asset_store=asset_store)
+    monochrome = scene_create("monochrome", seed, asset_store=asset_store)
+
+    assert rgb.metadata["marker"] == "kept"
+    assert multispectral.fields["custom_field"] == 17
+    assert monochrome.fields["custom_field"] == 17
+    assert tuple(scene_get(rgb, "photons").shape) == (1, 1, 31)
+    assert tuple(scene_get(multispectral, "photons").shape) == (1, 1, 31)
+    assert tuple(scene_get(monochrome, "photons").shape) == (2, 2, 1)
+    np.testing.assert_array_equal(scene_get(rgb, "wave"), np.arange(400.0, 701.0, 10.0, dtype=float))
+    np.testing.assert_array_equal(scene_get(multispectral, "wave"), np.arange(400.0, 701.0, 10.0, dtype=float))
+    np.testing.assert_array_equal(scene_get(monochrome, "wave"), np.array([550.0], dtype=float))
+    np.testing.assert_array_equal(scene_get(monochrome, "photons"), np.ones((2, 2, 1), dtype=float))
+    np.testing.assert_array_equal(seed.fields["wave"], np.array([500.0], dtype=float))
+    np.testing.assert_array_equal(seed.data["photons"], np.ones((2, 2, 1), dtype=float))
 
 
 def test_scene_create_ramp_equal_photon_alias_matches_ramp(asset_store) -> None:
