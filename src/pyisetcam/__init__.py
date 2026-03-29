@@ -674,6 +674,7 @@ from .sensor import (
     sensor_check_array,
     sensor_check_human,
     sensor_clear_data,
+    sensor_cone_plot,
     sensor_color_filter,
     sensor_compute_full_array,
     sensor_compute_image,
@@ -2194,6 +2195,7 @@ __all__ = [
     "sensorCheckArray",
     "sensorCheckHuman",
     "sensorClearData",
+    "sensorConePlot",
     "sensorColorOrder",
     "sensorCreateIMECSSM4x4vis",
     "sensorIMX363V2",
@@ -2218,6 +2220,7 @@ __all__ = [
     "sensor_check_array",
     "sensor_check_human",
     "sensor_clear_data",
+    "sensor_cone_plot",
     "humanConeMosaic",
     "human_cone_mosaic",
     "sensorColorFilter",
@@ -2848,6 +2851,7 @@ sensorROI = sensor_roi
 sensorCheckArray = sensor_check_array
 sensorCheckHuman = sensor_check_human
 sensorClearData = sensor_clear_data
+sensorConePlot = sensor_cone_plot
 sensorColorOrder = sensor_color_order
 sensorCreateIMECSSM4x4vis = sensor_create_imec_ssm_4x4_vis
 sensorIMX363V2 = sensor_imx363_v2

@@ -33,9 +33,12 @@ from pyisetcam import (
     sceneFromFile,
     sceneGet,
     sensorCompute,
+    sensorConePlot,
     sensorCreateConeMosaic,
     sensorGet,
+    sensorHumanResize,
     sensorSet,
+    sensorShowCFA,
     watsonImpulseResponse,
     watsonRGCSpacing,
     westheimerLSF,
@@ -382,6 +385,34 @@ def test_cone_plot_alias_matches_ie_cone_plot_payload() -> None:
             np.testing.assert_allclose(value, expected_value)
         else:
             assert value == expected_value
+
+
+def test_sensor_cone_plot_matches_ie_cone_plot_payload() -> None:
+    sensor, xy, cone_type, _, _ = sensorCreateConeMosaic()
+    payload = sensorConePlot(sensor, 18.0, 1.1, 0.5)
+    expected = ieConePlot(xy, cone_type, 18.0, 1.1, 0.5)
+
+    assert payload.keys() == expected.keys()
+    for key in payload:
+        value = payload[key]
+        expected_value = expected[key]
+        if isinstance(value, np.ndarray):
+            np.testing.assert_allclose(value, expected_value)
+        else:
+            assert value == expected_value
+
+
+def test_sensor_cone_plot_falls_back_to_sensor_show_cfa_for_block_layout() -> None:
+    sensor, _, _, _, _ = sensorCreateConeMosaic()
+    block_sensor = sensorHumanResize(sensor, [0, 0], [0, 0])
+    payload = sensorConePlot(block_sensor, [], [], [])
+    _, expected_image = sensorShowCFA(block_sensor)
+
+    assert payload["support"] is None
+    assert payload["spread"] is None
+    assert payload["delta"] is None
+    assert payload["grid"] is None
+    np.testing.assert_allclose(payload["image"], expected_image)
 
 
 def test_human_uv_safety_methods_match_expected_thresholds() -> None:

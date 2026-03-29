@@ -17,7 +17,7 @@ from .assets import AssetStore, ie_read_color_filter, ie_read_spectra
 from .color import luminance_from_photons, xyz_color_matching
 from .exceptions import UnsupportedOptionError
 from .fileio import vc_load_object
-from .metrics import xyz_from_energy
+from .metrics import ie_cone_plot, xyz_from_energy
 from .optics import DEFAULT_FOCAL_LENGTH_M
 from .optics import oi_crop, oi_get
 from .session import session_get_selected, session_replace_object, track_session_object
@@ -1655,6 +1655,44 @@ def human_cone_mosaic(
         densities=densities,
         um_cone_width=2.0 if um_cone_width is None else float(np.asarray(um_cone_width).reshape(-1)[0]),
         r_seed=r_seed,
+    )
+
+
+def sensor_cone_plot(
+    sensor: Sensor,
+    support: Any | None = None,
+    spread: Any | None = None,
+    delta: Any | None = None,
+) -> dict[str, Any]:
+    """Headless sensorConePlot() compatibility wrapper."""
+
+    xy = sensor_get(sensor, "human cone locs")
+    cone_type = sensor_get(sensor, "cone type")
+
+    resolved_support = None if _is_empty_dispatch_placeholder(support) else support
+    resolved_spread = None if _is_empty_dispatch_placeholder(spread) else float(np.asarray(spread, dtype=float).reshape(-1)[0])
+    resolved_delta = None if _is_empty_dispatch_placeholder(delta) else float(np.asarray(delta, dtype=float).reshape(-1)[0])
+
+    if xy is None or np.asarray(xy).size == 0:
+        _, image = sensor_show_cfa(sensor)
+        support_payload = None
+        if resolved_support is not None:
+            support_array = np.asarray(resolved_support, dtype=int).reshape(-1)
+            support_payload = np.repeat(support_array, 2) if support_array.size == 1 else support_array
+        return {
+            "support": support_payload,
+            "spread": resolved_spread,
+            "delta": resolved_delta,
+            "grid": None,
+            "image": np.asarray(image, dtype=float),
+        }
+
+    return ie_cone_plot(
+        xy,
+        cone_type,
+        support=resolved_support,
+        spread=resolved_spread,
+        delta=0.4 if resolved_delta is None else resolved_delta,
     )
 
 
@@ -7785,6 +7823,7 @@ sensorShowImage = sensor_show_image
 sensorSaveImage = sensor_save_image
 sensorCheckHuman = sensor_check_human
 humanConeMosaic = human_cone_mosaic
+sensorConePlot = sensor_cone_plot
 sensorROI = sensor_roi
 sensorVignetting = sensor_vignetting
 sensorCreateIMX490 = sensor_create_imx490
