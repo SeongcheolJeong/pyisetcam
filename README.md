@@ -414,7 +414,11 @@ That same frequency-orientation scene lane now also treats an explicit
 empty parameter payload `sceneCreate('frequency orientation', [])` as
 “use the default `FOTParams` struct”, matching the upstream
 `sceneFOTarget(...)` fallback instead of coercing `[]` into a bogus empty
-image-size override.
+image-size override. The adjacent helper-backed scene constructors now
+also inherit that same empty-payload fallback through the shared
+parameter normalizer, so `sceneCreate('moire orient', [])`,
+`sceneCreate('hdr lights', [])`, and `sceneCreate('harmonic', [])`
+now replay the same defaults as their no-argument upstream forms.
 The same `sceneCreate('radiance chart', wave, radiance, ...)` wrapper now
 also honors MATLAB-style empty placeholders in optional `rowcol`,
 `patch size`, and `gray fill` slots for both dict and key/value forms,
