@@ -4592,7 +4592,7 @@ def scene_create(
             display = None if len(args) <= 3 or _is_empty_scene_dispatch_placeholder(args[3]) else args[3]
             font = font_create(letter, font_name, font_size, asset_store=store)
         else:
-            font = args[0] if len(args) > 0 else font_create(asset_store=store)
+            font = font_create(asset_store=store) if len(args) == 0 or _is_empty_scene_dispatch_placeholder(args[0]) else args[0]
             display = None if len(args) <= 1 or _is_empty_scene_dispatch_placeholder(args[1]) else args[1]
         return track_session_object(session, scene_from_font(font, display, asset_store=store))
 

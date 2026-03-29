@@ -425,7 +425,9 @@ shorthand now also honors MATLAB-style empty placeholders in its optional
 `fontSize`, `fontName`, and `display` slots, so
 `sceneCreate('letter', 'g', [], [], [])` reuses the default Georgia 14 pt
 font on `LCD-Apple` instead of crashing or stringifying `[]` into bad
-font metadata. The same positional moire-target shorthand now also treats
+font metadata. The same font-object lane now also treats
+`sceneCreate('letter', [], [])` as “use the default font/display” instead
+of passing `[]` through as a bogus font object. The same positional moire-target shorthand now also treats
 an empty second argument as “use the default frequency”, so
 `sceneCreate('moire orient', imageSize, [])` reuses the helper's default
 `f` parameter instead of attempting `float([])`.
