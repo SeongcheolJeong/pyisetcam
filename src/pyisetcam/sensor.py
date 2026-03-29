@@ -19,7 +19,7 @@ from .exceptions import UnsupportedOptionError
 from .fileio import vc_load_object
 from .metrics import xyz_from_energy
 from .optics import DEFAULT_FOCAL_LENGTH_M
-from .optics import oi_get
+from .optics import oi_crop, oi_get
 from .session import session_get_selected, session_replace_object, track_session_object
 from .types import OpticalImage, Scene, Sensor, SessionContext
 from .utils import DEFAULT_WAVE, blackbody, ensure_multiple, ie_parameter_otype, linear_to_srgb, param_format, tile_pattern, xyz_to_linear_srgb
@@ -7184,7 +7184,13 @@ def sensor_compute_sv_filters(
     return np.asarray(combined, dtype=float), np.asarray(voltage_images, dtype=float), np.asarray(ir_filters, dtype=float)
 
 
-def _auto_exposure_default(sensor: Sensor, oi: OpticalImage) -> float:
+def _auto_exposure_luminance(
+    sensor: Sensor,
+    oi: OpticalImage,
+    *,
+    level: float = 0.95,
+    seed: int = 0,
+) -> tuple[float, float, OpticalImage]:
     cube = np.asarray(oi.data["photons"], dtype=float)
     wave = np.asarray(oi.fields["wave"], dtype=float)
     voltage_swing = float(sensor.fields["pixel"]["voltage_swing"])
@@ -7229,10 +7235,129 @@ def _auto_exposure_default(sensor: Sensor, oi: OpticalImage) -> float:
     small_oi.fields["cols"] = int(small_oi.data["photons"].shape[1])
     small_oi.fields["sample_spacing_m"] = width_m / max(int(small_oi.data["photons"].shape[1]), 1)
 
-    signal_sensor = sensor_compute(small_sensor, small_oi, seed=0)
+    signal_sensor = sensor_compute(small_sensor, small_oi, seed=seed)
     signal_voltage = np.asarray(signal_sensor.data["volts"], dtype=float)
     max_signal_voltage = float(np.max(signal_voltage))
-    return (0.95 * voltage_swing) / max(max_signal_voltage, 1e-12)
+    integration_time = (float(level) * voltage_swing) / max(max_signal_voltage, 1e-12)
+    return float(integration_time), max_signal_voltage, small_oi
+
+
+def _auto_exposure_default(sensor: Sensor, oi: OpticalImage) -> float:
+    integration_time, _, _ = _auto_exposure_luminance(sensor, oi, level=0.95, seed=0)
+    return float(integration_time)
+
+
+def _auto_exposure_weighted(
+    oi: OpticalImage,
+    sensor: Sensor,
+    level: float,
+    center_rect: Any | None = None,
+    *,
+    seed: int | None = None,
+) -> tuple[float, float]:
+    rect = None if _is_empty_dispatch_placeholder(center_rect) else center_rect
+    if rect is not None and hasattr(rect, "Position"):
+        rect = getattr(rect, "Position")
+    center_oi = oi if rect is None else oi_crop(oi, rect)
+
+    small_sensor = sensor_set_size_to_fov(sensor.clone(), float(oi_get(center_oi, "fov")), oi)
+    small_sensor = sensor_set(small_sensor, "noise flag", 0)
+    small_sensor = sensor_set(small_sensor, "integration time", 1)
+    small_sensor = sensor_clear_data(small_sensor)
+
+    voltage_swing = float(sensor_get(small_sensor, "pixel voltage swing"))
+    signal_voltage, _, _ = sensor_compute_image(center_oi, small_sensor, seed=seed)
+    max_signal_voltage = float(np.max(signal_voltage))
+    integration_time = (float(level) * voltage_swing) / max(max_signal_voltage, 1e-12)
+    return float(integration_time), max_signal_voltage
+
+
+def auto_exposure(
+    oi: OpticalImage,
+    sensor: Sensor,
+    level: Any | None = None,
+    ae_method: Any | None = None,
+    *args: Any,
+    seed: int | None = None,
+    **kwargs: Any,
+) -> tuple[np.ndarray | float, np.ndarray | float | None, OpticalImage | None]:
+    """Mirror MATLAB autoExposure() for the supported headless exposure methods."""
+
+    resolved_level = 0.95 if _is_empty_dispatch_placeholder(level) else float(np.asarray(level, dtype=float).reshape(-1)[0])
+    resolved_method = "default" if _is_empty_dispatch_placeholder(ae_method) else str(param_format(str(ae_method)))
+    options = {param_format(str(key)): value for key, value in kwargs.items() if value is not None}
+    options.update(dict(_matlab_kv_pairs(args, function_name="autoExposure")))
+
+    if resolved_method in {"default", "luminance"}:
+        return _auto_exposure_luminance(sensor, oi, level=resolved_level, seed=0 if seed is None else int(seed))
+
+    if resolved_method == "full":
+        working = sensor_set(sensor.clone(), "integration time", 1)
+        voltage_swing = float(sensor_get(working, "pixel voltage swing"))
+        signal_voltage, _, _ = sensor_compute_image(oi, working, seed=seed)
+        max_signal_voltage = float(np.max(signal_voltage))
+        integration_time = (resolved_level * voltage_swing) / max(max_signal_voltage, 1e-12)
+        return float(integration_time), max_signal_voltage, None
+
+    if resolved_method == "mean":
+        working = sensor_set(sensor.clone(), "integration time", 1)
+        working = sensor_set(working, "analog gain", 1)
+        voltage_swing = float(sensor_get(working, "pixel voltage swing"))
+        signal_voltage, _, _ = sensor_compute_image(oi, working, seed=seed)
+        mean_voltage = float(np.mean(signal_voltage))
+        integration_time = (resolved_level * voltage_swing) / max(mean_voltage, 1e-12)
+        max_signal_voltage = float(integration_time * float(np.max(signal_voltage)))
+        return float(integration_time), max_signal_voltage, None
+
+    if resolved_method == "cfa":
+        working = sensor_set(sensor.clone(), "integration time", 1)
+        voltage_swing = float(sensor_get(working, "pixel voltage swing"))
+        signal_voltage, _, _ = sensor_compute_image(oi, working, seed=seed)
+        pattern = np.asarray(sensor_get(working, "pattern"), dtype=int)
+        n_rows, n_cols = pattern.shape
+        integration_time = np.zeros((n_rows, n_cols), dtype=float)
+        max_signal_voltage = np.zeros((n_rows, n_cols), dtype=float)
+        for row in range(n_rows):
+            for col in range(n_cols):
+                current = np.asarray(signal_voltage[row::n_rows, col::n_cols], dtype=float)
+                max_signal_voltage[row, col] = float(np.max(current))
+                integration_time[row, col] = (resolved_level * voltage_swing) / max(max_signal_voltage[row, col], 1e-12)
+        return integration_time, max_signal_voltage, None
+
+    if resolved_method == "specular":
+        working = sensor_set(sensor.clone(), "noise flag", 0)
+        working = sensor_set(working, "integration time", 1)
+        voltage_swing = float(sensor_get(working, "pixel voltage swing"))
+        signal_voltage, _, _ = sensor_compute_image(oi, working, seed=seed)
+        target_voltage = float(np.percentile(np.asarray(signal_voltage, dtype=float), resolved_level * 100.0))
+        max_signal_voltage = float(np.max(signal_voltage))
+        integration_time = voltage_swing / max(target_voltage, 1e-12)
+        return float(integration_time), max_signal_voltage, None
+
+    if resolved_method in {"weighted", "center"}:
+        integration_time, _ = _auto_exposure_weighted(
+            oi,
+            sensor,
+            resolved_level,
+            options.get("centerrect"),
+            seed=seed,
+        )
+        return integration_time, None, None
+
+    if resolved_method == "video":
+        video_max = options.get("videomax", 1.0 / 60.0)
+        if _is_empty_dispatch_placeholder(video_max):
+            video_max = 1.0 / 60.0
+        weighted_time, _ = _auto_exposure_weighted(
+            oi,
+            sensor,
+            resolved_level,
+            options.get("centerrect"),
+            seed=seed,
+        )
+        return min(float(np.asarray(video_max, dtype=float).reshape(-1)[0]), weighted_time), None, None
+
+    raise UnsupportedOptionError("autoExposure", str(ae_method))
 
 
 def sensor_compute(
@@ -7540,6 +7665,7 @@ def sensor_ccm(
 
 
 sensorComputeSamples = sensor_compute_samples
+autoExposure = auto_exposure
 sensorComputeNoiseFree = sensor_compute_noise_free
 sensorAddNoise = sensor_add_noise
 binSensorCompute = bin_sensor_compute

@@ -17,6 +17,7 @@ from pyisetcam.utils import energy_to_quanta, tile_pattern
 from pyisetcam.utils import quanta_to_energy
 from pyisetcam import (
     ApplyFilters,
+    autoExposure,
     analog2digital,
     blackbody,
     binNoiseColumnFPN,
@@ -6634,6 +6635,101 @@ def test_sensor_simulation_legacy_wrappers(asset_store) -> None:
     assert np.allclose(full_dvs, full_dvs_snake)
     assert full_volts.shape == (8, 8, 2)
     assert full_dvs.shape == (8, 8, 2)
+
+
+def test_auto_exposure_legacy_wrapper_supported_methods(asset_store) -> None:
+    scene = scene_create("uniform ee", 8, np.array([500.0, 600.0, 700.0], dtype=float), asset_store=asset_store)
+    oi = oi_compute(oi_create(), scene)
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 8)
+    sensor = sensor_set(sensor, "cols", 8)
+    sensor = sensor_set(sensor, "noise flag", 0)
+    sensor = sensor_set(sensor, "auto exposure", False)
+
+    default_time, default_max, small_oi = autoExposure(oi, sensor, [], [])
+    luminance_time, luminance_max, luminance_oi = autoExposure(oi, sensor, 0.95, "luminance")
+    assert np.isclose(default_time, luminance_time)
+    assert np.isclose(default_max, luminance_max)
+    assert small_oi is not None
+    assert luminance_oi is not None
+    assert np.asarray(small_oi.data["photons"], dtype=float).shape[:2] == (2, 2)
+    assert np.allclose(np.asarray(small_oi.data["photons"], dtype=float), np.asarray(luminance_oi.data["photons"], dtype=float))
+
+    working = sensor_set(sensor.clone(), "integration time", 1)
+    voltage_swing = float(sensor_get(working, "pixel voltage swing"))
+    signal_voltage = np.asarray(sensor_module.sensor_compute_image(oi, working, seed=7)[0], dtype=float)
+
+    full_time, full_max, _ = autoExposure(oi, sensor, 0.9, "full", seed=7)
+    assert np.isclose(full_max, np.max(signal_voltage))
+    assert np.isclose(full_time, (0.9 * voltage_swing) / np.max(signal_voltage))
+
+    mean_time, mean_max, _ = autoExposure(oi, sensor, 0.9, "mean", seed=7)
+    expected_mean_time = (0.9 * voltage_swing) / np.mean(signal_voltage)
+    assert np.isclose(mean_time, expected_mean_time)
+    assert np.isclose(mean_max, expected_mean_time * np.max(signal_voltage))
+
+    cfa_time, cfa_max, _ = autoExposure(oi, sensor, 0.9, "cfa", seed=7)
+    pattern = np.asarray(sensor_get(sensor, "pattern"), dtype=int)
+    assert np.asarray(cfa_time, dtype=float).shape == pattern.shape
+    assert np.asarray(cfa_max, dtype=float).shape == pattern.shape
+    for row in range(pattern.shape[0]):
+        for col in range(pattern.shape[1]):
+            current = signal_voltage[row::pattern.shape[0], col::pattern.shape[1]]
+            expected_max = float(np.max(current))
+            assert np.isclose(cfa_max[row, col], expected_max)
+            assert np.isclose(cfa_time[row, col], (0.9 * voltage_swing) / expected_max)
+
+    specular_time, specular_max, _ = autoExposure(oi, sensor, 0.9, "specular", seed=7)
+    assert np.isclose(specular_max, np.max(signal_voltage))
+    assert np.isclose(specular_time, voltage_swing / np.percentile(signal_voltage, 90.0))
+
+
+def test_auto_exposure_legacy_wrapper_weighted_and_video(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    oi = oi_compute(oi_create(), scene, crop=True)
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "rows", 16)
+    sensor = sensor_set(sensor, "cols", 16)
+    sensor = sensor_set(sensor, "noise flag", 0)
+    sensor = sensor_set(sensor, "auto exposure", False)
+    rect = np.array([4, 4, 5, 5], dtype=int)
+
+    weighted_time, weighted_max, weighted_oi = autoExposure(
+        oi,
+        sensor,
+        0.9,
+        "weighted",
+        "center rect",
+        rect,
+        seed=3,
+    )
+    assert weighted_max is None
+    assert weighted_oi is None
+
+    center_oi = optics_module.oi_crop(oi, rect)
+    small_sensor = sensor_module.sensor_set_size_to_fov(sensor.clone(), float(optics_module.oi_get(center_oi, "fov")), oi)
+    small_sensor = sensor_set(small_sensor, "noise flag", 0)
+    small_sensor = sensor_set(small_sensor, "integration time", 1)
+    small_sensor = sensor_module.sensor_clear_data(small_sensor)
+    voltage_swing = float(sensor_get(small_sensor, "pixel voltage swing"))
+    signal_voltage = np.asarray(sensor_module.sensor_compute_image(center_oi, small_sensor, seed=3)[0], dtype=float)
+    expected_weighted = (0.9 * voltage_swing) / np.max(signal_voltage)
+    assert np.isclose(weighted_time, expected_weighted)
+
+    video_time, video_max, video_oi = autoExposure(
+        oi,
+        sensor,
+        0.9,
+        "video",
+        "center rect",
+        rect,
+        "video max",
+        weighted_time / 2.0,
+        seed=3,
+    )
+    assert video_max is None
+    assert video_oi is None
+    assert np.isclose(video_time, weighted_time / 2.0)
 
 
 def test_sensor_simulation_helper_wrappers_match_legacy_contracts(asset_store, tmp_path) -> None:

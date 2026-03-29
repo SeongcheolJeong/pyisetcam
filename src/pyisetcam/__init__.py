@@ -620,6 +620,7 @@ from .scene import (
     scene_wb_create,
 )
 from .sensor import (
+    auto_exposure,
     analog_to_digital,
     imx490_compute,
     sensor_create_imx490,
@@ -2271,6 +2272,8 @@ __all__ = [
     "sensorComputeMEV",
     "sensorComputeNoiseFree",
     "sensorComputeSVFilters",
+    "autoExposure",
+    "auto_exposure",
     "regridOI2ISA",
     "plane2mosaic",
     "plane2rgb",
@@ -2827,6 +2830,7 @@ sensorComputeMEV = sensor_compute_mev
 sensorComputeNoiseFree = sensor_compute_noise_free
 sensorComputeSamples = sensor_compute_samples
 sensorComputeSVFilters = sensor_compute_sv_filters
+autoExposure = auto_exposure
 regridOI2ISA = regrid_oi_to_isa
 plane2rgb = plane2mosaic
 imx490Compute = imx490_compute
