@@ -309,6 +309,25 @@ def test_scene_create_letter_branch_reuses_font_pipeline(asset_store) -> None:
     )
 
 
+def test_scene_create_letter_shortcut_accepts_empty_optional_placeholders(asset_store) -> None:
+    placeholder = scene_create("letter", "g", [], [], [], asset_store=asset_store)
+    explicit = scene_create("letter", "g", 14, "Georgia", "LCD-Apple", asset_store=asset_store)
+
+    np.testing.assert_allclose(
+        np.asarray(scene_get(placeholder, "photons"), dtype=float),
+        np.asarray(scene_get(explicit, "photons"), dtype=float),
+        atol=0.0,
+        rtol=0.0,
+    )
+    np.testing.assert_allclose(
+        np.asarray(scene_get(placeholder, "wave"), dtype=float),
+        np.asarray(scene_get(explicit, "wave"), dtype=float),
+        atol=0.0,
+        rtol=0.0,
+    )
+    assert scene_get(placeholder, "name") == scene_get(explicit, "name") == "g-georgia-14-96"
+
+
 def test_uniform_family_accepts_empty_size_placeholders(asset_store) -> None:
     wave = np.array([450.0, 550.0, 650.0], dtype=float)
 

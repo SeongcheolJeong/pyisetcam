@@ -4524,13 +4524,13 @@ def scene_create(
 
         if args and isinstance(args[0], str):
             letter = str(args[0])
-            font_size = int(args[1]) if len(args) > 1 else 14
-            font_name = str(args[2]) if len(args) > 2 else "Georgia"
-            display = args[3] if len(args) > 3 else None
+            font_size = _scene_dispatch_int_arg(args[1] if len(args) > 1 else None, 14)
+            font_name = _scene_dispatch_text_arg(args[2] if len(args) > 2 else None, "Georgia")
+            display = None if len(args) <= 3 or _is_empty_scene_dispatch_placeholder(args[3]) else args[3]
             font = font_create(letter, font_name, font_size, asset_store=store)
         else:
             font = args[0] if len(args) > 0 else font_create(asset_store=store)
-            display = args[1] if len(args) > 1 else None
+            display = None if len(args) <= 1 or _is_empty_scene_dispatch_placeholder(args[1]) else args[1]
         return track_session_object(session, scene_from_font(font, display, asset_store=store))
 
     raise UnsupportedOptionError("sceneCreate", scene_name)

@@ -389,7 +389,12 @@ type, params)` shorthand on top of the lower-level
 documented default reflectance-chart sources and sample counts when
 MATLAB-style empty placeholders are used in calls like
 `sceneCreate('reflectance chart', 24, [], [], wave, [], [])`, instead of
-coercing `[]` into invalid `sSamples` or `sFiles` payloads.
+coercing `[]` into invalid `sSamples` or `sFiles` payloads. The same text
+shorthand now also honors MATLAB-style empty placeholders in its optional
+`fontSize`, `fontName`, and `display` slots, so
+`sceneCreate('letter', 'g', [], [], [])` reuses the default Georgia 14 pt
+font on `LCD-Apple` instead of crashing or stringifying `[]` into bad
+font metadata.
 `sensor_create` now includes generic
 `rgbw` / `grbc` / `rccc` presets plus upstream-backed `mt9v024` and `ar0132at`
 RGBW/RCCC variants. The next sensorCreate dispatcher slice is now landed
