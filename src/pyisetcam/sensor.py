@@ -3887,6 +3887,41 @@ def sensor_jiggle(sensor: Sensor, pixels: Any) -> Sensor:
     return sensor.clone()
 
 
+def sensor_vignetting(
+    sensor: Sensor | None = None,
+    pv_flag: Any | None = None,
+    n_angles: Any = 5,
+    *,
+    asset_store: AssetStore | None = None,
+) -> Sensor:
+    """Gateway wrapper for the legacy pixel-vignetting/etendue computation."""
+
+    current_sensor = sensor
+    if current_sensor is None:
+        current_sensor = sensor_create(asset_store=asset_store)
+
+    flag_value = sensor_get(current_sensor, "vignetting") if _is_empty_dispatch_placeholder(pv_flag) else pv_flag
+    if _is_empty_dispatch_placeholder(flag_value):
+        flag_value = 0
+    angle_count = 5 if _is_empty_dispatch_placeholder(n_angles) else int(np.asarray(n_angles).reshape(-1)[0])
+
+    if isinstance(flag_value, str):
+        normalized = param_format(flag_value)
+    else:
+        normalized = int(np.asarray(flag_value).reshape(-1)[0])
+
+    if normalized in {0, "skip"}:
+        size = tuple(np.asarray(sensor_get(current_sensor, "size"), dtype=int).reshape(-1))
+        return sensor_set(current_sensor.clone(), "etendue", np.ones(size, dtype=float))
+    if normalized in {1, "bare", "nomicrolens"}:
+        return ml_analyze_array_etendue(current_sensor, "no microlens", angle_count, asset_store=asset_store)
+    if normalized in {2, "centered"}:
+        return ml_analyze_array_etendue(current_sensor, "centered", angle_count, asset_store=asset_store)
+    if normalized in {3, "optimal", "optimized"}:
+        return ml_analyze_array_etendue(current_sensor, "optimal", angle_count, asset_store=asset_store)
+    raise UnsupportedOptionError("sensorVignetting", str(flag_value))
+
+
 def sensor_no_noise(sensor: Sensor) -> Sensor:
     """Return a sensor copy with all non-photon-noise terms disabled."""
 
@@ -7502,6 +7537,7 @@ sensorSaveImage = sensor_save_image
 sensorCheckHuman = sensor_check_human
 humanConeMosaic = human_cone_mosaic
 sensorROI = sensor_roi
+sensorVignetting = sensor_vignetting
 sensorCreateIMX490 = sensor_create_imx490
 sensorCreateConeMosaic = sensor_create_cone_mosaic
 sensorHumanResize = sensor_human_resize

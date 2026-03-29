@@ -725,6 +725,7 @@ from .sensor import (
     sensor_compute_sv_filters,
     sensor_save_image,
     sensor_stats,
+    sensor_vignetting,
     sensor_show_cfa,
     sensor_show_cfa_weights,
     sensor_show_image,
@@ -2193,6 +2194,7 @@ __all__ = [
     "sensorInterleaved",
     "sensorMT9V024",
     "sensorPixelCoord",
+    "sensorVignetting",
     "sensorDetermineCFA",
     "sensorDeleteFilter",
     "sensorDisplayTransform",
@@ -2326,6 +2328,7 @@ __all__ = [
     "sensor_set_size_to_fov",
     "sensor_cfa_save",
     "sensor_save_image",
+    "sensor_vignetting",
     "sensor_image_color_array",
     "sensor_rgb_to_plane",
     "sensor_stats",
@@ -2836,6 +2839,7 @@ sensorIMX363V2 = sensor_imx363_v2
 sensorInterleaved = sensor_interleaved
 sensorMT9V024 = sensor_mt9v024
 sensorPixelCoord = sensor_pixel_coord
+sensorVignetting = sensor_vignetting
 sensorDetermineCFA = sensor_determine_cfa
 sensorDeleteFilter = sensor_delete_filter
 sensorDisplayTransform = sensor_display_transform

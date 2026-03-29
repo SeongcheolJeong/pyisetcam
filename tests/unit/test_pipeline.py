@@ -323,6 +323,7 @@ from pyisetcam import (
     mlDescription,
     mlGetCurrent,
     mlImportParams,
+    mlAnalyzeArrayEtendue,
     mlPrint,
     ml_radiance,
     mlSetCurrent,
@@ -441,6 +442,7 @@ from pyisetcam import (
     sensorSNR,
     sensorSNRluxsec,
     sensorStats,
+    sensorVignetting,
     sensorShowCFA,
     sensorShowCFAWeights,
     sensorShowImage,
@@ -6531,6 +6533,17 @@ def test_sensor_utility_wrappers_match_legacy_contracts(asset_store, tmp_path) -
     snr, luxsec = sensorSNRluxsec(monochrome, asset_store=asset_store)
     expected_mpe30 = np.interp(30.0, np.asarray(snr, dtype=float), np.asarray(luxsec, dtype=float).reshape(-1))
     assert np.isclose(float(mpe30), float(expected_mpe30))
+
+    vignetting_sensor = sensor_set(sensor_create(asset_store=asset_store), "size", np.array([8, 8], dtype=int))
+    skipped = sensorVignetting(vignetting_sensor)
+    assert np.allclose(np.asarray(sensor_get(skipped, "etendue"), dtype=float), np.ones((8, 8), dtype=float))
+
+    centered = sensorVignetting(vignetting_sensor, 2, 1, asset_store=asset_store)
+    expected_centered = mlAnalyzeArrayEtendue(vignetting_sensor, "centered", 1, asset_store=asset_store)
+    assert np.allclose(
+        np.asarray(sensor_get(centered, "etendue"), dtype=float),
+        np.asarray(sensor_get(expected_centered, "etendue"), dtype=float),
+    )
 
     wave = np.array([500.0, 501.0, 502.0], dtype=float)
     scene = scene_create("uniform ee", 12, wave, asset_store=asset_store)
