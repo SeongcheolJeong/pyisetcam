@@ -2508,6 +2508,9 @@ def sensor_create_array(
             array_type = str(value)
             continue
         if parameter == "sensorexample":
+            if _is_empty_dispatch_placeholder(value):
+                sensor_example = None
+                continue
             if not isinstance(value, Sensor):
                 raise ValueError("sensorCreateArray('sensor example', ...) requires a Sensor.")
             sensor_example = value
@@ -2527,8 +2530,6 @@ def sensor_create_array(
         sensors = _sensor_create_ideal_xyz_sequence(asset_store=store)
         return [_apply_sensor_settings(sensor, shared_settings) for sensor in sensors]
     if normalized_array_type in {"match", "matchxyz"}:
-        if sensor_example is None:
-            raise ValueError(f"sensorCreateArray('array type', '{array_type}', ...) requires a sensor example.")
         sensors = sensor_create_ideal(array_type, sensor_example, asset_store=store)
         if isinstance(sensors, Sensor):
             return _apply_sensor_settings(sensors, shared_settings)

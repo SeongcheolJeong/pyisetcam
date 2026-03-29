@@ -477,7 +477,9 @@ upstream by failing instead of silently templating from that example.
 `sensorCreateArray(...)` now also supports the
 ideal-array families
 `'xyz'`, `'matchxyz'`, `'match'`, and `'monochrome'` instead of stopping at
-the OVT split-pixel lane. The deprecated top-level
+the OVT split-pixel lane, and now also honors MATLAB-style empty
+`sensor example` placeholders in those ideal-array forms instead of
+failing early at the Python type gate. The deprecated top-level
 `sensorCreate('ideal')` shim now also matches upstream by throwing an
 explicit redirect to `sensorCreateIdeal(...)` instead of silently building
 an XYZ ideal sensor. Adjacent camera creation now also replays the

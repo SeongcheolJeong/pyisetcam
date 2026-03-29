@@ -11456,6 +11456,39 @@ def test_sensor_create_array_supports_ideal_array_types(asset_store) -> None:
     assert np.array_equal(np.asarray(sensor_get(monochrome, "pattern"), dtype=int), np.array([[1]], dtype=int))
 
 
+def test_sensor_create_array_accepts_empty_sensor_example_placeholder(asset_store) -> None:
+    xyz_array = sensor_create_array(
+        "array type",
+        "xyz",
+        "sensor example",
+        [],
+        "size",
+        np.array([10, 12], dtype=int),
+        asset_store=asset_store,
+    )
+
+    assert isinstance(xyz_array, list)
+    assert [sensor_get(current, "name") for current in xyz_array] == ["CIE-X-ideal", "CIE-Y-ideal", "CIE-Z-ideal"]
+    assert all(tuple(np.asarray(sensor_get(current, "size"), dtype=int)) == (10, 12) for current in xyz_array)
+
+    monochrome = sensor_create_array(
+        "array type",
+        "monochrome",
+        "sensor example",
+        [],
+        "size",
+        np.array([8, 10], dtype=int),
+        asset_store=asset_store,
+    )
+
+    assert isinstance(monochrome, sensor_module.Sensor)
+    assert tuple(np.asarray(sensor_get(monochrome, "size"), dtype=int)) == (8, 10)
+    assert sensor_get(monochrome, "name") == "Monochrome"
+
+    with pytest.raises(ValueError, match=r"sensorCreateIdeal\('match xyz', \.\.\.\) requires a sensor example\."):
+        sensor_create_array("array type", "matchxyz", "sensor example", [], asset_store=asset_store)
+
+
 def test_sensor_create_array_monochrome_rejects_nonempty_sensor_example(asset_store) -> None:
     example = sensor_create("default", asset_store=asset_store)
 
