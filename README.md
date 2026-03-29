@@ -535,7 +535,10 @@ dispatcher also now accepts the remaining parenthesized Bayer CFA aliases
 from upstream, including `bayer(grbg)`, `bayer(rggb)`, and `bayer(bggr)`.
 It also now replays the upstream `sensorCreate('monochrome array', [], N)`
 shortcut, including the default 3-sensor case and the practical Python
-overload. The same IMEC lane now also treats
+overload. That same monochrome-array lane now also treats
+`sensorCreate('monochrome array', [], [])` as an omitted sensor-count slot, so
+the explicit empty placeholder falls back to the same default 3-sensor bundle
+instead of crashing on an empty array index. The same IMEC lane now also treats
 `sensorCreate('imec44', [], [])` and `sensorCreateIMECSSM4x4vis('row col', [])`
 as omitted `rowcol` inputs, so they fall through to the direct helper's
 full-resolution default instead of crashing on the empty placeholder. The scene-constructor lane now also replays the older numeric

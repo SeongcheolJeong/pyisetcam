@@ -2176,6 +2176,8 @@ def sensor_create(
 
     if normalized == "monochromearray":
         count_source = args[0] if args and args[0] is not None else 3
+        if _is_empty_dispatch_placeholder(count_source):
+            count_source = 3
         count = int(np.rint(np.asarray(count_source, dtype=float).reshape(-1)[0]))
         if count < 1:
             raise ValueError("sensorCreate('monochrome array', ...) requires a positive sensor count.")

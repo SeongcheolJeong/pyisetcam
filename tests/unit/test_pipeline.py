@@ -11504,20 +11504,24 @@ def test_sensor_create_supports_monochrome_array_dispatch(asset_store) -> None:
     default_array = sensor_create("monochrome array", asset_store=asset_store)
     explicit = sensor_create("monochrome array", None, 5, asset_store=asset_store)
     placeholder = sensor_create("monochrome array", [], 5, asset_store=asset_store)
+    placeholder_default = sensor_create("monochrome array", [], [], asset_store=asset_store)
     overloaded = sensor_create("monochrome array", 4, asset_store=asset_store)
 
     assert isinstance(default_array, list)
     assert isinstance(explicit, list)
     assert isinstance(placeholder, list)
+    assert isinstance(placeholder_default, list)
     assert isinstance(overloaded, list)
     assert len(default_array) == 3
     assert len(explicit) == 5
     assert len(placeholder) == 5
+    assert len(placeholder_default) == 3
     assert len(overloaded) == 4
     assert explicit[0] is not explicit[1]
     assert placeholder[0] is not placeholder[1]
+    assert placeholder_default[0] is not placeholder_default[1]
 
-    for current in explicit + placeholder + overloaded + default_array:
+    for current in explicit + placeholder + placeholder_default + overloaded + default_array:
         assert sensor_get(current, "name") == "monochrome"
         assert sensor_get(current, "filter names") == ["w"]
         np.testing.assert_array_equal(
