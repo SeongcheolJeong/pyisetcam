@@ -6988,7 +6988,9 @@ def test_sensor_filter_edit_helpers_match_legacy_array_updates(asset_store) -> N
 
 def test_pixel_create_get_set_and_ideal_match_legacy_contract() -> None:
     wave = np.array([450.0, 550.0, 650.0], dtype=float)
+    default_wave = np.arange(400.0, 701.0, 10.0, dtype=float)
     pixel = pixelCreate("default", wave, 1.1e-6)
+    default_wave_pixel = pixelCreate("human", [])
 
     assert pixelGet(pixel, "name") == "aps"
     assert pixelGet(pixel, "type") == "pixel"
@@ -6996,6 +6998,7 @@ def test_pixel_create_get_set_and_ideal_match_legacy_contract() -> None:
     assert np.isclose(float(pixelGet(pixel, "fill factor")), 0.75)
     assert np.array_equal(np.asarray(pixelGet(pixel, "wave"), dtype=float), wave)
     assert np.array_equal(np.asarray(pixelGet(pixel, "spectralQE"), dtype=float), np.ones(wave.size, dtype=float))
+    assert np.array_equal(np.asarray(pixelGet(default_wave_pixel, "wave"), dtype=float), default_wave)
 
     resized = pixelSet(pixel, "size same fill factor", np.array([1.5e-6, 1.5e-6], dtype=float))
     noisy = pixelSet(resized, "readNoiseVolts", 2.0e-3)
@@ -7003,6 +7006,7 @@ def test_pixel_create_get_set_and_ideal_match_legacy_contract() -> None:
     idealized = pixelIdeal(noisy)
     created_ideal = pixelCreate("ideal", wave, 1.5e-6)
     created_ideal_rect = pixelCreate("ideal", wave, np.array([1.5e-6, 1.8e-6], dtype=float))
+    created_ideal_default_wave = pixelCreate("ideal", [], 1.5e-6)
 
     assert np.isclose(float(pixelGet(resized, "width")), 1.5e-6)
     assert np.isclose(float(pixelGet(resized, "height")), 1.5e-6)
@@ -7019,6 +7023,7 @@ def test_pixel_create_get_set_and_ideal_match_legacy_contract() -> None:
     assert np.isclose(float(pixelGet(created_ideal_rect, "width")), 1.8e-6)
     assert np.isclose(float(pixelGet(created_ideal_rect, "pdheight")), 1.5e-6)
     assert np.isclose(float(pixelGet(created_ideal_rect, "pdwidth")), 1.8e-6)
+    assert np.array_equal(np.asarray(pixelGet(created_ideal_default_wave, "wave"), dtype=float), default_wave)
 
 
 def test_pixel_sr_matches_closed_form_responsivity() -> None:

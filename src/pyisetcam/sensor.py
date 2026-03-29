@@ -2854,7 +2854,7 @@ def pixel_create(
 ) -> dict[str, Any]:
     """Create a standalone MATLAB-style pixel payload."""
 
-    resolved_wave = DEFAULT_WAVE.copy() if wave is None else np.asarray(wave, dtype=float).reshape(-1)
+    resolved_wave = DEFAULT_WAVE.copy() if _is_empty_dispatch_placeholder(wave) else np.asarray(wave, dtype=float).reshape(-1)
     normalized = param_format(pixel_type or "default")
 
     if normalized in {"default", "aps"}:
