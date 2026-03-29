@@ -266,7 +266,7 @@ def camera_create(
         return track_camera_session_state(session, camera)
     elif normalized in {"ideal"}:
         oi = oi_create(session=session)
-        sensor = sensor_create_ideal("xyz", asset_store=store, session=session)
+        sensor = sensor_create_ideal(asset_store=store, session=session)
     elif normalized in {"monochrome"}:
         oi = oi_create(session=session)
         sensor = sensor_create("monochrome", asset_store=store, session=session)

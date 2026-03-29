@@ -458,9 +458,9 @@ forms for `sensorCreate('imec44', [], rowcol)`,
 array-of-monochrome contract, preserving the example pixel and shared
 exposure time while splitting filters into per-channel ideal sensors.
 Direct `sensorCreateIdeal('xyz')` now also replays the upstream
-three-sensor `CIE-X/Y/Z-ideal` array, and `cameraCreate('ideal')` now
-returns the matching XYZ camera array instead of collapsing to a single
-sensor. Bare `sensorCreateIdeal()` now also follows the upstream default
+three-sensor `CIE-X/Y/Z-ideal` array, while `cameraCreate('ideal')` now
+again follows the vendored MATLAB wrapper and returns the default
+monochrome ideal camera. Bare `sensorCreateIdeal()` now also follows the upstream default
 again by returning the ideal monochrome sensor unless an explicit ideal
 type is requested, and the documented MATLAB placeholder forms
 `sensorCreateIdeal('monochrome', [], pixelSizeM)` and

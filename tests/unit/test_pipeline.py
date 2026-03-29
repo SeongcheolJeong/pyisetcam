@@ -6309,20 +6309,18 @@ def test_sensor_create_ideal_dispatcher_is_deprecated(asset_store) -> None:
         sensor_create("ideal", asset_store=asset_store)
 
 
-def test_camera_create_ideal_returns_xyz_camera_array(asset_store) -> None:
+def test_camera_create_ideal_returns_monochrome_camera(asset_store) -> None:
     ideal = camera_create("ideal", asset_store=asset_store)
 
-    assert isinstance(ideal, list)
-    assert len(ideal) == 3
-    assert [camera.fields["sensor"].name for camera in ideal] == ["CIE-X-ideal", "CIE-Y-ideal", "CIE-Z-ideal"]
-    assert [camera_get(camera, "sensor filter names") for camera in ideal] == [["rX"], ["gY"], ["bZ"]]
-    assert all(camera.name == "ideal" for camera in ideal)
-    assert all(camera.fields["oi"] is not ideal[0].fields["oi"] for camera in ideal[1:])
-    assert all(camera.fields["ip"] is not ideal[0].fields["ip"] for camera in ideal[1:])
-    assert all(np.array_equal(np.asarray(camera_get(camera, "sensor pattern"), dtype=int), np.array([[1]], dtype=int)) for camera in ideal)
+    assert not isinstance(ideal, list)
+    assert ideal.name == "ideal"
+    assert ideal.fields["sensor"].name == "ideal-monochrome"
+    assert camera_get(ideal, "sensor filter names") == ["w"]
+    assert np.array_equal(np.asarray(camera_get(ideal, "sensor pattern"), dtype=int), np.array([[1]], dtype=int))
 
 
 def test_camera_create_ideal_monochrome_replays_legacy_camera_name(asset_store) -> None:
+    ideal = camera_create("ideal", asset_store=asset_store)
     compact = camera_create("idealmonochrome", asset_store=asset_store)
     spaced = camera_create("ideal monochrome", asset_store=asset_store)
 
@@ -6330,6 +6328,8 @@ def test_camera_create_ideal_monochrome_replays_legacy_camera_name(asset_store) 
     assert spaced.name == "ideal monochrome"
     assert compact.fields["sensor"].name == "ideal-monochrome"
     assert spaced.fields["sensor"].name == "ideal-monochrome"
+    assert compact.fields["sensor"].name == ideal.fields["sensor"].name
+    assert spaced.fields["sensor"].name == ideal.fields["sensor"].name
     assert camera_get(compact, "sensor filter names") == ["w"]
     assert camera_get(spaced, "sensor filter names") == ["w"]
 
