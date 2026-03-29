@@ -670,6 +670,7 @@ from .sensor import (
     sensor_cfa_save,
     sensor_cfa_name_list,
     sensor_ccm,
+    sensor_macbeth_daylight_estimate,
     sensor_check_array,
     sensor_check_human,
     sensor_clear_data,
@@ -2167,6 +2168,7 @@ __all__ = [
     "sensorAddFilter",
     "sensorCfaSave",
     "sensorCCM",
+    "sensorMacbethDaylightEstimate",
     "pixelCenterFillPD",
     "pixelCreate",
     "pixelDescription",
@@ -2223,6 +2225,7 @@ __all__ = [
     "sensor_add_filter",
     "sensorAddNoise",
     "sensor_add_noise",
+    "sensor_macbeth_daylight_estimate",
     "sensor_create_cone_mosaic",
     "sensor_create_imec_ssm_4x4_vis",
     "sensor_gain_offset",
@@ -2840,6 +2843,7 @@ sensorAddNoise = sensor_add_noise
 sensorCfaSave = sensor_cfa_save
 sensorCFANameList = sensor_cfa_name_list
 sensorCCM = sensor_ccm
+sensorMacbethDaylightEstimate = sensor_macbeth_daylight_estimate
 sensorROI = sensor_roi
 sensorCheckArray = sensor_check_array
 sensorCheckHuman = sensor_check_human

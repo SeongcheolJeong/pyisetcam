@@ -384,6 +384,7 @@ from pyisetcam import (
     sensorCFANameList,
     sensorCfaSave,
     sensorAddNoise,
+    sensorMacbethDaylightEstimate,
     sensorClearData,
     sensorCheckArray,
     sensorCheckHuman,
@@ -12889,6 +12890,74 @@ def test_sensor_macbeth_daylight_estimate_script_contract(asset_store) -> None:
     assert camera_data.shape == (3, 24)
     assert design_matrix.shape == (72, 3)
     assert np.allclose(estimated_weights, true_weights, atol=1e-10, rtol=1e-10)
+
+
+def test_sensor_macbeth_daylight_estimate_wrapper_matches_linear_solution(asset_store) -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    reflectance = ie_read_spectra("macbethChart", wave, asset_store=asset_store)
+    sensor = sensor_create(asset_store=asset_store)
+    sensor = sensor_set(sensor, "wave", wave)
+    sensor = sensor_set(sensor, "rows", 82)
+    sensor = sensor_set(sensor, "cols", 122)
+
+    sensor_filters = np.asarray(sensor_get(sensor, "spectral qe"), dtype=float)
+    day_basis_quanta = energy_to_quanta(
+        ie_read_spectra("cieDaylightBasis.mat", wave, asset_store=asset_store),
+        wave,
+    )
+    true_weights = np.array([1.0, 0.0, 0.0], dtype=float)
+    illuminant_photons = day_basis_quanta @ true_weights
+    camera_data = sensor_filters.T @ (illuminant_photons[:, None] * reflectance)
+
+    corner_points = np.array(
+        [
+            [1.0, 82.0],
+            [121.0, 82.0],
+            [121.0, 1.0],
+            [1.0, 1.0],
+        ],
+        dtype=float,
+    )
+    rects, _, _ = sensor_module._chart_rectangles(corner_points, 4, 6, 0.4)
+    volts = np.zeros((82, 122, 3), dtype=float)
+    conversion_gain = float(sensor.fields["pixel"]["conversion_gain_v_per_electron"])
+    for index, rect in enumerate(np.asarray(rects, dtype=int)):
+        col = int(rect[0]) - 1
+        row = int(rect[1]) - 1
+        width = int(rect[2]) + 1
+        height = int(rect[3]) + 1
+        volts[row : row + height, col : col + width, :] = (
+            camera_data[:, index].reshape(1, 1, 3) * conversion_gain
+        )
+    sensor.data["volts"] = volts
+
+    ill_photons, cp, wgts, c_stacked, design_matrix = sensorMacbethDaylightEstimate(
+        sensor,
+        "corner points",
+        corner_points,
+        asset_store=asset_store,
+    )
+
+    x1 = sensor_filters.T @ (day_basis_quanta[:, [0]] * reflectance)
+    x2 = sensor_filters.T @ (day_basis_quanta[:, [1]] * reflectance)
+    x3 = sensor_filters.T @ (day_basis_quanta[:, [2]] * reflectance)
+    expected_matrix = np.column_stack(
+        [
+            x1.reshape(-1, order="F"),
+            x2.reshape(-1, order="F"),
+            x3.reshape(-1, order="F"),
+        ]
+    )
+    expected_stacked = camera_data.reshape(-1, order="F")
+    expected_weights = np.linalg.solve(expected_matrix.T @ expected_matrix, expected_matrix.T @ expected_stacked)
+    expected_weights = expected_weights / expected_weights[0]
+
+    assert np.allclose(cp, corner_points)
+    assert np.allclose(c_stacked, expected_stacked)
+    assert np.allclose(design_matrix, expected_matrix)
+    assert np.allclose(wgts, expected_weights, atol=1e-10, rtol=1e-10)
+    assert np.allclose(ill_photons, day_basis_quanta @ expected_weights, atol=1e-10, rtol=1e-10)
+    assert np.allclose(np.asarray(sensor_get(sensor, "chart rects"), dtype=float), np.asarray(rects, dtype=float))
 
 
 def test_exposure_value_and_photometric_exposure_match_legacy_formulas(asset_store) -> None:

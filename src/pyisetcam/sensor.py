@@ -22,7 +22,7 @@ from .optics import DEFAULT_FOCAL_LENGTH_M
 from .optics import oi_crop, oi_get
 from .session import session_get_selected, session_replace_object, track_session_object
 from .types import OpticalImage, Scene, Sensor, SessionContext
-from .utils import DEFAULT_WAVE, blackbody, ensure_multiple, ie_parameter_otype, linear_to_srgb, param_format, tile_pattern, xyz_to_linear_srgb
+from .utils import DEFAULT_WAVE, blackbody, energy_to_quanta, ensure_multiple, ie_parameter_otype, linear_to_srgb, param_format, tile_pattern, xyz_to_linear_srgb
 from .utils import image_increase_image_rgb_size
 
 _DEFAULT_PIXEL = {
@@ -7664,6 +7664,82 @@ def sensor_ccm(
     return np.asarray(matrix, dtype=float), np.asarray(corner_points).copy()
 
 
+def sensor_macbeth_daylight_estimate(
+    sensor: Sensor,
+    *args: Any,
+    asset_store: AssetStore | None = None,
+    **kwargs: Any,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Estimate a daylight illuminant from Macbeth-chart sensor data."""
+
+    store = _store(asset_store)
+    options = dict(_matlab_kv_pairs(args, function_name="sensorMacbethDaylightEstimate"))
+    for key, value in kwargs.items():
+        if value is None:
+            continue
+        options[param_format(str(key)).replace("_", "")] = value
+
+    corner_points = options.get("cornerpoints")
+    if _is_empty_dispatch_placeholder(corner_points):
+        corner_points = None
+    if corner_points is None:
+        corner_points = sensor_get(sensor, "chart corner points")
+    if corner_points is None or np.asarray(corner_points).size == 0:
+        raise ValueError("sensorMacbethDaylightEstimate requires chart corner points in headless mode.")
+
+    patch_size_fraction = options.get("patchsizefraction", 0.4)
+    if _is_empty_dispatch_placeholder(patch_size_fraction):
+        patch_size_fraction = 0.4
+    patch_size_fraction = float(np.asarray(patch_size_fraction, dtype=float).reshape(-1)[0])
+    if not (0.0 < patch_size_fraction < 1.0):
+        raise ValueError("sensorMacbethDaylightEstimate patch size fraction must be in (0, 1).")
+
+    rects, m_locs, p_size = _chart_rectangles(corner_points, 4, 6, patch_size_fraction)
+    delta = _matlab_round_scalar(patch_size_fraction * float(np.asarray(p_size, dtype=float).reshape(-1)[0]))
+    camera_data = np.asarray(
+        _chart_rects_data(sensor, m_locs, delta, full_data=False, data_type="electrons"),
+        dtype=float,
+    ).T
+    camera_stacked = camera_data.reshape(-1, order="F")
+
+    wave = np.asarray(sensor_get(sensor, "wave"), dtype=float).reshape(-1)
+    day_basis = energy_to_quanta(
+        ie_read_spectra("cieDaylightBasis.mat", wave, asset_store=store),
+        wave,
+    )
+    reflectance = ie_read_spectra("macbethChart", wave, asset_store=store)
+    sensor_filters = np.asarray(sensor_get(sensor, "spectral qe"), dtype=float)
+
+    x1 = sensor_filters.T @ (day_basis[:, [0]] * reflectance)
+    x2 = sensor_filters.T @ (day_basis[:, [1]] * reflectance)
+    x3 = sensor_filters.T @ (day_basis[:, [2]] * reflectance)
+    design_matrix = np.column_stack(
+        [
+            x1.reshape(-1, order="F"),
+            x2.reshape(-1, order="F"),
+            x3.reshape(-1, order="F"),
+        ]
+    )
+
+    normal_matrix = design_matrix.T @ design_matrix
+    rhs = design_matrix.T @ camera_stacked
+    weights = np.linalg.solve(normal_matrix, rhs)
+    weights = weights / max(float(weights[0]), 1e-12)
+    illuminant_photons = day_basis @ weights
+
+    sensor.fields.setdefault("chartP", {})
+    sensor.fields["chartP"]["cornerPoints"] = np.asarray(corner_points).copy()
+    sensor.fields["chartP"]["rects"] = rects.copy()
+
+    return (
+        np.asarray(illuminant_photons, dtype=float).reshape(-1),
+        np.asarray(corner_points, dtype=float).copy(),
+        np.asarray(weights, dtype=float).reshape(-1),
+        np.asarray(camera_stacked, dtype=float).reshape(-1),
+        np.asarray(design_matrix, dtype=float),
+    )
+
+
 sensorComputeSamples = sensor_compute_samples
 autoExposure = auto_exposure
 sensorComputeNoiseFree = sensor_compute_noise_free
@@ -7675,6 +7751,7 @@ sensorComputeFullArray = sensor_compute_full_array
 sensorComputeMEV = sensor_compute_mev
 sensorDR = sensor_dr
 sensorCCM = sensor_ccm
+sensorMacbethDaylightEstimate = sensor_macbeth_daylight_estimate
 sensorComputeSVFilters = sensor_compute_sv_filters
 binNoiseColumnFPN = bin_noise_column_fpn
 binNoiseFPN = bin_noise_fpn
