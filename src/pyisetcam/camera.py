@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -62,6 +63,49 @@ def _track_camera_sequence(
     for index, camera in enumerate(cameras):
         tracked.append(track_camera_session_state(session, camera, select=index == last_index))
     return tracked
+
+
+def _l3_items(l3: Any) -> list[tuple[str, Any]]:
+    if hasattr(l3, "items"):
+        return [(str(key), value) for key, value in l3.items()]
+    if hasattr(l3, "__dict__"):
+        return [(str(key), value) for key, value in vars(l3).items()]
+    raise ValueError("cameraCreate('L3', ...) requires a mapping-like L3 payload.")
+
+
+def _l3_get(l3: Any, *names: str) -> Any:
+    aliases = {param_format(name) for name in names}
+    for key, value in _l3_items(l3):
+        if param_format(key) in aliases:
+            return value
+    return None
+
+
+def _l3_set(l3: Any, name: str, value: Any) -> None:
+    target = param_format(name)
+    if hasattr(l3, "items"):
+        for key in list(l3.keys()):
+            if param_format(str(key)) == target:
+                l3[key] = value
+                return
+        l3[name] = value
+        return
+    if hasattr(l3, "__dict__"):
+        for key in vars(l3):
+            if param_format(str(key)) == target:
+                setattr(l3, key, value)
+                return
+        setattr(l3, name, value)
+        return
+    raise ValueError("cameraCreate('L3', ...) requires a mapping-like L3 payload.")
+
+
+def _l3_clear_data(l3: Any) -> Any:
+    cleared = copy.deepcopy(l3)
+    oi = _l3_get(cleared, "oi")
+    if isinstance(oi, OpticalImage):
+        _l3_set(cleared, "oi", oi_clear_data(oi))
+    return cleared
 
 
 @dataclass
@@ -193,6 +237,32 @@ def camera_create(
         camera.fields["oi"] = oi
         camera.fields["sensor"] = sensor
         camera.fields["ip"] = ip
+        return track_camera_session_state(session, camera)
+    elif normalized == "l3":
+        if not args:
+            raise FileNotFoundError(
+                "cameraCreate('L3') default camera asset is not vendored; pass an L3 payload explicitly."
+            )
+        if len(args) != 1:
+            raise ValueError("cameraCreate('L3', ...) accepts a single L3 payload.")
+        l3 = args[0]
+        oi_value = _l3_get(l3, "oi")
+        sensor_value = _l3_get(l3, "design sensor", "design_sensor", "designsensor")
+        if not isinstance(oi_value, OpticalImage):
+            raise ValueError("cameraCreate('L3', ...) requires an OpticalImage at L3['oi'].")
+        if not isinstance(sensor_value, Sensor):
+            raise ValueError("cameraCreate('L3', ...) requires a Sensor at L3['design sensor'].")
+        camera.name = "L3"
+        camera.fields["oi"] = oi_clear_data(oi_value)
+        camera.fields["sensor"] = sensor_value
+        camera.fields["ip"] = ip_create(
+            "L3",
+            sensor_value,
+            None,
+            _l3_clear_data(l3),
+            asset_store=store,
+            session=session,
+        )
         return track_camera_session_state(session, camera)
     elif normalized in {"ideal"}:
         oi = oi_create(session=session)

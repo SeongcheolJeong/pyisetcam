@@ -7589,6 +7589,30 @@ def test_camera_create_supports_vendor_sensor_variants(asset_store) -> None:
     assert ovt_large[0].fields["ip"] is not ovt_large[1].fields["ip"]
 
 
+def test_camera_create_supports_explicit_l3_payload(asset_store) -> None:
+    design_oi = oi_create("pinhole", asset_store=asset_store)
+    design_oi.data["photons"] = np.ones((4, 5, 3), dtype=float)
+    design_oi.fields["illuminance"] = np.ones((4, 5), dtype=float)
+    design_sensor = sensor_create("monochrome", asset_store=asset_store)
+    l3_payload = {
+        "oi": design_oi,
+        "design sensor": design_sensor,
+        "kernels": np.arange(4, dtype=float).reshape(2, 2),
+    }
+
+    camera = camera_create("l3", l3_payload, asset_store=asset_store)
+
+    assert camera.name == "L3"
+    assert camera_get(camera, "vci type") == "l3"
+    assert camera.fields["sensor"] is design_sensor
+    assert camera.fields["oi"] is not design_oi
+    assert camera.fields["oi"].data == {}
+    assert camera.fields["oi"].fields.get("illuminance") is None
+    assert camera_get(camera, "l3") is not l3_payload
+    assert np.array_equal(np.asarray(camera_get(camera, "l3")["kernels"], dtype=float), l3_payload["kernels"])
+    assert camera_get(camera, "l3")["oi"].data == {}
+
+
 def test_camera_compute_supports_vendor_sensor_variants(asset_store) -> None:
     scene = scene_create(asset_store=asset_store)
     mt9v024_rgbw = camera_compute(camera_create("mt9v024", "rgbw", asset_store=asset_store), scene, asset_store=asset_store)

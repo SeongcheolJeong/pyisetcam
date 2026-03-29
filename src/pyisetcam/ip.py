@@ -302,7 +302,6 @@ def ip_create(
 ) -> ImageProcessor:
     """Create an image processor."""
 
-    del l3
     store = _store(asset_store)
     ip = ImageProcessor(name=str(ip_name))
     if sensor is not None:
@@ -337,6 +336,8 @@ def ip_create(
     ip.fields["datamax"] = (
         None if sensor is None else float(sensor.fields["pixel"]["voltage_swing"])
     )
+    if l3 is not None:
+        ip.fields["l3"] = copy.deepcopy(l3)
     ip.data["transforms"] = [None, None, None]
     return track_ip_session_state(session, _ensure_ip_state(ip))
 

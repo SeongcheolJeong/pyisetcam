@@ -397,8 +397,12 @@ preset by returning per-sensor camera lists with matching OI, sensor, and IP
 objects instead of crashing on list-backed sensor constructors. The same
 camera wrapper lane now also accepts `cameraCreate('current')`, reusing the
 currently selected session `oi`, `sensor`, and `ip` independently and falling
-back to defaults only for the missing pieces. It is also routed through the
-existing IMEC 4x4 multispectral builder, and
+back to defaults only for the missing pieces. It now also accepts explicit
+`cameraCreate('L3', payload)` construction by replaying the supplied L3
+payload's `oi` and `design sensor` entries into a headless camera/IP bundle;
+the upstream no-argument default `L3defaultcamera` asset branch remains
+unsupported because that vendored camera asset is not present in this repo. It
+is also routed through the existing IMEC 4x4 multispectral builder, and
 `sensorCreate('custom', ...)` / `sensorCreate('fourcolor', ...)` now
 reuse the current headless custom filter-pattern helper. The same vendor
 lane now also accepts the practical overload
