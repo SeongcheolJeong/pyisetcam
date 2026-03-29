@@ -403,6 +403,10 @@ also honors MATLAB-style empty placeholders in optional `rowcol`,
 `patch size`, and `gray fill` slots for both dict and key/value forms,
 reusing the helper defaults instead of attempting `int([])` or passing an
 empty layout through to the chart core.
+That same `sceneCreate('sweep frequency', size, maxFreq, wave, yContrast)`
+wrapper now also honors MATLAB-style empty placeholders in the optional
+`maxFreq` slot, so `sceneCreate('sweep frequency', 64, [], [], [])`
+reuses the helper default of `size/16` instead of attempting `float([])`.
 `sensor_create` now includes generic
 `rgbw` / `grbc` / `rccc` presets plus upstream-backed `mt9v024` and `ar0132at`
 RGBW/RCCC variants. The next sensorCreate dispatcher slice is now landed

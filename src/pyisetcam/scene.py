@@ -4352,7 +4352,11 @@ def scene_create(
         else:
             size_vec = np.asarray(size, dtype=float).reshape(-1)
             default_max_frequency = float(size_vec[1] if size_vec.size > 1 else size_vec[0]) / 16.0
-        max_frequency = float(args[1]) if len(args) > 1 else default_max_frequency
+        max_frequency = (
+            default_max_frequency
+            if len(args) <= 1 or _is_empty_scene_dispatch_placeholder(args[1])
+            else float(args[1])
+        )
         wave_arg = None if len(args) <= 2 or _is_empty_scene_dispatch_placeholder(args[2]) else args[2]
         wave = _wave_or_default(wave_arg)
         y_contrast = None if len(args) <= 3 or _is_empty_scene_dispatch_placeholder(args[3]) else args[3]

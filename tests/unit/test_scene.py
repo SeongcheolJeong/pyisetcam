@@ -914,9 +914,11 @@ def test_sweep_frequency_scene_supports_custom_frequency_and_contrast_profile(as
     assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
 
 
-def test_sweep_frequency_dispatch_accepts_empty_size_and_wave_placeholders(asset_store) -> None:
+def test_sweep_frequency_dispatch_accepts_empty_placeholders(asset_store) -> None:
     placeholder = scene_create("sweep frequency", [], 12.0, [], [], asset_store=asset_store)
     explicit = scene_create("sweep frequency", 128, 12.0, None, None, asset_store=asset_store)
+    placeholder_maxf = scene_create("sweep frequency", 64, [], [], [], asset_store=asset_store)
+    explicit_maxf = scene_create("sweep frequency", 64, 4.0, None, None, asset_store=asset_store)
 
     np.testing.assert_allclose(
         np.asarray(scene_get(placeholder, "photons"), dtype=float),
@@ -928,6 +930,12 @@ def test_sweep_frequency_dispatch_accepts_empty_size_and_wave_placeholders(asset
     assert np.array_equal(
         np.asarray(scene_get(placeholder, "wave"), dtype=float),
         np.asarray(scene_get(explicit, "wave"), dtype=float),
+    )
+    np.testing.assert_allclose(
+        np.asarray(scene_get(placeholder_maxf, "photons"), dtype=float),
+        np.asarray(scene_get(explicit_maxf, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
     )
 
 
