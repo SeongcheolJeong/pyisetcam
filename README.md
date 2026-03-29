@@ -385,7 +385,11 @@ and
 documented text shorthand on top of the existing font-object path. The
 same scene lane now also accepts the documented `sceneCreate('vernier',
 type, params)` shorthand on top of the lower-level
-`sceneVernier(scene, type, params)` helper path.
+`sceneVernier(scene, type, params)` helper path. It now also preserves the
+documented default reflectance-chart sources and sample counts when
+MATLAB-style empty placeholders are used in calls like
+`sceneCreate('reflectance chart', 24, [], [], wave, [], [])`, instead of
+coercing `[]` into invalid `sSamples` or `sFiles` payloads.
 `sensor_create` now includes generic
 `rgbw` / `grbc` / `rccc` presets plus upstream-backed `mt9v024` and `ar0132at`
 RGBW/RCCC variants. The next sensorCreate dispatcher slice is now landed

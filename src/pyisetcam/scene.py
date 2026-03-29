@@ -102,8 +102,10 @@ def _macbeth_patch_size_arg(value: Any | None) -> int | None:
 def _is_empty_scene_dispatch_placeholder(value: Any | None) -> bool:
     if value is None:
         return True
-    if isinstance(value, (list, tuple, np.ndarray)):
-        return np.asarray(value).size == 0
+    if isinstance(value, np.ndarray):
+        return value.size == 0
+    if isinstance(value, (list, tuple)):
+        return len(value) == 0
     return False
 
 
@@ -3650,7 +3652,7 @@ def _default_reflectance_sample_files() -> list[str]:
 
 
 def _reflectance_chart_sources(value: Any | None) -> list[Any]:
-    if value is None:
+    if _is_empty_scene_dispatch_placeholder(value):
         return _default_reflectance_chart_files()
     if isinstance(value, (str, Path, np.ndarray)):
         return [value]
@@ -3805,6 +3807,8 @@ def _reflectance_chart_parameters(
     normalized = _normalized_parameter_dict(value)
     files = _reflectance_chart_sources(normalized.get("sfiles"))
     samples = normalized.get("ssamples", np.array([50, 40, 10], dtype=int))
+    if _is_empty_scene_dispatch_placeholder(samples):
+        samples = np.array([50, 40, 10], dtype=int)
     patch_size = int(np.rint(normalized.get("psize", 24)))
     chart_wave = _wave_or_default(normalized.get("wave", wave))
     gray_flag = bool(normalized.get("grayflag", 1))
@@ -4268,9 +4272,9 @@ def scene_create(
             params = _reflectance_chart_parameters(None)
             if len(args) > 0 and not _is_empty_scene_dispatch_placeholder(args[0]):
                 params["psize"] = max(int(np.rint(args[0])), 1)
-            if len(args) > 1:
+            if len(args) > 1 and not _is_empty_scene_dispatch_placeholder(args[1]):
                 params["ssamples"] = args[1]
-            if len(args) > 2:
+            if len(args) > 2 and not _is_empty_scene_dispatch_placeholder(args[2]):
                 params["sfiles"] = _reflectance_chart_sources(args[2])
             if len(args) > 3 and not _is_empty_scene_dispatch_placeholder(args[3]):
                 params["wave"] = _wave_or_default(args[3])

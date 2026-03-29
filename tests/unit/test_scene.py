@@ -1036,6 +1036,50 @@ def test_reflectance_chart_dispatch_accepts_matlab_empty_placeholders(asset_stor
     assert np.array_equal(np.asarray(scene_get(placeholder, "wave"), dtype=float), np.asarray(scene_get(explicit, "wave"), dtype=float))
 
 
+def test_reflectance_chart_dispatch_accepts_empty_source_and_sample_placeholders(asset_store) -> None:
+    wave = np.array([450.0, 550.0, 650.0], dtype=float)
+    explicit = scene_create(
+        "reflectance chart",
+        24,
+        [50, 40, 10],
+        [
+            "MunsellSamples_Vhrel.mat",
+            "Food_Vhrel.mat",
+            "skin/HyspexSkinReflectance.mat",
+        ],
+        wave,
+        True,
+        "r",
+        asset_store=asset_store,
+    )
+
+    placeholder_cases = [
+        scene_create("reflectance chart", 24, [], [], wave, [], [], asset_store=asset_store),
+        scene_create("reflectance chart", 24, None, None, wave, None, None, asset_store=asset_store),
+    ]
+    explicit_chart = scene_get(explicit, "chart parameters")
+
+    for placeholder in placeholder_cases:
+        np.testing.assert_allclose(
+            np.asarray(scene_get(placeholder, "photons"), dtype=float),
+            np.asarray(scene_get(explicit, "photons"), dtype=float),
+            rtol=0.0,
+            atol=0.0,
+        )
+        placeholder_chart = scene_get(placeholder, "chart parameters")
+        assert placeholder_chart["sFiles"] == explicit_chart["sFiles"]
+        assert placeholder_chart["grayFlag"] == explicit_chart["grayFlag"] is True
+        assert placeholder_chart["sampling"] == explicit_chart["sampling"] == "r"
+        assert all(
+            np.array_equal(np.asarray(left, dtype=int), np.asarray(right, dtype=int))
+            for left, right in zip(placeholder_chart["sSamples"], explicit_chart["sSamples"], strict=True)
+        )
+        assert np.array_equal(
+            np.asarray(scene_get(placeholder, "wave"), dtype=float),
+            np.asarray(scene_get(explicit, "wave"), dtype=float),
+        )
+
+
 def test_reflectance_chart_scene_supports_struct_parameters_and_absolute_paths(asset_store) -> None:
     params = {
         "pSize": 8,
