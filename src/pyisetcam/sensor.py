@@ -1943,6 +1943,114 @@ def _sensor_create_imx490_quad(*, asset_store: AssetStore) -> tuple[Sensor, Sens
     return large_lcg, large_hcg, small_lcg, small_hcg
 
 
+def sensor_create_imx490(
+    oi: OpticalImage,
+    *args: Any,
+    asset_store: AssetStore | None = None,
+    seed: int | None = None,
+    session: SessionContext | None = None,
+) -> list[Sensor]:
+    """Mirror the legacy MATLAB sensorCreateIMX490() capture-array helper."""
+
+    store = _store(asset_store)
+    settings = _matlab_kv_pairs(args, function_name="sensorCreateIMX490")
+
+    gains = np.array([1.0, 4.0, 1.0, 4.0], dtype=float)
+    noise_flag = 2
+    exp_time = 1.0 / 60.0
+    for parameter, value in settings:
+        if parameter == "gain":
+            gains = np.asarray(value, dtype=float).reshape(-1)
+            if gains.size != 4:
+                raise ValueError("sensorCreateIMX490 gain must contain four multiplicative gains.")
+        elif parameter == "noiseflag":
+            noise_flag = int(value)
+        elif parameter in {"exptime", "exposuretime", "integrationtime"}:
+            exp_time = float(value)
+        else:
+            raise UnsupportedOptionError("sensorCreateIMX490", parameter)
+    _ = gains
+
+    large = sensor_create("imx490-large", asset_store=store)
+    large = sensor_set(large, "match oi", oi)
+    large = sensor_set(large, "noise flag", noise_flag)
+    large = sensor_set(large, "exp time", exp_time)
+
+    small = sensor_create("imx490-small", asset_store=store)
+    small = sensor_set(small, "match oi", oi)
+    small = sensor_set(small, "noise flag", noise_flag)
+    small = sensor_set(small, "exp time", exp_time)
+
+    oi_spacing_m = float(np.asarray(oi_get(oi, "spatial resolution"), dtype=float).reshape(-1)[0])
+    sensor_spacing_m = float(np.asarray(sensor_get(large, "pixel size"), dtype=float).reshape(-1)[0])
+    if abs(oi_spacing_m - sensor_spacing_m) > 1.0e-9:
+        raise ValueError("sensorCreateIMX490 requires an optical image sampled at the IMX490 pixel size.")
+
+    oi_size = np.asarray(oi_get(oi, "size"), dtype=int).reshape(-1)
+    if oi_size.size != 2:
+        raise ValueError("sensorCreateIMX490 requires a 2-D optical image.")
+    large = sensor_set(large, "size", oi_size)
+    small = sensor_set(small, "size", oi_size)
+
+    capture_specs = (
+        (
+            "large-HCG",
+            large,
+            [
+                ("pixel conversion gain", 200e-6),
+                ("pixel read noise electrons", 0.83),
+                ("pixel dark voltage", 25.6 * 200e-6),
+                ("pixel voltage swing", 22000.0 * 49e-6),
+                ("pixel spectral qe", 1.0),
+            ],
+        ),
+        (
+            "large-LCG",
+            large,
+            [
+                ("pixel conversion gain", 49e-6),
+                ("pixel read noise electrons", 3.05),
+                ("pixel dark voltage", 25.6 * 49e-6),
+                ("pixel voltage swing", 22000.0 * 49e-6),
+                ("pixel spectral qe", 1.0),
+            ],
+        ),
+        (
+            "small-HCG",
+            small,
+            [
+                ("pixel conversion gain", 200e-6),
+                ("pixel read noise electrons", 0.83),
+                ("pixel dark voltage", 4.2 * 200e-6),
+                ("pixel voltage swing", 7900.0 * 49e-6),
+                ("pixel spectral qe", 0.1),
+            ],
+        ),
+        (
+            "small-LCG",
+            small,
+            [
+                ("pixel conversion gain", 49e-6),
+                ("pixel read noise electrons", 2.96),
+                ("pixel dark voltage", 4.2 * 49e-6),
+                ("pixel voltage swing", 7900.0 * 49e-6),
+                ("pixel spectral qe", 0.1),
+            ],
+        ),
+    )
+
+    captures: list[Sensor] = []
+    for index, (name, template, capture_settings) in enumerate(capture_specs):
+        capture = template.clone()
+        for parameter, value in capture_settings:
+            capture = sensor_set(capture, parameter, value)
+        capture = sensor_set(capture, "name", name)
+        capture = sensor_compute(capture, oi, seed=None if seed is None else int(seed) + index)
+        captures.append(capture)
+
+    return _track_sensor_sequence(session, captures)
+
+
 def sensor_create(
     sensor_type: str = "default",
     pixel: dict[str, Any] | None = None,
@@ -7374,6 +7482,7 @@ sensorShowImage = sensor_show_image
 sensorSaveImage = sensor_save_image
 sensorCheckHuman = sensor_check_human
 humanConeMosaic = human_cone_mosaic
+sensorCreateIMX490 = sensor_create_imx490
 sensorCreateConeMosaic = sensor_create_cone_mosaic
 sensorHumanResize = sensor_human_resize
 sensorCreateIMECSSM4x4vis = sensor_create_imec_ssm_4x4_vis

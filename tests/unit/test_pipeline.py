@@ -406,6 +406,7 @@ from pyisetcam import (
     sensor_create_ideal,
     sensor_create_array,
     sensorCreateConeMosaic,
+    sensorCreateIMX490,
     sensorCreateIMECSSM4x4vis,
     sensor_dr,
     sensor_dng_read,
@@ -11479,6 +11480,44 @@ def test_sensor_create_array_supports_imx490_split_pixel_type(asset_store) -> No
     assert np.isclose(
         float(sensor_get(sensor_array[3], "pixel conversion gain")),
         4.0 * float(sensor_get(sensor_array[2], "pixel conversion gain")),
+    )
+
+
+def test_sensor_create_imx490_replays_upstream_capture_sequence(asset_store) -> None:
+    scene = scene_create("uniform", 256, asset_store=asset_store)
+    oi = oi_compute(oi_create(asset_store=asset_store), scene)
+    resampled = oi_spatial_resample(oi_crop(oi, "border"), 3.0, "um")
+
+    sensor_array = sensorCreateIMX490(
+        resampled,
+        "exp time",
+        0.1,
+        "noise flag",
+        0,
+        asset_store=asset_store,
+    )
+
+    assert isinstance(sensor_array, list)
+    assert [str(sensor_get(sensor, "name")) for sensor in sensor_array] == [
+        "large-HCG",
+        "large-LCG",
+        "small-HCG",
+        "small-LCG",
+    ]
+    assert all(tuple(sensor_get(sensor, "size")) == tuple(oi_get(resampled, "size")) for sensor in sensor_array)
+    assert all(np.isclose(float(sensor_get(sensor, "exp time")), 0.1) for sensor in sensor_array)
+    assert all(np.asarray(sensor_get(sensor, "volts"), dtype=float).shape == tuple(oi_get(resampled, "size")) for sensor in sensor_array)
+    np.testing.assert_allclose(
+        [float(sensor_get(sensor, "pixel conversion gain")) for sensor in sensor_array],
+        np.array([200e-6, 49e-6, 200e-6, 49e-6], dtype=float),
+    )
+    np.testing.assert_allclose(
+        [float(sensor_get(sensor, "pixel read noise electrons")) for sensor in sensor_array],
+        np.array([0.83, 3.05, 0.83, 2.96], dtype=float),
+    )
+    np.testing.assert_allclose(
+        [float(np.mean(np.asarray(sensor_get(sensor, "pixel spectral qe"), dtype=float))) for sensor in sensor_array],
+        np.array([1.0, 1.0, 0.1, 0.1], dtype=float),
     )
 
 

@@ -622,6 +622,7 @@ from .scene import (
 from .sensor import (
     analog_to_digital,
     imx490_compute,
+    sensor_create_imx490,
     ml_analyze_array_etendue,
     ml_description,
     ml_get_current,
@@ -2123,6 +2124,8 @@ __all__ = [
     "noise_fpn",
     "imx490Compute",
     "imx490_compute",
+    "sensorCreateIMX490",
+    "sensor_create_imx490",
     "binNoiseColumnFPN",
     "binNoiseFPN",
     "binNoiseRead",
@@ -2814,6 +2817,7 @@ sensorComputeSVFilters = sensor_compute_sv_filters
 regridOI2ISA = regrid_oi_to_isa
 plane2rgb = plane2mosaic
 imx490Compute = imx490_compute
+sensorCreateIMX490 = sensor_create_imx490
 sensorAddFilter = sensor_add_filter
 sensorAddNoise = sensor_add_noise
 sensorCfaSave = sensor_cfa_save
