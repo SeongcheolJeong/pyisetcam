@@ -2177,6 +2177,8 @@ def sensor_create_ideal(
     wave = sensor_example.fields["wave"] if sensor_example is not None else DEFAULT_WAVE.copy()
 
     if normalized in {"monochrome"}:
+        if sensor_example is not None:
+            raise ValueError("Sensor example not used for monochrome case.")
         sensor = _sensor_base("ideal-monochrome", np.asarray(wave, dtype=float), size, pixel)
         sensor.fields["pattern"] = np.array([[1]], dtype=int)
         sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle("monochrome", np.asarray(wave, dtype=float), asset_store=store)

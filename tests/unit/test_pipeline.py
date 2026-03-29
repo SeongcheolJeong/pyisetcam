@@ -6297,6 +6297,13 @@ def test_sensor_create_ideal_accepts_empty_placeholder_for_pixel_size(asset_stor
         )
 
 
+def test_sensor_create_ideal_monochrome_rejects_nonempty_sensor_example(asset_store) -> None:
+    example = sensor_create("default", asset_store=asset_store)
+
+    with pytest.raises(ValueError, match=r"Sensor example not used for monochrome case\."):
+        sensor_create_ideal("monochrome", example, asset_store=asset_store)
+
+
 def test_sensor_create_ideal_dispatcher_is_deprecated(asset_store) -> None:
     with pytest.raises(ValueError, match=r"sensorCreate\('ideal'\) is deprecated\. Use sensorCreateIdeal"):
         sensor_create("ideal", asset_store=asset_store)

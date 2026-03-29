@@ -465,7 +465,10 @@ again by returning the ideal monochrome sensor unless an explicit ideal
 type is requested, and the documented MATLAB placeholder forms
 `sensorCreateIdeal('monochrome', [], pixelSizeM)` and
 `sensorCreateIdeal('xyz', [], pixelSizeM)` now honor the empty
-sensor-example slot instead of crashing. `sensorCreateArray(...)` now also supports the
+sensor-example slot instead of crashing. Non-empty
+`sensorCreateIdeal('monochrome', sensorExample, ...)` calls now also match
+upstream by failing instead of silently templating from that example.
+`sensorCreateArray(...)` now also supports the
 ideal-array families
 `'xyz'`, `'matchxyz'`, `'match'`, and `'monochrome'` instead of stopping at
 the OVT split-pixel lane. The deprecated top-level
