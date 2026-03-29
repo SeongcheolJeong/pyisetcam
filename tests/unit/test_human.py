@@ -20,6 +20,7 @@ from pyisetcam import (
     humanPupilSize,
     humanSpaceTime,
     humanUVSafety,
+    humanWaveDefocus,
     imageLinearTransform,
     ieConePlot,
     ijspeert,
@@ -135,6 +136,13 @@ def test_human_cone_mosaic_replays_defaults_and_lms_density_patchup() -> None:
 
     np.testing.assert_allclose(corrected_densities, np.array([0.0, 1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0]))
     assert corrected_seed == 7
+
+
+def test_human_wave_defocus_matches_thibos_formula() -> None:
+    wave = np.array([400.0, 500.0, 700.0], dtype=float)
+    expected = 1.7312 - (0.63346 / (wave * 1.0e-3 - 0.21410))
+
+    np.testing.assert_allclose(humanWaveDefocus(wave), expected)
 
 
 def test_watson_impulse_response_is_normalized() -> None:

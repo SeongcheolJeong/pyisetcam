@@ -261,6 +261,7 @@ from .optics import (
     human_oi,
     human_otf,
     human_otf_ibio,
+    human_wave_defocus,
     ie_field_height_to_index,
     ijspeert,
     lens_list,
@@ -1064,6 +1065,7 @@ __all__ = [
     "humanOI",
     "humanOTF",
     "humanOTF_ibio",
+    "humanWaveDefocus",
     "human_achromatic_otf",
     "human_cone_contrast",
     "human_cone_isolating",
@@ -1073,6 +1075,7 @@ __all__ = [
     "human_oi",
     "human_otf",
     "human_otf_ibio",
+    "human_wave_defocus",
     "human_optical_density",
     "human_pupil_size",
     "human_space_time",
@@ -2692,6 +2695,7 @@ humanMacularTransmittance = human_macular_transmittance
 humanOI = human_oi
 humanOTF = human_otf
 humanOTF_ibio = human_otf_ibio
+humanWaveDefocus = human_wave_defocus
 opticsDefocusCore = optics_defocus_core
 opticsDefocusDepth = optics_defocus_depth
 opticsDepthDefocus = optics_depth_defocus

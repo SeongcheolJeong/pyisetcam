@@ -2734,6 +2734,12 @@ def _human_wave_defocus(wave_nm: Any) -> np.ndarray:
     return q1 - (q2 / (wave * 1e-3 - q3))
 
 
+def human_wave_defocus(wave_nm: Any) -> np.ndarray:
+    """Legacy MATLAB humanWaveDefocus() compatibility wrapper."""
+
+    return _human_wave_defocus(wave_nm)
+
+
 def human_achromatic_otf(
     sample_sf: Any | None = None,
     model: str = "exp",
