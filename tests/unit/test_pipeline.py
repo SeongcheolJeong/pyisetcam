@@ -6233,6 +6233,21 @@ def test_sensor_create_ideal_match_and_match_xyz_replay_legacy_contract(asset_st
         assert np.isclose(float(current_pixel["fill_factor"]), float(source_pixel["fill_factor"]))
 
 
+def test_sensor_create_ideal_defaults_to_monochrome(asset_store) -> None:
+    implicit = sensor_create_ideal(asset_store=asset_store)
+    explicit = sensor_create_ideal("monochrome", asset_store=asset_store)
+
+    assert isinstance(implicit, sensor_module.Sensor)
+    assert implicit.name == "ideal-monochrome"
+    assert explicit.name == "ideal-monochrome"
+    assert np.array_equal(np.asarray(sensor_get(implicit, "pattern"), dtype=int), np.array([[1]], dtype=int))
+    assert np.array_equal(np.asarray(sensor_get(implicit, "pattern"), dtype=int), np.asarray(sensor_get(explicit, "pattern"), dtype=int))
+    assert sensor_get(implicit, "filter names") == ["w"]
+    assert sensor_get(implicit, "filter names") == sensor_get(explicit, "filter names")
+    assert tuple(np.asarray(sensor_get(implicit, "size"), dtype=int)) == tuple(np.asarray(sensor_get(explicit, "size"), dtype=int))
+    assert np.array_equal(np.asarray(sensor_get(implicit, "wave"), dtype=float), np.asarray(sensor_get(explicit, "wave"), dtype=float))
+
+
 def test_camera_create_ideal_returns_xyz_camera_array(asset_store) -> None:
     ideal = camera_create("ideal", asset_store=asset_store)
 

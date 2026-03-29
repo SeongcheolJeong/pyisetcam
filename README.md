@@ -460,7 +460,10 @@ exposure time while splitting filters into per-channel ideal sensors.
 Direct `sensorCreateIdeal('xyz')` now also replays the upstream
 three-sensor `CIE-X/Y/Z-ideal` array, and `cameraCreate('ideal')` now
 returns the matching XYZ camera array instead of collapsing to a single
-sensor. `sensorCreateArray(...)` now also supports the ideal-array families
+sensor. Bare `sensorCreateIdeal()` now also follows the upstream default
+again by returning the ideal monochrome sensor unless an explicit ideal
+type is requested. `sensorCreateArray(...)` now also supports the
+ideal-array families
 `'xyz'`, `'matchxyz'`, `'match'`, and `'monochrome'` instead of stopping at
 the OVT split-pixel lane.
 the dispatcher also exposes the legacy

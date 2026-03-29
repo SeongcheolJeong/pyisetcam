@@ -2156,7 +2156,7 @@ def sensor_create(
 
 
 def sensor_create_ideal(
-    ideal_type: str = "xyz",
+    ideal_type: str = "monochrome",
     sensor_example: Sensor | None = None,
     pixel_size_m: float | None = None,
     *,
