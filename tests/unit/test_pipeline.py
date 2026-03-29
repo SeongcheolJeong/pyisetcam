@@ -11622,6 +11622,34 @@ def test_sensor_create_array_supports_imx490_split_pixel_type(asset_store) -> No
     )
 
 
+def test_sensor_array_wrappers_treat_empty_array_type_as_ovt_default(asset_store) -> None:
+    split_default = sensor_module.sensor_create_split_pixel(asset_store=asset_store)
+    split_placeholder = sensor_module.sensor_create_split_pixel("array type", [], asset_store=asset_store)
+    split_placeholder_settings = sensor_module.sensor_create_split_pixel("array type", [], "exp time", 0.01, asset_store=asset_store)
+
+    assert isinstance(split_default, list)
+    assert isinstance(split_placeholder, list)
+    assert isinstance(split_placeholder_settings, list)
+    assert [sensor_get(current, "name") for current in split_placeholder] == [sensor_get(current, "name") for current in split_default]
+    assert [tuple(np.asarray(sensor_get(current, "size"), dtype=int)) for current in split_placeholder] == [
+        tuple(np.asarray(sensor_get(current, "size"), dtype=int)) for current in split_default
+    ]
+    assert all(np.isclose(float(sensor_get(current, "exp time")), 0.01) for current in split_placeholder_settings)
+
+    array_default = sensor_create_array(asset_store=asset_store)
+    array_placeholder = sensor_create_array("array type", [], asset_store=asset_store)
+    array_placeholder_settings = sensor_create_array("array type", [], "exp time", 0.02, asset_store=asset_store)
+
+    assert isinstance(array_default, list)
+    assert isinstance(array_placeholder, list)
+    assert isinstance(array_placeholder_settings, list)
+    assert [sensor_get(current, "name") for current in array_placeholder] == [sensor_get(current, "name") for current in array_default]
+    assert [tuple(np.asarray(sensor_get(current, "size"), dtype=int)) for current in array_placeholder] == [
+        tuple(np.asarray(sensor_get(current, "size"), dtype=int)) for current in array_default
+    ]
+    assert all(np.isclose(float(sensor_get(current, "exp time")), 0.02) for current in array_placeholder_settings)
+
+
 def test_sensor_create_imx490_replays_upstream_capture_sequence(asset_store) -> None:
     scene = scene_create("uniform", 256, asset_store=asset_store)
     oi = oi_compute(oi_create(asset_store=asset_store), scene)

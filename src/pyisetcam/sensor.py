@@ -2681,6 +2681,8 @@ def sensor_create_split_pixel(
     shared_settings: list[tuple[str, Any]] = []
     for parameter, value in settings:
         if parameter == "arraytype":
+            if _is_empty_dispatch_placeholder(value):
+                continue
             array_type = str(value)
             continue
         shared_settings.append((parameter, value))
@@ -2708,6 +2710,8 @@ def sensor_create_array(
     shared_settings: list[tuple[str, Any]] = []
     for parameter, value in settings:
         if parameter == "arraytype":
+            if _is_empty_dispatch_placeholder(value):
+                continue
             array_type = str(value)
             continue
         if parameter == "sensorexample":
