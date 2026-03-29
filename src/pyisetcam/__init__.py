@@ -639,6 +639,7 @@ from .sensor import (
     pixel_center_fill_pd,
     pixel_create,
     pixel_description,
+    pixel_dr,
     pixel_get,
     pixel_ideal,
     pixel_position_pd,
@@ -1863,6 +1864,7 @@ __all__ = [
     "pixel_snr",
     "pixel_snr_luxsec",
     "pixel_v_per_lux_sec",
+    "pixelDR",
     "sensor_snr",
     "sensor_snr_luxsec",
     "sensor_plot_color",
@@ -2309,6 +2311,7 @@ __all__ = [
     "pixel_ideal",
     "pixel_position_pd",
     "pixel_transmittance",
+    "pixel_dr",
     "bin_pixel",
     "bin_pixel_post",
     "pixelSNR",
@@ -2850,6 +2853,7 @@ LoadRawSensorData = load_raw_sensor_data
 pixelCenterFillPD = pixel_center_fill_pd
 pixelCreate = pixel_create
 pixelDescription = pixel_description
+pixelDR = pixel_dr
 pixelGet = pixel_get
 pixelIdeal = pixel_ideal
 pixelPositionPD = pixel_position_pd

@@ -360,6 +360,7 @@ from pyisetcam import (
     pixelCenterFillPD,
     pixelCreate,
     pixelDescription,
+    pixelDR,
     pixelGet,
     pixelIdeal,
     pixelPositionPD,
@@ -5069,6 +5070,8 @@ def test_sensor_get_set_supports_pixel_optical_and_spectral_metadata(asset_store
 
     expected_pixel_dr = 20.0 * np.log10((1.2 - 2.0e-3 * 0.01) / np.sqrt((2.0e-3 * 0.01) + (1.0e-3**2)))
     assert np.isclose(sensor_get(sensor, "pixeldynamicrange"), expected_pixel_dr)
+    assert np.isclose(pixelDR(sensor), expected_pixel_dr)
+    assert np.isclose(pixelDR(sensor, []), expected_pixel_dr)
 
     sensor = sensor_set(sensor, "n", np.array([1.0, 2.0, 3.5], dtype=float))
     assert np.allclose(sensor_get(sensor, "refractive indices"), np.array([1.0, 2.0, 3.5], dtype=float))

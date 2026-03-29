@@ -3091,6 +3091,14 @@ def pixel_sr(pixel: Any) -> np.ndarray:
     return _pixel_spectral_sr(_pixel_sensor_from_value(pixel))
 
 
+def pixel_dr(sensor: Sensor, integration_time: Any | None = None) -> Any:
+    """Return MATLAB-style pixel dynamic range in dB."""
+
+    if _is_empty_dispatch_placeholder(integration_time):
+        integration_time = None
+    return _pixel_dynamic_range(sensor, integration_time)
+
+
 def pixel_position_pd(pixel: Any, place: str | None = None) -> dict[str, Any]:
     """Place the photodetector within a standalone MATLAB-style pixel."""
 
@@ -7551,6 +7559,7 @@ binPixel = bin_pixel
 binPixelPost = bin_pixel_post
 pvFullOverlap = pv_full_overlap
 pvReduction = pv_reduction
+pixelDR = pixel_dr
 pixelTransmittance = pixel_transmittance
 ptInterfaceMatrix = pt_interface_matrix
 ptPoyntingFactor = pt_poynting_factor
