@@ -6049,6 +6049,15 @@ def test_sensor_model_wrappers_match_legacy_vendor_contracts(asset_store) -> Non
     assert direct_ar0132at.fields["size"] == tuple_ar0132at.fields["size"]
     assert np.array_equal(sensor_get(direct_ar0132at, "pattern"), sensor_get(tuple_ar0132at, "pattern"))
 
+    multi_mt9v024 = sensor_create("mt9v024", [], ["rgb", "mono", "rccc"], asset_store=asset_store)
+    multi_ar0132at = sensor_create("ar0132at", [], ("rgb", "rgbw", "rccc"), asset_store=asset_store)
+    assert [sensor.name for sensor in multi_mt9v024] == ["MTV9V024-RGB", "MTV9V024-Mono", "MTV9V024-RCCC"]
+    assert [sensor.name for sensor in multi_ar0132at] == ["AR0132AT-RGB", "AR0132AT-RGBW", "AR0132AT-RCCC"]
+    assert [tuple(sensor_get(sensor, "size")) for sensor in multi_mt9v024] == [(480, 752), (480, 752), (480, 752)]
+    assert [tuple(sensor_get(sensor, "size")) for sensor in multi_ar0132at] == [(960, 1280), (960, 1280), (960, 1280)]
+    assert [sensor_get(sensor, "filtercolorletters") for sensor in multi_mt9v024] == ["rgb", "w", "rw"]
+    assert [sensor_get(sensor, "filtercolorletters") for sensor in multi_ar0132at] == ["rgb", "rgbw", "rw"]
+
     imx363 = sensorIMX363V2(None, "row col", [12, 16], asset_store=asset_store)
     direct_imx363 = sensor_create("imx363", None, "row col", [12, 16], asset_store=asset_store)
     overload_imx363 = sensor_create("imx363", "row col", [12, 16], asset_store=asset_store)

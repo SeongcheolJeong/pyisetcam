@@ -1546,17 +1546,20 @@ def _sensor_from_upstream_model(
     return sensor
 
 
-def _sensor_variant_name(args: tuple[Any, ...], default: str) -> str:
+def _sensor_variant_names(args: tuple[Any, ...], default: str) -> list[str]:
     if not args:
-        return default
+        return [default]
     variant = args[0]
     if isinstance(variant, (list, tuple, np.ndarray)):
         values = np.asarray(variant, dtype=object).reshape(-1)
         if values.size == 0:
-            return default
-        if values.size == 1:
-            return str(values[0])
-    return str(variant)
+            return [default]
+        return [str(value) for value in values]
+    return [str(variant)]
+
+
+def _sensor_variant_name(args: tuple[Any, ...], default: str) -> str:
+    return _sensor_variant_names(args, default)[0]
 
 
 def _human_cone_mosaic(
@@ -1809,7 +1812,7 @@ def sensor_create(
     *args: Any,
     asset_store: AssetStore | None = None,
     session: SessionContext | None = None,
-) -> Sensor:
+) -> Sensor | list[Sensor]:
     """Create a supported sensor."""
 
     store = _store(asset_store)
@@ -1939,10 +1942,18 @@ def sensor_create(
         return track_session_object(session, sensor)
 
     if normalized == "mt9v024":
-        return track_session_object(session, _sensor_vendor_mt9v024(_sensor_variant_name(args, "rgb"), asset_store=store))
+        variants = _sensor_variant_names(args, "rgb")
+        sensors = [_sensor_vendor_mt9v024(variant, asset_store=store) for variant in variants]
+        if len(sensors) == 1:
+            return track_session_object(session, sensors[0])
+        return _track_sensor_sequence(session, sensors)
 
     if normalized == "ar0132at":
-        return track_session_object(session, _sensor_vendor_ar0132at(_sensor_variant_name(args, "rgb"), asset_store=store))
+        variants = _sensor_variant_names(args, "rgb")
+        sensors = [_sensor_vendor_ar0132at(variant, asset_store=store) for variant in variants]
+        if len(sensors) == 1:
+            return track_session_object(session, sensors[0])
+        return _track_sensor_sequence(session, sensors)
 
     if normalized in {"imx363", "googlepixel4a"}:
         sensor = _sensor_vendor_imx363(asset_store=store)

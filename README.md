@@ -385,7 +385,10 @@ RGBW/RCCC variants. The next sensorCreate dispatcher slice is now landed
 too: `sensorCreate('light field', oi)` and `sensorCreate('light field',
 pixel, oi)` reuse the headless light-field helper with MATLAB-style OI
 name replay, `sensorCreate('dual pixel', [], oi, nMicrolens)` now mirrors
-the upstream OI-sampled split-pixel geometry contract, and direct
+the upstream OI-sampled split-pixel geometry contract, the documented
+multi-variant payloads for `sensorCreate('MT9V024', [], {'rgb','mono','rccc'})`
+and `sensorCreate('ar0132at', [], {'rgb','rgbw','rccc'})` now return
+tracked sensor lists in the requested order, and direct
 `sensorCreate('ovt-large')` / `sensorCreate('ovt-small')` now expose the
 existing OVT vendor presets. `sensorCreate('imec44', rowcol)` is now
 also routed through the existing IMEC 4x4 multispectral builder, and
