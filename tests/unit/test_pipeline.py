@@ -11265,6 +11265,35 @@ def test_sensor_compute_array_supports_ovt_saturated_flow(asset_store) -> None:
     assert np.any(np.sum(saturated, axis=(0, 1)) > 0)
 
 
+def test_sensor_create_array_supports_ideal_array_types(asset_store) -> None:
+    xyz_array = sensor_create_array("array type", "xyz", "size", np.array([20, 24], dtype=int), asset_store=asset_store)
+
+    assert isinstance(xyz_array, list)
+    assert [sensor_get(current, "name") for current in xyz_array] == ["CIE-X-ideal", "CIE-Y-ideal", "CIE-Z-ideal"]
+    assert [sensor_get(current, "filter names") for current in xyz_array] == [["rX"], ["gY"], ["bZ"]]
+    assert all(tuple(np.asarray(sensor_get(current, "size"), dtype=int)) == (20, 24) for current in xyz_array)
+    assert all(np.array_equal(np.asarray(sensor_get(current, "pattern"), dtype=int), np.array([[1]], dtype=int)) for current in xyz_array)
+    assert all(np.isclose(float(sensor_get(current, "exp time")), 1.0) for current in xyz_array)
+    assert all(sensor_get(current, "noise flag") == -1 for current in xyz_array)
+    assert all(current.fields["mosaic"] is False for current in xyz_array)
+
+    example = sensor_set(sensor_create("default", asset_store=asset_store), "exp time", 0.02)
+    matched_xyz = sensor_create_array("array type", "matchxyz", "sensor example", example, "size", np.array([16, 18], dtype=int), asset_store=asset_store)
+
+    assert isinstance(matched_xyz, list)
+    assert [sensor_get(current, "name") for current in matched_xyz] == ["mono-rDefault", "mono-gDefault", "mono-bDefault"]
+    assert [sensor_get(current, "filter names") for current in matched_xyz] == [["rX"], ["gY"], ["bZ"]]
+    assert all(tuple(np.asarray(sensor_get(current, "size"), dtype=int)) == (16, 18) for current in matched_xyz)
+    assert all(np.isclose(float(sensor_get(current, "exp time")), 0.02) for current in matched_xyz)
+
+    monochrome = sensor_create_array("array type", "monochrome", "size", np.array([12, 14], dtype=int), asset_store=asset_store)
+
+    assert isinstance(monochrome, sensor_module.Sensor)
+    assert tuple(np.asarray(sensor_get(monochrome, "size"), dtype=int)) == (12, 14)
+    assert sensor_get(monochrome, "filter names") == ["w"]
+    assert np.array_equal(np.asarray(sensor_get(monochrome, "pattern"), dtype=int), np.array([[1]], dtype=int))
+
+
 def test_run_python_case_supports_sensor_split_pixel_ovt_saturated_parity_case(asset_store) -> None:
     case = run_python_case_with_context("sensor_split_pixel_ovt_saturated_small", asset_store=asset_store)
 

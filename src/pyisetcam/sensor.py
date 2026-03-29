@@ -1776,6 +1776,35 @@ def _sensor_create_ideal_match_sequence(
     return sensors
 
 
+def _sensor_create_ideal_xyz_sequence(
+    *,
+    asset_store: AssetStore,
+    pixel_size_m: float | None = None,
+) -> list[Sensor]:
+    wave = DEFAULT_WAVE.copy()
+    pixel = _default_pixel(None)
+    resolved_pixel_size = 2.8e-6 if pixel_size_m is None else float(pixel_size_m)
+    pixel["size_m"] = np.array([resolved_pixel_size, resolved_pixel_size], dtype=float)
+    pixel["fill_factor"] = 1.0
+    pixel["dark_voltage_v_per_sec"] = 0.0
+    pixel["read_noise_v"] = 0.0
+    pixel["voltage_swing"] = 1e6
+
+    filter_spectra, filter_names = _filter_bundle("xyz", wave, asset_store=asset_store)
+    sensor_names = ["CIE-X-ideal", "CIE-Y-ideal", "CIE-Z-ideal"]
+    sensors: list[Sensor] = []
+    for index in range(3):
+        current = _sensor_base(sensor_names[index], wave, (72, 88), pixel)
+        current.fields["pattern"] = np.array([[1]], dtype=int)
+        current.fields["filter_spectra"] = np.asarray(filter_spectra[:, index], dtype=float).reshape(-1, 1)
+        current.fields["filter_names"] = [str(filter_names[index])]
+        current.fields["noise_flag"] = -1
+        current.fields["mosaic"] = False
+        current.fields["integration_time"] = 1.0
+        sensors.append(current)
+    return sensors
+
+
 def _sensor_custom_dispatch(
     filter_pattern: Any,
     filter_file: Any,
@@ -2437,20 +2466,44 @@ def sensor_create_split_pixel(
 def sensor_create_array(
     *args: Any,
     asset_store: AssetStore | None = None,
-) -> list[Sensor]:
+) -> Sensor | list[Sensor]:
     """Create a MATLAB-style coordinated sensor array."""
 
+    store = _store(asset_store)
     settings = _matlab_kv_pairs(args, function_name="sensorCreateArray")
     array_type = "ovt"
-    forward_args: list[Any] = []
+    sensor_example: Sensor | None = None
+    shared_settings: list[tuple[str, Any]] = []
     for parameter, value in settings:
         if parameter == "arraytype":
             array_type = str(value)
-        forward_args.extend((parameter, value))
+            continue
+        if parameter == "sensorexample":
+            if not isinstance(value, Sensor):
+                raise ValueError("sensorCreateArray('sensor example', ...) requires a Sensor.")
+            sensor_example = value
+            continue
+        shared_settings.append((parameter, value))
 
     normalized_array_type = param_format(array_type)
     if normalized_array_type == "ovt":
-        return sensor_create_split_pixel(*forward_args, asset_store=asset_store)
+        forward_args: list[Any] = ["arraytype", array_type]
+        for parameter, value in shared_settings:
+            forward_args.extend((parameter, value))
+        return sensor_create_split_pixel(*forward_args, asset_store=store)
+    if normalized_array_type == "monochrome":
+        sensor = sensor_create_ideal("monochrome", asset_store=store)
+        return _apply_sensor_settings(sensor, shared_settings)
+    if normalized_array_type == "xyz":
+        sensors = _sensor_create_ideal_xyz_sequence(asset_store=store)
+        return [_apply_sensor_settings(sensor, shared_settings) for sensor in sensors]
+    if normalized_array_type in {"match", "matchxyz"}:
+        if sensor_example is None:
+            raise ValueError(f"sensorCreateArray('array type', '{array_type}', ...) requires a sensor example.")
+        sensors = sensor_create_ideal(array_type, sensor_example, asset_store=store)
+        if isinstance(sensors, Sensor):
+            return _apply_sensor_settings(sensors, shared_settings)
+        return [_apply_sensor_settings(sensor, shared_settings) for sensor in sensors]
     raise UnsupportedOptionError("sensorCreateArray", array_type)
 
 

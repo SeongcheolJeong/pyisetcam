@@ -457,6 +457,9 @@ forms for `sensorCreate('imec44', [], rowcol)`,
 `sensorCreateIdeal('match xyz', sensor)` now also replay the upstream
 array-of-monochrome contract, preserving the example pixel and shared
 exposure time while splitting filters into per-channel ideal sensors, and
+`sensorCreateArray(...)` now also supports the ideal-array families
+`'xyz'`, `'matchxyz'`, `'match'`, and `'monochrome'` instead of stopping at
+the OVT split-pixel lane.
 the dispatcher also exposes the legacy
 `sensorCreate('Nikon D100')` preset from the vendored Nikon MAT asset. The
 dispatcher also now accepts the remaining parenthesized Bayer CFA aliases
