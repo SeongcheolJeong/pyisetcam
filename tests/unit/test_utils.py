@@ -357,6 +357,7 @@ def test_floyd_steinberg_matches_legacy_error_diffusion_and_alias() -> None:
 
 
 def test_unit_frequency_list_matches_matlab_even_and_odd() -> None:
+    assert np.allclose(unit_frequency_list(1), np.array([0.0]))
     assert np.allclose(unit_frequency_list(4), np.array([-1.0, -0.5, 0.0, 0.5]))
     assert np.allclose(unit_frequency_list(5), np.array([-1.0, -0.5, 0.0, 0.5, 1.0]))
 

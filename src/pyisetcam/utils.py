@@ -634,7 +634,10 @@ def unit_frequency_list(sample_count: int) -> NDArray[np.float64]:
         middle = (count // 2) + 1
     coordinates = np.arange(1, count + 1, dtype=float)
     coordinates = coordinates - coordinates[middle - 1]
-    return coordinates / np.max(np.abs(coordinates))
+    max_coordinate = np.max(np.abs(coordinates))
+    if max_coordinate <= 0.0:
+        return np.zeros_like(coordinates)
+    return coordinates / max_coordinate
 
 
 def ie_unit_scale_factor(unit_name: str) -> float:
