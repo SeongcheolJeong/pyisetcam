@@ -1723,6 +1723,59 @@ def _track_sensor_sequence(
     return tracked
 
 
+def _sensor_create_ideal_match_exposure_time(sensor_example: Sensor) -> float:
+    if bool(sensor_get(sensor_example, "auto exposure")):
+        return 0.05
+    exposure_time = np.asarray(sensor_get(sensor_example, "exp time"), dtype=float).reshape(-1)
+    if exposure_time.size == 0:
+        return 0.0
+    return float(exposure_time[0])
+
+
+def _sensor_create_ideal_match_sequence(
+    sensor_example: Sensor,
+    *,
+    asset_store: AssetStore,
+    use_xyz_filters: bool = False,
+) -> list[Sensor]:
+    source_names = list(sensor_get(sensor_example, "filter names"))
+    source_filters = np.asarray(sensor_get(sensor_example, "filter spectra"), dtype=float)
+    if source_filters.ndim == 1:
+        source_filters = source_filters.reshape(-1, 1)
+    exposure_time = _sensor_create_ideal_match_exposure_time(sensor_example)
+
+    if use_xyz_filters:
+        target_filters, target_names = _filter_bundle(
+            "xyz",
+            np.asarray(sensor_get(sensor_example, "wave"), dtype=float).reshape(-1),
+            asset_store=asset_store,
+        )
+        target_filters = np.asarray(target_filters, dtype=float)
+        if target_filters.ndim == 1:
+            target_filters = target_filters.reshape(-1, 1)
+        channel_count = min(3, int(target_filters.shape[1]))
+    else:
+        target_filters = source_filters
+        target_names = source_names
+        channel_count = int(source_filters.shape[1])
+
+    sensors: list[Sensor] = []
+    for index in range(channel_count):
+        current = sensor_example.clone()
+        source_name = str(source_names[index] if index < len(source_names) else f"Channel-{index + 1}")
+        target_name = str(target_names[index] if index < len(target_names) else f"Channel-{index + 1}")
+        current = sensor_set(current, "name", f"mono-{source_name}")
+        current = sensor_set(current, "pattern", np.array([[1]], dtype=int))
+        current = sensor_set(current, "filter spectra", target_filters[:, index].reshape(-1, 1))
+        current = sensor_set(current, "filter names", [target_name])
+        current = sensor_set(current, "integration time", exposure_time)
+        current.fields["noise_flag"] = -1
+        _sensor_clear_data(current)
+        sensors.append(current)
+
+    return sensors
+
+
 def _sensor_custom_dispatch(
     filter_pattern: Any,
     filter_file: Any,
@@ -2080,7 +2133,7 @@ def sensor_create_ideal(
     *,
     asset_store: AssetStore | None = None,
     session: SessionContext | None = None,
-) -> Sensor:
+) -> Sensor | list[Sensor]:
     """Create an ideal milestone-one sensor."""
 
     store = _store(asset_store)
@@ -2102,7 +2155,20 @@ def sensor_create_ideal(
         sensor.fields["pixel"]["voltage_swing"] = 1e6
         return track_session_object(session, sensor)
 
-    if normalized in {"xyz", "matchxyz"}:
+    if normalized == "match":
+        if sensor_example is None:
+            raise ValueError("sensorCreateIdeal('match', ...) requires a sensor example.")
+        return _track_sensor_sequence(session, _sensor_create_ideal_match_sequence(sensor_example, asset_store=store))
+
+    if normalized == "matchxyz":
+        if sensor_example is None:
+            raise ValueError("sensorCreateIdeal('match xyz', ...) requires a sensor example.")
+        return _track_sensor_sequence(
+            session,
+            _sensor_create_ideal_match_sequence(sensor_example, asset_store=store, use_xyz_filters=True),
+        )
+
+    if normalized == "xyz":
         sensor = _sensor_base("ideal-xyz", np.asarray(wave, dtype=float), size, pixel)
         sensor.fields["pattern"] = np.array([[1, 2, 3]], dtype=int)
         sensor.fields["filter_spectra"], sensor.fields["filter_names"] = _filter_bundle("xyz", np.asarray(wave, dtype=float), asset_store=store)
@@ -2111,13 +2177,6 @@ def sensor_create_ideal(
         sensor.fields["pixel"]["dark_voltage_v_per_sec"] = 0.0
         sensor.fields["pixel"]["read_noise_v"] = 0.0
         sensor.fields["pixel"]["voltage_swing"] = 1e6
-        return track_session_object(session, sensor)
-
-    if normalized == "match" and sensor_example is not None:
-        sensor = sensor_example.clone()
-        sensor.name = f"ideal-{sensor_example.name}"
-        sensor.fields["pixel"] = pixel
-        sensor.fields["noise_flag"] = 0
         return track_session_object(session, sensor)
 
     raise UnsupportedOptionError("sensorCreateIdeal", ideal_type)

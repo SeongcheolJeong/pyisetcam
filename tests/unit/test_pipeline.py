@@ -403,6 +403,7 @@ from pyisetcam import (
     sensorColorOrder,
     sensor_crop,
     sensor_create,
+    sensor_create_ideal,
     sensor_create_array,
     sensorCreateConeMosaic,
     sensorCreateIMECSSM4x4vis,
@@ -6172,6 +6173,63 @@ def test_sensor_model_wrappers_match_legacy_vendor_contracts(asset_store) -> Non
         np.asarray(sensor_get(nikon, "wave"), dtype=float),
         np.arange(400.0, 701.0, 10.0, dtype=float),
     )
+
+
+def test_sensor_create_ideal_match_and_match_xyz_replay_legacy_contract(asset_store) -> None:
+    example = sensor_set(sensor_create("default", asset_store=asset_store), "exp time", 0.123)
+    source_filters = np.asarray(sensor_get(example, "filter spectra"), dtype=float)
+    source_names = list(sensor_get(example, "filter names"))
+    source_pixel = sensor_get(example, "pixel")
+
+    matched = sensor_create_ideal("match", example, asset_store=asset_store)
+
+    assert isinstance(matched, list)
+    assert len(matched) == int(sensor_get(example, "nfilters"))
+
+    for index, current in enumerate(matched):
+        assert sensor_get(current, "name") == f"mono-{source_names[index]}"
+        assert np.array_equal(np.asarray(sensor_get(current, "pattern"), dtype=int), np.array([[1]], dtype=int))
+        assert sensor_get(current, "filter names") == [source_names[index]]
+        np.testing.assert_allclose(
+            np.asarray(sensor_get(current, "filter spectra"), dtype=float),
+            source_filters[:, index : index + 1],
+            rtol=0.0,
+            atol=0.0,
+        )
+        assert np.isclose(float(sensor_get(current, "exp time")), 0.123)
+        assert sensor_get(current, "auto exposure") is False
+        assert tuple(np.asarray(sensor_get(current, "size"), dtype=int)) == tuple(np.asarray(sensor_get(example, "size"), dtype=int))
+        current_pixel = sensor_get(current, "pixel")
+        assert np.allclose(np.asarray(current_pixel["size_m"], dtype=float), np.asarray(source_pixel["size_m"], dtype=float))
+        assert np.isclose(float(current_pixel["fill_factor"]), float(source_pixel["fill_factor"]))
+
+    auto_example = sensor_set(sensor_create("default", asset_store=asset_store), "auto exposure", True)
+    matched_auto = sensor_create_ideal("match", auto_example, asset_store=asset_store)
+    assert all(np.isclose(float(sensor_get(current, "exp time")), 0.05) for current in matched_auto)
+
+    xyz_reference = sensor_create_ideal("xyz", asset_store=asset_store)
+    xyz_filters = np.asarray(sensor_get(xyz_reference, "filter spectra"), dtype=float)
+    xyz_names = list(sensor_get(xyz_reference, "filter names"))
+    matched_xyz = sensor_create_ideal("match xyz", example, asset_store=asset_store)
+
+    assert isinstance(matched_xyz, list)
+    assert len(matched_xyz) == 3
+
+    for index, current in enumerate(matched_xyz):
+        assert sensor_get(current, "name") == f"mono-{source_names[index]}"
+        assert sensor_get(current, "filter names") == [xyz_names[index]]
+        np.testing.assert_allclose(
+            np.asarray(sensor_get(current, "filter spectra"), dtype=float),
+            xyz_filters[:, index : index + 1],
+            rtol=0.0,
+            atol=0.0,
+        )
+        assert np.isclose(float(sensor_get(current, "exp time")), 0.123)
+        assert sensor_get(current, "auto exposure") is False
+        assert tuple(np.asarray(sensor_get(current, "size"), dtype=int)) == tuple(np.asarray(sensor_get(example, "size"), dtype=int))
+        current_pixel = sensor_get(current, "pixel")
+        assert np.allclose(np.asarray(current_pixel["size_m"], dtype=float), np.asarray(source_pixel["size_m"], dtype=float))
+        assert np.isclose(float(current_pixel["fill_factor"]), float(source_pixel["fill_factor"]))
 
 
 def test_sensor_create_imx363_and_crop_support_raw_tutorial_flow(asset_store) -> None:

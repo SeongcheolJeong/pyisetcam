@@ -453,7 +453,11 @@ human-cone parameter-struct flow on top of the existing
 dispatcher lane now also replays the documented empty-placeholder `[]`
 forms for `sensorCreate('imec44', [], rowcol)`,
 `sensorCreate('monochrome array', [], N)`, and the `custom` /
-`fourcolor` constructors, and it also exposes the legacy
+`fourcolor` constructors. Direct `sensorCreateIdeal('match', sensor)` and
+`sensorCreateIdeal('match xyz', sensor)` now also replay the upstream
+array-of-monochrome contract, preserving the example pixel and shared
+exposure time while splitting filters into per-channel ideal sensors, and
+the dispatcher also exposes the legacy
 `sensorCreate('Nikon D100')` preset from the vendored Nikon MAT asset. The
 dispatcher also now accepts the remaining parenthesized Bayer CFA aliases
 from upstream, including `bayer(grbg)`, `bayer(rggb)`, and `bayer(bggr)`.
