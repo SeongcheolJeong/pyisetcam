@@ -301,6 +301,9 @@ preserves the default `128 x 128` size,
 while `sceneCreate('bar', 64, [])` and `sceneCreate('bar ee', 64, [])` now
 replay the lower-level helper default bar width of `5` pixels instead of
 reusing the wrapper's omitted-argument default of `3`,
+while `sceneCreate('point array', 128, 16, [], [], wave)` now replays the
+lower-level helper default spectral type `d65` instead of reusing the
+wrapper's omitted-argument default of `ep`,
 and
 `sceneCreate('sweep frequency', [], maxFrequency, [], yContrast)` now
 honors MATLAB-style empty placeholders for the size and wavelength slots
