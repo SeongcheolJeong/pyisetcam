@@ -410,6 +410,11 @@ font metadata. The same positional moire-target shorthand now also treats
 an empty second argument as “use the default frequency”, so
 `sceneCreate('moire orient', imageSize, [])` reuses the helper's default
 `f` parameter instead of attempting `float([])`.
+That same frequency-orientation scene lane now also treats an explicit
+empty parameter payload `sceneCreate('frequency orientation', [])` as
+“use the default `FOTParams` struct”, matching the upstream
+`sceneFOTarget(...)` fallback instead of coercing `[]` into a bogus empty
+image-size override.
 The same `sceneCreate('radiance chart', wave, radiance, ...)` wrapper now
 also honors MATLAB-style empty placeholders in optional `rowcol`,
 `patch size`, and `gray fill` slots for both dict and key/value forms,

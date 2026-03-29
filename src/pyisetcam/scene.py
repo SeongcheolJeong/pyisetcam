@@ -2728,7 +2728,7 @@ def _hdr_lights_scene(params: dict[str, Any], *, asset_store: AssetStore) -> Sce
 
 
 def _normalized_parameter_dict(value: Any) -> dict[str, Any]:
-    if value is None:
+    if _is_empty_scene_dispatch_placeholder(value):
         return {}
     if isinstance(value, dict):
         raw = value

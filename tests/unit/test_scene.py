@@ -919,6 +919,22 @@ def test_frequency_orientation_scene_matches_upstream_parameterization(asset_sto
     assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
 
 
+def test_frequency_orientation_scene_empty_params_match_default_dispatch(asset_store) -> None:
+    default_scene = scene_create("frequency orientation", asset_store=asset_store)
+    placeholder_scene = scene_create("frequency orientation", [], asset_store=asset_store)
+
+    np.testing.assert_allclose(
+        np.asarray(scene_get(placeholder_scene, "photons"), dtype=float),
+        np.asarray(scene_get(default_scene, "photons"), dtype=float),
+        rtol=0.0,
+        atol=0.0,
+    )
+    assert np.array_equal(
+        np.asarray(scene_get(placeholder_scene, "wave"), dtype=float),
+        np.asarray(scene_get(default_scene, "wave"), dtype=float),
+    )
+
+
 def test_freq_orient_scalar_size_matches_tutorial_shape(asset_store) -> None:
     scene = scene_create("freq orient", 512, asset_store=asset_store)
     assert scene_get(scene, "photons").shape[:2] == (512, 512)
