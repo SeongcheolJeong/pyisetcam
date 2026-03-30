@@ -10315,3 +10315,13 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any, *args: Any) -> OpticalI
         _sync_oi_geometry_fields(oi)
         return oi
     raise KeyError(f"Unsupported oiSet parameter: {parameter}")
+
+
+opticsBuild2Dotf = optics_build_2d_otf
+opticsCoC = optics_coc
+opticsDefocusCore = optics_defocus_core
+opticsDefocusDisplacement = optics_defocus_displacement
+opticsDepthDefocus = optics_depth_defocus
+opticsDoF = optics_dof
+opticsPSF2OTF = optics_psf_to_otf
+opticsRayTrace = optics_ray_trace

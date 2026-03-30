@@ -162,6 +162,17 @@ def test_optics_module_human_matlab_aliases() -> None:
     assert optics_module.humanOI is optics_module.human_oi
 
 
+def test_optics_module_native_matlab_aliases() -> None:
+    assert optics_module.opticsBuild2Dotf is optics_module.optics_build_2d_otf
+    assert optics_module.opticsCoC is optics_module.optics_coc
+    assert optics_module.opticsDefocusCore is optics_module.optics_defocus_core
+    assert optics_module.opticsDefocusDisplacement is optics_module.optics_defocus_displacement
+    assert optics_module.opticsDepthDefocus is optics_module.optics_depth_defocus
+    assert optics_module.opticsDoF is optics_module.optics_dof
+    assert optics_module.opticsPSF2OTF is optics_module.optics_psf_to_otf
+    assert optics_module.opticsRayTrace is optics_module.optics_ray_trace
+
+
 def test_human_cones_replays_defaults_and_macular_density_adjustment() -> None:
     cones_default, correction_default, wave_default = humanCones()
     cones_placeholder, correction_placeholder, wave_placeholder = humanCones([], [], [], [])
