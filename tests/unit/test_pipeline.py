@@ -8337,6 +8337,8 @@ def test_camera_module_core_matlab_aliases() -> None:
     assert camera_module.cameraComputeSequence is camera_module.camera_compute_sequence
     assert camera_module.cameraComputesrgb is camera_module.camera_compute_srgb
     assert camera_module.cameraClearData is camera_module.camera_clear_data
+    assert camera_module.cameraMTF is camera_module.camera_mtf
+    assert camera_module.cameraAcutance is camera_module.camera_acutance
     assert camera_module.cameraGet is camera_module.camera_get
     assert camera_module.cameraSet is camera_module.camera_set
 
