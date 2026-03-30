@@ -2291,7 +2291,12 @@ MATLAB-style package-root aliases `Energy2Quanta(...)` /
 buried in `pyisetcam.utils` or `pyisetcam.metrics`. The same root helper
 surface now also exposes `linear_to_srgb(...)`, `xyz_to_linear_srgb(...)`,
 and `invert_gamma_table(...)` so the small sRGB conversion helpers are
-available directly from `pyisetcam` as well.
+available directly from `pyisetcam` as well. The same utility-root surface
+now also exposes `resample_cube(...)`, `gaussian_sigma_pixels(...)`,
+`apply_channelwise_gaussian(...)`, `least_squares_matrix(...)`, and
+`tile_pattern(...)` so the small image-resampling and CFA-layout helpers are
+available directly from `pyisetcam` instead of only through
+`pyisetcam.utils`.
 That same broad `utility` family is smaller again: the adjacent
 `utility/numerical` helper slice now also covers
 `getMiddleMatrix(...)`, `ieClip(...)`, `ieHwhm2SD(...)`, `ieScale(...)`,

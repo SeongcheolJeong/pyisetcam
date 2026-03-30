@@ -11,6 +11,7 @@ from scipy.signal import convolve2d
 from pyisetcam import (
     FloydSteinberg,
     HalfToneImage,
+    apply_channelwise_gaussian as top_level_apply_channelwise_gaussian,
     appendStruct,
     array_percentile as top_level_array_percentile,
     biNormal,
@@ -25,6 +26,7 @@ from pyisetcam import (
     expRand,
     ffndgrid,
     gammaPDF,
+    gaussian_sigma_pixels as top_level_gaussian_sigma_pixels,
     getMiddleMatrix,
     getGaussian,
     gatherStruct,
@@ -97,6 +99,7 @@ from pyisetcam import (
     imagescOPP,
     imagescRGB,
     isodd,
+    least_squares_matrix as top_level_least_squares_matrix,
     linear_to_srgb as top_level_linear_to_srgb,
     rgb2dac,
     rotationMatrix3d,
@@ -111,6 +114,7 @@ from pyisetcam import (
     unitFrequencyList,
     unit_frequency_list as top_level_unit_frequency_list,
     qinterp2,
+    resample_cube as top_level_resample_cube,
     unpadarray,
     upperQuad2FullMatrix,
     vectorLength,
@@ -121,11 +125,13 @@ from pyisetcam import (
     min2,
     replaceNaN,
     struct2pairs,
+    tile_pattern as top_level_tile_pattern,
     zernfun,
     zernfun2,
     zernpol,
 )
 from pyisetcam.utils import (
+    apply_channelwise_gaussian,
     append_struct,
     blackbody,
     bi_normal,
@@ -139,6 +145,7 @@ from pyisetcam.utils import (
     exp_rand,
     ffndgrid as ffndgrid_fn,
     floyd_steinberg,
+    gaussian_sigma_pixels,
     gather_struct,
     gamma_pdf,
     get_middle_matrix,
@@ -213,11 +220,13 @@ from pyisetcam.utils import (
     image_contrast,
     array_percentile,
     invert_gamma_table,
+    least_squares_matrix,
     linear_to_srgb,
     param_format,
     qinterp2 as qinterp2_fn,
     quanta_to_energy,
     replace_nan,
+    resample_cube,
     rgb_to_dac,
     rgb_to_xw_format,
     rotation_matrix_3d,
@@ -225,6 +234,7 @@ from pyisetcam.utils import (
     spectral_step,
     space2sample as space2sample_fn,
     struct2pairs as struct2pairs_fn,
+    tile_pattern,
     dpi2mperdot as dpi2mperdot_fn,
     ie_tikhonov,
     lorentz_sum,
@@ -323,6 +333,41 @@ def test_srgb_helpers_are_exposed_through_package_root() -> None:
         top_level_invert_gamma_table(linear_rgb, gamma_table),
         invert_gamma_table(linear_rgb, gamma_table),
     )
+
+
+def test_image_numeric_helpers_are_exposed_through_package_root() -> None:
+    cube = np.arange(12.0, dtype=float).reshape(2, 3, 2)
+    resized = resample_cube(cube, (4, 6))
+    sigmas = np.array([0.0, 1.0], dtype=float)
+    source = np.array(
+        [
+            [1.0, 0.0],
+            [0.0, 1.0],
+            [1.0, 1.0],
+        ],
+        dtype=float,
+    )
+    transform = np.array(
+        [
+            [2.0, 1.0],
+            [0.5, 3.0],
+        ],
+        dtype=float,
+    )
+    target = source @ transform
+    pattern = np.array([[1, 2], [3, 4]], dtype=int)
+
+    np.testing.assert_allclose(top_level_resample_cube(cube, (4, 6)), resized)
+    np.testing.assert_allclose(
+        top_level_apply_channelwise_gaussian(cube, sigmas, mode="nearest"),
+        apply_channelwise_gaussian(cube, sigmas, mode="nearest"),
+    )
+    assert np.isclose(
+        top_level_gaussian_sigma_pixels(4.0, 550.0, 2.0e-6, extra_blur_pixels=0.25),
+        gaussian_sigma_pixels(4.0, 550.0, 2.0e-6, extra_blur_pixels=0.25),
+    )
+    np.testing.assert_allclose(top_level_least_squares_matrix(source, target), least_squares_matrix(source, target))
+    np.testing.assert_array_equal(top_level_tile_pattern(pattern, 3, 5), tile_pattern(pattern, 3, 5))
 
 
 def test_interp_spectra_supports_descending_source_waves() -> None:
