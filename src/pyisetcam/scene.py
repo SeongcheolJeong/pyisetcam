@@ -6755,5 +6755,13 @@ def scene_set(scene: Scene, parameter: str, value: Any) -> Scene:
 
 
 sceneCreate = scene_create
+sceneAdd = scene_add
+sceneAdjustIlluminant = scene_adjust_illuminant
+sceneFromFile = scene_from_file
 sceneGet = scene_get
+sceneInitGeometry = scene_init_geometry
+sceneList = scene_list
+scenePhotonNoise = scene_photon_noise
 sceneSet = scene_set
+sceneSpatialResample = scene_spatial_resample
+sceneToFile = scene_to_file

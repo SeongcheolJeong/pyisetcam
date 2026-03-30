@@ -54,9 +54,17 @@ from pyisetcam.types import Scene
 
 
 def test_scene_module_core_matlab_aliases() -> None:
+    assert scene_module.sceneAdd is scene_module.scene_add
+    assert scene_module.sceneAdjustIlluminant is scene_module.scene_adjust_illuminant
     assert scene_module.sceneCreate is scene_module.scene_create
+    assert scene_module.sceneFromFile is scene_module.scene_from_file
     assert scene_module.sceneGet is scene_module.scene_get
+    assert scene_module.sceneInitGeometry is scene_module.scene_init_geometry
+    assert scene_module.sceneList is scene_module.scene_list
+    assert scene_module.scenePhotonNoise is scene_module.scene_photon_noise
     assert scene_module.sceneSet is scene_module.scene_set
+    assert scene_module.sceneSpatialResample is scene_module.scene_spatial_resample
+    assert scene_module.sceneToFile is scene_module.scene_to_file
 
 
 def test_scene_create_default_macbeth(asset_store) -> None:

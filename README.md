@@ -35,6 +35,7 @@
 - and now also standalone `human_cones(...)` / `humanCones(...)` coverage, exposing the vendored Stockman cone-fundamental assets together with the MATLAB macular-density correction contract and empty-placeholder defaults
 - and now also direct module-level `pyisetcam.metrics` alias coverage for `humanCones`, so callers can import the MATLAB-style cone-fundamental helper name from the metrics module itself instead of only through the package root
 - and now also direct module-level MATLAB alias coverage in `pyisetcam.optics` for the adjacent human helper family, so imports like `from pyisetcam.optics import humanWaveDefocus`, `humanAchromaticOTF`, `humanOTF`, `humanLSF`, `humanMacularTransmittance`, and `humanOI` work without going through the package root
+- and now also direct module-level MATLAB alias coverage in `pyisetcam.scene` for the adjacent helper surface, so imports like `sceneAdd`, `sceneAdjustIlluminant`, `sceneFromFile`, `sceneInitGeometry`, `sceneList`, `scenePhotonNoise`, `sceneSpatialResample`, and `sceneToFile` work without going through the package root
 - and now also direct `cone_plot(...)` / `conePlot(...)` alias coverage on top of the existing headless `ieConePlot(...)` mosaic renderer, so the upstream human-vision plotting helper name is available without changing the returned payload contract
 - and now also direct `sensor_create_imx490(...)` / `sensorCreateIMX490(...)` coverage, exposing the upstream four-capture IMX490 constructor with the legacy `large-HCG`, `large-LCG`, `small-HCG`, and `small-LCG` naming and per-capture gain/noise settings
 - and now also direct `sensor_roi(...)` / `sensorROI(...)` coverage, exposing the upstream centered-sensor ROI helper that returns MATLAB-style `roiLocs` on top of the existing headless ROI utilities
@@ -284,7 +285,11 @@ scene)`, `sceneCreate('multispectral', scene)`, and
 scene shell. That same scene wrapper surface now also exposes the core
 MATLAB-style gateway aliases directly from `pyisetcam.scene`, so imports
 like `from pyisetcam.scene import sceneCreate`, `sceneGet`, and `sceneSet`
-work without routing through the package root. The adjacent display getter
+work without routing through the package root. That same module now also
+exposes the adjacent helper aliases `sceneAdd`, `sceneAdjustIlluminant`,
+`sceneFromFile`, `sceneInitGeometry`, `sceneList`, `scenePhotonNoise`,
+`sceneSpatialResample`, and `sceneToFile` directly from `pyisetcam.scene`.
+The adjacent display getter
 lane now also replays the
 upstream MATLAB color and contrast aliases `rgb2lms`, `white lms`,
 `black xyz`, `primaries xyz` / `primaries xy`, `dark luminance`, and
