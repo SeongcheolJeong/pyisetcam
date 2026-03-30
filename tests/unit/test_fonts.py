@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 from pathlib import Path
 
 import numpy as np
@@ -23,6 +24,21 @@ from pyisetcam import (
     scene_from_font,
     scene_get,
 )
+
+fonts_module = importlib.import_module("pyisetcam.fonts")
+
+
+def test_fonts_module_helper_matlab_aliases() -> None:
+    assert fonts_module.displayCreate is fonts_module.display_create
+    assert fonts_module.displayGet is fonts_module.display_get
+    assert fonts_module.displaySet is fonts_module.display_set
+    assert fonts_module.Energy2Quanta is fonts_module.energy_to_quanta
+    assert fonts_module.RGB2XWFormat is fonts_module.rgb_to_xw_format
+    assert fonts_module.sceneAdjustLuminance is fonts_module.scene_adjust_luminance
+    assert fonts_module.sceneCreate is fonts_module.scene_create
+    assert fonts_module.sceneGet is fonts_module.scene_get
+    assert fonts_module.sceneSet is fonts_module.scene_set
+    assert fonts_module.XW2RGBFormat is fonts_module.xw_to_rgb_format
 
 
 def _expected_cached_bitmap(asset_store, relative_path: str) -> np.ndarray:
