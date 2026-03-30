@@ -10319,6 +10319,8 @@ def test_run_python_case_supports_metrics_spd_daylight_sweep_parity_case(asset_s
 def test_metrics_vsnr_script_workflow(asset_store) -> None:
     levels = np.asarray(np.logspace(1.5, 3.0, 3), dtype=float)
     result = camera_vsnr(camera_create(asset_store=asset_store), levels, asset_store=asset_store)
+    placeholder_result = camera_vsnr(camera_create(asset_store=asset_store), [], [], asset_store=asset_store)
+    default_result = camera_vsnr(camera_create(asset_store=asset_store), asset_store=asset_store)
 
     valid = np.asarray(result.vSNR, dtype=float)[np.isfinite(result.vSNR)]
     assert result.lightLevels.shape == (3,)
@@ -10329,6 +10331,10 @@ def test_metrics_vsnr_script_workflow(asset_store) -> None:
     assert valid.size == 3
     assert np.all(valid > 0.0)
     assert np.all(np.diff(valid) > 0.0)
+    np.testing.assert_allclose(placeholder_result.lightLevels, default_result.lightLevels, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(placeholder_result.vSNR, default_result.vSNR, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(placeholder_result.eTime, default_result.eTime, rtol=1e-10, atol=1e-12)
+    np.testing.assert_array_equal(placeholder_result.rect, default_result.rect)
 
 
 def test_camera_legacy_full_reference_and_vsnr_alias(asset_store) -> None:

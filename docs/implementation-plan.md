@@ -753,6 +753,10 @@
   name on top of the legacy short `vsnr` token, so both direct
   `metricsCamera(...)` calls and `cameraGet(camera, 'metric', ...)` reuse
   the same visual-SNR wrapper path.
+- The neighboring `cameraVSNR(...)` wrapper is tighter too: MATLAB-style
+  empty placeholders in the optional `lightLevels` and `exposureTime`
+  slots now fall back to the upstream defaults `[1 10 100]` and `0.01 s`
+  instead of being treated as literal empty arrays.
 - The same public camera gateway is tighter too: `cameraGet(...)` and
   `cameraSet(...)` now reuse `ieParameterOtype(...)` for unprefixed unique
   subobject parameters, so legacy calls like `cameraSet(camera, 'fill factor',

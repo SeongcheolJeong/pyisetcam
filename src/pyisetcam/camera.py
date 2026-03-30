@@ -1519,11 +1519,24 @@ def camera_vsnr(
     """Run the headless VSNR workflow from `s_metricsVSNR.m`."""
 
     store = _store(asset_store)
+    light_levels_is_omitted = light_levels is None
+    if isinstance(light_levels, str) and not light_levels.strip():
+        light_levels_is_omitted = True
+    elif isinstance(light_levels, (list, tuple, np.ndarray)):
+        light_levels_array = np.asarray(light_levels)
+        light_levels_is_omitted = light_levels_array.size == 0
     levels = (
         np.asarray([1.0, 10.0, 100.0], dtype=float)
-        if light_levels is None
+        if light_levels_is_omitted
         else np.asarray(light_levels, dtype=float).reshape(-1)
     )
+    exposure_time_is_omitted = exposure_time is None
+    if isinstance(exposure_time, str) and not exposure_time.strip():
+        exposure_time_is_omitted = True
+    elif isinstance(exposure_time, (list, tuple, np.ndarray)):
+        exposure_time_array = np.asarray(exposure_time)
+        exposure_time_is_omitted = exposure_time_array.size == 0
+    exposure_time_value = 0.01 if exposure_time_is_omitted else float(exposure_time)
     vsnr = np.full(levels.shape, np.nan, dtype=float)
     e_time = np.zeros(levels.shape, dtype=float)
     rect: np.ndarray | None = None
@@ -1534,7 +1547,7 @@ def camera_vsnr(
         scene = scene_set(scene, "fov", 5.0)
         scene = scene_adjust_luminance(scene, float(level), asset_store=store)
 
-        working_camera = camera_set(camera.clone(), "sensor exp time", float(exposure_time), session=session)
+        working_camera = camera_set(camera.clone(), "sensor exp time", exposure_time_value, session=session)
         working_camera = camera_compute(working_camera, scene, asset_store=store, session=session)
 
         ip = camera_get(working_camera, "ip")
