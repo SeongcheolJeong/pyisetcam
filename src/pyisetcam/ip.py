@@ -2333,6 +2333,8 @@ def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
         return _ip_transform(ip, 0)
     if key in {"transformcellarray", "transforms"}:
         return list(ip.data["transforms"])
+    if key in {"transformlist", "eachtransform"}:
+        return [_ip_transform(ip, 0), _ip_transform(ip, 1), _ip_transform(ip, 2)]
     if key == "transformmethod":
         return ip.fields["transform_method"]
     if key in {
@@ -2350,6 +2352,8 @@ def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
         return ip.fields["render"].get("renderflag", 1)
     if key in {"renderscale", "scaledisplay", "scaledisplayoutput"}:
         return bool(ip.fields["render"].get("scale", True))
+    if key in {"gammadisplay", "rendergamma", "gamma"}:
+        return float(ip.fields["render"].get("gamma", 1.0) or 1.0)
     if key in {"data", "datastructure"}:
         return ip.data
     if key in {"roidata", "dataroi", "roiresult"}:
@@ -2390,9 +2394,9 @@ def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
     if key == "maxdigitalvalue":
         nbits = ip_get(ip, "nbits")
         return 1.0 if nbits is None else float(2 ** int(nbits))
-    if key in {"sensorspace", "sensorchannels"}:
+    if key in {"datasensor", "sensordata", "sensorchannels", "sensorspace", "demosaicsensor"}:
         return ip.data.get("sensorspace")
-    if key == "nsensorchannels":
+    if key in {"ninputfilters", "numbersensorchannels", "nsensorinputs", "nsensorchannels"}:
         sensor_space = ip.data.get("sensorspace")
         if sensor_space is None:
             return None

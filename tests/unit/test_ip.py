@@ -1054,6 +1054,35 @@ def test_ip_get_quantization_and_digital_value_aliases_match_upstream() -> None:
     assert float(ip_get(empty_ip, "max digital value")) == 1.0
 
 
+def test_ip_get_transform_gamma_and_sensor_space_aliases_match_upstream() -> None:
+    ip = ip_create()
+    transform_a = 2.0 * np.eye(3, dtype=float)
+    transform_b = 3.0 * np.eye(3, dtype=float)
+    transform_c = 4.0 * np.eye(3, dtype=float)
+    sensor_space = np.arange(1, 13, dtype=float).reshape(2, 2, 3)
+
+    ip = ip_set(ip, "transforms", [transform_a, transform_b, transform_c])
+    ip = ip_set(ip, "gamma", 2.2)
+    ip = ip_set(ip, "sensorspace", sensor_space)
+
+    transform_list = ip_get(ip, "transform list")
+    assert len(transform_list) == 3
+    assert np.allclose(np.asarray(transform_list[0], dtype=float), transform_a)
+    assert np.allclose(np.asarray(transform_list[1], dtype=float), transform_b)
+    assert np.allclose(np.asarray(transform_list[2], dtype=float), transform_c)
+    each_transform = ip_get(ip, "each transform")
+    assert len(each_transform) == 3
+    assert np.allclose(np.asarray(each_transform[2], dtype=float), transform_c)
+
+    assert float(ip_get(ip, "gamma")) == 2.2
+    assert float(ip_get(ip, "render gamma")) == 2.2
+
+    for alias in ("data sensor", "sensor data", "sensor channels", "sensor space", "demosaic sensor"):
+        assert np.allclose(np.asarray(ip_get(ip, alias), dtype=float), sensor_space)
+    for alias in ("n input filters", "number sensor channels", "n sensor inputs", "n sensor channels"):
+        assert int(ip_get(ip, alias)) == 3
+
+
 def test_vcimage_srgb_matches_manual_pipeline(asset_store) -> None:
     generated = vcimageSRGB(asset_store=asset_store)
 

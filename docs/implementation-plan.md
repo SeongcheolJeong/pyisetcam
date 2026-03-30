@@ -832,6 +832,10 @@
   the stored quantization struct, method, bit depth, `max digital value`,
   and the `data intensities dv` aliases instead of leaving those
   MATLAB-era getters unsupported in headless mode.
+- That same IP bookkeeping surface now also replays the upstream
+  `transform list`, `gamma`, `data sensor`, and sensor-channel-count
+  alias families on top of the existing transform, render, and
+  sensor-space payloads.
 - Continue adding more scene patterns and `sceneFromFile`; the first slices now cover extra Macbeth variants, `moire orient`, `letter` / `font`, and the file-backed `rgb` / `multispectral` / `monochrome` scene shells.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.
