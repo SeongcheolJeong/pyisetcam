@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pyisetcam.optics as optics_module
 
 from pyisetcam import (
     colorTransformMatrix,
@@ -148,6 +149,17 @@ def test_human_wave_defocus_matches_thibos_formula() -> None:
     expected = 1.7312 - (0.63346 / (wave * 1.0e-3 - 0.21410))
 
     np.testing.assert_allclose(humanWaveDefocus(wave), expected)
+
+
+def test_optics_module_human_matlab_aliases() -> None:
+    assert optics_module.humanWaveDefocus is optics_module.human_wave_defocus
+    assert optics_module.humanAchromaticOTF is optics_module.human_achromatic_otf
+    assert optics_module.humanCore is optics_module.human_core
+    assert optics_module.humanOTF is optics_module.human_otf
+    assert optics_module.humanOTF_ibio is optics_module.human_otf_ibio
+    assert optics_module.humanLSF is optics_module.human_lsf
+    assert optics_module.humanMacularTransmittance is optics_module.human_macular_transmittance
+    assert optics_module.humanOI is optics_module.human_oi
 
 
 def test_human_cones_replays_defaults_and_macular_density_adjustment() -> None:

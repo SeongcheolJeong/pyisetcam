@@ -2981,6 +2981,16 @@ def human_oi(
     return oi_compute(current, scene)
 
 
+humanWaveDefocus = human_wave_defocus
+humanAchromaticOTF = human_achromatic_otf
+humanCore = human_core
+humanOTF = human_otf
+humanOTF_ibio = human_otf_ibio
+humanLSF = human_lsf
+humanMacularTransmittance = human_macular_transmittance
+humanOI = human_oi
+
+
 def ijspeert(
     age: float,
     p: float,
