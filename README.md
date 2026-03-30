@@ -2515,6 +2515,10 @@ empty placeholders in the optional `sz`, `scenefov`, and `scaleoutput`
 slots now fall back to the same default sensor size, camera-matched scene
 FOV, and unit output scale as the omitted-argument path instead of
 crashing on empty arrays.
+That same wrapper now also treats an empty `meanLuminance` placeholder as
+an omitted value, so `cameraComputesrgb(camera, scene, [])` falls back to
+the upstream default `100 cd/m^2` scene mean luminance instead of trying
+to coerce an empty array to a scalar.
 The neighboring `cameraComputeSequence(...)` wrapper now also accepts the
 upstream MATLAB-style key/value form, and empty `exposuretimes` /
 `nframes` placeholders in that form now fall back to the existing default

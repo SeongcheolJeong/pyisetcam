@@ -760,6 +760,14 @@ def camera_compute_srgb(
     scene = _camera_scene_input(scene_name, asset_store=store)
     scene = scene_adjust_illuminant(scene, "D65.mat", asset_store=store)
 
+    mean_luminance_is_omitted = mean_luminance is None
+    if isinstance(mean_luminance, str) and not mean_luminance.strip():
+        mean_luminance_is_omitted = True
+    elif isinstance(mean_luminance, (list, tuple, np.ndarray)):
+        mean_luminance_array = np.asarray(mean_luminance)
+        mean_luminance_is_omitted = mean_luminance_array.size == 0
+    mean_luminance_value = 100.0 if mean_luminance_is_omitted else float(mean_luminance)
+
     sz_is_omitted = sz is None
     if isinstance(sz, str) and not sz.strip():
         sz_is_omitted = True
@@ -796,7 +804,7 @@ def camera_compute_srgb(
         scaleoutput_is_omitted = scaleoutput_array.size == 0
     scaleoutput_value = 1.0 if scaleoutput_is_omitted else float(scaleoutput)
 
-    scene = scene_adjust_luminance(scene, float(mean_luminance), asset_store=store)
+    scene = scene_adjust_luminance(scene, mean_luminance_value, asset_store=store)
 
     working, xyz_ideal = _camera_ideal_xyz(working, scene, asset_store=store, session=session)
     xyz_ideal = xyz_ideal / max(float(np.max(xyz_ideal)), 1.0e-12) * scaleoutput_value

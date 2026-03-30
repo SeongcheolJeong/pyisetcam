@@ -8224,12 +8224,34 @@ def test_camera_compatibility_wrappers_cover_srgb_sequence_and_clear(asset_store
         asset_store=asset_store,
     )
 
+    mean_placeholder_result, mean_placeholder_ideal, mean_placeholder_raw, mean_placeholder_updated = cameraComputesrgb(
+        camera_create(asset_store=asset_store),
+        scene,
+        mean_luminance=[],
+        asset_store=asset_store,
+    )
+
+    mean_default_result, mean_default_ideal, mean_default_raw, mean_default_updated = cameraComputesrgb(
+        camera_create(asset_store=asset_store),
+        scene,
+        asset_store=asset_store,
+    )
+
     np.testing.assert_allclose(placeholder_result, explicit_default_result, rtol=1e-10, atol=1e-12)
     np.testing.assert_allclose(placeholder_ideal, explicit_default_ideal, rtol=1e-10, atol=1e-12)
     np.testing.assert_allclose(placeholder_raw, explicit_default_raw, rtol=1e-10, atol=1e-12)
     np.testing.assert_allclose(
         np.asarray(camera_get(placeholder_updated, "image"), dtype=float),
         np.asarray(camera_get(explicit_default_updated, "image"), dtype=float),
+        rtol=1e-10,
+        atol=1e-12,
+    )
+    np.testing.assert_allclose(mean_placeholder_result, mean_default_result, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(mean_placeholder_ideal, mean_default_ideal, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(mean_placeholder_raw, mean_default_raw, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(
+        np.asarray(camera_get(mean_placeholder_updated, "image"), dtype=float),
+        np.asarray(camera_get(mean_default_updated, "image"), dtype=float),
         rtol=1e-10,
         atol=1e-12,
     )
