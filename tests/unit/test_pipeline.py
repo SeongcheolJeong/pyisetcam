@@ -8346,6 +8346,15 @@ def test_camera_module_core_matlab_aliases() -> None:
 def test_sensor_module_core_matlab_aliases() -> None:
     assert sensor_module.sensorCreate is sensor_module.sensor_create
     assert sensor_module.sensorCreateIdeal is sensor_module.sensor_create_ideal
+    assert sensor_module.pixelCreate is sensor_module.pixel_create
+    assert sensor_module.pixelDescription is sensor_module.pixel_description
+    assert sensor_module.pixelGet is sensor_module.pixel_get
+    assert sensor_module.pixelIdeal is sensor_module.pixel_ideal
+    assert sensor_module.pixelSet is sensor_module.pixel_set
+    assert sensor_module.pixelSR is sensor_module.pixel_sr
+    assert sensor_module.pixelSNR is sensor_module.pixel_snr
+    assert sensor_module.pixelSNRluxsec is sensor_module.pixel_snr_luxsec
+    assert sensor_module.pixelVperLuxSec is sensor_module.pixel_v_per_lux_sec
     assert sensor_module.sensorCompute is sensor_module.sensor_compute
     assert sensor_module.sensorGet is sensor_module.sensor_get
     assert sensor_module.sensorSet is sensor_module.sensor_set
