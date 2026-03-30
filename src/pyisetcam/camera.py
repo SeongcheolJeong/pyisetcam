@@ -36,6 +36,7 @@ from .sensor import (
 )
 from .types import Camera, ImageProcessor, OpticalImage, Sensor, SessionContext
 from .utils import (
+    ie_parameter_otype,
     image_increase_image_rgb_size,
     linear_to_srgb,
     param_format,
@@ -364,6 +365,26 @@ def camera_get(camera: Camera, parameter: str, *args: Any) -> Any:
         return metrics_camera(camera, metric_name)
     if key == "image":
         return ip_get(camera.fields["ip"], "display data")
+
+    object_type, object_param = ie_parameter_otype(parameter)
+    if object_param is not None:
+        if object_type == "oi":
+            return oi_get(camera.fields["oi"], object_param, *args)
+        if object_type == "optics":
+            return oi_get(camera.fields["oi"], f"optics {object_param}", *args)
+        if object_type == "wvf":
+            return oi_get(camera.fields["oi"], f"wvf {object_param}", *args)
+        if object_type in {"sensor", "pixel"}:
+            return sensor_get(camera.fields["sensor"], object_param, *args)
+        if object_type == "ip":
+            return ip_get(camera.fields["ip"], object_param, *args)
+        if object_type == "display":
+            return ip_get(camera.fields["ip"], f"display {object_param}", *args)
+        if object_type == "l3":
+            l3 = camera.fields["ip"].fields.get("l3")
+            if l3 is None:
+                return None
+            return _l3_get(l3, object_param)
     raise KeyError(f"Unsupported cameraGet parameter: {parameter}")
 
 
@@ -462,6 +483,27 @@ def camera_set(
         metrics[metric_name] = copy.deepcopy(value)
         camera.fields["metrics"] = metrics
         return track_camera_session_state(session, camera)
+
+    object_type, object_param = ie_parameter_otype(parameter)
+    if object_param is not None:
+        if object_type == "oi":
+            camera.fields["oi"] = oi_set(camera.fields["oi"], object_param, value, *args)
+            return track_camera_session_state(session, camera)
+        if object_type == "optics":
+            camera.fields["oi"] = oi_set(camera.fields["oi"], f"optics {object_param}", value, *args)
+            return track_camera_session_state(session, camera)
+        if object_type == "wvf":
+            camera.fields["oi"] = oi_set(camera.fields["oi"], f"wvf {object_param}", value, *args)
+            return track_camera_session_state(session, camera)
+        if object_type in {"sensor", "pixel"}:
+            camera.fields["sensor"] = sensor_set(camera.fields["sensor"], object_param, value, *args)
+            return track_camera_session_state(session, camera)
+        if object_type == "ip":
+            camera.fields["ip"] = ip_set(camera.fields["ip"], object_param, value, *args, session=session)
+            return track_camera_session_state(session, camera)
+        if object_type == "display":
+            camera.fields["ip"] = ip_set(camera.fields["ip"], f"display {object_param}", value, *args, session=session)
+            return track_camera_session_state(session, camera)
     raise KeyError(f"Unsupported cameraSet parameter: {parameter}")
 
 

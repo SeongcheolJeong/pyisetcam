@@ -2470,3 +2470,10 @@ The neighboring camera-metrics gateway now also covers the upstream
 profile summary for the legacy `moire orient` scene, and
 `metricsCamera(camera, 'moire')` now routes through that wrapper instead of
 raising an unsupported-option error.
+The same public camera gateway is tighter too: `cameraGet(...)` and
+`cameraSet(...)` now reuse `ieParameterOtype(...)` for unprefixed unique
+subobject parameters, so calls like `cameraSet(camera, 'fill factor', ...)`,
+`cameraSet(camera, 'f number', ...)`, `cameraSet(camera, 'display dpi', ...)`,
+and `cameraGet(camera, 'training illuminant')` follow the upstream
+delegation shape without requiring explicit `pixel` / `optics` / `ip` / `l3`
+prefixes.

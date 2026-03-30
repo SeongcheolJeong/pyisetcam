@@ -749,6 +749,12 @@
   center-to-edge chroma profile summary for the legacy `moire orient`
   scene, and `metricsCamera(camera, 'moire')` now routes through that
   wrapper instead of failing the gateway dispatch.
+- The same public camera gateway is tighter too: `cameraGet(...)` and
+  `cameraSet(...)` now reuse `ieParameterOtype(...)` for unprefixed unique
+  subobject parameters, so legacy calls like `cameraSet(camera, 'fill factor',
+  ...)`, `cameraSet(camera, 'f number', ...)`, `cameraSet(camera, 'display dpi',
+  ...)`, and `cameraGet(camera, 'training illuminant')` delegate through the
+  expected pixel/optics/display/L3 paths without forcing explicit prefixes.
 - Continue adding more scene patterns and `sceneFromFile`; the first slices now cover extra Macbeth variants, `moire orient`, `letter` / `font`, and the file-backed `rgb` / `multispectral` / `monochrome` scene shells.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.

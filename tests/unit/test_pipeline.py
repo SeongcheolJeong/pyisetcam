@@ -7889,6 +7889,16 @@ def test_camera_get_set_routes_matlab_style_subobjects(asset_store) -> None:
     assert np.isclose(camera_get(camera, "optics f number"), 5.6)
     assert camera_get(camera, "vci type") == "default"
 
+    camera = camera_set(camera, "auto exposure", True)
+    camera = camera_set(camera, "fill factor", 0.5)
+    camera = camera_set(camera, "f number", 4.0)
+    camera = camera_set(camera, "display dpi", 96)
+
+    assert camera_get(camera, "auto exposure") is True
+    assert np.isclose(camera_get(camera, "fill factor"), 0.5)
+    assert np.isclose(camera_get(camera, "f number"), 4.0)
+    assert camera_get(camera, "display dpi") == 96
+
 
 def test_camera_compute_end_to_end(asset_store) -> None:
     scene = scene_create(asset_store=asset_store)
@@ -7977,6 +7987,7 @@ def test_camera_create_supports_explicit_l3_payload(asset_store) -> None:
         "oi": design_oi,
         "design sensor": design_sensor,
         "kernels": np.arange(4, dtype=float).reshape(2, 2),
+        "training illuminant": "D65",
     }
 
     camera = camera_create("l3", l3_payload, asset_store=asset_store)
@@ -7997,6 +8008,7 @@ def test_camera_create_supports_explicit_l3_payload(asset_store) -> None:
         np.asarray(design_sensor.fields["size"], dtype=int)
     )
     assert np.array_equal(np.asarray(camera_get(camera, "l3 kernels"), dtype=float), l3_payload["kernels"])
+    assert camera_get(camera, "training illuminant") == "D65"
     ip_l3_design_sensor = camera_get(camera, "ip l3 design sensor")
     assert ip_l3_design_sensor is not design_sensor
     assert ip_l3_design_sensor.name == design_sensor.name
