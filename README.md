@@ -2302,6 +2302,10 @@ available directly from `pyisetcam` instead of only through
 `sc_gaussian_parameters(...)`, and `sc_compute_difference(...)` instead of
 leaving those reusable color and SCIELAB helpers only under
 `pyisetcam.color` or `pyisetcam.scielab`.
+That same SCIELAB surface now also exposes the upstream MATLAB-style aliases
+`scGaussianParameters(...)` and `scComputeDifference(...)` alongside the
+snake-case helpers, instead of leaving only the mixed alias set around
+`scApplyFilters(...)` and `scComputeSCIELAB(...)`.
 That same broad `utility` family is smaller again: the adjacent
 `utility/numerical` helper slice now also covers
 `getMiddleMatrix(...)`, `ieClip(...)`, `ieHwhm2SD(...)`, `ieScale(...)`,

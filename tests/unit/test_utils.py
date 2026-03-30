@@ -126,6 +126,8 @@ from pyisetcam import (
     max2,
     min2,
     replaceNaN,
+    scComputeDifference,
+    scGaussianParameters,
     sc_compute_difference as top_level_sc_compute_difference,
     sc_gaussian_parameters as top_level_sc_gaussian_parameters,
     sensor_to_target_matrix as top_level_sensor_to_target_matrix,
@@ -411,6 +413,10 @@ def test_color_and_scielab_helpers_are_exposed_through_package_root() -> None:
         top_level_sc_compute_difference(xyz1, xyz2, white, "2000"),
         sc_compute_difference(xyz1, xyz2, white, "2000"),
     )
+    np.testing.assert_allclose(scGaussianParameters(30.0, {"filterversion": "distribution"})[0], mod_x1)
+    np.testing.assert_allclose(scGaussianParameters(30.0, {"filterversion": "distribution"})[1], mod_x2)
+    np.testing.assert_allclose(scGaussianParameters(30.0, {"filterversion": "distribution"})[2], mod_x3)
+    np.testing.assert_allclose(scComputeDifference(xyz1, xyz2, white, "2000"), sc_compute_difference(xyz1, xyz2, white, "2000"))
 
 
 def test_interp_spectra_supports_descending_source_waves() -> None:

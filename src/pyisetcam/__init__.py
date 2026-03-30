@@ -1641,9 +1641,11 @@ __all__ = [
     "preSCIELAB",
     "pre_scielab",
     "scApplyFilters",
+    "scComputeDifference",
     "scParams",
     "sc_compute_difference",
     "scComputeSCIELAB",
+    "scGaussianParameters",
     "sc_gaussian_parameters",
     "scOpponentFilter",
     "scPrepareFilters",
@@ -3027,8 +3029,10 @@ getPlanes = get_planes
 ieConv2FFT = ie_conv2_fft
 preSCIELAB = pre_scielab
 scApplyFilters = sc_apply_filters
+scComputeDifference = sc_compute_difference
 scParams = sc_params
 scComputeSCIELAB = sc_compute_scielab
+scGaussianParameters = sc_gaussian_parameters
 scOpponentFilter = sc_opponent_filter
 scPrepareFilters = sc_prepare_filters
 scResize = sc_resize
