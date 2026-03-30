@@ -296,7 +296,10 @@ subpixel-upsampling wrapper on top of the existing dixel image, oversample,
 and Samsung render-function paths. That same display utility lane now also
 exposes headless `display_plot(...)` / `displayPlot(...)` for the reusable
 non-GUI `spd`, `gamma table`, `gamut`, `gamut 3d`, and `psf` cases,
-returning the same MATLAB-style user-data payloads without opening figures.
+returning the same MATLAB-style user-data payloads without opening figures;
+the `pyisetcam.display` module now also exposes the corresponding MATLAB-style
+camelCase aliases directly, so imports like `from pyisetcam.display import
+displayPlot` and `displayCompute` work without going through the package root.
 Both
 `sceneCreate('empty', wave)` and
 `sceneCreate('empty', [], wave)` now replay the legacy wavelength override

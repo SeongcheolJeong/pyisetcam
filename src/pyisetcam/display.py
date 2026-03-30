@@ -1081,3 +1081,19 @@ def display_set(display: Display, parameter: str, value: Any, *args: Any) -> Dis
         display.fields["ambient_spd"] = np.asarray(value, dtype=float).reshape(-1)
         return display
     raise KeyError(f"Unsupported displaySet parameter: {parameter}")
+
+
+displayConvert = display_convert
+displayPT2ISET = display_pt2iset
+displayReflectance = display_reflectance
+displayMaxContrast = display_max_contrast
+displayCreate = display_create
+displayList = display_list
+displayDescription = display_description
+displayShowImage = display_show_image
+displayPlot = display_plot
+displayCompute = display_compute
+displaySetMaxLuminance = display_set_max_luminance
+displaySetWhitePoint = display_set_white_point
+displayGet = display_get
+displaySet = display_set

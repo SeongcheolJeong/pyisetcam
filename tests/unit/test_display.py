@@ -18,12 +18,30 @@ from pyisetcam import (
     render_lcd_samsung_rgbw,
     render_oled_samsung,
 )
+import pyisetcam.display as display_module
 
 
 def test_display_create_lcd_example(asset_store) -> None:
     display = display_create("lcdExample.mat", asset_store=asset_store)
     assert display_get(display, "spd").shape[1] == 3
     assert display_get(display, "gamma").shape[1] == 3
+
+
+def test_display_module_matlab_aliases() -> None:
+    assert display_module.displayConvert is display_module.display_convert
+    assert display_module.displayPT2ISET is display_module.display_pt2iset
+    assert display_module.displayReflectance is display_module.display_reflectance
+    assert display_module.displayMaxContrast is display_module.display_max_contrast
+    assert display_module.displayCreate is display_module.display_create
+    assert display_module.displayList is display_module.display_list
+    assert display_module.displayDescription is display_module.display_description
+    assert display_module.displayShowImage is display_module.display_show_image
+    assert display_module.displayPlot is display_module.display_plot
+    assert display_module.displayCompute is display_module.display_compute
+    assert display_module.displaySetMaxLuminance is display_module.display_set_max_luminance
+    assert display_module.displaySetWhitePoint is display_module.display_set_white_point
+    assert display_module.displayGet is display_module.display_get
+    assert display_module.displaySet is display_module.display_set
 
 
 def test_display_wave_resample(asset_store) -> None:

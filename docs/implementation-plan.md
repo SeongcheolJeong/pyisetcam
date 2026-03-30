@@ -853,6 +853,12 @@
   `ipGet/Set(..., 'combination method', ...)` and the `combine exposures`
   alias now replay the vendored default `longest` behavior and shared
   stored method field.
+- The adjacent display wrapper surface is tighter too: the
+  `pyisetcam.display` module now exposes the direct MATLAB-style camelCase
+  aliases for the existing headless display helpers, so users can import
+  `displayPlot`, `displayCompute`, `displayGet`, `displaySet`, and the
+  related display utility names from the module itself instead of only from
+  the package root.
 - Continue adding more scene patterns and `sceneFromFile`; the first slices now cover extra Macbeth variants, `moire orient`, `letter` / `font`, and the file-backed `rgb` / `multispectral` / `monochrome` scene shells.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.
