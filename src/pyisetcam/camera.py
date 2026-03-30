@@ -459,7 +459,7 @@ def camera_set(
 def camera_compute(
     camera: Camera,
     p_type: str | Scene = "sensor",
-    mode: str = "normal",
+    mode: Any = "normal",
     sensor_resize: bool = True,
     *,
     asset_store: AssetStore | None = None,
@@ -468,7 +468,8 @@ def camera_compute(
     """Run the supported camera pipeline."""
 
     store = _store(asset_store)
-    normalized_mode = param_format(mode)
+    adjust_scale = None if isinstance(mode, str) or mode is None else np.asarray(mode, dtype=float)
+    normalized_mode = param_format("normal" if adjust_scale is not None and mode is not None else mode or "normal")
     if normalized_mode not in {"normal", "idealxyz"}:
         raise UnsupportedOptionError("cameraCompute", mode)
 
@@ -550,6 +551,14 @@ def camera_compute(
         ip = ip_compute(ip, sensor, asset_store=store, session=session)
     else:
         raise UnsupportedOptionError("cameraCompute", str(p_type))
+
+    if adjust_scale is not None:
+        result = np.asarray(ip_get(ip, "result"), dtype=float)
+        mean_result = _camera_center_mean(result)
+        mean_scale = _camera_center_mean(adjust_scale)
+        if mean_result > 0.0:
+            result = result * (mean_scale / mean_result)
+            ip = ip_set(ip, "result", result, session=session)
 
     camera.fields["oi"] = oi
     camera.fields["sensor"] = sensor

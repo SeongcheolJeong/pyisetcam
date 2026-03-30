@@ -16201,6 +16201,28 @@ def test_camera_introduction_tutorial_workflow(asset_store) -> None:
     assert np.allclose(srgb_gray, srgb_from_sensor, atol=1e-12, rtol=1e-12)
 
 
+def test_camera_compute_supports_reference_lrgb_scaling(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    scene = scene_set(scene, "fov", 8.0)
+
+    camera = camera_create(asset_store=asset_store)
+    camera = camera_compute(camera, scene, asset_store=asset_store)
+    result = np.asarray(camera_get(camera, "ip result"), dtype=float)
+    reference = result * 0.25
+
+    scaled_camera = camera_compute(camera, "sensor", reference, asset_store=asset_store)
+    scaled_result = np.asarray(camera_get(scaled_camera, "ip result"), dtype=float)
+
+    assert scaled_result.shape == reference.shape
+    assert not np.allclose(scaled_result, result)
+    np.testing.assert_allclose(
+        np.mean(scaled_result[10:-10, 10:-10, :]),
+        np.mean(reference[10:-10, 10:-10, :]),
+        atol=1e-12,
+        rtol=1e-12,
+    )
+
+
 def test_camera_compute_ideal_xyz_mode_reuses_oi_path(asset_store) -> None:
     scene = scene_create("macbeth d65", 8, asset_store=asset_store)
     scene = scene_set(scene, "fov", 8.0)

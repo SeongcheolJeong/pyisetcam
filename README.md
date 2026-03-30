@@ -2461,3 +2461,7 @@ That same L3 path now also replays the upstream camera-set bookkeeping:
 `cameraSet('L3 sensor size', ...)` and `cameraSet('L3 sensor fov', ...)`
 update both the active camera sensor and the stored L3 design sensor
 together instead of leaving the payload out of sync.
+The public camera compute wrapper is tighter too: `cameraCompute(camera,
+'oi', lrgbScale)` now accepts the upstream non-string third-argument form
+and rescales the rendered linear RGB result to match the reference image
+mean instead of treating that input as an unsupported mode token.

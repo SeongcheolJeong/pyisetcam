@@ -739,6 +739,11 @@
   sync for the upstream bookkeeping setters: `cameraSet('L3 sensor size', ...)`
   and `cameraSet('L3 sensor fov', ...)` update both the active camera sensor
   and the stored L3 payload instead of diverging after the first resize.
+- The public camera compute wrapper now also replays the upstream
+  non-string third-argument scaling form: `cameraCompute(camera, 'oi',
+  lrgbScale)` rescales the rendered linear RGB result to match the
+  reference-image mean instead of treating that input as an unsupported
+  mode string.
 - Continue adding more scene patterns and `sceneFromFile`; the first slices now cover extra Macbeth variants, `moire orient`, `letter` / `font`, and the file-backed `rgb` / `multispectral` / `monochrome` scene shells.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.
