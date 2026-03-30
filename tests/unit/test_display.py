@@ -190,6 +190,21 @@ def test_display_plot_returns_headless_payloads(asset_store) -> None:
     assert psf_payload["srgb"].shape == (3, 3)
 
 
+def test_display_plot_gamut3d_returns_lab_cloud_and_hull(asset_store) -> None:
+    display = display_create("lcdExample.mat", asset_store=asset_store)
+
+    gamut_payload, gamut_handle = displayPlot(display, "gamut 3d")
+
+    assert gamut_handle is None
+    assert gamut_payload["LAB"].shape == (30**3, 3)
+    assert gamut_payload["rgb"].shape == (30**3, 3)
+    assert gamut_payload["hull"].ndim == 2
+    assert gamut_payload["hull"].shape[1] == 3
+    assert gamut_payload["hull"].shape[0] > 0
+    assert np.all(gamut_payload["rgb"] >= 0.0)
+    assert np.all(gamut_payload["rgb"] <= 1.0)
+
+
 def test_display_compute_matches_nearest_neighbor_and_dixel_weighting(asset_store) -> None:
     display = display_create("lcdExample.mat", asset_store=asset_store)
     dixel_image = np.array(

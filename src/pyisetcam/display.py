@@ -10,11 +10,12 @@ import imageio.v3 as iio
 import numpy as np
 from scipy.io import savemat
 from scipy.ndimage import zoom
+from scipy.spatial import ConvexHull
 
 from .assets import AssetStore, ie_read_spectra
 from .color import xyz_color_matching, xyz_to_lms
 from .exceptions import UnsupportedOptionError
-from .metrics import chromaticity_xy, xyz_from_energy
+from .metrics import chromaticity_xy, xyz_from_energy, xyz_to_lab
 from .session import track_session_object
 from .types import Display, SessionContext
 from .utils import blackbody, ie_lut_digital, ie_unit_scale_factor, image_linear_transform, interp_spectra, invert_gamma_table, param_format, spectral_step, srgb_to_xyz, xyz_to_srgb
@@ -513,6 +514,24 @@ def display_plot(
         if xy.shape[0] > 0:
             xy = np.vstack((xy, xy[0, :]))
         return {"xy": np.asarray(xy, dtype=float)}, None
+    if key == "gamut3d":
+        n_primaries = int(display_get(display, "n primaries"))
+        if n_primaries > 3:
+            warnings.warn("Display has more than 3 primaries; only the first 3 are used.", RuntimeWarning, stacklevel=2)
+        gtable = np.asarray(display_get(display, "gamma table"), dtype=float)
+        n_samples = 30
+        dac = np.rint(np.linspace(0.0, gtable.shape[0] - 1.0, n_samples + 1, dtype=float)[1:]).astype(int)
+        rr, gg, bb = np.meshgrid(dac, dac, dac, indexing="ij")
+        digital_rgb = np.stack((gg, rr, bb), axis=-1).reshape(-1, 1, 3)
+        rgb = np.asarray(ie_lut_digital(digital_rgb, gtable[:, : min(3, gtable.shape[1])]), dtype=float).reshape(-1, 3)
+        xyz = np.asarray(rgb @ np.asarray(display_get(display, "rgb2xyz"), dtype=float), dtype=float)
+        lab = np.asarray(xyz_to_lab(xyz, np.asarray(display_get(display, "white xyz"), dtype=float).reshape(3)), dtype=float)
+        hull = ConvexHull(lab)
+        return {
+            "LAB": lab.copy(),
+            "rgb": rgb.copy(),
+            "hull": np.asarray(hull.simplices, dtype=int).copy(),
+        }, None
     if key == "psf":
         psf = np.asarray(display_get(display, "dixel image"), dtype=float)
         if psf.size == 0:
