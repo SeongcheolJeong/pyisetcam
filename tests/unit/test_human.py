@@ -173,6 +173,33 @@ def test_optics_module_native_matlab_aliases() -> None:
     assert optics_module.opticsRayTrace is optics_module.optics_ray_trace
 
 
+def test_optics_module_oi_matlab_aliases() -> None:
+    assert optics_module.oiBirefringentDiffuser is optics_module.oi_birefringent_diffuser
+    assert optics_module.oiCalculateIlluminance is optics_module.oi_calculate_illuminance
+    assert optics_module.oiCalculateOTF is optics_module.oi_calculate_otf
+    assert optics_module.oiCameraMotion is optics_module.oi_camera_motion
+    assert optics_module.oiClearData is optics_module.oi_clear_data
+    assert optics_module.oiCombineDepths is optics_module.oi_combine_depths
+    assert optics_module.oiCompute is optics_module.oi_compute
+    assert optics_module.oiCreate is optics_module.oi_create
+    assert optics_module.oiCrop is optics_module.oi_crop
+    assert optics_module.oiCustomCompute is optics_module.oi_custom_compute
+    assert optics_module.oiDepthCombine is optics_module.oi_depth_combine
+    assert optics_module.oiDepthSegmentMap is optics_module.oi_depth_segment_map
+    assert optics_module.oiDiffuser is optics_module.oi_diffuser
+    assert optics_module.oiFrequencyResolution is optics_module.oi_frequency_resolution
+    assert optics_module.oiGet is optics_module.oi_get
+    assert optics_module.oiPadDepthMap is optics_module.oi_pad_depth_map
+    assert optics_module.oiPreviewVideo is optics_module.oi_preview_video
+    assert optics_module.oiSaveImage is optics_module.oi_save_image
+    assert optics_module.oiSet is optics_module.oi_set
+    assert optics_module.oiShowImage is optics_module.oi_show_image
+    assert optics_module.oiSpace is optics_module.oi_space
+    assert optics_module.oiSpatialResample is optics_module.oi_spatial_resample
+    assert optics_module.oiSpatialSupport is optics_module.oi_spatial_support
+    assert optics_module.oiWBCompute is optics_module.oi_wb_compute
+
+
 def test_human_cones_replays_defaults_and_macular_density_adjustment() -> None:
     cones_default, correction_default, wave_default = humanCones()
     cones_placeholder, correction_placeholder, wave_placeholder = humanCones([], [], [], [])
