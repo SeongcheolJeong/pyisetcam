@@ -539,6 +539,9 @@ def camera_compute(
     elif p_type is None:
         scene = None
         start_type = "sensor"
+    elif isinstance(p_type, str) and not p_type.strip():
+        scene = None
+        start_type = "sensor"
     else:
         p_type_array = None
         if isinstance(p_type, (list, tuple, np.ndarray)):

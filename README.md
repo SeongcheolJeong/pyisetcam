@@ -2494,3 +2494,7 @@ The fourth positional slot now follows the same rule: empty or `None`
 `sensorResize` placeholders are treated as omitted values, so
 `cameraCompute(camera, scene, [], [])` still replays the default resize-to-scene
 behavior instead of silently disabling sensor resizing.
+The `pType` parser is tighter too: empty-string placeholders are now treated
+as omitted values, so `cameraCompute(camera, '')` and
+`cameraCompute(camera, '   ')` both fall back to the upstream default
+`'sensor'` restart path instead of failing dispatch on blank strings.

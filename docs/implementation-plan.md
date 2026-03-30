@@ -772,6 +772,10 @@
   `sensorResize` placeholders are treated as omitted values, so
   `cameraCompute(camera, scene, [], [])` still replays the default
   resize-to-scene behavior instead of silently disabling sensor resizing.
+- The `pType` parser is tighter too: empty-string placeholders are now
+  treated as omitted values, so `cameraCompute(camera, '')` and
+  `cameraCompute(camera, '   ')` both fall back to the upstream default
+  `'sensor'` restart path instead of failing dispatch on blank strings.
 - Continue adding more scene patterns and `sceneFromFile`; the first slices now cover extra Macbeth variants, `moire orient`, `letter` / `font`, and the file-backed `rgb` / `multispectral` / `monochrome` scene shells.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.
