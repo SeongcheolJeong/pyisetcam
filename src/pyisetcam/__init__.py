@@ -64,6 +64,7 @@ from .color import (
 )
 from .description import HeadlessDescriptionHandle, sensor_description
 from .display import (
+    display_compute,
     display_convert,
     display_create,
     display_description,
@@ -1026,6 +1027,7 @@ __all__ = [
     "half_tone_image",
     "displayCreate",
     "displayConvert",
+    "displayCompute",
     "displayDescription",
     "displayGet",
     "displayList",
@@ -1036,6 +1038,7 @@ __all__ = [
     "displaySetMaxLuminance",
     "displaySetWhitePoint",
     "displayShowImage",
+    "display_compute",
     "display_convert",
     "display_create",
     "display_description",
@@ -2644,6 +2647,7 @@ illuminantSet = illuminant_set
 
 displayCreate = display_create
 displayConvert = display_convert
+displayCompute = display_compute
 displayDescription = display_description
 displayGet = display_get
 displayList = display_list

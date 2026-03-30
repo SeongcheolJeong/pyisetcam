@@ -6,8 +6,10 @@ import warnings
 from pathlib import Path
 from typing import Any
 
+import imageio.v3 as iio
 import numpy as np
 from scipy.io import savemat
+from scipy.ndimage import zoom
 
 from .assets import AssetStore, ie_read_spectra
 from .color import xyz_color_matching, xyz_to_lms
@@ -486,6 +488,114 @@ def display_show_image(
     return np.asarray(scene_get(scene, "rgb"), dtype=float)
 
 
+def _normalize_target_size(value: Any) -> tuple[int, int]:
+    target = np.asarray(value, dtype=int).reshape(-1)
+    if target.size == 1:
+        target = np.repeat(target, 2)
+    if target.size < 2:
+        raise ValueError("Target size must provide one or two integer values.")
+    return (max(int(target[0]), 1), max(int(target[1]), 1))
+
+
+def _resize_dixel_image(dixel_image: np.ndarray, target_size: tuple[int, int]) -> np.ndarray:
+    image = np.asarray(dixel_image, dtype=float)
+    if image.shape[:2] == target_size:
+        return image.copy()
+    factors = (target_size[0] / max(image.shape[0], 1), target_size[1] / max(image.shape[1], 1), 1.0)
+    resized = np.asarray(zoom(image, factors, order=1), dtype=float)
+    resized[resized < 0.0] = 0.0
+    scale = np.prod(target_size) / np.maximum(np.sum(resized, axis=(0, 1), keepdims=True), 1.0e-12)
+    return resized * scale
+
+
+def _display_render_function(value: Any) -> Any:
+    if callable(value):
+        return value
+    normalized = param_format(str(value))
+    if normalized in {"renderoledsamsung", "render_oled_samsung"}:
+        return render_oled_samsung
+    if normalized in {"renderlcdsamsungrgbw", "render_lcd_samsung_rgbw"}:
+        return render_lcd_samsung_rgbw
+    raise UnsupportedOptionError("displayCompute", str(value))
+
+
+def _display_compute_input(image: Any) -> np.ndarray:
+    if isinstance(image, (str, Path)):
+        payload = np.asarray(iio.imread(Path(image)), dtype=float)
+    else:
+        payload = np.asarray(image)
+    if np.issubdtype(payload.dtype, np.integer):
+        info = np.iinfo(payload.dtype)
+        return np.asarray(payload, dtype=float) / float(info.max)
+    return np.asarray(payload, dtype=float)
+
+
+def display_compute(
+    display: Display | str,
+    image: Any,
+    sz: Any | None = None,
+    *,
+    asset_store: AssetStore | None = None,
+) -> tuple[np.ndarray, Display]:
+    """Compute a MATLAB-style upsampled display image from RGB input."""
+
+    if display is None:
+        raise ValueError("display required")
+    if image is None:
+        raise ValueError("Input image required")
+
+    current_display = display_create(display, asset_store=asset_store) if isinstance(display, str) else display
+    image_array = _display_compute_input(image)
+    n_primaries = int(display_get(current_display, "n primaries"))
+
+    if image_array.ndim == 2:
+        image_array = np.repeat(image_array[:, :, None], n_primaries, axis=2)
+    elif image_array.ndim != 3:
+        raise ValueError("displayCompute expects a 2-D grayscale image or 3-D image cube.")
+    elif image_array.shape[2] == 1 and n_primaries > 1:
+        image_array = np.repeat(image_array, n_primaries, axis=2)
+    elif image_array.shape[2] != n_primaries:
+        raise ValueError("displayCompute image channels must match the number of display primaries.")
+
+    pixels_per_dixel = np.asarray(display_get(current_display, "pixels per dixel"), dtype=int).reshape(2)
+    render_function = display_get(current_display, "render function")
+    target_size = display_get(current_display, "dixel size") if sz is None else _normalize_target_size(sz)
+    target_size = tuple(np.asarray(target_size, dtype=int).reshape(2))
+    oversample = np.rint(np.asarray(target_size, dtype=float) / np.maximum(pixels_per_dixel.astype(float), 1.0)).astype(int)
+    if np.any(oversample <= 0):
+        raise ValueError("bad up-sampling sz")
+
+    dixel_image = np.asarray(display_get(current_display, "dixel image", target_size), dtype=float)
+    if dixel_image.size == 0:
+        raise ValueError("psf not defined for display")
+    if np.min(dixel_image) < 0.0:
+        raise ValueError("psfs values should be non-negative")
+
+    if np.any(pixels_per_dixel > 1) and not render_function:
+        raise ValueError("Render algorithm is required")
+
+    if render_function:
+        renderer = _display_render_function(render_function)
+        out_image = np.asarray(renderer(image_array, current_display, target_size, asset_store=asset_store), dtype=float)
+    else:
+        out_image = np.repeat(np.repeat(image_array, int(oversample[0]), axis=0), int(oversample[1]), axis=1)
+
+    rows, cols = image_array.shape[:2]
+    expected_rows = rows * int(oversample[0])
+    expected_cols = cols * int(oversample[1])
+    if out_image.shape[0] != expected_rows or out_image.shape[1] != expected_cols:
+        raise ValueError("bad outImage size")
+
+    if rows % max(int(pixels_per_dixel[0]), 1) != 0 or cols % max(int(pixels_per_dixel[1]), 1) != 0:
+        raise ValueError("Input image dimensions must be divisible by pixels per dixel.")
+
+    tiled_dixel = np.tile(
+        dixel_image,
+        (rows // max(int(pixels_per_dixel[0]), 1), cols // max(int(pixels_per_dixel[1]), 1), 1),
+    )
+    return np.asarray(out_image * tiled_dixel, dtype=float), current_display
+
+
 def _display_control_map(
     display: Display,
     *,
@@ -775,10 +885,26 @@ def display_get(display: Display, parameter: str, *args: Any) -> Any:
         return spd / np.maximum(fill_factor, 1.0e-12)
     if key in {"dixelintensitymap", "dixelimage"}:
         dixel = display.fields.get("dixel") or {}
-        return dixel.get("intensity_map")
+        intensity = dixel.get("intensity_map")
+        if intensity is None:
+            return None
+        if args:
+            return _resize_dixel_image(np.asarray(intensity, dtype=float), _normalize_target_size(args[0]))
+        return intensity
     if key == "dixelcontrolmap":
         dixel = display.fields.get("dixel") or {}
-        return dixel.get("control_map")
+        control_map = dixel.get("control_map")
+        if control_map is None:
+            return None
+        if args:
+            target_size = _normalize_target_size(args[0])
+            factors = (
+                target_size[0] / max(control_map.shape[0], 1),
+                target_size[1] / max(control_map.shape[1], 1),
+                1.0,
+            )
+            return np.asarray(zoom(np.asarray(control_map, dtype=float), factors, order=0), dtype=float)
+        return control_map
     if key == "renderfunction":
         dixel = display.fields.get("dixel") or {}
         return dixel.get("render_function")

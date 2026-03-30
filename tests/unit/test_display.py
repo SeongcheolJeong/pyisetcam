@@ -6,6 +6,8 @@ import numpy as np
 from scipy.io import loadmat, savemat
 
 from pyisetcam import (
+    displayCompute,
+    display_compute,
     displayConvert,
     displayPT2ISET,
     displayReflectance,
@@ -154,6 +156,40 @@ def test_display_create_normalizes_render_function_names(asset_store) -> None:
     assert display_get(barco, "render function") is None
 
 
+def test_display_compute_matches_nearest_neighbor_and_dixel_weighting(asset_store) -> None:
+    display = display_create("lcdExample.mat", asset_store=asset_store)
+    dixel_image = np.array(
+        [
+            [[1.0, 0.5, 0.25], [0.25, 1.0, 0.5]],
+            [[0.5, 0.25, 1.0], [1.0, 0.5, 0.25]],
+        ],
+        dtype=float,
+    )
+    control = np.ones((2, 2, 3), dtype=float)
+    image = np.array([[0.2, 0.8], [0.4, 0.6]], dtype=float)
+
+    display = display_set(display, "pixels per dixel", [1, 1])
+    display = display_set(display, "dixel image", dixel_image)
+    display = display_set(display, "dixel control map", control)
+
+    resized_image = np.asarray(display_get(display, "dixel image", [4, 4]), dtype=float)
+    resized_control = np.asarray(display_get(display, "dixel control map", [4, 4]), dtype=float)
+
+    actual, returned = display_compute(display, image)
+    alias_actual, alias_returned = displayCompute(display, image, [2, 2])
+
+    repeated = np.repeat(np.repeat(np.repeat(image[:, :, None], 3, axis=2), 2, axis=0), 2, axis=1)
+    expected = repeated * np.tile(dixel_image, (2, 2, 1))
+
+    assert returned is display
+    assert alias_returned is display
+    assert resized_image.shape == (4, 4, 3)
+    assert resized_control.shape == (4, 4, 3)
+    np.testing.assert_allclose(np.sum(resized_image, axis=(0, 1)), np.full(3, 16.0, dtype=float), rtol=1e-12, atol=1e-12)
+    np.testing.assert_allclose(actual, expected, rtol=1e-12, atol=1e-12)
+    np.testing.assert_allclose(alias_actual, expected, rtol=1e-12, atol=1e-12)
+
+
 def test_render_oled_samsung_matches_control_map_replay(asset_store) -> None:
     display = display_create("OLED-Samsung.mat", asset_store=asset_store)
     image = np.arange(1.0, 1.0 + 2 * 4 * 4, dtype=float).reshape(2, 4, 4, order="F")
@@ -171,6 +207,24 @@ def test_render_oled_samsung_matches_control_map_replay(asset_store) -> None:
             expected[:, block_index * tile_cols : (block_index + 1) * tile_cols, primary] = block.reshape(-1, order="F")[control]
 
     np.testing.assert_allclose(actual, expected, rtol=0.0, atol=0.0)
+
+
+def test_display_compute_uses_render_function_when_available(asset_store) -> None:
+    display = display_create("OLED-Samsung.mat", asset_store=asset_store)
+    image = np.arange(1.0, 1.0 + 2 * 4 * 4, dtype=float).reshape(2, 4, 4, order="F")
+
+    actual, returned = display_compute(display, image)
+
+    dixel_image = np.asarray(display_get(display, "dixel image"), dtype=float)
+    pixels_per_dixel = np.asarray(display_get(display, "pixels per dixel"), dtype=int).reshape(2)
+    rendered = render_oled_samsung(image, display, display_get(display, "dixel size"), asset_store=asset_store)
+    expected = rendered * np.tile(
+        dixel_image,
+        (image.shape[0] // pixels_per_dixel[0], image.shape[1] // pixels_per_dixel[1], 1),
+    )
+
+    assert returned is display
+    np.testing.assert_allclose(actual, expected, rtol=1e-12, atol=1e-12)
 
 
 def test_render_lcd_samsung_rgbw_matches_white_extraction(asset_store) -> None:
