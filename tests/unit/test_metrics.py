@@ -16,6 +16,7 @@ from pyisetcam import (
     mired_difference,
     peak_signal_to_noise_ratio,
     sc_compute_difference,
+    srgb_to_color_temp,
     xyz_from_energy,
     xyz_to_lab,
     xyz_to_luv,
@@ -210,6 +211,21 @@ def test_metrics_spd_mired_returns_estimated_ccts() -> None:
     assert value > 0.0
     assert params["cct_k"].shape == (2,)
     assert np.isclose(value, mired_difference(params["cct_k"][0], params["cct_k"][1]))
+
+
+def test_srgb_to_color_temp_accepts_matlab_style_method_key_value() -> None:
+    rgb = np.array(
+        [
+            [[0.85, 0.78, 0.70], [0.80, 0.75, 0.68]],
+            [[0.72, 0.70, 0.66], [0.68, 0.67, 0.65]],
+        ],
+        dtype=float,
+    )
+
+    positional = srgb_to_color_temp(rgb, "gray")
+    key_value = srgb_to_color_temp(rgb, "method", "gray")
+
+    assert positional == key_value
 
 
 def test_correlated_color_temperature_tracks_d65_white_point() -> None:

@@ -1007,7 +1007,7 @@ def spd_to_cct(
 def srgb_to_color_temp(
     rgb: Any,
     method: str = "bright",
-    *,
+    *args: Any,
     return_table: bool = False,
     asset_store: AssetStore | None = None,
 ) -> float | tuple[float, NDArray[np.float64]]:
@@ -1025,7 +1025,17 @@ def srgb_to_color_temp(
 
     img_xyz = np.asarray(srgb_to_xyz(rgb_float), dtype=float)
     img_xyz_xw, _, _, _ = rgb_to_xw_format(img_xyz)
-    method_key = param_format(method)
+    method_value = method
+    if args:
+        values = (method, *args)
+        if len(values) % 2 != 0:
+            raise ValueError("srgb2colortemp optional arguments must be key/value pairs.")
+        options: dict[str, Any] = {}
+        for index in range(0, len(values), 2):
+            options[param_format(values[index])] = values[index + 1]
+        method_value = options.get("method", options.get("type", "bright"))
+
+    method_key = param_format(method_value)
 
     if method_key in {"bright"}:
         y_channel = img_xyz_xw[:, 1]
@@ -1037,7 +1047,7 @@ def srgb_to_color_temp(
     elif method_key in {"gray"}:
         top_xy = np.mean(chromaticity_xy(img_xyz_xw), axis=0, dtype=float)
     else:
-        raise UnsupportedOptionError("srgb2colortemp", method)
+        raise UnsupportedOptionError("srgb2colortemp", method_value)
 
     wave = np.arange(400.0, 701.0, 10.0, dtype=float)
     c_temps = np.arange(2500.0, 10501.0, 500.0, dtype=float)
