@@ -2540,3 +2540,8 @@ That same sequence wrapper now also reuses the selected session scene when
 `scenes` is omitted or passed as an empty placeholder, matching the
 upstream current-scene default instead of requiring an explicit scene list
 in every call.
+The neighboring IP gateway is tighter too: `ipGet(...)` now accepts the
+upstream `white point` / `wp` / `image white point` aliases for the stored
+data white point, and `data or display white point` now falls back to the
+attached display white point when no data-specific white point has been
+set.

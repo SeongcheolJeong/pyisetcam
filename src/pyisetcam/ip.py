@@ -2393,8 +2393,13 @@ def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
     if key == "dataluminance":
         xyz = ip.data.get("xyz")
         return None if xyz is None else np.asarray(xyz, dtype=float)[..., 1]
-    if key in {"datawhitepoint", "datawp"}:
+    if key in {"whitepoint", "wp", "datawhitepoint", "datawp", "imagewhitepoint", "imagewp"}:
         return ip.data.get("wp")
+    if key in {"dataordisplaywhitepoint", "dataormonitorwhitepoint"}:
+        data_white_point = ip.data.get("wp")
+        if data_white_point is not None:
+            return data_white_point
+        return display_get(ip.fields["display"], "white point")
     raise KeyError(f"Unsupported ipGet parameter: {parameter}")
 
 

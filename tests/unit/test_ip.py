@@ -974,6 +974,29 @@ def test_vcimage_clear_data_matches_ip_clear_data(asset_store) -> None:
     assert cleared_by_vcimage.data == cleared_by_ip.data
 
 
+def test_ip_get_white_point_aliases_match_upstream_fallbacks() -> None:
+    ip = ip_create()
+    display_white = np.asarray(display_get(ip_get(ip, "display"), "white point"), dtype=float)
+
+    assert np.allclose(np.asarray(ip_get(ip, "data or display white point"), dtype=float), display_white)
+    assert np.allclose(np.asarray(ip_get(ip, "data or monitor white point"), dtype=float), display_white)
+
+    data_white = np.array([0.95, 1.0, 1.09], dtype=float)
+    ip = ip_set(ip, "data white point", data_white)
+
+    for alias in (
+        "data white point",
+        "data wp",
+        "white point",
+        "wp",
+        "image white point",
+        "image wp",
+        "data or display white point",
+        "data or monitor white point",
+    ):
+        assert np.allclose(np.asarray(ip_get(ip, alias), dtype=float), data_white)
+
+
 def test_vcimage_srgb_matches_manual_pipeline(asset_store) -> None:
     generated = vcimageSRGB(asset_store=asset_store)
 
