@@ -6756,6 +6756,10 @@ def scene_set(scene: Scene, parameter: str, value: Any) -> Scene:
 
 exiftoolDepthFromFile = exiftool_depth_from_file
 exiftoolInfo = exiftool_info
+FOTParams = fot_params
+gaborP = gabor_p
+hdrRender = hdr_render
+ieCheckerboard = ie_checkerboard
 macbethChartCreate = macbeth_chart_create
 macbethDrawRects = macbeth_draw_rects
 macbethEvaluationGraphs = macbeth_evaluation_graphs
@@ -6768,6 +6772,7 @@ macbethRectangles = macbeth_rectangles
 macbethROIs = macbeth_rois
 macbethSelect = macbeth_select
 macbethSensorValues = macbeth_sensor_values
+MOTarget = mo_target
 sceneCreate = scene_create
 sceneAdd = scene_add
 sceneAddGrid = scene_add_grid
