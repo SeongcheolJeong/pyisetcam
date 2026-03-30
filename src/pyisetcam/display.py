@@ -15,7 +15,7 @@ from .exceptions import UnsupportedOptionError
 from .metrics import chromaticity_xy, xyz_from_energy
 from .session import track_session_object
 from .types import Display, SessionContext
-from .utils import blackbody, interp_spectra, invert_gamma_table, param_format, spectral_step, srgb_to_xyz
+from .utils import blackbody, ie_unit_scale_factor, interp_spectra, invert_gamma_table, param_format, spectral_step, srgb_to_xyz
 
 
 def _store(asset_store: AssetStore | None) -> AssetStore:
@@ -647,6 +647,9 @@ def display_get(display: Display, parameter: str, *args: Any) -> Any:
         return int(2 ** int(display_get(display, "bits")))
     if key in {"levels"}:
         return np.arange(int(display_get(display, "nlevels")), dtype=int)
+    if key == "darklevel":
+        gamma = np.asarray(display_get(display, "gamma table"), dtype=float)
+        return np.asarray(gamma[0, :], dtype=float)
     if key in {"wave", "wavelength"}:
         return np.asarray(display.fields["wave"], dtype=float)
     if key == "binwidth":
@@ -705,9 +708,15 @@ def display_get(display: Display, parameter: str, *args: Any) -> Any:
     if key in {"dpi", "ppi"}:
         return float(display.fields["dpi"])
     if key in {"metersperdot"}:
-        return 0.0254 / max(float(display.fields["dpi"]), 1e-12)
+        value = 0.0254 / max(float(display.fields["dpi"]), 1e-12)
+        if args:
+            value *= float(ie_unit_scale_factor(str(args[0])))
+        return float(value)
     if key in {"dotspermeter"}:
-        return 1.0 / max(float(display_get(display, "meters per dot")), 1e-12)
+        value = 1.0 / max(float(display_get(display, "meters per dot")), 1e-12)
+        if args:
+            value *= float(ie_unit_scale_factor(str(args[0])))
+        return float(value)
     if key in {"dotsperdeg"}:
         dist = float(display_get(display, "viewing distance"))
         meters_per_dot = float(display_get(display, "meters per dot"))
@@ -730,6 +739,29 @@ def display_get(display: Display, parameter: str, *args: Any) -> Any:
         dixel = display.fields.get("dixel") or {}
         intensity = dixel.get("intensity_map")
         return None if intensity is None else intensity.shape[:2]
+    if key in {"oversample", "osample"}:
+        dixel_size = np.asarray(display_get(display, "dixel size"), dtype=float).reshape(2)
+        pixels_per_dixel = np.asarray(display_get(display, "pixels per dixel"), dtype=float).reshape(2)
+        return dixel_size / np.maximum(pixels_per_dixel, 1.0)
+    if key == "samplespacing":
+        sample_spacing = np.asarray(display_get(display, "meters per dot"), dtype=float) / np.asarray(
+            display_get(display, "dixel size"),
+            dtype=float,
+        )
+        sample_spacing = sample_spacing * np.asarray(display_get(display, "pixels per dixel"), dtype=float)
+        if args:
+            sample_spacing = sample_spacing * float(ie_unit_scale_factor(str(args[0])))
+        return np.asarray(sample_spacing, dtype=float).reshape(2)
+    if key in {"fillfactor", "fillingfactor", "subpixelfilling"}:
+        dixel_image = np.asarray(display_get(display, "dixel image"), dtype=float)
+        max_per_primary = np.max(dixel_image, axis=(0, 1), keepdims=True)
+        normalized = np.divide(dixel_image, np.maximum(max_per_primary, 1.0e-12))
+        filled = normalized > 0.2
+        return np.sum(filled, axis=(0, 1), dtype=float) / float(dixel_image.shape[0] * dixel_image.shape[1])
+    if key == "subpixelspd":
+        spd = np.asarray(display_get(display, "spd"), dtype=float)
+        fill_factor = np.asarray(display_get(display, "fill factor"), dtype=float).reshape(1, -1)
+        return spd / np.maximum(fill_factor, 1.0e-12)
     if key in {"dixelintensitymap", "dixelimage"}:
         dixel = display.fields.get("dixel") or {}
         return dixel.get("intensity_map")

@@ -36,6 +36,7 @@ def test_display_get_reports_matlab_style_derived_values(asset_store) -> None:
 
     inverse_gamma = display_get(display, "inverse gamma", 32)
     gamma = display_get(display, "gamma")
+    dark_level = np.asarray(display_get(display, "dark level"), dtype=float)
     rgb2lms = np.asarray(display_get(display, "rgb2lms"), dtype=float)
     white_lms = np.asarray(display_get(display, "white lms"), dtype=float)
     primaries_xyz = np.asarray(display_get(display, "primaries xyz"), dtype=float)
@@ -51,6 +52,7 @@ def test_display_get_reports_matlab_style_derived_values(asset_store) -> None:
     assert display_get(display, "bits") == expected_bits
     assert display_get(display, "n levels") == 2**expected_bits
     assert np.array_equal(display_get(display, "levels")[:4], np.array([0, 1, 2, 3]))
+    np.testing.assert_allclose(dark_level, gamma[0, :], rtol=1e-12, atol=1e-12)
     assert display_get(display, "n primaries") == 3
     assert display_get(display, "white spd").shape == (display_get(display, "n wave"),)
     assert display_get(display, "black spd").shape == (display_get(display, "n wave"),)
@@ -89,6 +91,38 @@ def test_display_set_resamples_ambient_and_tracks_dixel_metadata(asset_store) ->
     assert display_get(display, "pixels per dixel") == [1, 1]
     assert display_get(display, "dixel size") == (2, 3)
     assert np.array_equal(display_get(display, "dixel control map"), control)
+    np.testing.assert_allclose(display_get(display, "oversample"), np.array([2.0, 3.0]), rtol=1e-12, atol=1e-12)
+    np.testing.assert_allclose(
+        display_get(display, "sample spacing"),
+        np.array(
+            [
+                float(display_get(display, "meters per dot")) / 2.0,
+                float(display_get(display, "meters per dot")) / 3.0,
+            ],
+            dtype=float,
+        ),
+        rtol=1e-12,
+        atol=1e-12,
+    )
+    np.testing.assert_allclose(
+        display_get(display, "sample spacing", "mm"),
+        np.array(
+            [
+                float(display_get(display, "meters per dot", "mm")) / 2.0,
+                float(display_get(display, "meters per dot", "mm")) / 3.0,
+            ],
+            dtype=float,
+        ),
+        rtol=1e-12,
+        atol=1e-12,
+    )
+    np.testing.assert_allclose(display_get(display, "fill factor"), np.ones(3, dtype=float), rtol=1e-12, atol=1e-12)
+    np.testing.assert_allclose(
+        display_get(display, "subpixel spd"),
+        display_get(display, "spd"),
+        rtol=1e-12,
+        atol=1e-12,
+    )
 
 
 def test_display_create_normalizes_render_function_names(asset_store) -> None:

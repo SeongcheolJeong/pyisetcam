@@ -283,7 +283,10 @@ scene shell. The adjacent display getter lane now also replays the
 upstream MATLAB color and contrast aliases `rgb2lms`, `white lms`,
 `black xyz`, `primaries xyz` / `primaries xy`, `dark luminance`, and
 `peak contrast` on top of the existing headless display calibration
-surface, and both `sceneCreate('empty', wave)` and
+surface; that same display lane now also covers the derived dixel and
+subpixel getters `dark level`, `oversample`, `sample spacing`, `fill factor`,
+and `subpixel spd`, including MATLAB-style spatial-unit scaling on
+`meters per dot` / `dots per meter`. Both `sceneCreate('empty', wave)` and
 `sceneCreate('empty', [], wave)` now replay the legacy wavelength override
 instead of forcing the default 400:10:700 grid. The same Macbeth/default
 scene dispatcher now also accepts placeholder patch-size slots such as
