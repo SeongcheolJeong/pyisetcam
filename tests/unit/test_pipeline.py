@@ -13255,6 +13255,13 @@ def test_metrics_camera_gateway_matches_existing_wrappers(asset_store) -> None:
     assert np.asarray(color_metric["deltaE"], dtype=float).shape == (24,)
     assert "vci" not in color_metric
 
+    full_reference = metricsCamera(camera, "fullreference", asset_store=asset_store)
+    expected_full_reference = cameraFullReference(camera, asset_store=asset_store)
+    assert full_reference.sceneNames == expected_full_reference.sceneNames
+    np.testing.assert_allclose(full_reference.meanLuminances, expected_full_reference.meanLuminances, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(full_reference.scielab, expected_full_reference.scielab, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(full_reference.ssim, expected_full_reference.ssim, rtol=1e-10, atol=1e-12)
+
 
 def test_scene_cct_script_workflow(asset_store) -> None:
     wave = np.arange(400.0, 721.0, 5.0, dtype=float)
