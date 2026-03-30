@@ -56,6 +56,21 @@ def _copy_metadata_value(value: Any) -> Any:
     return copy.deepcopy(value)
 
 
+def _l3_get(l3: Any, *names: str) -> Any:
+    aliases = {param_format(name) for name in names}
+    if hasattr(l3, "items"):
+        for key, value in l3.items():
+            if param_format(str(key)) in aliases:
+                return value
+        return None
+    if hasattr(l3, "__dict__"):
+        for key, value in vars(l3).items():
+            if param_format(str(key)) in aliases:
+                return value
+        return None
+    raise ValueError("L3 payload must be mapping-like.")
+
+
 def _ip_chart_parameters(ip: ImageProcessor) -> dict[str, Any]:
     chart = ip.fields.get("chartP")
     if not isinstance(chart, dict):
@@ -2235,7 +2250,7 @@ def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
         l3 = ip.fields.get("l3")
         if l3 is None:
             return None
-        raise KeyError(f"Unsupported ipGet L3 parameter: {parameter}")
+        return _l3_get(l3, remainder)
 
     if key == "type":
         return ip.type

@@ -731,6 +731,10 @@
   covers `cameraCompute(..., 'ideal xyz')` with consistent headless `ip xyz`,
   `ip srgb`, and linear display-result payloads across both the direct
   scene-start and restart-from-`oi` call forms.
+- The adjacent explicit-`L3` camera path is tighter too: `cameraGet(...)`
+  and `ipGet(...)` now support field-addressable `l3 ...` lookups in
+  addition to whole-payload retrieval, so mapping-like L3 bundles can be
+  queried through the public gateway shape without unpacking them manually.
 - Continue adding more scene patterns and `sceneFromFile`; the first slices now cover extra Macbeth variants, `moire orient`, `letter` / `font`, and the file-backed `rgb` / `multispectral` / `monochrome` scene shells.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.

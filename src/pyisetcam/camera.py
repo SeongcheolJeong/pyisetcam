@@ -326,7 +326,12 @@ def camera_get(camera: Camera, parameter: str, *args: Any) -> Any:
             return camera.fields["ip"]
         return ip_get(camera.fields["ip"], remainder, *args)
     if prefix == "l3":
-        return camera.fields["ip"].fields.get("l3")
+        l3 = camera.fields["ip"].fields.get("l3")
+        if not remainder:
+            return l3
+        if l3 is None:
+            return None
+        return _l3_get(l3, remainder)
 
     if key == "type":
         return camera.type

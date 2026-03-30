@@ -7989,6 +7989,20 @@ def test_camera_create_supports_explicit_l3_payload(asset_store) -> None:
     assert camera_get(camera, "l3") is not l3_payload
     assert np.array_equal(np.asarray(camera_get(camera, "l3")["kernels"], dtype=float), l3_payload["kernels"])
     assert camera_get(camera, "l3")["oi"].data == {}
+    l3_design_sensor = camera_get(camera, "l3 design sensor")
+    assert l3_design_sensor is not design_sensor
+    assert l3_design_sensor.name == design_sensor.name
+    assert tuple(np.asarray(l3_design_sensor.fields["size"], dtype=int)) == tuple(
+        np.asarray(design_sensor.fields["size"], dtype=int)
+    )
+    assert np.array_equal(np.asarray(camera_get(camera, "l3 kernels"), dtype=float), l3_payload["kernels"])
+    ip_l3_design_sensor = camera_get(camera, "ip l3 design sensor")
+    assert ip_l3_design_sensor is not design_sensor
+    assert ip_l3_design_sensor.name == design_sensor.name
+    assert tuple(np.asarray(ip_l3_design_sensor.fields["size"], dtype=int)) == tuple(
+        np.asarray(design_sensor.fields["size"], dtype=int)
+    )
+    assert np.array_equal(np.asarray(camera_get(camera, "ip l3 kernels"), dtype=float), l3_payload["kernels"])
 
 
 def test_camera_compute_supports_vendor_sensor_variants(asset_store) -> None:

@@ -2453,3 +2453,7 @@ Post-milestone compatibility work now also covers the public
 the existing ideal-XYZ helper path and now returns consistent `ip xyz`,
 `ip srgb`, and linear display-result payloads for both the direct
 scene-start call form and the restart-from-`oi` form.
+The neighboring explicit-`L3` camera path is tighter too: `cameraGet(...)`
+and `ipGet(...)` now both support field-addressable `l3 ...` lookups on
+top of the existing whole-payload retrieval, so vendored or synthetic L3
+payloads can be queried through the same public gateway shape as upstream.
