@@ -12,6 +12,7 @@ from pyisetcam import (
     FloydSteinberg,
     HalfToneImage,
     appendStruct,
+    array_percentile as top_level_array_percentile,
     biNormal,
     cellDelete,
     cellMerge,
@@ -90,6 +91,7 @@ from pyisetcam import (
     imageCentroid,
     imageCircular,
     imageContrast,
+    interp_spectra as top_level_interp_spectra,
     imagescM,
     imagescOPP,
     imagescRGB,
@@ -100,6 +102,8 @@ from pyisetcam import (
     sceneCreate,
     sceneGet,
     space2sample,
+    spectral_angle as top_level_spectral_angle,
+    spectral_step as top_level_spectral_step,
     energy_to_quanta as top_level_energy_to_quanta,
     quanta_to_energy as top_level_quanta_to_energy,
     unitFrequencyList,
@@ -204,6 +208,7 @@ from pyisetcam.utils import (
     image_centroid,
     image_circular,
     image_contrast,
+    array_percentile,
     param_format,
     qinterp2 as qinterp2_fn,
     quanta_to_energy,
@@ -212,6 +217,7 @@ from pyisetcam.utils import (
     rgb_to_xw_format,
     rotation_matrix_3d,
     sample2space as sample2space_fn,
+    spectral_step,
     space2sample as space2sample_fn,
     struct2pairs as struct2pairs_fn,
     dpi2mperdot as dpi2mperdot_fn,
@@ -227,6 +233,7 @@ from pyisetcam.utils import (
     zernfun2 as zernfun2_fn,
     zernpol as zernpol_fn,
 )
+from pyisetcam.metrics import spectral_angle
 
 
 def test_param_format_string_and_key_value_list() -> None:
@@ -266,6 +273,31 @@ def test_energy_quanta_helpers_are_exposed_through_package_root() -> None:
     assert np.allclose(Energy2Quanta(energy, wave), quanta)
     assert np.allclose(top_level_quanta_to_energy(quanta, wave), energy)
     assert np.allclose(Quanta2Energy(quanta, wave), energy)
+
+
+def test_spectral_helpers_are_exposed_through_package_root() -> None:
+    source_wave = np.array([700.0, 600.0, 500.0, 400.0], dtype=float)
+    values = np.array(
+        [
+            [0.7, 0.2],
+            [0.6, 0.3],
+            [0.5, 0.4],
+            [0.4, 0.5],
+        ],
+        dtype=float,
+    )
+    target_wave = np.array([400.0, 500.0, 600.0, 700.0], dtype=float)
+    first = np.array([0.1, 0.3, 0.6], dtype=float)
+    second = np.array([0.1, 0.4, 0.5], dtype=float)
+    percentile_data = np.array([[1.0, 2.0], [3.0, 7.0]], dtype=float)
+
+    np.testing.assert_allclose(
+        top_level_interp_spectra(source_wave, values, target_wave),
+        interp_spectra(source_wave, values, target_wave),
+    )
+    assert np.isclose(top_level_spectral_step(target_wave), spectral_step(target_wave))
+    assert np.isclose(top_level_array_percentile(percentile_data, 75.0), array_percentile(percentile_data, 75.0))
+    assert np.isclose(top_level_spectral_angle(first, second), spectral_angle(first, second))
 
 
 def test_interp_spectra_supports_descending_source_waves() -> None:
