@@ -768,7 +768,7 @@ def delta_e_ab(
     xyz2: Any,
     white_point: Any,
     delta_e_version: str = "1976",
-) -> NDArray[np.float64]:
+) -> NDArray[np.float64] | tuple[NDArray[np.float64], dict[str, NDArray[np.float64]]]:
     """Compute CIELAB Delta E between XYZ values."""
 
     xyz1_array, xyz2_array = _paired_arrays(xyz1, xyz2)
@@ -781,6 +781,17 @@ def delta_e_ab(
         return np.asarray(deltaE_ciede94(lab1, lab2), dtype=float)
     if normalized_version in {"2000", "00", "cie2000", "ciede2000"}:
         return np.asarray(deltaE_ciede2000(lab1, lab2), dtype=float)
+    if normalized_version in {"luminance", "hue", "chrominance", "chroma", "all"}:
+        delta_e, components = delta_e_2000(lab1, lab2)
+        if normalized_version == "luminance":
+            return np.asarray(components["dL"], dtype=float)
+        if normalized_version in {"chrominance", "chroma"}:
+            return np.asarray(components["dC"], dtype=float)
+        if normalized_version == "hue":
+            return np.asarray(components["dH"], dtype=float)
+        return np.asarray(delta_e, dtype=float), {
+            key: np.asarray(value, dtype=float) for key, value in components.items()
+        }
     raise UnsupportedOptionError("deltaEab", delta_e_version)
 
 

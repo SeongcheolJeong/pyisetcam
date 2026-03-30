@@ -2302,6 +2302,10 @@ available directly from `pyisetcam` instead of only through
 `sc_gaussian_parameters(...)`, and `sc_compute_difference(...)` instead of
 leaving those reusable color and SCIELAB helpers only under
 `pyisetcam.color` or `pyisetcam.scielab`.
+The same color-metric path now also replays the upstream component modes for
+`delta_e_ab(...)` and `sc_compute_difference(...)`, so `'luminance'`,
+`'chrominance'`, `'hue'`, and `'all'` now work on top of the existing
+CIEDE2000 component math instead of raising unsupported-option errors.
 The same package-root helper surface now also exposes
 `example_spd_pair(...)` instead of leaving that deterministic
 documentation/example SPD generator only under `pyisetcam.metrics`.

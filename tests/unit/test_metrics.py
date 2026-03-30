@@ -15,6 +15,7 @@ from pyisetcam import (
     metrics_spd,
     mired_difference,
     peak_signal_to_noise_ratio,
+    sc_compute_difference,
     xyz_from_energy,
     xyz_to_lab,
     xyz_to_luv,
@@ -63,6 +64,26 @@ def test_delta_e_ab_is_zero_for_identical_xyz() -> None:
     xyz = np.array([20.0, 30.0, 15.0], dtype=float)
 
     assert np.isclose(delta_e_ab(xyz, xyz, white), 0.0)
+
+
+def test_delta_e_ab_supports_component_modes_and_all_payload() -> None:
+    white = np.array([95.047, 100.0, 108.883], dtype=float)
+    xyz1 = np.array([[20.0, 30.0, 15.0], [22.0, 31.0, 18.0]], dtype=float)
+    xyz2 = np.array([[19.0, 29.0, 14.0], [21.0, 32.0, 17.0]], dtype=float)
+
+    lab1 = xyz_to_lab(xyz1, white)
+    lab2 = xyz_to_lab(xyz2, white)
+    delta_e_2000_value, components = deltaE2000(lab1, lab2)
+    all_delta_e, all_components = delta_e_ab(xyz1, xyz2, white, "all")
+
+    np.testing.assert_allclose(delta_e_ab(xyz1, xyz2, white, "luminance"), components["dL"], rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(delta_e_ab(xyz1, xyz2, white, "chrominance"), components["dC"], rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(delta_e_ab(xyz1, xyz2, white, "hue"), components["dH"], rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(all_delta_e, delta_e_2000_value, rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(all_components["dL"], components["dL"], rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(all_components["dC"], components["dC"], rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(all_components["dH"], components["dH"], rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(all_components["RT"], components["RT"], rtol=1e-10, atol=1e-10)
 
 
 def test_delta_e_2000_matches_skimage_and_reports_components() -> None:
@@ -115,6 +136,26 @@ def test_delta_e_uv_accepts_single_and_pair_white_points() -> None:
 
     np.testing.assert_allclose(shared, expected_shared, rtol=1e-10, atol=1e-10)
     np.testing.assert_allclose(paired, expected_paired, rtol=1e-10, atol=1e-10)
+
+
+def test_sc_compute_difference_supports_component_modes_and_all_payload() -> None:
+    white = np.array([95.047, 100.0, 108.883], dtype=float)
+    xyz1 = np.array([[[20.0, 30.0, 15.0], [22.0, 31.0, 18.0]]], dtype=float)
+    xyz2 = np.array([[[19.0, 29.0, 14.0], [21.0, 32.0, 17.0]]], dtype=float)
+
+    lab1 = xyz_to_lab(xyz1, white)
+    lab2 = xyz_to_lab(xyz2, white)
+    delta_e_2000_value, components = deltaE2000(lab1, lab2)
+    payload = sc_compute_difference(xyz1, xyz2, white, "all")
+
+    np.testing.assert_allclose(sc_compute_difference(xyz1, xyz2, white, "luminance"), components["dL"], rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(sc_compute_difference(xyz1, xyz2, white, "chrominance"), components["dC"], rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(sc_compute_difference(xyz1, xyz2, white, "hue"), components["dH"], rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(payload["dE"], delta_e_2000_value, rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(payload["components"]["dL"], components["dL"], rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(payload["components"]["dC"], components["dC"], rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(payload["components"]["dH"], components["dH"], rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(payload["components"]["RT"], components["RT"], rtol=1e-10, atol=1e-10)
 
 
 def test_metrics_spd_angle_matches_direct_vector_angle() -> None:

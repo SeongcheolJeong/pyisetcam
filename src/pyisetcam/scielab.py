@@ -12,7 +12,7 @@ from skimage.color import deltaE_ciede2000, deltaE_ciede94
 
 from .display import display_create, display_get
 from .exceptions import UnsupportedOptionError
-from .metrics import xyz_to_lab
+from .metrics import delta_e_2000, xyz_to_lab
 from .scene import scene_from_file, scene_get, scene_set
 from .types import Display, Scene
 from .utils import param_format
@@ -716,7 +716,7 @@ def sc_compute_difference(
     xyz2: Any,
     white_point: Any,
     delta_e_version: str = "2000",
-) -> NDArray[np.float64]:
+) -> NDArray[np.float64] | dict[str, Any]:
     white1, white2 = _white_points(white_point)
     lab1 = xyz_to_lab(np.asarray(xyz1, dtype=float), white1)
     lab2 = xyz_to_lab(np.asarray(xyz2, dtype=float), white2)
@@ -727,6 +727,18 @@ def sc_compute_difference(
         return np.asarray(deltaE_ciede94(lab1, lab2), dtype=float)
     if version in {"2000", "00", "cie2000", "ciede2000"}:
         return np.asarray(deltaE_ciede2000(lab1, lab2), dtype=float)
+    if version in {"luminance", "chrominance", "chroma", "hue", "all"}:
+        delta_e, components = delta_e_2000(lab1, lab2)
+        if version == "luminance":
+            return np.asarray(components["dL"], dtype=float)
+        if version in {"chrominance", "chroma"}:
+            return np.asarray(components["dC"], dtype=float)
+        if version == "hue":
+            return np.asarray(components["dH"], dtype=float)
+        return {
+            "dE": np.asarray(delta_e, dtype=float),
+            "components": {key: np.asarray(value, dtype=float) for key, value in components.items()},
+        }
     raise UnsupportedOptionError("scComputeDifference", delta_e_version)
 
 
