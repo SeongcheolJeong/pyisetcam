@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import importlib
 import math
 
 import numpy as np
@@ -269,6 +270,8 @@ from pyisetcam.color import (
 from pyisetcam.metrics import example_spd_pair
 from pyisetcam.scielab import sc_compute_difference, sc_gaussian_parameters
 
+scielab_module = importlib.import_module("pyisetcam.scielab")
+
 
 def test_color_module_energy_and_units_matlab_aliases() -> None:
     assert color_module.Energy2Quanta is color_module.energy_to_quanta
@@ -297,6 +300,14 @@ def test_color_module_color_space_matlab_aliases() -> None:
     assert color_module.lms2srgb is color_module.lms_to_srgb
     assert color_module.lms2xyz is color_module.lms_to_xyz
     assert color_module.xyz2lms is color_module.xyz_to_lms
+
+
+def test_scielab_module_native_matlab_aliases() -> None:
+    assert scielab_module.getPlanes is scielab_module.get_planes
+    assert scielab_module.scParams is scielab_module.sc_params
+    assert scielab_module.separableConv is scielab_module.separable_conv
+    assert scielab_module.separableFilters is scielab_module.separable_filters
+    assert scielab_module.scielabRGB is scielab_module.scielab_rgb
 
 
 def test_param_format_string_and_key_value_list() -> None:
