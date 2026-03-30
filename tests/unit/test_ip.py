@@ -1027,6 +1027,33 @@ def test_ip_get_scaled_result_and_primary_aliases_match_headless_helpers() -> No
     assert np.allclose(np.asarray(ip_get(ip, "data intensity", 2), dtype=float), linear[:, :, 1])
 
 
+def test_ip_get_quantization_and_digital_value_aliases_match_upstream() -> None:
+    ip = ip_create()
+    linear = np.array(
+        [
+            [[0.25, 0.5, 0.75]],
+        ],
+        dtype=float,
+    )
+    ip = ip_set(ip, "result", linear)
+    ip = ip_set(ip, "quantization", {"method": "12 bit"})
+    ip = ip_set(ip, "nbits", 12)
+
+    quantization = ip_get(ip, "quantization")
+    assert isinstance(quantization, dict)
+    assert quantization["method"] == "12 bit"
+    assert int(ip_get(ip, "quantization nbits")) == 12
+    assert int(ip_get(ip, "nbits")) == 12
+    assert int(ip_get(ip, "bits")) == 12
+    assert ip_get(ip, "quantization method") == "12 bit"
+    assert float(ip_get(ip, "max digital value")) == 4096.0
+    assert np.allclose(np.asarray(ip_get(ip, "data intensities dv"), dtype=float), linear * 4096.0)
+    assert np.allclose(np.asarray(ip_get(ip, "data intensities digital values"), dtype=float), linear * 4096.0)
+
+    empty_ip = ip_create()
+    assert float(ip_get(empty_ip, "max digital value")) == 1.0
+
+
 def test_vcimage_srgb_matches_manual_pipeline(asset_store) -> None:
     generated = vcimageSRGB(asset_store=asset_store)
 

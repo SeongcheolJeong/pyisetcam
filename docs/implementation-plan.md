@@ -828,6 +828,10 @@
   `scaled result`, `data ics illuminant corrected`, and `result primary`
   aliases on top of the existing headless render and corrected-ICS
   payloads.
+- The adjacent quantization lane is tighter too: `ipGet(...)` now exposes
+  the stored quantization struct, method, bit depth, `max digital value`,
+  and the `data intensities dv` aliases instead of leaving those
+  MATLAB-era getters unsupported in headless mode.
 - Continue adding more scene patterns and `sceneFromFile`; the first slices now cover extra Macbeth variants, `moire orient`, `letter` / `font`, and the file-backed `rgb` / `multispectral` / `monochrome` scene shells.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.

@@ -2374,6 +2374,22 @@ def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
         )
     if key in {"input", "sensorinput", "sensormosaic"}:
         return ip.data.get("input")
+    if key == "quantization":
+        return copy.deepcopy(ip.data.get("quantization"))
+    if key == "quantizationmethod":
+        quantization = ip.data.get("quantization")
+        if isinstance(quantization, dict):
+            return quantization.get("method")
+        return quantization
+    if key in {"quantizationnbits", "nbits", "bits"}:
+        quantization = ip.data.get("quantization")
+        if not isinstance(quantization, dict):
+            return None
+        bits = quantization.get("bits")
+        return None if bits is None else int(bits)
+    if key == "maxdigitalvalue":
+        nbits = ip_get(ip, "nbits")
+        return 1.0 if nbits is None else float(2 ** int(nbits))
     if key in {"sensorspace", "sensorchannels"}:
         return ip.data.get("sensorspace")
     if key == "nsensorchannels":
@@ -2389,6 +2405,11 @@ def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
     if key in {"dataintensitiesscaled", "scaledresult", "resultscaledtomax", "resultscaled"}:
         scaled_ip = ip_set(ip.clone(), "scale display output", True)
         return image_show_image(scaled_ip)
+    if key in {"dataintensitiesdv", "dataintensitiesdigitalvalues"}:
+        result = ip.data.get("result")
+        if result is None:
+            return None
+        return np.asarray(result, dtype=float) * float(ip_get(ip, "max digital value"))
     if key in {"dataintensity", "resultprimary", "resultprimaryn"}:
         if not args:
             raise ValueError("Primary number required for ipGet(..., 'result primary').")
