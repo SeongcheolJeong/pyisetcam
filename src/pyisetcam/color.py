@@ -11,7 +11,16 @@ from numpy.typing import NDArray
 
 from .assets import AssetStore, ie_read_color_filter
 from .exceptions import UnsupportedOptionError
-from .utils import blackbody, energy_to_quanta, interp_spectra, param_format, quanta_to_energy, spectral_step, xyz_to_srgb
+from .utils import (
+    blackbody,
+    energy_to_quanta,
+    ie_unit_scale_factor,
+    interp_spectra,
+    param_format,
+    quanta_to_energy,
+    spectral_step,
+    xyz_to_srgb,
+)
 
 
 def xyz_color_matching(
@@ -878,11 +887,14 @@ def internal_to_display_matrix(
 
 
 cct2sun = cct_to_sun
+Energy2Quanta = energy_to_quanta
 ieCTemp2SRGB = ie_ctemp_to_srgb
 ieCirclePoints = ie_circle_points
 ieCovEllipsoid = ie_cov_ellipsoid
 ieSpectraSphere = ie_spectra_sphere
+ieUnitScaleFactor = ie_unit_scale_factor
 initDefaultSpectrum = init_default_spectrum
 mkInvGammaTable = mk_inv_gamma_table
+Quanta2Energy = quanta_to_energy
 xyz2vSNR = xyz_to_vsnr
 ieColorTransform = ie_color_transform

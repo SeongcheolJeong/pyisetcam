@@ -6,6 +6,7 @@ import math
 
 import numpy as np
 import pytest
+import pyisetcam.color as color_module
 from scipy.signal import convolve2d
 
 from pyisetcam import (
@@ -267,6 +268,12 @@ from pyisetcam.color import (
 )
 from pyisetcam.metrics import example_spd_pair
 from pyisetcam.scielab import sc_compute_difference, sc_gaussian_parameters
+
+
+def test_color_module_energy_and_units_matlab_aliases() -> None:
+    assert color_module.Energy2Quanta is color_module.energy_to_quanta
+    assert color_module.Quanta2Energy is color_module.quanta_to_energy
+    assert color_module.ieUnitScaleFactor is color_module.ie_unit_scale_factor
 
 
 def test_param_format_string_and_key_value_list() -> None:
