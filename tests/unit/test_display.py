@@ -40,6 +40,8 @@ def test_display_get_reports_matlab_style_derived_values(asset_store) -> None:
     rgb2lms = np.asarray(display_get(display, "rgb2lms"), dtype=float)
     rgb2xyz = np.asarray(display_get(display, "rgb2xyz"), dtype=float)
     lrgb2xyz = np.asarray(display_get(display, "lrgb2xyz"), dtype=float)
+    digital_rgb = np.array([[[0.0, 1.0, 2.0], [3.0, 2.0, 1.0]]], dtype=float)
+    digital_xyz = np.asarray(display_get(display, "drgb2xyz", digital_rgb), dtype=float)
     white_lms = np.asarray(display_get(display, "white lms"), dtype=float)
     primaries_xyz = np.asarray(display_get(display, "primaries xyz"), dtype=float)
     primaries_srgb = np.asarray(display_get(display, "primaries srgb"), dtype=float)
@@ -61,6 +63,12 @@ def test_display_get_reports_matlab_style_derived_values(asset_store) -> None:
     assert display_get(display, "white spd").shape == (display_get(display, "n wave"),)
     assert display_get(display, "black spd").shape == (display_get(display, "n wave"),)
     np.testing.assert_allclose(lrgb2xyz, rgb2xyz, rtol=1e-12, atol=1e-12)
+    np.testing.assert_allclose(
+        digital_xyz,
+        gamma[digital_rgb.astype(int)[0, :, :], np.arange(3)].reshape(1, 2, 3) @ rgb2xyz,
+        rtol=1e-12,
+        atol=1e-12,
+    )
     assert rgb2lms.shape == (3, 3)
     np.testing.assert_allclose(white_lms, np.sum(rgb2lms, axis=0), rtol=1e-12, atol=1e-12)
     assert primaries_xyz.shape == (3, 3)

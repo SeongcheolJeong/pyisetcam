@@ -15,7 +15,7 @@ from .exceptions import UnsupportedOptionError
 from .metrics import chromaticity_xy, xyz_from_energy
 from .session import track_session_object
 from .types import Display, SessionContext
-from .utils import blackbody, ie_unit_scale_factor, interp_spectra, invert_gamma_table, param_format, spectral_step, srgb_to_xyz, xyz_to_srgb
+from .utils import blackbody, ie_lut_digital, ie_unit_scale_factor, image_linear_transform, interp_spectra, invert_gamma_table, param_format, spectral_step, srgb_to_xyz, xyz_to_srgb
 
 
 def _store(asset_store: AssetStore | None) -> AssetStore:
@@ -674,6 +674,14 @@ def display_get(display: Display, parameter: str, *args: Any) -> Any:
         return spd[:, : min(3, spd.shape[1])]
     if key in {"rgb2xyz", "lrgb2xyz"}:
         return _display_rgb2xyz(display)
+    if key == "drgb2xyz":
+        if not args:
+            raise ValueError("displayGet(..., 'drgb2xyz') requires a digital RGB image.")
+        digital_rgb = np.asarray(args[0], dtype=float)
+        if digital_rgb.ndim != 3 or digital_rgb.shape[2] < 3:
+            raise ValueError("displayGet(..., 'drgb2xyz') expects an RGB-format digital image.")
+        linear_rgb = np.asarray(ie_lut_digital(digital_rgb[:, :, :3], display_get(display, "gamma table")), dtype=float)
+        return np.asarray(image_linear_transform(linear_rgb, display_get(display, "rgb2xyz")), dtype=float)
     if key == "rgb2lms":
         return np.asarray(xyz_to_lms(np.asarray(display_get(display, "rgb2xyz"), dtype=float)), dtype=float)
     if key == "xyz2rgb":
