@@ -92,10 +92,12 @@ from pyisetcam import (
     imageCircular,
     imageContrast,
     interp_spectra as top_level_interp_spectra,
+    invert_gamma_table as top_level_invert_gamma_table,
     imagescM,
     imagescOPP,
     imagescRGB,
     isodd,
+    linear_to_srgb as top_level_linear_to_srgb,
     rgb2dac,
     rotationMatrix3d,
     sample2space,
@@ -112,6 +114,7 @@ from pyisetcam import (
     unpadarray,
     upperQuad2FullMatrix,
     vectorLength,
+    xyz_to_linear_srgb as top_level_xyz_to_linear_srgb,
     xyz2srgb,
     lorentzSum,
     max2,
@@ -209,6 +212,8 @@ from pyisetcam.utils import (
     image_circular,
     image_contrast,
     array_percentile,
+    invert_gamma_table,
+    linear_to_srgb,
     param_format,
     qinterp2 as qinterp2_fn,
     quanta_to_energy,
@@ -229,6 +234,7 @@ from pyisetcam.utils import (
     upper_quad_to_full_matrix,
     vector_length,
     unit_frequency_list,
+    xyz_to_linear_srgb,
     zernfun as zernfun_fn,
     zernfun2 as zernfun2_fn,
     zernpol as zernpol_fn,
@@ -298,6 +304,25 @@ def test_spectral_helpers_are_exposed_through_package_root() -> None:
     assert np.isclose(top_level_spectral_step(target_wave), spectral_step(target_wave))
     assert np.isclose(top_level_array_percentile(percentile_data, 75.0), array_percentile(percentile_data, 75.0))
     assert np.isclose(top_level_spectral_angle(first, second), spectral_angle(first, second))
+
+
+def test_srgb_helpers_are_exposed_through_package_root() -> None:
+    xyz = np.array([[[0.25, 0.40, 0.10], [0.50, 0.50, 0.50]]], dtype=float)
+    linear_rgb = np.array([[[0.001, 0.25, 0.75], [0.05, 0.5, 1.0]]], dtype=float)
+    gamma_table = np.column_stack(
+        [
+            np.linspace(0.0, 1.0, 8, dtype=float) ** 2.2,
+            np.linspace(0.0, 1.0, 8, dtype=float) ** 2.0,
+            np.linspace(0.0, 1.0, 8, dtype=float) ** 1.8,
+        ]
+    )
+
+    np.testing.assert_allclose(top_level_xyz_to_linear_srgb(xyz), xyz_to_linear_srgb(xyz))
+    np.testing.assert_allclose(top_level_linear_to_srgb(linear_rgb), linear_to_srgb(linear_rgb))
+    np.testing.assert_allclose(
+        top_level_invert_gamma_table(linear_rgb, gamma_table),
+        invert_gamma_table(linear_rgb, gamma_table),
+    )
 
 
 def test_interp_spectra_supports_descending_source_waves() -> None:

@@ -2288,7 +2288,10 @@ MATLAB-style package-root aliases `Energy2Quanta(...)` /
 `pyisetcam.utils`. That same package-root helper surface now also exposes
 `interp_spectra(...)`, `spectral_step(...)`, `array_percentile(...)`, and
 `spectral_angle(...)` instead of leaving those small spectral utilities
-buried in `pyisetcam.utils` or `pyisetcam.metrics`.
+buried in `pyisetcam.utils` or `pyisetcam.metrics`. The same root helper
+surface now also exposes `linear_to_srgb(...)`, `xyz_to_linear_srgb(...)`,
+and `invert_gamma_table(...)` so the small sRGB conversion helpers are
+available directly from `pyisetcam` as well.
 That same broad `utility` family is smaller again: the adjacent
 `utility/numerical` helper slice now also covers
 `getMiddleMatrix(...)`, `ieClip(...)`, `ieHwhm2SD(...)`, `ieScale(...)`,
