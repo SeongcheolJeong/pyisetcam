@@ -55,16 +55,35 @@ from pyisetcam.types import Scene
 
 def test_scene_module_core_matlab_aliases() -> None:
     assert scene_module.sceneAdd is scene_module.scene_add
+    assert scene_module.sceneAddGrid is scene_module.scene_add_grid
     assert scene_module.sceneAdjustIlluminant is scene_module.scene_adjust_illuminant
+    assert scene_module.sceneAdjustLuminance is scene_module.scene_adjust_luminance
+    assert scene_module.sceneAdjustPixelSize is scene_module.scene_adjust_pixel_size
+    assert scene_module.sceneAdjustReflectance is scene_module.scene_adjust_reflectance
+    assert scene_module.sceneCalculateLuminance is scene_module.scene_calculate_luminance
+    assert scene_module.sceneClearData is scene_module.scene_clear_data
+    assert scene_module.sceneCombine is scene_module.scene_combine
     assert scene_module.sceneCreate is scene_module.scene_create
     assert scene_module.sceneFromFile is scene_module.scene_from_file
     assert scene_module.sceneGet is scene_module.scene_get
+    assert scene_module.sceneIlluminantScale is scene_module.scene_illuminant_scale
     assert scene_module.sceneInitGeometry is scene_module.scene_init_geometry
     assert scene_module.sceneList is scene_module.scene_list
     assert scene_module.scenePhotonNoise is scene_module.scene_photon_noise
+    assert scene_module.sceneRamp is scene_module.scene_ramp
+    assert scene_module.sceneRotate is scene_module.scene_rotate
+    assert scene_module.sceneSaveImage is scene_module.scene_save_image
+    assert scene_module.sceneSDR is scene_module.scene_sdr
     assert scene_module.sceneSet is scene_module.scene_set
+    assert scene_module.sceneShowImage is scene_module.scene_show_image
+    assert scene_module.sceneSPDScale is scene_module.scene_spd_scale
     assert scene_module.sceneSpatialResample is scene_module.scene_spatial_resample
+    assert scene_module.sceneSpatialSupport is scene_module.scene_spatial_support
+    assert scene_module.sceneThumbnail is scene_module.scene_thumbnail
     assert scene_module.sceneToFile is scene_module.scene_to_file
+    assert scene_module.sceneTranslate is scene_module.scene_translate
+    assert scene_module.sceneVernier is scene_module.scene_vernier
+    assert scene_module.sceneWBCreate is scene_module.scene_wb_create
 
 
 def test_scene_create_default_macbeth(asset_store) -> None:
