@@ -8205,6 +8205,34 @@ def test_camera_compatibility_wrappers_cover_srgb_sequence_and_clear(asset_store
     assert updated.fields["ip"].data["result"].shape[0] == srgb_result.shape[0] + 20
     assert updated.fields["ip"].data["result"].shape[1] == srgb_result.shape[1] + 20
 
+    placeholder_result, placeholder_ideal, placeholder_raw, placeholder_updated = cameraComputesrgb(
+        camera_create(asset_store=asset_store),
+        scene,
+        mean_luminance=50.0,
+        sz=[],
+        scenefov=[],
+        scaleoutput=[],
+        plot_flag=[],
+        asset_store=asset_store,
+    )
+
+    explicit_default_result, explicit_default_ideal, explicit_default_raw, explicit_default_updated = cameraComputesrgb(
+        camera_create(asset_store=asset_store),
+        scene,
+        mean_luminance=50.0,
+        asset_store=asset_store,
+    )
+
+    np.testing.assert_allclose(placeholder_result, explicit_default_result, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(placeholder_ideal, explicit_default_ideal, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(placeholder_raw, explicit_default_raw, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(
+        np.asarray(camera_get(placeholder_updated, "image"), dtype=float),
+        np.asarray(camera_get(explicit_default_updated, "image"), dtype=float),
+        rtol=1e-10,
+        atol=1e-12,
+    )
+
     sequence_camera, images = cameraComputeSequence(
         camera_create(asset_store=asset_store),
         scenes=[scene, scene],

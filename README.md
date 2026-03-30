@@ -2510,3 +2510,8 @@ The fourth positional slot is now equally strict too: blank-string
 `cameraCompute(camera, scene, [], '   ')` both preserve the upstream
 default resize-to-scene behavior instead of being interpreted through
 Python string truthiness.
+The adjacent `cameraComputesrgb(...)` wrapper is tighter too: MATLAB-style
+empty placeholders in the optional `sz`, `scenefov`, and `scaleoutput`
+slots now fall back to the same default sensor size, camera-matched scene
+FOV, and unit output scale as the omitted-argument path instead of
+crashing on empty arrays.

@@ -760,23 +760,46 @@ def camera_compute_srgb(
     scene = _camera_scene_input(scene_name, asset_store=store)
     scene = scene_adjust_illuminant(scene, "D65.mat", asset_store=store)
 
-    if sz is not None:
+    sz_is_omitted = sz is None
+    if isinstance(sz, str) and not sz.strip():
+        sz_is_omitted = True
+    elif isinstance(sz, (list, tuple, np.ndarray)):
+        sz_array = np.asarray(sz)
+        sz_is_omitted = sz_array.size == 0
+
+    if not sz_is_omitted:
         size = np.asarray(sz, dtype=int).reshape(-1)
         if size.size == 1:
             size = np.repeat(size, 2)
         sensor = sensor_set(camera_get(working, "sensor").clone(), "size", tuple((size[:2] + 20).tolist()))
         working = camera_set(working, "sensor", sensor, session=session)
 
-    if scenefov is None:
+    scenefov_is_omitted = scenefov is None
+    if isinstance(scenefov, str) and not scenefov.strip():
+        scenefov_is_omitted = True
+    elif isinstance(scenefov, (list, tuple, np.ndarray)):
+        scenefov_array = np.asarray(scenefov)
+        scenefov_is_omitted = scenefov_array.size == 0
+
+    if scenefov_is_omitted:
         oi = camera_get(working, "oi")
         sensor = camera_get(working, "sensor")
         scene_distance = float(scene_get(scene, "distance"))
         scenefov = float(sensor_get(sensor, "fov", scene_distance, oi))
     scene = scene_set(scene, "fov", float(scenefov))
+
+    scaleoutput_is_omitted = False
+    if isinstance(scaleoutput, str) and not scaleoutput.strip():
+        scaleoutput_is_omitted = True
+    elif isinstance(scaleoutput, (list, tuple, np.ndarray)):
+        scaleoutput_array = np.asarray(scaleoutput)
+        scaleoutput_is_omitted = scaleoutput_array.size == 0
+    scaleoutput_value = 1.0 if scaleoutput_is_omitted else float(scaleoutput)
+
     scene = scene_adjust_luminance(scene, float(mean_luminance), asset_store=store)
 
     working, xyz_ideal = _camera_ideal_xyz(working, scene, asset_store=store, session=session)
-    xyz_ideal = xyz_ideal / max(float(np.max(xyz_ideal)), 1.0e-12) * float(scaleoutput)
+    xyz_ideal = xyz_ideal / max(float(np.max(xyz_ideal)), 1.0e-12) * scaleoutput_value
     srgb_ideal, lrgb_ideal = _xyz_to_srgb_pair(xyz_ideal)
 
     working = camera_compute(working, scene, asset_store=store, session=session)
