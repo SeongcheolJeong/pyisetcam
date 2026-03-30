@@ -822,9 +822,9 @@ def camera_compute_srgb(
 
 def camera_compute_sequence(
     camera: Camera,
-    *,
-    scenes: Any,
-    exposuretimes: Any = 1.0,
+    *args: Any,
+    scenes: Any = None,
+    exposuretimes: Any = None,
     nframes: int | None = None,
     asset_store: AssetStore | None = None,
     session: SessionContext | None = None,
@@ -832,8 +832,34 @@ def camera_compute_sequence(
     """Compute one or more frames with scene/exposure sequences."""
 
     store = _store(asset_store)
+    if args:
+        if len(args) % 2 != 0:
+            raise ValueError("cameraComputeSequence expects MATLAB-style key/value pairs.")
+        for index in range(0, len(args), 2):
+            key = param_format(args[index])
+            value = args[index + 1]
+            if key == "scenes" and scenes is None:
+                scenes = value
+            elif key == "exposuretimes" and exposuretimes is None:
+                exposuretimes = value
+            elif key == "nframes" and nframes is None:
+                nframes = value
+            elif key not in {"scenes", "exposuretimes", "nframes"}:
+                raise ValueError(f"cameraComputeSequence does not support parameter {args[index]!r}.")
     if scenes is None:
         raise ValueError("cameraComputeSequence requires one or more scenes.")
+
+    if isinstance(exposuretimes, str) and not exposuretimes.strip():
+        exposuretimes = None
+    elif isinstance(exposuretimes, (list, tuple, np.ndarray)) and np.asarray(exposuretimes).size == 0:
+        exposuretimes = None
+    if exposuretimes is None:
+        exposuretimes = 1.0
+
+    if isinstance(nframes, str) and not nframes.strip():
+        nframes = None
+    elif isinstance(nframes, (list, tuple, np.ndarray)) and np.asarray(nframes).size == 0:
+        nframes = None
 
     scene_list = list(scenes) if isinstance(scenes, (list, tuple)) else [scenes]
     exposure_list = list(np.asarray(exposuretimes, dtype=float).reshape(-1)) if not np.isscalar(exposuretimes) else [float(exposuretimes)]

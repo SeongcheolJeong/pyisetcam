@@ -2515,3 +2515,7 @@ empty placeholders in the optional `sz`, `scenefov`, and `scaleoutput`
 slots now fall back to the same default sensor size, camera-matched scene
 FOV, and unit output scale as the omitted-argument path instead of
 crashing on empty arrays.
+The neighboring `cameraComputeSequence(...)` wrapper now also accepts the
+upstream MATLAB-style key/value form, and empty `exposuretimes` /
+`nframes` placeholders in that form now fall back to the existing default
+single-exposure behavior instead of being treated as literal empty arrays.

@@ -8241,10 +8241,48 @@ def test_camera_compatibility_wrappers_cover_srgb_sequence_and_clear(asset_store
         asset_store=asset_store,
     )
 
+    kv_sequence_camera, kv_images = cameraComputeSequence(
+        camera_create(asset_store=asset_store),
+        "scenes",
+        [scene, scene],
+        "exposuretimes",
+        [0.01, 0.02],
+        "nframes",
+        2,
+        asset_store=asset_store,
+    )
+
+    placeholder_sequence_camera, placeholder_images = cameraComputeSequence(
+        camera_create(asset_store=asset_store),
+        "scenes",
+        [scene, scene],
+        "exposuretimes",
+        [],
+        "nframes",
+        [],
+        asset_store=asset_store,
+    )
+
+    explicit_default_sequence_camera, explicit_default_images = cameraComputeSequence(
+        camera_create(asset_store=asset_store),
+        scenes=[scene, scene],
+        exposuretimes=1.0,
+        asset_store=asset_store,
+    )
+
     assert len(images) == 2
     assert images[0].shape == images[1].shape
     assert images[0].ndim == 3 and images[0].shape[2] == 3
     assert np.isclose(camera_get(sequence_camera, "sensor exposure time"), 0.02)
+    assert len(kv_images) == 2
+    np.testing.assert_allclose(kv_images[0], images[0], rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(kv_images[1], images[1], rtol=1e-10, atol=1e-12)
+    assert np.isclose(camera_get(kv_sequence_camera, "sensor exposure time"), 0.02)
+    assert len(placeholder_images) == 2
+    np.testing.assert_allclose(placeholder_images[0], explicit_default_images[0], rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(placeholder_images[1], explicit_default_images[1], rtol=1e-10, atol=1e-12)
+    assert np.isclose(camera_get(placeholder_sequence_camera, "sensor exposure time"), 1.0)
+    assert np.isclose(camera_get(explicit_default_sequence_camera, "sensor exposure time"), 1.0)
 
     cleared = cameraClearData(updated)
 

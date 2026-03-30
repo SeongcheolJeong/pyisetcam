@@ -793,6 +793,11 @@
   `scaleoutput` slots now fall back to the same default sensor size,
   camera-matched scene FOV, and unit output scale as the
   omitted-argument path instead of crashing on empty arrays.
+- The neighboring `cameraComputeSequence(...)` wrapper now also accepts
+  the upstream MATLAB-style key/value form, and empty `exposuretimes` /
+  `nframes` placeholders in that form now fall back to the existing
+  default single-exposure behavior instead of being treated as literal
+  empty arrays.
 - Continue adding more scene patterns and `sceneFromFile`; the first slices now cover extra Macbeth variants, `moire orient`, `letter` / `font`, and the file-backed `rgb` / `multispectral` / `monochrome` scene shells.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.
