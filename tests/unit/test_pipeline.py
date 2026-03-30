@@ -10352,6 +10352,13 @@ def test_camera_legacy_full_reference_and_vsnr_alias(asset_store) -> None:
     assert np.isfinite(float(reference.scielab[0, 0]))
     assert 0.0 <= float(reference.ssim[0, 0]) <= 1.0
 
+    placeholder_reference = cameraFullReference(camera, [], [], asset_store=asset_store)
+    default_reference = cameraFullReference(camera, asset_store=asset_store)
+    np.testing.assert_equal(placeholder_reference.sceneNames, default_reference.sceneNames)
+    np.testing.assert_allclose(placeholder_reference.meanLuminances, default_reference.meanLuminances, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(placeholder_reference.scielab, default_reference.scielab, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(placeholder_reference.ssim, default_reference.ssim, rtol=1e-10, atol=1e-12)
+
     levels = np.asarray([50.0, 100.0, 200.0], dtype=float)
     expected = camera_vsnr(camera, levels, asset_store=asset_store)
     legacy = cameraVSNR_SL(camera, levels, asset_store=asset_store)

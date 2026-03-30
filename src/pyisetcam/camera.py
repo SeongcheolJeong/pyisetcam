@@ -908,12 +908,26 @@ def camera_full_reference(
     """Compute MATLAB-style full-reference camera metrics without GUI output."""
 
     store = _store(asset_store)
+    scene_names_is_omitted = scene_names is None
+    if isinstance(scene_names, str) and not scene_names.strip():
+        scene_names_is_omitted = True
+    elif isinstance(scene_names, (list, tuple, np.ndarray)):
+        scene_names_array = np.asarray(scene_names, dtype=object)
+        scene_names_is_omitted = scene_names_array.size == 0
+
     scene_list = list(scene_names) if isinstance(scene_names, (list, tuple)) else [scene_names]
-    if scene_names is None:
+    if scene_names_is_omitted:
         scene_list = ["StuffedAnimals_tungsten-hdrs"]
 
+    mean_luminances_is_omitted = mean_luminances is None
+    if isinstance(mean_luminances, str) and not mean_luminances.strip():
+        mean_luminances_is_omitted = True
+    elif isinstance(mean_luminances, (list, tuple, np.ndarray)):
+        mean_luminances_array = np.asarray(mean_luminances)
+        mean_luminances_is_omitted = mean_luminances_array.size == 0
+
     luminances = np.asarray(
-        [3.0, 6.0, 12.0, 25.0, 50.0, 100.0, 200.0, 400.0] if mean_luminances is None else mean_luminances,
+        [3.0, 6.0, 12.0, 25.0, 50.0, 100.0, 200.0, 400.0] if mean_luminances_is_omitted else mean_luminances,
         dtype=float,
     ).reshape(-1)
     if luminances.size == 0:

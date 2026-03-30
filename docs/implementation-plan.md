@@ -757,6 +757,11 @@
   empty placeholders in the optional `lightLevels` and `exposureTime`
   slots now fall back to the upstream defaults `[1 10 100]` and `0.01 s`
   instead of being treated as literal empty arrays.
+- The adjacent `cameraFullReference(...)` wrapper now follows the same
+  rule: explicit empty `sceneNames` and `meanLuminances` placeholders fall
+  back to the upstream default Stuffed Animals benchmark scene plus the
+  standard `[3 6 12 25 50 100 200 400]` luminance sweep instead of
+  producing an empty benchmark request.
 - The same public camera gateway is tighter too: `cameraGet(...)` and
   `cameraSet(...)` now reuse `ieParameterOtype(...)` for unprefixed unique
   subobject parameters, so legacy calls like `cameraSet(camera, 'fill factor',
