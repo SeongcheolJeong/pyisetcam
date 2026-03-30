@@ -1789,6 +1789,7 @@ deltaE94 = delta_e_94
 deltaEuv = delta_e_uv
 iePSNR = peak_signal_to_noise_ratio
 ieSQRI = ie_sqri
+cct = cct_from_uv
 conePlot = cone_plot
 humanCones = human_cones
 humanConeContrast = human_cone_contrast

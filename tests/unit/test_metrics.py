@@ -29,6 +29,10 @@ def test_metrics_module_human_cones_matlab_alias() -> None:
     assert metrics_module.humanCones is metrics_module.human_cones
 
 
+def test_metrics_module_cct_matlab_alias() -> None:
+    assert metrics_module.cct is metrics_module.cct_from_uv
+
+
 def test_xyz_to_lab_maps_white_point_to_neutral() -> None:
     white = np.array([95.047, 100.0, 108.883], dtype=float)
     lab = xyz_to_lab(white, white)
