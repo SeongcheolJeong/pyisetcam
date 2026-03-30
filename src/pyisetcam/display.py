@@ -15,7 +15,7 @@ from .exceptions import UnsupportedOptionError
 from .metrics import chromaticity_xy, xyz_from_energy
 from .session import track_session_object
 from .types import Display, SessionContext
-from .utils import blackbody, ie_unit_scale_factor, interp_spectra, invert_gamma_table, param_format, spectral_step, srgb_to_xyz
+from .utils import blackbody, ie_unit_scale_factor, interp_spectra, invert_gamma_table, param_format, spectral_step, srgb_to_xyz, xyz_to_srgb
 
 
 def _store(asset_store: AssetStore | None) -> AssetStore:
@@ -672,7 +672,7 @@ def display_get(display: Display, parameter: str, *args: Any) -> Any:
     if key == "rgbspd":
         spd = np.asarray(display_get(display, "spd", *(args[:1] if args else ())), dtype=float)
         return spd[:, : min(3, spd.shape[1])]
-    if key == "rgb2xyz":
+    if key in {"rgb2xyz", "lrgb2xyz"}:
         return _display_rgb2xyz(display)
     if key == "rgb2lms":
         return np.asarray(xyz_to_lms(np.asarray(display_get(display, "rgb2xyz"), dtype=float)), dtype=float)
@@ -697,9 +697,12 @@ def display_get(display: Display, parameter: str, *args: Any) -> Any:
         wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)
         spd = np.asarray(display_get(display, "spd primaries"), dtype=float).T
         return np.asarray(xyz_from_energy(spd, wave), dtype=float)
+    if key in {"primariesrgb", "primariessrgb"}:
+        xyz = np.asarray(display_get(display, "primaries xyz"), dtype=float)
+        return np.asarray(xyz_to_srgb(xyz.reshape(1, xyz.shape[0], 3)), dtype=float).reshape(xyz.shape[0], 3)
     if key == "primariesxy":
         return np.asarray(chromaticity_xy(np.asarray(display_get(display, "primaries xyz"), dtype=float)), dtype=float)
-    if key in {"blackspd", "ambientspd"}:
+    if key in {"blackspd", "blackradiance", "ambientspd"}:
         ambient = _display_ambient(display)
         if args:
             wave = np.asarray(args[0], dtype=float).reshape(-1)
@@ -717,7 +720,7 @@ def display_get(display: Display, parameter: str, *args: Any) -> Any:
         if args:
             value *= float(ie_unit_scale_factor(str(args[0])))
         return float(value)
-    if key in {"dotsperdeg"}:
+    if key in {"dotsperdeg", "sampperdeg"}:
         dist = float(display_get(display, "viewing distance"))
         meters_per_dot = float(display_get(display, "meters per dot"))
         deg_per_dot = np.degrees(np.arctan2(meters_per_dot, max(dist, 1.0e-12)))
@@ -726,7 +729,7 @@ def display_get(display: Display, parameter: str, *args: Any) -> Any:
         dist = float(display_get(display, "viewing distance"))
         meters_per_dot = float(display_get(display, "meters per dot"))
         return float(np.degrees(np.arctan2(meters_per_dot, max(dist, 1.0e-12))))
-    if key in {"dist", "viewingdistance"}:
+    if key in {"dist", "distance", "viewingdistance"}:
         return float(display.fields["dist"])
     if key == "size":
         return _display_size_m(display)

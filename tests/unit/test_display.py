@@ -38,10 +38,14 @@ def test_display_get_reports_matlab_style_derived_values(asset_store) -> None:
     gamma = display_get(display, "gamma")
     dark_level = np.asarray(display_get(display, "dark level"), dtype=float)
     rgb2lms = np.asarray(display_get(display, "rgb2lms"), dtype=float)
+    rgb2xyz = np.asarray(display_get(display, "rgb2xyz"), dtype=float)
+    lrgb2xyz = np.asarray(display_get(display, "lrgb2xyz"), dtype=float)
     white_lms = np.asarray(display_get(display, "white lms"), dtype=float)
     primaries_xyz = np.asarray(display_get(display, "primaries xyz"), dtype=float)
+    primaries_srgb = np.asarray(display_get(display, "primaries srgb"), dtype=float)
     primaries_xy = np.asarray(display_get(display, "primaries xy"), dtype=float)
     black_xyz = np.asarray(display_get(display, "black xyz"), dtype=float)
+    black_radiance = np.asarray(display_get(display, "black radiance"), dtype=float)
     dark_luminance = float(display_get(display, "dark luminance"))
     peak_luminance = float(display_get(display, "peak luminance"))
     peak_contrast = float(display_get(display, "peak contrast"))
@@ -56,9 +60,13 @@ def test_display_get_reports_matlab_style_derived_values(asset_store) -> None:
     assert display_get(display, "n primaries") == 3
     assert display_get(display, "white spd").shape == (display_get(display, "n wave"),)
     assert display_get(display, "black spd").shape == (display_get(display, "n wave"),)
+    np.testing.assert_allclose(lrgb2xyz, rgb2xyz, rtol=1e-12, atol=1e-12)
     assert rgb2lms.shape == (3, 3)
     np.testing.assert_allclose(white_lms, np.sum(rgb2lms, axis=0), rtol=1e-12, atol=1e-12)
     assert primaries_xyz.shape == (3, 3)
+    assert primaries_srgb.shape == (3, 3)
+    assert np.all(primaries_srgb >= 0.0)
+    assert np.all(primaries_srgb <= 1.0)
     assert primaries_xy.shape == (3, 2)
     np.testing.assert_allclose(
         primaries_xy,
@@ -67,10 +75,13 @@ def test_display_get_reports_matlab_style_derived_values(asset_store) -> None:
         atol=1e-12,
     )
     assert black_xyz.shape == (3,)
+    np.testing.assert_allclose(black_radiance, display_get(display, "black spd"), rtol=1e-12, atol=1e-12)
     assert np.isclose(dark_luminance, black_xyz[1], rtol=1e-12, atol=1e-12)
     assert np.isclose(peak_contrast, peak_luminance / dark_luminance, rtol=1e-12, atol=1e-12)
     assert display_get(display, "meters per dot") > 0.0
     assert display_get(display, "dots per deg") > 0.0
+    assert np.isclose(display_get(display, "samp per deg"), display_get(display, "dots per deg"), rtol=1e-12, atol=1e-12)
+    assert np.isclose(display_get(display, "distance"), display_get(display, "viewing distance"), rtol=1e-12, atol=1e-12)
 
 
 def test_display_set_resamples_ambient_and_tracks_dixel_metadata(asset_store) -> None:
