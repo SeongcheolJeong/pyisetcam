@@ -54,6 +54,20 @@ from pyisetcam.types import Scene
 
 
 def test_scene_module_core_matlab_aliases() -> None:
+    assert scene_module.exiftoolDepthFromFile is scene_module.exiftool_depth_from_file
+    assert scene_module.exiftoolInfo is scene_module.exiftool_info
+    assert scene_module.macbethChartCreate is scene_module.macbeth_chart_create
+    assert scene_module.macbethDrawRects is scene_module.macbeth_draw_rects
+    assert scene_module.macbethEvaluationGraphs is scene_module.macbeth_evaluation_graphs
+    assert scene_module.macbethGretagSGCreate is scene_module.macbeth_gretag_sg_create
+    assert scene_module.macbethIdealColor is scene_module.macbeth_ideal_color
+    assert scene_module.macbethLuminanceNoise is scene_module.macbeth_luminance_noise
+    assert scene_module.macbethPatchData is scene_module.macbeth_patch_data
+    assert scene_module.macbethReadReflectance is scene_module.macbeth_read_reflectance
+    assert scene_module.macbethRectangles is scene_module.macbeth_rectangles
+    assert scene_module.macbethROIs is scene_module.macbeth_rois
+    assert scene_module.macbethSelect is scene_module.macbeth_select
+    assert scene_module.macbethSensorValues is scene_module.macbeth_sensor_values
     assert scene_module.sceneAdd is scene_module.scene_add
     assert scene_module.sceneAddGrid is scene_module.scene_add_grid
     assert scene_module.sceneAdjustIlluminant is scene_module.scene_adjust_illuminant

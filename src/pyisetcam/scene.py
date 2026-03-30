@@ -6754,6 +6754,20 @@ def scene_set(scene: Scene, parameter: str, value: Any) -> Scene:
     raise KeyError(f"Unsupported sceneSet parameter: {parameter}")
 
 
+exiftoolDepthFromFile = exiftool_depth_from_file
+exiftoolInfo = exiftool_info
+macbethChartCreate = macbeth_chart_create
+macbethDrawRects = macbeth_draw_rects
+macbethEvaluationGraphs = macbeth_evaluation_graphs
+macbethGretagSGCreate = macbeth_gretag_sg_create
+macbethIdealColor = macbeth_ideal_color
+macbethLuminanceNoise = macbeth_luminance_noise
+macbethPatchData = macbeth_patch_data
+macbethReadReflectance = macbeth_read_reflectance
+macbethRectangles = macbeth_rectangles
+macbethROIs = macbeth_rois
+macbethSelect = macbeth_select
+macbethSensorValues = macbeth_sensor_values
 sceneCreate = scene_create
 sceneAdd = scene_add
 sceneAddGrid = scene_add_grid
