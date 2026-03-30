@@ -7,7 +7,7 @@ from typing import Any
 import numpy as np
 
 from .exceptions import UnsupportedOptionError
-from .ip import ip_get
+from .ip import image_data_xyz, ip_get
 from .optics import oi_get
 from .scene import scene_get
 from .sensor import sensor_get
@@ -246,4 +246,10 @@ vcRect2Locs = vc_rect2_locs
 ieRoi2Locs = ie_roi2_locs
 ieLocs2Rect = ie_locs2_rect
 ieRect2Vertices = ie_rect2_vertices
+imageDataXYZ = image_data_xyz
+ipGet = ip_get
+oiGet = oi_get
+Quanta2Energy = quanta_to_energy
+sceneGet = scene_get
+sensorGet = sensor_get
 vcGetROIData = vc_get_roi_data

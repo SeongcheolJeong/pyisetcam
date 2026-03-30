@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import importlib
+
 import numpy as np
 
 from pyisetcam import (
@@ -27,6 +29,17 @@ from pyisetcam import (
     xyz_from_energy,
 )
 from pyisetcam.display import display_get
+
+roi_module = importlib.import_module("pyisetcam.roi")
+
+
+def test_roi_module_helper_matlab_aliases() -> None:
+    assert roi_module.sceneGet is roi_module.scene_get
+    assert roi_module.oiGet is roi_module.oi_get
+    assert roi_module.sensorGet is roi_module.sensor_get
+    assert roi_module.ipGet is roi_module.ip_get
+    assert roi_module.Quanta2Energy is roi_module.quanta_to_energy
+    assert roi_module.imageDataXYZ is roi_module.image_data_xyz
 
 
 def test_roi_rect_location_helpers_round_trip() -> None:
@@ -323,6 +336,25 @@ def test_ip_get_roi_data_and_xyz(asset_store) -> None:
     assert np.allclose(roi_data, np.array([[0.1, 0.2, 0.3], [1.0, 1.1, 1.2]], dtype=float))
     assert np.allclose(roi_xyz, expected_roi_xyz)
     assert np.allclose(full_xyz, expected_full_xyz)
+
+
+def test_vc_get_roi_data_ip_xyz(asset_store) -> None:
+    ip = ip_create(display="default", asset_store=asset_store)
+    result = np.array(
+        [
+            [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]],
+            [[0.7, 0.8, 0.9], [1.0, 1.1, 1.2]],
+        ],
+        dtype=float,
+    )
+    ip = ip_set(ip, "result", result)
+
+    roi_locs = np.array([[1, 1], [2, 2]], dtype=int)
+    roi_xyz = vcGetROIData(ip, roi_locs, "xyz")
+    full_xyz = np.asarray(imageDataXYZ(ip), dtype=float)
+    expected = np.vstack((full_xyz[0, 0, :], full_xyz[1, 1, :]))
+
+    assert np.allclose(roi_xyz, expected)
 
 
 def test_scene_get_roi_queries(asset_store) -> None:
