@@ -2305,7 +2305,9 @@ leaving those reusable color and SCIELAB helpers only under
 The same color-metric path now also replays the upstream component modes for
 `delta_e_ab(...)` and `sc_compute_difference(...)`, so `'luminance'`,
 `'chrominance'`, `'hue'`, and `'all'` now work on top of the existing
-CIEDE2000 component math instead of raising unsupported-option errors.
+CIEDE2000 component math instead of raising unsupported-option errors, and
+`delta_e_ab(...)` now also accepts paired white points like the neighboring
+`delta_e_uv(...)` path.
 The same package-root helper surface now also exposes
 `example_spd_pair(...)` instead of leaving that deterministic
 documentation/example SPD generator only under `pyisetcam.metrics`.

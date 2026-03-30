@@ -772,8 +772,12 @@ def delta_e_ab(
     """Compute CIELAB Delta E between XYZ values."""
 
     xyz1_array, xyz2_array = _paired_arrays(xyz1, xyz2)
-    lab1 = xyz_to_lab(xyz1_array, white_point)
-    lab2 = xyz_to_lab(xyz2_array, white_point)
+    if isinstance(white_point, (list, tuple)) and len(white_point) == 2:
+        lab1 = xyz_to_lab(xyz1_array, white_point[0])
+        lab2 = xyz_to_lab(xyz2_array, white_point[1])
+    else:
+        lab1 = xyz_to_lab(xyz1_array, white_point)
+        lab2 = xyz_to_lab(xyz2_array, white_point)
     normalized_version = param_format(delta_e_version)
     if normalized_version in {"1976", "76", "cie1976"}:
         return np.linalg.norm(lab1 - lab2, axis=-1)

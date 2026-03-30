@@ -86,6 +86,22 @@ def test_delta_e_ab_supports_component_modes_and_all_payload() -> None:
     np.testing.assert_allclose(all_components["RT"], components["RT"], rtol=1e-10, atol=1e-10)
 
 
+def test_delta_e_ab_accepts_single_and_pair_white_points() -> None:
+    xyz1 = np.array([[[20.0, 30.0, 15.0], [22.0, 31.0, 18.0]]], dtype=float)
+    xyz2 = np.array([[[19.0, 29.0, 14.0], [21.0, 32.0, 17.0]]], dtype=float)
+    white1 = np.array([95.047, 100.0, 108.883], dtype=float)
+    white2 = np.array([96.0, 101.0, 109.0], dtype=float)
+
+    shared = delta_e_ab(xyz1, xyz2, white1, "2000")
+    paired = delta_e_ab(xyz1, xyz2, (white1, white2), "2000")
+
+    expected_shared = deltaE2000(xyz_to_lab(xyz1, white1), xyz_to_lab(xyz2, white1))[0]
+    expected_paired = deltaE2000(xyz_to_lab(xyz1, white1), xyz_to_lab(xyz2, white2))[0]
+
+    np.testing.assert_allclose(shared, expected_shared, rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(paired, expected_paired, rtol=1e-10, atol=1e-10)
+
+
 def test_delta_e_2000_matches_skimage_and_reports_components() -> None:
     lab_std = np.array([[50.0, 2.6772, -79.7751], [50.0, 0.0, 0.0]], dtype=float)
     lab_sample = np.array([[50.0, 0.0, -82.7485], [50.0, -1.0, 2.0]], dtype=float)
