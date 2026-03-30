@@ -4,6 +4,8 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+import pyisetcam.session as session_module
+
 from pyisetcam import (
     ISET,
     camera_compute,
@@ -103,6 +105,12 @@ from pyisetcam import (
     mainOpen,
     main_open,
 )
+
+
+def test_session_module_path_matlab_aliases() -> None:
+    assert session_module.ISET is session_module.iset
+    assert session_module.isetPath is session_module.iset_path
+    assert session_module.isetRootPath is session_module.iset_root_path
 
 
 def test_session_add_get_and_select_round_trip(asset_store) -> None:

@@ -1334,6 +1334,10 @@ def session_delete_some_objects(
 
 
 # MATLAB-style aliases.
+ISET = iset
+isetPath = iset_path
+isetRootPath = iset_root_path
+
 vcAddAndSelectObject = session_add_and_select_object
 vcAddObject = session_add_object
 vcCountObjects = session_count_objects
