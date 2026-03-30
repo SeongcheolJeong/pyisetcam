@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import imageio.v3 as iio
 import numpy as np
+import pyisetcam.ip as ip_module
 from scipy.signal import convolve2d
 
 from pyisetcam.camera import _chart_rectangles, _chart_rects_data, _linear_srgb_to_xyz, _whole_chart_corner_points
@@ -995,6 +996,13 @@ def test_ip_get_white_point_aliases_match_upstream_fallbacks() -> None:
         "data or monitor white point",
     ):
         assert np.allclose(np.asarray(ip_get(ip, alias), dtype=float), data_white)
+
+
+def test_ip_module_core_matlab_aliases() -> None:
+    assert ip_module.ipCreate is ip_module.ip_create
+    assert ip_module.ipCompute is ip_module.ip_compute
+    assert ip_module.ipGet is ip_module.ip_get
+    assert ip_module.ipSet is ip_module.ip_set
 
 
 def test_ip_get_scaled_result_and_primary_aliases_match_headless_helpers() -> None:

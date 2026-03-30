@@ -854,6 +854,10 @@
   `ipGet/Set(..., 'combination method', ...)` and the `combine exposures`
   alias now replay the vendored default `longest` behavior and shared
   stored method field.
+- That same IP wrapper lane now also exposes the core MATLAB-style gateway
+  aliases directly from `pyisetcam.ip`, so callers can import `ipCreate`,
+  `ipCompute`, `ipGet`, and `ipSet` from the module itself instead of only
+  from the package root.
 - The adjacent display wrapper surface is tighter too: the
   `pyisetcam.display` module now exposes the direct MATLAB-style camelCase
   aliases for the existing headless display helpers, so users can import

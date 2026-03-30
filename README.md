@@ -2590,3 +2590,7 @@ The neighboring bracketed-IP bookkeeping surface is tighter too:
 `ipGet/Set(..., 'combination method', ...)` and the `combine exposures`
 alias now replay the vendored default `longest` behavior and shared stored
 method field.
+That same IP wrapper surface now also exposes the core MATLAB-style
+gateway aliases directly from `pyisetcam.ip`, so imports like
+`from pyisetcam.ip import ipCreate`, `ipCompute`, `ipGet`, and `ipSet`
+work without routing through the package root.
