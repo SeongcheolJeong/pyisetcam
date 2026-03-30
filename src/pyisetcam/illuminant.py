@@ -322,5 +322,8 @@ def illuminant_read(
     )
 
 
+illuminantCreate = illuminant_create
+illuminantGet = illuminant_get
+illuminantSet = illuminant_set
 illuminantModernize = illuminant_modernize
 illuminantRead = illuminant_read

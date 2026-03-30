@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 import pyisetcam.camera as camera_module
+import pyisetcam.illuminant as illuminant_module
 import pyisetcam.metrics as metrics_module
 import pyisetcam.optics as optics_module
 import pyisetcam.sensor as sensor_module
@@ -8377,6 +8378,12 @@ def test_sensor_module_core_matlab_aliases() -> None:
     assert sensor_module.sensorSet is sensor_module.sensor_set
     assert sensor_module.sensorSetSizeToFOV is sensor_module.sensor_set_size_to_fov
     assert sensor_module.spatialIntegration is sensor_module.spatial_integration
+
+
+def test_illuminant_module_core_matlab_aliases() -> None:
+    assert illuminant_module.illuminantCreate is illuminant_module.illuminant_create
+    assert illuminant_module.illuminantGet is illuminant_module.illuminant_get
+    assert illuminant_module.illuminantSet is illuminant_module.illuminant_set
 
 
 def test_run_python_case_with_context_returns_pipeline_objects(asset_store) -> None:
