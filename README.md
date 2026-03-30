@@ -280,7 +280,11 @@ radiance data; that same shell-constructor lane now also accepts a passed
 seed scene in the upstream one-argument forms like `sceneCreate('rgb',
 scene)`, `sceneCreate('multispectral', scene)`, and
 `sceneCreate('monochrome', scene)` instead of discarding the supplied
-scene shell. The adjacent display getter lane now also replays the
+scene shell. That same scene wrapper surface now also exposes the core
+MATLAB-style gateway aliases directly from `pyisetcam.scene`, so imports
+like `from pyisetcam.scene import sceneCreate`, `sceneGet`, and `sceneSet`
+work without routing through the package root. The adjacent display getter
+lane now also replays the
 upstream MATLAB color and contrast aliases `rgb2lms`, `white lms`,
 `black xyz`, `primaries xyz` / `primaries xy`, `dark luminance`, and
 `peak contrast` on top of the existing headless display calibration

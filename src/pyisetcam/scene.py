@@ -6752,3 +6752,8 @@ def scene_set(scene: Scene, parameter: str, value: Any) -> Scene:
         scene.fields["known_reflectance"] = np.asarray(value, dtype=float).reshape(-1)
         return scene
     raise KeyError(f"Unsupported sceneSet parameter: {parameter}")
+
+
+sceneCreate = scene_create
+sceneGet = scene_get
+sceneSet = scene_set
