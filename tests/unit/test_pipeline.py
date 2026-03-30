@@ -61,6 +61,7 @@ from pyisetcam import (
     adobergb_parameters,
     daylight,
     delta_e_ab,
+    deltaEuv,
     displayDescription,
     display_create,
     display_get,
@@ -13056,6 +13057,7 @@ def _build_metrics_test_ip(name: str, result: np.ndarray, xyz: np.ndarray, white
 
 def test_metrics_compute_and_masked_error_helpers(tmp_path) -> None:
     white_point = np.array([0.95047, 1.0, 1.08883], dtype=float)
+    white_point_2 = np.array([0.96422, 1.0, 0.82521], dtype=float)
     result1 = np.array(
         [
             [[0.10, 0.20, 0.30], [0.20, 0.30, 0.40]],
@@ -13074,12 +13076,17 @@ def test_metrics_compute_and_masked_error_helpers(tmp_path) -> None:
     xyz2 = xyz1 + 0.02
 
     ip1 = _build_metrics_test_ip("first", result1, xyz1, white_point)
-    ip2 = _build_metrics_test_ip("second", result2, xyz2, white_point)
+    ip2 = _build_metrics_test_ip("second", result2, xyz2, white_point_2)
 
     d_e_image, d_e_value = metricsCompute(ip1, ip2, "CIELAB (dE)")
-    expected_d_e = delta_e_ab(xyz1, xyz2, white_point)
+    expected_d_e = delta_e_ab(xyz1, xyz2, (white_point, white_point_2))
     np.testing.assert_allclose(d_e_image, expected_d_e, rtol=1e-10, atol=1e-12)
     assert d_e_value is None
+
+    d_uv_image, d_uv_value = metricsCompute(ip1, ip2, "CIELUV (dE)")
+    expected_d_uv = deltaEuv(xyz1, xyz2, (white_point, white_point_2))
+    np.testing.assert_allclose(d_uv_image, expected_d_uv, rtol=1e-10, atol=1e-12)
+    assert d_uv_value is None
 
     mse_image, mse_value = metricsCompute(ip1, ip2, "MSE")
     expected_mse = np.sum(np.square(result1 - result2), axis=-1)
@@ -13108,7 +13115,7 @@ def test_metrics_compute_and_masked_error_helpers(tmp_path) -> None:
         "vci2": ip2,
         "image1_name": "first",
         "image2_name": "second",
-        "metric_names": ["CIELAB (dE)", "MSE", "RMSE", "PSNR"],
+        "metric_names": ["CIELAB (dE)", "CIELUV (dE)", "MSE", "RMSE", "PSNR"],
         "current_metric": "CIELAB (dE)",
         "metric_image": d_e_image,
         "gamma": 2.2,
@@ -13119,7 +13126,7 @@ def test_metrics_compute_and_masked_error_helpers(tmp_path) -> None:
     assert selected2 is ip2
     assert metricsGet(handles, "image1name") == "first"
     assert metricsGet(handles, "currentmetric") == "CIELAB (dE)"
-    assert metricsGet(handles, "metricnames") == ["CIELAB (dE)", "MSE", "RMSE", "PSNR"]
+    assert metricsGet(handles, "metricnames") == ["CIELAB (dE)", "CIELUV (dE)", "MSE", "RMSE", "PSNR"]
     np.testing.assert_allclose(metricsGet(handles, "metricImageData"), d_e_image / 30.0, rtol=1e-10, atol=1e-12)
 
     updated = metricsSet(handles, "metricdata", mse_image)
@@ -13174,6 +13181,7 @@ def test_metrics_compute_and_masked_error_helpers(tmp_path) -> None:
 
 def test_metrics_roi_compare_and_sqri_helpers() -> None:
     white_point = np.array([0.95047, 1.0, 1.08883], dtype=float)
+    white_point_2 = np.array([0.96422, 1.0, 0.82521], dtype=float)
     result1 = np.array(
         [
             [[0.10, 0.20, 0.30], [0.20, 0.30, 0.40]],
@@ -13191,7 +13199,7 @@ def test_metrics_roi_compare_and_sqri_helpers() -> None:
     )
     xyz2 = xyz1 + 0.02
     ip1 = _build_metrics_test_ip("first", result1, xyz1, white_point)
-    ip2 = _build_metrics_test_ip("second", result2, xyz2, white_point)
+    ip2 = _build_metrics_test_ip("second", result2, xyz2, white_point_2)
     handles = {
         "vci1": ip1,
         "vci2": ip2,
@@ -13207,7 +13215,11 @@ def test_metrics_roi_compare_and_sqri_helpers() -> None:
     np.testing.assert_array_equal(metricsROI(handles, "metricImage"), np.array([[1, 2], [2, 2]], dtype=int))
 
     d_e_roi, returned_locs = metricsCompareROI(handles)
-    expected_d_e = delta_e_ab(ip_get(ip1, "roixyz", expected_locs), ip_get(ip2, "roixyz", expected_locs), white_point)
+    expected_d_e = delta_e_ab(
+        ip_get(ip1, "roixyz", expected_locs),
+        ip_get(ip2, "roixyz", expected_locs),
+        (white_point, white_point_2),
+    )
     np.testing.assert_array_equal(returned_locs, expected_locs)
     np.testing.assert_allclose(d_e_roi, expected_d_e, rtol=1e-10, atol=1e-12)
 

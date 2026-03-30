@@ -2307,7 +2307,9 @@ The same color-metric path now also replays the upstream component modes for
 `'chrominance'`, `'hue'`, and `'all'` now work on top of the existing
 CIEDE2000 component math instead of raising unsupported-option errors, and
 `delta_e_ab(...)` now also accepts paired white points like the neighboring
-`delta_e_uv(...)` path.
+`delta_e_uv(...)` path. The same metrics-helper lane now preserves those paired
+per-image white points through `metricsCompute(...)` and `metricsCompareROI(...)`
+instead of collapsing them into a single average white.
 The same package-root helper surface now also exposes
 `example_spd_pair(...)` instead of leaving that deterministic
 documentation/example SPD generator only under `pyisetcam.metrics`.

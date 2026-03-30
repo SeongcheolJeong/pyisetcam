@@ -1294,7 +1294,10 @@ def metrics_set(handles: Any, param: str, val: Any, *args: Any) -> dict[str, Any
     raise KeyError(f"Unknown metricsSet parameter: {param}")
 
 
-def _metrics_white_point(vci1: Any, vci2: Any) -> NDArray[np.float64]:
+def _metrics_white_point(
+    vci1: Any,
+    vci2: Any,
+) -> NDArray[np.float64] | tuple[NDArray[np.float64], NDArray[np.float64]]:
     from .ip import ip_get
 
     wp1 = ip_get(vci1, "datawhitepoint")
@@ -1307,7 +1310,7 @@ def _metrics_white_point(vci1: Any, vci2: Any) -> NDArray[np.float64]:
         return np.asarray(wp1, dtype=float)
     wp1_array = np.asarray(wp1, dtype=float)
     wp2_array = np.asarray(wp2, dtype=float)
-    return np.asarray((wp1_array + wp2_array) / 2.0, dtype=float)
+    return wp1_array, wp2_array
 
 
 def metrics_description(handles: Any) -> str:
@@ -1364,11 +1367,8 @@ def metrics_compute(vc1: Any, vc2: Any, metric_name: str = "difference") -> tupl
     if normalized_metric in {"cieluv", "cieluvde"}:
         xyz1 = np.asarray(ip_get(vc1, "dataxyz"), dtype=float)
         xyz2 = np.asarray(ip_get(vc2, "dataxyz"), dtype=float)
-        white = _metrics_white_point(vc1, vc2)
-        luv1 = np.asarray(xyz_to_luv(xyz1, white), dtype=float)
-        luv2 = np.asarray(xyz_to_luv(xyz2, white), dtype=float)
-        delta = np.linalg.norm(luv1 - luv2, axis=-1)
-        return np.asarray(delta, dtype=float), None
+        delta = np.asarray(delta_e_uv(xyz1, xyz2, _metrics_white_point(vc1, vc2)), dtype=float)
+        return delta, None
     result1 = np.asarray(ip_get(vc1, "result"), dtype=float)
     result2 = np.asarray(ip_get(vc2, "result"), dtype=float)
     if normalized_metric in {"mse", "meansquarederror"}:
