@@ -735,6 +735,10 @@
   and `ipGet(...)` now support field-addressable `l3 ...` lookups in
   addition to whole-payload retrieval, so mapping-like L3 bundles can be
   queried through the public gateway shape without unpacking them manually.
+- The same L3 camera lane now also keeps the embedded design sensor in
+  sync for the upstream bookkeeping setters: `cameraSet('L3 sensor size', ...)`
+  and `cameraSet('L3 sensor fov', ...)` update both the active camera sensor
+  and the stored L3 payload instead of diverging after the first resize.
 - Continue adding more scene patterns and `sceneFromFile`; the first slices now cover extra Macbeth variants, `moire orient`, `letter` / `font`, and the file-backed `rgb` / `multispectral` / `monochrome` scene shells.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.

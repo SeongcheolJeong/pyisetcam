@@ -8004,6 +8004,16 @@ def test_camera_create_supports_explicit_l3_payload(asset_store) -> None:
     )
     assert np.array_equal(np.asarray(camera_get(camera, "ip l3 kernels"), dtype=float), l3_payload["kernels"])
 
+    camera = camera_set(camera, "L3 sensor size", (11, 13))
+    assert tuple(np.asarray(camera_get(camera, "sensor size"), dtype=int)) == (11, 13)
+    assert tuple(np.asarray(camera_get(camera, "l3 design sensor").fields["size"], dtype=int)) == (11, 13)
+    assert tuple(np.asarray(camera_get(camera, "ip l3 design sensor").fields["size"], dtype=int)) == (11, 13)
+
+    camera = camera_set(camera, "L3 sensor fov", 4.0)
+    l3_sensor_size = tuple(np.asarray(camera_get(camera, "l3 design sensor").fields["size"], dtype=int))
+    assert tuple(np.asarray(camera_get(camera, "sensor size"), dtype=int)) == l3_sensor_size
+    assert tuple(np.asarray(camera_get(camera, "ip l3 design sensor").fields["size"], dtype=int)) == l3_sensor_size
+
 
 def test_camera_compute_supports_vendor_sensor_variants(asset_store) -> None:
     scene = scene_create(asset_store=asset_store)

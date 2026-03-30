@@ -398,6 +398,30 @@ def camera_set(
             camera.fields["ip"] = ip_set(camera.fields["ip"], remainder, value, *args, session=session)
         return track_camera_session_state(session, camera)
     if prefix == "l3":
+        normalized_remainder = param_format(remainder)
+        if normalized_remainder == "sensorsize":
+            camera.fields["sensor"] = sensor_set(camera.fields["sensor"], "size", value)
+            l3 = camera.fields["ip"].fields.get("l3")
+            if l3 is not None:
+                l3 = copy.deepcopy(l3)
+                design_sensor = _l3_get(l3, "design sensor", "design_sensor", "designsensor")
+                if isinstance(design_sensor, Sensor):
+                    _l3_set(l3, "design sensor", sensor_set(design_sensor, "size", value))
+                    camera.fields["ip"] = ip_set(camera.fields["ip"], "l3", l3, session=session)
+            return track_camera_session_state(session, camera)
+        if normalized_remainder == "sensorfov":
+            camera.fields["sensor"] = sensor_set_size_to_fov(camera.fields["sensor"], value, camera.fields["oi"])
+            l3 = camera.fields["ip"].fields.get("l3")
+            if l3 is not None:
+                l3 = copy.deepcopy(l3)
+                design_sensor = _l3_get(l3, "design sensor", "design_sensor", "designsensor")
+                if isinstance(design_sensor, Sensor):
+                    resized = sensor_set_size_to_fov(design_sensor, value, camera.fields["oi"])
+                    _l3_set(l3, "design sensor", resized)
+                    camera.fields["ip"] = ip_set(camera.fields["ip"], "l3", l3, session=session)
+            return track_camera_session_state(session, camera)
+        if remainder:
+            raise KeyError(f"Unsupported cameraSet parameter: {parameter}")
         camera.fields["ip"] = ip_set(camera.fields["ip"], "l3", value, session=session)
         return track_camera_session_state(session, camera)
 
@@ -418,11 +442,9 @@ def camera_set(
         camera.fields["ip"] = value
         return track_camera_session_state(session, camera)
     if key == "l3sensorsize":
-        camera.fields["sensor"] = sensor_set(camera.fields["sensor"], "size", value)
-        return track_camera_session_state(session, camera)
+        return camera_set(camera, "l3 sensor size", value, session=session)
     if key == "l3sensorfov":
-        camera.fields["sensor"] = sensor_set_size_to_fov(camera.fields["sensor"], value, camera.fields["oi"])
-        return track_camera_session_state(session, camera)
+        return camera_set(camera, "l3 sensor fov", value, session=session)
     if key in {"metric", "metrics"}:
         if not args:
             raise ValueError("cameraSet(..., 'metric', value, metric_name) requires a metric name.")

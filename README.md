@@ -2457,3 +2457,7 @@ The neighboring explicit-`L3` camera path is tighter too: `cameraGet(...)`
 and `ipGet(...)` now both support field-addressable `l3 ...` lookups on
 top of the existing whole-payload retrieval, so vendored or synthetic L3
 payloads can be queried through the same public gateway shape as upstream.
+That same L3 path now also replays the upstream camera-set bookkeeping:
+`cameraSet('L3 sensor size', ...)` and `cameraSet('L3 sensor fov', ...)`
+update both the active camera sensor and the stored L3 design sensor
+together instead of leaving the payload out of sync.
