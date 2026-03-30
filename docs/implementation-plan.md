@@ -836,6 +836,10 @@
   `transform list`, `gamma`, `data sensor`, and sensor-channel-count
   alias families on top of the existing transform, render, and
   sensor-space payloads.
+- The neighboring render-control lane is tighter too: `ipGet/Set(...,
+  'render whitept', ...)` now replays the vendored sensor-conversion
+  rewrite path headlessly, updating the current sensor conversion matrix
+  and locking `transform method` to `current`.
 - Continue adding more scene patterns and `sceneFromFile`; the first slices now cover extra Macbeth variants, `moire orient`, `letter` / `font`, and the file-backed `rgb` / `multispectral` / `monochrome` scene shells.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.

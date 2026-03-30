@@ -271,9 +271,10 @@ def _ensure_ip_state(ip: ImageProcessor) -> ImageProcessor:
     ip.fields.setdefault("conversion_method_sensor", "mcc optimized")
     ip.fields.setdefault("illuminant_correction_method", "none")
     ip.fields.setdefault("demosaic_method", "bilinear")
-    ip.fields.setdefault("render", {"renderflag": 1, "scale": True})
+    ip.fields.setdefault("render", {"renderflag": 1, "scale": True, "whitept": False})
     ip.fields["render"].setdefault("renderflag", 1)
     ip.fields["render"].setdefault("scale", True)
+    ip.fields["render"].setdefault("whitept", False)
     ip.fields.setdefault("demosaic", {"method": ip.fields["demosaic_method"]})
     ip.fields.setdefault("sensor_correction", {"method": ip.fields["conversion_method_sensor"]})
     ip.fields.setdefault(
@@ -344,7 +345,7 @@ def ip_create(
             "demosaic": {"method": "bilinear"},
             "sensor_correction": {"method": "mcc optimized"},
             "illuminant_correction": {"method": "none"},
-            "render": {"renderflag": 1, "scale": True},
+            "render": {"renderflag": 1, "scale": True, "whitept": False},
         }
     )
     ip.data["input"] = None if sensor is None else sensor.data.get("dv", sensor.data.get("volts"))
@@ -2352,6 +2353,8 @@ def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
         return ip.fields["render"].get("renderflag", 1)
     if key in {"renderscale", "scaledisplay", "scaledisplayoutput"}:
         return bool(ip.fields["render"].get("scale", True))
+    if key == "renderwhitept":
+        return bool(ip.fields["render"].get("whitept", False))
     if key in {"gammadisplay", "rendergamma", "gamma"}:
         return float(ip.fields["render"].get("gamma", 1.0) or 1.0)
     if key in {"data", "datastructure"}:
@@ -2603,6 +2606,7 @@ def ip_set(
         ip.fields["render"] = dict(value)
         ip.fields["render"].setdefault("renderflag", 1)
         ip.fields["render"].setdefault("scale", True)
+        ip.fields["render"].setdefault("whitept", False)
         return track_ip_session_state(session, ip)
     if key in {"renderflag", "displaymode"}:
         normalized = param_format(value)
@@ -2613,6 +2617,30 @@ def ip_set(
         return track_ip_session_state(session, ip)
     if key in {"renderscale", "scaledisplay", "scaledisplayoutput"}:
         ip.fields["render"]["scale"] = bool(value)
+        return track_ip_session_state(session, ip)
+    if key == "renderwhitept":
+        if isinstance(value, (bool, np.bool_)) and not bool(value):
+            ip.fields["render"]["whitept"] = False
+            return track_ip_session_state(session, ip)
+        illuminant = np.asarray(value, dtype=float).reshape(-1)
+        if not args:
+            raise ValueError("ipSet(..., 'renderwhitept', illuminant, sensor_qe) requires sensor data.")
+        sensor_arg = args[0]
+        if isinstance(sensor_arg, Sensor):
+            sensor_qe = np.asarray(sensor_get(sensor_arg, "spectral qe"), dtype=float)
+        else:
+            sensor_qe = np.asarray(sensor_arg, dtype=float)
+        if sensor_qe.ndim != 2 or sensor_qe.shape[0] != illuminant.size:
+            raise ValueError("sensor_qe must be wave x channels and match the illuminant length.")
+        sensor_light = illuminant.reshape(1, -1) @ sensor_qe
+        sensor_light = np.asarray(sensor_light, dtype=float).reshape(-1)
+        sensor_light /= max(float(np.max(sensor_light)), 1.0e-12)
+        transform = np.asarray(ip_get(ip, "sensor conversion matrix"), dtype=float)
+        sensor_white = sensor_light @ transform
+        transform = transform @ np.diag(1.0 / np.maximum(sensor_white, 1.0e-12))
+        ip = ip_set(ip, "sensor conversion matrix", transform, session=session)
+        ip = ip_set(ip, "transform method", "current", session=session)
+        ip.fields["render"]["whitept"] = True
         return track_ip_session_state(session, ip)
     if key in {"gammadisplay", "rendergamma", "gamma"}:
         ip.fields["render"]["gamma"] = value

@@ -1083,6 +1083,40 @@ def test_ip_get_transform_gamma_and_sensor_space_aliases_match_upstream() -> Non
         assert int(ip_get(ip, alias)) == 3
 
 
+def test_ip_set_renderwhitept_replays_legacy_sensor_transform_update() -> None:
+    ip = ip_create()
+    base_transform = np.array(
+        [
+            [1.0, 0.2, 0.0],
+            [0.0, 1.5, 0.1],
+            [0.0, 0.0, 2.0],
+        ],
+        dtype=float,
+    )
+    sensor_qe = np.array(
+        [
+            [1.0, 0.5, 0.2],
+            [0.5, 1.0, 0.8],
+        ],
+        dtype=float,
+    )
+    illuminant = np.array([2.0, 1.0], dtype=float)
+
+    ip = ip_set(ip, "sensor conversion matrix", base_transform)
+    updated = ip_set(ip, "render whitept", illuminant, sensor_qe)
+
+    sensor_light = (illuminant.reshape(1, -1) @ sensor_qe).reshape(-1)
+    sensor_light /= np.max(sensor_light)
+    expected_transform = base_transform @ np.diag(1.0 / (sensor_light @ base_transform))
+
+    assert bool(ip_get(updated, "render whitept")) is True
+    assert str(ip_get(updated, "transform method")) == "current"
+    assert np.allclose(np.asarray(ip_get(updated, "sensor conversion matrix"), dtype=float), expected_transform)
+
+    disabled = ip_set(updated, "render whitept", False)
+    assert bool(ip_get(disabled, "render whitept")) is False
+
+
 def test_vcimage_srgb_matches_manual_pipeline(asset_store) -> None:
     generated = vcimageSRGB(asset_store=asset_store)
 
