@@ -2296,7 +2296,12 @@ now also exposes `resample_cube(...)`, `gaussian_sigma_pixels(...)`,
 `apply_channelwise_gaussian(...)`, `least_squares_matrix(...)`, and
 `tile_pattern(...)` so the small image-resampling and CFA-layout helpers are
 available directly from `pyisetcam` instead of only through
-`pyisetcam.utils`.
+`pyisetcam.utils`. The same package-root helper surface now also exposes
+`xyz_color_matching(...)`, `sensor_to_target_matrix(...)`,
+`sensor_to_xyz_matrix(...)`, `internal_to_display_matrix(...)`,
+`sc_gaussian_parameters(...)`, and `sc_compute_difference(...)` instead of
+leaving those reusable color and SCIELAB helpers only under
+`pyisetcam.color` or `pyisetcam.scielab`.
 That same broad `utility` family is smaller again: the adjacent
 `utility/numerical` helper slice now also covers
 `getMiddleMatrix(...)`, `ieClip(...)`, `ieHwhm2SD(...)`, `ieScale(...)`,

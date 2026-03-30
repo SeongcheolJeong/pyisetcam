@@ -95,6 +95,7 @@ from pyisetcam import (
     imageContrast,
     interp_spectra as top_level_interp_spectra,
     invert_gamma_table as top_level_invert_gamma_table,
+    internal_to_display_matrix as top_level_internal_to_display_matrix,
     imagescM,
     imagescOPP,
     imagescRGB,
@@ -118,12 +119,17 @@ from pyisetcam import (
     unpadarray,
     upperQuad2FullMatrix,
     vectorLength,
+    xyz_color_matching as top_level_xyz_color_matching,
     xyz_to_linear_srgb as top_level_xyz_to_linear_srgb,
     xyz2srgb,
     lorentzSum,
     max2,
     min2,
     replaceNaN,
+    sc_compute_difference as top_level_sc_compute_difference,
+    sc_gaussian_parameters as top_level_sc_gaussian_parameters,
+    sensor_to_target_matrix as top_level_sensor_to_target_matrix,
+    sensor_to_xyz_matrix as top_level_sensor_to_xyz_matrix,
     struct2pairs,
     tile_pattern as top_level_tile_pattern,
     zernfun,
@@ -250,6 +256,13 @@ from pyisetcam.utils import (
     zernpol as zernpol_fn,
 )
 from pyisetcam.metrics import spectral_angle
+from pyisetcam.color import (
+    internal_to_display_matrix,
+    sensor_to_target_matrix,
+    sensor_to_xyz_matrix,
+    xyz_color_matching,
+)
+from pyisetcam.scielab import sc_compute_difference, sc_gaussian_parameters
 
 
 def test_param_format_string_and_key_value_list() -> None:
@@ -368,6 +381,36 @@ def test_image_numeric_helpers_are_exposed_through_package_root() -> None:
     )
     np.testing.assert_allclose(top_level_least_squares_matrix(source, target), least_squares_matrix(source, target))
     np.testing.assert_array_equal(top_level_tile_pattern(pattern, 3, 5), tile_pattern(pattern, 3, 5))
+
+
+def test_color_and_scielab_helpers_are_exposed_through_package_root() -> None:
+    wave = np.arange(400.0, 701.0, 10.0, dtype=float)
+    xyz_energy = xyz_color_matching(wave, energy=True)
+    xyz_quanta = xyz_color_matching(wave, quanta=True)
+    xyz1 = np.array([[[0.25, 0.35, 0.15]]], dtype=float)
+    xyz2 = np.array([[[0.30, 0.30, 0.20]]], dtype=float)
+    white = np.array([0.95, 1.0, 1.09], dtype=float)
+
+    np.testing.assert_allclose(top_level_xyz_color_matching(wave, energy=True), xyz_energy)
+    np.testing.assert_allclose(top_level_xyz_color_matching(wave, quanta=True), xyz_quanta)
+    np.testing.assert_allclose(
+        top_level_sensor_to_target_matrix(wave, xyz_quanta, target_space="xyz"),
+        sensor_to_target_matrix(wave, xyz_quanta, target_space="xyz"),
+    )
+    np.testing.assert_allclose(top_level_sensor_to_xyz_matrix(wave, xyz_quanta), sensor_to_xyz_matrix(wave, xyz_quanta))
+    np.testing.assert_allclose(
+        top_level_internal_to_display_matrix(wave, xyz_quanta),
+        internal_to_display_matrix(wave, xyz_quanta),
+    )
+    root_x1, root_x2, root_x3 = top_level_sc_gaussian_parameters(30.0, {"filterversion": "distribution"})
+    mod_x1, mod_x2, mod_x3 = sc_gaussian_parameters(30.0, {"filterversion": "distribution"})
+    np.testing.assert_allclose(root_x1, mod_x1)
+    np.testing.assert_allclose(root_x2, mod_x2)
+    np.testing.assert_allclose(root_x3, mod_x3)
+    np.testing.assert_allclose(
+        top_level_sc_compute_difference(xyz1, xyz2, white, "2000"),
+        sc_compute_difference(xyz1, xyz2, white, "2000"),
+    )
 
 
 def test_interp_spectra_supports_descending_source_waves() -> None:
