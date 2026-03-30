@@ -2559,6 +2559,11 @@ The neighboring `cameraComputeSequence(...)` wrapper now also accepts the
 upstream MATLAB-style key/value form, and empty `exposuretimes` /
 `nframes` placeholders in that form now fall back to the existing default
 single-exposure behavior instead of being treated as literal empty arrays.
+That same camera wrapper surface now also exposes the core MATLAB-style
+gateway aliases directly from `pyisetcam.camera`, so imports like
+`from pyisetcam.camera import cameraCreate`, `cameraCompute`,
+`cameraComputesrgb`, `cameraComputeSequence`, `cameraClearData`,
+`cameraGet`, and `cameraSet` work without routing through the package root.
 That same sequence wrapper now also reuses the selected session scene when
 `scenes` is omitted or passed as an empty placeholder, matching the
 upstream current-scene default instead of requiring an explicit scene list

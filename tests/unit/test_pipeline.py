@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import numpy as np
 import pytest
+import pyisetcam.camera as camera_module
 import pyisetcam.metrics as metrics_module
 import pyisetcam.optics as optics_module
 import pyisetcam.sensor as sensor_module
@@ -8328,6 +8329,16 @@ def test_camera_compatibility_wrappers_cover_srgb_sequence_and_clear(asset_store
     assert cleared.fields["sensor"].data == {}
     assert cleared.fields["ip"].data.get("result") is None
     assert cleared.fields["ip"].fields.get("l3") is None
+
+
+def test_camera_module_core_matlab_aliases() -> None:
+    assert camera_module.cameraCreate is camera_module.camera_create
+    assert camera_module.cameraCompute is camera_module.camera_compute
+    assert camera_module.cameraComputeSequence is camera_module.camera_compute_sequence
+    assert camera_module.cameraComputesrgb is camera_module.camera_compute_srgb
+    assert camera_module.cameraClearData is camera_module.camera_clear_data
+    assert camera_module.cameraGet is camera_module.camera_get
+    assert camera_module.cameraSet is camera_module.camera_set
 
 
 def test_run_python_case_with_context_returns_pipeline_objects(asset_store) -> None:
