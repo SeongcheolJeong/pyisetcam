@@ -2234,6 +2234,14 @@ def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
     key = param_format(parameter)
     if key in {"result", "displaylinearrgb", "datadisplay", "displaydata"}:
         return ip.data.get("result")
+    if key in {"dataintensitiesmax", "resultmax"}:
+        result = ip.data.get("result")
+        return None if result is None else float(np.max(np.asarray(result, dtype=float)))
+    if key in {"maxsensor", "maximumsensorvalue", "maximumsensorvoltageswing"}:
+        if "max" in ip.data and ip.data["max"] is not None:
+            return float(np.asarray(ip.data["max"], dtype=float).reshape(-1)[0])
+        sensor_input = ip.data.get("input")
+        return None if sensor_input is None else float(np.max(np.asarray(sensor_input, dtype=float)))
     if key in {"displayviewingdistance"}:
         return display_get(ip.fields["display"], "viewing distance")
     if key in {"displaydpi"}:
@@ -2374,7 +2382,7 @@ def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
             return None
         sensor_space_array = np.asarray(sensor_space)
         return 1 if sensor_space_array.ndim < 3 else int(sensor_space_array.shape[2])
-    if key in {"maximumsensorvalue", "sensormax", "rgbmax", "datamax"}:
+    if key in {"sensormax", "rgbmax", "datamax"}:
         return ip.fields.get("datamax")
     if key in {"datasrgb", "srgb"}:
         return ip.data.get("srgb")

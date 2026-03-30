@@ -2477,3 +2477,7 @@ subobject parameters, so calls like `cameraSet(camera, 'fill factor', ...)`,
 and `cameraGet(camera, 'training illuminant')` follow the upstream
 delegation shape without requiring explicit `pixel` / `optics` / `ip` / `l3`
 prefixes.
+The neighboring IP gateway is tighter too: `ipGet(..., 'result max')` and
+`ipGet(..., 'max sensor')` now replay the upstream aliases used by legacy
+camera utilities like `cameraVSNR.m`, and the same values are reachable
+through `cameraGet(camera, 'ip result max')` and `cameraGet(camera, 'ip max sensor')`.

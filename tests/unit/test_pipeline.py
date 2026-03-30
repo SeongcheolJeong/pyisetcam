@@ -7908,6 +7908,17 @@ def test_camera_compute_end_to_end(asset_store) -> None:
     assert result.shape[2] == 3
 
 
+def test_camera_get_routes_ip_result_max_and_max_sensor_aliases(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    camera = camera_compute(camera_create(asset_store=asset_store), scene, asset_store=asset_store)
+
+    expected_result_max = float(np.max(np.asarray(camera_get(camera, "ip result"), dtype=float)))
+    expected_sensor_max = float(np.max(np.asarray(camera_get(camera, "ip input"), dtype=float)))
+
+    assert np.isclose(float(camera_get(camera, "ip result max")), expected_result_max)
+    assert np.isclose(float(camera_get(camera, "ip max sensor")), expected_sensor_max)
+
+
 def test_camera_compute_skips_resize_when_sensor_fov_is_already_close(asset_store) -> None:
     scene = scene_create(asset_store=asset_store)
     camera = camera_create(asset_store=asset_store)

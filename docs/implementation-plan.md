@@ -755,6 +755,10 @@
   ...)`, `cameraSet(camera, 'f number', ...)`, `cameraSet(camera, 'display dpi',
   ...)`, and `cameraGet(camera, 'training illuminant')` delegate through the
   expected pixel/optics/display/L3 paths without forcing explicit prefixes.
+- The neighboring IP gateway is tighter too: `ipGet(..., 'result max')` and
+  `ipGet(..., 'max sensor')` now replay the upstream aliases used by camera
+  utilities like `cameraVSNR.m`, and the same values are reachable through
+  `cameraGet(camera, 'ip result max')` and `cameraGet(camera, 'ip max sensor')`.
 - Continue adding more scene patterns and `sceneFromFile`; the first slices now cover extra Macbeth variants, `moire orient`, `letter` / `font`, and the file-backed `rgb` / `multispectral` / `monochrome` scene shells.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.
