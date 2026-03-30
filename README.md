@@ -496,6 +496,10 @@ mirrored by the adjacent camera wrapper too, so `cameraCreate(...)` now
 accepts those multi-variant vendor payloads and the `ovt-large` dual-sensor
 preset by returning per-sensor camera lists with matching OI, sensor, and IP
 objects instead of crashing on list-backed sensor constructors. The same
+sensor wrapper surface now also exposes the core MATLAB-style gateway aliases
+directly from `pyisetcam.sensor`, so imports like `from pyisetcam.sensor
+import sensorCreate`, `sensorCreateIdeal`, `sensorCompute`, `sensorGet`, and
+`sensorSet` work without routing through the package root. The same
 camera wrapper lane now also accepts `cameraCreate('current')`, reusing the
 currently selected session `oi`, `sensor`, and `ip` independently and falling
 back to defaults only for the missing pieces. It now also accepts explicit

@@ -8341,6 +8341,15 @@ def test_camera_module_core_matlab_aliases() -> None:
     assert camera_module.cameraSet is camera_module.camera_set
 
 
+def test_sensor_module_core_matlab_aliases() -> None:
+    assert sensor_module.sensorCreate is sensor_module.sensor_create
+    assert sensor_module.sensorCreateIdeal is sensor_module.sensor_create_ideal
+    assert sensor_module.sensorCompute is sensor_module.sensor_compute
+    assert sensor_module.sensorGet is sensor_module.sensor_get
+    assert sensor_module.sensorSet is sensor_module.sensor_set
+    assert sensor_module.sensorSetSizeToFOV is sensor_module.sensor_set_size_to_fov
+
+
 def test_run_python_case_with_context_returns_pipeline_objects(asset_store) -> None:
     case = run_python_case_with_context("camera_default_pipeline", asset_store=asset_store)
 
