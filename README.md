@@ -2302,6 +2302,9 @@ available directly from `pyisetcam` instead of only through
 `sc_gaussian_parameters(...)`, and `sc_compute_difference(...)` instead of
 leaving those reusable color and SCIELAB helpers only under
 `pyisetcam.color` or `pyisetcam.scielab`.
+The same package-root helper surface now also exposes
+`example_spd_pair(...)` instead of leaving that deterministic
+documentation/example SPD generator only under `pyisetcam.metrics`.
 That same SCIELAB surface now also exposes the upstream MATLAB-style aliases
 `scGaussianParameters(...)` and `scComputeDifference(...)` alongside the
 snake-case helpers, instead of leaving only the mixed alias set around

@@ -23,6 +23,7 @@ from pyisetcam import (
     dpi2mperdot,
     Energy2Quanta,
     Quanta2Energy,
+    example_spd_pair as top_level_example_spd_pair,
     expRand,
     ffndgrid,
     gammaPDF,
@@ -264,6 +265,7 @@ from pyisetcam.color import (
     sensor_to_xyz_matrix,
     xyz_color_matching,
 )
+from pyisetcam.metrics import example_spd_pair
 from pyisetcam.scielab import sc_compute_difference, sc_gaussian_parameters
 
 
@@ -417,6 +419,15 @@ def test_color_and_scielab_helpers_are_exposed_through_package_root() -> None:
     np.testing.assert_allclose(scGaussianParameters(30.0, {"filterversion": "distribution"})[1], mod_x2)
     np.testing.assert_allclose(scGaussianParameters(30.0, {"filterversion": "distribution"})[2], mod_x3)
     np.testing.assert_allclose(scComputeDifference(xyz1, xyz2, white, "2000"), sc_compute_difference(xyz1, xyz2, white, "2000"))
+
+
+def test_example_spd_pair_is_exposed_through_package_root() -> None:
+    root_wave, root_first, root_second = top_level_example_spd_pair()
+    mod_wave, mod_first, mod_second = example_spd_pair()
+
+    np.testing.assert_allclose(root_wave, mod_wave)
+    np.testing.assert_allclose(root_first, mod_first)
+    np.testing.assert_allclose(root_second, mod_second)
 
 
 def test_interp_spectra_supports_descending_source_waves() -> None:
