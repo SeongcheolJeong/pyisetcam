@@ -768,6 +768,10 @@
   `cameraCompute(camera, [])` and `cameraCompute(camera, [], [], false)` both
   fall back to the upstream default `'sensor'` restart path instead of
   failing dispatch on an empty array payload.
+- The fourth positional slot now follows the same rule: empty or `None`
+  `sensorResize` placeholders are treated as omitted values, so
+  `cameraCompute(camera, scene, [], [])` still replays the default
+  resize-to-scene behavior instead of silently disabling sensor resizing.
 - Continue adding more scene patterns and `sceneFromFile`; the first slices now cover extra Macbeth variants, `moire orient`, `letter` / `font`, and the file-backed `rgb` / `multispectral` / `monochrome` scene shells.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.

@@ -2490,3 +2490,7 @@ That same parser now also treats empty `pType` placeholders as omitted, so
 `cameraCompute(camera, [])` and `cameraCompute(camera, [], [], false)` both
 fall back to the upstream default `'sensor'` restart path instead of
 failing dispatch on an empty array payload.
+The fourth positional slot now follows the same rule: empty or `None`
+`sensorResize` placeholders are treated as omitted values, so
+`cameraCompute(camera, scene, [], [])` still replays the default resize-to-scene
+behavior instead of silently disabling sensor resizing.

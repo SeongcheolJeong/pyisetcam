@@ -7978,6 +7978,35 @@ def test_camera_compute_accepts_empty_ptype_placeholder_as_sensor(asset_store) -
     )
 
 
+def test_camera_compute_accepts_empty_sensor_resize_placeholder_as_default_true(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    scene = scene_set(scene, "fov", 2.0)
+    base_camera = camera_create(asset_store=asset_store)
+
+    explicit_default = camera_compute(base_camera.clone(), scene, [], True, asset_store=asset_store)
+    placeholder_resize = camera_compute(base_camera.clone(), scene, [], [], asset_store=asset_store)
+    none_resize = camera_compute(base_camera.clone(), scene, [], None, asset_store=asset_store)
+
+    assert tuple(np.asarray(camera_get(placeholder_resize, "sensor size"), dtype=int)) == tuple(
+        np.asarray(camera_get(explicit_default, "sensor size"), dtype=int)
+    )
+    assert tuple(np.asarray(camera_get(none_resize, "sensor size"), dtype=int)) == tuple(
+        np.asarray(camera_get(explicit_default, "sensor size"), dtype=int)
+    )
+    np.testing.assert_allclose(
+        np.asarray(camera_get(placeholder_resize, "ip result"), dtype=float),
+        np.asarray(camera_get(explicit_default, "ip result"), dtype=float),
+        rtol=1e-10,
+        atol=1e-12,
+    )
+    np.testing.assert_allclose(
+        np.asarray(camera_get(none_resize, "ip result"), dtype=float),
+        np.asarray(camera_get(explicit_default, "ip result"), dtype=float),
+        rtol=1e-10,
+        atol=1e-12,
+    )
+
+
 def test_camera_parity_case_disables_sensor_noise(asset_store) -> None:
     payload = run_python_case("camera_default_pipeline", asset_store=asset_store)
     assert payload["sensor_volts"].ndim == 2

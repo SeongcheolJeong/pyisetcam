@@ -546,6 +546,14 @@ def camera_compute(
         scene = None
         start_type = "sensor" if p_type_array is not None and p_type_array.size == 0 else param_format(p_type)
 
+    if sensor_resize is None:
+        sensor_resize_flag = True
+    elif isinstance(sensor_resize, (list, tuple, np.ndarray)):
+        sensor_resize_array = np.asarray(sensor_resize)
+        sensor_resize_flag = True if sensor_resize_array.size == 0 else bool(sensor_resize_array.reshape(-1)[0])
+    else:
+        sensor_resize_flag = bool(sensor_resize)
+
     oi: OpticalImage = camera.fields["oi"]
     sensor: Sensor = camera.fields["sensor"]
     ip = camera.fields["ip"]
@@ -597,7 +605,7 @@ def camera_compute(
     if start_type == "scene":
         if scene is None:
             raise ValueError("A Scene object is required when starting from scene.")
-        if sensor_resize:
+        if sensor_resize_flag:
             scene_hfov = float(scene.fields["fov_deg"])
             scene_vfov = float(scene.fields["vfov_deg"])
             sensor_hfov = float(sensor_get(sensor, "fov horizontal", scene, oi))
