@@ -10,8 +10,9 @@ import numpy as np
 from scipy.io import savemat
 
 from .assets import AssetStore, ie_read_spectra
-from .color import xyz_color_matching
+from .color import xyz_color_matching, xyz_to_lms
 from .exceptions import UnsupportedOptionError
+from .metrics import chromaticity_xy, xyz_from_energy
 from .session import track_session_object
 from .types import Display, SessionContext
 from .utils import blackbody, interp_spectra, invert_gamma_table, param_format, spectral_step, srgb_to_xyz
@@ -670,6 +671,8 @@ def display_get(display: Display, parameter: str, *args: Any) -> Any:
         return spd[:, : min(3, spd.shape[1])]
     if key == "rgb2xyz":
         return _display_rgb2xyz(display)
+    if key == "rgb2lms":
+        return np.asarray(xyz_to_lms(np.asarray(display_get(display, "rgb2xyz"), dtype=float)), dtype=float)
     if key == "xyz2rgb":
         return np.linalg.inv(np.asarray(display_get(display, "rgb2xyz"), dtype=float))
     if key == "whitespd":
@@ -678,9 +681,21 @@ def display_get(display: Display, parameter: str, *args: Any) -> Any:
     if key in {"whitepoint", "whitexyz"}:
         white_xyz = np.sum(np.asarray(display_get(display, "rgb2xyz"), dtype=float), axis=0, dtype=float)
         return np.asarray(white_xyz, dtype=float).reshape(3)
+    if key == "blackxyz":
+        wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)
+        black_spd = np.asarray(display_get(display, "black spd"), dtype=float).reshape(1, -1)
+        return np.asarray(xyz_from_energy(black_spd, wave), dtype=float).reshape(3)
     if key in {"whitexy", "whitechromaticity"}:
         white_xyz = np.asarray(display_get(display, "white point"), dtype=float).reshape(3)
         return np.asarray(white_xyz[:2] / max(float(np.sum(white_xyz)), 1e-12), dtype=float)
+    if key == "whitelms":
+        return np.sum(np.asarray(display_get(display, "rgb2lms"), dtype=float), axis=0, dtype=float)
+    if key == "primariesxyz":
+        wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)
+        spd = np.asarray(display_get(display, "spd primaries"), dtype=float).T
+        return np.asarray(xyz_from_energy(spd, wave), dtype=float)
+    if key == "primariesxy":
+        return np.asarray(chromaticity_xy(np.asarray(display_get(display, "primaries xyz"), dtype=float)), dtype=float)
     if key in {"blackspd", "ambientspd"}:
         ambient = _display_ambient(display)
         if args:
@@ -732,6 +747,12 @@ def display_get(display: Display, parameter: str, *args: Any) -> Any:
         return display.fields.get("image")
     if key in {"maxluminance", "peakluminance", "peakdisplayluminance"}:
         return float(np.asarray(display_get(display, "white point"), dtype=float).reshape(3)[1])
+    if key in {"contrast", "peakcontrast"}:
+        peak_luminance = float(display_get(display, "peak luminance"))
+        dark_luminance = float(display_get(display, "dark luminance"))
+        return float(np.inf) if dark_luminance <= 0.0 else peak_luminance / dark_luminance
+    if key in {"darkluminance", "blackluminance"}:
+        return float(np.asarray(display_get(display, "black xyz"), dtype=float).reshape(3)[1])
     raise KeyError(f"Unsupported displayGet parameter: {parameter}")
 
 

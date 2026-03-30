@@ -279,7 +279,11 @@ radiance data; that same shell-constructor lane now also accepts a passed
 seed scene in the upstream one-argument forms like `sceneCreate('rgb',
 scene)`, `sceneCreate('multispectral', scene)`, and
 `sceneCreate('monochrome', scene)` instead of discarding the supplied
-scene shell, and both `sceneCreate('empty', wave)` and
+scene shell. The adjacent display getter lane now also replays the
+upstream MATLAB color and contrast aliases `rgb2lms`, `white lms`,
+`black xyz`, `primaries xyz` / `primaries xy`, `dark luminance`, and
+`peak contrast` on top of the existing headless display calibration
+surface, and both `sceneCreate('empty', wave)` and
 `sceneCreate('empty', [], wave)` now replay the legacy wavelength override
 instead of forcing the default 400:10:700 grid. The same Macbeth/default
 scene dispatcher now also accepts placeholder patch-size slots such as

@@ -32,18 +32,41 @@ def test_display_wave_resample(asset_store) -> None:
 
 def test_display_get_reports_matlab_style_derived_values(asset_store) -> None:
     display = display_create("lcdExample.mat", asset_store=asset_store)
+    display = display_set(display, "ambient spd", np.full(display_get(display, "n wave"), 0.01, dtype=float))
 
     inverse_gamma = display_get(display, "inverse gamma", 32)
     gamma = display_get(display, "gamma")
+    rgb2lms = np.asarray(display_get(display, "rgb2lms"), dtype=float)
+    white_lms = np.asarray(display_get(display, "white lms"), dtype=float)
+    primaries_xyz = np.asarray(display_get(display, "primaries xyz"), dtype=float)
+    primaries_xy = np.asarray(display_get(display, "primaries xy"), dtype=float)
+    black_xyz = np.asarray(display_get(display, "black xyz"), dtype=float)
+    dark_luminance = float(display_get(display, "dark luminance"))
+    peak_luminance = float(display_get(display, "peak luminance"))
+    peak_contrast = float(display_get(display, "peak contrast"))
     expected_bits = int(round(np.log2(gamma.shape[0])))
 
     assert inverse_gamma.shape == (32, 3)
+    assert display_get(display, "is emissive") is True
     assert display_get(display, "bits") == expected_bits
     assert display_get(display, "n levels") == 2**expected_bits
     assert np.array_equal(display_get(display, "levels")[:4], np.array([0, 1, 2, 3]))
     assert display_get(display, "n primaries") == 3
     assert display_get(display, "white spd").shape == (display_get(display, "n wave"),)
     assert display_get(display, "black spd").shape == (display_get(display, "n wave"),)
+    assert rgb2lms.shape == (3, 3)
+    np.testing.assert_allclose(white_lms, np.sum(rgb2lms, axis=0), rtol=1e-12, atol=1e-12)
+    assert primaries_xyz.shape == (3, 3)
+    assert primaries_xy.shape == (3, 2)
+    np.testing.assert_allclose(
+        primaries_xy,
+        primaries_xyz[:, :2] / np.sum(primaries_xyz, axis=1, keepdims=True),
+        rtol=1e-12,
+        atol=1e-12,
+    )
+    assert black_xyz.shape == (3,)
+    assert np.isclose(dark_luminance, black_xyz[1], rtol=1e-12, atol=1e-12)
+    assert np.isclose(peak_contrast, peak_luminance / dark_luminance, rtol=1e-12, atol=1e-12)
     assert display_get(display, "meters per dot") > 0.0
     assert display_get(display, "dots per deg") > 0.0
 
