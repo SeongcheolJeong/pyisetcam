@@ -32,6 +32,9 @@ def test_display_module_matlab_aliases() -> None:
     assert display_module.displayPT2ISET is display_module.display_pt2iset
     assert display_module.displayReflectance is display_module.display_reflectance
     assert display_module.displayMaxContrast is display_module.display_max_contrast
+    assert display_module.ieCalculateMonitorDPI is display_module.ie_calculate_monitor_dpi
+    assert display_module.ieLUTDigital is display_module.ie_lut_digital
+    assert display_module.mperdot2dpi is display_module.mperdot2dpi
     assert display_module.displayCreate is display_module.display_create
     assert display_module.displayList is display_module.display_list
     assert display_module.displayDescription is display_module.display_description
@@ -40,8 +43,13 @@ def test_display_module_matlab_aliases() -> None:
     assert display_module.displayCompute is display_module.display_compute
     assert display_module.displaySetMaxLuminance is display_module.display_set_max_luminance
     assert display_module.displaySetWhitePoint is display_module.display_set_white_point
+    assert display_module.ieReadSpectra is display_module.ie_read_spectra
+    assert display_module.ieUnitScaleFactor is display_module.ie_unit_scale_factor
+    assert display_module.srgb2xyz is display_module.srgb_to_xyz
     assert display_module.displayGet is display_module.display_get
     assert display_module.displaySet is display_module.display_set
+    assert display_module.xyz2lms is display_module.xyz_to_lms
+    assert display_module.xyz2srgb is display_module.xyz_to_srgb
 
 
 def test_display_wave_resample(asset_store) -> None:
