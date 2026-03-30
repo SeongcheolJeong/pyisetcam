@@ -13578,6 +13578,15 @@ def test_metrics_camera_gateway_matches_existing_wrappers(asset_store) -> None:
     np.testing.assert_allclose(computed_vsnr_metric.eTime, expected_vsnr.eTime, rtol=1e-10, atol=1e-12)
     np.testing.assert_array_equal(computed_vsnr_metric.rect, expected_vsnr.rect)
 
+    camera = camera_set(camera, "metric", expected_vsnr, "visible snr")
+    stored_metrics = camera_get(camera, "metrics")
+    assert "vsnr" in stored_metrics
+    assert "visiblesnr" not in stored_metrics
+    stored_vsnr_short = camera_get(camera, "metric", "vsnr")
+    stored_vsnr_alias = camera_get(camera, "metric", "visible snr")
+    np.testing.assert_allclose(stored_vsnr_short.vSNR, expected_vsnr.vSNR, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(stored_vsnr_alias.vSNR, expected_vsnr.vSNR, rtol=1e-10, atol=1e-12)
+
     camera = camera_set(camera, "metric", color_metric, "mcccolor")
     stored_metrics = camera_get(camera, "metrics")
     assert "mcccolor" in stored_metrics

@@ -109,6 +109,13 @@ def _l3_clear_data(l3: Any) -> Any:
     return cleared
 
 
+def _canonical_camera_metric_name(metric_name: Any) -> str:
+    normalized = param_format(metric_name)
+    if normalized == "visiblesnr":
+        return "vsnr"
+    return normalized
+
+
 @dataclass
 class CameraMTFResult:
     """Headless payload returned by camera_mtf()."""
@@ -357,9 +364,12 @@ def camera_get(camera: Camera, parameter: str, *args: Any) -> Any:
         metrics = camera.fields.get("metrics", {})
         if not args:
             return copy.deepcopy(metrics)
-        metric_name = param_format(args[0])
+        requested_metric_name = param_format(args[0])
+        metric_name = _canonical_camera_metric_name(args[0])
         if metric_name in metrics:
             return copy.deepcopy(metrics[metric_name])
+        if requested_metric_name in metrics:
+            return copy.deepcopy(metrics[requested_metric_name])
         from .metrics import metrics_camera
 
         return metrics_camera(camera, metric_name)
@@ -478,7 +488,7 @@ def camera_set(
     if key in {"metric", "metrics"}:
         if not args:
             raise ValueError("cameraSet(..., 'metric', value, metric_name) requires a metric name.")
-        metric_name = param_format(args[0])
+        metric_name = _canonical_camera_metric_name(args[0])
         metrics = dict(camera.fields.get("metrics", {}))
         metrics[metric_name] = copy.deepcopy(value)
         camera.fields["metrics"] = metrics
