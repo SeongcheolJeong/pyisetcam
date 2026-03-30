@@ -442,7 +442,7 @@ def camera_compute(
 
     store = _store(asset_store)
     normalized_mode = param_format(mode)
-    if normalized_mode != "normal":
+    if normalized_mode not in {"normal", "idealxyz"}:
         raise UnsupportedOptionError("cameraCompute", mode)
 
     if isinstance(p_type, Scene):
@@ -455,6 +455,50 @@ def camera_compute(
     oi: OpticalImage = camera.fields["oi"]
     sensor: Sensor = camera.fields["sensor"]
     ip = camera.fields["ip"]
+
+    if normalized_mode == "idealxyz":
+        if start_type == "scene":
+            if scene is None:
+                raise ValueError("A Scene object is required when starting from scene.")
+            camera, xyz_ideal = _camera_ideal_xyz(
+                camera,
+                scene,
+                asset_store=store,
+                session=session,
+            )
+        elif start_type in {"oi", "sensor"}:
+            camera = camera.clone()
+            oi = camera.fields["oi"]
+            sensor = sensor_set(camera_get(camera, "sensor").clone(), "noise flag", -1)
+            wave = np.asarray(oi_get(oi, "wave"), dtype=float).reshape(-1)
+            sensor = sensor_set(sensor, "wave", wave)
+            xyz_quanta = np.asarray(ie_read_spectra("XYZQuanta", wave, asset_store=store), dtype=float)
+            xyz_ideal, _ = sensor_compute_full_array(sensor, oi, xyz_quanta)
+            camera = camera_set(camera, "oi", oi, session=session)
+            camera = camera_set(camera, "sensor", sensor, session=session)
+        else:
+            raise UnsupportedOptionError("cameraCompute", str(p_type))
+
+        xyz_ideal = np.asarray(xyz_ideal, dtype=float)
+        srgb, linear_rgb = _xyz_to_srgb_pair(xyz_ideal)
+        ip = ip.clone()
+        ip = ip_set(ip, "wave", np.asarray(oi_get(camera.fields["oi"], "wave"), dtype=float), session=session)
+        ip = ip_set(ip, "internal cs", "XYZ", session=session)
+        ip = ip_set(ip, "conversion method sensor", "None", session=session)
+        ip = ip_set(ip, "correction method illuminant", "None", session=session)
+        ip = ip_set(ip, "sensor conversion matrix", np.eye(3, dtype=float), session=session)
+        ip = ip_set(ip, "illuminant correction matrix", np.eye(3, dtype=float), session=session)
+        ip = ip_set(ip, "ics2display transform", np.eye(3, dtype=float), session=session)
+        ip.data["input"] = xyz_ideal.copy()
+        ip.data["xyz"] = xyz_ideal.copy()
+        ip.data["ics"] = xyz_ideal.copy()
+        ip.data["sensorspace"] = xyz_ideal.copy()
+        ip.data["display_rgb"] = srgb.copy()
+        ip.data["srgb"] = srgb.copy()
+        ip.data["result"] = linear_rgb.copy()
+        camera.fields["ip"] = ip
+        camera.data["result"] = ip.data.get("result")
+        return track_camera_session_state(session, camera)
 
     if start_type == "scene":
         if scene is None:

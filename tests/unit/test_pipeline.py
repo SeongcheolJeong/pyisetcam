@@ -16177,6 +16177,51 @@ def test_camera_introduction_tutorial_workflow(asset_store) -> None:
     assert np.allclose(srgb_gray, srgb_from_sensor, atol=1e-12, rtol=1e-12)
 
 
+def test_camera_compute_ideal_xyz_mode_reuses_oi_path(asset_store) -> None:
+    scene = scene_create("macbeth d65", 8, asset_store=asset_store)
+    scene = scene_set(scene, "fov", 8.0)
+
+    camera = camera_create(asset_store=asset_store)
+    ideal_camera = camera_compute(camera, scene, "ideal xyz", asset_store=asset_store)
+
+    xyz = np.asarray(camera_get(ideal_camera, "ip data xyz"), dtype=float)
+    srgb = np.asarray(camera_get(ideal_camera, "ip data srgb"), dtype=float)
+    result = np.asarray(camera_get(ideal_camera, "ip result"), dtype=float)
+
+    assert xyz.shape == srgb.shape == result.shape
+    assert xyz.shape[2] == 3
+    assert np.all(srgb >= 0.0)
+    assert np.all(srgb <= 1.0)
+    assert camera_get(ideal_camera, "ip internal cs") == "XYZ"
+    assert camera_get(ideal_camera, "sensor noise flag") == -1
+    np.testing.assert_allclose(
+        np.asarray(camera_get(ideal_camera, "sensor wave"), dtype=float),
+        np.asarray(camera_get(ideal_camera, "oi wave"), dtype=float),
+        atol=1e-12,
+        rtol=1e-12,
+    )
+    np.testing.assert_allclose(
+        np.asarray(camera_get(ideal_camera, "image"), dtype=float),
+        result,
+        atol=1e-12,
+        rtol=1e-12,
+    )
+
+    ideal_from_oi = camera_compute(ideal_camera, "oi", "ideal xyz", asset_store=asset_store)
+    np.testing.assert_allclose(
+        np.asarray(camera_get(ideal_from_oi, "ip data xyz"), dtype=float),
+        xyz,
+        atol=1e-12,
+        rtol=1e-12,
+    )
+    np.testing.assert_allclose(
+        np.asarray(camera_get(ideal_from_oi, "ip data srgb"), dtype=float),
+        srgb,
+        atol=1e-12,
+        rtol=1e-12,
+    )
+
+
 def test_camera_antialias_and_noise_tutorial_workflows(asset_store) -> None:
     aa_scene = scene_create("freq orient", 512, asset_store=asset_store)
     aa_scene = scene_set(aa_scene, "fov", 6.0)

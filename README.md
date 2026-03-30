@@ -2448,3 +2448,8 @@ package also closed as external-toolbox scope, the pinned migration-gap
 ledger is now fully closed at `703` parity entries, `328` ported
 wrappers, and `412` out-of-scope paths, with no remaining open audit
 entries.
+Post-milestone compatibility work now also covers the public
+`cameraCompute(..., 'ideal xyz')` lane: the headless camera wrapper reuses
+the existing ideal-XYZ helper path and now returns consistent `ip xyz`,
+`ip srgb`, and linear display-result payloads for both the direct
+scene-start call form and the restart-from-`oi` form.

@@ -727,6 +727,10 @@
 - If parity exposes a numerically unstable MATLAB path, reproduce the documented outputs of the curated cases first rather than widening scope to match every historical edge case immediately.
 
 ## Post-Milestone Expansion Order
+- Continue tightening public camera wrapper compatibility; the latest slice now
+  covers `cameraCompute(..., 'ideal xyz')` with consistent headless `ip xyz`,
+  `ip srgb`, and linear display-result payloads across both the direct
+  scene-start and restart-from-`oi` call forms.
 - Continue adding more scene patterns and `sceneFromFile`; the first slices now cover extra Macbeth variants, `moire orient`, `letter` / `font`, and the file-backed `rgb` / `multispectral` / `monochrome` scene shells.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.
