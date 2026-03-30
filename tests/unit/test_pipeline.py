@@ -455,6 +455,7 @@ from pyisetcam import (
     sensorWBCompute,
     sensor_set_size_to_fov,
     sensor_set,
+    session_add_and_select_object,
     session_create,
     spd_to_cct,
     srgb_to_color_temp,
@@ -8270,6 +8271,16 @@ def test_camera_compatibility_wrappers_cover_srgb_sequence_and_clear(asset_store
         asset_store=asset_store,
     )
 
+    session = session_create()
+    session_add_and_select_object(session, "scene", scene.clone())
+    session_sequence_camera, session_images = cameraComputeSequence(
+        camera_create(asset_store=asset_store),
+        exposuretimes=[0.01, 0.02],
+        nframes=2,
+        asset_store=asset_store,
+        session=session,
+    )
+
     assert len(images) == 2
     assert images[0].shape == images[1].shape
     assert images[0].ndim == 3 and images[0].shape[2] == 3
@@ -8283,6 +8294,10 @@ def test_camera_compatibility_wrappers_cover_srgb_sequence_and_clear(asset_store
     np.testing.assert_allclose(placeholder_images[1], explicit_default_images[1], rtol=1e-10, atol=1e-12)
     assert np.isclose(camera_get(placeholder_sequence_camera, "sensor exposure time"), 1.0)
     assert np.isclose(camera_get(explicit_default_sequence_camera, "sensor exposure time"), 1.0)
+    assert len(session_images) == 2
+    np.testing.assert_allclose(session_images[0], images[0], rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(session_images[1], images[1], rtol=1e-10, atol=1e-12)
+    assert np.isclose(camera_get(session_sequence_camera, "sensor exposure time"), 0.02)
 
     cleared = cameraClearData(updated)
 

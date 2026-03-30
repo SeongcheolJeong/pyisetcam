@@ -846,6 +846,12 @@ def camera_compute_sequence(
                 nframes = value
             elif key not in {"scenes", "exposuretimes", "nframes"}:
                 raise ValueError(f"cameraComputeSequence does not support parameter {args[index]!r}.")
+    if isinstance(scenes, str) and not scenes.strip():
+        scenes = None
+    elif isinstance(scenes, (list, tuple, np.ndarray)) and np.asarray(scenes).size == 0:
+        scenes = None
+    if scenes is None:
+        scenes = ie_get_object(session, "scene") if session is not None else None
     if scenes is None:
         raise ValueError("cameraComputeSequence requires one or more scenes.")
 

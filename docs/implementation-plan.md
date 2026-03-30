@@ -798,6 +798,10 @@
   `nframes` placeholders in that form now fall back to the existing
   default single-exposure behavior instead of being treated as literal
   empty arrays.
+- That same sequence wrapper now also reuses the selected session scene
+  when `scenes` is omitted or passed as an empty placeholder, matching the
+  upstream current-scene default instead of requiring an explicit scene
+  list in every call.
 - Continue adding more scene patterns and `sceneFromFile`; the first slices now cover extra Macbeth variants, `moire orient`, `letter` / `font`, and the file-backed `rgb` / `multispectral` / `monochrome` scene shells.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.
