@@ -2498,3 +2498,9 @@ The `pType` parser is tighter too: empty-string placeholders are now treated
 as omitted values, so `cameraCompute(camera, '')` and
 `cameraCompute(camera, '   ')` both fall back to the upstream default
 `'sensor'` restart path instead of failing dispatch on blank strings.
+The adjacent mode parser now follows the same rule too: blank-string mode
+placeholders are treated as omitted values, so
+`cameraCompute(camera, scene, '')` and
+`cameraCompute(camera, scene, '   ')` both fall back to the upstream
+default `'normal'` compute path instead of failing dispatch on blank
+strings.

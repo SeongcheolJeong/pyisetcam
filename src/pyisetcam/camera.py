@@ -519,9 +519,12 @@ def camera_compute(
     """Run the supported camera pipeline."""
 
     store = _store(asset_store)
-    if isinstance(mode, str) or mode is None:
+    if mode is None:
         adjust_scale = None
-        normalized_mode = param_format(mode or "normal")
+        normalized_mode = "normal"
+    elif isinstance(mode, str):
+        adjust_scale = None
+        normalized_mode = "normal" if not mode.strip() else param_format(mode)
     else:
         mode_array = np.asarray(mode)
         if mode_array.size == 0:

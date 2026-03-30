@@ -7945,11 +7945,27 @@ def test_camera_compute_accepts_empty_mode_placeholder_when_disabling_resize(ass
 
     explicit_normal = camera_compute(base_camera.clone(), scene, None, False, asset_store=asset_store)
     placeholder_mode = camera_compute(base_camera.clone(), scene, [], False, asset_store=asset_store)
+    blank_mode = camera_compute(base_camera.clone(), scene, "", False, asset_store=asset_store)
+    whitespace_mode = camera_compute(base_camera.clone(), scene, "   ", False, asset_store=asset_store)
 
     assert tuple(np.asarray(camera_get(explicit_normal, "sensor size"), dtype=int)) == original_size
     assert tuple(np.asarray(camera_get(placeholder_mode, "sensor size"), dtype=int)) == original_size
+    assert tuple(np.asarray(camera_get(blank_mode, "sensor size"), dtype=int)) == original_size
+    assert tuple(np.asarray(camera_get(whitespace_mode, "sensor size"), dtype=int)) == original_size
     np.testing.assert_allclose(
         np.asarray(camera_get(placeholder_mode, "ip result"), dtype=float),
+        np.asarray(camera_get(explicit_normal, "ip result"), dtype=float),
+        rtol=1e-10,
+        atol=1e-12,
+    )
+    np.testing.assert_allclose(
+        np.asarray(camera_get(blank_mode, "ip result"), dtype=float),
+        np.asarray(camera_get(explicit_normal, "ip result"), dtype=float),
+        rtol=1e-10,
+        atol=1e-12,
+    )
+    np.testing.assert_allclose(
+        np.asarray(camera_get(whitespace_mode, "ip result"), dtype=float),
         np.asarray(camera_get(explicit_normal, "ip result"), dtype=float),
         rtol=1e-10,
         atol=1e-12,

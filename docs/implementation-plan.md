@@ -776,6 +776,12 @@
   treated as omitted values, so `cameraCompute(camera, '')` and
   `cameraCompute(camera, '   ')` both fall back to the upstream default
   `'sensor'` restart path instead of failing dispatch on blank strings.
+- The adjacent mode parser now follows the same rule too: blank-string mode
+  placeholders are treated as omitted values, so
+  `cameraCompute(camera, scene, '')` and
+  `cameraCompute(camera, scene, '   ')` both fall back to the upstream
+  default `'normal'` compute path instead of failing dispatch on blank
+  strings.
 - Continue adding more scene patterns and `sceneFromFile`; the first slices now cover extra Macbeth variants, `moire orient`, `letter` / `font`, and the file-backed `rgb` / `multispectral` / `monochrome` scene shells.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.
