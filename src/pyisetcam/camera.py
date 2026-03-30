@@ -554,6 +554,8 @@ def camera_compute(
 
     if sensor_resize is None:
         sensor_resize_flag = True
+    elif isinstance(sensor_resize, str):
+        sensor_resize_flag = True if not sensor_resize.strip() else bool(sensor_resize)
     elif isinstance(sensor_resize, (list, tuple, np.ndarray)):
         sensor_resize_array = np.asarray(sensor_resize)
         sensor_resize_flag = True if sensor_resize_array.size == 0 else bool(sensor_resize_array.reshape(-1)[0])

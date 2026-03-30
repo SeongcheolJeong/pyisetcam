@@ -2504,3 +2504,9 @@ placeholders are treated as omitted values, so
 `cameraCompute(camera, scene, '   ')` both fall back to the upstream
 default `'normal'` compute path instead of failing dispatch on blank
 strings.
+The fourth positional slot is now equally strict too: blank-string
+`sensorResize` placeholders are treated as omitted values, so
+`cameraCompute(camera, scene, [], '')` and
+`cameraCompute(camera, scene, [], '   ')` both preserve the upstream
+default resize-to-scene behavior instead of being interpreted through
+Python string truthiness.
