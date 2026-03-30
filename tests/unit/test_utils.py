@@ -276,6 +276,17 @@ def test_color_module_energy_and_units_matlab_aliases() -> None:
     assert color_module.ieUnitScaleFactor is color_module.ie_unit_scale_factor
 
 
+def test_color_module_photometry_matlab_aliases() -> None:
+    assert color_module.ieXYZFromPhotons is color_module.ie_xyz_from_photons
+    assert color_module.ieLuminance2Radiance is color_module.ie_luminance_to_radiance
+    assert color_module.ieScotopicLuminanceFromEnergy is color_module.ie_scotopic_luminance_from_energy
+    assert color_module.ieResponsivityConvert is color_module.ie_responsivity_convert
+    assert color_module.ieLuminanceFromEnergy is color_module.luminance_from_energy
+    assert color_module.ieLuminanceFromPhotons is color_module.luminance_from_photons
+    assert color_module.xyz2srgb is color_module.xyz_to_srgb
+    assert color_module.xyy2xyz is color_module.xyy_to_xyz
+
+
 def test_param_format_string_and_key_value_list() -> None:
     assert param_format("Exposure Time") == "exposuretime"
     assert param_format(["Exposure Time", 1, "Some Flag", True]) == ["exposuretime", 1, "someflag", True]
