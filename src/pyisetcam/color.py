@@ -886,11 +886,13 @@ def internal_to_display_matrix(
     return np.linalg.inv(np.asarray(display_spd, dtype=float).T @ internal_cmf)
 
 
+adobergbParameters = adobergb_parameters
 cct2sun = cct_to_sun
 Energy2Quanta = energy_to_quanta
 ieCTemp2SRGB = ie_ctemp_to_srgb
 ieCirclePoints = ie_circle_points
 ieCovEllipsoid = ie_cov_ellipsoid
+ieLAB2XYZ = ie_lab_to_xyz
 ieLuminance2Radiance = ie_luminance_to_radiance
 ieLuminanceFromEnergy = luminance_from_energy
 ieLuminanceFromPhotons = luminance_from_photons
@@ -900,9 +902,16 @@ ieSpectraSphere = ie_spectra_sphere
 ieUnitScaleFactor = ie_unit_scale_factor
 ieXYZFromPhotons = ie_xyz_from_photons
 initDefaultSpectrum = init_default_spectrum
+lms2srgb = lms_to_srgb
+lms2xyz = lms_to_xyz
+lrgb2srgb = lrgb_to_srgb
 mkInvGammaTable = mk_inv_gamma_table
 Quanta2Energy = quanta_to_energy
+srgb2lrgb = srgb_to_lrgb
+srgbParameters = srgb_parameters
+Y2Lstar = y_to_lstar
 xyy2xyz = xyy_to_xyz
+xyz2lms = xyz_to_lms
 xyz2srgb = xyz_to_srgb
 xyz2vSNR = xyz_to_vsnr
 ieColorTransform = ie_color_transform

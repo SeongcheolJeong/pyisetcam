@@ -287,6 +287,18 @@ def test_color_module_photometry_matlab_aliases() -> None:
     assert color_module.xyy2xyz is color_module.xyy_to_xyz
 
 
+def test_color_module_color_space_matlab_aliases() -> None:
+    assert color_module.srgbParameters is color_module.srgb_parameters
+    assert color_module.adobergbParameters is color_module.adobergb_parameters
+    assert color_module.srgb2lrgb is color_module.srgb_to_lrgb
+    assert color_module.lrgb2srgb is color_module.lrgb_to_srgb
+    assert color_module.Y2Lstar is color_module.y_to_lstar
+    assert color_module.ieLAB2XYZ is color_module.ie_lab_to_xyz
+    assert color_module.lms2srgb is color_module.lms_to_srgb
+    assert color_module.lms2xyz is color_module.lms_to_xyz
+    assert color_module.xyz2lms is color_module.xyz_to_lms
+
+
 def test_param_format_string_and_key_value_list() -> None:
     assert param_format("Exposure Time") == "exposuretime"
     assert param_format(["Exposure Time", 1, "Some Flag", True]) == ["exposuretime", 1, "someflag", True]
