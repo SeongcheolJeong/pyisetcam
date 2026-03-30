@@ -8344,8 +8344,19 @@ def test_camera_module_core_matlab_aliases() -> None:
 
 
 def test_sensor_module_core_matlab_aliases() -> None:
+    assert sensor_module.sensorAddFilter is sensor_module.sensor_add_filter
+    assert sensor_module.sensorCfaSave is sensor_module.sensor_cfa_save
+    assert sensor_module.sensorCFANameList is sensor_module.sensor_cfa_name_list
     assert sensor_module.sensorCreate is sensor_module.sensor_create
     assert sensor_module.sensorCreateIdeal is sensor_module.sensor_create_ideal
+    assert sensor_module.sensorCrop is sensor_module.sensor_crop
+    assert sensor_module.sensorDeleteFilter is sensor_module.sensor_delete_filter
+    assert sensor_module.sensorFromFile is sensor_module.sensor_from_file
+    assert sensor_module.sensorPixelCoord is sensor_module.sensor_pixel_coord
+    assert sensor_module.sensorReadColorFilters is sensor_module.sensor_read_color_filters
+    assert sensor_module.sensorReadFilter is sensor_module.sensor_read_filter
+    assert sensor_module.sensorReplaceFilter is sensor_module.sensor_replace_filter
+    assert sensor_module.sensorRescale is sensor_module.sensor_rescale
     assert sensor_module.pixelCenterFillPD is sensor_module.pixel_center_fill_pd
     assert sensor_module.pixelCreate is sensor_module.pixel_create
     assert sensor_module.pixelDescription is sensor_module.pixel_description
@@ -8361,9 +8372,11 @@ def test_sensor_module_core_matlab_aliases() -> None:
     assert sensor_module.SignalCurrentDensity is sensor_module.signal_current_density
     assert sensor_module.signalCurrent is sensor_module.signal_current
     assert sensor_module.sensorCompute is sensor_module.sensor_compute
+    assert sensor_module.sensorSNR is sensor_module.sensor_snr
     assert sensor_module.sensorGet is sensor_module.sensor_get
     assert sensor_module.sensorSet is sensor_module.sensor_set
     assert sensor_module.sensorSetSizeToFOV is sensor_module.sensor_set_size_to_fov
+    assert sensor_module.spatialIntegration is sensor_module.spatial_integration
 
 
 def test_run_python_case_with_context_returns_pipeline_objects(asset_store) -> None:
