@@ -338,6 +338,16 @@ def camera_get(camera: Camera, parameter: str, *args: Any) -> Any:
         return camera.fields["sensor"]
     if key in {"ip", "vci"}:
         return camera.fields["ip"]
+    if key in {"metric", "metrics"}:
+        metrics = camera.fields.get("metrics", {})
+        if not args:
+            return copy.deepcopy(metrics)
+        metric_name = param_format(args[0])
+        if metric_name in metrics:
+            return copy.deepcopy(metrics[metric_name])
+        from .metrics import metrics_camera
+
+        return metrics_camera(camera, metric_name)
     if key == "image":
         return ip_get(camera.fields["ip"], "display data")
     raise KeyError(f"Unsupported cameraGet parameter: {parameter}")
@@ -407,6 +417,14 @@ def camera_set(
         return track_camera_session_state(session, camera)
     if key == "l3sensorfov":
         camera.fields["sensor"] = sensor_set_size_to_fov(camera.fields["sensor"], value, camera.fields["oi"])
+        return track_camera_session_state(session, camera)
+    if key in {"metric", "metrics"}:
+        if not args:
+            raise ValueError("cameraSet(..., 'metric', value, metric_name) requires a metric name.")
+        metric_name = param_format(args[0])
+        metrics = dict(camera.fields.get("metrics", {}))
+        metrics[metric_name] = copy.deepcopy(value)
+        camera.fields["metrics"] = metrics
         return track_camera_session_state(session, camera)
     raise KeyError(f"Unsupported cameraSet parameter: {parameter}")
 

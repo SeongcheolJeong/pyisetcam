@@ -2312,7 +2312,9 @@ per-image white points through the CIELAB `metricsCompute(...)` and
 `metricsCompareROI(...)` paths instead of collapsing them into a single average
 white. The neighboring
 `metricsCamera(...)` gateway now also accepts the upstream `fullreference`
-metric name on top of the existing headless `cameraFullReference(...)` path.
+metric name on top of the existing headless `cameraFullReference(...)` path,
+and the adjacent camera wrapper now also replays `cameraGet/Set('metric', ...)`
+for stored or on-demand camera metrics.
 The same package-root helper surface now also exposes
 `example_spd_pair(...)` instead of leaving that deterministic
 documentation/example SPD generator only under `pyisetcam.metrics`.

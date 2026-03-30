@@ -13262,6 +13262,16 @@ def test_metrics_camera_gateway_matches_existing_wrappers(asset_store) -> None:
     np.testing.assert_allclose(full_reference.scielab, expected_full_reference.scielab, rtol=1e-10, atol=1e-12)
     np.testing.assert_allclose(full_reference.ssim, expected_full_reference.ssim, rtol=1e-10, atol=1e-12)
 
+    computed_metric = camera_get(camera, "metric", "mcccolor")
+    np.testing.assert_allclose(np.asarray(computed_metric["deltaE"], dtype=float), np.asarray(color_metric["deltaE"], dtype=float), rtol=1e-10, atol=1e-12)
+    assert "vci" not in computed_metric
+
+    camera = camera_set(camera, "metric", color_metric, "mcccolor")
+    stored_metrics = camera_get(camera, "metrics")
+    assert "mcccolor" in stored_metrics
+    stored_metric = camera_get(camera, "metric", "mcccolor")
+    np.testing.assert_allclose(np.asarray(stored_metric["deltaE"], dtype=float), np.asarray(color_metric["deltaE"], dtype=float), rtol=1e-10, atol=1e-12)
+
 
 def test_scene_cct_script_workflow(asset_store) -> None:
     wave = np.arange(400.0, 721.0, 5.0, dtype=float)
