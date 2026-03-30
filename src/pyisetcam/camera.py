@@ -519,8 +519,17 @@ def camera_compute(
     """Run the supported camera pipeline."""
 
     store = _store(asset_store)
-    adjust_scale = None if isinstance(mode, str) or mode is None else np.asarray(mode, dtype=float)
-    normalized_mode = param_format("normal" if adjust_scale is not None and mode is not None else mode or "normal")
+    if isinstance(mode, str) or mode is None:
+        adjust_scale = None
+        normalized_mode = param_format(mode or "normal")
+    else:
+        mode_array = np.asarray(mode)
+        if mode_array.size == 0:
+            adjust_scale = None
+            normalized_mode = "normal"
+        else:
+            adjust_scale = np.asarray(mode, dtype=float)
+            normalized_mode = "normal"
     if normalized_mode not in {"normal", "idealxyz"}:
         raise UnsupportedOptionError("cameraCompute", mode)
 

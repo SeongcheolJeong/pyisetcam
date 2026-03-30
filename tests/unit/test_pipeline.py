@@ -7937,6 +7937,25 @@ def test_camera_compute_skips_resize_when_sensor_fov_is_already_close(asset_stor
     assert camera.fields["sensor"].fields["size"] == original_size
 
 
+def test_camera_compute_accepts_empty_mode_placeholder_when_disabling_resize(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    scene = scene_set(scene, "fov", 2.0)
+    base_camera = camera_create(asset_store=asset_store)
+    original_size = tuple(np.asarray(camera_get(base_camera, "sensor size"), dtype=int))
+
+    explicit_normal = camera_compute(base_camera.clone(), scene, None, False, asset_store=asset_store)
+    placeholder_mode = camera_compute(base_camera.clone(), scene, [], False, asset_store=asset_store)
+
+    assert tuple(np.asarray(camera_get(explicit_normal, "sensor size"), dtype=int)) == original_size
+    assert tuple(np.asarray(camera_get(placeholder_mode, "sensor size"), dtype=int)) == original_size
+    np.testing.assert_allclose(
+        np.asarray(camera_get(placeholder_mode, "ip result"), dtype=float),
+        np.asarray(camera_get(explicit_normal, "ip result"), dtype=float),
+        rtol=1e-10,
+        atol=1e-12,
+    )
+
+
 def test_camera_parity_case_disables_sensor_noise(asset_store) -> None:
     payload = run_python_case("camera_default_pipeline", asset_store=asset_store)
     assert payload["sensor_volts"].ndim == 2

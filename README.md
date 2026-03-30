@@ -2481,3 +2481,8 @@ The neighboring IP gateway is tighter too: `ipGet(..., 'result max')` and
 `ipGet(..., 'max sensor')` now replay the upstream aliases used by legacy
 camera utilities like `cameraVSNR.m`, and the same values are reachable
 through `cameraGet(camera, 'ip result max')` and `cameraGet(camera, 'ip max sensor')`.
+The public camera compute wrapper is tighter too: MATLAB-style empty mode
+placeholders are now treated as omitted values, so
+`cameraCompute(camera, scene, [], false)` replays the normal compute path
+with `sensorResize=false` instead of misreading the empty third argument as
+an output-scaling image.

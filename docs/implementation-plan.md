@@ -759,6 +759,11 @@
   `ipGet(..., 'max sensor')` now replay the upstream aliases used by camera
   utilities like `cameraVSNR.m`, and the same values are reachable through
   `cameraGet(camera, 'ip result max')` and `cameraGet(camera, 'ip max sensor')`.
+- The public camera compute wrapper is tighter too: MATLAB-style empty mode
+  placeholders are now treated as omitted values, so
+  `cameraCompute(camera, scene, [], false)` replays the normal compute path
+  with `sensorResize=false` instead of misreading the empty third argument as
+  an output-scaling image.
 - Continue adding more scene patterns and `sceneFromFile`; the first slices now cover extra Macbeth variants, `moire orient`, `letter` / `font`, and the file-backed `rgb` / `multispectral` / `monochrome` scene shells.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.
