@@ -749,6 +749,10 @@
   center-to-edge chroma profile summary for the legacy `moire orient`
   scene, and `metricsCamera(camera, 'moire')` now routes through that
   wrapper instead of failing the gateway dispatch.
+- That same metrics gateway now also accepts the descriptive `visible snr`
+  name on top of the legacy short `vsnr` token, so both direct
+  `metricsCamera(...)` calls and `cameraGet(camera, 'metric', ...)` reuse
+  the same visual-SNR wrapper path.
 - The same public camera gateway is tighter too: `cameraGet(...)` and
   `cameraSet(...)` now reuse `ieParameterOtype(...)` for unprefixed unique
   subobject parameters, so legacy calls like `cameraSet(camera, 'fill factor',

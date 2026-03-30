@@ -1537,7 +1537,7 @@ def metrics_camera(
         return camera_full_reference(camera, asset_store=asset_store, session=session)
     if normalized_metric == "moire":
         return camera_moire(camera, asset_store=asset_store, session=session)
-    if normalized_metric == "vsnr":
+    if normalized_metric in {"vsnr", "visiblesnr"}:
         return camera_vsnr(camera, asset_store=asset_store, session=session)
     if normalized_metric == "acutance":
         return float(camera_acutance(camera, asset_store=asset_store, session=session))

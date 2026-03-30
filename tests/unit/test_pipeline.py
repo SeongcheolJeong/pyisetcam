@@ -13548,9 +13548,22 @@ def test_metrics_camera_gateway_matches_existing_wrappers(asset_store) -> None:
     np.testing.assert_allclose(moire_metric.cpd_mean, expected_moire.cpd_mean, rtol=1e-10, atol=1e-12)
     assert np.all(np.diff(np.asarray(moire_metric.cpd_mean, dtype=float)) >= 0.0)
 
+    vsnr_metric = metricsCamera(camera, "visible snr", asset_store=asset_store)
+    expected_vsnr = camera_vsnr(camera, asset_store=asset_store)
+    np.testing.assert_allclose(vsnr_metric.vSNR, expected_vsnr.vSNR, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(vsnr_metric.lightLevels, expected_vsnr.lightLevels, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(vsnr_metric.eTime, expected_vsnr.eTime, rtol=1e-10, atol=1e-12)
+    np.testing.assert_array_equal(vsnr_metric.rect, expected_vsnr.rect)
+
     computed_metric = camera_get(camera, "metric", "mcccolor")
     np.testing.assert_allclose(np.asarray(computed_metric["deltaE"], dtype=float), np.asarray(color_metric["deltaE"], dtype=float), rtol=1e-10, atol=1e-12)
     assert "vci" not in computed_metric
+
+    computed_vsnr_metric = camera_get(camera, "metric", "visible snr")
+    np.testing.assert_allclose(computed_vsnr_metric.vSNR, expected_vsnr.vSNR, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(computed_vsnr_metric.lightLevels, expected_vsnr.lightLevels, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(computed_vsnr_metric.eTime, expected_vsnr.eTime, rtol=1e-10, atol=1e-12)
+    np.testing.assert_array_equal(computed_vsnr_metric.rect, expected_vsnr.rect)
 
     camera = camera_set(camera, "metric", color_metric, "mcccolor")
     stored_metrics = camera_get(camera, "metrics")
