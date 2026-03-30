@@ -2357,6 +2357,8 @@ def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
         return ip.fields["render"]
     if key in {"renderflag", "displaymode"}:
         return ip.fields["render"].get("renderflag", 1)
+    if key in {"combineexposures", "combinationmethod"}:
+        return ip.fields.get("combination_method", "longest")
     if key in {"renderscale", "scaledisplay", "scaledisplayoutput"}:
         return bool(ip.fields["render"].get("scale", True))
     if key == "renderwhitept":
@@ -2641,6 +2643,11 @@ def ip_set(
         ip.fields["render"]["renderflag"] = mapping.get(
             normalized, int(value) if isinstance(value, (int, np.integer)) else 1
         )
+        return track_ip_session_state(session, ip)
+    if key in {"combineexposures", "combinationmethod"}:
+        method = str(value)
+        ip.fields["combine_exposures"] = method
+        ip.fields["combination_method"] = method
         return track_ip_session_state(session, ip)
     if key in {"renderscale", "scaledisplay", "scaledisplayoutput"}:
         ip.fields["render"]["scale"] = bool(value)

@@ -2563,3 +2563,7 @@ locking `transform method` to `current`.
 The adjacent IP geometry helpers are now in place too: `ipGet(...)`
 supports the upstream `center`, `image grid`, `distance2center`, and
 `angle` surfaces on top of the current result image size.
+The neighboring bracketed-IP bookkeeping surface is tighter too:
+`ipGet/Set(..., 'combination method', ...)` and the `combine exposures`
+alias now replay the vendored default `longest` behavior and shared stored
+method field.

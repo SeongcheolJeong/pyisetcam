@@ -1156,6 +1156,18 @@ def test_ip_get_geometry_helpers_match_upstream_grids() -> None:
     )
 
 
+def test_ip_get_set_combination_method_matches_upstream_default() -> None:
+    ip = ip_create()
+    assert str(ip_get(ip, "combination method")) == "longest"
+    assert str(ip_get(ip, "combine exposures")) == "longest"
+
+    updated = ip_set(ip, "combination method", "sum")
+    assert str(ip_get(updated, "combination method")) == "sum"
+    assert str(ip_get(updated, "combine exposures")) == "sum"
+    assert str(updated.fields["combination_method"]) == "sum"
+    assert str(updated.fields["combine_exposures"]) == "sum"
+
+
 def test_vcimage_srgb_matches_manual_pipeline(asset_store) -> None:
     generated = vcimageSRGB(asset_store=asset_store)
 

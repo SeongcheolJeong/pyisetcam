@@ -843,6 +843,10 @@
 - The adjacent IP geometry helpers are now in place too: `ipGet(...)`
   supports the upstream `center`, `image grid`, `distance2center`, and
   `angle` surfaces on top of the current result image size.
+- The neighboring bracketed-IP bookkeeping surface is tighter too:
+  `ipGet/Set(..., 'combination method', ...)` and the `combine exposures`
+  alias now replay the vendored default `longest` behavior and shared
+  stored method field.
 - Continue adding more scene patterns and `sceneFromFile`; the first slices now cover extra Macbeth variants, `moire orient`, `letter` / `font`, and the file-backed `rgb` / `multispectral` / `monochrome` scene shells.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.
