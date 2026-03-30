@@ -2486,3 +2486,7 @@ placeholders are now treated as omitted values, so
 `cameraCompute(camera, scene, [], false)` replays the normal compute path
 with `sensorResize=false` instead of misreading the empty third argument as
 an output-scaling image.
+That same parser now also treats empty `pType` placeholders as omitted, so
+`cameraCompute(camera, [])` and `cameraCompute(camera, [], [], false)` both
+fall back to the upstream default `'sensor'` restart path instead of
+failing dispatch on an empty array payload.

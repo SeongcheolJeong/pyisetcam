@@ -536,9 +536,15 @@ def camera_compute(
     if isinstance(p_type, Scene):
         scene = p_type
         start_type = "scene"
-    else:
+    elif p_type is None:
         scene = None
-        start_type = param_format(p_type)
+        start_type = "sensor"
+    else:
+        p_type_array = None
+        if isinstance(p_type, (list, tuple, np.ndarray)):
+            p_type_array = np.asarray(p_type)
+        scene = None
+        start_type = "sensor" if p_type_array is not None and p_type_array.size == 0 else param_format(p_type)
 
     oi: OpticalImage = camera.fields["oi"]
     sensor: Sensor = camera.fields["sensor"]

@@ -764,6 +764,10 @@
   `cameraCompute(camera, scene, [], false)` replays the normal compute path
   with `sensorResize=false` instead of misreading the empty third argument as
   an output-scaling image.
+- That same parser now also treats empty `pType` placeholders as omitted, so
+  `cameraCompute(camera, [])` and `cameraCompute(camera, [], [], false)` both
+  fall back to the upstream default `'sensor'` restart path instead of
+  failing dispatch on an empty array payload.
 - Continue adding more scene patterns and `sceneFromFile`; the first slices now cover extra Macbeth variants, `moire orient`, `letter` / `font`, and the file-backed `rgb` / `multispectral` / `monochrome` scene shells.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.

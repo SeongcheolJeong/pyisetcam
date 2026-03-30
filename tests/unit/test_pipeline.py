@@ -7956,6 +7956,28 @@ def test_camera_compute_accepts_empty_mode_placeholder_when_disabling_resize(ass
     )
 
 
+def test_camera_compute_accepts_empty_ptype_placeholder_as_sensor(asset_store) -> None:
+    scene = scene_create(asset_store=asset_store)
+    base_camera = camera_compute(camera_create(asset_store=asset_store), scene, asset_store=asset_store)
+
+    explicit_sensor = camera_compute(base_camera.clone(), "sensor", asset_store=asset_store)
+    placeholder_sensor = camera_compute(base_camera.clone(), [], asset_store=asset_store)
+    none_sensor = camera_compute(base_camera.clone(), None, asset_store=asset_store)
+
+    np.testing.assert_allclose(
+        np.asarray(camera_get(placeholder_sensor, "ip result"), dtype=float),
+        np.asarray(camera_get(explicit_sensor, "ip result"), dtype=float),
+        rtol=1e-10,
+        atol=1e-12,
+    )
+    np.testing.assert_allclose(
+        np.asarray(camera_get(none_sensor, "ip result"), dtype=float),
+        np.asarray(camera_get(explicit_sensor, "ip result"), dtype=float),
+        rtol=1e-10,
+        atol=1e-12,
+    )
+
+
 def test_camera_parity_case_disables_sensor_noise(asset_store) -> None:
     payload = run_python_case("camera_default_pipeline", asset_store=asset_store)
     assert payload["sensor_volts"].ndim == 2
