@@ -64,12 +64,31 @@ def test_scene_module_core_matlab_aliases() -> None:
     assert scene_module.sceneClearData is scene_module.scene_clear_data
     assert scene_module.sceneCombine is scene_module.scene_combine
     assert scene_module.sceneCreate is scene_module.scene_create
+    assert scene_module.sceneCrop is scene_module.scene_crop
+    assert scene_module.sceneDescription is scene_module.scene_description
+    assert scene_module.sceneEnergyFromVector is scene_module.scene_energy_from_vector
+    assert scene_module.sceneExtractWaveband is scene_module.scene_extract_waveband
+    assert scene_module.sceneFrequencySupport is scene_module.scene_frequency_support
+    assert scene_module.sceneFromBasis is scene_module.scene_from_basis
+    assert scene_module.sceneFromDDFFile is scene_module.scene_from_ddf_file
     assert scene_module.sceneFromFile is scene_module.scene_from_file
     assert scene_module.sceneGet is scene_module.scene_get
+    assert scene_module.sceneHDRChart is scene_module.scene_hdr_chart
+    assert scene_module.sceneHDRImage is scene_module.scene_hdr_image
+    assert scene_module.sceneIlluminantPattern is scene_module.scene_illuminant_pattern
     assert scene_module.sceneIlluminantScale is scene_module.scene_illuminant_scale
+    assert scene_module.sceneIlluminantSS is scene_module.scene_illuminant_ss
     assert scene_module.sceneInitGeometry is scene_module.scene_init_geometry
+    assert scene_module.sceneInitSpatial is scene_module.scene_init_spatial
+    assert scene_module.sceneInsert is scene_module.scene_insert
+    assert scene_module.sceneInterpolateW is scene_module.scene_interpolate_w
     assert scene_module.sceneList is scene_module.scene_list
+    assert scene_module.sceneMakeVideo is scene_module.scene_make_video
     assert scene_module.scenePhotonNoise is scene_module.scene_photon_noise
+    assert scene_module.scenePhotonsFromVector is scene_module.scene_photons_from_vector
+    assert scene_module.sceneRadianceChart is scene_module.scene_radiance_chart
+    assert scene_module.sceneRadianceFromVector is scene_module.scene_radiance_from_vector
+    assert scene_module.sceneReflectanceChart is scene_module.scene_reflectance_chart
     assert scene_module.sceneRamp is scene_module.scene_ramp
     assert scene_module.sceneRotate is scene_module.scene_rotate
     assert scene_module.sceneSaveImage is scene_module.scene_save_image
