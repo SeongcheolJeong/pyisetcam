@@ -293,7 +293,11 @@ last vendored `displayGet(...)` conversion case `drgb2xyz` on top of the
 existing DAC lookup and display `rgb2xyz` transform, and now also exposes
 headless `display_compute(...)` / `displayCompute(...)` for the upstream
 subpixel-upsampling wrapper on top of the existing dixel image, oversample,
-and Samsung render-function paths. Both `sceneCreate('empty', wave)` and
+and Samsung render-function paths. That same display utility lane now also
+exposes headless `display_plot(...)` / `displayPlot(...)` for the reusable
+non-GUI `spd`, `gamma table`, `gamut`, and `psf` cases, returning the same
+MATLAB-style user-data payloads without opening figures. Both
+`sceneCreate('empty', wave)` and
 `sceneCreate('empty', [], wave)` now replay the legacy wavelength override
 instead of forcing the default 400:10:700 grid. The same Macbeth/default
 scene dispatcher now also accepts placeholder patch-size slots such as

@@ -71,6 +71,7 @@ from .display import (
     display_get,
     display_list,
     display_max_contrast,
+    display_plot,
     display_pt2iset,
     display_reflectance,
     display_set,
@@ -1032,6 +1033,7 @@ __all__ = [
     "displayGet",
     "displayList",
     "displayMaxContrast",
+    "displayPlot",
     "displayPT2ISET",
     "displayReflectance",
     "displaySet",
@@ -1045,6 +1047,7 @@ __all__ = [
     "display_get",
     "display_list",
     "display_max_contrast",
+    "display_plot",
     "display_pt2iset",
     "display_reflectance",
     "display_set",
@@ -2652,6 +2655,7 @@ displayDescription = display_description
 displayGet = display_get
 displayList = display_list
 displayMaxContrast = display_max_contrast
+displayPlot = display_plot
 displayPT2ISET = display_pt2iset
 displayReflectance = display_reflectance
 displaySet = display_set

@@ -488,6 +488,57 @@ def display_show_image(
     return np.asarray(scene_get(scene, "rgb"), dtype=float)
 
 
+def display_plot(
+    display: Display,
+    param: str,
+    *args: Any,
+) -> tuple[Any, None]:
+    """Return MATLAB-style displayPlot user-data without opening a figure."""
+
+    if display is None:
+        raise ValueError("Display required")
+
+    key = param_format(param)
+    if key in {"primaries", "spd"}:
+        wave = np.asarray(display_get(display, "wave"), dtype=float).reshape(-1)
+        spd = np.asarray(display_get(display, "spd primaries"), dtype=float)
+        return {"wave": wave.copy(), "spd": spd.copy()}, None
+    if key in {"gammatable", "gamma"}:
+        return np.asarray(display_get(display, "gamma table"), dtype=float).copy(), None
+    if key == "gamut":
+        xy = np.asarray(display_get(display, "primaries xy"), dtype=float)
+        if xy.shape[0] > 0:
+            black_like = np.sum(xy, axis=1) < 0.1
+            xy = xy[~black_like]
+        if xy.shape[0] > 0:
+            xy = np.vstack((xy, xy[0, :]))
+        return {"xy": np.asarray(xy, dtype=float)}, None
+    if key == "psf":
+        psf = np.asarray(display_get(display, "dixel image"), dtype=float)
+        if psf.size == 0:
+            raise ValueError("No psf for this display")
+        n_primaries = min(int(display_get(display, "n primaries")), 3)
+        dixel_size = np.asarray(display_get(display, "dixel size"), dtype=float).reshape(2)
+        spacing_mm = float(display_get(display, "meters per dot", "mm"))
+        x = (np.arange(1, int(dixel_size[1]) + 1, dtype=float) * spacing_mm)
+        y = (np.arange(1, int(dixel_size[0]) + 1, dtype=float) * spacing_mm)
+        x = x - np.mean(x)
+        y = y - np.mean(y)
+        srgb = np.asarray(display_get(display, "primaries rgb"), dtype=float).T
+        normalized_psf = np.asarray(psf[:, :, :n_primaries], dtype=float).copy()
+        for index in range(normalized_psf.shape[2]):
+            peak = float(np.max(normalized_psf[:, :, index]))
+            if peak > 0.0:
+                normalized_psf[:, :, index] /= peak
+        return {
+            "x": x.copy(),
+            "y": y.copy(),
+            "psf": normalized_psf,
+            "srgb": srgb[:, :n_primaries].copy(),
+        }, None
+    raise UnsupportedOptionError("displayPlot", param)
+
+
 def _normalize_target_size(value: Any) -> tuple[int, int]:
     target = np.asarray(value, dtype=int).reshape(-1)
     if target.size == 1:

@@ -9,6 +9,7 @@ from pyisetcam import (
     displayCompute,
     display_compute,
     displayConvert,
+    displayPlot,
     displayPT2ISET,
     displayReflectance,
     display_create,
@@ -154,6 +155,39 @@ def test_display_create_normalizes_render_function_names(asset_store) -> None:
     assert display_get(oled, "render function") == "render_oled_samsung"
     assert display_get(rgbw, "render function") == "render_lcd_samsung_rgbw"
     assert display_get(barco, "render function") is None
+
+
+def test_display_plot_returns_headless_payloads(asset_store) -> None:
+    display = display_create("lcdExample.mat", asset_store=asset_store)
+    dixel_image = np.array(
+        [
+            [[1.0, 0.5, 0.25], [0.25, 1.0, 0.5]],
+            [[0.5, 0.25, 1.0], [1.0, 0.5, 0.25]],
+        ],
+        dtype=float,
+    )
+    display = display_set(display, "dixel image", dixel_image)
+    display = display_set(display, "pixels per dixel", [1, 1])
+
+    spd_payload, spd_handle = displayPlot(display, "spd")
+    gamma_payload, gamma_handle = displayPlot(display, "gamma table")
+    gamut_payload, gamut_handle = displayPlot(display, "gamut")
+    psf_payload, psf_handle = displayPlot(display, "psf")
+
+    assert spd_handle is None
+    assert gamma_handle is None
+    assert gamut_handle is None
+    assert psf_handle is None
+    np.testing.assert_allclose(spd_payload["wave"], display_get(display, "wave"), rtol=1e-12, atol=1e-12)
+    np.testing.assert_allclose(spd_payload["spd"], display_get(display, "spd primaries"), rtol=1e-12, atol=1e-12)
+    np.testing.assert_allclose(gamma_payload, display_get(display, "gamma table"), rtol=1e-12, atol=1e-12)
+    np.testing.assert_allclose(gamut_payload["xy"][0, :], display_get(display, "primaries xy")[0, :], rtol=1e-12, atol=1e-12)
+    np.testing.assert_allclose(gamut_payload["xy"][-1, :], gamut_payload["xy"][0, :], rtol=1e-12, atol=1e-12)
+    assert psf_payload["psf"].shape == dixel_image.shape
+    np.testing.assert_allclose(np.max(psf_payload["psf"], axis=(0, 1)), np.ones(3, dtype=float), rtol=1e-12, atol=1e-12)
+    assert psf_payload["x"].shape == (2,)
+    assert psf_payload["y"].shape == (2,)
+    assert psf_payload["srgb"].shape == (3, 3)
 
 
 def test_display_compute_matches_nearest_neighbor_and_dixel_weighting(asset_store) -> None:
