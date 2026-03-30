@@ -1377,7 +1377,10 @@ def metrics_compute(vc1: Any, vc2: Any, metric_name: str = "difference") -> tupl
     if normalized_metric in {"cieluv", "cieluvde"}:
         xyz1 = np.asarray(ip_get(vc1, "dataxyz"), dtype=float)
         xyz2 = np.asarray(ip_get(vc2, "dataxyz"), dtype=float)
-        delta = np.asarray(delta_e_uv(xyz1, xyz2, _metrics_white_point(vc1, vc2)), dtype=float)
+        white = ip_get(vc1, "datawhitepoint")
+        if white is None:
+            raise ValueError("Metrics CIELUV calculations require image 1 white point.")
+        delta = np.asarray(delta_e_uv(xyz1, xyz2, white), dtype=float)
         return delta, None
     result1 = np.asarray(ip_get(vc1, "result"), dtype=float)
     result2 = np.asarray(ip_get(vc2, "result"), dtype=float)

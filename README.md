@@ -2308,8 +2308,9 @@ The same color-metric path now also replays the upstream component modes for
 CIEDE2000 component math instead of raising unsupported-option errors, and
 `delta_e_ab(...)` now also accepts paired white points like the neighboring
 `delta_e_uv(...)` path. The same metrics-helper lane now preserves those paired
-per-image white points through `metricsCompute(...)` and `metricsCompareROI(...)`
-instead of collapsing them into a single average white. The neighboring
+per-image white points through the CIELAB `metricsCompute(...)` and
+`metricsCompareROI(...)` paths instead of collapsing them into a single average
+white. The neighboring
 `metricsCamera(...)` gateway now also accepts the upstream `fullreference`
 metric name on top of the existing headless `cameraFullReference(...)` path.
 The same package-root helper surface now also exposes

@@ -13084,7 +13084,7 @@ def test_metrics_compute_and_masked_error_helpers(tmp_path) -> None:
     assert d_e_value is None
 
     d_uv_image, d_uv_value = metricsCompute(ip1, ip2, "CIELUV (dE)")
-    expected_d_uv = deltaEuv(xyz1, xyz2, (white_point, white_point_2))
+    expected_d_uv = deltaEuv(xyz1, xyz2, white_point)
     np.testing.assert_allclose(d_uv_image, expected_d_uv, rtol=1e-10, atol=1e-12)
     assert d_uv_value is None
 
