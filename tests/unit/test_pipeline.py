@@ -34,6 +34,7 @@ from pyisetcam import (
     camera_create,
     cameraFullReference,
     camera_get,
+    cameraMoire,
     camera_mtf,
     camera_set,
     camera_vsnr,
@@ -13285,6 +13286,13 @@ def test_metrics_camera_gateway_matches_existing_wrappers(asset_store) -> None:
     np.testing.assert_allclose(full_reference.meanLuminances, expected_full_reference.meanLuminances, rtol=1e-10, atol=1e-12)
     np.testing.assert_allclose(full_reference.scielab, expected_full_reference.scielab, rtol=1e-10, atol=1e-12)
     np.testing.assert_allclose(full_reference.ssim, expected_full_reference.ssim, rtol=1e-10, atol=1e-12)
+
+    moire_metric = metricsCamera(camera, "moire", asset_store=asset_store)
+    expected_moire = cameraMoire(camera, asset_store=asset_store)
+    np.testing.assert_allclose(moire_metric.data_abIdeal_mean, expected_moire.data_abIdeal_mean, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(moire_metric.data_abim_mean, expected_moire.data_abim_mean, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(moire_metric.cpd_mean, expected_moire.cpd_mean, rtol=1e-10, atol=1e-12)
+    assert np.all(np.diff(np.asarray(moire_metric.cpd_mean, dtype=float)) >= 0.0)
 
     computed_metric = camera_get(camera, "metric", "mcccolor")
     np.testing.assert_allclose(np.asarray(computed_metric["deltaE"], dtype=float), np.asarray(color_metric["deltaE"], dtype=float), rtol=1e-10, atol=1e-12)

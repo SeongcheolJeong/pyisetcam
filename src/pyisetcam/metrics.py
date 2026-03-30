@@ -1522,7 +1522,7 @@ def metrics_camera(
 ) -> Any:
     """Compute a predefined camera metric using the MATLAB metricsCamera() gateway shape."""
 
-    from .camera import camera_acutance, camera_color_accuracy, camera_full_reference, camera_mtf, camera_vsnr
+    from .camera import camera_acutance, camera_color_accuracy, camera_full_reference, camera_moire, camera_mtf, camera_vsnr
 
     normalized_metric = param_format(metric_name)
     if normalized_metric == "mcccolor":
@@ -1535,6 +1535,8 @@ def metrics_camera(
         return camera_mtf(camera, asset_store=asset_store, session=session)
     if normalized_metric == "fullreference":
         return camera_full_reference(camera, asset_store=asset_store, session=session)
+    if normalized_metric == "moire":
+        return camera_moire(camera, asset_store=asset_store, session=session)
     if normalized_metric == "vsnr":
         return camera_vsnr(camera, asset_store=asset_store, session=session)
     if normalized_metric == "acutance":

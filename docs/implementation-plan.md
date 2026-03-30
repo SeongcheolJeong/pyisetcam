@@ -744,6 +744,11 @@
   lrgbScale)` rescales the rendered linear RGB result to match the
   reference-image mean instead of treating that input as an unsupported
   mode string.
+- The adjacent camera-metrics gateway now also covers the upstream
+  `moire` branch: a headless `cameraMoire(...)` wrapper returns the
+  center-to-edge chroma profile summary for the legacy `moire orient`
+  scene, and `metricsCamera(camera, 'moire')` now routes through that
+  wrapper instead of failing the gateway dispatch.
 - Continue adding more scene patterns and `sceneFromFile`; the first slices now cover extra Macbeth variants, `moire orient`, `letter` / `font`, and the file-backed `rgb` / `multispectral` / `monochrome` scene shells.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.

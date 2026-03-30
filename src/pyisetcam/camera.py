@@ -149,6 +149,15 @@ class CameraFullReferenceResult:
     ssim: NDArray[np.float64]
 
 
+@dataclass
+class CameraMoireResult:
+    """Headless payload returned by camera_moire()."""
+
+    data_abIdeal_mean: NDArray[np.float64]
+    data_abim_mean: NDArray[np.float64]
+    cpd_mean: NDArray[np.float64]
+
+
 def _pixel_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
     pixel = sensor.fields["pixel"]
     key = param_format(parameter)
@@ -841,6 +850,78 @@ def camera_full_reference(
     )
 
 
+def camera_moire(
+    camera: Camera,
+    *,
+    asset_store: AssetStore | None = None,
+    session: SessionContext | None = None,
+) -> CameraMoireResult:
+    """Compute a headless MATLAB-style moire metric summary."""
+
+    store = _store(asset_store)
+    mean_luminance = 100.0
+    fov_scene = 10.0
+
+    working_camera = camera.clone()
+    sensor = sensor_set_size_to_fov(camera_get(working_camera, "sensor").clone(), fov_scene, camera_get(working_camera, "oi"))
+    working_camera = camera_set(working_camera, "sensor", sensor, session=session)
+
+    scene = scene_create("moire orient", asset_store=store, session=session)
+    scene = scene_set(scene, "wave", np.asarray(camera_get(working_camera, "sensor wave"), dtype=float))
+    scene = scene_adjust_illuminant(scene, "D65.mat", asset_store=store)
+    scene = scene_set(scene, "fov", fov_scene)
+    scene = scene_adjust_luminance(scene, mean_luminance, asset_store=store)
+
+    white_point = np.asarray(scene_get(scene, "illuminant xyz"), dtype=float).reshape(-1)
+    white_point /= max(float(np.max(white_point)), 1.0e-12)
+
+    ideal_camera, xyz_ideal = _camera_ideal_xyz(working_camera, scene, asset_store=store, session=session)
+    xyz_ideal = np.asarray(xyz_ideal, dtype=float)
+    xyz_ideal /= max(float(np.max(xyz_ideal)), 1.0e-12)
+    _, lrgb_ideal = _xyz_to_srgb_pair(xyz_ideal)
+
+    result_camera = camera_set(camera.clone(), "oi", camera_get(ideal_camera, "oi"), session=session)
+    result_camera = camera_set(result_camera, "sensor", camera_get(camera, "sensor").clone(), session=session)
+    result_camera = camera_compute(result_camera, "oi", lrgb_ideal, asset_store=store, session=session)
+    lrgb_result = np.asarray(camera_get(result_camera, "image"), dtype=float)
+
+    xyz_ideal_cropped = _camera_crop_border(xyz_ideal)
+    lrgb_result_cropped = _camera_crop_border(lrgb_result)
+    target_shape = np.minimum(
+        np.asarray(xyz_ideal_cropped.shape[:2], dtype=int),
+        np.asarray(lrgb_result_cropped.shape[:2], dtype=int),
+    )
+    xyz_ideal_cropped = _center_crop_to_shape(xyz_ideal_cropped, target_shape)
+    lrgb_result_cropped = _center_crop_to_shape(lrgb_result_cropped, target_shape)
+    if xyz_ideal_cropped.shape[0] > 4 and xyz_ideal_cropped.shape[1] > 4:
+        xyz_ideal_cropped = xyz_ideal_cropped[2:-2, 2:-2, :]
+        lrgb_result_cropped = lrgb_result_cropped[2:-2, 2:-2, :]
+
+    xyz_result = _linear_srgb_to_xyz(np.asarray(np.clip(lrgb_result_cropped, 0.0, 1.0), dtype=float))
+    lab_ideal = np.asarray(xyz_to_lab(xyz_ideal_cropped, white_point), dtype=float)
+    lab_result = np.asarray(xyz_to_lab(xyz_result, white_point), dtype=float)
+    ab_ideal = np.sqrt(np.sum(np.square(lab_ideal[..., 1:3]), axis=2, dtype=float))
+    ab_result = np.sqrt(np.sum(np.square(lab_result[..., 1:3]), axis=2, dtype=float))
+
+    profile_ideal = np.mean(ab_ideal, axis=0, dtype=float)
+    profile_result = np.mean(ab_result, axis=0, dtype=float)
+    center = int(profile_ideal.size // 2)
+    profile_ideal = profile_ideal[center:]
+    profile_result = profile_result[center:]
+
+    mo_params = scene.fields.get("mo_target_params", {})
+    frequency = float(mo_params.get("f", 1.0 / max(float(scene_get(scene, "cols")), 1.0) / 10.0))
+    pixels_per_degree = float(np.asarray(xyz_ideal.shape[:2], dtype=float)[1]) / max(float(fov_scene), 1.0e-12)
+    radii = np.arange(profile_ideal.size, dtype=float)
+    cpd_mean = frequency * radii * pixels_per_degree
+
+    return CameraMoireResult(
+        data_abIdeal_mean=np.asarray(profile_ideal, dtype=float),
+        data_abim_mean=np.asarray(profile_result, dtype=float),
+        cpd_mean=np.asarray(cpd_mean, dtype=float),
+    )
+
+
 def camera_vsnr_sl(
     camera: Camera,
     light_levels: Any | None = None,
@@ -1350,6 +1431,7 @@ def camera_vsnr(
 
 
 cameraColorAccuracy = camera_color_accuracy
+cameraMoire = camera_moire
 cameraFullReference = camera_full_reference
 cameraVSNR_SL = camera_vsnr_sl
 cameraVSNR = camera_vsnr

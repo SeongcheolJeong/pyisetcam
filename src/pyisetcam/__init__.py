@@ -10,6 +10,7 @@ from .assets import (
 )
 from .camera import (
     CameraFullReferenceResult,
+    CameraMoireResult,
     CameraMTFResult,
     CameraVSNRResult,
     camera_acutance,
@@ -21,6 +22,7 @@ from .camera import (
     camera_create,
     camera_full_reference,
     camera_get,
+    camera_moire,
     camera_mtf,
     camera_set,
     camera_vsnr,
@@ -889,6 +891,7 @@ __all__ = [
     "airy_disk",
     "Camera",
     "CameraFullReferenceResult",
+    "CameraMoireResult",
     "CameraMTFResult",
     "DEFAULT_UPSTREAM_SHA",
     "DEFAULT_UPSTREAM_TARBALL_SHA256",
@@ -928,6 +931,7 @@ __all__ = [
     "cameraCreate",
     "cameraFullReference",
     "cameraGet",
+    "cameraMoire",
     "cameraMTF",
     "cameraSet",
     "cameraVSNR",
@@ -942,6 +946,7 @@ __all__ = [
     "camera_create",
     "camera_full_reference",
     "camera_get",
+    "camera_moire",
     "camera_mtf",
     "camera_vsnr",
     "camera_vsnr_sl",
@@ -3264,6 +3269,7 @@ cameraComputesrgb = camera_compute_srgb
 cameraClearData = camera_clear_data
 cameraFullReference = camera_full_reference
 cameraGet = camera_get
+cameraMoire = camera_moire
 cameraMTF = camera_mtf
 cameraAcutance = camera_acutance
 cameraColorAccuracy = camera_color_accuracy

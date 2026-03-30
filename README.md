@@ -2465,3 +2465,8 @@ The public camera compute wrapper is tighter too: `cameraCompute(camera,
 'oi', lrgbScale)` now accepts the upstream non-string third-argument form
 and rescales the rendered linear RGB result to match the reference image
 mean instead of treating that input as an unsupported mode token.
+The neighboring camera-metrics gateway now also covers the upstream
+`moire` branch: `cameraMoire(...)` returns a headless center-to-edge chroma
+profile summary for the legacy `moire orient` scene, and
+`metricsCamera(camera, 'moire')` now routes through that wrapper instead of
+raising an unsupported-option error.
