@@ -1790,6 +1790,7 @@ deltaEuv = delta_e_uv
 iePSNR = peak_signal_to_noise_ratio
 ieSQRI = ie_sqri
 conePlot = cone_plot
+humanCones = human_cones
 humanConeContrast = human_cone_contrast
 humanConeIsolating = human_cone_isolating
 humanOpticalDensity = human_optical_density

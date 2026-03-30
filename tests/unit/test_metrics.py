@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pyisetcam.metrics as metrics_module
 
 from pyisetcam import (
     DEFAULT_WAVE,
@@ -22,6 +23,10 @@ from pyisetcam import (
     xyz_to_luv,
     xyz_to_uv,
 )
+
+
+def test_metrics_module_human_cones_matlab_alias() -> None:
+    assert metrics_module.humanCones is metrics_module.human_cones
 
 
 def test_xyz_to_lab_maps_white_point_to_neutral() -> None:
