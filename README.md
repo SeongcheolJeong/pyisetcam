@@ -2560,3 +2560,6 @@ The neighboring render-control lane is tighter too: `ipGet/Set(...,
 'render whitept', ...)` now replays the vendored sensor-conversion
 rewrite path headlessly, updating the current sensor conversion matrix and
 locking `transform method` to `current`.
+The adjacent IP geometry helpers are now in place too: `ipGet(...)`
+supports the upstream `center`, `image grid`, `distance2center`, and
+`angle` surfaces on top of the current result image size.

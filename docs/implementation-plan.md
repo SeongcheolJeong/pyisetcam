@@ -840,6 +840,9 @@
   'render whitept', ...)` now replays the vendored sensor-conversion
   rewrite path headlessly, updating the current sensor conversion matrix
   and locking `transform method` to `current`.
+- The adjacent IP geometry helpers are now in place too: `ipGet(...)`
+  supports the upstream `center`, `image grid`, `distance2center`, and
+  `angle` surfaces on top of the current result image size.
 - Continue adding more scene patterns and `sceneFromFile`; the first slices now cover extra Macbeth variants, `moire orient`, `letter` / `font`, and the file-backed `rgb` / `multispectral` / `monochrome` scene shells.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.

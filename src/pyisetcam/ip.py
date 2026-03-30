@@ -2288,6 +2288,12 @@ def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
     if key in {"rgbsize", "resultsize", "displaysize", "size"}:
         result = ip.data.get("result")
         return None if result is None else tuple(np.asarray(result).shape)
+    if key in {"imagecenter", "center"}:
+        size = ip_get(ip, "size")
+        if size is None:
+            return None
+        size_array = np.asarray(size, dtype=float).reshape(-1)
+        return (size_array[:2] + 1.0) / 2.0
     if key in {"internalcs", "internalcolorspace"}:
         return ip.fields["internal_cs"]
     if key in {"internalcmf", "internalcolormatchingfunction"}:
@@ -2379,6 +2385,27 @@ def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
             if chromaticity is None
             else np.mean(np.asarray(chromaticity, dtype=float), axis=0).reshape(-1)
         )
+    if key == "imagegrid":
+        size = ip_get(ip, "size")
+        if size is None:
+            return None
+        center = np.asarray(ip_get(ip, "center"), dtype=float).reshape(-1)
+        size_array = np.asarray(size, dtype=int).reshape(-1)
+        x_coords, y_coords = np.meshgrid(
+            np.arange(1, int(size_array[1]) + 1, dtype=float),
+            np.arange(1, int(size_array[0]) + 1, dtype=float),
+        )
+        return [x_coords - float(center[1]), y_coords - float(center[0])]
+    if key == "distance2center":
+        grid = ip_get(ip, "imagegrid")
+        if grid is None:
+            return None
+        return np.sqrt(np.square(np.asarray(grid[0], dtype=float)) + np.square(np.asarray(grid[1], dtype=float)))
+    if key == "angle":
+        grid = ip_get(ip, "imagegrid")
+        if grid is None:
+            return None
+        return np.arctan2(np.asarray(grid[1], dtype=float), np.asarray(grid[0], dtype=float))
     if key in {"input", "sensorinput", "sensormosaic"}:
         return ip.data.get("input")
     if key == "quantization":

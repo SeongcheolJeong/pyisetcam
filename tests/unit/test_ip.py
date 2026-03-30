@@ -1117,6 +1117,45 @@ def test_ip_set_renderwhitept_replays_legacy_sensor_transform_update() -> None:
     assert bool(ip_get(disabled, "render whitept")) is False
 
 
+def test_ip_get_geometry_helpers_match_upstream_grids() -> None:
+    ip = ip_create()
+    linear = np.zeros((3, 5, 3), dtype=float)
+    ip = ip_set(ip, "result", linear)
+
+    center = np.asarray(ip_get(ip, "center"), dtype=float)
+    assert np.allclose(center, np.array([2.0, 3.0], dtype=float))
+
+    image_grid = ip_get(ip, "image grid")
+    assert isinstance(image_grid, list)
+    assert len(image_grid) == 2
+    expected_x = np.array(
+        [
+            [-2.0, -1.0, 0.0, 1.0, 2.0],
+            [-2.0, -1.0, 0.0, 1.0, 2.0],
+            [-2.0, -1.0, 0.0, 1.0, 2.0],
+        ],
+        dtype=float,
+    )
+    expected_y = np.array(
+        [
+            [-1.0, -1.0, -1.0, -1.0, -1.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0],
+            [1.0, 1.0, 1.0, 1.0, 1.0],
+        ],
+        dtype=float,
+    )
+    assert np.allclose(np.asarray(image_grid[0], dtype=float), expected_x)
+    assert np.allclose(np.asarray(image_grid[1], dtype=float), expected_y)
+    assert np.allclose(
+        np.asarray(ip_get(ip, "distance2center"), dtype=float),
+        np.sqrt(expected_x**2 + expected_y**2),
+    )
+    assert np.allclose(
+        np.asarray(ip_get(ip, "angle"), dtype=float),
+        np.arctan2(expected_y, expected_x),
+    )
+
+
 def test_vcimage_srgb_matches_manual_pipeline(asset_store) -> None:
     generated = vcimageSRGB(asset_store=asset_store)
 
