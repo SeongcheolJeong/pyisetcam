@@ -202,6 +202,39 @@ def test_metrics_spd_cielab_matches_direct_xyz_and_lab_path() -> None:
     assert params["lab2"].shape == (3,)
 
 
+def test_metrics_spd_accepts_matlab_style_key_value_options() -> None:
+    spd1 = np.asarray(blackbody(DEFAULT_WAVE, 6500.0, kind="energy"), dtype=float)
+    spd2 = np.asarray(blackbody(DEFAULT_WAVE, 5000.0, kind="energy"), dtype=float)
+    white = np.array([95.047, 100.0, 108.883], dtype=float)
+
+    keyword_value, keyword_params = metrics_spd(
+        spd1,
+        spd2,
+        metric="cielab",
+        wave=DEFAULT_WAVE,
+        white_point=white,
+        return_params=True,
+    )
+    legacy_value, legacy_params = metrics_spd(
+        spd1,
+        spd2,
+        "metric",
+        "cielab",
+        "wave",
+        DEFAULT_WAVE,
+        "white point",
+        white,
+        return_params=True,
+    )
+
+    assert np.isclose(legacy_value, keyword_value, rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(legacy_params["xyz1"], keyword_params["xyz1"], rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(legacy_params["xyz2"], keyword_params["xyz2"], rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(legacy_params["lab1"], keyword_params["lab1"], rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(legacy_params["lab2"], keyword_params["lab2"], rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(legacy_params["white_point"], keyword_params["white_point"], rtol=1e-10, atol=1e-10)
+
+
 def test_metrics_spd_mired_returns_estimated_ccts() -> None:
     spd1 = np.asarray(blackbody(DEFAULT_WAVE, 6500.0, kind="energy"), dtype=float)
     spd2 = np.asarray(blackbody(DEFAULT_WAVE, 5000.0, kind="energy"), dtype=float)

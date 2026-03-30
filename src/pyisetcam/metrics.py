@@ -1680,7 +1680,7 @@ def chart_patch_compare(
 def metrics_spd(
     spd1: Any,
     spd2: Any,
-    *,
+    *args: Any,
     metric: str = "angle",
     luminance: float = 100.0,
     white_point: Any | None = None,
@@ -1694,10 +1694,25 @@ def metrics_spd(
     second = _vector(spd2, name="spd2")
     if first.size != second.size:
         raise ValueError("spd1 and spd2 must have the same length.")
-    wave_array = _default_wave(first.size) if wave is None else _vector(wave, name="wave")
+    metric_value = metric
+    luminance_value = luminance
+    white_point_value = white_point
+    wave_value = wave
+    if args:
+        if len(args) % 2 != 0:
+            raise ValueError("metricsSPD optional arguments must be key/value pairs.")
+        options: dict[str, Any] = {}
+        for index in range(0, len(args), 2):
+            options[param_format(args[index])] = args[index + 1]
+        metric_value = options.get("metric", metric_value)
+        luminance_value = float(np.asarray(options.get("luminance", luminance_value), dtype=float).reshape(-1)[0])
+        white_point_value = options.get("whitepoint", white_point_value)
+        wave_value = options.get("wave", wave_value)
+
+    wave_array = _default_wave(first.size) if wave_value is None else _vector(wave_value, name="wave")
     if wave_array.size != first.size:
         raise ValueError("wave must match the SPD length.")
-    normalized_metric = param_format(metric)
+    normalized_metric = param_format(metric_value)
     params: dict[str, Any] = {}
 
     if normalized_metric == "angle":
@@ -1707,13 +1722,17 @@ def metrics_spd(
     if normalized_metric == "cielab":
         xyz1 = xyz_from_energy(first, wave_array, asset_store=asset_store)
         xyz2 = xyz_from_energy(second, wave_array, asset_store=asset_store)
-        spd1_scaled = first * (float(luminance) / max(float(xyz1[1]), 1e-12))
-        spd2_scaled = second * (float(luminance) / max(float(xyz2[1]), 1e-12))
+        spd1_scaled = first * (float(luminance_value) / max(float(xyz1[1]), 1e-12))
+        spd2_scaled = second * (float(luminance_value) / max(float(xyz2[1]), 1e-12))
         xyz1 = xyz_from_energy(spd1_scaled, wave_array, asset_store=asset_store)
         xyz2 = xyz_from_energy(spd2_scaled, wave_array, asset_store=asset_store)
-        white_xyz = xyz_from_energy(spd1_scaled, wave_array, asset_store=asset_store) if white_point is None else np.asarray(white_point, dtype=float)
-        if white_point is None:
-            white_xyz = white_xyz * (float(luminance) / max(float(white_xyz[1]), 1e-12))
+        white_xyz = (
+            xyz_from_energy(spd1_scaled, wave_array, asset_store=asset_store)
+            if white_point_value is None
+            else np.asarray(white_point_value, dtype=float)
+        )
+        if white_point_value is None:
+            white_xyz = white_xyz * (float(luminance_value) / max(float(white_xyz[1]), 1e-12))
         lab1 = xyz_to_lab(xyz1, white_xyz)
         lab2 = xyz_to_lab(xyz2, white_xyz)
         value = float(np.linalg.norm(lab1 - lab2))
@@ -1744,7 +1763,7 @@ def metrics_spd(
         }
         return (value, params) if return_params else value
 
-    raise UnsupportedOptionError("metricsSPD", metric)
+    raise UnsupportedOptionError("metricsSPD", metric_value)
 
 
 def example_spd_pair(*, wave: Any | None = None) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
