@@ -758,6 +758,7 @@ from .utils import (
     convolvecirc,
     dac_to_rgb,
     dpi2mperdot,
+    energy_to_quanta,
     exp_rand,
     ffndgrid,
     floyd_steinberg,
@@ -843,6 +844,7 @@ from .utils import (
     lorentz_sum,
     param_format,
     qinterp2,
+    quanta_to_energy,
     replace_nan,
     rgb_to_dac,
     rgb_to_xw_format,
@@ -886,6 +888,8 @@ __all__ = [
     "biNormal",
     "bi_normal",
     "blackbody",
+    "Energy2Quanta",
+    "Quanta2Energy",
     "cellDelete",
     "cellMerge",
     "cell_delete",
@@ -1370,6 +1374,8 @@ __all__ = [
     "image_translate",
     "imageTranspose",
     "image_transpose",
+    "energy_to_quanta",
+    "quanta_to_energy",
     "replaceNaN",
     "replace_nan",
     "sample2space",
@@ -3110,6 +3116,8 @@ ieTone = ie_tone
 ieTikhonov = ie_tikhonov
 ieUncompressData = ie_uncompress_data
 ieUnitScaleFactor = ie_unit_scale_factor
+Energy2Quanta = energy_to_quanta
+Quanta2Energy = quanta_to_energy
 unitFrequencyList = unit_frequency_list
 lorentzSum = lorentz_sum
 listStruct = list_struct

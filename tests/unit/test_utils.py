@@ -19,6 +19,8 @@ from pyisetcam import (
     compStruct,
     convolvecirc,
     dpi2mperdot,
+    Energy2Quanta,
+    Quanta2Energy,
     expRand,
     ffndgrid,
     gammaPDF,
@@ -98,6 +100,8 @@ from pyisetcam import (
     sceneCreate,
     sceneGet,
     space2sample,
+    energy_to_quanta as top_level_energy_to_quanta,
+    quanta_to_energy as top_level_quanta_to_energy,
     unitFrequencyList,
     unit_frequency_list as top_level_unit_frequency_list,
     qinterp2,
@@ -251,6 +255,17 @@ def test_energy_quanta_round_trip_supports_wave_first_matrices() -> None:
     quanta = energy_to_quanta(energy, wave)
     restored = quanta_to_energy(quanta, wave)
     assert np.allclose(restored, energy)
+
+
+def test_energy_quanta_helpers_are_exposed_through_package_root() -> None:
+    wave = np.array([400.0, 500.0, 600.0])
+    energy = np.array([0.2, 0.5, 0.8])
+    quanta = energy_to_quanta(energy, wave)
+
+    assert np.allclose(top_level_energy_to_quanta(energy, wave), quanta)
+    assert np.allclose(Energy2Quanta(energy, wave), quanta)
+    assert np.allclose(top_level_quanta_to_energy(quanta, wave), energy)
+    assert np.allclose(Quanta2Energy(quanta, wave), energy)
 
 
 def test_interp_spectra_supports_descending_source_waves() -> None:

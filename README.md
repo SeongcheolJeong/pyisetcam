@@ -2281,7 +2281,11 @@ truncated mean-to-Nyquist FFT support, centered sample geometry, and the
 obsolete zero-based inverse-spacing contract. That same utility-units lane
 now also exposes the direct package-root `unit_frequency_list(...)` helper
 plus the MATLAB-style alias `unitFrequencyList(...)` instead of leaving the
-helper only in `pyisetcam.utils`.
+helper only in `pyisetcam.utils`. The same broad utility-helper surface now
+also exposes `energy_to_quanta(...)`, `quanta_to_energy(...)`, and the
+MATLAB-style package-root aliases `Energy2Quanta(...)` /
+`Quanta2Energy(...)` instead of leaving those conversions only in
+`pyisetcam.utils`.
 That same broad `utility` family is smaller again: the adjacent
 `utility/numerical` helper slice now also covers
 `getMiddleMatrix(...)`, `ieClip(...)`, `ieHwhm2SD(...)`, `ieScale(...)`,
