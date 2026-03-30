@@ -2545,3 +2545,6 @@ upstream `white point` / `wp` / `image white point` aliases for the stored
 data white point, and `data or display white point` now falls back to the
 attached display white point when no data-specific white point has been
 set.
+That same IP getter cluster now also replays the upstream `scaled result`,
+`data ics illuminant corrected`, and `result primary` aliases on top of
+the existing headless render and corrected-ICS payloads.

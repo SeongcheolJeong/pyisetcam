@@ -824,6 +824,10 @@
   stored data white point, and `data or display white point` now falls
   back to the attached display white point when no data-specific white
   point has been set.
+- That same IP getter cluster now also replays the upstream
+  `scaled result`, `data ics illuminant corrected`, and `result primary`
+  aliases on top of the existing headless render and corrected-ICS
+  payloads.
 - Continue adding more scene patterns and `sceneFromFile`; the first slices now cover extra Macbeth variants, `moire orient`, `letter` / `font`, and the file-backed `rgb` / `multispectral` / `monochrome` scene shells.
 - Expand sensor presets to RGBW, RCCC, and selected vendor models actually used in scripts.
 - Port metrics and validation utilities.

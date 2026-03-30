@@ -2386,9 +2386,25 @@ def ip_get(ip: ImageProcessor, parameter: str, *args: Any) -> Any:
         return ip.fields.get("datamax")
     if key in {"datasrgb", "srgb"}:
         return ip.data.get("srgb")
+    if key in {"dataintensitiesscaled", "scaledresult", "resultscaledtomax", "resultscaled"}:
+        scaled_ip = ip_set(ip.clone(), "scale display output", True)
+        return image_show_image(scaled_ip)
+    if key in {"dataintensity", "resultprimary", "resultprimaryn"}:
+        if not args:
+            raise ValueError("Primary number required for ipGet(..., 'result primary').")
+        result = ip.data.get("result")
+        if result is None:
+            raise ValueError("IP has no result data for ipGet(..., 'result primary').")
+        primary_index = int(args[0]) - 1
+        result_array = np.asarray(result, dtype=float)
+        if result_array.ndim < 3 or primary_index < 0 or primary_index >= int(result_array.shape[2]):
+            raise ValueError("No such display primary.")
+        return result_array[:, :, primary_index]
     if key in {"dataxyz", "xyz"}:
         return ip.data.get("xyz")
     if key in {"dataics", "ics"}:
+        return ip.data.get("ics", ip.data.get("xyz"))
+    if key == "dataicsilluminantcorrected":
         return ip.data.get("ics", ip.data.get("xyz"))
     if key == "dataluminance":
         xyz = ip.data.get("xyz")

@@ -997,6 +997,36 @@ def test_ip_get_white_point_aliases_match_upstream_fallbacks() -> None:
         assert np.allclose(np.asarray(ip_get(ip, alias), dtype=float), data_white)
 
 
+def test_ip_get_scaled_result_and_primary_aliases_match_headless_helpers() -> None:
+    ip = ip_create()
+    linear = np.array(
+        [
+            [[0.2, 0.4, 0.6], [0.1, 0.3, 0.5]],
+            [[0.6, 0.3, 0.1], [0.8, 0.4, 0.2]],
+        ],
+        dtype=float,
+    )
+    corrected_ics = np.array(
+        [
+            [[0.1, 0.2, 0.3], [0.2, 0.3, 0.4]],
+            [[0.4, 0.3, 0.2], [0.3, 0.2, 0.1]],
+        ],
+        dtype=float,
+    )
+    ip = ip_set(ip, "result", linear)
+    ip = ip_set(ip, "scale display output", False)
+    ip.data["ics"] = corrected_ics
+
+    expected_scaled = imageShowImage(ip_set(ip.clone(), "scale display output", True), 1.0, False, 0)
+    assert np.allclose(np.asarray(ip_get(ip, "scaled result"), dtype=float), expected_scaled)
+    assert np.allclose(np.asarray(ip_get(ip, "result scaled to max"), dtype=float), expected_scaled)
+    assert np.allclose(np.asarray(ip_get(ip, "data intensities scaled"), dtype=float), expected_scaled)
+
+    assert np.allclose(np.asarray(ip_get(ip, "data ics illuminant corrected"), dtype=float), corrected_ics)
+    assert np.allclose(np.asarray(ip_get(ip, "result primary", 2), dtype=float), linear[:, :, 1])
+    assert np.allclose(np.asarray(ip_get(ip, "data intensity", 2), dtype=float), linear[:, :, 1])
+
+
 def test_vcimage_srgb_matches_manual_pipeline(asset_store) -> None:
     generated = vcimageSRGB(asset_store=asset_store)
 
