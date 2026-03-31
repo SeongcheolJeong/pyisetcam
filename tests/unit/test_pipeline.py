@@ -3523,6 +3523,17 @@ def test_oi_create_treats_empty_type_as_default_and_supports_uniform_ee_specify(
     assert oi_get(alias_oi, "compute method") == oi_get(reference_oi, "compute method")
 
 
+def test_oi_create_treats_empty_optional_wave_as_omitted_for_default_and_pinhole(asset_store) -> None:
+    default_oi = oi_create("default", [], asset_store=asset_store)
+    default_reference = oi_create("default", asset_store=asset_store)
+    pinhole_oi = oi_create("pinhole", [], asset_store=asset_store)
+    pinhole_reference = oi_create("pinhole", asset_store=asset_store)
+
+    assert np.array_equal(np.asarray(oi_get(default_oi, "wave"), dtype=float), np.asarray(oi_get(default_reference, "wave"), dtype=float))
+    assert np.array_equal(np.asarray(oi_get(pinhole_oi, "wave"), dtype=float), np.asarray(oi_get(pinhole_reference, "wave"), dtype=float))
+    assert np.isclose(float(oi_get(pinhole_oi, "fnumber")), float(oi_get(pinhole_reference, "fnumber")))
+
+
 def test_oi_photon_noise_matches_seeded_legacy_contract() -> None:
     photons = np.array(
         [

@@ -5234,6 +5234,12 @@ def oi_create(
     wave_index = 1 if normalized in {"wvf", "shiftinvariant", "raytrace"} else 0
     if normalized == "psf":
         wave = np.asarray(psf_data["wave"], dtype=float).copy() if psf_data is not None else DEFAULT_WAVE.copy()
+    elif normalized in {"default", "diffractionlimited", "diffraction", "pinhole"}:
+        wave = (
+            DEFAULT_WAVE.copy()
+            if len(args) <= wave_index or _is_empty_dispatch_placeholder(args[wave_index])
+            else np.asarray(args[wave_index], dtype=float)
+        )
     elif normalized in {"wvf", "shiftinvariant"} and args and isinstance(args[0], dict) and len(args) <= wave_index:
         wave = np.asarray(optics.get("wavefront", {}).get("wave", DEFAULT_WAVE.copy()), dtype=float)
     else:
