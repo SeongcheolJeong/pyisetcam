@@ -78,6 +78,14 @@ def _store(asset_store: AssetStore | None) -> AssetStore:
     return asset_store or AssetStore.default()
 
 
+def _is_empty_dispatch_placeholder(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, (list, tuple, np.ndarray)):
+        return np.asarray(value).size == 0
+    return False
+
+
 def _mat_to_native(value: Any) -> Any:
     if isinstance(value, bytes):
         return value.decode("utf-8")
@@ -5045,6 +5053,7 @@ def oi_create(
     """Create a supported optical image object."""
 
     normalized = param_format(oi_type)
+    store = _store(asset_store)
     valid_types = [
         "default",
         "pinhole",
@@ -5136,6 +5145,27 @@ def oi_create(
             "aberration_scale": 0.0,
             "offaxis_method": "cos4th",
         }
+    elif normalized in {"uniformd65", "uniformee"}:
+        from .scene import scene_create, scene_set
+
+        size = 32 if len(args) == 0 or _is_empty_dispatch_placeholder(args[0]) else args[0]
+        wave = DEFAULT_WAVE.copy() if len(args) < 2 or _is_empty_dispatch_placeholder(args[1]) else np.asarray(args[1], dtype=float)
+        scene_name = "uniform d65" if normalized == "uniformd65" else "uniform ee"
+        source_scene = scene_create(scene_name, size, wave, asset_store=store)
+        source_scene = scene_set(source_scene, "hfov", 120.0)
+
+        base = oi_create("default", asset_store=store, session=session)
+        base = oi_set(base, "optics fnumber", 1e-3)
+        base = oi_set(base, "optics offaxis method", "skip")
+        computed = oi_compute(base, source_scene, session=session)
+        return oi_set(computed, "compute method", "")
+    elif normalized == "black":
+        size_value = 32 if len(args) == 0 or _is_empty_dispatch_placeholder(args[0]) else int(np.asarray(args[0], dtype=int).reshape(-1)[0])
+        wave = DEFAULT_WAVE.copy() if len(args) < 2 or _is_empty_dispatch_placeholder(args[1]) else np.asarray(args[1], dtype=float)
+        black_oi = oi_create("shift invariant", asset_store=store, session=session)
+        black_oi = oi_set(black_oi, "wave", wave)
+        black_oi = oi_set(black_oi, "photons", np.zeros((size_value, size_value, int(np.asarray(wave, dtype=float).size)), dtype=float))
+        return oi_set(black_oi, "fov", 100.0)
     else:
         raise UnsupportedOptionError("oiCreate", oi_type)
 

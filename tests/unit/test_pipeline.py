@@ -3414,6 +3414,53 @@ def test_oi_create_valid_returns_upstream_constructor_list() -> None:
     ]
 
 
+def test_oi_create_supports_uniform_and_black_constructor_wrappers(asset_store) -> None:
+    wave = np.arange(500.0, 601.0, 50.0, dtype=float)
+
+    uniform_d65 = oi_create("uniform d65", 16, wave, asset_store=asset_store)
+    expected_uniform_d65_scene = scene_set(scene_create("uniform d65", 16, wave, asset_store=asset_store), "hfov", 120.0)
+    expected_uniform_d65 = oi_create("default", asset_store=asset_store)
+    expected_uniform_d65 = oi_set(expected_uniform_d65, "optics fnumber", 1e-3)
+    expected_uniform_d65 = oi_set(expected_uniform_d65, "optics offaxis method", "skip")
+    expected_uniform_d65 = oi_set(oi_compute(expected_uniform_d65, expected_uniform_d65_scene), "compute method", "")
+
+    np.testing.assert_allclose(
+        np.asarray(oi_get(uniform_d65, "photons"), dtype=float),
+        np.asarray(oi_get(expected_uniform_d65, "photons"), dtype=float),
+    )
+    assert oi_get(uniform_d65, "compute method") == ""
+    assert np.isclose(float(oi_get(uniform_d65, "fnumber")), 1e-3)
+    assert oi_get(uniform_d65, "optics off axis method") == "skip"
+    assert np.isclose(float(oi_get(uniform_d65, "fov")), float(oi_get(expected_uniform_d65, "fov")))
+
+    uniform_ee = oi_create("uniform ee", [], wave, asset_store=asset_store)
+    expected_uniform_ee_scene = scene_set(scene_create("uniform ee", 32, wave, asset_store=asset_store), "hfov", 120.0)
+    expected_uniform_ee = oi_create("default", asset_store=asset_store)
+    expected_uniform_ee = oi_set(expected_uniform_ee, "optics fnumber", 1e-3)
+    expected_uniform_ee = oi_set(expected_uniform_ee, "optics offaxis method", "skip")
+    expected_uniform_ee = oi_set(oi_compute(expected_uniform_ee, expected_uniform_ee_scene), "compute method", "")
+
+    np.testing.assert_allclose(
+        np.asarray(oi_get(uniform_ee, "photons"), dtype=float),
+        np.asarray(oi_get(expected_uniform_ee, "photons"), dtype=float),
+    )
+    assert tuple(np.asarray(oi_get(uniform_ee, "size"), dtype=int)) == tuple(np.asarray(oi_get(expected_uniform_ee, "size"), dtype=int))
+    assert oi_get(uniform_ee, "compute method") == ""
+
+    black = oi_create("black", [], wave, asset_store=asset_store)
+    expected_black = oi_create("shift invariant", asset_store=asset_store)
+    expected_black = oi_set(expected_black, "wave", wave)
+    expected_black = oi_set(expected_black, "photons", np.zeros((32, 32, wave.size), dtype=float))
+    expected_black = oi_set(expected_black, "fov", 100.0)
+
+    np.testing.assert_allclose(
+        np.asarray(oi_get(black, "photons"), dtype=float),
+        np.asarray(oi_get(expected_black, "photons"), dtype=float),
+    )
+    assert np.array_equal(np.asarray(oi_get(black, "wave"), dtype=float).reshape(-1), wave)
+    assert np.isclose(float(oi_get(black, "fov")), 100.0)
+
+
 def test_oi_photon_noise_matches_seeded_legacy_contract() -> None:
     photons = np.array(
         [
