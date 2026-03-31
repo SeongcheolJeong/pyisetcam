@@ -3134,6 +3134,14 @@ def test_optics_create_human_alias_matches_marimont_wandell(asset_store) -> None
     assert human_alias["lens"]["type"] == "lens"
     assert human_mw["lens"]["type"] == "lens"
     assert human_wvf["lens"]["type"] == "lens"
+    assert np.allclose(
+        np.asarray(opticsGet(human_mw, "transmittance"), dtype=float),
+        np.asarray(human_mw["lens"]["transmittance"], dtype=float),
+    )
+    assert np.array_equal(
+        np.asarray(opticsGet(human_wvf, "transmittance wave"), dtype=float),
+        np.asarray(human_wvf["lens"]["wave"], dtype=float),
+    )
     assert "wavefront" not in human_alias
     assert "wavefront" not in human_mw
     assert "wvf" not in human_alias
@@ -3560,6 +3568,11 @@ def test_oi_create_supports_human_constructor_wrappers(asset_store) -> None:
         np.asarray(human_mw.fields["optics"]["lens"]["wave"], dtype=float),
         np.asarray(oi_get(human_mw, "wave"), dtype=float),
     )
+    assert np.allclose(
+        np.asarray(oi_get(human_mw, "transmittance"), dtype=float),
+        np.asarray(human_mw.fields["optics"]["lens"]["transmittance"], dtype=float),
+    )
+    assert oi_get(human_mw, "lens")["type"] == "lens"
     assert "transmittance" not in human_mw.fields["optics"]
 
     computed_human_mw = oi_compute(human_mw, scene, crop=True)
@@ -3581,6 +3594,15 @@ def test_oi_create_supports_human_constructor_wrappers(asset_store) -> None:
         np.asarray(human_wvf.fields["optics"]["lens"]["wave"], dtype=float),
         np.asarray(oi_get(human_wvf, "wave"), dtype=float),
     )
+    assert np.allclose(
+        np.asarray(oi_get(human_wvf, "transmittance"), dtype=float),
+        np.asarray(human_wvf.fields["optics"]["lens"]["transmittance"], dtype=float),
+    )
+    assert np.array_equal(
+        np.asarray(oi_get(human_wvf, "transmittance wave"), dtype=float),
+        np.asarray(oi_get(human_wvf, "wave"), dtype=float),
+    )
+    assert oi_get(human_wvf, "lens")["type"] == "lens"
     assert "transmittance" not in human_wvf.fields["optics"]
     assert "transmittance" not in human_alias.fields["optics"]
     assert np.array_equal(

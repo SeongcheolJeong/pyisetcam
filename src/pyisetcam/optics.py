@@ -5201,7 +5201,10 @@ def oi_create(
         human_mw.fields["optics"]["focal_length_m"] = float(focal_length_m)
         human_mw.fields["optics"]["f_number"] = float(focal_length_m / max(2.0 * pupil_radius_m, 1.0e-12))
         human_mw.fields["optics"]["otf_method"] = "human"
-        human_mw.fields["optics"]["lens"] = _human_lens_payload(np.asarray(human_mw.fields.get("wave", wave), dtype=float))
+        human_mw.fields["optics"]["lens"] = _human_lens_payload(
+            np.asarray(human_mw.fields.get("wave", wave), dtype=float),
+            asset_store=store,
+        )
         human_mw.fields["optics"].pop("transmittance", None)
         _sync_oi_identity_fields(human_mw)
         return track_session_object(session, human_mw)
@@ -5234,7 +5237,10 @@ def oi_create(
         human_wvf.name = "human-WVF"
         human_wvf.fields["optics"]["name"] = "humanwvf"
         human_wvf.fields["optics"]["otf_method"] = "human"
-        human_wvf.fields["optics"]["lens"] = _human_lens_payload(np.asarray(human_wvf.fields.get("wave", wave), dtype=float))
+        human_wvf.fields["optics"]["lens"] = _human_lens_payload(
+            np.asarray(human_wvf.fields.get("wave", wave), dtype=float),
+            asset_store=store,
+        )
         human_wvf.fields["optics"].pop("transmittance", None)
         _sync_oi_identity_fields(human_wvf)
         return track_session_object(session, human_wvf)
@@ -5627,15 +5633,16 @@ def _ensure_optics_transmittance(optics: dict[str, Any], wave: np.ndarray | None
 
 
 def _optics_transmittance_scale(optics: dict[str, Any], wave: np.ndarray) -> np.ndarray:
-    transmittance = _ensure_optics_transmittance(optics, wave=np.asarray(wave, dtype=float).reshape(-1))
+    target_wave = np.asarray(wave, dtype=float).reshape(-1)
+    transmittance = _optics_transmittance_payload(optics, target_wave)
     source_wave = np.asarray(transmittance["wave"], dtype=float).reshape(-1)
     source_scale = np.asarray(transmittance["scale"], dtype=float).reshape(-1)
-    target_wave = np.asarray(wave, dtype=float).reshape(-1)
     if source_wave.size == 0 or source_scale.size == 0:
         return np.ones(target_wave.size, dtype=float)
     if source_wave.size == target_wave.size and np.array_equal(source_wave, target_wave):
         return source_scale.copy()
-    return np.interp(target_wave, source_wave, source_scale, left=1.0, right=1.0)
+    fill_value = 1.0 if "transmittance" in optics else float(source_scale[-1])
+    return np.interp(target_wave, source_wave, source_scale, left=fill_value, right=fill_value)
 
 
 def _normalize_sce_params(wave: np.ndarray, sce_params: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -9603,11 +9610,51 @@ def _sync_oi_identity_fields(oi: OpticalImage) -> None:
     oi.fields["type"] = str(oi.type)
 
 
-def _human_lens_payload(wave: np.ndarray) -> dict[str, Any]:
+def _human_lens_payload(wave: np.ndarray, *, asset_store: AssetStore | None = None) -> dict[str, Any]:
+    sampled_wave = np.asarray(wave, dtype=float).reshape(-1)
+    _, density = _store(asset_store).load_spectra("lensDensity.mat", wave_nm=sampled_wave)
+    density_profile = np.asarray(density, dtype=float).reshape(-1)
     return {
         "type": "lens",
         "name": "human lens",
-        "wave": np.asarray(wave, dtype=float).reshape(-1).copy(),
+        "wave": sampled_wave.copy(),
+        "density": density_profile.copy(),
+        "transmittance": np.power(10.0, -density_profile),
+    }
+
+
+def _optics_lens_payload(optics: dict[str, Any]) -> dict[str, Any] | None:
+    lens = optics.get("lens")
+    if not isinstance(lens, dict):
+        return None
+    if "wave" not in lens or "transmittance" not in lens:
+        return None
+    return {
+        "type": str(lens.get("type", "lens")),
+        "name": str(lens.get("name", "lens")),
+        "wave": np.asarray(lens.get("wave"), dtype=float).reshape(-1).copy(),
+        "transmittance": np.asarray(lens.get("transmittance"), dtype=float).reshape(-1).copy(),
+        **({"density": np.asarray(lens.get("density"), dtype=float).reshape(-1).copy()} if lens.get("density") is not None else {}),
+    }
+
+
+def _optics_transmittance_payload(optics: dict[str, Any], wave: np.ndarray) -> dict[str, np.ndarray]:
+    transmittance = optics.get("transmittance")
+    if isinstance(transmittance, dict) and transmittance.get("wave") is not None and transmittance.get("scale") is not None:
+        return {
+            "wave": np.asarray(transmittance.get("wave"), dtype=float).reshape(-1).copy(),
+            "scale": np.asarray(transmittance.get("scale"), dtype=float).reshape(-1).copy(),
+        }
+    lens = _optics_lens_payload(optics)
+    if lens is not None:
+        return {
+            "wave": np.asarray(lens["wave"], dtype=float).reshape(-1).copy(),
+            "scale": np.asarray(lens["transmittance"], dtype=float).reshape(-1).copy(),
+        }
+    sampled_wave = np.asarray(wave, dtype=float).reshape(-1)
+    return {
+        "wave": sampled_wave.copy(),
+        "scale": np.ones(sampled_wave.size, dtype=float),
     }
 
 
@@ -9629,6 +9676,9 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         return oi.metadata
     if key == "data":
         return oi.data
+    if key == "lens":
+        lens = _optics_lens_payload(oi.fields["optics"])
+        return None if lens is None else lens
     if key in {"wave", "wavelength"}:
         return np.asarray(oi.fields["wave"], dtype=float)
     if key == "illuminantformat":
@@ -10066,12 +10116,20 @@ def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
         return float(np.max(field_height)) * _spatial_unit_scale(args[0] if args else None)
     if key in {"transmittance", "transmittancescale", "lenstransmittance", "opticstransmittance", "opticstransmittancescale"}:
         target_wave = np.asarray(args[0], dtype=float).reshape(-1) if args else np.asarray(oi.fields["wave"], dtype=float)
-        return _optics_transmittance_scale(oi.fields["optics"], target_wave)
+        source = _optics_transmittance_payload(oi.fields["optics"], target_wave)
+        source_wave = np.asarray(source["wave"], dtype=float).reshape(-1)
+        source_scale = np.asarray(source["scale"], dtype=float).reshape(-1)
+        if source_scale.size == 1 and source_wave.size > 1:
+            source_scale = np.full(source_wave.size, float(source_scale[0]), dtype=float)
+        if source_wave.size == 0:
+            return np.empty(0, dtype=float)
+        fill_value = 1.0 if "transmittance" in oi.fields["optics"] else float(source_scale[-1])
+        return np.interp(target_wave, source_wave, source_scale, left=fill_value, right=fill_value)
     if key in {"transmittancewave", "opticstransmittancewave"}:
-        transmittance = _ensure_optics_transmittance(oi.fields["optics"], wave=np.asarray(oi.fields["wave"], dtype=float))
+        transmittance = _optics_transmittance_payload(oi.fields["optics"], np.asarray(oi.fields["wave"], dtype=float))
         return np.asarray(transmittance["wave"], dtype=float).copy()
     if key in {"transmittancenwave", "opticstransmittancenwave"}:
-        transmittance = _ensure_optics_transmittance(oi.fields["optics"], wave=np.asarray(oi.fields["wave"], dtype=float))
+        transmittance = _optics_transmittance_payload(oi.fields["optics"], np.asarray(oi.fields["wave"], dtype=float))
         return int(np.asarray(transmittance["wave"], dtype=float).size)
     if key in {"otf", "opticsotf", "otfstruct", "opticsotfstruct"}:
         otf_bundle = _synthesized_shift_invariant_otf_bundle(oi)
