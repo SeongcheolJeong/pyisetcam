@@ -8745,6 +8745,8 @@ def test_sensor_module_core_matlab_aliases() -> None:
     assert sensor_module.sensorCreateIdeal is sensor_module.sensor_create_ideal
     assert sensor_module.sensorCrop is sensor_module.sensor_crop
     assert sensor_module.sensorDeleteFilter is sensor_module.sensor_delete_filter
+    assert sensor_module.sensorDescription is sensor_module.sensor_description
+    assert sensor_module.sensorDNGRead is sensor_module.sensor_dng_read
     assert sensor_module.sensorFromFile is sensor_module.sensor_from_file
     assert sensor_module.sensorPixelCoord is sensor_module.sensor_pixel_coord
     assert sensor_module.sensorReadColorFilters is sensor_module.sensor_read_color_filters

@@ -7804,6 +7804,26 @@ def sensor_macbeth_daylight_estimate(
     )
 
 
+def sensor_description(sensor: Sensor, *args: Any, **kwargs: Any) -> Any:
+    """Lazy sensorDescription() wrapper to avoid import cycles at module load time."""
+
+    from .description import sensor_description as _sensor_description
+
+    return _sensor_description(sensor, *args, **kwargs)
+
+
+def sensor_dng_read(
+    fname: str | Path,
+    *args: Any,
+    asset_store: Any | None = None,
+) -> Any:
+    """Lazy sensorDNGRead() wrapper to avoid import cycles at module load time."""
+
+    from .fileio import sensor_dng_read as _sensor_dng_read
+
+    return _sensor_dng_read(fname, *args, asset_store=asset_store)
+
+
 sensorComputeSamples = sensor_compute_samples
 autoExposure = auto_exposure
 sensorComputeNoiseFree = sensor_compute_noise_free
@@ -7869,6 +7889,8 @@ sensorCompute = sensor_compute
 sensorGet = sensor_get
 sensorCrop = sensor_crop
 sensorDeleteFilter = sensor_delete_filter
+sensorDescription = sensor_description
+sensorDNGRead = sensor_dng_read
 sensorFromFile = sensor_from_file
 sensorPixelCoord = sensor_pixel_coord
 sensorReadColorFilters = sensor_read_color_filters
