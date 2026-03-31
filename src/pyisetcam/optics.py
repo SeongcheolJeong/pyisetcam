@@ -4639,8 +4639,6 @@ def optics_create(
         return {
             "type": "optics",
             "name": "empty",
-            "offaxis_method": "cos4th",
-            "vignetting": 0,
         }
     if normalized in {"human", "humanmw"}:
         oi = oi_create("human mw", *args, asset_store=asset_store)
