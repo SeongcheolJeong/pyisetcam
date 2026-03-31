@@ -959,6 +959,14 @@ def srgb_to_color_temp(
     )
 
 
+def chromaticity_xy(xyz: Any) -> NDArray[np.float64]:
+    """Lazy chromaticity() wrapper to avoid importing metrics at module load time."""
+
+    from .metrics import chromaticity_xy as _chromaticity_xy
+
+    return _chromaticity_xy(xyz)
+
+
 def color_transform_matrix(matrix_type: str, space_type: int = 10) -> NDArray[np.float64]:
     """Lazy colorTransformMatrix() wrapper to avoid importing scielab at module load time."""
 
@@ -999,6 +1007,8 @@ lrgb2srgb = lrgb_to_srgb
 mkInvGammaTable = mk_inv_gamma_table
 Quanta2Energy = quanta_to_energy
 RGB2XWFormat = rgb_to_xw_format
+chromaticity = chromaticity_xy
+chromaticityXY = chromaticity_xy
 colorBlockMatrix = color_block_matrix
 colorTransformMatrix = color_transform_matrix
 spd2cct = spd_to_cct

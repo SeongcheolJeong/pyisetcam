@@ -20,6 +20,9 @@ from pyisetcam import (
     biNormal,
     cellDelete,
     cellMerge,
+    chromaticity as top_level_chromaticity,
+    chromaticityXY as top_level_chromaticityXY,
+    chromaticity_xy as top_level_chromaticity_xy,
     compareFields,
     compStruct,
     convolvecirc,
@@ -306,6 +309,8 @@ def test_color_module_color_space_matlab_aliases() -> None:
 
 def test_color_module_cross_module_matlab_aliases() -> None:
     assert color_module.RGB2XWFormat is color_module.rgb_to_xw_format
+    assert color_module.chromaticity is color_module.chromaticity_xy
+    assert color_module.chromaticityXY is color_module.chromaticity_xy
     assert color_module.XW2RGBFormat is color_module.xw_to_rgb_format
     assert color_module.colorBlockMatrix is color_module.color_block_matrix
     assert color_module.srgb2xyz is color_module.srgb_to_xyz
@@ -330,6 +335,10 @@ def test_color_module_cross_module_matlab_aliases() -> None:
         color_module.colorTransformMatrix("xyz2opp"),
         scielab_module.color_transform_matrix("xyz2opp"),
     )
+    xyz_sample = np.array([20.0, 30.0, 15.0], dtype=float)
+    assert np.allclose(color_module.chromaticity(xyz_sample), metrics_module.chromaticity_xy(xyz_sample))
+    assert top_level_chromaticity is top_level_chromaticity_xy
+    assert top_level_chromaticityXY is top_level_chromaticity_xy
 
 
 def test_scielab_module_native_matlab_aliases() -> None:

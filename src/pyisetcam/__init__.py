@@ -2523,6 +2523,8 @@ __all__ = [
     "wvf_wave_to_idx",
     "wvf_plot",
     "wvf_zernike_nm_to_osa_index",
+    "chromaticity",
+    "chromaticityXY",
     "chromaticity_xy",
     "plotScene",
     "plotSensor",
@@ -3059,6 +3061,8 @@ separableFilters = separable_filters
 visualAngle = visual_angle
 colorTransformMatrix = color_transform_matrix
 scielabRGB = scielab_rgb
+chromaticity = chromaticity_xy
+chromaticityXY = chromaticity_xy
 xyz2luv = xyz_to_luv
 cct2sun = cct_to_sun
 cct = cct_from_uv
