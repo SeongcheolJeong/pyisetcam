@@ -37,7 +37,13 @@ def test_metrics_module_adjacent_matlab_aliases() -> None:
     assert metrics_module.cctFromUV is metrics_module.cct_from_uv
     assert metrics_module.chromaticityXY is metrics_module.chromaticity_xy
     assert metrics_module.comparisonMetrics is metrics_module.comparison_metrics
+    assert metrics_module.correlatedColorTemperature is metrics_module.correlated_color_temperature
     assert metrics_module.exampleSPDPair is metrics_module.example_spd_pair
+    assert metrics_module.meanAbsoluteError is metrics_module.mean_absolute_error
+    assert metrics_module.meanRelativeError is metrics_module.mean_relative_error
+    assert metrics_module.miredDifference is metrics_module.mired_difference
+    assert metrics_module.peakSignalToNoiseRatio is metrics_module.peak_signal_to_noise_ratio
+    assert metrics_module.rootMeanSquaredError is metrics_module.root_mean_squared_error
     assert metrics_module.spectralAngle is metrics_module.spectral_angle
     assert metrics_module.xyz2uv is metrics_module.xyz_to_uv
 
