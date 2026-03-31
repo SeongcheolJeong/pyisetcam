@@ -4654,6 +4654,8 @@ def optics_create(
         optics = dict(oi.fields["optics"])
         optics.setdefault("type", "optics")
         optics["name"] = "humanwvf"
+        if isinstance(optics.get("wavefront"), dict):
+            optics.setdefault("wvf", dict(optics["wavefront"]))
         optics.pop("transmittance", None)
         optics.setdefault("vignetting", 0)
         return optics
@@ -4665,6 +4667,8 @@ def optics_create(
         optics.setdefault("name", "standard (1/4-inch)")
     elif normalized in {"wvf", "shiftinvariant"}:
         optics.setdefault("name", "wvf")
+        if isinstance(optics.get("wavefront"), dict):
+            optics.setdefault("wvf", dict(optics["wavefront"]))
     optics.setdefault("vignetting", 0)
     return optics
 

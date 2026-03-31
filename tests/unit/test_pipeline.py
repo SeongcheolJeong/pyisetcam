@@ -3131,6 +3131,10 @@ def test_optics_create_human_alias_matches_marimont_wandell(asset_store) -> None
     assert "transmittance" not in human_alias
     assert "transmittance" not in human_mw
     assert "transmittance" not in human_wvf
+    assert np.array_equal(
+        np.asarray(human_wvf["wvf"]["zcoeffs"], dtype=float),
+        np.asarray(human_wvf["wavefront"]["zcoeffs"], dtype=float),
+    )
     assert not np.allclose(
         np.asarray(human_alias["wavefront"]["zcoeffs"], dtype=float),
         np.asarray(human_wvf["wavefront"]["zcoeffs"], dtype=float),
@@ -3147,6 +3151,14 @@ def test_optics_create_shift_invariant_wrappers_restore_wvf_name(asset_store) ->
     assert wavefront["name"] == "wvf"
     assert shift_invariant["compute_method"] == "opticspsf"
     assert wavefront["compute_method"] == "opticspsf"
+    assert np.array_equal(
+        np.asarray(shift_invariant["wvf"]["wave"], dtype=float),
+        np.asarray(shift_invariant["wavefront"]["wave"], dtype=float),
+    )
+    assert np.array_equal(
+        np.asarray(wavefront["wvf"]["wave"], dtype=float),
+        np.asarray(wavefront["wavefront"]["wave"], dtype=float),
+    )
 
 
 def test_lens_list_reads_pinned_upstream_lens_jsons(asset_store) -> None:
