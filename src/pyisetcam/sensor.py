@@ -227,6 +227,8 @@ def _default_pixel(pixel: dict[str, Any] | None) -> dict[str, Any]:
 def _is_empty_dispatch_placeholder(value: Any) -> bool:
     if value is None:
         return True
+    if isinstance(value, str):
+        return value.strip() == ""
     if isinstance(value, (list, tuple, np.ndarray)):
         return np.asarray(value).size == 0
     return False

@@ -129,14 +129,24 @@ def test_human_cone_mosaic_replays_defaults_and_lms_density_patchup() -> None:
         [],
         [],
     )
+    blank_xy, blank_cone_type, blank_densities, blank_seed = humanConeMosaic(
+        [6, 8],
+        "",
+        "",
+        "",
+    )
 
     assert default_xy.shape == (48, 2)
     assert default_cone_type.shape == (6, 8)
     np.testing.assert_allclose(placeholder_xy, default_xy)
     np.testing.assert_array_equal(placeholder_cone_type, default_cone_type)
     np.testing.assert_allclose(placeholder_densities, default_densities)
+    np.testing.assert_allclose(blank_xy, default_xy)
+    np.testing.assert_array_equal(blank_cone_type, default_cone_type)
+    np.testing.assert_allclose(blank_densities, default_densities)
     assert np.isclose(np.sum(default_densities), 1.0)
     assert placeholder_seed == default_seed == 0
+    assert blank_seed == default_seed == 0
 
     _, _, corrected_densities, corrected_seed = humanConeMosaic([4, 5], [1.0, 1.0, 1.0], [], 7)
 
