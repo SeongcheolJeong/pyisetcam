@@ -3114,9 +3114,13 @@ def test_optics_create_human_alias_matches_marimont_wandell(asset_store) -> None
 
     assert human_alias["name"] == "human-MW"
     assert human_alias["name"] == human_mw["name"]
+    assert human_wvf["name"] == "humanwvf"
     assert human_wvf["name"] != human_alias["name"]
     assert np.isclose(float(human_alias["f_number"]), float(human_mw["f_number"]))
     assert np.isclose(float(human_alias["focal_length_m"]), float(human_mw["focal_length_m"]))
+    assert "transmittance" not in human_alias
+    assert "transmittance" not in human_mw
+    assert "transmittance" not in human_wvf
     assert not np.allclose(
         np.asarray(human_alias["wavefront"]["zcoeffs"], dtype=float),
         np.asarray(human_wvf["wavefront"]["zcoeffs"], dtype=float),

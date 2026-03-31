@@ -4644,8 +4644,15 @@ def optics_create(
         }
     if normalized in {"human", "humanmw"}:
         oi = oi_create("human mw", *args, asset_store=asset_store)
+        optics = dict(oi.fields["optics"])
+        optics.pop("transmittance", None)
+        return optics
     elif normalized in {"wvfhuman", "humanwvf"}:
         oi = oi_create("human", *args, asset_store=asset_store)
+        optics = dict(oi.fields["optics"])
+        optics["name"] = "humanwvf"
+        optics.pop("transmittance", None)
+        return optics
     else:
         oi = oi_create(optics_type, *args, asset_store=asset_store)
     return dict(oi.fields["optics"])
