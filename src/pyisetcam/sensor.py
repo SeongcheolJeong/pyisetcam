@@ -2118,7 +2118,12 @@ def sensor_create(
     """Create a supported sensor."""
 
     store = _store(asset_store)
-    resolved_type = "default" if _is_empty_dispatch_placeholder(sensor_type) else sensor_type
+    resolved_type = (
+        "default"
+        if _is_empty_dispatch_placeholder(sensor_type)
+        or (isinstance(sensor_type, str) and sensor_type.strip() == "")
+        else sensor_type
+    )
     normalized = param_format(resolved_type)
     if normalized == "lightfield" and isinstance(pixel, OpticalImage):
         args = (pixel, *args)

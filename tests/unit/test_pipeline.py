@@ -8701,6 +8701,16 @@ def test_sensor_create_empty_type_placeholder_uses_default_constructor(asset_sto
     assert sensor_get(placeholder_sensor, "filter names") == sensor_get(default_sensor, "filter names")
 
 
+def test_sensor_create_blank_type_placeholder_uses_default_constructor(asset_store) -> None:
+    default_sensor = sensor_create(asset_store=asset_store)
+    blank_sensor = sensor_create("", asset_store=asset_store)
+
+    assert sensor_get(blank_sensor, "name") == sensor_get(default_sensor, "name")
+    np.testing.assert_allclose(sensor_get(blank_sensor, "wave"), sensor_get(default_sensor, "wave"))
+    np.testing.assert_array_equal(sensor_get(blank_sensor, "pattern"), sensor_get(default_sensor, "pattern"))
+    assert sensor_get(blank_sensor, "filter names") == sensor_get(default_sensor, "filter names")
+
+
 def test_sensor_module_core_matlab_aliases() -> None:
     assert sensor_module.sensorAddFilter is sensor_module.sensor_add_filter
     assert sensor_module.sensorCfaSave is sensor_module.sensor_cfa_save
