@@ -107,11 +107,26 @@ def illuminant_create(
         center = 550.0
         sd = 20.0
         peak_energy = 25.0
-        if len(args) > 0 and isinstance(args[0], dict):
-            params = args[0]
-            center = float(params.get("center", center))
-            sd = float(params.get("sd", sd))
-            peak_energy = float(params.get("peakEnergy", peak_energy))
+        if args:
+            if len(args) == 1 and isinstance(args[0], dict):
+                params = args[0]
+                center = float(params.get("center", center))
+                sd = float(params.get("sd", sd))
+                peak_energy = float(params.get("peakEnergy", peak_energy))
+            else:
+                if len(args) % 2 != 0:
+                    raise ValueError("illuminantCreate('gaussian', ...) optional arguments must be a params dict or key/value pairs.")
+                for index in range(0, len(args), 2):
+                    key = param_format(str(args[index]))
+                    raw_value = args[index + 1]
+                    if key == "center":
+                        center = float(raw_value)
+                    elif key == "sd":
+                        sd = float(raw_value)
+                    elif key == "peakenergy":
+                        peak_energy = float(raw_value)
+                    else:
+                        raise KeyError(f"Unknown gaussian illuminant parameter: {args[index]}")
         energy = peak_energy * np.exp(-0.5 * np.square((wave_nm - center) / sd))
         illuminant.name = f"Gaussian {center:.0f}"
     elif name_key in {"daylight"}:

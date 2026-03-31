@@ -13898,6 +13898,32 @@ def test_scene_illuminant_script_workflow(asset_store) -> None:
     assert np.asarray(illuminant_get(tungsten, "photons"), dtype=float).shape == (31,)
 
 
+def test_illuminant_create_gaussian_accepts_key_value_params(asset_store) -> None:
+    wave = np.arange(400.0, 701.0, 5.0, dtype=float)
+    params = {"center": 510.0, "sd": 5.0, "peakEnergy": 10.0}
+
+    from_struct = illuminant_create("gaussian", wave, params, asset_store=asset_store)
+    from_pairs = illuminant_create(
+        "gaussian",
+        wave,
+        "center",
+        510.0,
+        "sd",
+        5.0,
+        "peak energy",
+        10.0,
+        asset_store=asset_store,
+    )
+
+    assert illuminant_get(from_pairs, "name") == "Gaussian 510"
+    np.testing.assert_allclose(
+        np.asarray(illuminant_get(from_pairs, "energy"), dtype=float).reshape(-1),
+        np.asarray(illuminant_get(from_struct, "energy"), dtype=float).reshape(-1),
+        rtol=1e-12,
+        atol=1e-12,
+    )
+
+
 def test_illuminant_legacy_wrappers_match_current_creation_paths(asset_store) -> None:
     wave = np.arange(400.0, 701.0, 10.0, dtype=float)
     energy = np.linspace(0.25, 1.25, wave.size, dtype=float)
