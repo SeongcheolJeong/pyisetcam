@@ -81,6 +81,8 @@ def _store(asset_store: AssetStore | None) -> AssetStore:
 def _is_empty_dispatch_placeholder(value: Any) -> bool:
     if value is None:
         return True
+    if isinstance(value, str):
+        return str(value).strip() == ""
     if isinstance(value, (list, tuple, np.ndarray)):
         return np.asarray(value).size == 0
     return False

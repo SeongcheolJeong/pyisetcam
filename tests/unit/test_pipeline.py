@@ -3085,6 +3085,16 @@ def test_optics_object_wrappers_round_trip_supported_fields(asset_store) -> None
     assert np.isclose(float(opticsGet(optics, "aperture diameter")), 0.01 / 2.8)
 
 
+def test_optics_create_blank_type_placeholder_uses_default_constructor(asset_store) -> None:
+    default_optics = opticsCreate(asset_store=asset_store)
+    blank_optics = opticsCreate("", asset_store=asset_store)
+
+    assert blank_optics["name"] == default_optics["name"]
+    assert blank_optics["type"] == default_optics["type"]
+    assert np.isclose(float(blank_optics["f_number"]), float(default_optics["f_number"]))
+    assert np.isclose(float(blank_optics["focal_length_m"]), float(default_optics["focal_length_m"]))
+
+
 def test_optics_create_valid_returns_supported_wrapper_list() -> None:
     assert opticsCreate("valid") == [
         "default",
@@ -3715,6 +3725,15 @@ def test_oi_create_treats_empty_type_as_default_and_supports_uniform_ee_specify(
         np.asarray(oi_get(reference_oi, "photons"), dtype=float),
     )
     assert oi_get(alias_oi, "compute method") == oi_get(reference_oi, "compute method")
+
+
+def test_oi_create_treats_blank_type_as_default(asset_store) -> None:
+    default_oi = oi_create(asset_store=asset_store)
+    blank_oi = oi_create("", asset_store=asset_store)
+
+    assert oi_get(blank_oi, "compute method") == oi_get(default_oi, "compute method")
+    assert oi_get(blank_oi, "optics model") == oi_get(default_oi, "optics model")
+    assert np.isclose(float(oi_get(blank_oi, "fnumber")), float(oi_get(default_oi, "fnumber")))
 
 
 def test_oi_create_treats_empty_optional_wave_as_omitted_for_default_and_pinhole(asset_store) -> None:
