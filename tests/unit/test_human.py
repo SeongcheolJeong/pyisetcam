@@ -219,6 +219,31 @@ def test_optics_module_wvf_matlab_aliases() -> None:
     assert optics_module.wvfSet is optics_module.wvf_set
 
 
+def test_optics_module_raytrace_matlab_aliases() -> None:
+    assert optics_module.rtAngleLUT is optics_module.rt_angle_lut
+    assert optics_module.rtBlockCenter is optics_module.rt_block_center
+    assert optics_module.rtChooseBlockSize is optics_module.rt_choose_block_size
+    assert optics_module.rtDIInterp is optics_module.rt_di_interp
+    assert optics_module.rtExtractBlock is optics_module.rt_extract_block
+    assert optics_module.rtFileNames is optics_module.rt_file_names
+    assert optics_module.rtFilteredBlockSupport is optics_module.rt_filtered_block_support
+    assert optics_module.rtGeometry is optics_module.rt_geometry
+    assert optics_module.rtImageRotate is optics_module.rt_image_rotate
+    assert optics_module.rtImportData is optics_module.rt_import_data
+    assert optics_module.rtInsertBlock is optics_module.rt_insert_block
+    assert optics_module.rtOTF is optics_module.rt_otf
+    assert optics_module.rtPSFApply is optics_module.rt_psf_apply
+    assert optics_module.rtPSFEdit is optics_module.rt_psf_edit
+    assert optics_module.rtPSFGrid is optics_module.rt_psf_grid
+    assert optics_module.rtPSFInterp is optics_module.rt_psf_interp
+    assert optics_module.rtPrecomputePSF is optics_module.rt_precompute_psf
+    assert optics_module.rtPrecomputePSFApply is optics_module.rt_precompute_psf_apply
+    assert optics_module.rtRIInterp is optics_module.rt_ri_interp
+    assert optics_module.rtRootPath is optics_module.rt_root_path
+    assert optics_module.rtSampleHeights is optics_module.rt_sample_heights
+    assert optics_module.rtSynthetic is optics_module.rt_synthetic
+
+
 def test_human_cones_replays_defaults_and_macular_density_adjustment() -> None:
     cones_default, correction_default, wave_default = humanCones()
     cones_placeholder, correction_placeholder, wave_placeholder = humanCones([], [], [], [])
