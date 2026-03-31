@@ -3095,6 +3095,22 @@ def test_optics_clear_data_description_and_wvf_bridge(asset_store) -> None:
     assert np.isclose(float(wvf_get(bridged_wvf, "focal length")), float(cleared["focal_length_m"]))
 
 
+def test_optics_create_human_alias_matches_marimont_wandell(asset_store) -> None:
+    human_alias = opticsCreate("human", asset_store=asset_store)
+    human_mw = opticsCreate("human mw", asset_store=asset_store)
+    human_wvf = opticsCreate("wvf human", asset_store=asset_store)
+
+    assert human_alias["name"] == "human-MW"
+    assert human_alias["name"] == human_mw["name"]
+    assert human_wvf["name"] != human_alias["name"]
+    assert np.isclose(float(human_alias["f_number"]), float(human_mw["f_number"]))
+    assert np.isclose(float(human_alias["focal_length_m"]), float(human_mw["focal_length_m"]))
+    assert not np.allclose(
+        np.asarray(human_alias["wavefront"]["zcoeffs"], dtype=float),
+        np.asarray(human_wvf["wavefront"]["zcoeffs"], dtype=float),
+    )
+
+
 def test_lens_list_reads_pinned_upstream_lens_jsons(asset_store) -> None:
     files = lensList("dgauss*.json", quiet=True, asset_store=asset_store)
 

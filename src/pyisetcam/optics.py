@@ -4634,7 +4634,13 @@ def optics_create(
 ) -> dict[str, Any]:
     """Create a headless optics struct using the currently supported OI models."""
 
-    oi = oi_create(optics_type, *args, asset_store=asset_store)
+    normalized = param_format("default" if _is_empty_dispatch_placeholder(optics_type) else optics_type)
+    if normalized in {"human", "humanmw"}:
+        oi = oi_create("human mw", *args, asset_store=asset_store)
+    elif normalized in {"wvfhuman", "humanwvf"}:
+        oi = oi_create("human", *args, asset_store=asset_store)
+    else:
+        oi = oi_create(optics_type, *args, asset_store=asset_store)
     return dict(oi.fields["optics"])
 
 
