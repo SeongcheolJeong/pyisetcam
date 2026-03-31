@@ -537,12 +537,16 @@ def scene_from_font(
 
 AddTextToImage = add_text_to_image
 AddTextToImageWithBorder = add_text_to_image_with_border
+addTextToImage = add_text_to_image
+addTextToImageWithBorder = add_text_to_image_with_border
 BitmapFont = bitmap_font
+bitmapFont = bitmap_font
 displayCreate = display_create
 displayGet = display_get
 displaySet = display_set
 Energy2Quanta = energy_to_quanta
 RasterizeText = rasterize_text
+rasterizeText = rasterize_text
 fontBitmapGet = font_bitmap_get
 fontCreate = font_create
 fontGet = font_get
