@@ -5145,6 +5145,60 @@ def oi_create(
             "aberration_scale": 0.0,
             "offaxis_method": "cos4th",
         }
+    elif normalized == "humanmw":
+        pupil_radius_m = 0.0015 if len(args) == 0 or _is_empty_dispatch_placeholder(args[0]) else float(np.asarray(args[0], dtype=float).reshape(-1)[0])
+        focal_length_m = DEFAULT_WVF_FOCAL_LENGTH_M if len(args) < 2 or _is_empty_dispatch_placeholder(args[1]) else float(np.asarray(args[1], dtype=float).reshape(-1)[0])
+        wave = DEFAULT_WAVE.copy()
+        otf, support, otf_wave = human_otf(pupil_radius_m, 1.0 / max(focal_length_m, 1.0e-12), None, wave)
+        human_mw = oi_create("shift invariant", asset_store=store)
+        human_mw = oi_set(
+            human_mw,
+            "otfstruct",
+            {
+                "OTF": np.asarray(otf, dtype=complex),
+                "fx": np.asarray(support[0, :, 0], dtype=float).reshape(-1),
+                "fy": np.asarray(support[:, 0, 1], dtype=float).reshape(-1),
+                "wave": np.asarray(otf_wave, dtype=float).reshape(-1),
+                "function": "humanOTF",
+            },
+        )
+        human_mw = oi_set(human_mw, "compute method", "humanmw")
+        human_mw.name = "human-MW"
+        human_mw.fields["optics"]["name"] = "human-MW"
+        human_mw.fields["optics"]["focal_length_m"] = float(focal_length_m)
+        human_mw.fields["optics"]["f_number"] = float(focal_length_m / max(2.0 * pupil_radius_m, 1.0e-12))
+        human_mw.fields["optics"]["otf_method"] = "human"
+        return track_session_object(session, human_mw)
+    elif normalized in {"human", "wvfhuman", "humanwvf"}:
+        pupil_diameter_mm = 3.0 if len(args) == 0 or _is_empty_dispatch_placeholder(args[0]) else float(np.asarray(args[0], dtype=float).reshape(-1)[0])
+        if len(args) > 1 and not _is_empty_dispatch_placeholder(args[1]):
+            zcoeffs = np.asarray(args[1], dtype=float).reshape(-1)
+            measured_pupil_mm = pupil_diameter_mm
+        else:
+            supported_pupils = np.array([3.0, 4.5, 6.0, 7.5], dtype=float)
+            larger_or_equal = supported_pupils[supported_pupils >= pupil_diameter_mm]
+            measured_pupil_mm = float(larger_or_equal[0] if larger_or_equal.size > 0 else supported_pupils[-1])
+            zcoeffs = np.asarray(wvf_load_thibos_virtual_eyes(measured_pupil_mm, asset_store=store), dtype=float).reshape(-1)
+        wave = DEFAULT_WAVE.copy() if len(args) < 3 or _is_empty_dispatch_placeholder(args[2]) else np.asarray(args[2], dtype=float).reshape(-1)
+        focal_length_m = DEFAULT_WVF_FOCAL_LENGTH_M
+        if len(args) > 3 and not _is_empty_dispatch_placeholder(args[3]):
+            um_per_degree = float(np.asarray(args[3], dtype=float).reshape(-1)[0])
+            focal_length_m = um_per_degree * 1.0e-6 / (2.0 * np.tan(np.deg2rad(0.5)))
+        lca_method = "human" if len(args) < 5 or _is_empty_dispatch_placeholder(args[4]) else args[4]
+        wavefront = wvf_create(
+            wave=wave,
+            focal_length_m=focal_length_m,
+            calc_pupil_diameter_mm=pupil_diameter_mm,
+            measured_pupil=measured_pupil_mm,
+            zcoeffs=zcoeffs,
+            lcamethod=lca_method,
+        )
+        human_wvf = wvf_to_oi(wavefront)
+        human_wvf = oi_set(human_wvf, "compute method", "opticspsf")
+        human_wvf.name = "human-WVF"
+        human_wvf.fields["optics"]["name"] = "human"
+        human_wvf.fields["optics"]["otf_method"] = "human"
+        return track_session_object(session, human_wvf)
     elif normalized in {"uniformd65", "uniformee"}:
         from .scene import scene_create, scene_set
 
