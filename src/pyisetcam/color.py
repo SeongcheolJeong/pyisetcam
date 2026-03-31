@@ -18,7 +18,10 @@ from .utils import (
     interp_spectra,
     param_format,
     quanta_to_energy,
+    rgb_to_xw_format,
+    srgb_to_xyz,
     spectral_step,
+    xw_to_rgb_format,
     xyz_to_srgb,
 )
 
@@ -886,6 +889,84 @@ def internal_to_display_matrix(
     return np.linalg.inv(np.asarray(display_spd, dtype=float).T @ internal_cmf)
 
 
+def xyz_from_energy(
+    energy: Any,
+    wave_nm: Any,
+    *,
+    asset_store: AssetStore | None = None,
+) -> NDArray[np.float64]:
+    """Lazy xyz_from_energy() wrapper to avoid importing metrics at module load time."""
+
+    from .metrics import xyz_from_energy as _xyz_from_energy
+
+    return _xyz_from_energy(energy, wave_nm, asset_store=asset_store)
+
+
+def ie_xyz_to_lab(xyz: Any, white_point: Any) -> NDArray[np.float64]:
+    """Lazy ieXYZ2LAB() wrapper to avoid importing metrics at module load time."""
+
+    from .metrics import xyz_to_lab as _xyz_to_lab
+
+    return _xyz_to_lab(xyz, white_point)
+
+
+def xyz_to_luv(xyz: Any, white_point: Any) -> NDArray[np.float64]:
+    """Lazy xyz2luv() wrapper to avoid importing metrics at module load time."""
+
+    from .metrics import xyz_to_luv as _xyz_to_luv
+
+    return _xyz_to_luv(xyz, white_point)
+
+
+def xyz_to_uv(xyz: Any) -> NDArray[np.float64]:
+    """Lazy xyz2uv() wrapper to avoid importing metrics at module load time."""
+
+    from .metrics import xyz_to_uv as _xyz_to_uv
+
+    return _xyz_to_uv(xyz)
+
+
+def spd_to_cct(
+    wave_nm: Any,
+    spd: Any,
+    *,
+    asset_store: AssetStore | None = None,
+) -> float | NDArray[np.float64]:
+    """Lazy spd2cct() wrapper to avoid importing metrics at module load time."""
+
+    from .metrics import spd_to_cct as _spd_to_cct
+
+    return _spd_to_cct(wave_nm, spd, asset_store=asset_store)
+
+
+def srgb_to_color_temp(
+    rgb: Any,
+    method: str = "bright",
+    *args: Any,
+    return_table: bool = False,
+    asset_store: AssetStore | None = None,
+) -> float | tuple[float, NDArray[np.float64]]:
+    """Lazy srgb2colortemp() wrapper to avoid importing metrics at module load time."""
+
+    from .metrics import srgb_to_color_temp as _srgb_to_color_temp
+
+    return _srgb_to_color_temp(
+        rgb,
+        method,
+        *args,
+        return_table=return_table,
+        asset_store=asset_store,
+    )
+
+
+def color_transform_matrix(matrix_type: str, space_type: int = 10) -> NDArray[np.float64]:
+    """Lazy colorTransformMatrix() wrapper to avoid importing scielab at module load time."""
+
+    from .scielab import color_transform_matrix as _color_transform_matrix
+
+    return _color_transform_matrix(matrix_type, space_type)
+
+
 adobergbParameters = adobergb_parameters
 cct2sun = cct_to_sun
 Energy2Quanta = energy_to_quanta
@@ -900,6 +981,8 @@ ieResponsivityConvert = ie_responsivity_convert
 ieScotopicLuminanceFromEnergy = ie_scotopic_luminance_from_energy
 ieSpectraSphere = ie_spectra_sphere
 ieUnitScaleFactor = ie_unit_scale_factor
+ieXYZ2LAB = ie_xyz_to_lab
+ieXYZFromEnergy = xyz_from_energy
 ieXYZFromPhotons = ie_xyz_from_photons
 initDefaultSpectrum = init_default_spectrum
 lms2srgb = lms_to_srgb
@@ -907,11 +990,19 @@ lms2xyz = lms_to_xyz
 lrgb2srgb = lrgb_to_srgb
 mkInvGammaTable = mk_inv_gamma_table
 Quanta2Energy = quanta_to_energy
+RGB2XWFormat = rgb_to_xw_format
+colorTransformMatrix = color_transform_matrix
+spd2cct = spd_to_cct
+srgb2colortemp = srgb_to_color_temp
 srgb2lrgb = srgb_to_lrgb
+srgb2xyz = srgb_to_xyz
 srgbParameters = srgb_parameters
+XW2RGBFormat = xw_to_rgb_format
 Y2Lstar = y_to_lstar
 xyy2xyz = xyy_to_xyz
 xyz2lms = xyz_to_lms
+xyz2luv = xyz_to_luv
 xyz2srgb = xyz_to_srgb
+xyz2uv = xyz_to_uv
 xyz2vSNR = xyz_to_vsnr
 ieColorTransform = ie_color_transform

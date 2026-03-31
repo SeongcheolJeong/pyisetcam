@@ -271,6 +271,7 @@ from pyisetcam.metrics import example_spd_pair
 from pyisetcam.scielab import sc_compute_difference, sc_gaussian_parameters
 
 scielab_module = importlib.import_module("pyisetcam.scielab")
+metrics_module = importlib.import_module("pyisetcam.metrics")
 
 
 def test_color_module_energy_and_units_matlab_aliases() -> None:
@@ -300,6 +301,28 @@ def test_color_module_color_space_matlab_aliases() -> None:
     assert color_module.lms2srgb is color_module.lms_to_srgb
     assert color_module.lms2xyz is color_module.lms_to_xyz
     assert color_module.xyz2lms is color_module.xyz_to_lms
+
+
+def test_color_module_cross_module_matlab_aliases() -> None:
+    assert color_module.RGB2XWFormat is color_module.rgb_to_xw_format
+    assert color_module.XW2RGBFormat is color_module.xw_to_rgb_format
+    assert color_module.srgb2xyz is color_module.srgb_to_xyz
+    assert color_module.ieXYZFromEnergy is color_module.xyz_from_energy
+    assert color_module.ieXYZ2LAB is color_module.ie_xyz_to_lab
+    assert color_module.xyz2luv is color_module.xyz_to_luv
+    assert color_module.xyz2uv is color_module.xyz_to_uv
+    assert color_module.spd2cct is color_module.spd_to_cct
+    assert color_module.srgb2colortemp is color_module.srgb_to_color_temp
+    assert color_module.colorTransformMatrix is color_module.color_transform_matrix
+
+    wave = np.array([400.0, 500.0, 600.0])
+    energy = np.array([1.0, 0.5, 0.25])
+    xyz = color_module.ieXYZFromEnergy(energy, wave)
+    assert np.allclose(xyz, metrics_module.xyz_from_energy(energy, wave))
+    assert np.allclose(
+        color_module.colorTransformMatrix("xyz2opp"),
+        scielab_module.color_transform_matrix("xyz2opp"),
+    )
 
 
 def test_scielab_module_native_matlab_aliases() -> None:
