@@ -144,6 +144,15 @@ def test_scene_create_empty_name_placeholder_uses_default_constructor(asset_stor
     assert placeholder_scene.name == default_scene.name
 
 
+def test_scene_create_blank_name_placeholder_uses_default_constructor(asset_store) -> None:
+    default_scene = scene_create(asset_store=asset_store)
+    blank_scene = scene_create("", asset_store=asset_store)
+
+    np.testing.assert_allclose(scene_get(blank_scene, "wave"), scene_get(default_scene, "wave"))
+    np.testing.assert_allclose(scene_get(blank_scene, "photons"), scene_get(default_scene, "photons"))
+    assert blank_scene.name == default_scene.name
+
+
 def test_scene_create_list_alias_matches_public_listing() -> None:
     listing = scene_create("scene list")
     assert isinstance(listing, str)

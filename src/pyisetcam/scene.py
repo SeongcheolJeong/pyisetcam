@@ -3966,7 +3966,12 @@ def scene_create(
     """Create a supported milestone-one scene."""
 
     store = _store(asset_store)
-    resolved_name = "default" if _is_empty_scene_dispatch_placeholder(scene_name) else scene_name
+    resolved_name = (
+        "default"
+        if _is_empty_scene_dispatch_placeholder(scene_name)
+        or (isinstance(scene_name, str) and scene_name.strip() == "")
+        else scene_name
+    )
     name = param_format(resolved_name)
 
     if name in {"list", "scenelist"}:
