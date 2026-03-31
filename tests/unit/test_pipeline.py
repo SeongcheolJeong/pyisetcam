@@ -3564,6 +3564,25 @@ def test_oi_create_supports_human_constructor_wrappers(asset_store) -> None:
     assert np.asarray(oi_get(computed_human_wvf, "photons"), dtype=float).shape == (8, 8, wave.size)
 
 
+def test_oi_create_empty_returns_minimal_shell_and_keeps_wave_override() -> None:
+    explicit_wave = np.array([450.0, 550.0], dtype=float)
+
+    empty = oi_create("empty")
+    explicit = oi_create("empty", explicit_wave)
+
+    assert empty.fields["optics"]["name"] == "empty"
+    assert empty.fields["optics"]["type"] == "optics"
+    assert "f_number" not in empty.fields["optics"]
+    assert "focal_length_m" not in empty.fields["optics"]
+    assert "transmittance" not in empty.fields["optics"]
+    assert oi_get(empty, "diffuser method") == "skip"
+    assert oi_get(empty, "compute method") == ""
+    assert np.asarray(oi_get(empty, "wave"), dtype=float).size == 0
+
+    assert "transmittance" not in explicit.fields["optics"]
+    assert np.array_equal(np.asarray(oi_get(explicit, "wave"), dtype=float), explicit_wave)
+
+
 def test_oi_create_treats_empty_type_as_default_and_supports_uniform_ee_specify(asset_store) -> None:
     wave = np.arange(500.0, 601.0, 50.0, dtype=float)
 

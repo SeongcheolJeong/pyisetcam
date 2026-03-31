@@ -5176,14 +5176,7 @@ def oi_create(
             "offaxis_method": "skip",
         }
     elif normalized == "empty":
-        optics = {
-            "model": "diffractionlimited",
-            "f_number": 4.0,
-            "focal_length_m": DEFAULT_FOCAL_LENGTH_M,
-            "compute_method": "opticsotf",
-            "aberration_scale": 0.0,
-            "offaxis_method": "cos4th",
-        }
+        optics = optics_create("empty", asset_store=store)
     elif normalized == "humanmw":
         pupil_radius_m = 0.0015 if len(args) == 0 or _is_empty_dispatch_placeholder(args[0]) else float(np.asarray(args[0], dtype=float).reshape(-1)[0])
         focal_length_m = DEFAULT_WVF_FOCAL_LENGTH_M if len(args) < 2 or _is_empty_dispatch_placeholder(args[1]) else float(np.asarray(args[1], dtype=float).reshape(-1)[0])
@@ -5267,6 +5260,12 @@ def oi_create(
     wave_index = 1 if normalized in {"wvf", "shiftinvariant", "raytrace"} else 0
     if normalized == "psf":
         wave = np.asarray(psf_data["wave"], dtype=float).copy() if psf_data is not None else DEFAULT_WAVE.copy()
+    elif normalized == "empty":
+        wave = (
+            np.empty(0, dtype=float)
+            if len(args) == 0 or _is_empty_dispatch_placeholder(args[0])
+            else np.asarray(args[0], dtype=float).reshape(-1)
+        )
     elif normalized in {"default", "diffractionlimited", "diffraction", "pinhole"}:
         wave = (
             DEFAULT_WAVE.copy()
@@ -5277,16 +5276,17 @@ def oi_create(
         wave = np.asarray(optics.get("wavefront", {}).get("wave", DEFAULT_WAVE.copy()), dtype=float)
     else:
         wave = np.asarray(args[wave_index], dtype=float) if len(args) > wave_index else DEFAULT_WAVE.copy()
-    optics.setdefault(
-        "transmittance",
-        {
-            "wave": np.asarray(wave, dtype=float).reshape(-1).copy(),
-            "scale": np.ones(np.asarray(wave, dtype=float).size, dtype=float),
-        },
-    )
+    if normalized != "empty":
+        optics.setdefault(
+            "transmittance",
+            {
+                "wave": np.asarray(wave, dtype=float).reshape(-1).copy(),
+                "scale": np.ones(np.asarray(wave, dtype=float).size, dtype=float),
+            },
+        )
     oi.fields["optics"] = optics
     oi.fields["wave"] = wave
-    oi.fields["compute_method"] = optics["compute_method"]
+    oi.fields["compute_method"] = optics.get("compute_method", "")
     oi.fields["diffuser_method"] = "skip"
     oi.fields["diffuser_blur_m"] = 2e-6
     oi.fields["psf_angle_step_deg"] = DEFAULT_RAYTRACE_ANGLE_STEP_DEG
@@ -9413,14 +9413,14 @@ def _oi_image_distance_m(oi: OpticalImage) -> float:
     if oi.fields.get("image_distance_m") is not None:
         return float(oi.fields["image_distance_m"])
     scene_distance = _oi_depth_distance_m(oi)
-    focal_length = float(oi.fields["optics"]["focal_length_m"])
+    focal_length = float(oi.fields["optics"].get("focal_length_m", DEFAULT_FOCAL_LENGTH_M))
     if scene_distance is not None:
         if param_format(oi.fields["optics"].get("model", "")) == "skip":
             return focal_length
         if scene_distance <= focal_length:
             return focal_length
         return float(1.0 / max((1.0 / focal_length) - (1.0 / scene_distance), 1e-12))
-    return float(oi.fields["optics"]["focal_length_m"])
+    return focal_length
 
 
 def _oi_width_m(oi: OpticalImage) -> float:
