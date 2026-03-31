@@ -9690,6 +9690,30 @@ def _optics_transmittance_payload(optics: dict[str, Any], wave: np.ndarray) -> d
     }
 
 
+def _set_optics_transmittance_payload(optics: dict[str, Any], wave: np.ndarray, scale: np.ndarray) -> None:
+    wave_array = np.asarray(wave, dtype=float).reshape(-1)
+    scale_array = np.asarray(scale, dtype=float).reshape(-1)
+    if wave_array.size != scale_array.size:
+        raise ValueError("Transmittance must match wave dimension.")
+    if "transmittance" in optics:
+        optics["transmittance"] = {
+            "wave": wave_array.copy(),
+            "scale": scale_array.copy(),
+        }
+        return
+    if isinstance(optics.get("lens"), dict):
+        updated_lens = dict(optics["lens"])
+        updated_lens["wave"] = wave_array.copy()
+        updated_lens["transmittance"] = scale_array.copy()
+        updated_lens.pop("density", None)
+        optics["lens"] = updated_lens
+        return
+    optics["transmittance"] = {
+        "wave": wave_array.copy(),
+        "scale": scale_array.copy(),
+    }
+
+
 def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
     key = param_format(parameter)
     prefix, remainder = split_prefixed_parameter(parameter, ("optics", "wvf"))
@@ -10307,21 +10331,20 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any, *args: Any) -> OpticalI
         oi.fields["optics"].pop("transmittance", None)
         return oi
     if key in {"transmittance", "transmittancescale", "opticstransmittance", "opticstransmittancescale"}:
-        transmittance = _ensure_optics_transmittance(oi.fields["optics"], wave=np.asarray(oi.fields["wave"], dtype=float))
         scale = np.asarray(value, dtype=float).reshape(-1)
+        transmittance = _optics_transmittance_payload(oi.fields["optics"], np.asarray(oi.fields["wave"], dtype=float))
         if scale.size != np.asarray(transmittance["wave"], dtype=float).size:
             raise ValueError("Transmittance must match wave dimension.")
         if np.any((scale < 0.0) | (scale > 1.0)):
             raise ValueError("Transmittance should be in [0, 1].")
-        transmittance["scale"] = scale
+        _set_optics_transmittance_payload(oi.fields["optics"], np.asarray(transmittance["wave"], dtype=float), scale)
         return oi
     if key in {"transmittancewave", "opticstransmittancewave"}:
-        transmittance = _ensure_optics_transmittance(oi.fields["optics"], wave=np.asarray(oi.fields["wave"], dtype=float))
+        transmittance = _optics_transmittance_payload(oi.fields["optics"], np.asarray(oi.fields["wave"], dtype=float))
         old_wave = np.asarray(transmittance["wave"], dtype=float).reshape(-1)
         old_scale = np.asarray(transmittance["scale"], dtype=float).reshape(-1)
         new_wave = np.asarray(value, dtype=float).reshape(-1)
-        transmittance["wave"] = new_wave
-        transmittance["scale"] = np.interp(new_wave, old_wave, old_scale)
+        _set_optics_transmittance_payload(oi.fields["optics"], new_wave, np.interp(new_wave, old_wave, old_scale))
         return oi
     if key in {"psfdata", "opticspsfdata", "shiftinvariantpsfdata"}:
         psf_data = _normalize_shift_invariant_psf_data(value)
@@ -10332,12 +10355,15 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any, *args: Any) -> OpticalI
         oi.fields["optics"]["compute_method"] = "opticsotf"
         oi.fields["compute_method"] = "opticsotf"
         oi.fields["wave"] = np.asarray(psf_data["wave"], dtype=float).copy()
-        transmittance = _ensure_optics_transmittance(oi.fields["optics"], wave=np.asarray(oi.fields["wave"], dtype=float))
+        transmittance = _optics_transmittance_payload(oi.fields["optics"], np.asarray(oi.fields["wave"], dtype=float))
         old_wave = np.asarray(transmittance["wave"], dtype=float).reshape(-1)
         old_scale = np.asarray(transmittance["scale"], dtype=float).reshape(-1)
         new_wave = np.asarray(oi.fields["wave"], dtype=float).reshape(-1)
-        transmittance["wave"] = new_wave.copy()
-        transmittance["scale"] = np.interp(new_wave, old_wave, old_scale, left=1.0, right=1.0)
+        _set_optics_transmittance_payload(
+            oi.fields["optics"],
+            new_wave,
+            np.interp(new_wave, old_wave, old_scale, left=1.0, right=1.0),
+        )
         return oi
     if key in {"otf", "opticsotf"}:
         otf = np.asarray(value, dtype=complex)
@@ -10368,11 +10394,14 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any, *args: Any) -> OpticalI
         oi.fields["optics"]["model"] = "shiftinvariant"
         oi.fields["optics"]["compute_method"] = "opticsotf"
         oi.fields["compute_method"] = "opticsotf"
-        transmittance = _ensure_optics_transmittance(oi.fields["optics"], wave=wave)
+        transmittance = _optics_transmittance_payload(oi.fields["optics"], wave)
         old_wave = np.asarray(transmittance["wave"], dtype=float).reshape(-1)
         old_scale = np.asarray(transmittance["scale"], dtype=float).reshape(-1)
-        transmittance["wave"] = wave.copy()
-        transmittance["scale"] = np.interp(wave, old_wave, old_scale, left=1.0, right=1.0)
+        _set_optics_transmittance_payload(
+            oi.fields["optics"],
+            wave,
+            np.interp(wave, old_wave, old_scale, left=1.0, right=1.0),
+        )
         return oi
     if key in {"otfstruct", "opticsotfstruct"}:
         otf_struct = _normalize_shift_invariant_otf_struct(value, target_wave=np.asarray(oi.fields.get("wave", DEFAULT_WAVE), dtype=float))
@@ -10385,12 +10414,15 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any, *args: Any) -> OpticalI
         oi.fields["optics"]["compute_method"] = "opticsotf"
         oi.fields["compute_method"] = "opticsotf"
         oi.fields["wave"] = np.asarray(otf_struct["wave"], dtype=float).copy()
-        transmittance = _ensure_optics_transmittance(oi.fields["optics"], wave=np.asarray(oi.fields["wave"], dtype=float))
+        transmittance = _optics_transmittance_payload(oi.fields["optics"], np.asarray(oi.fields["wave"], dtype=float))
         old_wave = np.asarray(transmittance["wave"], dtype=float).reshape(-1)
         old_scale = np.asarray(transmittance["scale"], dtype=float).reshape(-1)
         new_wave = np.asarray(oi.fields["wave"], dtype=float).reshape(-1)
-        transmittance["wave"] = new_wave.copy()
-        transmittance["scale"] = np.interp(new_wave, old_wave, old_scale, left=1.0, right=1.0)
+        _set_optics_transmittance_payload(
+            oi.fields["optics"],
+            new_wave,
+            np.interp(new_wave, old_wave, old_scale, left=1.0, right=1.0),
+        )
         return oi
     if key in {"computemethod"}:
         oi.fields["compute_method"] = str(value)

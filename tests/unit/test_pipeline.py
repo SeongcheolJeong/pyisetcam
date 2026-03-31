@@ -3159,6 +3159,8 @@ def test_oi_and_optics_set_lens_replace_camera_transmittance() -> None:
     wave = np.array([500.0, 600.0], dtype=float)
     transmittance = np.array([0.8, 0.6], dtype=float)
     lens = {"wave": wave, "transmittance": transmittance}
+    updated_transmittance = np.array([0.7, 0.5], dtype=float)
+    rewaved = np.array([450.0, 550.0, 650.0], dtype=float)
 
     oi = oi_set(oi_create("default"), "lens", lens)
     optics = opticsSet(opticsCreate("default"), "lens", lens)
@@ -3171,6 +3173,23 @@ def test_oi_and_optics_set_lens_replace_camera_transmittance() -> None:
     assert np.array_equal(np.asarray(opticsGet(optics, "transmittance wave"), dtype=float), wave)
     assert np.allclose(np.asarray(oi_get(oi, "transmittance", wave), dtype=float), transmittance)
     assert np.allclose(np.asarray(opticsGet(optics, "transmittance", wave), dtype=float), transmittance)
+
+    oi = oi_set(oi, "transmittance", updated_transmittance)
+    optics = opticsSet(optics, "transmittance", updated_transmittance)
+    assert "transmittance" not in oi.fields["optics"]
+    assert "transmittance" not in optics
+    assert np.allclose(np.asarray(oi_get(oi, "transmittance", wave), dtype=float), updated_transmittance)
+    assert np.allclose(np.asarray(opticsGet(optics, "transmittance", wave), dtype=float), updated_transmittance)
+
+    oi = oi_set(oi, "transmittance wave", rewaved)
+    optics = opticsSet(optics, "transmittance wave", rewaved)
+    assert "transmittance" not in oi.fields["optics"]
+    assert "transmittance" not in optics
+    assert np.array_equal(np.asarray(oi_get(oi, "transmittance wave"), dtype=float), rewaved)
+    assert np.array_equal(np.asarray(opticsGet(optics, "transmittance wave"), dtype=float), rewaved)
+    expected_rewaved = np.interp(rewaved, wave, updated_transmittance)
+    assert np.allclose(np.asarray(oi_get(oi, "transmittance", rewaved), dtype=float), expected_rewaved)
+    assert np.allclose(np.asarray(opticsGet(optics, "transmittance", rewaved), dtype=float), expected_rewaved)
 
 
 def test_optics_create_shift_invariant_wrappers_restore_wvf_name(asset_store) -> None:
