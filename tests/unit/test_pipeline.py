@@ -3133,6 +3133,18 @@ def test_optics_create_human_alias_matches_marimont_wandell(asset_store) -> None
     )
 
 
+def test_optics_create_shift_invariant_wrappers_restore_wvf_name(asset_store) -> None:
+    shift_invariant = opticsCreate("shift invariant", asset_store=asset_store)
+    wavefront = opticsCreate("wvf", asset_store=asset_store)
+
+    assert shift_invariant["type"] == "optics"
+    assert wavefront["type"] == "optics"
+    assert shift_invariant["name"] == "wvf"
+    assert wavefront["name"] == "wvf"
+    assert shift_invariant["compute_method"] == "opticspsf"
+    assert wavefront["compute_method"] == "opticspsf"
+
+
 def test_lens_list_reads_pinned_upstream_lens_jsons(asset_store) -> None:
     files = lensList("dgauss*.json", quiet=True, asset_store=asset_store)
 

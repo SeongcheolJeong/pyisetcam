@@ -4663,6 +4663,8 @@ def optics_create(
     optics.setdefault("type", "optics")
     if normalized in {"default", "diffractionlimited"}:
         optics.setdefault("name", "standard (1/4-inch)")
+    elif normalized in {"wvf", "shiftinvariant"}:
+        optics.setdefault("name", "wvf")
     optics.setdefault("vignetting", 0)
     return optics
 
