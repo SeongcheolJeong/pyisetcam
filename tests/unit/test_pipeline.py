@@ -14328,12 +14328,15 @@ def test_illuminant_legacy_wrappers_match_current_creation_paths(asset_store) ->
 
     default_direct = illuminant_create(asset_store=asset_store)
     placeholder_direct = illuminant_create([], [], asset_store=asset_store)
+    blank_direct = illuminant_create("", [], asset_store=asset_store)
     placeholder_read_energy, placeholder_read_wave = illuminantRead([], [], [], [], asset_store=asset_store)
     default_direct_energy = np.asarray(illuminant_get(default_direct, "energy"), dtype=float).reshape(-1)
     default_direct_wave = np.asarray(illuminant_get(default_direct, "wave"), dtype=float).reshape(-1)
 
     assert np.array_equal(np.asarray(illuminant_get(placeholder_direct, "wave"), dtype=float).reshape(-1), default_direct_wave)
     assert np.allclose(np.asarray(illuminant_get(placeholder_direct, "energy"), dtype=float).reshape(-1), default_direct_energy)
+    assert np.array_equal(np.asarray(illuminant_get(blank_direct, "wave"), dtype=float).reshape(-1), default_direct_wave)
+    assert np.allclose(np.asarray(illuminant_get(blank_direct, "energy"), dtype=float).reshape(-1), default_direct_energy)
     assert np.array_equal(np.asarray(placeholder_read_wave, dtype=float).reshape(-1), default_direct_wave)
     assert np.allclose(np.asarray(placeholder_read_energy, dtype=float).reshape(-1), default_direct_energy)
 
