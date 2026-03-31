@@ -3066,6 +3066,8 @@ def test_rt_psf_edit_centers_and_rotates_raytrace_planes() -> None:
 
 def test_optics_object_wrappers_round_trip_supported_fields(asset_store) -> None:
     optics = opticsCreate(asset_store=asset_store)
+    assert optics["name"] == "standard (1/4-inch)"
+    assert optics["vignetting"] == 0
     optics = opticsSet(optics, "fnumber", 2.8)
     optics = opticsSet(optics, "focal length", 0.01)
     optics = opticsSet(optics, "transmittance wave", np.array([500.0, 600.0], dtype=float))
