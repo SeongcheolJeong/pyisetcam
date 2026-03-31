@@ -25,6 +25,16 @@ def _store(asset_store: AssetStore | None) -> AssetStore:
     return asset_store or AssetStore.default()
 
 
+def _is_empty_dispatch_placeholder(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return str(value).strip() == ""
+    if isinstance(value, (list, tuple, np.ndarray)):
+        return np.asarray(value).size == 0
+    return False
+
+
 def _struct_field(value: Any, field: str, default: Any = ...,) -> Any:
     if isinstance(value, dict):
         if field in value:
@@ -399,7 +409,8 @@ def display_create(
     """Create a supported display."""
 
     store = _store(asset_store)
-    normalized = param_format(display_name)
+    resolved_name = "LCD-Apple" if _is_empty_dispatch_placeholder(display_name) else display_name
+    normalized = param_format(resolved_name)
     if normalized == "default":
         display = _display_default()
     elif normalized == "equalenergy":
@@ -407,13 +418,13 @@ def display_create(
         display.name = "equalenergy"
         display.fields["spd"] = np.ones_like(display.fields["spd"], dtype=float) * 1e-3
     else:
-        name = display_name
+        name = resolved_name
         if not name.lower().endswith(".mat"):
             name = f"{name}.mat"
         try:
             display = _mat_display_to_display(store.load_display_struct(name))
         except Exception as error:  # pragma: no cover - exercised via tests against actual assets
-            raise UnsupportedOptionError("displayCreate", display_name) from error
+            raise UnsupportedOptionError("displayCreate", resolved_name) from error
 
     target_wave = wave
     if target_wave is None and len(args) == 1:

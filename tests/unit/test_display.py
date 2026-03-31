@@ -27,6 +27,16 @@ def test_display_create_lcd_example(asset_store) -> None:
     assert display_get(display, "gamma").shape[1] == 3
 
 
+def test_display_create_empty_name_placeholder_uses_default_constructor(asset_store) -> None:
+    default_display = display_create(asset_store=asset_store)
+    placeholder_display = display_create([], asset_store=asset_store)
+
+    assert placeholder_display.name == default_display.name
+    np.testing.assert_allclose(display_get(placeholder_display, "wave"), display_get(default_display, "wave"))
+    np.testing.assert_allclose(display_get(placeholder_display, "spd"), display_get(default_display, "spd"))
+    np.testing.assert_allclose(display_get(placeholder_display, "gamma"), display_get(default_display, "gamma"))
+
+
 def test_display_module_matlab_aliases() -> None:
     assert display_module.displayConvert is display_module.display_convert
     assert display_module.displayPT2ISET is display_module.display_pt2iset
