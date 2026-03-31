@@ -46,8 +46,10 @@ from pyisetcam import (
     scene_from_file,
     scene_get,
     scene_list,
+    scene_pad,
     scene_set,
     scene_sdr,
+    scenePad,
     scene_to_file,
 )
 from pyisetcam.types import Scene
@@ -106,6 +108,7 @@ def test_scene_module_core_matlab_aliases() -> None:
     assert scene_module.sceneInterpolateW is scene_module.scene_interpolate_w
     assert scene_module.sceneList is scene_module.scene_list
     assert scene_module.sceneMakeVideo is scene_module.scene_make_video
+    assert scene_module.scenePad is scene_module.scene_pad
     assert scene_module.scenePhotonNoise is scene_module.scene_photon_noise
     assert scene_module.scenePhotonsFromVector is scene_module.scene_photons_from_vector
     assert scene_module.sceneRadianceChart is scene_module.scene_radiance_chart
@@ -125,6 +128,12 @@ def test_scene_module_core_matlab_aliases() -> None:
     assert scene_module.sceneTranslate is scene_module.scene_translate
     assert scene_module.sceneVernier is scene_module.scene_vernier
     assert scene_module.sceneWBCreate is scene_module.scene_wb_create
+
+
+def test_scene_pad_replays_upstream_deprecation_error() -> None:
+    assert scenePad is scene_pad
+    with pytest.raises(ValueError, match=r"^Deprecated\. You probably want oiPad\.$"):
+        scenePad(None, [8, 8, 0])
 
 
 def test_scene_create_default_macbeth(asset_store) -> None:

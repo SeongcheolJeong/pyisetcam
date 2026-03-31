@@ -609,6 +609,7 @@ from .scene import (
     scene_insert,
     scene_make_video,
     scene_photon_noise,
+    scene_pad,
     scene_init_spatial,
     scene_list,
     scene_photons_from_vector,
@@ -2094,6 +2095,7 @@ __all__ = [
     "sceneInterpolateW",
     "sceneList",
     "sceneMakeVideo",
+    "scenePad",
     "scenePhotonsFromVector",
     "sceneRadianceFromVector",
     "sceneReflectanceChart",
@@ -2589,6 +2591,7 @@ macbethSensorValues = macbeth_sensor_values
 sceneRotate = scene_rotate
 sceneSaveImage = scene_save_image
 sceneShowImage = scene_show_image
+scenePad = scene_pad
 sceneSpatialResample = scene_spatial_resample
 sceneSpatialSupport = scene_spatial_support
 sceneSet = scene_set

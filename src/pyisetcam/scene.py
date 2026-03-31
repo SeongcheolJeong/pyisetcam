@@ -5965,6 +5965,16 @@ def scene_spatial_resample(
     return resampled
 
 
+def scene_pad(
+    oi: Any,
+    pad_size: Any,
+    s_dist: Any | None = None,
+) -> Any:
+    """Deprecated MATLAB shim retained for compatibility."""
+
+    raise ValueError("Deprecated. You probably want oiPad.")
+
+
 def scene_photon_noise(
     scene: Scene,
     rect_or_locs: Any | None = None,
@@ -6823,6 +6833,7 @@ sceneSaveImage = scene_save_image
 sceneSDR = scene_sdr
 sceneSet = scene_set
 sceneShowImage = scene_show_image
+scenePad = scene_pad
 sceneSPDScale = scene_spd_scale
 sceneSpatialResample = scene_spatial_resample
 sceneSpatialSupport = scene_spatial_support
