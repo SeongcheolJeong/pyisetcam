@@ -5168,6 +5168,7 @@ def oi_create(
         optics = _load_raytrace_optics(source, asset_store=_store(asset_store))
     elif normalized == "pinhole":
         optics = {
+            "name": "pinhole",
             "model": "skip",
             "f_number": 1e-3,
             "focal_length_m": 1e-2,
@@ -5289,6 +5290,8 @@ def oi_create(
     oi.fields["compute_method"] = optics.get("compute_method", "")
     oi.fields["diffuser_method"] = "skip"
     oi.fields["diffuser_blur_m"] = 2e-6
+    if normalized == "pinhole":
+        oi.name = "pinhole"
     oi.fields["psf_angle_step_deg"] = DEFAULT_RAYTRACE_ANGLE_STEP_DEG
     oi.fields["psf_sample_angles_deg"] = None
     oi.fields["psf_image_heights_m"] = None

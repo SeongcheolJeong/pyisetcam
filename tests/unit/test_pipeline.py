@@ -3610,6 +3610,10 @@ def test_oi_create_treats_empty_optional_wave_as_omitted_for_default_and_pinhole
     assert np.array_equal(np.asarray(oi_get(default_oi, "wave"), dtype=float), np.asarray(oi_get(default_reference, "wave"), dtype=float))
     assert np.array_equal(np.asarray(oi_get(pinhole_oi, "wave"), dtype=float), np.asarray(oi_get(pinhole_reference, "wave"), dtype=float))
     assert np.isclose(float(oi_get(pinhole_oi, "fnumber")), float(oi_get(pinhole_reference, "fnumber")))
+    assert oi_get(pinhole_oi, "name") == "pinhole"
+    assert pinhole_oi.fields["optics"]["name"] == "pinhole"
+    assert oi_get(pinhole_reference, "name") == "pinhole"
+    assert pinhole_reference.fields["optics"]["name"] == "pinhole"
 
 
 def test_oi_photon_noise_matches_seeded_legacy_contract() -> None:
