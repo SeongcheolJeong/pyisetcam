@@ -5201,6 +5201,7 @@ def oi_create(
         human_mw.fields["optics"]["focal_length_m"] = float(focal_length_m)
         human_mw.fields["optics"]["f_number"] = float(focal_length_m / max(2.0 * pupil_radius_m, 1.0e-12))
         human_mw.fields["optics"]["otf_method"] = "human"
+        human_mw.fields["optics"]["lens"] = _human_lens_payload(np.asarray(human_mw.fields.get("wave", wave), dtype=float))
         human_mw.fields["optics"].pop("transmittance", None)
         _sync_oi_identity_fields(human_mw)
         return track_session_object(session, human_mw)
@@ -5233,6 +5234,7 @@ def oi_create(
         human_wvf.name = "human-WVF"
         human_wvf.fields["optics"]["name"] = "humanwvf"
         human_wvf.fields["optics"]["otf_method"] = "human"
+        human_wvf.fields["optics"]["lens"] = _human_lens_payload(np.asarray(human_wvf.fields.get("wave", wave), dtype=float))
         human_wvf.fields["optics"].pop("transmittance", None)
         _sync_oi_identity_fields(human_wvf)
         return track_session_object(session, human_wvf)
@@ -9599,6 +9601,14 @@ def _sync_oi_geometry_fields(oi: OpticalImage) -> None:
 def _sync_oi_identity_fields(oi: OpticalImage) -> None:
     oi.fields["name"] = str(oi.name)
     oi.fields["type"] = str(oi.type)
+
+
+def _human_lens_payload(wave: np.ndarray) -> dict[str, Any]:
+    return {
+        "type": "lens",
+        "name": "human lens",
+        "wave": np.asarray(wave, dtype=float).reshape(-1).copy(),
+    }
 
 
 def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
