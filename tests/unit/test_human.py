@@ -200,6 +200,25 @@ def test_optics_module_oi_matlab_aliases() -> None:
     assert optics_module.oiWBCompute is optics_module.oi_wb_compute
 
 
+def test_optics_module_wvf_matlab_aliases() -> None:
+    assert optics_module.wvf2oi is optics_module.wvf_to_oi
+    assert optics_module.wvf2optics is optics_module.wvf_to_optics
+    assert optics_module.wvf2PSF is optics_module.wvf_to_psf
+    assert optics_module.wvfAperture is optics_module.wvf_aperture
+    assert optics_module.wvfApertureP is optics_module.wvf_aperture_params
+    assert optics_module.wvfClearData is optics_module.wvf_clear_data
+    assert optics_module.wvfCompute is optics_module.wvf_compute
+    assert optics_module.wvfComputePSF is optics_module.wvf_compute_psf
+    assert optics_module.wvfCreate is optics_module.wvf_create
+    assert optics_module.wvfDefocusDioptersToMicrons is optics_module.wvf_defocus_diopters_to_microns
+    assert optics_module.wvfDefocusMicronsToDiopters is optics_module.wvf_defocus_microns_to_diopters
+    assert optics_module.wvfGet is optics_module.wvf_get
+    assert optics_module.wvfLoadThibosVirtualEyes is optics_module.wvf_load_thibos_virtual_eyes
+    assert optics_module.wvfPupilAmplitude is optics_module.wvf_pupil_amplitude
+    assert optics_module.wvfPupilFunction is optics_module.wvf_pupil_function
+    assert optics_module.wvfSet is optics_module.wvf_set
+
+
 def test_human_cones_replays_defaults_and_macular_density_adjustment() -> None:
     cones_default, correction_default, wave_default = humanCones()
     cones_placeholder, correction_placeholder, wave_placeholder = humanCones([], [], [], [])
