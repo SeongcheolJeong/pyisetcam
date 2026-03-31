@@ -52,6 +52,16 @@ def _store(asset_store: AssetStore | None) -> AssetStore:
     return asset_store or AssetStore.default()
 
 
+def _is_empty_dispatch_placeholder(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return str(value).strip() == ""
+    if isinstance(value, (list, tuple, np.ndarray)):
+        return np.asarray(value).size == 0
+    return False
+
+
 def _copy_metadata_value(value: Any) -> Any:
     return copy.deepcopy(value)
 
@@ -319,7 +329,8 @@ def ip_create(
     """Create an image processor."""
 
     store = _store(asset_store)
-    ip = ImageProcessor(name=str(ip_name))
+    resolved_name = "default" if _is_empty_dispatch_placeholder(ip_name) else ip_name
+    ip = ImageProcessor(name=str(resolved_name))
     if sensor is not None:
         ip.fields["wave"] = np.asarray(sensor.fields["wave"], dtype=float)
     else:

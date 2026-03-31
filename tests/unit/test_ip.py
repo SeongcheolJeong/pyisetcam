@@ -133,6 +133,16 @@ def test_image_show_image_matches_hdr_render_headlessly() -> None:
     assert np.allclose(rendered, expected)
 
 
+def test_ip_create_empty_name_placeholder_uses_default_constructor(asset_store) -> None:
+    default_ip = ip_create(asset_store=asset_store)
+    placeholder_ip = ip_create([], asset_store=asset_store)
+
+    assert placeholder_ip.name == default_ip.name
+    np.testing.assert_allclose(ip_get(placeholder_ip, "wave"), ip_get(default_ip, "wave"))
+    assert display_get(ip_get(placeholder_ip, "display"), "name") == display_get(ip_get(default_ip, "display"), "name")
+    assert ip_get(placeholder_ip, "demosaic method") == ip_get(default_ip, "demosaic method")
+
+
 def test_ip_compute_supports_rgb_bayer_demosaic_methods(asset_store) -> None:
     sensor = sensor_create("default", asset_store=asset_store)
     mosaic = np.array(
