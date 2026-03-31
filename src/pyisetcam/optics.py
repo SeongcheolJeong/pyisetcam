@@ -4661,7 +4661,7 @@ def optics_create(
         oi = oi_create(optics_type, *args, asset_store=asset_store)
     optics = dict(oi.fields["optics"])
     optics.setdefault("type", "optics")
-    if normalized in {"default", "diffractionlimited"}:
+    if normalized in {"default", "diffractionlimited", "diffraction"}:
         optics.setdefault("name", "standard (1/4-inch)")
     elif normalized in {"wvf", "shiftinvariant"}:
         optics.setdefault("name", "wvf")
