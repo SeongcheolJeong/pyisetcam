@@ -1245,6 +1245,12 @@ def _color_block_matrix(wave_nm: np.ndarray, extrap_val: float = 0.0) -> np.ndar
     return matrix
 
 
+def color_block_matrix(wave_nm: Any, extrap_val: float = 0.0) -> np.ndarray:
+    """Return the legacy three-band display block matrix for the requested wave sampling."""
+
+    return _color_block_matrix(np.asarray(wave_nm, dtype=float), float(extrap_val))
+
+
 def _sensor_display_transform(sensor: Sensor) -> np.ndarray:
     block_matrix = _color_block_matrix(np.asarray(sensor.fields["wave"], dtype=float), extrap_val=0.2)
     filter_spectra = np.asarray(sensor_get(sensor, "filterspectra"), dtype=float)
@@ -7851,6 +7857,7 @@ regridOI2ISA = regrid_oi_to_isa
 plane2rgb = plane2mosaic
 sensorClearData = sensor_clear_data
 sensorColorOrder = sensor_color_order
+colorBlockMatrix = color_block_matrix
 sensorDetermineCFA = sensor_determine_cfa
 sensorDisplayTransform = sensor_display_transform
 sensorEquateTransmittances = sensor_equate_transmittances

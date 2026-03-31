@@ -8057,6 +8057,16 @@ def _legacy_sensor_color_block_matrix(wave: np.ndarray) -> np.ndarray:
     return matrix
 
 
+def test_sensor_color_block_matrix_matches_legacy_closed_form() -> None:
+    wave = np.arange(410.0, 691.0, 20.0, dtype=float)
+    expected = _legacy_sensor_color_block_matrix(wave)
+
+    matrix = sensor_module.colorBlockMatrix(wave, 0.2)
+
+    assert matrix.shape == expected.shape
+    assert np.allclose(matrix, expected)
+
+
 def test_sensor_display_transform_matches_legacy_closed_form(asset_store) -> None:
     sensor = sensor_create(asset_store=asset_store)
 
@@ -8738,6 +8748,7 @@ def test_sensor_create_blank_type_placeholder_uses_default_constructor(asset_sto
 
 
 def test_sensor_module_core_matlab_aliases() -> None:
+    assert sensor_module.colorBlockMatrix is sensor_module.color_block_matrix
     assert sensor_module.sensorAddFilter is sensor_module.sensor_add_filter
     assert sensor_module.sensorCfaSave is sensor_module.sensor_cfa_save
     assert sensor_module.sensorCFANameList is sensor_module.sensor_cfa_name_list

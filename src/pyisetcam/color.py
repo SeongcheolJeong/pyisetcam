@@ -967,6 +967,14 @@ def color_transform_matrix(matrix_type: str, space_type: int = 10) -> NDArray[np
     return _color_transform_matrix(matrix_type, space_type)
 
 
+def color_block_matrix(wave_nm: Any, extrap_val: float = 0.0) -> NDArray[np.float64]:
+    """Lazy colorBlockMatrix() wrapper to avoid importing sensor at module load time."""
+
+    from .sensor import color_block_matrix as _color_block_matrix
+
+    return _color_block_matrix(wave_nm, extrap_val)
+
+
 adobergbParameters = adobergb_parameters
 cct2sun = cct_to_sun
 Energy2Quanta = energy_to_quanta
@@ -991,6 +999,7 @@ lrgb2srgb = lrgb_to_srgb
 mkInvGammaTable = mk_inv_gamma_table
 Quanta2Energy = quanta_to_energy
 RGB2XWFormat = rgb_to_xw_format
+colorBlockMatrix = color_block_matrix
 colorTransformMatrix = color_transform_matrix
 spd2cct = spd_to_cct
 srgb2colortemp = srgb_to_color_temp

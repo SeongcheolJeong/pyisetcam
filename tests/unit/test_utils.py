@@ -8,6 +8,7 @@ import math
 import numpy as np
 import pytest
 import pyisetcam.color as color_module
+import pyisetcam.sensor as sensor_module
 from scipy.signal import convolve2d
 
 from pyisetcam import (
@@ -306,6 +307,7 @@ def test_color_module_color_space_matlab_aliases() -> None:
 def test_color_module_cross_module_matlab_aliases() -> None:
     assert color_module.RGB2XWFormat is color_module.rgb_to_xw_format
     assert color_module.XW2RGBFormat is color_module.xw_to_rgb_format
+    assert color_module.colorBlockMatrix is color_module.color_block_matrix
     assert color_module.srgb2xyz is color_module.srgb_to_xyz
     assert color_module.ieXYZFromEnergy is color_module.xyz_from_energy
     assert color_module.ieXYZ2LAB is color_module.ie_xyz_to_lab
@@ -319,6 +321,11 @@ def test_color_module_cross_module_matlab_aliases() -> None:
     energy = np.array([1.0, 0.5, 0.25])
     xyz = color_module.ieXYZFromEnergy(energy, wave)
     assert np.allclose(xyz, metrics_module.xyz_from_energy(energy, wave))
+    block_wave = np.arange(410.0, 691.0, 20.0, dtype=float)
+    assert np.allclose(
+        color_module.colorBlockMatrix(block_wave, 0.2),
+        sensor_module.color_block_matrix(block_wave, 0.2),
+    )
     assert np.allclose(
         color_module.colorTransformMatrix("xyz2opp"),
         scielab_module.color_transform_matrix("xyz2opp"),
