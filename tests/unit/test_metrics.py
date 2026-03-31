@@ -33,6 +33,15 @@ def test_metrics_module_cct_matlab_alias() -> None:
     assert metrics_module.cct is metrics_module.cct_from_uv
 
 
+def test_metrics_module_adjacent_matlab_aliases() -> None:
+    assert metrics_module.cctFromUV is metrics_module.cct_from_uv
+    assert metrics_module.chromaticityXY is metrics_module.chromaticity_xy
+    assert metrics_module.comparisonMetrics is metrics_module.comparison_metrics
+    assert metrics_module.exampleSPDPair is metrics_module.example_spd_pair
+    assert metrics_module.spectralAngle is metrics_module.spectral_angle
+    assert metrics_module.xyz2uv is metrics_module.xyz_to_uv
+
+
 def test_xyz_to_lab_maps_white_point_to_neutral() -> None:
     white = np.array([95.047, 100.0, 108.883], dtype=float)
     lab = xyz_to_lab(white, white)
