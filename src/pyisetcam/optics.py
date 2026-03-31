@@ -4635,6 +4635,26 @@ def optics_create(
     """Create a headless optics struct using the currently supported OI models."""
 
     normalized = param_format("default" if _is_empty_dispatch_placeholder(optics_type) else optics_type)
+    valid_types = [
+        "default",
+        "pinhole",
+        "diffractionlimited",
+        "diffraction",
+        "shiftinvariant",
+        "raytrace",
+        "wvf",
+        "psf",
+        "human",
+        "humanmw",
+        "wvfhuman",
+        "humanwvf",
+        "uniformd65",
+        "uniformee",
+        "black",
+        "empty",
+    ]
+    if normalized.startswith("valid"):
+        return valid_types.copy()
     if normalized == "empty":
         return {
             "type": "optics",

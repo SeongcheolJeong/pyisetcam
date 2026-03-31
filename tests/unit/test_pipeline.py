@@ -3085,6 +3085,27 @@ def test_optics_object_wrappers_round_trip_supported_fields(asset_store) -> None
     assert np.isclose(float(opticsGet(optics, "aperture diameter")), 0.01 / 2.8)
 
 
+def test_optics_create_valid_returns_supported_wrapper_list() -> None:
+    assert opticsCreate("valid") == [
+        "default",
+        "pinhole",
+        "diffractionlimited",
+        "diffraction",
+        "shiftinvariant",
+        "raytrace",
+        "wvf",
+        "psf",
+        "human",
+        "humanmw",
+        "wvfhuman",
+        "humanwvf",
+        "uniformd65",
+        "uniformee",
+        "black",
+        "empty",
+    ]
+
+
 def test_optics_create_empty_returns_minimal_shell() -> None:
     optics = opticsCreate("empty")
 
