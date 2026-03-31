@@ -244,6 +244,16 @@ def test_optics_module_raytrace_matlab_aliases() -> None:
     assert optics_module.rtSynthetic is optics_module.rt_synthetic
 
 
+def test_optics_module_residual_matlab_aliases() -> None:
+    assert optics_module.airyDisk is optics_module.airy_disk
+    assert optics_module.ieFieldHeight2Index is optics_module.ie_field_height_to_index
+    assert optics_module.sceCreate is optics_module.sce_create
+    assert optics_module.sceGet is optics_module.sce_get
+    assert optics_module.siSynthetic is optics_module.si_synthetic
+    assert optics_module.zemaxLoad is optics_module.zemax_load
+    assert optics_module.zemaxReadHeader is optics_module.zemax_read_header
+
+
 def test_human_cones_replays_defaults_and_macular_density_adjustment() -> None:
     cones_default, correction_default, wave_default = humanCones()
     cones_placeholder, correction_placeholder, wave_placeholder = humanCones([], [], [], [])
