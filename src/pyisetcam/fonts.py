@@ -25,6 +25,16 @@ def _store(asset_store: AssetStore | None) -> AssetStore:
     return asset_store or AssetStore.default()
 
 
+def _is_empty_dispatch_placeholder(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return str(value).strip() == ""
+    if isinstance(value, (list, tuple, np.ndarray)):
+        return np.asarray(value).size == 0
+    return False
+
+
 def _font_name(letter: str, family: str, size: int, dpi: int) -> str:
     return str(f"{letter}-{family}-{int(size)}-{int(dpi)}").lower()
 
@@ -381,14 +391,19 @@ def font_create(
     *,
     asset_store: AssetStore | None = None,
 ) -> dict[str, Any]:
+    resolved_letter = "g" if _is_empty_dispatch_placeholder(letter) else str(letter)
+    resolved_family = "Georgia" if _is_empty_dispatch_placeholder(family) else str(family)
+    resolved_size = 14 if _is_empty_dispatch_placeholder(sz) else int(sz)
+    resolved_dpi = 96 if _is_empty_dispatch_placeholder(dpi) else int(dpi)
+    resolved_style = "NORMAL" if _is_empty_dispatch_placeholder(style) else str(style)
     font = {
         "type": "font",
-        "name": _font_name(str(letter), str(family), int(sz), int(dpi)),
-        "character": str(letter),
-        "size": int(sz),
-        "family": str(family),
-        "style": str(style),
-        "dpi": int(dpi),
+        "name": _font_name(resolved_letter, resolved_family, resolved_size, resolved_dpi),
+        "character": resolved_letter,
+        "size": resolved_size,
+        "family": resolved_family,
+        "style": resolved_style,
+        "dpi": resolved_dpi,
     }
     font["bitmap"] = font_bitmap_get(font, asset_store=asset_store)
     return font

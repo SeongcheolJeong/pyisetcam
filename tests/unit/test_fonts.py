@@ -67,6 +67,21 @@ def test_font_create_loads_cached_bitmap(asset_store) -> None:
     np.testing.assert_allclose(font_get(font, "bitmap"), expected, rtol=0.0, atol=0.0)
 
 
+def test_font_create_accepts_empty_and_blank_placeholders(asset_store) -> None:
+    default_font = font_create(asset_store=asset_store)
+    empty_placeholder = font_create([], [], [], [], [], asset_store=asset_store)
+    blank_placeholder = font_create("", "", "", "", "", asset_store=asset_store)
+
+    for candidate in (empty_placeholder, blank_placeholder):
+        assert font_get(candidate, "name") == font_get(default_font, "name")
+        assert font_get(candidate, "character") == font_get(default_font, "character")
+        assert font_get(candidate, "family") == font_get(default_font, "family")
+        assert font_get(candidate, "size") == font_get(default_font, "size")
+        assert font_get(candidate, "dpi") == font_get(default_font, "dpi")
+        assert font_get(candidate, "style") == font_get(default_font, "style")
+        np.testing.assert_allclose(font_get(candidate, "bitmap"), font_get(default_font, "bitmap"), rtol=0.0, atol=0.0)
+
+
 def test_font_get_supports_padded_and_inverted_bitmaps(asset_store) -> None:
     font = font_create("g", "Georgia", 14, 96, asset_store=asset_store)
 
