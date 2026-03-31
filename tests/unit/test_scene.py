@@ -135,6 +135,15 @@ def test_scene_create_default_macbeth(asset_store) -> None:
     assert np.isclose(scene_get(scene, "mean luminance", asset_store=asset_store), 100.0, rtol=5e-2)
 
 
+def test_scene_create_empty_name_placeholder_uses_default_constructor(asset_store) -> None:
+    default_scene = scene_create(asset_store=asset_store)
+    placeholder_scene = scene_create([], asset_store=asset_store)
+
+    np.testing.assert_allclose(scene_get(placeholder_scene, "wave"), scene_get(default_scene, "wave"))
+    np.testing.assert_allclose(scene_get(placeholder_scene, "photons"), scene_get(default_scene, "photons"))
+    assert placeholder_scene.name == default_scene.name
+
+
 def test_scene_create_list_alias_matches_public_listing() -> None:
     listing = scene_create("scene list")
     assert isinstance(listing, str)
