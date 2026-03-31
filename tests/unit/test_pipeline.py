@@ -3078,6 +3078,18 @@ def test_optics_object_wrappers_round_trip_supported_fields(asset_store) -> None
     assert np.isclose(float(opticsGet(optics, "aperture diameter")), 0.01 / 2.8)
 
 
+def test_optics_create_empty_returns_minimal_shell() -> None:
+    optics = opticsCreate("empty")
+
+    assert optics["type"] == "optics"
+    assert optics["name"] == "empty"
+    assert optics["offaxis_method"] == "cos4th"
+    assert optics["vignetting"] == 0
+    assert "f_number" not in optics
+    assert "focal_length_m" not in optics
+    assert "transmittance" not in optics
+
+
 def test_optics_clear_data_description_and_wvf_bridge(asset_store) -> None:
     optics = opticsCreate("psf", asset_store=asset_store)
     assert "otf_data" in optics

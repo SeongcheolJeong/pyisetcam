@@ -4635,6 +4635,13 @@ def optics_create(
     """Create a headless optics struct using the currently supported OI models."""
 
     normalized = param_format("default" if _is_empty_dispatch_placeholder(optics_type) else optics_type)
+    if normalized == "empty":
+        return {
+            "type": "optics",
+            "name": "empty",
+            "offaxis_method": "cos4th",
+            "vignetting": 0,
+        }
     if normalized in {"human", "humanmw"}:
         oi = oi_create("human mw", *args, asset_store=asset_store)
     elif normalized in {"wvfhuman", "humanwvf"}:
