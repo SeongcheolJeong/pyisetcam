@@ -3155,6 +3155,24 @@ def test_optics_create_human_alias_matches_marimont_wandell(asset_store) -> None
     assert human_wvf["otf_method"] == "human"
 
 
+def test_oi_and_optics_set_lens_replace_camera_transmittance() -> None:
+    wave = np.array([500.0, 600.0], dtype=float)
+    transmittance = np.array([0.8, 0.6], dtype=float)
+    lens = {"wave": wave, "transmittance": transmittance}
+
+    oi = oi_set(oi_create("default"), "lens", lens)
+    optics = opticsSet(opticsCreate("default"), "lens", lens)
+
+    assert "transmittance" not in oi.fields["optics"]
+    assert "transmittance" not in optics
+    assert oi_get(oi, "lens")["type"] == "lens"
+    assert opticsGet(optics, "lens")["type"] == "lens"
+    assert np.array_equal(np.asarray(oi_get(oi, "transmittance wave"), dtype=float), wave)
+    assert np.array_equal(np.asarray(opticsGet(optics, "transmittance wave"), dtype=float), wave)
+    assert np.allclose(np.asarray(oi_get(oi, "transmittance", wave), dtype=float), transmittance)
+    assert np.allclose(np.asarray(opticsGet(optics, "transmittance", wave), dtype=float), transmittance)
+
+
 def test_optics_create_shift_invariant_wrappers_restore_wvf_name(asset_store) -> None:
     shift_invariant = opticsCreate("shift invariant", asset_store=asset_store)
     wavefront = opticsCreate("wvf", asset_store=asset_store)

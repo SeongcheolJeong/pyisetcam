@@ -5,7 +5,7 @@ from __future__ import annotations
 from math import factorial
 from pathlib import Path
 import re
-from typing import Any
+from typing import Any, Mapping
 
 import imageio.v3 as iio
 import numpy as np
@@ -9623,6 +9623,38 @@ def _human_lens_payload(wave: np.ndarray, *, asset_store: AssetStore | None = No
     }
 
 
+def _normalize_lens_payload(value: Any, *, default_wave: np.ndarray) -> dict[str, Any]:
+    if not isinstance(value, Mapping):
+        raise TypeError("Lens payload must be a mapping.")
+    payload = dict(value)
+    wave = np.asarray(payload.get("wave", default_wave), dtype=float).reshape(-1)
+    if payload.get("transmittance") is not None:
+        transmittance = np.asarray(payload.get("transmittance"), dtype=float).reshape(-1)
+        if transmittance.size != wave.size:
+            raise ValueError("Lens transmittance must match wave dimension.")
+        density = payload.get("density")
+        density_array = None if density is None else np.asarray(density, dtype=float).reshape(-1)
+        if density_array is not None and density_array.size != wave.size:
+            raise ValueError("Lens density must match wave dimension.")
+    else:
+        density = payload.get("density")
+        if density is None:
+            transmittance = np.ones(wave.size, dtype=float)
+            density_array = np.zeros(wave.size, dtype=float)
+        else:
+            density_array = np.asarray(density, dtype=float).reshape(-1)
+            if density_array.size != wave.size:
+                raise ValueError("Lens density must match wave dimension.")
+            transmittance = np.power(10.0, -density_array)
+    return {
+        "type": str(payload.get("type", "lens")),
+        "name": str(payload.get("name", "lens")),
+        "wave": wave.copy(),
+        "transmittance": np.asarray(transmittance, dtype=float).reshape(-1).copy(),
+        **({"density": density_array.copy()} if density_array is not None else {}),
+    }
+
+
 def _optics_lens_payload(optics: dict[str, Any]) -> dict[str, Any] | None:
     lens = optics.get("lens")
     if not isinstance(lens, dict):
@@ -10269,6 +10301,10 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any, *args: Any) -> OpticalI
         return oi
     if key in {"opticsmodel", "model"}:
         oi.fields["optics"]["model"] = str(value)
+        return oi
+    if key == "lens":
+        oi.fields["optics"]["lens"] = _normalize_lens_payload(value, default_wave=np.asarray(oi.fields["wave"], dtype=float).reshape(-1))
+        oi.fields["optics"].pop("transmittance", None)
         return oi
     if key in {"transmittance", "transmittancescale", "opticstransmittance", "opticstransmittancescale"}:
         transmittance = _ensure_optics_transmittance(oi.fields["optics"], wave=np.asarray(oi.fields["wave"], dtype=float))
