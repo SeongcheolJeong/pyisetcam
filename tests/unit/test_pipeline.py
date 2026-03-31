@@ -3486,12 +3486,22 @@ def test_oi_create_valid_returns_upstream_constructor_list() -> None:
 def test_oi_create_supports_uniform_and_black_constructor_wrappers(asset_store) -> None:
     wave = np.arange(500.0, 601.0, 50.0, dtype=float)
 
+    default_oi = oi_create("default", asset_store=asset_store)
+    diffraction_oi = oi_create("diffraction", asset_store=asset_store)
+    wvf_oi = oi_create("wvf", asset_store=asset_store)
+    shift_oi = oi_create("shift invariant", asset_store=asset_store)
     uniform_d65 = oi_create("uniform d65", 16, wave, asset_store=asset_store)
     expected_uniform_d65_scene = scene_set(scene_create("uniform d65", 16, wave, asset_store=asset_store), "hfov", 120.0)
     expected_uniform_d65 = oi_create("default", asset_store=asset_store)
     expected_uniform_d65 = oi_set(expected_uniform_d65, "optics fnumber", 1e-3)
     expected_uniform_d65 = oi_set(expected_uniform_d65, "optics offaxis method", "skip")
     expected_uniform_d65 = oi_set(oi_compute(expected_uniform_d65, expected_uniform_d65_scene), "compute method", "")
+
+    assert default_oi.fields["optics"]["name"] == "standard (1/4-inch)"
+    assert diffraction_oi.fields["optics"]["name"] == "standard (1/4-inch)"
+    assert wvf_oi.fields["optics"]["name"] == "wvf"
+    assert shift_oi.fields["optics"]["name"] == "wvf"
+    assert uniform_d65.fields["optics"]["name"] == "standard (1/4-inch)"
 
     np.testing.assert_allclose(
         np.asarray(oi_get(uniform_d65, "photons"), dtype=float),
@@ -3528,6 +3538,7 @@ def test_oi_create_supports_uniform_and_black_constructor_wrappers(asset_store) 
     )
     assert np.array_equal(np.asarray(oi_get(black, "wave"), dtype=float).reshape(-1), wave)
     assert np.isclose(float(oi_get(black, "fov")), 100.0)
+    assert black.fields["optics"]["name"] == "wvf"
 
 
 def test_oi_create_supports_human_constructor_wrappers(asset_store) -> None:

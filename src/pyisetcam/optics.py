@@ -5117,6 +5117,7 @@ def oi_create(
 
     if normalized in {"default", "diffractionlimited", "diffraction"}:
         optics = {
+            "name": "standard (1/4-inch)",
             "model": "diffractionlimited",
             "f_number": 4.0,
             "focal_length_m": DEFAULT_FOCAL_LENGTH_M,
@@ -5136,6 +5137,7 @@ def oi_create(
             )
         )
         optics = {
+            "name": "wvf",
             "model": "shiftinvariant",
             "f_number": float(wavefront.get("f_number", 4.0)),
             "focal_length_m": float(wavefront.get("focal_length_m", DEFAULT_FOCAL_LENGTH_M)),
