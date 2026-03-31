@@ -3547,6 +3547,8 @@ def test_oi_create_supports_human_constructor_wrappers(asset_store) -> None:
 
     human_mw = oi_create("human mw", asset_store=asset_store)
     assert oi_get(human_mw, "name") == "human-MW"
+    assert human_mw.fields["name"] == "human-MW"
+    assert human_mw.fields["type"] == "opticalimage"
     assert oi_get(human_mw, "compute method") == "humanmw"
     assert oi_get(human_mw, "optics model") == "shiftinvariant"
     assert human_mw.fields["optics"]["name"] == "human-MW"
@@ -3558,6 +3560,8 @@ def test_oi_create_supports_human_constructor_wrappers(asset_store) -> None:
     human_wvf = oi_create("wvf human", 4.0, [], wave, asset_store=asset_store)
     human_alias = oi_create("human", 4.0, [], wave, asset_store=asset_store)
     assert human_wvf.name == "human-WVF"
+    assert human_wvf.fields["name"] == "human-WVF"
+    assert human_wvf.fields["type"] == "opticalimage"
     assert oi_get(human_wvf, "compute method") == "opticspsf"
     assert oi_get(human_wvf, "optics model") == "shiftinvariant"
     assert np.array_equal(np.asarray(oi_get(human_wvf, "wave"), dtype=float).reshape(-1), wave)
@@ -3580,7 +3584,10 @@ def test_oi_create_empty_returns_minimal_shell_and_keeps_wave_override() -> None
 
     empty = oi_create("empty")
     explicit = oi_create("empty", explicit_wave)
+    renamed = oi_set(empty.clone(), "name", "empty shell")
 
+    assert empty.fields["name"] == "opticalimage"
+    assert empty.fields["type"] == "opticalimage"
     assert empty.fields["optics"]["name"] == "empty"
     assert empty.fields["optics"]["type"] == "optics"
     assert "f_number" not in empty.fields["optics"]
@@ -3590,8 +3597,12 @@ def test_oi_create_empty_returns_minimal_shell_and_keeps_wave_override() -> None
     assert oi_get(empty, "compute method") == ""
     assert np.asarray(oi_get(empty, "wave"), dtype=float).size == 0
 
+    assert explicit.fields["name"] == "opticalimage"
+    assert explicit.fields["type"] == "opticalimage"
     assert "transmittance" not in explicit.fields["optics"]
     assert np.array_equal(np.asarray(oi_get(explicit, "wave"), dtype=float), explicit_wave)
+    assert renamed.fields["name"] == "empty shell"
+    assert renamed.fields["type"] == "opticalimage"
 
 
 def test_oi_create_treats_empty_type_as_default_and_supports_uniform_ee_specify(asset_store) -> None:

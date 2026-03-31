@@ -5202,6 +5202,7 @@ def oi_create(
         human_mw.fields["optics"]["f_number"] = float(focal_length_m / max(2.0 * pupil_radius_m, 1.0e-12))
         human_mw.fields["optics"]["otf_method"] = "human"
         human_mw.fields["optics"].pop("transmittance", None)
+        _sync_oi_identity_fields(human_mw)
         return track_session_object(session, human_mw)
     elif normalized in {"human", "wvfhuman", "humanwvf"}:
         pupil_diameter_mm = 3.0 if len(args) == 0 or _is_empty_dispatch_placeholder(args[0]) else float(np.asarray(args[0], dtype=float).reshape(-1)[0])
@@ -5233,6 +5234,7 @@ def oi_create(
         human_wvf.fields["optics"]["name"] = "humanwvf"
         human_wvf.fields["optics"]["otf_method"] = "human"
         human_wvf.fields["optics"].pop("transmittance", None)
+        _sync_oi_identity_fields(human_wvf)
         return track_session_object(session, human_wvf)
     elif normalized in {"uniformd65", "uniformee", "uniformeespecify"}:
         from .scene import scene_create, scene_set
@@ -5247,14 +5249,18 @@ def oi_create(
         base = oi_set(base, "optics fnumber", 1e-3)
         base = oi_set(base, "optics offaxis method", "skip")
         computed = oi_compute(base, source_scene, session=session)
-        return oi_set(computed, "compute method", "")
+        computed = oi_set(computed, "compute method", "")
+        _sync_oi_identity_fields(computed)
+        return computed
     elif normalized == "black":
         size_value = 32 if len(args) == 0 or _is_empty_dispatch_placeholder(args[0]) else int(np.asarray(args[0], dtype=int).reshape(-1)[0])
         wave = DEFAULT_WAVE.copy() if len(args) < 2 or _is_empty_dispatch_placeholder(args[1]) else np.asarray(args[1], dtype=float)
         black_oi = oi_create("shift invariant", asset_store=store, session=session)
         black_oi = oi_set(black_oi, "wave", wave)
         black_oi = oi_set(black_oi, "photons", np.zeros((size_value, size_value, int(np.asarray(wave, dtype=float).size)), dtype=float))
-        return oi_set(black_oi, "fov", 100.0)
+        black_oi = oi_set(black_oi, "fov", 100.0)
+        _sync_oi_identity_fields(black_oi)
+        return black_oi
     else:
         raise UnsupportedOptionError("oiCreate", oi_type)
 
@@ -5300,6 +5306,7 @@ def oi_create(
     oi.fields["psf_struct"] = None
     oi.fields["sample_spacing_m"] = None
     oi.data["photons"] = np.empty((0, 0, 0), dtype=float)
+    _sync_oi_identity_fields(oi)
     return track_session_object(session, oi)
 
 
@@ -9589,6 +9596,11 @@ def _sync_oi_geometry_fields(oi: OpticalImage) -> None:
     oi.fields["vfov_deg"] = vfov_deg
 
 
+def _sync_oi_identity_fields(oi: OpticalImage) -> None:
+    oi.fields["name"] = str(oi.name)
+    oi.fields["type"] = str(oi.type)
+
+
 def oi_get(oi: OpticalImage, parameter: str, *args: Any) -> Any:
     key = param_format(parameter)
     prefix, remainder = split_prefixed_parameter(parameter, ("optics", "wvf"))
@@ -10129,6 +10141,7 @@ def oi_set(oi: OpticalImage, parameter: str, value: Any, *args: Any) -> OpticalI
         return _rebuild_oi_from_wvf(oi, updated_wvf)
     if key == "name":
         oi.name = str(value)
+        _sync_oi_identity_fields(oi)
         return oi
     if key == "wave":
         oi.fields["wave"] = np.asarray(value, dtype=float).reshape(-1)
