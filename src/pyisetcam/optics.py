@@ -5052,6 +5052,8 @@ def oi_create(
 ) -> OpticalImage | list[str]:
     """Create a supported optical image object."""
 
+    if _is_empty_dispatch_placeholder(oi_type):
+        oi_type = "diffraction limited"
     normalized = param_format(oi_type)
     store = _store(asset_store)
     valid_types = [
@@ -5199,7 +5201,7 @@ def oi_create(
         human_wvf.fields["optics"]["name"] = "human"
         human_wvf.fields["optics"]["otf_method"] = "human"
         return track_session_object(session, human_wvf)
-    elif normalized in {"uniformd65", "uniformee"}:
+    elif normalized in {"uniformd65", "uniformee", "uniformeespecify"}:
         from .scene import scene_create, scene_set
 
         size = 32 if len(args) == 0 or _is_empty_dispatch_placeholder(args[0]) else args[0]

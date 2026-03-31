@@ -3489,6 +3489,24 @@ def test_oi_create_supports_human_constructor_wrappers(asset_store) -> None:
     assert np.asarray(oi_get(computed_human_wvf, "photons"), dtype=float).shape == (8, 8, wave.size)
 
 
+def test_oi_create_treats_empty_type_as_default_and_supports_uniform_ee_specify(asset_store) -> None:
+    wave = np.arange(500.0, 601.0, 50.0, dtype=float)
+
+    default_oi = oi_create(asset_store=asset_store)
+    placeholder_oi = oi_create([], asset_store=asset_store)
+    assert oi_get(placeholder_oi, "compute method") == oi_get(default_oi, "compute method")
+    assert oi_get(placeholder_oi, "optics model") == oi_get(default_oi, "optics model")
+    assert np.isclose(float(oi_get(placeholder_oi, "fnumber")), float(oi_get(default_oi, "fnumber")))
+
+    alias_oi = oi_create("uniform ee specify", [], wave, asset_store=asset_store)
+    reference_oi = oi_create("uniform ee", 32, wave, asset_store=asset_store)
+    np.testing.assert_allclose(
+        np.asarray(oi_get(alias_oi, "photons"), dtype=float),
+        np.asarray(oi_get(reference_oi, "photons"), dtype=float),
+    )
+    assert oi_get(alias_oi, "compute method") == oi_get(reference_oi, "compute method")
+
+
 def test_oi_photon_noise_matches_seeded_legacy_contract() -> None:
     photons = np.array(
         [
