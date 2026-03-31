@@ -49,6 +49,16 @@ from .utils import (
 )
 
 
+def _is_empty_dispatch_placeholder(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return str(value).strip() == ""
+    if isinstance(value, (list, tuple, np.ndarray)):
+        return np.asarray(value).size == 0
+    return False
+
+
 def _store(asset_store: AssetStore | None) -> AssetStore:
     return asset_store or AssetStore.default()
 
@@ -230,8 +240,9 @@ def camera_create(
     """Create a supported camera."""
 
     store = _store(asset_store)
-    normalized = param_format(camera_type)
-    camera = Camera(name=str(camera_type))
+    resolved_type = "default" if _is_empty_dispatch_placeholder(camera_type) else camera_type
+    normalized = param_format(resolved_type)
+    camera = Camera(name=str(resolved_type))
 
     if normalized in {"default"}:
         oi = oi_create(session=session)

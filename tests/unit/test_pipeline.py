@@ -8681,6 +8681,16 @@ def test_camera_module_core_matlab_aliases() -> None:
     assert camera_module.cameraSet is camera_module.camera_set
 
 
+def test_camera_create_empty_type_placeholder_uses_default_constructor(asset_store) -> None:
+    default_camera = camera_create(asset_store=asset_store)
+    placeholder_camera = camera_create([], asset_store=asset_store)
+
+    assert placeholder_camera.name == default_camera.name
+    assert camera_get(placeholder_camera, "sensor name") == camera_get(default_camera, "sensor name")
+    assert camera_get(placeholder_camera, "oi name") == camera_get(default_camera, "oi name")
+    assert camera_get(placeholder_camera, "ip name") == camera_get(default_camera, "ip name")
+
+
 def test_sensor_module_core_matlab_aliases() -> None:
     assert sensor_module.sensorAddFilter is sensor_module.sensor_add_filter
     assert sensor_module.sensorCfaSave is sensor_module.sensor_cfa_save
