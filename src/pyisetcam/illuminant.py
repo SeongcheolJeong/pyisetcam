@@ -25,6 +25,14 @@ def _store(asset_store: AssetStore | None) -> AssetStore:
     return asset_store or AssetStore.default()
 
 
+def _is_empty_dispatch_placeholder(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, (list, tuple, np.ndarray)):
+        return np.asarray(value).size == 0
+    return False
+
+
 def _wave_or_default(wave: Any | None) -> np.ndarray:
     if wave is None:
         return np.asarray(DEFAULT_WAVE, dtype=float).reshape(-1)
@@ -68,21 +76,28 @@ def illuminant_create(
     """Create a MATLAB-style illuminant object."""
 
     store = _store(asset_store)
+    if _is_empty_dispatch_placeholder(il_name):
+        il_name = "d65"
     wave_nm = _wave_or_default(wave)
     name_key = param_format(il_name)
     illuminant = _base_illuminant(str(il_name), wave_nm)
 
+    def _scalar_arg(index: int, default: float) -> float:
+        if len(args) <= index or _is_empty_dispatch_placeholder(args[index]):
+            return default
+        return float(args[index])
+
     if name_key in _ILLUMINANT_FILE_MAP:
-        luminance = 100.0 if len(args) == 0 else float(args[0])
+        luminance = _scalar_arg(0, 100.0)
         _, energy = store.load_illuminant(_ILLUMINANT_FILE_MAP[name_key], wave_nm=wave_nm)
         energy = _scale_energy_to_luminance(energy, wave_nm, luminance, asset_store=store)
         illuminant.name = str(il_name)
     elif name_key in {"equalenergy", "white", "uniform"}:
-        luminance = 100.0 if len(args) == 0 else float(args[0])
+        luminance = _scalar_arg(0, 100.0)
         energy = _scale_energy_to_luminance(np.ones(wave_nm.size, dtype=float), wave_nm, luminance, asset_store=store)
         illuminant.name = str(il_name)
     elif name_key in {"equalphoton", "equalphotons"}:
-        luminance = 100.0 if len(args) == 0 else float(args[0])
+        luminance = _scalar_arg(0, 100.0)
         energy = _scale_energy_to_luminance(
             quanta_to_energy(np.ones(wave_nm.size, dtype=float), wave_nm),
             wave_nm,
@@ -91,13 +106,13 @@ def illuminant_create(
         )
         illuminant.name = str(il_name)
     elif name_key in {"blackbody"}:
-        temperature_k = 5000.0 if len(args) == 0 else float(args[0])
-        luminance = 100.0 if len(args) < 2 else float(args[1])
+        temperature_k = _scalar_arg(0, 5000.0)
+        luminance = _scalar_arg(1, 100.0)
         energy = np.asarray(blackbody(wave_nm, temperature_k, kind="energy"), dtype=float).reshape(-1)
         energy = _scale_energy_to_luminance(energy, wave_nm, luminance, asset_store=store)
         illuminant.name = f"blackbody-{temperature_k:.0f}"
     elif name_key in {"555nm", "monochromatic"}:
-        luminance = 100.0 if len(args) == 0 else float(args[0])
+        luminance = _scalar_arg(0, 100.0)
         energy = np.zeros(wave_nm.size, dtype=float)
         idx = int(np.argmin(np.abs(wave_nm - 555.0)))
         energy[idx] = 1.0
@@ -108,17 +123,25 @@ def illuminant_create(
         sd = 20.0
         peak_energy = 25.0
         if args:
+            if len(args) == 1 and _is_empty_dispatch_placeholder(args[0]):
+                args = ()
             if len(args) == 1 and isinstance(args[0], dict):
                 params = args[0]
-                center = float(params.get("center", center))
-                sd = float(params.get("sd", sd))
-                peak_energy = float(params.get("peakEnergy", peak_energy))
+                if not _is_empty_dispatch_placeholder(params.get("center")):
+                    center = float(params.get("center"))
+                if not _is_empty_dispatch_placeholder(params.get("sd")):
+                    sd = float(params.get("sd"))
+                peak_field = params.get("peakEnergy", params.get("peak energy"))
+                if not _is_empty_dispatch_placeholder(peak_field):
+                    peak_energy = float(peak_field)
             else:
                 if len(args) % 2 != 0:
                     raise ValueError("illuminantCreate('gaussian', ...) optional arguments must be a params dict or key/value pairs.")
                 for index in range(0, len(args), 2):
                     key = param_format(str(args[index]))
                     raw_value = args[index + 1]
+                    if _is_empty_dispatch_placeholder(raw_value):
+                        continue
                     if key == "center":
                         center = float(raw_value)
                     elif key == "sd":
@@ -130,8 +153,8 @@ def illuminant_create(
         energy = peak_energy * np.exp(-0.5 * np.square((wave_nm - center) / sd))
         illuminant.name = f"Gaussian {center:.0f}"
     elif name_key in {"daylight"}:
-        cct_k = 6500.0 if len(args) == 0 else float(args[0])
-        luminance = 100.0 if len(args) < 2 else float(args[1])
+        cct_k = _scalar_arg(0, 6500.0)
+        luminance = _scalar_arg(1, 100.0)
         energy = np.asarray(daylight(wave_nm, cct_k, "energy", asset_store=store), dtype=float).reshape(-1)
         energy = _scale_energy_to_luminance(energy, wave_nm, luminance, asset_store=store)
         illuminant.name = f"daylight-{cct_k:.0f}"
@@ -305,10 +328,10 @@ def illuminant_read(
     """Return the requested illuminant spectral radiance in energy units."""
 
     store = _store(asset_store)
-    if ill_p is None:
-        name = "d65" if light_name is None else str(light_name)
+    if _is_empty_dispatch_placeholder(ill_p):
+        name = "d65" if _is_empty_dispatch_placeholder(light_name) else str(light_name)
         wave_nm = _wave_or_default(wave)
-        luminance_cd_m2 = 100.0 if luminance is None else float(luminance)
+        luminance_cd_m2 = 100.0 if _is_empty_dispatch_placeholder(luminance) else float(luminance)
         if param_format(name) == "blackbody":
             illuminant = illuminant_create(name, wave_nm, 6500.0, luminance_cd_m2, asset_store=store)
         else:
@@ -317,14 +340,20 @@ def illuminant_read(
         if isinstance(ill_p, BaseISETObject):
             illuminant = ill_p.clone()
         elif isinstance(ill_p, dict):
-            name = str(ill_p.get("name", light_name or "d65"))
-            luminance_cd_m2 = float(ill_p.get("luminance", 100.0 if luminance is None else luminance))
+            fallback_name = "d65" if _is_empty_dispatch_placeholder(light_name) else str(light_name)
+            raw_name = ill_p.get("name", fallback_name)
+            name = fallback_name if _is_empty_dispatch_placeholder(raw_name) else str(raw_name)
+            fallback_luminance = 100.0 if _is_empty_dispatch_placeholder(luminance) else float(luminance)
+            raw_luminance = ill_p.get("luminance", fallback_luminance)
+            luminance_cd_m2 = fallback_luminance if _is_empty_dispatch_placeholder(raw_luminance) else float(raw_luminance)
             spectrum = ill_p.get("spectrum", {})
             if not isinstance(spectrum, dict):
                 spectrum = {}
-            wave_nm = _wave_or_default(spectrum.get("wave", wave))
+            raw_wave = spectrum.get("wave", wave)
+            wave_nm = _wave_or_default(raw_wave)
             if param_format(name) == "blackbody":
-                temperature_k = float(ill_p.get("temperature", 6500.0))
+                raw_temperature = ill_p.get("temperature", 6500.0)
+                temperature_k = 6500.0 if _is_empty_dispatch_placeholder(raw_temperature) else float(raw_temperature)
                 illuminant = illuminant_create(name, wave_nm, temperature_k, luminance_cd_m2, asset_store=store)
             else:
                 illuminant = illuminant_create(name, wave_nm, luminance_cd_m2, asset_store=store)
