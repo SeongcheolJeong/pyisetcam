@@ -7488,6 +7488,9 @@ def test_pixel_create_get_set_and_ideal_match_legacy_contract() -> None:
     default_wave = np.arange(400.0, 701.0, 10.0, dtype=float)
     pixel = pixelCreate("default", wave, 1.1e-6)
     default_wave_pixel = pixelCreate("human", [])
+    default_pixel = pixelCreate()
+    empty_type_pixel = pixelCreate(np.array([], dtype=float), wave)
+    blank_type_pixel = pixelCreate("", wave)
 
     assert pixelGet(pixel, "name") == "aps"
     assert pixelGet(pixel, "type") == "pixel"
@@ -7496,6 +7499,10 @@ def test_pixel_create_get_set_and_ideal_match_legacy_contract() -> None:
     assert np.array_equal(np.asarray(pixelGet(pixel, "wave"), dtype=float), wave)
     assert np.array_equal(np.asarray(pixelGet(pixel, "spectralQE"), dtype=float), np.ones(wave.size, dtype=float))
     assert np.array_equal(np.asarray(pixelGet(default_wave_pixel, "wave"), dtype=float), default_wave)
+    assert pixelGet(empty_type_pixel, "name") == pixelGet(default_pixel, "name")
+    assert pixelGet(blank_type_pixel, "name") == pixelGet(default_pixel, "name")
+    assert np.array_equal(np.asarray(pixelGet(empty_type_pixel, "wave"), dtype=float), wave)
+    assert np.array_equal(np.asarray(pixelGet(blank_type_pixel, "wave"), dtype=float), wave)
 
     resized = pixelSet(pixel, "size same fill factor", np.array([1.5e-6, 1.5e-6], dtype=float))
     noisy = pixelSet(resized, "readNoiseVolts", 2.0e-3)

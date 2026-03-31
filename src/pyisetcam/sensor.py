@@ -3058,7 +3058,13 @@ def pixel_create(
     """Create a standalone MATLAB-style pixel payload."""
 
     resolved_wave = DEFAULT_WAVE.copy() if _is_empty_dispatch_placeholder(wave) else np.asarray(wave, dtype=float).reshape(-1)
-    normalized = param_format(pixel_type or "default")
+    resolved_type = (
+        "default"
+        if _is_empty_dispatch_placeholder(pixel_type)
+        or (isinstance(pixel_type, str) and pixel_type.strip() == "")
+        else pixel_type
+    )
+    normalized = param_format(resolved_type)
 
     if normalized in {"default", "aps"}:
         payload = _default_pixel({"name": "aps", "type": "pixel"})
