@@ -5041,10 +5041,28 @@ def oi_create(
     *args: Any,
     asset_store: AssetStore | None = None,
     session: SessionContext | None = None,
-) -> OpticalImage:
+) -> OpticalImage | list[str]:
     """Create a supported optical image object."""
 
     normalized = param_format(oi_type)
+    valid_types = [
+        "default",
+        "pinhole",
+        "diffractionlimited",
+        "diffraction",
+        "shiftinvariant",
+        "raytrace",
+        "wvf",
+        "human",
+        "humanmw",
+        "wvfhuman",
+        "humanwvf",
+        "uniformd65",
+        "uniformee",
+        "black",
+    ]
+    if normalized.startswith("valid"):
+        return valid_types.copy()
     oi = OpticalImage(name="opticalimage")
     optics: dict[str, Any]
     psf_data: dict[str, Any] | None = None

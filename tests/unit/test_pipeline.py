@@ -3395,6 +3395,25 @@ def test_oi_illuminant_helper_wrappers_match_legacy_contract(asset_store) -> Non
     )
 
 
+def test_oi_create_valid_returns_upstream_constructor_list() -> None:
+    assert oi_create("valid") == [
+        "default",
+        "pinhole",
+        "diffractionlimited",
+        "diffraction",
+        "shiftinvariant",
+        "raytrace",
+        "wvf",
+        "human",
+        "humanmw",
+        "wvfhuman",
+        "humanwvf",
+        "uniformd65",
+        "uniformee",
+        "black",
+    ]
+
+
 def test_oi_photon_noise_matches_seeded_legacy_contract() -> None:
     photons = np.array(
         [
