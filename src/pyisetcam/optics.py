@@ -4646,6 +4646,8 @@ def optics_create(
         oi = oi_create("human mw", *args, asset_store=asset_store)
         optics = dict(oi.fields["optics"])
         optics.setdefault("type", "optics")
+        optics.pop("wavefront", None)
+        optics.pop("wvf", None)
         optics.pop("transmittance", None)
         optics.setdefault("vignetting", 0)
         return optics
