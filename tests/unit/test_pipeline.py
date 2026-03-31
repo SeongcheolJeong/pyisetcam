@@ -3066,6 +3066,7 @@ def test_rt_psf_edit_centers_and_rotates_raytrace_planes() -> None:
 
 def test_optics_object_wrappers_round_trip_supported_fields(asset_store) -> None:
     optics = opticsCreate(asset_store=asset_store)
+    assert optics["type"] == "optics"
     assert optics["name"] == "standard (1/4-inch)"
     assert optics["vignetting"] == 0
     optics = opticsSet(optics, "fnumber", 2.8)
@@ -3114,6 +3115,9 @@ def test_optics_create_human_alias_matches_marimont_wandell(asset_store) -> None
     human_mw = opticsCreate("human mw", asset_store=asset_store)
     human_wvf = opticsCreate("wvf human", asset_store=asset_store)
 
+    assert human_alias["type"] == "optics"
+    assert human_mw["type"] == "optics"
+    assert human_wvf["type"] == "optics"
     assert human_alias["name"] == "human-MW"
     assert human_alias["name"] == human_mw["name"]
     assert human_wvf["name"] == "humanwvf"

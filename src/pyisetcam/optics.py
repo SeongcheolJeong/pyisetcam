@@ -4645,12 +4645,14 @@ def optics_create(
     if normalized in {"human", "humanmw"}:
         oi = oi_create("human mw", *args, asset_store=asset_store)
         optics = dict(oi.fields["optics"])
+        optics.setdefault("type", "optics")
         optics.pop("transmittance", None)
         optics.setdefault("vignetting", 0)
         return optics
     elif normalized in {"wvfhuman", "humanwvf"}:
         oi = oi_create("human", *args, asset_store=asset_store)
         optics = dict(oi.fields["optics"])
+        optics.setdefault("type", "optics")
         optics["name"] = "humanwvf"
         optics.pop("transmittance", None)
         optics.setdefault("vignetting", 0)
@@ -4658,6 +4660,7 @@ def optics_create(
     else:
         oi = oi_create(optics_type, *args, asset_store=asset_store)
     optics = dict(oi.fields["optics"])
+    optics.setdefault("type", "optics")
     if normalized in {"default", "diffractionlimited"}:
         optics.setdefault("name", "standard (1/4-inch)")
     optics.setdefault("vignetting", 0)
