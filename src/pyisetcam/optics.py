@@ -5207,6 +5207,7 @@ def oi_create(
         human_mw.fields["optics"]["focal_length_m"] = float(focal_length_m)
         human_mw.fields["optics"]["f_number"] = float(focal_length_m / max(2.0 * pupil_radius_m, 1.0e-12))
         human_mw.fields["optics"]["otf_method"] = "human"
+        human_mw.fields["optics"].pop("transmittance", None)
         return track_session_object(session, human_mw)
     elif normalized in {"human", "wvfhuman", "humanwvf"}:
         pupil_diameter_mm = 3.0 if len(args) == 0 or _is_empty_dispatch_placeholder(args[0]) else float(np.asarray(args[0], dtype=float).reshape(-1)[0])
@@ -5235,8 +5236,9 @@ def oi_create(
         human_wvf = wvf_to_oi(wavefront)
         human_wvf = oi_set(human_wvf, "compute method", "opticspsf")
         human_wvf.name = "human-WVF"
-        human_wvf.fields["optics"]["name"] = "human"
+        human_wvf.fields["optics"]["name"] = "humanwvf"
         human_wvf.fields["optics"]["otf_method"] = "human"
+        human_wvf.fields["optics"].pop("transmittance", None)
         return track_session_object(session, human_wvf)
     elif normalized in {"uniformd65", "uniformee", "uniformeespecify"}:
         from .scene import scene_create, scene_set

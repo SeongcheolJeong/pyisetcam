@@ -3538,6 +3538,8 @@ def test_oi_create_supports_human_constructor_wrappers(asset_store) -> None:
     assert oi_get(human_mw, "name") == "human-MW"
     assert oi_get(human_mw, "compute method") == "humanmw"
     assert oi_get(human_mw, "optics model") == "shiftinvariant"
+    assert human_mw.fields["optics"]["name"] == "human-MW"
+    assert "transmittance" not in human_mw.fields["optics"]
 
     computed_human_mw = oi_compute(human_mw, scene, crop=True)
     assert np.asarray(oi_get(computed_human_mw, "photons"), dtype=float).shape == (8, 8, wave.size)
@@ -3548,6 +3550,10 @@ def test_oi_create_supports_human_constructor_wrappers(asset_store) -> None:
     assert oi_get(human_wvf, "compute method") == "opticspsf"
     assert oi_get(human_wvf, "optics model") == "shiftinvariant"
     assert np.array_equal(np.asarray(oi_get(human_wvf, "wave"), dtype=float).reshape(-1), wave)
+    assert human_wvf.fields["optics"]["name"] == "humanwvf"
+    assert human_alias.fields["optics"]["name"] == "humanwvf"
+    assert "transmittance" not in human_wvf.fields["optics"]
+    assert "transmittance" not in human_alias.fields["optics"]
     assert np.array_equal(
         np.asarray(oi_get(human_alias, "wave"), dtype=float).reshape(-1),
         np.asarray(oi_get(human_wvf, "wave"), dtype=float).reshape(-1),
