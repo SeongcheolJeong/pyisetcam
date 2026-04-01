@@ -8,6 +8,7 @@ from typing import Any
 
 import imageio.v3 as iio
 import numpy as np
+from scipy.ndimage import maximum_filter
 
 from .assets import AssetStore, ie_read_color_filter, ie_read_spectra
 from .camera import (
@@ -49,6 +50,7 @@ from .optics import (
     oi_crop,
     oi_create,
     oi_get,
+    oi_show_image,
     oi_spatial_resample,
     psf_to_zcoeff_error,
     wvf_compute,
@@ -182,6 +184,131 @@ def _deterministic_normal_samples(n_rows: int, n_cols: int) -> np.ndarray:
 def _channel_normalize(values: Any) -> np.ndarray:
     vector = np.asarray(values, dtype=float).reshape(-1)
     return vector / max(float(np.max(np.abs(vector))), 1e-12)
+
+
+def _canonical_profile(values: Any, samples: int = 129) -> np.ndarray:
+    profile = np.asarray(values, dtype=float).reshape(-1)
+    if profile.size == 0:
+        return np.zeros(samples, dtype=float)
+    if profile.size == 1:
+        return np.full(samples, float(profile[0]), dtype=float)
+    support = np.linspace(-1.0, 1.0, profile.size, dtype=float)
+    query = np.linspace(-1.0, 1.0, samples, dtype=float)
+    return np.interp(query, support, profile)
+
+
+def _luma(values: Any) -> np.ndarray:
+    array = np.asarray(values, dtype=float)
+    if array.ndim == 2:
+        return array
+    if array.ndim == 3 and array.shape[2] == 3:
+        return np.mean(array, axis=2, dtype=float)
+    raise ValueError("Expected grayscale or RGB image data.")
+
+
+def _find_point_peaks(image: Any, *, percentile: float = 99.7, size: int = 7) -> np.ndarray:
+    luma = _luma(image)
+    maxima = maximum_filter(luma, size=size, mode="nearest")
+    threshold = float(np.percentile(luma, percentile))
+    peaks = np.argwhere((luma == maxima) & (luma >= threshold))
+    if peaks.size == 0:
+        raise ValueError("No point peaks were detected in the rendered point-array image.")
+    return np.asarray(peaks, dtype=int)
+
+
+def _select_center_and_edge_peaks(peaks: Any, shape: tuple[int, int]) -> tuple[np.ndarray, np.ndarray]:
+    peak_array = np.asarray(peaks, dtype=int).reshape(-1, 2)
+    center = (np.asarray(shape, dtype=float) - 1.0) / 2.0
+    distances = np.sqrt(np.sum((np.asarray(peak_array, dtype=float) - center) ** 2, axis=1))
+    center_peak = np.asarray(peak_array[int(np.argmin(distances))], dtype=int)
+    edge_peak = np.asarray(peak_array[int(np.argmax(distances))], dtype=int)
+    return center_peak, edge_peak
+
+
+def _crop_square(image: Any, peak_rc: Any, radius: int) -> np.ndarray:
+    array = np.asarray(image, dtype=float)
+    peak = np.asarray(peak_rc, dtype=int).reshape(2)
+    row, col = int(peak[0]), int(peak[1])
+    row_min = max(row - radius, 0)
+    row_max = min(row + radius + 1, array.shape[0])
+    col_min = max(col - radius, 0)
+    col_max = min(col + radius + 1, array.shape[1])
+    if array.ndim == 2:
+        return array[row_min:row_max, col_min:col_max]
+    return array[row_min:row_max, col_min:col_max, :]
+
+
+def _spot_metrics(values: Any, *, spacing_um: float = 1.0) -> dict[str, float]:
+    plane = np.asarray(values, dtype=float)
+    plane = plane - float(np.min(plane))
+    total = float(np.sum(plane, dtype=float))
+    if total <= 0.0:
+        return {
+            "peak": 0.0,
+            "rms_radius_px": 0.0,
+            "rms_radius_um": 0.0,
+            "ee50_radius_px": 0.0,
+            "ee50_radius_um": 0.0,
+            "ee80_radius_px": 0.0,
+            "ee80_radius_um": 0.0,
+        }
+    yy, xx = np.indices(plane.shape)
+    center_y = float(np.sum(yy * plane, dtype=float) / total)
+    center_x = float(np.sum(xx * plane, dtype=float) / total)
+    radius_px = np.sqrt(np.square(yy - center_y) + np.square(xx - center_x))
+    order = np.argsort(radius_px.reshape(-1))
+    sorted_radius = radius_px.reshape(-1)[order]
+    sorted_energy = plane.reshape(-1)[order]
+    cumulative = np.cumsum(sorted_energy, dtype=float)
+
+    def _energy_radius(level: float) -> float:
+        index = int(np.searchsorted(cumulative, level * total, side="left"))
+        index = min(index, sorted_radius.size - 1)
+        return float(sorted_radius[index])
+
+    rms_radius_px = float(np.sqrt(np.sum(np.square(radius_px) * plane, dtype=float) / total))
+    ee50_radius_px = _energy_radius(0.50)
+    ee80_radius_px = _energy_radius(0.80)
+    return {
+        "peak": float(np.max(plane)),
+        "rms_radius_px": rms_radius_px,
+        "rms_radius_um": rms_radius_px * float(spacing_um),
+        "ee50_radius_px": ee50_radius_px,
+        "ee50_radius_um": ee50_radius_px * float(spacing_um),
+        "ee80_radius_px": ee80_radius_px,
+        "ee80_radius_um": ee80_radius_px * float(spacing_um),
+    }
+
+
+def _raytrace_psf_payload(current_oi: Any, *, reference_wavelength_nm: float) -> dict[str, Any]:
+    field_heights_mm = np.asarray(oi_get(current_oi, "rtpsffieldheight", "mm"), dtype=float).reshape(-1)
+    support_x_um = np.asarray(oi_get(current_oi, "rtpsfsupportx", "um"), dtype=float).reshape(-1)
+    support_y_um = np.asarray(oi_get(current_oi, "rtpsfsupporty", "um"), dtype=float).reshape(-1)
+    psf_spacing_um = np.asarray(oi_get(current_oi, "rtpsfspacing", "um"), dtype=float).reshape(-1)
+    sample_spacing_um = float(psf_spacing_um[0]) if psf_spacing_um.size else 1.0
+    edge_field_height_mm = float(field_heights_mm[-1]) if field_heights_mm.size else 0.0
+    center_psf = np.asarray(oi_get(current_oi, "rtpsfdata", 0.0, float(reference_wavelength_nm)), dtype=float)
+    edge_psf = np.asarray(
+        oi_get(current_oi, "rtpsfdata", edge_field_height_mm / 1.0e3, float(reference_wavelength_nm)),
+        dtype=float,
+    )
+    center_peak = max(float(np.max(center_psf)), 1.0e-12)
+    edge_peak = max(float(np.max(edge_psf)), 1.0e-12)
+    center_psf_center_row = _channel_normalize(center_psf[center_psf.shape[0] // 2, :])
+    edge_psf_center_row = _channel_normalize(edge_psf[edge_psf.shape[0] // 2, :])
+    return {
+        "field_heights_mm": field_heights_mm,
+        "edge_field_height_mm": edge_field_height_mm,
+        "support_x_um": support_x_um,
+        "support_y_um": support_y_um,
+        "sample_spacing_um": sample_spacing_um,
+        "center_psf_norm": center_psf / center_peak,
+        "edge_psf_norm": edge_psf / edge_peak,
+        "center_psf_center_row_norm": center_psf_center_row,
+        "edge_psf_center_row_norm": edge_psf_center_row,
+        "center_psf_metrics": _spot_metrics(center_psf, spacing_um=sample_spacing_um),
+        "edge_psf_metrics": _spot_metrics(edge_psf, spacing_um=sample_spacing_um),
+    }
 
 
 def _reflectance_sample_statistics(reflectances: Any) -> tuple[np.ndarray, np.ndarray]:
@@ -5468,6 +5595,103 @@ def run_python_case_with_context(
                 "rt_small": rt_small,
                 "dl_small": dl_small,
             },
+        )
+
+    if case_name == "optics_rt_center_edge_psf_small":
+        reference_wavelength_nm = 550.0
+        oi = oi_create("ray trace", asset_store=store)
+        psf_payload = _raytrace_psf_payload(oi, reference_wavelength_nm=reference_wavelength_nm)
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "reference_wavelength_nm": reference_wavelength_nm,
+                "field_heights_mm": np.asarray([0.0, psf_payload["edge_field_height_mm"]], dtype=float),
+                "support_x_um": psf_payload["support_x_um"],
+                "support_y_um": psf_payload["support_y_um"],
+                "center_psf_norm": psf_payload["center_psf_norm"],
+                "edge_psf_norm": psf_payload["edge_psf_norm"],
+                "center_psf_center_row_norm": psf_payload["center_psf_center_row_norm"],
+                "edge_psf_center_row_norm": psf_payload["edge_psf_center_row_norm"],
+                "center_psf_metrics": psf_payload["center_psf_metrics"],
+                "edge_psf_metrics": psf_payload["edge_psf_metrics"],
+            },
+            context={"oi": oi},
+        )
+
+    if case_name == "optics_rt_point_array_field_small":
+        point_spacing_px = 64
+        crop_radius = 24
+        scene = scene_create("point array", 320, point_spacing_px, asset_store=store)
+        scene = scene_set(scene, "fov", 12.0)
+        oi = oi_create("ray trace", asset_store=store)
+        scene = scene_set(scene, "distance", oi_get(oi, "optics rtObjectDistance", "m"))
+        geometry_oi = rt_geometry(oi, scene)
+        psf_struct = rt_precompute_psf(geometry_oi, angle_step_deg=20.0)
+        stepwise_oi = oi_set(geometry_oi, "psf struct", psf_struct)
+        stepwise_oi = rt_precompute_psf_apply(stepwise_oi, angle_step_deg=20.0)
+        render_rgb = np.asarray(oi_show_image(stepwise_oi, -1, 1.0, asset_store=store), dtype=float)
+        peaks = _find_point_peaks(render_rgb)
+        center_peak_zero_based, edge_peak_zero_based = _select_center_and_edge_peaks(peaks, render_rgb.shape[:2])
+        center_crop_rgb = _crop_square(render_rgb, center_peak_zero_based, crop_radius)
+        edge_crop_rgb = _crop_square(render_rgb, edge_peak_zero_based, crop_radius)
+        center_luma = _luma(center_crop_rgb)
+        edge_luma = _luma(edge_crop_rgb)
+        center_peak_rc = center_peak_zero_based + 1
+        edge_peak_rc = edge_peak_zero_based + 1
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int).reshape(-1),
+                "scene_fov_deg": float(scene_get(scene, "fov")),
+                "point_spacing_px": float(point_spacing_px),
+                "render_rgb": render_rgb,
+                "center_peak_rc": center_peak_rc.astype(int),
+                "edge_peak_rc": edge_peak_rc.astype(int),
+                "center_crop_rgb": center_crop_rgb,
+                "edge_crop_rgb": edge_crop_rgb,
+                "center_crop_luma_norm": center_luma / max(float(np.max(center_luma)), 1.0e-12),
+                "edge_crop_luma_norm": edge_luma / max(float(np.max(edge_luma)), 1.0e-12),
+                "center_crop_metrics": _spot_metrics(center_luma, spacing_um=1.0),
+                "edge_crop_metrics": _spot_metrics(edge_luma, spacing_um=1.0),
+            },
+            context={"scene": scene, "oi": stepwise_oi},
+        )
+
+    if case_name == "optics_rt_distortion_field_small":
+        reference_wavelength_nm = 550.0
+        scene = scene_create("distortion grid", [384, 384], 48, "ee", 2, asset_store=store)
+        scene = scene_set(scene, "fov", 20.0)
+        ideal_grid_rgb = np.asarray(scene_show_image(scene, -1, 1.0, asset_store=store), dtype=float)
+        oi = oi_create("ray trace", asset_store=store)
+        scene = scene_set(scene, "distance", oi_get(oi, "optics rtObjectDistance", "m"))
+        geometry_oi = rt_geometry(oi, scene)
+        distorted_grid_rgb = np.asarray(oi_show_image(geometry_oi, -1, 1.0, asset_store=store), dtype=float)
+        field_height_mm = np.asarray(oi_get(geometry_oi, "rtgeomfieldheight", "mm"), dtype=float).reshape(-1)
+        distorted_height_mm = np.asarray(
+            oi_get(geometry_oi, "rtgeomfunction", reference_wavelength_nm, "mm"),
+            dtype=float,
+        ).reshape(-1)
+        distortion_percent = np.zeros_like(field_height_mm)
+        nonzero = field_height_mm > 1.0e-12
+        distortion_percent[nonzero] = (
+            (distorted_height_mm[nonzero] - field_height_mm[nonzero]) / field_height_mm[nonzero]
+        ) * 100.0
+        max_distortion_index = int(np.argmax(np.abs(distortion_percent)))
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "reference_wavelength_nm": reference_wavelength_nm,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int).reshape(-1),
+                "scene_fov_deg": float(scene_get(scene, "fov")),
+                "ideal_grid_rgb": ideal_grid_rgb,
+                "distorted_grid_rgb": distorted_grid_rgb,
+                "field_height_mm": field_height_mm,
+                "distorted_height_mm": distorted_height_mm,
+                "distortion_percent": distortion_percent,
+                "max_distortion_percent": float(np.abs(distortion_percent[max_distortion_index])),
+                "max_distortion_field_height_mm": float(field_height_mm[max_distortion_index]),
+            },
+            context={"scene": scene, "oi": geometry_oi},
         )
 
     if case_name == "optics_rt_psf_small":

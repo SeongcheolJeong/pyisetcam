@@ -48,6 +48,12 @@ def _load_reference(case_name: str) -> dict[str, Any]:
 def _normalize(value: Any) -> Any:
     if isinstance(value, dict):
         return {key: _normalize(item) for key, item in value.items()}
+    if hasattr(value, "_fieldnames"):
+        return {str(field): _normalize(getattr(value, field)) for field in getattr(value, "_fieldnames", [])}
+    if hasattr(value, "__dict__") and not isinstance(value, (str, bytes)):
+        raw_fields = {key: item for key, item in vars(value).items() if not key.startswith("_")}
+        if raw_fields:
+            return {str(key): _normalize(item) for key, item in raw_fields.items()}
     if isinstance(value, np.ndarray):
         array = np.squeeze(np.asarray(value))
         if np.iscomplexobj(array):
@@ -209,11 +215,19 @@ def _compare(
             "abs_diff": difference,
             "rel_diff": rel_diff,
         }
-        if rule and rule.get("mode") in {"mean_rel", "normalized_mae"}:
-            threshold_key = "max_mean_rel" if rule["mode"] == "mean_rel" else "max_normalized_mae"
+        if rule and rule.get("mode") in {"mean_rel", "normalized_mae", "mae"}:
+            if rule["mode"] == "mean_rel":
+                threshold_key = "max_mean_rel"
+                metric_value = rel_diff
+            elif rule["mode"] == "normalized_mae":
+                threshold_key = "max_normalized_mae"
+                metric_value = rel_diff
+            else:
+                threshold_key = "max_mae"
+                metric_value = difference
             threshold = float(rule[threshold_key])
             return {
-                "pass": bool(rel_diff <= threshold),
+                "pass": bool(metric_value <= threshold),
                 "comparison_mode": str(rule["mode"]),
                 threshold_key: threshold,
                 **base,
@@ -256,11 +270,19 @@ def _compare(
             "abs_diff": difference,
             "rel_diff": rel_diff,
         }
-        if rule and rule.get("mode") in {"mean_rel", "normalized_mae"}:
-            threshold_key = "max_mean_rel" if rule["mode"] == "mean_rel" else "max_normalized_mae"
+        if rule and rule.get("mode") in {"mean_rel", "normalized_mae", "mae"}:
+            if rule["mode"] == "mean_rel":
+                threshold_key = "max_mean_rel"
+                metric_value = rel_diff
+            elif rule["mode"] == "normalized_mae":
+                threshold_key = "max_normalized_mae"
+                metric_value = rel_diff
+            else:
+                threshold_key = "max_mae"
+                metric_value = difference
             threshold = float(rule[threshold_key])
             return {
-                "pass": bool(rel_diff <= threshold),
+                "pass": bool(metric_value <= threshold),
                 "comparison_mode": str(rule["mode"]),
                 threshold_key: threshold,
                 **base,
@@ -307,6 +329,14 @@ def _compare(
             "pass": bool(metrics["normalized_mae"] <= threshold),
             "comparison_mode": "normalized_mae",
             "max_normalized_mae": threshold,
+            **metrics,
+        }
+    if rule and rule.get("mode") == "mae":
+        threshold = float(rule["max_mae"])
+        return {
+            "pass": bool(metrics["mae"] <= threshold),
+            "comparison_mode": "mae",
+            "max_mae": threshold,
             **metrics,
         }
     if rule and rule.get("mode") == "scale_invariant":

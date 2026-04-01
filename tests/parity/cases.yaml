@@ -3162,6 +3162,98 @@
       }
     },
     {
+      "name": "optics_rt_center_edge_psf_small",
+      "matlab_function": "oiCreate/oiGet rtpsfdata",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "center_psf_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.03
+        },
+        "edge_psf_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.05
+        },
+        "center_psf_center_row_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.03
+        },
+        "edge_psf_center_row_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.05
+        }
+      }
+    },
+    {
+      "name": "optics_rt_point_array_field_small",
+      "matlab_function": "sceneCreate/oiCompute point array",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "render_rgb": {
+          "mode": "mae",
+          "max_mae": 0.01
+        },
+        "center_crop_rgb": {
+          "mode": "mae",
+          "max_mae": 0.01
+        },
+        "edge_crop_rgb": {
+          "mode": "mae",
+          "max_mae": 0.01
+        },
+        "center_peak_rc": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "edge_peak_rc": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "center_crop_metrics": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.5
+        },
+        "edge_crop_metrics": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.5
+        },
+        "center_crop_luma_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.3
+        },
+        "edge_crop_luma_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.3
+        }
+      }
+    },
+    {
+      "name": "optics_rt_distortion_field_small",
+      "matlab_function": "sceneCreate/oiCompute distortion grid",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "ideal_grid_rgb": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.01
+        },
+        "distorted_grid_rgb": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.04
+        },
+        "distortion_percent": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "distorted_height_mm": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.01
+        }
+      }
+    },
+    {
       "name": "sensor_description_fpn_small",
       "matlab_function": "sensorDescription",
       "rtol": 1e-05,

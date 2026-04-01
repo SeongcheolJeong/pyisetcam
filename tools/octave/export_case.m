@@ -4523,6 +4523,100 @@ switch case_name
         payload.dl_small_size = double(oiGet(dlSmall, 'size'));
         payload.dl_small_center_row_550_widths = local_profile_widths(local_canonical_profile(dlSmallCenterRow, 129), [0.50 0.10 0.01]);
 
+    case 'optics_rt_center_edge_psf_small'
+        referenceWavelengthNM = 550;
+        oi = oiCreate('ray trace');
+        optics = oiGet(oi, 'optics');
+
+        fieldHeightMM = double(oiGet(oi, 'rtpsffieldheight', 'mm'));
+        supportXUM = double(opticsGet(optics, 'rtpsfsupportx', 'um'));
+        supportYUM = double(opticsGet(optics, 'rtpsfsupporty', 'um'));
+        spacingUM = double(opticsGet(optics, 'rtpsfspacing', 'um'));
+        if isempty(spacingUM)
+            sampleSpacingUM = 1.0;
+        else
+            sampleSpacingUM = double(spacingUM(1));
+        end
+        edgeFieldMM = double(fieldHeightMM(end));
+
+        centerPsf = double(oiGet(oi, 'rtpsfdata', 0, referenceWavelengthNM));
+        edgePsf = double(oiGet(oi, 'rtpsfdata', edgeFieldMM / 1000, referenceWavelengthNM));
+
+        payload.reference_wavelength_nm = double(referenceWavelengthNM);
+        payload.field_heights_mm = double([0; edgeFieldMM]);
+        payload.support_x_um = double(supportXUM(:));
+        payload.support_y_um = double(supportYUM(:));
+        payload.center_psf_norm = local_normalize_plane(centerPsf);
+        payload.edge_psf_norm = local_normalize_plane(edgePsf);
+        payload.center_psf_center_row_norm = local_channel_normalize(centerPsf(floor(size(centerPsf, 1) / 2) + 1, :));
+        payload.edge_psf_center_row_norm = local_channel_normalize(edgePsf(floor(size(edgePsf, 1) / 2) + 1, :));
+        payload.center_psf_metrics = local_spot_metrics(centerPsf, sampleSpacingUM);
+        payload.edge_psf_metrics = local_spot_metrics(edgePsf, sampleSpacingUM);
+
+    case 'optics_rt_point_array_field_small'
+        pointSpacing = 64;
+        cropRadius = 24;
+
+        scene = sceneCreate('point array', 320, pointSpacing);
+        scene = sceneSet(scene, 'fov', 12.0);
+        oi = oiCreate('ray trace');
+        scene = sceneSet(scene, 'distance', oiGet(oi, 'optics rtObjectDistance', 'm'));
+        ieAddObject(scene);
+        geometryOI = rtGeometry(oi, scene);
+        svPSF = rtPrecomputePSF(geometryOI, 20);
+        stepwiseOI = oiSet(geometryOI, 'psf struct', svPSF);
+        stepwiseOI = rtPrecomputePSFApply(stepwiseOI, 20);
+        renderRGB = double(oiShowImage(stepwiseOI, -1, 1.0));
+
+        peaks = local_find_point_peaks(renderRGB, 99.7, 7);
+        [centerPeak, edgePeak] = local_select_center_edge_peaks(peaks, size(renderRGB));
+        centerCrop = local_crop_square(renderRGB, centerPeak, cropRadius);
+        edgeCrop = local_crop_square(renderRGB, edgePeak, cropRadius);
+        centerLuma = local_luma(centerCrop);
+        edgeLuma = local_luma(edgeCrop);
+
+        payload.scene_size = double(sceneGet(scene, 'size'));
+        payload.scene_fov_deg = double(sceneGet(scene, 'fov'));
+        payload.point_spacing_px = double(pointSpacing);
+        payload.render_rgb = renderRGB;
+        payload.center_peak_rc = double(centerPeak(:));
+        payload.edge_peak_rc = double(edgePeak(:));
+        payload.center_crop_rgb = double(centerCrop);
+        payload.edge_crop_rgb = double(edgeCrop);
+        payload.center_crop_luma_norm = local_normalize_plane(centerLuma);
+        payload.edge_crop_luma_norm = local_normalize_plane(edgeLuma);
+        payload.center_crop_metrics = local_spot_metrics(centerLuma, 1.0);
+        payload.edge_crop_metrics = local_spot_metrics(edgeLuma, 1.0);
+
+    case 'optics_rt_distortion_field_small'
+        referenceWavelengthNM = 550;
+        scene = sceneCreate('gridlines', [384 384], 48, 'ee', 2);
+        scene = sceneSet(scene, 'fov', 20.0);
+        idealGridRGB = double(sceneShowImage(scene, -1, 1.0));
+        oi = oiCreate('ray trace');
+        scene = sceneSet(scene, 'distance', oiGet(oi, 'optics rtObjectDistance', 'm'));
+        ieAddObject(scene);
+        geometryOI = rtGeometry(oi, scene);
+        distortedGridRGB = double(oiShowImage(geometryOI, -1, 1.0));
+
+        fieldHeightMM = double(oiGet(geometryOI, 'rtgeomfieldheight', 'mm'));
+        distortedHeightMM = double(oiGet(geometryOI, 'rtgeomfunction', referenceWavelengthNM, 'mm'));
+        distortionPercent = zeros(size(fieldHeightMM));
+        nonzero = fieldHeightMM > 1e-12;
+        distortionPercent(nonzero) = ((distortedHeightMM(nonzero) - fieldHeightMM(nonzero)) ./ fieldHeightMM(nonzero)) * 100;
+        [maxDistortionPercent, maxIndex] = max(abs(distortionPercent));
+
+        payload.reference_wavelength_nm = double(referenceWavelengthNM);
+        payload.scene_size = double(sceneGet(scene, 'size'));
+        payload.scene_fov_deg = double(sceneGet(scene, 'fov'));
+        payload.ideal_grid_rgb = idealGridRGB;
+        payload.distorted_grid_rgb = distortedGridRGB;
+        payload.field_height_mm = double(fieldHeightMM(:));
+        payload.distorted_height_mm = double(distortedHeightMM(:));
+        payload.distortion_percent = double(distortionPercent(:));
+        payload.max_distortion_percent = double(maxDistortionPercent);
+        payload.max_distortion_field_height_mm = double(fieldHeightMM(maxIndex));
+
     case 'optics_rt_psf_small'
         scene = sceneCreate('pointArray', 512, 32);
         scene = sceneInterpolateW(scene, 450:100:650);
@@ -7662,6 +7756,138 @@ end
 function values = local_channel_normalize(values)
 values = double(values(:))';
 values = values / max(max(abs(values)), eps);
+end
+
+function plane = local_normalize_plane(values)
+plane = double(values);
+peak = max(plane(:));
+if peak <= 0
+    plane = zeros(size(plane));
+else
+    plane = plane / peak;
+end
+end
+
+function luma = local_luma(image)
+image = double(image);
+if ndims(image) == 2
+    luma = image;
+elseif ndims(image) == 3 && size(image, 3) == 3
+    luma = mean(image, 3);
+else
+    error('Expected grayscale or RGB image data.');
+end
+end
+
+function peaks = local_find_point_peaks(image, percentileThreshold, windowSize)
+if nargin < 2 || isempty(percentileThreshold)
+    percentileThreshold = 99.7;
+end
+if nargin < 3 || isempty(windowSize)
+    windowSize = 7;
+end
+
+luma = local_luma(image);
+threshold = prctile(luma(:), percentileThreshold);
+radius = floor(windowSize / 2);
+[rows, cols] = size(luma);
+mask = false(rows, cols);
+for row = 1:rows
+    rowMin = max(row - radius, 1);
+    rowMax = min(row + radius, rows);
+    for col = 1:cols
+        colMin = max(col - radius, 1);
+        colMax = min(col + radius, cols);
+        window = luma(rowMin:rowMax, colMin:colMax);
+        value = luma(row, col);
+        if value >= threshold && value == max(window(:))
+            mask(row, col) = true;
+        end
+    end
+end
+
+[peakRows, peakCols] = find(mask);
+if isempty(peakRows)
+    error('No point peaks were detected in the rendered point-array image.');
+end
+peaks = [peakRows(:), peakCols(:)];
+end
+
+function [centerPeak, edgePeak] = local_select_center_edge_peaks(peaks, imageSize)
+peaks = double(peaks);
+center = ([double(imageSize(1)), double(imageSize(2))] + 1) / 2;
+distances = sqrt(sum((peaks - center) .^ 2, 2));
+[~, centerIndex] = min(distances);
+[~, edgeIndex] = max(distances);
+centerPeak = peaks(centerIndex, :);
+edgePeak = peaks(edgeIndex, :);
+end
+
+function crop = local_crop_square(image, peakRC, radius)
+image = double(image);
+row = round(double(peakRC(1)));
+col = round(double(peakRC(2)));
+rowMin = max(row - radius, 1);
+rowMax = min(row + radius, size(image, 1));
+colMin = max(col - radius, 1);
+colMax = min(col + radius, size(image, 2));
+if ndims(image) == 2
+    crop = image(rowMin:rowMax, colMin:colMax);
+else
+    crop = image(rowMin:rowMax, colMin:colMax, :);
+end
+end
+
+function metrics = local_spot_metrics(values, spacingUm)
+if nargin < 2 || isempty(spacingUm)
+    spacingUm = 1.0;
+end
+
+plane = double(values);
+plane = plane - min(plane(:));
+total = sum(plane(:));
+if total <= 0
+    metrics = struct( ...
+        'peak', 0.0, ...
+        'rms_radius_px', 0.0, ...
+        'rms_radius_um', 0.0, ...
+        'ee50_radius_px', 0.0, ...
+        'ee50_radius_um', 0.0, ...
+        'ee80_radius_px', 0.0, ...
+        'ee80_radius_um', 0.0);
+    return;
+end
+
+[yy, xx] = ndgrid(0:size(plane, 1) - 1, 0:size(plane, 2) - 1);
+centerY = sum(sum(yy .* plane)) / total;
+centerX = sum(sum(xx .* plane)) / total;
+radiusPx = sqrt((yy - centerY) .^ 2 + (xx - centerX) .^ 2);
+[sortedRadius, order] = sort(radiusPx(:));
+sortedEnergy = plane(order);
+cumulative = cumsum(sortedEnergy);
+
+index50 = find(cumulative >= (0.50 * total), 1, 'first');
+index80 = find(cumulative >= (0.80 * total), 1, 'first');
+if isempty(index50)
+    ee50RadiusPx = 0.0;
+else
+    ee50RadiusPx = sortedRadius(index50);
+end
+if isempty(index80)
+    ee80RadiusPx = 0.0;
+else
+    ee80RadiusPx = sortedRadius(index80);
+end
+
+rmsRadiusPx = sqrt(sum(sum((radiusPx .^ 2) .* plane)) / total);
+metrics = struct( ...
+    'peak', double(max(plane(:))), ...
+    'rms_radius_px', double(rmsRadiusPx), ...
+    'rms_radius_um', double(rmsRadiusPx * spacingUm), ...
+    'ee50_radius_px', double(ee50RadiusPx), ...
+    'ee50_radius_um', double(ee50RadiusPx * spacingUm), ...
+    'ee80_radius_px', double(ee80RadiusPx), ...
+    'ee80_radius_um', double(ee80RadiusPx * spacingUm));
 end
 
 function basis = local_canonicalize_basis_columns(basis)

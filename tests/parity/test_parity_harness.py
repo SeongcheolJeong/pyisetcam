@@ -33,6 +33,12 @@ def _field_rules(case: dict[str, Any]) -> dict[str, dict[str, Any]]:
 def _normalize(value: Any) -> Any:
     if isinstance(value, dict):
         return {key: _normalize(item) for key, item in value.items()}
+    if hasattr(value, "_fieldnames"):
+        return {str(field): _normalize(getattr(value, field)) for field in getattr(value, "_fieldnames", [])}
+    if hasattr(value, "__dict__") and not isinstance(value, (str, bytes)):
+        raw_fields = {key: item for key, item in vars(value).items() if not key.startswith("_")}
+        if raw_fields:
+            return {str(key): _normalize(item) for key, item in raw_fields.items()}
     if isinstance(value, np.ndarray):
         if np.iscomplexobj(value):
             value = np.real(value)
@@ -88,9 +94,13 @@ def _compare(
         reference_scalar = float(reference)
         actual_scalar = float(actual)
         rel_diff = abs(actual_scalar - reference_scalar) / max(abs(reference_scalar), 1e-12)
-        if rule and rule.get("mode") in {"mean_rel", "normalized_mae"}:
-            threshold_key = "max_mean_rel" if rule["mode"] == "mean_rel" else "max_normalized_mae"
-            assert rel_diff <= float(rule[threshold_key])
+        if rule and rule.get("mode") in {"mean_rel", "normalized_mae", "mae"}:
+            if rule["mode"] == "mean_rel":
+                assert rel_diff <= float(rule["max_mean_rel"])
+            elif rule["mode"] == "normalized_mae":
+                assert rel_diff <= float(rule["max_normalized_mae"])
+            else:
+                assert difference <= float(rule["max_mae"])
             return
         if rule and rule.get("mode") == "scale_invariant":
             if abs(actual_scalar) <= 0.0:
@@ -121,6 +131,10 @@ def _compare(
     if rule and rule.get("mode") == "normalized_mae":
         normalized_mae = float(np.mean(np.abs(actual_array - reference_array))) / max(float(np.mean(np.abs(reference_array))), 1e-12)
         assert normalized_mae <= float(rule["max_normalized_mae"])
+        return
+    if rule and rule.get("mode") == "mae":
+        mae = float(np.mean(np.abs(actual_array - reference_array)))
+        assert mae <= float(rule["max_mae"])
         return
     if rule and rule.get("mode") == "scale_invariant":
         reference_flat = reference_array.reshape(-1)
