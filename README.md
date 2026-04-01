@@ -5,6 +5,15 @@
 - `scene -> optical image -> sensor -> image processor -> camera`
 - pinned to upstream ISETCam commit `412b9f9bdb3262f2552b96f0e769b5ad6cdff821`
 - validated through a GNU Octave parity harness for curated cases
+
+## Start Here
+
+- [Install Guide](docs/install-guide.md)
+- [Getting Started Tutorial](docs/tutorial.md)
+- [MATLAB To Python Mapping](docs/migration.md)
+
+Current expansion notes:
+
 - with the broad-parity expansion now started by adding post-core scene-family cases, utility-helper cases for `unitFrequencyList`, `Energy2Quanta/Quanta2Energy` in vector and matrix form, `blackbody` energy/quanta, and `ieParamFormat`, plus initial metrics-family cases for `ieXYZFromEnergy`, `xyz2luv`, `ieXYZ2LAB`, `xyz2uv`, `cct`, `deltaEab` (1976), and `metricsSPD` angle/CIELAB/mired
 - with Phase 3 scene-script coverage now started by adding MATLAB-style `spd_to_cct` / `spd2cct` plus curated Octave parity on the `s_sceneCCT.m` blackbody-CCT workflow
 - and now also MATLAB-style `daylight(...)` plus curated Octave parity on the `s_sceneDaylight.m` daylight-SPD and daylight-basis workflow
@@ -232,62 +241,38 @@ Out of scope for this milestone:
 
 ## Quickstart
 
-Install Miniforge and create the environment:
+Start with the user-facing docs:
+
+- [Install Guide](docs/install-guide.md)
+- [Getting Started Tutorial](docs/tutorial.md)
+
+Recommended setup:
 
 ```bash
 conda env create -f environment.yml
 conda activate isetcam-py
 python -m pip install -e .
-python tools/fetch_upstream.py
-pytest
 ```
 
-Run the example pipeline:
+Run the tutorial examples:
 
 ```bash
 python examples/end_to_end.py
+python examples/explicit_pipeline.py
 python examples/scene_from_file.py
+python examples/quality_metrics.py
 ```
 
-Generate the current machine-readable parity summary:
+These examples write outputs under `reports/tutorial/`.
+
+Optional developer checks:
 
 ```bash
+pytest
 python tools/parity_report.py
-```
-
-Generate the current machine-readable migration gap ledger and audit summary:
-
-```bash
 python tools/audit_migration_gap.py
+python tools/regenerate_parity_baselines.py
 ```
-
-This writes a JSON-compatible YAML ledger to
-`docs/migration-gap-ledger.yaml` and a summary snapshot to
-`reports/migration-gap/latest.json`.
-The audit now explicitly folds already-landed low-level demosaic internals,
-deprecated image-processing aliases, MATLAB camelcase-to-Python snake_case
-wrapper matches, short prefixed MATLAB wrapper names such as `oiGet` /
-`oiSet` / `oiAdd`, and GUI-only hooks into covered or out-of-scope
-classifications instead of leaving them as false-positive family gaps; it
-also now treats the MATLAB OpenEXR MEX shim/build-script family as
-out-of-scope integration debt rather than a remaining headless API target,
-and it also classifies `sceneFluorescenceChart.m` as out of scope because
-the pinned upstream snapshot does not actually vendor the required
-`fluorescenceSignal` / `fluorescenceWeights` model helpers. It now also
-tracks the legacy display introduction/rendering tutorials and the
-`s_displayCompare` / `s_displayReflectanceCtemp` / `s_displaySurfaceReflectance`
-script workflows as covered by the existing headless display-scene
-regressions, while treating `s_initSO.m` as session-only `vcSESSION`
-scaffolding outside the explicit-object migration target. The same audit
-pass now also treats the remaining `scripts/development` scratch/tutorial
-files as out of scope because they are explicitly unfinished exploratory
-workflows rather than stable reusable MATLAB APIs. The adjacent
-`scripts/oneoverf` tinker/synthesis notebooks are now also treated as out
-of scope for the same reason: they are exploratory spectrum-analysis
-scripts, not stable reusable compute surfaces. The image-tutorial audit now
-also treats the old standalone JPEG/DCT teaching walkthroughs as out of
-scope while tracking `t_ip.m` as covered by the current headless IP
-workflow regression surface.
 
 Run the initial metrics helpers:
 
@@ -305,23 +290,6 @@ For the curated WVF case, the harness also records strict pre-PSF / PSF
 stage parity and treats the final Octave delta-PSF convolution as a
 documented relaxed `mean_rel` diagnostic, because that path collapses to a
 single-precision FFT artifact in Octave.
-
-Regenerate Octave baselines for the curated parity cases:
-
-```bash
-python tools/regenerate_parity_baselines.py
-```
-
-If the default `octave` wrapper in your environment is broken, point the
-tool at a working `octave-cli` binary:
-
-```bash
-PYISETCAM_OCTAVE_BIN=/abs/path/to/octave-cli-10.3.0 python tools/regenerate_parity_baselines.py
-```
-
-For conda-style Octave installs, the runner now auto-populates
-`OCTAVE_HOME`, `OCTAVE_EXEC_HOME`, and `OCTAVE_IMAGE_PATH` from the chosen
-binary so baseline export works even when the raw CLI crashes at startup.
 
 ## Layout
 
