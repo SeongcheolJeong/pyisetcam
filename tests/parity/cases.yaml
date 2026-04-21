@@ -3326,6 +3326,54 @@
       }
     },
     {
+      "name": "pipeline_rt_bar_small",
+      "matlab_function": "sceneCreate/rtPrecomputePSFApply/sensorCompute/ipCompute ray trace bar",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "oi_size": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.03
+        },
+        "oi_edge_rc": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.03
+        },
+        "sensor_edge_rc": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.03
+        },
+        "result_edge_rc": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.03
+        },
+        "oi_edge_crop_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.08
+        },
+        "oi_edge_profile_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.12
+        },
+        "sensor_edge_crop_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.08
+        },
+        "sensor_edge_profile_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.14
+        },
+        "result_edge_crop_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.08
+        },
+        "result_edge_profile_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.08
+        }
+      }
+    },
+    {
       "name": "sensor_description_fpn_small",
       "matlab_function": "sensorDescription",
       "rtol": 1e-05,

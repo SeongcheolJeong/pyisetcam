@@ -272,6 +272,60 @@ def _crop_square_padded(image: Any, peak_rc: Any, radius: int) -> np.ndarray:
     return crop
 
 
+def _normalize_edge_profile(values: Any) -> np.ndarray:
+    profile = np.asarray(values, dtype=float).reshape(-1)
+    if profile.size == 0:
+        return np.zeros(0, dtype=float)
+    lo = float(np.percentile(profile, 5))
+    hi = float(np.percentile(profile, 95))
+    if hi - lo <= 1.0e-12:
+        normalized = np.zeros_like(profile, dtype=float)
+    else:
+        normalized = np.clip((profile - lo) / (hi - lo), 0.0, 1.0)
+    if normalized.size > 1 and normalized[0] > normalized[-1]:
+        normalized = 1.0 - normalized
+    return normalized
+
+
+def _central_vertical_edge_payload(
+    image: Any,
+    *,
+    crop_radius: int,
+    band_half_rows: int = 6,
+    search_half_width: int = 24,
+    profile_half_width: int = 24,
+) -> dict[str, np.ndarray]:
+    plane = _luma(image)
+    center_row = plane.shape[0] // 2
+    center_col = plane.shape[1] // 2
+    row_min = max(center_row - band_half_rows, 0)
+    row_max = min(center_row + band_half_rows + 1, plane.shape[0])
+    averaged_profile = np.mean(plane[row_min:row_max, :], axis=0, dtype=float)
+    gradient = np.abs(np.diff(averaged_profile))
+    if gradient.size == 0:
+        edge_col = center_col
+    else:
+        search_min = min(max(center_col, 0), gradient.size - 1)
+        search_max = min(gradient.size, center_col + search_half_width + 1)
+        if search_max <= search_min:
+            search_min = 0
+            search_max = gradient.size
+        edge_col = int(search_min + np.argmax(gradient[search_min:search_max]))
+
+    peak_rc = np.asarray([center_row, edge_col], dtype=int)
+    crop = _crop_square_padded(image, peak_rc, crop_radius)
+    crop_plane = _luma(crop)
+    edge_min = max(edge_col - profile_half_width, 0)
+    edge_max = min(edge_col + profile_half_width + 1, averaged_profile.size)
+    edge_profile = _canonical_profile(_normalize_edge_profile(averaged_profile[edge_min:edge_max]), 129)
+    crop_peak = max(float(np.max(crop_plane)), 1.0e-12)
+    return {
+        "edge_rc": peak_rc + 1,
+        "crop_norm": crop_plane / crop_peak,
+        "profile_norm": edge_profile,
+    }
+
+
 def _spot_metrics(values: Any, *, spacing_um: float = 1.0) -> dict[str, float]:
     plane = np.asarray(values, dtype=float)
     plane = plane - float(np.min(plane))
@@ -2295,7 +2349,7 @@ def run_python_case_with_context(
             query = np.linspace(-1.0, 1.0, samples, dtype=float)
             return np.interp(query, support, profile).astype(float)
 
-        scene = scene_create("slanted bar", 512, 7.0 / 3.0, asset_store=store)
+        scene = scene_create("slanted bar", 256, 7.0 / 3.0, asset_store=store)
         scene = scene_adjust_luminance(scene, 100.0, asset_store=store)
         scene = scene_set(scene, "distance", 1.0)
         scene = scene_set(scene, "fov", 5.0)
@@ -5783,6 +5837,55 @@ def run_python_case_with_context(
                 "result_edge_crop_luma_norm": result_edge_luma / max(float(np.max(result_edge_luma)), 1.0e-12),
                 "result_center_crop_metrics": _spot_metrics(result_center_luma, spacing_um=1.0),
                 "result_edge_crop_metrics": _spot_metrics(result_edge_luma, spacing_um=1.0),
+            },
+            context={"scene": scene, "oi": oi, "sensor": sensor, "ip": ip},
+        )
+
+    if case_name == "pipeline_rt_bar_small":
+        scene = scene_create("bar", 128, 3, asset_store=store)
+        scene = scene_interpolate_w(scene, np.arange(550.0, 651.0, 100.0, dtype=float))
+        scene = scene_set(scene, "hfov", 12.0)
+        scene = scene_set(scene, "name", "rtDemo-Bar")
+
+        oi = oi_create("ray trace", store.resolve("data/optics/zmWideAngle.mat"), asset_store=store)
+        oi = oi_set(oi, "wangular", scene_get(scene, "wangular"))
+        oi = oi_set(oi, "wave", scene_get(scene, "wave"))
+        scene = scene_set(scene, "distance", 2.0)
+        oi = oi_set(oi, "optics rtObjectDistance", scene_get(scene, "distance", "mm"))
+
+        geometry_oi = rt_geometry(oi, scene)
+        psf_struct = rt_precompute_psf(geometry_oi, angle_step_deg=20.0)
+        oi = oi_set(geometry_oi, "psf struct", psf_struct)
+        oi = rt_precompute_psf_apply(oi, angle_step_deg=20.0)
+
+        sensor = sensor_set(sensor_create(asset_store=store), "noise flag", 0)
+        sensor = sensor_compute(sensor, oi, seed=0)
+        ip = ip_compute(ip_create(sensor=sensor, asset_store=store), sensor, asset_store=store)
+
+        oi_rgb = np.asarray(oi_show_image(oi, -1, 1.0, asset_store=store), dtype=float)
+        sensor_volts = np.asarray(sensor_get(sensor, "volts"), dtype=float)
+        result = np.asarray(ip_get(ip, "result"), dtype=float)
+        oi_edge = _central_vertical_edge_payload(oi_rgb, crop_radius=32)
+        sensor_edge = _central_vertical_edge_payload(sensor_volts, crop_radius=16)
+        result_edge = _central_vertical_edge_payload(result, crop_radius=16)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int).reshape(-1),
+                "scene_fov_deg": float(scene_get(scene, "fov")),
+                "oi_size": np.asarray(oi_get(oi, "size"), dtype=int).reshape(-1),
+                "sensor_size": np.asarray(sensor_get(sensor, "size"), dtype=int).reshape(-1),
+                "ip_size": np.asarray(ip_get(ip, "size"), dtype=int).reshape(-1),
+                "oi_edge_rc": oi_edge["edge_rc"].astype(int),
+                "sensor_edge_rc": sensor_edge["edge_rc"].astype(int),
+                "result_edge_rc": result_edge["edge_rc"].astype(int),
+                "oi_edge_crop_norm": oi_edge["crop_norm"],
+                "oi_edge_profile_norm": oi_edge["profile_norm"],
+                "sensor_edge_crop_norm": sensor_edge["crop_norm"],
+                "sensor_edge_profile_norm": sensor_edge["profile_norm"],
+                "result_edge_crop_norm": result_edge["crop_norm"],
+                "result_edge_profile_norm": result_edge["profile_norm"],
             },
             context={"scene": scene, "oi": oi, "sensor": sensor, "ip": ip},
         )

@@ -1599,7 +1599,7 @@ switch case_name
         payload.error_center_row_norm = double(errorCenterRows);
 
     case 'metrics_edge2mtf_small'
-        scene = sceneCreate('slanted bar', 512, 7/3);
+        scene = sceneCreate('slanted bar', 256, 7/3);
         scene = sceneAdjustLuminance(scene, 100);
         scene = sceneSet(scene, 'distance', 1);
         scene = sceneSet(scene, 'fov', 5);
@@ -4670,6 +4670,53 @@ switch case_name
         payload.result_edge_crop_luma_norm = local_normalize_plane(resultEdgeLuma);
         payload.result_center_crop_metrics = local_spot_metrics(resultCenterLuma, 1.0);
         payload.result_edge_crop_metrics = local_spot_metrics(resultEdgeLuma, 1.0);
+
+    case 'pipeline_rt_bar_small'
+        scene = sceneCreate('bar', 128, 3);
+        scene = sceneInterpolateW(scene, 550:100:650);
+        scene = sceneSet(scene, 'h fov', 12);
+        scene = sceneSet(scene, 'name', 'rtDemo-Bar');
+
+        oi = oiCreate;
+        opticsData = load(fullfile(isetRootPath, 'data', 'optics', 'zmWideAngle.mat'), 'optics');
+        oi = oiSet(oi, 'optics', opticsData.optics);
+        oi = oiSet(oi, 'wangular', sceneGet(scene, 'wangular'));
+        oi = oiSet(oi, 'wavelength', sceneGet(scene, 'wave'));
+        scene = sceneSet(scene, 'distance', 2);
+        oi = oiSet(oi, 'optics rtObjectDistance', sceneGet(scene, 'distance', 'mm'));
+        ieAddObject(scene);
+        geometryOI = rtGeometry(oi, scene);
+        svPSF = rtPrecomputePSF(geometryOI, 20);
+        oi = oiSet(geometryOI, 'psf struct', svPSF);
+        oi = rtPrecomputePSFApply(oi, 20);
+
+        sensor = sensorCreate();
+        sensor = sensorSet(sensor, 'noise flag', 0);
+        sensor = sensorCompute(sensor, oi, false);
+        ip = ipCreate('default', sensor);
+        ip = ipCompute(ip, sensor);
+
+        oiRGB = double(oiShowImage(oi, -1, 1.0));
+        sensorVolts = double(sensorGet(sensor, 'volts'));
+        result = double(ipGet(ip, 'result'));
+        oiEdge = local_central_vertical_edge_payload(oiRGB, 32, 6, 24, 24);
+        sensorEdge = local_central_vertical_edge_payload(sensorVolts, 16, 6, 24, 24);
+        resultEdge = local_central_vertical_edge_payload(result, 16, 6, 24, 24);
+
+        payload.scene_size = double(sceneGet(scene, 'size')(:));
+        payload.scene_fov_deg = double(sceneGet(scene, 'fov'));
+        payload.oi_size = double(oiGet(oi, 'size')(:));
+        payload.sensor_size = double(sensorGet(sensor, 'size')(:));
+        payload.ip_size = double(ipGet(ip, 'size')(:));
+        payload.oi_edge_rc = double(oiEdge.edge_rc(:));
+        payload.sensor_edge_rc = double(sensorEdge.edge_rc(:));
+        payload.result_edge_rc = double(resultEdge.edge_rc(:));
+        payload.oi_edge_crop_norm = double(oiEdge.crop_norm);
+        payload.oi_edge_profile_norm = double(oiEdge.profile_norm(:));
+        payload.sensor_edge_crop_norm = double(sensorEdge.crop_norm);
+        payload.sensor_edge_profile_norm = double(sensorEdge.profile_norm(:));
+        payload.result_edge_crop_norm = double(resultEdge.crop_norm);
+        payload.result_edge_profile_norm = double(resultEdge.profile_norm(:));
 
     case 'optics_rt_psf_small'
         scene = sceneCreate('pointArray', 512, 32);
@@ -7918,6 +7965,68 @@ else
     crop = zeros(2 * radius + 1, 2 * radius + 1, size(image, 3));
     crop(destRowMin:destRowMax, destColMin:destColMax, :) = image(rowMin:rowMax, colMin:colMax, :);
 end
+end
+
+function normalized = local_normalize_edge_profile(values)
+profile = double(values(:))';
+if isempty(profile)
+    normalized = zeros(1, 0);
+    return;
+end
+
+lowValue = prctile(profile, 5);
+highValue = prctile(profile, 95);
+if highValue - lowValue <= eps
+    normalized = zeros(size(profile));
+else
+    normalized = min(max((profile - lowValue) ./ (highValue - lowValue), 0), 1);
+end
+
+if numel(normalized) > 1 && normalized(1) > normalized(end)
+    normalized = 1 - normalized;
+end
+end
+
+function payload = local_central_vertical_edge_payload(image, cropRadius, bandHalfRows, searchHalfWidth, profileHalfWidth)
+if nargin < 3 || isempty(bandHalfRows)
+    bandHalfRows = 6;
+end
+if nargin < 4 || isempty(searchHalfWidth)
+    searchHalfWidth = 24;
+end
+if nargin < 5 || isempty(profileHalfWidth)
+    profileHalfWidth = 24;
+end
+
+plane = local_luma(image);
+centerRow = floor(size(plane, 1) / 2) + 1;
+centerCol = floor(size(plane, 2) / 2) + 1;
+rowMin = max(centerRow - bandHalfRows, 1);
+rowMax = min(centerRow + bandHalfRows, size(plane, 1));
+averagedProfile = mean(plane(rowMin:rowMax, :), 1);
+gradient = abs(diff(averagedProfile));
+if isempty(gradient)
+    edgeCol = centerCol;
+else
+    searchMin = min(max(centerCol, 1), numel(gradient));
+    searchMax = min(numel(gradient), centerCol + searchHalfWidth);
+    if searchMax <= searchMin
+        searchMin = 1;
+        searchMax = numel(gradient);
+    end
+    [~, localIndex] = max(gradient(searchMin:searchMax));
+    edgeCol = searchMin + localIndex - 1;
+end
+
+crop = local_crop_square_padded(image, [centerRow edgeCol], cropRadius);
+cropPlane = local_luma(crop);
+profileMin = max(edgeCol - profileHalfWidth, 1);
+profileMax = min(edgeCol + profileHalfWidth, numel(averagedProfile));
+edgeProfile = local_normalize_edge_profile(averagedProfile(profileMin:profileMax));
+
+payload.edge_rc = [centerRow; edgeCol];
+payload.crop_norm = local_normalize_plane(cropPlane);
+payload.profile_norm = local_canonical_profile(edgeProfile, 129);
 end
 
 function metrics = local_spot_metrics(values, spacingUm)
