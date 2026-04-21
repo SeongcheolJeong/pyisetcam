@@ -220,8 +220,15 @@ def _select_center_and_edge_peaks(peaks: Any, shape: tuple[int, int]) -> tuple[n
     peak_array = np.asarray(peaks, dtype=int).reshape(-1, 2)
     center = (np.asarray(shape, dtype=float) - 1.0) / 2.0
     distances = np.sqrt(np.sum((np.asarray(peak_array, dtype=float) - center) ** 2, axis=1))
-    center_peak = np.asarray(peak_array[int(np.argmin(distances))], dtype=int)
-    edge_peak = np.asarray(peak_array[int(np.argmax(distances))], dtype=int)
+    min_distance = float(np.min(distances))
+    min_candidates = peak_array[np.isclose(distances, min_distance, rtol=0.0, atol=1.0e-12)]
+    min_order = np.lexsort((min_candidates[:, 1], min_candidates[:, 0]))
+    center_peak = np.asarray(min_candidates[min_order[0]], dtype=int)
+
+    max_distance = float(np.max(distances))
+    max_candidates = peak_array[np.isclose(distances, max_distance, rtol=0.0, atol=1.0e-12)]
+    max_order = np.lexsort((max_candidates[:, 1], max_candidates[:, 0]))
+    edge_peak = np.asarray(max_candidates[max_order[0]], dtype=int)
     return center_peak, edge_peak
 
 
@@ -236,6 +243,33 @@ def _crop_square(image: Any, peak_rc: Any, radius: int) -> np.ndarray:
     if array.ndim == 2:
         return array[row_min:row_max, col_min:col_max]
     return array[row_min:row_max, col_min:col_max, :]
+
+
+def _crop_square_padded(image: Any, peak_rc: Any, radius: int) -> np.ndarray:
+    array = np.asarray(image, dtype=float)
+    peak = np.asarray(peak_rc, dtype=int).reshape(2)
+    row, col = int(peak[0]), int(peak[1])
+    if array.ndim == 2:
+        crop = np.zeros((2 * radius + 1, 2 * radius + 1), dtype=float)
+    else:
+        crop = np.zeros((2 * radius + 1, 2 * radius + 1, array.shape[2]), dtype=float)
+
+    row_min = max(row - radius, 0)
+    row_max = min(row + radius + 1, array.shape[0])
+    col_min = max(col - radius, 0)
+    col_max = min(col + radius + 1, array.shape[1])
+
+    dest_row_min = row_min - (row - radius)
+    dest_row_max = dest_row_min + (row_max - row_min)
+    dest_col_min = col_min - (col - radius)
+    dest_col_max = dest_col_min + (col_max - col_min)
+
+    if array.ndim == 2:
+        crop[dest_row_min:dest_row_max, dest_col_min:dest_col_max] = array[row_min:row_max, col_min:col_max]
+        return crop
+
+    crop[dest_row_min:dest_row_max, dest_col_min:dest_col_max, :] = array[row_min:row_max, col_min:col_max, :]
+    return crop
 
 
 def _spot_metrics(values: Any, *, spacing_um: float = 1.0) -> dict[str, float]:
@@ -5692,6 +5726,65 @@ def run_python_case_with_context(
                 "max_distortion_field_height_mm": float(field_height_mm[max_distortion_index]),
             },
             context={"scene": scene, "oi": geometry_oi},
+        )
+
+    if case_name == "ip_rt_point_array_pipeline_small":
+        point_spacing_px = 64
+        crop_radius = 24
+        scene = scene_create("point array", 320, point_spacing_px, asset_store=store)
+        scene = scene_set(scene, "fov", 12.0)
+
+        oi = oi_create("ray trace", asset_store=store)
+        scene = scene_set(scene, "distance", oi_get(oi, "optics rtObjectDistance", "m"))
+        oi = oi_compute(oi, scene)
+
+        sensor = sensor_set(sensor_create(asset_store=store), "noise flag", 0)
+        sensor = sensor_compute(sensor, oi, seed=0)
+        ip = ip_compute(ip_create(sensor=sensor, asset_store=store), sensor, asset_store=store)
+
+        sensor_volts = np.asarray(sensor_get(sensor, "volts"), dtype=float)
+        result = np.asarray(ip_get(ip, "result"), dtype=float)
+
+        sensor_peaks = _find_point_peaks(sensor_volts)
+        sensor_center_peak_zero_based, sensor_edge_peak_zero_based = _select_center_and_edge_peaks(
+            sensor_peaks, sensor_volts.shape[:2]
+        )
+        sensor_center_crop = _crop_square_padded(sensor_volts, sensor_center_peak_zero_based, crop_radius)
+        sensor_edge_crop = _crop_square_padded(sensor_volts, sensor_edge_peak_zero_based, crop_radius)
+
+        result_center_peak_zero_based = sensor_center_peak_zero_based
+        result_edge_peak_zero_based = sensor_edge_peak_zero_based
+        result_center_crop = _crop_square_padded(result, result_center_peak_zero_based, crop_radius)
+        result_edge_crop = _crop_square_padded(result, result_edge_peak_zero_based, crop_radius)
+        result_center_luma = _luma(result_center_crop)
+        result_edge_luma = _luma(result_edge_crop)
+
+        return ParityCaseResult(
+            payload={
+                "case_name": case_name,
+                "scene_size": np.asarray(scene_get(scene, "size"), dtype=int).reshape(-1),
+                "scene_fov_deg": float(scene_get(scene, "fov")),
+                "point_spacing_px": float(point_spacing_px),
+                "oi_size": np.asarray(oi_get(oi, "size"), dtype=int).reshape(-1),
+                "sensor_size": np.asarray(sensor_get(sensor, "size"), dtype=int).reshape(-1),
+                "sensor_volts": sensor_volts,
+                "result": result,
+                "sensor_center_peak_rc": (sensor_center_peak_zero_based + 1).astype(int),
+                "sensor_edge_peak_rc": (sensor_edge_peak_zero_based + 1).astype(int),
+                "result_center_peak_rc": (result_center_peak_zero_based + 1).astype(int),
+                "result_edge_peak_rc": (result_edge_peak_zero_based + 1).astype(int),
+                "sensor_center_crop_norm": sensor_center_crop / max(float(np.max(sensor_center_crop)), 1.0e-12),
+                "sensor_edge_crop_norm": sensor_edge_crop / max(float(np.max(sensor_edge_crop)), 1.0e-12),
+                "sensor_center_crop_metrics": _spot_metrics(sensor_center_crop, spacing_um=1.0),
+                "sensor_edge_crop_metrics": _spot_metrics(sensor_edge_crop, spacing_um=1.0),
+                "result_center_crop_rgb": result_center_crop,
+                "result_edge_crop_rgb": result_edge_crop,
+                "result_center_crop_luma_norm": result_center_luma / max(float(np.max(result_center_luma)), 1.0e-12),
+                "result_edge_crop_luma_norm": result_edge_luma / max(float(np.max(result_edge_luma)), 1.0e-12),
+                "result_center_crop_metrics": _spot_metrics(result_center_luma, spacing_um=1.0),
+                "result_edge_crop_metrics": _spot_metrics(result_edge_luma, spacing_um=1.0),
+            },
+            context={"scene": scene, "oi": oi, "sensor": sensor, "ip": ip},
         )
 
     if case_name == "optics_rt_psf_small":

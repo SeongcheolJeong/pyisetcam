@@ -4617,6 +4617,60 @@ switch case_name
         payload.max_distortion_percent = double(maxDistortionPercent);
         payload.max_distortion_field_height_mm = double(fieldHeightMM(maxIndex));
 
+    case 'ip_rt_point_array_pipeline_small'
+        pointSpacingPx = 64;
+        cropRadius = 24;
+        scene = sceneCreate('point array', 320, pointSpacingPx);
+        scene = sceneSet(scene, 'fov', 12.0);
+
+        oi = oiCreate('ray trace');
+        scene = sceneSet(scene, 'distance', oiGet(oi, 'optics rtObjectDistance', 'm'));
+        ieAddObject(scene);
+        oi = oiCompute(oi, scene);
+
+        sensor = sensorCreate();
+        sensor = sensorSet(sensor, 'noise flag', 0);
+        sensor = sensorCompute(sensor, oi, false);
+        ip = ipCreate('default', sensor);
+        ip = ipCompute(ip, sensor);
+
+        sensorVolts = double(sensorGet(sensor, 'volts'));
+        result = double(ipGet(ip, 'result'));
+
+        sensorPeaks = local_find_point_peaks(sensorVolts, 99.7, 7);
+        [sensorCenterPeak, sensorEdgePeak] = local_select_center_edge_peaks(sensorPeaks, size(sensorVolts));
+        sensorCenterCrop = local_crop_square_padded(sensorVolts, sensorCenterPeak, cropRadius);
+        sensorEdgeCrop = local_crop_square_padded(sensorVolts, sensorEdgePeak, cropRadius);
+
+        resultCenterPeak = sensorCenterPeak;
+        resultEdgePeak = sensorEdgePeak;
+        resultCenterCrop = local_crop_square_padded(result, resultCenterPeak, cropRadius);
+        resultEdgeCrop = local_crop_square_padded(result, resultEdgePeak, cropRadius);
+        resultCenterLuma = local_luma(resultCenterCrop);
+        resultEdgeLuma = local_luma(resultEdgeCrop);
+
+        payload.scene_size = double(sceneGet(scene, 'size'));
+        payload.scene_fov_deg = double(sceneGet(scene, 'fov'));
+        payload.point_spacing_px = double(pointSpacingPx);
+        payload.oi_size = double(oiGet(oi, 'size'));
+        payload.sensor_size = double(sensorGet(sensor, 'size'));
+        payload.sensor_volts = sensorVolts;
+        payload.result = result;
+        payload.sensor_center_peak_rc = double(sensorCenterPeak);
+        payload.sensor_edge_peak_rc = double(sensorEdgePeak);
+        payload.result_center_peak_rc = double(resultCenterPeak);
+        payload.result_edge_peak_rc = double(resultEdgePeak);
+        payload.sensor_center_crop_norm = local_normalize_plane(sensorCenterCrop);
+        payload.sensor_edge_crop_norm = local_normalize_plane(sensorEdgeCrop);
+        payload.sensor_center_crop_metrics = local_spot_metrics(sensorCenterCrop, 1.0);
+        payload.sensor_edge_crop_metrics = local_spot_metrics(sensorEdgeCrop, 1.0);
+        payload.result_center_crop_rgb = resultCenterCrop;
+        payload.result_edge_crop_rgb = resultEdgeCrop;
+        payload.result_center_crop_luma_norm = local_normalize_plane(resultCenterLuma);
+        payload.result_edge_crop_luma_norm = local_normalize_plane(resultEdgeLuma);
+        payload.result_center_crop_metrics = local_spot_metrics(resultCenterLuma, 1.0);
+        payload.result_edge_crop_metrics = local_spot_metrics(resultEdgeLuma, 1.0);
+
     case 'optics_rt_psf_small'
         scene = sceneCreate('pointArray', 512, 32);
         scene = sceneInterpolateW(scene, 450:100:650);
@@ -7817,10 +7871,15 @@ function [centerPeak, edgePeak] = local_select_center_edge_peaks(peaks, imageSiz
 peaks = double(peaks);
 center = ([double(imageSize(1)), double(imageSize(2))] + 1) / 2;
 distances = sqrt(sum((peaks - center) .^ 2, 2));
-[~, centerIndex] = min(distances);
-[~, edgeIndex] = max(distances);
-centerPeak = peaks(centerIndex, :);
-edgePeak = peaks(edgeIndex, :);
+minDistance = min(distances);
+centerCandidates = peaks(abs(distances - minDistance) <= 1e-12, :);
+centerCandidates = sortrows(centerCandidates, [1 2]);
+centerPeak = centerCandidates(1, :);
+
+maxDistance = max(distances);
+edgeCandidates = peaks(abs(distances - maxDistance) <= 1e-12, :);
+edgeCandidates = sortrows(edgeCandidates, [1 2]);
+edgePeak = edgeCandidates(1, :);
 end
 
 function crop = local_crop_square(image, peakRC, radius)
@@ -7835,6 +7894,29 @@ if ndims(image) == 2
     crop = image(rowMin:rowMax, colMin:colMax);
 else
     crop = image(rowMin:rowMax, colMin:colMax, :);
+end
+end
+
+function crop = local_crop_square_padded(image, peakRC, radius)
+image = double(image);
+row = round(double(peakRC(1)));
+col = round(double(peakRC(2)));
+rowMin = max(row - radius, 1);
+rowMax = min(row + radius, size(image, 1));
+colMin = max(col - radius, 1);
+colMax = min(col + radius, size(image, 2));
+
+destRowMin = 1 + rowMin - (row - radius);
+destRowMax = destRowMin + (rowMax - rowMin);
+destColMin = 1 + colMin - (col - radius);
+destColMax = destColMin + (colMax - colMin);
+
+if ndims(image) == 2
+    crop = zeros(2 * radius + 1, 2 * radius + 1);
+    crop(destRowMin:destRowMax, destColMin:destColMax) = image(rowMin:rowMax, colMin:colMax);
+else
+    crop = zeros(2 * radius + 1, 2 * radius + 1, size(image, 3));
+    crop(destRowMin:destRowMax, destColMin:destColMax, :) = image(rowMin:rowMax, colMin:colMax, :);
 end
 end
 

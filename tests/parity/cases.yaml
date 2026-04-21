@@ -3254,6 +3254,78 @@
       }
     },
     {
+      "name": "ip_rt_point_array_pipeline_small",
+      "matlab_function": "sceneCreate/oiCompute/sensorCompute/ipCompute ray trace point array",
+      "rtol": 1e-05,
+      "atol": 1e-08,
+      "field_overrides": {
+        "sensor_volts": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.06
+        },
+        "result": {
+          "mode": "mae",
+          "max_mae": 0.01
+        },
+        "sensor_center_peak_rc": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "sensor_edge_peak_rc": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "result_center_peak_rc": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "result_edge_peak_rc": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.02
+        },
+        "sensor_center_crop_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.2
+        },
+        "sensor_edge_crop_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.2
+        },
+        "sensor_center_crop_metrics": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.3
+        },
+        "sensor_edge_crop_metrics": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.3
+        },
+        "result_center_crop_rgb": {
+          "mode": "mae",
+          "max_mae": 0.01
+        },
+        "result_edge_crop_rgb": {
+          "mode": "mae",
+          "max_mae": 0.01
+        },
+        "result_center_crop_luma_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.3
+        },
+        "result_edge_crop_luma_norm": {
+          "mode": "normalized_mae",
+          "max_normalized_mae": 0.3
+        },
+        "result_center_crop_metrics": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.3
+        },
+        "result_edge_crop_metrics": {
+          "mode": "mean_rel",
+          "max_mean_rel": 0.3
+        }
+      }
+    },
+    {
       "name": "sensor_description_fpn_small",
       "matlab_function": "sensorDescription",
       "rtol": 1e-05,
