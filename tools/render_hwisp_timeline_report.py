@@ -106,11 +106,23 @@ def _warm_scene(scene):
     return result
 
 
+def _highlight_scene(scene):
+    result = scene.clone()
+    photons = np.asarray(result.data["photons"], dtype=float).copy()
+    rows, cols = photons.shape[:2]
+    row_end = max(rows // 4, 1)
+    col_end = max(cols // 4, 1)
+    photons[:row_end, :col_end, :] *= 24.0
+    result.data["photons"] = photons
+    return result
+
+
 def _three_a_scenes(store: AssetStore) -> list:
     nominal = scene_create("macbeth d65", 16, asset_store=store)
     bright = _scale_scene(nominal, 4.0)
+    highlight = _highlight_scene(bright)
     warm = _warm_scene(bright)
-    return [nominal] * 4 + [bright] * 4 + [warm] * 4
+    return [nominal] * 4 + [highlight] * 4 + [warm] * 4
 
 
 def _simulate_three_a_sequence(store: AssetStore):
@@ -123,6 +135,10 @@ def _simulate_three_a_sequence(store: AssetStore):
             "target_luma": 0.18,
             "max_ae_step_ev": 1.0,
             "max_awb_step_ev": 0.5,
+            "ae_metering": "center_weighted",
+            "ae_highlight_clip": 0.98,
+            "ae_highlight_weight": 0.5,
+            "awb_stats_roi": "valid_luma",
         },
         transport={"request_queue_depth": 2, "max_buffers": 3},
         seed=42,
@@ -139,26 +155,42 @@ def _render_ae_convergence(sequence, output_path: Path) -> None:
     frames = [frame.timeline.frame_id for frame in sequence.frames]
     stats = [frame.controls_applied["produced_stats"] for frame in sequence.frames]
     controls = [frame.controls_applied for frame in sequence.frames]
-    luma = [float(item["mean_sensor_luma_norm"]) for item in stats]
-    target = [float(item["target_luma"]) for item in stats]
+    ae_stats = [item.get("ae", {}) for item in stats]
+    luma = [float(item.get("metering_luma", stats[index]["mean_sensor_luma_norm"])) for index, item in enumerate(ae_stats)]
+    target = [float(item.get("target_luma", stats[index]["target_luma"])) for index, item in enumerate(ae_stats)]
+    ev_error = [float(item.get("ev_error", 0.0)) for item in ae_stats]
+    clip_fraction = [float(item.get("clipped_fraction", 0.0)) for item in ae_stats]
     exposure_ms = [float(item["exposure_time_us"]) / 1000.0 for item in controls]
     analog_gain = [float(item["analog_gain"]) for item in controls]
+    exposure_product = [exposure_ms[index] * analog_gain[index] for index in range(len(frames))]
+    ae_settle = float(sequence.aggregate.get("ae_settle_frame", -1.0))
 
-    fig, axes = plt.subplots(2, 1, figsize=(9.0, 6.0), sharex=True, constrained_layout=True)
-    axes[0].plot(frames, luma, marker="o", label="measured luma")
+    fig, axes = plt.subplots(3, 1, figsize=(9.0, 8.0), sharex=True, constrained_layout=True)
+    axes[0].plot(frames, luma, marker="o", label="metered luma")
     axes[0].plot(frames, target, linestyle="--", label="target luma")
-    axes[0].axvline(4, color="#9a5a21", alpha=0.35, label="4x brightness step")
+    axes[0].axvline(4, color="#9a5a21", alpha=0.35, label="4x brightness + highlight")
+    if ae_settle >= 0:
+        axes[0].axvline(ae_settle, color="#338a3e", linestyle=":", alpha=0.8, label="AE settle")
     axes[0].set_ylabel("Normalized luma")
-    axes[0].set_title("AE Convergence With Delayed Feedback")
+    axes[0].set_title("AE Convergence With H3A-like Metering")
     axes[0].grid(alpha=0.25)
     axes[0].legend()
 
     axes[1].plot(frames, exposure_ms, marker="o", label="exposure")
     axes[1].plot(frames, analog_gain, marker="s", label="analog gain")
-    axes[1].set_xlabel("Frame")
+    axes[1].plot(frames, exposure_product, marker="^", label="exposure x gain")
     axes[1].set_ylabel("Exposure ms / gain")
     axes[1].grid(alpha=0.25)
     axes[1].legend()
+
+    axes[2].plot(frames, ev_error, marker="o", label="EV error")
+    axes[2].plot(frames, clip_fraction, marker="s", label="clip fraction")
+    axes[2].axhline(0.25, color="#338a3e", linestyle=":", alpha=0.7, label="+/-0.25 EV")
+    axes[2].axhline(-0.25, color="#338a3e", linestyle=":", alpha=0.7)
+    axes[2].set_xlabel("Frame")
+    axes[2].set_ylabel("EV / fraction")
+    axes[2].grid(alpha=0.25)
+    axes[2].legend()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=170)
     plt.close(fig)
@@ -168,22 +200,40 @@ def _render_awb_convergence(sequence, output_path: Path) -> None:
     frames = [frame.timeline.frame_id for frame in sequence.frames]
     stats = [frame.controls_applied["produced_stats"] for frame in sequence.frames]
     controls = [frame.controls_applied for frame in sequence.frames]
-    corrected = np.asarray([item["awb_corrected_rgb_means"] for item in stats], dtype=float)
+    awb_stats = [item.get("awb", {}) for item in stats]
+    corrected = np.asarray(
+        [item.get("corrected_rgb_means", stats[index]["awb_corrected_rgb_means"]) for index, item in enumerate(awb_stats)],
+        dtype=float,
+    )
+    raw_imbalance = [float(item.get("rgb_imbalance", stats[index]["sensor_rgb_imbalance"])) for index, item in enumerate(awb_stats)]
+    corrected_imbalance = [
+        float(item.get("corrected_rgb_imbalance", stats[index]["awb_corrected_rgb_imbalance"]))
+        for index, item in enumerate(awb_stats)
+    ]
     gains = np.asarray([item["wb_gains_rgb"] for item in controls], dtype=float)
+    awb_settle = float(sequence.aggregate.get("awb_settle_frame", -1.0))
 
-    fig, axes = plt.subplots(2, 1, figsize=(9.0, 6.0), sharex=True, constrained_layout=True)
+    fig, axes = plt.subplots(3, 1, figsize=(9.0, 8.0), sharex=True, constrained_layout=True)
     for index, channel in enumerate(("R", "G", "B")):
         axes[0].plot(frames, corrected[:, index], marker="o", label=f"{channel} corrected mean")
         axes[1].plot(frames, gains[:, index], marker="s", label=f"{channel} WB gain")
     axes[0].axvline(8, color="#9a5a21", alpha=0.35, label="warm illuminant step")
-    axes[0].set_title("AWB Convergence With Delayed Feedback")
+    if awb_settle >= 0:
+        axes[0].axvline(awb_settle, color="#338a3e", linestyle=":", alpha=0.8, label="AWB settle")
+    axes[0].set_title("AWB Convergence With Valid-luma Gray-world Stats")
     axes[0].set_ylabel("Corrected channel mean")
     axes[0].grid(alpha=0.25)
     axes[0].legend()
-    axes[1].set_xlabel("Frame")
     axes[1].set_ylabel("WB gain")
     axes[1].grid(alpha=0.25)
     axes[1].legend()
+    axes[2].plot(frames, raw_imbalance, marker="o", label="raw RGB imbalance")
+    axes[2].plot(frames, corrected_imbalance, marker="s", label="corrected RGB imbalance")
+    axes[2].axhline(0.20, color="#338a3e", linestyle=":", alpha=0.7, label="0.20 settle threshold")
+    axes[2].set_xlabel("Frame")
+    axes[2].set_ylabel("Imbalance")
+    axes[2].grid(alpha=0.25)
+    axes[2].legend()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=170)
     plt.close(fig)
@@ -369,6 +419,14 @@ def _html_page(title: str, body: str) -> str:
     .scroll {{
       overflow-x: auto;
     }}
+    .pass {{
+      color: #226b32;
+      font-weight: 700;
+    }}
+    .fail {{
+      color: #a13b2b;
+      font-weight: 700;
+    }}
   </style>
 </head>
 <body>
@@ -389,7 +447,7 @@ def _figure_html(path: Path, title: str, caption: str) -> str:
     )
 
 
-def _summary_cards(summary: dict[str, float]) -> str:
+def _summary_cards(summary: dict[str, object]) -> str:
     cards = [
         ("Frames", f"{int(summary['frame_count'])}"),
         ("Mean E2E", f"{_ms(summary['e2e_latency_mean_us'])} ms"),
@@ -441,6 +499,8 @@ def _three_a_table_html(sequence) -> str:
     for frame in sequence.frames:
         controls = frame.controls_applied
         stats = controls["produced_stats"]
+        ae_stats = stats.get("ae", {})
+        awb_stats = stats.get("awb", {})
         requested = controls["requested_controls"]
         ae_request = requested.get("ae") if isinstance(requested, dict) else None
         awb_request = requested.get("awb") if isinstance(requested, dict) else None
@@ -452,11 +512,14 @@ def _three_a_table_html(sequence) -> str:
             f"<td>{escape(str(controls['awb_stats_frame']))}</td>"
             f"<td>{controls['exposure_time_us'] / 1000.0:.3f}</td>"
             f"<td>{controls['analog_gain']:.3f}</td>"
-            f"<td>{stats['mean_sensor_luma_norm']:.4f}</td>"
+            f"<td>{ae_stats.get('metering_luma', stats['mean_sensor_luma_norm']):.4f}</td>"
+            f"<td>{ae_stats.get('ev_error', 0.0):.3f}</td>"
+            f"<td>{ae_stats.get('clipped_fraction', 0.0):.4f}</td>"
             f"<td>{stats['target_luma']:.4f}</td>"
             f"<td>{controls['wb_gains_rgb'][0]:.3f}</td>"
             f"<td>{controls['wb_gains_rgb'][1]:.3f}</td>"
             f"<td>{controls['wb_gains_rgb'][2]:.3f}</td>"
+            f"<td>{awb_stats.get('valid_pixel_fraction', 1.0):.3f}</td>"
             f"<td>{stats['awb_corrected_rgb_imbalance']:.3f}</td>"
             f"<td>{'' if ae_request is None else ae_request['apply_frame']}</td>"
             f"<td>{'' if awb_request is None else awb_request['apply_frame']}</td>"
@@ -465,12 +528,66 @@ def _three_a_table_html(sequence) -> str:
     return (
         '<div class="scroll"><table><thead><tr>'
         "<th>Frame</th><th>Warmup</th><th>AE source</th><th>AWB source</th>"
-        "<th>Exposure ms</th><th>Analog gain</th><th>Luma</th><th>Target</th>"
-        "<th>WB R</th><th>WB G</th><th>WB B</th><th>Corrected RGB imbalance</th>"
+        "<th>Exposure ms</th><th>Analog gain</th><th>Metered luma</th><th>EV error</th>"
+        "<th>Clip fraction</th><th>Target</th>"
+        "<th>WB R</th><th>WB G</th><th>WB B</th><th>AWB valid pixels</th><th>Corrected RGB imbalance</th>"
         "<th>Next AE frame</th><th>Next AWB frame</th>"
         "</tr></thead><tbody>"
         + "\n".join(rows)
         + "</tbody></table></div>"
+    )
+
+
+def _three_a_verdict_html(sequence) -> str:
+    aggregate = sequence.aggregate
+    verdicts = aggregate.get("validation_verdicts", {})
+    thresholds = aggregate.get("validation_thresholds", {})
+    rows = [
+        (
+            "AE settle",
+            bool(verdicts.get("ae_settle", False)),
+            f"settle frame {aggregate.get('ae_settle_frame', -1):.0f}, final error {aggregate.get('ae_final_error_ev', 0.0):.3f} EV",
+        ),
+        (
+            "AWB settle",
+            bool(verdicts.get("awb_settle", False)),
+            f"settle frame {aggregate.get('awb_settle_frame', -1):.0f}, final imbalance {aggregate.get('awb_final_rgb_imbalance', 0.0):.3f}",
+        ),
+        (
+            "Clamp compliance",
+            bool(verdicts.get("clamp_compliance", False)),
+            "exposure, analog gain, and WB gains remain inside configured limits",
+        ),
+        (
+            "Warmup delay mapping",
+            bool(verdicts.get("warmup_delay_mapping", False)),
+            "frames before the configured control delay are marked warmup",
+        ),
+        (
+            "Clip reduction",
+            bool(verdicts.get("clip_reduction", False)),
+            f"max clip before response {aggregate.get('max_clip_fraction_before_response', 0.0):.4f}, after response {aggregate.get('max_clip_fraction_after_response', 0.0):.4f}",
+        ),
+    ]
+    body = []
+    for name, passed, detail in rows:
+        klass = "pass" if passed else "fail"
+        status = "PASS" if passed else "FAIL"
+        body.append(
+            "<tr>"
+            f"<td>{escape(name)}</td>"
+            f'<td class="{klass}">{status}</td>'
+            f"<td>{escape(detail)}</td>"
+            "</tr>"
+        )
+    return (
+        '<div class="scroll"><table><thead><tr>'
+        "<th>Validation</th><th>Status</th><th>Evidence</th>"
+        "</tr></thead><tbody>"
+        + "\n".join(body)
+        + "</tbody></table></div>"
+        f"<p class=\"lead\">Default thresholds: AE |EV error| <= {thresholds.get('ae_settle_ev', 0.25):.2f} for two consecutive frames; "
+        f"AWB corrected RGB imbalance <= {thresholds.get('awb_settle_imbalance', 0.20):.2f} for two consecutive frames.</p>"
     )
 
 
@@ -505,7 +622,7 @@ def _stage_table_html(sequence) -> str:
 def _write_html_reports(
     *,
     sequence,
-    summary: dict[str, float],
+    summary: dict[str, object],
     report_html: Path,
     details_html: Path,
     frame_timeline: Path,
@@ -542,13 +659,15 @@ def _write_html_reports(
 <h2>3A AE/AWB Behavior</h2>
 <p class="lead">This sequence enables <code>apply_to_image=True</code>. Frame statistics generate AE/AWB controls that apply two frames later, so the plots show delayed control response rather than instantaneous correction.</p>
 <div class="grid">
-  {_figure_html(ae_convergence, "AE convergence", "Measured luma, target luma, exposure time, and analog gain across a 4x brightness step.")}
-  {_figure_html(awb_convergence, "AWB convergence", "Corrected RGB channel means and white-balance gains across a warm-illuminant step.")}
+  {_figure_html(ae_convergence, "AE convergence", "H3A-like metered luma, clipping fraction, EV error, exposure time, and analog gain across a 4x brightness step with a highlight patch.")}
+  {_figure_html(awb_convergence, "AWB convergence", "Valid-luma gray-world RGB means, channel imbalance, and white-balance gains across a warm-illuminant step.")}
   {_figure_html(three_a_thumbnails, "3A output thumbnails", "Representative rendered frames before and after AE/AWB delayed control application.")}
 </div>
 <div class="links">
   <a href="{escape(three_a_summary_json.name)}">3A machine-readable JSON</a>
 </div>
+<h2>3A Validation Verdict</h2>
+{_three_a_verdict_html(three_a_sequence)}
 <h2>3A Frame Controls</h2>
 {_three_a_table_html(three_a_sequence)}
 """
@@ -610,6 +729,7 @@ def render(output_dir: Path = DEFAULT_OUTPUT_DIR, *, nframes: int = 8) -> dict[s
     hw_isp_export_json(three_a_sequence, three_a_summary_json)
 
     summary = hw_isp_latency_summary(sequence)
+    three_a_summary = hw_isp_latency_summary(three_a_sequence)
     _write_html_reports(
         sequence=sequence,
         summary=summary,
@@ -637,6 +757,13 @@ def render(output_dir: Path = DEFAULT_OUTPUT_DIR, *, nframes: int = 8) -> dict[s
         f"- HTML dashboard: [{report_html}]({report_html})",
         f"- HTML details: [{details_html}]({details_html})",
         f"- 3A summary JSON: [{three_a_summary_json}]({three_a_summary_json})",
+        "",
+        "## 3A Validation",
+        f"- AE settle frame: `{three_a_summary['ae_settle_frame']:.0f}`",
+        f"- AE final error: `{three_a_summary['ae_final_error_ev']:.3f} EV`",
+        f"- AWB settle frame: `{three_a_summary['awb_settle_frame']:.0f}`",
+        f"- AWB final RGB imbalance: `{three_a_summary['awb_final_rgb_imbalance']:.3f}`",
+        f"- Max clip fraction: `{three_a_summary['max_clip_fraction']:.4f}`",
         "",
         "## Figures",
         f"![frame timeline]({frame_timeline})",

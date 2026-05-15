@@ -65,6 +65,13 @@ class HWIspControlPath:
     min_wb_gain: float = 0.25
     max_wb_gain: float = 4.0
     max_awb_step_ev: float = 0.5
+    stats_grid: tuple[int, int] = (8, 8)
+    ae_metering: str = "center_weighted"
+    ae_highlight_clip: float = 0.98
+    ae_highlight_weight: float = 0.5
+    awb_stats_roi: str = "valid_luma"
+    awb_min_luma: float = 0.02
+    awb_max_luma: float = 0.95
 
 
 @dataclass(frozen=True)
@@ -129,7 +136,14 @@ class HWIspFrameResult:
 @dataclass(frozen=True)
 class HWIspSequenceResult:
     frames: tuple[HWIspFrameResult, ...]
-    aggregate: dict[str, float]
+    aggregate: dict[str, Any]
+
+
+_AE_SETTLE_EV_THRESHOLD = 0.25
+_AWB_SETTLE_IMBALANCE_THRESHOLD = 0.20
+_SETTLE_CONSECUTIVE_FRAMES = 2
+_AE_STEP_FRAME = 4
+_AWB_STEP_FRAME = 8
 
 
 def _default_stages() -> tuple[HWIspStage, ...]:
@@ -471,26 +485,142 @@ def _apply_controls_to_camera(camera: Camera, controls: dict[str, Any], config: 
     return updated
 
 
-def _sensor_mean_luma_norm(sensor: Sensor) -> float:
+def _sensor_luma_plane_norm(sensor: Sensor) -> np.ndarray:
     volts = np.asarray(sensor.data.get("volts", sensor.data.get("dv", np.empty(0))), dtype=float)
     if volts.size == 0:
-        return 0.0
+        return np.zeros((1, 1), dtype=float)
+    if volts.ndim == 1:
+        volts = volts.reshape(1, -1)
+    elif volts.ndim == 3:
+        volts = np.mean(volts[:, :, : min(volts.shape[2], 3)], axis=2)
     try:
         voltage_swing = float(sensor_get(sensor, "pixel voltage swing"))
     except Exception:
         voltage_swing = max(float(np.max(volts)), 1.0)
-    return float(np.mean(volts) / max(voltage_swing, 1.0e-12))
+    luma = volts / max(voltage_swing, 1.0e-12)
+    return np.nan_to_num(luma, nan=0.0, posinf=0.0, neginf=0.0).astype(float)
 
 
-def _rgb_means_from_ip(ip: ImageProcessor) -> list[float]:
+def _stats_grid_shape(config: HWIspConfig) -> tuple[int, int]:
+    grid = np.asarray(config.control_path.stats_grid, dtype=int).reshape(-1)
+    rows = int(grid[0]) if grid.size >= 1 else 8
+    cols = int(grid[1]) if grid.size >= 2 else rows
+    return max(rows, 1), max(cols, 1)
+
+
+def _tile_means(values: np.ndarray, grid: tuple[int, int]) -> np.ndarray:
+    array = np.asarray(values, dtype=float)
+    if array.ndim != 2 or array.size == 0:
+        return np.zeros(grid, dtype=float)
+    row_splits = np.array_split(array, grid[0], axis=0)
+    result = np.zeros(grid, dtype=float)
+    for row_index, row_block in enumerate(row_splits):
+        col_splits = np.array_split(row_block, grid[1], axis=1)
+        for col_index, tile in enumerate(col_splits):
+            result[row_index, col_index] = float(np.mean(tile)) if tile.size else 0.0
+    return result
+
+
+def _center_weights(shape: tuple[int, int]) -> np.ndarray:
+    rows, cols = int(shape[0]), int(shape[1])
+    y = np.linspace(-1.0, 1.0, rows, dtype=float)
+    x = np.linspace(-1.0, 1.0, cols, dtype=float)
+    yy, xx = np.meshgrid(y, x, indexing="ij")
+    weights = np.exp(-(xx * xx + yy * yy) / (2.0 * 0.55 * 0.55))
+    return weights / max(float(np.sum(weights)), 1.0e-12)
+
+
+def _ae_stats(sensor: Sensor, config: HWIspConfig) -> dict[str, Any]:
+    control = config.control_path
+    luma = _sensor_luma_plane_norm(sensor)
+    grid = _stats_grid_shape(config)
+    tile_mean = _tile_means(luma, grid)
+    clipped = np.asarray(luma >= float(control.ae_highlight_clip), dtype=float)
+    tile_clip = _tile_means(clipped, grid)
+    mean_luma = float(np.mean(luma)) if luma.size else 0.0
+    weighted_luma = float(np.sum(tile_mean * _center_weights(tile_mean.shape)))
+    metering = mean_luma
+    metering_mode = str(control.ae_metering).lower().replace("-", "_").replace(" ", "_")
+    if metering_mode in {"center", "center_weighted"}:
+        metering = weighted_luma
+    target = max(float(control.target_luma), 1.0e-9)
+    ev_error = float(np.log2(max(metering, 1.0e-9) / target))
+    return {
+        "stats_grid": [int(grid[0]), int(grid[1])],
+        "ae_metering": str(control.ae_metering),
+        "tile_mean_luma": tile_mean.astype(float).tolist(),
+        "tile_clip_fraction": tile_clip.astype(float).tolist(),
+        "mean_luma": float(mean_luma),
+        "weighted_luma": float(weighted_luma),
+        "metering_luma": float(metering),
+        "target_luma": float(control.target_luma),
+        "target_error": float(metering - float(control.target_luma)),
+        "ev_error": ev_error,
+        "clipped_fraction": float(np.mean(clipped)) if clipped.size else 0.0,
+        "highlight_clip": float(control.ae_highlight_clip),
+    }
+
+
+def _rgb_array_from_ip(ip: ImageProcessor) -> np.ndarray | None:
     for key in ("sensorspace", "result", "srgb"):
         data = ip.data.get(key)
         if data is None:
             continue
         array = np.asarray(data, dtype=float)
         if array.ndim == 3 and array.shape[2] >= 3 and array.size:
-            return np.mean(array[:, :, :3], axis=(0, 1)).astype(float).tolist()
-    return [0.0, 0.0, 0.0]
+            return np.nan_to_num(array[:, :, :3], nan=0.0, posinf=0.0, neginf=0.0).astype(float)
+    return None
+
+
+def _rgb_means(array: np.ndarray | None, mask: np.ndarray | None = None) -> list[float]:
+    if array is None or array.size == 0:
+        return [0.0, 0.0, 0.0]
+    rgb = np.asarray(array, dtype=float)
+    if mask is not None and mask.shape == rgb.shape[:2] and bool(np.any(mask)):
+        return np.mean(rgb[mask, :3], axis=0).astype(float).tolist()
+    return np.mean(rgb[:, :, :3], axis=(0, 1)).astype(float).tolist()
+
+
+def _awb_stats(ip: ImageProcessor, config: HWIspConfig, applied_controls: dict[str, Any]) -> dict[str, Any]:
+    control = config.control_path
+    rgb = _rgb_array_from_ip(ip)
+    raw_means = _rgb_means(rgb)
+    if rgb is None:
+        mask = np.zeros((1, 1), dtype=bool)
+        valid_fraction = 0.0
+    else:
+        luma = np.mean(rgb[:, :, :3], axis=2)
+        roi = str(control.awb_stats_roi).lower().replace("-", "_").replace(" ", "_")
+        if roi == "valid_luma":
+            mask = (
+                np.isfinite(luma)
+                & (luma >= float(control.awb_min_luma))
+                & (luma <= float(control.awb_max_luma))
+            )
+        else:
+            mask = np.isfinite(luma)
+        valid_fraction = float(np.mean(mask)) if mask.size else 0.0
+        if not bool(np.any(mask)):
+            mask = np.isfinite(luma)
+            valid_fraction = float(np.mean(mask)) if mask.size else 0.0
+
+    rgb_means = _rgb_means(rgb, mask)
+    wb = np.asarray(applied_controls.get("wb_gains_rgb", [1.0, 1.0, 1.0]), dtype=float).reshape(-1)[:3]
+    corrected_rgb = (np.asarray(rgb_means, dtype=float).reshape(-1)[:3] * wb).astype(float).tolist()
+    raw_corrected_rgb = (np.asarray(raw_means, dtype=float).reshape(-1)[:3] * wb).astype(float).tolist()
+    return {
+        "stats_roi": str(control.awb_stats_roi),
+        "valid_luma_range": [float(control.awb_min_luma), float(control.awb_max_luma)],
+        "valid_pixel_fraction": float(valid_fraction),
+        "raw_rgb_means": raw_means,
+        "rgb_means": rgb_means,
+        "corrected_rgb_means": corrected_rgb,
+        "raw_corrected_rgb_means": raw_corrected_rgb,
+        "raw_rgb_imbalance": _channel_imbalance(raw_means),
+        "rgb_imbalance": _channel_imbalance(rgb_means),
+        "corrected_rgb_imbalance": _channel_imbalance(corrected_rgb),
+        "raw_corrected_rgb_imbalance": _channel_imbalance(raw_corrected_rgb),
+    }
 
 
 def _channel_imbalance(values: Any) -> float:
@@ -502,23 +632,29 @@ def _channel_imbalance(values: Any) -> float:
 
 
 def _frame_stats(sensor: Sensor, ip: ImageProcessor, config: HWIspConfig, applied_controls: dict[str, Any]) -> dict[str, Any]:
-    rgb_means = _rgb_means_from_ip(ip)
-    wb = np.asarray(applied_controls.get("wb_gains_rgb", [1.0, 1.0, 1.0]), dtype=float).reshape(-1)[:3]
-    corrected_rgb = (np.asarray(rgb_means, dtype=float).reshape(-1)[:3] * wb).astype(float).tolist()
+    ae = _ae_stats(sensor, config)
+    awb = _awb_stats(ip, config, applied_controls)
     output = ip.data.get("result", ip.data.get("srgb"))
     if output is not None and np.asarray(output).ndim == 3:
         output_means = np.mean(np.asarray(output, dtype=float)[:, :, :3], axis=(0, 1)).astype(float).tolist()
     else:
         output_means = [0.0, 0.0, 0.0]
     return {
-        "mean_sensor_luma_norm": _sensor_mean_luma_norm(sensor),
+        "mean_sensor_luma_norm": float(ae["mean_luma"]),
+        "weighted_sensor_luma_norm": float(ae["weighted_luma"]),
+        "metering_sensor_luma_norm": float(ae["metering_luma"]),
         "target_luma": float(config.control_path.target_luma),
-        "sensor_rgb_means": rgb_means,
-        "awb_corrected_rgb_means": corrected_rgb,
-        "sensor_rgb_imbalance": _channel_imbalance(rgb_means),
-        "awb_corrected_rgb_imbalance": _channel_imbalance(corrected_rgb),
+        "clipped_fraction": float(ae["clipped_fraction"]),
+        "sensor_rgb_means": list(awb["rgb_means"]),
+        "sensor_raw_rgb_means": list(awb["raw_rgb_means"]),
+        "awb_corrected_rgb_means": list(awb["corrected_rgb_means"]),
+        "sensor_rgb_imbalance": float(awb["rgb_imbalance"]),
+        "sensor_raw_rgb_imbalance": float(awb["raw_rgb_imbalance"]),
+        "awb_corrected_rgb_imbalance": float(awb["corrected_rgb_imbalance"]),
         "output_rgb_means": output_means,
         "output_rgb_imbalance": _channel_imbalance(output_means),
+        "ae": ae,
+        "awb": awb,
     }
 
 
@@ -568,16 +704,30 @@ def _requested_ae_controls(
     control = config.control_path
     if not control.ae_enabled:
         return None
-    measured = max(float(stats["mean_sensor_luma_norm"]), 1.0e-9)
+    ae_stats = stats.get("ae", {}) if isinstance(stats.get("ae"), dict) else {}
+    measured = max(float(ae_stats.get("metering_luma", stats["mean_sensor_luma_norm"])), 1.0e-9)
     target = max(float(control.target_luma), 1.0e-9)
     step = max(float(control.max_ae_step_ev), 0.0)
     ratio = _clamp(target / measured, 2.0 ** (-step), 2.0**step)
+    clipped_fraction = max(float(ae_stats.get("clipped_fraction", 0.0)), 0.0)
+    highlight_limited = False
+    if clipped_fraction > 0.0:
+        clip_scale = _clamp(clipped_fraction / 0.02, 0.0, 1.0)
+        highlight_weight = _clamp(float(control.ae_highlight_weight), 0.0, 1.0)
+        highlight_ratio = _clamp(1.0 - highlight_weight * clip_scale, 2.0 ** (-step), 1.0)
+        highlight_limited = highlight_ratio < ratio
+        ratio = min(ratio, highlight_ratio)
     current_product = float(applied["exposure_time_us"]) * float(applied["analog_gain"])
     exposure_us, analog_gain = _allocate_exposure_gain(current_product * ratio, config)
     return {
         "source_frame": int(frame_id),
         "apply_frame": int(frame_id) + int(control.ae_apply_delay_frames),
         "measured_luma": float(measured),
+        "mean_luma": float(ae_stats.get("mean_luma", stats["mean_sensor_luma_norm"])),
+        "weighted_luma": float(ae_stats.get("weighted_luma", measured)),
+        "clipped_fraction": float(clipped_fraction),
+        "ev_error": float(ae_stats.get("ev_error", np.log2(measured / target))),
+        "highlight_limited": bool(highlight_limited),
         "target_luma": float(target),
         "ratio": float(ratio),
         "exposure_time_us": float(exposure_us),
@@ -596,7 +746,9 @@ def _requested_awb_controls(
         return None
     if str(control.awb_method).lower().replace("-", "_").replace(" ", "_") != "gray_world":
         return None
-    means = np.maximum(np.asarray(stats["sensor_rgb_means"], dtype=float).reshape(-1)[:3], 1.0e-9)
+    awb_stats = stats.get("awb", {}) if isinstance(stats.get("awb"), dict) else {}
+    source_means = awb_stats.get("rgb_means", stats["sensor_rgb_means"])
+    means = np.maximum(np.asarray(source_means, dtype=float).reshape(-1)[:3], 1.0e-9)
     current = np.maximum(np.asarray(applied.get("wb_gains_rgb", [1.0, 1.0, 1.0]), dtype=float).reshape(-1)[:3], 1.0e-9)
     target_mean = float(np.mean(means))
     desired = target_mean / means
@@ -610,6 +762,7 @@ def _requested_awb_controls(
         "source_frame": int(frame_id),
         "apply_frame": int(frame_id) + int(control.awb_apply_delay_frames),
         "rgb_means": means.astype(float).tolist(),
+        "valid_pixel_fraction": float(awb_stats.get("valid_pixel_fraction", 1.0)),
         "wb_gains_rgb": gains.astype(float).tolist(),
     }
 
@@ -876,7 +1029,134 @@ def hw_isp_timeline_table(result: HWIspFrameResult | HWIspSequenceResult) -> lis
     return rows
 
 
-def hw_isp_latency_summary(result: HWIspFrameResult | HWIspSequenceResult) -> dict[str, float]:
+def _first_settle_frame(
+    values: list[tuple[int, float]],
+    *,
+    threshold: float,
+    consecutive: int,
+    start_frame: int,
+) -> float:
+    if not values:
+        return -1.0
+    consecutive = max(int(consecutive), 1)
+    for index in range(0, max(len(values) - consecutive + 1, 0)):
+        frame_id = int(values[index][0])
+        if frame_id < int(start_frame):
+            continue
+        window = values[index : index + consecutive]
+        if len(window) == consecutive and all(abs(float(value)) <= float(threshold) for _, value in window):
+            return float(frame_id)
+    return -1.0
+
+
+def _control_config_from_frame(frame: HWIspFrameResult) -> dict[str, Any]:
+    metadata = frame.camera.metadata.get("hw_isp", {}) if hasattr(frame.camera, "metadata") else {}
+    config = metadata.get("config", {}) if isinstance(metadata, dict) else {}
+    control = config.get("control_path", {}) if isinstance(config, dict) else {}
+    return control if isinstance(control, dict) else {}
+
+
+def _sensor_config_from_frame(frame: HWIspFrameResult) -> dict[str, Any]:
+    metadata = frame.camera.metadata.get("hw_isp", {}) if hasattr(frame.camera, "metadata") else {}
+    config = metadata.get("config", {}) if isinstance(metadata, dict) else {}
+    sensor = config.get("sensor_timing", {}) if isinstance(config, dict) else {}
+    return sensor if isinstance(sensor, dict) else {}
+
+
+def _three_a_aggregate(frames: tuple[HWIspFrameResult, ...]) -> dict[str, Any]:
+    ae_errors: list[tuple[int, float]] = []
+    awb_imbalances: list[tuple[int, float]] = []
+    clipped: list[tuple[int, float]] = []
+    warmup_count = 0
+    for frame in frames:
+        controls = frame.controls_applied
+        stats = controls.get("produced_stats", {})
+        ae_stats = stats.get("ae", {}) if isinstance(stats, dict) else {}
+        awb_stats = stats.get("awb", {}) if isinstance(stats, dict) else {}
+        frame_id = int(frame.timeline.frame_id)
+        if bool(controls.get("warmup", False)):
+            warmup_count += 1
+        ae_errors.append((frame_id, float(ae_stats.get("ev_error", 0.0))))
+        awb_imbalances.append((frame_id, float(awb_stats.get("corrected_rgb_imbalance", stats.get("awb_corrected_rgb_imbalance", 0.0)))))
+        clipped.append((frame_id, float(ae_stats.get("clipped_fraction", stats.get("clipped_fraction", 0.0)))))
+
+    ae_settle_frame = _first_settle_frame(
+        ae_errors,
+        threshold=_AE_SETTLE_EV_THRESHOLD,
+        consecutive=_SETTLE_CONSECUTIVE_FRAMES,
+        start_frame=_AE_STEP_FRAME,
+    )
+    awb_settle_frame = _first_settle_frame(
+        awb_imbalances,
+        threshold=_AWB_SETTLE_IMBALANCE_THRESHOLD,
+        consecutive=_SETTLE_CONSECUTIVE_FRAMES,
+        start_frame=_AWB_STEP_FRAME,
+    )
+    control_config = _control_config_from_frame(frames[0])
+    sensor_config = _sensor_config_from_frame(frames[0])
+    fps = float(sensor_config.get("fps", 30.0))
+    max_exposure = (1.0e6 / max(fps, 1.0e-12)) * float(control_config.get("max_exposure_fraction", 0.90))
+    min_exposure = float(control_config.get("min_exposure_time_us", 100.0))
+    min_gain = float(control_config.get("min_analog_gain", 1.0))
+    max_gain = float(control_config.get("max_analog_gain", 16.0))
+    min_wb = float(control_config.get("min_wb_gain", 0.25))
+    max_wb = float(control_config.get("max_wb_gain", 4.0))
+    clamp_compliance = True
+    for frame in frames:
+        controls = frame.controls_applied
+        exposure = float(controls.get("exposure_time_us", 0.0))
+        gain = float(controls.get("analog_gain", 0.0))
+        wb = np.asarray(controls.get("wb_gains_rgb", [1.0, 1.0, 1.0]), dtype=float)
+        clamp_compliance = clamp_compliance and min_exposure <= exposure <= max(max_exposure, min_exposure)
+        clamp_compliance = clamp_compliance and min_gain <= gain <= max_gain
+        clamp_compliance = clamp_compliance and bool(np.all((wb >= min_wb) & (wb <= max_wb)))
+
+    ae_enabled = bool(control_config.get("ae_enabled", True))
+    awb_enabled = bool(control_config.get("awb_enabled", True))
+    ae_delay = int(control_config.get("ae_apply_delay_frames", 2)) if ae_enabled else 0
+    awb_delay = int(control_config.get("awb_apply_delay_frames", 2)) if awb_enabled else 0
+    warmup_delay = max(ae_delay, awb_delay)
+    warmup_delay_mapping = True
+    for frame in frames:
+        expected = int(frame.timeline.frame_id) < warmup_delay
+        if bool(frame.controls_applied.get("warmup", False)) != expected:
+            warmup_delay_mapping = False
+            break
+
+    pre_clip = [value for frame_id, value in clipped if _AE_STEP_FRAME <= frame_id < _AE_STEP_FRAME + ae_delay]
+    post_clip = [value for frame_id, value in clipped if frame_id >= _AE_STEP_FRAME + ae_delay]
+    max_clip_pre = max(pre_clip) if pre_clip else 0.0
+    max_clip_post = max(post_clip) if post_clip else 0.0
+    clip_reduction = max_clip_pre <= 0.0 or max_clip_post < max_clip_pre
+
+    final_ae_error = float(ae_errors[-1][1]) if ae_errors else 0.0
+    final_awb_imbalance = float(awb_imbalances[-1][1]) if awb_imbalances else 0.0
+    return {
+        "ae_settle_frame": float(ae_settle_frame),
+        "ae_settle_frames_after_step": float(ae_settle_frame - _AE_STEP_FRAME) if ae_settle_frame >= 0 else -1.0,
+        "ae_final_error_ev": final_ae_error,
+        "awb_settle_frame": float(awb_settle_frame),
+        "awb_final_rgb_imbalance": final_awb_imbalance,
+        "max_clip_fraction": float(max((value for _, value in clipped), default=0.0)),
+        "max_clip_fraction_before_response": float(max_clip_pre),
+        "max_clip_fraction_after_response": float(max_clip_post),
+        "warmup_frame_count": float(warmup_count),
+        "validation_verdicts": {
+            "ae_settle": bool(ae_settle_frame >= 0),
+            "awb_settle": bool(awb_settle_frame >= 0),
+            "clamp_compliance": bool(clamp_compliance),
+            "warmup_delay_mapping": bool(warmup_delay_mapping),
+            "clip_reduction": bool(clip_reduction),
+        },
+        "validation_thresholds": {
+            "ae_settle_ev": float(_AE_SETTLE_EV_THRESHOLD),
+            "awb_settle_imbalance": float(_AWB_SETTLE_IMBALANCE_THRESHOLD),
+            "settle_consecutive_frames": float(_SETTLE_CONSECUTIVE_FRAMES),
+        },
+    }
+
+
+def hw_isp_latency_summary(result: HWIspFrameResult | HWIspSequenceResult) -> dict[str, Any]:
     frames = result.frames if isinstance(result, HWIspSequenceResult) else (result,)
     if not frames:
         return {"frame_count": 0.0}
@@ -888,7 +1168,7 @@ def hw_isp_latency_summary(result: HWIspFrameResult | HWIspSequenceResult) -> di
         dtype=float,
     )
     queue = np.asarray([frame.timeline.queue_stall_us for frame in frames], dtype=float)
-    return {
+    summary: dict[str, Any] = {
         "frame_count": float(len(frames)),
         "e2e_latency_mean_us": float(np.mean(e2e)),
         "e2e_latency_max_us": float(np.max(e2e)),
@@ -896,6 +1176,8 @@ def hw_isp_latency_summary(result: HWIspFrameResult | HWIspSequenceResult) -> di
         "queue_stall_total_us": float(np.sum(queue)),
         "queue_stall_max_us": float(np.max(queue)),
     }
+    summary.update(_three_a_aggregate(tuple(frames)))
+    return summary
 
 
 def _timeline_to_dict(timeline: HWIspFrameTimeline) -> dict[str, Any]:

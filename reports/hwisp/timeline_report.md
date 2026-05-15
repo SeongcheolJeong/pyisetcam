@@ -9,6 +9,13 @@
 - HTML details: [/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/frame_details.html](/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/frame_details.html)
 - 3A summary JSON: [/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/three_a_summary.json](/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/three_a_summary.json)
 
+## 3A Validation
+- AE settle frame: `8`
+- AE final error: `-0.153 EV`
+- AWB settle frame: `10`
+- AWB final RGB imbalance: `0.156`
+- Max clip fraction: `0.1638`
+
 ## Figures
 ![frame timeline](/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/frame_timeline.png)
 ![stage latency](/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/stage_latency.png)

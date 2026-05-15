@@ -95,6 +95,20 @@ config = hw_isp_config(
 
 When enabled, AE applies delayed `exposure_time_us` and `analog_gain` to the sensor. AWB applies delayed gray-world RGB gains through a manual IP illuminant-correction matrix. AF is not part of v1.
 
+The default 3A stats model is H3A-like:
+
+- AE uses an `8 x 8` stats grid with center-weighted metering by default.
+- AE records tile luma, weighted luma, clipped-pixel fraction, target error, and EV error.
+- Highlight clipping can force the requested exposure/gain product downward even when the full-frame mean is below target.
+- AWB uses `ip.data["sensorspace"]` with a valid-luma ROI by default, excluding dark and clipped pixels before gray-world gain estimation.
+- Sequence summaries include AE settle frame, AWB settle frame, final EV error, final RGB imbalance, clipping reduction, clamp compliance, and warmup-delay verdicts.
+
+For compatibility/debug, switch AE back to full-frame mean metering:
+
+```python
+config = hw_isp_config(control_path={"ae_metering": "mean"})
+```
+
 The queue model uses `request_queue_depth` and `max_buffers`. When the pipeline is slower than the frame interval, the simulator records `queue_stall_us`. By default it stalls rather than dropping frames.
 
 ## Report
@@ -120,6 +134,14 @@ Outputs are written under `reports/hwisp/`:
 - `three_a_thumbnails.png`
 
 Open `reports/hwisp/index.html` for the browser-facing dashboard. Use `frame_details.html` when you need the full per-frame and per-stage timestamp tables. The dashboard includes a deterministic 12-frame Macbeth-style 3A scenario with a brightness step and a warm-illuminant step.
+
+The dashboard also includes a validation verdict table:
+
+- AE settled when absolute EV error stays below `0.25 EV` for two consecutive frames.
+- AWB settled when corrected RGB imbalance stays below `0.20` for two consecutive frames.
+- Clamp compliance verifies exposure, analog gain, and WB gains remain within configured limits.
+- Warmup delay mapping verifies frame-based control delay behavior.
+- Clip reduction verifies the highlight patch clip fraction decreases after delayed AE response.
 
 ## Relationship To Parity
 
