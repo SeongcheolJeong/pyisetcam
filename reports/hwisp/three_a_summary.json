@@ -1,0 +1,1861 @@
+{
+  "type": "sequence",
+  "aggregate": {
+    "frame_count": 12.0,
+    "e2e_latency_mean_us": 19157.866999589405,
+    "e2e_latency_max_us": 33737.72999999998,
+    "e2e_latency_min_us": 11737.73,
+    "queue_stall_total_us": 0.0,
+    "queue_stall_max_us": 0.0
+  },
+  "frames": [
+    {
+      "timeline": {
+        "frame_id": 0,
+        "timestamps_us": {
+          "request": 0.0,
+          "requested": 0.0,
+          "exposure_start": 0.0,
+          "exposure_mid": 4000.0,
+          "readout_start": 8000.0,
+          "readout_end": 11009.6,
+          "stats_ready": 11009.6,
+          "isp_start": 8243.26,
+          "isp_done": 10797.73,
+          "dma_done": 11237.73,
+          "app_visible": 11737.73,
+          "frame_interval_us": 33333.333333333336,
+          "line_time_us": 15.2,
+          "hidden_lines_top": 16.0,
+          "hidden_lines_bottom": 20.0
+        },
+        "stages": [
+          {
+            "name": "blc",
+            "domain": "bayer",
+            "buffering": "stream",
+            "start_us": 8243.26,
+            "end_us": 10705.66,
+            "latency_us": 2462.3999999999996,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.06,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "dpc",
+            "domain": "bayer",
+            "buffering": "line",
+            "start_us": 8273.86,
+            "end_us": 10736.26,
+            "latency_us": 2462.3999999999996,
+            "line_buffer_delay_us": 30.4,
+            "cycle_latency_us": 0.2,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "demosaic",
+            "domain": "bayer_to_rgb",
+            "buffering": "line",
+            "start_us": 8335.21,
+            "end_us": 10797.609999999999,
+            "latency_us": 2462.3999999999996,
+            "line_buffer_delay_us": 60.8,
+            "cycle_latency_us": 0.55,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "ccm_gamma",
+            "domain": "rgb",
+            "buffering": "stream",
+            "start_us": 8335.33,
+            "end_us": 10797.73,
+            "latency_us": 2462.3999999999996,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.12,
+            "stalled_us": 0.0
+          }
+        ],
+        "queue_stall_us": 0.0,
+        "dropped": false
+      },
+      "controls_applied": {
+        "ae_enabled": true,
+        "awb_enabled": true,
+        "apply_to_image": true,
+        "ae_stats_frame": null,
+        "awb_stats_frame": null,
+        "ae_apply_delay_frames": 2,
+        "awb_apply_delay_frames": 2,
+        "stats_ready_us": 11009.6,
+        "warmup": true,
+        "exposure_time_us": 8000.0,
+        "analog_gain": 1.0,
+        "wb_gains_rgb": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "applied_controls": {
+          "exposure_time_us": 8000.0,
+          "analog_gain": 1.0,
+          "wb_gains_rgb": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "ae_stats_frame": null,
+          "awb_stats_frame": null
+        },
+        "produced_stats": {
+          "mean_sensor_luma_norm": 0.02732593648587905,
+          "target_luma": 0.18,
+          "sensor_rgb_means": [
+            0.04962783625474311,
+            0.021704966354476288,
+            0.016473529686362922
+          ],
+          "awb_corrected_rgb_means": [
+            0.04962783625474311,
+            0.021704966354476288,
+            0.016473529686362922
+          ],
+          "sensor_rgb_imbalance": 1.1327533801357137,
+          "awb_corrected_rgb_imbalance": 1.1327533801357137,
+          "output_rgb_means": [
+            0.050534722668855975,
+            0.03456702111057577,
+            0.033106645903064204
+          ],
+          "output_rgb_imbalance": 0.4423055794754427
+        },
+        "requested_controls": {
+          "ae": {
+            "source_frame": 0,
+            "apply_frame": 2,
+            "measured_luma": 0.02732593648587905,
+            "target_luma": 0.18,
+            "ratio": 2.0,
+            "exposure_time_us": 16000.0,
+            "analog_gain": 1.0
+          },
+          "awb": {
+            "source_frame": 0,
+            "apply_frame": 2,
+            "rgb_means": [
+              0.04962783625474311,
+              0.021704966354476288,
+              0.016473529686362922
+            ],
+            "wb_gains_rgb": [
+              0.7071067811865476,
+              1.0,
+              1.3175662270147268
+            ]
+          }
+        }
+      },
+      "latency_summary": {
+        "frame_count": 1.0,
+        "e2e_latency_mean_us": 11737.73,
+        "e2e_latency_max_us": 11737.73,
+        "e2e_latency_min_us": 11737.73,
+        "queue_stall_total_us": 0.0,
+        "queue_stall_max_us": 0.0
+      }
+    },
+    {
+      "timeline": {
+        "frame_id": 1,
+        "timestamps_us": {
+          "request": 33333.333333333336,
+          "requested": 33333.333333333336,
+          "exposure_start": 33333.333333333336,
+          "exposure_mid": 37333.333333333336,
+          "readout_start": 41333.333333333336,
+          "readout_end": 44342.933333333334,
+          "stats_ready": 44342.933333333334,
+          "isp_start": 41576.59333333333,
+          "isp_done": 44131.06333333334,
+          "dma_done": 44571.06333333334,
+          "app_visible": 45071.06333333334,
+          "frame_interval_us": 33333.333333333336,
+          "line_time_us": 15.2,
+          "hidden_lines_top": 16.0,
+          "hidden_lines_bottom": 20.0
+        },
+        "stages": [
+          {
+            "name": "blc",
+            "domain": "bayer",
+            "buffering": "stream",
+            "start_us": 41576.59333333333,
+            "end_us": 44038.99333333333,
+            "latency_us": 2462.4000000000015,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.06,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "dpc",
+            "domain": "bayer",
+            "buffering": "line",
+            "start_us": 41607.19333333333,
+            "end_us": 44069.59333333333,
+            "latency_us": 2462.4000000000015,
+            "line_buffer_delay_us": 30.4,
+            "cycle_latency_us": 0.2,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "demosaic",
+            "domain": "bayer_to_rgb",
+            "buffering": "line",
+            "start_us": 41668.543333333335,
+            "end_us": 44130.943333333336,
+            "latency_us": 2462.4000000000015,
+            "line_buffer_delay_us": 60.8,
+            "cycle_latency_us": 0.55,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "ccm_gamma",
+            "domain": "rgb",
+            "buffering": "stream",
+            "start_us": 41668.66333333334,
+            "end_us": 44131.06333333334,
+            "latency_us": 2462.4000000000015,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.12,
+            "stalled_us": 0.0
+          }
+        ],
+        "queue_stall_us": 0.0,
+        "dropped": false
+      },
+      "controls_applied": {
+        "ae_enabled": true,
+        "awb_enabled": true,
+        "apply_to_image": true,
+        "ae_stats_frame": null,
+        "awb_stats_frame": null,
+        "ae_apply_delay_frames": 2,
+        "awb_apply_delay_frames": 2,
+        "stats_ready_us": 44342.933333333334,
+        "warmup": true,
+        "exposure_time_us": 8000.0,
+        "analog_gain": 1.0,
+        "wb_gains_rgb": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "applied_controls": {
+          "exposure_time_us": 8000.0,
+          "analog_gain": 1.0,
+          "wb_gains_rgb": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "ae_stats_frame": null,
+          "awb_stats_frame": null
+        },
+        "produced_stats": {
+          "mean_sensor_luma_norm": 0.02732593648587905,
+          "target_luma": 0.18,
+          "sensor_rgb_means": [
+            0.04962783625474311,
+            0.021704966354476288,
+            0.016473529686362922
+          ],
+          "awb_corrected_rgb_means": [
+            0.04962783625474311,
+            0.021704966354476288,
+            0.016473529686362922
+          ],
+          "sensor_rgb_imbalance": 1.1327533801357137,
+          "awb_corrected_rgb_imbalance": 1.1327533801357137,
+          "output_rgb_means": [
+            0.050534722668855975,
+            0.03456702111057577,
+            0.033106645903064204
+          ],
+          "output_rgb_imbalance": 0.4423055794754427
+        },
+        "requested_controls": {
+          "ae": {
+            "source_frame": 1,
+            "apply_frame": 3,
+            "measured_luma": 0.02732593648587905,
+            "target_luma": 0.18,
+            "ratio": 2.0,
+            "exposure_time_us": 16000.0,
+            "analog_gain": 1.0
+          },
+          "awb": {
+            "source_frame": 1,
+            "apply_frame": 3,
+            "rgb_means": [
+              0.04962783625474311,
+              0.021704966354476288,
+              0.016473529686362922
+            ],
+            "wb_gains_rgb": [
+              0.7071067811865476,
+              1.0,
+              1.3175662270147268
+            ]
+          }
+        }
+      },
+      "latency_summary": {
+        "frame_count": 1.0,
+        "e2e_latency_mean_us": 11737.730000000003,
+        "e2e_latency_max_us": 11737.730000000003,
+        "e2e_latency_min_us": 11737.730000000003,
+        "queue_stall_total_us": 0.0,
+        "queue_stall_max_us": 0.0
+      }
+    },
+    {
+      "timeline": {
+        "frame_id": 2,
+        "timestamps_us": {
+          "request": 66666.66666666667,
+          "requested": 66666.66666666667,
+          "exposure_start": 66666.66666666667,
+          "exposure_mid": 74666.66666666667,
+          "readout_start": 82666.66666666667,
+          "readout_end": 85676.26666666668,
+          "stats_ready": 85676.26666666668,
+          "isp_start": 82909.92666666667,
+          "isp_done": 85464.39666666667,
+          "dma_done": 85904.39666666667,
+          "app_visible": 86404.39666666667,
+          "frame_interval_us": 33333.333333333336,
+          "line_time_us": 15.2,
+          "hidden_lines_top": 16.0,
+          "hidden_lines_bottom": 20.0
+        },
+        "stages": [
+          {
+            "name": "blc",
+            "domain": "bayer",
+            "buffering": "stream",
+            "start_us": 82909.92666666667,
+            "end_us": 85372.32666666668,
+            "latency_us": 2462.4000000000087,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.06,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "dpc",
+            "domain": "bayer",
+            "buffering": "line",
+            "start_us": 82940.52666666666,
+            "end_us": 85402.92666666667,
+            "latency_us": 2462.4000000000087,
+            "line_buffer_delay_us": 30.4,
+            "cycle_latency_us": 0.2,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "demosaic",
+            "domain": "bayer_to_rgb",
+            "buffering": "line",
+            "start_us": 83001.87666666666,
+            "end_us": 85464.27666666667,
+            "latency_us": 2462.4000000000087,
+            "line_buffer_delay_us": 60.8,
+            "cycle_latency_us": 0.55,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "ccm_gamma",
+            "domain": "rgb",
+            "buffering": "stream",
+            "start_us": 83001.99666666666,
+            "end_us": 85464.39666666667,
+            "latency_us": 2462.4000000000087,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.12,
+            "stalled_us": 0.0
+          }
+        ],
+        "queue_stall_us": 0.0,
+        "dropped": false
+      },
+      "controls_applied": {
+        "ae_enabled": true,
+        "awb_enabled": true,
+        "apply_to_image": true,
+        "ae_stats_frame": 0,
+        "awb_stats_frame": 0,
+        "ae_apply_delay_frames": 2,
+        "awb_apply_delay_frames": 2,
+        "stats_ready_us": 85676.26666666668,
+        "warmup": false,
+        "exposure_time_us": 16000.0,
+        "analog_gain": 1.0,
+        "wb_gains_rgb": [
+          0.7071067811865476,
+          1.0,
+          1.3175662270147268
+        ],
+        "applied_controls": {
+          "exposure_time_us": 16000.0,
+          "analog_gain": 1.0,
+          "wb_gains_rgb": [
+            0.7071067811865476,
+            1.0,
+            1.3175662270147268
+          ],
+          "ae_stats_frame": 0,
+          "awb_stats_frame": 0
+        },
+        "produced_stats": {
+          "mean_sensor_luma_norm": 0.05465177119539146,
+          "target_luma": 0.18,
+          "sensor_rgb_means": [
+            0.09926907573012855,
+            0.043394018633676555,
+            0.032967766391708904
+          ],
+          "awb_corrected_rgb_means": [
+            0.07019383661089483,
+            0.043394018633676555,
+            0.043437215577826815
+          ],
+          "sensor_rgb_imbalance": 1.132511263451257,
+          "awb_corrected_rgb_imbalance": 0.5120166703990212,
+          "output_rgb_means": [
+            0.0204541037938934,
+            0.07499097175197796,
+            0.07341283607233741
+          ],
+          "output_rgb_imbalance": 0.9689247149057525
+        },
+        "requested_controls": {
+          "ae": {
+            "source_frame": 2,
+            "apply_frame": 4,
+            "measured_luma": 0.05465177119539146,
+            "target_luma": 0.18,
+            "ratio": 2.0,
+            "exposure_time_us": 30000.000000000004,
+            "analog_gain": 1.0666666666666664
+          },
+          "awb": {
+            "source_frame": 2,
+            "apply_frame": 4,
+            "rgb_means": [
+              0.09926907573012855,
+              0.043394018633676555,
+              0.032967766391708904
+            ],
+            "wb_gains_rgb": [
+              0.5000000000000001,
+              1.0,
+              1.3162559488588759
+            ]
+          }
+        }
+      },
+      "latency_summary": {
+        "frame_count": 1.0,
+        "e2e_latency_mean_us": 19737.729999999996,
+        "e2e_latency_max_us": 19737.729999999996,
+        "e2e_latency_min_us": 19737.729999999996,
+        "queue_stall_total_us": 0.0,
+        "queue_stall_max_us": 0.0
+      }
+    },
+    {
+      "timeline": {
+        "frame_id": 3,
+        "timestamps_us": {
+          "request": 100000.0,
+          "requested": 100000.0,
+          "exposure_start": 100000.0,
+          "exposure_mid": 108000.0,
+          "readout_start": 116000.0,
+          "readout_end": 119009.6,
+          "stats_ready": 119009.6,
+          "isp_start": 116243.26,
+          "isp_done": 118797.73,
+          "dma_done": 119237.73,
+          "app_visible": 119737.73,
+          "frame_interval_us": 33333.333333333336,
+          "line_time_us": 15.2,
+          "hidden_lines_top": 16.0,
+          "hidden_lines_bottom": 20.0
+        },
+        "stages": [
+          {
+            "name": "blc",
+            "domain": "bayer",
+            "buffering": "stream",
+            "start_us": 116243.26,
+            "end_us": 118705.66,
+            "latency_us": 2462.4000000000087,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.06,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "dpc",
+            "domain": "bayer",
+            "buffering": "line",
+            "start_us": 116273.85999999999,
+            "end_us": 118736.26,
+            "latency_us": 2462.4000000000087,
+            "line_buffer_delay_us": 30.4,
+            "cycle_latency_us": 0.2,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "demosaic",
+            "domain": "bayer_to_rgb",
+            "buffering": "line",
+            "start_us": 116335.20999999999,
+            "end_us": 118797.61,
+            "latency_us": 2462.4000000000087,
+            "line_buffer_delay_us": 60.8,
+            "cycle_latency_us": 0.55,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "ccm_gamma",
+            "domain": "rgb",
+            "buffering": "stream",
+            "start_us": 116335.32999999999,
+            "end_us": 118797.73,
+            "latency_us": 2462.4000000000087,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.12,
+            "stalled_us": 0.0
+          }
+        ],
+        "queue_stall_us": 0.0,
+        "dropped": false
+      },
+      "controls_applied": {
+        "ae_enabled": true,
+        "awb_enabled": true,
+        "apply_to_image": true,
+        "ae_stats_frame": 1,
+        "awb_stats_frame": 1,
+        "ae_apply_delay_frames": 2,
+        "awb_apply_delay_frames": 2,
+        "stats_ready_us": 119009.6,
+        "warmup": false,
+        "exposure_time_us": 16000.0,
+        "analog_gain": 1.0,
+        "wb_gains_rgb": [
+          0.7071067811865476,
+          1.0,
+          1.3175662270147268
+        ],
+        "applied_controls": {
+          "exposure_time_us": 16000.0,
+          "analog_gain": 1.0,
+          "wb_gains_rgb": [
+            0.7071067811865476,
+            1.0,
+            1.3175662270147268
+          ],
+          "ae_stats_frame": 1,
+          "awb_stats_frame": 1
+        },
+        "produced_stats": {
+          "mean_sensor_luma_norm": 0.05465177119539146,
+          "target_luma": 0.18,
+          "sensor_rgb_means": [
+            0.09926907573012855,
+            0.043394018633676555,
+            0.032967766391708904
+          ],
+          "awb_corrected_rgb_means": [
+            0.07019383661089483,
+            0.043394018633676555,
+            0.043437215577826815
+          ],
+          "sensor_rgb_imbalance": 1.132511263451257,
+          "awb_corrected_rgb_imbalance": 0.5120166703990212,
+          "output_rgb_means": [
+            0.0204541037938934,
+            0.07499097175197796,
+            0.07341283607233741
+          ],
+          "output_rgb_imbalance": 0.9689247149057525
+        },
+        "requested_controls": {
+          "ae": {
+            "source_frame": 3,
+            "apply_frame": 5,
+            "measured_luma": 0.05465177119539146,
+            "target_luma": 0.18,
+            "ratio": 2.0,
+            "exposure_time_us": 30000.000000000004,
+            "analog_gain": 1.0666666666666664
+          },
+          "awb": {
+            "source_frame": 3,
+            "apply_frame": 5,
+            "rgb_means": [
+              0.09926907573012855,
+              0.043394018633676555,
+              0.032967766391708904
+            ],
+            "wb_gains_rgb": [
+              0.5000000000000001,
+              1.0,
+              1.3162559488588759
+            ]
+          }
+        }
+      },
+      "latency_summary": {
+        "frame_count": 1.0,
+        "e2e_latency_mean_us": 19737.729999999996,
+        "e2e_latency_max_us": 19737.729999999996,
+        "e2e_latency_min_us": 19737.729999999996,
+        "queue_stall_total_us": 0.0,
+        "queue_stall_max_us": 0.0
+      }
+    },
+    {
+      "timeline": {
+        "frame_id": 4,
+        "timestamps_us": {
+          "request": 133333.33333333334,
+          "requested": 133333.33333333334,
+          "exposure_start": 133333.33333333334,
+          "exposure_mid": 148333.33333333334,
+          "readout_start": 163333.33333333334,
+          "readout_end": 166342.93333333335,
+          "stats_ready": 166342.93333333335,
+          "isp_start": 163576.59333333335,
+          "isp_done": 166131.06333333332,
+          "dma_done": 166571.06333333332,
+          "app_visible": 167071.06333333332,
+          "frame_interval_us": 33333.333333333336,
+          "line_time_us": 15.2,
+          "hidden_lines_top": 16.0,
+          "hidden_lines_bottom": 20.0
+        },
+        "stages": [
+          {
+            "name": "blc",
+            "domain": "bayer",
+            "buffering": "stream",
+            "start_us": 163576.59333333335,
+            "end_us": 166038.99333333335,
+            "latency_us": 2462.399999999994,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.06,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "dpc",
+            "domain": "bayer",
+            "buffering": "line",
+            "start_us": 163607.19333333336,
+            "end_us": 166069.59333333335,
+            "latency_us": 2462.399999999994,
+            "line_buffer_delay_us": 30.4,
+            "cycle_latency_us": 0.2,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "demosaic",
+            "domain": "bayer_to_rgb",
+            "buffering": "line",
+            "start_us": 163668.54333333333,
+            "end_us": 166130.94333333333,
+            "latency_us": 2462.399999999994,
+            "line_buffer_delay_us": 60.8,
+            "cycle_latency_us": 0.55,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "ccm_gamma",
+            "domain": "rgb",
+            "buffering": "stream",
+            "start_us": 163668.66333333333,
+            "end_us": 166131.06333333332,
+            "latency_us": 2462.399999999994,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.12,
+            "stalled_us": 0.0
+          }
+        ],
+        "queue_stall_us": 0.0,
+        "dropped": false
+      },
+      "controls_applied": {
+        "ae_enabled": true,
+        "awb_enabled": true,
+        "apply_to_image": true,
+        "ae_stats_frame": 2,
+        "awb_stats_frame": 2,
+        "ae_apply_delay_frames": 2,
+        "awb_apply_delay_frames": 2,
+        "stats_ready_us": 166342.93333333335,
+        "warmup": false,
+        "exposure_time_us": 30000.000000000004,
+        "analog_gain": 1.0666666666666664,
+        "wb_gains_rgb": [
+          0.5000000000000001,
+          1.0,
+          1.3162559488588759
+        ],
+        "applied_controls": {
+          "exposure_time_us": 30000.000000000004,
+          "analog_gain": 1.0666666666666664,
+          "wb_gains_rgb": [
+            0.5000000000000001,
+            1.0,
+            1.3162559488588759
+          ],
+          "ae_stats_frame": 2,
+          "awb_stats_frame": 2
+        },
+        "produced_stats": {
+          "mean_sensor_luma_norm": 0.36089011130534737,
+          "target_luma": 0.18,
+          "sensor_rgb_means": [
+            0.6041581978038428,
+            0.30492285987589185,
+            0.23161088186841247
+          ],
+          "awb_corrected_rgb_means": [
+            0.3020790989019215,
+            0.30492285987589185,
+            0.3048592010797483
+          ],
+          "sensor_rgb_imbalance": 0.9797929739461587,
+          "awb_corrected_rgb_imbalance": 0.009355901202375779,
+          "output_rgb_means": [
+            0.00743619469909232,
+            0.3146929983321193,
+            0.2639607949269557
+          ],
+          "output_rgb_imbalance": 1.5727455336856442
+        },
+        "requested_controls": {
+          "ae": {
+            "source_frame": 4,
+            "apply_frame": 6,
+            "measured_luma": 0.36089011130534737,
+            "target_luma": 0.18,
+            "ratio": 0.5,
+            "exposure_time_us": 15999.999999999998,
+            "analog_gain": 1.0
+          },
+          "awb": {
+            "source_frame": 4,
+            "apply_frame": 6,
+            "rgb_means": [
+              0.6041581978038428,
+              0.30492285987589185,
+              0.23161088186841247
+            ],
+            "wb_gains_rgb": [
+              0.5047069806953008,
+              1.0,
+              1.3165308012130919
+            ]
+          }
+        }
+      },
+      "latency_summary": {
+        "frame_count": 1.0,
+        "e2e_latency_mean_us": 33737.72999999998,
+        "e2e_latency_max_us": 33737.72999999998,
+        "e2e_latency_min_us": 33737.72999999998,
+        "queue_stall_total_us": 0.0,
+        "queue_stall_max_us": 0.0
+      }
+    },
+    {
+      "timeline": {
+        "frame_id": 5,
+        "timestamps_us": {
+          "request": 166666.6666666667,
+          "requested": 166666.6666666667,
+          "exposure_start": 166666.6666666667,
+          "exposure_mid": 181666.6666666667,
+          "readout_start": 196666.6666666667,
+          "readout_end": 199676.2666666667,
+          "stats_ready": 199676.2666666667,
+          "isp_start": 196909.9266666667,
+          "isp_done": 199464.39666666667,
+          "dma_done": 199904.39666666667,
+          "app_visible": 200404.39666666667,
+          "frame_interval_us": 33333.333333333336,
+          "line_time_us": 15.2,
+          "hidden_lines_top": 16.0,
+          "hidden_lines_bottom": 20.0
+        },
+        "stages": [
+          {
+            "name": "blc",
+            "domain": "bayer",
+            "buffering": "stream",
+            "start_us": 196909.9266666667,
+            "end_us": 199372.3266666667,
+            "latency_us": 2462.399999999994,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.06,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "dpc",
+            "domain": "bayer",
+            "buffering": "line",
+            "start_us": 196940.5266666667,
+            "end_us": 199402.9266666667,
+            "latency_us": 2462.399999999994,
+            "line_buffer_delay_us": 30.4,
+            "cycle_latency_us": 0.2,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "demosaic",
+            "domain": "bayer_to_rgb",
+            "buffering": "line",
+            "start_us": 197001.87666666668,
+            "end_us": 199464.27666666667,
+            "latency_us": 2462.399999999994,
+            "line_buffer_delay_us": 60.8,
+            "cycle_latency_us": 0.55,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "ccm_gamma",
+            "domain": "rgb",
+            "buffering": "stream",
+            "start_us": 197001.99666666667,
+            "end_us": 199464.39666666667,
+            "latency_us": 2462.399999999994,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.12,
+            "stalled_us": 0.0
+          }
+        ],
+        "queue_stall_us": 0.0,
+        "dropped": false
+      },
+      "controls_applied": {
+        "ae_enabled": true,
+        "awb_enabled": true,
+        "apply_to_image": true,
+        "ae_stats_frame": 3,
+        "awb_stats_frame": 3,
+        "ae_apply_delay_frames": 2,
+        "awb_apply_delay_frames": 2,
+        "stats_ready_us": 199676.2666666667,
+        "warmup": false,
+        "exposure_time_us": 30000.000000000004,
+        "analog_gain": 1.0666666666666664,
+        "wb_gains_rgb": [
+          0.5000000000000001,
+          1.0,
+          1.3162559488588759
+        ],
+        "applied_controls": {
+          "exposure_time_us": 30000.000000000004,
+          "analog_gain": 1.0666666666666664,
+          "wb_gains_rgb": [
+            0.5000000000000001,
+            1.0,
+            1.3162559488588759
+          ],
+          "ae_stats_frame": 3,
+          "awb_stats_frame": 3
+        },
+        "produced_stats": {
+          "mean_sensor_luma_norm": 0.36089011130534737,
+          "target_luma": 0.18,
+          "sensor_rgb_means": [
+            0.6041581978038428,
+            0.30492285987589185,
+            0.23161088186841247
+          ],
+          "awb_corrected_rgb_means": [
+            0.3020790989019215,
+            0.30492285987589185,
+            0.3048592010797483
+          ],
+          "sensor_rgb_imbalance": 0.9797929739461587,
+          "awb_corrected_rgb_imbalance": 0.009355901202375779,
+          "output_rgb_means": [
+            0.00743619469909232,
+            0.3146929983321193,
+            0.2639607949269557
+          ],
+          "output_rgb_imbalance": 1.5727455336856442
+        },
+        "requested_controls": {
+          "ae": {
+            "source_frame": 5,
+            "apply_frame": 7,
+            "measured_luma": 0.36089011130534737,
+            "target_luma": 0.18,
+            "ratio": 0.5,
+            "exposure_time_us": 15999.999999999998,
+            "analog_gain": 1.0
+          },
+          "awb": {
+            "source_frame": 5,
+            "apply_frame": 7,
+            "rgb_means": [
+              0.6041581978038428,
+              0.30492285987589185,
+              0.23161088186841247
+            ],
+            "wb_gains_rgb": [
+              0.5047069806953008,
+              1.0,
+              1.3165308012130919
+            ]
+          }
+        }
+      },
+      "latency_summary": {
+        "frame_count": 1.0,
+        "e2e_latency_mean_us": 33737.72999999998,
+        "e2e_latency_max_us": 33737.72999999998,
+        "e2e_latency_min_us": 33737.72999999998,
+        "queue_stall_total_us": 0.0,
+        "queue_stall_max_us": 0.0
+      }
+    },
+    {
+      "timeline": {
+        "frame_id": 6,
+        "timestamps_us": {
+          "request": 200000.0,
+          "requested": 200000.0,
+          "exposure_start": 200000.0,
+          "exposure_mid": 208000.0,
+          "readout_start": 216000.0,
+          "readout_end": 219009.6,
+          "stats_ready": 219009.6,
+          "isp_start": 216243.26,
+          "isp_done": 218797.72999999998,
+          "dma_done": 219237.72999999998,
+          "app_visible": 219737.72999999998,
+          "frame_interval_us": 33333.333333333336,
+          "line_time_us": 15.2,
+          "hidden_lines_top": 16.0,
+          "hidden_lines_bottom": 20.0
+        },
+        "stages": [
+          {
+            "name": "blc",
+            "domain": "bayer",
+            "buffering": "stream",
+            "start_us": 216243.26,
+            "end_us": 218705.66,
+            "latency_us": 2462.399999999994,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.06,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "dpc",
+            "domain": "bayer",
+            "buffering": "line",
+            "start_us": 216273.86000000002,
+            "end_us": 218736.26,
+            "latency_us": 2462.399999999994,
+            "line_buffer_delay_us": 30.4,
+            "cycle_latency_us": 0.2,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "demosaic",
+            "domain": "bayer_to_rgb",
+            "buffering": "line",
+            "start_us": 216335.21,
+            "end_us": 218797.61,
+            "latency_us": 2462.399999999994,
+            "line_buffer_delay_us": 60.8,
+            "cycle_latency_us": 0.55,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "ccm_gamma",
+            "domain": "rgb",
+            "buffering": "stream",
+            "start_us": 216335.33,
+            "end_us": 218797.72999999998,
+            "latency_us": 2462.399999999994,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.12,
+            "stalled_us": 0.0
+          }
+        ],
+        "queue_stall_us": 0.0,
+        "dropped": false
+      },
+      "controls_applied": {
+        "ae_enabled": true,
+        "awb_enabled": true,
+        "apply_to_image": true,
+        "ae_stats_frame": 4,
+        "awb_stats_frame": 4,
+        "ae_apply_delay_frames": 2,
+        "awb_apply_delay_frames": 2,
+        "stats_ready_us": 219009.6,
+        "warmup": false,
+        "exposure_time_us": 15999.999999999998,
+        "analog_gain": 1.0,
+        "wb_gains_rgb": [
+          0.5047069806953008,
+          1.0,
+          1.3165308012130919
+        ],
+        "applied_controls": {
+          "exposure_time_us": 15999.999999999998,
+          "analog_gain": 1.0,
+          "wb_gains_rgb": [
+            0.5047069806953008,
+            1.0,
+            1.3165308012130919
+          ],
+          "ae_stats_frame": 4,
+          "awb_stats_frame": 4
+        },
+        "produced_stats": {
+          "mean_sensor_luma_norm": 0.21819210941045447,
+          "target_luma": 0.18,
+          "sensor_rgb_means": [
+            0.39562315305906376,
+            0.17352287602067923,
+            0.13177173409908594
+          ],
+          "awb_corrected_rgb_means": [
+            0.19967376707359494,
+            0.17352287602067923,
+            0.17348154667070811
+          ],
+          "sensor_rgb_imbalance": 1.1293111666767388,
+          "awb_corrected_rgb_imbalance": 0.14373476513200698,
+          "output_rgb_means": [
+            0.010417954191001035,
+            0.29862251508151444,
+            0.25098835119134
+          ],
+          "output_rgb_imbalance": 1.5438735491423565
+        },
+        "requested_controls": {
+          "ae": {
+            "source_frame": 6,
+            "apply_frame": 8,
+            "measured_luma": 0.21819210941045447,
+            "target_luma": 0.18,
+            "ratio": 0.8249610881271193,
+            "exposure_time_us": 13199.377410033907,
+            "analog_gain": 1.0
+          },
+          "awb": {
+            "source_frame": 6,
+            "apply_frame": 8,
+            "rgb_means": [
+              0.39562315305906376,
+              0.17352287602067923,
+              0.13177173409908594
+            ],
+            "wb_gains_rgb": [
+              0.43860647355685345,
+              1.0,
+              1.3168444447289316
+            ]
+          }
+        }
+      },
+      "latency_summary": {
+        "frame_count": 1.0,
+        "e2e_latency_mean_us": 19737.72999999998,
+        "e2e_latency_max_us": 19737.72999999998,
+        "e2e_latency_min_us": 19737.72999999998,
+        "queue_stall_total_us": 0.0,
+        "queue_stall_max_us": 0.0
+      }
+    },
+    {
+      "timeline": {
+        "frame_id": 7,
+        "timestamps_us": {
+          "request": 233333.33333333334,
+          "requested": 233333.33333333334,
+          "exposure_start": 233333.33333333334,
+          "exposure_mid": 241333.33333333334,
+          "readout_start": 249333.33333333334,
+          "readout_end": 252342.93333333335,
+          "stats_ready": 252342.93333333335,
+          "isp_start": 249576.59333333335,
+          "isp_done": 252131.06333333332,
+          "dma_done": 252571.06333333332,
+          "app_visible": 253071.06333333332,
+          "frame_interval_us": 33333.333333333336,
+          "line_time_us": 15.2,
+          "hidden_lines_top": 16.0,
+          "hidden_lines_bottom": 20.0
+        },
+        "stages": [
+          {
+            "name": "blc",
+            "domain": "bayer",
+            "buffering": "stream",
+            "start_us": 249576.59333333335,
+            "end_us": 252038.99333333335,
+            "latency_us": 2462.399999999994,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.06,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "dpc",
+            "domain": "bayer",
+            "buffering": "line",
+            "start_us": 249607.19333333336,
+            "end_us": 252069.59333333335,
+            "latency_us": 2462.399999999994,
+            "line_buffer_delay_us": 30.4,
+            "cycle_latency_us": 0.2,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "demosaic",
+            "domain": "bayer_to_rgb",
+            "buffering": "line",
+            "start_us": 249668.54333333333,
+            "end_us": 252130.94333333333,
+            "latency_us": 2462.399999999994,
+            "line_buffer_delay_us": 60.8,
+            "cycle_latency_us": 0.55,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "ccm_gamma",
+            "domain": "rgb",
+            "buffering": "stream",
+            "start_us": 249668.66333333333,
+            "end_us": 252131.06333333332,
+            "latency_us": 2462.399999999994,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.12,
+            "stalled_us": 0.0
+          }
+        ],
+        "queue_stall_us": 0.0,
+        "dropped": false
+      },
+      "controls_applied": {
+        "ae_enabled": true,
+        "awb_enabled": true,
+        "apply_to_image": true,
+        "ae_stats_frame": 5,
+        "awb_stats_frame": 5,
+        "ae_apply_delay_frames": 2,
+        "awb_apply_delay_frames": 2,
+        "stats_ready_us": 252342.93333333335,
+        "warmup": false,
+        "exposure_time_us": 15999.999999999998,
+        "analog_gain": 1.0,
+        "wb_gains_rgb": [
+          0.5047069806953008,
+          1.0,
+          1.3165308012130919
+        ],
+        "applied_controls": {
+          "exposure_time_us": 15999.999999999998,
+          "analog_gain": 1.0,
+          "wb_gains_rgb": [
+            0.5047069806953008,
+            1.0,
+            1.3165308012130919
+          ],
+          "ae_stats_frame": 5,
+          "awb_stats_frame": 5
+        },
+        "produced_stats": {
+          "mean_sensor_luma_norm": 0.21819210941045447,
+          "target_luma": 0.18,
+          "sensor_rgb_means": [
+            0.39562315305906376,
+            0.17352287602067923,
+            0.13177173409908594
+          ],
+          "awb_corrected_rgb_means": [
+            0.19967376707359494,
+            0.17352287602067923,
+            0.17348154667070811
+          ],
+          "sensor_rgb_imbalance": 1.1293111666767388,
+          "awb_corrected_rgb_imbalance": 0.14373476513200698,
+          "output_rgb_means": [
+            0.010417954191001035,
+            0.29862251508151444,
+            0.25098835119134
+          ],
+          "output_rgb_imbalance": 1.5438735491423565
+        },
+        "requested_controls": {
+          "ae": {
+            "source_frame": 7,
+            "apply_frame": 9,
+            "measured_luma": 0.21819210941045447,
+            "target_luma": 0.18,
+            "ratio": 0.8249610881271193,
+            "exposure_time_us": 13199.377410033907,
+            "analog_gain": 1.0
+          },
+          "awb": {
+            "source_frame": 7,
+            "apply_frame": 9,
+            "rgb_means": [
+              0.39562315305906376,
+              0.17352287602067923,
+              0.13177173409908594
+            ],
+            "wb_gains_rgb": [
+              0.43860647355685345,
+              1.0,
+              1.3168444447289316
+            ]
+          }
+        }
+      },
+      "latency_summary": {
+        "frame_count": 1.0,
+        "e2e_latency_mean_us": 19737.72999999998,
+        "e2e_latency_max_us": 19737.72999999998,
+        "e2e_latency_min_us": 19737.72999999998,
+        "queue_stall_total_us": 0.0,
+        "queue_stall_max_us": 0.0
+      }
+    },
+    {
+      "timeline": {
+        "frame_id": 8,
+        "timestamps_us": {
+          "request": 266666.6666666667,
+          "requested": 266666.6666666667,
+          "exposure_start": 266666.6666666667,
+          "exposure_mid": 273266.35537168366,
+          "readout_start": 279866.0440767006,
+          "readout_end": 282875.64407670056,
+          "stats_ready": 282875.64407670056,
+          "isp_start": 280109.3040767006,
+          "isp_done": 282663.77407670056,
+          "dma_done": 283103.77407670056,
+          "app_visible": 283603.77407670056,
+          "frame_interval_us": 33333.333333333336,
+          "line_time_us": 15.2,
+          "hidden_lines_top": 16.0,
+          "hidden_lines_bottom": 20.0
+        },
+        "stages": [
+          {
+            "name": "blc",
+            "domain": "bayer",
+            "buffering": "stream",
+            "start_us": 280109.3040767006,
+            "end_us": 282571.70407670055,
+            "latency_us": 2462.399999999965,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.06,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "dpc",
+            "domain": "bayer",
+            "buffering": "line",
+            "start_us": 280139.9040767006,
+            "end_us": 282602.3040767006,
+            "latency_us": 2462.399999999965,
+            "line_buffer_delay_us": 30.4,
+            "cycle_latency_us": 0.2,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "demosaic",
+            "domain": "bayer_to_rgb",
+            "buffering": "line",
+            "start_us": 280201.2540767006,
+            "end_us": 282663.65407670056,
+            "latency_us": 2462.399999999965,
+            "line_buffer_delay_us": 60.8,
+            "cycle_latency_us": 0.55,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "ccm_gamma",
+            "domain": "rgb",
+            "buffering": "stream",
+            "start_us": 280201.3740767006,
+            "end_us": 282663.77407670056,
+            "latency_us": 2462.399999999965,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.12,
+            "stalled_us": 0.0
+          }
+        ],
+        "queue_stall_us": 0.0,
+        "dropped": false
+      },
+      "controls_applied": {
+        "ae_enabled": true,
+        "awb_enabled": true,
+        "apply_to_image": true,
+        "ae_stats_frame": 6,
+        "awb_stats_frame": 6,
+        "ae_apply_delay_frames": 2,
+        "awb_apply_delay_frames": 2,
+        "stats_ready_us": 282875.64407670056,
+        "warmup": false,
+        "exposure_time_us": 13199.377410033907,
+        "analog_gain": 1.0,
+        "wb_gains_rgb": [
+          0.43860647355685345,
+          1.0,
+          1.3168444447289316
+        ],
+        "applied_controls": {
+          "exposure_time_us": 13199.377410033907,
+          "analog_gain": 1.0,
+          "wb_gains_rgb": [
+            0.43860647355685345,
+            1.0,
+            1.3168444447289316
+          ],
+          "ae_stats_frame": 6,
+          "awb_stats_frame": 6
+        },
+        "produced_stats": {
+          "mean_sensor_luma_norm": 0.2548840913554846,
+          "target_luma": 0.18,
+          "sensor_rgb_means": [
+            0.5655334220192134,
+            0.18245234431473067,
+            0.0908891417615689
+          ],
+          "awb_corrected_rgb_means": [
+            0.24804661991038698,
+            0.18245234431473067,
+            0.11968686141490234
+          ],
+          "sensor_rgb_imbalance": 1.6974316754874335,
+          "awb_corrected_rgb_imbalance": 0.6999076630854657,
+          "output_rgb_means": [
+            0.01637112002848235,
+            0.31293801121916665,
+            0.14150607974211538
+          ],
+          "output_rgb_imbalance": 1.8897024837020298
+        },
+        "requested_controls": {
+          "ae": {
+            "source_frame": 8,
+            "apply_frame": 10,
+            "measured_luma": 0.2548840913554846,
+            "target_luma": 0.18,
+            "ratio": 0.7062033532291176,
+            "exposure_time_us": 9321.44458750261,
+            "analog_gain": 1.0
+          },
+          "awb": {
+            "source_frame": 8,
+            "apply_frame": 10,
+            "rgb_means": [
+              0.5655334220192134,
+              0.18245234431473067,
+              0.0908891417615689
+            ],
+            "wb_gains_rgb": [
+              0.3226199145990209,
+              1.0,
+              1.8622992732713228
+            ]
+          }
+        }
+      },
+      "latency_summary": {
+        "frame_count": 1.0,
+        "e2e_latency_mean_us": 16937.107410033874,
+        "e2e_latency_max_us": 16937.107410033874,
+        "e2e_latency_min_us": 16937.107410033874,
+        "queue_stall_total_us": 0.0,
+        "queue_stall_max_us": 0.0
+      }
+    },
+    {
+      "timeline": {
+        "frame_id": 9,
+        "timestamps_us": {
+          "request": 300000.0,
+          "requested": 300000.0,
+          "exposure_start": 300000.0,
+          "exposure_mid": 306599.688705017,
+          "readout_start": 313199.3774100339,
+          "readout_end": 316208.97741003387,
+          "stats_ready": 316208.97741003387,
+          "isp_start": 313442.6374100339,
+          "isp_done": 315997.1074100339,
+          "dma_done": 316437.1074100339,
+          "app_visible": 316937.1074100339,
+          "frame_interval_us": 33333.333333333336,
+          "line_time_us": 15.2,
+          "hidden_lines_top": 16.0,
+          "hidden_lines_bottom": 20.0
+        },
+        "stages": [
+          {
+            "name": "blc",
+            "domain": "bayer",
+            "buffering": "stream",
+            "start_us": 313442.6374100339,
+            "end_us": 315905.03741003387,
+            "latency_us": 2462.399999999965,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.06,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "dpc",
+            "domain": "bayer",
+            "buffering": "line",
+            "start_us": 313473.23741003394,
+            "end_us": 315935.6374100339,
+            "latency_us": 2462.399999999965,
+            "line_buffer_delay_us": 30.4,
+            "cycle_latency_us": 0.2,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "demosaic",
+            "domain": "bayer_to_rgb",
+            "buffering": "line",
+            "start_us": 313534.5874100339,
+            "end_us": 315996.9874100339,
+            "latency_us": 2462.399999999965,
+            "line_buffer_delay_us": 60.8,
+            "cycle_latency_us": 0.55,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "ccm_gamma",
+            "domain": "rgb",
+            "buffering": "stream",
+            "start_us": 313534.7074100339,
+            "end_us": 315997.1074100339,
+            "latency_us": 2462.399999999965,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.12,
+            "stalled_us": 0.0
+          }
+        ],
+        "queue_stall_us": 0.0,
+        "dropped": false
+      },
+      "controls_applied": {
+        "ae_enabled": true,
+        "awb_enabled": true,
+        "apply_to_image": true,
+        "ae_stats_frame": 7,
+        "awb_stats_frame": 7,
+        "ae_apply_delay_frames": 2,
+        "awb_apply_delay_frames": 2,
+        "stats_ready_us": 316208.97741003387,
+        "warmup": false,
+        "exposure_time_us": 13199.377410033907,
+        "analog_gain": 1.0,
+        "wb_gains_rgb": [
+          0.43860647355685345,
+          1.0,
+          1.3168444447289316
+        ],
+        "applied_controls": {
+          "exposure_time_us": 13199.377410033907,
+          "analog_gain": 1.0,
+          "wb_gains_rgb": [
+            0.43860647355685345,
+            1.0,
+            1.3168444447289316
+          ],
+          "ae_stats_frame": 7,
+          "awb_stats_frame": 7
+        },
+        "produced_stats": {
+          "mean_sensor_luma_norm": 0.2548840913554846,
+          "target_luma": 0.18,
+          "sensor_rgb_means": [
+            0.5655334220192134,
+            0.18245234431473067,
+            0.0908891417615689
+          ],
+          "awb_corrected_rgb_means": [
+            0.24804661991038698,
+            0.18245234431473067,
+            0.11968686141490234
+          ],
+          "sensor_rgb_imbalance": 1.6974316754874335,
+          "awb_corrected_rgb_imbalance": 0.6999076630854657,
+          "output_rgb_means": [
+            0.01637112002848235,
+            0.31293801121916665,
+            0.14150607974211538
+          ],
+          "output_rgb_imbalance": 1.8897024837020298
+        },
+        "requested_controls": {
+          "ae": {
+            "source_frame": 9,
+            "apply_frame": 11,
+            "measured_luma": 0.2548840913554846,
+            "target_luma": 0.18,
+            "ratio": 0.7062033532291176,
+            "exposure_time_us": 9321.44458750261,
+            "analog_gain": 1.0
+          },
+          "awb": {
+            "source_frame": 9,
+            "apply_frame": 11,
+            "rgb_means": [
+              0.5655334220192134,
+              0.18245234431473067,
+              0.0908891417615689
+            ],
+            "wb_gains_rgb": [
+              0.3226199145990209,
+              1.0,
+              1.8622992732713228
+            ]
+          }
+        }
+      },
+      "latency_summary": {
+        "frame_count": 1.0,
+        "e2e_latency_mean_us": 16937.107410033874,
+        "e2e_latency_max_us": 16937.107410033874,
+        "e2e_latency_min_us": 16937.107410033874,
+        "queue_stall_total_us": 0.0,
+        "queue_stall_max_us": 0.0
+      }
+    },
+    {
+      "timeline": {
+        "frame_id": 10,
+        "timestamps_us": {
+          "request": 333333.3333333334,
+          "requested": 333333.3333333334,
+          "exposure_start": 333333.3333333334,
+          "exposure_mid": 337994.0556270847,
+          "readout_start": 342654.777920836,
+          "readout_end": 345664.377920836,
+          "stats_ready": 345664.377920836,
+          "isp_start": 342898.037920836,
+          "isp_done": 345452.507920836,
+          "dma_done": 345892.507920836,
+          "app_visible": 346392.507920836,
+          "frame_interval_us": 33333.333333333336,
+          "line_time_us": 15.2,
+          "hidden_lines_top": 16.0,
+          "hidden_lines_bottom": 20.0
+        },
+        "stages": [
+          {
+            "name": "blc",
+            "domain": "bayer",
+            "buffering": "stream",
+            "start_us": 342898.037920836,
+            "end_us": 345360.437920836,
+            "latency_us": 2462.399999999965,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.06,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "dpc",
+            "domain": "bayer",
+            "buffering": "line",
+            "start_us": 342928.63792083604,
+            "end_us": 345391.037920836,
+            "latency_us": 2462.399999999965,
+            "line_buffer_delay_us": 30.4,
+            "cycle_latency_us": 0.2,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "demosaic",
+            "domain": "bayer_to_rgb",
+            "buffering": "line",
+            "start_us": 342989.987920836,
+            "end_us": 345452.387920836,
+            "latency_us": 2462.399999999965,
+            "line_buffer_delay_us": 60.8,
+            "cycle_latency_us": 0.55,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "ccm_gamma",
+            "domain": "rgb",
+            "buffering": "stream",
+            "start_us": 342990.107920836,
+            "end_us": 345452.507920836,
+            "latency_us": 2462.399999999965,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.12,
+            "stalled_us": 0.0
+          }
+        ],
+        "queue_stall_us": 0.0,
+        "dropped": false
+      },
+      "controls_applied": {
+        "ae_enabled": true,
+        "awb_enabled": true,
+        "apply_to_image": true,
+        "ae_stats_frame": 8,
+        "awb_stats_frame": 8,
+        "ae_apply_delay_frames": 2,
+        "awb_apply_delay_frames": 2,
+        "stats_ready_us": 345664.377920836,
+        "warmup": false,
+        "exposure_time_us": 9321.44458750261,
+        "analog_gain": 1.0,
+        "wb_gains_rgb": [
+          0.3226199145990209,
+          1.0,
+          1.8622992732713228
+        ],
+        "applied_controls": {
+          "exposure_time_us": 9321.44458750261,
+          "analog_gain": 1.0,
+          "wb_gains_rgb": [
+            0.3226199145990209,
+            1.0,
+            1.8622992732713228
+          ],
+          "ae_stats_frame": 8,
+          "awb_stats_frame": 8
+        },
+        "produced_stats": {
+          "mean_sensor_luma_norm": 0.18638306920581815,
+          "target_luma": 0.18,
+          "sensor_rgb_means": [
+            0.4252066477950715,
+            0.12884982033758444,
+            0.06419174162382774
+          ],
+          "awb_corrected_rgb_means": [
+            0.13718013239858193,
+            0.12884982033758444,
+            0.11954423377607491
+          ],
+          "sensor_rgb_imbalance": 1.7517959638578204,
+          "awb_corrected_rgb_imbalance": 0.13721794071876056,
+          "output_rgb_means": [
+            0.0008601199884347257,
+            0.30843708934270186,
+            0.18918605103324843
+          ],
+          "output_rgb_imbalance": 1.8510770198949045
+        },
+        "requested_controls": {
+          "ae": {
+            "source_frame": 10,
+            "apply_frame": 12,
+            "measured_luma": 0.18638306920581815,
+            "target_luma": 0.18,
+            "ratio": 0.9657529558182697,
+            "exposure_time_us": 9002.212662876858,
+            "analog_gain": 1.0
+          },
+          "awb": {
+            "source_frame": 10,
+            "apply_frame": 12,
+            "rgb_means": [
+              0.4252066477950715,
+              0.12884982033758444,
+              0.06419174162382774
+            ],
+            "wb_gains_rgb": [
+              0.3030287061732009,
+              1.0,
+              2.0072647521025644
+            ]
+          }
+        }
+      },
+      "latency_summary": {
+        "frame_count": 1.0,
+        "e2e_latency_mean_us": 13059.17458750261,
+        "e2e_latency_max_us": 13059.17458750261,
+        "e2e_latency_min_us": 13059.17458750261,
+        "queue_stall_total_us": 0.0,
+        "queue_stall_max_us": 0.0
+      }
+    },
+    {
+      "timeline": {
+        "frame_id": 11,
+        "timestamps_us": {
+          "request": 366666.6666666667,
+          "requested": 366666.6666666667,
+          "exposure_start": 366666.6666666667,
+          "exposure_mid": 371327.388960418,
+          "readout_start": 375988.1112541693,
+          "readout_end": 378997.7112541693,
+          "stats_ready": 378997.7112541693,
+          "isp_start": 376231.3712541693,
+          "isp_done": 378785.8412541693,
+          "dma_done": 379225.8412541693,
+          "app_visible": 379725.8412541693,
+          "frame_interval_us": 33333.333333333336,
+          "line_time_us": 15.2,
+          "hidden_lines_top": 16.0,
+          "hidden_lines_bottom": 20.0
+        },
+        "stages": [
+          {
+            "name": "blc",
+            "domain": "bayer",
+            "buffering": "stream",
+            "start_us": 376231.3712541693,
+            "end_us": 378693.7712541693,
+            "latency_us": 2462.399999999965,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.06,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "dpc",
+            "domain": "bayer",
+            "buffering": "line",
+            "start_us": 376261.97125416936,
+            "end_us": 378724.3712541693,
+            "latency_us": 2462.399999999965,
+            "line_buffer_delay_us": 30.4,
+            "cycle_latency_us": 0.2,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "demosaic",
+            "domain": "bayer_to_rgb",
+            "buffering": "line",
+            "start_us": 376323.32125416934,
+            "end_us": 378785.7212541693,
+            "latency_us": 2462.399999999965,
+            "line_buffer_delay_us": 60.8,
+            "cycle_latency_us": 0.55,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "ccm_gamma",
+            "domain": "rgb",
+            "buffering": "stream",
+            "start_us": 376323.44125416933,
+            "end_us": 378785.8412541693,
+            "latency_us": 2462.399999999965,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.12,
+            "stalled_us": 0.0
+          }
+        ],
+        "queue_stall_us": 0.0,
+        "dropped": false
+      },
+      "controls_applied": {
+        "ae_enabled": true,
+        "awb_enabled": true,
+        "apply_to_image": true,
+        "ae_stats_frame": 9,
+        "awb_stats_frame": 9,
+        "ae_apply_delay_frames": 2,
+        "awb_apply_delay_frames": 2,
+        "stats_ready_us": 378997.7112541693,
+        "warmup": false,
+        "exposure_time_us": 9321.44458750261,
+        "analog_gain": 1.0,
+        "wb_gains_rgb": [
+          0.3226199145990209,
+          1.0,
+          1.8622992732713228
+        ],
+        "applied_controls": {
+          "exposure_time_us": 9321.44458750261,
+          "analog_gain": 1.0,
+          "wb_gains_rgb": [
+            0.3226199145990209,
+            1.0,
+            1.8622992732713228
+          ],
+          "ae_stats_frame": 9,
+          "awb_stats_frame": 9
+        },
+        "produced_stats": {
+          "mean_sensor_luma_norm": 0.18638306920581815,
+          "target_luma": 0.18,
+          "sensor_rgb_means": [
+            0.4252066477950715,
+            0.12884982033758444,
+            0.06419174162382774
+          ],
+          "awb_corrected_rgb_means": [
+            0.13718013239858193,
+            0.12884982033758444,
+            0.11954423377607491
+          ],
+          "sensor_rgb_imbalance": 1.7517959638578204,
+          "awb_corrected_rgb_imbalance": 0.13721794071876056,
+          "output_rgb_means": [
+            0.0008601199884347257,
+            0.30843708934270186,
+            0.18918605103324843
+          ],
+          "output_rgb_imbalance": 1.8510770198949045
+        },
+        "requested_controls": {
+          "ae": {
+            "source_frame": 11,
+            "apply_frame": 13,
+            "measured_luma": 0.18638306920581815,
+            "target_luma": 0.18,
+            "ratio": 0.9657529558182697,
+            "exposure_time_us": 9002.212662876858,
+            "analog_gain": 1.0
+          },
+          "awb": {
+            "source_frame": 11,
+            "apply_frame": 13,
+            "rgb_means": [
+              0.4252066477950715,
+              0.12884982033758444,
+              0.06419174162382774
+            ],
+            "wb_gains_rgb": [
+              0.3030287061732009,
+              1.0,
+              2.0072647521025644
+            ]
+          }
+        }
+      },
+      "latency_summary": {
+        "frame_count": 1.0,
+        "e2e_latency_mean_us": 13059.17458750261,
+        "e2e_latency_max_us": 13059.17458750261,
+        "e2e_latency_min_us": 13059.17458750261,
+        "queue_stall_total_us": 0.0,
+        "queue_stall_max_us": 0.0
+      }
+    }
+  ]
+}

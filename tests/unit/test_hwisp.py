@@ -26,6 +26,20 @@ def _small_scene(asset_store):
     return scene_create("uniform ee", 8, asset_store=asset_store)
 
 
+def _scaled_scene(scene, scale: float):
+    result = scene.clone()
+    result.data["photons"] = np.asarray(result.data["photons"], dtype=float) * float(scale)
+    return result
+
+
+def _warm_scene(scene):
+    result = scene.clone()
+    wave = np.asarray(result.fields["wave"], dtype=float)
+    spectral_tilt = np.interp(wave, [float(np.min(wave)), float(np.max(wave))], [0.4, 2.2])
+    result.data["photons"] = np.asarray(result.data["photons"], dtype=float) * spectral_tilt.reshape(1, 1, -1)
+    return result
+
+
 def test_default_config_and_alias_are_deterministic() -> None:
     config = hw_isp_config(fps=60.0, seed=7)
     alias_config = hwISPConfig(fps=60.0, seed=7)
@@ -176,6 +190,9 @@ def test_export_json_and_timeline_table(asset_store, tmp_path) -> None:
     assert output.exists()
     assert payload["type"] == "sequence"
     assert len(payload["frames"]) == 2
+    assert "produced_stats" in payload["frames"][0]["controls_applied"]
+    assert "requested_controls" in payload["frames"][0]["controls_applied"]
+    assert "applied_controls" in payload["frames"][0]["controls_applied"]
     assert any(row["type"] == "stage" for row in table)
     assert hw_isp_latency_summary(sequence)["frame_count"] == 2.0
 
@@ -192,16 +209,153 @@ def test_hw_isp_frame_preserves_camera_compute_image(asset_store) -> None:
     )
 
 
+def test_apply_to_image_false_preserves_sequence_image_behavior(asset_store) -> None:
+    scene = _small_scene(asset_store)
+    sequence = hw_isp_simulate_sequence(
+        camera_create(asset_store=asset_store),
+        scene,
+        hw_isp_config(control_path={"apply_to_image": False}),
+        nframes=2,
+        asset_store=asset_store,
+    )
+
+    np.testing.assert_allclose(
+        ip_get(sequence.frames[0].ip, "result"),
+        ip_get(sequence.frames[1].ip, "result"),
+    )
+
+
+def test_ae_behavior_delay_applies_requested_controls(asset_store) -> None:
+    scene = _small_scene(asset_store)
+    config = hw_isp_config(
+        control_path={"apply_to_image": True, "ae_apply_delay_frames": 2, "awb_enabled": False},
+        sensor_timing={"exposure_time_us": 8000.0},
+    )
+    sequence = hw_isp_simulate_sequence(
+        camera_create(asset_store=asset_store),
+        scene,
+        config,
+        nframes=4,
+        asset_store=asset_store,
+    )
+
+    requested = sequence.frames[0].controls_applied["requested_controls"]["ae"]
+    applied = sequence.frames[2].controls_applied
+    assert applied["ae_stats_frame"] == 0
+    assert applied["exposure_time_us"] == requested["exposure_time_us"]
+    assert applied["analog_gain"] == requested["analog_gain"]
+
+
+def test_ae_behavior_responds_to_brightness_step(asset_store) -> None:
+    base = _small_scene(asset_store)
+    bright = _scaled_scene(base, 4.0)
+    config = hw_isp_config(
+        control_path={"apply_to_image": True, "target_luma": 0.18, "awb_enabled": False},
+        sensor_timing={"fps": 30.0, "exposure_time_us": 8000.0},
+    )
+    sequence = hw_isp_simulate_sequence(
+        camera_create(asset_store=asset_store),
+        [base] * 4 + [bright] * 4,
+        config,
+        asset_store=asset_store,
+    )
+
+    product_at_step = (
+        sequence.frames[4].controls_applied["exposure_time_us"]
+        * sequence.frames[4].controls_applied["analog_gain"]
+    )
+    product_after_delay = (
+        sequence.frames[6].controls_applied["exposure_time_us"]
+        * sequence.frames[6].controls_applied["analog_gain"]
+    )
+    assert sequence.frames[6].controls_applied["ae_stats_frame"] == 4
+    assert product_after_delay < product_at_step
+
+
+def test_ae_behavior_clamps_exposure_and_gain(asset_store) -> None:
+    dark = _scaled_scene(_small_scene(asset_store), 0.01)
+    config = hw_isp_config(
+        control_path={
+            "apply_to_image": True,
+            "target_luma": 0.5,
+            "max_exposure_fraction": 0.25,
+            "max_analog_gain": 2.0,
+            "awb_enabled": False,
+        },
+        sensor_timing={"fps": 100.0, "exposure_time_us": 8000.0},
+    )
+    sequence = hw_isp_simulate_sequence(
+        camera_create(asset_store=asset_store),
+        dark,
+        config,
+        nframes=6,
+        asset_store=asset_store,
+    )
+
+    max_exposure = (1.0e6 / config.sensor_timing.fps) * config.control_path.max_exposure_fraction
+    for frame in sequence.frames:
+        assert frame.controls_applied["exposure_time_us"] <= max_exposure
+        assert frame.controls_applied["analog_gain"] <= config.control_path.max_analog_gain
+
+
+def test_awb_behavior_delay_applies_requested_gains(asset_store) -> None:
+    warm = _warm_scene(_small_scene(asset_store))
+    config = hw_isp_config(
+        control_path={"apply_to_image": True, "ae_enabled": False, "awb_apply_delay_frames": 2},
+        sensor_timing={"exposure_time_us": 8000.0},
+    )
+    sequence = hw_isp_simulate_sequence(
+        camera_create(asset_store=asset_store),
+        warm,
+        config,
+        nframes=4,
+        asset_store=asset_store,
+    )
+
+    requested = sequence.frames[0].controls_applied["requested_controls"]["awb"]["wb_gains_rgb"]
+    applied = sequence.frames[2].controls_applied
+    assert applied["awb_stats_frame"] == 0
+    np.testing.assert_allclose(applied["wb_gains_rgb"], requested)
+
+
+def test_awb_behavior_reduces_corrected_channel_imbalance(asset_store) -> None:
+    warm = _warm_scene(_small_scene(asset_store))
+    config = hw_isp_config(
+        control_path={"apply_to_image": True, "ae_enabled": False, "awb_apply_delay_frames": 2},
+        sensor_timing={"exposure_time_us": 8000.0},
+    )
+    sequence = hw_isp_simulate_sequence(
+        camera_create(asset_store=asset_store),
+        warm,
+        config,
+        nframes=4,
+        asset_store=asset_store,
+    )
+
+    frame0_stats = sequence.frames[0].controls_applied["produced_stats"]
+    frame2_stats = sequence.frames[2].controls_applied["produced_stats"]
+    frame2_gains = np.asarray(sequence.frames[2].controls_applied["wb_gains_rgb"], dtype=float)
+    assert frame2_gains[0] < 1.0
+    assert frame2_gains[2] > 1.0
+    assert frame2_stats["awb_corrected_rgb_imbalance"] < frame0_stats["sensor_rgb_imbalance"]
+
+
 def test_hw_isp_report_renderer_writes_html(asset_store, tmp_path) -> None:
     outputs = render_hwisp_timeline_report(tmp_path / "hwisp", nframes=3)
 
     assert outputs["html"].exists()
     assert outputs["details_html"].exists()
     assert outputs["summary"].exists()
+    assert outputs["three_a_summary"].exists()
     assert outputs["frame_timeline"].exists()
+    assert outputs["ae_convergence"].exists()
+    assert outputs["awb_convergence"].exists()
+    assert outputs["three_a_thumbnails"].exists()
     html = outputs["html"].read_text(encoding="utf-8")
     details = outputs["details_html"].read_text(encoding="utf-8")
     assert "HW ISP Simulation Report" in html
     assert "frame_timeline.png" in html
+    assert "3A AE/AWB Behavior" in html
+    assert "ae_convergence.png" in html
     assert "HW ISP Frame Details" in details
     assert "Stage Timing" in details

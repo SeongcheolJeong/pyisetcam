@@ -176,6 +176,29 @@
 <tr><td>5</td><td>50.000</td><td>64.769</td><td>76.994</td><td>76.782</td><td>77.722</td><td>12.954</td><td>14.769</td><td>False</td><td>3</td><td>3</td></tr>
 <tr><td>6</td><td>60.000</td><td>77.722</td><td>89.948</td><td>89.736</td><td>90.676</td><td>12.954</td><td>17.722</td><td>False</td><td>4</td><td>4</td></tr>
 <tr><td>7</td><td>70.000</td><td>90.676</td><td>102.902</td><td>102.690</td><td>103.630</td><td>12.954</td><td>20.676</td><td>False</td><td>5</td><td>5</td></tr></tbody></table></div>
+<h2>3A AE/AWB Behavior</h2>
+<p class="lead">This sequence enables <code>apply_to_image=True</code>. Frame statistics generate AE/AWB controls that apply two frames later, so the plots show delayed control response rather than instantaneous correction.</p>
+<div class="grid">
+  <figure><img src="ae_convergence.png" alt="AE convergence"><figcaption><strong>AE convergence</strong><br>Measured luma, target luma, exposure time, and analog gain across a 4x brightness step.</figcaption></figure>
+  <figure><img src="awb_convergence.png" alt="AWB convergence"><figcaption><strong>AWB convergence</strong><br>Corrected RGB channel means and white-balance gains across a warm-illuminant step.</figcaption></figure>
+  <figure><img src="three_a_thumbnails.png" alt="3A output thumbnails"><figcaption><strong>3A output thumbnails</strong><br>Representative rendered frames before and after AE/AWB delayed control application.</figcaption></figure>
+</div>
+<div class="links">
+  <a href="three_a_summary.json">3A machine-readable JSON</a>
+</div>
+<h2>3A Frame Controls</h2>
+<div class="scroll"><table><thead><tr><th>Frame</th><th>Warmup</th><th>AE source</th><th>AWB source</th><th>Exposure ms</th><th>Analog gain</th><th>Luma</th><th>Target</th><th>WB R</th><th>WB G</th><th>WB B</th><th>Corrected RGB imbalance</th><th>Next AE frame</th><th>Next AWB frame</th></tr></thead><tbody><tr><td>0</td><td>True</td><td>None</td><td>None</td><td>8.000</td><td>1.000</td><td>0.0273</td><td>0.1800</td><td>1.000</td><td>1.000</td><td>1.000</td><td>1.133</td><td>2</td><td>2</td></tr>
+<tr><td>1</td><td>True</td><td>None</td><td>None</td><td>8.000</td><td>1.000</td><td>0.0273</td><td>0.1800</td><td>1.000</td><td>1.000</td><td>1.000</td><td>1.133</td><td>3</td><td>3</td></tr>
+<tr><td>2</td><td>False</td><td>0</td><td>0</td><td>16.000</td><td>1.000</td><td>0.0547</td><td>0.1800</td><td>0.707</td><td>1.000</td><td>1.318</td><td>0.512</td><td>4</td><td>4</td></tr>
+<tr><td>3</td><td>False</td><td>1</td><td>1</td><td>16.000</td><td>1.000</td><td>0.0547</td><td>0.1800</td><td>0.707</td><td>1.000</td><td>1.318</td><td>0.512</td><td>5</td><td>5</td></tr>
+<tr><td>4</td><td>False</td><td>2</td><td>2</td><td>30.000</td><td>1.067</td><td>0.3609</td><td>0.1800</td><td>0.500</td><td>1.000</td><td>1.316</td><td>0.009</td><td>6</td><td>6</td></tr>
+<tr><td>5</td><td>False</td><td>3</td><td>3</td><td>30.000</td><td>1.067</td><td>0.3609</td><td>0.1800</td><td>0.500</td><td>1.000</td><td>1.316</td><td>0.009</td><td>7</td><td>7</td></tr>
+<tr><td>6</td><td>False</td><td>4</td><td>4</td><td>16.000</td><td>1.000</td><td>0.2182</td><td>0.1800</td><td>0.505</td><td>1.000</td><td>1.317</td><td>0.144</td><td>8</td><td>8</td></tr>
+<tr><td>7</td><td>False</td><td>5</td><td>5</td><td>16.000</td><td>1.000</td><td>0.2182</td><td>0.1800</td><td>0.505</td><td>1.000</td><td>1.317</td><td>0.144</td><td>9</td><td>9</td></tr>
+<tr><td>8</td><td>False</td><td>6</td><td>6</td><td>13.199</td><td>1.000</td><td>0.2549</td><td>0.1800</td><td>0.439</td><td>1.000</td><td>1.317</td><td>0.700</td><td>10</td><td>10</td></tr>
+<tr><td>9</td><td>False</td><td>7</td><td>7</td><td>13.199</td><td>1.000</td><td>0.2549</td><td>0.1800</td><td>0.439</td><td>1.000</td><td>1.317</td><td>0.700</td><td>11</td><td>11</td></tr>
+<tr><td>10</td><td>False</td><td>8</td><td>8</td><td>9.321</td><td>1.000</td><td>0.1864</td><td>0.1800</td><td>0.323</td><td>1.000</td><td>1.862</td><td>0.137</td><td>12</td><td>12</td></tr>
+<tr><td>11</td><td>False</td><td>9</td><td>9</td><td>9.321</td><td>1.000</td><td>0.1864</td><td>0.1800</td><td>0.323</td><td>1.000</td><td>1.862</td><td>0.137</td><td>13</td><td>13</td></tr></tbody></table></div>
 
 </main>
 </body>

@@ -7,11 +7,15 @@
 - Total queue stall: `82.704 ms`
 - HTML dashboard: [/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/index.html](/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/index.html)
 - HTML details: [/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/frame_details.html](/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/frame_details.html)
+- 3A summary JSON: [/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/three_a_summary.json](/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/three_a_summary.json)
 
 ## Figures
 ![frame timeline](/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/frame_timeline.png)
 ![stage latency](/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/stage_latency.png)
 ![e2e latency](/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/e2e_latency.png)
+![ae convergence](/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/ae_convergence.png)
+![awb convergence](/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/awb_convergence.png)
+![3a thumbnails](/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/three_a_thumbnails.png)
 
 ## Regenerate
 - `python tools/render_hwisp_timeline_report.py`

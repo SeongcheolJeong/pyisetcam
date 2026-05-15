@@ -16,6 +16,7 @@ import numpy as np
 
 from .assets import AssetStore
 from .camera import camera_compute, camera_get
+from .ip import ip_set
 from .scene import scene_create
 from .sensor import sensor_get, sensor_set
 from .types import Camera, ImageProcessor, OpticalImage, Scene, Sensor
@@ -53,6 +54,17 @@ class HWIspControlPath:
     stats_ready_at: str = "frame_end"
     ae_apply_delay_frames: int = 2
     awb_apply_delay_frames: int = 2
+    apply_to_image: bool = False
+    target_luma: float = 0.18
+    min_exposure_time_us: float = 100.0
+    max_exposure_fraction: float = 0.90
+    min_analog_gain: float = 1.0
+    max_analog_gain: float = 16.0
+    max_ae_step_ev: float = 1.0
+    awb_method: str = "gray_world"
+    min_wb_gain: float = 0.25
+    max_wb_gain: float = 4.0
+    max_awb_step_ev: float = 0.5
 
 
 @dataclass(frozen=True)
@@ -362,21 +374,298 @@ def _build_timeline(
     )
 
 
-def _control_payload(frame_id: int, timeline: HWIspFrameTimeline, config: HWIspConfig) -> dict[str, Any]:
+def _clamp(value: float, lower: float, upper: float) -> float:
+    return float(np.clip(float(value), float(lower), float(upper)))
+
+
+def _default_control_state(camera: Camera, config: HWIspConfig) -> dict[str, Any]:
+    sensor = camera.fields.get("sensor")
+    try:
+        analog_gain = float(sensor_get(sensor, "analog gain")) if sensor is not None else 1.0
+    except Exception:
+        analog_gain = 1.0
+    return {
+        "exposure_time_us": float(config.sensor_timing.exposure_time_us),
+        "analog_gain": analog_gain,
+        "wb_gains_rgb": [1.0, 1.0, 1.0],
+        "ae_stats_frame": None,
+        "awb_stats_frame": None,
+    }
+
+
+def _merge_control_update(base: dict[str, Any], update: Any) -> dict[str, Any]:
+    merged = copy.deepcopy(base)
+    if update is None:
+        return merged
+    updates = update if isinstance(update, list) else [update]
+    for item in updates:
+        if not isinstance(item, dict):
+            continue
+        for key in ("exposure_time_us", "analog_gain", "wb_gains_rgb", "ae_stats_frame", "awb_stats_frame"):
+            if key in item:
+                value = item[key]
+                if key == "wb_gains_rgb":
+                    merged[key] = np.asarray(value, dtype=float).reshape(-1)[:3].astype(float).tolist()
+                elif key in {"ae_stats_frame", "awb_stats_frame"} and value is None:
+                    merged[key] = None
+                elif key in {"ae_stats_frame", "awb_stats_frame"}:
+                    merged[key] = int(value)
+                else:
+                    merged[key] = float(value)
+    return merged
+
+
+def _scheduled_update_for_frame(previous_state: Any, frame_id: int) -> Any:
+    if not isinstance(previous_state, dict):
+        return None
+    schedule = previous_state.get("scheduled_controls", {})
+    if not isinstance(schedule, dict):
+        return None
+    return schedule.get(frame_id, schedule.get(str(frame_id)))
+
+
+def _resolve_applied_controls(
+    camera: Camera,
+    config: HWIspConfig,
+    frame_id: int,
+    previous_state: Any,
+) -> dict[str, Any]:
+    controls = _default_control_state(camera, config)
+    if isinstance(previous_state, dict) and isinstance(previous_state.get("current_controls"), dict):
+        controls = _merge_control_update(controls, previous_state["current_controls"])
+    controls = _merge_control_update(controls, _scheduled_update_for_frame(previous_state, int(frame_id)))
+    return _clamp_control_state(controls, config)
+
+
+def _config_with_exposure(config: HWIspConfig, exposure_time_us: float) -> HWIspConfig:
+    return HWIspConfig(
+        sensor_timing=_replace_dataclass(
+            config.sensor_timing,
+            {"exposure_time_us": float(exposure_time_us)},
+        ),
+        stages=config.stages,
+        control_path=config.control_path,
+        transport=config.transport,
+        global_latency_factor=config.global_latency_factor,
+        seed=config.seed,
+    )
+
+
+def _apply_controls_to_camera(camera: Camera, controls: dict[str, Any], config: HWIspConfig) -> Camera:
+    if not bool(config.control_path.apply_to_image):
+        return camera
+    updated = camera.clone()
+    sensor = updated.fields.get("sensor")
+    if sensor is not None:
+        sensor = sensor_set(sensor, "exposure duration", float(controls["exposure_time_us"]) * 1.0e-6)
+        sensor = sensor_set(sensor, "analog gain", float(controls["analog_gain"]))
+        updated.fields["sensor"] = sensor
+    ip = updated.fields.get("ip")
+    if ip is not None and config.control_path.awb_enabled:
+        wb = np.asarray(controls.get("wb_gains_rgb", [1.0, 1.0, 1.0]), dtype=float).reshape(-1)
+        if wb.size < 3:
+            wb = np.pad(wb, (0, 3 - wb.size), constant_values=1.0)
+        ip = ip_set(ip, "illuminant correction method", "manual")
+        ip = ip_set(ip, "illuminant correction matrix", np.diag(wb[:3]))
+        updated.fields["ip"] = ip
+    return updated
+
+
+def _sensor_mean_luma_norm(sensor: Sensor) -> float:
+    volts = np.asarray(sensor.data.get("volts", sensor.data.get("dv", np.empty(0))), dtype=float)
+    if volts.size == 0:
+        return 0.0
+    try:
+        voltage_swing = float(sensor_get(sensor, "pixel voltage swing"))
+    except Exception:
+        voltage_swing = max(float(np.max(volts)), 1.0)
+    return float(np.mean(volts) / max(voltage_swing, 1.0e-12))
+
+
+def _rgb_means_from_ip(ip: ImageProcessor) -> list[float]:
+    for key in ("sensorspace", "result", "srgb"):
+        data = ip.data.get(key)
+        if data is None:
+            continue
+        array = np.asarray(data, dtype=float)
+        if array.ndim == 3 and array.shape[2] >= 3 and array.size:
+            return np.mean(array[:, :, :3], axis=(0, 1)).astype(float).tolist()
+    return [0.0, 0.0, 0.0]
+
+
+def _channel_imbalance(values: Any) -> float:
+    array = np.asarray(values, dtype=float).reshape(-1)
+    if array.size == 0:
+        return 0.0
+    mean = max(float(np.mean(array)), 1.0e-12)
+    return float((np.max(array) - np.min(array)) / mean)
+
+
+def _frame_stats(sensor: Sensor, ip: ImageProcessor, config: HWIspConfig, applied_controls: dict[str, Any]) -> dict[str, Any]:
+    rgb_means = _rgb_means_from_ip(ip)
+    wb = np.asarray(applied_controls.get("wb_gains_rgb", [1.0, 1.0, 1.0]), dtype=float).reshape(-1)[:3]
+    corrected_rgb = (np.asarray(rgb_means, dtype=float).reshape(-1)[:3] * wb).astype(float).tolist()
+    output = ip.data.get("result", ip.data.get("srgb"))
+    if output is not None and np.asarray(output).ndim == 3:
+        output_means = np.mean(np.asarray(output, dtype=float)[:, :, :3], axis=(0, 1)).astype(float).tolist()
+    else:
+        output_means = [0.0, 0.0, 0.0]
+    return {
+        "mean_sensor_luma_norm": _sensor_mean_luma_norm(sensor),
+        "target_luma": float(config.control_path.target_luma),
+        "sensor_rgb_means": rgb_means,
+        "awb_corrected_rgb_means": corrected_rgb,
+        "sensor_rgb_imbalance": _channel_imbalance(rgb_means),
+        "awb_corrected_rgb_imbalance": _channel_imbalance(corrected_rgb),
+        "output_rgb_means": output_means,
+        "output_rgb_imbalance": _channel_imbalance(output_means),
+    }
+
+
+def _allocate_exposure_gain(
+    desired_product: float,
+    config: HWIspConfig,
+) -> tuple[float, float]:
     control = config.control_path
-    ae_source = frame_id - int(control.ae_apply_delay_frames) if control.ae_enabled else None
-    awb_source = frame_id - int(control.awb_apply_delay_frames) if control.awb_enabled else None
-    ae_applied = ae_source if ae_source is not None and ae_source >= 0 else None
-    awb_applied = awb_source if awb_source is not None and awb_source >= 0 else None
+    frame_interval_us = 1.0e6 / max(float(config.sensor_timing.fps), 1.0e-12)
+    min_exposure = max(float(control.min_exposure_time_us), 1.0e-9)
+    max_exposure = max(min_exposure, frame_interval_us * float(control.max_exposure_fraction))
+    min_gain = max(float(control.min_analog_gain), 1.0e-9)
+    max_gain = max(min_gain, float(control.max_analog_gain))
+    product = max(float(desired_product), min_exposure * min_gain)
+
+    if product <= max_exposure * min_gain:
+        exposure = _clamp(product / min_gain, min_exposure, max_exposure)
+        gain = min_gain
+    else:
+        exposure = max_exposure
+        gain = _clamp(product / max(exposure, 1.0e-12), min_gain, max_gain)
+    return exposure, gain
+
+
+def _clamp_control_state(controls: dict[str, Any], config: HWIspConfig) -> dict[str, Any]:
+    clamped = copy.deepcopy(controls)
+    exposure_us, analog_gain = _allocate_exposure_gain(
+        float(clamped["exposure_time_us"]) * float(clamped["analog_gain"]),
+        config,
+    )
+    clamped["exposure_time_us"] = float(exposure_us)
+    clamped["analog_gain"] = float(analog_gain)
+    wb = np.asarray(clamped.get("wb_gains_rgb", [1.0, 1.0, 1.0]), dtype=float).reshape(-1)
+    if wb.size < 3:
+        wb = np.pad(wb, (0, 3 - wb.size), constant_values=1.0)
+    wb = np.clip(wb[:3], float(config.control_path.min_wb_gain), float(config.control_path.max_wb_gain))
+    clamped["wb_gains_rgb"] = wb.astype(float).tolist()
+    return clamped
+
+
+def _requested_ae_controls(
+    frame_id: int,
+    applied: dict[str, Any],
+    stats: dict[str, Any],
+    config: HWIspConfig,
+) -> dict[str, Any] | None:
+    control = config.control_path
+    if not control.ae_enabled:
+        return None
+    measured = max(float(stats["mean_sensor_luma_norm"]), 1.0e-9)
+    target = max(float(control.target_luma), 1.0e-9)
+    step = max(float(control.max_ae_step_ev), 0.0)
+    ratio = _clamp(target / measured, 2.0 ** (-step), 2.0**step)
+    current_product = float(applied["exposure_time_us"]) * float(applied["analog_gain"])
+    exposure_us, analog_gain = _allocate_exposure_gain(current_product * ratio, config)
+    return {
+        "source_frame": int(frame_id),
+        "apply_frame": int(frame_id) + int(control.ae_apply_delay_frames),
+        "measured_luma": float(measured),
+        "target_luma": float(target),
+        "ratio": float(ratio),
+        "exposure_time_us": float(exposure_us),
+        "analog_gain": float(analog_gain),
+    }
+
+
+def _requested_awb_controls(
+    frame_id: int,
+    applied: dict[str, Any],
+    stats: dict[str, Any],
+    config: HWIspConfig,
+) -> dict[str, Any] | None:
+    control = config.control_path
+    if not control.awb_enabled:
+        return None
+    if str(control.awb_method).lower().replace("-", "_").replace(" ", "_") != "gray_world":
+        return None
+    means = np.maximum(np.asarray(stats["sensor_rgb_means"], dtype=float).reshape(-1)[:3], 1.0e-9)
+    current = np.maximum(np.asarray(applied.get("wb_gains_rgb", [1.0, 1.0, 1.0]), dtype=float).reshape(-1)[:3], 1.0e-9)
+    target_mean = float(np.mean(means))
+    desired = target_mean / means
+    desired = desired / max(float(desired[1]), 1.0e-9)
+    step = max(float(control.max_awb_step_ev), 0.0)
+    relative = np.clip(desired / current, 2.0 ** (-step), 2.0**step)
+    gains = current * relative
+    gains = gains / max(float(gains[1]), 1.0e-9)
+    gains = np.clip(gains, float(control.min_wb_gain), float(control.max_wb_gain))
+    return {
+        "source_frame": int(frame_id),
+        "apply_frame": int(frame_id) + int(control.awb_apply_delay_frames),
+        "rgb_means": means.astype(float).tolist(),
+        "wb_gains_rgb": gains.astype(float).tolist(),
+    }
+
+
+def _requested_controls(
+    frame_id: int,
+    applied: dict[str, Any],
+    stats: dict[str, Any],
+    config: HWIspConfig,
+) -> dict[str, Any]:
+    return {
+        "ae": _requested_ae_controls(frame_id, applied, stats, config),
+        "awb": _requested_awb_controls(frame_id, applied, stats, config),
+    }
+
+
+def _control_payload(
+    frame_id: int,
+    timeline: HWIspFrameTimeline,
+    config: HWIspConfig,
+    applied_controls: dict[str, Any],
+    stats: dict[str, Any],
+    requested_controls: dict[str, Any],
+) -> dict[str, Any]:
+    control = config.control_path
+    if bool(control.apply_to_image):
+        ae_applied = applied_controls.get("ae_stats_frame") if control.ae_enabled else None
+        awb_applied = applied_controls.get("awb_stats_frame") if control.awb_enabled else None
+    else:
+        ae_source = frame_id - int(control.ae_apply_delay_frames) if control.ae_enabled else None
+        awb_source = frame_id - int(control.awb_apply_delay_frames) if control.awb_enabled else None
+        ae_applied = ae_source if ae_source is not None and ae_source >= 0 else None
+        awb_applied = awb_source if awb_source is not None and awb_source >= 0 else None
+    applied = {
+        "exposure_time_us": float(applied_controls["exposure_time_us"]),
+        "analog_gain": float(applied_controls["analog_gain"]),
+        "wb_gains_rgb": np.asarray(applied_controls["wb_gains_rgb"], dtype=float).reshape(-1)[:3].astype(float).tolist(),
+        "ae_stats_frame": None if ae_applied is None else int(ae_applied),
+        "awb_stats_frame": None if awb_applied is None else int(awb_applied),
+    }
     return {
         "ae_enabled": bool(control.ae_enabled),
         "awb_enabled": bool(control.awb_enabled),
-        "ae_stats_frame": ae_applied,
-        "awb_stats_frame": awb_applied,
+        "apply_to_image": bool(control.apply_to_image),
+        "ae_stats_frame": applied["ae_stats_frame"],
+        "awb_stats_frame": applied["awb_stats_frame"],
         "ae_apply_delay_frames": int(control.ae_apply_delay_frames),
         "awb_apply_delay_frames": int(control.awb_apply_delay_frames),
         "stats_ready_us": float(timeline.timestamps_us["stats_ready"]),
-        "warmup": ae_applied is None or awb_applied is None,
+        "warmup": (control.ae_enabled and ae_applied is None) or (control.awb_enabled and awb_applied is None),
+        "exposure_time_us": applied["exposure_time_us"],
+        "analog_gain": applied["analog_gain"],
+        "wb_gains_rgb": applied["wb_gains_rgb"],
+        "applied_controls": applied,
+        "produced_stats": copy.deepcopy(stats),
+        "requested_controls": copy.deepcopy(requested_controls),
     }
 
 
@@ -410,17 +699,27 @@ def hw_isp_simulate_frame(
 
     store = asset_store or AssetStore.default()
     resolved_config = config or hw_isp_config()
+    applied_controls = _resolve_applied_controls(camera, resolved_config, int(frame_id), previous_state)
+    compute_config = (
+        _config_with_exposure(resolved_config, float(applied_controls["exposure_time_us"]))
+        if bool(resolved_config.control_path.apply_to_image)
+        else resolved_config
+    )
+    controlled_camera = _apply_controls_to_camera(camera, applied_controls, compute_config)
     working_scene = scene_create(scene, asset_store=store) if isinstance(scene, str) else scene.clone()
-    working_camera = camera_compute(camera.clone(), working_scene, asset_store=store)
+    working_camera = camera_compute(controlled_camera.clone(), working_scene, asset_store=store)
     sensor = camera_get(working_camera, "sensor")
+    ip = camera_get(working_camera, "ip")
     timeline = _build_timeline(
         frame_id=int(frame_id),
         sensor=sensor,
-        config=resolved_config,
+        config=compute_config,
         previous_state=previous_state,
     )
-    controls = _control_payload(int(frame_id), timeline, resolved_config)
-    working_camera = _attach_metadata(working_camera, timeline, controls, resolved_config)
+    stats = _frame_stats(sensor, ip, compute_config, applied_controls)
+    requested = _requested_controls(int(frame_id), applied_controls, stats, compute_config)
+    controls = _control_payload(int(frame_id), timeline, compute_config, applied_controls, stats, requested)
+    working_camera = _attach_metadata(working_camera, timeline, controls, compute_config)
     return HWIspFrameResult(
         camera=working_camera,
         oi=camera_get(working_camera, "oi"),
@@ -470,11 +769,21 @@ def hw_isp_simulate_sequence(
     frames: list[HWIspFrameResult] = []
     visibility_history: list[float] = []
     current_camera = camera.clone()
+    current_controls = _default_control_state(current_camera, resolved_config)
+    current_controls["exposure_time_us"] = float(exposure_list[0])
+    scheduled_controls: dict[int, dict[str, Any]] = {}
     for frame_id, (scene_item, exposure_us) in enumerate(zip(scene_list, exposure_list, strict=True)):
+        if bool(resolved_config.control_path.apply_to_image):
+            current_controls = _merge_control_update(current_controls, scheduled_controls.pop(frame_id, None))
+            if not resolved_config.control_path.ae_enabled:
+                current_controls["exposure_time_us"] = float(exposure_us)
+            frame_exposure_us = float(current_controls["exposure_time_us"])
+        else:
+            frame_exposure_us = float(exposure_us)
         frame_config = HWIspConfig(
             sensor_timing=_replace_dataclass(
                 resolved_config.sensor_timing,
-                {"exposure_time_us": float(exposure_us)},
+                {"exposure_time_us": frame_exposure_us},
             ),
             stages=resolved_config.stages,
             control_path=resolved_config.control_path,
@@ -482,22 +791,53 @@ def hw_isp_simulate_sequence(
             global_latency_factor=resolved_config.global_latency_factor,
             seed=resolved_config.seed,
         )
-        current_camera.fields["sensor"] = sensor_set(
-            current_camera.fields["sensor"],
-            "exposure duration",
-            float(exposure_us) * 1.0e-6,
-        )
+        if not bool(resolved_config.control_path.apply_to_image):
+            current_camera.fields["sensor"] = sensor_set(
+                current_camera.fields["sensor"],
+                "exposure duration",
+                float(exposure_us) * 1.0e-6,
+            )
+        previous_payload: dict[str, Any] = {"app_visible_times_us": visibility_history}
+        if bool(resolved_config.control_path.apply_to_image):
+            previous_payload.update(
+                {
+                    "current_controls": current_controls,
+                    "scheduled_controls": scheduled_controls,
+                }
+            )
         frame_result = hw_isp_simulate_frame(
             current_camera,
             scene_item,
             frame_config,
             frame_id=frame_id,
-            previous_state={"app_visible_times_us": visibility_history},
+            previous_state=previous_payload,
             asset_store=store,
         )
         frames.append(frame_result)
         visibility_history.append(float(frame_result.timeline.timestamps_us["app_visible"]))
         current_camera = frame_result.camera
+        if bool(resolved_config.control_path.apply_to_image):
+            current_controls = copy.deepcopy(frame_result.controls_applied["applied_controls"])
+            requested = frame_result.controls_applied.get("requested_controls", {})
+            ae_request = requested.get("ae") if isinstance(requested, dict) else None
+            if isinstance(ae_request, dict):
+                apply_frame = int(ae_request["apply_frame"])
+                scheduled_controls.setdefault(apply_frame, {}).update(
+                    {
+                        "exposure_time_us": float(ae_request["exposure_time_us"]),
+                        "analog_gain": float(ae_request["analog_gain"]),
+                        "ae_stats_frame": int(ae_request["source_frame"]),
+                    }
+                )
+            awb_request = requested.get("awb") if isinstance(requested, dict) else None
+            if isinstance(awb_request, dict):
+                apply_frame = int(awb_request["apply_frame"])
+                scheduled_controls.setdefault(apply_frame, {}).update(
+                    {
+                        "wb_gains_rgb": np.asarray(awb_request["wb_gains_rgb"], dtype=float).reshape(-1)[:3].astype(float).tolist(),
+                        "awb_stats_frame": int(awb_request["source_frame"]),
+                    }
+                )
 
     aggregate = hw_isp_latency_summary(HWIspSequenceResult(tuple(frames), aggregate={}))
     return HWIspSequenceResult(frames=tuple(frames), aggregate=aggregate)

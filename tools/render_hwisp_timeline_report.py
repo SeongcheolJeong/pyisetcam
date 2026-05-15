@@ -92,6 +92,135 @@ def _render_e2e_latency(rows: list[dict[str, float | int | str]], output_path: P
     plt.close(fig)
 
 
+def _scale_scene(scene, scale: float):
+    result = scene.clone()
+    result.data["photons"] = np.asarray(result.data["photons"], dtype=float) * float(scale)
+    return result
+
+
+def _warm_scene(scene):
+    result = scene.clone()
+    wave = np.asarray(result.fields["wave"], dtype=float)
+    spectral_tilt = np.interp(wave, [float(np.min(wave)), float(np.max(wave))], [0.4, 2.2])
+    result.data["photons"] = np.asarray(result.data["photons"], dtype=float) * spectral_tilt.reshape(1, 1, -1)
+    return result
+
+
+def _three_a_scenes(store: AssetStore) -> list:
+    nominal = scene_create("macbeth d65", 16, asset_store=store)
+    bright = _scale_scene(nominal, 4.0)
+    warm = _warm_scene(bright)
+    return [nominal] * 4 + [bright] * 4 + [warm] * 4
+
+
+def _simulate_three_a_sequence(store: AssetStore):
+    config = hw_isp_config(
+        sensor_timing={"fps": 30.0, "line_time_us": 15.2, "exposure_time_us": 8000.0},
+        control_path={
+            "apply_to_image": True,
+            "ae_apply_delay_frames": 2,
+            "awb_apply_delay_frames": 2,
+            "target_luma": 0.18,
+            "max_ae_step_ev": 1.0,
+            "max_awb_step_ev": 0.5,
+        },
+        transport={"request_queue_depth": 2, "max_buffers": 3},
+        seed=42,
+    )
+    return hw_isp_simulate_sequence(
+        camera_create(asset_store=store),
+        _three_a_scenes(store),
+        config,
+        asset_store=store,
+    )
+
+
+def _render_ae_convergence(sequence, output_path: Path) -> None:
+    frames = [frame.timeline.frame_id for frame in sequence.frames]
+    stats = [frame.controls_applied["produced_stats"] for frame in sequence.frames]
+    controls = [frame.controls_applied for frame in sequence.frames]
+    luma = [float(item["mean_sensor_luma_norm"]) for item in stats]
+    target = [float(item["target_luma"]) for item in stats]
+    exposure_ms = [float(item["exposure_time_us"]) / 1000.0 for item in controls]
+    analog_gain = [float(item["analog_gain"]) for item in controls]
+
+    fig, axes = plt.subplots(2, 1, figsize=(9.0, 6.0), sharex=True, constrained_layout=True)
+    axes[0].plot(frames, luma, marker="o", label="measured luma")
+    axes[0].plot(frames, target, linestyle="--", label="target luma")
+    axes[0].axvline(4, color="#9a5a21", alpha=0.35, label="4x brightness step")
+    axes[0].set_ylabel("Normalized luma")
+    axes[0].set_title("AE Convergence With Delayed Feedback")
+    axes[0].grid(alpha=0.25)
+    axes[0].legend()
+
+    axes[1].plot(frames, exposure_ms, marker="o", label="exposure")
+    axes[1].plot(frames, analog_gain, marker="s", label="analog gain")
+    axes[1].set_xlabel("Frame")
+    axes[1].set_ylabel("Exposure ms / gain")
+    axes[1].grid(alpha=0.25)
+    axes[1].legend()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=170)
+    plt.close(fig)
+
+
+def _render_awb_convergence(sequence, output_path: Path) -> None:
+    frames = [frame.timeline.frame_id for frame in sequence.frames]
+    stats = [frame.controls_applied["produced_stats"] for frame in sequence.frames]
+    controls = [frame.controls_applied for frame in sequence.frames]
+    corrected = np.asarray([item["awb_corrected_rgb_means"] for item in stats], dtype=float)
+    gains = np.asarray([item["wb_gains_rgb"] for item in controls], dtype=float)
+
+    fig, axes = plt.subplots(2, 1, figsize=(9.0, 6.0), sharex=True, constrained_layout=True)
+    for index, channel in enumerate(("R", "G", "B")):
+        axes[0].plot(frames, corrected[:, index], marker="o", label=f"{channel} corrected mean")
+        axes[1].plot(frames, gains[:, index], marker="s", label=f"{channel} WB gain")
+    axes[0].axvline(8, color="#9a5a21", alpha=0.35, label="warm illuminant step")
+    axes[0].set_title("AWB Convergence With Delayed Feedback")
+    axes[0].set_ylabel("Corrected channel mean")
+    axes[0].grid(alpha=0.25)
+    axes[0].legend()
+    axes[1].set_xlabel("Frame")
+    axes[1].set_ylabel("WB gain")
+    axes[1].grid(alpha=0.25)
+    axes[1].legend()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=170)
+    plt.close(fig)
+
+
+def _frame_preview(frame) -> np.ndarray:
+    image = frame.ip.data.get("srgb")
+    if image is None:
+        image = frame.ip.data.get("result")
+    array = np.asarray(image, dtype=float)
+    if array.ndim == 2:
+        array = np.repeat(array[:, :, None], 3, axis=2)
+    if array.ndim != 3 or array.shape[2] < 3:
+        return np.zeros((8, 8, 3), dtype=float)
+    return np.clip(array[:, :, :3], 0.0, 1.0)
+
+
+def _render_three_a_thumbnails(sequence, output_path: Path) -> None:
+    selected = [0, 4, 6, 8, 10, 11]
+    selected = [index for index in selected if index < len(sequence.frames)]
+    fig, axes = plt.subplots(1, len(selected), figsize=(2.2 * len(selected), 2.6), constrained_layout=True)
+    if len(selected) == 1:
+        axes = [axes]
+    for axis, frame_index in zip(axes, selected, strict=True):
+        frame = sequence.frames[frame_index]
+        controls = frame.controls_applied
+        axis.imshow(_frame_preview(frame))
+        axis.set_title(
+            f"F{frame_index}\nE={controls['exposure_time_us'] / 1000.0:.1f} ms\nWB={controls['wb_gains_rgb'][0]:.2f}/{controls['wb_gains_rgb'][2]:.2f}",
+            fontsize=8,
+        )
+        axis.axis("off")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=170)
+    plt.close(fig)
+
+
 def _ms(value_us: float) -> str:
     return f"{float(value_us) / 1000.0:.3f}"
 
@@ -307,6 +436,44 @@ def _frame_table_html(sequence) -> str:
     )
 
 
+def _three_a_table_html(sequence) -> str:
+    rows = []
+    for frame in sequence.frames:
+        controls = frame.controls_applied
+        stats = controls["produced_stats"]
+        requested = controls["requested_controls"]
+        ae_request = requested.get("ae") if isinstance(requested, dict) else None
+        awb_request = requested.get("awb") if isinstance(requested, dict) else None
+        rows.append(
+            "<tr>"
+            f"<td>{frame.timeline.frame_id}</td>"
+            f"<td>{escape(str(controls['warmup']))}</td>"
+            f"<td>{escape(str(controls['ae_stats_frame']))}</td>"
+            f"<td>{escape(str(controls['awb_stats_frame']))}</td>"
+            f"<td>{controls['exposure_time_us'] / 1000.0:.3f}</td>"
+            f"<td>{controls['analog_gain']:.3f}</td>"
+            f"<td>{stats['mean_sensor_luma_norm']:.4f}</td>"
+            f"<td>{stats['target_luma']:.4f}</td>"
+            f"<td>{controls['wb_gains_rgb'][0]:.3f}</td>"
+            f"<td>{controls['wb_gains_rgb'][1]:.3f}</td>"
+            f"<td>{controls['wb_gains_rgb'][2]:.3f}</td>"
+            f"<td>{stats['awb_corrected_rgb_imbalance']:.3f}</td>"
+            f"<td>{'' if ae_request is None else ae_request['apply_frame']}</td>"
+            f"<td>{'' if awb_request is None else awb_request['apply_frame']}</td>"
+            "</tr>"
+        )
+    return (
+        '<div class="scroll"><table><thead><tr>'
+        "<th>Frame</th><th>Warmup</th><th>AE source</th><th>AWB source</th>"
+        "<th>Exposure ms</th><th>Analog gain</th><th>Luma</th><th>Target</th>"
+        "<th>WB R</th><th>WB G</th><th>WB B</th><th>Corrected RGB imbalance</th>"
+        "<th>Next AE frame</th><th>Next AWB frame</th>"
+        "</tr></thead><tbody>"
+        + "\n".join(rows)
+        + "</tbody></table></div>"
+    )
+
+
 def _stage_table_html(sequence) -> str:
     rows = []
     for frame in sequence.frames:
@@ -344,6 +511,11 @@ def _write_html_reports(
     frame_timeline: Path,
     stage_latency: Path,
     e2e_latency: Path,
+    three_a_sequence,
+    ae_convergence: Path,
+    awb_convergence: Path,
+    three_a_thumbnails: Path,
+    three_a_summary_json: Path,
     report_md: Path,
     summary_json: Path,
 ) -> None:
@@ -367,6 +539,18 @@ def _write_html_reports(
 </div>
 <h2>Frame Summary</h2>
 {_frame_table_html(sequence)}
+<h2>3A AE/AWB Behavior</h2>
+<p class="lead">This sequence enables <code>apply_to_image=True</code>. Frame statistics generate AE/AWB controls that apply two frames later, so the plots show delayed control response rather than instantaneous correction.</p>
+<div class="grid">
+  {_figure_html(ae_convergence, "AE convergence", "Measured luma, target luma, exposure time, and analog gain across a 4x brightness step.")}
+  {_figure_html(awb_convergence, "AWB convergence", "Corrected RGB channel means and white-balance gains across a warm-illuminant step.")}
+  {_figure_html(three_a_thumbnails, "3A output thumbnails", "Representative rendered frames before and after AE/AWB delayed control application.")}
+</div>
+<div class="links">
+  <a href="{escape(three_a_summary_json.name)}">3A machine-readable JSON</a>
+</div>
+<h2>3A Frame Controls</h2>
+{_three_a_table_html(three_a_sequence)}
 """
     details_body = f"""
 <h1>HW ISP Frame Details</h1>
@@ -401,12 +585,17 @@ def render(output_dir: Path = DEFAULT_OUTPUT_DIR, *, nframes: int = 8) -> dict[s
         nframes=nframes,
         asset_store=store,
     )
+    three_a_sequence = _simulate_three_a_sequence(store)
     rows = hw_isp_timeline_table(sequence)
 
     frame_timeline = output_dir / "frame_timeline.png"
     stage_latency = output_dir / "stage_latency.png"
     e2e_latency = output_dir / "e2e_latency.png"
+    ae_convergence = output_dir / "ae_convergence.png"
+    awb_convergence = output_dir / "awb_convergence.png"
+    three_a_thumbnails = output_dir / "three_a_thumbnails.png"
     summary_json = output_dir / "timeline_summary.json"
+    three_a_summary_json = output_dir / "three_a_summary.json"
     report_md = output_dir / "timeline_report.md"
     report_html = output_dir / "index.html"
     details_html = output_dir / "frame_details.html"
@@ -414,7 +603,11 @@ def render(output_dir: Path = DEFAULT_OUTPUT_DIR, *, nframes: int = 8) -> dict[s
     _render_frame_timeline(rows, frame_timeline)
     _render_stage_latency(rows, stage_latency)
     _render_e2e_latency(rows, e2e_latency)
+    _render_ae_convergence(three_a_sequence, ae_convergence)
+    _render_awb_convergence(three_a_sequence, awb_convergence)
+    _render_three_a_thumbnails(three_a_sequence, three_a_thumbnails)
     hw_isp_export_json(sequence, summary_json)
+    hw_isp_export_json(three_a_sequence, three_a_summary_json)
 
     summary = hw_isp_latency_summary(sequence)
     _write_html_reports(
@@ -425,6 +618,11 @@ def render(output_dir: Path = DEFAULT_OUTPUT_DIR, *, nframes: int = 8) -> dict[s
         frame_timeline=frame_timeline,
         stage_latency=stage_latency,
         e2e_latency=e2e_latency,
+        three_a_sequence=three_a_sequence,
+        ae_convergence=ae_convergence,
+        awb_convergence=awb_convergence,
+        three_a_thumbnails=three_a_thumbnails,
+        three_a_summary_json=three_a_summary_json,
         report_md=report_md,
         summary_json=summary_json,
     )
@@ -438,11 +636,15 @@ def render(output_dir: Path = DEFAULT_OUTPUT_DIR, *, nframes: int = 8) -> dict[s
         f"- Total queue stall: `{summary['queue_stall_total_us'] / 1000.0:.3f} ms`",
         f"- HTML dashboard: [{report_html}]({report_html})",
         f"- HTML details: [{details_html}]({details_html})",
+        f"- 3A summary JSON: [{three_a_summary_json}]({three_a_summary_json})",
         "",
         "## Figures",
         f"![frame timeline]({frame_timeline})",
         f"![stage latency]({stage_latency})",
         f"![e2e latency]({e2e_latency})",
+        f"![ae convergence]({ae_convergence})",
+        f"![awb convergence]({awb_convergence})",
+        f"![3a thumbnails]({three_a_thumbnails})",
         "",
         "## Regenerate",
         "- `python tools/render_hwisp_timeline_report.py`",
@@ -454,9 +656,13 @@ def render(output_dir: Path = DEFAULT_OUTPUT_DIR, *, nframes: int = 8) -> dict[s
         "html": report_html,
         "details_html": details_html,
         "summary": summary_json,
+        "three_a_summary": three_a_summary_json,
         "frame_timeline": frame_timeline,
         "stage_latency": stage_latency,
         "e2e_latency": e2e_latency,
+        "ae_convergence": ae_convergence,
+        "awb_convergence": awb_convergence,
+        "three_a_thumbnails": three_a_thumbnails,
     }
 
 

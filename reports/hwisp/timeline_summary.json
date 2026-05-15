@@ -81,12 +81,78 @@
       "controls_applied": {
         "ae_enabled": true,
         "awb_enabled": true,
+        "apply_to_image": false,
         "ae_stats_frame": null,
         "awb_stats_frame": null,
         "ae_apply_delay_frames": 2,
         "awb_apply_delay_frames": 2,
         "stats_ready_us": 12225.599999999999,
-        "warmup": true
+        "warmup": true,
+        "exposure_time_us": 8000.0,
+        "analog_gain": 1.0,
+        "wb_gains_rgb": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "applied_controls": {
+          "exposure_time_us": 8000.0,
+          "analog_gain": 1.0,
+          "wb_gains_rgb": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "ae_stats_frame": null,
+          "awb_stats_frame": null
+        },
+        "produced_stats": {
+          "mean_sensor_luma_norm": 0.02559440537257914,
+          "target_luma": 0.18,
+          "sensor_rgb_means": [
+            0.044160323161613495,
+            0.020763062799252305,
+            0.01670035212446454
+          ],
+          "awb_corrected_rgb_means": [
+            0.044160323161613495,
+            0.020763062799252305,
+            0.01670035212446454
+          ],
+          "sensor_rgb_imbalance": 1.0092641557940658,
+          "awb_corrected_rgb_imbalance": 1.0092641557940658,
+          "output_rgb_means": [
+            0.04308873098205514,
+            0.03255715785608323,
+            0.03316321659607698
+          ],
+          "output_rgb_imbalance": 0.2903683405155601
+        },
+        "requested_controls": {
+          "ae": {
+            "source_frame": 0,
+            "apply_frame": 2,
+            "measured_luma": 0.02559440537257914,
+            "target_luma": 0.18,
+            "ratio": 2.0,
+            "exposure_time_us": 9000.0,
+            "analog_gain": 1.7777777777777777
+          },
+          "awb": {
+            "source_frame": 0,
+            "apply_frame": 2,
+            "rgb_means": [
+              0.044160323161613495,
+              0.020763062799252305,
+              0.01670035212446454
+            ],
+            "wb_gains_rgb": [
+              0.7071067811865476,
+              1.0,
+              1.2432709588701578
+            ]
+          }
+        }
       },
       "latency_summary": {
         "frame_count": 1.0,
@@ -169,12 +235,78 @@
       "controls_applied": {
         "ae_enabled": true,
         "awb_enabled": true,
+        "apply_to_image": false,
         "ae_stats_frame": null,
         "awb_stats_frame": null,
         "ae_apply_delay_frames": 2,
         "awb_apply_delay_frames": 2,
         "stats_ready_us": 25179.329999999994,
-        "warmup": true
+        "warmup": true,
+        "exposure_time_us": 8000.0,
+        "analog_gain": 1.0,
+        "wb_gains_rgb": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "applied_controls": {
+          "exposure_time_us": 8000.0,
+          "analog_gain": 1.0,
+          "wb_gains_rgb": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "ae_stats_frame": null,
+          "awb_stats_frame": null
+        },
+        "produced_stats": {
+          "mean_sensor_luma_norm": 0.02559440537257914,
+          "target_luma": 0.18,
+          "sensor_rgb_means": [
+            0.044160323161613495,
+            0.020763062799252305,
+            0.01670035212446454
+          ],
+          "awb_corrected_rgb_means": [
+            0.044160323161613495,
+            0.020763062799252305,
+            0.01670035212446454
+          ],
+          "sensor_rgb_imbalance": 1.0092641557940658,
+          "awb_corrected_rgb_imbalance": 1.0092641557940658,
+          "output_rgb_means": [
+            0.04308873098205514,
+            0.03255715785608323,
+            0.03316321659607698
+          ],
+          "output_rgb_imbalance": 0.2903683405155601
+        },
+        "requested_controls": {
+          "ae": {
+            "source_frame": 1,
+            "apply_frame": 3,
+            "measured_luma": 0.02559440537257914,
+            "target_luma": 0.18,
+            "ratio": 2.0,
+            "exposure_time_us": 9000.0,
+            "analog_gain": 1.7777777777777777
+          },
+          "awb": {
+            "source_frame": 1,
+            "apply_frame": 3,
+            "rgb_means": [
+              0.044160323161613495,
+              0.020763062799252305,
+              0.01670035212446454
+            ],
+            "wb_gains_rgb": [
+              0.7071067811865476,
+              1.0,
+              1.2432709588701578
+            ]
+          }
+        }
       },
       "latency_summary": {
         "frame_count": 1.0,
@@ -257,12 +389,78 @@
       "controls_applied": {
         "ae_enabled": true,
         "awb_enabled": true,
+        "apply_to_image": false,
         "ae_stats_frame": 0,
         "awb_stats_frame": 0,
         "ae_apply_delay_frames": 2,
         "awb_apply_delay_frames": 2,
         "stats_ready_us": 38133.05999999999,
-        "warmup": false
+        "warmup": false,
+        "exposure_time_us": 8000.0,
+        "analog_gain": 1.0,
+        "wb_gains_rgb": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "applied_controls": {
+          "exposure_time_us": 8000.0,
+          "analog_gain": 1.0,
+          "wb_gains_rgb": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "ae_stats_frame": 0,
+          "awb_stats_frame": 0
+        },
+        "produced_stats": {
+          "mean_sensor_luma_norm": 0.02559440537257914,
+          "target_luma": 0.18,
+          "sensor_rgb_means": [
+            0.044160323161613495,
+            0.020763062799252305,
+            0.01670035212446454
+          ],
+          "awb_corrected_rgb_means": [
+            0.044160323161613495,
+            0.020763062799252305,
+            0.01670035212446454
+          ],
+          "sensor_rgb_imbalance": 1.0092641557940658,
+          "awb_corrected_rgb_imbalance": 1.0092641557940658,
+          "output_rgb_means": [
+            0.04308873098205514,
+            0.03255715785608323,
+            0.03316321659607698
+          ],
+          "output_rgb_imbalance": 0.2903683405155601
+        },
+        "requested_controls": {
+          "ae": {
+            "source_frame": 2,
+            "apply_frame": 4,
+            "measured_luma": 0.02559440537257914,
+            "target_luma": 0.18,
+            "ratio": 2.0,
+            "exposure_time_us": 9000.0,
+            "analog_gain": 1.7777777777777777
+          },
+          "awb": {
+            "source_frame": 2,
+            "apply_frame": 4,
+            "rgb_means": [
+              0.044160323161613495,
+              0.020763062799252305,
+              0.01670035212446454
+            ],
+            "wb_gains_rgb": [
+              0.7071067811865476,
+              1.0,
+              1.2432709588701578
+            ]
+          }
+        }
       },
       "latency_summary": {
         "frame_count": 1.0,
@@ -345,12 +543,78 @@
       "controls_applied": {
         "ae_enabled": true,
         "awb_enabled": true,
+        "apply_to_image": false,
         "ae_stats_frame": 1,
         "awb_stats_frame": 1,
         "ae_apply_delay_frames": 2,
         "awb_apply_delay_frames": 2,
         "stats_ready_us": 51086.78999999999,
-        "warmup": false
+        "warmup": false,
+        "exposure_time_us": 8000.0,
+        "analog_gain": 1.0,
+        "wb_gains_rgb": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "applied_controls": {
+          "exposure_time_us": 8000.0,
+          "analog_gain": 1.0,
+          "wb_gains_rgb": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "ae_stats_frame": 1,
+          "awb_stats_frame": 1
+        },
+        "produced_stats": {
+          "mean_sensor_luma_norm": 0.02559440537257914,
+          "target_luma": 0.18,
+          "sensor_rgb_means": [
+            0.044160323161613495,
+            0.020763062799252305,
+            0.01670035212446454
+          ],
+          "awb_corrected_rgb_means": [
+            0.044160323161613495,
+            0.020763062799252305,
+            0.01670035212446454
+          ],
+          "sensor_rgb_imbalance": 1.0092641557940658,
+          "awb_corrected_rgb_imbalance": 1.0092641557940658,
+          "output_rgb_means": [
+            0.04308873098205514,
+            0.03255715785608323,
+            0.03316321659607698
+          ],
+          "output_rgb_imbalance": 0.2903683405155601
+        },
+        "requested_controls": {
+          "ae": {
+            "source_frame": 3,
+            "apply_frame": 5,
+            "measured_luma": 0.02559440537257914,
+            "target_luma": 0.18,
+            "ratio": 2.0,
+            "exposure_time_us": 9000.0,
+            "analog_gain": 1.7777777777777777
+          },
+          "awb": {
+            "source_frame": 3,
+            "apply_frame": 5,
+            "rgb_means": [
+              0.044160323161613495,
+              0.020763062799252305,
+              0.01670035212446454
+            ],
+            "wb_gains_rgb": [
+              0.7071067811865476,
+              1.0,
+              1.2432709588701578
+            ]
+          }
+        }
       },
       "latency_summary": {
         "frame_count": 1.0,
@@ -433,12 +697,78 @@
       "controls_applied": {
         "ae_enabled": true,
         "awb_enabled": true,
+        "apply_to_image": false,
         "ae_stats_frame": 2,
         "awb_stats_frame": 2,
         "ae_apply_delay_frames": 2,
         "awb_apply_delay_frames": 2,
         "stats_ready_us": 64040.52,
-        "warmup": false
+        "warmup": false,
+        "exposure_time_us": 8000.0,
+        "analog_gain": 1.0,
+        "wb_gains_rgb": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "applied_controls": {
+          "exposure_time_us": 8000.0,
+          "analog_gain": 1.0,
+          "wb_gains_rgb": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "ae_stats_frame": 2,
+          "awb_stats_frame": 2
+        },
+        "produced_stats": {
+          "mean_sensor_luma_norm": 0.02559440537257914,
+          "target_luma": 0.18,
+          "sensor_rgb_means": [
+            0.044160323161613495,
+            0.020763062799252305,
+            0.01670035212446454
+          ],
+          "awb_corrected_rgb_means": [
+            0.044160323161613495,
+            0.020763062799252305,
+            0.01670035212446454
+          ],
+          "sensor_rgb_imbalance": 1.0092641557940658,
+          "awb_corrected_rgb_imbalance": 1.0092641557940658,
+          "output_rgb_means": [
+            0.04308873098205514,
+            0.03255715785608323,
+            0.03316321659607698
+          ],
+          "output_rgb_imbalance": 0.2903683405155601
+        },
+        "requested_controls": {
+          "ae": {
+            "source_frame": 4,
+            "apply_frame": 6,
+            "measured_luma": 0.02559440537257914,
+            "target_luma": 0.18,
+            "ratio": 2.0,
+            "exposure_time_us": 9000.0,
+            "analog_gain": 1.7777777777777777
+          },
+          "awb": {
+            "source_frame": 4,
+            "apply_frame": 6,
+            "rgb_means": [
+              0.044160323161613495,
+              0.020763062799252305,
+              0.01670035212446454
+            ],
+            "wb_gains_rgb": [
+              0.7071067811865476,
+              1.0,
+              1.2432709588701578
+            ]
+          }
+        }
       },
       "latency_summary": {
         "frame_count": 1.0,
@@ -521,12 +851,78 @@
       "controls_applied": {
         "ae_enabled": true,
         "awb_enabled": true,
+        "apply_to_image": false,
         "ae_stats_frame": 3,
         "awb_stats_frame": 3,
         "ae_apply_delay_frames": 2,
         "awb_apply_delay_frames": 2,
         "stats_ready_us": 76994.25,
-        "warmup": false
+        "warmup": false,
+        "exposure_time_us": 8000.0,
+        "analog_gain": 1.0,
+        "wb_gains_rgb": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "applied_controls": {
+          "exposure_time_us": 8000.0,
+          "analog_gain": 1.0,
+          "wb_gains_rgb": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "ae_stats_frame": 3,
+          "awb_stats_frame": 3
+        },
+        "produced_stats": {
+          "mean_sensor_luma_norm": 0.02559440537257914,
+          "target_luma": 0.18,
+          "sensor_rgb_means": [
+            0.044160323161613495,
+            0.020763062799252305,
+            0.01670035212446454
+          ],
+          "awb_corrected_rgb_means": [
+            0.044160323161613495,
+            0.020763062799252305,
+            0.01670035212446454
+          ],
+          "sensor_rgb_imbalance": 1.0092641557940658,
+          "awb_corrected_rgb_imbalance": 1.0092641557940658,
+          "output_rgb_means": [
+            0.04308873098205514,
+            0.03255715785608323,
+            0.03316321659607698
+          ],
+          "output_rgb_imbalance": 0.2903683405155601
+        },
+        "requested_controls": {
+          "ae": {
+            "source_frame": 5,
+            "apply_frame": 7,
+            "measured_luma": 0.02559440537257914,
+            "target_luma": 0.18,
+            "ratio": 2.0,
+            "exposure_time_us": 9000.0,
+            "analog_gain": 1.7777777777777777
+          },
+          "awb": {
+            "source_frame": 5,
+            "apply_frame": 7,
+            "rgb_means": [
+              0.044160323161613495,
+              0.020763062799252305,
+              0.01670035212446454
+            ],
+            "wb_gains_rgb": [
+              0.7071067811865476,
+              1.0,
+              1.2432709588701578
+            ]
+          }
+        }
       },
       "latency_summary": {
         "frame_count": 1.0,
@@ -609,12 +1005,78 @@
       "controls_applied": {
         "ae_enabled": true,
         "awb_enabled": true,
+        "apply_to_image": false,
         "ae_stats_frame": 4,
         "awb_stats_frame": 4,
         "ae_apply_delay_frames": 2,
         "awb_apply_delay_frames": 2,
         "stats_ready_us": 89947.98,
-        "warmup": false
+        "warmup": false,
+        "exposure_time_us": 8000.0,
+        "analog_gain": 1.0,
+        "wb_gains_rgb": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "applied_controls": {
+          "exposure_time_us": 8000.0,
+          "analog_gain": 1.0,
+          "wb_gains_rgb": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "ae_stats_frame": 4,
+          "awb_stats_frame": 4
+        },
+        "produced_stats": {
+          "mean_sensor_luma_norm": 0.02559440537257914,
+          "target_luma": 0.18,
+          "sensor_rgb_means": [
+            0.044160323161613495,
+            0.020763062799252305,
+            0.01670035212446454
+          ],
+          "awb_corrected_rgb_means": [
+            0.044160323161613495,
+            0.020763062799252305,
+            0.01670035212446454
+          ],
+          "sensor_rgb_imbalance": 1.0092641557940658,
+          "awb_corrected_rgb_imbalance": 1.0092641557940658,
+          "output_rgb_means": [
+            0.04308873098205514,
+            0.03255715785608323,
+            0.03316321659607698
+          ],
+          "output_rgb_imbalance": 0.2903683405155601
+        },
+        "requested_controls": {
+          "ae": {
+            "source_frame": 6,
+            "apply_frame": 8,
+            "measured_luma": 0.02559440537257914,
+            "target_luma": 0.18,
+            "ratio": 2.0,
+            "exposure_time_us": 9000.0,
+            "analog_gain": 1.7777777777777777
+          },
+          "awb": {
+            "source_frame": 6,
+            "apply_frame": 8,
+            "rgb_means": [
+              0.044160323161613495,
+              0.020763062799252305,
+              0.01670035212446454
+            ],
+            "wb_gains_rgb": [
+              0.7071067811865476,
+              1.0,
+              1.2432709588701578
+            ]
+          }
+        }
       },
       "latency_summary": {
         "frame_count": 1.0,
@@ -697,12 +1159,78 @@
       "controls_applied": {
         "ae_enabled": true,
         "awb_enabled": true,
+        "apply_to_image": false,
         "ae_stats_frame": 5,
         "awb_stats_frame": 5,
         "ae_apply_delay_frames": 2,
         "awb_apply_delay_frames": 2,
         "stats_ready_us": 102901.70999999999,
-        "warmup": false
+        "warmup": false,
+        "exposure_time_us": 8000.0,
+        "analog_gain": 1.0,
+        "wb_gains_rgb": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "applied_controls": {
+          "exposure_time_us": 8000.0,
+          "analog_gain": 1.0,
+          "wb_gains_rgb": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "ae_stats_frame": 5,
+          "awb_stats_frame": 5
+        },
+        "produced_stats": {
+          "mean_sensor_luma_norm": 0.02559440537257914,
+          "target_luma": 0.18,
+          "sensor_rgb_means": [
+            0.044160323161613495,
+            0.020763062799252305,
+            0.01670035212446454
+          ],
+          "awb_corrected_rgb_means": [
+            0.044160323161613495,
+            0.020763062799252305,
+            0.01670035212446454
+          ],
+          "sensor_rgb_imbalance": 1.0092641557940658,
+          "awb_corrected_rgb_imbalance": 1.0092641557940658,
+          "output_rgb_means": [
+            0.04308873098205514,
+            0.03255715785608323,
+            0.03316321659607698
+          ],
+          "output_rgb_imbalance": 0.2903683405155601
+        },
+        "requested_controls": {
+          "ae": {
+            "source_frame": 7,
+            "apply_frame": 9,
+            "measured_luma": 0.02559440537257914,
+            "target_luma": 0.18,
+            "ratio": 2.0,
+            "exposure_time_us": 9000.0,
+            "analog_gain": 1.7777777777777777
+          },
+          "awb": {
+            "source_frame": 7,
+            "apply_frame": 9,
+            "rgb_means": [
+              0.044160323161613495,
+              0.020763062799252305,
+              0.01670035212446454
+            ],
+            "wb_gains_rgb": [
+              0.7071067811865476,
+              1.0,
+              1.2432709588701578
+            ]
+          }
+        }
       },
       "latency_summary": {
         "frame_count": 1.0,

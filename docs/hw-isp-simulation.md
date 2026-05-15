@@ -1,6 +1,6 @@
 # HW ISP Simulation
 
-`pyisetcam` includes a hardware ISP latency layer for system verification. It does not replace the existing imaging pipeline. The normal `Scene -> OpticalImage -> Sensor -> ImageProcessor` computation still produces the image, and the HW ISP layer adds deterministic timing metadata on top.
+`pyisetcam` includes a hardware ISP simulation layer for system verification. The normal `Scene -> OpticalImage -> Sensor -> ImageProcessor` computation still produces the image, and the HW ISP layer adds deterministic timing metadata plus optional delayed AE/AWB control feedback on top.
 
 This is useful when image parity is not enough. System verification often needs to know when a frame was exposed, when rolling-shutter readout finished, when ISP stages completed, which AE/AWB controls were active, and when the frame became visible to the app.
 
@@ -78,7 +78,22 @@ config = hw_isp_config(
 
 ## 3A And Queue Delay
 
-AE/AWB are modeled as delayed control metadata. If `ae_apply_delay_frames=2`, statistics from frame `N` become active on frame `N + 2`. Early frames are marked as warmup.
+By default, AE/AWB are modeled as delayed control metadata only, so existing image values are unchanged. If `ae_apply_delay_frames=2`, statistics from frame `N` become active on frame `N + 2`. Early frames are marked as warmup.
+
+Enable image-affecting AE/AWB with:
+
+```python
+config = hw_isp_config(
+    control_path={
+        "apply_to_image": True,
+        "ae_apply_delay_frames": 2,
+        "awb_apply_delay_frames": 2,
+        "target_luma": 0.18,
+    }
+)
+```
+
+When enabled, AE applies delayed `exposure_time_us` and `analog_gain` to the sensor. AWB applies delayed gray-world RGB gains through a manual IP illuminant-correction matrix. AF is not part of v1.
 
 The queue model uses `request_queue_depth` and `max_buffers`. When the pipeline is slower than the frame interval, the simulator records `queue_stall_us`. By default it stalls rather than dropping frames.
 
@@ -96,11 +111,15 @@ Outputs are written under `reports/hwisp/`:
 - `frame_details.html`
 - `timeline_report.md`
 - `timeline_summary.json`
+- `three_a_summary.json`
 - `frame_timeline.png`
 - `stage_latency.png`
 - `e2e_latency.png`
+- `ae_convergence.png`
+- `awb_convergence.png`
+- `three_a_thumbnails.png`
 
-Open `reports/hwisp/index.html` for the browser-facing dashboard. Use `frame_details.html` when you need the full per-frame and per-stage timestamp tables.
+Open `reports/hwisp/index.html` for the browser-facing dashboard. Use `frame_details.html` when you need the full per-frame and per-stage timestamp tables. The dashboard includes a deterministic 12-frame Macbeth-style 3A scenario with a brightness step and a warm-illuminant step.
 
 ## Relationship To Parity
 
