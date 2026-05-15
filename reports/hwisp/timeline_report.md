@@ -2,9 +2,10 @@
 
 ## Summary
 - Frames: `8`
-- Mean E2E latency: `12.954 ms`
-- Max E2E latency: `12.954 ms`
-- Total queue stall: `82.704 ms`
+- Mean E2E latency: `12.984 ms`
+- Max E2E latency: `12.984 ms`
+- Total queue stall: `83.565 ms`
+- HW ISP profile: `rpi_vc4_imx219_public_seed`
 - HTML dashboard: [/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/index.html](/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/index.html)
 - HTML details: [/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/frame_details.html](/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/frame_details.html)
 - 3A summary JSON: [/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/three_a_summary.json](/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/three_a_summary.json)

@@ -151,6 +151,13 @@ from .hwisp import (
     hw_isp_simulate_sequence,
     hw_isp_timeline_table,
 )
+from .hwisp_db import (
+    HWIspParameterProfile,
+    hw_isp_config_from_profile,
+    hw_isp_parameter_db,
+    hw_isp_profile,
+    hw_isp_profile_names,
+)
 from .iso import (
     ISO12233,
     ISO12233v1,
@@ -3300,6 +3307,10 @@ hwISPSimulateSequence = hw_isp_simulate_sequence
 hwISPTimelineTable = hw_isp_timeline_table
 hwISPLatencySummary = hw_isp_latency_summary
 hwISPExportJSON = hw_isp_export_json
+hwISPParameterDB = hw_isp_parameter_db
+hwISPProfileNames = hw_isp_profile_names
+hwISPProfile = hw_isp_profile
+hwISPConfigFromProfile = hw_isp_config_from_profile
 
 cameraCreate = camera_create
 cameraCompute = camera_compute

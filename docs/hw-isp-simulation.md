@@ -8,6 +8,7 @@ This is useful when image parity is not enough. System verification often needs 
 
 ```python
 from pyisetcam import camera_create, scene_create
+from pyisetcam import hw_isp_config_from_profile, hw_isp_profile_names
 from pyisetcam.hwisp import hw_isp_config, hw_isp_simulate_sequence, hw_isp_latency_summary
 
 scene = scene_create("uniform ee", 8)
@@ -31,6 +32,47 @@ frame = sequence.frames[0]
 frame.camera.metadata["hw_isp"]
 frame.ip.metadata["hw_isp"]
 ```
+
+## Parameter DB
+
+The simulator can load named HW ISP parameter profiles:
+
+```python
+print(hw_isp_profile_names())
+
+config = hw_isp_config_from_profile(
+    "rpi_vc4_imx219_public_seed",
+    control_path={"apply_to_image": True},
+)
+```
+
+Built-in profiles live under `src/pyisetcam/data/hwisp/`:
+
+- `generic_1080p_30fps`: synthetic engineering seed profile.
+- `rpi_vc4_imx219_public_seed`: public Raspberry Pi/libcamera IMX219 seed profile with a small normalized calibration subset.
+
+These are not sign-off vendor databases. They are seed inputs. Replace timing
+fields with BSP, kernel trace, hardware counter, or measured values before using
+latency numbers as product evidence.
+
+To load product-specific or collected profiles:
+
+```bash
+export PYISETCAM_HWISP_DB=/path/to/hwisp/profiles
+```
+
+To collect normalized profiles from local libcamera tuning files:
+
+```bash
+python tools/collect_hwisp_parameter_db.py /usr/share/libcamera/ipa/rpi/vc4 --output-dir configs/hwisp/collected
+export PYISETCAM_HWISP_DB=configs/hwisp/collected
+```
+
+The collector extracts public tuning/calibration summaries such as black level,
+lux reference, noise, GEQ, and AGC target seed. Raw libcamera tuning files do not
+normally contain complete block latency, queue, or DMA timing, so the collector
+fills missing timing from the generic profile and marks the profile confidence as
+`collected_tuning_with_seed_timing`.
 
 ## Timing Model
 
@@ -117,6 +159,12 @@ Generate the default timeline report:
 
 ```bash
 python tools/render_hwisp_timeline_report.py
+```
+
+Use a DB profile:
+
+```bash
+python tools/render_hwisp_timeline_report.py --profile rpi_vc4_imx219_public_seed
 ```
 
 Outputs are written under `reports/hwisp/`:

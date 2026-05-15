@@ -38,6 +38,9 @@ include-package-data = true
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+pyisetcam = ["data/hwisp/*.json", "data/hwisp/README.md"]
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]

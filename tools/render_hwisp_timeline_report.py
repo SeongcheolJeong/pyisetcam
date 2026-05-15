@@ -26,6 +26,7 @@ from pyisetcam.hwisp import (
     hw_isp_simulate_sequence,
     hw_isp_timeline_table,
 )
+from pyisetcam.hwisp_db import hw_isp_config_from_profile
 
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "reports" / "hwisp"
 
@@ -125,10 +126,10 @@ def _three_a_scenes(store: AssetStore) -> list:
     return [nominal] * 4 + [highlight] * 4 + [warm] * 4
 
 
-def _simulate_three_a_sequence(store: AssetStore):
-    config = hw_isp_config(
-        sensor_timing={"fps": 30.0, "line_time_us": 15.2, "exposure_time_us": 8000.0},
-        control_path={
+def _three_a_config(profile: str | None = None):
+    overrides = {
+        "sensor_timing": {"fps": 30.0, "line_time_us": 15.2, "exposure_time_us": 8000.0},
+        "control_path": {
             "apply_to_image": True,
             "ae_apply_delay_frames": 2,
             "awb_apply_delay_frames": 2,
@@ -140,9 +141,16 @@ def _simulate_three_a_sequence(store: AssetStore):
             "ae_highlight_weight": 0.5,
             "awb_stats_roi": "valid_luma",
         },
-        transport={"request_queue_depth": 2, "max_buffers": 3},
-        seed=42,
-    )
+        "transport": {"request_queue_depth": 2, "max_buffers": 3},
+        "seed": 42,
+    }
+    if profile:
+        return hw_isp_config_from_profile(profile, **overrides)
+    return hw_isp_config(**overrides)
+
+
+def _simulate_three_a_sequence(store: AssetStore, profile: str | None = None):
+    config = _three_a_config(profile)
     return hw_isp_simulate_sequence(
         camera_create(asset_store=store),
         _three_a_scenes(store),
@@ -687,15 +695,22 @@ def _write_html_reports(
     details_html.write_text(_html_page("HW ISP Frame Details", details_body), encoding="utf-8")
 
 
-def render(output_dir: Path = DEFAULT_OUTPUT_DIR, *, nframes: int = 8) -> dict[str, Path]:
+def render(output_dir: Path = DEFAULT_OUTPUT_DIR, *, nframes: int = 8, profile: str | None = None) -> dict[str, Path]:
     store = AssetStore.default()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    config = hw_isp_config(
+    config_overrides = dict(
         sensor_timing={"fps": 100.0, "line_time_us": 15.2, "exposure_time_us": 8000.0},
-        transport={"request_queue_depth": 1, "max_buffers": 1, "dma_submit_us": 120.0, "dma_complete_us": 320.0, "app_processing_us": 500.0},
+        transport={
+            "request_queue_depth": 1,
+            "max_buffers": 1,
+            "dma_submit_us": 120.0,
+            "dma_complete_us": 320.0,
+            "app_processing_us": 500.0,
+        },
         seed=42,
     )
+    config = hw_isp_config_from_profile(profile, **config_overrides) if profile else hw_isp_config(**config_overrides)
     scene = scene_create("uniform ee", 8, asset_store=store)
     sequence = hw_isp_simulate_sequence(
         camera_create(asset_store=store),
@@ -704,7 +719,7 @@ def render(output_dir: Path = DEFAULT_OUTPUT_DIR, *, nframes: int = 8) -> dict[s
         nframes=nframes,
         asset_store=store,
     )
-    three_a_sequence = _simulate_three_a_sequence(store)
+    three_a_sequence = _simulate_three_a_sequence(store, profile)
     rows = hw_isp_timeline_table(sequence)
 
     frame_timeline = output_dir / "frame_timeline.png"
@@ -754,6 +769,7 @@ def render(output_dir: Path = DEFAULT_OUTPUT_DIR, *, nframes: int = 8) -> dict[s
         f"- Mean E2E latency: `{summary['e2e_latency_mean_us'] / 1000.0:.3f} ms`",
         f"- Max E2E latency: `{summary['e2e_latency_max_us'] / 1000.0:.3f} ms`",
         f"- Total queue stall: `{summary['queue_stall_total_us'] / 1000.0:.3f} ms`",
+        f"- HW ISP profile: `{profile or 'inline defaults'}`",
         f"- HTML dashboard: [{report_html}]({report_html})",
         f"- HTML details: [{details_html}]({details_html})",
         f"- 3A summary JSON: [{three_a_summary_json}]({three_a_summary_json})",
@@ -797,8 +813,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--nframes", type=int, default=8)
+    parser.add_argument("--profile", default=None, help="Named HW ISP parameter profile to use.")
     args = parser.parse_args()
-    outputs = render(args.output_dir, nframes=args.nframes)
+    outputs = render(args.output_dir, nframes=args.nframes, profile=args.profile)
     for name, path in outputs.items():
         print(f"{name}: {path}")
 
