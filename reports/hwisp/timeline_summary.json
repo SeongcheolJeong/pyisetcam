@@ -1,0 +1,717 @@
+{
+  "type": "sequence",
+  "aggregate": {
+    "frame_count": 8.0,
+    "e2e_latency_mean_us": 12953.729999999998,
+    "e2e_latency_max_us": 12953.730000000003,
+    "e2e_latency_min_us": 12953.729999999989,
+    "queue_stall_total_us": 82704.43999999997,
+    "queue_stall_max_us": 20676.109999999986
+  },
+  "frames": [
+    {
+      "timeline": {
+        "frame_id": 0,
+        "timestamps_us": {
+          "request": 0.0,
+          "requested": 0.0,
+          "exposure_start": 0.0,
+          "exposure_mid": 4000.0,
+          "readout_start": 8000.0,
+          "readout_end": 12225.599999999999,
+          "stats_ready": 12225.599999999999,
+          "isp_start": 8243.26,
+          "isp_done": 12013.729999999998,
+          "dma_done": 12453.729999999998,
+          "app_visible": 12953.729999999998,
+          "frame_interval_us": 10000.0,
+          "line_time_us": 15.2,
+          "hidden_lines_top": 16.0,
+          "hidden_lines_bottom": 20.0
+        },
+        "stages": [
+          {
+            "name": "blc",
+            "domain": "bayer",
+            "buffering": "stream",
+            "start_us": 8243.26,
+            "end_us": 11921.659999999998,
+            "latency_us": 3678.399999999998,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.06,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "dpc",
+            "domain": "bayer",
+            "buffering": "line",
+            "start_us": 8273.86,
+            "end_us": 11952.259999999998,
+            "latency_us": 3678.399999999998,
+            "line_buffer_delay_us": 30.4,
+            "cycle_latency_us": 0.2,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "demosaic",
+            "domain": "bayer_to_rgb",
+            "buffering": "line",
+            "start_us": 8335.21,
+            "end_us": 12013.609999999997,
+            "latency_us": 3678.399999999998,
+            "line_buffer_delay_us": 60.8,
+            "cycle_latency_us": 0.55,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "ccm_gamma",
+            "domain": "rgb",
+            "buffering": "stream",
+            "start_us": 8335.33,
+            "end_us": 12013.729999999998,
+            "latency_us": 3678.399999999998,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.12,
+            "stalled_us": 0.0
+          }
+        ],
+        "queue_stall_us": 0.0,
+        "dropped": false
+      },
+      "controls_applied": {
+        "ae_enabled": true,
+        "awb_enabled": true,
+        "ae_stats_frame": null,
+        "awb_stats_frame": null,
+        "ae_apply_delay_frames": 2,
+        "awb_apply_delay_frames": 2,
+        "stats_ready_us": 12225.599999999999,
+        "warmup": true
+      },
+      "latency_summary": {
+        "frame_count": 1.0,
+        "e2e_latency_mean_us": 12953.729999999998,
+        "e2e_latency_max_us": 12953.729999999998,
+        "e2e_latency_min_us": 12953.729999999998,
+        "queue_stall_total_us": 0.0,
+        "queue_stall_max_us": 0.0
+      }
+    },
+    {
+      "timeline": {
+        "frame_id": 1,
+        "timestamps_us": {
+          "request": 12953.729999999998,
+          "requested": 10000.0,
+          "exposure_start": 12953.729999999998,
+          "exposure_mid": 16953.729999999996,
+          "readout_start": 20953.729999999996,
+          "readout_end": 25179.329999999994,
+          "stats_ready": 25179.329999999994,
+          "isp_start": 21196.989999999998,
+          "isp_done": 24967.459999999995,
+          "dma_done": 25407.459999999995,
+          "app_visible": 25907.459999999995,
+          "frame_interval_us": 10000.0,
+          "line_time_us": 15.2,
+          "hidden_lines_top": 16.0,
+          "hidden_lines_bottom": 20.0
+        },
+        "stages": [
+          {
+            "name": "blc",
+            "domain": "bayer",
+            "buffering": "stream",
+            "start_us": 21196.989999999998,
+            "end_us": 24875.389999999996,
+            "latency_us": 3678.399999999998,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.06,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "dpc",
+            "domain": "bayer",
+            "buffering": "line",
+            "start_us": 21227.59,
+            "end_us": 24905.989999999998,
+            "latency_us": 3678.399999999998,
+            "line_buffer_delay_us": 30.4,
+            "cycle_latency_us": 0.2,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "demosaic",
+            "domain": "bayer_to_rgb",
+            "buffering": "line",
+            "start_us": 21288.94,
+            "end_us": 24967.339999999997,
+            "latency_us": 3678.399999999998,
+            "line_buffer_delay_us": 60.8,
+            "cycle_latency_us": 0.55,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "ccm_gamma",
+            "domain": "rgb",
+            "buffering": "stream",
+            "start_us": 21289.059999999998,
+            "end_us": 24967.459999999995,
+            "latency_us": 3678.399999999998,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.12,
+            "stalled_us": 0.0
+          }
+        ],
+        "queue_stall_us": 2953.7299999999977,
+        "dropped": false
+      },
+      "controls_applied": {
+        "ae_enabled": true,
+        "awb_enabled": true,
+        "ae_stats_frame": null,
+        "awb_stats_frame": null,
+        "ae_apply_delay_frames": 2,
+        "awb_apply_delay_frames": 2,
+        "stats_ready_us": 25179.329999999994,
+        "warmup": true
+      },
+      "latency_summary": {
+        "frame_count": 1.0,
+        "e2e_latency_mean_us": 12953.729999999998,
+        "e2e_latency_max_us": 12953.729999999998,
+        "e2e_latency_min_us": 12953.729999999998,
+        "queue_stall_total_us": 2953.7299999999977,
+        "queue_stall_max_us": 2953.7299999999977
+      }
+    },
+    {
+      "timeline": {
+        "frame_id": 2,
+        "timestamps_us": {
+          "request": 25907.459999999995,
+          "requested": 20000.0,
+          "exposure_start": 25907.459999999995,
+          "exposure_mid": 29907.459999999995,
+          "readout_start": 33907.45999999999,
+          "readout_end": 38133.05999999999,
+          "stats_ready": 38133.05999999999,
+          "isp_start": 34150.71999999999,
+          "isp_done": 37921.189999999995,
+          "dma_done": 38361.189999999995,
+          "app_visible": 38861.189999999995,
+          "frame_interval_us": 10000.0,
+          "line_time_us": 15.2,
+          "hidden_lines_top": 16.0,
+          "hidden_lines_bottom": 20.0
+        },
+        "stages": [
+          {
+            "name": "blc",
+            "domain": "bayer",
+            "buffering": "stream",
+            "start_us": 34150.71999999999,
+            "end_us": 37829.11999999999,
+            "latency_us": 3678.4000000000015,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.06,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "dpc",
+            "domain": "bayer",
+            "buffering": "line",
+            "start_us": 34181.319999999985,
+            "end_us": 37859.71999999999,
+            "latency_us": 3678.4000000000015,
+            "line_buffer_delay_us": 30.4,
+            "cycle_latency_us": 0.2,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "demosaic",
+            "domain": "bayer_to_rgb",
+            "buffering": "line",
+            "start_us": 34242.66999999999,
+            "end_us": 37921.06999999999,
+            "latency_us": 3678.4000000000015,
+            "line_buffer_delay_us": 60.8,
+            "cycle_latency_us": 0.55,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "ccm_gamma",
+            "domain": "rgb",
+            "buffering": "stream",
+            "start_us": 34242.78999999999,
+            "end_us": 37921.189999999995,
+            "latency_us": 3678.4000000000015,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.12,
+            "stalled_us": 0.0
+          }
+        ],
+        "queue_stall_us": 5907.4599999999955,
+        "dropped": false
+      },
+      "controls_applied": {
+        "ae_enabled": true,
+        "awb_enabled": true,
+        "ae_stats_frame": 0,
+        "awb_stats_frame": 0,
+        "ae_apply_delay_frames": 2,
+        "awb_apply_delay_frames": 2,
+        "stats_ready_us": 38133.05999999999,
+        "warmup": false
+      },
+      "latency_summary": {
+        "frame_count": 1.0,
+        "e2e_latency_mean_us": 12953.73,
+        "e2e_latency_max_us": 12953.73,
+        "e2e_latency_min_us": 12953.73,
+        "queue_stall_total_us": 5907.4599999999955,
+        "queue_stall_max_us": 5907.4599999999955
+      }
+    },
+    {
+      "timeline": {
+        "frame_id": 3,
+        "timestamps_us": {
+          "request": 38861.189999999995,
+          "requested": 30000.0,
+          "exposure_start": 38861.189999999995,
+          "exposure_mid": 42861.189999999995,
+          "readout_start": 46861.189999999995,
+          "readout_end": 51086.78999999999,
+          "stats_ready": 51086.78999999999,
+          "isp_start": 47104.44999999999,
+          "isp_done": 50874.92,
+          "dma_done": 51314.92,
+          "app_visible": 51814.92,
+          "frame_interval_us": 10000.0,
+          "line_time_us": 15.2,
+          "hidden_lines_top": 16.0,
+          "hidden_lines_bottom": 20.0
+        },
+        "stages": [
+          {
+            "name": "blc",
+            "domain": "bayer",
+            "buffering": "stream",
+            "start_us": 47104.44999999999,
+            "end_us": 50782.84999999999,
+            "latency_us": 3678.4000000000015,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.06,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "dpc",
+            "domain": "bayer",
+            "buffering": "line",
+            "start_us": 47135.04999999999,
+            "end_us": 50813.44999999999,
+            "latency_us": 3678.4000000000015,
+            "line_buffer_delay_us": 30.4,
+            "cycle_latency_us": 0.2,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "demosaic",
+            "domain": "bayer_to_rgb",
+            "buffering": "line",
+            "start_us": 47196.399999999994,
+            "end_us": 50874.799999999996,
+            "latency_us": 3678.4000000000015,
+            "line_buffer_delay_us": 60.8,
+            "cycle_latency_us": 0.55,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "ccm_gamma",
+            "domain": "rgb",
+            "buffering": "stream",
+            "start_us": 47196.52,
+            "end_us": 50874.92,
+            "latency_us": 3678.4000000000015,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.12,
+            "stalled_us": 0.0
+          }
+        ],
+        "queue_stall_us": 8861.189999999995,
+        "dropped": false
+      },
+      "controls_applied": {
+        "ae_enabled": true,
+        "awb_enabled": true,
+        "ae_stats_frame": 1,
+        "awb_stats_frame": 1,
+        "ae_apply_delay_frames": 2,
+        "awb_apply_delay_frames": 2,
+        "stats_ready_us": 51086.78999999999,
+        "warmup": false
+      },
+      "latency_summary": {
+        "frame_count": 1.0,
+        "e2e_latency_mean_us": 12953.730000000003,
+        "e2e_latency_max_us": 12953.730000000003,
+        "e2e_latency_min_us": 12953.730000000003,
+        "queue_stall_total_us": 8861.189999999995,
+        "queue_stall_max_us": 8861.189999999995
+      }
+    },
+    {
+      "timeline": {
+        "frame_id": 4,
+        "timestamps_us": {
+          "request": 51814.92,
+          "requested": 40000.0,
+          "exposure_start": 51814.92,
+          "exposure_mid": 55814.92,
+          "readout_start": 59814.92,
+          "readout_end": 64040.52,
+          "stats_ready": 64040.52,
+          "isp_start": 60058.17999999999,
+          "isp_done": 63828.65,
+          "dma_done": 64268.65,
+          "app_visible": 64768.65,
+          "frame_interval_us": 10000.0,
+          "line_time_us": 15.2,
+          "hidden_lines_top": 16.0,
+          "hidden_lines_bottom": 20.0
+        },
+        "stages": [
+          {
+            "name": "blc",
+            "domain": "bayer",
+            "buffering": "stream",
+            "start_us": 60058.17999999999,
+            "end_us": 63736.579999999994,
+            "latency_us": 3678.4000000000015,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.06,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "dpc",
+            "domain": "bayer",
+            "buffering": "line",
+            "start_us": 60088.77999999999,
+            "end_us": 63767.17999999999,
+            "latency_us": 3678.4000000000015,
+            "line_buffer_delay_us": 30.4,
+            "cycle_latency_us": 0.2,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "demosaic",
+            "domain": "bayer_to_rgb",
+            "buffering": "line",
+            "start_us": 60150.13,
+            "end_us": 63828.53,
+            "latency_us": 3678.4000000000015,
+            "line_buffer_delay_us": 60.8,
+            "cycle_latency_us": 0.55,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "ccm_gamma",
+            "domain": "rgb",
+            "buffering": "stream",
+            "start_us": 60150.25,
+            "end_us": 63828.65,
+            "latency_us": 3678.4000000000015,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.12,
+            "stalled_us": 0.0
+          }
+        ],
+        "queue_stall_us": 11814.919999999998,
+        "dropped": false
+      },
+      "controls_applied": {
+        "ae_enabled": true,
+        "awb_enabled": true,
+        "ae_stats_frame": 2,
+        "awb_stats_frame": 2,
+        "ae_apply_delay_frames": 2,
+        "awb_apply_delay_frames": 2,
+        "stats_ready_us": 64040.52,
+        "warmup": false
+      },
+      "latency_summary": {
+        "frame_count": 1.0,
+        "e2e_latency_mean_us": 12953.730000000003,
+        "e2e_latency_max_us": 12953.730000000003,
+        "e2e_latency_min_us": 12953.730000000003,
+        "queue_stall_total_us": 11814.919999999998,
+        "queue_stall_max_us": 11814.919999999998
+      }
+    },
+    {
+      "timeline": {
+        "frame_id": 5,
+        "timestamps_us": {
+          "request": 64768.65,
+          "requested": 50000.0,
+          "exposure_start": 64768.65,
+          "exposure_mid": 68768.65,
+          "readout_start": 72768.65,
+          "readout_end": 76994.25,
+          "stats_ready": 76994.25,
+          "isp_start": 73011.90999999999,
+          "isp_done": 76782.37999999999,
+          "dma_done": 77222.37999999999,
+          "app_visible": 77722.37999999999,
+          "frame_interval_us": 10000.0,
+          "line_time_us": 15.2,
+          "hidden_lines_top": 16.0,
+          "hidden_lines_bottom": 20.0
+        },
+        "stages": [
+          {
+            "name": "blc",
+            "domain": "bayer",
+            "buffering": "stream",
+            "start_us": 73011.90999999999,
+            "end_us": 76690.31,
+            "latency_us": 3678.4000000000087,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.06,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "dpc",
+            "domain": "bayer",
+            "buffering": "line",
+            "start_us": 73042.50999999998,
+            "end_us": 76720.90999999999,
+            "latency_us": 3678.4000000000087,
+            "line_buffer_delay_us": 30.4,
+            "cycle_latency_us": 0.2,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "demosaic",
+            "domain": "bayer_to_rgb",
+            "buffering": "line",
+            "start_us": 73103.85999999999,
+            "end_us": 76782.26,
+            "latency_us": 3678.4000000000087,
+            "line_buffer_delay_us": 60.8,
+            "cycle_latency_us": 0.55,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "ccm_gamma",
+            "domain": "rgb",
+            "buffering": "stream",
+            "start_us": 73103.97999999998,
+            "end_us": 76782.37999999999,
+            "latency_us": 3678.4000000000087,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.12,
+            "stalled_us": 0.0
+          }
+        ],
+        "queue_stall_us": 14768.650000000001,
+        "dropped": false
+      },
+      "controls_applied": {
+        "ae_enabled": true,
+        "awb_enabled": true,
+        "ae_stats_frame": 3,
+        "awb_stats_frame": 3,
+        "ae_apply_delay_frames": 2,
+        "awb_apply_delay_frames": 2,
+        "stats_ready_us": 76994.25,
+        "warmup": false
+      },
+      "latency_summary": {
+        "frame_count": 1.0,
+        "e2e_latency_mean_us": 12953.729999999989,
+        "e2e_latency_max_us": 12953.729999999989,
+        "e2e_latency_min_us": 12953.729999999989,
+        "queue_stall_total_us": 14768.650000000001,
+        "queue_stall_max_us": 14768.650000000001
+      }
+    },
+    {
+      "timeline": {
+        "frame_id": 6,
+        "timestamps_us": {
+          "request": 77722.37999999999,
+          "requested": 60000.0,
+          "exposure_start": 77722.37999999999,
+          "exposure_mid": 81722.37999999999,
+          "readout_start": 85722.37999999999,
+          "readout_end": 89947.98,
+          "stats_ready": 89947.98,
+          "isp_start": 85965.63999999998,
+          "isp_done": 89736.10999999999,
+          "dma_done": 90176.10999999999,
+          "app_visible": 90676.10999999999,
+          "frame_interval_us": 10000.0,
+          "line_time_us": 15.2,
+          "hidden_lines_top": 16.0,
+          "hidden_lines_bottom": 20.0
+        },
+        "stages": [
+          {
+            "name": "blc",
+            "domain": "bayer",
+            "buffering": "stream",
+            "start_us": 85965.63999999998,
+            "end_us": 89644.04,
+            "latency_us": 3678.4000000000087,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.06,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "dpc",
+            "domain": "bayer",
+            "buffering": "line",
+            "start_us": 85996.23999999998,
+            "end_us": 89674.63999999998,
+            "latency_us": 3678.4000000000087,
+            "line_buffer_delay_us": 30.4,
+            "cycle_latency_us": 0.2,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "demosaic",
+            "domain": "bayer_to_rgb",
+            "buffering": "line",
+            "start_us": 86057.58999999998,
+            "end_us": 89735.98999999999,
+            "latency_us": 3678.4000000000087,
+            "line_buffer_delay_us": 60.8,
+            "cycle_latency_us": 0.55,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "ccm_gamma",
+            "domain": "rgb",
+            "buffering": "stream",
+            "start_us": 86057.70999999998,
+            "end_us": 89736.10999999999,
+            "latency_us": 3678.4000000000087,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.12,
+            "stalled_us": 0.0
+          }
+        ],
+        "queue_stall_us": 17722.37999999999,
+        "dropped": false
+      },
+      "controls_applied": {
+        "ae_enabled": true,
+        "awb_enabled": true,
+        "ae_stats_frame": 4,
+        "awb_stats_frame": 4,
+        "ae_apply_delay_frames": 2,
+        "awb_apply_delay_frames": 2,
+        "stats_ready_us": 89947.98,
+        "warmup": false
+      },
+      "latency_summary": {
+        "frame_count": 1.0,
+        "e2e_latency_mean_us": 12953.729999999996,
+        "e2e_latency_max_us": 12953.729999999996,
+        "e2e_latency_min_us": 12953.729999999996,
+        "queue_stall_total_us": 17722.37999999999,
+        "queue_stall_max_us": 17722.37999999999
+      }
+    },
+    {
+      "timeline": {
+        "frame_id": 7,
+        "timestamps_us": {
+          "request": 90676.10999999999,
+          "requested": 70000.0,
+          "exposure_start": 90676.10999999999,
+          "exposure_mid": 94676.10999999999,
+          "readout_start": 98676.10999999999,
+          "readout_end": 102901.70999999999,
+          "stats_ready": 102901.70999999999,
+          "isp_start": 98919.36999999998,
+          "isp_done": 102689.83999999998,
+          "dma_done": 103129.83999999998,
+          "app_visible": 103629.83999999998,
+          "frame_interval_us": 10000.0,
+          "line_time_us": 15.2,
+          "hidden_lines_top": 16.0,
+          "hidden_lines_bottom": 20.0
+        },
+        "stages": [
+          {
+            "name": "blc",
+            "domain": "bayer",
+            "buffering": "stream",
+            "start_us": 98919.36999999998,
+            "end_us": 102597.76999999999,
+            "latency_us": 3678.4000000000087,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.06,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "dpc",
+            "domain": "bayer",
+            "buffering": "line",
+            "start_us": 98949.96999999997,
+            "end_us": 102628.36999999998,
+            "latency_us": 3678.4000000000087,
+            "line_buffer_delay_us": 30.4,
+            "cycle_latency_us": 0.2,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "demosaic",
+            "domain": "bayer_to_rgb",
+            "buffering": "line",
+            "start_us": 99011.31999999998,
+            "end_us": 102689.71999999999,
+            "latency_us": 3678.4000000000087,
+            "line_buffer_delay_us": 60.8,
+            "cycle_latency_us": 0.55,
+            "stalled_us": 0.0
+          },
+          {
+            "name": "ccm_gamma",
+            "domain": "rgb",
+            "buffering": "stream",
+            "start_us": 99011.43999999997,
+            "end_us": 102689.83999999998,
+            "latency_us": 3678.4000000000087,
+            "line_buffer_delay_us": 0.0,
+            "cycle_latency_us": 0.12,
+            "stalled_us": 0.0
+          }
+        ],
+        "queue_stall_us": 20676.109999999986,
+        "dropped": false
+      },
+      "controls_applied": {
+        "ae_enabled": true,
+        "awb_enabled": true,
+        "ae_stats_frame": 5,
+        "awb_stats_frame": 5,
+        "ae_apply_delay_frames": 2,
+        "awb_apply_delay_frames": 2,
+        "stats_ready_us": 102901.70999999999,
+        "warmup": false
+      },
+      "latency_summary": {
+        "frame_count": 1.0,
+        "e2e_latency_mean_us": 12953.729999999996,
+        "e2e_latency_max_us": 12953.729999999996,
+        "e2e_latency_min_us": 12953.729999999996,
+        "queue_stall_total_us": 20676.109999999986,
+        "queue_stall_max_us": 20676.109999999986
+      }
+    }
+  ]
+}

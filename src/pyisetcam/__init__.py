@@ -134,6 +134,23 @@ from .illuminant import (
     illuminant_read,
     illuminant_set,
 )
+from .hwisp import (
+    HWIspConfig,
+    HWIspControlPath,
+    HWIspFrameResult,
+    HWIspFrameTimeline,
+    HWIspSensorTiming,
+    HWIspSequenceResult,
+    HWIspStage,
+    HWIspStageSpan,
+    HWIspTransport,
+    hw_isp_config,
+    hw_isp_export_json,
+    hw_isp_latency_summary,
+    hw_isp_simulate_frame,
+    hw_isp_simulate_sequence,
+    hw_isp_timeline_table,
+)
 from .iso import (
     ISO12233,
     ISO12233v1,
@@ -3276,6 +3293,13 @@ LFImage2buffer = lf_image_to_buffer
 LFbuffer2SubApertureViews = lf_buffer_to_sub_aperture_views
 LFToolboxVersion = lf_toolbox_version
 ip2lightfield = ip_to_lightfield
+
+hwISPConfig = hw_isp_config
+hwISPSimulateFrame = hw_isp_simulate_frame
+hwISPSimulateSequence = hw_isp_simulate_sequence
+hwISPTimelineTable = hw_isp_timeline_table
+hwISPLatencySummary = hw_isp_latency_summary
+hwISPExportJSON = hw_isp_export_json
 
 cameraCreate = camera_create
 cameraCompute = camera_compute

@@ -11,6 +11,7 @@
 - [Install Guide](docs/install-guide.md)
 - [Getting Started Tutorial](docs/tutorial.md)
 - [MATLAB To Python Mapping](docs/migration.md)
+- [HW ISP Simulation](docs/hw-isp-simulation.md)
 
 Current expansion notes:
 
