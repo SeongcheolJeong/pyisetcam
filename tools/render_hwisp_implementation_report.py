@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import json
+import mimetypes
 import subprocess
 import sys
 from datetime import datetime
@@ -447,10 +449,19 @@ def _artifact_table(rows: list[dict[str, Any]]) -> str:
     return "<table><thead><tr><th>Artifact</th><th>Status</th><th>Bytes</th></tr></thead><tbody>" + "".join(body) + "</tbody></table>"
 
 
-def _figure(path: Path, title: str, caption: str) -> str:
+def _image_source(path: Path, embed_images: bool) -> str:
+    if not embed_images or not path.exists():
+        return path.name
+    mime_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"data:{mime_type};base64,{encoded}"
+
+
+def _figure(path: Path, title: str, caption: str, *, embed_images: bool = False) -> str:
+    source = _image_source(path, embed_images)
     return (
         "<figure>"
-        f'<img src="{escape(path.name)}" alt="{escape(title)}">'
+        f'<img src="{escape(source)}" alt="{escape(title)}">'
         f"<figcaption><strong>{escape(title)}</strong><br>{escape(caption)}</figcaption>"
         "</figure>"
     )
@@ -461,6 +472,7 @@ def render(
     *,
     profile: str = DEFAULT_PROFILE,
     run_tests: bool = False,
+    embed_images: bool = False,
 ) -> dict[str, Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     timeline_summary = _read_json(output_dir / "timeline_summary.json")
@@ -474,8 +486,12 @@ def render(
     verdicts = three_a_aggregate.get("validation_verdicts", {})
     verdict_status = "PASS" if verdicts and all(verdicts.values()) else "CHECK"
 
-    html_path = output_dir / "implementation_verification_report.html"
-    summary_path = output_dir / "implementation_verification_summary.json"
+    if embed_images:
+        html_path = output_dir / "implementation_verification_report_integrated.html"
+        summary_path = output_dir / "implementation_verification_integrated_summary.json"
+    else:
+        html_path = output_dir / "implementation_verification_report.html"
+        summary_path = output_dir / "implementation_verification_summary.json"
 
     body = f"""
 <h1>HW ISP Implementation And Verification Report</h1>
@@ -526,12 +542,12 @@ def render(
   <div class="card"><span class="label">Queue Stall Total</span><span class="value">{float(timeline_aggregate.get('queue_stall_total_us', 0.0)) / 1000.0:.3f} ms</span></div>
 </div>
 <div class="grid">
-  {_figure(output_dir / 'frame_timeline.png', 'Frame timeline', 'Per-frame ISP stage spans and queue timing.')}
-  {_figure(output_dir / 'stage_latency.png', 'Stage latency', 'Mean modeled latency by HW ISP block.')}
-  {_figure(output_dir / 'e2e_latency.png', 'E2E latency', 'Application-visible latency and queue stall.')}
-  {_figure(output_dir / 'ae_convergence.png', 'AE convergence', 'Metered luma, exposure/gain, clipping, and settle frame.')}
-  {_figure(output_dir / 'awb_convergence.png', 'AWB convergence', 'Valid-luma gray-world correction and RGB imbalance.')}
-  {_figure(output_dir / 'three_a_thumbnails.png', '3A thumbnails', 'Representative output frames before and after delayed control response.')}
+  {_figure(output_dir / 'frame_timeline.png', 'Frame timeline', 'Per-frame ISP stage spans and queue timing.', embed_images=embed_images)}
+  {_figure(output_dir / 'stage_latency.png', 'Stage latency', 'Mean modeled latency by HW ISP block.', embed_images=embed_images)}
+  {_figure(output_dir / 'e2e_latency.png', 'E2E latency', 'Application-visible latency and queue stall.', embed_images=embed_images)}
+  {_figure(output_dir / 'ae_convergence.png', 'AE convergence', 'Metered luma, exposure/gain, clipping, and settle frame.', embed_images=embed_images)}
+  {_figure(output_dir / 'awb_convergence.png', 'AWB convergence', 'Valid-luma gray-world correction and RGB imbalance.', embed_images=embed_images)}
+  {_figure(output_dir / 'three_a_thumbnails.png', '3A thumbnails', 'Representative output frames before and after delayed control response.', embed_images=embed_images)}
 </div>
 
 <h2>Artifact Check</h2>
@@ -552,6 +568,7 @@ def render(
   <a href="timeline_summary.json">Timeline JSON</a>
   <a href="three_a_summary.json">3A JSON</a>
   <a href="implementation_verification_summary.json">Implementation summary JSON</a>
+  <a href="implementation_verification_report_integrated.html">Integrated image HTML</a>
 </div>
 <p class="lead">Generated at {escape(generated_at)}.</p>
 """
@@ -564,6 +581,7 @@ def render(
         "artifacts": artifacts,
         "timeline_aggregate": timeline_aggregate,
         "three_a_aggregate": three_a_aggregate,
+        "embed_images": bool(embed_images),
         "outputs": {"html": str(html_path), "summary": str(summary_path)},
     }
     summary_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
@@ -575,8 +593,14 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--profile", default=DEFAULT_PROFILE)
     parser.add_argument("--run-tests", action="store_true")
+    parser.add_argument("--embed-images", action="store_true")
     args = parser.parse_args()
-    outputs = render(args.output_dir, profile=args.profile, run_tests=bool(args.run_tests))
+    outputs = render(
+        args.output_dir,
+        profile=args.profile,
+        run_tests=bool(args.run_tests),
+        embed_images=bool(args.embed_images),
+    )
     for name, path in outputs.items():
         print(f"{name}: {path}")
 

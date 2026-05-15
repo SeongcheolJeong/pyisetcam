@@ -173,11 +173,19 @@ Generate the implementation and verification report with architecture diagram:
 python tools/render_hwisp_implementation_report.py --profile rpi_vc4_imx219_public_seed --run-tests
 ```
 
+Generate a self-contained copy with PNG figures embedded directly in the HTML:
+
+```bash
+python tools/render_hwisp_implementation_report.py --profile rpi_vc4_imx219_public_seed --embed-images
+```
+
 Outputs are written under `reports/hwisp/`:
 
 - `index.html`
 - `implementation_verification_report.html`
+- `implementation_verification_report_integrated.html`
 - `implementation_verification_summary.json`
+- `implementation_verification_integrated_summary.json`
 - `frame_details.html`
 - `timeline_report.md`
 - `timeline_summary.json`

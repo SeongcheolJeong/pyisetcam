@@ -140,3 +140,15 @@ def test_hwisp_implementation_report_renderer_writes_html(tmp_path) -> None:
     assert "HW ISP Implementation And Verification Report" in html
     assert "Architecture" in html
     assert "HW ISP Profile" in html
+
+    png_bytes = bytes.fromhex(
+        "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489"
+        "0000000a49444154789c6360000002000100ffff03000006000557bfab00000000"
+        "49454e44ae426082"
+    )
+    (output_dir / "frame_timeline.png").write_bytes(png_bytes)
+    embedded_outputs = render_hwisp_implementation_report(output_dir, embed_images=True)
+    embedded_html = embedded_outputs["html"].read_text(encoding="utf-8")
+
+    assert embedded_outputs["html"].name == "implementation_verification_report_integrated.html"
+    assert "data:image/png;base64," in embedded_html
