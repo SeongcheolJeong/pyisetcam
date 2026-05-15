@@ -19,6 +19,7 @@ from pyisetcam import (
     ip_get,
     scene_create,
 )
+from tools.render_hwisp_timeline_report import render as render_hwisp_timeline_report
 
 
 def _small_scene(asset_store):
@@ -189,3 +190,18 @@ def test_hw_isp_frame_preserves_camera_compute_image(asset_store) -> None:
         ip_get(camera_get(normal, "ip"), "result"),
         ip_get(simulated.ip, "result"),
     )
+
+
+def test_hw_isp_report_renderer_writes_html(asset_store, tmp_path) -> None:
+    outputs = render_hwisp_timeline_report(tmp_path / "hwisp", nframes=3)
+
+    assert outputs["html"].exists()
+    assert outputs["details_html"].exists()
+    assert outputs["summary"].exists()
+    assert outputs["frame_timeline"].exists()
+    html = outputs["html"].read_text(encoding="utf-8")
+    details = outputs["details_html"].read_text(encoding="utf-8")
+    assert "HW ISP Simulation Report" in html
+    assert "frame_timeline.png" in html
+    assert "HW ISP Frame Details" in details
+    assert "Stage Timing" in details

@@ -5,6 +5,8 @@
 - Mean E2E latency: `12.954 ms`
 - Max E2E latency: `12.954 ms`
 - Total queue stall: `82.704 ms`
+- HTML dashboard: [/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/index.html](/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/index.html)
+- HTML details: [/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/frame_details.html](/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/frame_details.html)
 
 ## Figures
 ![frame timeline](/Users/seongcheoljeong/Documents/CameraE2E/reports/hwisp/frame_timeline.png)

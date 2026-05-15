@@ -92,11 +92,15 @@ python tools/render_hwisp_timeline_report.py
 
 Outputs are written under `reports/hwisp/`:
 
+- `index.html`
+- `frame_details.html`
 - `timeline_report.md`
 - `timeline_summary.json`
 - `frame_timeline.png`
 - `stage_latency.png`
 - `e2e_latency.png`
+
+Open `reports/hwisp/index.html` for the browser-facing dashboard. Use `frame_details.html` when you need the full per-frame and per-stage timestamp tables.
 
 ## Relationship To Parity
 
