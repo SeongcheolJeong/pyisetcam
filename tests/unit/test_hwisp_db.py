@@ -13,6 +13,7 @@ from pyisetcam import (
     scene_create,
 )
 from tools.collect_hwisp_parameter_db import collect
+from tools.render_hwisp_implementation_report import render as render_hwisp_implementation_report
 
 
 def test_builtin_hwisp_profiles_are_loadable() -> None:
@@ -90,3 +91,52 @@ def test_collector_writes_normalized_profile_from_libcamera_json(tmp_path) -> No
 
     profile = hw_isp_profile(payload["name"], db_path=output_dir)
     assert profile.calibration["noise"]["reference_slope"] == 3.67
+
+
+def test_hwisp_implementation_report_renderer_writes_html(tmp_path) -> None:
+    output_dir = tmp_path / "hwisp"
+    output_dir.mkdir()
+    (output_dir / "timeline_summary.json").write_text(
+        json.dumps(
+            {
+                "aggregate": {
+                    "frame_count": 8.0,
+                    "e2e_latency_mean_us": 12000.0,
+                    "e2e_latency_max_us": 13000.0,
+                    "queue_stall_total_us": 1000.0,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    (output_dir / "three_a_summary.json").write_text(
+        json.dumps(
+            {
+                "aggregate": {
+                    "ae_settle_frame": 8.0,
+                    "ae_final_error_ev": 0.1,
+                    "awb_settle_frame": 10.0,
+                    "awb_final_rgb_imbalance": 0.15,
+                    "max_clip_fraction_before_response": 0.1,
+                    "max_clip_fraction_after_response": 0.05,
+                    "validation_verdicts": {
+                        "ae_settle": True,
+                        "awb_settle": True,
+                        "clamp_compliance": True,
+                        "warmup_delay_mapping": True,
+                        "clip_reduction": True,
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    outputs = render_hwisp_implementation_report(output_dir)
+    html = outputs["html"].read_text(encoding="utf-8")
+
+    assert outputs["html"].exists()
+    assert outputs["summary"].exists()
+    assert "HW ISP Implementation And Verification Report" in html
+    assert "Architecture" in html
+    assert "HW ISP Profile" in html

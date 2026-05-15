@@ -167,9 +167,17 @@ Use a DB profile:
 python tools/render_hwisp_timeline_report.py --profile rpi_vc4_imx219_public_seed
 ```
 
+Generate the implementation and verification report with architecture diagram:
+
+```bash
+python tools/render_hwisp_implementation_report.py --profile rpi_vc4_imx219_public_seed --run-tests
+```
+
 Outputs are written under `reports/hwisp/`:
 
 - `index.html`
+- `implementation_verification_report.html`
+- `implementation_verification_summary.json`
 - `frame_details.html`
 - `timeline_report.md`
 - `timeline_summary.json`
