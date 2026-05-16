@@ -14,6 +14,7 @@ from pyisetcam import (
 )
 from tools.collect_hwisp_parameter_db import collect
 from tools.render_hwisp_implementation_report import render as render_hwisp_implementation_report
+from tools.render_hwisp_technical_report import render as render_hwisp_technical_report
 
 
 def test_builtin_hwisp_profiles_are_loadable() -> None:
@@ -152,3 +153,11 @@ def test_hwisp_implementation_report_renderer_writes_html(tmp_path) -> None:
 
     assert embedded_outputs["html"].name == "implementation_verification_report_integrated.html"
     assert "data:image/png;base64," in embedded_html
+
+    technical_outputs = render_hwisp_technical_report(output_dir)
+    technical_html = technical_outputs["html"].read_text(encoding="utf-8")
+
+    assert technical_outputs["html"].name == "hwisp_technical_report.html"
+    assert "HW ISP Technical Report" in technical_html
+    assert "Sensor Timing Model" in technical_html
+    assert "ISP Stage Timing Model" in technical_html

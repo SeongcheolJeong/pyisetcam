@@ -179,9 +179,17 @@ Generate a self-contained copy with PNG figures embedded directly in the HTML:
 python tools/render_hwisp_implementation_report.py --profile rpi_vc4_imx219_public_seed --embed-images
 ```
 
+Generate the detailed technical report:
+
+```bash
+python tools/render_hwisp_technical_report.py --profile rpi_vc4_imx219_public_seed
+```
+
 Outputs are written under `reports/hwisp/`:
 
 - `index.html`
+- `hwisp_technical_report.html`
+- `hwisp_technical_summary.json`
 - `implementation_verification_report.html`
 - `implementation_verification_report_integrated.html`
 - `implementation_verification_summary.json`
