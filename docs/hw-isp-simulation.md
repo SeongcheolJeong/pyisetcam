@@ -185,11 +185,19 @@ Generate the detailed technical report:
 python tools/render_hwisp_technical_report.py --profile rpi_vc4_imx219_public_seed
 ```
 
+Generate the HW ISP parameter DB requirements report:
+
+```bash
+python tools/render_hwisp_parameter_requirements_report.py --profile rpi_vc4_imx219_public_seed
+```
+
 Outputs are written under `reports/hwisp/`:
 
 - `index.html`
 - `hwisp_technical_report.html`
 - `hwisp_technical_summary.json`
+- `hwisp_parameter_requirements_report.html`
+- `hwisp_parameter_requirements_summary.json`
 - `implementation_verification_report.html`
 - `implementation_verification_report_integrated.html`
 - `implementation_verification_summary.json`

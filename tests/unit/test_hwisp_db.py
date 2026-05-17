@@ -14,6 +14,9 @@ from pyisetcam import (
 )
 from tools.collect_hwisp_parameter_db import collect
 from tools.render_hwisp_implementation_report import render as render_hwisp_implementation_report
+from tools.render_hwisp_parameter_requirements_report import (
+    render as render_hwisp_parameter_requirements_report,
+)
 from tools.render_hwisp_technical_report import render as render_hwisp_technical_report
 
 
@@ -161,3 +164,11 @@ def test_hwisp_implementation_report_renderer_writes_html(tmp_path) -> None:
     assert "HW ISP Technical Report" in technical_html
     assert "Sensor Timing Model" in technical_html
     assert "ISP Stage Timing Model" in technical_html
+
+    parameter_outputs = render_hwisp_parameter_requirements_report(output_dir)
+    parameter_html = parameter_outputs["html"].read_text(encoding="utf-8")
+
+    assert parameter_outputs["html"].name == "hwisp_parameter_requirements_report.html"
+    assert "HW ISP Parameter DB Requirements Report" in parameter_html
+    assert "Required DB Parameter Matrix" in parameter_html
+    assert "Minimum Sign-off Checklist" in parameter_html
