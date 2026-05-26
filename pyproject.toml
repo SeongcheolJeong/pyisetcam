@@ -30,6 +30,23 @@ dev = [
   "ruff",
   "mypy",
 ]
+yolo = [
+  "lap",
+  "ultralytics",
+]
+torch-vision = [
+  "torch",
+  "torchvision",
+]
+transformers = [
+  "pillow",
+  "torch",
+  "transformers",
+]
+sam = [
+  "segment-anything",
+  "torch",
+]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -39,7 +56,7 @@ include-package-data = true
 where = ["src"]
 
 [tool.setuptools.package-data]
-pyisetcam = ["data/hwisp/*.json", "data/hwisp/README.md"]
+pyisetcam = ["data/hwisp/*.json", "data/hwisp/README.md", "data/task_perception/*.json", "data/task_perception/README.md"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

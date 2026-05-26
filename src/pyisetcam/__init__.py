@@ -437,6 +437,20 @@ from .optics import (
     zemax_read_header,
 )
 from .parity import run_python_case, run_python_case_with_context
+from .perception import (
+    PerceptionMetricResult,
+    PerceptionViewingConfig,
+    image_to_luminance,
+    perception_artifact_metrics,
+    perception_color_metrics,
+    perception_compare,
+    perception_config,
+    perception_image_metrics,
+    perception_report,
+    perception_sharpness_metrics,
+    perception_visible_difference_map,
+    pixels_per_degree,
+)
 from .plotting import (
     fise_plot_defaults,
     hist2d,
@@ -558,6 +572,43 @@ from .session import (
     vc_get_figure,
     vc_set_figure_handles,
     vc_select_figure,
+)
+from .task_perception import (
+    TaskBoundingBox,
+    TaskClassificationResult,
+    TaskModelAdapter,
+    TaskModelConfig,
+    TaskOrientedBoundingBox,
+    TaskPerceptionConfig,
+    TaskPoseResult,
+    TaskSegmentationMask,
+    TaskTrackResult,
+    annotations_to_bboxes,
+    annotations_to_masks,
+    bbox_iou,
+    boundary_f1_score,
+    detection_metrics,
+    detection_recall_at_iou,
+    mask_iou,
+    mean_average_precision,
+    mean_iou,
+    render_detection_overlay,
+    render_segmentation_overlay,
+    run_task_detector,
+    run_task_segmenter,
+    segmentation_metrics,
+    task_detector_from_config,
+    task_degradation_report,
+    task_model_config,
+    task_model_config_from_profile,
+    task_model_from_config,
+    task_model_profile,
+    task_model_profile_names,
+    task_perception_config,
+    task_perception_perturb_image,
+    task_perception_sweep,
+    task_segmenter_from_config,
+    task_score_by_stage,
 )
 from .scene import (
     build_pyramid,
@@ -2046,6 +2097,89 @@ __all__ = [
     "wvf_compute_psf",
     "run_python_case",
     "run_python_case_with_context",
+    "PerceptionMetricResult",
+    "PerceptionViewingConfig",
+    "imageToLuminance",
+    "image_to_luminance",
+    "perceptionArtifactMetrics",
+    "perceptionColorMetrics",
+    "perceptionCompare",
+    "perceptionConfig",
+    "perceptionImageMetrics",
+    "perceptionReport",
+    "perceptionSharpnessMetrics",
+    "perceptionVisibleDifferenceMap",
+    "perception_artifact_metrics",
+    "perception_color_metrics",
+    "perception_compare",
+    "perception_config",
+    "perception_image_metrics",
+    "perception_report",
+    "perception_sharpness_metrics",
+    "perception_visible_difference_map",
+    "pixelsPerDegree",
+    "pixels_per_degree",
+    "TaskBoundingBox",
+    "TaskClassificationResult",
+    "TaskModelAdapter",
+    "TaskModelConfig",
+    "TaskOrientedBoundingBox",
+    "TaskPerceptionConfig",
+    "TaskPoseResult",
+    "TaskSegmentationMask",
+    "TaskTrackResult",
+    "annotationsToBboxes",
+    "annotationsToMasks",
+    "annotations_to_bboxes",
+    "annotations_to_masks",
+    "bboxIoU",
+    "bbox_iou",
+    "boundaryF1Score",
+    "boundary_f1_score",
+    "detectionMetrics",
+    "detectionRecallAtIoU",
+    "detection_metrics",
+    "detection_recall_at_iou",
+    "maskIoU",
+    "mask_iou",
+    "meanAveragePrecision",
+    "meanIoU",
+    "mean_average_precision",
+    "mean_iou",
+    "renderDetectionOverlay",
+    "renderSegmentationOverlay",
+    "render_detection_overlay",
+    "render_segmentation_overlay",
+    "runTaskDetector",
+    "runTaskSegmenter",
+    "run_task_detector",
+    "run_task_segmenter",
+    "segmentationMetrics",
+    "segmentation_metrics",
+    "taskDegradationReport",
+    "taskDetectorFromConfig",
+    "taskModelConfig",
+    "taskModelConfigFromProfile",
+    "taskModelFromConfig",
+    "taskModelProfile",
+    "taskModelProfileNames",
+    "taskPerceptionConfig",
+    "taskPerceptionPerturbImage",
+    "taskPerceptionSweep",
+    "taskSegmenterFromConfig",
+    "taskScoreByStage",
+    "task_degradation_report",
+    "task_detector_from_config",
+    "task_model_config",
+    "task_model_config_from_profile",
+    "task_model_from_config",
+    "task_model_profile",
+    "task_model_profile_names",
+    "task_perception_config",
+    "task_perception_perturb_image",
+    "task_perception_sweep",
+    "task_segmenter_from_config",
+    "task_score_by_stage",
     "hdrRender",
     "hdr_render",
     "buildPyramid",
@@ -3300,6 +3434,43 @@ LFImage2buffer = lf_image_to_buffer
 LFbuffer2SubApertureViews = lf_buffer_to_sub_aperture_views
 LFToolboxVersion = lf_toolbox_version
 ip2lightfield = ip_to_lightfield
+
+perceptionConfig = perception_config
+pixelsPerDegree = pixels_per_degree
+imageToLuminance = image_to_luminance
+perceptionImageMetrics = perception_image_metrics
+perceptionColorMetrics = perception_color_metrics
+perceptionVisibleDifferenceMap = perception_visible_difference_map
+perceptionSharpnessMetrics = perception_sharpness_metrics
+perceptionArtifactMetrics = perception_artifact_metrics
+perceptionCompare = perception_compare
+perceptionReport = perception_report
+taskPerceptionConfig = task_perception_config
+taskModelConfig = task_model_config
+taskModelProfileNames = task_model_profile_names
+taskModelProfile = task_model_profile
+taskModelConfigFromProfile = task_model_config_from_profile
+taskModelFromConfig = task_model_from_config
+taskDetectorFromConfig = task_detector_from_config
+taskSegmenterFromConfig = task_segmenter_from_config
+bboxIoU = bbox_iou
+maskIoU = mask_iou
+boundaryF1Score = boundary_f1_score
+detectionMetrics = detection_metrics
+meanAveragePrecision = mean_average_precision
+detectionRecallAtIoU = detection_recall_at_iou
+segmentationMetrics = segmentation_metrics
+meanIoU = mean_iou
+runTaskDetector = run_task_detector
+runTaskSegmenter = run_task_segmenter
+taskScoreByStage = task_score_by_stage
+taskPerceptionSweep = task_perception_sweep
+taskDegradationReport = task_degradation_report
+taskPerceptionPerturbImage = task_perception_perturb_image
+renderDetectionOverlay = render_detection_overlay
+renderSegmentationOverlay = render_segmentation_overlay
+annotationsToBboxes = annotations_to_bboxes
+annotationsToMasks = annotations_to_masks
 
 hwISPConfig = hw_isp_config
 hwISPSimulateFrame = hw_isp_simulate_frame

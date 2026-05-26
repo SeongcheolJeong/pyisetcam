@@ -153,7 +153,7 @@ The package root re-exports a very large compatibility surface. For onboarding, 
 - `color`: color transforms, luminance conversions, and colorimetry helpers
   - start with `luminance_from_energy`, `luminance_from_photons`, `ie_color_transform`, `srgb_parameters`, `adobergb_parameters`
 
-### `metrics`, `iso`, `scielab`, `roi`
+### `metrics`, `iso`, `scielab`, `perception`, `roi`
 
 - `metrics`: summary metrics and camera-quality workflows
   - start with `comparison_metrics`, `camera_acutance`, `camera_mtf`, `camera_color_accuracy`, `metrics_spd`
@@ -161,6 +161,10 @@ The package root re-exports a very large compatibility surface. For onboarding, 
   - start with `iso12233`, `iso_find_slanted_bar`, `edge_to_mtf`
 - `scielab`: perceptual image-difference workflows
   - start with `scielab`, `scielab_rgb`, `sc_prepare_filters`
+- `perception`: viewing-condition aware summaries for human-visible image quality
+  - start with `perception_config`, `perception_compare`, `perception_visible_difference_map`, `perception_color_metrics`, `perception_sharpness_metrics`
+- `task_perception`: object-detection and segmentation metrics for downstream perception decisions
+  - start with `TaskBoundingBox`, `TaskSegmentationMask`, `detection_metrics`, `mean_average_precision`, `segmentation_metrics`, `task_perception_sweep`
 - `roi`: region-of-interest geometry and data extraction
   - start with `vc_get_roi_data`, `ie_rect2_locs`, `ie_locs2_rect`
 
@@ -185,5 +189,7 @@ The package root re-exports a very large compatibility surface. For onboarding, 
 ## Where To Go Next
 
 - See [MATLAB To Python Mapping](./migration.md) if you are porting existing MATLAB code.
+- See [Perception Metrics](./perception.md) when you need viewing-condition aware color, sharpness, and visible-difference evidence.
+- See [Task Perception](./task-perception.md) when you need object-detection, segmentation, or task-robustness evidence.
 - Use the README for parity-report and migration-audit commands when you move from user workflows into developer verification.
 - Explore advanced areas such as human optics, ray-trace optics, SCIELAB workflows, and broader metrics once you are comfortable with the basic explicit-object pipeline.
