@@ -8,6 +8,14 @@ from .assets import (
     ie_read_color_filter,
     ie_read_spectra,
 )
+from .db_catalog import (
+    CameraE2EDBEntry,
+    camerae2e_db_catalog,
+    camerae2e_db_get,
+    camerae2e_db_parameters,
+    camerae2e_db_search,
+    camerae2e_db_summary,
+)
 from .camera import (
     CameraFullReferenceResult,
     CameraMoireResult,
@@ -108,6 +116,45 @@ from .fileio import (
     vc_save_object,
     vc_save_multispectral_image,
 )
+from .fdtd_sensor import (
+    FDTDSensorLUT,
+    fdtd_sensor_apply_optical_response,
+    fdtd_sensor_config,
+    fdtd_sensor_cos4_relative_illumination,
+    fdtd_sensor_default_lut_path,
+    fdtd_sensor_field_response_map,
+    fdtd_sensor_lut_crosstalk_kernel,
+    fdtd_sensor_lut_load,
+    fdtd_sensor_lut_response,
+    fdtd_sensor_lut_summary,
+    fdtd_sensor_lut_to_jsonable,
+    fdtd_sensor_lut_validate,
+    fdtd_sensor_physics_validate,
+    fdtd_sensor_qe_scale,
+    sensor_attach_fdtd_lut,
+)
+from .tcad_sensor import (
+    TCADAccuracyGate,
+    TCADCollectionSummary,
+    TCADGenerationMap,
+    TCADSensorDB,
+    sensor_attach_physics_lut,
+    sensor_attach_tcad_lut,
+    tcad_accuracy_gate_load,
+    tcad_collection_summary_load,
+    tcad_generation_map_load,
+    tcad_sensor_apply_collection_response,
+    tcad_sensor_collection_efficiency,
+    tcad_sensor_config,
+    tcad_sensor_db_load,
+    tcad_sensor_db_to_jsonable,
+    tcad_sensor_default_paths,
+    tcad_sensor_default_root,
+    tcad_sensor_generation_map_slice,
+    tcad_sensor_split_phase,
+    tcad_sensor_summary,
+    tcad_sensor_validate,
+)
 from .fonts import (
     add_text_to_image,
     add_text_to_image_with_border,
@@ -157,6 +204,33 @@ from .hwisp_db import (
     hw_isp_parameter_db,
     hw_isp_profile,
     hw_isp_profile_names,
+)
+from .image_sensor_db import (
+    image_sensor_db_catalog_path,
+    image_sensor_db_get,
+    image_sensor_db_load,
+    image_sensor_db_parameters,
+    image_sensor_db_records,
+    image_sensor_db_root,
+    image_sensor_db_summary,
+)
+from .lens_patents import (
+    lens_patent_camerae2e_manifest,
+    lens_patent_companies,
+    lens_patent_company_db_path,
+    lens_patent_company_sets_manifest,
+    lens_patent_db_summary,
+    lens_patent_default_data_dir,
+    lens_patent_default_db_path,
+    lens_patent_downsample_psf,
+    lens_patent_get,
+    lens_patent_optics,
+    lens_patent_raytrace_optics,
+    lens_patent_raytrace_psf_manifest,
+    lens_patent_raytrace_psf_path,
+    lens_patent_raytrace_psf_search,
+    lens_patent_search,
+    lens_patent_surfaces,
 )
 from .iso import (
     ISO12233,
@@ -966,6 +1040,7 @@ from .utils import (
 
 __all__ = [
     "AssetStore",
+    "CameraE2EDBEntry",
     "airy_disk",
     "Camera",
     "CameraFullReferenceResult",
@@ -974,6 +1049,16 @@ __all__ = [
     "DEFAULT_UPSTREAM_SHA",
     "DEFAULT_UPSTREAM_TARBALL_SHA256",
     "DEFAULT_WAVE",
+    "camerae2e_db_catalog",
+    "camerae2e_db_get",
+    "camerae2e_db_parameters",
+    "camerae2e_db_search",
+    "camerae2e_db_summary",
+    "cameraE2EDBCatalog",
+    "cameraE2EDBGet",
+    "cameraE2EDBParameters",
+    "cameraE2EDBSearch",
+    "cameraE2EDBSummary",
     "Display",
     "FloydSteinberg",
     "HalfToneImage",
@@ -1028,6 +1113,20 @@ __all__ = [
     "camera_mtf",
     "camera_vsnr",
     "camera_vsnr_sl",
+    "image_sensor_db_catalog_path",
+    "image_sensor_db_get",
+    "image_sensor_db_load",
+    "image_sensor_db_parameters",
+    "image_sensor_db_records",
+    "image_sensor_db_root",
+    "image_sensor_db_summary",
+    "imageSensorDBCatalogPath",
+    "imageSensorDBGet",
+    "imageSensorDBLoad",
+    "imageSensorDBParameters",
+    "imageSensorDBRecords",
+    "imageSensorDBRoot",
+    "imageSensorDBSummary",
     "macbethColorError",
     "macbeth_color_error",
     "macbethCompareIdeal",
@@ -2610,6 +2709,99 @@ __all__ = [
     "vc_save_object",
     "vc_save_multispectral_image",
     "vc_set_figure_handles",
+    "lens_patent_camerae2e_manifest",
+    "lens_patent_companies",
+    "lens_patent_company_db_path",
+    "lens_patent_company_sets_manifest",
+    "lens_patent_db_summary",
+    "lens_patent_default_data_dir",
+    "lens_patent_default_db_path",
+    "lens_patent_downsample_psf",
+    "lens_patent_get",
+    "lens_patent_optics",
+    "lens_patent_raytrace_optics",
+    "lens_patent_raytrace_psf_manifest",
+    "lens_patent_raytrace_psf_path",
+    "lens_patent_raytrace_psf_search",
+    "lens_patent_search",
+    "lens_patent_surfaces",
+    "lensPatentCompanies",
+    "lensPatentCompanyDBPath",
+    "lensPatentCompanySetsManifest",
+    "lensPatentCameraE2EManifest",
+    "lensPatentDBSummary",
+    "lensPatentDefaultDataDir",
+    "lensPatentDefaultDBPath",
+    "lensPatentDownsamplePSF",
+    "lensPatentGet",
+    "lensPatentOptics",
+    "lensPatentRaytraceOptics",
+    "lensPatentRaytracePSFManifest",
+    "lensPatentRaytracePSFPath",
+    "lensPatentRaytracePSFSearch",
+    "lensPatentSearch",
+    "lensPatentSurfaces",
+    "FDTDSensorLUT",
+    "fdtd_sensor_apply_optical_response",
+    "fdtd_sensor_config",
+    "fdtd_sensor_cos4_relative_illumination",
+    "fdtd_sensor_default_lut_path",
+    "fdtd_sensor_field_response_map",
+    "fdtd_sensor_lut_crosstalk_kernel",
+    "fdtd_sensor_lut_load",
+    "fdtd_sensor_lut_response",
+    "fdtd_sensor_lut_summary",
+    "fdtd_sensor_lut_to_jsonable",
+    "fdtd_sensor_lut_validate",
+    "fdtd_sensor_physics_validate",
+    "fdtd_sensor_qe_scale",
+    "sensor_attach_fdtd_lut",
+    "TCADAccuracyGate",
+    "TCADCollectionSummary",
+    "TCADGenerationMap",
+    "TCADSensorDB",
+    "sensor_attach_physics_lut",
+    "sensor_attach_tcad_lut",
+    "tcad_accuracy_gate_load",
+    "tcad_collection_summary_load",
+    "tcad_generation_map_load",
+    "tcad_sensor_apply_collection_response",
+    "tcad_sensor_collection_efficiency",
+    "tcad_sensor_config",
+    "tcad_sensor_db_load",
+    "tcad_sensor_db_to_jsonable",
+    "tcad_sensor_default_paths",
+    "tcad_sensor_default_root",
+    "tcad_sensor_generation_map_slice",
+    "tcad_sensor_split_phase",
+    "tcad_sensor_summary",
+    "tcad_sensor_validate",
+    "tcadAccuracyGateLoad",
+    "tcadCollectionSummaryLoad",
+    "tcadGenerationMapLoad",
+    "tcadSensorApplyCollectionResponse",
+    "tcadSensorCollectionEfficiency",
+    "tcadSensorConfig",
+    "tcadSensorDBLoad",
+    "tcadSensorDefaultPaths",
+    "tcadSensorDefaultRoot",
+    "tcadSensorGenerationMapSlice",
+    "tcadSensorSplitPhase",
+    "tcadSensorSummary",
+    "tcadSensorValidate",
+    "sensorAttachPhysicsLUT",
+    "sensorAttachTCADLUT",
+    "fdtdSensorConfig",
+    "fdtdSensorCos4RelativeIllumination",
+    "fdtdSensorDefaultLUTPath",
+    "fdtdSensorLUTLoad",
+    "fdtdSensorLUTSummary",
+    "fdtdSensorLUTValidate",
+    "fdtdSensorPhysicsValidate",
+    "fdtdSensorLUTResponse",
+    "fdtdSensorLUTCrosstalkKernel",
+    "fdtdSensorFieldResponseMap",
+    "sensorAttachFDTDLUT",
     "pathToLinux",
     "path_to_linux",
     "sceCreate",
@@ -3482,6 +3674,64 @@ hwISPParameterDB = hw_isp_parameter_db
 hwISPProfileNames = hw_isp_profile_names
 hwISPProfile = hw_isp_profile
 hwISPConfigFromProfile = hw_isp_config_from_profile
+
+lensPatentDefaultDBPath = lens_patent_default_db_path
+lensPatentDefaultDataDir = lens_patent_default_data_dir
+lensPatentCameraE2EManifest = lens_patent_camerae2e_manifest
+lensPatentDBSummary = lens_patent_db_summary
+lensPatentCompanies = lens_patent_companies
+lensPatentCompanySetsManifest = lens_patent_company_sets_manifest
+lensPatentCompanyDBPath = lens_patent_company_db_path
+lensPatentDownsamplePSF = lens_patent_downsample_psf
+lensPatentSearch = lens_patent_search
+lensPatentGet = lens_patent_get
+lensPatentSurfaces = lens_patent_surfaces
+lensPatentOptics = lens_patent_optics
+lensPatentRaytracePSFManifest = lens_patent_raytrace_psf_manifest
+lensPatentRaytracePSFPath = lens_patent_raytrace_psf_path
+lensPatentRaytracePSFSearch = lens_patent_raytrace_psf_search
+lensPatentRaytraceOptics = lens_patent_raytrace_optics
+
+fdtdSensorConfig = fdtd_sensor_config
+fdtdSensorCos4RelativeIllumination = fdtd_sensor_cos4_relative_illumination
+fdtdSensorDefaultLUTPath = fdtd_sensor_default_lut_path
+fdtdSensorLUTLoad = fdtd_sensor_lut_load
+fdtdSensorLUTSummary = fdtd_sensor_lut_summary
+fdtdSensorLUTValidate = fdtd_sensor_lut_validate
+fdtdSensorPhysicsValidate = fdtd_sensor_physics_validate
+fdtdSensorLUTResponse = fdtd_sensor_lut_response
+fdtdSensorLUTCrosstalkKernel = fdtd_sensor_lut_crosstalk_kernel
+fdtdSensorFieldResponseMap = fdtd_sensor_field_response_map
+sensorAttachFDTDLUT = sensor_attach_fdtd_lut
+tcadAccuracyGateLoad = tcad_accuracy_gate_load
+tcadCollectionSummaryLoad = tcad_collection_summary_load
+tcadGenerationMapLoad = tcad_generation_map_load
+tcadSensorApplyCollectionResponse = tcad_sensor_apply_collection_response
+tcadSensorCollectionEfficiency = tcad_sensor_collection_efficiency
+tcadSensorConfig = tcad_sensor_config
+tcadSensorDBLoad = tcad_sensor_db_load
+tcadSensorDefaultPaths = tcad_sensor_default_paths
+tcadSensorDefaultRoot = tcad_sensor_default_root
+tcadSensorGenerationMapSlice = tcad_sensor_generation_map_slice
+tcadSensorSplitPhase = tcad_sensor_split_phase
+tcadSensorSummary = tcad_sensor_summary
+tcadSensorValidate = tcad_sensor_validate
+sensorAttachPhysicsLUT = sensor_attach_physics_lut
+sensorAttachTCADLUT = sensor_attach_tcad_lut
+
+cameraE2EDBCatalog = camerae2e_db_catalog
+cameraE2EDBSearch = camerae2e_db_search
+cameraE2EDBGet = camerae2e_db_get
+cameraE2EDBParameters = camerae2e_db_parameters
+cameraE2EDBSummary = camerae2e_db_summary
+
+imageSensorDBRoot = image_sensor_db_root
+imageSensorDBCatalogPath = image_sensor_db_catalog_path
+imageSensorDBLoad = image_sensor_db_load
+imageSensorDBRecords = image_sensor_db_records
+imageSensorDBGet = image_sensor_db_get
+imageSensorDBParameters = image_sensor_db_parameters
+imageSensorDBSummary = image_sensor_db_summary
 
 cameraCreate = camera_create
 cameraCompute = camera_compute

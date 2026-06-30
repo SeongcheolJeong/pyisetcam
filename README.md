@@ -12,6 +12,7 @@
 - [Getting Started Tutorial](docs/tutorial.md)
 - [MATLAB To Python Mapping](docs/migration.md)
 - [HW ISP Simulation](docs/hw-isp-simulation.md)
+- [FDTD/TCAD-Informed Sensor Block](docs/fdtd-sensor.md)
 - [Perception Metrics](docs/perception.md)
 - [Task Perception](docs/task-perception.md)
 

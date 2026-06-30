@@ -16,6 +16,8 @@ from scipy.signal import convolve2d
 from .assets import AssetStore, ie_read_color_filter, ie_read_spectra
 from .color import luminance_from_photons, xyz_color_matching
 from .exceptions import UnsupportedOptionError
+from .fdtd_sensor import fdtd_sensor_apply_optical_response, fdtd_sensor_config, fdtd_sensor_qe_scale
+from .tcad_sensor import tcad_sensor_apply_collection_response, tcad_sensor_config
 from .fileio import vc_load_object
 from .metrics import ie_cone_plot, xyz_from_energy
 from .optics import DEFAULT_FOCAL_LENGTH_M
@@ -284,6 +286,8 @@ def _sensor_base(
             "n_samples_per_pixel": 1,
             "vignetting": 0,
             "etendue": None,
+            "fdtd_sensor": None,
+            "tcad_sensor": None,
             "pixel_qe": np.ones(np.asarray(wave, dtype=float).size, dtype=float),
             "ir_filter": np.ones(np.asarray(wave, dtype=float).size, dtype=float),
         }
@@ -5303,6 +5307,10 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return bool(sensor.fields.get("consistency", False))
     if key in {"sensorcompute", "sensorcomputemethod"}:
         return _copy_metadata_value(sensor.fields.get("sensor_compute_method"))
+    if key in {"fdtdsensor", "fdtdlut", "fdtdopticalresponse", "fdtdopticalresponselut"}:
+        return _copy_metadata_value(sensor.fields.get("fdtd_sensor"))
+    if key in {"tcadsensor", "tcadlut", "tcadcollection", "tcadcollectionlut", "tcadcollectionresponse"}:
+        return _copy_metadata_value(sensor.fields.get("tcad_sensor"))
     if key in {"filternames", "filtername"}:
         return list(sensor.fields["filter_names"])
     if key in {"nfilters", "nfilter", "ncolors", "ncolor", "nsensors", "nsensor"}:
@@ -5915,6 +5923,12 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any, *args: Any) -> Sensor
         return sensor
     if key in {"sensorcompute", "sensorcomputemethod"}:
         sensor.fields["sensor_compute_method"] = _copy_metadata_value(value)
+        return sensor
+    if key in {"fdtdsensor", "fdtdlut", "fdtdopticalresponse", "fdtdopticalresponselut"}:
+        sensor.fields["fdtd_sensor"] = None if value is None else fdtd_sensor_config(value)
+        return sensor
+    if key in {"tcadsensor", "tcadlut", "tcadcollection", "tcadcollectionlut", "tcadcollectionresponse"}:
+        sensor.fields["tcad_sensor"] = None if value is None else tcad_sensor_config(value)
         return sensor
     if key in {"roi", "roilocs"}:
         roi = np.asarray(value, dtype=float)
@@ -6955,13 +6969,42 @@ def _sensor_qe_on_wave(sensor: Sensor, target_wave: np.ndarray, *, dtype: Any = 
     if spectral_qe.ndim == 1:
         spectral_qe = spectral_qe.reshape(-1, 1)
     if np.array_equal(target_wave, sensor_wave):
-        return spectral_qe
+        return _sensor_apply_fdtd_qe_scale(sensor, target_wave, spectral_qe)
     if sensor_wave.size <= 1:
         raise ValueError("Sensor and optical image wavelength samplings do not match.")
     interpolated = np.empty((target_wave.size, spectral_qe.shape[1]), dtype=spectral_qe.dtype)
     for index in range(spectral_qe.shape[1]):
         interpolated[:, index] = np.interp(target_wave, sensor_wave, spectral_qe[:, index], left=0.0, right=0.0)
-    return interpolated
+    return _sensor_apply_fdtd_qe_scale(sensor, target_wave, interpolated)
+
+
+def _sensor_apply_fdtd_qe_scale(sensor: Sensor, wave: np.ndarray, spectral_qe: np.ndarray) -> np.ndarray:
+    config = sensor.fields.get("fdtd_sensor")
+    if not isinstance(config, dict) or not bool(config.get("enabled", True)):
+        return spectral_qe
+    scale = fdtd_sensor_qe_scale(config, wave).astype(spectral_qe.dtype, copy=False)
+    if scale.size == 0:
+        return spectral_qe
+    return spectral_qe * scale.reshape(-1, 1)
+
+
+def _sensor_apply_fdtd_optical_response(sensor: Sensor, values: np.ndarray) -> np.ndarray:
+    config = sensor.fields.get("fdtd_sensor")
+    if not isinstance(config, dict) or not bool(config.get("enabled", True)):
+        return np.asarray(values)
+    return fdtd_sensor_apply_optical_response(values, config)
+
+
+def _sensor_apply_tcad_collection_response(sensor: Sensor, values: np.ndarray) -> np.ndarray:
+    config = sensor.fields.get("tcad_sensor")
+    if not isinstance(config, dict) or not bool(config.get("enabled", True)):
+        return np.asarray(values)
+    return tcad_sensor_apply_collection_response(values, config)
+
+
+def _sensor_apply_physics_response(sensor: Sensor, values: np.ndarray) -> np.ndarray:
+    optical = _sensor_apply_fdtd_optical_response(sensor, values)
+    return _sensor_apply_tcad_collection_response(sensor, optical)
 
 
 def _signal_current_density(oi: OpticalImage, sensor: Sensor) -> np.ndarray:
@@ -7027,7 +7070,8 @@ def signal_current(oi: OpticalImage, sensor: Sensor) -> np.ndarray:
     working = sensor.clone()
     if working.fields["mosaic"]:
         current_density = _signal_current_density(oi, working)
-        return np.asarray(_spatial_integrate_current_density(current_density, oi, working), dtype=float)
+        signal = _spatial_integrate_current_density(current_density, oi, working)
+        return np.asarray(_sensor_apply_physics_response(working, signal), dtype=float)
 
     cube = np.asarray(oi.data["photons"], dtype=float)
     wave = np.asarray(oi.fields["wave"], dtype=float)
@@ -7037,6 +7081,7 @@ def signal_current(oi: OpticalImage, sensor: Sensor) -> np.ndarray:
     filter_spectra = _sensor_qe_on_wave(working, wave)
     electron_rate_density = np.tensordot(cube * delta_nm, filter_spectra, axes=([2], [0]))
     electron_rate = _regrid_electron_rate_density(electron_rate_density, oi, working) * pixel_area
+    electron_rate = _sensor_apply_physics_response(working, electron_rate)
     return np.asarray(electron_rate * _ELEMENTARY_CHARGE_C, dtype=float)
 
 
@@ -7504,6 +7549,7 @@ def sensor_compute(
     if computed.fields["mosaic"]:
         current_density = _signal_current_density(oi, computed)
         signal_current = _spatial_integrate_current_density(current_density, oi, computed)
+        signal_current = _sensor_apply_physics_response(computed, signal_current)
         exposure_map_m: np.ndarray | None = None
         if integration_time_matrix is not None:
             pattern_rows, pattern_cols = integration_time_matrix.shape
@@ -7526,6 +7572,7 @@ def sensor_compute(
         filter_spectra = _sensor_qe_on_wave(computed, wave)
         electron_rate_density = np.tensordot(cube * delta_nm, filter_spectra, axes=([2], [0]))
         electron_rate = _regrid_electron_rate_density(electron_rate_density, oi, computed) * pixel_area
+        electron_rate = _sensor_apply_physics_response(computed, electron_rate)
 
         def _base_volts(current_integration_time: float) -> tuple[np.ndarray, np.ndarray]:
             electrons = electron_rate * current_integration_time
