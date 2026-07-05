@@ -92,7 +92,7 @@ def _ensure_clean(target: Path) -> None:
 
 def _ensure_remote_exists(remote: str) -> None:
     probe = subprocess.run(
-        ["git", "ls-remote", "--exit-code", remote, "HEAD"],
+        ["git", "ls-remote", remote],
         text=True,
         capture_output=True,
         check=False,
