@@ -269,6 +269,25 @@ def test_camerae2e_parameter_candidate_plan_evolutionary_returns_seed_population
     }
 
 
+def test_camerae2e_parameter_candidate_plan_surrogate_returns_seed_population() -> None:
+    plan = camerae2e_parameter_candidate_plan(
+        {
+            "sensor.integration_time": [0.001, 0.002, 0.004],
+            "sensor.analog_gain": [1.0, 2.0, 4.0],
+        },
+        method="bayesian",
+        max_cases=6,
+        seed=14,
+    )
+
+    assert plan["method"] == "surrogate"
+    assert plan["max_cases"] == 6
+    assert plan["case_count"] == 4
+    assert plan["search_config"]["seed_count"] == 4
+    assert "not a calibrated Gaussian-process" in plan["search_config"]["truth_boundary"]
+    assert plan["warnings"][0]["kind"] == "surrogate_seed_plan"
+
+
 def test_camerae2e_optimize_parameters_rejects_invalid_values_before_run() -> None:
     try:
         camerae2e_optimize_parameters(
@@ -349,6 +368,54 @@ def test_camerae2e_optimize_parameters_supports_evolutionary_search() -> None:
         case["parameters"] for case in repeated["cases"]
     ]
     assert len({str(case["parameters"]) for case in result["cases"]}) == 5
+
+
+def test_camerae2e_optimize_parameters_supports_surrogate_search() -> None:
+    parameter_space = {
+        "sensor.integration_time": [0.001, 0.002, 0.004],
+        "sensor.analog_gain": [1.0, 2.0, 4.0],
+        "optics.fnumber": [2.0, 2.8, 4.0],
+    }
+    result = camerae2e_optimize_parameters(
+        {
+            "name": "unit_surrogate_parameter_optimization",
+            "scene": {"type": "uniform ee", "args": [8]},
+            "sensor": {"noise_flag": 0},
+        },
+        parameter_space,
+        {"metric": "metrics.color.rgb_mean", "direction": "maximize"},
+        method="bayesian",
+        max_cases=6,
+        seed=211,
+        top_k=2,
+    )
+    repeated = camerae2e_optimize_parameters(
+        {
+            "name": "unit_surrogate_parameter_optimization",
+            "scene": {"type": "uniform ee", "args": [8]},
+            "sensor": {"noise_flag": 0},
+        },
+        parameter_space,
+        {"metric": "metrics.color.rgb_mean", "direction": "maximize"},
+        method="surrogate",
+        max_cases=6,
+        seed=211,
+        top_k=2,
+    )
+
+    assert result["method"] == "budgeted_surrogate"
+    assert result["search_method"] == "surrogate"
+    assert result["case_count"] == 6
+    assert result["candidate_plan"]["case_count"] == 6
+    assert result["candidate_plan"]["search_config"]["model"] == (
+        "discrete_rbf_inverse_distance_surrogate"
+    )
+    assert result["candidate_plan"]["search_trace"]
+    assert result["candidate_plan"]["executed_generation_count"] >= 1
+    assert [case["parameters"] for case in result["cases"]] == [
+        case["parameters"] for case in repeated["cases"]
+    ]
+    assert len({str(case["parameters"]) for case in result["cases"]}) == 6
 
 
 def test_camerae2e_scenario_applies_extended_configure_axes() -> None:

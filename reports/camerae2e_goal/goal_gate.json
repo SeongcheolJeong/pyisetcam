@@ -340,6 +340,10 @@
     },
     {
       "evidence": {
+        "adaptive_methods": [
+          "evolutionary",
+          "surrogate"
+        ],
         "automation": {
           "axes": {
             "sensor.analog_gain": {
@@ -595,11 +599,123 @@
         },
         "registered_configure_count": 32,
         "search_method": "evolutionary",
-        "seed": 2036
+        "seed": 2036,
+        "surrogate_candidate_plan": {
+          "axis_count": 2,
+          "axis_sizes": {
+            "sensor.analog_gain": 3,
+            "sensor.integration_time": 2
+          },
+          "candidate_preview": [
+            {
+              "sensor.analog_gain": 1.0,
+              "sensor.integration_time": 0.001
+            },
+            {
+              "sensor.analog_gain": 4.0,
+              "sensor.integration_time": 0.004
+            },
+            {
+              "sensor.analog_gain": 2.0,
+              "sensor.integration_time": 0.001
+            },
+            {
+              "sensor.analog_gain": 2.0,
+              "sensor.integration_time": 0.004
+            }
+          ],
+          "case_count": 4,
+          "executed_generation_count": 1,
+          "full_grid_count": 6,
+          "implicit_default_budget": false,
+          "max_cases": 4,
+          "method": "surrogate",
+          "ok": true,
+          "parameter_space_validation": {
+            "axes": {
+              "sensor.analog_gain": {
+                "assignment": "scenario.sensor -> sensor_set(...)",
+                "issues": [],
+                "readiness_tier": "validated",
+                "status": "registered",
+                "value_count": 3,
+                "value_issues": [],
+                "value_warnings": [],
+                "values": [
+                  1.0,
+                  2.0,
+                  4.0
+                ]
+              },
+              "sensor.integration_time": {
+                "assignment": "scenario.sensor -> sensor_set(...)",
+                "issues": [],
+                "readiness_tier": "validated",
+                "status": "registered",
+                "value_count": 2,
+                "value_issues": [],
+                "value_warnings": [],
+                "values": [
+                  0.001,
+                  0.004
+                ]
+              }
+            },
+            "axis_count": 2,
+            "issue_count": 0,
+            "issues": [],
+            "ok": true,
+            "schema_version": "camerae2e_parameter_space_validation_v1",
+            "warning_count": 0,
+            "warnings": []
+          },
+          "schema_version": "camerae2e_parameter_candidate_plan_v1",
+          "search_config": {
+            "acquisition": "expected_improvement_proxy_plus_uncertainty",
+            "budget": 4,
+            "candidate_pool_size": 6,
+            "exploration_weight": 0.35,
+            "length_scale": 0.75,
+            "model": "discrete_rbf_inverse_distance_surrogate",
+            "seed_count": 4,
+            "truth_boundary": "Surrogate search is a deterministic discrete-axis acquisition proxy, not a calibrated Gaussian-process Bayesian optimizer."
+          },
+          "search_trace": [
+            {
+              "best_case_index": 3,
+              "best_feasible": true,
+              "best_parameters": {
+                "sensor.analog_gain": 2.0,
+                "sensor.integration_time": 0.004
+              },
+              "best_score": 0.009286749079007636,
+              "candidate_count": 4,
+              "candidate_pool_size": 6,
+              "evaluated_count": 4,
+              "generation": 0,
+              "selected_case_index": 3,
+              "selected_parameters": {
+                "sensor.analog_gain": 2.0,
+                "sensor.integration_time": 0.004
+              },
+              "selected_score": 0.009286749079007636
+            }
+          ],
+          "seed": 2037,
+          "truncated": true,
+          "warnings": [
+            {
+              "kind": "surrogate_seed_plan",
+              "message": "Standalone surrogate candidate plans contain only the seed population; camerae2e_optimize_parameters expands the search with a discrete RBF acquisition proxy over candidate pools."
+            }
+          ]
+        },
+        "surrogate_method": "budgeted_surrogate",
+        "surrogate_search_method": "surrogate"
       },
       "name": "parameter_optimization",
       "status": "pass",
-      "summary": "Camera parameter optimization runs FACA objective search with validated, budget-aware and evolutionary candidate planning.",
+      "summary": "Camera parameter optimization runs FACA objective search with validated, budget-aware evolutionary and surrogate candidate planning.",
       "tier": "validated"
     },
     {
@@ -840,7 +956,7 @@
       "tier": "calibration_required"
     }
   ],
-  "generated_at": "2026-07-05T06:36:27.069248+00:00",
+  "generated_at": "2026-07-05T06:45:28.605255+00:00",
   "goal": "Research-grade E2E optimization platform plus RAW data factory for perception training.",
   "ok": true,
   "output_dir": "/Users/seongcheoljeong/Documents/CameraE2E/reports/camerae2e_goal",

@@ -478,8 +478,8 @@ def camerae2e_optimize_parameters(
 
     The score is always maximized. Objective specs can maximize, minimize, or
     target any numeric path in the FACA report. Supported methods are grid,
-    random, Latin-hypercube, and score-ranked evolutionary search over the
-    discrete axis values supplied by the caller or preset catalog.
+    random, Latin-hypercube, score-ranked evolutionary, and discrete surrogate
+    search over the axis values supplied by the caller or preset catalog.
     """
 
     axes = _normalize_parameter_space(parameter_space or {})
@@ -499,6 +499,20 @@ def camerae2e_optimize_parameters(
     constraint_specs = [dict(item) for item in constraints or []]
     if candidate_plan["method"] == "evolutionary":
         cases, candidate_plan = _run_evolutionary_parameter_search(
+            candidate_plan,
+            axes,
+            base_scenario=base_scenario,
+            objective_specs=objective_specs,
+            objective=objective,
+            constraint_specs=constraint_specs,
+            scene=scene,
+            camera=camera,
+            asset_store=asset_store,
+            seed=seed,
+            include_arrays=include_arrays,
+        )
+    elif candidate_plan["method"] == "surrogate":
+        cases, candidate_plan = _run_surrogate_parameter_search(
             candidate_plan,
             axes,
             base_scenario=base_scenario,
@@ -594,9 +608,10 @@ def camerae2e_parameter_candidate_plan(
 
     ``grid`` preserves Cartesian grid semantics.  ``random`` and
     ``latin_hypercube`` sample from the provided discrete axis values and default
-    to a bounded budget when ``max_cases`` is omitted. ``evolutionary`` returns
-    a deterministic seed population; :func:`camerae2e_optimize_parameters`
-    expands it adaptively using evaluated FACA objective scores.
+    to a bounded budget when ``max_cases`` is omitted. ``evolutionary`` and
+    ``surrogate`` return deterministic seed populations;
+    :func:`camerae2e_optimize_parameters` expands them adaptively using
+    evaluated FACA objective scores.
     """
 
     axes = _normalize_parameter_space(parameter_space)
@@ -627,8 +642,8 @@ def camerae2e_parameter_candidate_plan(
             "candidates": [],
         }
     if method_key == "evolutionary":
-        population_size = _evolutionary_population_size(axes, budget)
-        candidates = _evolutionary_seed_candidates(axes, population_size, seed)
+        adaptive_seed_count = _evolutionary_population_size(axes, budget)
+        candidates = _evolutionary_seed_candidates(axes, adaptive_seed_count, seed)
         warnings.append(
             {
                 "kind": "evolutionary_seed_plan",
@@ -639,8 +654,21 @@ def camerae2e_parameter_candidate_plan(
                 ),
             }
         )
+    elif method_key == "surrogate":
+        adaptive_seed_count = _surrogate_seed_count(axes, budget)
+        candidates = _surrogate_seed_candidates(axes, adaptive_seed_count, seed)
+        warnings.append(
+            {
+                "kind": "surrogate_seed_plan",
+                "message": (
+                    "Standalone surrogate candidate plans contain only the seed "
+                    "population; camerae2e_optimize_parameters expands the search "
+                    "with a discrete RBF acquisition proxy over candidate pools."
+                ),
+            }
+        )
     else:
-        population_size = None
+        adaptive_seed_count = None
         candidates = _generate_parameter_candidates(
             axes,
             method=method_key,
@@ -669,9 +697,12 @@ def camerae2e_parameter_candidate_plan(
         "implicit_default_budget": implicit_default_budget,
         "truncated": len(candidates) < full_grid_count,
         "case_count": len(candidates),
-        "search_config": _evolutionary_search_config(axes, budget, population_size)
-        if method_key == "evolutionary"
-        else {},
+        "search_config": _adaptive_search_config(
+            method_key,
+            axes,
+            budget,
+            adaptive_seed_count,
+        ),
         "parameter_space_validation": validation,
         "warnings": warnings,
         "candidates": _jsonable(candidates),
@@ -972,11 +1003,18 @@ def _normalize_candidate_method(method: str) -> str:
         "genetic": "evolutionary",
         "genetic_algorithm": "evolutionary",
         "ea": "evolutionary",
+        "surrogate": "surrogate",
+        "surrogate_search": "surrogate",
+        "surrogate_guided": "surrogate",
+        "model_guided": "surrogate",
+        "bayesian": "surrogate",
+        "bayesian_proxy": "surrogate",
+        "bayesian_optimization": "surrogate",
     }
     if key not in aliases:
         raise ValueError(
             "Candidate generation method must be one of: grid, random, "
-            "latin_hypercube, evolutionary."
+            "latin_hypercube, evolutionary, surrogate."
         )
     return aliases[key]
 
@@ -1020,6 +1058,12 @@ def _generate_parameter_candidates(
         return _evolutionary_seed_candidates(
             axes,
             _evolutionary_population_size(axes, max_cases),
+            seed,
+        )
+    if method == "surrogate":
+        return _surrogate_seed_candidates(
+            axes,
+            _surrogate_seed_count(axes, max_cases),
             seed,
         )
     raise ValueError(f"Unsupported candidate generation method: {method!r}.")
@@ -1150,6 +1194,19 @@ def _evolutionary_search_config(
     }
 
 
+def _adaptive_search_config(
+    method: str,
+    axes: Mapping[str, list[Any]],
+    budget: int,
+    seed_count: int | None,
+) -> dict[str, Any]:
+    if method == "evolutionary":
+        return _evolutionary_search_config(axes, budget, seed_count)
+    if method == "surrogate":
+        return _surrogate_search_config(axes, budget, seed_count)
+    return {}
+
+
 def _evolutionary_seed_candidates(
     axes: Mapping[str, list[Any]], population_size: int, seed: int
 ) -> list[dict[str, Any]]:
@@ -1164,6 +1221,55 @@ def _evolutionary_seed_candidates(
     candidates.extend(_latin_hypercube_candidates(axes, int(population_size), seed))
     candidates.extend(_random_candidates(axes, int(population_size), int(seed) + 991))
     return _dedupe_and_fill_candidates(candidates, axes, int(population_size))
+
+
+def _surrogate_seed_count(axes: Mapping[str, list[Any]], budget: int) -> int:
+    if not axes:
+        return 1
+    full_grid_count = _full_grid_count(axes)
+    axis_count = max(len(axes), 1)
+    requested = max(4, 2 * axis_count)
+    return int(min(max(int(budget), 1), full_grid_count, requested))
+
+
+def _surrogate_search_config(
+    axes: Mapping[str, list[Any]],
+    budget: int,
+    seed_count: int | None = None,
+) -> dict[str, Any]:
+    if seed_count is None:
+        seed_count = _surrogate_seed_count(axes, budget)
+    full_grid_count = _full_grid_count(axes)
+    candidate_pool_size = int(min(full_grid_count, max(256, int(budget) * 64)))
+    return {
+        "seed_count": int(seed_count),
+        "candidate_pool_size": candidate_pool_size,
+        "exploration_weight": 0.35,
+        "length_scale": 0.75,
+        "model": "discrete_rbf_inverse_distance_surrogate",
+        "acquisition": "expected_improvement_proxy_plus_uncertainty",
+        "truth_boundary": (
+            "Surrogate search is a deterministic discrete-axis acquisition proxy, "
+            "not a calibrated Gaussian-process Bayesian optimizer."
+        ),
+        "budget": int(budget),
+    }
+
+
+def _surrogate_seed_candidates(
+    axes: Mapping[str, list[Any]], seed_count: int, seed: int
+) -> list[dict[str, Any]]:
+    if not axes:
+        return [{}]
+    candidates: list[dict[str, Any]] = []
+    full_grid_count = _full_grid_count(axes)
+    if full_grid_count:
+        candidates.append(_candidate_from_grid_index(axes, 0))
+    if full_grid_count > 1:
+        candidates.append(_candidate_from_grid_index(axes, full_grid_count - 1))
+    candidates.extend(_latin_hypercube_candidates(axes, int(seed_count), int(seed) + 101))
+    candidates.extend(_random_candidates(axes, int(seed_count), int(seed) + 202))
+    return _dedupe_and_fill_candidates(candidates, axes, int(seed_count))
 
 
 def _run_evolutionary_parameter_search(
@@ -1242,6 +1348,94 @@ def _run_evolutionary_parameter_search(
         )
         if not pending:
             break
+        generation += 1
+
+    executed_plan = dict(candidate_plan)
+    executed_plan["case_count"] = len(cases)
+    executed_plan["truncated"] = len(cases) < full_grid_count
+    executed_plan["candidates"] = [_jsonable(case.get("parameters", {})) for case in cases]
+    executed_plan["search_config"] = _jsonable(config)
+    executed_plan["search_trace"] = _jsonable(search_trace)
+    executed_plan["executed_generation_count"] = len(search_trace)
+    return cases, executed_plan
+
+
+def _run_surrogate_parameter_search(
+    candidate_plan: Mapping[str, Any],
+    axes: Mapping[str, list[Any]],
+    *,
+    base_scenario: Mapping[str, Any] | None,
+    objective_specs: list[dict[str, Any]],
+    objective: ObjectiveSpec | ObjectiveCallable | None,
+    constraint_specs: list[dict[str, Any]],
+    scene: Scene | str | Mapping[str, Any] | None,
+    camera: Camera | None,
+    asset_store: AssetStore | None,
+    seed: int,
+    include_arrays: bool,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    budget = int(candidate_plan.get("max_cases", 1))
+    config = dict(candidate_plan.get("search_config") or _surrogate_search_config(axes, budget))
+    pool = _surrogate_candidate_pool(
+        axes,
+        pool_size=int(config.get("candidate_pool_size", max(256, budget * 64))),
+        seed=int(seed) + 303,
+    )
+    pending = [dict(candidate) for candidate in candidate_plan.get("candidates", [])]
+    seen: set[str] = set()
+    cases: list[dict[str, Any]] = []
+    search_trace: list[dict[str, Any]] = []
+    generation = 0
+    full_grid_count = _full_grid_count(axes)
+
+    while len(cases) < budget and len(seen) < full_grid_count:
+        generation_cases: list[dict[str, Any]] = []
+        for candidate in pending:
+            if len(cases) >= budget:
+                break
+            signature = _candidate_signature(candidate)
+            if signature in seen:
+                continue
+            case = _evaluate_parameter_candidate(
+                candidate,
+                case_index=len(cases),
+                base_scenario=base_scenario,
+                objective_specs=objective_specs,
+                objective=objective,
+                constraint_specs=constraint_specs,
+                scene=scene,
+                camera=camera,
+                asset_store=asset_store,
+                seed=seed,
+                include_arrays=include_arrays,
+            )
+            cases.append(case)
+            generation_cases.append(case)
+            seen.add(signature)
+
+        ranked = _rank_cases_for_search(cases)
+        search_trace.append(
+            _surrogate_trace_entry(
+                generation,
+                generation_cases,
+                ranked,
+                evaluated_count=len(cases),
+                pool_size=len(pool),
+            )
+        )
+        if len(cases) >= budget or len(seen) >= full_grid_count:
+            break
+        next_candidate = _surrogate_next_candidate(
+            axes,
+            pool,
+            cases,
+            seen,
+            exploration_weight=float(config.get("exploration_weight", 0.35)),
+            length_scale=float(config.get("length_scale", 0.75)),
+        )
+        if next_candidate is None:
+            break
+        pending = [next_candidate]
         generation += 1
 
     executed_plan = dict(candidate_plan)
@@ -1346,6 +1540,92 @@ def _evolutionary_next_candidates(
     return _dedupe_new_candidates(candidates, axes, population_size, seen)
 
 
+def _surrogate_candidate_pool(
+    axes: Mapping[str, list[Any]],
+    *,
+    pool_size: int,
+    seed: int,
+) -> list[dict[str, Any]]:
+    if not axes:
+        return [{}]
+    full_grid_count = _full_grid_count(axes)
+    if full_grid_count <= int(pool_size):
+        return _grid_candidates(axes, full_grid_count)
+    candidates: list[dict[str, Any]] = []
+    candidates.extend(_latin_hypercube_candidates(axes, int(pool_size), seed))
+    candidates.extend(_random_candidates(axes, int(pool_size), int(seed) + 991))
+    return _dedupe_and_fill_candidates(candidates, axes, int(pool_size))
+
+
+def _surrogate_next_candidate(
+    axes: Mapping[str, list[Any]],
+    candidate_pool: Iterable[Mapping[str, Any]],
+    cases: Iterable[Mapping[str, Any]],
+    seen: set[str],
+    *,
+    exploration_weight: float,
+    length_scale: float,
+) -> dict[str, Any] | None:
+    evaluated = [case for case in cases if case.get("parameters") is not None]
+    if not evaluated:
+        return None
+    observed_vectors = np.asarray(
+        [_candidate_vector(case["parameters"], axes) for case in evaluated],
+        dtype=float,
+    )
+    observed_scores = _surrogate_score_array(evaluated)
+    best_score = float(np.max(observed_scores)) if observed_scores.size else 0.0
+    score_scale = float(np.std(observed_scores)) if observed_scores.size > 1 else 1.0
+    score_scale = max(score_scale, 1.0e-9)
+    best_candidate: dict[str, Any] | None = None
+    best_acquisition = -math.inf
+    for candidate in candidate_pool:
+        payload = dict(candidate)
+        signature = _candidate_signature(payload)
+        if signature in seen:
+            continue
+        vector = _candidate_vector(payload, axes)
+        distances = np.linalg.norm(observed_vectors - vector, axis=1)
+        weights = np.exp(-np.square(distances) / max(2.0 * length_scale * length_scale, 1.0e-12))
+        weight_sum = float(np.sum(weights))
+        if weight_sum <= 1.0e-12:
+            prediction = float(np.mean(observed_scores))
+        else:
+            prediction = float(np.dot(weights, observed_scores) / weight_sum)
+        uncertainty = float(min(np.min(distances) / max(math.sqrt(max(len(axes), 1)), 1.0), 1.0))
+        improvement_proxy = max(prediction - best_score, 0.0)
+        acquisition = improvement_proxy + (float(exploration_weight) * score_scale * uncertainty)
+        if acquisition > best_acquisition:
+            best_acquisition = acquisition
+            best_candidate = payload
+    return best_candidate
+
+
+def _candidate_vector(candidate: Mapping[str, Any], axes: Mapping[str, list[Any]]) -> np.ndarray:
+    values = []
+    for key, axis_values in axes.items():
+        value_to_index = {
+            _value_signature(value): index
+            for index, value in enumerate(axis_values)
+        }
+        index = value_to_index.get(_value_signature(candidate.get(key)), 0)
+        denominator = max(len(axis_values) - 1, 1)
+        values.append(float(index) / float(denominator))
+    return np.asarray(values, dtype=float)
+
+
+def _surrogate_score_array(cases: Iterable[Mapping[str, Any]]) -> np.ndarray:
+    raw_scores = np.asarray(
+        [float(case.get("score", -math.inf)) for case in cases],
+        dtype=float,
+    )
+    finite = raw_scores[np.isfinite(raw_scores)]
+    if finite.size == 0:
+        return np.zeros(raw_scores.shape, dtype=float)
+    floor = float(np.min(finite)) - max(float(np.std(finite)), 1.0)
+    return np.where(np.isfinite(raw_scores), raw_scores, floor)
+
+
 def _mutate_candidate(
     candidate: Mapping[str, Any],
     axes: Mapping[str, list[Any]],
@@ -1410,6 +1690,31 @@ def _evolutionary_trace_entry(
     }
 
 
+def _surrogate_trace_entry(
+    generation: int,
+    generation_cases: list[Mapping[str, Any]],
+    ranked_cases: list[Mapping[str, Any]],
+    *,
+    evaluated_count: int,
+    pool_size: int,
+) -> dict[str, Any]:
+    best = ranked_cases[0] if ranked_cases else {}
+    selected = generation_cases[-1] if generation_cases else {}
+    return {
+        "generation": int(generation),
+        "candidate_count": len(generation_cases),
+        "evaluated_count": int(evaluated_count),
+        "candidate_pool_size": int(pool_size),
+        "best_case_index": best.get("case_index"),
+        "best_score": best.get("score"),
+        "best_feasible": best.get("feasible"),
+        "best_parameters": _jsonable(best.get("parameters", {})),
+        "selected_case_index": selected.get("case_index"),
+        "selected_score": selected.get("score"),
+        "selected_parameters": _jsonable(selected.get("parameters", {})),
+    }
+
+
 def _dedupe_and_fill_candidates(
     candidates: Iterable[Mapping[str, Any]],
     axes: Mapping[str, list[Any]],
@@ -1440,6 +1745,10 @@ def _dedupe_and_fill_candidates(
 
 def _candidate_signature(candidate: Mapping[str, Any]) -> str:
     return str(_jsonable(candidate))
+
+
+def _value_signature(value: Any) -> str:
+    return str(_jsonable(value))
 
 
 def _candidate_plan_summary(plan: Mapping[str, Any]) -> dict[str, Any]:

@@ -152,7 +152,7 @@ def _capability_matrix(
             "implemented": (
                 "Preset parameter-space catalog plus deterministic grid, random, "
                 "Latin-hypercube candidate planning, and score-ranked evolutionary "
-                "search over "
+                "plus discrete surrogate-guided search over "
                 "dot-path camera parameters using FACA metric objectives, constraints, "
                 "Pareto front, selected scenarios, parameter-lineage evidence, "
                 "pixel geometry/CFA/readout/binning/OCL/noise/optics-PSF/FDTD-OCL configure "
@@ -160,7 +160,7 @@ def _capability_matrix(
                 "validation."
             ),
             "remaining": (
-                "Bayesian/surrogate search, true multi-factor readout/remosaic "
+                "True Gaussian-process Bayesian search, true multi-factor readout/remosaic "
                 "binning, OCL process-stack calibration, and closed-loop hardware calibration."
             ),
         },

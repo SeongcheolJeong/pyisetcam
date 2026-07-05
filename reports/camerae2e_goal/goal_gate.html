@@ -24,7 +24,7 @@ code { word-break: break-all; }
 <p class="lead">Research-grade E2E optimization platform plus RAW data factory for perception training.</p>
 <p>OK: <strong>True</strong>; strict:
 <strong>False</strong>; generated:
-<code>2026-07-05T06:36:27.069248+00:00</code></p>
+<code>2026-07-05T06:45:28.605255+00:00</code></p>
 <p>Artifacts: <code>/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke</code></p>
 <h2>Requirements</h2>
 <table>
@@ -343,7 +343,11 @@ code { word-break: break-all; }
       &quot;std&quot;: 0.011569184556674312
     }
   }
-}</pre></td></tr><tr><td>parameter_optimization</td><td><span class='status status-pass'>pass</span></td><td>validated</td><td>Camera parameter optimization runs FACA objective search with validated, budget-aware and evolutionary candidate planning.</td><td><pre>{
+}</pre></td></tr><tr><td>parameter_optimization</td><td><span class='status status-pass'>pass</span></td><td>validated</td><td>Camera parameter optimization runs FACA objective search with validated, budget-aware evolutionary and surrogate candidate planning.</td><td><pre>{
+  &quot;adaptive_methods&quot;: [
+    &quot;evolutionary&quot;,
+    &quot;surrogate&quot;
+  ],
   &quot;automation&quot;: {
     &quot;axes&quot;: {
       &quot;sensor.analog_gain&quot;: {
@@ -599,7 +603,119 @@ code { word-break: break-all; }
   },
   &quot;registered_configure_count&quot;: 32,
   &quot;search_method&quot;: &quot;evolutionary&quot;,
-  &quot;seed&quot;: 2036
+  &quot;seed&quot;: 2036,
+  &quot;surrogate_candidate_plan&quot;: {
+    &quot;axis_count&quot;: 2,
+    &quot;axis_sizes&quot;: {
+      &quot;sensor.analog_gain&quot;: 3,
+      &quot;sensor.integration_time&quot;: 2
+    },
+    &quot;candidate_preview&quot;: [
+      {
+        &quot;sensor.analog_gain&quot;: 1.0,
+        &quot;sensor.integration_time&quot;: 0.001
+      },
+      {
+        &quot;sensor.analog_gain&quot;: 4.0,
+        &quot;sensor.integration_time&quot;: 0.004
+      },
+      {
+        &quot;sensor.analog_gain&quot;: 2.0,
+        &quot;sensor.integration_time&quot;: 0.001
+      },
+      {
+        &quot;sensor.analog_gain&quot;: 2.0,
+        &quot;sensor.integration_time&quot;: 0.004
+      }
+    ],
+    &quot;case_count&quot;: 4,
+    &quot;executed_generation_count&quot;: 1,
+    &quot;full_grid_count&quot;: 6,
+    &quot;implicit_default_budget&quot;: false,
+    &quot;max_cases&quot;: 4,
+    &quot;method&quot;: &quot;surrogate&quot;,
+    &quot;ok&quot;: true,
+    &quot;parameter_space_validation&quot;: {
+      &quot;axes&quot;: {
+        &quot;sensor.analog_gain&quot;: {
+          &quot;assignment&quot;: &quot;scenario.sensor -&gt; sensor_set(...)&quot;,
+          &quot;issues&quot;: [],
+          &quot;readiness_tier&quot;: &quot;validated&quot;,
+          &quot;status&quot;: &quot;registered&quot;,
+          &quot;value_count&quot;: 3,
+          &quot;value_issues&quot;: [],
+          &quot;value_warnings&quot;: [],
+          &quot;values&quot;: [
+            1.0,
+            2.0,
+            4.0
+          ]
+        },
+        &quot;sensor.integration_time&quot;: {
+          &quot;assignment&quot;: &quot;scenario.sensor -&gt; sensor_set(...)&quot;,
+          &quot;issues&quot;: [],
+          &quot;readiness_tier&quot;: &quot;validated&quot;,
+          &quot;status&quot;: &quot;registered&quot;,
+          &quot;value_count&quot;: 2,
+          &quot;value_issues&quot;: [],
+          &quot;value_warnings&quot;: [],
+          &quot;values&quot;: [
+            0.001,
+            0.004
+          ]
+        }
+      },
+      &quot;axis_count&quot;: 2,
+      &quot;issue_count&quot;: 0,
+      &quot;issues&quot;: [],
+      &quot;ok&quot;: true,
+      &quot;schema_version&quot;: &quot;camerae2e_parameter_space_validation_v1&quot;,
+      &quot;warning_count&quot;: 0,
+      &quot;warnings&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;camerae2e_parameter_candidate_plan_v1&quot;,
+    &quot;search_config&quot;: {
+      &quot;acquisition&quot;: &quot;expected_improvement_proxy_plus_uncertainty&quot;,
+      &quot;budget&quot;: 4,
+      &quot;candidate_pool_size&quot;: 6,
+      &quot;exploration_weight&quot;: 0.35,
+      &quot;length_scale&quot;: 0.75,
+      &quot;model&quot;: &quot;discrete_rbf_inverse_distance_surrogate&quot;,
+      &quot;seed_count&quot;: 4,
+      &quot;truth_boundary&quot;: &quot;Surrogate search is a deterministic discrete-axis acquisition proxy, not a calibrated Gaussian-process Bayesian optimizer.&quot;
+    },
+    &quot;search_trace&quot;: [
+      {
+        &quot;best_case_index&quot;: 3,
+        &quot;best_feasible&quot;: true,
+        &quot;best_parameters&quot;: {
+          &quot;sensor.analog_gain&quot;: 2.0,
+          &quot;sensor.integration_time&quot;: 0.004
+        },
+        &quot;best_score&quot;: 0.009286749079007636,
+        &quot;candidate_count&quot;: 4,
+        &quot;candidate_pool_size&quot;: 6,
+        &quot;evaluated_count&quot;: 4,
+        &quot;generation&quot;: 0,
+        &quot;selected_case_index&quot;: 3,
+        &quot;selected_parameters&quot;: {
+          &quot;sensor.analog_gain&quot;: 2.0,
+          &quot;sensor.integration_time&quot;: 0.004
+        },
+        &quot;selected_score&quot;: 0.009286749079007636
+      }
+    ],
+    &quot;seed&quot;: 2037,
+    &quot;truncated&quot;: true,
+    &quot;warnings&quot;: [
+      {
+        &quot;kind&quot;: &quot;surrogate_seed_plan&quot;,
+        &quot;message&quot;: &quot;Standalone surrogate candidate plans contain only the seed population; camerae2e_optimize_parameters expands the search with a discrete RBF acquisition proxy over candidate pools.&quot;
+      }
+    ]
+  },
+  &quot;surrogate_method&quot;: &quot;budgeted_surrogate&quot;,
+  &quot;surrogate_search_method&quot;: &quot;surrogate&quot;
 }</pre></td></tr><tr><td>dataset_factory_smoke</td><td><span class='status status-pass'>pass</span></td><td>validated</td><td>RAW data factory exports deterministic NPZ, metadata, labels, and lineage.</td><td><pre>{
   &quot;case_count&quot;: 1,
   &quot;dataset_root&quot;: &quot;/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke/optimization_dataset&quot;,

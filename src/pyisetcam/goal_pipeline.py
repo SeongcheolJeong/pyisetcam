@@ -265,26 +265,46 @@ def _optimization_smoke(*, seed: int) -> dict[str, Any]:
         seed=seed,
         top_k=1,
     )
+    surrogate_result = camerae2e_optimize_camera_parameters(
+        {
+            "name": "goal_gate_surrogate_optimization_smoke",
+            "scene": {"type": "uniform ee", "args": [8]},
+            "sensor": {"noise_flag": 0},
+        },
+        preset="exposure",
+        parameter_space={"sensor.integration_time": [0.001, 0.004]},
+        objective={"metric": "metrics.color.rgb_mean", "direction": "maximize"},
+        method="bayesian",
+        max_cases=4,
+        seed=seed + 1,
+        top_k=1,
+    )
     best = dict(result.get("best_case", {}))
     passed = (
         result.get("schema_version") == "camerae2e_parameter_optimization_v1"
         and int(result.get("case_count", 0)) >= 2
         and best.get("parameters", {}).get("sensor.integration_time") == 0.004
+        and surrogate_result.get("search_method") == "surrogate"
+        and int(surrogate_result.get("case_count", 0)) >= 2
     )
     return {
         "status": "pass" if passed else "fail",
         "tier": "validated",
         "summary": (
             "Camera parameter optimization runs FACA objective search with "
-            "validated, budget-aware and evolutionary candidate planning."
+            "validated, budget-aware evolutionary and surrogate candidate planning."
         ),
         "evidence": {
             "seed": seed,
             "registered_configure_count": config_catalog.get("registered_axis_count"),
             "presets": config_catalog.get("presets", {}),
+            "adaptive_methods": ["evolutionary", "surrogate"],
             "method": result.get("method"),
             "search_method": result.get("search_method"),
             "candidate_plan": result.get("candidate_plan", {}),
+            "surrogate_method": surrogate_result.get("method"),
+            "surrogate_search_method": surrogate_result.get("search_method"),
+            "surrogate_candidate_plan": surrogate_result.get("candidate_plan", {}),
             "case_count": result.get("case_count"),
             "feasible_count": result.get("feasible_count"),
             "pareto_case_count": result.get("pareto_case_count"),
