@@ -44,6 +44,9 @@ def camerae2e_dataset_export(
     labels: Mapping[str, Any] | Iterable[Mapping[str, Any]] | None = None,
     include_rgb: bool = True,
     include_tiff: bool = False,
+    include_stage_outputs: bool = False,
+    include_container: bool = False,
+    include_uncertainty: bool = False,
     split: Mapping[str, float] | Iterable[str] | str | None = None,
 ) -> dict[str, Any]:
     """Export reproducible CameraE2E RAW/stage data for perception training.
@@ -58,13 +61,25 @@ def camerae2e_dataset_export(
     rgb_dir = root / "rgb"
     label_dir = root / "labels"
     tiff_dir = root / "raw_tiff"
-    for directory in (raw_dir, rgb_dir, label_dir, tiff_dir if include_tiff else None):
+    stage_dir = root / "stage_outputs"
+    container_dir = root / "containers"
+    uncertainty_dir = root / "uncertainty"
+    for directory in (
+        raw_dir,
+        rgb_dir,
+        label_dir,
+        tiff_dir if include_tiff else None,
+        stage_dir if include_stage_outputs else None,
+        container_dir if include_container else None,
+        uncertainty_dir if include_uncertainty else None,
+    ):
         if directory is not None:
             directory.mkdir(parents=True, exist_ok=True)
 
     scenario_list = list(scenarios or [{"name": "camerae2e_dataset_case"}])
     label_list = _normalize_labels(labels, len(scenario_list))
     split_list = _normalize_splits(split, len(scenario_list))
+    split_policy = _split_policy(split, len(scenario_list), split_list)
     records: list[dict[str, Any]] = []
     metadata_path = root / "metadata.jsonl"
     with metadata_path.open("w", encoding="utf-8") as metadata_stream:
@@ -102,6 +117,20 @@ def camerae2e_dataset_export(
                 tiff_path = tiff_dir / f"{case_id}.tiff"
                 tifffile.imwrite(tiff_path, raw_array.astype(np.float32), photometric="minisblack")
 
+            stage_outputs_path = None
+            if include_stage_outputs:
+                stage_outputs_path = stage_dir / f"{case_id}.npz"
+                _write_stage_outputs(stage_outputs_path, result)
+
+            uncertainty_path = None
+            if include_uncertainty:
+                uncertainty_path = uncertainty_dir / f"{case_id}.npz"
+                _write_uncertainty_outputs(
+                    uncertainty_path,
+                    raw_array,
+                    sensor_digital_array,
+                )
+
             label_payload = {
                 "schema_version": "camerae2e_dataset_labels_v1",
                 "case_id": case_id,
@@ -125,6 +154,9 @@ def camerae2e_dataset_export(
                 "raw": str(raw_path),
                 "rgb": None if rgb_path is None else str(rgb_path),
                 "raw_tiff": None if tiff_path is None else str(tiff_path),
+                "stage_outputs": None if stage_outputs_path is None else str(stage_outputs_path),
+                "container": None,
+                "uncertainty": None if uncertainty_path is None else str(uncertainty_path),
                 "labels": str(label_path),
                 "raw_shape": list(raw_array.shape),
                 "raw_dtype": str(raw_array.dtype),
@@ -137,12 +169,37 @@ def camerae2e_dataset_export(
                 "sensor_digital_content_sha256": _sha256_array(sensor_digital_array),
                 "rgb_sha256": None if rgb_path is None else _sha256_file(rgb_path),
                 "raw_tiff_sha256": None if tiff_path is None else _sha256_file(tiff_path),
+                "stage_outputs_sha256": (
+                    None if stage_outputs_path is None else _sha256_file(stage_outputs_path)
+                ),
+                "container_sha256": None,
+                "uncertainty_sha256": (
+                    None if uncertainty_path is None else _sha256_file(uncertainty_path)
+                ),
                 "labels_sha256": _sha256_file(label_path),
                 "scenario": report.get("scenario", {}),
                 "parameter_lineage": report.get("parameter_lineage", []),
                 "stage_summaries": report.get("stage_summaries", {}),
                 "faca_metrics": report.get("metrics", {}),
+                "label_summary": _label_summary(label_list[index]),
+                "uncertainty_model": (
+                    None if uncertainty_path is None else _uncertainty_model_manifest()
+                ),
             }
+            if include_container:
+                container_path = container_dir / f"{case_id}.zip"
+                _write_case_container(
+                    container_path,
+                    record=record,
+                    raw_path=raw_path,
+                    label_path=label_path,
+                    rgb_path=rgb_path,
+                    tiff_path=tiff_path,
+                    stage_outputs_path=stage_outputs_path,
+                    uncertainty_path=uncertainty_path,
+                )
+                record["container"] = str(container_path)
+                record["container_sha256"] = _sha256_file(container_path)
             records.append(record)
             metadata_stream.write(json.dumps(_jsonable(record), sort_keys=True) + "\n")
 
@@ -156,13 +213,27 @@ def camerae2e_dataset_export(
         "seed": int(seed),
         "case_count": len(records),
         "splits": split_counts,
+        "split_policy": split_policy,
         "format": {
             "raw": "deterministic compressed NumPy .npz with raw and sensor_digital arrays",
             "rgb": "8-bit PNG preview when include_rgb=True",
             "raw_tiff": "float32 TIFF when include_tiff=True",
+            "stage_outputs": (
+                "deterministic NPZ with selected per-stage arrays when "
+                "include_stage_outputs=True"
+            ),
+            "uncertainty": (
+                "deterministic NPZ with proxy uncertainty/confidence maps when "
+                "include_uncertainty=True"
+            ),
             "labels": "JSON labels supplied by caller; empty by default",
-            "dng": "not emitted in v1",
+            "container": "deterministic DNG-like ZIP container when include_container=True",
+            "dng": "not emitted as standards-compliant DNG in v1",
         },
+        "truth_boundary": (
+            "RAW factory outputs are research artifacts. The optional container is "
+            "DNG-like for packaging only and is not a standards-compliant DNG."
+        ),
         "integrity": {
             "hash": "sha256",
             "raw_npz": "deterministic zip container with fixed member timestamps",
@@ -190,6 +261,9 @@ def camerae2e_dataset_export_from_optimization(
     labels: Mapping[str, Any] | Iterable[Mapping[str, Any]] | None = None,
     include_rgb: bool = True,
     include_tiff: bool = False,
+    include_stage_outputs: bool = False,
+    include_container: bool = False,
+    include_uncertainty: bool = False,
     split: Mapping[str, float] | Iterable[str] | str | None = None,
 ) -> dict[str, Any]:
     """Export RAW data from selected optimization cases.
@@ -218,6 +292,9 @@ def camerae2e_dataset_export_from_optimization(
         labels=labels,
         include_rgb=include_rgb,
         include_tiff=include_tiff,
+        include_stage_outputs=include_stage_outputs,
+        include_container=include_container,
+        include_uncertainty=include_uncertainty,
         split=effective_split,
     )
     manifest["source_optimization"] = {
@@ -519,6 +596,9 @@ def camerae2e_dataset_export_adas_kitti_demo(
     seed: int = 0,
     include_rgb: bool = True,
     include_tiff: bool = False,
+    include_stage_outputs: bool = False,
+    include_container: bool = False,
+    include_uncertainty: bool = False,
     split: Mapping[str, float] | Iterable[str] | str | None = "demo",
 ) -> dict[str, Any]:
     """Generate a KITTI/YOLO-style ADAS RAW dataset demo.
@@ -572,6 +652,9 @@ def camerae2e_dataset_export_adas_kitti_demo(
         labels=labels,
         include_rgb=include_rgb,
         include_tiff=include_tiff,
+        include_stage_outputs=include_stage_outputs,
+        include_container=include_container,
+        include_uncertainty=include_uncertainty,
         split=split,
     )
     manifest["adas_kitti_demo"] = {
@@ -603,6 +686,9 @@ def camerae2e_dataset_export_camera_spec_variants(
     seed: int = 0,
     include_rgb: bool = True,
     include_tiff: bool = False,
+    include_stage_outputs: bool = False,
+    include_container: bool = False,
+    include_uncertainty: bool = False,
     split: str = "camera_variant",
 ) -> dict[str, Any]:
     """Export proxy re-captures of one KITTI-style scene under target cameras.
@@ -712,6 +798,9 @@ def camerae2e_dataset_export_camera_spec_variants(
         labels=labels,
         include_rgb=include_rgb,
         include_tiff=include_tiff,
+        include_stage_outputs=include_stage_outputs,
+        include_container=include_container,
+        include_uncertainty=include_uncertainty,
         split=split,
     )
     manifest["camera_spec_variants"] = {
@@ -798,6 +887,52 @@ def _normalize_labels(
     if len(values) != count:
         raise ValueError("labels must contain one item per scenario when provided as an iterable.")
     return values
+
+
+def _label_summary(labels: Mapping[str, Any]) -> dict[str, Any]:
+    objects = list(labels.get("objects", [])) if isinstance(labels.get("objects", []), list) else []
+    masks = list(labels.get("masks", [])) if isinstance(labels.get("masks", []), list) else []
+    semantic_masks = (
+        list(labels.get("semantic_masks", []))
+        if isinstance(labels.get("semantic_masks", []), list)
+        else []
+    )
+    instance_masks = (
+        list(labels.get("instance_masks", []))
+        if isinstance(labels.get("instance_masks", []), list)
+        else []
+    )
+    keypoints = (
+        list(labels.get("keypoints", [])) if isinstance(labels.get("keypoints", []), list) else []
+    )
+    polylines = (
+        list(labels.get("polylines", [])) if isinstance(labels.get("polylines", []), list) else []
+    )
+    stage_tags = (
+        list(labels.get("stage_tags", [])) if isinstance(labels.get("stage_tags", []), list) else []
+    )
+    return {
+        "object_count": len(objects),
+        "mask_count": len(masks),
+        "semantic_mask_count": len(semantic_masks),
+        "instance_mask_count": len(instance_masks),
+        "keypoint_count": len(keypoints),
+        "polyline_count": len(polylines),
+        "stage_tag_count": len(stage_tags),
+        "supported_label_types": [
+            "objects",
+            "masks",
+            "semantic_masks",
+            "instance_masks",
+            "keypoints",
+            "polylines",
+            "stage_tags",
+        ],
+        "truth_boundary": (
+            "Labels are caller-provided or synthetic-helper-provided; CameraE2E "
+            "does not infer semantic truth from arbitrary images."
+        ),
+    }
 
 
 def _adas_scene_from_rgb(
@@ -1544,6 +1679,41 @@ def _normalize_splits(
     return values
 
 
+def _split_policy(
+    split: Mapping[str, float] | Iterable[str] | str | None,
+    count: int,
+    split_list: list[str],
+) -> dict[str, Any]:
+    if split is None:
+        mode = "unspecified"
+        requested: Any = None
+    elif isinstance(split, str):
+        mode = "single_split"
+        requested = split
+    elif isinstance(split, Mapping):
+        mode = "weighted_deterministic"
+        requested = {str(key): float(value) for key, value in split.items()}
+    else:
+        mode = "explicit_sequence"
+        requested = list(split_list)
+    counts: dict[str, int] = {}
+    for name in split_list:
+        counts[name] = counts.get(name, 0) + 1
+    fractions = {
+        name: (float(value) / max(int(count), 1))
+        for name, value in counts.items()
+    }
+    return {
+        "schema_version": "camerae2e_dataset_split_policy_v1",
+        "mode": mode,
+        "requested": requested,
+        "assigned_counts": counts,
+        "assigned_fractions": fractions,
+        "case_count": int(count),
+        "deterministic": True,
+    }
+
+
 def _array_from_stage(result: Mapping[str, Any], stage_name: str) -> np.ndarray:
     stage = dict(result.get("stages", {}).get(stage_name, {}))
     value = stage.get("array")
@@ -1566,6 +1736,109 @@ def _uint8_preview(array: Any) -> np.ndarray:
         upper = float(np.max(finite))
         finite = (finite - lower) / max(upper - lower, 1.0e-12)
     return np.clip(np.round(finite * 255.0), 0.0, 255.0).astype(np.uint8)
+
+
+def _write_stage_outputs(path: Path, result: Mapping[str, Any]) -> None:
+    arrays: dict[str, Any] = {}
+    for stage_name, stage in dict(result.get("stages", {})).items():
+        if not isinstance(stage, Mapping) or stage.get("array") is None:
+            continue
+        array = np.asarray(stage.get("array"))
+        if array.size == 0:
+            continue
+        arrays[_safe_npz_member_name(str(stage_name))] = array
+    if not arrays:
+        arrays["empty"] = np.empty(0, dtype=np.float32)
+    _write_npz_deterministic(path, **arrays)
+
+
+def _write_uncertainty_outputs(path: Path, raw_array: Any, sensor_digital_array: Any) -> None:
+    raw = np.asarray(raw_array, dtype=np.float64)
+    digital = np.asarray(sensor_digital_array, dtype=np.float64)
+    if raw.size == 0:
+        uncertainty = np.empty(0, dtype=np.float32)
+        confidence = np.empty(0, dtype=np.float32)
+    else:
+        base = raw
+        if digital.shape == raw.shape and np.nanstd(digital) > 0:
+            base = 0.5 * raw + 0.5 * digital
+        finite = np.nan_to_num(base, nan=0.0, posinf=0.0, neginf=0.0)
+        center = float(np.median(finite))
+        scale = max(float(np.std(finite)), 1.0e-12)
+        uncertainty = np.clip(np.abs(finite - center) / (3.0 * scale), 0.0, 1.0).astype(
+            np.float32
+        )
+        confidence = (1.0 - uncertainty).astype(np.float32)
+    _write_npz_deterministic(
+        path,
+        uncertainty=uncertainty,
+        confidence=confidence,
+    )
+
+
+def _uncertainty_model_manifest() -> dict[str, Any]:
+    return {
+        "schema_version": "camerae2e_uncertainty_proxy_v1",
+        "readiness_tier": "proxy",
+        "model": "normalized_raw_sensor_deviation",
+        "outputs": ["uncertainty", "confidence"],
+        "truth_boundary": (
+            "This is a deterministic proxy map for regression/debugging. It is not "
+            "a calibrated sensor noise posterior or model confidence estimate."
+        ),
+    }
+
+
+def _safe_npz_member_name(name: str) -> str:
+    return "".join(ch if ch.isalnum() or ch in {"_", "-"} else "_" for ch in name)
+
+
+def _write_case_container(
+    path: Path,
+    *,
+    record: Mapping[str, Any],
+    raw_path: Path,
+    label_path: Path,
+    rgb_path: Path | None,
+    tiff_path: Path | None,
+    stage_outputs_path: Path | None,
+    uncertainty_path: Path | None,
+) -> None:
+    payload = {
+        "schema_version": "camerae2e_raw_container_manifest_v1",
+        "case_id": record.get("case_id"),
+        "readiness_tier": "proxy",
+        "container_kind": "dng_like_zip",
+        "truth_boundary": (
+            "This package groups CameraE2E raw/stage/label artifacts. It is not a "
+            "standards-compliant DNG and must not be consumed as one."
+        ),
+        "record": _jsonable(
+            {
+                key: value
+                for key, value in record.items()
+                if key not in {"container", "container_sha256"}
+            }
+        ),
+    }
+    members: list[tuple[str, Path | None]] = [
+        ("raw.npz", raw_path),
+        ("labels.json", label_path),
+        ("rgb.png", rgb_path),
+        ("raw_tiff.tiff", tiff_path),
+        ("stage_outputs.npz", stage_outputs_path),
+        ("uncertainty.npz", uncertainty_path),
+    ]
+    with ZipFile(path, "w", compression=ZIP_DEFLATED) as archive:
+        info = ZipInfo("container_manifest.json", date_time=(1980, 1, 1, 0, 0, 0))
+        info.compress_type = ZIP_DEFLATED
+        archive.writestr(info, json.dumps(payload, sort_keys=True).encode("utf-8"))
+        for member_name, source_path in members:
+            if source_path is None or not source_path.exists():
+                continue
+            info = ZipInfo(member_name, date_time=(1980, 1, 1, 0, 0, 0))
+            info.compress_type = ZIP_DEFLATED
+            archive.writestr(info, source_path.read_bytes())
 
 
 def _write_npz_deterministic(path: Path, **arrays: Any) -> None:
@@ -1668,6 +1941,9 @@ def _validate_record(
     for path_key, hash_key, missing_kind in (
         ("rgb", "rgb_sha256", "missing_rgb"),
         ("raw_tiff", "raw_tiff_sha256", "missing_raw_tiff"),
+        ("stage_outputs", "stage_outputs_sha256", "missing_stage_outputs"),
+        ("container", "container_sha256", "missing_container"),
+        ("uncertainty", "uncertainty_sha256", "missing_uncertainty"),
         ("labels", "labels_sha256", "missing_labels"),
     ):
         path_value = record.get(path_key)

@@ -51,7 +51,53 @@ def test_camerae2e_dataset_export_writes_manifest_raw_preview_and_labels(tmp_pat
 
     assert raw["raw"].shape == tuple(record["raw_shape"])
     assert labels["labels"]["objects"][0]["label"] == "chart"
-    assert manifest["format"]["dng"] == "not emitted in v1"
+    assert manifest["format"]["dng"] == "not emitted as standards-compliant DNG in v1"
+    assert validation["ok"] is True
+
+
+def test_camerae2e_dataset_export_optional_stage_container_and_uncertainty(
+    tmp_path: Path,
+) -> None:
+    manifest = camerae2e_dataset_export(
+        tmp_path,
+        [
+            {
+                "name": "dataset_packaged_case",
+                "scene": {"type": "uniform ee", "args": [8]},
+                "sensor": {"noise_flag": 0},
+            }
+        ],
+        seed=6,
+        labels={
+            "objects": [{"label": "chart", "bbox_xyxy": [0, 0, 4, 4]}],
+            "keypoints": [{"label": "corner", "points_xyc": [[1, 1, 1.0]]}],
+            "polylines": [{"label": "edge", "points_xy": [[0, 0], [2, 2]]}],
+        },
+        split={"train": 0.7, "val": 0.15, "test": 0.15},
+        include_rgb=False,
+        include_stage_outputs=True,
+        include_container=True,
+        include_uncertainty=True,
+    )
+    record = manifest["records"][0]
+    validation = camerae2e_dataset_validate(manifest)
+
+    assert manifest["split_policy"]["mode"] == "weighted_deterministic"
+    assert manifest["format"]["container"].startswith("deterministic DNG-like")
+    assert "not a standards-compliant DNG" in manifest["truth_boundary"]
+    assert Path(record["stage_outputs"]).exists()
+    assert Path(record["container"]).exists()
+    assert Path(record["uncertainty"]).exists()
+    assert record["stage_outputs_sha256"].startswith("sha256:")
+    assert record["container_sha256"].startswith("sha256:")
+    assert record["uncertainty_sha256"].startswith("sha256:")
+    assert record["label_summary"]["object_count"] == 1
+    assert record["label_summary"]["keypoint_count"] == 1
+    assert record["label_summary"]["polyline_count"] == 1
+    assert record["uncertainty_model"]["readiness_tier"] == "proxy"
+    with np.load(record["uncertainty"], allow_pickle=False) as payload:
+        assert payload["uncertainty"].shape == tuple(record["raw_shape"])
+        assert payload["confidence"].shape == tuple(record["raw_shape"])
     assert validation["ok"] is True
 
 

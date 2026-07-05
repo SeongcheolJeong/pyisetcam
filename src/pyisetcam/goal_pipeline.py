@@ -363,32 +363,52 @@ def _optimization_smoke(*, seed: int) -> dict[str, Any]:
         seed=seed + 1,
         top_k=1,
     )
+    proxy_surrogate_result = camerae2e_optimize_camera_parameters(
+        {
+            "name": "goal_gate_proxy_surrogate_optimization_smoke",
+            "scene": {"type": "uniform ee", "args": [8]},
+            "sensor": {"noise_flag": 0},
+        },
+        preset="exposure",
+        parameter_space={"sensor.integration_time": [0.001, 0.004]},
+        objective={"metric": "metrics.color.rgb_mean", "direction": "maximize"},
+        method="surrogate",
+        max_cases=4,
+        seed=seed + 2,
+        top_k=1,
+    )
     best = dict(result.get("best_case", {}))
     passed = (
         result.get("schema_version") == "camerae2e_parameter_optimization_v1"
         and int(result.get("case_count", 0)) >= 2
         and best.get("parameters", {}).get("sensor.integration_time") == 0.004
-        and surrogate_result.get("search_method") == "surrogate"
+        and surrogate_result.get("search_method") == "gaussian_process"
         and int(surrogate_result.get("case_count", 0)) >= 2
+        and proxy_surrogate_result.get("search_method") == "surrogate"
+        and int(proxy_surrogate_result.get("case_count", 0)) >= 2
     )
     return {
         "status": "pass" if passed else "fail",
         "tier": "validated",
         "summary": (
             "Camera parameter optimization runs FACA objective search with "
-            "validated, budget-aware evolutionary and surrogate candidate planning."
+            "validated, budget-aware evolutionary, surrogate, and GP Bayesian "
+            "candidate planning."
         ),
         "evidence": {
             "seed": seed,
             "registered_configure_count": config_catalog.get("registered_axis_count"),
             "presets": config_catalog.get("presets", {}),
-            "adaptive_methods": ["evolutionary", "surrogate"],
+            "adaptive_methods": ["evolutionary", "surrogate", "gaussian_process"],
             "method": result.get("method"),
             "search_method": result.get("search_method"),
             "candidate_plan": result.get("candidate_plan", {}),
-            "surrogate_method": surrogate_result.get("method"),
-            "surrogate_search_method": surrogate_result.get("search_method"),
-            "surrogate_candidate_plan": surrogate_result.get("candidate_plan", {}),
+            "gaussian_process_method": surrogate_result.get("method"),
+            "gaussian_process_search_method": surrogate_result.get("search_method"),
+            "gaussian_process_candidate_plan": surrogate_result.get("candidate_plan", {}),
+            "surrogate_method": proxy_surrogate_result.get("method"),
+            "surrogate_search_method": proxy_surrogate_result.get("search_method"),
+            "surrogate_candidate_plan": proxy_surrogate_result.get("candidate_plan", {}),
             "case_count": result.get("case_count"),
             "feasible_count": result.get("feasible_count"),
             "pareto_case_count": result.get("pareto_case_count"),
@@ -482,6 +502,9 @@ def _dataset_factory_smoke(output_dir: Path, *, seed: int) -> dict[str, Any]:
         selection="best",
         max_cases=1,
         include_rgb=False,
+        include_stage_outputs=True,
+        include_container=True,
+        include_uncertainty=True,
         seed=seed,
     )
     validation = camerae2e_dataset_validate(manifest)
@@ -503,6 +526,12 @@ def _dataset_factory_smoke(output_dir: Path, *, seed: int) -> dict[str, Any]:
             "case_count": manifest.get("case_count"),
             "raw_shape": record.get("raw_shape"),
             "raw_sha256": record.get("raw_sha256"),
+            "stage_outputs_sha256": record.get("stage_outputs_sha256"),
+            "container_sha256": record.get("container_sha256"),
+            "uncertainty_sha256": record.get("uncertainty_sha256"),
+            "split_policy": manifest.get("split_policy", {}),
+            "label_summary": record.get("label_summary", {}),
+            "uncertainty_model": record.get("uncertainty_model", {}),
             "parameter_lineage_count": len(record.get("parameter_lineage", [])),
             "source_optimization": manifest.get("source_optimization", {}),
             "perception_index": {

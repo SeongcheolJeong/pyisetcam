@@ -26,9 +26,9 @@
 | TCAD / DEVSIM | `calibration_required` | generation-map ingestion, split-PD current proxy, accuracy gate | active FDTD/TCAD lineage closure, carrier calibration, dark/noise/lag/full-well |
 | HW ISP | `proxy` | rolling shutter, stage latency, queue, DMA, delayed AE/AWB | board/vendor trace calibration, AF/HDR/TNR detail |
 | Metrics | `validated` | MTF, ISO12233, Delta E, SCIELAB, VSNR, SQRI | product-specific weighting and pass/fail gates |
-| Optimization | `validated` | dot-path camera parameter grid/random/Latin-hypercube/evolutionary/surrogate search, pixel geometry/CFA preset/Quad Bayer/readout/noise/optics-PSF/analytic OCL/FDTD-OCL configure catalog, preset parameter-space catalog, FACA objective scoring, hard constraints, Pareto front, selected scenarios, parameter-lineage evidence | true GP Bayesian search, hardware-in-loop calibration |
+| Optimization | `validated` | dot-path camera parameter grid/random/Latin-hypercube/evolutionary/surrogate/GP expected-improvement search, pixel geometry/CFA preset/Quad Bayer/readout/noise/optics-PSF/analytic OCL/FDTD-OCL configure catalog, preset parameter-space catalog, FACA objective scoring, hard constraints, Pareto front, selected scenarios, parameter-lineage evidence | hardware-in-loop calibration |
 | Perception | `available` | task adapters, detection/segmentation/classification/pose/tracking metrics, robustness sweep | training loop, dataset-specific model calibration |
-| RAW data factory | `validated` | manifest, metadata JSONL, deterministic RAW NPZ, split, checksum, labels JSON, validation, RAW-aware perception index, YOLO view export, ADAS/KITTI YOLO demo export, proxy camera-spec variant re-capture | DNG writer, automatic label synthesis |
+| RAW data factory | `validated` | manifest, metadata JSONL, deterministic RAW NPZ, split policy, checksum, labels JSON, optional per-stage NPZ, optional uncertainty/confidence NPZ, optional DNG-like ZIP container, validation, RAW-aware perception index, YOLO view export, ADAS/KITTI YOLO demo export, proxy camera-spec variant re-capture | standards-compliant DNG writer, automatic label synthesis, calibrated uncertainty posterior |
 | DB/LUT registry | `validated` / `calibration_required` | manifest, readiness tier, provenance, dependency lineage, stale detection, calibration evidence manifest, readiness promotion plan | actual measured evidence attachment and calibrated promotion |
 | External pipeline | `calibration_required` | FDTD, TCAD, RayOptics, HW ISP assets discoverable in one registry | refresh orchestration and calibrated end-to-end asset generation |
 
@@ -47,6 +47,10 @@ DB/LUT registry:
 - `camerae2e_readiness_promotion_plan(...)`
 - `image_sensor_db_config(...)`
 - `image_sensor_db_optimize_camera_parameters(...)`
+
+PPT gap audit:
+
+- `camerae2e_ppt_gap_audit(...)`
 
 `camerae2e_goal_gate(...)` is the top-level research-platform evidence gate.
 It regenerates a machine-readable pass/warn/fail matrix over registry,
@@ -126,12 +130,14 @@ grid by sampling evenly across the Cartesian index range. `method="random"` and
 default to a bounded budget when `max_cases` is omitted. `method="evolutionary"`
 starts from a deterministic seed population, evaluates FACA objective fitness,
 then expands remaining budget through score-ranked elite selection, uniform
-discrete crossover, and mutation. `method="surrogate"` or `method="bayesian"`
-starts from a deterministic seed population and then chooses unevaluated
-discrete-axis candidates from a bounded pool using an RBF/inverse-distance
-expected-improvement proxy plus uncertainty. This is a research surrogate, not
-a calibrated Gaussian-process Bayesian optimizer. The optimizer accepts the
-same `method` and `max_cases` arguments and records the resulting
+discrete crossover, and mutation. `method="surrogate"` starts from a deterministic
+seed population and then chooses unevaluated discrete-axis candidates from a
+bounded pool using an RBF/inverse-distance expected-improvement proxy plus
+uncertainty. `method="gaussian_process"`, `method="gp"`, or `method="bayesian"`
+uses an RBF Gaussian-process posterior over the discrete FACA objective surface
+and expected improvement acquisition. This is an optimizer for research
+ranking, not a calibrated physical sensor, lens, or ISP model. The optimizer
+accepts the same `method` and `max_cases` arguments and records the resulting
 candidate-plan summary and generation trace in optimization reports.
 `camerae2e_optimize_camera_parameters(...)` runs those presets directly while
 still allowing caller overrides. The optimizer maximizes objective paths from
@@ -139,8 +145,8 @@ the FACA report, supports hard metric constraints, reports the feasible Pareto
 front, and emits selected scenario configs that can be passed into the RAW data
 factory. FACA and dataset records include parameter-lineage entries with
 requested/before/after values so a RAW export can be traced back to the actual
-camera parameters applied. This is the reproducible baseline for later true
-GP/Bayesian optimizers and hardware-in-loop calibration.
+camera parameters applied. This is the reproducible baseline for later
+hardware-in-loop calibration and measured-objective fitting.
 `camerae2e_optimization_escalation_plan(...)` takes a completed optimization
 result and plans the next fidelity step for selected best/top/Pareto candidates:
 DB/LUT anchoring, FDTD optical LUT batch generation, TCAD/DEVSIM collection
@@ -203,6 +209,14 @@ RAW data factory:
 - `camerae2e_dataset_export_perception_index(...)`
 - `camerae2e_dataset_validate(...)`
 
+`camerae2e_dataset_export(...)` can also emit optional per-stage NPZ bundles,
+proxy uncertainty/confidence maps, and a deterministic DNG-like ZIP container
+that groups RAW, labels, previews, stage outputs, and metadata. That container
+is deliberately not a standards-compliant DNG file. A valid DNG writer remains
+a separate milestone because TIFF/DNG tag compliance, CFA metadata, color
+matrices, black/white levels, and reader interoperability need their own
+validation.
+
 ADAS/KITTI demo export is intentionally labeled `proxy`: it applies KITTI-style
 object-detection geometry and YOLO/KITTI label metadata to the RAW factory, but
 does not claim KITTI raw sensor ground truth or measured ADAS camera
@@ -238,6 +252,18 @@ RayOptics PSF assets are kept at `proxy` tier because they are geometric ray his
 HW ISP seed profiles are system-simulation inputs. They become calibrated only when replaced or fitted with board traces, hardware counters, BSP timing, or equivalent measured evidence.
 
 ## Report Outputs
+
+Audit the current image-only technical overview PPT claim ledger with:
+
+```bash
+python tools/render_camerae2e_ppt_gap_audit.py \
+  --pptx /Users/seongcheoljeong/Downloads/camerae2e-technical-overview-images.pptx
+```
+
+Outputs:
+
+- `reports/camerae2e_goal/ppt_gap_audit.json`
+- `reports/camerae2e_goal/ppt_gap_audit.html`
 
 Regenerate the current goal-readiness reports with:
 

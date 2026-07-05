@@ -148,6 +148,7 @@ from .optimization import (
 )
 from .goal_pipeline import camerae2e_goal_gate
 from .physics_pipeline import camerae2e_physics_pipeline_plan
+from .ppt_gap_audit import camerae2e_ppt_gap_audit
 from .fdtd_sensor import (
     FDTDSensorLUT,
     fdtd_sensor_apply_optical_response,
@@ -1119,6 +1120,7 @@ __all__ = [
     "camerae2e_parameter_space_catalog",
     "camerae2e_parameter_space_validate",
     "camerae2e_physics_pipeline_plan",
+    "camerae2e_ppt_gap_audit",
     "camerae2e_readiness_promotion_plan",
     "camerae2e_run_scenario",
     "camerae2e_run_sweep",
@@ -1152,6 +1154,7 @@ __all__ = [
     "cameraE2EParameterSpaceCatalog",
     "cameraE2EParameterSpaceValidate",
     "cameraE2EPhysicsPipelinePlan",
+    "cameraE2EPPTGapAudit",
     "cameraE2EReadinessPromotionPlan",
     "cameraE2ERunScenario",
     "cameraE2ERunSweep",
@@ -3849,6 +3852,7 @@ cameraE2EParameterSpaceCatalog = camerae2e_parameter_space_catalog
 cameraE2EOptimizationConfigCatalog = camerae2e_optimization_config_catalog
 cameraE2EParameterSpaceValidate = camerae2e_parameter_space_validate
 cameraE2EPhysicsPipelinePlan = camerae2e_physics_pipeline_plan
+cameraE2EPPTGapAudit = camerae2e_ppt_gap_audit
 cameraE2ECalibrationEvidenceRequirements = camerae2e_calibration_evidence_requirements
 cameraE2ECalibrationEvidenceManifest = camerae2e_calibration_evidence_manifest
 cameraE2ECalibrationEvidenceValidate = camerae2e_calibration_evidence_validate

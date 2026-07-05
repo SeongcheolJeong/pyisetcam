@@ -1416,7 +1416,7 @@
       "tier": "calibration_required"
     }
   ],
-  "generated_at": "2026-07-05T07:29:09.065831+00:00",
+  "generated_at": "2026-07-05T07:54:31.983426+00:00",
   "goal": "Research-grade E2E optimization platform plus RAW data factory for perception training.",
   "physics_pipeline_plan": {
     "actions": [

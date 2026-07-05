@@ -541,8 +541,9 @@ def camerae2e_optimize_parameters(
 
     The score is always maximized. Objective specs can maximize, minimize, or
     target any numeric path in the FACA report. Supported methods are grid,
-    random, Latin-hypercube, score-ranked evolutionary, and discrete surrogate
-    search over the axis values supplied by the caller or preset catalog.
+    random, Latin-hypercube, score-ranked evolutionary, discrete surrogate,
+    and Gaussian-process Bayesian search over the axis values supplied by the
+    caller or preset catalog.
     """
 
     axes = _normalize_parameter_space(parameter_space or {})
@@ -576,6 +577,20 @@ def camerae2e_optimize_parameters(
         )
     elif candidate_plan["method"] == "surrogate":
         cases, candidate_plan = _run_surrogate_parameter_search(
+            candidate_plan,
+            axes,
+            base_scenario=base_scenario,
+            objective_specs=objective_specs,
+            objective=objective,
+            constraint_specs=constraint_specs,
+            scene=scene,
+            camera=camera,
+            asset_store=asset_store,
+            seed=seed,
+            include_arrays=include_arrays,
+        )
+    elif candidate_plan["method"] == "gaussian_process":
+        cases, candidate_plan = _run_gaussian_process_parameter_search(
             candidate_plan,
             axes,
             base_scenario=base_scenario,
@@ -671,8 +686,9 @@ def camerae2e_parameter_candidate_plan(
 
     ``grid`` preserves Cartesian grid semantics.  ``random`` and
     ``latin_hypercube`` sample from the provided discrete axis values and default
-    to a bounded budget when ``max_cases`` is omitted. ``evolutionary`` and
-    ``surrogate`` return deterministic seed populations;
+    to a bounded budget when ``max_cases`` is omitted. ``evolutionary``,
+    ``surrogate``, and ``gaussian_process`` return deterministic seed
+    populations;
     :func:`camerae2e_optimize_parameters` expands them adaptively using
     evaluated FACA objective scores.
     """
@@ -727,6 +743,19 @@ def camerae2e_parameter_candidate_plan(
                     "Standalone surrogate candidate plans contain only the seed "
                     "population; camerae2e_optimize_parameters expands the search "
                     "with a discrete RBF acquisition proxy over candidate pools."
+                ),
+            }
+        )
+    elif method_key == "gaussian_process":
+        adaptive_seed_count = _gp_seed_count(axes, budget)
+        candidates = _gp_seed_candidates(axes, adaptive_seed_count, seed)
+        warnings.append(
+            {
+                "kind": "gaussian_process_seed_plan",
+                "message": (
+                    "Standalone Gaussian-process candidate plans contain only the "
+                    "initial design; camerae2e_optimize_parameters expands the "
+                    "search with GP posterior expected improvement."
                 ),
             }
         )
@@ -1557,14 +1586,19 @@ def _normalize_candidate_method(method: str) -> str:
         "surrogate_search": "surrogate",
         "surrogate_guided": "surrogate",
         "model_guided": "surrogate",
-        "bayesian": "surrogate",
         "bayesian_proxy": "surrogate",
-        "bayesian_optimization": "surrogate",
+        "inverse_distance_surrogate": "surrogate",
+        "gaussian_process": "gaussian_process",
+        "gp": "gaussian_process",
+        "gp_bayesian": "gaussian_process",
+        "bayesian": "gaussian_process",
+        "bayesian_optimization": "gaussian_process",
+        "expected_improvement": "gaussian_process",
     }
     if key not in aliases:
         raise ValueError(
             "Candidate generation method must be one of: grid, random, "
-            "latin_hypercube, evolutionary, surrogate."
+            "latin_hypercube, evolutionary, surrogate, gaussian_process."
         )
     return aliases[key]
 
@@ -1614,6 +1648,12 @@ def _generate_parameter_candidates(
         return _surrogate_seed_candidates(
             axes,
             _surrogate_seed_count(axes, max_cases),
+            seed,
+        )
+    if method == "gaussian_process":
+        return _gp_seed_candidates(
+            axes,
+            _gp_seed_count(axes, max_cases),
             seed,
         )
     raise ValueError(f"Unsupported candidate generation method: {method!r}.")
@@ -1754,6 +1794,8 @@ def _adaptive_search_config(
         return _evolutionary_search_config(axes, budget, seed_count)
     if method == "surrogate":
         return _surrogate_search_config(axes, budget, seed_count)
+    if method == "gaussian_process":
+        return _gp_search_config(axes, budget, seed_count)
     return {}
 
 
@@ -1819,6 +1861,62 @@ def _surrogate_seed_candidates(
         candidates.append(_candidate_from_grid_index(axes, full_grid_count - 1))
     candidates.extend(_latin_hypercube_candidates(axes, int(seed_count), int(seed) + 101))
     candidates.extend(_random_candidates(axes, int(seed_count), int(seed) + 202))
+    return _dedupe_and_fill_candidates(candidates, axes, int(seed_count))
+
+
+def _gp_seed_count(axes: Mapping[str, list[Any]], budget: int) -> int:
+    if not axes:
+        return 1
+    full_grid_count = _full_grid_count(axes)
+    axis_count = max(len(axes), 1)
+    requested = max(5, 2 * axis_count + 1)
+    return int(min(max(int(budget), 1), full_grid_count, requested))
+
+
+def _gp_search_config(
+    axes: Mapping[str, list[Any]],
+    budget: int,
+    seed_count: int | None = None,
+) -> dict[str, Any]:
+    if seed_count is None:
+        seed_count = _gp_seed_count(axes, budget)
+    full_grid_count = _full_grid_count(axes)
+    candidate_pool_size = int(min(full_grid_count, max(256, int(budget) * 64)))
+    return {
+        "seed_count": int(seed_count),
+        "candidate_pool_size": candidate_pool_size,
+        "kernel": "rbf",
+        "model": "gaussian_process_rbf",
+        "acquisition": "expected_improvement",
+        "length_scale": 0.65,
+        "signal_variance": 1.0,
+        "noise_variance": 1.0e-6,
+        "jitter": 1.0e-9,
+        "xi": 0.01,
+        "truth_boundary": (
+            "Gaussian-process search models the discrete FACA objective surface; "
+            "it is not a calibrated physical sensor, lens, or ISP model."
+        ),
+        "budget": int(budget),
+    }
+
+
+def _gp_seed_candidates(
+    axes: Mapping[str, list[Any]], seed_count: int, seed: int
+) -> list[dict[str, Any]]:
+    if not axes:
+        return [{}]
+    candidates: list[dict[str, Any]] = []
+    full_grid_count = _full_grid_count(axes)
+    if full_grid_count:
+        candidates.append(_candidate_from_grid_index(axes, 0))
+    if full_grid_count > 1:
+        candidates.append(_candidate_from_grid_index(axes, full_grid_count - 1))
+    middle = full_grid_count // 2
+    if full_grid_count > 2:
+        candidates.append(_candidate_from_grid_index(axes, middle))
+    candidates.extend(_latin_hypercube_candidates(axes, int(seed_count), int(seed) + 313))
+    candidates.extend(_random_candidates(axes, int(seed_count), int(seed) + 626))
     return _dedupe_and_fill_candidates(candidates, axes, int(seed_count))
 
 
@@ -1998,6 +2096,102 @@ def _run_surrogate_parameter_search(
     return cases, executed_plan
 
 
+def _run_gaussian_process_parameter_search(
+    candidate_plan: Mapping[str, Any],
+    axes: Mapping[str, list[Any]],
+    *,
+    base_scenario: Mapping[str, Any] | None,
+    objective_specs: list[dict[str, Any]],
+    objective: ObjectiveSpec | ObjectiveCallable | None,
+    constraint_specs: list[dict[str, Any]],
+    scene: Scene | str | Mapping[str, Any] | None,
+    camera: Camera | None,
+    asset_store: AssetStore | None,
+    seed: int,
+    include_arrays: bool,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    budget = int(candidate_plan.get("max_cases", 1))
+    config = dict(candidate_plan.get("search_config") or _gp_search_config(axes, budget))
+    pool = _surrogate_candidate_pool(
+        axes,
+        pool_size=int(config.get("candidate_pool_size", max(256, budget * 64))),
+        seed=int(seed) + 919,
+    )
+    pending = [dict(candidate) for candidate in candidate_plan.get("candidates", [])]
+    seen: set[str] = set()
+    cases: list[dict[str, Any]] = []
+    search_trace: list[dict[str, Any]] = []
+    generation = 0
+    full_grid_count = _full_grid_count(axes)
+
+    while len(cases) < budget and len(seen) < full_grid_count:
+        generation_cases: list[dict[str, Any]] = []
+        for candidate in pending:
+            if len(cases) >= budget:
+                break
+            signature = _candidate_signature(candidate)
+            if signature in seen:
+                continue
+            case = _evaluate_parameter_candidate(
+                candidate,
+                case_index=len(cases),
+                base_scenario=base_scenario,
+                objective_specs=objective_specs,
+                objective=objective,
+                constraint_specs=constraint_specs,
+                scene=scene,
+                camera=camera,
+                asset_store=asset_store,
+                seed=seed,
+                include_arrays=include_arrays,
+            )
+            cases.append(case)
+            generation_cases.append(case)
+            seen.add(signature)
+
+        ranked = _rank_cases_for_search(cases)
+        acquisition_summary: dict[str, Any] = {}
+        if len(cases) >= budget or len(seen) >= full_grid_count:
+            next_candidate = None
+        else:
+            next_candidate, acquisition_summary = _gp_next_candidate(
+                axes,
+                pool,
+                cases,
+                seen,
+                length_scale=float(config.get("length_scale", 0.65)),
+                signal_variance=float(config.get("signal_variance", 1.0)),
+                noise_variance=float(config.get("noise_variance", 1.0e-6)),
+                jitter=float(config.get("jitter", 1.0e-9)),
+                xi=float(config.get("xi", 0.01)),
+            )
+        search_trace.append(
+            _gp_trace_entry(
+                generation,
+                generation_cases,
+                ranked,
+                evaluated_count=len(cases),
+                pool_size=len(pool),
+                acquisition_summary=acquisition_summary,
+            )
+        )
+        if len(cases) >= budget or len(seen) >= full_grid_count:
+            break
+        if next_candidate is None:
+            break
+        pending = [next_candidate]
+        generation += 1
+
+    executed_plan = dict(candidate_plan)
+    executed_plan["case_count"] = len(cases)
+    executed_plan["truncated"] = len(cases) < full_grid_count
+    executed_plan["candidates"] = [_jsonable(case.get("parameters", {})) for case in cases]
+    executed_plan["search_config"] = _jsonable(config)
+    executed_plan["search_trace"] = _jsonable(search_trace)
+    executed_plan["executed_generation_count"] = len(search_trace)
+    return cases, executed_plan
+
+
 def _evaluate_parameter_candidate(
     axis_values: Mapping[str, Any],
     *,
@@ -2151,6 +2345,163 @@ def _surrogate_next_candidate(
     return best_candidate
 
 
+def _gp_next_candidate(
+    axes: Mapping[str, list[Any]],
+    candidate_pool: Iterable[Mapping[str, Any]],
+    cases: Iterable[Mapping[str, Any]],
+    seen: set[str],
+    *,
+    length_scale: float,
+    signal_variance: float,
+    noise_variance: float,
+    jitter: float,
+    xi: float,
+) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    evaluated = [case for case in cases if case.get("parameters") is not None]
+    pool = [
+        dict(candidate)
+        for candidate in candidate_pool
+        if _candidate_signature(dict(candidate)) not in seen
+    ]
+    if not evaluated or not pool:
+        return None, {"status": "empty"}
+    observed_vectors = np.asarray(
+        [_candidate_vector(case["parameters"], axes) for case in evaluated],
+        dtype=float,
+    )
+    observed_scores = _surrogate_score_array(evaluated)
+    candidate_vectors = np.asarray(
+        [_candidate_vector(candidate, axes) for candidate in pool],
+        dtype=float,
+    )
+    mean, std = _gp_posterior(
+        observed_vectors,
+        observed_scores,
+        candidate_vectors,
+        length_scale=max(float(length_scale), 1.0e-9),
+        signal_variance=max(float(signal_variance), 1.0e-12),
+        noise_variance=max(float(noise_variance), 0.0),
+        jitter=max(float(jitter), 0.0),
+    )
+    best_score = float(np.max(observed_scores)) if observed_scores.size else 0.0
+    expected_improvement = _expected_improvement(
+        mean,
+        std,
+        best_score=best_score,
+        xi=float(xi),
+    )
+    if expected_improvement.size == 0:
+        return None, {"status": "empty_acquisition"}
+    order = np.lexsort((-std, -mean, -expected_improvement))
+    best_index = int(order[0])
+    selected = pool[best_index]
+    return selected, {
+        "status": "selected",
+        "selected_parameters": _jsonable(selected),
+        "selected_expected_improvement": float(expected_improvement[best_index]),
+        "selected_predicted_mean": float(mean[best_index]),
+        "selected_predicted_std": float(std[best_index]),
+        "best_observed_score": best_score,
+        "candidate_pool_size": len(pool),
+    }
+
+
+def _gp_posterior(
+    observed_vectors: np.ndarray,
+    observed_scores: np.ndarray,
+    candidate_vectors: np.ndarray,
+    *,
+    length_scale: float,
+    signal_variance: float,
+    noise_variance: float,
+    jitter: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    if observed_vectors.size == 0 or candidate_vectors.size == 0:
+        return (
+            np.zeros((candidate_vectors.shape[0],), dtype=float),
+            np.zeros((candidate_vectors.shape[0],), dtype=float),
+        )
+    score_mean = float(np.mean(observed_scores))
+    score_scale = float(np.std(observed_scores))
+    score_scale = max(score_scale, 1.0e-9)
+    y = (observed_scores - score_mean) / score_scale
+    kernel = _rbf_kernel(
+        observed_vectors,
+        observed_vectors,
+        length_scale=length_scale,
+        signal_variance=signal_variance,
+    )
+    diag_noise = max(float(noise_variance), 0.0) + max(float(jitter), 0.0)
+    for attempt in range(8):
+        try:
+            noise = diag_noise + (10.0**attempt * max(float(jitter), 1.0e-12))
+            factor = np.linalg.cholesky(
+                kernel + np.eye(kernel.shape[0], dtype=float) * noise
+            )
+            alpha = np.linalg.solve(factor.T, np.linalg.solve(factor, y))
+            cross = _rbf_kernel(
+                candidate_vectors,
+                observed_vectors,
+                length_scale=length_scale,
+                signal_variance=signal_variance,
+            )
+            mean_norm = cross @ alpha
+            solve = np.linalg.solve(factor, cross.T)
+            variance_norm = np.maximum(
+                float(signal_variance) - np.sum(np.square(solve), axis=0),
+                0.0,
+            )
+            return (
+                score_mean + score_scale * mean_norm,
+                score_scale * np.sqrt(variance_norm),
+            )
+        except np.linalg.LinAlgError:
+            continue
+    fallback_mean = np.full((candidate_vectors.shape[0],), score_mean, dtype=float)
+    fallback_std = np.full((candidate_vectors.shape[0],), score_scale, dtype=float)
+    return fallback_mean, fallback_std
+
+
+def _rbf_kernel(
+    left: np.ndarray,
+    right: np.ndarray,
+    *,
+    length_scale: float,
+    signal_variance: float,
+) -> np.ndarray:
+    left = np.asarray(left, dtype=float)
+    right = np.asarray(right, dtype=float)
+    diff = left[:, None, :] - right[None, :, :]
+    squared_distance = np.sum(np.square(diff), axis=2)
+    return float(signal_variance) * np.exp(
+        -0.5 * squared_distance / max(length_scale * length_scale, 1.0e-12)
+    )
+
+
+def _expected_improvement(
+    mean: np.ndarray,
+    std: np.ndarray,
+    *,
+    best_score: float,
+    xi: float,
+) -> np.ndarray:
+    improvement = np.asarray(mean, dtype=float) - float(best_score) - float(xi)
+    std = np.maximum(np.asarray(std, dtype=float), 1.0e-12)
+    z = improvement / std
+    cdf = _normal_cdf(z)
+    pdf = np.exp(-0.5 * np.square(z)) / math.sqrt(2.0 * math.pi)
+    return np.maximum(improvement * cdf + std * pdf, 0.0)
+
+
+def _normal_cdf(value: np.ndarray) -> np.ndarray:
+    flat = np.asarray(value, dtype=float).reshape(-1)
+    cdf = np.asarray(
+        [0.5 * (1.0 + math.erf(float(item) / math.sqrt(2.0))) for item in flat],
+        dtype=float,
+    )
+    return cdf.reshape(np.asarray(value).shape)
+
+
 def _candidate_vector(candidate: Mapping[str, Any], axes: Mapping[str, list[Any]]) -> np.ndarray:
     values = []
     for key, axis_values in axes.items():
@@ -2262,6 +2613,35 @@ def _surrogate_trace_entry(
         "selected_case_index": selected.get("case_index"),
         "selected_score": selected.get("score"),
         "selected_parameters": _jsonable(selected.get("parameters", {})),
+    }
+
+
+def _gp_trace_entry(
+    generation: int,
+    generation_cases: list[Mapping[str, Any]],
+    ranked_cases: list[Mapping[str, Any]],
+    *,
+    evaluated_count: int,
+    pool_size: int,
+    acquisition_summary: Mapping[str, Any],
+) -> dict[str, Any]:
+    best = ranked_cases[0] if ranked_cases else {}
+    selected = generation_cases[-1] if generation_cases else {}
+    return {
+        "generation": int(generation),
+        "candidate_count": len(generation_cases),
+        "evaluated_count": int(evaluated_count),
+        "candidate_pool_size": int(pool_size),
+        "model": "gaussian_process_rbf",
+        "acquisition": "expected_improvement",
+        "best_case_index": best.get("case_index"),
+        "best_score": best.get("score"),
+        "best_feasible": best.get("feasible"),
+        "best_parameters": _jsonable(best.get("parameters", {})),
+        "selected_case_index": selected.get("case_index"),
+        "selected_score": selected.get("score"),
+        "selected_parameters": _jsonable(selected.get("parameters", {})),
+        "next_candidate": _jsonable(dict(acquisition_summary)),
     }
 
 

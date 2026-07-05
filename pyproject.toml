@@ -18,6 +18,7 @@ dependencies = [
   "scikit-image",
   "matplotlib",
   "imageio",
+  "imagecodecs",
   "tifffile",
   "h5py",
   "pooch",

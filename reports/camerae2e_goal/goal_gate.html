@@ -24,7 +24,7 @@ code { word-break: break-all; }
 <p class="lead">Research-grade E2E optimization platform plus RAW data factory for perception training.</p>
 <p>OK: <strong>True</strong>; strict:
 <strong>False</strong>; generated:
-<code>2026-07-05T07:29:21.587635+00:00</code></p>
+<code>2026-07-05T07:54:26.409138+00:00</code></p>
 <p>Artifacts: <code>/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke</code></p>
 <h2>Requirements</h2>
 <table>
@@ -406,10 +406,11 @@ code { word-break: break-all; }
       &quot;std&quot;: 0.011569184556674312
     }
   }
-}</pre></td></tr><tr><td>parameter_optimization</td><td><span class='status status-pass'>pass</span></td><td>validated</td><td>Camera parameter optimization runs FACA objective search with validated, budget-aware evolutionary and surrogate candidate planning.</td><td><pre>{
+}</pre></td></tr><tr><td>parameter_optimization</td><td><span class='status status-pass'>pass</span></td><td>validated</td><td>Camera parameter optimization runs FACA objective search with validated, budget-aware evolutionary, surrogate, and GP Bayesian candidate planning.</td><td><pre>{
   &quot;adaptive_methods&quot;: [
     &quot;evolutionary&quot;,
-    &quot;surrogate&quot;
+    &quot;surrogate&quot;,
+    &quot;gaussian_process&quot;
   ],
   &quot;automation&quot;: {
     &quot;axes&quot;: {
@@ -550,6 +551,125 @@ code { word-break: break-all; }
   },
   &quot;case_count&quot;: 4,
   &quot;feasible_count&quot;: 4,
+  &quot;gaussian_process_candidate_plan&quot;: {
+    &quot;axis_count&quot;: 2,
+    &quot;axis_sizes&quot;: {
+      &quot;sensor.analog_gain&quot;: 3,
+      &quot;sensor.integration_time&quot;: 2
+    },
+    &quot;candidate_preview&quot;: [
+      {
+        &quot;sensor.analog_gain&quot;: 1.0,
+        &quot;sensor.integration_time&quot;: 0.001
+      },
+      {
+        &quot;sensor.analog_gain&quot;: 4.0,
+        &quot;sensor.integration_time&quot;: 0.004
+      },
+      {
+        &quot;sensor.analog_gain&quot;: 1.0,
+        &quot;sensor.integration_time&quot;: 0.004
+      },
+      {
+        &quot;sensor.analog_gain&quot;: 2.0,
+        &quot;sensor.integration_time&quot;: 0.001
+      }
+    ],
+    &quot;case_count&quot;: 4,
+    &quot;executed_generation_count&quot;: 1,
+    &quot;full_grid_count&quot;: 6,
+    &quot;implicit_default_budget&quot;: false,
+    &quot;max_cases&quot;: 4,
+    &quot;method&quot;: &quot;gaussian_process&quot;,
+    &quot;ok&quot;: true,
+    &quot;parameter_space_validation&quot;: {
+      &quot;axes&quot;: {
+        &quot;sensor.analog_gain&quot;: {
+          &quot;assignment&quot;: &quot;scenario.sensor -&gt; sensor_set(...)&quot;,
+          &quot;issues&quot;: [],
+          &quot;readiness_tier&quot;: &quot;validated&quot;,
+          &quot;status&quot;: &quot;registered&quot;,
+          &quot;value_count&quot;: 3,
+          &quot;value_issues&quot;: [],
+          &quot;value_warnings&quot;: [],
+          &quot;values&quot;: [
+            1.0,
+            2.0,
+            4.0
+          ]
+        },
+        &quot;sensor.integration_time&quot;: {
+          &quot;assignment&quot;: &quot;scenario.sensor -&gt; sensor_set(...)&quot;,
+          &quot;issues&quot;: [],
+          &quot;readiness_tier&quot;: &quot;validated&quot;,
+          &quot;status&quot;: &quot;registered&quot;,
+          &quot;value_count&quot;: 2,
+          &quot;value_issues&quot;: [],
+          &quot;value_warnings&quot;: [],
+          &quot;values&quot;: [
+            0.001,
+            0.004
+          ]
+        }
+      },
+      &quot;axis_count&quot;: 2,
+      &quot;issue_count&quot;: 0,
+      &quot;issues&quot;: [],
+      &quot;ok&quot;: true,
+      &quot;schema_version&quot;: &quot;camerae2e_parameter_space_validation_v1&quot;,
+      &quot;warning_count&quot;: 0,
+      &quot;warnings&quot;: []
+    },
+    &quot;schema_version&quot;: &quot;camerae2e_parameter_candidate_plan_v1&quot;,
+    &quot;search_config&quot;: {
+      &quot;acquisition&quot;: &quot;expected_improvement&quot;,
+      &quot;budget&quot;: 4,
+      &quot;candidate_pool_size&quot;: 6,
+      &quot;jitter&quot;: 1e-09,
+      &quot;kernel&quot;: &quot;rbf&quot;,
+      &quot;length_scale&quot;: 0.65,
+      &quot;model&quot;: &quot;gaussian_process_rbf&quot;,
+      &quot;noise_variance&quot;: 1e-06,
+      &quot;seed_count&quot;: 4,
+      &quot;signal_variance&quot;: 1.0,
+      &quot;truth_boundary&quot;: &quot;Gaussian-process search models the discrete FACA objective surface; it is not a calibrated physical sensor, lens, or ISP model.&quot;,
+      &quot;xi&quot;: 0.01
+    },
+    &quot;search_trace&quot;: [
+      {
+        &quot;acquisition&quot;: &quot;expected_improvement&quot;,
+        &quot;best_case_index&quot;: 2,
+        &quot;best_feasible&quot;: true,
+        &quot;best_parameters&quot;: {
+          &quot;sensor.analog_gain&quot;: 1.0,
+          &quot;sensor.integration_time&quot;: 0.004
+        },
+        &quot;best_score&quot;: 0.018573498158015272,
+        &quot;candidate_count&quot;: 4,
+        &quot;candidate_pool_size&quot;: 6,
+        &quot;evaluated_count&quot;: 4,
+        &quot;generation&quot;: 0,
+        &quot;model&quot;: &quot;gaussian_process_rbf&quot;,
+        &quot;next_candidate&quot;: {},
+        &quot;selected_case_index&quot;: 3,
+        &quot;selected_parameters&quot;: {
+          &quot;sensor.analog_gain&quot;: 2.0,
+          &quot;sensor.integration_time&quot;: 0.001
+        },
+        &quot;selected_score&quot;: 0.002321687269751909
+      }
+    ],
+    &quot;seed&quot;: 2037,
+    &quot;truncated&quot;: true,
+    &quot;warnings&quot;: [
+      {
+        &quot;kind&quot;: &quot;gaussian_process_seed_plan&quot;,
+        &quot;message&quot;: &quot;Standalone Gaussian-process candidate plans contain only the initial design; camerae2e_optimize_parameters expands the search with GP posterior expected improvement.&quot;
+      }
+    ]
+  },
+  &quot;gaussian_process_method&quot;: &quot;budgeted_gaussian_process&quot;,
+  &quot;gaussian_process_search_method&quot;: &quot;gaussian_process&quot;,
   &quot;method&quot;: &quot;budgeted_evolutionary&quot;,
   &quot;parameter_space_validation&quot;: {
     &quot;axes&quot;: {
@@ -693,7 +813,7 @@ code { word-break: break-all; }
         &quot;sensor.integration_time&quot;: 0.001
       },
       {
-        &quot;sensor.analog_gain&quot;: 2.0,
+        &quot;sensor.analog_gain&quot;: 1.0,
         &quot;sensor.integration_time&quot;: 0.004
       }
     ],
@@ -758,23 +878,23 @@ code { word-break: break-all; }
         &quot;best_case_index&quot;: 3,
         &quot;best_feasible&quot;: true,
         &quot;best_parameters&quot;: {
-          &quot;sensor.analog_gain&quot;: 2.0,
+          &quot;sensor.analog_gain&quot;: 1.0,
           &quot;sensor.integration_time&quot;: 0.004
         },
-        &quot;best_score&quot;: 0.009286749079007636,
+        &quot;best_score&quot;: 0.018573498158015272,
         &quot;candidate_count&quot;: 4,
         &quot;candidate_pool_size&quot;: 6,
         &quot;evaluated_count&quot;: 4,
         &quot;generation&quot;: 0,
         &quot;selected_case_index&quot;: 3,
         &quot;selected_parameters&quot;: {
-          &quot;sensor.analog_gain&quot;: 2.0,
+          &quot;sensor.analog_gain&quot;: 1.0,
           &quot;sensor.integration_time&quot;: 0.004
         },
-        &quot;selected_score&quot;: 0.009286749079007636
+        &quot;selected_score&quot;: 0.018573498158015272
       }
     ],
-    &quot;seed&quot;: 2037,
+    &quot;seed&quot;: 2038,
     &quot;truncated&quot;: true,
     &quot;warnings&quot;: [
       {
@@ -857,7 +977,27 @@ code { word-break: break-all; }
   }
 }</pre></td></tr><tr><td>dataset_factory_smoke</td><td><span class='status status-pass'>pass</span></td><td>validated</td><td>RAW data factory exports deterministic NPZ, metadata, labels, and lineage.</td><td><pre>{
   &quot;case_count&quot;: 1,
+  &quot;container_sha256&quot;: &quot;sha256:16b7452f7d023b867aa03d0d0f3a777e631887eb96cd362fc0bd734a2d080380&quot;,
   &quot;dataset_root&quot;: &quot;/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke/optimization_dataset&quot;,
+  &quot;label_summary&quot;: {
+    &quot;instance_mask_count&quot;: 0,
+    &quot;keypoint_count&quot;: 0,
+    &quot;mask_count&quot;: 0,
+    &quot;object_count&quot;: 0,
+    &quot;polyline_count&quot;: 0,
+    &quot;semantic_mask_count&quot;: 0,
+    &quot;stage_tag_count&quot;: 0,
+    &quot;supported_label_types&quot;: [
+      &quot;objects&quot;,
+      &quot;masks&quot;,
+      &quot;semantic_masks&quot;,
+      &quot;instance_masks&quot;,
+      &quot;keypoints&quot;,
+      &quot;polylines&quot;,
+      &quot;stage_tags&quot;
+    ],
+    &quot;truth_boundary&quot;: &quot;Labels are caller-provided or synthetic-helper-provided; CameraE2E does not infer semantic truth from arbitrary images.&quot;
+  },
   &quot;manifest_schema&quot;: &quot;camerae2e_dataset_manifest_v1&quot;,
   &quot;parameter_lineage_count&quot;: 4,
   &quot;perception_index&quot;: {
@@ -927,6 +1067,31 @@ code { word-break: break-all; }
     &quot;source_schema_version&quot;: &quot;camerae2e_parameter_optimization_v1&quot;,
     &quot;source_seed&quot;: 2046
   },
+  &quot;split_policy&quot;: {
+    &quot;assigned_counts&quot;: {
+      &quot;best&quot;: 1
+    },
+    &quot;assigned_fractions&quot;: {
+      &quot;best&quot;: 1.0
+    },
+    &quot;case_count&quot;: 1,
+    &quot;deterministic&quot;: true,
+    &quot;mode&quot;: &quot;single_split&quot;,
+    &quot;requested&quot;: &quot;best&quot;,
+    &quot;schema_version&quot;: &quot;camerae2e_dataset_split_policy_v1&quot;
+  },
+  &quot;stage_outputs_sha256&quot;: &quot;sha256:fac49aa7a8ca6e0649a303216a6df8a3e9254bd1e83bd35751c734f75afa881d&quot;,
+  &quot;uncertainty_model&quot;: {
+    &quot;model&quot;: &quot;normalized_raw_sensor_deviation&quot;,
+    &quot;outputs&quot;: [
+      &quot;uncertainty&quot;,
+      &quot;confidence&quot;
+    ],
+    &quot;readiness_tier&quot;: &quot;proxy&quot;,
+    &quot;schema_version&quot;: &quot;camerae2e_uncertainty_proxy_v1&quot;,
+    &quot;truth_boundary&quot;: &quot;This is a deterministic proxy map for regression/debugging. It is not a calibrated sensor noise posterior or model confidence estimate.&quot;
+  },
+  &quot;uncertainty_sha256&quot;: &quot;sha256:7b1d3a6ee2108f6532afdc8aacdc9a1d7ed8a11dfe9add1b73da9a7c86d1dbf5&quot;,
   &quot;validation_ok&quot;: true
 }</pre></td></tr><tr><td>adas_kitti_demo_smoke</td><td><span class='status status-pass'>pass</span></td><td>proxy</td><td>ADAS/KITTI YOLO demo produces proxy RAW data and labels.</td><td><pre>{
   &quot;camera_spec&quot;: {
