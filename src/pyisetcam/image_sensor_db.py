@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -24,7 +25,9 @@ def image_sensor_db_root(root: str | Path | None = None) -> Path:
     explicit = os.environ.get("PYISETCAM_IMAGE_SENSOR_DB_ROOT")
     if explicit:
         return Path(explicit).expanduser()
-    fdtd_root = Path(os.environ.get("PYISETCAM_FDTD_ROOT", "/Users/seongcheoljeong/FDTD")).expanduser()
+    fdtd_root = Path(
+        os.environ.get("PYISETCAM_FDTD_ROOT", "/Users/seongcheoljeong/FDTD")
+    ).expanduser()
     return fdtd_root / "sensor_db"
 
 
@@ -76,7 +79,13 @@ def image_sensor_db_records(
         if query_text and query_text not in haystack:
             continue
         records.append(record)
-    records.sort(key=lambda item: (item["manufacturer"].lower(), item["device_name"].lower(), item["code"]))
+    records.sort(
+        key=lambda item: (
+            item["manufacturer"].lower(),
+            item["device_name"].lower(),
+            item["code"],
+        )
+    )
     if limit is not None:
         records = records[: int(limit)]
     return records
@@ -92,7 +101,9 @@ def image_sensor_db_get(sensor_id_or_code: str, root: str | Path | None = None) 
     raise KeyError(f"Unknown image sensor DB record: {sensor_id_or_code}")
 
 
-def image_sensor_db_parameters(sensor_id_or_code: str, root: str | Path | None = None) -> dict[str, Any]:
+def image_sensor_db_parameters(
+    sensor_id_or_code: str, root: str | Path | None = None
+) -> dict[str, Any]:
     """Return path parameters for direct CameraE2E sensor configuration."""
 
     record = image_sensor_db_get(sensor_id_or_code, root=root)
@@ -101,12 +112,125 @@ def image_sensor_db_parameters(sensor_id_or_code: str, root: str | Path | None =
         "sensor_id": record["sensor_id"],
         "code": record["code"],
         "catalog_path": image_sensor_db_catalog_path(root),
-        "stack_config_path": Path(record["stack_config_path"]) if record["stack_config_path"] else None,
-        "tcad_profile_path": Path(record["tcad_profile_path"]) if record["tcad_profile_path"] else None,
+        "stack_config_path": (
+            Path(record["stack_config_path"]) if record["stack_config_path"] else None
+        ),
+        "tcad_profile_path": (
+            Path(record["tcad_profile_path"]) if record["tcad_profile_path"] else None
+        ),
         "lut_path": fdtd_sensor_default_lut_path(),
         "generation_map_path": defaults["generation_map_path"],
         "collection_summary_paths": defaults["collection_summary_paths"],
         "accuracy_gate_path": defaults["accuracy_gate_path"],
+    }
+
+
+def image_sensor_db_config(
+    sensor_id_or_code: str,
+    *,
+    strategy: str = "hybrid",
+    root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Build a CameraE2E scenario fragment from one image-sensor DB record.
+
+    The returned ``scenario`` can be passed to ``camerae2e_run_scenario`` or used
+    as the base scenario for parameter optimization.  The policy is explicit:
+    DB/LUT paths are preferred when requested, while analytic sensor proxies are
+    only filled from metadata that is available in the selected record.
+    """
+
+    record = image_sensor_db_get(sensor_id_or_code, root=root)
+    params = image_sensor_db_parameters(sensor_id_or_code, root=root)
+    resolved_strategy = _normalize_config_strategy(strategy)
+    attach_luts = resolved_strategy in {"hybrid", "lut_only"}
+    attach_analytic = resolved_strategy in {"hybrid", "analytic_only"}
+
+    sensor_config = _analytic_sensor_config_from_record(
+        record,
+        include_ocl_proxy=attach_analytic,
+    )
+    fdtd_config: dict[str, Any] | None = None
+    tcad_config: dict[str, Any] | None = None
+    if attach_luts and _path_exists(params.get("lut_path")):
+        fdtd_config = {
+            "enabled": True,
+            "lut": _path_string(params["lut_path"]),
+            "mode": "qe+field+crosstalk",
+            "crosstalk_strength": 1.0,
+        }
+    tcad_paths_available = (
+        _path_exists(params.get("generation_map_path"))
+        and _path_exists(params.get("accuracy_gate_path"))
+        and all(_path_exists(item) for item in params.get("collection_summary_paths", []))
+    )
+    if attach_luts and tcad_paths_available:
+        tcad_config = {
+            "enabled": True,
+            "db": {
+                "root": _path_string(image_sensor_db_root(root).parent),
+                "generation_map_path": _path_string(params["generation_map_path"]),
+                "collection_summary_paths": [
+                    _path_string(item) for item in params.get("collection_summary_paths", [])
+                ],
+                "accuracy_gate_path": _path_string(params["accuracy_gate_path"]),
+            },
+            "collection_mode": "collection",
+            "allow_proxy_accuracy": True,
+        }
+
+    scenario: dict[str, Any] = {
+        "name": f"image_sensor_db_{record['sensor_id']}",
+        "sensor": sensor_config,
+        "image_sensor_db": {
+            "sensor_id": record["sensor_id"],
+            "code": record["code"],
+            "strategy": resolved_strategy,
+        },
+    }
+    if fdtd_config is not None:
+        scenario["fdtd"] = fdtd_config
+    if tcad_config is not None:
+        scenario["tcad"] = tcad_config
+
+    component_tiers = {
+        "sensor_db_metadata": "proxy",
+        "analytic_sensor_proxy": "proxy" if attach_analytic and sensor_config else "missing",
+        "fdtd_lut": "proxy" if fdtd_config is not None else "missing",
+        "tcad_collection": "calibration_required" if tcad_config is not None else "missing",
+    }
+    return {
+        "schema_version": "camerae2e_image_sensor_db_config_v1",
+        "sensor_id": record["sensor_id"],
+        "code": record["code"],
+        "manufacturer": record["manufacturer"],
+        "device_name": record["device_name"],
+        "strategy": resolved_strategy,
+        "readiness_tier": (
+            "calibration_required" if tcad_config is not None else "proxy"
+        ),
+        "scenario": scenario,
+        "sensor": sensor_config,
+        "fdtd": fdtd_config,
+        "tcad": tcad_config,
+        "paths": _jsonable_parameters(params),
+        "policy": {
+            "schema_version": "camerae2e_sensor_db_policy_v1",
+            "component_tiers": component_tiers,
+            "db_lut_role": (
+                "DB/LUT artifacts override or calibrate proxy defaults when attached."
+            ),
+            "analytic_role": (
+                "Analytic proxy axes support broad free-configuration sweeps and "
+                "should be calibrated or validated against DB/LUT/FDTD/TCAD evidence "
+                "before stronger claims are made."
+            ),
+            "truth_boundary": (
+                "Sensor DB records are metadata-derived unless measured stack, "
+                "sensor-specific FDTD LUT, TCAD process deck, QE/noise data, and "
+                "lineage evidence are attached."
+            ),
+        },
+        "record_summary": _record_summary(record),
     }
 
 
@@ -127,9 +251,126 @@ def image_sensor_db_summary(root: str | Path | None = None) -> dict[str, Any]:
         "record_count": len(records),
         "manufacturer_count": len(manufacturers),
         "manufacturers": dict(sorted(manufacturers.items(), key=lambda item: (-item[1], item[0]))),
-        "pixel_architectures": dict(sorted(architectures.items(), key=lambda item: (-item[1], item[0]))),
+        "pixel_architectures": dict(
+            sorted(architectures.items(), key=lambda item: (-item[1], item[0]))
+        ),
         "catalog_path": str(image_sensor_db_catalog_path(root)),
     }
+
+
+def _normalize_config_strategy(strategy: str) -> str:
+    normalized = str(strategy).strip().lower().replace("-", "_").replace(" ", "_")
+    aliases = {
+        "hybrid": "hybrid",
+        "combo": "hybrid",
+        "combination": "hybrid",
+        "db_lut_preferred": "hybrid",
+        "lut": "lut_only",
+        "lut_only": "lut_only",
+        "db_only": "lut_only",
+        "analytic": "analytic_only",
+        "analytic_only": "analytic_only",
+        "proxy": "analytic_only",
+        "free_configuration": "analytic_only",
+    }
+    if normalized not in aliases:
+        raise ValueError("strategy must be one of: hybrid, lut_only, analytic_only.")
+    return aliases[normalized]
+
+
+def _analytic_sensor_config_from_record(
+    record: Mapping[str, Any], *, include_ocl_proxy: bool
+) -> dict[str, Any]:
+    config: dict[str, Any] = {}
+    pixel_pitch_um = _finite_float(record.get("pixel_pitch_um"))
+    if pixel_pitch_um is not None and pixel_pitch_um > 0.0:
+        config["pixel_size"] = pixel_pitch_um * 1.0e-6
+
+    cfa_preset = _cfa_preset_from_record(record)
+    if cfa_preset is not None:
+        config["cfa_preset"] = cfa_preset
+
+    if include_ocl_proxy:
+        ocl_shape = _ocl_group_shape_from_record(record)
+        if ocl_shape is not None:
+            config["ocl_group_shape"] = ocl_shape
+            config["ocl_group_equalization"] = 1.0 if ocl_shape == "2x2" else 0.0
+    return config
+
+
+def _cfa_preset_from_record(record: Mapping[str, Any]) -> str | None:
+    pattern = str(record.get("cfa_pattern") or "").strip().lower()
+    if pattern in {"bayer", "rggb_bayer"}:
+        return "bayer_rgb"
+    if pattern in {"quad_bayer", "tetracell_bayer"}:
+        return "quad_bayer_rgb"
+    return None
+
+
+def _ocl_group_shape_from_record(record: Mapping[str, Any]) -> str | None:
+    pattern = str(record.get("cfa_pattern") or "").strip().lower()
+    architecture = str(record.get("pixel_architecture") or "").strip().lower()
+    if pattern in {"quad_bayer", "tetracell_bayer"}:
+        return "2x2"
+    if architecture in {"four_shared", "quad_pixel", "super_qpd"}:
+        return "2x2"
+    if architecture in {"standalone", "two_shared", "dual_pixel", "eight_shared"}:
+        return "1x1"
+    return None
+
+
+def _record_summary(record: Mapping[str, Any]) -> dict[str, Any]:
+    keys = (
+        "sensor_id",
+        "code",
+        "manufacturer",
+        "device_name",
+        "pixel_pitch_um",
+        "pixel_architecture",
+        "cfa_pattern",
+        "illumination",
+        "microlens_type",
+        "dti_type",
+        "has_dti",
+        "has_pdaf",
+        "has_hdr",
+        "has_lofic",
+        "stack_config_path",
+        "tcad_profile_path",
+    )
+    return {key: record.get(key) for key in keys}
+
+
+def _jsonable_parameters(params: Mapping[str, Any]) -> dict[str, Any]:
+    return {str(key): _jsonable_value(value) for key, value in params.items()}
+
+
+def _jsonable_value(value: Any) -> Any:
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, Mapping):
+        return {str(key): _jsonable_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_jsonable_value(item) for item in value]
+    return value
+
+
+def _path_string(value: Any) -> str:
+    return str(Path(value).expanduser()) if value is not None else ""
+
+
+def _path_exists(value: Any) -> bool:
+    return value is not None and Path(value).expanduser().exists()
+
+
+def _finite_float(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if number != number or number in {float("inf"), float("-inf")}:
+        return None
+    return number
 
 
 def _normalize_record(raw: dict[str, Any], root: Path) -> dict[str, Any]:
@@ -181,10 +422,11 @@ def _slugify(value: str) -> str:
     return "_".join(part for part in cleaned.split())
 
 
-imageSensorDBRoot = image_sensor_db_root
-imageSensorDBCatalogPath = image_sensor_db_catalog_path
-imageSensorDBLoad = image_sensor_db_load
-imageSensorDBRecords = image_sensor_db_records
-imageSensorDBGet = image_sensor_db_get
-imageSensorDBParameters = image_sensor_db_parameters
-imageSensorDBSummary = image_sensor_db_summary
+imageSensorDBRoot = image_sensor_db_root  # noqa: N816
+imageSensorDBCatalogPath = image_sensor_db_catalog_path  # noqa: N816
+imageSensorDBLoad = image_sensor_db_load  # noqa: N816
+imageSensorDBRecords = image_sensor_db_records  # noqa: N816
+imageSensorDBGet = image_sensor_db_get  # noqa: N816
+imageSensorDBParameters = image_sensor_db_parameters  # noqa: N816
+imageSensorDBConfig = image_sensor_db_config  # noqa: N816
+imageSensorDBSummary = image_sensor_db_summary  # noqa: N816

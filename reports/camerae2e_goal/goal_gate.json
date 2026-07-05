@@ -212,6 +212,32 @@
     },
     {
       "evidence": {
+        "analytic_sensor": {
+          "ocl_group_equalization": 0.0,
+          "ocl_group_shape": "1x1",
+          "pixel_size": 2.79e-06
+        },
+        "analytic_strategy": "analytic_only",
+        "component_tiers": {
+          "analytic_sensor_proxy": "proxy",
+          "fdtd_lut": "proxy",
+          "sensor_db_metadata": "proxy",
+          "tcad_collection": "calibration_required"
+        },
+        "hybrid_has_fdtd": true,
+        "hybrid_has_tcad": true,
+        "hybrid_strategy": "hybrid",
+        "parameter_lineage_count": 4,
+        "sensor_id": "def_2310_801_ams_osram_mira050_1qm1wb_ft_se",
+        "truth_boundary": "Sensor DB records are metadata-derived unless measured stack, sensor-specific FDTD LUT, TCAD process deck, QE/noise data, and lineage evidence are attached."
+      },
+      "name": "sensor_db_config_policy",
+      "status": "pass",
+      "summary": "Image-sensor DB selection emits DB/LUT-preferred hybrid config and analytic-only FACA fallback with explicit proxy policy.",
+      "tier": "calibration_required"
+    },
+    {
+      "evidence": {
         "metrics": {
           "angle": {
             "available": false,
@@ -962,7 +988,7 @@
       "tier": "calibration_required"
     }
   ],
-  "generated_at": "2026-07-05T07:00:49.758220+00:00",
+  "generated_at": "2026-07-05T07:13:39.627455+00:00",
   "goal": "Research-grade E2E optimization platform plus RAW data factory for perception training.",
   "ok": true,
   "output_dir": "/Users/seongcheoljeong/Documents/CameraE2E/reports/camerae2e_goal",
@@ -993,6 +1019,14 @@
       ],
       "evidence_summary": "Measured-evidence requirements exist and calibrated promotion remains blocked until evidence validates.",
       "requirement": "Calibration evidence and readiness promotion",
+      "status": "pass"
+    },
+    {
+      "checks": [
+        "sensor_db_config_policy"
+      ],
+      "evidence_summary": "Sensor DB records can produce DB/LUT-preferred hybrid configs and analytic-only FACA fallback scenarios with explicit proxy boundaries.",
+      "requirement": "Image-sensor DB hybrid configuration policy",
       "status": "pass"
     },
     {
@@ -1047,11 +1081,11 @@
   "schema_version": "camerae2e_goal_gate_v1",
   "strict": false,
   "summary": {
-    "check_count": 9,
+    "check_count": 10,
     "include_demos": true,
     "seed": 2026,
     "status_counts": {
-      "pass": 7,
+      "pass": 8,
       "warn": 2
     }
   }

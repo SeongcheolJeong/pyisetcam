@@ -45,13 +45,15 @@ DB/LUT registry:
 - `camerae2e_calibration_evidence_manifest(...)`
 - `camerae2e_calibration_evidence_validate(...)`
 - `camerae2e_readiness_promotion_plan(...)`
+- `image_sensor_db_config(...)`
 
 `camerae2e_goal_gate(...)` is the top-level research-platform evidence gate.
 It regenerates a machine-readable pass/warn/fail matrix over registry,
-physics-pipeline lineage, calibration evidence policy, FACA smoke,
-camera-parameter optimization, RAW dataset export, ADAS/KITTI YOLO demo export,
-camera-spec variant re-capture, and the strict sign-off claim guard. Non-strict
-mode is the normal research gate. Strict mode is expected to fail while proxy or
+physics-pipeline lineage, calibration evidence policy, image-sensor DB
+hybrid/analytic configuration policy, FACA smoke, camera-parameter optimization,
+RAW dataset export, ADAS/KITTI YOLO demo export, camera-spec variant
+re-capture, and the strict sign-off claim guard. Non-strict mode is the normal
+research gate. Strict mode is expected to fail while proxy or
 calibration-required assets remain active.
 
 The calibration evidence APIs define the measured artifacts required before a

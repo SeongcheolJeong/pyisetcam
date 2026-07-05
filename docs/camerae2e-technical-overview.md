@@ -560,6 +560,7 @@ PPT에서 설명한 활용 범위를 코드에서 직접 추적하기 위해 pub
 | 영역 | API | 역할 |
 |---|---|---|
 | DB/LUT registry | `camerae2e_db_manifest()`, `camerae2e_db_validate(...)`, `camerae2e_db_lineage(...)` | asset provenance, readiness tier, dependency, stale artifact를 한 manifest에서 추적 |
+| Image-sensor DB selector | `image_sensor_db_records(...)`, `image_sensor_db_parameters(...)`, `image_sensor_db_config(...)` | sensor DB record 검색, raw path bundle 반환, 또는 DB/LUT-preferred hybrid scenario와 analytic-only fallback scenario를 policy manifest와 함께 생성 |
 | Calibration evidence | `camerae2e_calibration_evidence_requirements(...)`, `camerae2e_calibration_evidence_manifest(...)`, `camerae2e_calibration_evidence_validate(...)`, `camerae2e_readiness_promotion_plan(...)` | measured PSF/QE/TCAD/HW trace/model evaluation 같은 외부 evidence를 검증하고 calibrated 승격 가능 여부를 plan으로 산출 |
 | Physics pipeline plan | `camerae2e_physics_pipeline_plan(...)` | FDTD/TCAD/RayOptics/HW ISP asset의 stale/missing/proxy 상태를 refresh/calibration action list로 변환 |
 | Goal evidence gate | `camerae2e_goal_gate(...)` | registry, physics lineage, FACA, optimization, RAW factory, ADAS/KITTI demo, camera-spec variant, strict sign-off guard를 한 번에 pass/warn/fail evidence로 기록 |

@@ -21,6 +21,7 @@ from .dataset import (
     camerae2e_dataset_validate,
 )
 from .db_catalog import camerae2e_db_manifest, camerae2e_db_validate
+from .image_sensor_db import image_sensor_db_config, image_sensor_db_records
 from .optimization import (
     camerae2e_optimization_config_catalog,
     camerae2e_optimize_camera_parameters,
@@ -58,6 +59,7 @@ def camerae2e_goal_gate(
         _run_check("registry_manifest", lambda: _registry_check(strict=strict)),
         _run_check("physics_pipeline", lambda: _physics_pipeline_check(strict=strict)),
         _run_check("calibration_evidence_policy", _calibration_evidence_policy),
+        _run_check("sensor_db_config_policy", lambda: _sensor_db_config_policy(seed=seed + 5)),
         _run_check("faca_smoke", lambda: _faca_smoke(seed=seed)),
         _run_check("parameter_optimization", lambda: _optimization_smoke(seed=seed + 10)),
         _run_check(
@@ -213,6 +215,60 @@ def _calibration_evidence_policy() -> dict[str, Any]:
                 for item in plan.get("plans", [])
                 if str(item.get("status", "")).startswith("blocked_")
             ][:8],
+        },
+    }
+
+
+def _sensor_db_config_policy(*, seed: int) -> dict[str, Any]:
+    records = image_sensor_db_records(limit=1)
+    if not records:
+        return {
+            "status": "fail",
+            "tier": "missing",
+            "summary": "Image-sensor DB has no selectable records.",
+            "evidence": {"record_count": 0},
+        }
+
+    sensor_id = str(records[0]["sensor_id"])
+    hybrid = image_sensor_db_config(sensor_id, strategy="hybrid")
+    analytic = image_sensor_db_config(sensor_id, strategy="analytic_only")
+    scenario = {
+        "scene": {"type": "uniform ee", "args": [8]},
+        **dict(analytic["scenario"]),
+        "sensor": {
+            **dict(analytic["scenario"].get("sensor", {})),
+            "noise_flag": 0,
+        },
+    }
+    result = camerae2e_run_scenario(scenario, seed=seed, include_arrays=False)
+    report = camerae2e_faca_report(result)
+    policy = dict(hybrid.get("policy", {}))
+    tiers = dict(policy.get("component_tiers", {}))
+    passed = (
+        hybrid.get("schema_version") == "camerae2e_image_sensor_db_config_v1"
+        and analytic.get("strategy") == "analytic_only"
+        and "fdtd" in hybrid.get("scenario", {})
+        and "fdtd" not in analytic.get("scenario", {})
+        and tiers.get("sensor_db_metadata") == "proxy"
+        and bool(report.get("parameter_lineage"))
+    )
+    return {
+        "status": "pass" if passed else "fail",
+        "tier": hybrid.get("readiness_tier", "proxy"),
+        "summary": (
+            "Image-sensor DB selection emits DB/LUT-preferred hybrid config and "
+            "analytic-only FACA fallback with explicit proxy policy."
+        ),
+        "evidence": {
+            "sensor_id": sensor_id,
+            "hybrid_strategy": hybrid.get("strategy"),
+            "analytic_strategy": analytic.get("strategy"),
+            "component_tiers": tiers,
+            "hybrid_has_fdtd": "fdtd" in hybrid.get("scenario", {}),
+            "hybrid_has_tcad": "tcad" in hybrid.get("scenario", {}),
+            "analytic_sensor": analytic.get("sensor", {}),
+            "parameter_lineage_count": len(report.get("parameter_lineage", [])),
+            "truth_boundary": policy.get("truth_boundary"),
         },
     }
 
@@ -523,6 +579,14 @@ def _requirement_matrix(checks: list[Mapping[str, Any]]) -> list[dict[str, Any]]
             (
                 "Measured-evidence requirements exist and calibrated promotion remains "
                 "blocked until evidence validates."
+            ),
+        ),
+        (
+            "Image-sensor DB hybrid configuration policy",
+            ["sensor_db_config_policy"],
+            (
+                "Sensor DB records can produce DB/LUT-preferred hybrid configs and "
+                "analytic-only FACA fallback scenarios with explicit proxy boundaries."
             ),
         ),
         (

@@ -24,12 +24,12 @@ code { word-break: break-all; }
 <p class="lead">Research-grade E2E optimization platform plus RAW data factory for perception training.</p>
 <p>OK: <strong>True</strong>; strict:
 <strong>False</strong>; generated:
-<code>2026-07-05T07:00:49.758220+00:00</code></p>
+<code>2026-07-05T07:13:39.627455+00:00</code></p>
 <p>Artifacts: <code>/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke</code></p>
 <h2>Requirements</h2>
 <table>
 <thead><tr><th>Requirement</th><th>Status</th><th>Checks</th><th>Evidence</th></tr></thead>
-<tbody><tr><td>DB/LUT registry and readiness matrix</td><td><span class='status status-warn'>warn</span></td><td>registry_manifest</td><td>Registry manifest validates schema, readiness tiers, and stale dependencies.</td></tr><tr><td>FDTD/TCAD/RayOptics/HW ISP external pipeline</td><td><span class='status status-warn'>warn</span></td><td>physics_pipeline</td><td>External asset lineage and refresh actions are generated without sign-off inflation.</td></tr><tr><td>Calibration evidence and readiness promotion</td><td><span class='status status-pass'>pass</span></td><td>calibration_evidence_policy</td><td>Measured-evidence requirements exist and calibrated promotion remains blocked until evidence validates.</td></tr><tr><td>System FACA scenario metrics</td><td><span class='status status-pass'>pass</span></td><td>faca_smoke</td><td>Scene/OI/Sensor/IP/HW ISP stages produce metrics and parameter lineage.</td></tr><tr><td>Automated camera-parameter optimization</td><td><span class='status status-pass'>pass</span></td><td>parameter_optimization</td><td>Preset camera parameter search optimizes a FACA metric deterministically.</td></tr><tr><td>RAW data factory from optimized camera cases</td><td><span class='status status-pass'>pass</span></td><td>dataset_factory_smoke</td><td>Optimization outputs can be rendered into validated RAW training artifacts.</td></tr><tr><td>ADAS/KITTI YOLO demo RAW generation</td><td><span class='status status-pass'>pass</span></td><td>adas_kitti_demo_smoke</td><td>Synthetic or supplied KITTI-style inputs can produce proxy RAW and YOLO labels.</td></tr><tr><td>Camera-spec variant re-capture</td><td><span class='status status-pass'>pass</span></td><td>camera_spec_variant_smoke</td><td>One KITTI-style scene can be exported under multiple camera specifications.</td></tr><tr><td>Physics proxy/sign-off claim guard</td><td><span class='status status-pass'>pass</span></td><td>signoff_claim_guard</td><td>Strict validation blocks calibrated claims until measured evidence is attached.</td></tr></tbody>
+<tbody><tr><td>DB/LUT registry and readiness matrix</td><td><span class='status status-warn'>warn</span></td><td>registry_manifest</td><td>Registry manifest validates schema, readiness tiers, and stale dependencies.</td></tr><tr><td>FDTD/TCAD/RayOptics/HW ISP external pipeline</td><td><span class='status status-warn'>warn</span></td><td>physics_pipeline</td><td>External asset lineage and refresh actions are generated without sign-off inflation.</td></tr><tr><td>Calibration evidence and readiness promotion</td><td><span class='status status-pass'>pass</span></td><td>calibration_evidence_policy</td><td>Measured-evidence requirements exist and calibrated promotion remains blocked until evidence validates.</td></tr><tr><td>Image-sensor DB hybrid configuration policy</td><td><span class='status status-pass'>pass</span></td><td>sensor_db_config_policy</td><td>Sensor DB records can produce DB/LUT-preferred hybrid configs and analytic-only FACA fallback scenarios with explicit proxy boundaries.</td></tr><tr><td>System FACA scenario metrics</td><td><span class='status status-pass'>pass</span></td><td>faca_smoke</td><td>Scene/OI/Sensor/IP/HW ISP stages produce metrics and parameter lineage.</td></tr><tr><td>Automated camera-parameter optimization</td><td><span class='status status-pass'>pass</span></td><td>parameter_optimization</td><td>Preset camera parameter search optimizes a FACA metric deterministically.</td></tr><tr><td>RAW data factory from optimized camera cases</td><td><span class='status status-pass'>pass</span></td><td>dataset_factory_smoke</td><td>Optimization outputs can be rendered into validated RAW training artifacts.</td></tr><tr><td>ADAS/KITTI YOLO demo RAW generation</td><td><span class='status status-pass'>pass</span></td><td>adas_kitti_demo_smoke</td><td>Synthetic or supplied KITTI-style inputs can produce proxy RAW and YOLO labels.</td></tr><tr><td>Camera-spec variant re-capture</td><td><span class='status status-pass'>pass</span></td><td>camera_spec_variant_smoke</td><td>One KITTI-style scene can be exported under multiple camera specifications.</td></tr><tr><td>Physics proxy/sign-off claim guard</td><td><span class='status status-pass'>pass</span></td><td>signoff_claim_guard</td><td>Strict validation blocks calibrated claims until measured evidence is attached.</td></tr></tbody>
 </table>
 <h2>Checks</h2>
 <table>
@@ -222,6 +222,25 @@ code { word-break: break-all; }
       &quot;tcad_process_deck&quot;
     ]
   }
+}</pre></td></tr><tr><td>sensor_db_config_policy</td><td><span class='status status-pass'>pass</span></td><td>calibration_required</td><td>Image-sensor DB selection emits DB/LUT-preferred hybrid config and analytic-only FACA fallback with explicit proxy policy.</td><td><pre>{
+  &quot;analytic_sensor&quot;: {
+    &quot;ocl_group_equalization&quot;: 0.0,
+    &quot;ocl_group_shape&quot;: &quot;1x1&quot;,
+    &quot;pixel_size&quot;: 2.79e-06
+  },
+  &quot;analytic_strategy&quot;: &quot;analytic_only&quot;,
+  &quot;component_tiers&quot;: {
+    &quot;analytic_sensor_proxy&quot;: &quot;proxy&quot;,
+    &quot;fdtd_lut&quot;: &quot;proxy&quot;,
+    &quot;sensor_db_metadata&quot;: &quot;proxy&quot;,
+    &quot;tcad_collection&quot;: &quot;calibration_required&quot;
+  },
+  &quot;hybrid_has_fdtd&quot;: true,
+  &quot;hybrid_has_tcad&quot;: true,
+  &quot;hybrid_strategy&quot;: &quot;hybrid&quot;,
+  &quot;parameter_lineage_count&quot;: 4,
+  &quot;sensor_id&quot;: &quot;def_2310_801_ams_osram_mira050_1qm1wb_ft_se&quot;,
+  &quot;truth_boundary&quot;: &quot;Sensor DB records are metadata-derived unless measured stack, sensor-specific FDTD LUT, TCAD process deck, QE/noise data, and lineage evidence are attached.&quot;
 }</pre></td></tr><tr><td>faca_smoke</td><td><span class='status status-pass'>pass</span></td><td>validated</td><td>System FACA can run Scene -&gt; OI -&gt; Sensor -&gt; IP plus HW ISP control metrics.</td><td><pre>{
   &quot;metrics&quot;: {
     &quot;angle&quot;: {

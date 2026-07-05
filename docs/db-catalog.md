@@ -66,10 +66,11 @@ Main entries:
 Image-sensor selector APIs:
 
 ```python
-from pyisetcam import image_sensor_db_records, image_sensor_db_parameters
+from pyisetcam import image_sensor_db_records, image_sensor_db_parameters, image_sensor_db_config
 
 records = image_sensor_db_records("sony", limit=10)
 params = image_sensor_db_parameters(records[0]["sensor_id"])
+config = image_sensor_db_config(records[0]["sensor_id"], strategy="hybrid")
 ```
 
 The selector parameters include:
@@ -81,6 +82,13 @@ The selector parameters include:
 - `generation_map_path`
 - `collection_summary_paths`
 - `accuracy_gate_path`
+
+`image_sensor_db_config(...)` returns a CameraE2E scenario fragment plus a
+policy manifest. Use `strategy="hybrid"` when DB/LUT paths should be attached
+and analytic proxy defaults should fill only metadata-derived axes. Use
+`strategy="analytic_only"` for broad free-configuration optimization without
+attaching the external FDTD/TCAD paths. Use `strategy="lut_only"` when the DB/LUT
+side should be inspected without analytic OCL group fallback.
 
 Parameter use:
 

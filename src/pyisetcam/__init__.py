@@ -238,6 +238,7 @@ from .hwisp_db import (
 )
 from .image_sensor_db import (
     image_sensor_db_catalog_path,
+    image_sensor_db_config,
     image_sensor_db_get,
     image_sensor_db_load,
     image_sensor_db_parameters,
@@ -1205,6 +1206,7 @@ __all__ = [
     "camera_vsnr",
     "camera_vsnr_sl",
     "image_sensor_db_catalog_path",
+    "image_sensor_db_config",
     "image_sensor_db_get",
     "image_sensor_db_load",
     "image_sensor_db_parameters",
@@ -1212,6 +1214,7 @@ __all__ = [
     "image_sensor_db_root",
     "image_sensor_db_summary",
     "imageSensorDBCatalogPath",
+    "imageSensorDBConfig",
     "imageSensorDBGet",
     "imageSensorDBLoad",
     "imageSensorDBParameters",
@@ -3846,6 +3849,7 @@ cameraE2EReadinessPromotionPlan = camerae2e_readiness_promotion_plan
 
 imageSensorDBRoot = image_sensor_db_root
 imageSensorDBCatalogPath = image_sensor_db_catalog_path
+imageSensorDBConfig = image_sensor_db_config
 imageSensorDBLoad = image_sensor_db_load
 imageSensorDBRecords = image_sensor_db_records
 imageSensorDBGet = image_sensor_db_get
