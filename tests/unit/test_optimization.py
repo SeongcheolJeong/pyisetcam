@@ -243,6 +243,32 @@ def test_camerae2e_parameter_candidate_plan_latin_hypercube_defaults_budget() ->
     assert plan["warnings"][0]["kind"] == "implicit_default_budget"
 
 
+def test_camerae2e_parameter_candidate_plan_evolutionary_returns_seed_population() -> None:
+    plan = camerae2e_parameter_candidate_plan(
+        {
+            "sensor.integration_time": [0.001, 0.002, 0.004],
+            "sensor.analog_gain": [1.0, 2.0, 4.0],
+        },
+        method="genetic",
+        max_cases=6,
+        seed=12,
+    )
+
+    assert plan["method"] == "evolutionary"
+    assert plan["max_cases"] == 6
+    assert plan["case_count"] == 4
+    assert plan["search_config"]["population_size"] == 4
+    assert plan["warnings"][0]["kind"] == "evolutionary_seed_plan"
+    assert plan["candidates"][0] == {
+        "sensor.integration_time": 0.001,
+        "sensor.analog_gain": 1.0,
+    }
+    assert plan["candidates"][1] == {
+        "sensor.integration_time": 0.004,
+        "sensor.analog_gain": 4.0,
+    }
+
+
 def test_camerae2e_optimize_parameters_rejects_invalid_values_before_run() -> None:
     try:
         camerae2e_optimize_parameters(
@@ -279,6 +305,50 @@ def test_camerae2e_optimize_parameters_uses_budgeted_candidates() -> None:
     assert result["candidate_plan"]["truncated"] is True
     assert result["case_count"] == 4
     assert len(result["cases"]) == 4
+
+
+def test_camerae2e_optimize_parameters_supports_evolutionary_search() -> None:
+    parameter_space = {
+        "sensor.integration_time": [0.001, 0.002, 0.004],
+        "sensor.analog_gain": [1.0, 2.0, 4.0],
+    }
+    result = camerae2e_optimize_parameters(
+        {
+            "name": "unit_evolutionary_parameter_optimization",
+            "scene": {"type": "uniform ee", "args": [8]},
+            "sensor": {"noise_flag": 0},
+        },
+        parameter_space,
+        {"metric": "metrics.color.rgb_mean", "direction": "maximize"},
+        method="evolutionary",
+        max_cases=5,
+        seed=210,
+        top_k=2,
+    )
+    repeated = camerae2e_optimize_parameters(
+        {
+            "name": "unit_evolutionary_parameter_optimization",
+            "scene": {"type": "uniform ee", "args": [8]},
+            "sensor": {"noise_flag": 0},
+        },
+        parameter_space,
+        {"metric": "metrics.color.rgb_mean", "direction": "maximize"},
+        method="evolutionary",
+        max_cases=5,
+        seed=210,
+        top_k=2,
+    )
+
+    assert result["method"] == "budgeted_evolutionary"
+    assert result["search_method"] == "evolutionary"
+    assert result["case_count"] == 5
+    assert result["candidate_plan"]["case_count"] == 5
+    assert result["candidate_plan"]["search_trace"]
+    assert result["candidate_plan"]["executed_generation_count"] >= 1
+    assert [case["parameters"] for case in result["cases"]] == [
+        case["parameters"] for case in repeated["cases"]
+    ]
+    assert len({str(case["parameters"]) for case in result["cases"]}) == 5
 
 
 def test_camerae2e_scenario_applies_extended_configure_axes() -> None:

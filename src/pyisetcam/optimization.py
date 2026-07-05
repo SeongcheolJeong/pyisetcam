@@ -467,7 +467,7 @@ def camerae2e_optimize_parameters(
     top_k: int = 5,
     include_arrays: bool = False,
 ) -> dict[str, Any]:
-    """Optimize CameraE2E camera parameters with deterministic grid search.
+    """Optimize CameraE2E camera parameters with deterministic bounded search.
 
     Parameters use dot paths.  Examples:
 
@@ -476,8 +476,10 @@ def camerae2e_optimize_parameters(
     - ``optics.fnumber``
     - ``ip.demosaic_method``
 
-    The score is always maximized.  Objective specs can maximize, minimize, or
-    target any numeric path in the FACA report.
+    The score is always maximized. Objective specs can maximize, minimize, or
+    target any numeric path in the FACA report. Supported methods are grid,
+    random, Latin-hypercube, and score-ranked evolutionary search over the
+    discrete axis values supplied by the caller or preset catalog.
     """
 
     axes = _normalize_parameter_space(parameter_space or {})
@@ -495,43 +497,37 @@ def camerae2e_optimize_parameters(
     )
     objective_specs = _normalize_objective(objective)
     constraint_specs = [dict(item) for item in constraints or []]
-    cases: list[dict[str, Any]] = []
-    for index, axis_values in enumerate(candidate_plan["candidates"]):
-        scenario = _deep_dict(base_scenario or {})
-        scenario.setdefault("name", "camerae2e_parameter_optimization")
-        for key, value in axis_values.items():
-            _assign_parameter(scenario, key, value)
-        report = camerae2e_faca_report(
-            camerae2e_run_scenario(
-                scenario,
+    if candidate_plan["method"] == "evolutionary":
+        cases, candidate_plan = _run_evolutionary_parameter_search(
+            candidate_plan,
+            axes,
+            base_scenario=base_scenario,
+            objective_specs=objective_specs,
+            objective=objective,
+            constraint_specs=constraint_specs,
+            scene=scene,
+            camera=camera,
+            asset_store=asset_store,
+            seed=seed,
+            include_arrays=include_arrays,
+        )
+    else:
+        cases = [
+            _evaluate_parameter_candidate(
+                axis_values,
+                case_index=index,
+                base_scenario=base_scenario,
+                objective_specs=objective_specs,
+                objective=objective,
+                constraint_specs=constraint_specs,
                 scene=scene,
                 camera=camera,
                 asset_store=asset_store,
-                seed=int(seed) + index,
+                seed=seed,
                 include_arrays=include_arrays,
             )
-        )
-        objective_values, objective_utilities, score = _score_report(
-            report, objective_specs, objective
-        )
-        constraint_results = [_evaluate_constraint(report, item) for item in constraint_specs]
-        feasible = all(item["pass"] for item in constraint_results)
-        if not feasible:
-            score = -math.inf
-        cases.append(
-            {
-                "case_index": index,
-                "seed": int(seed) + index,
-                "parameters": _jsonable(axis_values),
-                "score": float(score),
-                "feasible": bool(feasible),
-                "objective_values": _jsonable(objective_values),
-                "objective_utilities": _jsonable(objective_utilities),
-                "constraint_results": _jsonable(constraint_results),
-                "scenario": _jsonable(report.get("scenario", {})),
-                "report": report,
-            }
-        )
+            for index, axis_values in enumerate(candidate_plan["candidates"])
+        ]
 
     ranked = sorted(
         cases,
@@ -598,7 +594,9 @@ def camerae2e_parameter_candidate_plan(
 
     ``grid`` preserves Cartesian grid semantics.  ``random`` and
     ``latin_hypercube`` sample from the provided discrete axis values and default
-    to a bounded budget when ``max_cases`` is omitted.
+    to a bounded budget when ``max_cases`` is omitted. ``evolutionary`` returns
+    a deterministic seed population; :func:`camerae2e_optimize_parameters`
+    expands it adaptively using evaluated FACA objective scores.
     """
 
     axes = _normalize_parameter_space(parameter_space)
@@ -628,12 +626,27 @@ def camerae2e_parameter_candidate_plan(
             "warnings": [],
             "candidates": [],
         }
-    candidates = _generate_parameter_candidates(
-        axes,
-        method=method_key,
-        max_cases=budget,
-        seed=seed,
-    )
+    if method_key == "evolutionary":
+        population_size = _evolutionary_population_size(axes, budget)
+        candidates = _evolutionary_seed_candidates(axes, population_size, seed)
+        warnings.append(
+            {
+                "kind": "evolutionary_seed_plan",
+                "message": (
+                    "Standalone evolutionary candidate plans contain only the seed "
+                    "population; camerae2e_optimize_parameters expands the search "
+                    "adaptively from evaluated objective scores."
+                ),
+            }
+        )
+    else:
+        population_size = None
+        candidates = _generate_parameter_candidates(
+            axes,
+            method=method_key,
+            max_cases=budget,
+            seed=seed,
+        )
     if implicit_default_budget and full_grid_count > budget:
         warnings.append(
             {
@@ -656,6 +669,9 @@ def camerae2e_parameter_candidate_plan(
         "implicit_default_budget": implicit_default_budget,
         "truncated": len(candidates) < full_grid_count,
         "case_count": len(candidates),
+        "search_config": _evolutionary_search_config(axes, budget, population_size)
+        if method_key == "evolutionary"
+        else {},
         "parameter_space_validation": validation,
         "warnings": warnings,
         "candidates": _jsonable(candidates),
@@ -951,10 +967,16 @@ def _normalize_candidate_method(method: str) -> str:
         "latin": "latin_hypercube",
         "lhs": "latin_hypercube",
         "budgeted_latin_hypercube": "latin_hypercube",
+        "evolutionary": "evolutionary",
+        "evolutionary_search": "evolutionary",
+        "genetic": "evolutionary",
+        "genetic_algorithm": "evolutionary",
+        "ea": "evolutionary",
     }
     if key not in aliases:
         raise ValueError(
-            "Candidate generation method must be one of: grid, random, latin_hypercube."
+            "Candidate generation method must be one of: grid, random, "
+            "latin_hypercube, evolutionary."
         )
     return aliases[key]
 
@@ -994,6 +1016,12 @@ def _generate_parameter_candidates(
         return _random_candidates(axes, max_cases, seed)
     if method == "latin_hypercube":
         return _latin_hypercube_candidates(axes, max_cases, seed)
+    if method == "evolutionary":
+        return _evolutionary_seed_candidates(
+            axes,
+            _evolutionary_population_size(axes, max_cases),
+            seed,
+        )
     raise ValueError(f"Unsupported candidate generation method: {method!r}.")
 
 
@@ -1093,6 +1121,293 @@ def _latin_hypercube_candidates(
             }
         )
     return _dedupe_and_fill_candidates(candidates, axes, max_cases)
+
+
+def _evolutionary_population_size(axes: Mapping[str, list[Any]], budget: int) -> int:
+    if not axes:
+        return 1
+    axis_count = max(len(axes), 1)
+    full_grid_count = _full_grid_count(axes)
+    requested = max(4, 2 * axis_count)
+    return int(min(max(int(budget), 1), full_grid_count, requested))
+
+
+def _evolutionary_search_config(
+    axes: Mapping[str, list[Any]],
+    budget: int,
+    population_size: int | None = None,
+) -> dict[str, Any]:
+    if population_size is None:
+        population_size = _evolutionary_population_size(axes, budget)
+    axis_count = max(len(axes), 1)
+    return {
+        "population_size": int(population_size),
+        "elite_count": int(max(1, min(population_size, math.ceil(population_size / 3.0)))),
+        "mutation_probability": float(min(0.5, max(0.15, 1.0 / axis_count))),
+        "selection": "score_ranked_elite",
+        "crossover": "uniform_discrete_axis",
+        "budget": int(budget),
+    }
+
+
+def _evolutionary_seed_candidates(
+    axes: Mapping[str, list[Any]], population_size: int, seed: int
+) -> list[dict[str, Any]]:
+    if not axes:
+        return [{}]
+    candidates: list[dict[str, Any]] = []
+    full_grid_count = _full_grid_count(axes)
+    if full_grid_count:
+        candidates.append(_candidate_from_grid_index(axes, 0))
+    if full_grid_count > 1:
+        candidates.append(_candidate_from_grid_index(axes, full_grid_count - 1))
+    candidates.extend(_latin_hypercube_candidates(axes, int(population_size), seed))
+    candidates.extend(_random_candidates(axes, int(population_size), int(seed) + 991))
+    return _dedupe_and_fill_candidates(candidates, axes, int(population_size))
+
+
+def _run_evolutionary_parameter_search(
+    candidate_plan: Mapping[str, Any],
+    axes: Mapping[str, list[Any]],
+    *,
+    base_scenario: Mapping[str, Any] | None,
+    objective_specs: list[dict[str, Any]],
+    objective: ObjectiveSpec | ObjectiveCallable | None,
+    constraint_specs: list[dict[str, Any]],
+    scene: Scene | str | Mapping[str, Any] | None,
+    camera: Camera | None,
+    asset_store: AssetStore | None,
+    seed: int,
+    include_arrays: bool,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    budget = int(candidate_plan.get("max_cases", 1))
+    config = dict(candidate_plan.get("search_config") or _evolutionary_search_config(axes, budget))
+    population_size = int(
+        config.get("population_size", _evolutionary_population_size(axes, budget))
+    )
+    elite_count = int(config.get("elite_count", max(1, population_size // 3)))
+    mutation_probability = float(config.get("mutation_probability", 0.25))
+    rng = np.random.default_rng(int(seed) + 1729)
+    seen: set[str] = set()
+    cases: list[dict[str, Any]] = []
+    search_trace: list[dict[str, Any]] = []
+    pending = [dict(candidate) for candidate in candidate_plan.get("candidates", [])]
+    generation = 0
+    full_grid_count = _full_grid_count(axes)
+
+    while len(cases) < budget and len(seen) < full_grid_count:
+        generation_cases: list[dict[str, Any]] = []
+        for candidate in pending:
+            if len(cases) >= budget:
+                break
+            signature = _candidate_signature(candidate)
+            if signature in seen:
+                continue
+            case = _evaluate_parameter_candidate(
+                candidate,
+                case_index=len(cases),
+                base_scenario=base_scenario,
+                objective_specs=objective_specs,
+                objective=objective,
+                constraint_specs=constraint_specs,
+                scene=scene,
+                camera=camera,
+                asset_store=asset_store,
+                seed=seed,
+                include_arrays=include_arrays,
+            )
+            cases.append(case)
+            generation_cases.append(case)
+            seen.add(signature)
+
+        ranked = _rank_cases_for_search(cases)
+        search_trace.append(
+            _evolutionary_trace_entry(
+                generation,
+                generation_cases,
+                ranked,
+                evaluated_count=len(cases),
+            )
+        )
+        if len(cases) >= budget or len(seen) >= full_grid_count:
+            break
+        pending = _evolutionary_next_candidates(
+            axes,
+            ranked,
+            seen,
+            population_size=min(population_size, budget - len(cases)),
+            elite_count=elite_count,
+            mutation_probability=mutation_probability,
+            rng=rng,
+        )
+        if not pending:
+            break
+        generation += 1
+
+    executed_plan = dict(candidate_plan)
+    executed_plan["case_count"] = len(cases)
+    executed_plan["truncated"] = len(cases) < full_grid_count
+    executed_plan["candidates"] = [_jsonable(case.get("parameters", {})) for case in cases]
+    executed_plan["search_config"] = _jsonable(config)
+    executed_plan["search_trace"] = _jsonable(search_trace)
+    executed_plan["executed_generation_count"] = len(search_trace)
+    return cases, executed_plan
+
+
+def _evaluate_parameter_candidate(
+    axis_values: Mapping[str, Any],
+    *,
+    case_index: int,
+    base_scenario: Mapping[str, Any] | None,
+    objective_specs: list[dict[str, Any]],
+    objective: ObjectiveSpec | ObjectiveCallable | None,
+    constraint_specs: list[dict[str, Any]],
+    scene: Scene | str | Mapping[str, Any] | None,
+    camera: Camera | None,
+    asset_store: AssetStore | None,
+    seed: int,
+    include_arrays: bool,
+) -> dict[str, Any]:
+    scenario = _deep_dict(base_scenario or {})
+    scenario.setdefault("name", "camerae2e_parameter_optimization")
+    for key, value in axis_values.items():
+        _assign_parameter(scenario, key, value)
+    report = camerae2e_faca_report(
+        camerae2e_run_scenario(
+            scenario,
+            scene=scene,
+            camera=camera,
+            asset_store=asset_store,
+            seed=int(seed) + int(case_index),
+            include_arrays=include_arrays,
+        )
+    )
+    objective_values, objective_utilities, score = _score_report(
+        report, objective_specs, objective
+    )
+    constraint_results = [_evaluate_constraint(report, item) for item in constraint_specs]
+    feasible = all(item["pass"] for item in constraint_results)
+    if not feasible:
+        score = -math.inf
+    return {
+        "case_index": int(case_index),
+        "seed": int(seed) + int(case_index),
+        "parameters": _jsonable(axis_values),
+        "score": float(score),
+        "feasible": bool(feasible),
+        "objective_values": _jsonable(objective_values),
+        "objective_utilities": _jsonable(objective_utilities),
+        "constraint_results": _jsonable(constraint_results),
+        "scenario": _jsonable(report.get("scenario", {})),
+        "report": report,
+    }
+
+
+def _rank_cases_for_search(cases: Iterable[Mapping[str, Any]]) -> list[Mapping[str, Any]]:
+    return sorted(
+        cases,
+        key=lambda item: (
+            bool(item.get("feasible", True)),
+            float(item.get("score", -math.inf)),
+            -int(item.get("case_index", 0)),
+        ),
+        reverse=True,
+    )
+
+
+def _evolutionary_next_candidates(
+    axes: Mapping[str, list[Any]],
+    ranked_cases: list[Mapping[str, Any]],
+    seen: set[str],
+    *,
+    population_size: int,
+    elite_count: int,
+    mutation_probability: float,
+    rng: np.random.Generator,
+) -> list[dict[str, Any]]:
+    if not axes or population_size <= 0 or not ranked_cases:
+        return []
+    elites = [dict(item.get("parameters", {})) for item in ranked_cases[: max(elite_count, 1)]]
+    candidates: list[dict[str, Any]] = []
+    for elite in elites[:population_size]:
+        candidates.append(_mutate_candidate(elite, axes, mutation_probability, rng))
+    attempts = 0
+    while len(candidates) < population_size and attempts < max(100, population_size * 30):
+        parent_a = elites[int(rng.integers(0, len(elites)))]
+        parent_b = elites[int(rng.integers(0, len(elites)))]
+        child = {}
+        for key, values in axes.items():
+            inherited = parent_a.get(key) if rng.random() < 0.5 else parent_b.get(key)
+            if inherited is None or rng.random() < mutation_probability:
+                inherited = values[int(rng.integers(0, len(values)))]
+            child[key] = inherited
+        candidates.append(child)
+        attempts += 1
+    return _dedupe_new_candidates(candidates, axes, population_size, seen)
+
+
+def _mutate_candidate(
+    candidate: Mapping[str, Any],
+    axes: Mapping[str, list[Any]],
+    mutation_probability: float,
+    rng: np.random.Generator,
+) -> dict[str, Any]:
+    mutated = dict(candidate)
+    forced_key = list(axes)[int(rng.integers(0, len(axes)))] if axes else None
+    for key, values in axes.items():
+        if key == forced_key or rng.random() < mutation_probability:
+            mutated[key] = values[int(rng.integers(0, len(values)))]
+        else:
+            mutated.setdefault(key, values[0])
+    return mutated
+
+
+def _dedupe_new_candidates(
+    candidates: Iterable[Mapping[str, Any]],
+    axes: Mapping[str, list[Any]],
+    target_count: int,
+    seen: set[str],
+) -> list[dict[str, Any]]:
+    unique: list[dict[str, Any]] = []
+    local_seen = set(seen)
+    for candidate in candidates:
+        payload = dict(candidate)
+        signature = _candidate_signature(payload)
+        if signature in local_seen:
+            continue
+        unique.append(payload)
+        local_seen.add(signature)
+        if len(unique) >= target_count:
+            return unique
+    for flat_index in range(_full_grid_count(axes)):
+        payload = _candidate_from_grid_index(axes, flat_index)
+        signature = _candidate_signature(payload)
+        if signature in local_seen:
+            continue
+        unique.append(payload)
+        local_seen.add(signature)
+        if len(unique) >= target_count:
+            break
+    return unique
+
+
+def _evolutionary_trace_entry(
+    generation: int,
+    generation_cases: list[Mapping[str, Any]],
+    ranked_cases: list[Mapping[str, Any]],
+    *,
+    evaluated_count: int,
+) -> dict[str, Any]:
+    best = ranked_cases[0] if ranked_cases else {}
+    return {
+        "generation": int(generation),
+        "candidate_count": len(generation_cases),
+        "evaluated_count": int(evaluated_count),
+        "best_case_index": best.get("case_index"),
+        "best_score": best.get("score"),
+        "best_feasible": best.get("feasible"),
+        "best_parameters": _jsonable(best.get("parameters", {})),
+    }
 
 
 def _dedupe_and_fill_candidates(

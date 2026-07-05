@@ -260,6 +260,8 @@ def _optimization_smoke(*, seed: int) -> dict[str, Any]:
         preset="exposure",
         parameter_space={"sensor.integration_time": [0.001, 0.004]},
         objective={"metric": "metrics.color.rgb_mean", "direction": "maximize"},
+        method="evolutionary",
+        max_cases=4,
         seed=seed,
         top_k=1,
     )
@@ -274,7 +276,7 @@ def _optimization_smoke(*, seed: int) -> dict[str, Any]:
         "tier": "validated",
         "summary": (
             "Camera parameter optimization runs FACA objective search with "
-            "validated, budget-aware candidate planning."
+            "validated, budget-aware and evolutionary candidate planning."
         ),
         "evidence": {
             "seed": seed,

@@ -26,7 +26,7 @@
 | TCAD / DEVSIM | `calibration_required` | generation-map ingestion, split-PD current proxy, accuracy gate | active FDTD/TCAD lineage closure, carrier calibration, dark/noise/lag/full-well |
 | HW ISP | `proxy` | rolling shutter, stage latency, queue, DMA, delayed AE/AWB | board/vendor trace calibration, AF/HDR/TNR detail |
 | Metrics | `validated` | MTF, ISO12233, Delta E, SCIELAB, VSNR, SQRI | product-specific weighting and pass/fail gates |
-| Optimization | `validated` | dot-path camera parameter grid search, pixel geometry/CFA/readout/noise/optics-PSF/FDTD-OCL configure catalog, preset parameter-space catalog, FACA objective scoring, hard constraints, Pareto front, selected scenarios, parameter-lineage evidence | Bayesian/evolutionary search, hardware-in-loop calibration |
+| Optimization | `validated` | dot-path camera parameter grid/random/Latin-hypercube/evolutionary search, pixel geometry/CFA/readout/noise/optics-PSF/FDTD-OCL configure catalog, preset parameter-space catalog, FACA objective scoring, hard constraints, Pareto front, selected scenarios, parameter-lineage evidence | Bayesian/surrogate search, hardware-in-loop calibration |
 | Perception | `available` | task adapters, detection/segmentation/classification/pose/tracking metrics, robustness sweep | training loop, dataset-specific model calibration |
 | RAW data factory | `validated` | manifest, metadata JSONL, deterministic RAW NPZ, split, checksum, labels JSON, validation, RAW-aware perception index, YOLO view export, ADAS/KITTI YOLO demo export, proxy camera-spec variant re-capture | DNG writer, automatic label synthesis |
 | DB/LUT registry | `validated` / `calibration_required` | manifest, readiness tier, provenance, dependency lineage, stale detection, calibration evidence manifest, readiness promotion plan | actual measured evidence attachment and calibrated promotion |
@@ -118,9 +118,12 @@ reproducible candidate list before running FACA. The default `grid` method keeps
 the previous Cartesian behavior. Passing `max_cases` turns it into a budgeted
 grid by sampling evenly across the Cartesian index range. `method="random"` and
 `method="latin_hypercube"` sample discrete axis values with a fixed seed and
-default to a bounded budget when `max_cases` is omitted. The optimizer accepts
-the same `method` and `max_cases` arguments and records the resulting
-candidate-plan summary in optimization reports.
+default to a bounded budget when `max_cases` is omitted. `method="evolutionary"`
+starts from a deterministic seed population, evaluates FACA objective fitness,
+then expands remaining budget through score-ranked elite selection, uniform
+discrete crossover, and mutation. The optimizer accepts the same `method` and
+`max_cases` arguments and records the resulting candidate-plan summary and
+generation trace in optimization reports.
 `camerae2e_optimize_camera_parameters(...)` runs those presets directly while
 still allowing caller overrides. The optimizer maximizes objective paths from
 the FACA report, supports hard metric constraints, reports the feasible Pareto
@@ -128,7 +131,7 @@ front, and emits selected scenario configs that can be passed into the RAW data
 factory. FACA and dataset records include parameter-lineage entries with
 requested/before/after values so a RAW export can be traced back to the actual
 camera parameters applied. This is the reproducible baseline for later
-Bayesian/evolutionary optimizers.
+Bayesian/surrogate optimizers and hardware-in-loop calibration.
 
 Important boundary: `sensor.n_samples_per_pixel` is sub-pixel integration
 sampling, not readout binning. `sensor.binning_method` and
