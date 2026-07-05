@@ -153,7 +153,8 @@ def _capability_matrix(
                 "Preset parameter-space catalog plus deterministic grid search over "
                 "dot-path camera parameters using FACA metric objectives, constraints, "
                 "Pareto front, selected scenarios, parameter-lineage evidence, "
-                "configure target catalog, and preflight parameter-space validation."
+                "pixel geometry/CFA/readout/noise/optics-PSF/FDTD-OCL configure "
+                "targets, and preflight parameter-space validation."
             ),
             "remaining": (
                 "Bayesian/evolutionary search and closed-loop hardware calibration."
@@ -176,8 +177,10 @@ def _capability_matrix(
             "implemented": (
                 "Dataset manifest, metadata JSONL, deterministic RAW NPZ, "
                 "optimization-case export, parameter-lineage evidence, split, checksum, "
-                "RGB preview, caller-provided labels, ADAS/KITTI YOLO demo export, "
-                "and focal-ratio pinhole crop/resize camera-spec variant re-capture."
+                "RGB preview, caller-provided labels, RAW-aware perception training "
+                "manifest, YOLO-style RGB preview/label view, ADAS/KITTI YOLO demo "
+                "export, and focal-ratio pinhole crop/resize camera-spec variant "
+                "re-capture."
             ),
             "remaining": "DNG writer and automatic label synthesis are intentionally outside v1.",
         },

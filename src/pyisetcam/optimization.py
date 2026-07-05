@@ -38,12 +38,142 @@ _PARAMETER_AXIS_CATALOG: dict[str, dict[str, Any]] = {
         "values": [0, 2],
         "description": "Sensor noise model selector.",
     },
+    "sensor.pixel_size": {
+        "area": "sensor_geometry",
+        "unit": "m",
+        "readiness_tier": "validated",
+        "values": [2.0e-6, 2.8e-6, 3.75e-6],
+        "description": (
+            "Pixel pitch used by sensor sampling, pixel area, FOV-driven sensor sizing, "
+            "and RAW signal/noise tradeoffs."
+        ),
+    },
+    "sensor.pixel_fill_factor": {
+        "area": "sensor_geometry",
+        "unit": "fraction",
+        "readiness_tier": "validated",
+        "values": [0.55, 0.75, 0.95],
+        "description": "Photodiode fill factor used in pixel-area signal collection.",
+    },
+    "sensor.n_samples_per_pixel": {
+        "area": "sensor_geometry",
+        "unit": "samples/pixel",
+        "readiness_tier": "validated",
+        "values": [1, 3, 5],
+        "description": (
+            "Sub-pixel spatial sampling for sensor irradiance integration. "
+            "This is not a readout-binning factor."
+        ),
+    },
+    "sensor.cfa_pattern": {
+        "area": "sensor_spectral",
+        "unit": "index matrix",
+        "readiness_tier": "validated",
+        "values": [
+            [[1, 2], [2, 3]],
+            [[2, 1], [3, 2]],
+        ],
+        "description": (
+            "CFA pattern-and-size matrix. Filter spectra/names must remain consistent "
+            "with the selected pattern indices."
+        ),
+    },
+    "sensor.binning_method": {
+        "area": "sensor_readout",
+        "unit": "enum",
+        "readiness_tier": "proxy",
+        "values": ["off", "kodak2008"],
+        "description": (
+            "Legacy pixel-binning compute wrapper. Treat as a readout proxy until "
+            "charge-domain, readout-domain, and ISP-domain binning are separated."
+        ),
+    },
+    "sensor.pixel_read_noise_v": {
+        "area": "sensor_noise",
+        "unit": "V",
+        "readiness_tier": "validated",
+        "values": [5.0e-4, 1.0e-3, 2.0e-3],
+        "description": "Pixel read-noise voltage used by the sensor noise model.",
+    },
+    "sensor.pixel_dark_voltage": {
+        "area": "sensor_noise",
+        "unit": "V/s",
+        "readiness_tier": "validated",
+        "values": [2.5e-4, 1.0e-3, 4.0e-3],
+        "description": "Pixel dark voltage accumulation rate.",
+    },
+    "sensor.pixel_voltage_swing": {
+        "area": "sensor_readout",
+        "unit": "V",
+        "readiness_tier": "validated",
+        "values": [0.6, 1.0, 1.4],
+        "description": "Pixel voltage swing/full-well proxy used by clipping and quantization.",
+    },
+    "sensor.pixel_conversion_gain": {
+        "area": "sensor_readout",
+        "unit": "V/e-",
+        "readiness_tier": "validated",
+        "values": [5.0e-5, 1.0e-4, 2.0e-4],
+        "description": "Pixel conversion gain used for electron-to-voltage conversion.",
+    },
     "optics.fnumber": {
         "area": "optics",
         "unit": "f/#",
         "readiness_tier": "validated",
         "values": [2.0, 2.8, 4.0],
         "description": "Optics f-number for irradiance and diffraction/blur tradeoffs.",
+    },
+    "optics.focal_length": {
+        "area": "optics",
+        "unit": "m",
+        "readiness_tier": "validated",
+        "values": [0.0028, 0.004, 0.006],
+        "description": "Effective focal length for FOV, magnification, and ADAS crop tradeoffs.",
+    },
+    "optics.si_psf_radius_um": {
+        "area": "optics_psf",
+        "unit": "um",
+        "readiness_tier": "proxy",
+        "values": [1.0, 2.0, 4.0],
+        "description": (
+            "Synthetic shift-invariant pillbox PSF radius. This is a blur proxy, "
+            "not RayOptics geometric PSF or diffraction/wave-optics sign-off."
+        ),
+    },
+    "optics.psf_angle_step": {
+        "area": "optics_psf",
+        "unit": "deg",
+        "readiness_tier": "proxy",
+        "values": [5.0, 10.0, 15.0],
+        "description": "RayOptics/geometric PSF angular sampling step.",
+    },
+    "optics.rt_compute_spacing": {
+        "area": "optics_psf",
+        "unit": "m",
+        "readiness_tier": "proxy",
+        "values": [1.0e-6, 2.5e-6, 5.0e-6],
+        "description": "Raytrace PSF compute spacing for geometric PSF resampling.",
+    },
+    "fdtd.mode": {
+        "area": "sensor_physics",
+        "unit": "enum",
+        "readiness_tier": "proxy",
+        "values": ["qe", "qe+field", "qe+field+crosstalk"],
+        "description": "FDTD optical-response mode. Requires an attached FDTD LUT.",
+    },
+    "fdtd.crosstalk_strength": {
+        "area": "sensor_physics",
+        "unit": "x",
+        "readiness_tier": "proxy",
+        "values": [0.0, 0.5, 1.0],
+        "description": "Optical-crosstalk strength applied from an attached FDTD LUT.",
+    },
+    "tcad.collection_mode": {
+        "area": "sensor_physics",
+        "unit": "enum",
+        "readiness_tier": "calibration_required",
+        "values": ["collection", "off"],
+        "description": "TCAD collection-response mode. Requires an attached TCAD DB/LUT.",
     },
     "ip.demosaic_method": {
         "area": "isp",
@@ -78,6 +208,26 @@ _PARAMETER_AXIS_CATALOG: dict[str, dict[str, Any]] = {
 _PARAMETER_SPACE_PRESETS: dict[str, tuple[str, ...]] = {
     "exposure": ("sensor.integration_time", "sensor.analog_gain"),
     "optics": ("optics.fnumber",),
+    "optics_psf": ("optics.fnumber", "optics.focal_length", "optics.si_psf_radius_um"),
+    "raytrace_psf": ("optics.psf_angle_step", "optics.rt_compute_spacing"),
+    "sensor_geometry": (
+        "sensor.pixel_size",
+        "sensor.pixel_fill_factor",
+        "sensor.n_samples_per_pixel",
+    ),
+    "sensor_spectral": ("sensor.cfa_pattern",),
+    "sensor_readout": (
+        "sensor.integration_time",
+        "sensor.analog_gain",
+        "sensor.pixel_read_noise_v",
+        "sensor.pixel_voltage_swing",
+        "sensor.binning_method",
+    ),
+    "physics_proxy": (
+        "fdtd.mode",
+        "fdtd.crosstalk_strength",
+        "tcad.collection_mode",
+    ),
     "isp": ("ip.demosaic_method",),
     "hw_isp_control": (
         "hw_isp.ae_apply_delay_frames",
@@ -86,6 +236,13 @@ _PARAMETER_SPACE_PRESETS: dict[str, tuple[str, ...]] = {
     ),
     "research_smoke": ("sensor.integration_time", "optics.fnumber"),
     "raw_factory": ("sensor.integration_time", "sensor.analog_gain", "optics.fnumber"),
+    "adas_camera": (
+        "optics.focal_length",
+        "optics.fnumber",
+        "sensor.pixel_size",
+        "sensor.integration_time",
+        "sensor.analog_gain",
+    ),
 }
 
 _SENSOR_OPTIMIZATION_PARAMETERS = {
@@ -102,6 +259,59 @@ _SENSOR_OPTIMIZATION_PARAMETERS = {
     "noise_flag",
     "noise flag",
     "noise",
+    "pixel_size",
+    "pixel size",
+    "pixel_size_m",
+    "pixel size m",
+    "pixel_pitch",
+    "pixel pitch",
+    "pixel_fill_factor",
+    "pixel fill factor",
+    "fill_factor",
+    "fill factor",
+    "n_samples_per_pixel",
+    "n samples per pixel",
+    "samples_per_pixel",
+    "samples per pixel",
+    "cfa_pattern",
+    "cfa pattern",
+    "pattern",
+    "pattern_and_size",
+    "pattern and size",
+    "cfa",
+    "color_filter_array",
+    "color filter array",
+    "filter_names",
+    "filter names",
+    "filter_spectra",
+    "filter spectra",
+    "color_filters",
+    "color filters",
+    "pixel_read_noise_v",
+    "pixel read noise v",
+    "read_noise",
+    "read noise",
+    "read_noise_v",
+    "read noise v",
+    "pixel_dark_voltage",
+    "pixel dark voltage",
+    "dark_voltage",
+    "dark voltage",
+    "pixel_voltage_swing",
+    "pixel voltage swing",
+    "voltage_swing",
+    "voltage swing",
+    "pixel_conversion_gain",
+    "pixel conversion gain",
+    "conversion_gain",
+    "conversion gain",
+    "sensor_compute_method",
+    "sensor compute method",
+    "binning",
+    "binning_method",
+    "binning method",
+    "pixel_binning",
+    "pixel binning",
 }
 
 _OBJECTIVE_METRIC_CATALOG: dict[str, dict[str, Any]] = {
@@ -283,7 +493,16 @@ def camerae2e_optimization_config_catalog() -> dict[str, Any]:
                     "sensor.integration_time",
                     "sensor.analog_gain",
                     "sensor.noise_flag",
+                    "sensor.pixel_size",
+                    "sensor.pixel_fill_factor",
+                    "sensor.cfa_pattern",
+                    "sensor.binning_method",
                 ],
+                "truth_boundary": (
+                    "sensor.binning_method routes to a legacy binning compute proxy; "
+                    "sensor.n_samples_per_pixel is sub-pixel integration sampling, "
+                    "not readout binning."
+                ),
             },
             {
                 "path_pattern": "hw_isp.<name>",
@@ -301,9 +520,17 @@ def camerae2e_optimization_config_catalog() -> dict[str, Any]:
                 "path_pattern": "fdtd.<name>",
                 "assignment": "scenario.fdtd attachment options",
                 "readiness_tier": "proxy",
-                "allowed_suffixes": ["lut", "mode", "qe_mode", "crosstalk_mode"],
+                "allowed_suffixes": [
+                    "lut",
+                    "mode",
+                    "field_model",
+                    "case",
+                    "cra_x_deg",
+                    "cra_z_deg",
+                    "crosstalk_strength",
+                ],
                 "requirement": (
-                    "fdtd.mode only changes the pipeline when "
+                    "FDTD configure axes only change the pipeline when "
                     "base_scenario.fdtd.lut is attached."
                 ),
             },
@@ -324,13 +551,18 @@ def camerae2e_optimization_config_catalog() -> dict[str, Any]:
                 "examples": [
                     "optics.fnumber",
                     "optics.focal_length",
+                    "optics.si_psf_radius_um",
+                    "optics.psf_angle_step",
+                    "optics.rt_compute_spacing",
                     "pixel.size",
                     "sensor.bits",
                     "ip.demosaic_method",
                 ],
                 "truth_boundary": (
                     "The optimizer can assign these paths, but actual effect depends "
-                    "on camera_set support and should be verified with parameter_lineage."
+                    "on camera_set support and should be verified with parameter_lineage. "
+                    "optics.si_psf_radius_um is a CameraE2E high-level synthetic PSF proxy, "
+                    "not a product lens PSF calibration."
                 ),
             },
         ],
@@ -515,7 +747,7 @@ def _parameter_axis_issues(
                 "message": f"Unsupported sensor optimization parameter: {path!r}.",
             }
         ]
-    if prefix == "fdtd" and remainder == "mode" and not _has_nested_value(
+    if prefix == "fdtd" and remainder not in {"lut", "enabled"} and not _has_nested_value(
         base_scenario, "fdtd", "lut"
     ):
         return [
@@ -524,7 +756,7 @@ def _parameter_axis_issues(
                 "kind": "inactive_fdtd_axis",
                 "message": (
                     f"{path!r} needs an explicit LUT/DB attachment in the base scenario; "
-                    "optimizing the mode alone would not change the camera pipeline."
+                    "optimizing FDTD options alone would not change the camera pipeline."
                 ),
             }
         ]

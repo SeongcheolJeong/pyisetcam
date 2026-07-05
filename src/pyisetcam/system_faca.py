@@ -15,6 +15,7 @@ from .db_catalog import camerae2e_db_lineage, camerae2e_db_summary, camerae2e_db
 from .fdtd_sensor import sensor_attach_fdtd_lut
 from .hwisp import HWIspConfig, hw_isp_config, hw_isp_simulate_sequence
 from .ip import ip_get
+from .optics import si_synthetic
 from .scene import scene_create, scene_get
 from .sensor import sensor_get, sensor_set
 from .tcad_sensor import sensor_attach_tcad_lut
@@ -194,6 +195,20 @@ def _apply_physics_and_sensor_overrides(
         if isinstance(bucket, Mapping):
             parameter_overrides.update(dict(bucket))
     for key, value in parameter_overrides.items():
+        special = _apply_special_camera_parameter(updated, key, value)
+        if special is not None:
+            updated, parameter_name, before, after = special
+            lineage.append(
+                _parameter_lineage_entry(
+                    str(key),
+                    parameter_name,
+                    value,
+                    before,
+                    after,
+                    status="applied",
+                )
+            )
+            continue
         parameter_name = _camera_parameter_name(key)
         before = _safe_camera_get(updated, parameter_name)
         updated = camera_set(updated, parameter_name, value)
@@ -218,11 +233,11 @@ def _apply_physics_and_sensor_overrides(
         if sensor_parameter is None:
             raise KeyError(f"Unsupported CameraE2E sensor override: {key!r}")
         before = _safe_sensor_get(sensor, sensor_parameter)
-        sensor = sensor_set(sensor, sensor_parameter, value)
+        sensor = sensor_set(sensor, sensor_parameter, _sensor_override_value(key, value))
         after = _safe_sensor_get(sensor, sensor_parameter)
         lineage.append(
             _parameter_lineage_entry(
-                f"sensor.{str(sensor_parameter).replace(' ', '_')}",
+                f"sensor.{str(key).replace(' ', '_')}",
                 sensor_parameter,
                 value,
                 before,
@@ -249,6 +264,8 @@ def _apply_physics_and_sensor_overrides(
     tcad = dict(config.get("tcad", {})) if isinstance(config.get("tcad"), Mapping) else {}
     if tcad.get("db") is not None:
         tcad_kwargs = {key: value for key, value in tcad.items() if key not in {"db", "enabled"}}
+        if "collection_mode" in tcad_kwargs and "mode" not in tcad_kwargs:
+            tcad_kwargs["mode"] = tcad_kwargs.pop("collection_mode")
         sensor = sensor_attach_tcad_lut(sensor, tcad["db"], **tcad_kwargs)
         lineage.append(
             _parameter_lineage_entry(
@@ -263,6 +280,36 @@ def _apply_physics_and_sensor_overrides(
 
     updated.fields["sensor"] = sensor
     return updated, lineage
+
+
+def _apply_special_camera_parameter(
+    camera: Camera, key: Any, value: Any
+) -> tuple[Camera, str, Any, Any] | None:
+    normalized = str(key).strip().replace("_", " ").lower()
+    if normalized in {
+        "optics.psf radius um",
+        "optics.si psf radius um",
+        "optics.shift invariant psf radius um",
+    }:
+        radius_um = float(np.asarray(value, dtype=float).reshape(-1)[0])
+        if radius_um <= 0.0:
+            raise ValueError("optics.si_psf_radius_um must be positive.")
+        before = _safe_camera_get(camera, "optics model")
+        oi = camera_get(camera, "oi")
+        pillbox_diameter_mm = 2.0 * radius_um * 1e-3
+        optics = si_synthetic("pillbox", oi, pillbox_diameter_mm)
+        updated = camera_set(camera, "optics", optics)
+        after = {
+            "optics_model": _safe_camera_get(updated, "optics model"),
+            "proxy_model": "shift_invariant_pillbox_psf",
+            "radius_um": radius_um,
+            "diameter_mm": pillbox_diameter_mm,
+            "truth_boundary": (
+                "synthetic_shift_invariant_proxy_not_rayoptics_or_wave_optics_signoff"
+            ),
+        }
+        return updated, "optics si psf radius um", before, after
+    return None
 
 
 def _camera_parameter_name(key: Any) -> str:
@@ -283,7 +330,49 @@ def _sensor_override_parameter_name(key: Any) -> str | None:
         return "exposure duration"
     if normalized in {"analog gain", "gain"}:
         return "analog gain"
+    if normalized in {"pixel size", "pixel size m", "pixel pitch", "pixel pitch m"}:
+        return "pixel size"
+    if normalized in {"pixel fill factor", "fill factor", "pd fill factor"}:
+        return "pixel fill factor"
+    if normalized in {"n samples per pixel", "samples per pixel", "spatial samples per pixel"}:
+        return "n samples per pixel"
+    if normalized in {"cfa pattern", "pattern", "pattern and size"}:
+        return "pattern and size"
+    if normalized in {"cfa", "color filter array"}:
+        return "cfa"
+    if normalized in {"filter names", "filter name"}:
+        return "filter names"
+    if normalized in {"filter spectra", "color filters", "filter transmissivities"}:
+        return "filter spectra"
+    if normalized in {"pixel read noise v", "read noise", "read noise v"}:
+        return "pixel read noise"
+    if normalized in {"pixel dark voltage", "dark voltage", "dark voltage v per sec"}:
+        return "pixel dark voltage"
+    if normalized in {"pixel voltage swing", "voltage swing"}:
+        return "pixel voltage swing"
+    if normalized in {"pixel conversion gain", "conversion gain"}:
+        return "pixel conversion gain"
+    if normalized in {"sensor compute method", "compute method"}:
+        return "sensor compute method"
+    if normalized in {"binning", "binning method", "pixel binning", "pixel binning method"}:
+        return "sensor compute method"
     return None
+
+
+def _sensor_override_value(key: Any, value: Any) -> Any:
+    normalized = str(key).replace("_", " ").lower()
+    if normalized not in {"binning", "binning method", "pixel binning", "pixel binning method"}:
+        return value
+    if value is None:
+        return None
+    if isinstance(value, Mapping):
+        payload = dict(value)
+        payload.setdefault("name", "binning")
+        return payload
+    normalized_value = str(value).strip().lower()
+    if normalized_value in {"", "off", "none", "default", "disabled", "false", "0"}:
+        return None
+    return {"name": "binning", "method": str(value)}
 
 
 def _parameter_lineage_entry(

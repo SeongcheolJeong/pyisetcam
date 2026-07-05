@@ -17,6 +17,7 @@ from .dataset import (
     camerae2e_dataset_export_adas_kitti_demo,
     camerae2e_dataset_export_camera_spec_variants,
     camerae2e_dataset_export_from_optimization,
+    camerae2e_dataset_export_perception_index,
     camerae2e_dataset_validate,
 )
 from .db_catalog import camerae2e_db_manifest, camerae2e_db_validate
@@ -308,6 +309,11 @@ def _dataset_factory_smoke(output_dir: Path, *, seed: int) -> dict[str, Any]:
         seed=seed,
     )
     validation = camerae2e_dataset_validate(manifest)
+    perception_index = camerae2e_dataset_export_perception_index(
+        manifest,
+        output_dir=output_dir / "perception_index",
+        formats=("raw_manifest", "yolo"),
+    )
     record = manifest["records"][0] if manifest.get("records") else {}
     passed = bool(validation.get("ok")) and manifest.get("case_count") == 1
     return {
@@ -323,6 +329,12 @@ def _dataset_factory_smoke(output_dir: Path, *, seed: int) -> dict[str, Any]:
             "raw_sha256": record.get("raw_sha256"),
             "parameter_lineage_count": len(record.get("parameter_lineage", [])),
             "source_optimization": manifest.get("source_optimization", {}),
+            "perception_index": {
+                "manifest": perception_index.get("manifest"),
+                "formats": perception_index.get("formats", []),
+                "warning_count": perception_index.get("warning_count", 0),
+                "outputs": perception_index.get("outputs", {}),
+            },
         },
     }
 

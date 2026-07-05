@@ -86,6 +86,7 @@ from .dataset import (
     camerae2e_dataset_export,
     camerae2e_dataset_export_adas_kitti_demo,
     camerae2e_dataset_export_from_optimization,
+    camerae2e_dataset_export_perception_index,
     camerae2e_dataset_validate,
     camerae2e_kitti_yolo_labels,
 )
@@ -1099,6 +1100,7 @@ __all__ = [
     "camerae2e_dataset_export_adas_kitti_demo",
     "camerae2e_dataset_export_camera_spec_variants",
     "camerae2e_dataset_export_from_optimization",
+    "camerae2e_dataset_export_perception_index",
     "camerae2e_dataset_validate",
     "camerae2e_faca_report",
     "camerae2e_goal_gate",
@@ -1130,6 +1132,7 @@ __all__ = [
     "cameraE2EDatasetExportADASKITTIDemo",
     "cameraE2EDatasetExportCameraSpecVariants",
     "cameraE2EDatasetExportFromOptimization",
+    "cameraE2EDatasetExportPerceptionIndex",
     "cameraE2EDatasetValidate",
     "cameraE2EFACAReport",
     "cameraE2EGoalGate",
@@ -3822,6 +3825,7 @@ cameraE2EDatasetExport = camerae2e_dataset_export
 cameraE2EDatasetExportADASKITTIDemo = camerae2e_dataset_export_adas_kitti_demo
 cameraE2EDatasetExportCameraSpecVariants = camerae2e_dataset_export_camera_spec_variants
 cameraE2EDatasetExportFromOptimization = camerae2e_dataset_export_from_optimization
+cameraE2EDatasetExportPerceptionIndex = camerae2e_dataset_export_perception_index
 cameraE2EDatasetValidate = camerae2e_dataset_validate
 cameraE2EKITTIYOLOLabels = camerae2e_kitti_yolo_labels
 cameraE2EOptimizeCameraParameters = camerae2e_optimize_camera_parameters

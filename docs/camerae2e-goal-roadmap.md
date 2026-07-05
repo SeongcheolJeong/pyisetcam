@@ -26,9 +26,9 @@
 | TCAD / DEVSIM | `calibration_required` | generation-map ingestion, split-PD current proxy, accuracy gate | active FDTD/TCAD lineage closure, carrier calibration, dark/noise/lag/full-well |
 | HW ISP | `proxy` | rolling shutter, stage latency, queue, DMA, delayed AE/AWB | board/vendor trace calibration, AF/HDR/TNR detail |
 | Metrics | `validated` | MTF, ISO12233, Delta E, SCIELAB, VSNR, SQRI | product-specific weighting and pass/fail gates |
-| Optimization | `validated` | dot-path camera parameter grid search, preset parameter-space catalog, FACA objective scoring, hard constraints, Pareto front, selected scenarios, parameter-lineage evidence | Bayesian/evolutionary search, hardware-in-loop calibration |
+| Optimization | `validated` | dot-path camera parameter grid search, pixel geometry/CFA/readout/noise/optics-PSF/FDTD-OCL configure catalog, preset parameter-space catalog, FACA objective scoring, hard constraints, Pareto front, selected scenarios, parameter-lineage evidence | Bayesian/evolutionary search, hardware-in-loop calibration |
 | Perception | `available` | task adapters, detection/segmentation/classification/pose/tracking metrics, robustness sweep | training loop, dataset-specific model calibration |
-| RAW data factory | `validated` | manifest, metadata JSONL, deterministic RAW NPZ, split, checksum, labels JSON, validation, ADAS/KITTI YOLO demo export, proxy camera-spec variant re-capture | DNG writer, automatic label synthesis |
+| RAW data factory | `validated` | manifest, metadata JSONL, deterministic RAW NPZ, split, checksum, labels JSON, validation, RAW-aware perception index, YOLO view export, ADAS/KITTI YOLO demo export, proxy camera-spec variant re-capture | DNG writer, automatic label synthesis |
 | DB/LUT registry | `validated` / `calibration_required` | manifest, readiness tier, provenance, dependency lineage, stale detection, calibration evidence manifest, readiness promotion plan | actual measured evidence attachment and calibrated promotion |
 | External pipeline | `calibration_required` | FDTD, TCAD, RayOptics, HW ISP assets discoverable in one registry | refresh orchestration and calibrated end-to-end asset generation |
 
@@ -89,9 +89,14 @@ Optimization:
 
 The first optimizer is deterministic grid search over dot-path camera
 parameters such as `sensor.integration_time`, `sensor.analog_gain`,
-`optics.fnumber`, `ip.demosaic_method`, and HW ISP control-delay parameters.
+`sensor.pixel_size`, `sensor.pixel_fill_factor`, `sensor.cfa_pattern`,
+`sensor.binning_method`, `sensor.pixel_read_noise_v`, `optics.fnumber`,
+`optics.focal_length`, `optics.si_psf_radius_um`, `fdtd.crosstalk_strength`,
+`ip.demosaic_method`, and HW ISP control-delay parameters.
 `camerae2e_parameter_space_catalog(...)` exposes validated preset search spaces
-such as `exposure`, `raw_factory`, `isp`, and `hw_isp_control`.
+such as `exposure`, `raw_factory`, `sensor_geometry`, `sensor_spectral`,
+`sensor_readout`, `optics_psf`, `raytrace_psf`, `physics_proxy`, `adas_camera`,
+`isp`, and `hw_isp_control`.
 `camerae2e_optimization_config_catalog(...)` lists every registered configure
 axis, custom dot-path assignment rule, and supported FACA objective metric path.
 `camerae2e_parameter_space_validate(...)` classifies a caller parameter space as
@@ -107,6 +112,28 @@ requested/before/after values so a RAW export can be traced back to the actual
 camera parameters applied. This is the reproducible baseline for later
 Bayesian/evolutionary optimizers.
 
+Important boundary: `sensor.n_samples_per_pixel` is sub-pixel integration
+sampling, not readout binning. `sensor.binning_method` currently routes to the
+legacy binning wrapper and remains a `proxy` until charge-domain,
+readout-domain, and ISP-domain binning are separated. `optics.si_psf_radius_um`
+is a synthetic shift-invariant pillbox PSF radius for blur sensitivity sweeps;
+it must not be interpreted as a RayOptics geometric PSF radius or
+diffraction/wave-optics sign-off. FDTD/OCL axes such as
+`fdtd.crosstalk_strength` only affect the pipeline when an FDTD LUT is attached
+in the base scenario.
+
+Optimization configure priority:
+
+| Group | High-value axes | Current handling |
+|---|---|---|
+| Exposure/noise/readout | `sensor.integration_time`, `sensor.analog_gain`, `sensor.pixel_read_noise_v`, `sensor.pixel_dark_voltage`, `sensor.pixel_voltage_swing`, `sensor.pixel_conversion_gain`, `sensor.noise_flag` | registered validated axes |
+| Sensor geometry/sampling | `sensor.pixel_size`, `sensor.pixel_fill_factor`, `sensor.n_samples_per_pixel`, `sensor.binning_method`, sensor resolution/FOV custom paths | pixel/sampling validated; binning proxy |
+| CFA/spectral | `sensor.cfa_pattern`, `sensor.filter_names`, `sensor.filter_spectra`, IR/QE custom paths | CFA registered; spectra/name changes require consistency checks |
+| Optics/PSF | `optics.focal_length`, `optics.fnumber`, `optics.si_psf_radius_um`, `optics.psf_angle_step`, `optics.rt_compute_spacing`, distortion/relative-illumination custom paths | focal/f-number validated; PSF radius/RayOptics sampling proxy |
+| FDTD/TCAD/OCL | `fdtd.mode`, `fdtd.crosstalk_strength`, CRA/field options, `tcad.collection_mode` | guarded by attached LUT/DB; proxy or calibration-required |
+| ISP/control | `ip.demosaic_method`, black level/tone/gamma/custom IP paths, HW ISP AE/AWB delay and latency axes | demosaic validated; HW ISP proxy |
+| Perception/data | selected camera-spec scenario, RAW split/export, label preservation, YOLO view, robustness metrics | validated factory outputs; no automatic label synthesis |
+
 RAW data factory:
 
 - `camerae2e_dataset_export(...)`
@@ -115,6 +142,7 @@ RAW data factory:
 - `camerae2e_adas_camera_spec(...)`
 - `camerae2e_kitti_yolo_labels(...)`
 - `camerae2e_dataset_export_from_optimization(...)`
+- `camerae2e_dataset_export_perception_index(...)`
 - `camerae2e_dataset_validate(...)`
 
 ADAS/KITTI demo export is intentionally labeled `proxy`: it applies KITTI-style

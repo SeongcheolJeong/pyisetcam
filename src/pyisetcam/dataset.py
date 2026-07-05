@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import shutil
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
@@ -302,6 +303,73 @@ def camerae2e_dataset_validate(
         "issues": issues,
         "warnings": warnings,
     }
+
+
+def camerae2e_dataset_export_perception_index(
+    dataset: str | Path | Mapping[str, Any],
+    *,
+    output_dir: str | Path | None = None,
+    formats: Iterable[str] | str = ("raw_manifest", "yolo"),
+    class_map: Mapping[str, int] | None = None,
+    copy_images: bool = False,
+) -> dict[str, Any]:
+    """Export perception-training indexes from a CameraE2E RAW dataset.
+
+    ``raw_manifest`` keeps RAW NPZ paths, labels, hashes, and FACA metadata for
+    custom RAW-aware training pipelines.  ``yolo`` exports a YOLO-style RGB
+    preview label view; it is an adapter for detector training and does not mean
+    YOLO consumes RAW NPZ directly.
+    """
+
+    manifest, _, root = _load_manifest(dataset)
+    formats_list = _normalize_index_formats(formats)
+    out_root = Path(output_dir).expanduser().resolve() if output_dir else root / "perception_index"
+    out_root.mkdir(parents=True, exist_ok=True)
+    records = list(manifest.get("records", []))
+    resolved_class_map = _dataset_class_map(manifest, root, class_map)
+    warnings: list[dict[str, Any]] = []
+    outputs: dict[str, Any] = {}
+
+    if "raw_manifest" in formats_list:
+        outputs["raw_manifest"] = _write_raw_training_index(
+            records,
+            root,
+            out_root,
+            resolved_class_map,
+            warnings,
+        )
+    if "yolo" in formats_list:
+        outputs["yolo"] = _write_yolo_training_view(
+            records,
+            root,
+            out_root,
+            resolved_class_map,
+            warnings,
+            copy_images=copy_images,
+        )
+
+    payload = {
+        "schema_version": "camerae2e_perception_training_index_v1",
+        "dataset_root": str(root),
+        "output_dir": str(out_root),
+        "formats": formats_list,
+        "case_count": len(records),
+        "class_map": resolved_class_map,
+        "truth_boundary": (
+            "raw_manifest indexes RAW NPZ for RAW-aware training code; "
+            "YOLO view uses RGB previews and JSON labels converted to YOLO txt."
+        ),
+        "outputs": outputs,
+        "warning_count": len(warnings),
+        "warnings": warnings,
+    }
+    manifest_path = out_root / "perception_index_manifest.json"
+    manifest_path.write_text(
+        json.dumps(_jsonable(payload), indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    payload["manifest"] = str(manifest_path)
+    return payload
 
 
 def camerae2e_adas_camera_spec(preset: str = "kitti_yolo_demo") -> dict[str, Any]:
@@ -1184,6 +1252,256 @@ def _image_size_rc(image_size: tuple[int, int] | list[int] | Any) -> tuple[int, 
     return int(values[0]), int(values[1])
 
 
+def _normalize_index_formats(formats: Iterable[str] | str) -> list[str]:
+    values = [formats] if isinstance(formats, str) else list(formats)
+    normalized = []
+    valid = {"raw_manifest", "yolo"}
+    for item in values:
+        key = str(item).strip().lower()
+        if key not in valid:
+            raise ValueError("perception index format must be one of: raw_manifest, yolo.")
+        if key not in normalized:
+            normalized.append(key)
+    return normalized
+
+
+def _dataset_class_map(
+    manifest: Mapping[str, Any],
+    root: Path,
+    override: Mapping[str, int] | None,
+) -> dict[str, int]:
+    if override is not None:
+        return {str(key): int(value) for key, value in override.items()}
+    class_map: dict[str, int] = {}
+    for record in manifest.get("records", []):
+        payload = _label_payload_for_record(record, root)
+        for item in payload.get("objects", []):
+            label = str(item.get("label", "object"))
+            class_id = item.get("class_id")
+            if class_id is not None and int(class_id) >= 0:
+                class_map[label] = int(class_id)
+    if class_map:
+        return dict(sorted(class_map.items(), key=lambda item: item[1]))
+    return {"object": 0}
+
+
+def _write_raw_training_index(
+    records: list[Mapping[str, Any]],
+    root: Path,
+    out_root: Path,
+    class_map: Mapping[str, int],
+    warnings: list[dict[str, Any]],
+) -> dict[str, Any]:
+    path = out_root / "raw_manifest.jsonl"
+    splits_dir = out_root / "splits"
+    splits_dir.mkdir(parents=True, exist_ok=True)
+    split_rows: dict[str, list[str]] = {}
+    row_count = 0
+    with path.open("w", encoding="utf-8") as stream:
+        for record in records:
+            case_id = str(record.get("case_id", f"case_{row_count:04d}"))
+            split = str(record.get("split", "unspecified"))
+            labels = _label_payload_for_record(record, root)
+            row = {
+                "case_id": case_id,
+                "split": split,
+                "raw": str(_resolve_dataset_path(root, record.get("raw"))),
+                "rgb": _path_or_none(_resolve_dataset_path(root, record.get("rgb"))),
+                "labels": str(_resolve_dataset_path(root, record.get("labels"))),
+                "raw_shape": record.get("raw_shape", []),
+                "raw_dtype": record.get("raw_dtype"),
+                "raw_sha256": record.get("raw_sha256"),
+                "class_map": dict(class_map),
+                "objects": _objects_for_training(labels, class_map, warnings, case_id),
+                "faca_metrics": record.get("faca_metrics", {}),
+                "parameter_lineage": record.get("parameter_lineage", []),
+            }
+            stream.write(json.dumps(_jsonable(row), sort_keys=True) + "\n")
+            split_rows.setdefault(split, []).append(row["raw"])
+            row_count += 1
+    split_files = {}
+    for split, paths in split_rows.items():
+        split_path = splits_dir / f"{split}_raw.txt"
+        split_path.write_text("\n".join(paths) + "\n", encoding="utf-8")
+        split_files[split] = str(split_path)
+    return {
+        "path": str(path),
+        "sha256": _sha256_file(path),
+        "row_count": row_count,
+        "split_files": split_files,
+    }
+
+
+def _write_yolo_training_view(
+    records: list[Mapping[str, Any]],
+    root: Path,
+    out_root: Path,
+    class_map: Mapping[str, int],
+    warnings: list[dict[str, Any]],
+    *,
+    copy_images: bool,
+) -> dict[str, Any]:
+    yolo_root = out_root / "yolo"
+    labels_root = yolo_root / "labels"
+    images_root = yolo_root / "images"
+    yolo_root.mkdir(parents=True, exist_ok=True)
+    split_images: dict[str, list[str]] = {}
+    label_count = 0
+    object_count = 0
+    for index, record in enumerate(records):
+        case_id = str(record.get("case_id", f"case_{index:04d}"))
+        split = str(record.get("split", "unspecified"))
+        rgb_path = _resolve_dataset_path(root, record.get("rgb"))
+        if rgb_path is None or not rgb_path.exists():
+            warnings.append({"case_id": case_id, "kind": "yolo_missing_rgb_preview"})
+            continue
+        labels = _label_payload_for_record(record, root)
+        rows = _yolo_rows(labels, class_map, warnings, case_id)
+        label_dir = labels_root / split
+        label_dir.mkdir(parents=True, exist_ok=True)
+        label_path = label_dir / f"{case_id}.txt"
+        label_path.write_text("\n".join(rows) + ("\n" if rows else ""), encoding="utf-8")
+        image_reference = rgb_path
+        if copy_images:
+            image_dir = images_root / split
+            image_dir.mkdir(parents=True, exist_ok=True)
+            image_reference = image_dir / f"{case_id}{rgb_path.suffix or '.png'}"
+            shutil.copyfile(rgb_path, image_reference)
+        split_images.setdefault(split, []).append(str(image_reference))
+        label_count += 1
+        object_count += len(rows)
+    split_files = {}
+    for split, paths in split_images.items():
+        split_file = yolo_root / f"{split}.txt"
+        split_file.write_text("\n".join(paths) + "\n", encoding="utf-8")
+        split_files[split] = str(split_file)
+    names = [None] * (max(class_map.values(), default=-1) + 1)
+    for label, class_id in class_map.items():
+        if class_id >= 0:
+            names[class_id] = label
+    dataset_yaml = yolo_root / "dataset.yaml"
+    dataset_yaml.write_text(
+        _simple_yaml(
+            {
+                "path": str(yolo_root),
+                "names": [
+                    item if item is not None else f"class_{index}"
+                    for index, item in enumerate(names)
+                ],
+                **split_files,
+            }
+        ),
+        encoding="utf-8",
+    )
+    return {
+        "root": str(yolo_root),
+        "dataset_yaml": str(dataset_yaml),
+        "split_files": split_files,
+        "label_count": label_count,
+        "object_count": object_count,
+        "copy_images": bool(copy_images),
+        "truth_boundary": "YOLO view uses RGB previews, not RAW NPZ tensors.",
+    }
+
+
+def _label_payload_for_record(record: Mapping[str, Any], root: Path) -> dict[str, Any]:
+    label_path = _resolve_dataset_path(root, record.get("labels"))
+    if label_path is None or not label_path.exists():
+        return {"objects": [], "masks": [], "source": "missing"}
+    payload = json.loads(label_path.read_text(encoding="utf-8"))
+    labels = payload.get("labels", payload)
+    return labels if isinstance(labels, dict) else {"objects": [], "masks": []}
+
+
+def _objects_for_training(
+    labels: Mapping[str, Any],
+    class_map: Mapping[str, int],
+    warnings: list[dict[str, Any]],
+    case_id: str,
+) -> list[dict[str, Any]]:
+    objects = []
+    for item in labels.get("objects", []):
+        row = dict(item)
+        label = str(row.get("label", "object"))
+        class_id = int(row.get("class_id", class_map.get(label, -1)))
+        if class_id < 0:
+            warnings.append(
+                {"case_id": case_id, "kind": "negative_or_unknown_class", "label": label}
+            )
+        row["class_id"] = class_id
+        objects.append(row)
+    return objects
+
+
+def _yolo_rows(
+    labels: Mapping[str, Any],
+    class_map: Mapping[str, int],
+    warnings: list[dict[str, Any]],
+    case_id: str,
+) -> list[str]:
+    rows = []
+    image_size = _image_size_rc(labels.get("image_size_rc", [1, 1]))
+    for item in labels.get("objects", []):
+        row = _yolo_row(item, image_size, class_map)
+        if row is None:
+            warnings.append(
+                {
+                    "case_id": case_id,
+                    "kind": "skipped_yolo_object",
+                    "label": item.get("label"),
+                }
+            )
+            continue
+        rows.append(row)
+    return rows
+
+
+def _yolo_row(
+    item: Mapping[str, Any],
+    image_size_rc: tuple[int, int],
+    class_map: Mapping[str, int],
+) -> str | None:
+    label = str(item.get("label", "object"))
+    class_id = int(item.get("class_id", class_map.get(label, -1)))
+    if class_id < 0:
+        return None
+    yolo = item.get("yolo_xywhn")
+    if yolo is None and item.get("bbox_xyxy") is not None:
+        rows, cols = image_size_rc
+        x1, y1, x2, y2 = [float(value) for value in item["bbox_xyxy"]]
+        width = max(x2 - x1, 0.0)
+        height = max(y2 - y1, 0.0)
+        yolo = [
+            (x1 + width / 2.0) / max(cols, 1),
+            (y1 + height / 2.0) / max(rows, 1),
+            width / max(cols, 1),
+            height / max(rows, 1),
+        ]
+    if yolo is None or len(yolo) != 4:
+        return None
+    x_center, y_center, width, height = [float(value) for value in yolo]
+    if width <= 0.0 or height <= 0.0:
+        return None
+    clipped = np.clip([x_center, y_center, width, height], 0.0, 1.0)
+    return f"{class_id} {clipped[0]:.8f} {clipped[1]:.8f} {clipped[2]:.8f} {clipped[3]:.8f}"
+
+
+def _path_or_none(path: Path | None) -> str | None:
+    return None if path is None else str(path)
+
+
+def _simple_yaml(payload: Mapping[str, Any]) -> str:
+    lines = []
+    for key, value in payload.items():
+        if isinstance(value, list):
+            lines.append(f"{key}:")
+            for item in value:
+                lines.append(f"  - {item}")
+        else:
+            lines.append(f"{key}: {value}")
+    return "\n".join(lines) + "\n"
+
+
 def _deep_dict(value: Mapping[str, Any]) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for key, item in value.items():
@@ -1410,6 +1728,7 @@ cameraE2EDatasetExportCameraSpecVariants = (  # noqa: N816
     camerae2e_dataset_export_camera_spec_variants
 )
 cameraE2EDatasetExportFromOptimization = camerae2e_dataset_export_from_optimization  # noqa: N816
+cameraE2EDatasetExportPerceptionIndex = camerae2e_dataset_export_perception_index  # noqa: N816
 cameraE2EDatasetValidate = camerae2e_dataset_validate  # noqa: N816
 cameraE2EADASCameraSpec = camerae2e_adas_camera_spec  # noqa: N816
 cameraE2EKITTIYOLOLabels = camerae2e_kitti_yolo_labels  # noqa: N816

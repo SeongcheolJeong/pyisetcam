@@ -11,6 +11,7 @@ from pyisetcam import (
     camerae2e_dataset_export_adas_kitti_demo,
     camerae2e_dataset_export_camera_spec_variants,
     camerae2e_dataset_export_from_optimization,
+    camerae2e_dataset_export_perception_index,
     camerae2e_dataset_validate,
     camerae2e_kitti_yolo_labels,
     camerae2e_optimize_parameters,
@@ -167,6 +168,38 @@ def test_camerae2e_adas_kitti_demo_exports_raw_and_yolo_labels(tmp_path: Path) -
     assert record_labels["labels"]["objects"][0]["yolo_xywhn"][2] > 0.0
     assert record_labels["labels"]["image_size_rc"] == record["raw_shape"][:2]
     assert validation["ok"] is True
+
+
+def test_camerae2e_dataset_export_perception_index_writes_raw_and_yolo_views(
+    tmp_path: Path,
+) -> None:
+    manifest = camerae2e_dataset_export_adas_kitti_demo(
+        tmp_path / "dataset",
+        case_count=1,
+        seed=81,
+        include_rgb=True,
+    )
+    index = camerae2e_dataset_export_perception_index(
+        manifest,
+        output_dir=tmp_path / "perception_index",
+        copy_images=True,
+    )
+    raw_manifest = Path(index["outputs"]["raw_manifest"]["path"])
+    yolo_root = Path(index["outputs"]["yolo"]["root"])
+    yolo_yaml = Path(index["outputs"]["yolo"]["dataset_yaml"])
+    yolo_label = yolo_root / "labels" / "demo" / "case_0000.txt"
+    copied_image = yolo_root / "images" / "demo" / "case_0000.png"
+
+    assert index["schema_version"] == "camerae2e_perception_training_index_v1"
+    assert index["warning_count"] == 0
+    assert raw_manifest.exists()
+    assert yolo_yaml.exists()
+    assert yolo_label.exists()
+    assert copied_image.exists()
+    assert "raw_manifest indexes RAW NPZ" in index["truth_boundary"]
+    assert "YOLO view uses RGB previews" in index["outputs"]["yolo"]["truth_boundary"]
+    assert len(raw_manifest.read_text(encoding="utf-8").splitlines()) == 1
+    assert yolo_label.read_text(encoding="utf-8").strip().split()[0] == "0"
 
 
 def test_camerae2e_camera_spec_variants_recapture_scene_with_target_specs(

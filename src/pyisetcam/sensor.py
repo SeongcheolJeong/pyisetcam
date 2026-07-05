@@ -4275,6 +4275,8 @@ def sensor_compute_noise_free(
     working = sensor_set(working, "analog offset", 0.0)
     working.fields["pixel"] = dict(working.fields["pixel"])
     working.fields["pixel"]["voltage_swing"] = 1.0e6
+    if _sensor_compute_method_is_binning(working.fields.get("sensor_compute_method")):
+        working.fields["sensor_compute_method"] = None
 
     computed = sensor_compute(working, oi, seed=seed, session=session)
     computed.fields["pixel"] = dict(computed.fields["pixel"])
@@ -4508,11 +4510,16 @@ def bin_sensor_compute(
 
     del show_wait_bar
     method = b_method or "kodak2008"
-    integration_time = np.asarray(sensor_get(sensor, "integration time"), dtype=float).reshape(-1)
+    current = sensor_clear_data(sensor)
+    integration_time = np.asarray(sensor_get(current, "integration time"), dtype=float).reshape(-1)
     if integration_time.size != 1:
         raise ValueError("Pixel binning only runs with a single integration time.")
+    if bool(sensor_get(current, "auto exposure")) or float(integration_time[0]) <= 0.0:
+        exposure_sensor = current.clone()
+        exposure_sensor.fields["sensor_compute_method"] = None
+        exposure_time = _auto_exposure_default(exposure_sensor, optical_image)
+        current = sensor_set(current, "integration time", exposure_time)
 
-    current = sensor_clear_data(sensor)
     dv_stage, volt_image, dsnu, prnu = bin_sensor_compute_image(
         optical_image,
         current,
@@ -7475,6 +7482,19 @@ def auto_exposure(
     raise UnsupportedOptionError("autoExposure", str(ae_method))
 
 
+def _sensor_compute_method_is_binning(value: Any) -> bool:
+    if isinstance(value, dict):
+        return param_format(str(value.get("name", ""))) == "binning"
+    return param_format(str(value)) == "binning"
+
+
+def _sensor_compute_binning_method(value: Any) -> str | None:
+    if isinstance(value, dict):
+        method = value.get("method", value.get("b_method", value.get("bMethod")))
+        return None if method is None else str(method)
+    return None
+
+
 def sensor_compute(
     sensor: Sensor | list[Sensor] | tuple[Sensor, ...],
     oi: OpticalImage,
@@ -7500,6 +7520,14 @@ def sensor_compute(
 
     del show_bar
     computed = sensor.clone()
+    compute_method = computed.fields.get("sensor_compute_method")
+    if _sensor_compute_method_is_binning(compute_method):
+        return bin_sensor_compute(
+            computed,
+            oi,
+            _sensor_compute_binning_method(compute_method),
+            seed=seed,
+        )
     cube = np.asarray(oi.data["photons"], dtype=float)
     wave = np.asarray(oi.fields["wave"], dtype=float)
     pixel = computed.fields["pixel"]

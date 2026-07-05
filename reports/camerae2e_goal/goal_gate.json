@@ -411,6 +411,13 @@
         },
         "pareto_case_count": 1,
         "presets": {
+          "adas_camera": [
+            "optics.focal_length",
+            "optics.fnumber",
+            "sensor.pixel_size",
+            "sensor.integration_time",
+            "sensor.analog_gain"
+          ],
           "exposure": [
             "sensor.integration_time",
             "sensor.analog_gain"
@@ -426,17 +433,46 @@
           "optics": [
             "optics.fnumber"
           ],
+          "optics_psf": [
+            "optics.fnumber",
+            "optics.focal_length",
+            "optics.si_psf_radius_um"
+          ],
+          "physics_proxy": [
+            "fdtd.mode",
+            "fdtd.crosstalk_strength",
+            "tcad.collection_mode"
+          ],
           "raw_factory": [
             "sensor.integration_time",
             "sensor.analog_gain",
             "optics.fnumber"
           ],
+          "raytrace_psf": [
+            "optics.psf_angle_step",
+            "optics.rt_compute_spacing"
+          ],
           "research_smoke": [
             "sensor.integration_time",
             "optics.fnumber"
+          ],
+          "sensor_geometry": [
+            "sensor.pixel_size",
+            "sensor.pixel_fill_factor",
+            "sensor.n_samples_per_pixel"
+          ],
+          "sensor_readout": [
+            "sensor.integration_time",
+            "sensor.analog_gain",
+            "sensor.pixel_read_noise_v",
+            "sensor.pixel_voltage_swing",
+            "sensor.binning_method"
+          ],
+          "sensor_spectral": [
+            "sensor.cfa_pattern"
           ]
         },
-        "registered_configure_count": 8,
+        "registered_configure_count": 24,
         "seed": 2036
       },
       "name": "parameter_optimization",
@@ -450,6 +486,33 @@
         "dataset_root": "/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke/optimization_dataset",
         "manifest_schema": "camerae2e_dataset_manifest_v1",
         "parameter_lineage_count": 4,
+        "perception_index": {
+          "formats": [
+            "raw_manifest",
+            "yolo"
+          ],
+          "manifest": "/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke/optimization_dataset/perception_index/perception_index_manifest.json",
+          "outputs": {
+            "raw_manifest": {
+              "path": "/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke/optimization_dataset/perception_index/raw_manifest.jsonl",
+              "row_count": 1,
+              "sha256": "sha256:0b21408999012ad0e4026c59d354271e2623a0372a4e446bdbf1d3f47a8b8f51",
+              "split_files": {
+                "best": "/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke/optimization_dataset/perception_index/splits/best_raw.txt"
+              }
+            },
+            "yolo": {
+              "copy_images": false,
+              "dataset_yaml": "/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke/optimization_dataset/perception_index/yolo/dataset.yaml",
+              "label_count": 0,
+              "object_count": 0,
+              "root": "/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke/optimization_dataset/perception_index/yolo",
+              "split_files": {},
+              "truth_boundary": "YOLO view uses RGB previews, not RAW NPZ tensors."
+            }
+          },
+          "warning_count": 1
+        },
         "raw_sha256": "sha256:fdee52649096f1f7e0702b7a7cc4c24fd4dae588566ebac3f3a288ab9b80eb21",
         "raw_shape": [
           242,
@@ -655,7 +718,7 @@
       "tier": "calibration_required"
     }
   ],
-  "generated_at": "2026-07-05T05:42:24.528677+00:00",
+  "generated_at": "2026-07-05T06:00:30.548546+00:00",
   "goal": "Research-grade E2E optimization platform plus RAW data factory for perception training.",
   "ok": true,
   "output_dir": "/Users/seongcheoljeong/Documents/CameraE2E/reports/camerae2e_goal",
