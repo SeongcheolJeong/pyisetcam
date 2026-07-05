@@ -135,11 +135,13 @@ from .fileio import (
     vc_save_multispectral_image,
 )
 from .optimization import (
+    camerae2e_optimization_config_catalog,
     camerae2e_optimization_report,
     camerae2e_optimize_camera_parameters,
     camerae2e_optimize_parameters,
     camerae2e_pareto_front,
     camerae2e_parameter_space_catalog,
+    camerae2e_parameter_space_validate,
 )
 from .goal_pipeline import camerae2e_goal_gate
 from .physics_pipeline import camerae2e_physics_pipeline_plan
@@ -1101,11 +1103,13 @@ __all__ = [
     "camerae2e_faca_report",
     "camerae2e_goal_gate",
     "camerae2e_kitti_yolo_labels",
+    "camerae2e_optimization_config_catalog",
     "camerae2e_optimization_report",
     "camerae2e_optimize_camera_parameters",
     "camerae2e_optimize_parameters",
     "camerae2e_pareto_front",
     "camerae2e_parameter_space_catalog",
+    "camerae2e_parameter_space_validate",
     "camerae2e_physics_pipeline_plan",
     "camerae2e_readiness_promotion_plan",
     "camerae2e_run_scenario",
@@ -1130,11 +1134,13 @@ __all__ = [
     "cameraE2EFACAReport",
     "cameraE2EGoalGate",
     "cameraE2EKITTIYOLOLabels",
+    "cameraE2EOptimizationConfigCatalog",
     "cameraE2EOptimizationReport",
     "cameraE2EOptimizeCameraParameters",
     "cameraE2EOptimizeParameters",
     "cameraE2EParetoFront",
     "cameraE2EParameterSpaceCatalog",
+    "cameraE2EParameterSpaceValidate",
     "cameraE2EPhysicsPipelinePlan",
     "cameraE2EReadinessPromotionPlan",
     "cameraE2ERunScenario",
@@ -3823,6 +3829,8 @@ cameraE2EOptimizeParameters = camerae2e_optimize_parameters
 cameraE2EOptimizationReport = camerae2e_optimization_report
 cameraE2EParetoFront = camerae2e_pareto_front
 cameraE2EParameterSpaceCatalog = camerae2e_parameter_space_catalog
+cameraE2EOptimizationConfigCatalog = camerae2e_optimization_config_catalog
+cameraE2EParameterSpaceValidate = camerae2e_parameter_space_validate
 cameraE2EPhysicsPipelinePlan = camerae2e_physics_pipeline_plan
 cameraE2ECalibrationEvidenceRequirements = camerae2e_calibration_evidence_requirements
 cameraE2ECalibrationEvidenceManifest = camerae2e_calibration_evidence_manifest

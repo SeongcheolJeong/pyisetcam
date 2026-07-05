@@ -88,6 +88,50 @@ _PARAMETER_SPACE_PRESETS: dict[str, tuple[str, ...]] = {
     "raw_factory": ("sensor.integration_time", "sensor.analog_gain", "optics.fnumber"),
 }
 
+_SENSOR_OPTIMIZATION_PARAMETERS = {
+    "integration_time",
+    "integration time",
+    "integration",
+    "exposure_duration",
+    "exposure duration",
+    "exposure_time",
+    "exposure time",
+    "analog_gain",
+    "analog gain",
+    "gain",
+    "noise_flag",
+    "noise flag",
+    "noise",
+}
+
+_OBJECTIVE_METRIC_CATALOG: dict[str, dict[str, Any]] = {
+    "metrics.color.rgb_mean": {
+        "area": "color",
+        "direction_hint": "maximize",
+        "description": "Mean rendered RGB response.",
+    },
+    "metrics.artifact.raw_std": {
+        "area": "artifact",
+        "direction_hint": "minimize_or_target",
+        "description": "RAW variation/noise proxy from the sensor stage.",
+    },
+    "metrics.artifact.rgb_std": {
+        "area": "artifact",
+        "direction_hint": "minimize_or_target",
+        "description": "Rendered RGB variation proxy.",
+    },
+    "metrics.artifact.rgb_clip_fraction": {
+        "area": "artifact",
+        "direction_hint": "minimize",
+        "description": "Fraction of rendered RGB samples clipped to 0 or 1.",
+    },
+    "metrics.control.frame_count": {
+        "area": "control",
+        "direction_hint": "target",
+        "description": "HW ISP sequence frame count when HW ISP simulation is enabled.",
+    },
+}
+
 
 def camerae2e_optimize_parameters(
     base_scenario: Mapping[str, Any] | None = None,
@@ -116,6 +160,10 @@ def camerae2e_optimize_parameters(
     """
 
     axes = _normalize_parameter_space(parameter_space or {})
+    parameter_validation = camerae2e_parameter_space_validate(
+        axes,
+        base_scenario=base_scenario,
+    )
     _validate_parameter_axis_names(axes, base_scenario)
     objective_specs = _normalize_objective(objective)
     constraint_specs = [dict(item) for item in constraints or []]
@@ -174,6 +222,7 @@ def camerae2e_optimize_parameters(
         "method": "deterministic_grid",
         "seed": int(seed),
         "parameter_space": _jsonable(axes),
+        "parameter_space_validation": parameter_validation,
         "objective": _jsonable(_objective_description(objective, objective_specs)),
         "constraints": _jsonable(constraint_specs),
         "case_count": len(cases),
@@ -208,6 +257,140 @@ def camerae2e_parameter_space_catalog(preset: str | None = None) -> dict[str, An
         "preset": key,
         "axes": {path: _jsonable(_PARAMETER_AXIS_CATALOG[path]) for path in paths},
         "parameter_space": {path: list(_PARAMETER_AXIS_CATALOG[path]["values"]) for path in paths},
+    }
+
+
+def camerae2e_optimization_config_catalog() -> dict[str, Any]:
+    """Return all documented CameraE2E optimization configure targets.
+
+    Registered axes are validated smoke-test targets.  Custom path rules
+    describe additional dot-paths that the optimizer can assign, but callers
+    should still verify parameter lineage and FACA metric movement.
+    """
+
+    return {
+        "schema_version": "camerae2e_optimization_config_catalog_v1",
+        "registered_axis_count": len(_PARAMETER_AXIS_CATALOG),
+        "registered_axes": _jsonable(_PARAMETER_AXIS_CATALOG),
+        "presets": {name: list(paths) for name, paths in _PARAMETER_SPACE_PRESETS.items()},
+        "custom_path_rules": [
+            {
+                "path_pattern": "sensor.<name>",
+                "assignment": "scenario.sensor -> sensor_set(...)",
+                "readiness_tier": "validated",
+                "allowed_suffixes": sorted(_SENSOR_OPTIMIZATION_PARAMETERS),
+                "registered_examples": [
+                    "sensor.integration_time",
+                    "sensor.analog_gain",
+                    "sensor.noise_flag",
+                ],
+            },
+            {
+                "path_pattern": "hw_isp.<name>",
+                "assignment": "scenario.hw_isp control dictionary",
+                "readiness_tier": "proxy",
+                "allowed_suffixes": "open, simulator-dependent",
+                "side_effect": "enabled=True is inserted for HW ISP axes except hw_isp.enabled",
+                "registered_examples": [
+                    "hw_isp.ae_apply_delay_frames",
+                    "hw_isp.awb_apply_delay_frames",
+                    "hw_isp.global_latency_factor",
+                ],
+            },
+            {
+                "path_pattern": "fdtd.<name>",
+                "assignment": "scenario.fdtd attachment options",
+                "readiness_tier": "proxy",
+                "allowed_suffixes": ["lut", "mode", "qe_mode", "crosstalk_mode"],
+                "requirement": (
+                    "fdtd.mode only changes the pipeline when "
+                    "base_scenario.fdtd.lut is attached."
+                ),
+            },
+            {
+                "path_pattern": "tcad.<name>",
+                "assignment": "scenario.tcad attachment options",
+                "readiness_tier": "calibration_required",
+                "allowed_suffixes": ["db", "collection_mode"],
+                "requirement": (
+                    "tcad.collection_mode only changes the pipeline when "
+                    "base_scenario.tcad.db is attached."
+                ),
+            },
+            {
+                "path_pattern": "<camera_set dot path>",
+                "assignment": "scenario.parameters/camera_parameters -> camera_set(...)",
+                "readiness_tier": "available",
+                "examples": [
+                    "optics.fnumber",
+                    "optics.focal_length",
+                    "pixel.size",
+                    "sensor.bits",
+                    "ip.demosaic_method",
+                ],
+                "truth_boundary": (
+                    "The optimizer can assign these paths, but actual effect depends "
+                    "on camera_set support and should be verified with parameter_lineage."
+                ),
+            },
+        ],
+        "objective_metrics": _jsonable(_OBJECTIVE_METRIC_CATALOG),
+    }
+
+
+def camerae2e_parameter_space_validate(
+    parameter_space: Mapping[str, Iterable[Any] | Mapping[str, Any]],
+    *,
+    base_scenario: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Validate and classify optimization parameter-space paths without running a sweep."""
+
+    issues: list[dict[str, Any]] = []
+    warnings: list[dict[str, Any]] = []
+    try:
+        axes = _normalize_parameter_space(parameter_space)
+    except ValueError as exc:
+        return {
+            "schema_version": "camerae2e_parameter_space_validation_v1",
+            "ok": False,
+            "axis_count": 0,
+            "issue_count": 1,
+            "warning_count": 0,
+            "issues": [{"kind": "parameter_space", "message": str(exc)}],
+            "warnings": [],
+            "axes": {},
+        }
+    axis_payload: dict[str, dict[str, Any]] = {}
+    for path, values in axes.items():
+        axis_issues = _parameter_axis_issues(path, base_scenario)
+        issues.extend(axis_issues)
+        classification = _parameter_axis_classification(path)
+        if classification["status"] == "custom_passthrough":
+            warnings.append(
+                {
+                    "path": path,
+                    "kind": "custom_passthrough",
+                    "message": (
+                        "Axis is assignable through camera_set passthrough but is not "
+                        "a registered validated optimization axis."
+                    ),
+                }
+            )
+        axis_payload[path] = {
+            "values": _jsonable(values),
+            "value_count": len(values),
+            **classification,
+            "issues": axis_issues,
+        }
+    return {
+        "schema_version": "camerae2e_parameter_space_validation_v1",
+        "ok": not issues,
+        "axis_count": len(axes),
+        "issue_count": len(issues),
+        "warning_count": len(warnings),
+        "issues": issues,
+        "warnings": warnings,
+        "axes": axis_payload,
     }
 
 
@@ -312,42 +495,109 @@ def _normalize_parameter_space(
 def _validate_parameter_axis_names(
     axes: Mapping[str, Any], base_scenario: Mapping[str, Any] | None
 ) -> None:
-    sensor_allowed = {
-        "integration_time",
-        "integration time",
-        "integration",
-        "exposure_duration",
-        "exposure duration",
-        "exposure_time",
-        "exposure time",
-        "analog_gain",
-        "analog gain",
-        "gain",
-        "noise_flag",
-        "noise flag",
-        "noise",
-    }
     for key in axes:
-        path = str(key)
-        if "." not in path:
-            continue
-        prefix, remainder = path.split(".", 1)
-        if prefix == "sensor" and remainder not in sensor_allowed:
-            raise ValueError(f"Unsupported sensor optimization parameter: {path!r}.")
-        if prefix == "fdtd" and remainder == "mode" and not _has_nested_value(
-            base_scenario, "fdtd", "lut"
-        ):
-            raise ValueError(
-                f"{path!r} needs an explicit LUT/DB attachment in the base scenario; "
-                "optimizing the mode alone would not change the camera pipeline."
-            )
-        if prefix == "tcad" and remainder == "collection_mode" and not _has_nested_value(
-            base_scenario, "tcad", "db"
-        ):
-            raise ValueError(
-                f"{path!r} needs an explicit LUT/DB attachment in the base scenario; "
-                "optimizing the mode alone would not change the camera pipeline."
-            )
+        issues = _parameter_axis_issues(str(key), base_scenario)
+        if issues:
+            raise ValueError(str(issues[0]["message"]))
+
+
+def _parameter_axis_issues(
+    path: str, base_scenario: Mapping[str, Any] | None
+) -> list[dict[str, Any]]:
+    if "." not in path:
+        return []
+    prefix, remainder = path.split(".", 1)
+    if prefix == "sensor" and remainder not in _SENSOR_OPTIMIZATION_PARAMETERS:
+        return [
+            {
+                "path": path,
+                "kind": "unsupported_sensor_axis",
+                "message": f"Unsupported sensor optimization parameter: {path!r}.",
+            }
+        ]
+    if prefix == "fdtd" and remainder == "mode" and not _has_nested_value(
+        base_scenario, "fdtd", "lut"
+    ):
+        return [
+            {
+                "path": path,
+                "kind": "inactive_fdtd_axis",
+                "message": (
+                    f"{path!r} needs an explicit LUT/DB attachment in the base scenario; "
+                    "optimizing the mode alone would not change the camera pipeline."
+                ),
+            }
+        ]
+    if prefix == "tcad" and remainder == "collection_mode" and not _has_nested_value(
+        base_scenario, "tcad", "db"
+    ):
+        return [
+            {
+                "path": path,
+                "kind": "inactive_tcad_axis",
+                "message": (
+                    f"{path!r} needs an explicit LUT/DB attachment in the base scenario; "
+                    "optimizing the mode alone would not change the camera pipeline."
+                ),
+            }
+        ]
+    return []
+
+
+def _parameter_axis_classification(path: str) -> dict[str, Any]:
+    if path in _PARAMETER_AXIS_CATALOG:
+        return {
+            "status": "registered",
+            "assignment": _assignment_for_path(path),
+            "readiness_tier": _PARAMETER_AXIS_CATALOG[path]["readiness_tier"],
+        }
+    if "." not in path:
+        return {
+            "status": "custom_passthrough",
+            "assignment": "scenario.parameters -> camera_set(...)",
+            "readiness_tier": "available",
+        }
+    prefix, remainder = path.split(".", 1)
+    if prefix == "sensor" and remainder in _SENSOR_OPTIMIZATION_PARAMETERS:
+        return {
+            "status": "assignable",
+            "assignment": "scenario.sensor -> sensor_set(...)",
+            "readiness_tier": "validated",
+        }
+    if prefix == "hw_isp":
+        return {
+            "status": "assignable",
+            "assignment": "scenario.hw_isp control dictionary",
+            "readiness_tier": "proxy",
+        }
+    if prefix == "fdtd":
+        return {
+            "status": "assignable",
+            "assignment": "scenario.fdtd attachment options",
+            "readiness_tier": "proxy",
+        }
+    if prefix == "tcad":
+        return {
+            "status": "assignable",
+            "assignment": "scenario.tcad attachment options",
+            "readiness_tier": "calibration_required",
+        }
+    return {
+        "status": "custom_passthrough",
+        "assignment": "scenario.parameters/camera_parameters -> camera_set(...)",
+        "readiness_tier": "available",
+    }
+
+
+def _assignment_for_path(path: str) -> str:
+    prefix = path.split(".", 1)[0]
+    if prefix == "sensor":
+        return "scenario.sensor -> sensor_set(...)"
+    if prefix == "hw_isp":
+        return "scenario.hw_isp control dictionary"
+    if prefix in {"fdtd", "tcad"}:
+        return f"scenario.{prefix} attachment options"
+    return "scenario.parameters/camera_parameters -> camera_set(...)"
 
 
 def _has_nested_value(payload: Mapping[str, Any] | None, bucket: str, name: str) -> bool:
@@ -565,3 +815,5 @@ cameraE2EOptimizeCameraParameters = camerae2e_optimize_camera_parameters  # noqa
 cameraE2EParetoFront = camerae2e_pareto_front  # noqa: N816
 cameraE2EOptimizationReport = camerae2e_optimization_report  # noqa: N816
 cameraE2EParameterSpaceCatalog = camerae2e_parameter_space_catalog  # noqa: N816
+cameraE2EOptimizationConfigCatalog = camerae2e_optimization_config_catalog  # noqa: N816
+cameraE2EParameterSpaceValidate = camerae2e_parameter_space_validate  # noqa: N816

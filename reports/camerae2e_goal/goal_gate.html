@@ -24,7 +24,7 @@ code { word-break: break-all; }
 <p class="lead">Research-grade E2E optimization platform plus RAW data factory for perception training.</p>
 <p>OK: <strong>True</strong>; strict:
 <strong>False</strong>; generated:
-<code>2026-07-05T05:35:54.371678+00:00</code></p>
+<code>2026-07-05T05:42:24.528677+00:00</code></p>
 <p>Artifacts: <code>/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke</code></p>
 <h2>Requirements</h2>
 <table>
@@ -379,7 +379,68 @@ code { word-break: break-all; }
   },
   &quot;case_count&quot;: 6,
   &quot;feasible_count&quot;: 6,
+  &quot;parameter_space_validation&quot;: {
+    &quot;axes&quot;: {
+      &quot;sensor.analog_gain&quot;: {
+        &quot;assignment&quot;: &quot;scenario.sensor -&gt; sensor_set(...)&quot;,
+        &quot;issues&quot;: [],
+        &quot;readiness_tier&quot;: &quot;validated&quot;,
+        &quot;status&quot;: &quot;registered&quot;,
+        &quot;value_count&quot;: 3,
+        &quot;values&quot;: [
+          1.0,
+          2.0,
+          4.0
+        ]
+      },
+      &quot;sensor.integration_time&quot;: {
+        &quot;assignment&quot;: &quot;scenario.sensor -&gt; sensor_set(...)&quot;,
+        &quot;issues&quot;: [],
+        &quot;readiness_tier&quot;: &quot;validated&quot;,
+        &quot;status&quot;: &quot;registered&quot;,
+        &quot;value_count&quot;: 2,
+        &quot;values&quot;: [
+          0.001,
+          0.004
+        ]
+      }
+    },
+    &quot;axis_count&quot;: 2,
+    &quot;issue_count&quot;: 0,
+    &quot;issues&quot;: [],
+    &quot;ok&quot;: true,
+    &quot;schema_version&quot;: &quot;camerae2e_parameter_space_validation_v1&quot;,
+    &quot;warning_count&quot;: 0,
+    &quot;warnings&quot;: []
+  },
   &quot;pareto_case_count&quot;: 1,
+  &quot;presets&quot;: {
+    &quot;exposure&quot;: [
+      &quot;sensor.integration_time&quot;,
+      &quot;sensor.analog_gain&quot;
+    ],
+    &quot;hw_isp_control&quot;: [
+      &quot;hw_isp.ae_apply_delay_frames&quot;,
+      &quot;hw_isp.awb_apply_delay_frames&quot;,
+      &quot;hw_isp.global_latency_factor&quot;
+    ],
+    &quot;isp&quot;: [
+      &quot;ip.demosaic_method&quot;
+    ],
+    &quot;optics&quot;: [
+      &quot;optics.fnumber&quot;
+    ],
+    &quot;raw_factory&quot;: [
+      &quot;sensor.integration_time&quot;,
+      &quot;sensor.analog_gain&quot;,
+      &quot;optics.fnumber&quot;
+    ],
+    &quot;research_smoke&quot;: [
+      &quot;sensor.integration_time&quot;,
+      &quot;optics.fnumber&quot;
+    ]
+  },
+  &quot;registered_configure_count&quot;: 8,
   &quot;seed&quot;: 2036
 }</pre></td></tr><tr><td>dataset_factory_smoke</td><td><span class='status status-pass'>pass</span></td><td>validated</td><td>RAW data factory exports deterministic NPZ, metadata, labels, and lineage.</td><td><pre>{
   &quot;case_count&quot;: 1,

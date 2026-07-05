@@ -82,6 +82,8 @@ Optimization:
 - `camerae2e_optimize_parameters(...)`
 - `camerae2e_optimize_camera_parameters(...)`
 - `camerae2e_parameter_space_catalog(...)`
+- `camerae2e_optimization_config_catalog(...)`
+- `camerae2e_parameter_space_validate(...)`
 - `camerae2e_optimization_report(...)`
 - `camerae2e_pareto_front(...)`
 
@@ -90,6 +92,12 @@ parameters such as `sensor.integration_time`, `sensor.analog_gain`,
 `optics.fnumber`, `ip.demosaic_method`, and HW ISP control-delay parameters.
 `camerae2e_parameter_space_catalog(...)` exposes validated preset search spaces
 such as `exposure`, `raw_factory`, `isp`, and `hw_isp_control`.
+`camerae2e_optimization_config_catalog(...)` lists every registered configure
+axis, custom dot-path assignment rule, and supported FACA objective metric path.
+`camerae2e_parameter_space_validate(...)` classifies a caller parameter space as
+`registered`, `assignable`, `custom_passthrough`, or blocked before any expensive
+sweep is launched. This prevents false optimization runs where an axis is
+syntactically accepted but does not affect the camera pipeline.
 `camerae2e_optimize_camera_parameters(...)` runs those presets directly while
 still allowing caller overrides. The optimizer maximizes objective paths from
 the FACA report, supports hard metric constraints, reports the feasible Pareto

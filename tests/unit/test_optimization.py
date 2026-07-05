@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from pyisetcam import (
     camerae2e_faca_report,
+    camerae2e_optimization_config_catalog,
     camerae2e_optimization_report,
     camerae2e_optimize_camera_parameters,
     camerae2e_optimize_parameters,
     camerae2e_parameter_space_catalog,
+    camerae2e_parameter_space_validate,
     camerae2e_pareto_front,
     camerae2e_run_scenario,
 )
@@ -52,6 +54,62 @@ def test_camerae2e_parameter_space_catalog_exposes_presets() -> None:
     }
 
 
+def test_camerae2e_optimization_config_catalog_lists_configure_targets() -> None:
+    catalog = camerae2e_optimization_config_catalog()
+
+    assert catalog["schema_version"] == "camerae2e_optimization_config_catalog_v1"
+    assert catalog["registered_axis_count"] == 8
+    assert "sensor.integration_time" in catalog["registered_axes"]
+    assert "hw_isp.global_latency_factor" in catalog["registered_axes"]
+    assert "metrics.artifact.raw_std" in catalog["objective_metrics"]
+    assert any(
+        rule["path_pattern"] == "<camera_set dot path>"
+        for rule in catalog["custom_path_rules"]
+    )
+    sensor_rule = next(
+        rule for rule in catalog["custom_path_rules"] if rule["path_pattern"] == "sensor.<name>"
+    )
+    assert "exposure_time" in sensor_rule["allowed_suffixes"]
+
+
+def test_camerae2e_parameter_space_validate_classifies_axes() -> None:
+    validation = camerae2e_parameter_space_validate(
+        {
+            "sensor.integration_time": [0.001, 0.004],
+            "optics.focal_length": [0.002, 0.004],
+            "hw_isp.ae_apply_delay_frames": [0, 2],
+        }
+    )
+
+    assert validation["ok"] is True
+    assert validation["axes"]["sensor.integration_time"]["status"] == "registered"
+    assert validation["axes"]["hw_isp.ae_apply_delay_frames"]["status"] == "registered"
+    assert validation["axes"]["optics.focal_length"]["status"] == "custom_passthrough"
+    assert validation["warning_count"] == 1
+
+
+def test_camerae2e_parameter_space_validate_reports_ineffective_axes() -> None:
+    validation = camerae2e_parameter_space_validate(
+        {
+            "sensor.not_a_real_parameter": [1],
+            "fdtd.mode": ["proxy"],
+            "tcad.collection_mode": ["proxy"],
+        }
+    )
+    fdtd_ready = camerae2e_parameter_space_validate(
+        {"fdtd.mode": ["proxy"]},
+        base_scenario={"fdtd": {"lut": "unit_lut.json"}},
+    )
+
+    assert validation["ok"] is False
+    assert {issue["kind"] for issue in validation["issues"]} == {
+        "unsupported_sensor_axis",
+        "inactive_fdtd_axis",
+        "inactive_tcad_axis",
+    }
+    assert fdtd_ready["ok"] is True
+
+
 def test_camerae2e_optimize_parameters_selects_best_grid_case() -> None:
     result = camerae2e_optimize_parameters(
         {
@@ -74,6 +132,7 @@ def test_camerae2e_optimize_parameters_selects_best_grid_case() -> None:
     assert result["feasible_count"] == 4
     assert result["pareto_case_count"] == 1
     assert report["best_case"]["parameters"]["sensor.integration_time"] == 0.004
+    assert result["parameter_space_validation"]["ok"] is True
     assert report["selected_scenarios"][0]["sensor"]["integration_time"] == 0.004
     assert len(report["top_cases"]) == 2
 

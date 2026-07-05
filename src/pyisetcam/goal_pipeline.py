@@ -20,7 +20,10 @@ from .dataset import (
     camerae2e_dataset_validate,
 )
 from .db_catalog import camerae2e_db_manifest, camerae2e_db_validate
-from .optimization import camerae2e_optimize_camera_parameters
+from .optimization import (
+    camerae2e_optimization_config_catalog,
+    camerae2e_optimize_camera_parameters,
+)
 from .physics_pipeline import camerae2e_physics_pipeline_plan
 from .system_faca import camerae2e_faca_report, camerae2e_run_scenario
 
@@ -246,6 +249,7 @@ def _faca_smoke(*, seed: int) -> dict[str, Any]:
 
 
 def _optimization_smoke(*, seed: int) -> dict[str, Any]:
+    config_catalog = camerae2e_optimization_config_catalog()
     result = camerae2e_optimize_camera_parameters(
         {
             "name": "goal_gate_optimization_smoke",
@@ -270,10 +274,13 @@ def _optimization_smoke(*, seed: int) -> dict[str, Any]:
         "summary": "Camera parameter optimization runs a deterministic FACA objective grid.",
         "evidence": {
             "seed": seed,
+            "registered_configure_count": config_catalog.get("registered_axis_count"),
+            "presets": config_catalog.get("presets", {}),
             "case_count": result.get("case_count"),
             "feasible_count": result.get("feasible_count"),
             "pareto_case_count": result.get("pareto_case_count"),
             "best_parameters": best.get("parameters", {}),
+            "parameter_space_validation": result.get("parameter_space_validation", {}),
             "automation": result.get("automation", {}),
         },
     }

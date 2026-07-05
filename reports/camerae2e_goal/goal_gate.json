@@ -375,7 +375,68 @@
         },
         "case_count": 6,
         "feasible_count": 6,
+        "parameter_space_validation": {
+          "axes": {
+            "sensor.analog_gain": {
+              "assignment": "scenario.sensor -> sensor_set(...)",
+              "issues": [],
+              "readiness_tier": "validated",
+              "status": "registered",
+              "value_count": 3,
+              "values": [
+                1.0,
+                2.0,
+                4.0
+              ]
+            },
+            "sensor.integration_time": {
+              "assignment": "scenario.sensor -> sensor_set(...)",
+              "issues": [],
+              "readiness_tier": "validated",
+              "status": "registered",
+              "value_count": 2,
+              "values": [
+                0.001,
+                0.004
+              ]
+            }
+          },
+          "axis_count": 2,
+          "issue_count": 0,
+          "issues": [],
+          "ok": true,
+          "schema_version": "camerae2e_parameter_space_validation_v1",
+          "warning_count": 0,
+          "warnings": []
+        },
         "pareto_case_count": 1,
+        "presets": {
+          "exposure": [
+            "sensor.integration_time",
+            "sensor.analog_gain"
+          ],
+          "hw_isp_control": [
+            "hw_isp.ae_apply_delay_frames",
+            "hw_isp.awb_apply_delay_frames",
+            "hw_isp.global_latency_factor"
+          ],
+          "isp": [
+            "ip.demosaic_method"
+          ],
+          "optics": [
+            "optics.fnumber"
+          ],
+          "raw_factory": [
+            "sensor.integration_time",
+            "sensor.analog_gain",
+            "optics.fnumber"
+          ],
+          "research_smoke": [
+            "sensor.integration_time",
+            "optics.fnumber"
+          ]
+        },
+        "registered_configure_count": 8,
         "seed": 2036
       },
       "name": "parameter_optimization",
@@ -594,7 +655,7 @@
       "tier": "calibration_required"
     }
   ],
-  "generated_at": "2026-07-05T05:35:54.371678+00:00",
+  "generated_at": "2026-07-05T05:42:24.528677+00:00",
   "goal": "Research-grade E2E optimization platform plus RAW data factory for perception training.",
   "ok": true,
   "output_dir": "/Users/seongcheoljeong/Documents/CameraE2E/reports/camerae2e_goal",

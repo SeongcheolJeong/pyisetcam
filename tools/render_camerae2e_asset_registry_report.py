@@ -152,7 +152,8 @@ def _capability_matrix(
             "implemented": (
                 "Preset parameter-space catalog plus deterministic grid search over "
                 "dot-path camera parameters using FACA metric objectives, constraints, "
-                "Pareto front, selected scenarios, and parameter-lineage evidence."
+                "Pareto front, selected scenarios, parameter-lineage evidence, "
+                "configure target catalog, and preflight parameter-space validation."
             ),
             "remaining": (
                 "Bayesian/evolutionary search and closed-loop hardware calibration."

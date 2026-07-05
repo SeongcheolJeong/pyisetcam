@@ -1387,7 +1387,7 @@
     },
     {
       "area": "Optimization",
-      "implemented": "Preset parameter-space catalog plus deterministic grid search over dot-path camera parameters using FACA metric objectives, constraints, Pareto front, selected scenarios, and parameter-lineage evidence.",
+      "implemented": "Preset parameter-space catalog plus deterministic grid search over dot-path camera parameters using FACA metric objectives, constraints, Pareto front, selected scenarios, parameter-lineage evidence, configure target catalog, and preflight parameter-space validation.",
       "remaining": "Bayesian/evolutionary search and closed-loop hardware calibration.",
       "tier": "validated"
     },
@@ -1416,7 +1416,7 @@
       "tier": "calibration_required"
     }
   ],
-  "generated_at": "2026-07-05T05:35:44.147003+00:00",
+  "generated_at": "2026-07-05T05:42:14.372199+00:00",
   "goal": "Research-grade E2E optimization platform plus RAW data factory for perception training.",
   "physics_pipeline_plan": {
     "actions": [
