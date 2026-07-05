@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CameraE2E Goal Gate</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  margin: 32px; color: #17202a; }
+table { border-collapse: collapse; width: 100%; margin-top: 18px; }
+th, td { border: 1px solid #d5d8dc; padding: 8px 10px; vertical-align: top; font-size: 13px; }
+th { background: #f4f6f7; text-align: left; }
+pre { white-space: pre-wrap; word-break: break-word; max-height: 360px; overflow: auto;
+  background: #f8f9f9; padding: 8px; }
+.status { display: inline-block; padding: 2px 7px; border-radius: 4px; font-weight: 600; }
+.status-pass { background: #d5f5e3; color: #145a32; }
+.status-warn, .status-skip { background: #fdebd0; color: #7d3c00; }
+.status-fail { background: #fadbd8; color: #78281f; }
+.lead { font-size: 18px; }
+code { word-break: break-all; }
+</style>
+</head>
+<body>
+<h1>CameraE2E Goal Gate</h1>
+<p class="lead">Research-grade E2E optimization platform plus RAW data factory for perception training.</p>
+<p>OK: <strong>True</strong>; strict:
+<strong>False</strong>; generated:
+<code>2026-07-05T05:27:10.214248+00:00</code></p>
+<p>Artifacts: <code>/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke</code></p>
+<h2>Requirements</h2>
+<table>
+<thead><tr><th>Requirement</th><th>Status</th><th>Checks</th><th>Evidence</th></tr></thead>
+<tbody><tr><td>DB/LUT registry and readiness matrix</td><td><span class='status status-warn'>warn</span></td><td>registry_manifest</td><td>Registry manifest validates schema, readiness tiers, and stale dependencies.</td></tr><tr><td>FDTD/TCAD/RayOptics/HW ISP external pipeline</td><td><span class='status status-warn'>warn</span></td><td>physics_pipeline</td><td>External asset lineage and refresh actions are generated without sign-off inflation.</td></tr><tr><td>System FACA scenario metrics</td><td><span class='status status-pass'>pass</span></td><td>faca_smoke</td><td>Scene/OI/Sensor/IP/HW ISP stages produce metrics and parameter lineage.</td></tr><tr><td>Automated camera-parameter optimization</td><td><span class='status status-pass'>pass</span></td><td>parameter_optimization</td><td>Preset camera parameter search optimizes a FACA metric deterministically.</td></tr><tr><td>RAW data factory from optimized camera cases</td><td><span class='status status-pass'>pass</span></td><td>dataset_factory_smoke</td><td>Optimization outputs can be rendered into validated RAW training artifacts.</td></tr><tr><td>ADAS/KITTI YOLO demo RAW generation</td><td><span class='status status-pass'>pass</span></td><td>adas_kitti_demo_smoke</td><td>Synthetic or supplied KITTI-style inputs can produce proxy RAW and YOLO labels.</td></tr><tr><td>Camera-spec variant re-capture</td><td><span class='status status-pass'>pass</span></td><td>camera_spec_variant_smoke</td><td>One KITTI-style scene can be exported under multiple camera specifications.</td></tr><tr><td>Physics proxy/sign-off claim guard</td><td><span class='status status-pass'>pass</span></td><td>signoff_claim_guard</td><td>Strict validation blocks calibrated claims until measured evidence is attached.</td></tr></tbody>
+</table>
+<h2>Checks</h2>
+<table>
+<thead><tr><th>Name</th><th>Status</th><th>Tier</th><th>Summary</th><th>Evidence</th></tr></thead>
+<tbody><tr><td>registry_manifest</td><td><span class='status status-warn'>warn</span></td><td>calibration_required</td><td>DB/LUT registry manifest is available and JSON-serializable.</td><td><pre>{
+  &quot;entry_count&quot;: 10,
+  &quot;issue_count&quot;: 0,
+  &quot;manifest_schema&quot;: &quot;camerae2e_db_manifest_v1&quot;,
+  &quot;readiness_tiers&quot;: {
+    &quot;available&quot;: 1,
+    &quot;calibration_required&quot;: 1,
+    &quot;proxy&quot;: 6,
+    &quot;validated&quot;: 2
+  },
+  &quot;stale_dependency_count&quot;: 1,
+  &quot;validation_schema&quot;: &quot;camerae2e_db_validation_v1&quot;,
+  &quot;warning_count&quot;: 1
+}</pre></td></tr><tr><td>physics_pipeline</td><td><span class='status status-warn'>warn</span></td><td>calibration_required</td><td>External FDTD/TCAD/RayOptics/HW ISP lineage plan is generated.</td><td><pre>{
+  &quot;active_runs&quot;: {
+    &quot;fdtd_lut_path&quot;: &quot;/Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant/camera_lut.json&quot;,
+    &quot;fdtd_lut_run&quot;: &quot;/Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant&quot;,
+    &quot;lineage_match&quot;: false,
+    &quot;tcad_generation_map_path&quot;: &quot;/Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke/tcad_generation_map_2d.npz&quot;,
+    &quot;tcad_generation_map_run&quot;: &quot;/Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke&quot;
+  },
+  &quot;ok&quot;: true,
+  &quot;refresh_order&quot;: [
+    {
+      &quot;action&quot;: &quot;refresh_downstream_from_current_dependency&quot;,
+      &quot;entry&quot;: &quot;tcad_sensor_db_active&quot;,
+      &quot;reason&quot;: &quot;TCAD/FDTD active artifact mismatch: active FDTD LUT is under /Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant, but TCAD generation map is under /Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke&quot;,
+      &quot;severity&quot;: &quot;warning&quot;
+    }
+  ],
+  &quot;schema&quot;: &quot;camerae2e_physics_pipeline_plan_v1&quot;,
+  &quot;summary&quot;: {
+    &quot;action_count&quot;: 10,
+    &quot;blocking_count&quot;: 0,
+    &quot;calibration_required_count&quot;: 7,
+    &quot;refresh_action_count&quot;: 1,
+    &quot;stale_dependency_count&quot;: 1
+  },
+  &quot;truth_boundaries&quot;: [
+    {
+      &quot;blocks_strict_validation&quot;: true,
+      &quot;entry&quot;: &quot;fdtd_sensor_stack_catalog&quot;,
+      &quot;readiness_tier&quot;: &quot;proxy&quot;,
+      &quot;truth_boundary&quot;: &quot;metadata_derived_stack_configs_unless_product_cad_listed&quot;
+    },
+    {
+      &quot;blocks_strict_validation&quot;: true,
+      &quot;entry&quot;: &quot;fdtd_sensor_lut_active&quot;,
+      &quot;readiness_tier&quot;: &quot;proxy&quot;,
+      &quot;truth_boundary&quot;: &quot;optical_absorption_and_regional_response_proxy&quot;
+    },
+    {
+      &quot;blocks_strict_validation&quot;: true,
+      &quot;entry&quot;: &quot;tcad_sensor_db_active&quot;,
+      &quot;readiness_tier&quot;: &quot;calibration_required&quot;,
+      &quot;truth_boundary&quot;: &quot;carrier_collection_framework_not_product_calibrated_tcad&quot;
+    },
+    {
+      &quot;blocks_strict_validation&quot;: true,
+      &quot;entry&quot;: &quot;lens_patents_active&quot;,
+      &quot;readiness_tier&quot;: &quot;proxy&quot;,
+      &quot;truth_boundary&quot;: &quot;geometric_psf_not_diffraction_wave_optics&quot;
+    },
+    {
+      &quot;blocks_strict_validation&quot;: true,
+      &quot;entry&quot;: &quot;hwisp_parameter_profiles&quot;,
+      &quot;readiness_tier&quot;: &quot;proxy&quot;,
+      &quot;truth_boundary&quot;: &quot;seed_or_public_profile_not_vendor_trace_signoff&quot;
+    },
+    {
+      &quot;blocks_strict_validation&quot;: false,
+      &quot;entry&quot;: &quot;task_perception_model_profiles&quot;,
+      &quot;readiness_tier&quot;: &quot;available&quot;,
+      &quot;truth_boundary&quot;: &quot;adapter_profiles_not_training_dataset_or_model_accuracy_claim&quot;
+    },
+    {
+      &quot;blocks_strict_validation&quot;: true,
+      &quot;entry&quot;: &quot;lens_patents_bundled_v6&quot;,
+      &quot;readiness_tier&quot;: &quot;proxy&quot;,
+      &quot;truth_boundary&quot;: &quot;geometric_psf_not_diffraction_wave_optics&quot;
+    },
+    {
+      &quot;blocks_strict_validation&quot;: true,
+      &quot;entry&quot;: &quot;rayoptics_lens_db_v9&quot;,
+      &quot;readiness_tier&quot;: &quot;proxy&quot;,
+      &quot;truth_boundary&quot;: &quot;geometric_psf_not_diffraction_wave_optics&quot;
+    }
+  ]
+}</pre></td></tr><tr><td>faca_smoke</td><td><span class='status status-pass'>pass</span></td><td>validated</td><td>System FACA can run Scene -&gt; OI -&gt; Sensor -&gt; IP plus HW ISP control metrics.</td><td><pre>{
+  &quot;metrics&quot;: {
+    &quot;angle&quot;: {
+      &quot;available&quot;: false,
+      &quot;note&quot;: &quot;CRA/field axes are recorded through attached FDTD scenario parameters.&quot;
+    },
+    &quot;artifact&quot;: {
+      &quot;raw_std&quot;: 0.011569184556674312,
+      &quot;rgb_clip_fraction&quot;: null,
+      &quot;rgb_std&quot;: 0.007304492201519821
+    },
+    &quot;color&quot;: {
+      &quot;rgb_mean&quot;: 0.037146996316030544
+    },
+    &quot;control&quot;: {
+      &quot;ae_final_error_ev&quot;: -2.7465877251004382,
+      &quot;ae_settle_frame&quot;: -1.0,
+      &quot;ae_settle_frames_after_step&quot;: -1.0,
+      &quot;awb_final_rgb_imbalance&quot;: 1.0110625171733443,
+      &quot;awb_settle_frame&quot;: -1.0,
+      &quot;e2e_latency_max_us&quot;: 12953.730000000003,
+      &quot;e2e_latency_mean_us&quot;: 12953.73,
+      &quot;e2e_latency_min_us&quot;: 12953.729999999998,
+      &quot;frame_count&quot;: 2.0,
+      &quot;max_clip_fraction&quot;: 0.0,
+      &quot;max_clip_fraction_after_response&quot;: 0.0,
+      &quot;max_clip_fraction_before_response&quot;: 0.0,
+      &quot;queue_stall_max_us&quot;: 0.0,
+      &quot;queue_stall_total_us&quot;: 0.0,
+      &quot;validation_thresholds&quot;: {
+        &quot;ae_settle_ev&quot;: 0.25,
+        &quot;awb_settle_imbalance&quot;: 0.2,
+        &quot;settle_consecutive_frames&quot;: 2.0
+      },
+      &quot;validation_verdicts&quot;: {
+        &quot;ae_settle&quot;: false,
+        &quot;awb_settle&quot;: false,
+        &quot;clamp_compliance&quot;: true,
+        &quot;clip_reduction&quot;: true,
+        &quot;warmup_delay_mapping&quot;: true
+      },
+      &quot;warmup_frame_count&quot;: 2.0
+    },
+    &quot;field&quot;: {
+      &quot;available&quot;: true
+    }
+  },
+  &quot;parameter_lineage_count&quot;: 1,
+  &quot;scenario_name&quot;: &quot;goal_gate_faca_smoke&quot;,
+  &quot;seed&quot;: 2026,
+  &quot;stage_summaries&quot;: {
+    &quot;ip_result&quot;: {
+      &quot;available&quot;: true,
+      &quot;dtype&quot;: &quot;float64&quot;,
+      &quot;max&quot;: 0.04754330609737384,
+      &quot;mean&quot;: 0.037146996316030544,
+      &quot;min&quot;: 0.00939095448318405,
+      &quot;shape&quot;: [
+        242,
+        242,
+        3
+      ],
+      &quot;std&quot;: 0.007304492201519821
+    },
+    &quot;ip_srgb&quot;: {
+      &quot;available&quot;: true,
+      &quot;dtype&quot;: &quot;float64&quot;,
+      &quot;max&quot;: 0.2415102430106581,
+      &quot;mean&quot;: 0.21117233259520277,
+      &quot;min&quot;: 0.09585099628619137,
+      &quot;shape&quot;: [
+        242,
+        242,
+        3
+      ],
+      &quot;std&quot;: 0.022944411291789913
+    },
+    &quot;oi_photons&quot;: {
+      &quot;available&quot;: true,
+      &quot;dtype&quot;: &quot;float64&quot;,
+      &quot;max&quot;: 231676786636318.06,
+      &quot;mean&quot;: 115483491494148.25,
+      &quot;min&quot;: 188141564163.23544,
+      &quot;shape&quot;: [
+        10,
+        10,
+        31
+      ],
+      &quot;std&quot;: 89176966978586.4
+    },
+    &quot;scene_photons&quot;: {
+      &quot;available&quot;: true,
+      &quot;dtype&quot;: &quot;float64&quot;,
+      &quot;max&quot;: 4830164317522772.0,
+      &quot;mean&quot;: 3795129106625035.5,
+      &quot;min&quot;: 2760093895727298.5,
+      &quot;shape&quot;: [
+        8,
+        8,
+        31
+      ],
+      &quot;std&quot;: 617175757512845.5
+    },
+    &quot;sensor_digital&quot;: {
+      &quot;available&quot;: false,
+      &quot;dtype&quot;: null,
+      &quot;shape&quot;: []
+    },
+    &quot;sensor_raw&quot;: {
+      &quot;available&quot;: true,
+      &quot;dtype&quot;: &quot;float64&quot;,
+      &quot;max&quot;: 0.04754330609737384,
+      &quot;mean&quot;: 0.02558891294207637,
+      &quot;min&quot;: 0.00474146448721803,
+      &quot;shape&quot;: [
+        242,
+        242
+      ],
+      &quot;std&quot;: 0.011569184556674312
+    }
+  }
+}</pre></td></tr><tr><td>parameter_optimization</td><td><span class='status status-pass'>pass</span></td><td>validated</td><td>Camera parameter optimization runs a deterministic FACA objective grid.</td><td><pre>{
+  &quot;automation&quot;: {
+    &quot;axes&quot;: {
+      &quot;sensor.analog_gain&quot;: {
+        &quot;area&quot;: &quot;sensor&quot;,
+        &quot;description&quot;: &quot;Analog gain before digital conversion.&quot;,
+        &quot;readiness_tier&quot;: &quot;validated&quot;,
+        &quot;unit&quot;: &quot;x&quot;,
+        &quot;values&quot;: [
+          1.0,
+          2.0,
+          4.0
+        ]
+      },
+      &quot;sensor.integration_time&quot;: {
+        &quot;area&quot;: &quot;sensor&quot;,
+        &quot;description&quot;: &quot;Sensor exposure/integration time for RAW signal and noise tradeoffs.&quot;,
+        &quot;readiness_tier&quot;: &quot;validated&quot;,
+        &quot;unit&quot;: &quot;s&quot;,
+        &quot;values&quot;: [
+          0.001,
+          0.002,
+          0.004
+        ]
+      }
+    },
+    &quot;axis_count&quot;: 2,
+    &quot;preset&quot;: &quot;exposure&quot;,
+    &quot;schema_version&quot;: &quot;camerae2e_parameter_optimization_automation_v1&quot;
+  },
+  &quot;best_parameters&quot;: {
+    &quot;sensor.analog_gain&quot;: 1.0,
+    &quot;sensor.integration_time&quot;: 0.004
+  },
+  &quot;case_count&quot;: 6,
+  &quot;feasible_count&quot;: 6,
+  &quot;pareto_case_count&quot;: 1,
+  &quot;seed&quot;: 2036
+}</pre></td></tr><tr><td>dataset_factory_smoke</td><td><span class='status status-pass'>pass</span></td><td>validated</td><td>RAW data factory exports deterministic NPZ, metadata, labels, and lineage.</td><td><pre>{
+  &quot;case_count&quot;: 1,
+  &quot;dataset_root&quot;: &quot;/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke/optimization_dataset&quot;,
+  &quot;manifest_schema&quot;: &quot;camerae2e_dataset_manifest_v1&quot;,
+  &quot;parameter_lineage_count&quot;: 4,
+  &quot;raw_sha256&quot;: &quot;sha256:fdee52649096f1f7e0702b7a7cc4c24fd4dae588566ebac3f3a288ab9b80eb21&quot;,
+  &quot;raw_shape&quot;: [
+    242,
+    242
+  ],
+  &quot;source_optimization&quot;: {
+    &quot;constraints&quot;: [],
+    &quot;method&quot;: &quot;deterministic_grid&quot;,
+    &quot;objective&quot;: [
+      {
+        &quot;direction&quot;: &quot;maximize&quot;,
+        &quot;metric&quot;: &quot;metrics.color.rgb_mean&quot;
+      }
+    ],
+    &quot;schema_version&quot;: &quot;camerae2e_dataset_source_optimization_v1&quot;,
+    &quot;selected_case_count&quot;: 1,
+    &quot;selected_cases&quot;: [
+      {
+        &quot;case_index&quot;: 9,
+        &quot;constraint_results&quot;: [],
+        &quot;feasible&quot;: true,
+        &quot;objective_utilities&quot;: {
+          &quot;metrics.color.rgb_mean&quot;: 0.07110686775687382
+        },
+        &quot;objective_values&quot;: {
+          &quot;metrics.color.rgb_mean&quot;: 0.07110686775687382
+        },
+        &quot;parameters&quot;: {
+          &quot;optics.fnumber&quot;: 2.0,
+          &quot;sensor.analog_gain&quot;: 1.0,
+          &quot;sensor.integration_time&quot;: 0.004
+        },
+        &quot;score&quot;: 0.07110686775687382,
+        &quot;seed&quot;: 2055
+      }
+    ],
+    &quot;selection&quot;: &quot;best&quot;,
+    &quot;source_schema_version&quot;: &quot;camerae2e_parameter_optimization_v1&quot;,
+    &quot;source_seed&quot;: 2046
+  },
+  &quot;validation_ok&quot;: true
+}</pre></td></tr><tr><td>adas_kitti_demo_smoke</td><td><span class='status status-pass'>pass</span></td><td>proxy</td><td>ADAS/KITTI YOLO demo produces proxy RAW data and labels.</td><td><pre>{
+  &quot;camera_spec&quot;: {
+    &quot;dataset_reference&quot;: {
+      &quot;label_format&quot;: &quot;KITTI text plus YOLO normalized xywh labels&quot;,
+      &quot;name&quot;: &quot;KITTI object-detection style&quot;,
+      &quot;native_image_size_rc&quot;: [
+        375,
+        1242
+      ],
+      &quot;p2_focal_px&quot;: 721.5377,
+      &quot;principal_point_px&quot;: [
+        609.5593,
+        172.854
+      ]
+    },
+    &quot;demo&quot;: {
+      &quot;image_size_rc&quot;: [
+        96,
+        320
+      ],
+      &quot;mean_luminance_cd_m2&quot;: 80.0,
+      &quot;scene_distance_m&quot;: 30.0
+    },
+    &quot;hw_isp&quot;: {
+      &quot;ae_apply_delay_frames&quot;: 2,
+      &quot;awb_apply_delay_frames&quot;: 2,
+      &quot;enabled&quot;: true,
+      &quot;fps&quot;: 30.0,
+      &quot;line_time_us&quot;: 15.2,
+      &quot;nframes&quot;: 3
+    },
+    &quot;optics&quot;: {
+      &quot;f_number&quot;: 1.8,
+      &quot;focal_length_m&quot;: 0.002705766375,
+      &quot;hfov_deg&quot;: 81.43464801812478,
+      &quot;vfov_deg&quot;: 29.13358538929036
+    },
+    &quot;preset&quot;: &quot;kitti_yolo_demo&quot;,
+    &quot;readiness_tier&quot;: &quot;proxy&quot;,
+    &quot;schema_version&quot;: &quot;camerae2e_adas_camera_spec_v1&quot;,
+    &quot;sensor&quot;: {
+      &quot;analog_gain&quot;: 1.0,
+      &quot;bits&quot;: 12,
+      &quot;cfa_pattern&quot;: &quot;bayer_rggb&quot;,
+      &quot;integration_time_s&quot;: 0.004,
+      &quot;noise_flag&quot;: 2,
+      &quot;pixel_pitch_m&quot;: 3.75e-06
+    },
+    &quot;truth_boundary&quot;: &quot;KITTI camera geometry plus public-style ADAS assumptions; not measured sensor, lens, ISP, or KITTI raw calibration.&quot;
+  },
+  &quot;case_count&quot;: 1,
+  &quot;dataset_root&quot;: &quot;/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke/adas_kitti&quot;,
+  &quot;label_coordinate_frame&quot;: &quot;exported_raw_shape&quot;,
+  &quot;raw_shape&quot;: [
+    374,
+    1242
+  ],
+  &quot;truth_boundary&quot;: null,
+  &quot;validation_ok&quot;: true
+}</pre></td></tr><tr><td>camera_spec_variant_smoke</td><td><span class='status status-pass'>pass</span></td><td>proxy</td><td>KITTI-style source scene can be proxy re-captured under multiple camera specs.</td><td><pre>{
+  &quot;case_count&quot;: 2,
+  &quot;dataset_root&quot;: &quot;/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke/camera_spec_variants&quot;,
+  &quot;focal_lengths_m&quot;: [
+    0.00156,
+    0.00294
+  ],
+  &quot;geometric_transform&quot;: {
+    &quot;approximation&quot;: &quot;2D pinhole focal-ratio crop/resize on the RGB image; no depth, disocclusion, parallax, or spectral reconstruction.&quot;,
+    &quot;mode&quot;: &quot;pinhole_crop&quot;,
+    &quot;out_of_fov_fill&quot;: &quot;edge&quot;
+  },
+  &quot;presets&quot;: [
+    &quot;wide_fov_adas_demo&quot;,
+    &quot;narrow_fov_adas_demo&quot;
+  ],
+  &quot;record_transforms&quot;: [
+    {
+      &quot;mode&quot;: &quot;pinhole_crop&quot;,
+      &quot;object_scale_x&quot;: 0.7206830634074977,
+      &quot;out_of_source_fraction&quot;: 0.4908854166666667
+    },
+    {
+      &quot;mode&quot;: &quot;pinhole_crop&quot;,
+      &quot;object_scale_x&quot;: 1.4552254164959084,
+      &quot;out_of_source_fraction&quot;: 0.0
+    }
+  ],
+  &quot;truth_boundary&quot;: &quot;RGB-to-scene proxy re-capture. This does not recover true KITTI spectral radiance, depth, occlusion, lens flare, ISP inverse, or measured raw.&quot;,
+  &quot;validation_ok&quot;: true
+}</pre></td></tr><tr><td>signoff_claim_guard</td><td><span class='status status-pass'>pass</span></td><td>calibration_required</td><td>Proxy/calibration-required assets are prevented from being promoted to product sign-off claims.</td><td><pre>{
+  &quot;blocked_issue_examples&quot;: [
+    {
+      &quot;entry&quot;: &quot;hwisp_parameter_profiles&quot;,
+      &quot;kind&quot;: &quot;readiness_tier&quot;,
+      &quot;message&quot;: &quot;proxy is not accepted by strict validation.&quot;
+    },
+    {
+      &quot;entry&quot;: &quot;rayoptics_lens_db_v9&quot;,
+      &quot;kind&quot;: &quot;readiness_tier&quot;,
+      &quot;message&quot;: &quot;proxy is not accepted by strict validation.&quot;
+    },
+    {
+      &quot;entry&quot;: &quot;lens_patents_bundled_v6&quot;,
+      &quot;kind&quot;: &quot;readiness_tier&quot;,
+      &quot;message&quot;: &quot;proxy is not accepted by strict validation.&quot;
+    },
+    {
+      &quot;entry&quot;: &quot;lens_patents_active&quot;,
+      &quot;kind&quot;: &quot;readiness_tier&quot;,
+      &quot;message&quot;: &quot;proxy is not accepted by strict validation.&quot;
+    },
+    {
+      &quot;entry&quot;: &quot;tcad_sensor_db_active&quot;,
+      &quot;kind&quot;: &quot;stale_dependency&quot;,
+      &quot;message&quot;: &quot;TCAD/FDTD active artifact mismatch: active FDTD LUT is under /Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant, but TCAD generation map is under /Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke&quot;
+    },
+    {
+      &quot;entry&quot;: &quot;tcad_sensor_db_active&quot;,
+      &quot;kind&quot;: &quot;readiness_tier&quot;,
+      &quot;message&quot;: &quot;calibration_required is not accepted by strict validation.&quot;
+    },
+    {
+      &quot;entry&quot;: &quot;fdtd_sensor_lut_active&quot;,
+      &quot;kind&quot;: &quot;readiness_tier&quot;,
+      &quot;message&quot;: &quot;proxy is not accepted by strict validation.&quot;
+    },
+    {
+      &quot;entry&quot;: &quot;fdtd_sensor_stack_catalog&quot;,
+      &quot;kind&quot;: &quot;readiness_tier&quot;,
+      &quot;message&quot;: &quot;proxy is not accepted by strict validation.&quot;
+    }
+  ],
+  &quot;calibrated_or_signoff_claim_allowed&quot;: false,
+  &quot;strict_db_ok&quot;: false,
+  &quot;strict_issue_count&quot;: 8,
+  &quot;strict_physics_ok&quot;: false
+}</pre></td></tr></tbody>
+</table>
+</body>
+</html>

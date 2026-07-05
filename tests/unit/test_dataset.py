@@ -189,16 +189,28 @@ def test_camerae2e_camera_spec_variants_recapture_scene_with_target_specs(
         record["scenario"]["target_camera_spec"]["optics"]["focal_length_m"]
         for record in manifest["records"]
     ]
-    first_labels = json.loads(Path(manifest["records"][0]["labels"]).read_text(encoding="utf-8"))
+    transforms = [
+        record["scenario"]["geometric_scene_transform"]
+        for record in manifest["records"]
+    ]
+    wide_labels = json.loads(Path(manifest["records"][0]["labels"]).read_text(encoding="utf-8"))
+    narrow_labels = json.loads(Path(manifest["records"][1]["labels"]).read_text(encoding="utf-8"))
+    wide_box_width = wide_labels["labels"]["objects"][0]["yolo_xywhn"][2]
+    narrow_box_width = narrow_labels["labels"]["objects"][0]["yolo_xywhn"][2]
 
     assert manifest["case_count"] == 2
     assert presets == ["wide_fov_adas_demo", "narrow_fov_adas_demo"]
     assert focal_lengths[0] != focal_lengths[1]
+    assert manifest["camera_spec_variants"]["geometric_transform"]["mode"] == "pinhole_crop"
+    assert transforms[0]["mode"] == "pinhole_crop"
+    assert transforms[0]["warp"]["out_of_source_fraction"] > 0.0
+    assert transforms[1]["object_scale_x"] > transforms[0]["object_scale_x"]
+    assert narrow_box_width > wide_box_width
     assert all(
         any(item["path"] == "optics.focal_length" for item in record["parameter_lineage"])
         for record in manifest["records"]
     )
-    assert first_labels["labels"]["coordinate_frame"] == "exported_raw_shape"
-    assert first_labels["labels"]["image_size_rc"] == list(raw_shapes[0])
+    assert wide_labels["labels"]["coordinate_frame"] == "exported_raw_shape"
+    assert wide_labels["labels"]["image_size_rc"] == list(raw_shapes[0])
     assert "RGB-to-scene proxy" in manifest["camera_spec_variants"]["truth_boundary"]
     assert validation["ok"] is True

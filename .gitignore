@@ -11,3 +11,5 @@ dist/
 reports/parity/*.json
 outputs/adas-kitti-yolo-raw-demo/
 outputs/adas-kitti-camera-variants-demo/
+outputs/camerae2e-goal-gate-smoke/
+reports/camerae2e_goal/goal_gate_artifacts/

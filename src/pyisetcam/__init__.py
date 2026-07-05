@@ -135,6 +135,7 @@ from .optimization import (
     camerae2e_pareto_front,
     camerae2e_parameter_space_catalog,
 )
+from .goal_pipeline import camerae2e_goal_gate
 from .physics_pipeline import camerae2e_physics_pipeline_plan
 from .fdtd_sensor import (
     FDTDSensorLUT,
@@ -1089,6 +1090,7 @@ __all__ = [
     "camerae2e_dataset_export_from_optimization",
     "camerae2e_dataset_validate",
     "camerae2e_faca_report",
+    "camerae2e_goal_gate",
     "camerae2e_kitti_yolo_labels",
     "camerae2e_optimization_report",
     "camerae2e_optimize_camera_parameters",
@@ -1113,6 +1115,7 @@ __all__ = [
     "cameraE2EDatasetExportFromOptimization",
     "cameraE2EDatasetValidate",
     "cameraE2EFACAReport",
+    "cameraE2EGoalGate",
     "cameraE2EKITTIYOLOLabels",
     "cameraE2EOptimizationReport",
     "cameraE2EOptimizeCameraParameters",
@@ -3793,6 +3796,7 @@ cameraE2EDBLineage = camerae2e_db_lineage
 cameraE2ERunScenario = camerae2e_run_scenario
 cameraE2ERunSweep = camerae2e_run_sweep
 cameraE2EFACAReport = camerae2e_faca_report
+cameraE2EGoalGate = camerae2e_goal_gate
 cameraE2EADASCameraSpec = camerae2e_adas_camera_spec
 cameraE2EDatasetExport = camerae2e_dataset_export
 cameraE2EDatasetExportADASKITTIDemo = camerae2e_dataset_export_adas_kitti_demo

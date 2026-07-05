@@ -524,6 +524,8 @@ def camerae2e_dataset_export_camera_spec_variants(
     label_paths: Iterable[str | Path] | None = None,
     source_spec: Mapping[str, Any] | None = None,
     target_specs: Iterable[Mapping[str, Any] | str] | None = None,
+    geometric_transform: str = "pinhole_crop",
+    out_of_fov_fill: str = "edge",
     case_count: int = 1,
     asset_store: AssetStore | None = None,
     seed: int = 0,
@@ -535,7 +537,9 @@ def camerae2e_dataset_export_camera_spec_variants(
 
     This is a controlled transformation, not an inverse-physics reconstruction.
     The source RGB frame is interpreted as a display-derived proxy scene, then
-    re-rendered through each target camera spec.
+    re-rendered through each target camera spec.  By default the source RGB is
+    first transformed with a focal-ratio pinhole crop/resize approximation so
+    FoV changes are visible in the image geometry and labels.
     """
 
     targets = list(
@@ -546,6 +550,9 @@ def camerae2e_dataset_export_camera_spec_variants(
         camerae2e_adas_camera_spec(item) if isinstance(item, str) else _jsonable(item)
         for item in targets
     ]
+    transform_key = str(geometric_transform).strip().lower()
+    if transform_key not in {"pinhole_crop", "none"}:
+        raise ValueError("geometric_transform must be one of: pinhole_crop, none.")
     source_payload = _jsonable(source_spec or camerae2e_adas_camera_spec())
     store = asset_store or AssetStore.default()
     root = Path(output_dir).expanduser().resolve()
@@ -592,8 +599,28 @@ def camerae2e_dataset_export_camera_spec_variants(
             }
         )
         for target_index, target_spec in enumerate(target_payloads):
+            target_image = image
+            target_labels = _rescale_label_payload(
+                source_labels,
+                _image_size_rc(target_spec["dataset_reference"]["native_image_size_rc"]),
+                coordinate_frame="target_camera_spec_native_image",
+            )
+            transform_metadata: dict[str, Any] = {
+                "mode": "none",
+                "truth_boundary": "no RGB geometric transformation was applied",
+            }
+            if transform_key == "pinhole_crop":
+                target_image, target_labels, transform_metadata = (
+                    _camera_spec_geometric_transform(
+                        image,
+                        source_labels,
+                        source_payload,
+                        target_spec,
+                        out_of_fov_fill=out_of_fov_fill,
+                    )
+                )
             scene = _adas_scene_from_rgb(
-                image,
+                target_image,
                 target_spec,
                 store,
                 f"{frame_name}_{target_spec.get('preset', target_index)}",
@@ -601,14 +628,9 @@ def camerae2e_dataset_export_camera_spec_variants(
             scenario = _adas_scenario(scene, target_spec, len(scenarios))
             scenario["source_camera_spec"] = source_payload
             scenario["target_camera_spec"] = target_spec
+            scenario["geometric_scene_transform"] = transform_metadata
             scenarios.append(scenario)
-            labels.append(
-                _rescale_label_payload(
-                    source_labels,
-                    _image_size_rc(target_spec["dataset_reference"]["native_image_size_rc"]),
-                    coordinate_frame="target_camera_spec_native_image",
-                )
-            )
+            labels.append(target_labels)
 
     manifest = camerae2e_dataset_export(
         root,
@@ -625,6 +647,14 @@ def camerae2e_dataset_export_camera_spec_variants(
         "source_spec": source_payload,
         "target_specs": target_payloads,
         "source_frames": source_descriptions,
+        "geometric_transform": {
+            "mode": transform_key,
+            "out_of_fov_fill": str(out_of_fov_fill),
+            "approximation": (
+                "2D pinhole focal-ratio crop/resize on the RGB image; "
+                "no depth, disocclusion, parallax, or spectral reconstruction."
+            ),
+        },
         "truth_boundary": (
             "RGB-to-scene proxy re-capture. This does not recover true KITTI "
             "spectral radiance, depth, occlusion, lens flare, ISP inverse, or measured raw."
@@ -745,6 +775,247 @@ def _adas_scenario(scene: Scene, spec: Mapping[str, Any], index: int) -> dict[st
         },
         "adas_camera_spec": _jsonable(spec),
     }
+
+
+def _camera_spec_geometric_transform(
+    rgb: Any,
+    labels: Mapping[str, Any],
+    source_spec: Mapping[str, Any],
+    target_spec: Mapping[str, Any],
+    *,
+    out_of_fov_fill: str,
+) -> tuple[np.ndarray, dict[str, Any], dict[str, Any]]:
+    source = np.asarray(rgb)
+    if source.ndim < 2:
+        raise ValueError("camera-spec geometric transform expects a 2D or 3D RGB image.")
+    rows, cols = int(source.shape[0]), int(source.shape[1])
+    source_geometry = _effective_pinhole_geometry(source_spec, (rows, cols))
+    target_geometry = _effective_pinhole_geometry(target_spec, (rows, cols))
+    transformed, warp_metadata = _warp_rgb_between_pinhole_specs(
+        source,
+        source_geometry,
+        target_geometry,
+        fill_mode=out_of_fov_fill,
+    )
+    source_labels = _rescale_label_payload(
+        labels,
+        (rows, cols),
+        coordinate_frame="source_image_for_pinhole_crop",
+    )
+    target_labels = _transform_label_payload_camera_geometry(
+        source_labels,
+        source_geometry,
+        target_geometry,
+        target_size_rc=(rows, cols),
+    )
+    transform_metadata = {
+        "mode": "pinhole_crop",
+        "source_preset": source_spec.get("preset"),
+        "target_preset": target_spec.get("preset"),
+        "source_geometry": source_geometry,
+        "target_geometry": target_geometry,
+        "object_scale_x": target_geometry["fx_px"] / max(source_geometry["fx_px"], 1.0e-12),
+        "object_scale_y": target_geometry["fy_px"] / max(source_geometry["fy_px"], 1.0e-12),
+        "warp": warp_metadata,
+        "truth_boundary": (
+            "2D pinhole focal-ratio image crop/resize only; no depth, parallax, "
+            "disocclusion, rolling-shutter pose change, or spectral reconstruction."
+        ),
+    }
+    target_labels["geometric_transform"] = transform_metadata
+    return transformed, target_labels, transform_metadata
+
+
+def _effective_pinhole_geometry(
+    spec: Mapping[str, Any], image_size_rc: tuple[int, int]
+) -> dict[str, Any]:
+    rows, cols = image_size_rc
+    reference = dict(spec.get("dataset_reference", {}))
+    native_rows, native_cols = _image_size_rc(
+        reference.get("native_image_size_rc", [rows, cols])
+    )
+    focal_px = _camera_spec_reference_focal_px(spec, native_cols)
+    principal = reference.get(
+        "principal_point_px",
+        [(native_cols - 1.0) / 2.0, (native_rows - 1.0) / 2.0],
+    )
+    principal_values = np.asarray(principal, dtype=float).reshape(-1)
+    if principal_values.size < 2:
+        principal_values = np.asarray(
+            [(native_cols - 1.0) / 2.0, (native_rows - 1.0) / 2.0],
+            dtype=float,
+        )
+    x_scale = cols / max(native_cols, 1)
+    y_scale = rows / max(native_rows, 1)
+    return {
+        "image_size_rc": [rows, cols],
+        "native_image_size_rc": [native_rows, native_cols],
+        "fx_px": float(focal_px * x_scale),
+        "fy_px": float(focal_px * y_scale),
+        "cx_px": float(principal_values[0] * x_scale),
+        "cy_px": float(principal_values[1] * y_scale),
+        "reference_focal_px": float(focal_px),
+    }
+
+
+def _camera_spec_reference_focal_px(spec: Mapping[str, Any], native_cols: int) -> float:
+    reference = dict(spec.get("dataset_reference", {}))
+    if reference.get("p2_focal_px") is not None:
+        return float(reference["p2_focal_px"])
+    hfov = dict(spec.get("optics", {})).get("hfov_deg")
+    if hfov is not None:
+        return float((native_cols / 2.0) / np.tan(np.deg2rad(float(hfov)) / 2.0))
+    focal_length = dict(spec.get("optics", {})).get("focal_length_m")
+    pixel_pitch = dict(spec.get("sensor", {})).get("pixel_pitch_m")
+    if focal_length is not None and pixel_pitch is not None:
+        return float(focal_length) / max(float(pixel_pitch), 1.0e-12)
+    raise ValueError("Camera spec must provide p2_focal_px, hfov_deg, or focal_length/pitch.")
+
+
+def _warp_rgb_between_pinhole_specs(
+    image: np.ndarray,
+    source_geometry: Mapping[str, Any],
+    target_geometry: Mapping[str, Any],
+    *,
+    fill_mode: str,
+) -> tuple[np.ndarray, dict[str, Any]]:
+    key = str(fill_mode).strip().lower()
+    if key not in {"edge", "black", "constant"}:
+        raise ValueError("out_of_fov_fill must be one of: edge, black, constant.")
+    rows, cols = int(image.shape[0]), int(image.shape[1])
+    yy, xx = np.indices((rows, cols), dtype=float)
+    source_x = float(source_geometry["cx_px"]) + (
+        float(source_geometry["fx_px"]) / max(float(target_geometry["fx_px"]), 1.0e-12)
+    ) * (xx - float(target_geometry["cx_px"]))
+    source_y = float(source_geometry["cy_px"]) + (
+        float(source_geometry["fy_px"]) / max(float(target_geometry["fy_px"]), 1.0e-12)
+    ) * (yy - float(target_geometry["cy_px"]))
+    out_of_source = (
+        (source_x < 0.0)
+        | (source_x > cols - 1.0)
+        | (source_y < 0.0)
+        | (source_y > rows - 1.0)
+    )
+    sampled = _bilinear_sample_image(image, source_x, source_y, out_of_source, fill_mode=key)
+    sample_rect = [
+        float(np.min(source_x)),
+        float(np.min(source_y)),
+        float(np.max(source_x)),
+        float(np.max(source_y)),
+    ]
+    return sampled, {
+        "source_sample_rect_xyxy": sample_rect,
+        "out_of_source_fraction": float(np.mean(out_of_source)),
+        "fill_mode": key,
+    }
+
+
+def _bilinear_sample_image(
+    image: np.ndarray,
+    source_x: np.ndarray,
+    source_y: np.ndarray,
+    out_of_source: np.ndarray,
+    *,
+    fill_mode: str,
+) -> np.ndarray:
+    source = np.asarray(image)
+    original_ndim = source.ndim
+    if original_ndim == 2:
+        source = source[:, :, None]
+    rows, cols, channels = source.shape[:3]
+    x = np.clip(source_x, 0.0, cols - 1.0)
+    y = np.clip(source_y, 0.0, rows - 1.0)
+    x0 = np.floor(x).astype(int)
+    y0 = np.floor(y).astype(int)
+    x1 = np.clip(x0 + 1, 0, cols - 1)
+    y1 = np.clip(y0 + 1, 0, rows - 1)
+    dx = (x - x0)[..., None]
+    dy = (y - y0)[..., None]
+    values = source.astype(float, copy=False)
+    top = values[y0, x0, :channels] * (1.0 - dx) + values[y0, x1, :channels] * dx
+    bottom = values[y1, x0, :channels] * (1.0 - dx) + values[y1, x1, :channels] * dx
+    sampled = top * (1.0 - dy) + bottom * dy
+    if fill_mode in {"black", "constant"}:
+        sampled[out_of_source, :] = 0.0
+    if np.issubdtype(image.dtype, np.integer):
+        info = np.iinfo(image.dtype)
+        sampled = np.clip(np.round(sampled), info.min, info.max).astype(image.dtype)
+    else:
+        sampled = sampled.astype(image.dtype, copy=False)
+    if original_ndim == 2:
+        return sampled[:, :, 0]
+    return sampled
+
+
+def _transform_label_payload_camera_geometry(
+    labels: Mapping[str, Any],
+    source_geometry: Mapping[str, Any],
+    target_geometry: Mapping[str, Any],
+    *,
+    target_size_rc: tuple[int, int],
+) -> dict[str, Any]:
+    payload = _jsonable(labels)
+    target_rows, target_cols = target_size_rc
+    sx = float(target_geometry["fx_px"]) / max(float(source_geometry["fx_px"]), 1.0e-12)
+    sy = float(target_geometry["fy_px"]) / max(float(source_geometry["fy_px"]), 1.0e-12)
+    source_cx = float(source_geometry["cx_px"])
+    source_cy = float(source_geometry["cy_px"])
+    target_cx = float(target_geometry["cx_px"])
+    target_cy = float(target_geometry["cy_px"])
+    objects = []
+    for item in payload.get("objects", []):
+        obj = dict(item)
+        bbox = obj.get("bbox_xyxy")
+        if bbox is None or len(bbox) != 4:
+            objects.append(obj)
+            continue
+        x1, y1, x2, y2 = [float(value) for value in bbox]
+        transformed = [
+            target_cx + sx * (x1 - source_cx),
+            target_cy + sy * (y1 - source_cy),
+            target_cx + sx * (x2 - source_cx),
+            target_cy + sy * (y2 - source_cy),
+        ]
+        clipped = [
+            min(max(transformed[0], 0.0), float(target_cols)),
+            min(max(transformed[1], 0.0), float(target_rows)),
+            min(max(transformed[2], 0.0), float(target_cols)),
+            min(max(transformed[3], 0.0), float(target_rows)),
+        ]
+        original_area = max(transformed[2] - transformed[0], 0.0) * max(
+            transformed[3] - transformed[1],
+            0.0,
+        )
+        clipped_area = max(clipped[2] - clipped[0], 0.0) * max(clipped[3] - clipped[1], 0.0)
+        visibility = 0.0 if original_area <= 0.0 else clipped_area / original_area
+        if visibility <= 0.0:
+            continue
+        width = max(clipped[2] - clipped[0], 0.0)
+        height = max(clipped[3] - clipped[1], 0.0)
+        obj["bbox_xyxy_unclipped"] = transformed
+        obj["bbox_xyxy"] = clipped
+        obj["visibility_fraction"] = float(visibility)
+        obj["yolo_xywhn"] = [
+            (clipped[0] + width / 2.0) / max(target_cols, 1),
+            (clipped[1] + height / 2.0) / max(target_rows, 1),
+            width / max(target_cols, 1),
+            height / max(target_rows, 1),
+        ]
+        objects.append(obj)
+    payload["objects"] = objects
+    payload["image_size_rc"] = [target_rows, target_cols]
+    payload["coordinate_frame"] = "target_camera_spec_pinhole_crop"
+    payload["source_coordinate_frame"] = {
+        "image_size_rc": labels.get("image_size_rc", source_geometry.get("image_size_rc")),
+        "coordinate_frame": labels.get("coordinate_frame", labels.get("source", "source_image")),
+    }
+    payload["pinhole_label_transform"] = {
+        "scale_x": sx,
+        "scale_y": sy,
+        "source_principal_point_xy": [source_cx, source_cy],
+        "target_principal_point_xy": [target_cx, target_cy],
+    }
+    return payload
 
 
 def _synthetic_adas_rgb_and_labels(

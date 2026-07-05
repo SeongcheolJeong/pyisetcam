@@ -40,6 +40,15 @@ DB/LUT registry:
 - `camerae2e_db_validate(strict=False)`
 - `camerae2e_db_lineage(name)`
 - `camerae2e_physics_pipeline_plan(strict=False)`
+- `camerae2e_goal_gate(...)`
+
+`camerae2e_goal_gate(...)` is the top-level research-platform evidence gate.
+It regenerates a machine-readable pass/warn/fail matrix over registry,
+physics-pipeline lineage, FACA smoke, camera-parameter optimization, RAW
+dataset export, ADAS/KITTI YOLO demo export, camera-spec variant re-capture,
+and the strict sign-off claim guard. Non-strict mode is the normal research
+gate. Strict mode is expected to fail while proxy or calibration-required
+assets remain active.
 
 System FACA:
 
@@ -97,9 +106,13 @@ python tools/render_adas_kitti_raw_demo.py --variants \
 
 This performs a proxy re-capture of the same KITTI-style RGB scene through
 target camera specs such as `wide_fov_adas_demo` and `narrow_fov_adas_demo`.
-It is useful for controlled robustness experiments, but it does not recover the
-true KITTI spectral radiance, depth, occlusion, lens flare, ISP inverse, or
-measured RAW.
+The default `geometric_transform="pinhole_crop"` applies a focal-ratio
+center crop/resize approximation to the source RGB and remaps/clips labels in
+the same coordinate transform. Narrow FoV therefore behaves like a zoomed crop;
+wide FoV exposes source-outside regions that are explicitly filled and counted
+in metadata. It is useful for controlled robustness experiments, but it does not
+recover true KITTI spectral radiance, depth, occlusion, lens flare, ISP inverse,
+or measured RAW.
 
 ## External Pipeline Policy
 
@@ -123,6 +136,18 @@ Outputs:
 - `reports/camerae2e_goal/readiness.html`
 - `reports/camerae2e_goal/asset_registry.json`
 - `reports/camerae2e_goal/asset_registry.html`
+
+Run the goal-level evidence gate with:
+
+```bash
+python tools/run_camerae2e_goal_gate.py
+```
+
+Outputs:
+
+- `reports/camerae2e_goal/goal_gate.json`
+- `reports/camerae2e_goal/goal_gate.html`
+- smoke RAW artifacts under `outputs/camerae2e-goal-gate-smoke/`
 
 Validate external physics pipeline lineage with:
 

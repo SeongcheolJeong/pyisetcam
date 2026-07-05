@@ -176,7 +176,7 @@ def _capability_matrix(
                 "Dataset manifest, metadata JSONL, deterministic RAW NPZ, "
                 "optimization-case export, parameter-lineage evidence, split, checksum, "
                 "RGB preview, caller-provided labels, ADAS/KITTI YOLO demo export, "
-                "and proxy camera-spec variant re-capture."
+                "and focal-ratio pinhole crop/resize camera-spec variant re-capture."
             ),
             "remaining": "DNG writer and automatic label synthesis are intentionally outside v1.",
         },
@@ -197,10 +197,12 @@ def _capability_matrix(
             "tier": "calibration_required" if has_stale else "proxy",
             "implemented": (
                 "FDTD, TCAD, RayOptics, HW ISP assets are discoverable "
-                "from one registry."
+                "from one registry, with a goal-level evidence gate for "
+                "registry, physics lineage, FACA, optimization, RAW export, "
+                "ADAS/KITTI demo, camera-spec variants, and sign-off guard."
             ),
             "remaining": (
-                "End-to-end artifact refresh orchestration and "
+                "External FDTD/TCAD artifact regeneration orchestration and "
                 "product-calibrated data generation."
             ),
         },

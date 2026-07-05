@@ -1,0 +1,575 @@
+{
+  "artifact_dir": "/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke",
+  "checks": [
+    {
+      "evidence": {
+        "entry_count": 10,
+        "issue_count": 0,
+        "manifest_schema": "camerae2e_db_manifest_v1",
+        "readiness_tiers": {
+          "available": 1,
+          "calibration_required": 1,
+          "proxy": 6,
+          "validated": 2
+        },
+        "stale_dependency_count": 1,
+        "validation_schema": "camerae2e_db_validation_v1",
+        "warning_count": 1
+      },
+      "name": "registry_manifest",
+      "status": "warn",
+      "summary": "DB/LUT registry manifest is available and JSON-serializable.",
+      "tier": "calibration_required"
+    },
+    {
+      "evidence": {
+        "active_runs": {
+          "fdtd_lut_path": "/Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant/camera_lut.json",
+          "fdtd_lut_run": "/Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant",
+          "lineage_match": false,
+          "tcad_generation_map_path": "/Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke/tcad_generation_map_2d.npz",
+          "tcad_generation_map_run": "/Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke"
+        },
+        "ok": true,
+        "refresh_order": [
+          {
+            "action": "refresh_downstream_from_current_dependency",
+            "entry": "tcad_sensor_db_active",
+            "reason": "TCAD/FDTD active artifact mismatch: active FDTD LUT is under /Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant, but TCAD generation map is under /Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke",
+            "severity": "warning"
+          }
+        ],
+        "schema": "camerae2e_physics_pipeline_plan_v1",
+        "summary": {
+          "action_count": 10,
+          "blocking_count": 0,
+          "calibration_required_count": 7,
+          "refresh_action_count": 1,
+          "stale_dependency_count": 1
+        },
+        "truth_boundaries": [
+          {
+            "blocks_strict_validation": true,
+            "entry": "fdtd_sensor_stack_catalog",
+            "readiness_tier": "proxy",
+            "truth_boundary": "metadata_derived_stack_configs_unless_product_cad_listed"
+          },
+          {
+            "blocks_strict_validation": true,
+            "entry": "fdtd_sensor_lut_active",
+            "readiness_tier": "proxy",
+            "truth_boundary": "optical_absorption_and_regional_response_proxy"
+          },
+          {
+            "blocks_strict_validation": true,
+            "entry": "tcad_sensor_db_active",
+            "readiness_tier": "calibration_required",
+            "truth_boundary": "carrier_collection_framework_not_product_calibrated_tcad"
+          },
+          {
+            "blocks_strict_validation": true,
+            "entry": "lens_patents_active",
+            "readiness_tier": "proxy",
+            "truth_boundary": "geometric_psf_not_diffraction_wave_optics"
+          },
+          {
+            "blocks_strict_validation": true,
+            "entry": "hwisp_parameter_profiles",
+            "readiness_tier": "proxy",
+            "truth_boundary": "seed_or_public_profile_not_vendor_trace_signoff"
+          },
+          {
+            "blocks_strict_validation": false,
+            "entry": "task_perception_model_profiles",
+            "readiness_tier": "available",
+            "truth_boundary": "adapter_profiles_not_training_dataset_or_model_accuracy_claim"
+          },
+          {
+            "blocks_strict_validation": true,
+            "entry": "lens_patents_bundled_v6",
+            "readiness_tier": "proxy",
+            "truth_boundary": "geometric_psf_not_diffraction_wave_optics"
+          },
+          {
+            "blocks_strict_validation": true,
+            "entry": "rayoptics_lens_db_v9",
+            "readiness_tier": "proxy",
+            "truth_boundary": "geometric_psf_not_diffraction_wave_optics"
+          }
+        ]
+      },
+      "name": "physics_pipeline",
+      "status": "warn",
+      "summary": "External FDTD/TCAD/RayOptics/HW ISP lineage plan is generated.",
+      "tier": "calibration_required"
+    },
+    {
+      "evidence": {
+        "metrics": {
+          "angle": {
+            "available": false,
+            "note": "CRA/field axes are recorded through attached FDTD scenario parameters."
+          },
+          "artifact": {
+            "raw_std": 0.011569184556674312,
+            "rgb_clip_fraction": null,
+            "rgb_std": 0.007304492201519821
+          },
+          "color": {
+            "rgb_mean": 0.037146996316030544
+          },
+          "control": {
+            "ae_final_error_ev": -2.7465877251004382,
+            "ae_settle_frame": -1.0,
+            "ae_settle_frames_after_step": -1.0,
+            "awb_final_rgb_imbalance": 1.0110625171733443,
+            "awb_settle_frame": -1.0,
+            "e2e_latency_max_us": 12953.730000000003,
+            "e2e_latency_mean_us": 12953.73,
+            "e2e_latency_min_us": 12953.729999999998,
+            "frame_count": 2.0,
+            "max_clip_fraction": 0.0,
+            "max_clip_fraction_after_response": 0.0,
+            "max_clip_fraction_before_response": 0.0,
+            "queue_stall_max_us": 0.0,
+            "queue_stall_total_us": 0.0,
+            "validation_thresholds": {
+              "ae_settle_ev": 0.25,
+              "awb_settle_imbalance": 0.2,
+              "settle_consecutive_frames": 2.0
+            },
+            "validation_verdicts": {
+              "ae_settle": false,
+              "awb_settle": false,
+              "clamp_compliance": true,
+              "clip_reduction": true,
+              "warmup_delay_mapping": true
+            },
+            "warmup_frame_count": 2.0
+          },
+          "field": {
+            "available": true
+          }
+        },
+        "parameter_lineage_count": 1,
+        "scenario_name": "goal_gate_faca_smoke",
+        "seed": 2026,
+        "stage_summaries": {
+          "ip_result": {
+            "available": true,
+            "dtype": "float64",
+            "max": 0.04754330609737384,
+            "mean": 0.037146996316030544,
+            "min": 0.00939095448318405,
+            "shape": [
+              242,
+              242,
+              3
+            ],
+            "std": 0.007304492201519821
+          },
+          "ip_srgb": {
+            "available": true,
+            "dtype": "float64",
+            "max": 0.2415102430106581,
+            "mean": 0.21117233259520277,
+            "min": 0.09585099628619137,
+            "shape": [
+              242,
+              242,
+              3
+            ],
+            "std": 0.022944411291789913
+          },
+          "oi_photons": {
+            "available": true,
+            "dtype": "float64",
+            "max": 231676786636318.06,
+            "mean": 115483491494148.25,
+            "min": 188141564163.23544,
+            "shape": [
+              10,
+              10,
+              31
+            ],
+            "std": 89176966978586.4
+          },
+          "scene_photons": {
+            "available": true,
+            "dtype": "float64",
+            "max": 4830164317522772.0,
+            "mean": 3795129106625035.5,
+            "min": 2760093895727298.5,
+            "shape": [
+              8,
+              8,
+              31
+            ],
+            "std": 617175757512845.5
+          },
+          "sensor_digital": {
+            "available": false,
+            "dtype": null,
+            "shape": []
+          },
+          "sensor_raw": {
+            "available": true,
+            "dtype": "float64",
+            "max": 0.04754330609737384,
+            "mean": 0.02558891294207637,
+            "min": 0.00474146448721803,
+            "shape": [
+              242,
+              242
+            ],
+            "std": 0.011569184556674312
+          }
+        }
+      },
+      "name": "faca_smoke",
+      "status": "pass",
+      "summary": "System FACA can run Scene -> OI -> Sensor -> IP plus HW ISP control metrics.",
+      "tier": "validated"
+    },
+    {
+      "evidence": {
+        "automation": {
+          "axes": {
+            "sensor.analog_gain": {
+              "area": "sensor",
+              "description": "Analog gain before digital conversion.",
+              "readiness_tier": "validated",
+              "unit": "x",
+              "values": [
+                1.0,
+                2.0,
+                4.0
+              ]
+            },
+            "sensor.integration_time": {
+              "area": "sensor",
+              "description": "Sensor exposure/integration time for RAW signal and noise tradeoffs.",
+              "readiness_tier": "validated",
+              "unit": "s",
+              "values": [
+                0.001,
+                0.002,
+                0.004
+              ]
+            }
+          },
+          "axis_count": 2,
+          "preset": "exposure",
+          "schema_version": "camerae2e_parameter_optimization_automation_v1"
+        },
+        "best_parameters": {
+          "sensor.analog_gain": 1.0,
+          "sensor.integration_time": 0.004
+        },
+        "case_count": 6,
+        "feasible_count": 6,
+        "pareto_case_count": 1,
+        "seed": 2036
+      },
+      "name": "parameter_optimization",
+      "status": "pass",
+      "summary": "Camera parameter optimization runs a deterministic FACA objective grid.",
+      "tier": "validated"
+    },
+    {
+      "evidence": {
+        "case_count": 1,
+        "dataset_root": "/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke/optimization_dataset",
+        "manifest_schema": "camerae2e_dataset_manifest_v1",
+        "parameter_lineage_count": 4,
+        "raw_sha256": "sha256:fdee52649096f1f7e0702b7a7cc4c24fd4dae588566ebac3f3a288ab9b80eb21",
+        "raw_shape": [
+          242,
+          242
+        ],
+        "source_optimization": {
+          "constraints": [],
+          "method": "deterministic_grid",
+          "objective": [
+            {
+              "direction": "maximize",
+              "metric": "metrics.color.rgb_mean"
+            }
+          ],
+          "schema_version": "camerae2e_dataset_source_optimization_v1",
+          "selected_case_count": 1,
+          "selected_cases": [
+            {
+              "case_index": 9,
+              "constraint_results": [],
+              "feasible": true,
+              "objective_utilities": {
+                "metrics.color.rgb_mean": 0.07110686775687382
+              },
+              "objective_values": {
+                "metrics.color.rgb_mean": 0.07110686775687382
+              },
+              "parameters": {
+                "optics.fnumber": 2.0,
+                "sensor.analog_gain": 1.0,
+                "sensor.integration_time": 0.004
+              },
+              "score": 0.07110686775687382,
+              "seed": 2055
+            }
+          ],
+          "selection": "best",
+          "source_schema_version": "camerae2e_parameter_optimization_v1",
+          "source_seed": 2046
+        },
+        "validation_ok": true
+      },
+      "name": "dataset_factory_smoke",
+      "status": "pass",
+      "summary": "RAW data factory exports deterministic NPZ, metadata, labels, and lineage.",
+      "tier": "validated"
+    },
+    {
+      "evidence": {
+        "camera_spec": {
+          "dataset_reference": {
+            "label_format": "KITTI text plus YOLO normalized xywh labels",
+            "name": "KITTI object-detection style",
+            "native_image_size_rc": [
+              375,
+              1242
+            ],
+            "p2_focal_px": 721.5377,
+            "principal_point_px": [
+              609.5593,
+              172.854
+            ]
+          },
+          "demo": {
+            "image_size_rc": [
+              96,
+              320
+            ],
+            "mean_luminance_cd_m2": 80.0,
+            "scene_distance_m": 30.0
+          },
+          "hw_isp": {
+            "ae_apply_delay_frames": 2,
+            "awb_apply_delay_frames": 2,
+            "enabled": true,
+            "fps": 30.0,
+            "line_time_us": 15.2,
+            "nframes": 3
+          },
+          "optics": {
+            "f_number": 1.8,
+            "focal_length_m": 0.002705766375,
+            "hfov_deg": 81.43464801812478,
+            "vfov_deg": 29.13358538929036
+          },
+          "preset": "kitti_yolo_demo",
+          "readiness_tier": "proxy",
+          "schema_version": "camerae2e_adas_camera_spec_v1",
+          "sensor": {
+            "analog_gain": 1.0,
+            "bits": 12,
+            "cfa_pattern": "bayer_rggb",
+            "integration_time_s": 0.004,
+            "noise_flag": 2,
+            "pixel_pitch_m": 3.75e-06
+          },
+          "truth_boundary": "KITTI camera geometry plus public-style ADAS assumptions; not measured sensor, lens, ISP, or KITTI raw calibration."
+        },
+        "case_count": 1,
+        "dataset_root": "/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke/adas_kitti",
+        "label_coordinate_frame": "exported_raw_shape",
+        "raw_shape": [
+          374,
+          1242
+        ],
+        "truth_boundary": null,
+        "validation_ok": true
+      },
+      "name": "adas_kitti_demo_smoke",
+      "status": "pass",
+      "summary": "ADAS/KITTI YOLO demo produces proxy RAW data and labels.",
+      "tier": "proxy"
+    },
+    {
+      "evidence": {
+        "case_count": 2,
+        "dataset_root": "/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke/camera_spec_variants",
+        "focal_lengths_m": [
+          0.00156,
+          0.00294
+        ],
+        "geometric_transform": {
+          "approximation": "2D pinhole focal-ratio crop/resize on the RGB image; no depth, disocclusion, parallax, or spectral reconstruction.",
+          "mode": "pinhole_crop",
+          "out_of_fov_fill": "edge"
+        },
+        "presets": [
+          "wide_fov_adas_demo",
+          "narrow_fov_adas_demo"
+        ],
+        "record_transforms": [
+          {
+            "mode": "pinhole_crop",
+            "object_scale_x": 0.7206830634074977,
+            "out_of_source_fraction": 0.4908854166666667
+          },
+          {
+            "mode": "pinhole_crop",
+            "object_scale_x": 1.4552254164959084,
+            "out_of_source_fraction": 0.0
+          }
+        ],
+        "truth_boundary": "RGB-to-scene proxy re-capture. This does not recover true KITTI spectral radiance, depth, occlusion, lens flare, ISP inverse, or measured raw.",
+        "validation_ok": true
+      },
+      "name": "camera_spec_variant_smoke",
+      "status": "pass",
+      "summary": "KITTI-style source scene can be proxy re-captured under multiple camera specs.",
+      "tier": "proxy"
+    },
+    {
+      "evidence": {
+        "blocked_issue_examples": [
+          {
+            "entry": "hwisp_parameter_profiles",
+            "kind": "readiness_tier",
+            "message": "proxy is not accepted by strict validation."
+          },
+          {
+            "entry": "rayoptics_lens_db_v9",
+            "kind": "readiness_tier",
+            "message": "proxy is not accepted by strict validation."
+          },
+          {
+            "entry": "lens_patents_bundled_v6",
+            "kind": "readiness_tier",
+            "message": "proxy is not accepted by strict validation."
+          },
+          {
+            "entry": "lens_patents_active",
+            "kind": "readiness_tier",
+            "message": "proxy is not accepted by strict validation."
+          },
+          {
+            "entry": "tcad_sensor_db_active",
+            "kind": "stale_dependency",
+            "message": "TCAD/FDTD active artifact mismatch: active FDTD LUT is under /Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant, but TCAD generation map is under /Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke"
+          },
+          {
+            "entry": "tcad_sensor_db_active",
+            "kind": "readiness_tier",
+            "message": "calibration_required is not accepted by strict validation."
+          },
+          {
+            "entry": "fdtd_sensor_lut_active",
+            "kind": "readiness_tier",
+            "message": "proxy is not accepted by strict validation."
+          },
+          {
+            "entry": "fdtd_sensor_stack_catalog",
+            "kind": "readiness_tier",
+            "message": "proxy is not accepted by strict validation."
+          }
+        ],
+        "calibrated_or_signoff_claim_allowed": false,
+        "strict_db_ok": false,
+        "strict_issue_count": 8,
+        "strict_physics_ok": false
+      },
+      "name": "signoff_claim_guard",
+      "status": "pass",
+      "summary": "Proxy/calibration-required assets are prevented from being promoted to product sign-off claims.",
+      "tier": "calibration_required"
+    }
+  ],
+  "generated_at": "2026-07-05T05:27:10.214248+00:00",
+  "goal": "Research-grade E2E optimization platform plus RAW data factory for perception training.",
+  "ok": true,
+  "output_dir": "/Users/seongcheoljeong/Documents/CameraE2E/reports/camerae2e_goal",
+  "reports": {
+    "html": "/Users/seongcheoljeong/Documents/CameraE2E/reports/camerae2e_goal/goal_gate.html",
+    "json": "/Users/seongcheoljeong/Documents/CameraE2E/reports/camerae2e_goal/goal_gate.json"
+  },
+  "requirements": [
+    {
+      "checks": [
+        "registry_manifest"
+      ],
+      "evidence_summary": "Registry manifest validates schema, readiness tiers, and stale dependencies.",
+      "requirement": "DB/LUT registry and readiness matrix",
+      "status": "warn"
+    },
+    {
+      "checks": [
+        "physics_pipeline"
+      ],
+      "evidence_summary": "External asset lineage and refresh actions are generated without sign-off inflation.",
+      "requirement": "FDTD/TCAD/RayOptics/HW ISP external pipeline",
+      "status": "warn"
+    },
+    {
+      "checks": [
+        "faca_smoke"
+      ],
+      "evidence_summary": "Scene/OI/Sensor/IP/HW ISP stages produce metrics and parameter lineage.",
+      "requirement": "System FACA scenario metrics",
+      "status": "pass"
+    },
+    {
+      "checks": [
+        "parameter_optimization"
+      ],
+      "evidence_summary": "Preset camera parameter search optimizes a FACA metric deterministically.",
+      "requirement": "Automated camera-parameter optimization",
+      "status": "pass"
+    },
+    {
+      "checks": [
+        "dataset_factory_smoke"
+      ],
+      "evidence_summary": "Optimization outputs can be rendered into validated RAW training artifacts.",
+      "requirement": "RAW data factory from optimized camera cases",
+      "status": "pass"
+    },
+    {
+      "checks": [
+        "adas_kitti_demo_smoke"
+      ],
+      "evidence_summary": "Synthetic or supplied KITTI-style inputs can produce proxy RAW and YOLO labels.",
+      "requirement": "ADAS/KITTI YOLO demo RAW generation",
+      "status": "pass"
+    },
+    {
+      "checks": [
+        "camera_spec_variant_smoke"
+      ],
+      "evidence_summary": "One KITTI-style scene can be exported under multiple camera specifications.",
+      "requirement": "Camera-spec variant re-capture",
+      "status": "pass"
+    },
+    {
+      "checks": [
+        "signoff_claim_guard"
+      ],
+      "evidence_summary": "Strict validation blocks calibrated claims until measured evidence is attached.",
+      "requirement": "Physics proxy/sign-off claim guard",
+      "status": "pass"
+    }
+  ],
+  "schema_version": "camerae2e_goal_gate_v1",
+  "strict": false,
+  "summary": {
+    "check_count": 8,
+    "include_demos": true,
+    "seed": 2026,
+    "status_counts": {
+      "pass": 6,
+      "warn": 2
+    }
+  }
+}
