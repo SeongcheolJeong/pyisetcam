@@ -105,6 +105,113 @@
     },
     {
       "evidence": {
+        "blocked_examples": [
+          {
+            "current_tier": "proxy",
+            "entry": "hwisp_parameter_profiles",
+            "missing_evidence_types": [
+              "3a_telemetry_trace",
+              "board_latency_trace",
+              "hardware_counter_trace"
+            ]
+          },
+          {
+            "current_tier": "proxy",
+            "entry": "rayoptics_lens_db_v9",
+            "missing_evidence_types": [
+              "diffraction_or_wave_optics_reference",
+              "measured_psf"
+            ]
+          },
+          {
+            "current_tier": "proxy",
+            "entry": "lens_patents_bundled_v6",
+            "missing_evidence_types": [
+              "diffraction_or_wave_optics_reference",
+              "measured_psf"
+            ]
+          },
+          {
+            "current_tier": "proxy",
+            "entry": "lens_patents_active",
+            "missing_evidence_types": [
+              "diffraction_or_wave_optics_reference",
+              "measured_psf"
+            ]
+          },
+          {
+            "current_tier": "available",
+            "entry": "task_perception_model_profiles",
+            "missing_evidence_types": [
+              "dataset_split_manifest",
+              "model_evaluation_report"
+            ]
+          },
+          {
+            "current_tier": "calibration_required",
+            "entry": "tcad_sensor_db_active",
+            "missing_evidence_types": [
+              "fdtd_tcad_lineage_match",
+              "measured_electrical_response",
+              "tcad_process_deck"
+            ]
+          },
+          {
+            "current_tier": "proxy",
+            "entry": "fdtd_sensor_lut_active",
+            "missing_evidence_types": [
+              "measured_qe_response",
+              "optical_stack_materials",
+              "sensor_specific_fdtd_lut"
+            ]
+          },
+          {
+            "current_tier": "proxy",
+            "entry": "fdtd_sensor_stack_catalog",
+            "missing_evidence_types": [
+              "material_index_reference",
+              "measured_stack_or_cad"
+            ]
+          }
+        ],
+        "promotion_candidates": [],
+        "promotion_summary": {
+          "blocked_count": 8,
+          "evidence_count": 0,
+          "plan_count": 8,
+          "promotion_candidate_count": 0,
+          "status_counts": {
+            "blocked_missing_evidence": 8
+          }
+        },
+        "requirements_summary": {
+          "entry_count": 8,
+          "required_evidence_types": [
+            "3a_telemetry_trace",
+            "board_latency_trace",
+            "dataset_split_manifest",
+            "diffraction_or_wave_optics_reference",
+            "fdtd_tcad_lineage_match",
+            "hardware_counter_trace",
+            "material_index_reference",
+            "measured_electrical_response",
+            "measured_psf",
+            "measured_qe_response",
+            "measured_stack_or_cad",
+            "model_evaluation_report",
+            "optical_stack_materials",
+            "sensor_specific_fdtd_lut",
+            "tcad_process_deck"
+          ]
+        }
+      },
+      "name": "calibration_evidence_policy",
+      "status": "pass",
+      "summary": "Measured-evidence requirements are explicit, and calibrated promotion is blocked until required artifacts validate.",
+      "tier": "calibration_required"
+    },
+    {
+      "evidence": {
         "metrics": {
           "angle": {
             "available": false,
@@ -487,7 +594,7 @@
       "tier": "calibration_required"
     }
   ],
-  "generated_at": "2026-07-05T05:27:10.214248+00:00",
+  "generated_at": "2026-07-05T05:35:54.371678+00:00",
   "goal": "Research-grade E2E optimization platform plus RAW data factory for perception training.",
   "ok": true,
   "output_dir": "/Users/seongcheoljeong/Documents/CameraE2E/reports/camerae2e_goal",
@@ -511,6 +618,14 @@
       "evidence_summary": "External asset lineage and refresh actions are generated without sign-off inflation.",
       "requirement": "FDTD/TCAD/RayOptics/HW ISP external pipeline",
       "status": "warn"
+    },
+    {
+      "checks": [
+        "calibration_evidence_policy"
+      ],
+      "evidence_summary": "Measured-evidence requirements exist and calibrated promotion remains blocked until evidence validates.",
+      "requirement": "Calibration evidence and readiness promotion",
+      "status": "pass"
     },
     {
       "checks": [
@@ -564,11 +679,11 @@
   "schema_version": "camerae2e_goal_gate_v1",
   "strict": false,
   "summary": {
-    "check_count": 8,
+    "check_count": 9,
     "include_demos": true,
     "seed": 2026,
     "status_counts": {
-      "pass": 6,
+      "pass": 7,
       "warn": 2
     }
   }

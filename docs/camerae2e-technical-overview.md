@@ -543,6 +543,7 @@ PPT에서 설명한 활용 범위를 코드에서 직접 추적하기 위해 pub
 | 영역 | API | 역할 |
 |---|---|---|
 | DB/LUT registry | `camerae2e_db_manifest()`, `camerae2e_db_validate(...)`, `camerae2e_db_lineage(...)` | asset provenance, readiness tier, dependency, stale artifact를 한 manifest에서 추적 |
+| Calibration evidence | `camerae2e_calibration_evidence_requirements(...)`, `camerae2e_calibration_evidence_manifest(...)`, `camerae2e_calibration_evidence_validate(...)`, `camerae2e_readiness_promotion_plan(...)` | measured PSF/QE/TCAD/HW trace/model evaluation 같은 외부 evidence를 검증하고 calibrated 승격 가능 여부를 plan으로 산출 |
 | Physics pipeline plan | `camerae2e_physics_pipeline_plan(...)` | FDTD/TCAD/RayOptics/HW ISP asset의 stale/missing/proxy 상태를 refresh/calibration action list로 변환 |
 | Goal evidence gate | `camerae2e_goal_gate(...)` | registry, physics lineage, FACA, optimization, RAW factory, ADAS/KITTI demo, camera-spec variant, strict sign-off guard를 한 번에 pass/warn/fail evidence로 기록 |
 | System FACA | `camerae2e_run_scenario(...)`, `camerae2e_run_sweep(...)`, `camerae2e_faca_report(...)` | Field / Angle / Color / Artifact / Control 관점의 E2E scenario와 sweep 결과 수집 |
@@ -571,6 +572,8 @@ python tools/run_camerae2e_goal_gate.py
 
 이 gate의 strict mode는 proxy/calibration-required asset이 남아 있는 한
 실패해야 정상이다. 그 실패는 제품 sign-off claim을 막기 위한 안전장치다.
+Calibration evidence manifest가 없거나 부족하면 readiness promotion plan은
+`calibrated` 승격을 막고, 필요한 measured artifact type을 명시한다.
 
 ## 12. 결론
 

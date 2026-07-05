@@ -1405,8 +1405,8 @@
     },
     {
       "area": "DB/LUT Registry",
-      "implemented": "Manifest, readiness tier, provenance, dependency lineage, stale dependency detection.",
-      "remaining": "Promote proxy/calibration_required assets only when measured evidence is attached.",
+      "implemented": "Manifest, readiness tier, provenance, dependency lineage, stale dependency detection, calibration evidence manifest, and readiness promotion plan.",
+      "remaining": "Attach real measured evidence before promoting proxy/calibration_required assets.",
       "tier": "calibration_required"
     },
     {
@@ -1416,7 +1416,7 @@
       "tier": "calibration_required"
     }
   ],
-  "generated_at": "2026-07-05T05:27:00.546190+00:00",
+  "generated_at": "2026-07-05T05:35:44.147003+00:00",
   "goal": "Research-grade E2E optimization platform plus RAW data factory for perception training.",
   "physics_pipeline_plan": {
     "actions": [

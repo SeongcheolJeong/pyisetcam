@@ -8,6 +8,12 @@ from .assets import (
     ie_read_color_filter,
     ie_read_spectra,
 )
+from .calibration import (
+    camerae2e_calibration_evidence_manifest,
+    camerae2e_calibration_evidence_requirements,
+    camerae2e_calibration_evidence_validate,
+    camerae2e_readiness_promotion_plan,
+)
 from .db_catalog import (
     CameraE2EDBEntry,
     camerae2e_db_catalog,
@@ -1076,6 +1082,9 @@ __all__ = [
     "DEFAULT_UPSTREAM_TARBALL_SHA256",
     "DEFAULT_WAVE",
     "camerae2e_db_catalog",
+    "camerae2e_calibration_evidence_manifest",
+    "camerae2e_calibration_evidence_requirements",
+    "camerae2e_calibration_evidence_validate",
     "camerae2e_db_get",
     "camerae2e_db_lineage",
     "camerae2e_db_manifest",
@@ -1098,6 +1107,7 @@ __all__ = [
     "camerae2e_pareto_front",
     "camerae2e_parameter_space_catalog",
     "camerae2e_physics_pipeline_plan",
+    "camerae2e_readiness_promotion_plan",
     "camerae2e_run_scenario",
     "camerae2e_run_sweep",
     "cameraE2EDBCatalog",
@@ -1109,6 +1119,9 @@ __all__ = [
     "cameraE2EDBSummary",
     "cameraE2EDBValidate",
     "cameraE2EADASCameraSpec",
+    "cameraE2ECalibrationEvidenceManifest",
+    "cameraE2ECalibrationEvidenceRequirements",
+    "cameraE2ECalibrationEvidenceValidate",
     "cameraE2EDatasetExport",
     "cameraE2EDatasetExportADASKITTIDemo",
     "cameraE2EDatasetExportCameraSpecVariants",
@@ -1123,6 +1136,7 @@ __all__ = [
     "cameraE2EParetoFront",
     "cameraE2EParameterSpaceCatalog",
     "cameraE2EPhysicsPipelinePlan",
+    "cameraE2EReadinessPromotionPlan",
     "cameraE2ERunScenario",
     "cameraE2ERunSweep",
     "Display",
@@ -3810,6 +3824,10 @@ cameraE2EOptimizationReport = camerae2e_optimization_report
 cameraE2EParetoFront = camerae2e_pareto_front
 cameraE2EParameterSpaceCatalog = camerae2e_parameter_space_catalog
 cameraE2EPhysicsPipelinePlan = camerae2e_physics_pipeline_plan
+cameraE2ECalibrationEvidenceRequirements = camerae2e_calibration_evidence_requirements
+cameraE2ECalibrationEvidenceManifest = camerae2e_calibration_evidence_manifest
+cameraE2ECalibrationEvidenceValidate = camerae2e_calibration_evidence_validate
+cameraE2EReadinessPromotionPlan = camerae2e_readiness_promotion_plan
 
 imageSensorDBRoot = image_sensor_db_root
 imageSensorDBCatalogPath = image_sensor_db_catalog_path

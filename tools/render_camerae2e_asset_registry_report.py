@@ -185,11 +185,12 @@ def _capability_matrix(
             "tier": "validated" if not has_stale else "calibration_required",
             "implemented": (
                 "Manifest, readiness tier, provenance, dependency lineage, "
-                "stale dependency detection."
+                "stale dependency detection, calibration evidence manifest, "
+                "and readiness promotion plan."
             ),
             "remaining": (
-                "Promote proxy/calibration_required assets only when measured "
-                "evidence is attached."
+                "Attach real measured evidence before promoting "
+                "proxy/calibration_required assets."
             ),
         },
         {

@@ -9,6 +9,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from .calibration import (
+    camerae2e_calibration_evidence_requirements,
+    camerae2e_readiness_promotion_plan,
+)
 from .dataset import (
     camerae2e_dataset_export_adas_kitti_demo,
     camerae2e_dataset_export_camera_spec_variants,
@@ -49,6 +53,7 @@ def camerae2e_goal_gate(
     checks = [
         _run_check("registry_manifest", lambda: _registry_check(strict=strict)),
         _run_check("physics_pipeline", lambda: _physics_pipeline_check(strict=strict)),
+        _run_check("calibration_evidence_policy", _calibration_evidence_policy),
         _run_check("faca_smoke", lambda: _faca_smoke(seed=seed)),
         _run_check("parameter_optimization", lambda: _optimization_smoke(seed=seed + 10)),
         _run_check(
@@ -162,6 +167,48 @@ def _physics_pipeline_check(*, strict: bool) -> dict[str, Any]:
                 }
                 for item in plan.get("refresh_order", [])
             ],
+        },
+    }
+
+
+def _calibration_evidence_policy() -> dict[str, Any]:
+    requirements = camerae2e_calibration_evidence_requirements()
+    plan = camerae2e_readiness_promotion_plan()
+    summary = dict(plan.get("summary", {}))
+    passed = (
+        requirements.get("schema_version") == "camerae2e_calibration_evidence_requirements_v1"
+        and plan.get("schema_version") == "camerae2e_readiness_promotion_plan_v1"
+        and plan.get("evidence_validation", {}).get("ok") is True
+        and int(summary.get("blocked_count", 0)) > 0
+    )
+    return {
+        "status": "pass" if passed else "fail",
+        "tier": "calibration_required",
+        "summary": (
+            "Measured-evidence requirements are explicit, and calibrated promotion "
+            "is blocked until required artifacts validate."
+        ),
+        "evidence": {
+            "requirements_summary": requirements.get("summary", {}),
+            "promotion_summary": summary,
+            "promotion_candidates": [
+                {
+                    "entry": item.get("entry"),
+                    "target_tier": item.get("target_tier"),
+                    "evidence_ids": item.get("evidence_ids", []),
+                }
+                for item in plan.get("plans", [])
+                if item.get("status") == "promotion_candidate"
+            ],
+            "blocked_examples": [
+                {
+                    "entry": item.get("entry"),
+                    "current_tier": item.get("current_tier"),
+                    "missing_evidence_types": item.get("missing_evidence_types", []),
+                }
+                for item in plan.get("plans", [])
+                if str(item.get("status", "")).startswith("blocked_")
+            ][:8],
         },
     }
 
@@ -422,6 +469,14 @@ def _requirement_matrix(checks: list[Mapping[str, Any]]) -> list[dict[str, Any]]
             "FDTD/TCAD/RayOptics/HW ISP external pipeline",
             ["physics_pipeline"],
             "External asset lineage and refresh actions are generated without sign-off inflation.",
+        ),
+        (
+            "Calibration evidence and readiness promotion",
+            ["calibration_evidence_policy"],
+            (
+                "Measured-evidence requirements exist and calibrated promotion remains "
+                "blocked until evidence validates."
+            ),
         ),
         (
             "System FACA scenario metrics",

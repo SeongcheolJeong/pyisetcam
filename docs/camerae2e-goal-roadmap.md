@@ -29,7 +29,7 @@
 | Optimization | `validated` | dot-path camera parameter grid search, preset parameter-space catalog, FACA objective scoring, hard constraints, Pareto front, selected scenarios, parameter-lineage evidence | Bayesian/evolutionary search, hardware-in-loop calibration |
 | Perception | `available` | task adapters, detection/segmentation/classification/pose/tracking metrics, robustness sweep | training loop, dataset-specific model calibration |
 | RAW data factory | `validated` | manifest, metadata JSONL, deterministic RAW NPZ, split, checksum, labels JSON, validation, ADAS/KITTI YOLO demo export, proxy camera-spec variant re-capture | DNG writer, automatic label synthesis |
-| DB/LUT registry | `validated` / `calibration_required` | manifest, readiness tier, provenance, dependency lineage, stale detection | measured evidence ingestion and calibrated promotion |
+| DB/LUT registry | `validated` / `calibration_required` | manifest, readiness tier, provenance, dependency lineage, stale detection, calibration evidence manifest, readiness promotion plan | actual measured evidence attachment and calibrated promotion |
 | External pipeline | `calibration_required` | FDTD, TCAD, RayOptics, HW ISP assets discoverable in one registry | refresh orchestration and calibrated end-to-end asset generation |
 
 ## Implemented API Surface
@@ -41,14 +41,35 @@ DB/LUT registry:
 - `camerae2e_db_lineage(name)`
 - `camerae2e_physics_pipeline_plan(strict=False)`
 - `camerae2e_goal_gate(...)`
+- `camerae2e_calibration_evidence_requirements(...)`
+- `camerae2e_calibration_evidence_manifest(...)`
+- `camerae2e_calibration_evidence_validate(...)`
+- `camerae2e_readiness_promotion_plan(...)`
 
 `camerae2e_goal_gate(...)` is the top-level research-platform evidence gate.
 It regenerates a machine-readable pass/warn/fail matrix over registry,
-physics-pipeline lineage, FACA smoke, camera-parameter optimization, RAW
-dataset export, ADAS/KITTI YOLO demo export, camera-spec variant re-capture,
-and the strict sign-off claim guard. Non-strict mode is the normal research
-gate. Strict mode is expected to fail while proxy or calibration-required
-assets remain active.
+physics-pipeline lineage, calibration evidence policy, FACA smoke,
+camera-parameter optimization, RAW dataset export, ADAS/KITTI YOLO demo export,
+camera-spec variant re-capture, and the strict sign-off claim guard. Non-strict
+mode is the normal research gate. Strict mode is expected to fail while proxy or
+calibration-required assets remain active.
+
+The calibration evidence APIs define the measured artifacts required before a
+registry entry can be promoted to `calibrated`. For example HW ISP promotion
+requires board latency traces, hardware counter traces, and 3A telemetry traces;
+sensor promotion requires measured optical/electrical evidence and lineage
+closure. Without those artifacts the promotion plan remains blocked, which is
+the intended behavior.
+
+Validate a calibration evidence bundle with:
+
+```bash
+python tools/validate_camerae2e_calibration_evidence.py path/to/manifest.json
+```
+
+Default output:
+
+- `reports/camerae2e_goal/calibration_evidence_validation.json`
 
 System FACA:
 

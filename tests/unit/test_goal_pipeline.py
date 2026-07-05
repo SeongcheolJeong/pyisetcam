@@ -15,6 +15,13 @@ def test_camerae2e_goal_gate_writes_reports_and_smoke_artifacts(tmp_path: Path) 
     assert Path(payload["reports"]["json"]).exists()
     assert Path(payload["reports"]["html"]).exists()
     assert Path(payload["artifact_dir"]).exists()
+    assert checks["calibration_evidence_policy"]["status"] == "pass"
+    assert (
+        checks["calibration_evidence_policy"]["evidence"]["promotion_summary"][
+            "promotion_candidate_count"
+        ]
+        == 0
+    )
     assert checks["faca_smoke"]["status"] == "pass"
     assert checks["parameter_optimization"]["status"] == "pass"
     assert checks["dataset_factory_smoke"]["status"] == "pass"
@@ -24,3 +31,4 @@ def test_camerae2e_goal_gate_writes_reports_and_smoke_artifacts(tmp_path: Path) 
     assert checks["signoff_claim_guard"]["evidence"]["calibrated_or_signoff_claim_allowed"] is False
     assert requirements["RAW data factory from optimized camera cases"]["status"] == "pass"
     assert requirements["Camera-spec variant re-capture"]["status"] == "pass"
+    assert requirements["Calibration evidence and readiness promotion"]["status"] == "pass"
