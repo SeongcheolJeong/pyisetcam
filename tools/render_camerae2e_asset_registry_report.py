@@ -150,8 +150,9 @@ def _capability_matrix(
             "area": "Optimization",
             "tier": "validated",
             "implemented": (
-                "Deterministic grid search over dot-path camera parameters using "
-                "FACA metric objectives, constraints, Pareto front, and selected scenarios."
+                "Preset parameter-space catalog plus deterministic grid search over "
+                "dot-path camera parameters using FACA metric objectives, constraints, "
+                "Pareto front, selected scenarios, and parameter-lineage evidence."
             ),
             "remaining": (
                 "Bayesian/evolutionary search and closed-loop hardware calibration."
@@ -173,7 +174,9 @@ def _capability_matrix(
             "tier": "validated",
             "implemented": (
                 "Dataset manifest, metadata JSONL, deterministic RAW NPZ, "
-                "optimization-case export, split, checksum, RGB preview, caller-provided labels."
+                "optimization-case export, parameter-lineage evidence, split, checksum, "
+                "RGB preview, caller-provided labels, ADAS/KITTI YOLO demo export, "
+                "and proxy camera-spec variant re-capture."
             ),
             "remaining": "DNG writer and automatic label synthesis are intentionally outside v1.",
         },

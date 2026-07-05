@@ -15,8 +15,21 @@ import numpy as np
 import tifffile
 
 from .assets import AssetStore
+from .scene import scene_from_file, scene_set
 from .system_faca import camerae2e_faca_report, camerae2e_run_scenario
 from .types import Camera, Scene
+
+_KITTI_CLASS_IDS = {
+    "Car": 0,
+    "Van": 1,
+    "Truck": 2,
+    "Pedestrian": 3,
+    "Person_sitting": 4,
+    "Cyclist": 5,
+    "Tram": 6,
+    "Misc": 7,
+    "DontCare": -1,
+}
 
 
 def camerae2e_dataset_export(
@@ -39,7 +52,7 @@ def camerae2e_dataset_export(
     choose its own packing and camera-specific metadata policy.
     """
 
-    root = Path(output_dir).expanduser()
+    root = Path(output_dir).expanduser().resolve()
     raw_dir = root / "raw"
     rgb_dir = root / "rgb"
     label_dir = root / "labels"
@@ -125,6 +138,7 @@ def camerae2e_dataset_export(
                 "raw_tiff_sha256": None if tiff_path is None else _sha256_file(tiff_path),
                 "labels_sha256": _sha256_file(label_path),
                 "scenario": report.get("scenario", {}),
+                "parameter_lineage": report.get("parameter_lineage", []),
                 "stage_summaries": report.get("stage_summaries", {}),
                 "faca_metrics": report.get("metrics", {}),
             }
@@ -290,6 +304,337 @@ def camerae2e_dataset_validate(
     }
 
 
+def camerae2e_adas_camera_spec(preset: str = "kitti_yolo_demo") -> dict[str, Any]:
+    """Return an ADAS camera preset for RAW demo generation.
+
+    The default preset is tied to KITTI-style geometry, not to measured KITTI
+    sensor calibration.  It is intended for reproducible ADAS/YOLO RAW factory
+    demos and keeps the truth boundary explicit in the returned metadata.
+    """
+
+    key = str(preset).strip().lower()
+    if key not in {
+        "kitti_yolo_demo",
+        "kitti_adas_demo",
+        "wide_fov_adas_demo",
+        "narrow_fov_adas_demo",
+    }:
+        raise ValueError(
+            "ADAS camera spec preset must be one of: "
+            "kitti_yolo_demo, wide_fov_adas_demo, narrow_fov_adas_demo."
+        )
+    image_size = [375, 1242]
+    presets = {
+        "kitti_yolo_demo": {
+            "focal_px": 721.5377,
+            "pixel_pitch_m": 3.75e-6,
+            "f_number": 1.8,
+            "integration_time_s": 0.004,
+        },
+        "kitti_adas_demo": {
+            "focal_px": 721.5377,
+            "pixel_pitch_m": 3.75e-6,
+            "f_number": 1.8,
+            "integration_time_s": 0.004,
+        },
+        "wide_fov_adas_demo": {
+            "focal_px": 520.0,
+            "pixel_pitch_m": 3.0e-6,
+            "f_number": 2.0,
+            "integration_time_s": 0.003,
+        },
+        "narrow_fov_adas_demo": {
+            "focal_px": 1050.0,
+            "pixel_pitch_m": 2.8e-6,
+            "f_number": 2.4,
+            "integration_time_s": 0.006,
+        },
+    }
+    preset_values = presets[key]
+    focal_px = float(preset_values["focal_px"])
+    pixel_pitch_m = float(preset_values["pixel_pitch_m"])
+    focal_length_m = focal_px * pixel_pitch_m
+    hfov_deg = float(2.0 * np.rad2deg(np.arctan2(image_size[1] / 2.0, focal_px)))
+    vfov_deg = float(2.0 * np.rad2deg(np.arctan2(image_size[0] / 2.0, focal_px)))
+    return {
+        "schema_version": "camerae2e_adas_camera_spec_v1",
+        "preset": key,
+        "readiness_tier": "proxy",
+        "truth_boundary": (
+            "KITTI camera geometry plus public-style ADAS assumptions; "
+            "not measured sensor, lens, ISP, or KITTI raw calibration."
+        ),
+        "dataset_reference": {
+            "name": "KITTI object-detection style",
+            "label_format": "KITTI text plus YOLO normalized xywh labels",
+            "native_image_size_rc": image_size,
+            "p2_focal_px": focal_px,
+            "principal_point_px": [609.5593, 172.8540],
+        },
+        "optics": {
+            "focal_length_m": focal_length_m,
+            "f_number": float(preset_values["f_number"]),
+            "hfov_deg": hfov_deg,
+            "vfov_deg": vfov_deg,
+        },
+        "sensor": {
+            "pixel_pitch_m": pixel_pitch_m,
+            "cfa_pattern": "bayer_rggb",
+            "bits": 12,
+            "integration_time_s": float(preset_values["integration_time_s"]),
+            "analog_gain": 1.0,
+            "noise_flag": 2,
+        },
+        "hw_isp": {
+            "enabled": True,
+            "nframes": 3,
+            "fps": 30.0,
+            "line_time_us": 15.2,
+            "ae_apply_delay_frames": 2,
+            "awb_apply_delay_frames": 2,
+        },
+        "demo": {
+            "image_size_rc": [96, 320],
+            "mean_luminance_cd_m2": 80.0,
+            "scene_distance_m": 30.0,
+        },
+    }
+
+
+def camerae2e_kitti_yolo_labels(
+    source: str | Path | Iterable[str] | None = None,
+    *,
+    image_size: tuple[int, int] | list[int],
+    class_ids: Mapping[str, int] | None = None,
+) -> dict[str, Any]:
+    """Return caller-supplied or demo KITTI labels with YOLO-normalized boxes."""
+
+    rows, cols = _image_size_rc(image_size)
+    mapping = dict(_KITTI_CLASS_IDS if class_ids is None else class_ids)
+    if source is None:
+        lines = _synthetic_kitti_label_lines(rows, cols)
+        source_name = "synthetic_kitti_style"
+    elif isinstance(source, (str, Path)):
+        path = Path(source).expanduser()
+        lines = path.read_text(encoding="utf-8").splitlines()
+        source_name = str(path)
+    else:
+        lines = [str(line) for line in source]
+        source_name = "inline_kitti_labels"
+    objects = [
+        _kitti_label_to_object(line, rows=rows, cols=cols, class_ids=mapping)
+        for line in lines
+        if line.strip()
+    ]
+    return {
+        "schema_version": "camerae2e_kitti_yolo_labels_v1",
+        "source": source_name,
+        "image_size_rc": [rows, cols],
+        "class_map": mapping,
+        "objects": objects,
+        "masks": [],
+    }
+
+
+def camerae2e_dataset_export_adas_kitti_demo(
+    output_dir: str | Path,
+    *,
+    image_paths: Iterable[str | Path] | None = None,
+    label_paths: Iterable[str | Path] | None = None,
+    case_count: int = 2,
+    spec: Mapping[str, Any] | None = None,
+    asset_store: AssetStore | None = None,
+    seed: int = 0,
+    include_rgb: bool = True,
+    include_tiff: bool = False,
+    split: Mapping[str, float] | Iterable[str] | str | None = "demo",
+) -> dict[str, Any]:
+    """Generate a KITTI/YOLO-style ADAS RAW dataset demo.
+
+    If ``image_paths`` and optional ``label_paths`` are supplied, those KITTI
+    RGB frames and labels are used.  Otherwise the function creates a small,
+    deterministic KITTI-style road scene with YOLO/KITTI boxes so the RAW
+    factory can be exercised without bundling the KITTI dataset.
+    """
+
+    store = asset_store or AssetStore.default()
+    camera_spec = _jsonable(spec or camerae2e_adas_camera_spec())
+    demo_shape = _image_size_rc(camera_spec.get("demo", {}).get("image_size_rc", [96, 320]))
+    image_list = [] if image_paths is None else [Path(path).expanduser() for path in image_paths]
+    label_list = [] if label_paths is None else [Path(path).expanduser() for path in label_paths]
+    if label_list and len(label_list) != len(image_list):
+        raise ValueError("label_paths must have the same length as image_paths.")
+
+    scenarios: list[dict[str, Any]] = []
+    labels: list[dict[str, Any]] = []
+    if image_list:
+        selected_images = image_list[: max(int(case_count), 0)]
+        for index, image_path in enumerate(selected_images):
+            image = np.asarray(iio.imread(image_path))
+            if image.ndim < 2:
+                raise ValueError(f"KITTI demo image must be 2D or 3D: {image_path}")
+            rows, cols = int(image.shape[0]), int(image.shape[1])
+            label_source = label_list[index] if label_list else None
+            scene = _adas_scene_from_rgb(
+                image,
+                camera_spec,
+                store,
+                f"kitti_frame_{index:04d}",
+            )
+            scenarios.append(_adas_scenario(scene, camera_spec, index))
+            labels.append(camerae2e_kitti_yolo_labels(label_source, image_size=(rows, cols)))
+    else:
+        for index in range(max(int(case_count), 0)):
+            rgb, label_payload = _synthetic_adas_rgb_and_labels(
+                demo_shape[0], demo_shape[1], index=index
+            )
+            scene = _adas_scene_from_rgb(rgb, camera_spec, store, f"synthetic_kitti_{index:04d}")
+            scenarios.append(_adas_scenario(scene, camera_spec, index))
+            labels.append(label_payload)
+
+    manifest = camerae2e_dataset_export(
+        output_dir,
+        scenarios,
+        asset_store=store,
+        seed=seed,
+        labels=labels,
+        include_rgb=include_rgb,
+        include_tiff=include_tiff,
+        split=split,
+    )
+    manifest["adas_kitti_demo"] = {
+        "schema_version": "camerae2e_adas_kitti_demo_v1",
+        "camera_spec": camera_spec,
+        "case_count": len(scenarios),
+        "input_mode": "synthetic" if not image_list else "kitti_files",
+        "note": (
+            "This demo applies KITTI-style ADAS geometry and YOLO/KITTI labels "
+            "to the CameraE2E RAW factory. It is not KITTI raw sensor ground truth."
+        ),
+    }
+    _rescale_manifest_labels_to_raw(manifest)
+    _rewrite_dataset_metadata_and_manifest(manifest)
+    return manifest
+
+
+def camerae2e_dataset_export_camera_spec_variants(
+    output_dir: str | Path,
+    *,
+    image_paths: Iterable[str | Path] | None = None,
+    label_paths: Iterable[str | Path] | None = None,
+    source_spec: Mapping[str, Any] | None = None,
+    target_specs: Iterable[Mapping[str, Any] | str] | None = None,
+    case_count: int = 1,
+    asset_store: AssetStore | None = None,
+    seed: int = 0,
+    include_rgb: bool = True,
+    include_tiff: bool = False,
+    split: str = "camera_variant",
+) -> dict[str, Any]:
+    """Export proxy re-captures of one KITTI-style scene under target cameras.
+
+    This is a controlled transformation, not an inverse-physics reconstruction.
+    The source RGB frame is interpreted as a display-derived proxy scene, then
+    re-rendered through each target camera spec.
+    """
+
+    targets = list(
+        target_specs
+        or ["kitti_yolo_demo", "wide_fov_adas_demo", "narrow_fov_adas_demo"]
+    )
+    target_payloads = [
+        camerae2e_adas_camera_spec(item) if isinstance(item, str) else _jsonable(item)
+        for item in targets
+    ]
+    source_payload = _jsonable(source_spec or camerae2e_adas_camera_spec())
+    store = asset_store or AssetStore.default()
+    root = Path(output_dir).expanduser().resolve()
+    image_list = [] if image_paths is None else [Path(path).expanduser() for path in image_paths]
+    label_list = [] if label_paths is None else [Path(path).expanduser() for path in label_paths]
+    if label_list and len(label_list) != len(image_list):
+        raise ValueError("label_paths must have the same length as image_paths.")
+
+    scenarios: list[dict[str, Any]] = []
+    labels: list[dict[str, Any]] = []
+    source_descriptions: list[dict[str, Any]] = []
+    if image_list:
+        selected_images = image_list[: max(int(case_count), 0)]
+        source_frames = []
+        for index, image_path in enumerate(selected_images):
+            image = np.asarray(iio.imread(image_path))
+            rows, cols = int(image.shape[0]), int(image.shape[1])
+            label_source = label_list[index] if label_list else None
+            source_frames.append(
+                (
+                    image,
+                    camerae2e_kitti_yolo_labels(label_source, image_size=(rows, cols)),
+                    f"kitti_file_{index:04d}",
+                    str(image_path),
+                )
+            )
+    else:
+        demo_shape = _image_size_rc(source_payload.get("demo", {}).get("image_size_rc", [96, 320]))
+        source_frames = []
+        for index in range(max(int(case_count), 0)):
+            image, source_labels = _synthetic_adas_rgb_and_labels(
+                demo_shape[0], demo_shape[1], index=index
+            )
+            source_frames.append(
+                (image, source_labels, f"synthetic_kitti_{index:04d}", "synthetic")
+            )
+
+    for frame_index, (image, source_labels, frame_name, source_path) in enumerate(source_frames):
+        source_descriptions.append(
+            {
+                "frame_index": frame_index,
+                "source": source_path,
+                "source_label_frame": source_labels.get("image_size_rc"),
+            }
+        )
+        for target_index, target_spec in enumerate(target_payloads):
+            scene = _adas_scene_from_rgb(
+                image,
+                target_spec,
+                store,
+                f"{frame_name}_{target_spec.get('preset', target_index)}",
+            )
+            scenario = _adas_scenario(scene, target_spec, len(scenarios))
+            scenario["source_camera_spec"] = source_payload
+            scenario["target_camera_spec"] = target_spec
+            scenarios.append(scenario)
+            labels.append(
+                _rescale_label_payload(
+                    source_labels,
+                    _image_size_rc(target_spec["dataset_reference"]["native_image_size_rc"]),
+                    coordinate_frame="target_camera_spec_native_image",
+                )
+            )
+
+    manifest = camerae2e_dataset_export(
+        root,
+        scenarios,
+        asset_store=store,
+        seed=seed,
+        labels=labels,
+        include_rgb=include_rgb,
+        include_tiff=include_tiff,
+        split=split,
+    )
+    manifest["camera_spec_variants"] = {
+        "schema_version": "camerae2e_camera_spec_variants_v1",
+        "source_spec": source_payload,
+        "target_specs": target_payloads,
+        "source_frames": source_descriptions,
+        "truth_boundary": (
+            "RGB-to-scene proxy re-capture. This does not recover true KITTI "
+            "spectral radiance, depth, occlusion, lens flare, ISP inverse, or measured raw."
+        ),
+    }
+    _rescale_manifest_labels_to_raw(manifest)
+    _rewrite_dataset_metadata_and_manifest(manifest)
+    return manifest
+
+
 def _optimization_cases(
     optimization_result: Mapping[str, Any], *, selection: str
 ) -> list[Mapping[str, Any]]:
@@ -351,6 +696,221 @@ def _normalize_labels(
     if len(values) != count:
         raise ValueError("labels must contain one item per scenario when provided as an iterable.")
     return values
+
+
+def _adas_scene_from_rgb(
+    rgb: Any, spec: Mapping[str, Any], asset_store: AssetStore, name: str
+) -> Scene:
+    scene = scene_from_file(
+        np.asarray(rgb),
+        "rgb",
+        float(spec.get("demo", {}).get("mean_luminance_cd_m2", 80.0)),
+        "lcdExample.mat",
+        asset_store=asset_store,
+    )
+    scene.name = str(name)
+    scene = scene_set(scene, "fov", float(spec.get("optics", {}).get("hfov_deg", 81.4)))
+    scene = scene_set(scene, "distance", float(spec.get("demo", {}).get("scene_distance_m", 30.0)))
+    return scene
+
+
+def _adas_scenario(scene: Scene, spec: Mapping[str, Any], index: int) -> dict[str, Any]:
+    sensor = dict(spec.get("sensor", {}))
+    optics = dict(spec.get("optics", {}))
+    hw_isp = dict(spec.get("hw_isp", {}))
+    return {
+        "name": f"adas_kitti_yolo_demo_{index:04d}",
+        "scene": scene,
+        "sensor": {
+            "noise_flag": sensor.get("noise_flag", 2),
+            "integration_time": sensor.get("integration_time_s", 0.004),
+            "analog_gain": sensor.get("analog_gain", 1.0),
+        },
+        "parameters": {
+            "pixel.size": [
+                sensor.get("pixel_pitch_m", 3.75e-6),
+                sensor.get("pixel_pitch_m", 3.75e-6),
+            ],
+            "sensor.bits": sensor.get("bits", 12),
+            "optics.focal_length": optics.get("focal_length_m", 0.0027),
+            "optics.fnumber": optics.get("f_number", 1.8),
+        },
+        "hw_isp": {
+            "enabled": bool(hw_isp.get("enabled", True)),
+            "nframes": int(hw_isp.get("nframes", 3)),
+            "fps": float(hw_isp.get("fps", 30.0)),
+            "line_time_us": float(hw_isp.get("line_time_us", 15.2)),
+            "ae_apply_delay_frames": int(hw_isp.get("ae_apply_delay_frames", 2)),
+            "awb_apply_delay_frames": int(hw_isp.get("awb_apply_delay_frames", 2)),
+        },
+        "adas_camera_spec": _jsonable(spec),
+    }
+
+
+def _synthetic_adas_rgb_and_labels(
+    rows: int, cols: int, *, index: int
+) -> tuple[np.ndarray, dict[str, Any]]:
+    rr, cc = np.indices((rows, cols))
+    rgb = np.zeros((rows, cols, 3), dtype=np.uint8)
+    horizon = int(round(rows * 0.42))
+    sky_grad = np.clip(0.65 + 0.25 * (1.0 - rr / max(horizon, 1)), 0.0, 1.0)
+    road_grad = np.clip(0.18 + 0.25 * (rr - horizon) / max(rows - horizon, 1), 0.0, 1.0)
+    sky_mask = rr < horizon
+    rgb[..., 0] = np.where(sky_mask, 95 * sky_grad, 90 * road_grad).astype(np.uint8)
+    rgb[..., 1] = np.where(sky_mask, 145 * sky_grad, 95 * road_grad).astype(np.uint8)
+    rgb[..., 2] = np.where(sky_mask, 210 * sky_grad, 85 * road_grad).astype(np.uint8)
+
+    lane_center = cols / 2.0 + (index - 0.5) * cols * 0.03
+    for offset in (-cols * 0.14, cols * 0.14):
+        x = (lane_center + offset + (rr - horizon) * offset / max(rows - horizon, 1)).astype(int)
+        mask = (rr > horizon) & (np.abs(cc - x) <= 1)
+        rgb[mask] = np.array([230, 230, 210], dtype=np.uint8)
+
+    boxes = [
+        ("Car", [0.42 * cols, 0.55 * rows, 0.66 * cols, 0.82 * rows], [1.55, 1.70, 4.20]),
+        ("Car", [0.18 * cols, 0.50 * rows, 0.31 * cols, 0.66 * rows], [1.50, 1.65, 3.90]),
+        ("Pedestrian", [0.72 * cols, 0.49 * rows, 0.77 * cols, 0.73 * rows], [1.75, 0.60, 0.50]),
+    ]
+    lines = []
+    for label, box, dims_hwl in boxes:
+        x1, y1, x2, y2 = [int(round(value)) for value in box]
+        color = (
+            np.array([170, 35, 30], dtype=np.uint8)
+            if label == "Car"
+            else np.array([40, 120, 45], dtype=np.uint8)
+        )
+        rgb[max(y1, 0) : min(y2, rows), max(x1, 0) : min(x2, cols)] = color
+        h, w, length = dims_hwl
+        lines.append(
+            f"{label} 0.00 0 0.00 {x1:.1f} {y1:.1f} {x2:.1f} {y2:.1f} "
+            f"{h:.2f} {w:.2f} {length:.2f} 0.00 0.00 20.00 0.00"
+        )
+    return rgb, camerae2e_kitti_yolo_labels(lines, image_size=(rows, cols))
+
+
+def _synthetic_kitti_label_lines(rows: int, cols: int) -> list[str]:
+    _, labels = _synthetic_adas_rgb_and_labels(rows, cols, index=0)
+    return [
+        str(item.get("kitti", {}).get("line", ""))
+        for item in labels.get("objects", [])
+        if item.get("kitti", {}).get("line")
+    ]
+
+
+def _kitti_label_to_object(
+    line: str, *, rows: int, cols: int, class_ids: Mapping[str, int]
+) -> dict[str, Any]:
+    parts = line.strip().split()
+    if len(parts) < 8:
+        raise ValueError(f"KITTI label line has too few columns: {line!r}")
+    label = parts[0]
+    bbox = [float(parts[index]) for index in range(4, 8)]
+    x1, y1, x2, y2 = bbox
+    width = max(x2 - x1, 0.0)
+    height = max(y2 - y1, 0.0)
+    yolo = [
+        (x1 + width / 2.0) / max(cols, 1),
+        (y1 + height / 2.0) / max(rows, 1),
+        width / max(cols, 1),
+        height / max(rows, 1),
+    ]
+    return {
+        "label": label,
+        "class_id": int(class_ids.get(label, -1)),
+        "bbox_xyxy": [x1, y1, x2, y2],
+        "yolo_xywhn": yolo,
+        "kitti": {
+            "line": line,
+            "truncation": float(parts[1]) if len(parts) > 1 else None,
+            "occlusion": int(float(parts[2])) if len(parts) > 2 else None,
+            "alpha": float(parts[3]) if len(parts) > 3 else None,
+            "dimensions_hwl_m": [float(value) for value in parts[8:11]] if len(parts) >= 11 else [],
+            "location_xyz_m": [float(value) for value in parts[11:14]] if len(parts) >= 14 else [],
+            "rotation_y": float(parts[14]) if len(parts) >= 15 else None,
+        },
+    }
+
+
+def _rescale_manifest_labels_to_raw(manifest: dict[str, Any]) -> None:
+    root = Path(str(manifest.get("dataset_root", "."))).expanduser()
+    for record in manifest.get("records", []):
+        raw_shape = record.get("raw_shape", [])
+        if len(raw_shape) < 2:
+            continue
+        label_path = _resolve_dataset_path(root, record.get("labels"))
+        if label_path is None or not label_path.exists():
+            continue
+        label_json = json.loads(label_path.read_text(encoding="utf-8"))
+        label_json["labels"] = _rescale_label_payload(
+            label_json.get("labels", {}),
+            _image_size_rc(raw_shape[:2]),
+            coordinate_frame="exported_raw_shape",
+        )
+        label_path.write_text(
+            json.dumps(_jsonable(label_json), indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+        record["labels_sha256"] = _sha256_file(label_path)
+        record["label_coordinate_frame"] = "exported_raw_shape"
+
+
+def _rescale_label_payload(
+    labels: Mapping[str, Any],
+    target_size_rc: tuple[int, int],
+    *,
+    coordinate_frame: str,
+) -> dict[str, Any]:
+    payload = _jsonable(labels)
+    source_size = _image_size_rc(payload.get("image_size_rc", target_size_rc))
+    target_rows, target_cols = target_size_rc
+    y_scale = target_rows / max(source_size[0], 1)
+    x_scale = target_cols / max(source_size[1], 1)
+    objects = []
+    for item in payload.get("objects", []):
+        obj = dict(item)
+        bbox = obj.get("bbox_xyxy")
+        if bbox is not None and len(bbox) == 4:
+            x1, y1, x2, y2 = [float(value) for value in bbox]
+            scaled = [x1 * x_scale, y1 * y_scale, x2 * x_scale, y2 * y_scale]
+            width = max(scaled[2] - scaled[0], 0.0)
+            height = max(scaled[3] - scaled[1], 0.0)
+            obj["bbox_xyxy"] = scaled
+            obj["yolo_xywhn"] = [
+                (scaled[0] + width / 2.0) / max(target_cols, 1),
+                (scaled[1] + height / 2.0) / max(target_rows, 1),
+                width / max(target_cols, 1),
+                height / max(target_rows, 1),
+            ]
+        objects.append(obj)
+    payload["objects"] = objects
+    payload["image_size_rc"] = [target_rows, target_cols]
+    payload["coordinate_frame"] = coordinate_frame
+    payload["source_coordinate_frame"] = {
+        "image_size_rc": [source_size[0], source_size[1]],
+        "coordinate_frame": labels.get("coordinate_frame", labels.get("source", "source_image")),
+    }
+    return payload
+
+
+def _rewrite_dataset_metadata_and_manifest(manifest: dict[str, Any]) -> None:
+    root = Path(str(manifest.get("dataset_root", "."))).expanduser()
+    metadata_path = root / "metadata.jsonl"
+    with metadata_path.open("w", encoding="utf-8") as metadata_stream:
+        for record in manifest.get("records", []):
+            metadata_stream.write(json.dumps(_jsonable(record), sort_keys=True) + "\n")
+    manifest.setdefault("integrity", {})["metadata_jsonl_sha256"] = _sha256_file(metadata_path)
+    manifest_path = root / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(_jsonable(manifest), indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+
+def _image_size_rc(image_size: tuple[int, int] | list[int] | Any) -> tuple[int, int]:
+    values = np.asarray(image_size, dtype=int).reshape(-1)
+    if values.size < 2 or int(values[0]) <= 0 or int(values[1]) <= 0:
+        raise ValueError("image_size must contain positive row and column counts.")
+    return int(values[0]), int(values[1])
 
 
 def _deep_dict(value: Mapping[str, Any]) -> dict[str, Any]:
@@ -574,5 +1134,11 @@ def _jsonable(value: Any) -> Any:
 
 
 cameraE2EDatasetExport = camerae2e_dataset_export  # noqa: N816
+cameraE2EDatasetExportADASKITTIDemo = camerae2e_dataset_export_adas_kitti_demo  # noqa: N816
+cameraE2EDatasetExportCameraSpecVariants = (  # noqa: N816
+    camerae2e_dataset_export_camera_spec_variants
+)
 cameraE2EDatasetExportFromOptimization = camerae2e_dataset_export_from_optimization  # noqa: N816
 cameraE2EDatasetValidate = camerae2e_dataset_validate  # noqa: N816
+cameraE2EADASCameraSpec = camerae2e_adas_camera_spec  # noqa: N816
+cameraE2EKITTIYOLOLabels = camerae2e_kitti_yolo_labels  # noqa: N816

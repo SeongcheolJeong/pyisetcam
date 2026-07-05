@@ -9,4 +9,5 @@ dist/
 .DS_Store
 .cache/upstream/
 reports/parity/*.json
-
+outputs/adas-kitti-yolo-raw-demo/
+outputs/adas-kitti-camera-variants-demo/

@@ -26,9 +26,9 @@
 | TCAD / DEVSIM | `calibration_required` | generation-map ingestion, split-PD current proxy, accuracy gate | active FDTD/TCAD lineage closure, carrier calibration, dark/noise/lag/full-well |
 | HW ISP | `proxy` | rolling shutter, stage latency, queue, DMA, delayed AE/AWB | board/vendor trace calibration, AF/HDR/TNR detail |
 | Metrics | `validated` | MTF, ISO12233, Delta E, SCIELAB, VSNR, SQRI | product-specific weighting and pass/fail gates |
-| Optimization | `validated` | dot-path camera parameter grid search, FACA objective scoring, hard constraints, Pareto front, selected scenarios | Bayesian/evolutionary search, hardware-in-loop calibration |
+| Optimization | `validated` | dot-path camera parameter grid search, preset parameter-space catalog, FACA objective scoring, hard constraints, Pareto front, selected scenarios, parameter-lineage evidence | Bayesian/evolutionary search, hardware-in-loop calibration |
 | Perception | `available` | task adapters, detection/segmentation/classification/pose/tracking metrics, robustness sweep | training loop, dataset-specific model calibration |
-| RAW data factory | `validated` | manifest, metadata JSONL, deterministic RAW NPZ, split, checksum, labels JSON, validation | DNG writer, automatic label synthesis |
+| RAW data factory | `validated` | manifest, metadata JSONL, deterministic RAW NPZ, split, checksum, labels JSON, validation, ADAS/KITTI YOLO demo export, proxy camera-spec variant re-capture | DNG writer, automatic label synthesis |
 | DB/LUT registry | `validated` / `calibration_required` | manifest, readiness tier, provenance, dependency lineage, stale detection | measured evidence ingestion and calibrated promotion |
 | External pipeline | `calibration_required` | FDTD, TCAD, RayOptics, HW ISP assets discoverable in one registry | refresh orchestration and calibrated end-to-end asset generation |
 
@@ -50,22 +50,56 @@ System FACA:
 Optimization:
 
 - `camerae2e_optimize_parameters(...)`
+- `camerae2e_optimize_camera_parameters(...)`
+- `camerae2e_parameter_space_catalog(...)`
 - `camerae2e_optimization_report(...)`
 - `camerae2e_pareto_front(...)`
 
 The first optimizer is deterministic grid search over dot-path camera
 parameters such as `sensor.integration_time`, `sensor.analog_gain`,
-`optics.fnumber`, and `ip.demosaic_method`. It maximizes objective paths from
+`optics.fnumber`, `ip.demosaic_method`, and HW ISP control-delay parameters.
+`camerae2e_parameter_space_catalog(...)` exposes validated preset search spaces
+such as `exposure`, `raw_factory`, `isp`, and `hw_isp_control`.
+`camerae2e_optimize_camera_parameters(...)` runs those presets directly while
+still allowing caller overrides. The optimizer maximizes objective paths from
 the FACA report, supports hard metric constraints, reports the feasible Pareto
 front, and emits selected scenario configs that can be passed into the RAW data
-factory. This is the reproducible baseline for later Bayesian/evolutionary
-optimizers.
+factory. FACA and dataset records include parameter-lineage entries with
+requested/before/after values so a RAW export can be traced back to the actual
+camera parameters applied. This is the reproducible baseline for later
+Bayesian/evolutionary optimizers.
 
 RAW data factory:
 
 - `camerae2e_dataset_export(...)`
+- `camerae2e_dataset_export_adas_kitti_demo(...)`
+- `camerae2e_dataset_export_camera_spec_variants(...)`
+- `camerae2e_adas_camera_spec(...)`
+- `camerae2e_kitti_yolo_labels(...)`
 - `camerae2e_dataset_export_from_optimization(...)`
 - `camerae2e_dataset_validate(...)`
+
+ADAS/KITTI demo export is intentionally labeled `proxy`: it applies KITTI-style
+object-detection geometry and YOLO/KITTI label metadata to the RAW factory, but
+does not claim KITTI raw sensor ground truth or measured ADAS camera
+calibration. Regenerate the demo with:
+
+```bash
+python tools/render_adas_kitti_raw_demo.py
+```
+
+For camera-spec transformation, use:
+
+```bash
+python tools/render_adas_kitti_raw_demo.py --variants \
+  --output-dir outputs/adas-kitti-camera-variants-demo
+```
+
+This performs a proxy re-capture of the same KITTI-style RGB scene through
+target camera specs such as `wide_fov_adas_demo` and `narrow_fov_adas_demo`.
+It is useful for controlled robustness experiments, but it does not recover the
+true KITTI spectral radiance, depth, occlusion, lens flare, ISP inverse, or
+measured RAW.
 
 ## External Pipeline Policy
 

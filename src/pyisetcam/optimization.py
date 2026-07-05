@@ -16,6 +16,78 @@ from .types import Camera, Scene
 ObjectiveSpec = Mapping[str, Any] | str | Iterable[Mapping[str, Any]]
 ObjectiveCallable = Callable[[Mapping[str, Any]], float]
 
+_PARAMETER_AXIS_CATALOG: dict[str, dict[str, Any]] = {
+    "sensor.integration_time": {
+        "area": "sensor",
+        "unit": "s",
+        "readiness_tier": "validated",
+        "values": [0.001, 0.002, 0.004],
+        "description": "Sensor exposure/integration time for RAW signal and noise tradeoffs.",
+    },
+    "sensor.analog_gain": {
+        "area": "sensor",
+        "unit": "x",
+        "readiness_tier": "validated",
+        "values": [1.0, 2.0, 4.0],
+        "description": "Analog gain before digital conversion.",
+    },
+    "sensor.noise_flag": {
+        "area": "sensor",
+        "unit": "enum",
+        "readiness_tier": "validated",
+        "values": [0, 2],
+        "description": "Sensor noise model selector.",
+    },
+    "optics.fnumber": {
+        "area": "optics",
+        "unit": "f/#",
+        "readiness_tier": "validated",
+        "values": [2.0, 2.8, 4.0],
+        "description": "Optics f-number for irradiance and diffraction/blur tradeoffs.",
+    },
+    "ip.demosaic_method": {
+        "area": "isp",
+        "unit": "enum",
+        "readiness_tier": "validated",
+        "values": ["bilinear", "nearest neighbor", "laplacian"],
+        "description": "Demosaic method used by the image processor.",
+    },
+    "hw_isp.ae_apply_delay_frames": {
+        "area": "hw_isp",
+        "unit": "frames",
+        "readiness_tier": "proxy",
+        "values": [0, 1, 2],
+        "description": "Delayed AE control application in the HW ISP simulator.",
+    },
+    "hw_isp.awb_apply_delay_frames": {
+        "area": "hw_isp",
+        "unit": "frames",
+        "readiness_tier": "proxy",
+        "values": [0, 1, 2],
+        "description": "Delayed AWB control application in the HW ISP simulator.",
+    },
+    "hw_isp.global_latency_factor": {
+        "area": "hw_isp",
+        "unit": "x",
+        "readiness_tier": "proxy",
+        "values": [0.8, 1.0, 1.2],
+        "description": "Global stage latency scale for system-control sweeps.",
+    },
+}
+
+_PARAMETER_SPACE_PRESETS: dict[str, tuple[str, ...]] = {
+    "exposure": ("sensor.integration_time", "sensor.analog_gain"),
+    "optics": ("optics.fnumber",),
+    "isp": ("ip.demosaic_method",),
+    "hw_isp_control": (
+        "hw_isp.ae_apply_delay_frames",
+        "hw_isp.awb_apply_delay_frames",
+        "hw_isp.global_latency_factor",
+    ),
+    "research_smoke": ("sensor.integration_time", "optics.fnumber"),
+    "raw_factory": ("sensor.integration_time", "sensor.analog_gain", "optics.fnumber"),
+}
+
 
 def camerae2e_optimize_parameters(
     base_scenario: Mapping[str, Any] | None = None,
@@ -44,6 +116,7 @@ def camerae2e_optimize_parameters(
     """
 
     axes = _normalize_parameter_space(parameter_space or {})
+    _validate_parameter_axis_names(axes, base_scenario)
     objective_specs = _normalize_objective(objective)
     constraint_specs = [dict(item) for item in constraints or []]
     cases: list[dict[str, Any]] = []
@@ -117,6 +190,85 @@ def camerae2e_optimize_parameters(
     }
 
 
+def camerae2e_parameter_space_catalog(preset: str | None = None) -> dict[str, Any]:
+    """Return supported automated CameraE2E parameter axes and presets."""
+
+    if preset is None:
+        return {
+            "schema_version": "camerae2e_parameter_space_catalog_v1",
+            "axes": _jsonable(_PARAMETER_AXIS_CATALOG),
+            "presets": {name: list(paths) for name, paths in _PARAMETER_SPACE_PRESETS.items()},
+        }
+    key = str(preset).strip().lower()
+    if key not in _PARAMETER_SPACE_PRESETS:
+        raise ValueError(f"Unknown CameraE2E parameter-space preset: {preset!r}.")
+    paths = _PARAMETER_SPACE_PRESETS[key]
+    return {
+        "schema_version": "camerae2e_parameter_space_catalog_v1",
+        "preset": key,
+        "axes": {path: _jsonable(_PARAMETER_AXIS_CATALOG[path]) for path in paths},
+        "parameter_space": {path: list(_PARAMETER_AXIS_CATALOG[path]["values"]) for path in paths},
+    }
+
+
+def camerae2e_optimize_camera_parameters(
+    base_scenario: Mapping[str, Any] | None = None,
+    *,
+    preset: str = "raw_factory",
+    parameter_space: Mapping[str, Iterable[Any] | Mapping[str, Any]] | None = None,
+    objective: ObjectiveSpec | ObjectiveCallable | None = None,
+    constraints: Iterable[Mapping[str, Any]] | None = None,
+    scene: Scene | str | Mapping[str, Any] | None = None,
+    camera: Camera | None = None,
+    asset_store: AssetStore | None = None,
+    seed: int = 0,
+    top_k: int = 5,
+    include_arrays: bool = False,
+) -> dict[str, Any]:
+    """Run the automated CameraE2E camera-parameter optimization baseline.
+
+    ``preset`` supplies a validated parameter-space starter set.  Passing
+    ``parameter_space`` overrides or extends those axes while retaining the
+    same deterministic optimizer, constraint, Pareto, and selected-scenario
+    outputs as :func:`camerae2e_optimize_parameters`.
+    """
+
+    catalog = camerae2e_parameter_space_catalog(preset)
+    axes = dict(catalog["parameter_space"])
+    if parameter_space is not None:
+        axes.update(_normalize_parameter_space(parameter_space))
+    result = camerae2e_optimize_parameters(
+        base_scenario,
+        axes,
+        objective,
+        constraints=constraints,
+        scene=scene,
+        camera=camera,
+        asset_store=asset_store,
+        seed=seed,
+        top_k=top_k,
+        include_arrays=include_arrays,
+    )
+    result["automation"] = {
+        "schema_version": "camerae2e_parameter_optimization_automation_v1",
+        "preset": str(preset).strip().lower(),
+        "axis_count": len(axes),
+        "axes": _jsonable(
+            {
+                path: _PARAMETER_AXIS_CATALOG.get(
+                    path,
+                    {
+                        "readiness_tier": "available",
+                        "description": "Caller-provided custom parameter axis.",
+                    },
+                )
+                for path in axes
+            }
+        ),
+    }
+    return result
+
+
 def camerae2e_pareto_front(result: Mapping[str, Any]) -> list[dict[str, Any]]:
     """Return compact non-dominated feasible cases from an optimization result."""
 
@@ -155,6 +307,54 @@ def _normalize_parameter_space(
             raise ValueError(f"Parameter axis {key!r} must contain at least one value.")
         axes[str(key)] = values
     return axes
+
+
+def _validate_parameter_axis_names(
+    axes: Mapping[str, Any], base_scenario: Mapping[str, Any] | None
+) -> None:
+    sensor_allowed = {
+        "integration_time",
+        "integration time",
+        "integration",
+        "exposure_duration",
+        "exposure duration",
+        "exposure_time",
+        "exposure time",
+        "analog_gain",
+        "analog gain",
+        "gain",
+        "noise_flag",
+        "noise flag",
+        "noise",
+    }
+    for key in axes:
+        path = str(key)
+        if "." not in path:
+            continue
+        prefix, remainder = path.split(".", 1)
+        if prefix == "sensor" and remainder not in sensor_allowed:
+            raise ValueError(f"Unsupported sensor optimization parameter: {path!r}.")
+        if prefix == "fdtd" and remainder == "mode" and not _has_nested_value(
+            base_scenario, "fdtd", "lut"
+        ):
+            raise ValueError(
+                f"{path!r} needs an explicit LUT/DB attachment in the base scenario; "
+                "optimizing the mode alone would not change the camera pipeline."
+            )
+        if prefix == "tcad" and remainder == "collection_mode" and not _has_nested_value(
+            base_scenario, "tcad", "db"
+        ):
+            raise ValueError(
+                f"{path!r} needs an explicit LUT/DB attachment in the base scenario; "
+                "optimizing the mode alone would not change the camera pipeline."
+            )
+
+
+def _has_nested_value(payload: Mapping[str, Any] | None, bucket: str, name: str) -> bool:
+    if not isinstance(payload, Mapping):
+        return False
+    value = payload.get(bucket)
+    return isinstance(value, Mapping) and value.get(name) is not None
 
 
 def _axis_values(raw: Iterable[Any] | Mapping[str, Any]) -> list[Any]:
@@ -265,6 +465,8 @@ def _assign_parameter(scenario: dict[str, Any], key: str, value: Any) -> None:
         if not isinstance(bucket, dict):
             bucket = {}
             scenario[parts[0]] = bucket
+        if parts[0] == "hw_isp" and parts[1] != "enabled":
+            bucket.setdefault("enabled", True)
         bucket[parts[1]] = value
         return
     scenario.setdefault("parameters", {})[key] = value
@@ -359,5 +561,7 @@ def _jsonable(value: Any) -> Any:
 
 
 cameraE2EOptimizeParameters = camerae2e_optimize_parameters  # noqa: N816
+cameraE2EOptimizeCameraParameters = camerae2e_optimize_camera_parameters  # noqa: N816
 cameraE2EParetoFront = camerae2e_pareto_front  # noqa: N816
 cameraE2EOptimizationReport = camerae2e_optimization_report  # noqa: N816
+cameraE2EParameterSpaceCatalog = camerae2e_parameter_space_catalog  # noqa: N816

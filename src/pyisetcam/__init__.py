@@ -75,9 +75,13 @@ from .color import (
 )
 from .description import HeadlessDescriptionHandle, sensor_description
 from .dataset import (
+    camerae2e_adas_camera_spec,
+    camerae2e_dataset_export_camera_spec_variants,
     camerae2e_dataset_export,
+    camerae2e_dataset_export_adas_kitti_demo,
     camerae2e_dataset_export_from_optimization,
     camerae2e_dataset_validate,
+    camerae2e_kitti_yolo_labels,
 )
 from .display import (
     display_compute,
@@ -126,8 +130,10 @@ from .fileio import (
 )
 from .optimization import (
     camerae2e_optimization_report,
+    camerae2e_optimize_camera_parameters,
     camerae2e_optimize_parameters,
     camerae2e_pareto_front,
+    camerae2e_parameter_space_catalog,
 )
 from .physics_pipeline import camerae2e_physics_pipeline_plan
 from .fdtd_sensor import (
@@ -1076,13 +1082,19 @@ __all__ = [
     "camerae2e_db_search",
     "camerae2e_db_summary",
     "camerae2e_db_validate",
+    "camerae2e_adas_camera_spec",
     "camerae2e_dataset_export",
+    "camerae2e_dataset_export_adas_kitti_demo",
+    "camerae2e_dataset_export_camera_spec_variants",
     "camerae2e_dataset_export_from_optimization",
     "camerae2e_dataset_validate",
     "camerae2e_faca_report",
+    "camerae2e_kitti_yolo_labels",
     "camerae2e_optimization_report",
+    "camerae2e_optimize_camera_parameters",
     "camerae2e_optimize_parameters",
     "camerae2e_pareto_front",
+    "camerae2e_parameter_space_catalog",
     "camerae2e_physics_pipeline_plan",
     "camerae2e_run_scenario",
     "camerae2e_run_sweep",
@@ -1094,13 +1106,19 @@ __all__ = [
     "cameraE2EDBSearch",
     "cameraE2EDBSummary",
     "cameraE2EDBValidate",
+    "cameraE2EADASCameraSpec",
     "cameraE2EDatasetExport",
+    "cameraE2EDatasetExportADASKITTIDemo",
+    "cameraE2EDatasetExportCameraSpecVariants",
     "cameraE2EDatasetExportFromOptimization",
     "cameraE2EDatasetValidate",
     "cameraE2EFACAReport",
+    "cameraE2EKITTIYOLOLabels",
     "cameraE2EOptimizationReport",
+    "cameraE2EOptimizeCameraParameters",
     "cameraE2EOptimizeParameters",
     "cameraE2EParetoFront",
+    "cameraE2EParameterSpaceCatalog",
     "cameraE2EPhysicsPipelinePlan",
     "cameraE2ERunScenario",
     "cameraE2ERunSweep",
@@ -3775,12 +3793,18 @@ cameraE2EDBLineage = camerae2e_db_lineage
 cameraE2ERunScenario = camerae2e_run_scenario
 cameraE2ERunSweep = camerae2e_run_sweep
 cameraE2EFACAReport = camerae2e_faca_report
+cameraE2EADASCameraSpec = camerae2e_adas_camera_spec
 cameraE2EDatasetExport = camerae2e_dataset_export
+cameraE2EDatasetExportADASKITTIDemo = camerae2e_dataset_export_adas_kitti_demo
+cameraE2EDatasetExportCameraSpecVariants = camerae2e_dataset_export_camera_spec_variants
 cameraE2EDatasetExportFromOptimization = camerae2e_dataset_export_from_optimization
 cameraE2EDatasetValidate = camerae2e_dataset_validate
+cameraE2EKITTIYOLOLabels = camerae2e_kitti_yolo_labels
+cameraE2EOptimizeCameraParameters = camerae2e_optimize_camera_parameters
 cameraE2EOptimizeParameters = camerae2e_optimize_parameters
 cameraE2EOptimizationReport = camerae2e_optimization_report
 cameraE2EParetoFront = camerae2e_pareto_front
+cameraE2EParameterSpaceCatalog = camerae2e_parameter_space_catalog
 cameraE2EPhysicsPipelinePlan = camerae2e_physics_pipeline_plan
 
 imageSensorDBRoot = image_sensor_db_root

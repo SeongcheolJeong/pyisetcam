@@ -37,7 +37,9 @@ def camerae2e_run_scenario(
     scenario_name = str(config.get("name", "camerae2e_faca_scenario"))
     resolved_scene = _resolve_scene(scene if scene is not None else config.get("scene"), store)
     resolved_camera = _resolve_camera(camera if camera is not None else config.get("camera"), store)
-    resolved_camera = _apply_physics_and_sensor_overrides(resolved_camera, config)
+    resolved_camera, parameter_lineage = _apply_physics_and_sensor_overrides(
+        resolved_camera, config
+    )
 
     hw_payload = dict(config.get("hw_isp", {})) if isinstance(config.get("hw_isp"), Mapping) else {}
     use_hw_isp = bool(hw_payload.get("enabled", False))
@@ -67,6 +69,7 @@ def camerae2e_run_scenario(
         "hw_isp_sequence": hw_sequence,
         "stages": stages,
         "metrics": metrics,
+        "parameter_lineage": parameter_lineage,
         "artifact_lineage": _artifact_lineage_summary(),
     }
 
@@ -145,6 +148,7 @@ def camerae2e_faca_report(result: Mapping[str, Any]) -> dict[str, Any]:
             for name, payload in dict(result.get("stages", {})).items()
         },
         "metrics": _jsonable(result.get("metrics", {})),
+        "parameter_lineage": _jsonable(result.get("parameter_lineage", [])),
         "artifact_lineage": _jsonable(result.get("artifact_lineage", {})),
     }
 
@@ -179,43 +183,86 @@ def _resolve_camera(source: Camera | Mapping[str, Any] | None, store: AssetStore
     return created.clone()
 
 
-def _apply_physics_and_sensor_overrides(camera: Camera, config: Mapping[str, Any]) -> Camera:
+def _apply_physics_and_sensor_overrides(
+    camera: Camera, config: Mapping[str, Any]
+) -> tuple[Camera, list[dict[str, Any]]]:
     updated = camera.clone()
+    lineage: list[dict[str, Any]] = []
     parameter_overrides = {}
     for bucket_name in ("parameters", "camera_parameters"):
         bucket = config.get(bucket_name)
         if isinstance(bucket, Mapping):
             parameter_overrides.update(dict(bucket))
     for key, value in parameter_overrides.items():
-        updated = camera_set(updated, _camera_parameter_name(key), value)
+        parameter_name = _camera_parameter_name(key)
+        before = _safe_camera_get(updated, parameter_name)
+        updated = camera_set(updated, parameter_name, value)
+        after = _safe_camera_get(updated, parameter_name)
+        lineage.append(
+            _parameter_lineage_entry(
+                str(key),
+                parameter_name,
+                value,
+                before,
+                after,
+                status="applied",
+            )
+        )
 
     sensor = camera_get(updated, "sensor").clone()
     sensor_overrides = (
         dict(config.get("sensor", {})) if isinstance(config.get("sensor"), Mapping) else {}
     )
     for key, value in sensor_overrides.items():
-        normalized = str(key).replace("_", " ").lower()
-        if normalized in {"noise flag", "noise"}:
-            sensor = sensor_set(sensor, "noise flag", value)
-        elif normalized in {"integration time", "integration"}:
-            sensor = sensor_set(sensor, "integration time", value)
-        elif normalized in {"exposure duration", "exposure time", "exposure time s"}:
-            sensor = sensor_set(sensor, "exposure duration", value)
-        elif normalized in {"analog gain", "gain"}:
-            sensor = sensor_set(sensor, "analog gain", value)
+        sensor_parameter = _sensor_override_parameter_name(key)
+        if sensor_parameter is None:
+            raise KeyError(f"Unsupported CameraE2E sensor override: {key!r}")
+        before = _safe_sensor_get(sensor, sensor_parameter)
+        sensor = sensor_set(sensor, sensor_parameter, value)
+        after = _safe_sensor_get(sensor, sensor_parameter)
+        lineage.append(
+            _parameter_lineage_entry(
+                f"sensor.{str(sensor_parameter).replace(' ', '_')}",
+                sensor_parameter,
+                value,
+                before,
+                after,
+                status="applied",
+            )
+        )
 
     fdtd = dict(config.get("fdtd", {})) if isinstance(config.get("fdtd"), Mapping) else {}
     if fdtd.get("lut") is not None:
         fdtd_kwargs = {key: value for key, value in fdtd.items() if key not in {"lut", "enabled"}}
         sensor = sensor_attach_fdtd_lut(sensor, fdtd["lut"], **fdtd_kwargs)
+        lineage.append(
+            _parameter_lineage_entry(
+                "fdtd.lut",
+                "fdtd lut",
+                fdtd["lut"],
+                None,
+                {"attached": True, "options": fdtd_kwargs},
+                status="attached",
+            )
+        )
 
     tcad = dict(config.get("tcad", {})) if isinstance(config.get("tcad"), Mapping) else {}
     if tcad.get("db") is not None:
         tcad_kwargs = {key: value for key, value in tcad.items() if key not in {"db", "enabled"}}
         sensor = sensor_attach_tcad_lut(sensor, tcad["db"], **tcad_kwargs)
+        lineage.append(
+            _parameter_lineage_entry(
+                "tcad.db",
+                "tcad db",
+                tcad["db"],
+                None,
+                {"attached": True, "options": tcad_kwargs},
+                status="attached",
+            )
+        )
 
     updated.fields["sensor"] = sensor
-    return updated
+    return updated, lineage
 
 
 def _camera_parameter_name(key: Any) -> str:
@@ -224,6 +271,38 @@ def _camera_parameter_name(key: Any) -> str:
         prefix, remainder = value.split(".", 1)
         return f"{prefix} {remainder.replace('.', ' ')}"
     return value
+
+
+def _sensor_override_parameter_name(key: Any) -> str | None:
+    normalized = str(key).replace("_", " ").lower()
+    if normalized in {"noise flag", "noise"}:
+        return "noise flag"
+    if normalized in {"integration time", "integration"}:
+        return "integration time"
+    if normalized in {"exposure duration", "exposure time", "exposure time s"}:
+        return "exposure duration"
+    if normalized in {"analog gain", "gain"}:
+        return "analog gain"
+    return None
+
+
+def _parameter_lineage_entry(
+    path: str,
+    parameter: str,
+    requested: Any,
+    before: Any,
+    after: Any,
+    *,
+    status: str,
+) -> dict[str, Any]:
+    return {
+        "path": str(path),
+        "parameter": str(parameter),
+        "requested": _jsonable(requested),
+        "before": _jsonable(before),
+        "after": _jsonable(after),
+        "status": str(status),
+    }
 
 
 def _resolve_hw_config(raw: Any) -> HWIspConfig:
@@ -364,6 +443,8 @@ def _assign_axis_value(scenario: dict[str, Any], key: str, value: Any) -> None:
         if not isinstance(bucket, dict):
             bucket = {}
             scenario[parts[0]] = bucket
+        if parts[0] == "hw_isp" and parts[1] != "enabled":
+            bucket.setdefault("enabled", True)
         bucket[parts[1]] = value
         return
     scenario.setdefault("parameters", {})[key] = value
@@ -389,6 +470,20 @@ def _deep_dict(value: Mapping[str, Any]) -> dict[str, Any]:
 def _safe_get(callback: Any) -> Any:
     try:
         return callback()
+    except Exception:
+        return None
+
+
+def _safe_camera_get(camera: Camera, parameter: str) -> Any:
+    try:
+        return camera_get(camera, parameter)
+    except Exception:
+        return None
+
+
+def _safe_sensor_get(sensor: Any, parameter: str) -> Any:
+    try:
+        return sensor_get(sensor, parameter)
     except Exception:
         return None
 
