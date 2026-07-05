@@ -48,6 +48,7 @@ _NUMERIC_KEYS = {
     "region_sx_um",
     "region_sz_um",
 }
+_DEFAULT_CAMERA_DB_ROOT_ENV = "PYISETCAM_CAMERA_DB_ROOT"
 
 
 @dataclass(frozen=True)
@@ -81,6 +82,10 @@ def fdtd_sensor_default_lut_path() -> Path | None:
     env_root = os.environ.get("PYISETCAM_FDTD_ROOT")
     if env_root:
         candidates.append(Path(env_root))
+    camera_db_root = os.environ.get(_DEFAULT_CAMERA_DB_ROOT_ENV)
+    if camera_db_root:
+        candidates.append(Path(camera_db_root).expanduser() / "fdtd_tcad")
+    candidates.extend(_default_camera_db_fdtd_roots())
     candidates.append(Path("/Users/seongcheoljeong/FDTD"))
 
     relative_candidates = [
@@ -99,6 +104,14 @@ def fdtd_sensor_default_lut_path() -> Path | None:
             if path.exists():
                 return path
     return None
+
+
+def _default_camera_db_fdtd_roots() -> list[Path]:
+    repo_root = Path(__file__).resolve().parents[2]
+    return [
+        repo_root / "camerae2e_db/fdtd_tcad",
+        repo_root.parent / "CameraE2E-DB/fdtd_tcad",
+    ]
 
 
 def fdtd_sensor_config(

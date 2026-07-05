@@ -32,6 +32,10 @@ from .optimization import (
     camerae2e_optimize_camera_parameters,
 )
 from .physics_pipeline import camerae2e_physics_pipeline_plan
+from .physics_simulation import (
+    camerae2e_physics_simulation_manifest,
+    camerae2e_physics_simulation_validate,
+)
 from .system_faca import camerae2e_faca_report, camerae2e_run_scenario
 
 
@@ -63,6 +67,10 @@ def camerae2e_goal_gate(
     checks = [
         _run_check("registry_manifest", lambda: _registry_check(strict=strict)),
         _run_check("physics_pipeline", lambda: _physics_pipeline_check(strict=strict)),
+        _run_check(
+            "physics_simulation_manifest",
+            lambda: _physics_simulation_manifest_check(output_root, strict=strict),
+        ),
         _run_check("calibration_evidence_policy", _calibration_evidence_policy),
         _run_check("sensor_db_config_policy", lambda: _sensor_db_config_policy(seed=seed + 5)),
         _run_check("faca_smoke", lambda: _faca_smoke(seed=seed)),
@@ -182,6 +190,45 @@ def _physics_pipeline_check(*, strict: bool) -> dict[str, Any]:
                 }
                 for item in plan.get("refresh_order", [])
             ],
+        },
+    }
+
+
+def _physics_simulation_manifest_check(output_dir: Path, *, strict: bool) -> dict[str, Any]:
+    manifest = camerae2e_physics_simulation_manifest(output_dir=output_dir)
+    validation = camerae2e_physics_simulation_validate(manifest, strict=strict)
+    summary = dict(manifest.get("summary", {}))
+    warning_count = int(validation.get("warning_count", 0))
+    status = "pass" if validation.get("ok") and warning_count == 0 else "warn"
+    if not validation.get("ok"):
+        status = "fail"
+    return {
+        "status": status,
+        "tier": "validated" if status == "pass" else "calibration_required",
+        "summary": (
+            "FDTD/TCAD/RayOptics simulation roots, source scripts, artifacts, "
+            "CameraE2E import modules, and command graph are merged into one manifest."
+        ),
+        "evidence": {
+            "schema": manifest.get("schema_version"),
+            "reports": manifest.get("reports", {}),
+            "summary": summary,
+            "validation": {
+                "ok": validation.get("ok"),
+                "warning_count": validation.get("warning_count", 0),
+                "issue_count": validation.get("issue_count", 0),
+                "status_counts": validation.get("status_counts", {}),
+            },
+            "local_validation_command_count": len(manifest.get("local_validation_commands", [])),
+            "external_command_count": len(
+                [
+                    command
+                    for command in manifest.get("commands", [])
+                    if command.get("cost_tier") == "external_expensive"
+                ]
+            ),
+            "active_runs": manifest.get("active_runs", {}),
+            "merge_policy": manifest.get("merge_policy", {}),
         },
     }
 
@@ -691,8 +738,11 @@ def _requirement_matrix(checks: list[Mapping[str, Any]]) -> list[dict[str, Any]]
         ),
         (
             "FDTD/TCAD/RayOptics/HW ISP external pipeline",
-            ["physics_pipeline"],
-            "External asset lineage and refresh actions are generated without sign-off inflation.",
+            ["physics_pipeline", "physics_simulation_manifest"],
+            (
+                "External asset lineage, simulation roots, command graph, and refresh "
+                "actions are generated without sign-off inflation."
+            ),
         ),
         (
             "Calibration evidence and readiness promotion",

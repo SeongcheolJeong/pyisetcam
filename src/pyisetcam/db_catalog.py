@@ -33,6 +33,8 @@ from .lens_patents import (
 from .task_perception import task_model_profile_names
 from .tcad_sensor import tcad_sensor_db_load, tcad_sensor_default_paths, tcad_sensor_validate
 
+_DEFAULT_CAMERA_DB_ROOT_ENV = "PYISETCAM_CAMERA_DB_ROOT"
+
 
 @dataclass(frozen=True)
 class CameraE2EDBEntry:
@@ -436,8 +438,17 @@ def _lens_entries() -> list[CameraE2EDBEntry]:
         )
     )
 
-    rayoptics_v9_dir = (
-        Path.home() / "RayOptics" / "CameraE2E_Lens_DB_v9_20260627" / "data" / "lens_patents"
+    rayoptics_v9_dir = _first_existing_path(
+        [
+            _camera_db_root() / "lens_db/CameraE2E_Lens_DB_v9_20260627/data/lens_patents",
+            _sibling_camera_db_root()
+            / "lens_db/CameraE2E_Lens_DB_v9_20260627/data/lens_patents",
+            Path.home()
+            / "RayOptics"
+            / "CameraE2E_Lens_DB_v9_20260627"
+            / "data"
+            / "lens_patents",
+        ]
     )
     rayoptics_v9_db = rayoptics_v9_dir / "lens_patent_simulation_v9.sqlite"
     entries.append(
@@ -553,7 +564,7 @@ def _sensor_entries() -> list[CameraE2EDBEntry]:
         )
     )
 
-    root = Path(os.environ.get("PYISETCAM_FDTD_ROOT", "/Users/seongcheoljeong/FDTD")).expanduser()
+    root = Path(tcad_sensor_default_paths()["root"]).expanduser()
     sensor_catalog = root / "sensor_db" / "sensor_catalog.json"
     stack_dir = root / "sensor_db" / "generated_stack_configs"
     entries.append(
@@ -927,6 +938,25 @@ def _tcad_stale_reason(
             else "TCAD DB validation is invalid."
         )
     return None
+
+
+def _camera_db_root() -> Path:
+    explicit = os.environ.get(_DEFAULT_CAMERA_DB_ROOT_ENV)
+    if explicit:
+        return Path(explicit).expanduser()
+    return Path(__file__).resolve().parents[2] / "camerae2e_db"
+
+
+def _sibling_camera_db_root() -> Path:
+    return Path(__file__).resolve().parents[2].parent / "CameraE2E-DB"
+
+
+def _first_existing_path(candidates: list[Path]) -> Path:
+    fallback = candidates[0]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return fallback
 
 
 def _jsonable(value: Any) -> Any:

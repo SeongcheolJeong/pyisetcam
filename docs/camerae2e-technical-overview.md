@@ -563,6 +563,7 @@ PPT에서 설명한 활용 범위를 코드에서 직접 추적하기 위해 pub
 | Image-sensor DB selector | `image_sensor_db_records(...)`, `image_sensor_db_parameters(...)`, `image_sensor_db_config(...)`, `image_sensor_db_optimize_camera_parameters(...)` | sensor DB record 검색, raw path bundle 반환, DB/LUT-preferred hybrid scenario와 analytic-only fallback scenario 생성, 또는 선택된 sensor DB source를 보존한 FACA parameter optimization 실행 |
 | Calibration evidence | `camerae2e_calibration_evidence_requirements(...)`, `camerae2e_calibration_evidence_manifest(...)`, `camerae2e_calibration_evidence_validate(...)`, `camerae2e_readiness_promotion_plan(...)` | measured PSF/QE/TCAD/HW trace/model evaluation 같은 외부 evidence를 검증하고 calibrated 승격 가능 여부를 plan으로 산출 |
 | Physics pipeline plan | `camerae2e_physics_pipeline_plan(...)` | FDTD/TCAD/RayOptics/HW ISP asset의 stale/missing/proxy 상태를 refresh/calibration action list로 변환 |
+| Physics simulation bridge | `camerae2e_physics_simulation_manifest(...)`, `camerae2e_physics_simulation_validate(...)`, `camerae2e_physics_simulation_commands(...)` | `simulations/fdtd_tcad/`와 `simulations/rayoptics/`에 병합된 source/config/small fixture, active LUT/DB, CameraE2E import module, command graph, lineage gate를 하나의 JSON/HTML manifest로 추적 |
 | Goal evidence gate | `camerae2e_goal_gate(...)` | registry, physics lineage, FACA, optimization, optimization-to-physics escalation, RAW factory, ADAS/KITTI demo, camera-spec variant, strict sign-off guard를 한 번에 pass/warn/fail evidence로 기록 |
 | PPT gap audit | `camerae2e_ppt_gap_audit(...)` | image-only technical overview PPT의 visible claim ledger를 현재 구현 evidence와 대조해 `implemented`/`partial`/`proxy`/`missing`/`blocked_external_evidence`로 분류하고 JSON/HTML gap report를 생성 |
 | System FACA | `camerae2e_run_scenario(...)`, `camerae2e_run_sweep(...)`, `camerae2e_faca_report(...)` | Field / Angle / Color / Artifact / Control 관점의 E2E scenario와 sweep 결과 수집 |
@@ -593,6 +594,22 @@ python tools/render_camerae2e_asset_registry_report.py
 
 ```bash
 python tools/validate_camerae2e_physics_pipeline.py
+python tools/render_camerae2e_physics_simulation_manifest.py
+```
+
+FDTD/TCAD and RayOptics source/config/small fixtures are merged into this
+repository under `simulations/`. Lens/Sensor DB artifacts are split as
+final-result-only runtime inputs under `camerae2e_db/` and the standalone
+`/Users/seongcheoljeong/Documents/CameraE2E-DB` repository. Generated full
+`runs/`, virtual environments, `node_modules`, zip bundles, screenshots, and
+build outputs are intentionally excluded from the simulation source tree. They
+should be regenerated or stored as external artifacts, not hidden inside Git
+history. Refresh the monorepo source copy and DB package with:
+
+```bash
+python3 tools/import_camerae2e_simulation_workspaces.py
+python3 tools/package_camerae2e_db_repository.py --target ../CameraE2E-DB --clean
+python3 tools/package_camerae2e_db_repository.py --target camerae2e_db --clean
 ```
 
 전체 research-platform evidence gate는 다음 명령으로 실행한다.

@@ -16,6 +16,8 @@ from typing import Any
 from .fdtd_sensor import fdtd_sensor_default_lut_path
 from .tcad_sensor import tcad_sensor_default_paths
 
+_DEFAULT_CAMERA_DB_ROOT_ENV = "PYISETCAM_CAMERA_DB_ROOT"
+
 
 def image_sensor_db_root(root: str | Path | None = None) -> Path:
     """Return the active image-sensor DB root directory."""
@@ -25,10 +27,24 @@ def image_sensor_db_root(root: str | Path | None = None) -> Path:
     explicit = os.environ.get("PYISETCAM_IMAGE_SENSOR_DB_ROOT")
     if explicit:
         return Path(explicit).expanduser()
+    camera_db_root = os.environ.get(_DEFAULT_CAMERA_DB_ROOT_ENV)
+    if camera_db_root:
+        return Path(camera_db_root).expanduser() / "fdtd_tcad/sensor_db"
+    for candidate in _default_camera_db_sensor_roots():
+        if candidate.exists():
+            return candidate
     fdtd_root = Path(
         os.environ.get("PYISETCAM_FDTD_ROOT", "/Users/seongcheoljeong/FDTD")
     ).expanduser()
     return fdtd_root / "sensor_db"
+
+
+def _default_camera_db_sensor_roots() -> list[Path]:
+    repo_root = Path(__file__).resolve().parents[2]
+    return [
+        repo_root / "camerae2e_db/fdtd_tcad/sensor_db",
+        repo_root.parent / "CameraE2E-DB/fdtd_tcad/sensor_db",
+    ]
 
 
 def image_sensor_db_catalog_path(root: str | Path | None = None) -> Path:

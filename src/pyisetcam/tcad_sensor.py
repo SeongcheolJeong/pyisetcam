@@ -20,6 +20,7 @@ from .fdtd_sensor import FDTDSensorLUT, fdtd_sensor_config
 
 
 _DEFAULT_FDTD_ROOT = Path("/Users/seongcheoljeong/FDTD")
+_DEFAULT_CAMERA_DB_ROOT_ENV = "PYISETCAM_CAMERA_DB_ROOT"
 _DEFAULT_GENERATION_MAP = Path("runs/fdtd_to_tcad_generation_2d_cra_smoke/tcad_generation_map_2d.npz")
 _DEFAULT_COLLECTION_SUMMARIES = (
     Path("runs/devsim_split_pd_2d_fdtd_map_proxy_center_smoke/summary.json"),
@@ -103,7 +104,24 @@ class TCADSensorDB:
 def tcad_sensor_default_root() -> Path:
     """Return the configured external FDTD/TCAD workspace root."""
 
-    return Path(os.environ.get("PYISETCAM_FDTD_ROOT", _DEFAULT_FDTD_ROOT)).expanduser()
+    explicit_fdtd = os.environ.get("PYISETCAM_FDTD_ROOT")
+    if explicit_fdtd:
+        return Path(explicit_fdtd).expanduser()
+    camera_db_root = os.environ.get(_DEFAULT_CAMERA_DB_ROOT_ENV)
+    if camera_db_root:
+        return Path(camera_db_root).expanduser() / "fdtd_tcad"
+    for candidate in _default_camera_db_fdtd_roots():
+        if candidate.exists():
+            return candidate
+    return _DEFAULT_FDTD_ROOT.expanduser()
+
+
+def _default_camera_db_fdtd_roots() -> list[Path]:
+    repo_root = Path(__file__).resolve().parents[2]
+    return [
+        repo_root / "camerae2e_db/fdtd_tcad",
+        repo_root.parent / "CameraE2E-DB/fdtd_tcad",
+    ]
 
 
 def tcad_sensor_default_paths(root: str | Path | None = None) -> dict[str, Any]:

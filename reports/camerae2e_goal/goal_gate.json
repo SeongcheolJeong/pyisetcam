@@ -24,18 +24,18 @@
     {
       "evidence": {
         "active_runs": {
-          "fdtd_lut_path": "/Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant/camera_lut.json",
-          "fdtd_lut_run": "/Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant",
+          "fdtd_lut_path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/convergence_cra3_rgb_r84_gridsnap_quant/camera_lut.json",
+          "fdtd_lut_run": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/convergence_cra3_rgb_r84_gridsnap_quant",
           "lineage_match": false,
-          "tcad_generation_map_path": "/Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke/tcad_generation_map_2d.npz",
-          "tcad_generation_map_run": "/Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke"
+          "tcad_generation_map_path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/fdtd_to_tcad_generation_2d_cra_smoke/tcad_generation_map_2d.npz",
+          "tcad_generation_map_run": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/fdtd_to_tcad_generation_2d_cra_smoke"
         },
         "ok": true,
         "refresh_order": [
           {
             "action": "refresh_downstream_from_current_dependency",
             "entry": "tcad_sensor_db_active",
-            "reason": "TCAD/FDTD active artifact mismatch: active FDTD LUT is under /Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant, but TCAD generation map is under /Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke",
+            "reason": "TCAD/FDTD active artifact mismatch: active FDTD LUT is under /Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/convergence_cra3_rgb_r84_gridsnap_quant, but TCAD generation map is under /Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/fdtd_to_tcad_generation_2d_cra_smoke",
             "severity": "warning"
           }
         ],
@@ -101,6 +101,62 @@
       "name": "physics_pipeline",
       "status": "warn",
       "summary": "External FDTD/TCAD/RayOptics/HW ISP lineage plan is generated.",
+      "tier": "calibration_required"
+    },
+    {
+      "evidence": {
+        "active_runs": {
+          "fdtd_lut_path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/convergence_cra3_rgb_r84_gridsnap_quant/camera_lut.json",
+          "fdtd_lut_run": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/convergence_cra3_rgb_r84_gridsnap_quant",
+          "lineage_match": false,
+          "manifest_fdtd_lut_path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/fixtures/fdtd_active_lut/camera_lut.json",
+          "manifest_lineage_match": false,
+          "manifest_tcad_generation_map_path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/fixtures/tcad_generation_map/tcad_generation_map_2d.npz",
+          "tcad_generation_map_path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/fdtd_to_tcad_generation_2d_cra_smoke/tcad_generation_map_2d.npz",
+          "tcad_generation_map_run": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/fdtd_to_tcad_generation_2d_cra_smoke"
+        },
+        "external_command_count": 5,
+        "local_validation_command_count": 8,
+        "merge_policy": {
+          "camerae2e_boundary": "CameraE2E owns manifest, import adapters, lineage gates, and reports; external workspaces own expensive solver generation.",
+          "final_db_repository": "Lens and sensor DB artifacts are packaged as final-result-only runtime inputs under camerae2e_db or a sibling CameraE2E-DB repo.",
+          "large_external_assets": "reference_by_path_and_hash_do_not_vendor",
+          "solver_execution": "external_batch_commands_not_unit_tests",
+          "truth_boundary": "FDTD/TCAD/RayOptics simulation artifacts are research inputs until measured calibration and strict lineage gates are attached."
+        },
+        "reports": {
+          "html": "/Users/seongcheoljeong/Documents/CameraE2E/reports/camerae2e_goal/physics_simulation_manifest.html",
+          "json": "/Users/seongcheoljeong/Documents/CameraE2E/reports/camerae2e_goal/physics_simulation_manifest.json"
+        },
+        "schema": "camerae2e_physics_simulation_manifest_v1",
+        "summary": {
+          "issue_count": 0,
+          "readiness_tiers": {
+            "calibration_required": 2,
+            "proxy": 3,
+            "validated": 1
+          },
+          "stage_count": 6,
+          "status_counts": {
+            "available": 5,
+            "stale_dependency": 1
+          },
+          "strict_ok": false,
+          "warning_count": 1
+        },
+        "validation": {
+          "issue_count": 0,
+          "ok": true,
+          "status_counts": {
+            "available": 5,
+            "stale_dependency": 1
+          },
+          "warning_count": 1
+        }
+      },
+      "name": "physics_simulation_manifest",
+      "status": "warn",
+      "summary": "FDTD/TCAD/RayOptics simulation roots, source scripts, artifacts, CameraE2E import modules, and command graph are merged into one manifest.",
       "tier": "calibration_required"
     },
     {
@@ -1245,7 +1301,7 @@
           {
             "entry": "tcad_sensor_db_active",
             "kind": "stale_dependency",
-            "message": "TCAD/FDTD active artifact mismatch: active FDTD LUT is under /Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant, but TCAD generation map is under /Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke"
+            "message": "TCAD/FDTD active artifact mismatch: active FDTD LUT is under /Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/convergence_cra3_rgb_r84_gridsnap_quant, but TCAD generation map is under /Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/fdtd_to_tcad_generation_2d_cra_smoke"
           },
           {
             "entry": "tcad_sensor_db_active",
@@ -1274,7 +1330,7 @@
       "tier": "calibration_required"
     }
   ],
-  "generated_at": "2026-07-05T07:54:26.409138+00:00",
+  "generated_at": "2026-07-05T08:50:55.901277+00:00",
   "goal": "Research-grade E2E optimization platform plus RAW data factory for perception training.",
   "ok": true,
   "output_dir": "/Users/seongcheoljeong/Documents/CameraE2E/reports/camerae2e_goal",
@@ -1293,9 +1349,10 @@
     },
     {
       "checks": [
-        "physics_pipeline"
+        "physics_pipeline",
+        "physics_simulation_manifest"
       ],
-      "evidence_summary": "External asset lineage and refresh actions are generated without sign-off inflation.",
+      "evidence_summary": "External asset lineage, simulation roots, command graph, and refresh actions are generated without sign-off inflation.",
       "requirement": "FDTD/TCAD/RayOptics/HW ISP external pipeline",
       "status": "warn"
     },
@@ -1375,12 +1432,12 @@
   "schema_version": "camerae2e_goal_gate_v1",
   "strict": false,
   "summary": {
-    "check_count": 11,
+    "check_count": 12,
     "include_demos": true,
     "seed": 2026,
     "status_counts": {
       "pass": 9,
-      "warn": 2
+      "warn": 3
     }
   }
 }

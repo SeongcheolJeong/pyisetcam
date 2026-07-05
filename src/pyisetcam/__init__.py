@@ -148,6 +148,11 @@ from .optimization import (
 )
 from .goal_pipeline import camerae2e_goal_gate
 from .physics_pipeline import camerae2e_physics_pipeline_plan
+from .physics_simulation import (
+    camerae2e_physics_simulation_commands,
+    camerae2e_physics_simulation_manifest,
+    camerae2e_physics_simulation_validate,
+)
 from .ppt_gap_audit import camerae2e_ppt_gap_audit
 from .fdtd_sensor import (
     FDTDSensorLUT,
@@ -1120,6 +1125,9 @@ __all__ = [
     "camerae2e_parameter_space_catalog",
     "camerae2e_parameter_space_validate",
     "camerae2e_physics_pipeline_plan",
+    "camerae2e_physics_simulation_commands",
+    "camerae2e_physics_simulation_manifest",
+    "camerae2e_physics_simulation_validate",
     "camerae2e_ppt_gap_audit",
     "camerae2e_readiness_promotion_plan",
     "camerae2e_run_scenario",
@@ -1154,6 +1162,9 @@ __all__ = [
     "cameraE2EParameterSpaceCatalog",
     "cameraE2EParameterSpaceValidate",
     "cameraE2EPhysicsPipelinePlan",
+    "cameraE2EPhysicsSimulationCommands",
+    "cameraE2EPhysicsSimulationManifest",
+    "cameraE2EPhysicsSimulationValidate",
     "cameraE2EPPTGapAudit",
     "cameraE2EReadinessPromotionPlan",
     "cameraE2ERunScenario",
@@ -3852,6 +3863,9 @@ cameraE2EParameterSpaceCatalog = camerae2e_parameter_space_catalog
 cameraE2EOptimizationConfigCatalog = camerae2e_optimization_config_catalog
 cameraE2EParameterSpaceValidate = camerae2e_parameter_space_validate
 cameraE2EPhysicsPipelinePlan = camerae2e_physics_pipeline_plan
+cameraE2EPhysicsSimulationCommands = camerae2e_physics_simulation_commands
+cameraE2EPhysicsSimulationManifest = camerae2e_physics_simulation_manifest
+cameraE2EPhysicsSimulationValidate = camerae2e_physics_simulation_validate
 cameraE2EPPTGapAudit = camerae2e_ppt_gap_audit
 cameraE2ECalibrationEvidenceRequirements = camerae2e_calibration_evidence_requirements
 cameraE2ECalibrationEvidenceManifest = camerae2e_calibration_evidence_manifest

@@ -11,13 +11,13 @@
       ],
       "family": "sensor",
       "inputs": {
-        "catalog_path": "/Users/seongcheoljeong/FDTD/sensor_db/sensor_catalog.json"
+        "catalog_path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/sensor_db/sensor_catalog.json"
       },
       "kind": "proxy_truth_boundary",
       "outputs": {
-        "path": "/Users/seongcheoljeong/FDTD/sensor_db/sensor_catalog.json"
+        "path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/sensor_db/sensor_catalog.json"
       },
-      "path": "/Users/seongcheoljeong/FDTD/sensor_db/sensor_catalog.json",
+      "path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/sensor_db/sensor_catalog.json",
       "readiness_tier": "proxy",
       "reason": "Research sweeps may use this asset, but calibrated/sign-off claims are blocked.",
       "refresh_command": "python tools/render_sensor_db_overview.py",
@@ -52,13 +52,13 @@
       ],
       "family": "sensor",
       "inputs": {
-        "lut_path": "/Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant/camera_lut.json"
+        "lut_path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/convergence_cra3_rgb_r84_gridsnap_quant/camera_lut.json"
       },
       "kind": "proxy_truth_boundary",
       "outputs": {
-        "lut_path": "/Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant/camera_lut.json"
+        "lut_path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/convergence_cra3_rgb_r84_gridsnap_quant/camera_lut.json"
       },
-      "path": "/Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant/camera_lut.json",
+      "path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/convergence_cra3_rgb_r84_gridsnap_quant/camera_lut.json",
       "readiness_tier": "proxy",
       "reason": "Research sweeps may use this asset, but calibrated/sign-off claims are blocked.",
       "refresh_command": "python tools/render_fdtd_sensor_physics_report.py",
@@ -94,39 +94,39 @@
       ],
       "family": "sensor",
       "inputs": {
-        "accuracy_gate_path": "/Users/seongcheoljeong/FDTD/runs/tcad_accuracy_gate_reference_profile/tcad_accuracy_gate.json",
+        "accuracy_gate_path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/tcad_accuracy_gate_reference_profile/tcad_accuracy_gate.json",
         "collection_summary_paths": [
-          "/Users/seongcheoljeong/FDTD/runs/devsim_split_pd_2d_fdtd_map_proxy_center_smoke/summary.json",
-          "/Users/seongcheoljeong/FDTD/runs/devsim_split_pd_2d_fdtd_map_proxy_edge20x_smoke/summary.json"
+          "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/devsim_split_pd_2d_fdtd_map_proxy_center_smoke/summary.json",
+          "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/devsim_split_pd_2d_fdtd_map_proxy_edge20x_smoke/summary.json"
         ],
-        "generation_map_path": "/Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke/tcad_generation_map_2d.npz"
+        "generation_map_path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/fdtd_to_tcad_generation_2d_cra_smoke/tcad_generation_map_2d.npz"
       },
       "kind": "stale_dependency",
       "outputs": {
-        "accuracy_gate_path": "/Users/seongcheoljeong/FDTD/runs/tcad_accuracy_gate_reference_profile/tcad_accuracy_gate.json",
+        "accuracy_gate_path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/tcad_accuracy_gate_reference_profile/tcad_accuracy_gate.json",
         "collection_summary_paths": [
-          "/Users/seongcheoljeong/FDTD/runs/devsim_split_pd_2d_fdtd_map_proxy_center_smoke/summary.json",
-          "/Users/seongcheoljeong/FDTD/runs/devsim_split_pd_2d_fdtd_map_proxy_edge20x_smoke/summary.json"
+          "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/devsim_split_pd_2d_fdtd_map_proxy_center_smoke/summary.json",
+          "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/devsim_split_pd_2d_fdtd_map_proxy_edge20x_smoke/summary.json"
         ],
-        "generation_map_path": "/Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke/tcad_generation_map_2d.npz"
+        "generation_map_path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/fdtd_to_tcad_generation_2d_cra_smoke/tcad_generation_map_2d.npz"
       },
-      "path": "/Users/seongcheoljeong/FDTD",
+      "path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad",
       "readiness_tier": "calibration_required",
-      "reason": "TCAD/FDTD active artifact mismatch: active FDTD LUT is under /Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant, but TCAD generation map is under /Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke",
+      "reason": "TCAD/FDTD active artifact mismatch: active FDTD LUT is under /Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/convergence_cra3_rgb_r84_gridsnap_quant, but TCAD generation map is under /Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/fdtd_to_tcad_generation_2d_cra_smoke",
       "refresh_command": "python tools/render_fdtd_tcad_sensor_report.py",
       "remediation": [
         {
           "command": "python tools/render_fdtd_tcad_sensor_report.py",
-          "current_generation_map_parent": "/Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke",
-          "expected_output_parent": "/Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant",
-          "input": "/Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant/camera_lut.json",
+          "current_generation_map_parent": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/fdtd_to_tcad_generation_2d_cra_smoke",
+          "expected_output_parent": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/convergence_cra3_rgb_r84_gridsnap_quant",
+          "input": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/convergence_cra3_rgb_r84_gridsnap_quant/camera_lut.json",
           "step": "Regenerate FDTD-to-TCAD generation map from the active FDTD LUT run."
         },
         {
           "dependency": "fdtd_sensor_lut_active",
           "inputs": [
-            "/Users/seongcheoljeong/FDTD/runs/devsim_split_pd_2d_fdtd_map_proxy_center_smoke/summary.json",
-            "/Users/seongcheoljeong/FDTD/runs/devsim_split_pd_2d_fdtd_map_proxy_edge20x_smoke/summary.json"
+            "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/devsim_split_pd_2d_fdtd_map_proxy_center_smoke/summary.json",
+            "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/devsim_split_pd_2d_fdtd_map_proxy_edge20x_smoke/summary.json"
           ],
           "step": "Regenerate or re-point DEVSIM summaries to that generation map."
         },
@@ -159,16 +159,16 @@
       ],
       "family": "lens",
       "inputs": {
-        "db_path": "/Users/seongcheoljeong/RayOptics/CameraE2E_Lens_DB_v9_20260627/data/lens_patents/lens_patent_simulation_v9.sqlite",
-        "psf_dir": "/Users/seongcheoljeong/RayOptics/CameraE2E_Lens_DB_v9_20260627/data/lens_patents/raytrace_psf"
+        "db_path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/lens_db/CameraE2E_Lens_DB_v9_20260627/data/lens_patents/lens_patent_simulation_v9.sqlite",
+        "psf_dir": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/lens_db/CameraE2E_Lens_DB_v9_20260627/data/lens_patents/raytrace_psf"
       },
       "kind": "proxy_truth_boundary",
       "outputs": {
-        "db_path": "/Users/seongcheoljeong/RayOptics/CameraE2E_Lens_DB_v9_20260627/data/lens_patents/lens_patent_simulation_v9.sqlite",
-        "highres_psf_dir": "/Users/seongcheoljeong/RayOptics/CameraE2E_Lens_DB_v9_20260627/data/lens_patents/raytrace_psf_highres",
-        "psf_dir": "/Users/seongcheoljeong/RayOptics/CameraE2E_Lens_DB_v9_20260627/data/lens_patents/raytrace_psf"
+        "db_path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/lens_db/CameraE2E_Lens_DB_v9_20260627/data/lens_patents/lens_patent_simulation_v9.sqlite",
+        "highres_psf_dir": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/lens_db/CameraE2E_Lens_DB_v9_20260627/data/lens_patents/raytrace_psf_highres",
+        "psf_dir": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/lens_db/CameraE2E_Lens_DB_v9_20260627/data/lens_patents/raytrace_psf"
       },
-      "path": "/Users/seongcheoljeong/RayOptics/CameraE2E_Lens_DB_v9_20260627/data/lens_patents/lens_patent_simulation_v9.sqlite",
+      "path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/lens_db/CameraE2E_Lens_DB_v9_20260627/data/lens_patents/lens_patent_simulation_v9.sqlite",
       "readiness_tier": "proxy",
       "reason": "Research sweeps may use this asset, but calibrated/sign-off claims are blocked.",
       "refresh_command": "python tools/render_lens_db_camerae2e_report.py",
@@ -384,14 +384,14 @@
       ],
       "family": "lens",
       "inputs": {
-        "db_path": "/Users/seongcheoljeong/RayOptics/CameraE2E_Lens_DB_v9_20260627/data/lens_patents/lens_patent_simulation_v9.sqlite",
-        "psf_dir": "/Users/seongcheoljeong/RayOptics/CameraE2E_Lens_DB_v9_20260627/data/lens_patents/raytrace_psf"
+        "db_path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/lens_db/CameraE2E_Lens_DB_v9_20260627/data/lens_patents/lens_patent_simulation_v9.sqlite",
+        "psf_dir": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/lens_db/CameraE2E_Lens_DB_v9_20260627/data/lens_patents/raytrace_psf"
       },
       "kind": "proxy_truth_boundary",
       "outputs": {
-        "path": "/Users/seongcheoljeong/RayOptics/CameraE2E_Lens_DB_v9_20260627/data/lens_patents/lens_patent_simulation_v9.sqlite"
+        "path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/lens_db/CameraE2E_Lens_DB_v9_20260627/data/lens_patents/lens_patent_simulation_v9.sqlite"
       },
-      "path": "/Users/seongcheoljeong/RayOptics/CameraE2E_Lens_DB_v9_20260627/data/lens_patents/lens_patent_simulation_v9.sqlite",
+      "path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/lens_db/CameraE2E_Lens_DB_v9_20260627/data/lens_patents/lens_patent_simulation_v9.sqlite",
       "readiness_tier": "proxy",
       "reason": "Research sweeps may use this asset, but calibrated/sign-off claims are blocked.",
       "refresh_command": "python tools/render_lens_db_camerae2e_report.py",
@@ -414,11 +414,11 @@
     }
   ],
   "active_runs": {
-    "fdtd_lut_path": "/Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant/camera_lut.json",
-    "fdtd_lut_run": "/Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant",
+    "fdtd_lut_path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/convergence_cra3_rgb_r84_gridsnap_quant/camera_lut.json",
+    "fdtd_lut_run": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/convergence_cra3_rgb_r84_gridsnap_quant",
     "lineage_match": false,
-    "tcad_generation_map_path": "/Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke/tcad_generation_map_2d.npz",
-    "tcad_generation_map_run": "/Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke"
+    "tcad_generation_map_path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/fdtd_to_tcad_generation_2d_cra_smoke/tcad_generation_map_2d.npz",
+    "tcad_generation_map_run": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/fdtd_to_tcad_generation_2d_cra_smoke"
   },
   "manifest_validation": {
     "issue_count": 0,
@@ -442,39 +442,39 @@
       ],
       "family": "sensor",
       "inputs": {
-        "accuracy_gate_path": "/Users/seongcheoljeong/FDTD/runs/tcad_accuracy_gate_reference_profile/tcad_accuracy_gate.json",
+        "accuracy_gate_path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/tcad_accuracy_gate_reference_profile/tcad_accuracy_gate.json",
         "collection_summary_paths": [
-          "/Users/seongcheoljeong/FDTD/runs/devsim_split_pd_2d_fdtd_map_proxy_center_smoke/summary.json",
-          "/Users/seongcheoljeong/FDTD/runs/devsim_split_pd_2d_fdtd_map_proxy_edge20x_smoke/summary.json"
+          "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/devsim_split_pd_2d_fdtd_map_proxy_center_smoke/summary.json",
+          "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/devsim_split_pd_2d_fdtd_map_proxy_edge20x_smoke/summary.json"
         ],
-        "generation_map_path": "/Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke/tcad_generation_map_2d.npz"
+        "generation_map_path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/fdtd_to_tcad_generation_2d_cra_smoke/tcad_generation_map_2d.npz"
       },
       "kind": "stale_dependency",
       "outputs": {
-        "accuracy_gate_path": "/Users/seongcheoljeong/FDTD/runs/tcad_accuracy_gate_reference_profile/tcad_accuracy_gate.json",
+        "accuracy_gate_path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/tcad_accuracy_gate_reference_profile/tcad_accuracy_gate.json",
         "collection_summary_paths": [
-          "/Users/seongcheoljeong/FDTD/runs/devsim_split_pd_2d_fdtd_map_proxy_center_smoke/summary.json",
-          "/Users/seongcheoljeong/FDTD/runs/devsim_split_pd_2d_fdtd_map_proxy_edge20x_smoke/summary.json"
+          "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/devsim_split_pd_2d_fdtd_map_proxy_center_smoke/summary.json",
+          "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/devsim_split_pd_2d_fdtd_map_proxy_edge20x_smoke/summary.json"
         ],
-        "generation_map_path": "/Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke/tcad_generation_map_2d.npz"
+        "generation_map_path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/fdtd_to_tcad_generation_2d_cra_smoke/tcad_generation_map_2d.npz"
       },
-      "path": "/Users/seongcheoljeong/FDTD",
+      "path": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad",
       "readiness_tier": "calibration_required",
-      "reason": "TCAD/FDTD active artifact mismatch: active FDTD LUT is under /Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant, but TCAD generation map is under /Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke",
+      "reason": "TCAD/FDTD active artifact mismatch: active FDTD LUT is under /Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/convergence_cra3_rgb_r84_gridsnap_quant, but TCAD generation map is under /Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/fdtd_to_tcad_generation_2d_cra_smoke",
       "refresh_command": "python tools/render_fdtd_tcad_sensor_report.py",
       "remediation": [
         {
           "command": "python tools/render_fdtd_tcad_sensor_report.py",
-          "current_generation_map_parent": "/Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke",
-          "expected_output_parent": "/Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant",
-          "input": "/Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant/camera_lut.json",
+          "current_generation_map_parent": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/fdtd_to_tcad_generation_2d_cra_smoke",
+          "expected_output_parent": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/convergence_cra3_rgb_r84_gridsnap_quant",
+          "input": "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/convergence_cra3_rgb_r84_gridsnap_quant/camera_lut.json",
           "step": "Regenerate FDTD-to-TCAD generation map from the active FDTD LUT run."
         },
         {
           "dependency": "fdtd_sensor_lut_active",
           "inputs": [
-            "/Users/seongcheoljeong/FDTD/runs/devsim_split_pd_2d_fdtd_map_proxy_center_smoke/summary.json",
-            "/Users/seongcheoljeong/FDTD/runs/devsim_split_pd_2d_fdtd_map_proxy_edge20x_smoke/summary.json"
+            "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/devsim_split_pd_2d_fdtd_map_proxy_center_smoke/summary.json",
+            "/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/devsim_split_pd_2d_fdtd_map_proxy_edge20x_smoke/summary.json"
           ],
           "step": "Regenerate or re-point DEVSIM summaries to that generation map."
         },

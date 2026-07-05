@@ -29,8 +29,8 @@
 | Optimization | `validated` | dot-path camera parameter grid/random/Latin-hypercube/evolutionary/surrogate/GP expected-improvement search, pixel geometry/CFA preset/Quad Bayer/readout/noise/optics-PSF/analytic OCL/FDTD-OCL configure catalog, preset parameter-space catalog, FACA objective scoring, hard constraints, Pareto front, selected scenarios, parameter-lineage evidence | hardware-in-loop calibration |
 | Perception | `available` | task adapters, detection/segmentation/classification/pose/tracking metrics, robustness sweep | training loop, dataset-specific model calibration |
 | RAW data factory | `validated` | manifest, metadata JSONL, deterministic RAW NPZ, split policy, checksum, labels JSON, optional per-stage NPZ, optional uncertainty/confidence NPZ, optional DNG-like ZIP container, validation, RAW-aware perception index, YOLO view export, ADAS/KITTI YOLO demo export, proxy camera-spec variant re-capture | standards-compliant DNG writer, automatic label synthesis, calibrated uncertainty posterior |
-| DB/LUT registry | `validated` / `calibration_required` | manifest, readiness tier, provenance, dependency lineage, stale detection, calibration evidence manifest, readiness promotion plan | actual measured evidence attachment and calibrated promotion |
-| External pipeline | `calibration_required` | FDTD, TCAD, RayOptics, HW ISP assets discoverable in one registry | refresh orchestration and calibrated end-to-end asset generation |
+| DB/LUT registry | `validated` / `calibration_required` | manifest, readiness tier, provenance, dependency lineage, stale detection, calibration evidence manifest, readiness promotion plan, final-result-only Lens/Sensor DB package in `camerae2e_db/` and standalone `CameraE2E-DB` repo | actual measured evidence attachment and calibrated promotion |
+| External pipeline | `calibration_required` | FDTD, TCAD, RayOptics source/config/small fixtures are merged under `simulations/`; runtime DB artifacts are split under `camerae2e_db/`/`CameraE2E-DB`; active assets are discoverable in one registry and simulation manifest | regenerated run lineage closure and calibrated end-to-end asset generation |
 
 ## Implemented API Surface
 
@@ -40,6 +40,9 @@ DB/LUT registry:
 - `camerae2e_db_validate(strict=False)`
 - `camerae2e_db_lineage(name)`
 - `camerae2e_physics_pipeline_plan(strict=False)`
+- `camerae2e_physics_simulation_manifest(...)`
+- `camerae2e_physics_simulation_validate(...)`
+- `camerae2e_physics_simulation_commands(...)`
 - `camerae2e_goal_gate(...)`
 - `camerae2e_calibration_evidence_requirements(...)`
 - `camerae2e_calibration_evidence_manifest(...)`
@@ -77,6 +80,15 @@ python tools/validate_camerae2e_calibration_evidence.py path/to/manifest.json
 Default output:
 
 - `reports/camerae2e_goal/calibration_evidence_validation.json`
+
+Final Lens/Sensor DB repository:
+
+- `camerae2e_db/` is the small in-repository mirror.
+- `/Users/seongcheoljeong/Documents/CameraE2E-DB` is the standalone DB repo.
+- `tools/package_camerae2e_db_repository.py` regenerates both from the curated
+  final artifacts.
+- Runtime discovery accepts `PYISETCAM_CAMERA_DB_ROOT`; older scripts can set
+  `PYISETCAM_LENS_DB_ROOT` and `PYISETCAM_FDTD_ROOT` explicitly.
 
 System FACA:
 
@@ -245,7 +257,22 @@ or measured RAW.
 
 ## External Pipeline Policy
 
-FDTD and TCAD artifacts must be checked as a connected lineage, not as isolated files. If the active FDTD LUT is from one run and the TCAD generation map is from another, the registry marks the TCAD entry with `stale_dependency`. This does not block research runs by default, but it blocks strict validation.
+FDTD/TCAD and RayOptics simulation source is now monorepo-visible under
+`simulations/fdtd_tcad/` and `simulations/rayoptics/`. The import policy keeps
+source, configs, sensor/lens DB fixtures, and small canonical loader fixtures in
+Git, while excluding `runs/`, virtual environments, `node_modules`, zip bundles,
+and generated web/build artifacts. Refresh the monorepo copy with:
+
+```bash
+python tools/import_camerae2e_simulation_workspaces.py
+python tools/render_camerae2e_physics_simulation_manifest.py
+```
+
+FDTD and TCAD artifacts must still be checked as a connected lineage, not as
+isolated files. If the active FDTD LUT is from one run and the TCAD generation
+map is from another, the registry and simulation manifest mark the TCAD bridge
+with `stale_dependency`. This does not block research runs by default, but it
+blocks strict validation.
 
 RayOptics PSF assets are kept at `proxy` tier because they are geometric ray histograms. Diffraction and wavefront analysis remain separate CameraE2E optics paths and should be compared explicitly when a design decision depends on diffraction.
 
@@ -300,3 +327,5 @@ The validation payload includes a `plan` section with refresh/calibration
 actions, and the registry report command also writes:
 
 - `reports/camerae2e_goal/physics_pipeline_plan.json`
+- `reports/camerae2e_goal/physics_simulation_manifest.json`
+- `reports/camerae2e_goal/physics_simulation_manifest.html`

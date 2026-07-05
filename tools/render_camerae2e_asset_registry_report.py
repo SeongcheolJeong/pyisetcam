@@ -14,6 +14,7 @@ from pyisetcam import (
     camerae2e_db_manifest,
     camerae2e_db_validate,
     camerae2e_physics_pipeline_plan,
+    camerae2e_physics_simulation_manifest,
 )
 
 
@@ -30,6 +31,7 @@ def render_report(output_dir: Path) -> dict[str, Path]:
     manifest = camerae2e_db_manifest()
     validation = camerae2e_db_validate()
     physics_plan = camerae2e_physics_pipeline_plan()
+    physics_simulation = camerae2e_physics_simulation_manifest()
     readiness = {
         "schema_version": "camerae2e_goal_readiness_v1",
         "generated_at": datetime.now(UTC).isoformat(),
@@ -46,12 +48,15 @@ def render_report(output_dir: Path) -> dict[str, Path]:
         "asset_manifest": manifest,
         "validation": validation,
         "physics_pipeline_plan": physics_plan,
+        "physics_simulation_manifest": physics_simulation,
     }
     readiness_json = output_dir / "readiness.json"
     readiness_html = output_dir / "readiness.html"
     registry_json = output_dir / "asset_registry.json"
     registry_html = output_dir / "asset_registry.html"
     physics_plan_json = output_dir / "physics_pipeline_plan.json"
+    physics_simulation_json = output_dir / "physics_simulation_manifest.json"
+    physics_simulation_html = output_dir / "physics_simulation_manifest.html"
     readiness_json.write_text(
         json.dumps(_jsonable(readiness), indent=2, sort_keys=True), encoding="utf-8"
     )
@@ -61,6 +66,13 @@ def render_report(output_dir: Path) -> dict[str, Path]:
     physics_plan_json.write_text(
         json.dumps(_jsonable(physics_plan), indent=2, sort_keys=True), encoding="utf-8"
     )
+    physics_simulation_json.write_text(
+        json.dumps(_jsonable(physics_simulation), indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    physics_simulation_html.write_text(
+        _render_physics_simulation_html(physics_simulation), encoding="utf-8"
+    )
     readiness_html.write_text(_render_readiness_html(readiness), encoding="utf-8")
     registry_html.write_text(_render_registry_html(manifest, validation), encoding="utf-8")
     return {
@@ -69,6 +81,8 @@ def render_report(output_dir: Path) -> dict[str, Path]:
         "asset_registry_json": registry_json,
         "asset_registry_html": registry_html,
         "physics_pipeline_plan_json": physics_plan_json,
+        "physics_simulation_json": physics_simulation_json,
+        "physics_simulation_html": physics_simulation_html,
     }
 
 
@@ -164,8 +178,8 @@ def _capability_matrix(
                 "validation."
             ),
             "remaining": (
-                "True Gaussian-process Bayesian search, true multi-factor readout/remosaic "
-                "binning, OCL process-stack calibration, and closed-loop hardware calibration."
+                "True multi-factor readout/remosaic binning, OCL process-stack "
+                "calibration, and closed-loop hardware calibration."
             ),
         },
         {
@@ -209,14 +223,15 @@ def _capability_matrix(
             "area": "External Pipeline",
             "tier": "calibration_required" if has_stale else "proxy",
             "implemented": (
-                "FDTD, TCAD, RayOptics, HW ISP assets are discoverable "
-                "from one registry, with a goal-level evidence gate for "
-                "registry, physics lineage, FACA, optimization, RAW export, "
-                "ADAS/KITTI demo, camera-spec variants, and sign-off guard."
+                "FDTD/TCAD and RayOptics source/config/small fixtures are merged "
+                "under simulations/, active assets are discoverable from one "
+                "registry, and the goal-level evidence gate covers registry, "
+                "physics lineage, simulation manifest, FACA, optimization, RAW "
+                "export, ADAS/KITTI demo, camera-spec variants, and sign-off guard."
             ),
             "remaining": (
-                "External FDTD/TCAD artifact regeneration orchestration and "
-                "product-calibrated data generation."
+                "External generated-run lineage closure and product-calibrated "
+                "data generation."
             ),
         },
     ]
@@ -276,6 +291,38 @@ def _render_registry_html(manifest: Mapping[str, Any], validation: Mapping[str, 
           <thead><tr><th>Name</th><th>Family</th><th>Role</th>
           <th>Status</th><th>Tier</th><th>Path</th>
           <th>Stale reason</th></tr></thead>
+          <tbody>{"".join(rows)}</tbody>
+        </table>
+        """,
+    )
+
+
+def _render_physics_simulation_html(manifest: Mapping[str, Any]) -> str:
+    rows = []
+    for stage in manifest.get("stages", []):
+        rows.append(
+            "<tr>"
+            f"<td>{_e(stage.get('stage_id'))}</td>"
+            f"<td>{_e(stage.get('family'))}</td>"
+            f"<td>{_e(stage.get('status'))}</td>"
+            f"<td><span class='tier tier-{_e(stage.get('readiness_tier'))}'>"
+            f"{_e(stage.get('readiness_tier'))}</span></td>"
+            f"<td><code>{_e(stage.get('workspace_root'))}</code></td>"
+            f"<td>{len(stage.get('commands', []))}</td>"
+            f"<td>{_e(stage.get('truth_boundary'))}</td>"
+            "</tr>"
+        )
+    summary = html.escape(json.dumps(manifest.get("summary", {}), sort_keys=True))
+    return _html_page(
+        "CameraE2E Physics Simulation Manifest",
+        f"""
+        <p class="lead">FDTD/TCAD/RayOptics source, fixtures, active artifacts,
+        CameraE2E import modules, and refresh commands.</p>
+        <p>Summary: <code>{summary}</code></p>
+        <table>
+          <thead><tr><th>Stage</th><th>Family</th><th>Status</th>
+          <th>Tier</th><th>Workspace</th><th>Commands</th>
+          <th>Truth Boundary</th></tr></thead>
           <tbody>{"".join(rows)}</tbody>
         </table>
         """,

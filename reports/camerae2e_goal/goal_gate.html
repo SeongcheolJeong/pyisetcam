@@ -24,12 +24,12 @@ code { word-break: break-all; }
 <p class="lead">Research-grade E2E optimization platform plus RAW data factory for perception training.</p>
 <p>OK: <strong>True</strong>; strict:
 <strong>False</strong>; generated:
-<code>2026-07-05T07:54:26.409138+00:00</code></p>
+<code>2026-07-05T08:50:55.901277+00:00</code></p>
 <p>Artifacts: <code>/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke</code></p>
 <h2>Requirements</h2>
 <table>
 <thead><tr><th>Requirement</th><th>Status</th><th>Checks</th><th>Evidence</th></tr></thead>
-<tbody><tr><td>DB/LUT registry and readiness matrix</td><td><span class='status status-warn'>warn</span></td><td>registry_manifest</td><td>Registry manifest validates schema, readiness tiers, and stale dependencies.</td></tr><tr><td>FDTD/TCAD/RayOptics/HW ISP external pipeline</td><td><span class='status status-warn'>warn</span></td><td>physics_pipeline</td><td>External asset lineage and refresh actions are generated without sign-off inflation.</td></tr><tr><td>Calibration evidence and readiness promotion</td><td><span class='status status-pass'>pass</span></td><td>calibration_evidence_policy</td><td>Measured-evidence requirements exist and calibrated promotion remains blocked until evidence validates.</td></tr><tr><td>Image-sensor DB hybrid configuration policy</td><td><span class='status status-pass'>pass</span></td><td>sensor_db_config_policy</td><td>Sensor DB records can produce DB/LUT-preferred hybrid configs and analytic-only FACA fallback scenarios with explicit proxy boundaries.</td></tr><tr><td>System FACA scenario metrics</td><td><span class='status status-pass'>pass</span></td><td>faca_smoke</td><td>Scene/OI/Sensor/IP/HW ISP stages produce metrics and parameter lineage.</td></tr><tr><td>Automated camera-parameter optimization</td><td><span class='status status-pass'>pass</span></td><td>parameter_optimization</td><td>Preset camera parameter search optimizes a FACA metric deterministically.</td></tr><tr><td>Optimization-to-physics escalation plan</td><td><span class='status status-pass'>pass</span></td><td>optimization_escalation_plan</td><td>Optimized candidates are mapped to DB/LUT, FDTD, TCAD, RayOptics, RAW export, and perception-evaluation follow-up stages.</td></tr><tr><td>RAW data factory from optimized camera cases</td><td><span class='status status-pass'>pass</span></td><td>dataset_factory_smoke</td><td>Optimization outputs can be rendered into validated RAW training artifacts.</td></tr><tr><td>ADAS/KITTI YOLO demo RAW generation</td><td><span class='status status-pass'>pass</span></td><td>adas_kitti_demo_smoke</td><td>Synthetic or supplied KITTI-style inputs can produce proxy RAW and YOLO labels.</td></tr><tr><td>Camera-spec variant re-capture</td><td><span class='status status-pass'>pass</span></td><td>camera_spec_variant_smoke</td><td>One KITTI-style scene can be exported under multiple camera specifications.</td></tr><tr><td>Physics proxy/sign-off claim guard</td><td><span class='status status-pass'>pass</span></td><td>signoff_claim_guard</td><td>Strict validation blocks calibrated claims until measured evidence is attached.</td></tr></tbody>
+<tbody><tr><td>DB/LUT registry and readiness matrix</td><td><span class='status status-warn'>warn</span></td><td>registry_manifest</td><td>Registry manifest validates schema, readiness tiers, and stale dependencies.</td></tr><tr><td>FDTD/TCAD/RayOptics/HW ISP external pipeline</td><td><span class='status status-warn'>warn</span></td><td>physics_pipeline, physics_simulation_manifest</td><td>External asset lineage, simulation roots, command graph, and refresh actions are generated without sign-off inflation.</td></tr><tr><td>Calibration evidence and readiness promotion</td><td><span class='status status-pass'>pass</span></td><td>calibration_evidence_policy</td><td>Measured-evidence requirements exist and calibrated promotion remains blocked until evidence validates.</td></tr><tr><td>Image-sensor DB hybrid configuration policy</td><td><span class='status status-pass'>pass</span></td><td>sensor_db_config_policy</td><td>Sensor DB records can produce DB/LUT-preferred hybrid configs and analytic-only FACA fallback scenarios with explicit proxy boundaries.</td></tr><tr><td>System FACA scenario metrics</td><td><span class='status status-pass'>pass</span></td><td>faca_smoke</td><td>Scene/OI/Sensor/IP/HW ISP stages produce metrics and parameter lineage.</td></tr><tr><td>Automated camera-parameter optimization</td><td><span class='status status-pass'>pass</span></td><td>parameter_optimization</td><td>Preset camera parameter search optimizes a FACA metric deterministically.</td></tr><tr><td>Optimization-to-physics escalation plan</td><td><span class='status status-pass'>pass</span></td><td>optimization_escalation_plan</td><td>Optimized candidates are mapped to DB/LUT, FDTD, TCAD, RayOptics, RAW export, and perception-evaluation follow-up stages.</td></tr><tr><td>RAW data factory from optimized camera cases</td><td><span class='status status-pass'>pass</span></td><td>dataset_factory_smoke</td><td>Optimization outputs can be rendered into validated RAW training artifacts.</td></tr><tr><td>ADAS/KITTI YOLO demo RAW generation</td><td><span class='status status-pass'>pass</span></td><td>adas_kitti_demo_smoke</td><td>Synthetic or supplied KITTI-style inputs can produce proxy RAW and YOLO labels.</td></tr><tr><td>Camera-spec variant re-capture</td><td><span class='status status-pass'>pass</span></td><td>camera_spec_variant_smoke</td><td>One KITTI-style scene can be exported under multiple camera specifications.</td></tr><tr><td>Physics proxy/sign-off claim guard</td><td><span class='status status-pass'>pass</span></td><td>signoff_claim_guard</td><td>Strict validation blocks calibrated claims until measured evidence is attached.</td></tr></tbody>
 </table>
 <h2>Checks</h2>
 <table>
@@ -49,18 +49,18 @@ code { word-break: break-all; }
   &quot;warning_count&quot;: 1
 }</pre></td></tr><tr><td>physics_pipeline</td><td><span class='status status-warn'>warn</span></td><td>calibration_required</td><td>External FDTD/TCAD/RayOptics/HW ISP lineage plan is generated.</td><td><pre>{
   &quot;active_runs&quot;: {
-    &quot;fdtd_lut_path&quot;: &quot;/Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant/camera_lut.json&quot;,
-    &quot;fdtd_lut_run&quot;: &quot;/Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant&quot;,
+    &quot;fdtd_lut_path&quot;: &quot;/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/convergence_cra3_rgb_r84_gridsnap_quant/camera_lut.json&quot;,
+    &quot;fdtd_lut_run&quot;: &quot;/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/convergence_cra3_rgb_r84_gridsnap_quant&quot;,
     &quot;lineage_match&quot;: false,
-    &quot;tcad_generation_map_path&quot;: &quot;/Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke/tcad_generation_map_2d.npz&quot;,
-    &quot;tcad_generation_map_run&quot;: &quot;/Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke&quot;
+    &quot;tcad_generation_map_path&quot;: &quot;/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/fdtd_to_tcad_generation_2d_cra_smoke/tcad_generation_map_2d.npz&quot;,
+    &quot;tcad_generation_map_run&quot;: &quot;/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/fdtd_to_tcad_generation_2d_cra_smoke&quot;
   },
   &quot;ok&quot;: true,
   &quot;refresh_order&quot;: [
     {
       &quot;action&quot;: &quot;refresh_downstream_from_current_dependency&quot;,
       &quot;entry&quot;: &quot;tcad_sensor_db_active&quot;,
-      &quot;reason&quot;: &quot;TCAD/FDTD active artifact mismatch: active FDTD LUT is under /Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant, but TCAD generation map is under /Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke&quot;,
+      &quot;reason&quot;: &quot;TCAD/FDTD active artifact mismatch: active FDTD LUT is under /Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/convergence_cra3_rgb_r84_gridsnap_quant, but TCAD generation map is under /Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/fdtd_to_tcad_generation_2d_cra_smoke&quot;,
       &quot;severity&quot;: &quot;warning&quot;
     }
   ],
@@ -122,6 +122,55 @@ code { word-break: break-all; }
       &quot;truth_boundary&quot;: &quot;geometric_psf_not_diffraction_wave_optics&quot;
     }
   ]
+}</pre></td></tr><tr><td>physics_simulation_manifest</td><td><span class='status status-warn'>warn</span></td><td>calibration_required</td><td>FDTD/TCAD/RayOptics simulation roots, source scripts, artifacts, CameraE2E import modules, and command graph are merged into one manifest.</td><td><pre>{
+  &quot;active_runs&quot;: {
+    &quot;fdtd_lut_path&quot;: &quot;/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/convergence_cra3_rgb_r84_gridsnap_quant/camera_lut.json&quot;,
+    &quot;fdtd_lut_run&quot;: &quot;/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/convergence_cra3_rgb_r84_gridsnap_quant&quot;,
+    &quot;lineage_match&quot;: false,
+    &quot;manifest_fdtd_lut_path&quot;: &quot;/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/fixtures/fdtd_active_lut/camera_lut.json&quot;,
+    &quot;manifest_lineage_match&quot;: false,
+    &quot;manifest_tcad_generation_map_path&quot;: &quot;/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/fixtures/tcad_generation_map/tcad_generation_map_2d.npz&quot;,
+    &quot;tcad_generation_map_path&quot;: &quot;/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/fdtd_to_tcad_generation_2d_cra_smoke/tcad_generation_map_2d.npz&quot;,
+    &quot;tcad_generation_map_run&quot;: &quot;/Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/fdtd_to_tcad_generation_2d_cra_smoke&quot;
+  },
+  &quot;external_command_count&quot;: 5,
+  &quot;local_validation_command_count&quot;: 8,
+  &quot;merge_policy&quot;: {
+    &quot;camerae2e_boundary&quot;: &quot;CameraE2E owns manifest, import adapters, lineage gates, and reports; external workspaces own expensive solver generation.&quot;,
+    &quot;final_db_repository&quot;: &quot;Lens and sensor DB artifacts are packaged as final-result-only runtime inputs under camerae2e_db or a sibling CameraE2E-DB repo.&quot;,
+    &quot;large_external_assets&quot;: &quot;reference_by_path_and_hash_do_not_vendor&quot;,
+    &quot;solver_execution&quot;: &quot;external_batch_commands_not_unit_tests&quot;,
+    &quot;truth_boundary&quot;: &quot;FDTD/TCAD/RayOptics simulation artifacts are research inputs until measured calibration and strict lineage gates are attached.&quot;
+  },
+  &quot;reports&quot;: {
+    &quot;html&quot;: &quot;/Users/seongcheoljeong/Documents/CameraE2E/reports/camerae2e_goal/physics_simulation_manifest.html&quot;,
+    &quot;json&quot;: &quot;/Users/seongcheoljeong/Documents/CameraE2E/reports/camerae2e_goal/physics_simulation_manifest.json&quot;
+  },
+  &quot;schema&quot;: &quot;camerae2e_physics_simulation_manifest_v1&quot;,
+  &quot;summary&quot;: {
+    &quot;issue_count&quot;: 0,
+    &quot;readiness_tiers&quot;: {
+      &quot;calibration_required&quot;: 2,
+      &quot;proxy&quot;: 3,
+      &quot;validated&quot;: 1
+    },
+    &quot;stage_count&quot;: 6,
+    &quot;status_counts&quot;: {
+      &quot;available&quot;: 5,
+      &quot;stale_dependency&quot;: 1
+    },
+    &quot;strict_ok&quot;: false,
+    &quot;warning_count&quot;: 1
+  },
+  &quot;validation&quot;: {
+    &quot;issue_count&quot;: 0,
+    &quot;ok&quot;: true,
+    &quot;status_counts&quot;: {
+      &quot;available&quot;: 5,
+      &quot;stale_dependency&quot;: 1
+    },
+    &quot;warning_count&quot;: 1
+  }
 }</pre></td></tr><tr><td>calibration_evidence_policy</td><td><span class='status status-pass'>pass</span></td><td>calibration_required</td><td>Measured-evidence requirements are explicit, and calibrated promotion is blocked until required artifacts validate.</td><td><pre>{
   &quot;blocked_examples&quot;: [
     {
@@ -1207,7 +1256,7 @@ code { word-break: break-all; }
     {
       &quot;entry&quot;: &quot;tcad_sensor_db_active&quot;,
       &quot;kind&quot;: &quot;stale_dependency&quot;,
-      &quot;message&quot;: &quot;TCAD/FDTD active artifact mismatch: active FDTD LUT is under /Users/seongcheoljeong/FDTD/runs/convergence_cra3_rgb_r84_gridsnap_quant, but TCAD generation map is under /Users/seongcheoljeong/FDTD/runs/fdtd_to_tcad_generation_2d_cra_smoke&quot;
+      &quot;message&quot;: &quot;TCAD/FDTD active artifact mismatch: active FDTD LUT is under /Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/convergence_cra3_rgb_r84_gridsnap_quant, but TCAD generation map is under /Users/seongcheoljeong/Documents/CameraE2E/camerae2e_db/fdtd_tcad/runs/fdtd_to_tcad_generation_2d_cra_smoke&quot;
     },
     {
       &quot;entry&quot;: &quot;tcad_sensor_db_active&quot;,
