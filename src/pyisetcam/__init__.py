@@ -12,9 +12,12 @@ from .db_catalog import (
     CameraE2EDBEntry,
     camerae2e_db_catalog,
     camerae2e_db_get,
+    camerae2e_db_lineage,
+    camerae2e_db_manifest,
     camerae2e_db_parameters,
     camerae2e_db_search,
     camerae2e_db_summary,
+    camerae2e_db_validate,
 )
 from .camera import (
     CameraFullReferenceResult,
@@ -71,6 +74,7 @@ from .color import (
     y_to_lstar,
 )
 from .description import HeadlessDescriptionHandle, sensor_description
+from .dataset import camerae2e_dataset_export
 from .display import (
     display_compute,
     display_convert,
@@ -646,6 +650,11 @@ from .session import (
     vc_get_figure,
     vc_set_figure_handles,
     vc_select_figure,
+)
+from .system_faca import (
+    camerae2e_faca_report,
+    camerae2e_run_scenario,
+    camerae2e_run_sweep,
 )
 from .task_perception import (
     TaskBoundingBox,
