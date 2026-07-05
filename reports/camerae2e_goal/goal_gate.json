@@ -796,6 +796,83 @@
     },
     {
       "evidence": {
+        "acceptance_gates": [
+          {
+            "evidence": {
+              "selected_case_count": 2
+            },
+            "gate": "candidate_selection",
+            "status": "pass"
+          },
+          {
+            "evidence": {
+              "calibration_required_axis_count": 0,
+              "policy": "Proxy and calibration-required axes require downstream evidence before calibrated claims.",
+              "proxy_axis_count": 3
+            },
+            "gate": "proxy_axis_boundary",
+            "status": "pass"
+          },
+          {
+            "evidence": {
+              "needed_stage_ids": [
+                "analytic_candidate_screen",
+                "db_lut_anchor",
+                "fdtd_optical_lut_batch",
+                "tcad_collection_batch",
+                "rayoptics_geometric_psf_batch",
+                "raw_dataset_export",
+                "perception_eval_batch"
+              ]
+            },
+            "gate": "physics_stage_coverage",
+            "status": "pass"
+          },
+          {
+            "evidence": {
+              "export_api": "camerae2e_dataset_export_from_optimization"
+            },
+            "gate": "dataset_export_path",
+            "status": "pass"
+          }
+        ],
+        "axis_needs": {
+          "db_lut_anchor": true,
+          "fdtd_optical_lut": true,
+          "hw_isp_trace": false,
+          "perception_eval": true,
+          "raw_dataset_export": true,
+          "rayoptics_geometric_psf": true,
+          "tcad_collection": true
+        },
+        "ok": true,
+        "physics_summary": {
+          "action_count": 10,
+          "blocking_count": 0,
+          "calibration_required_count": 7,
+          "refresh_action_count": 1,
+          "stale_dependency_count": 1
+        },
+        "schema": "camerae2e_optimization_escalation_plan_v1",
+        "selected_case_count": 2,
+        "stage_statuses": {
+          "analytic_candidate_screen": "ready",
+          "db_lut_anchor": "ready_proxy",
+          "fdtd_optical_lut_batch": "ready_proxy",
+          "hw_isp_trace_batch": "not_needed",
+          "perception_eval_batch": "ready",
+          "raw_dataset_export": "ready",
+          "rayoptics_geometric_psf_batch": "ready_proxy",
+          "tcad_collection_batch": "needs_stale_dependency"
+        }
+      },
+      "name": "optimization_escalation_plan",
+      "status": "pass",
+      "summary": "Optimization candidates produce an explicit escalation plan for DB/LUT, FDTD, TCAD, RayOptics, RAW export, and perception evaluation.",
+      "tier": "calibration_required"
+    },
+    {
+      "evidence": {
         "case_count": 1,
         "dataset_root": "/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke/optimization_dataset",
         "manifest_schema": "camerae2e_dataset_manifest_v1",
@@ -1032,7 +1109,7 @@
       "tier": "calibration_required"
     }
   ],
-  "generated_at": "2026-07-05T07:20:19.748166+00:00",
+  "generated_at": "2026-07-05T07:29:21.587635+00:00",
   "goal": "Research-grade E2E optimization platform plus RAW data factory for perception training.",
   "ok": true,
   "output_dir": "/Users/seongcheoljeong/Documents/CameraE2E/reports/camerae2e_goal",
@@ -1091,6 +1168,14 @@
     },
     {
       "checks": [
+        "optimization_escalation_plan"
+      ],
+      "evidence_summary": "Optimized candidates are mapped to DB/LUT, FDTD, TCAD, RayOptics, RAW export, and perception-evaluation follow-up stages.",
+      "requirement": "Optimization-to-physics escalation plan",
+      "status": "pass"
+    },
+    {
+      "checks": [
         "dataset_factory_smoke"
       ],
       "evidence_summary": "Optimization outputs can be rendered into validated RAW training artifacts.",
@@ -1125,11 +1210,11 @@
   "schema_version": "camerae2e_goal_gate_v1",
   "strict": false,
   "summary": {
-    "check_count": 10,
+    "check_count": 11,
     "include_demos": true,
     "seed": 2026,
     "status_counts": {
-      "pass": 8,
+      "pass": 9,
       "warn": 2
     }
   }

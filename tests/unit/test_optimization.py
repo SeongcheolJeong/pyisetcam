@@ -5,6 +5,7 @@ import numpy as np
 from pyisetcam import (
     camerae2e_faca_report,
     camerae2e_optimization_config_catalog,
+    camerae2e_optimization_escalation_plan,
     camerae2e_optimization_report,
     camerae2e_optimize_camera_parameters,
     camerae2e_optimize_parameters,
@@ -429,6 +430,92 @@ def test_camerae2e_optimize_parameters_supports_surrogate_search() -> None:
         case["parameters"] for case in repeated["cases"]
     ]
     assert len({str(case["parameters"]) for case in result["cases"]}) == 6
+
+
+def test_camerae2e_optimization_escalation_plan_maps_proxy_axes_to_physics() -> None:
+    result = camerae2e_optimize_camera_parameters(
+        {
+            "name": "unit_escalation_source",
+            "scene": {"type": "uniform ee", "args": [8]},
+            "sensor": {"noise_flag": 0},
+        },
+        preset="exposure",
+        parameter_space={
+            "sensor.ocl_group_shape": ["1x1", "2x2"],
+            "sensor.ocl_group_equalization": [0.0, 1.0],
+            "optics.si_psf_radius_um": [1.0, 2.0],
+        },
+        objective={"metric": "metrics.color.rgb_mean", "direction": "maximize"},
+        method="latin_hypercube",
+        max_cases=4,
+        seed=212,
+        top_k=2,
+    )
+    physics_plan = {
+        "schema_version": "camerae2e_physics_pipeline_plan_v1",
+        "ok": True,
+        "summary": {"stale_dependency_count": 0},
+        "active_runs": {"lineage_match": True},
+        "actions": [
+            {
+                "entry": "fdtd_sensor_stack_catalog",
+                "kind": "proxy_truth_boundary",
+                "severity": "info",
+                "blocks_strict_validation": True,
+            },
+            {
+                "entry": "fdtd_sensor_lut_active",
+                "kind": "proxy_truth_boundary",
+                "severity": "info",
+                "blocks_strict_validation": True,
+            },
+            {
+                "entry": "tcad_sensor_db_active",
+                "kind": "calibration_required",
+                "severity": "warning",
+                "blocks_strict_validation": True,
+            },
+            {
+                "entry": "lens_patents_active",
+                "kind": "proxy_truth_boundary",
+                "severity": "info",
+                "blocks_strict_validation": True,
+            },
+        ],
+    }
+
+    plan = camerae2e_optimization_escalation_plan(
+        result,
+        selection="top",
+        max_cases=2,
+        physics_pipeline_plan=physics_plan,
+    )
+    stages = {stage["stage_id"]: stage for stage in plan["stages"]}
+
+    assert plan["schema_version"] == "camerae2e_optimization_escalation_plan_v1"
+    assert plan["ok"] is True
+    assert plan["selected_case_count"] == 2
+    assert plan["axis_summary"]["needs"]["fdtd_optical_lut"] is True
+    assert plan["axis_summary"]["needs"]["tcad_collection"] is True
+    assert plan["axis_summary"]["needs"]["rayoptics_geometric_psf"] is True
+    assert stages["fdtd_optical_lut_batch"]["status"] == "ready_proxy"
+    assert stages["tcad_collection_batch"]["status"] == "needs_calibration_required"
+    assert stages["rayoptics_geometric_psf_batch"]["status"] == "ready_proxy"
+    assert plan["validation_jobs"][0]["registry_entries"] == [
+        "fdtd_sensor_stack_catalog",
+        "fdtd_sensor_lut_active",
+        "tcad_sensor_db_active",
+        "lens_patents_active",
+    ]
+
+    compact_plan = camerae2e_optimization_escalation_plan(
+        camerae2e_optimization_report(result),
+        selection="top",
+        max_cases=1,
+        physics_pipeline_plan=physics_plan,
+    )
+    assert compact_plan["selected_case_count"] == 1
+    assert compact_plan["axis_summary"]["axis_count"] >= 3
 
 
 def test_camerae2e_scenario_applies_extended_configure_axes() -> None:

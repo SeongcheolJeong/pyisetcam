@@ -24,6 +24,7 @@ def test_camerae2e_goal_gate_writes_reports_and_smoke_artifacts(tmp_path: Path) 
     )
     assert checks["faca_smoke"]["status"] == "pass"
     assert checks["parameter_optimization"]["status"] == "pass"
+    assert checks["optimization_escalation_plan"]["status"] == "pass"
     assert checks["dataset_factory_smoke"]["status"] == "pass"
     assert checks["adas_kitti_demo_smoke"]["status"] == "pass"
     assert checks["camera_spec_variant_smoke"]["status"] == "pass"
@@ -32,3 +33,4 @@ def test_camerae2e_goal_gate_writes_reports_and_smoke_artifacts(tmp_path: Path) 
     assert requirements["RAW data factory from optimized camera cases"]["status"] == "pass"
     assert requirements["Camera-spec variant re-capture"]["status"] == "pass"
     assert requirements["Calibration evidence and readiness promotion"]["status"] == "pass"
+    assert requirements["Optimization-to-physics escalation plan"]["status"] == "pass"

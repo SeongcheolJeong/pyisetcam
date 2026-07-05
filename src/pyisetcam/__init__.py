@@ -137,6 +137,7 @@ from .fileio import (
 )
 from .optimization import (
     camerae2e_optimization_config_catalog,
+    camerae2e_optimization_escalation_plan,
     camerae2e_optimization_report,
     camerae2e_optimize_camera_parameters,
     camerae2e_optimize_parameters,
@@ -1109,6 +1110,7 @@ __all__ = [
     "camerae2e_goal_gate",
     "camerae2e_kitti_yolo_labels",
     "camerae2e_optimization_config_catalog",
+    "camerae2e_optimization_escalation_plan",
     "camerae2e_optimization_report",
     "camerae2e_optimize_camera_parameters",
     "camerae2e_optimize_parameters",
@@ -1142,6 +1144,7 @@ __all__ = [
     "cameraE2EGoalGate",
     "cameraE2EKITTIYOLOLabels",
     "cameraE2EOptimizationConfigCatalog",
+    "cameraE2EOptimizationEscalationPlan",
     "cameraE2EOptimizationReport",
     "cameraE2EOptimizeCameraParameters",
     "cameraE2EOptimizeParameters",
@@ -3838,6 +3841,7 @@ cameraE2EDatasetValidate = camerae2e_dataset_validate
 cameraE2EKITTIYOLOLabels = camerae2e_kitti_yolo_labels
 cameraE2EOptimizeCameraParameters = camerae2e_optimize_camera_parameters
 cameraE2EOptimizeParameters = camerae2e_optimize_parameters
+cameraE2EOptimizationEscalationPlan = camerae2e_optimization_escalation_plan
 cameraE2EOptimizationReport = camerae2e_optimization_report
 cameraE2EParetoFront = camerae2e_pareto_front
 cameraE2EParameterCandidatePlan = camerae2e_parameter_candidate_plan

@@ -28,6 +28,7 @@ from .image_sensor_db import (
 )
 from .optimization import (
     camerae2e_optimization_config_catalog,
+    camerae2e_optimization_escalation_plan,
     camerae2e_optimize_camera_parameters,
 )
 from .physics_pipeline import camerae2e_physics_pipeline_plan
@@ -66,6 +67,10 @@ def camerae2e_goal_gate(
         _run_check("sensor_db_config_policy", lambda: _sensor_db_config_policy(seed=seed + 5)),
         _run_check("faca_smoke", lambda: _faca_smoke(seed=seed)),
         _run_check("parameter_optimization", lambda: _optimization_smoke(seed=seed + 10)),
+        _run_check(
+            "optimization_escalation_plan",
+            lambda: _optimization_escalation_smoke(seed=seed + 15),
+        ),
         _run_check(
             "dataset_factory_smoke",
             lambda: _dataset_factory_smoke(artifact_root / "optimization_dataset", seed=seed + 20),
@@ -394,6 +399,70 @@ def _optimization_smoke(*, seed: int) -> dict[str, Any]:
     }
 
 
+def _optimization_escalation_smoke(*, seed: int) -> dict[str, Any]:
+    result = camerae2e_optimize_camera_parameters(
+        {
+            "name": "goal_gate_optimization_escalation_source",
+            "scene": {"type": "uniform ee", "args": [8]},
+            "sensor": {"noise_flag": 0},
+        },
+        preset="exposure",
+        parameter_space={
+            "sensor.ocl_group_shape": ["1x1", "2x2"],
+            "sensor.ocl_group_equalization": [0.0, 1.0],
+            "optics.si_psf_radius_um": [1.0, 2.0],
+        },
+        objective={"metric": "metrics.color.rgb_mean", "direction": "maximize"},
+        method="latin_hypercube",
+        max_cases=4,
+        seed=seed,
+        top_k=2,
+    )
+    plan = camerae2e_optimization_escalation_plan(
+        result,
+        selection="top",
+        max_cases=2,
+        strict=False,
+    )
+    needs = dict(plan.get("axis_summary", {}).get("needs", {}))
+    stage_ids = {str(stage.get("stage_id")) for stage in plan.get("stages", [])}
+    passed = (
+        plan.get("schema_version") == "camerae2e_optimization_escalation_plan_v1"
+        and bool(plan.get("ok"))
+        and int(plan.get("selected_case_count", 0)) == 2
+        and needs.get("fdtd_optical_lut") is True
+        and needs.get("tcad_collection") is True
+        and needs.get("rayoptics_geometric_psf") is True
+        and {
+            "fdtd_optical_lut_batch",
+            "tcad_collection_batch",
+            "rayoptics_geometric_psf_batch",
+            "raw_dataset_export",
+        }
+        <= stage_ids
+    )
+    return {
+        "status": "pass" if passed else "fail",
+        "tier": "calibration_required",
+        "summary": (
+            "Optimization candidates produce an explicit escalation plan for "
+            "DB/LUT, FDTD, TCAD, RayOptics, RAW export, and perception evaluation."
+        ),
+        "evidence": {
+            "schema": plan.get("schema_version"),
+            "ok": plan.get("ok"),
+            "selected_case_count": plan.get("selected_case_count"),
+            "axis_needs": needs,
+            "physics_summary": plan.get("physics_pipeline", {}).get("summary", {}),
+            "stage_statuses": {
+                stage.get("stage_id"): stage.get("status")
+                for stage in plan.get("stages", [])
+            },
+            "acceptance_gates": plan.get("acceptance_gates", []),
+        },
+    }
+
+
 def _dataset_factory_smoke(output_dir: Path, *, seed: int) -> dict[str, Any]:
     optimization = camerae2e_optimize_camera_parameters(
         {
@@ -621,6 +690,14 @@ def _requirement_matrix(checks: list[Mapping[str, Any]]) -> list[dict[str, Any]]
             "Automated camera-parameter optimization",
             ["parameter_optimization"],
             "Preset camera parameter search optimizes a FACA metric deterministically.",
+        ),
+        (
+            "Optimization-to-physics escalation plan",
+            ["optimization_escalation_plan"],
+            (
+                "Optimized candidates are mapped to DB/LUT, FDTD, TCAD, RayOptics, "
+                "RAW export, and perception-evaluation follow-up stages."
+            ),
         ),
         (
             "RAW data factory from optimized camera cases",

@@ -24,12 +24,12 @@ code { word-break: break-all; }
 <p class="lead">Research-grade E2E optimization platform plus RAW data factory for perception training.</p>
 <p>OK: <strong>True</strong>; strict:
 <strong>False</strong>; generated:
-<code>2026-07-05T07:20:19.748166+00:00</code></p>
+<code>2026-07-05T07:29:21.587635+00:00</code></p>
 <p>Artifacts: <code>/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke</code></p>
 <h2>Requirements</h2>
 <table>
 <thead><tr><th>Requirement</th><th>Status</th><th>Checks</th><th>Evidence</th></tr></thead>
-<tbody><tr><td>DB/LUT registry and readiness matrix</td><td><span class='status status-warn'>warn</span></td><td>registry_manifest</td><td>Registry manifest validates schema, readiness tiers, and stale dependencies.</td></tr><tr><td>FDTD/TCAD/RayOptics/HW ISP external pipeline</td><td><span class='status status-warn'>warn</span></td><td>physics_pipeline</td><td>External asset lineage and refresh actions are generated without sign-off inflation.</td></tr><tr><td>Calibration evidence and readiness promotion</td><td><span class='status status-pass'>pass</span></td><td>calibration_evidence_policy</td><td>Measured-evidence requirements exist and calibrated promotion remains blocked until evidence validates.</td></tr><tr><td>Image-sensor DB hybrid configuration policy</td><td><span class='status status-pass'>pass</span></td><td>sensor_db_config_policy</td><td>Sensor DB records can produce DB/LUT-preferred hybrid configs and analytic-only FACA fallback scenarios with explicit proxy boundaries.</td></tr><tr><td>System FACA scenario metrics</td><td><span class='status status-pass'>pass</span></td><td>faca_smoke</td><td>Scene/OI/Sensor/IP/HW ISP stages produce metrics and parameter lineage.</td></tr><tr><td>Automated camera-parameter optimization</td><td><span class='status status-pass'>pass</span></td><td>parameter_optimization</td><td>Preset camera parameter search optimizes a FACA metric deterministically.</td></tr><tr><td>RAW data factory from optimized camera cases</td><td><span class='status status-pass'>pass</span></td><td>dataset_factory_smoke</td><td>Optimization outputs can be rendered into validated RAW training artifacts.</td></tr><tr><td>ADAS/KITTI YOLO demo RAW generation</td><td><span class='status status-pass'>pass</span></td><td>adas_kitti_demo_smoke</td><td>Synthetic or supplied KITTI-style inputs can produce proxy RAW and YOLO labels.</td></tr><tr><td>Camera-spec variant re-capture</td><td><span class='status status-pass'>pass</span></td><td>camera_spec_variant_smoke</td><td>One KITTI-style scene can be exported under multiple camera specifications.</td></tr><tr><td>Physics proxy/sign-off claim guard</td><td><span class='status status-pass'>pass</span></td><td>signoff_claim_guard</td><td>Strict validation blocks calibrated claims until measured evidence is attached.</td></tr></tbody>
+<tbody><tr><td>DB/LUT registry and readiness matrix</td><td><span class='status status-warn'>warn</span></td><td>registry_manifest</td><td>Registry manifest validates schema, readiness tiers, and stale dependencies.</td></tr><tr><td>FDTD/TCAD/RayOptics/HW ISP external pipeline</td><td><span class='status status-warn'>warn</span></td><td>physics_pipeline</td><td>External asset lineage and refresh actions are generated without sign-off inflation.</td></tr><tr><td>Calibration evidence and readiness promotion</td><td><span class='status status-pass'>pass</span></td><td>calibration_evidence_policy</td><td>Measured-evidence requirements exist and calibrated promotion remains blocked until evidence validates.</td></tr><tr><td>Image-sensor DB hybrid configuration policy</td><td><span class='status status-pass'>pass</span></td><td>sensor_db_config_policy</td><td>Sensor DB records can produce DB/LUT-preferred hybrid configs and analytic-only FACA fallback scenarios with explicit proxy boundaries.</td></tr><tr><td>System FACA scenario metrics</td><td><span class='status status-pass'>pass</span></td><td>faca_smoke</td><td>Scene/OI/Sensor/IP/HW ISP stages produce metrics and parameter lineage.</td></tr><tr><td>Automated camera-parameter optimization</td><td><span class='status status-pass'>pass</span></td><td>parameter_optimization</td><td>Preset camera parameter search optimizes a FACA metric deterministically.</td></tr><tr><td>Optimization-to-physics escalation plan</td><td><span class='status status-pass'>pass</span></td><td>optimization_escalation_plan</td><td>Optimized candidates are mapped to DB/LUT, FDTD, TCAD, RayOptics, RAW export, and perception-evaluation follow-up stages.</td></tr><tr><td>RAW data factory from optimized camera cases</td><td><span class='status status-pass'>pass</span></td><td>dataset_factory_smoke</td><td>Optimization outputs can be rendered into validated RAW training artifacts.</td></tr><tr><td>ADAS/KITTI YOLO demo RAW generation</td><td><span class='status status-pass'>pass</span></td><td>adas_kitti_demo_smoke</td><td>Synthetic or supplied KITTI-style inputs can produce proxy RAW and YOLO labels.</td></tr><tr><td>Camera-spec variant re-capture</td><td><span class='status status-pass'>pass</span></td><td>camera_spec_variant_smoke</td><td>One KITTI-style scene can be exported under multiple camera specifications.</td></tr><tr><td>Physics proxy/sign-off claim guard</td><td><span class='status status-pass'>pass</span></td><td>signoff_claim_guard</td><td>Strict validation blocks calibrated claims until measured evidence is attached.</td></tr></tbody>
 </table>
 <h2>Checks</h2>
 <table>
@@ -785,6 +785,76 @@ code { word-break: break-all; }
   },
   &quot;surrogate_method&quot;: &quot;budgeted_surrogate&quot;,
   &quot;surrogate_search_method&quot;: &quot;surrogate&quot;
+}</pre></td></tr><tr><td>optimization_escalation_plan</td><td><span class='status status-pass'>pass</span></td><td>calibration_required</td><td>Optimization candidates produce an explicit escalation plan for DB/LUT, FDTD, TCAD, RayOptics, RAW export, and perception evaluation.</td><td><pre>{
+  &quot;acceptance_gates&quot;: [
+    {
+      &quot;evidence&quot;: {
+        &quot;selected_case_count&quot;: 2
+      },
+      &quot;gate&quot;: &quot;candidate_selection&quot;,
+      &quot;status&quot;: &quot;pass&quot;
+    },
+    {
+      &quot;evidence&quot;: {
+        &quot;calibration_required_axis_count&quot;: 0,
+        &quot;policy&quot;: &quot;Proxy and calibration-required axes require downstream evidence before calibrated claims.&quot;,
+        &quot;proxy_axis_count&quot;: 3
+      },
+      &quot;gate&quot;: &quot;proxy_axis_boundary&quot;,
+      &quot;status&quot;: &quot;pass&quot;
+    },
+    {
+      &quot;evidence&quot;: {
+        &quot;needed_stage_ids&quot;: [
+          &quot;analytic_candidate_screen&quot;,
+          &quot;db_lut_anchor&quot;,
+          &quot;fdtd_optical_lut_batch&quot;,
+          &quot;tcad_collection_batch&quot;,
+          &quot;rayoptics_geometric_psf_batch&quot;,
+          &quot;raw_dataset_export&quot;,
+          &quot;perception_eval_batch&quot;
+        ]
+      },
+      &quot;gate&quot;: &quot;physics_stage_coverage&quot;,
+      &quot;status&quot;: &quot;pass&quot;
+    },
+    {
+      &quot;evidence&quot;: {
+        &quot;export_api&quot;: &quot;camerae2e_dataset_export_from_optimization&quot;
+      },
+      &quot;gate&quot;: &quot;dataset_export_path&quot;,
+      &quot;status&quot;: &quot;pass&quot;
+    }
+  ],
+  &quot;axis_needs&quot;: {
+    &quot;db_lut_anchor&quot;: true,
+    &quot;fdtd_optical_lut&quot;: true,
+    &quot;hw_isp_trace&quot;: false,
+    &quot;perception_eval&quot;: true,
+    &quot;raw_dataset_export&quot;: true,
+    &quot;rayoptics_geometric_psf&quot;: true,
+    &quot;tcad_collection&quot;: true
+  },
+  &quot;ok&quot;: true,
+  &quot;physics_summary&quot;: {
+    &quot;action_count&quot;: 10,
+    &quot;blocking_count&quot;: 0,
+    &quot;calibration_required_count&quot;: 7,
+    &quot;refresh_action_count&quot;: 1,
+    &quot;stale_dependency_count&quot;: 1
+  },
+  &quot;schema&quot;: &quot;camerae2e_optimization_escalation_plan_v1&quot;,
+  &quot;selected_case_count&quot;: 2,
+  &quot;stage_statuses&quot;: {
+    &quot;analytic_candidate_screen&quot;: &quot;ready&quot;,
+    &quot;db_lut_anchor&quot;: &quot;ready_proxy&quot;,
+    &quot;fdtd_optical_lut_batch&quot;: &quot;ready_proxy&quot;,
+    &quot;hw_isp_trace_batch&quot;: &quot;not_needed&quot;,
+    &quot;perception_eval_batch&quot;: &quot;ready&quot;,
+    &quot;raw_dataset_export&quot;: &quot;ready&quot;,
+    &quot;rayoptics_geometric_psf_batch&quot;: &quot;ready_proxy&quot;,
+    &quot;tcad_collection_batch&quot;: &quot;needs_stale_dependency&quot;
+  }
 }</pre></td></tr><tr><td>dataset_factory_smoke</td><td><span class='status status-pass'>pass</span></td><td>validated</td><td>RAW data factory exports deterministic NPZ, metadata, labels, and lineage.</td><td><pre>{
   &quot;case_count&quot;: 1,
   &quot;dataset_root&quot;: &quot;/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke/optimization_dataset&quot;,

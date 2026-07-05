@@ -90,6 +90,7 @@ Optimization:
 - `camerae2e_parameter_space_validate(...)`
 - `camerae2e_optimization_report(...)`
 - `camerae2e_pareto_front(...)`
+- `camerae2e_optimization_escalation_plan(...)`
 
 The first optimizer is deterministic grid search over dot-path camera
 parameters such as `sensor.integration_time`, `sensor.analog_gain`,
@@ -140,6 +141,13 @@ factory. FACA and dataset records include parameter-lineage entries with
 requested/before/after values so a RAW export can be traced back to the actual
 camera parameters applied. This is the reproducible baseline for later true
 GP/Bayesian optimizers and hardware-in-loop calibration.
+`camerae2e_optimization_escalation_plan(...)` takes a completed optimization
+result and plans the next fidelity step for selected best/top/Pareto candidates:
+DB/LUT anchoring, FDTD optical LUT batch generation, TCAD/DEVSIM collection
+checks, RayOptics geometric PSF comparison, HW ISP trace replay, RAW export,
+and perception-index evaluation. This is the intended combination path:
+analytic/proxy search is used to reduce the space, and expensive physics or
+measured calibration evidence is reserved for short-listed candidates.
 
 Important boundary: `sensor.n_samples_per_pixel` is sub-pixel integration
 sampling, not readout binning. `sensor.binning_method` and
@@ -167,6 +175,9 @@ calibrate the proxy defaults. When the goal is to configure many hypothetical
 sensors, analytic proxy axes are the fast search engine. FDTD/TCAD/RayOptics
 then act as offline LUT sources, calibration anchors, or validation batches for
 top candidates, not as per-candidate solvers inside every optimization loop.
+The escalation planner makes that policy machine-readable so downstream tools
+can see which candidates still need LUT refresh, stale-dependency closure, or
+measured evidence before stronger claims are made.
 
 Optimization configure priority:
 

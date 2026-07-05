@@ -1038,6 +1038,489 @@ def camerae2e_optimization_report(result: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def camerae2e_optimization_escalation_plan(
+    result: Mapping[str, Any],
+    *,
+    selection: str = "pareto",
+    max_cases: int | None = 5,
+    strict: bool = False,
+    include_physics_pipeline: bool = True,
+    physics_pipeline_plan: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Plan how optimized camera candidates should move to higher fidelity.
+
+    The optimizer is intentionally allowed to run broad analytic/proxy sweeps.
+    This planner keeps that useful speed while making the next evidence step
+    explicit: DB/LUT anchoring, FDTD optical LUT validation, TCAD collection
+    checks, RayOptics geometric PSF comparison, HW ISP trace calibration, and
+    RAW/perception export.
+    """
+
+    if include_physics_pipeline and physics_pipeline_plan is None:
+        from .physics_pipeline import camerae2e_physics_pipeline_plan
+
+        physics_pipeline_plan = camerae2e_physics_pipeline_plan(strict=strict)
+    selected_cases = _optimization_selected_cases(
+        result,
+        selection=selection,
+        max_cases=max_cases,
+    )
+    axes = _optimization_axes_from_result(result, selected_cases)
+    axis_summary = _optimization_axis_summary(axes)
+    physics_summary = _physics_plan_summary(physics_pipeline_plan)
+    stages = _escalation_stages(
+        axis_summary,
+        selected_case_count=len(selected_cases),
+        physics_pipeline_plan=physics_pipeline_plan,
+        strict=strict,
+    )
+    validation_jobs = [
+        _escalation_validation_job(case, index, stages)
+        for index, case in enumerate(selected_cases)
+    ]
+    blocking_stage_count = sum(
+        1 for stage in stages if str(stage.get("status", "")).startswith("blocked")
+    )
+    return {
+        "schema_version": "camerae2e_optimization_escalation_plan_v1",
+        "ok": bool(selected_cases) and (not strict or blocking_stage_count == 0),
+        "strict": bool(strict),
+        "source": {
+            "schema_version": result.get("schema_version"),
+            "method": result.get("method"),
+            "search_method": result.get("search_method"),
+            "seed": result.get("seed"),
+            "case_count": result.get("case_count", 0),
+            "feasible_count": result.get("feasible_count", 0),
+            "pareto_case_count": result.get("pareto_case_count", 0),
+        },
+        "selection": str(selection),
+        "selected_case_count": len(selected_cases),
+        "selected_cases": selected_cases,
+        "axis_summary": axis_summary,
+        "physics_pipeline": physics_summary,
+        "stages": stages,
+        "validation_jobs": validation_jobs,
+        "acceptance_gates": _escalation_acceptance_gates(
+            axis_summary,
+            stages,
+            selected_case_count=len(selected_cases),
+        ),
+        "truth_boundary": (
+            "This is a research-fidelity escalation plan. Analytic and proxy "
+            "optimization candidates are not promoted to calibrated/sign-off "
+            "status until measured calibration evidence and closed lineage gates pass."
+        ),
+    }
+
+
+def _optimization_selected_cases(
+    result: Mapping[str, Any],
+    *,
+    selection: str,
+    max_cases: int | None,
+) -> list[dict[str, Any]]:
+    key = str(selection).strip().lower().replace("-", "_")
+    if key in {"best", "winner"}:
+        raw_cases = [result.get("best_case")] if result.get("best_case") else []
+    elif key in {"top", "top_cases"}:
+        raw_cases = list(result.get("top_cases", []))
+    elif key in {"all", "cases"}:
+        raw_cases = [_strip_case_report(case) for case in result.get("cases", [])]
+    elif key in {"pareto", "pareto_front"}:
+        raw_cases = list(result.get("pareto_front", [])) or camerae2e_pareto_front(result)
+    else:
+        raise ValueError("selection must be one of: best, top, pareto, all.")
+    cases = [
+        _escalation_case_summary(case, rank=index)
+        for index, case in enumerate(raw_cases)
+        if case is not None
+    ]
+    if max_cases is not None:
+        cases = cases[: max(int(max_cases), 0)]
+    return cases
+
+
+def _optimization_axes_from_result(
+    result: Mapping[str, Any], selected_cases: Iterable[Mapping[str, Any]]
+) -> dict[str, Any]:
+    axes = result.get("parameter_space", {})
+    if isinstance(axes, Mapping) and axes:
+        return dict(axes)
+    inferred: dict[str, list[Any]] = {}
+    for case in selected_cases:
+        for path, value in dict(case.get("parameters", {})).items():
+            bucket = inferred.setdefault(str(path), [])
+            if _value_signature(value) not in {_value_signature(item) for item in bucket}:
+                bucket.append(value)
+    return inferred
+
+
+def _escalation_case_summary(case: Mapping[str, Any], *, rank: int) -> dict[str, Any]:
+    return {
+        "rank": int(rank),
+        "case_index": case.get("case_index"),
+        "seed": case.get("seed"),
+        "score": case.get("score"),
+        "feasible": bool(case.get("feasible", True)),
+        "parameters": _jsonable(case.get("parameters", {})),
+        "objective_values": _jsonable(case.get("objective_values", {})),
+        "constraint_results": _jsonable(case.get("constraint_results", [])),
+        "scenario": _jsonable(case.get("scenario", {})),
+    }
+
+
+def _optimization_axis_summary(axes: Mapping[str, Any]) -> dict[str, Any]:
+    entries = []
+    readiness_counts: dict[str, int] = {}
+    area_counts: dict[str, int] = {}
+    for path, values in axes.items():
+        classification = _parameter_axis_classification(str(path))
+        catalog_entry = dict(_PARAMETER_AXIS_CATALOG.get(str(path), {}))
+        readiness = str(classification.get("readiness_tier", "available"))
+        area = str(catalog_entry.get("area", _axis_area_from_path(str(path))))
+        readiness_counts[readiness] = readiness_counts.get(readiness, 0) + 1
+        area_counts[area] = area_counts.get(area, 0) + 1
+        entries.append(
+            {
+                "path": str(path),
+                "area": area,
+                "readiness_tier": readiness,
+                "status": classification.get("status"),
+                "assignment": classification.get("assignment"),
+                "value_count": _axis_value_count(values),
+                "description": catalog_entry.get("description"),
+            }
+        )
+    return {
+        "axis_count": len(entries),
+        "readiness_counts": readiness_counts,
+        "area_counts": area_counts,
+        "axes": entries,
+        "needs": _escalation_needs(entries),
+    }
+
+
+def _axis_area_from_path(path: str) -> str:
+    if "." not in path:
+        return "camera"
+    prefix = path.split(".", 1)[0]
+    if prefix == "sensor":
+        return "sensor_custom"
+    if prefix == "optics":
+        return "optics"
+    if prefix == "fdtd":
+        return "sensor_physics"
+    if prefix == "tcad":
+        return "sensor_physics"
+    return prefix
+
+
+def _axis_value_count(values: Any) -> int:
+    if isinstance(values, Mapping) and "values" in values:
+        return len(list(values.get("values", [])))
+    if isinstance(values, Mapping):
+        return 1
+    try:
+        return len(list(values))
+    except TypeError:
+        return 1
+
+
+def _escalation_needs(entries: list[Mapping[str, Any]]) -> dict[str, bool]:
+    paths = {str(entry.get("path", "")) for entry in entries}
+    areas = {str(entry.get("area", "")) for entry in entries}
+    return {
+        "db_lut_anchor": any(path.startswith("sensor.") for path in paths),
+        "fdtd_optical_lut": bool(
+            areas & {"sensor_geometry", "sensor_spectral", "sensor_ocl", "sensor_physics"}
+            or any(path.startswith("fdtd.") for path in paths)
+        ),
+        "tcad_collection": bool(
+            areas & {"sensor_readout", "sensor_noise", "sensor_ocl", "sensor_physics"}
+            or any(path.startswith("tcad.") for path in paths)
+        ),
+        "rayoptics_geometric_psf": bool(
+            areas & {"optics", "optics_psf"} or any(path.startswith("optics.") for path in paths)
+        ),
+        "hw_isp_trace": any(path.startswith("hw_isp.") for path in paths),
+        "raw_dataset_export": True,
+        "perception_eval": True,
+    }
+
+
+def _physics_plan_summary(plan: Mapping[str, Any] | None) -> dict[str, Any]:
+    if plan is None:
+        return {
+            "included": False,
+            "schema_version": None,
+            "ok": None,
+            "summary": {},
+            "active_runs": {},
+        }
+    return {
+        "included": True,
+        "schema_version": plan.get("schema_version"),
+        "ok": plan.get("ok"),
+        "summary": _jsonable(plan.get("summary", {})),
+        "active_runs": _jsonable(plan.get("active_runs", {})),
+    }
+
+
+def _escalation_stages(
+    axis_summary: Mapping[str, Any],
+    *,
+    selected_case_count: int,
+    physics_pipeline_plan: Mapping[str, Any] | None,
+    strict: bool,
+) -> list[dict[str, Any]]:
+    needs = dict(axis_summary.get("needs", {}))
+    stages = [
+        _static_escalation_stage(
+            "analytic_candidate_screen",
+            needed=True,
+            status="ready" if selected_case_count else "blocked_no_candidates",
+            readiness_tier="validated",
+            action="Use FACA-ranked optimization candidates as the screening set.",
+            truth_boundary=(
+                "Screening metrics are research-use FACA metrics; they do not prove "
+                "calibrated sensor or lens performance."
+            ),
+        )
+    ]
+    stage_specs = [
+        (
+            "db_lut_anchor",
+            "fdtd_sensor_stack_catalog",
+            "proxy",
+            "Bind candidates to selected Sensor DB records and DB/LUT provenance.",
+            "Sensor DB metadata is not per-sensor calibrated physics by itself.",
+        ),
+        (
+            "fdtd_optical_lut_batch",
+            "fdtd_sensor_lut_active",
+            "proxy",
+            "Regenerate or attach FDTD optical-response LUTs for top candidates.",
+            "FDTD LUT validation remains optical proxy until convergence and stack evidence pass.",
+        ),
+        (
+            "tcad_collection_batch",
+            "tcad_sensor_db_active",
+            "calibration_required",
+            "Run TCAD/DEVSIM collection checks for top sensor candidates.",
+            "Current TCAD/DEVSIM summaries are not product-calibrated carrier transport.",
+        ),
+        (
+            "rayoptics_geometric_psf_batch",
+            "lens_patents_active",
+            "proxy",
+            "Attach RayOptics geometric PSF assets and compare against diffraction/WVF metrics.",
+            "RayOptics PSFs are geometric ray histograms, not wave-optics sign-off.",
+        ),
+        (
+            "hw_isp_trace_batch",
+            "hwisp_parameter_profiles",
+            "proxy",
+            "Replay selected cases with HW ISP timing/control-delay profiles.",
+            "Seed/public HW ISP profiles are not vendor latency sign-off without board traces.",
+        ),
+    ]
+    need_key_by_stage = {
+        "db_lut_anchor": "db_lut_anchor",
+        "fdtd_optical_lut_batch": "fdtd_optical_lut",
+        "tcad_collection_batch": "tcad_collection",
+        "rayoptics_geometric_psf_batch": "rayoptics_geometric_psf",
+        "hw_isp_trace_batch": "hw_isp_trace",
+    }
+    for stage_id, entry, tier, action, boundary in stage_specs:
+        needed = bool(needs.get(need_key_by_stage[stage_id], False))
+        stages.append(
+            _physics_escalation_stage(
+                stage_id,
+                entry,
+                needed=needed,
+                readiness_tier=tier,
+                action=action,
+                truth_boundary=boundary,
+                physics_pipeline_plan=physics_pipeline_plan,
+                strict=strict,
+            )
+        )
+    stages.extend(
+        [
+            _static_escalation_stage(
+                "raw_dataset_export",
+                needed=True,
+                status="ready",
+                readiness_tier="validated",
+                action=(
+                    "Export selected candidates with camerae2e_dataset_export_from_optimization."
+                ),
+                truth_boundary="RAW NPZ/metadata outputs are deterministic research artifacts.",
+            ),
+            _static_escalation_stage(
+                "perception_eval_batch",
+                needed=True,
+                status="ready",
+                readiness_tier="available",
+                action=(
+                    "Build RAW-aware and YOLO-view indexes for perception evaluation/training."
+                ),
+                truth_boundary=(
+                    "Perception adapters do not imply dataset-specific model accuracy without "
+                    "training/evaluation evidence."
+                ),
+            ),
+        ]
+    )
+    return stages
+
+
+def _physics_escalation_stage(
+    stage_id: str,
+    entry_name: str,
+    *,
+    needed: bool,
+    readiness_tier: str,
+    action: str,
+    truth_boundary: str,
+    physics_pipeline_plan: Mapping[str, Any] | None,
+    strict: bool,
+) -> dict[str, Any]:
+    action_entry = _physics_action_for_entry(physics_pipeline_plan, entry_name)
+    if not needed:
+        status = "not_needed"
+    elif action_entry is None:
+        status = "planned_without_registry_evidence"
+    else:
+        kind = str(action_entry.get("kind", "ready"))
+        severity = str(action_entry.get("severity", "info"))
+        if severity == "blocking" or (strict and action_entry.get("blocks_strict_validation")):
+            status = f"blocked_{kind}"
+        elif kind in {"missing_asset", "stale_dependency", "calibration_required"}:
+            status = f"needs_{kind}"
+        else:
+            status = "ready_proxy" if readiness_tier == "proxy" else "ready"
+    return {
+        "stage_id": stage_id,
+        "needed": bool(needed),
+        "status": status,
+        "readiness_tier": readiness_tier,
+        "registry_entry": entry_name,
+        "action": action,
+        "registry_action": None if action_entry is None else _jsonable(action_entry),
+        "truth_boundary": truth_boundary,
+    }
+
+
+def _static_escalation_stage(
+    stage_id: str,
+    *,
+    needed: bool,
+    status: str,
+    readiness_tier: str,
+    action: str,
+    truth_boundary: str,
+) -> dict[str, Any]:
+    return {
+        "stage_id": stage_id,
+        "needed": bool(needed),
+        "status": str(status),
+        "readiness_tier": str(readiness_tier),
+        "registry_entry": None,
+        "action": str(action),
+        "registry_action": None,
+        "truth_boundary": str(truth_boundary),
+    }
+
+
+def _physics_action_for_entry(
+    physics_pipeline_plan: Mapping[str, Any] | None, entry_name: str
+) -> Mapping[str, Any] | None:
+    if not isinstance(physics_pipeline_plan, Mapping):
+        return None
+    for action in physics_pipeline_plan.get("actions", []):
+        if str(action.get("entry")) == entry_name:
+            return action
+    return None
+
+
+def _escalation_validation_job(
+    case: Mapping[str, Any],
+    index: int,
+    stages: list[Mapping[str, Any]],
+) -> dict[str, Any]:
+    needed_stages = [
+        stage
+        for stage in stages
+        if stage.get("needed") and stage.get("stage_id") not in {"analytic_candidate_screen"}
+    ]
+    return {
+        "job_id": f"candidate_{index:04d}",
+        "case_index": case.get("case_index"),
+        "seed": case.get("seed"),
+        "parameters": _jsonable(case.get("parameters", {})),
+        "score": case.get("score"),
+        "scenario": _jsonable(case.get("scenario", {})),
+        "planned_stage_ids": [str(stage.get("stage_id")) for stage in needed_stages],
+        "registry_entries": [
+            str(stage.get("registry_entry"))
+            for stage in needed_stages
+            if stage.get("registry_entry")
+        ],
+    }
+
+
+def _escalation_acceptance_gates(
+    axis_summary: Mapping[str, Any],
+    stages: list[Mapping[str, Any]],
+    *,
+    selected_case_count: int,
+) -> list[dict[str, Any]]:
+    readiness_counts = dict(axis_summary.get("readiness_counts", {}))
+    proxy_axis_count = int(readiness_counts.get("proxy", 0))
+    calibration_axis_count = int(readiness_counts.get("calibration_required", 0))
+    return [
+        {
+            "gate": "candidate_selection",
+            "status": "pass" if selected_case_count > 0 else "fail",
+            "evidence": {"selected_case_count": int(selected_case_count)},
+        },
+        {
+            "gate": "proxy_axis_boundary",
+            "status": "pass",
+            "evidence": {
+                "proxy_axis_count": proxy_axis_count,
+                "calibration_required_axis_count": calibration_axis_count,
+                "policy": (
+                    "Proxy and calibration-required axes require downstream evidence "
+                    "before calibrated claims."
+                ),
+            },
+        },
+        {
+            "gate": "physics_stage_coverage",
+            "status": "pass"
+            if any(stage.get("stage_id") == "fdtd_optical_lut_batch" for stage in stages)
+            else "fail",
+            "evidence": {
+                "needed_stage_ids": [
+                    stage.get("stage_id") for stage in stages if stage.get("needed")
+                ],
+            },
+        },
+        {
+            "gate": "dataset_export_path",
+            "status": "pass"
+            if any(stage.get("stage_id") == "raw_dataset_export" for stage in stages)
+            else "fail",
+            "evidence": {
+                "export_api": "camerae2e_dataset_export_from_optimization",
+            },
+        },
+    ]
+
+
 def _normalize_parameter_space(
     parameter_space: Mapping[str, Iterable[Any] | Mapping[str, Any]]
 ) -> dict[str, list[Any]]:
@@ -2624,6 +3107,7 @@ cameraE2EOptimizeParameters = camerae2e_optimize_parameters  # noqa: N816
 cameraE2EOptimizeCameraParameters = camerae2e_optimize_camera_parameters  # noqa: N816
 cameraE2EParetoFront = camerae2e_pareto_front  # noqa: N816
 cameraE2EOptimizationReport = camerae2e_optimization_report  # noqa: N816
+cameraE2EOptimizationEscalationPlan = camerae2e_optimization_escalation_plan  # noqa: N816
 cameraE2EParameterSpaceCatalog = camerae2e_parameter_space_catalog  # noqa: N816
 cameraE2EOptimizationConfigCatalog = camerae2e_optimization_config_catalog  # noqa: N816
 cameraE2EParameterSpaceValidate = camerae2e_parameter_space_validate  # noqa: N816
