@@ -350,6 +350,51 @@ def _apply_special_sensor_override(
 ) -> tuple[Any, str, Any, Any] | None:
     normalized = str(key).strip().replace("_", " ").lower()
     if normalized in {
+        "cfa preset",
+        "cfa pattern preset",
+        "cfa type",
+        "cfa layout",
+    }:
+        before = {
+            "pattern": _safe_sensor_get(sensor, "pattern"),
+            "cfa_name": _safe_sensor_get(sensor, "cfa name"),
+        }
+        updated = sensor_set(sensor, "cfa preset", value)
+        after = {
+            "preset": value,
+            "pattern": _safe_sensor_get(updated, "pattern"),
+            "cfa_name": _safe_sensor_get(updated, "cfa name"),
+        }
+        return updated, "sensor cfa preset", before, after
+    if normalized in {
+        "ocl group proxy",
+        "shared ocl aperture",
+        "shared ocl aperture proxy",
+    }:
+        before = _safe_sensor_get(sensor, "ocl group proxy")
+        updated = sensor_set(sensor, "ocl group proxy", value)
+        after = _safe_sensor_get(updated, "ocl group proxy")
+        return updated, "sensor ocl group proxy", before, after
+    if normalized in {
+        "ocl group shape",
+        "shared ocl shape",
+        "shared ocl aperture shape",
+    }:
+        before = _safe_sensor_get(sensor, "ocl group proxy")
+        updated = sensor_set(sensor, "ocl group shape", value)
+        after = _safe_sensor_get(updated, "ocl group proxy")
+        return updated, "sensor ocl group shape", before, after
+    if normalized in {
+        "ocl group equalization",
+        "ocl equalization",
+        "shared ocl equalization",
+        "shared ocl aperture equalization",
+    }:
+        before = _safe_sensor_get(sensor, "ocl group proxy")
+        updated = sensor_set(sensor, "ocl group equalization", value)
+        after = _safe_sensor_get(updated, "ocl group proxy")
+        return updated, "sensor ocl group equalization", before, after
+    if normalized in {
         "binning factor",
         "pixel binning factor",
         "readout binning factor",
@@ -455,6 +500,8 @@ def _sensor_override_parameter_name(key: Any) -> str | None:
         return "n samples per pixel"
     if normalized in {"cfa pattern", "pattern", "pattern and size"}:
         return "pattern and size"
+    if normalized in {"cfa preset", "cfa pattern preset", "cfa type", "cfa layout"}:
+        return "cfa preset"
     if normalized in {"cfa", "color filter array"}:
         return "cfa"
     if normalized in {"filter names", "filter name"}:
@@ -477,6 +524,17 @@ def _sensor_override_parameter_name(key: Any) -> str | None:
         return "microlens"
     if normalized in {"microlens offset", "microlens offset microns", "ocl offset um"}:
         return "microlens offset"
+    if normalized in {"ocl group proxy", "shared ocl aperture", "shared ocl aperture proxy"}:
+        return "ocl group proxy"
+    if normalized in {"ocl group shape", "shared ocl shape", "shared ocl aperture shape"}:
+        return "ocl group shape"
+    if normalized in {
+        "ocl group equalization",
+        "ocl equalization",
+        "shared ocl equalization",
+        "shared ocl aperture equalization",
+    }:
+        return "ocl group equalization"
     return None
 
 

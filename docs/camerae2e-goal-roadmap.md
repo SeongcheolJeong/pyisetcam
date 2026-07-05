@@ -21,12 +21,12 @@
 |---|---:|---|---|
 | Scene | `validated` | spectral scene, chart scene, RGB/multispectral import, illuminant control | 실제 scene/illumination capture calibration |
 | Optics / RayOptics | `proxy` | Lens DB 검색, RayOptics geometric PSF, CameraE2E optics 실행 | diffraction/wave-optics sign-off, flare/ghost/coating, 제조 오차 |
-| Image Sensor | `proxy` | CFA/pixel/exposure/noise/RAW, image-sensor selector DB | per-sensor calibrated process deck, measured n,k, CAD/GDS, sensor-specific LUT |
+| Image Sensor | `proxy` | CFA/pixel/exposure/noise/RAW, CFA preset/Quad Bayer selector, analytic shared-OCL group equalization proxy, image-sensor selector DB | per-sensor calibrated process deck, measured n/k, CAD/GDS, sensor-specific LUT |
 | FDTD optical LUT | `proxy` | QE/field/crosstalk proxy LUT, physics sanity checks | full convergence, localized crosstalk, measured optical stack |
 | TCAD / DEVSIM | `calibration_required` | generation-map ingestion, split-PD current proxy, accuracy gate | active FDTD/TCAD lineage closure, carrier calibration, dark/noise/lag/full-well |
 | HW ISP | `proxy` | rolling shutter, stage latency, queue, DMA, delayed AE/AWB | board/vendor trace calibration, AF/HDR/TNR detail |
 | Metrics | `validated` | MTF, ISO12233, Delta E, SCIELAB, VSNR, SQRI | product-specific weighting and pass/fail gates |
-| Optimization | `validated` | dot-path camera parameter grid/random/Latin-hypercube/evolutionary/surrogate search, pixel geometry/CFA/readout/noise/optics-PSF/FDTD-OCL configure catalog, preset parameter-space catalog, FACA objective scoring, hard constraints, Pareto front, selected scenarios, parameter-lineage evidence | true GP Bayesian search, hardware-in-loop calibration |
+| Optimization | `validated` | dot-path camera parameter grid/random/Latin-hypercube/evolutionary/surrogate search, pixel geometry/CFA preset/Quad Bayer/readout/noise/optics-PSF/analytic OCL/FDTD-OCL configure catalog, preset parameter-space catalog, FACA objective scoring, hard constraints, Pareto front, selected scenarios, parameter-lineage evidence | true GP Bayesian search, hardware-in-loop calibration |
 | Perception | `available` | task adapters, detection/segmentation/classification/pose/tracking metrics, robustness sweep | training loop, dataset-specific model calibration |
 | RAW data factory | `validated` | manifest, metadata JSONL, deterministic RAW NPZ, split, checksum, labels JSON, validation, RAW-aware perception index, YOLO view export, ADAS/KITTI YOLO demo export, proxy camera-spec variant re-capture | DNG writer, automatic label synthesis |
 | DB/LUT registry | `validated` / `calibration_required` | manifest, readiness tier, provenance, dependency lineage, stale detection, calibration evidence manifest, readiness promotion plan | actual measured evidence attachment and calibrated promotion |
@@ -90,9 +90,10 @@ Optimization:
 
 The first optimizer is deterministic grid search over dot-path camera
 parameters such as `sensor.integration_time`, `sensor.analog_gain`,
-`sensor.pixel_size`, `sensor.pixel_fill_factor`, `sensor.cfa_pattern`,
-`sensor.binning_method`, `sensor.binning_factor`, `sensor.ocl_vignetting`,
-`sensor.ocl_fnumber`, `sensor.ocl_focal_length_um`,
+`sensor.pixel_size`, `sensor.pixel_fill_factor`, `sensor.cfa_preset`,
+`sensor.cfa_pattern`, `sensor.binning_method`, `sensor.binning_factor`,
+`sensor.ocl_vignetting`, `sensor.ocl_group_shape`,
+`sensor.ocl_group_equalization`, `sensor.ocl_fnumber`, `sensor.ocl_focal_length_um`,
 `sensor.ocl_refractive_index`, `sensor.pixel_read_noise_v`, `optics.fnumber`,
 `optics.focal_length`, `optics.si_psf_radius_um`, `fdtd.crosstalk_strength`,
 `fdtd.ocl_shift_um`, `fdtd.cra_x_deg`, `fdtd.cra_z_deg`,
@@ -107,8 +108,8 @@ axis, custom dot-path assignment rule, and supported FACA objective metric path.
 `registered`, `assignable`, `custom_passthrough`, or blocked before any expensive
 sweep is launched. It also validates high-value axis values: positive exposure,
 gain, pixel size, f-number, focal length, PSF radius, odd
-`sensor.n_samples_per_pixel`, CFA matrix shape/integer constraints, supported
-binning/demosaic/OCL/mode tokens, supported 1/off or 2x legacy
+`sensor.n_samples_per_pixel`, CFA preset/matrix shape/integer constraints, supported
+binning/demosaic/OCL group/OCL mode tokens, supported 1/off or 2x legacy
 `sensor.binning_factor`, nonnegative FDTD crosstalk strength, finite FDTD CRA/OCL
 selectors, and HW ISP delay integer constraints. This prevents false optimization runs where an axis
 is syntactically accepted but does not affect the camera pipeline or fails deep
@@ -142,14 +143,27 @@ sampling, not readout binning. `sensor.binning_method` and
 `sensor.binning_factor` currently route to the legacy 2x binning wrapper and
 remain `proxy` until charge-domain, readout-domain, and ISP-domain binning are
 separated. `sensor.ocl_vignetting`/microlens axes use the current
-etendue/vignetting model; OCL offset/height/process-stack optimization should
-not be registered as validated until fixed-offset etendue or FDTD/TCAD-backed
-OCL LUTs are attached. `optics.si_psf_radius_um` is a synthetic
+etendue/vignetting model. `sensor.cfa_preset` expands named layouts such as
+Bayer and Quad Bayer into CFA matrices while reusing the current filter
+spectra/QE. `sensor.ocl_group_shape` and `sensor.ocl_group_equalization` are
+analytic shared-aperture proxies: they equalize the spatial optical sample
+within a group per spectral/current plane before CFA selection and therefore
+model "no extra optical resolution under one OCL" without mixing color-filter
+outputs. OCL offset/height/process-stack optimization should not be registered
+as validated until fixed-offset etendue or FDTD/TCAD-backed OCL LUTs are
+attached. `optics.si_psf_radius_um` is a synthetic
 shift-invariant pillbox PSF radius for blur sensitivity sweeps; it must not be
 interpreted as a RayOptics geometric PSF radius or diffraction/wave-optics
 sign-off. FDTD/OCL axes such as `fdtd.crosstalk_strength`,
 `fdtd.ocl_shift_um`, and FDTD CRA selectors only affect the pipeline when an
 FDTD LUT is attached in the base scenario.
+
+Sensor DB and free-configuration runs intentionally use different defaults.
+When a sensor DB record is selected, DB/LUT artifacts should override or
+calibrate the proxy defaults. When the goal is to configure many hypothetical
+sensors, analytic proxy axes are the fast search engine. FDTD/TCAD/RayOptics
+then act as offline LUT sources, calibration anchors, or validation batches for
+top candidates, not as per-candidate solvers inside every optimization loop.
 
 Optimization configure priority:
 
@@ -157,8 +171,8 @@ Optimization configure priority:
 |---|---|---|
 | Exposure/noise/readout | `sensor.integration_time`, `sensor.analog_gain`, `sensor.pixel_read_noise_v`, `sensor.pixel_dark_voltage`, `sensor.pixel_voltage_swing`, `sensor.pixel_conversion_gain`, `sensor.noise_flag`, `sensor.binning_method`, `sensor.binning_factor` | registered validated/proxy axes; binning is legacy 2x proxy |
 | Sensor geometry/sampling | `sensor.pixel_size`, `sensor.pixel_fill_factor`, `sensor.n_samples_per_pixel`, sensor resolution/FOV custom paths | pixel/sampling validated; FOV/size custom paths require lineage checks |
-| CFA/spectral | `sensor.cfa_pattern`, `sensor.filter_names`, `sensor.filter_spectra`, IR/QE custom paths | CFA registered; spectra/name changes require consistency checks |
-| OCL/microlens | `sensor.ocl_vignetting`, `sensor.ocl_fnumber`, `sensor.ocl_focal_length_um`, `sensor.ocl_refractive_index`; future `ocl_offset/height/stack` via FDTD/TCAD LUT | etendue/vignetting proxy; refractive index calibration-required |
+| CFA/spectral | `sensor.cfa_preset`, `sensor.cfa_pattern`, `sensor.filter_names`, `sensor.filter_spectra`, IR/QE custom paths | Bayer/Quad Bayer presets registered; spectra/name changes require consistency checks |
+| OCL/microlens | `sensor.ocl_vignetting`, `sensor.ocl_group_shape`, `sensor.ocl_group_equalization`, `sensor.ocl_fnumber`, `sensor.ocl_focal_length_um`, `sensor.ocl_refractive_index`; future `ocl_offset/height/stack` via FDTD/TCAD LUT | etendue/vignetting and shared-aperture analytic proxies; refractive index calibration-required |
 | Optics/PSF | `optics.focal_length`, `optics.fnumber`, `optics.si_psf_radius_um`, `optics.psf_angle_step`, `optics.rt_compute_spacing`, distortion/relative-illumination custom paths | focal/f-number validated; PSF radius/RayOptics sampling proxy |
 | FDTD/TCAD/OCL | `fdtd.mode`, `fdtd.crosstalk_strength`, `fdtd.ocl_shift_um`, `fdtd.cra_x_deg`, `fdtd.cra_z_deg`, `tcad.collection_mode` | guarded by attached LUT/DB; proxy or calibration-required |
 | ISP/control | `ip.demosaic_method`, black level/tone/gamma/custom IP paths, HW ISP AE/AWB delay and latency axes | demosaic validated; HW ISP proxy |

@@ -99,7 +99,10 @@ def _capability_matrix(
         {
             "area": "Image Sensor",
             "tier": "proxy",
-            "implemented": "CFA/pixel/exposure/noise/RAW path plus image-sensor selector DB.",
+            "implemented": (
+                "CFA/pixel/exposure/noise/RAW path, CFA preset/Quad Bayer selector, "
+                "analytic shared-OCL group equalization proxy, and image-sensor selector DB."
+            ),
             "remaining": (
                 "Per-sensor calibrated process decks, measured n,k, CAD/GDS, "
                 "sensor-specific FDTD LUTs."
@@ -155,7 +158,8 @@ def _capability_matrix(
                 "plus discrete surrogate-guided search over "
                 "dot-path camera parameters using FACA metric objectives, constraints, "
                 "Pareto front, selected scenarios, parameter-lineage evidence, "
-                "pixel geometry/CFA/readout/binning/OCL/noise/optics-PSF/FDTD-OCL configure "
+                "pixel geometry/CFA preset/Quad Bayer/readout/binning/analytic OCL/"
+                "FDTD-OCL/noise/optics-PSF configure "
                 "targets, candidate budget controls, and preflight parameter-space "
                 "validation."
             ),

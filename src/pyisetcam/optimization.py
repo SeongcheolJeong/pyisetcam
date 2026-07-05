@@ -77,6 +77,16 @@ _PARAMETER_AXIS_CATALOG: dict[str, dict[str, Any]] = {
             "with the selected pattern indices."
         ),
     },
+    "sensor.cfa_preset": {
+        "area": "sensor_spectral",
+        "unit": "enum",
+        "readiness_tier": "validated",
+        "values": ["bayer_rgb", "quad_bayer_rgb", "quad_bayer_bggr"],
+        "description": (
+            "Named CFA pattern selector. Quad Bayer presets expand to 4x4 same-color "
+            "2x2 groups while reusing the current RGB filter spectra."
+        ),
+    },
     "sensor.binning_method": {
         "area": "sensor_readout",
         "unit": "enum",
@@ -107,6 +117,28 @@ _PARAMETER_AXIS_CATALOG: dict[str, dict[str, Any]] = {
             "On-chip-lens/microlens etendue proxy applied through sensor vignetting. "
             "This changes sensor_compute via the etendue map, but is not a calibrated "
             "OCL process stack."
+        ),
+    },
+    "sensor.ocl_group_shape": {
+        "area": "sensor_ocl",
+        "unit": "pixels",
+        "readiness_tier": "proxy",
+        "values": ["1x1", "2x2"],
+        "description": (
+            "Analytic shared-OCL aperture group shape. A 2x2 group equalizes the "
+            "spatial optical sample per spectral plane before CFA selection; it "
+            "does not create extra optical resolution."
+        ),
+    },
+    "sensor.ocl_group_equalization": {
+        "area": "sensor_ocl",
+        "unit": "fraction",
+        "readiness_tier": "proxy",
+        "values": [0.0, 0.5, 1.0],
+        "description": (
+            "Strength of the analytic shared-OCL group equalization in [0, 1]. "
+            "This is a fast proxy for CRA-matched shared aperture behavior, not a "
+            "DTI/FDTD-calibrated process-stack model."
         ),
     },
     "sensor.ocl_fnumber": {
@@ -286,11 +318,13 @@ _PARAMETER_SPACE_PRESETS: dict[str, tuple[str, ...]] = {
     ),
     "sensor_ocl": (
         "sensor.ocl_vignetting",
+        "sensor.ocl_group_shape",
+        "sensor.ocl_group_equalization",
         "sensor.ocl_fnumber",
         "sensor.ocl_focal_length_um",
         "sensor.ocl_refractive_index",
     ),
-    "sensor_spectral": ("sensor.cfa_pattern",),
+    "sensor_spectral": ("sensor.cfa_preset", "sensor.cfa_pattern"),
     "sensor_readout": (
         "sensor.integration_time",
         "sensor.analog_gain",
@@ -319,8 +353,11 @@ _PARAMETER_SPACE_PRESETS: dict[str, tuple[str, ...]] = {
         "optics.focal_length",
         "optics.fnumber",
         "sensor.pixel_size",
+        "sensor.cfa_preset",
         "sensor.binning_factor",
         "sensor.ocl_vignetting",
+        "sensor.ocl_group_shape",
+        "sensor.ocl_group_equalization",
         "sensor.integration_time",
         "sensor.analog_gain",
     ),
@@ -359,6 +396,14 @@ _SENSOR_OPTIMIZATION_PARAMETERS = {
     "pattern",
     "pattern_and_size",
     "pattern and size",
+    "cfa_preset",
+    "cfa preset",
+    "cfa_pattern_preset",
+    "cfa pattern preset",
+    "cfa_type",
+    "cfa type",
+    "cfa_layout",
+    "cfa layout",
     "cfa",
     "color_filter_array",
     "color filter array",
@@ -405,6 +450,24 @@ _SENSOR_OPTIMIZATION_PARAMETERS = {
     "microlens vignetting",
     "pixel_vignetting",
     "pixel vignetting",
+    "ocl_group_shape",
+    "ocl group shape",
+    "shared_ocl_shape",
+    "shared ocl shape",
+    "shared_ocl_aperture_shape",
+    "shared ocl aperture shape",
+    "ocl_group_equalization",
+    "ocl group equalization",
+    "ocl_equalization",
+    "ocl equalization",
+    "shared_ocl_equalization",
+    "shared ocl equalization",
+    "shared_ocl_aperture_equalization",
+    "shared ocl aperture equalization",
+    "ocl_group_proxy",
+    "ocl group proxy",
+    "shared_ocl_aperture",
+    "shared ocl aperture",
     "ocl_fnumber",
     "ocl fnumber",
     "ocl_f_number",
@@ -734,10 +797,13 @@ def camerae2e_optimization_config_catalog() -> dict[str, Any]:
                     "sensor.noise_flag",
                     "sensor.pixel_size",
                     "sensor.pixel_fill_factor",
+                    "sensor.cfa_preset",
                     "sensor.cfa_pattern",
                     "sensor.binning_method",
                     "sensor.binning_factor",
                     "sensor.ocl_vignetting",
+                    "sensor.ocl_group_shape",
+                    "sensor.ocl_group_equalization",
                     "sensor.ocl_fnumber",
                 ],
                 "truth_boundary": (
@@ -745,7 +811,8 @@ def camerae2e_optimization_config_catalog() -> dict[str, Any]:
                     "binning compute proxy; "
                     "sensor.n_samples_per_pixel is sub-pixel integration sampling, "
                     "not readout binning. OCL/microlens axes use etendue/vignetting "
-                    "proxies unless an FDTD OCL LUT is attached."
+                    "and shared-aperture analytic proxies unless an FDTD OCL LUT is attached. "
+                    "CFA presets change sampling layout but reuse the current filter spectra."
                 ),
             },
             {
@@ -1851,6 +1918,7 @@ def _parameter_value_findings(
         "fdtd.cra_z_deg",
     }
     nonnegative_scalar_axes = {"fdtd.crosstalk_strength"}
+    fraction_axes = {"sensor.ocl_group_equalization"}
     nonnegative_integer_axes = {
         "hw_isp.ae_apply_delay_frames",
         "hw_isp.awb_apply_delay_frames",
@@ -1907,12 +1975,18 @@ def _parameter_value_findings(
             cfa_issues, cfa_warnings = _validate_cfa_pattern(path, index, value)
             issues.extend(cfa_issues)
             warnings.extend(cfa_warnings)
+        elif key == "sensor.cfa_preset":
+            issues.extend(_validate_enum_value(path, index, value, _CFA_PRESETS))
         elif key == "sensor.binning_method":
             issues.extend(_validate_enum_value(path, index, value, _BINNING_METHODS))
         elif key == "sensor.binning_factor":
             issues.extend(_validate_binning_factor(path, index, value))
         elif key == "sensor.ocl_vignetting":
             issues.extend(_validate_enum_value(path, index, value, _OCL_VIGNETTING_MODES))
+        elif key == "sensor.ocl_group_shape":
+            issues.extend(_validate_ocl_group_shape(path, index, value))
+        elif key in fraction_axes:
+            issues.extend(_validate_fraction_value(path, index, value))
         elif key == "sensor.noise_flag":
             issues.extend(
                 _validate_integer_value(
@@ -1970,6 +2044,27 @@ _OCL_VIGNETTING_MODES = {
     "optimal",
     "optimized",
 }
+
+_CFA_PRESETS = {
+    "bayer",
+    "bayer_rgb",
+    "bayer_rggb",
+    "rggb",
+    "bayer_grbg",
+    "grbg",
+    "bayer_bggr",
+    "bggr",
+    "bayer_gbrg",
+    "gbrg",
+    "quad_bayer",
+    "quad_bayer_rgb",
+    "quad_bayer_rggb",
+    "quad_bayer_bggr",
+    "quad_bayer_grbg",
+    "quad_bayer_gbrg",
+}
+
+_OCL_GROUP_SHAPES = {"1x1", "2x2"}
 
 
 def _canonical_parameter_path(path: str) -> str:
@@ -2058,6 +2153,20 @@ def _validate_fill_factor(path: str, index: int, value: Any) -> list[dict[str, A
     return []
 
 
+def _validate_fraction_value(path: str, index: int, value: Any) -> list[dict[str, Any]]:
+    number = _scalar_float(value)
+    if number is None or not (0.0 <= number <= 1.0):
+        return [
+            _value_finding(
+                path,
+                index,
+                "invalid_fraction_value",
+                f"{path!r} values must be in the interval [0, 1].",
+            )
+        ]
+    return []
+
+
 def _validate_n_samples_per_pixel(
     path: str, index: int, value: Any
 ) -> list[dict[str, Any]]:
@@ -2106,6 +2215,51 @@ def _validate_binning_factor(path: str, index: int, value: Any) -> list[dict[str
     return []
 
 
+def _validate_ocl_group_shape(path: str, index: int, value: Any) -> list[dict[str, Any]]:
+    if isinstance(value, str):
+        normalized = value.strip().lower().replace(" ", "")
+        if normalized in _OCL_GROUP_SHAPES or normalized in {"off", "none", "disabled"}:
+            return []
+        return [
+            _value_finding(
+                path,
+                index,
+                "unsupported_ocl_group_shape",
+                "sensor.ocl_group_shape currently supports '1x1' or '2x2'.",
+            )
+        ]
+    array = _numeric_array(value)
+    if (
+        array is None
+        or array.size not in {1, 2}
+        or not np.all(np.isclose(array.reshape(-1), np.rint(array.reshape(-1))))
+    ):
+        return [
+            _value_finding(
+                path,
+                index,
+                "invalid_ocl_group_shape",
+                (
+                    "sensor.ocl_group_shape values must be '1x1', '2x2', "
+                    "or positive integer dimensions."
+                ),
+            )
+        ]
+    dims = np.rint(array.reshape(-1)).astype(int)
+    if dims.size == 1:
+        dims = np.repeat(dims, 2)
+    if np.any(dims <= 0) or tuple(dims[:2]) not in {(1, 1), (2, 2)}:
+        return [
+            _value_finding(
+                path,
+                index,
+                "unsupported_ocl_group_shape",
+                "sensor.ocl_group_shape currently supports '1x1' or '2x2'.",
+            )
+        ]
+    return []
+
+
 def _validate_cfa_pattern(
     path: str, index: int, value: Any
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -2141,8 +2295,9 @@ def _validate_cfa_pattern(
 def _validate_enum_value(
     path: str, index: int, value: Any, allowed: set[str]
 ) -> list[dict[str, Any]]:
-    key = str(value).strip().lower()
-    if key.replace(" ", "") not in {item.replace(" ", "") for item in allowed}:
+    key = str(value).strip().lower().replace(" ", "").replace("_", "")
+    allowed_keys = {item.replace(" ", "").replace("_", "") for item in allowed}
+    if key not in allowed_keys:
         return [
             _value_finding(
                 path,

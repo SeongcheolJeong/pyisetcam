@@ -528,8 +528,11 @@
             "optics.focal_length",
             "optics.fnumber",
             "sensor.pixel_size",
+            "sensor.cfa_preset",
             "sensor.binning_factor",
             "sensor.ocl_vignetting",
+            "sensor.ocl_group_shape",
+            "sensor.ocl_group_equalization",
             "sensor.integration_time",
             "sensor.analog_gain"
           ],
@@ -581,6 +584,8 @@
           ],
           "sensor_ocl": [
             "sensor.ocl_vignetting",
+            "sensor.ocl_group_shape",
+            "sensor.ocl_group_equalization",
             "sensor.ocl_fnumber",
             "sensor.ocl_focal_length_um",
             "sensor.ocl_refractive_index"
@@ -594,10 +599,11 @@
             "sensor.binning_factor"
           ],
           "sensor_spectral": [
+            "sensor.cfa_preset",
             "sensor.cfa_pattern"
           ]
         },
-        "registered_configure_count": 32,
+        "registered_configure_count": 35,
         "search_method": "evolutionary",
         "seed": 2036,
         "surrogate_candidate_plan": {
@@ -956,7 +962,7 @@
       "tier": "calibration_required"
     }
   ],
-  "generated_at": "2026-07-05T06:45:28.605255+00:00",
+  "generated_at": "2026-07-05T07:00:49.758220+00:00",
   "goal": "Research-grade E2E optimization platform plus RAW data factory for perception training.",
   "ok": true,
   "output_dir": "/Users/seongcheoljeong/Documents/CameraE2E/reports/camerae2e_goal",

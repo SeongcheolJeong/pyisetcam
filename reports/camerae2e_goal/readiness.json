@@ -1356,7 +1356,7 @@
     },
     {
       "area": "Image Sensor",
-      "implemented": "CFA/pixel/exposure/noise/RAW path plus image-sensor selector DB.",
+      "implemented": "CFA/pixel/exposure/noise/RAW path, CFA preset/Quad Bayer selector, analytic shared-OCL group equalization proxy, and image-sensor selector DB.",
       "remaining": "Per-sensor calibrated process decks, measured n,k, CAD/GDS, sensor-specific FDTD LUTs.",
       "tier": "proxy"
     },
@@ -1387,7 +1387,7 @@
     },
     {
       "area": "Optimization",
-      "implemented": "Preset parameter-space catalog plus deterministic grid, random, Latin-hypercube candidate planning, and score-ranked evolutionary plus discrete surrogate-guided search over dot-path camera parameters using FACA metric objectives, constraints, Pareto front, selected scenarios, parameter-lineage evidence, pixel geometry/CFA/readout/binning/OCL/noise/optics-PSF/FDTD-OCL configure targets, candidate budget controls, and preflight parameter-space validation.",
+      "implemented": "Preset parameter-space catalog plus deterministic grid, random, Latin-hypercube candidate planning, and score-ranked evolutionary plus discrete surrogate-guided search over dot-path camera parameters using FACA metric objectives, constraints, Pareto front, selected scenarios, parameter-lineage evidence, pixel geometry/CFA preset/Quad Bayer/readout/binning/analytic OCL/FDTD-OCL/noise/optics-PSF configure targets, candidate budget controls, and preflight parameter-space validation.",
       "remaining": "True Gaussian-process Bayesian search, true multi-factor readout/remosaic binning, OCL process-stack calibration, and closed-loop hardware calibration.",
       "tier": "validated"
     },
@@ -1416,7 +1416,7 @@
       "tier": "calibration_required"
     }
   ],
-  "generated_at": "2026-07-05T06:45:33.382016+00:00",
+  "generated_at": "2026-07-05T07:00:39.261456+00:00",
   "goal": "Research-grade E2E optimization platform plus RAW data factory for perception training.",
   "physics_pipeline_plan": {
     "actions": [

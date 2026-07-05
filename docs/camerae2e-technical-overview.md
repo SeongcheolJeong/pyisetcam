@@ -107,8 +107,17 @@ Lens DB도 연결되어 있다. 기존 리포트 기준으로 외부 RayOptics v
 | exposure | auto exposure, integration time, multi-exposure, matrix integration time 일부 | `sensor_set(..., "integration time", ...)`, `sensor_compute_mev(...)` |
 | raw response | current density, spatial integration, sensor volts, digital values, full-array compute | `sensor_compute(...)`, `sensor_compute_full_array(...)`, `sensor_compute_image(...)` |
 | noise | shot noise, read noise, dark current, DSNU, PRNU, column FPN, quantization | `sensor_add_noise(...)`, `sensor_compute_noise_free(...)` |
-| sampling/array | binning, sensor array, multi-sensor, SV filter, CFA plane conversion | `bin_sensor_compute(...)`, `sensor_compute_array(...)`, `sensor_compute_sv_filters(...)` |
+| sampling/array | binning, sensor array, multi-sensor, SV filter, CFA plane conversion, CFA preset/Quad Bayer selector, analytic shared-OCL group equalization proxy | `bin_sensor_compute(...)`, `sensor_compute_array(...)`, `sensor_compute_sv_filters(...)`, `sensor_set(..., "cfa preset", ...)`, `sensor_set(..., "ocl group shape", ...)` |
 | file IO | DNG read, image/spectra/object import/export | `ie_dng_read(...)`, `vc_read_image(...)`, `vc_export_object(...)` |
+
+`sensor.cfa_preset`은 Bayer/Quad Bayer 같은 이름을 실제 CFA matrix로 확장한다.
+`sensor.ocl_group_shape`와 `sensor.ocl_group_equalization`은 하나의 OCL
+aperture 아래 여러 pixel이 같은 spatial optical sample을 공유한다는 해석
+proxy다. 이 처리는 CFA 이후 R/G/B raw 값을 평균내지 않고, CFA 선택 전
+spectral/current plane별 sampling을 group 단위로 equalize한다. 따라서 "하나의
+OCL 아래 pixel이 여러 개 있어도 광학 해상도가 자동 증가하지 않는다"는 가정을
+빠르게 sweep할 수 있지만, CRA mismatch/defocus/polarization/DTI geometry는
+FDTD-calibrated LUT나 measured evidence 없이 sign-off claim으로 올리지 않는다.
 
 ### FDTD optical LUT
 
@@ -461,6 +470,14 @@ Physics 근사는 완벽한 현실 재현이 목적이 아니라, 설계 결정�
 | TCAD/DEVSIM proxy | generation map과 collection current plumbing을 연결한다. | calibrated electrical sensor model이 아니면 제품 collection/QE/dark/lag sign-off가 아니다. |
 | measured calibration | 최종 제품 정확도에 필요하다. | 비용과 시간이 크고, design space 전체를 훑기 어렵다. |
 
+센서DB 자체를 재현하거나 비교할 때는 DB/LUT가 우선이다. 반대로 아직 존재하지
+않는 sensor configuration을 넓게 최적화할 때는 해석 proxy가 기본 엔진이다.
+CameraE2E의 권장 구조는 combination이다: 해석 모델로 넓은 후보를 빠르게
+search하고, sensor DB/FDTD/TCAD/RayOptics LUT는 proxy parameter를 보정하거나
+상위 후보를 검증하는 anchor로 쓴다. FDTD를 매 후보마다 직접 돌리는 방식은
+Research RAW factory에는 너무 무겁고, material/stack/mesh/convergence가 맞지
+않으면 "FDTD라서 정답"이라는 해석도 성립하지 않는다.
+
 ### 9.3 올바른 사용 원칙
 
 CameraE2E를 좋은 solution으로 쓰려면 다음 경계를 지켜야 한다.
@@ -547,7 +564,7 @@ PPT에서 설명한 활용 범위를 코드에서 직접 추적하기 위해 pub
 | Physics pipeline plan | `camerae2e_physics_pipeline_plan(...)` | FDTD/TCAD/RayOptics/HW ISP asset의 stale/missing/proxy 상태를 refresh/calibration action list로 변환 |
 | Goal evidence gate | `camerae2e_goal_gate(...)` | registry, physics lineage, FACA, optimization, RAW factory, ADAS/KITTI demo, camera-spec variant, strict sign-off guard를 한 번에 pass/warn/fail evidence로 기록 |
 | System FACA | `camerae2e_run_scenario(...)`, `camerae2e_run_sweep(...)`, `camerae2e_faca_report(...)` | Field / Angle / Color / Artifact / Control 관점의 E2E scenario와 sweep 결과 수집 |
-| Parameter optimization | `camerae2e_parameter_space_catalog(...)`, `camerae2e_parameter_candidate_plan(...)`, `camerae2e_optimization_config_catalog(...)`, `camerae2e_parameter_space_validate(...)`, `camerae2e_optimize_camera_parameters(...)`, `camerae2e_optimize_parameters(...)`, `camerae2e_pareto_front(...)`, `camerae2e_optimization_report(...)` | `sensor.integration_time`, `sensor.pixel_size`, `sensor.pixel_fill_factor`, `sensor.cfa_pattern`, `sensor.binning_method`, `sensor.binning_factor`, `sensor.ocl_vignetting`, `sensor.ocl_fnumber`, `sensor.ocl_focal_length_um`, `sensor.ocl_refractive_index`, `sensor.pixel_read_noise_v`, `optics.fnumber`, `optics.focal_length`, `optics.si_psf_radius_um`, `fdtd.crosstalk_strength`, `fdtd.ocl_shift_um`, FDTD CRA selectors, `ip.demosaic_method`, HW ISP delay 같은 dot-path camera parameter를 preset catalog 또는 caller space로 자동 grid/random/Latin-hypercube/evolutionary/surrogate search하고, configure target 목록/validation, 값 범위/모드 token guard, candidate budget, FACA metric objective/constraint, score-ranked evolutionary trace, RBF/inverse-distance surrogate acquisition trace, Pareto front, selected scenario를 산출. `binning_*`, OCL etendue/microlens, `si_psf_radius_um`, RayOptics sampling, FDTD OCL/CRA 축은 proxy/calibration boundary를 함께 기록한다. |
+| Parameter optimization | `camerae2e_parameter_space_catalog(...)`, `camerae2e_parameter_candidate_plan(...)`, `camerae2e_optimization_config_catalog(...)`, `camerae2e_parameter_space_validate(...)`, `camerae2e_optimize_camera_parameters(...)`, `camerae2e_optimize_parameters(...)`, `camerae2e_pareto_front(...)`, `camerae2e_optimization_report(...)` | `sensor.integration_time`, `sensor.pixel_size`, `sensor.pixel_fill_factor`, `sensor.cfa_preset`, `sensor.cfa_pattern`, `sensor.binning_method`, `sensor.binning_factor`, `sensor.ocl_vignetting`, `sensor.ocl_group_shape`, `sensor.ocl_group_equalization`, `sensor.ocl_fnumber`, `sensor.ocl_focal_length_um`, `sensor.ocl_refractive_index`, `sensor.pixel_read_noise_v`, `optics.fnumber`, `optics.focal_length`, `optics.si_psf_radius_um`, `fdtd.crosstalk_strength`, `fdtd.ocl_shift_um`, FDTD CRA selectors, `ip.demosaic_method`, HW ISP delay 같은 dot-path camera parameter를 preset catalog 또는 caller space로 자동 grid/random/Latin-hypercube/evolutionary/surrogate search하고, configure target 목록/validation, 값 범위/모드 token guard, candidate budget, FACA metric objective/constraint, score-ranked evolutionary trace, RBF/inverse-distance surrogate acquisition trace, Pareto front, selected scenario를 산출. `cfa_preset`/Quad Bayer, `binning_*`, analytic shared-OCL group, OCL etendue/microlens, `si_psf_radius_um`, RayOptics sampling, FDTD OCL/CRA 축은 proxy/calibration boundary를 함께 기록한다. |
 | RAW data factory | `camerae2e_dataset_export(...)`, `camerae2e_dataset_export_from_optimization(...)`, `camerae2e_dataset_export_perception_index(...)`, `camerae2e_dataset_export_adas_kitti_demo(...)`, `camerae2e_dataset_export_camera_spec_variants(...)`, `camerae2e_dataset_validate(...)` | perception 학습용 deterministic RAW NPZ, RAW-aware training manifest JSONL, YOLO-style RGB preview/label view, optimization best/top/Pareto case export, ADAS/KITTI YOLO demo export, KITTI-style scene의 focal-ratio pinhole crop/resize camera-spec proxy re-capture, parameter-lineage evidence, split, checksum, RGB preview, labels JSON, metadata JSONL, manifest export/validation |
 
 새 readiness tier는 `missing`, `available`, `proxy`, `validated`, `calibration_required`, `calibrated`로 통일한다. 이 tier는 기능의 존재 여부가 아니라 claim의 강도를 나타낸다. 예를 들어 RayOptics PSF가 실행 가능해도 diffraction/wave-optics sign-off는 아니므로 `proxy`에 머문다. TCAD framework가 로드되어도 measured process/optical/electrical calibration이 없으면 `calibration_required`에 머문다.

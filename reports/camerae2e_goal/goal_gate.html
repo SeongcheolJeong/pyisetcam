@@ -24,7 +24,7 @@ code { word-break: break-all; }
 <p class="lead">Research-grade E2E optimization platform plus RAW data factory for perception training.</p>
 <p>OK: <strong>True</strong>; strict:
 <strong>False</strong>; generated:
-<code>2026-07-05T06:45:28.605255+00:00</code></p>
+<code>2026-07-05T07:00:49.758220+00:00</code></p>
 <p>Artifacts: <code>/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke</code></p>
 <h2>Requirements</h2>
 <table>
@@ -532,8 +532,11 @@ code { word-break: break-all; }
       &quot;optics.focal_length&quot;,
       &quot;optics.fnumber&quot;,
       &quot;sensor.pixel_size&quot;,
+      &quot;sensor.cfa_preset&quot;,
       &quot;sensor.binning_factor&quot;,
       &quot;sensor.ocl_vignetting&quot;,
+      &quot;sensor.ocl_group_shape&quot;,
+      &quot;sensor.ocl_group_equalization&quot;,
       &quot;sensor.integration_time&quot;,
       &quot;sensor.analog_gain&quot;
     ],
@@ -585,6 +588,8 @@ code { word-break: break-all; }
     ],
     &quot;sensor_ocl&quot;: [
       &quot;sensor.ocl_vignetting&quot;,
+      &quot;sensor.ocl_group_shape&quot;,
+      &quot;sensor.ocl_group_equalization&quot;,
       &quot;sensor.ocl_fnumber&quot;,
       &quot;sensor.ocl_focal_length_um&quot;,
       &quot;sensor.ocl_refractive_index&quot;
@@ -598,10 +603,11 @@ code { word-break: break-all; }
       &quot;sensor.binning_factor&quot;
     ],
     &quot;sensor_spectral&quot;: [
+      &quot;sensor.cfa_preset&quot;,
       &quot;sensor.cfa_pattern&quot;
     ]
   },
-  &quot;registered_configure_count&quot;: 32,
+  &quot;registered_configure_count&quot;: 35,
   &quot;search_method&quot;: &quot;evolutionary&quot;,
   &quot;seed&quot;: 2036,
   &quot;surrogate_candidate_plan&quot;: {

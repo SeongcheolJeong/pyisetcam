@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import numpy as np
+
 from pyisetcam import (
     camerae2e_faca_report,
     camerae2e_optimization_config_catalog,
@@ -64,8 +66,11 @@ def test_camerae2e_optimization_config_catalog_lists_configure_targets() -> None
     assert "sensor.integration_time" in catalog["registered_axes"]
     assert "sensor.pixel_size" in catalog["registered_axes"]
     assert "sensor.cfa_pattern" in catalog["registered_axes"]
+    assert "sensor.cfa_preset" in catalog["registered_axes"]
     assert "sensor.binning_factor" in catalog["registered_axes"]
     assert "sensor.ocl_vignetting" in catalog["registered_axes"]
+    assert "sensor.ocl_group_shape" in catalog["registered_axes"]
+    assert "sensor.ocl_group_equalization" in catalog["registered_axes"]
     assert "sensor.ocl_fnumber" in catalog["registered_axes"]
     assert "optics.si_psf_radius_um" in catalog["registered_axes"]
     assert "fdtd.ocl_shift_um" in catalog["registered_axes"]
@@ -81,9 +86,12 @@ def test_camerae2e_optimization_config_catalog_lists_configure_targets() -> None
     )
     assert "exposure_time" in sensor_rule["allowed_suffixes"]
     assert "pixel_size" in sensor_rule["allowed_suffixes"]
+    assert "cfa_preset" in sensor_rule["allowed_suffixes"]
     assert "binning_method" in sensor_rule["allowed_suffixes"]
     assert "binning_factor" in sensor_rule["allowed_suffixes"]
     assert "ocl_vignetting" in sensor_rule["allowed_suffixes"]
+    assert "ocl_group_shape" in sensor_rule["allowed_suffixes"]
+    assert "ocl_group_equalization" in sensor_rule["allowed_suffixes"]
 
 
 def test_camerae2e_parameter_space_validate_classifies_axes() -> None:
@@ -133,9 +141,12 @@ def test_camerae2e_parameter_space_validate_reports_invalid_values() -> None:
             "sensor.pixel_fill_factor": [1.5],
             "sensor.n_samples_per_pixel": [2],
             "sensor.cfa_pattern": [[[1.2, 2], [2, 3]]],
+            "sensor.cfa_preset": ["unsupported"],
             "sensor.binning_method": ["unsupported"],
             "sensor.binning_factor": [4],
             "sensor.ocl_vignetting": ["unsupported"],
+            "sensor.ocl_group_shape": ["3x3"],
+            "sensor.ocl_group_equalization": [1.5],
             "sensor.ocl_fnumber": [0.0],
             "optics.si_psf_radius_um": [-1.0],
         }
@@ -150,6 +161,8 @@ def test_camerae2e_parameter_space_validate_reports_invalid_values() -> None:
         "invalid_cfa_pattern",
         "unsupported_enum_value",
         "unsupported_binning_factor",
+        "unsupported_ocl_group_shape",
+        "invalid_fraction_value",
         "invalid_positive_value",
     } <= issue_kinds
     assert validation["axes"]["sensor.n_samples_per_pixel"]["value_issues"][0][
@@ -457,6 +470,37 @@ def test_camerae2e_scenario_applies_extended_configure_axes() -> None:
     }
     assert result["camera"].fields["sensor"].fields["vignetting"] == 2
     assert result["camera"].fields["sensor"].fields["etendue"] is not None
+
+
+def test_camerae2e_scenario_applies_quad_bayer_ocl_group_proxy() -> None:
+    result = camerae2e_run_scenario(
+        {
+            "scene": {"type": "uniform ee", "args": [8]},
+            "sensor": {
+                "noise_flag": 0,
+                "cfa_preset": "quad_bayer_rgb",
+                "ocl_group_shape": "2x2",
+                "ocl_group_equalization": 1.0,
+            },
+        },
+        include_arrays=False,
+    )
+    sensor = result["camera"].fields["sensor"]
+    expected_quad_bayer = np.array(
+        [[1, 1, 2, 2], [1, 1, 2, 2], [2, 2, 3, 3], [2, 2, 3, 3]],
+        dtype=int,
+    )
+
+    np.testing.assert_array_equal(sensor.fields["pattern"], expected_quad_bayer)
+    assert sensor.fields["ocl_group_proxy"]["shape"] == (2, 2)
+    assert sensor.fields["ocl_group_proxy"]["equalization"] == 1.0
+    assert sensor.fields["ocl_group_proxy"]["mode"] == "uniform"
+    assert any(item["path"] == "sensor.cfa_preset" for item in result["parameter_lineage"])
+    assert any(item["path"] == "sensor.ocl_group_shape" for item in result["parameter_lineage"])
+    assert any(
+        item["path"] == "sensor.ocl_group_equalization"
+        for item in result["parameter_lineage"]
+    )
 
 
 def test_camerae2e_optimize_parameters_selects_best_grid_case() -> None:
