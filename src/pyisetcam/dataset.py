@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import hashlib
+import io
 import json
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 import imageio.v3 as iio
 import numpy as np
@@ -27,6 +30,7 @@ def camerae2e_dataset_export(
     labels: Mapping[str, Any] | Iterable[Mapping[str, Any]] | None = None,
     include_rgb: bool = True,
     include_tiff: bool = False,
+    split: Mapping[str, float] | Iterable[str] | str | None = None,
 ) -> dict[str, Any]:
     """Export reproducible CameraE2E RAW/stage data for perception training.
 
@@ -46,6 +50,7 @@ def camerae2e_dataset_export(
 
     scenario_list = list(scenarios or [{"name": "camerae2e_dataset_case"}])
     label_list = _normalize_labels(labels, len(scenario_list))
+    split_list = _normalize_splits(split, len(scenario_list))
     records: list[dict[str, Any]] = []
     metadata_path = root / "metadata.jsonl"
     with metadata_path.open("w", encoding="utf-8") as metadata_stream:
@@ -65,10 +70,11 @@ def camerae2e_dataset_export(
                 rgb_array = _array_from_stage(result, "ip_result")
 
             raw_path = raw_dir / f"{case_id}.npz"
-            np.savez_compressed(
+            sensor_digital_array = _array_from_stage(result, "sensor_digital")
+            _write_npz_deterministic(
                 raw_path,
                 raw=raw_array,
-                sensor_digital=_array_from_stage(result, "sensor_digital"),
+                sensor_digital=sensor_digital_array,
                 seed=np.asarray([int(seed) + index], dtype=np.int64),
             )
 
@@ -99,6 +105,7 @@ def camerae2e_dataset_export(
             report = camerae2e_faca_report(result)
             record = {
                 "case_id": case_id,
+                "split": split_list[index],
                 "seed": int(seed) + index,
                 "scenario_name": report["name"],
                 "raw": str(raw_path),
@@ -106,23 +113,45 @@ def camerae2e_dataset_export(
                 "raw_tiff": None if tiff_path is None else str(tiff_path),
                 "labels": str(label_path),
                 "raw_shape": list(raw_array.shape),
+                "raw_dtype": str(raw_array.dtype),
                 "rgb_shape": list(rgb_array.shape),
+                "rgb_dtype": str(rgb_array.dtype) if rgb_array.size else None,
+                "sensor_digital_shape": list(sensor_digital_array.shape),
+                "sensor_digital_dtype": str(sensor_digital_array.dtype),
+                "raw_sha256": _sha256_file(raw_path),
+                "raw_content_sha256": _sha256_array(raw_array),
+                "sensor_digital_content_sha256": _sha256_array(sensor_digital_array),
+                "rgb_sha256": None if rgb_path is None else _sha256_file(rgb_path),
+                "raw_tiff_sha256": None if tiff_path is None else _sha256_file(tiff_path),
+                "labels_sha256": _sha256_file(label_path),
+                "scenario": report.get("scenario", {}),
+                "stage_summaries": report.get("stage_summaries", {}),
                 "faca_metrics": report.get("metrics", {}),
             }
             records.append(record)
             metadata_stream.write(json.dumps(_jsonable(record), sort_keys=True) + "\n")
 
+    metadata_sha256 = _sha256_file(metadata_path)
+    split_counts: dict[str, int] = {}
+    for name in split_list:
+        split_counts[name] = split_counts.get(name, 0) + 1
     manifest = {
         "schema_version": "camerae2e_dataset_manifest_v1",
         "dataset_root": str(root),
         "seed": int(seed),
         "case_count": len(records),
+        "splits": split_counts,
         "format": {
-            "raw": "compressed NumPy .npz with raw and sensor_digital arrays",
+            "raw": "deterministic compressed NumPy .npz with raw and sensor_digital arrays",
             "rgb": "8-bit PNG preview when include_rgb=True",
             "raw_tiff": "float32 TIFF when include_tiff=True",
             "labels": "JSON labels supplied by caller; empty by default",
             "dng": "not emitted in v1",
+        },
+        "integrity": {
+            "hash": "sha256",
+            "raw_npz": "deterministic zip container with fixed member timestamps",
+            "metadata_jsonl_sha256": metadata_sha256,
         },
         "records": records,
     }
@@ -131,6 +160,73 @@ def camerae2e_dataset_export(
         json.dumps(_jsonable(manifest), indent=2, sort_keys=True), encoding="utf-8"
     )
     return manifest
+
+
+def camerae2e_dataset_validate(
+    dataset: str | Path | Mapping[str, Any], *, strict: bool = False
+) -> dict[str, Any]:
+    """Validate a CameraE2E RAW dataset manifest and referenced artifacts."""
+
+    manifest, manifest_path, root = _load_manifest(dataset)
+    issues: list[dict[str, Any]] = []
+    warnings: list[dict[str, Any]] = []
+    records = list(manifest.get("records", []))
+    if manifest.get("schema_version") != "camerae2e_dataset_manifest_v1":
+        issues.append(
+            {
+                "kind": "schema_version",
+                "message": "Dataset manifest schema_version is not camerae2e_dataset_manifest_v1.",
+            }
+        )
+    if int(manifest.get("case_count", -1)) != len(records):
+        issues.append(
+            {
+                "kind": "case_count",
+                "message": "Dataset manifest case_count does not match records length.",
+            }
+        )
+
+    metadata_path = root / "metadata.jsonl"
+    metadata_rows = _load_metadata_rows(metadata_path, issues)
+    metadata_by_case = {str(item.get("case_id")): item for item in metadata_rows}
+    if len(metadata_rows) != len(records):
+        issues.append(
+            {
+                "kind": "metadata_count",
+                "message": "metadata.jsonl row count does not match records length.",
+            }
+        )
+
+    for index, record in enumerate(records):
+        _validate_record(record, index, root, metadata_by_case, issues, warnings)
+
+    split_counts: dict[str, int] = {}
+    for record in records:
+        split_name = str(record.get("split", "unspecified"))
+        split_counts[split_name] = split_counts.get(split_name, 0) + 1
+    if dict(manifest.get("splits", {})) != split_counts:
+        issues.append(
+            {
+                "kind": "split_counts",
+                "message": "Manifest split counts do not match record split assignments.",
+            }
+        )
+
+    if strict and warnings:
+        issues.extend({**warning, "strict_promoted": True} for warning in warnings)
+    return {
+        "schema_version": "camerae2e_dataset_validation_v1",
+        "ok": not issues,
+        "strict": bool(strict),
+        "dataset_root": str(root),
+        "manifest_path": None if manifest_path is None else str(manifest_path),
+        "case_count": len(records),
+        "split_counts": split_counts,
+        "issue_count": len(issues),
+        "warning_count": len(warnings),
+        "issues": issues,
+        "warnings": warnings,
+    }
 
 
 def _normalize_labels(
@@ -144,6 +240,37 @@ def _normalize_labels(
     values = [dict(item) for item in labels]
     if len(values) != count:
         raise ValueError("labels must contain one item per scenario when provided as an iterable.")
+    return values
+
+
+def _normalize_splits(
+    split: Mapping[str, float] | Iterable[str] | str | None, count: int
+) -> list[str]:
+    if count <= 0:
+        return []
+    if split is None:
+        return ["unspecified" for _ in range(count)]
+    if isinstance(split, str):
+        return [split for _ in range(count)]
+    if isinstance(split, Mapping):
+        names = [str(key) for key in split]
+        weights = np.asarray([float(split[key]) for key in split], dtype=float)
+        if len(names) == 0 or np.any(weights < 0.0) or float(np.sum(weights)) <= 0.0:
+            raise ValueError("split mapping must contain non-negative weights with positive sum.")
+        normalized = weights / float(np.sum(weights))
+        exact = normalized * count
+        counts = np.floor(exact).astype(int)
+        remainder = count - int(np.sum(counts))
+        fractions = exact - counts
+        for index in np.argsort(-fractions)[:remainder]:
+            counts[int(index)] += 1
+        result: list[str] = []
+        for name, item_count in zip(names, counts, strict=True):
+            result.extend([name] * int(item_count))
+        return result[:count]
+    values = [str(item) for item in split]
+    if len(values) != count:
+        raise ValueError("split iterable must contain one split name per scenario.")
     return values
 
 
@@ -171,6 +298,150 @@ def _uint8_preview(array: Any) -> np.ndarray:
     return np.clip(np.round(finite * 255.0), 0.0, 255.0).astype(np.uint8)
 
 
+def _write_npz_deterministic(path: Path, **arrays: Any) -> None:
+    with ZipFile(path, "w", compression=ZIP_DEFLATED) as archive:
+        for name in sorted(arrays):
+            buffer = io.BytesIO()
+            np.save(buffer, np.asarray(arrays[name]), allow_pickle=False)
+            info = ZipInfo(f"{name}.npy", date_time=(1980, 1, 1, 0, 0, 0))
+            info.compress_type = ZIP_DEFLATED
+            archive.writestr(info, buffer.getvalue())
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return f"sha256:{digest.hexdigest()}"
+
+
+def _sha256_array(array: Any) -> str:
+    values = np.ascontiguousarray(np.asarray(array))
+    digest = hashlib.sha256()
+    digest.update(str(values.dtype).encode("utf-8"))
+    digest.update(json.dumps(list(values.shape), sort_keys=True).encode("utf-8"))
+    digest.update(values.tobytes(order="C"))
+    return f"sha256:{digest.hexdigest()}"
+
+
+def _load_manifest(
+    dataset: str | Path | Mapping[str, Any],
+) -> tuple[dict[str, Any], Path | None, Path]:
+    if isinstance(dataset, Mapping):
+        manifest = dict(dataset)
+        root = Path(str(manifest.get("dataset_root", "."))).expanduser()
+        return manifest, None, root
+    path = Path(dataset).expanduser()
+    manifest_path = path / "manifest.json" if path.is_dir() else path
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    root = Path(str(manifest.get("dataset_root", manifest_path.parent))).expanduser()
+    return manifest, manifest_path, root
+
+
+def _load_metadata_rows(path: Path, issues: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not path.exists():
+        issues.append({"kind": "missing_metadata", "message": f"Missing metadata.jsonl: {path}"})
+        return []
+    rows = []
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            rows.append(json.loads(line))
+        except json.JSONDecodeError as exc:
+            issues.append(
+                {
+                    "kind": "metadata_json",
+                    "message": f"metadata.jsonl line {line_number} is invalid JSON: {exc}",
+                }
+            )
+    return rows
+
+
+def _validate_record(
+    record: Mapping[str, Any],
+    index: int,
+    root: Path,
+    metadata_by_case: Mapping[str, Mapping[str, Any]],
+    issues: list[dict[str, Any]],
+    warnings: list[dict[str, Any]],
+) -> None:
+    case_id = str(record.get("case_id", f"case_{index:04d}"))
+    metadata_row = metadata_by_case.get(case_id)
+    if metadata_row is None:
+        issues.append({"case_id": case_id, "kind": "missing_metadata_row"})
+    elif str(metadata_row.get("raw")) != str(record.get("raw")):
+        issues.append({"case_id": case_id, "kind": "metadata_record_mismatch"})
+
+    raw_path = _resolve_dataset_path(root, record.get("raw"))
+    if raw_path is None or not raw_path.exists():
+        issues.append({"case_id": case_id, "kind": "missing_raw", "path": str(raw_path)})
+        return
+    _check_file_hash(record, "raw_sha256", raw_path, case_id, issues)
+    try:
+        with np.load(raw_path, allow_pickle=False) as raw_data:
+            raw = np.asarray(raw_data["raw"])
+            sensor_digital = np.asarray(raw_data["sensor_digital"])
+    except Exception as exc:
+        issues.append({"case_id": case_id, "kind": "raw_npz_load", "message": str(exc)})
+        return
+    if list(raw.shape) != list(record.get("raw_shape", [])):
+        issues.append({"case_id": case_id, "kind": "raw_shape"})
+    if str(raw.dtype) != str(record.get("raw_dtype", raw.dtype)):
+        issues.append({"case_id": case_id, "kind": "raw_dtype"})
+    if record.get("raw_content_sha256") != _sha256_array(raw):
+        issues.append({"case_id": case_id, "kind": "raw_content_sha256"})
+    if record.get("sensor_digital_content_sha256") != _sha256_array(sensor_digital):
+        issues.append({"case_id": case_id, "kind": "sensor_digital_content_sha256"})
+
+    for path_key, hash_key, missing_kind in (
+        ("rgb", "rgb_sha256", "missing_rgb"),
+        ("raw_tiff", "raw_tiff_sha256", "missing_raw_tiff"),
+        ("labels", "labels_sha256", "missing_labels"),
+    ):
+        path_value = record.get(path_key)
+        if path_value is None:
+            continue
+        path = _resolve_dataset_path(root, path_value)
+        if path is None or not path.exists():
+            issues.append({"case_id": case_id, "kind": missing_kind, "path": str(path)})
+            continue
+        _check_file_hash(record, hash_key, path, case_id, issues)
+
+    label_path = _resolve_dataset_path(root, record.get("labels"))
+    if label_path is not None and label_path.exists():
+        labels = json.loads(label_path.read_text(encoding="utf-8"))
+        if labels.get("case_id") != case_id:
+            issues.append({"case_id": case_id, "kind": "label_case_id"})
+        if "labels" not in labels:
+            warnings.append({"case_id": case_id, "kind": "label_payload_missing"})
+
+
+def _check_file_hash(
+    record: Mapping[str, Any],
+    hash_key: str,
+    path: Path,
+    case_id: str,
+    issues: list[dict[str, Any]],
+) -> None:
+    expected = record.get(hash_key)
+    if expected is None:
+        return
+    actual = _sha256_file(path)
+    if actual != expected:
+        issues.append(
+            {"case_id": case_id, "kind": hash_key, "expected": expected, "actual": actual}
+        )
+
+
+def _resolve_dataset_path(root: Path, value: Any) -> Path | None:
+    if value in (None, ""):
+        return None
+    path = Path(str(value)).expanduser()
+    return path if path.is_absolute() else root / path
+
+
 def _jsonable(value: Any) -> Any:
     if isinstance(value, Path):
         return str(value)
@@ -186,3 +457,4 @@ def _jsonable(value: Any) -> Any:
 
 
 cameraE2EDatasetExport = camerae2e_dataset_export  # noqa: N816
+cameraE2EDatasetValidate = camerae2e_dataset_validate  # noqa: N816

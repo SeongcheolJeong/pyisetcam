@@ -173,8 +173,8 @@ def _capability_matrix(
             "area": "RAW Data Factory",
             "tier": "validated",
             "implemented": (
-                "Dataset manifest, metadata JSONL, RAW NPZ, RGB preview, "
-                "caller-provided labels."
+                "Dataset manifest, metadata JSONL, deterministic RAW NPZ, "
+                "split, checksum, RGB preview, caller-provided labels."
             ),
             "remaining": "DNG writer and automatic label synthesis are intentionally outside v1.",
         },

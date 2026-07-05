@@ -28,7 +28,7 @@
 | Metrics | `validated` | MTF, ISO12233, Delta E, SCIELAB, VSNR, SQRI | product-specific weighting and pass/fail gates |
 | Optimization | `validated` | dot-path camera parameter grid search, FACA objective scoring, hard constraints | Bayesian/evolutionary search, Pareto reporting, hardware-in-loop calibration |
 | Perception | `available` | task adapters, detection/segmentation/classification/pose/tracking metrics, robustness sweep | training loop, dataset-specific model calibration |
-| RAW data factory | `validated` | manifest, metadata JSONL, RAW NPZ, RGB preview, labels JSON | DNG writer, automatic label synthesis |
+| RAW data factory | `validated` | manifest, metadata JSONL, deterministic RAW NPZ, split, checksum, labels JSON, validation | DNG writer, automatic label synthesis |
 | DB/LUT registry | `validated` / `calibration_required` | manifest, readiness tier, provenance, dependency lineage, stale detection | measured evidence ingestion and calibrated promotion |
 | External pipeline | `calibration_required` | FDTD, TCAD, RayOptics, HW ISP assets discoverable in one registry | refresh orchestration and calibrated end-to-end asset generation |
 
@@ -61,6 +61,7 @@ baseline for later Bayesian/evolutionary optimizers.
 RAW data factory:
 
 - `camerae2e_dataset_export(...)`
+- `camerae2e_dataset_validate(...)`
 
 ## External Pipeline Policy
 

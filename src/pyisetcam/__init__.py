@@ -74,7 +74,7 @@ from .color import (
     y_to_lstar,
 )
 from .description import HeadlessDescriptionHandle, sensor_description
-from .dataset import camerae2e_dataset_export
+from .dataset import camerae2e_dataset_export, camerae2e_dataset_validate
 from .display import (
     display_compute,
     display_convert,
@@ -1072,6 +1072,7 @@ __all__ = [
     "camerae2e_db_summary",
     "camerae2e_db_validate",
     "camerae2e_dataset_export",
+    "camerae2e_dataset_validate",
     "camerae2e_faca_report",
     "camerae2e_optimization_report",
     "camerae2e_optimize_parameters",
@@ -1087,6 +1088,7 @@ __all__ = [
     "cameraE2EDBSummary",
     "cameraE2EDBValidate",
     "cameraE2EDatasetExport",
+    "cameraE2EDatasetValidate",
     "cameraE2EFACAReport",
     "cameraE2EOptimizationReport",
     "cameraE2EOptimizeParameters",
@@ -3765,6 +3767,7 @@ cameraE2ERunScenario = camerae2e_run_scenario
 cameraE2ERunSweep = camerae2e_run_sweep
 cameraE2EFACAReport = camerae2e_faca_report
 cameraE2EDatasetExport = camerae2e_dataset_export
+cameraE2EDatasetValidate = camerae2e_dataset_validate
 cameraE2EOptimizeParameters = camerae2e_optimize_parameters
 cameraE2EOptimizationReport = camerae2e_optimization_report
 cameraE2EPhysicsPipelinePlan = camerae2e_physics_pipeline_plan
