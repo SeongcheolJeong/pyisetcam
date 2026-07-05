@@ -150,14 +150,17 @@ def _capability_matrix(
             "area": "Optimization",
             "tier": "validated",
             "implemented": (
-                "Preset parameter-space catalog plus deterministic grid search over "
+                "Preset parameter-space catalog plus deterministic grid, random, "
+                "and Latin-hypercube candidate planning over "
                 "dot-path camera parameters using FACA metric objectives, constraints, "
                 "Pareto front, selected scenarios, parameter-lineage evidence, "
-                "pixel geometry/CFA/readout/noise/optics-PSF/FDTD-OCL configure "
-                "targets, and preflight parameter-space validation."
+                "pixel geometry/CFA/readout/binning/OCL/noise/optics-PSF/FDTD-OCL configure "
+                "targets, candidate budget controls, and preflight parameter-space "
+                "validation."
             ),
             "remaining": (
-                "Bayesian/evolutionary search and closed-loop hardware calibration."
+                "Bayesian/evolutionary search, true multi-factor readout/remosaic "
+                "binning, OCL process-stack calibration, and closed-loop hardware calibration."
             ),
         },
         {

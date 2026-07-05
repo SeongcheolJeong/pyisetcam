@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import itertools
 import math
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any
@@ -88,6 +87,52 @@ _PARAMETER_AXIS_CATALOG: dict[str, dict[str, Any]] = {
             "charge-domain, readout-domain, and ISP-domain binning are separated."
         ),
     },
+    "sensor.binning_factor": {
+        "area": "sensor_readout",
+        "unit": "pixels",
+        "readiness_tier": "proxy",
+        "values": [1, 2],
+        "description": (
+            "Readout-binning factor selector. Current backend supports 1/off and "
+            "the legacy 2x binning proxy; larger factors need a dedicated readout "
+            "or remosaic implementation."
+        ),
+    },
+    "sensor.ocl_vignetting": {
+        "area": "sensor_ocl",
+        "unit": "enum",
+        "readiness_tier": "proxy",
+        "values": ["off", "centered", "optimal"],
+        "description": (
+            "On-chip-lens/microlens etendue proxy applied through sensor vignetting. "
+            "This changes sensor_compute via the etendue map, but is not a calibrated "
+            "OCL process stack."
+        ),
+    },
+    "sensor.ocl_fnumber": {
+        "area": "sensor_ocl",
+        "unit": "f/#",
+        "readiness_tier": "proxy",
+        "values": [1.2, 1.8, 2.4],
+        "description": "Microlens f-number used by the OCL etendue proxy.",
+    },
+    "sensor.ocl_focal_length_um": {
+        "area": "sensor_ocl",
+        "unit": "um",
+        "readiness_tier": "proxy",
+        "values": [1.0, 1.8, 2.6],
+        "description": "Microlens focal length used by the OCL etendue proxy.",
+    },
+    "sensor.ocl_refractive_index": {
+        "area": "sensor_ocl",
+        "unit": "index",
+        "readiness_tier": "calibration_required",
+        "values": [1.45, 1.55, 1.65],
+        "description": (
+            "Microlens refractive-index proxy. Treat as calibration-required unless "
+            "matched to an optical stack or FDTD OCL LUT."
+        ),
+    },
     "sensor.pixel_read_noise_v": {
         "area": "sensor_noise",
         "unit": "V",
@@ -168,6 +213,30 @@ _PARAMETER_AXIS_CATALOG: dict[str, dict[str, Any]] = {
         "values": [0.0, 0.5, 1.0],
         "description": "Optical-crosstalk strength applied from an attached FDTD LUT.",
     },
+    "fdtd.ocl_shift_um": {
+        "area": "sensor_physics",
+        "unit": "um",
+        "readiness_tier": "proxy",
+        "values": [-0.25, 0.0, 0.25],
+        "description": (
+            "FDTD OCL/microlens lateral-shift selector. Only affects the pipeline "
+            "when the attached FDTD LUT contains matching OCL cases."
+        ),
+    },
+    "fdtd.cra_x_deg": {
+        "area": "sensor_physics",
+        "unit": "deg",
+        "readiness_tier": "proxy",
+        "values": [-10.0, 0.0, 10.0],
+        "description": "FDTD chief-ray-angle x-axis selector for attached LUT cases.",
+    },
+    "fdtd.cra_z_deg": {
+        "area": "sensor_physics",
+        "unit": "deg",
+        "readiness_tier": "proxy",
+        "values": [0.0, 10.0, 20.0],
+        "description": "FDTD chief-ray-angle z-axis selector for attached LUT cases.",
+    },
     "tcad.collection_mode": {
         "area": "sensor_physics",
         "unit": "enum",
@@ -215,6 +284,12 @@ _PARAMETER_SPACE_PRESETS: dict[str, tuple[str, ...]] = {
         "sensor.pixel_fill_factor",
         "sensor.n_samples_per_pixel",
     ),
+    "sensor_ocl": (
+        "sensor.ocl_vignetting",
+        "sensor.ocl_fnumber",
+        "sensor.ocl_focal_length_um",
+        "sensor.ocl_refractive_index",
+    ),
     "sensor_spectral": ("sensor.cfa_pattern",),
     "sensor_readout": (
         "sensor.integration_time",
@@ -222,10 +297,14 @@ _PARAMETER_SPACE_PRESETS: dict[str, tuple[str, ...]] = {
         "sensor.pixel_read_noise_v",
         "sensor.pixel_voltage_swing",
         "sensor.binning_method",
+        "sensor.binning_factor",
     ),
     "physics_proxy": (
         "fdtd.mode",
         "fdtd.crosstalk_strength",
+        "fdtd.ocl_shift_um",
+        "fdtd.cra_x_deg",
+        "fdtd.cra_z_deg",
         "tcad.collection_mode",
     ),
     "isp": ("ip.demosaic_method",),
@@ -240,6 +319,8 @@ _PARAMETER_SPACE_PRESETS: dict[str, tuple[str, ...]] = {
         "optics.focal_length",
         "optics.fnumber",
         "sensor.pixel_size",
+        "sensor.binning_factor",
+        "sensor.ocl_vignetting",
         "sensor.integration_time",
         "sensor.analog_gain",
     ),
@@ -312,6 +393,34 @@ _SENSOR_OPTIMIZATION_PARAMETERS = {
     "binning method",
     "pixel_binning",
     "pixel binning",
+    "binning_factor",
+    "binning factor",
+    "pixel_binning_factor",
+    "pixel binning factor",
+    "readout_binning_factor",
+    "readout binning factor",
+    "ocl_vignetting",
+    "ocl vignetting",
+    "microlens_vignetting",
+    "microlens vignetting",
+    "pixel_vignetting",
+    "pixel vignetting",
+    "ocl_fnumber",
+    "ocl fnumber",
+    "ocl_f_number",
+    "ocl f number",
+    "microlens_fnumber",
+    "microlens fnumber",
+    "microlens_f_number",
+    "microlens f number",
+    "ocl_focal_length_um",
+    "ocl focal length um",
+    "microlens_focal_length_um",
+    "microlens focal length um",
+    "ocl_refractive_index",
+    "ocl refractive index",
+    "microlens_refractive_index",
+    "microlens refractive index",
 }
 
 _OBJECTIVE_METRIC_CATALOG: dict[str, dict[str, Any]] = {
@@ -348,6 +457,8 @@ def camerae2e_optimize_parameters(
     parameter_space: Mapping[str, Iterable[Any] | Mapping[str, Any]] | None = None,
     objective: ObjectiveSpec | ObjectiveCallable | None = None,
     *,
+    method: str = "grid",
+    max_cases: int | None = None,
     constraints: Iterable[Mapping[str, Any]] | None = None,
     scene: Scene | str | Mapping[str, Any] | None = None,
     camera: Camera | None = None,
@@ -375,18 +486,21 @@ def camerae2e_optimize_parameters(
         base_scenario=base_scenario,
     )
     _validate_parameter_axis_names(axes, base_scenario)
+    candidate_plan = camerae2e_parameter_candidate_plan(
+        axes,
+        method=method,
+        max_cases=max_cases,
+        seed=seed,
+        base_scenario=base_scenario,
+    )
     objective_specs = _normalize_objective(objective)
     constraint_specs = [dict(item) for item in constraints or []]
     cases: list[dict[str, Any]] = []
-    keys = list(axes)
-    combinations = [()] if not keys else itertools.product(*(axes[key] for key in keys))
-    for index, values in enumerate(combinations):
+    for index, axis_values in enumerate(candidate_plan["candidates"]):
         scenario = _deep_dict(base_scenario or {})
         scenario.setdefault("name", "camerae2e_parameter_optimization")
-        axis_values = {}
-        for key, value in zip(keys, values, strict=True):
+        for key, value in axis_values.items():
             _assign_parameter(scenario, key, value)
-            axis_values[key] = value
         report = camerae2e_faca_report(
             camerae2e_run_scenario(
                 scenario,
@@ -429,10 +543,12 @@ def camerae2e_optimize_parameters(
     best = feasible_cases[0] if feasible_cases else None
     return {
         "schema_version": "camerae2e_parameter_optimization_v1",
-        "method": "deterministic_grid",
+        "method": _optimization_method_name(candidate_plan),
+        "search_method": candidate_plan["method"],
         "seed": int(seed),
         "parameter_space": _jsonable(axes),
         "parameter_space_validation": parameter_validation,
+        "candidate_plan": _candidate_plan_summary(candidate_plan),
         "objective": _jsonable(_objective_description(objective, objective_specs)),
         "constraints": _jsonable(constraint_specs),
         "case_count": len(cases),
@@ -470,6 +586,82 @@ def camerae2e_parameter_space_catalog(preset: str | None = None) -> dict[str, An
     }
 
 
+def camerae2e_parameter_candidate_plan(
+    parameter_space: Mapping[str, Iterable[Any] | Mapping[str, Any]],
+    *,
+    method: str = "grid",
+    max_cases: int | None = None,
+    seed: int = 0,
+    base_scenario: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Generate a deterministic, budget-aware candidate plan for optimization.
+
+    ``grid`` preserves Cartesian grid semantics.  ``random`` and
+    ``latin_hypercube`` sample from the provided discrete axis values and default
+    to a bounded budget when ``max_cases`` is omitted.
+    """
+
+    axes = _normalize_parameter_space(parameter_space)
+    validation = camerae2e_parameter_space_validate(axes, base_scenario=base_scenario)
+    method_key = _normalize_candidate_method(method)
+    full_grid_count = _full_grid_count(axes)
+    budget, implicit_default_budget = _candidate_budget(
+        method_key,
+        full_grid_count,
+        max_cases,
+    )
+    warnings: list[dict[str, Any]] = []
+    if not validation.get("ok", False):
+        return {
+            "schema_version": "camerae2e_parameter_candidate_plan_v1",
+            "ok": False,
+            "method": method_key,
+            "seed": int(seed),
+            "axis_count": len(axes),
+            "axis_sizes": {key: len(values) for key, values in axes.items()},
+            "full_grid_count": full_grid_count,
+            "max_cases": budget,
+            "implicit_default_budget": implicit_default_budget,
+            "truncated": False,
+            "case_count": 0,
+            "parameter_space_validation": validation,
+            "warnings": [],
+            "candidates": [],
+        }
+    candidates = _generate_parameter_candidates(
+        axes,
+        method=method_key,
+        max_cases=budget,
+        seed=seed,
+    )
+    if implicit_default_budget and full_grid_count > budget:
+        warnings.append(
+            {
+                "kind": "implicit_default_budget",
+                "message": (
+                    f"{method_key} search defaulted to max_cases={budget}; "
+                    "pass max_cases explicitly to change the budget."
+                ),
+            }
+        )
+    return {
+        "schema_version": "camerae2e_parameter_candidate_plan_v1",
+        "ok": True,
+        "method": method_key,
+        "seed": int(seed),
+        "axis_count": len(axes),
+        "axis_sizes": {key: len(values) for key, values in axes.items()},
+        "full_grid_count": full_grid_count,
+        "max_cases": budget,
+        "implicit_default_budget": implicit_default_budget,
+        "truncated": len(candidates) < full_grid_count,
+        "case_count": len(candidates),
+        "parameter_space_validation": validation,
+        "warnings": warnings,
+        "candidates": _jsonable(candidates),
+    }
+
+
 def camerae2e_optimization_config_catalog() -> dict[str, Any]:
     """Return all documented CameraE2E optimization configure targets.
 
@@ -497,11 +689,16 @@ def camerae2e_optimization_config_catalog() -> dict[str, Any]:
                     "sensor.pixel_fill_factor",
                     "sensor.cfa_pattern",
                     "sensor.binning_method",
+                    "sensor.binning_factor",
+                    "sensor.ocl_vignetting",
+                    "sensor.ocl_fnumber",
                 ],
                 "truth_boundary": (
-                    "sensor.binning_method routes to a legacy binning compute proxy; "
+                    "sensor.binning_method and sensor.binning_factor route to a legacy "
+                    "binning compute proxy; "
                     "sensor.n_samples_per_pixel is sub-pixel integration sampling, "
-                    "not readout binning."
+                    "not readout binning. OCL/microlens axes use etendue/vignetting "
+                    "proxies unless an FDTD OCL LUT is attached."
                 ),
             },
             {
@@ -527,6 +724,7 @@ def camerae2e_optimization_config_catalog() -> dict[str, Any]:
                     "case",
                     "cra_x_deg",
                     "cra_z_deg",
+                    "ocl_shift_um",
                     "crosstalk_strength",
                 ],
                 "requirement": (
@@ -637,6 +835,8 @@ def camerae2e_optimize_camera_parameters(
     preset: str = "raw_factory",
     parameter_space: Mapping[str, Iterable[Any] | Mapping[str, Any]] | None = None,
     objective: ObjectiveSpec | ObjectiveCallable | None = None,
+    method: str = "grid",
+    max_cases: int | None = None,
     constraints: Iterable[Mapping[str, Any]] | None = None,
     scene: Scene | str | Mapping[str, Any] | None = None,
     camera: Camera | None = None,
@@ -661,6 +861,8 @@ def camerae2e_optimize_camera_parameters(
         base_scenario,
         axes,
         objective,
+        method=method,
+        max_cases=max_cases,
         constraints=constraints,
         scene=scene,
         camera=camera,
@@ -673,6 +875,9 @@ def camerae2e_optimize_camera_parameters(
         "schema_version": "camerae2e_parameter_optimization_automation_v1",
         "preset": str(preset).strip().lower(),
         "axis_count": len(axes),
+        "search_method": result.get("search_method"),
+        "max_cases": result.get("candidate_plan", {}).get("max_cases"),
+        "candidate_count": result.get("candidate_plan", {}).get("case_count"),
         "axes": _jsonable(
             {
                 path: _PARAMETER_AXIS_CATALOG.get(
@@ -704,10 +909,12 @@ def camerae2e_optimization_report(result: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "schema_version": "camerae2e_parameter_optimization_report_v1",
         "method": result.get("method"),
+        "search_method": result.get("search_method"),
         "seed": result.get("seed"),
         "case_count": result.get("case_count", 0),
         "feasible_count": result.get("feasible_count", 0),
         "pareto_case_count": result.get("pareto_case_count", 0),
+        "candidate_plan": _jsonable(result.get("candidate_plan", {})),
         "objective": _jsonable(result.get("objective", {})),
         "constraints": _jsonable(result.get("constraints", [])),
         "best_case": _jsonable(best),
@@ -727,6 +934,213 @@ def _normalize_parameter_space(
             raise ValueError(f"Parameter axis {key!r} must contain at least one value.")
         axes[str(key)] = values
     return axes
+
+
+def _normalize_candidate_method(method: str) -> str:
+    key = str(method).strip().lower().replace("-", "_").replace(" ", "_")
+    aliases = {
+        "deterministic_grid": "grid",
+        "cartesian": "grid",
+        "cartesian_grid": "grid",
+        "grid": "grid",
+        "random": "random",
+        "random_search": "random",
+        "sample": "random",
+        "sampling": "random",
+        "latin_hypercube": "latin_hypercube",
+        "latin": "latin_hypercube",
+        "lhs": "latin_hypercube",
+        "budgeted_latin_hypercube": "latin_hypercube",
+    }
+    if key not in aliases:
+        raise ValueError(
+            "Candidate generation method must be one of: grid, random, latin_hypercube."
+        )
+    return aliases[key]
+
+
+def _candidate_budget(
+    method: str, full_grid_count: int, max_cases: int | None
+) -> tuple[int, bool]:
+    if max_cases is None:
+        if method == "grid":
+            return full_grid_count, False
+        return min(full_grid_count, 32), True
+    budget = int(max_cases)
+    if budget <= 0:
+        raise ValueError("max_cases must be a positive integer.")
+    return min(budget, full_grid_count), False
+
+
+def _full_grid_count(axes: Mapping[str, list[Any]]) -> int:
+    count = 1
+    for values in axes.values():
+        count *= len(values)
+    return int(count)
+
+
+def _generate_parameter_candidates(
+    axes: Mapping[str, list[Any]],
+    *,
+    method: str,
+    max_cases: int,
+    seed: int,
+) -> list[dict[str, Any]]:
+    if not axes:
+        return [{}]
+    if method == "grid":
+        return _grid_candidates(axes, max_cases)
+    if method == "random":
+        return _random_candidates(axes, max_cases, seed)
+    if method == "latin_hypercube":
+        return _latin_hypercube_candidates(axes, max_cases, seed)
+    raise ValueError(f"Unsupported candidate generation method: {method!r}.")
+
+
+def _grid_candidates(axes: Mapping[str, list[Any]], max_cases: int) -> list[dict[str, Any]]:
+    full_grid_count = _full_grid_count(axes)
+    indices = (
+        range(full_grid_count)
+        if max_cases >= full_grid_count
+        else _even_grid_indices(full_grid_count, max_cases)
+    )
+    return [_candidate_from_grid_index(axes, index) for index in indices]
+
+
+def _even_grid_indices(full_grid_count: int, count: int) -> list[int]:
+    if count <= 1:
+        return [0]
+    indices = [
+        int((index * (full_grid_count - 1)) // (count - 1))
+        for index in range(count)
+    ]
+    result = []
+    seen = set()
+    for index in indices:
+        if index not in seen:
+            result.append(index)
+            seen.add(index)
+    fill = 0
+    while len(result) < count and fill < full_grid_count:
+        if fill not in seen:
+            result.append(fill)
+            seen.add(fill)
+        fill += 1
+    return result
+
+
+def _candidate_from_grid_index(
+    axes: Mapping[str, list[Any]], flat_index: int
+) -> dict[str, Any]:
+    keys = list(axes)
+    remaining = int(flat_index)
+    reversed_values: dict[str, Any] = {}
+    for key in reversed(keys):
+        values = axes[key]
+        local_index = remaining % len(values)
+        remaining //= len(values)
+        reversed_values[key] = values[local_index]
+    return {key: reversed_values[key] for key in keys}
+
+
+def _random_candidates(
+    axes: Mapping[str, list[Any]], max_cases: int, seed: int
+) -> list[dict[str, Any]]:
+    full_grid_count = _full_grid_count(axes)
+    if max_cases >= full_grid_count:
+        return _grid_candidates(axes, full_grid_count)
+    rng = np.random.default_rng(int(seed))
+    candidates = []
+    seen = set()
+    attempts = 0
+    max_attempts = max(100, max_cases * 20)
+    while len(candidates) < max_cases and attempts < max_attempts:
+        candidate = {
+            key: values[int(rng.integers(0, len(values)))]
+            for key, values in axes.items()
+        }
+        attempts += 1
+        signature = _candidate_signature(candidate)
+        if signature in seen:
+            continue
+        candidates.append(candidate)
+        seen.add(signature)
+    return _dedupe_and_fill_candidates(candidates, axes, max_cases)
+
+
+def _latin_hypercube_candidates(
+    axes: Mapping[str, list[Any]], max_cases: int, seed: int
+) -> list[dict[str, Any]]:
+    full_grid_count = _full_grid_count(axes)
+    if max_cases >= full_grid_count:
+        return _grid_candidates(axes, full_grid_count)
+    rng = np.random.default_rng(int(seed))
+    columns: dict[str, np.ndarray] = {}
+    for key, values in axes.items():
+        if max_cases == 1:
+            strata = np.asarray([0.5], dtype=float)
+        else:
+            strata = (np.arange(max_cases, dtype=float) + rng.random(max_cases)) / max_cases
+            rng.shuffle(strata)
+        indices = np.floor(strata * len(values)).astype(int)
+        columns[key] = np.clip(indices, 0, len(values) - 1)
+    candidates = []
+    for row_index in range(max_cases):
+        candidates.append(
+            {
+                key: axes[key][int(columns[key][row_index])]
+                for key in axes
+            }
+        )
+    return _dedupe_and_fill_candidates(candidates, axes, max_cases)
+
+
+def _dedupe_and_fill_candidates(
+    candidates: Iterable[Mapping[str, Any]],
+    axes: Mapping[str, list[Any]],
+    target_count: int,
+) -> list[dict[str, Any]]:
+    unique: list[dict[str, Any]] = []
+    seen = set()
+    for candidate in candidates:
+        payload = dict(candidate)
+        signature = _candidate_signature(payload)
+        if signature in seen:
+            continue
+        unique.append(payload)
+        seen.add(signature)
+        if len(unique) >= target_count:
+            return unique
+    for flat_index in range(_full_grid_count(axes)):
+        payload = _candidate_from_grid_index(axes, flat_index)
+        signature = _candidate_signature(payload)
+        if signature in seen:
+            continue
+        unique.append(payload)
+        seen.add(signature)
+        if len(unique) >= target_count:
+            break
+    return unique
+
+
+def _candidate_signature(candidate: Mapping[str, Any]) -> str:
+    return str(_jsonable(candidate))
+
+
+def _candidate_plan_summary(plan: Mapping[str, Any]) -> dict[str, Any]:
+    payload = {key: value for key, value in plan.items() if key != "candidates"}
+    payload["candidate_preview"] = _jsonable(list(plan.get("candidates", []))[:5])
+    return _jsonable(payload)
+
+
+def _optimization_method_name(candidate_plan: Mapping[str, Any]) -> str:
+    method = str(candidate_plan.get("method", "grid"))
+    truncated = bool(candidate_plan.get("truncated", False))
+    if method == "grid" and not truncated:
+        return "deterministic_grid"
+    if method == "grid":
+        return "budgeted_grid"
+    return f"budgeted_{method}"
 
 
 def _validate_parameter_axis_names(
@@ -802,7 +1216,15 @@ def _parameter_value_findings(
         "optics.si_psf_radius_um",
         "optics.psf_angle_step",
         "optics.rt_compute_spacing",
+        "sensor.ocl_fnumber",
+        "sensor.ocl_focal_length_um",
+        "sensor.ocl_refractive_index",
         "hw_isp.global_latency_factor",
+    }
+    finite_scalar_axes = {
+        "fdtd.ocl_shift_um",
+        "fdtd.cra_x_deg",
+        "fdtd.cra_z_deg",
     }
     nonnegative_scalar_axes = {"fdtd.crosstalk_strength"}
     nonnegative_integer_axes = {
@@ -863,6 +1285,10 @@ def _parameter_value_findings(
             warnings.extend(cfa_warnings)
         elif key == "sensor.binning_method":
             issues.extend(_validate_enum_value(path, index, value, _BINNING_METHODS))
+        elif key == "sensor.binning_factor":
+            issues.extend(_validate_binning_factor(path, index, value))
+        elif key == "sensor.ocl_vignetting":
+            issues.extend(_validate_enum_value(path, index, value, _OCL_VIGNETTING_MODES))
         elif key == "sensor.noise_flag":
             issues.extend(
                 _validate_integer_value(
@@ -885,6 +1311,15 @@ def _parameter_value_findings(
                     {"bilinear", "nearestneighbor", "nearest neighbor", "laplacian"},
                 )
             )
+        elif key in finite_scalar_axes:
+            issues.extend(
+                _validate_numeric_value(
+                    path,
+                    index,
+                    value,
+                    kind="invalid_numeric_value",
+                )
+            )
     return issues, warnings
 
 
@@ -895,6 +1330,21 @@ _BINNING_METHODS = {
     "kodak2008",
     "addadjacentblocks",
     "averageadjacentdigitalblocks",
+}
+
+_OCL_VIGNETTING_MODES = {
+    "0",
+    "1",
+    "2",
+    "3",
+    "off",
+    "skip",
+    "bare",
+    "nomicrolens",
+    "no microlens",
+    "centered",
+    "optimal",
+    "optimized",
 }
 
 
@@ -1004,6 +1454,29 @@ def _validate_n_samples_per_pixel(
                 index,
                 "unsupported_samples_per_pixel",
                 "sensor.n_samples_per_pixel must be a positive odd integer.",
+            )
+        ]
+    return []
+
+
+def _validate_binning_factor(path: str, index: int, value: Any) -> list[dict[str, Any]]:
+    issues = _validate_integer_value(
+        path,
+        index,
+        value,
+        nonnegative=True,
+        kind="invalid_binning_factor",
+    )
+    if issues:
+        return issues
+    number = int(_scalar_float(value) or 0)
+    if number not in {1, 2}:
+        return [
+            _value_finding(
+                path,
+                index,
+                "unsupported_binning_factor",
+                "sensor.binning_factor currently supports 1/off or the legacy 2x proxy.",
             )
         ]
     return []

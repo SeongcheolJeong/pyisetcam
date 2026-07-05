@@ -4555,7 +4555,21 @@ def bin_sensor_compute(
     quant_sensor = bin_pixel_post(quant_sensor, method)
 
     result = current.clone()
-    result.fields["sensor_compute_method"] = {"name": "binning", "method": method}
+    result_vignetting = result.fields.get("vignetting", 0)
+    normalized_vignetting = (
+        param_format(result_vignetting)
+        if isinstance(result_vignetting, str)
+        else result_vignetting
+    )
+    if normalized_vignetting not in {0, "skip", "off", "none", "disabled", "false", "", None}:
+        result.fields["etendue"] = _sensor_etendue(result).copy()
+    method_payload = {"name": "binning", "method": method}
+    original_method = current.fields.get("sensor_compute_method")
+    if isinstance(original_method, dict):
+        for key in ("factor", "domain", "stage"):
+            if key in original_method:
+                method_payload[key] = _copy_metadata_value(original_method[key])
+    result.fields["sensor_compute_method"] = method_payload
     result.data["volts"] = np.asarray(dv_linear, dtype=float).copy()
     result.data["dv"] = np.asarray(sensor_get(quant_sensor, "dv"), dtype=float).copy()
     if dsnu is not None:
@@ -6886,10 +6900,18 @@ def _sensor_etendue(sensor: Sensor) -> np.ndarray:
 
     vignetting = sensor.fields.get("vignetting", 0)
     normalized = param_format(vignetting) if isinstance(vignetting, str) else vignetting
-    if normalized in {0, "skip", "", None}:
+    if normalized in {0, "skip", "off", "none", "disabled", "false", "", None}:
         etendue = np.ones(sensor.fields["size"], dtype=float)
         sensor.fields["etendue"] = etendue
         return etendue
+
+    if normalized in {1, 2, 3, "bare", "nomicrolens", "centered", "optimal", "optimized"}:
+        updated = sensor_vignetting(sensor, vignetting)
+        etendue = np.asarray(updated.fields.get("etendue"), dtype=float)
+        if etendue.shape == tuple(sensor.fields["size"]):
+            sensor.fields["etendue"] = etendue.copy()
+            sensor.fields["ml"] = _copy_metadata_value(updated.fields.get("ml"))
+            return etendue
 
     raise UnsupportedOptionError("sensorCompute", f"vignetting {vignetting}")
 

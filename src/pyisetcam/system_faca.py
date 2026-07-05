@@ -17,7 +17,7 @@ from .hwisp import HWIspConfig, hw_isp_config, hw_isp_simulate_sequence
 from .ip import ip_get
 from .optics import si_synthetic
 from .scene import scene_create, scene_get
-from .sensor import sensor_get, sensor_set
+from .sensor import mlens_create, mlens_set, sensor_get, sensor_set, sensor_vignetting
 from .tcad_sensor import sensor_attach_tcad_lut
 from .types import Camera, Scene
 
@@ -39,7 +39,7 @@ def camerae2e_run_scenario(
     resolved_scene = _resolve_scene(scene if scene is not None else config.get("scene"), store)
     resolved_camera = _resolve_camera(camera if camera is not None else config.get("camera"), store)
     resolved_camera, parameter_lineage = _apply_physics_and_sensor_overrides(
-        resolved_camera, config
+        resolved_camera, config, store
     )
 
     hw_payload = dict(config.get("hw_isp", {})) if isinstance(config.get("hw_isp"), Mapping) else {}
@@ -185,7 +185,7 @@ def _resolve_camera(source: Camera | Mapping[str, Any] | None, store: AssetStore
 
 
 def _apply_physics_and_sensor_overrides(
-    camera: Camera, config: Mapping[str, Any]
+    camera: Camera, config: Mapping[str, Any], store: AssetStore
 ) -> tuple[Camera, list[dict[str, Any]]]:
     updated = camera.clone()
     lineage: list[dict[str, Any]] = []
@@ -228,13 +228,46 @@ def _apply_physics_and_sensor_overrides(
     sensor_overrides = (
         dict(config.get("sensor", {})) if isinstance(config.get("sensor"), Mapping) else {}
     )
+    delayed_sensor_overrides: list[tuple[Any, Any]] = []
     for key, value in sensor_overrides.items():
+        if _is_sensor_vignetting_override(key):
+            delayed_sensor_overrides.append((key, value))
+            continue
+        special = _apply_special_sensor_override(sensor, key, value, store)
+        if special is not None:
+            sensor, sensor_parameter, before, after = special
+            lineage.append(
+                _parameter_lineage_entry(
+                    f"sensor.{str(key).replace(' ', '_')}",
+                    sensor_parameter,
+                    value,
+                    before,
+                    after,
+                    status="applied",
+                )
+            )
+            continue
         sensor_parameter = _sensor_override_parameter_name(key)
         if sensor_parameter is None:
             raise KeyError(f"Unsupported CameraE2E sensor override: {key!r}")
         before = _safe_sensor_get(sensor, sensor_parameter)
         sensor = sensor_set(sensor, sensor_parameter, _sensor_override_value(key, value))
         after = _safe_sensor_get(sensor, sensor_parameter)
+        lineage.append(
+            _parameter_lineage_entry(
+                f"sensor.{str(key).replace(' ', '_')}",
+                sensor_parameter,
+                value,
+                before,
+                after,
+                status="applied",
+            )
+        )
+    for key, value in delayed_sensor_overrides:
+        special = _apply_special_sensor_override(sensor, key, value, store)
+        if special is None:
+            raise KeyError(f"Unsupported CameraE2E sensor override: {key!r}")
+        sensor, sensor_parameter, before, after = special
         lineage.append(
             _parameter_lineage_entry(
                 f"sensor.{str(key).replace(' ', '_')}",
@@ -312,6 +345,90 @@ def _apply_special_camera_parameter(
     return None
 
 
+def _apply_special_sensor_override(
+    sensor: Any, key: Any, value: Any, store: AssetStore
+) -> tuple[Any, str, Any, Any] | None:
+    normalized = str(key).strip().replace("_", " ").lower()
+    if normalized in {
+        "binning factor",
+        "pixel binning factor",
+        "readout binning factor",
+    }:
+        before = _safe_sensor_get(sensor, "sensor compute method")
+        payload = _sensor_binning_factor_value(value)
+        updated = sensor_set(sensor, "sensor compute method", payload)
+        after = _safe_sensor_get(updated, "sensor compute method")
+        return updated, "sensor compute method", before, after
+    if normalized in {
+        "ocl vignetting",
+        "microlens vignetting",
+        "pixel vignetting",
+        "vignetting",
+    }:
+        before = {
+            "vignetting": _safe_sensor_get(sensor, "vignetting"),
+            "etendue": _array_summary(_safe_sensor_get(sensor, "etendue")),
+        }
+        updated = sensor_vignetting(sensor, value, asset_store=store)
+        updated = sensor_set(updated, "vignetting", _sensor_vignetting_value(value))
+        after = {
+            "vignetting": _safe_sensor_get(updated, "vignetting"),
+            "vignetting_name": _safe_sensor_get(updated, "vignetting name"),
+            "etendue": _array_summary(_safe_sensor_get(updated, "etendue")),
+        }
+        return updated, "sensor ocl vignetting", before, after
+    microlens_parameter = _microlens_override_parameter_name(normalized)
+    if microlens_parameter is None:
+        return None
+    before = _safe_sensor_get(sensor, "microlens")
+    microlens = before if isinstance(before, Mapping) else mlens_create(sensor, asset_store=store)
+    if normalized in {"ocl focal length um", "microlens focal length um"}:
+        updated_microlens = mlens_set(microlens, microlens_parameter, value, "microns")
+    else:
+        updated_microlens = mlens_set(microlens, microlens_parameter, value)
+    updated = sensor_set(sensor, "microlens", updated_microlens)
+    updated.fields["etendue"] = None
+    after = _safe_sensor_get(updated, "microlens")
+    return updated, f"microlens {microlens_parameter}", before, after
+
+
+def _microlens_override_parameter_name(normalized: str) -> str | None:
+    if normalized in {
+        "ocl fnumber",
+        "ocl f number",
+        "microlens fnumber",
+        "microlens f number",
+    }:
+        return "microlens fnumber"
+    if normalized in {
+        "ocl focal length um",
+        "microlens focal length um",
+    }:
+        return "microlens focal length"
+    if normalized in {
+        "ocl refractive index",
+        "microlens refractive index",
+    }:
+        return "microlens refractive index"
+    if normalized in {
+        "ocl chief ray angle deg",
+        "microlens chief ray angle deg",
+        "microlens ray angle deg",
+    }:
+        return "chief ray angle"
+    return None
+
+
+def _is_sensor_vignetting_override(key: Any) -> bool:
+    normalized = str(key).strip().replace("_", " ").lower()
+    return normalized in {
+        "ocl vignetting",
+        "microlens vignetting",
+        "pixel vignetting",
+        "vignetting",
+    }
+
+
 def _camera_parameter_name(key: Any) -> str:
     value = str(key).strip().replace("_", " ")
     if "." in value:
@@ -356,6 +473,10 @@ def _sensor_override_parameter_name(key: Any) -> str | None:
         return "sensor compute method"
     if normalized in {"binning", "binning method", "pixel binning", "pixel binning method"}:
         return "sensor compute method"
+    if normalized in {"microlens", "micro lens", "ocl"}:
+        return "microlens"
+    if normalized in {"microlens offset", "microlens offset microns", "ocl offset um"}:
+        return "microlens offset"
     return None
 
 
@@ -373,6 +494,44 @@ def _sensor_override_value(key: Any, value: Any) -> Any:
     if normalized_value in {"", "off", "none", "default", "disabled", "false", "0"}:
         return None
     return {"name": "binning", "method": str(value)}
+
+
+def _sensor_binning_factor_value(value: Any) -> dict[str, Any] | None:
+    factor = int(np.asarray(value, dtype=float).reshape(-1)[0])
+    if factor <= 1:
+        return None
+    if factor != 2:
+        raise ValueError("sensor.binning_factor currently supports 1/off or the legacy 2x proxy.")
+    return {"name": "binning", "method": "kodak2008", "factor": factor}
+
+
+def _sensor_vignetting_value(value: Any) -> Any:
+    if isinstance(value, str):
+        normalized = value.strip().lower().replace("_", " ")
+        if normalized in {"off", "skip", "none", "disabled", "false", "0"}:
+            return 0
+        if normalized in {"bare", "no microlens", "nomicrolens", "1"}:
+            return 1
+        if normalized in {"centered", "2"}:
+            return 2
+        if normalized in {"optimal", "optimized", "3"}:
+            return 3
+    return value
+
+
+def _array_summary(value: Any) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    array = np.asarray(value, dtype=float)
+    if array.size == 0:
+        return {"shape": list(array.shape), "available": False}
+    return {
+        "shape": list(array.shape),
+        "available": True,
+        "min": float(np.nanmin(array)),
+        "max": float(np.nanmax(array)),
+        "mean": float(np.nanmean(array)),
+    }
 
 
 def _parameter_lineage_entry(

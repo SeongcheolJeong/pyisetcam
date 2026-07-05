@@ -141,6 +141,7 @@ from .optimization import (
     camerae2e_optimize_camera_parameters,
     camerae2e_optimize_parameters,
     camerae2e_pareto_front,
+    camerae2e_parameter_candidate_plan,
     camerae2e_parameter_space_catalog,
     camerae2e_parameter_space_validate,
 )
@@ -1110,6 +1111,7 @@ __all__ = [
     "camerae2e_optimize_camera_parameters",
     "camerae2e_optimize_parameters",
     "camerae2e_pareto_front",
+    "camerae2e_parameter_candidate_plan",
     "camerae2e_parameter_space_catalog",
     "camerae2e_parameter_space_validate",
     "camerae2e_physics_pipeline_plan",
@@ -3832,6 +3834,7 @@ cameraE2EOptimizeCameraParameters = camerae2e_optimize_camera_parameters
 cameraE2EOptimizeParameters = camerae2e_optimize_parameters
 cameraE2EOptimizationReport = camerae2e_optimization_report
 cameraE2EParetoFront = camerae2e_pareto_front
+cameraE2EParameterCandidatePlan = camerae2e_parameter_candidate_plan
 cameraE2EParameterSpaceCatalog = camerae2e_parameter_space_catalog
 cameraE2EOptimizationConfigCatalog = camerae2e_optimization_config_catalog
 cameraE2EParameterSpaceValidate = camerae2e_parameter_space_validate

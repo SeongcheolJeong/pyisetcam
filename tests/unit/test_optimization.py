@@ -6,6 +6,7 @@ from pyisetcam import (
     camerae2e_optimization_report,
     camerae2e_optimize_camera_parameters,
     camerae2e_optimize_parameters,
+    camerae2e_parameter_candidate_plan,
     camerae2e_parameter_space_catalog,
     camerae2e_parameter_space_validate,
     camerae2e_pareto_front,
@@ -63,7 +64,11 @@ def test_camerae2e_optimization_config_catalog_lists_configure_targets() -> None
     assert "sensor.integration_time" in catalog["registered_axes"]
     assert "sensor.pixel_size" in catalog["registered_axes"]
     assert "sensor.cfa_pattern" in catalog["registered_axes"]
+    assert "sensor.binning_factor" in catalog["registered_axes"]
+    assert "sensor.ocl_vignetting" in catalog["registered_axes"]
+    assert "sensor.ocl_fnumber" in catalog["registered_axes"]
     assert "optics.si_psf_radius_um" in catalog["registered_axes"]
+    assert "fdtd.ocl_shift_um" in catalog["registered_axes"]
     assert "fdtd.crosstalk_strength" in catalog["registered_axes"]
     assert "hw_isp.global_latency_factor" in catalog["registered_axes"]
     assert "metrics.artifact.raw_std" in catalog["objective_metrics"]
@@ -77,6 +82,8 @@ def test_camerae2e_optimization_config_catalog_lists_configure_targets() -> None
     assert "exposure_time" in sensor_rule["allowed_suffixes"]
     assert "pixel_size" in sensor_rule["allowed_suffixes"]
     assert "binning_method" in sensor_rule["allowed_suffixes"]
+    assert "binning_factor" in sensor_rule["allowed_suffixes"]
+    assert "ocl_vignetting" in sensor_rule["allowed_suffixes"]
 
 
 def test_camerae2e_parameter_space_validate_classifies_axes() -> None:
@@ -127,6 +134,9 @@ def test_camerae2e_parameter_space_validate_reports_invalid_values() -> None:
             "sensor.n_samples_per_pixel": [2],
             "sensor.cfa_pattern": [[[1.2, 2], [2, 3]]],
             "sensor.binning_method": ["unsupported"],
+            "sensor.binning_factor": [4],
+            "sensor.ocl_vignetting": ["unsupported"],
+            "sensor.ocl_fnumber": [0.0],
             "optics.si_psf_radius_um": [-1.0],
         }
     )
@@ -139,6 +149,7 @@ def test_camerae2e_parameter_space_validate_reports_invalid_values() -> None:
         "unsupported_samples_per_pixel",
         "invalid_cfa_pattern",
         "unsupported_enum_value",
+        "unsupported_binning_factor",
         "invalid_positive_value",
     } <= issue_kinds
     assert validation["axes"]["sensor.n_samples_per_pixel"]["value_issues"][0][
@@ -162,6 +173,76 @@ def test_camerae2e_parameter_space_validate_reports_value_warnings() -> None:
     }
 
 
+def test_camerae2e_parameter_candidate_plan_supports_budgeted_grid() -> None:
+    plan = camerae2e_parameter_candidate_plan(
+        {
+            "sensor.integration_time": [0.001, 0.002, 0.004],
+            "sensor.analog_gain": [1.0, 2.0, 4.0],
+        },
+        max_cases=4,
+    )
+
+    assert plan["schema_version"] == "camerae2e_parameter_candidate_plan_v1"
+    assert plan["ok"] is True
+    assert plan["method"] == "grid"
+    assert plan["full_grid_count"] == 9
+    assert plan["case_count"] == 4
+    assert plan["truncated"] is True
+    assert plan["candidates"][0] == {
+        "sensor.integration_time": 0.001,
+        "sensor.analog_gain": 1.0,
+    }
+    assert plan["candidates"][-1] == {
+        "sensor.integration_time": 0.004,
+        "sensor.analog_gain": 4.0,
+    }
+
+
+def test_camerae2e_parameter_candidate_plan_random_is_seeded() -> None:
+    parameter_space = {
+        "sensor.integration_time": [0.001, 0.002, 0.004],
+        "sensor.analog_gain": [1.0, 2.0, 4.0],
+        "optics.fnumber": [2.0, 2.8, 4.0],
+    }
+    left = camerae2e_parameter_candidate_plan(
+        parameter_space,
+        method="random",
+        max_cases=5,
+        seed=123,
+    )
+    right = camerae2e_parameter_candidate_plan(
+        parameter_space,
+        method="random",
+        max_cases=5,
+        seed=123,
+    )
+
+    assert left["method"] == "random"
+    assert left["case_count"] == 5
+    assert left["candidates"] == right["candidates"]
+    assert len({str(candidate) for candidate in left["candidates"]}) == 5
+
+
+def test_camerae2e_parameter_candidate_plan_latin_hypercube_defaults_budget() -> None:
+    plan = camerae2e_parameter_candidate_plan(
+        {
+            "sensor.integration_time": [0.001, 0.002, 0.004],
+            "sensor.analog_gain": [1.0, 2.0, 4.0],
+            "optics.fnumber": [2.0, 2.8, 4.0],
+            "sensor.pixel_fill_factor": [0.55, 0.75, 0.95],
+        },
+        method="lhs",
+        seed=77,
+    )
+
+    assert plan["method"] == "latin_hypercube"
+    assert plan["implicit_default_budget"] is True
+    assert plan["max_cases"] == 32
+    assert plan["case_count"] == 32
+    assert plan["truncated"] is True
+    assert plan["warnings"][0]["kind"] == "implicit_default_budget"
+
+
 def test_camerae2e_optimize_parameters_rejects_invalid_values_before_run() -> None:
     try:
         camerae2e_optimize_parameters(
@@ -174,6 +255,32 @@ def test_camerae2e_optimize_parameters_rejects_invalid_values_before_run() -> No
         raise AssertionError("Expected invalid value to fail before optimization.")
 
 
+def test_camerae2e_optimize_parameters_uses_budgeted_candidates() -> None:
+    result = camerae2e_optimize_parameters(
+        {
+            "name": "unit_budgeted_parameter_optimization",
+            "scene": {"type": "uniform ee", "args": [8]},
+            "sensor": {"noise_flag": 0},
+        },
+        {
+            "sensor.integration_time": [0.001, 0.002, 0.004],
+            "sensor.analog_gain": [1.0, 2.0, 4.0],
+        },
+        {"metric": "metrics.color.rgb_mean", "direction": "maximize"},
+        method="latin_hypercube",
+        max_cases=4,
+        seed=200,
+        top_k=2,
+    )
+
+    assert result["method"] == "budgeted_latin_hypercube"
+    assert result["search_method"] == "latin_hypercube"
+    assert result["candidate_plan"]["case_count"] == 4
+    assert result["candidate_plan"]["truncated"] is True
+    assert result["case_count"] == 4
+    assert len(result["cases"]) == 4
+
+
 def test_camerae2e_scenario_applies_extended_configure_axes() -> None:
     result = camerae2e_run_scenario(
         {
@@ -184,6 +291,11 @@ def test_camerae2e_scenario_applies_extended_configure_axes() -> None:
                 "pixel_fill_factor": 0.55,
                 "cfa_pattern": [[1, 2], [2, 3]],
                 "binning_method": "kodak2008",
+                "binning_factor": 2,
+                "ocl_fnumber": 1.8,
+                "ocl_focal_length_um": 1.4,
+                "ocl_refractive_index": 1.55,
+                "ocl_vignetting": "centered",
             },
             "parameters": {"optics.si_psf_radius_um": 2.0},
         },
@@ -195,11 +307,19 @@ def test_camerae2e_scenario_applies_extended_configure_axes() -> None:
     assert any(item["path"] == "sensor.pixel_fill_factor" for item in lineage)
     assert any(item["path"] == "sensor.cfa_pattern" for item in lineage)
     assert any(item["path"] == "sensor.binning_method" for item in lineage)
+    assert any(item["path"] == "sensor.binning_factor" for item in lineage)
+    assert any(item["path"] == "sensor.ocl_fnumber" for item in lineage)
+    assert any(item["path"] == "sensor.ocl_focal_length_um" for item in lineage)
+    assert any(item["path"] == "sensor.ocl_refractive_index" for item in lineage)
+    assert any(item["path"] == "sensor.ocl_vignetting" for item in lineage)
     assert any(item["path"] == "optics.si_psf_radius_um" for item in lineage)
     assert result["camera"].fields["sensor"].fields["sensor_compute_method"] == {
         "name": "binning",
         "method": "kodak2008",
+        "factor": 2,
     }
+    assert result["camera"].fields["sensor"].fields["vignetting"] == 2
+    assert result["camera"].fields["sensor"].fields["etendue"] is not None
 
 
 def test_camerae2e_optimize_parameters_selects_best_grid_case() -> None:

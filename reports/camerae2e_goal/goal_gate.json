@@ -366,15 +366,96 @@
             }
           },
           "axis_count": 2,
+          "candidate_count": 6,
+          "max_cases": 6,
           "preset": "exposure",
-          "schema_version": "camerae2e_parameter_optimization_automation_v1"
+          "schema_version": "camerae2e_parameter_optimization_automation_v1",
+          "search_method": "grid"
         },
         "best_parameters": {
           "sensor.analog_gain": 1.0,
           "sensor.integration_time": 0.004
         },
+        "candidate_plan": {
+          "axis_count": 2,
+          "axis_sizes": {
+            "sensor.analog_gain": 3,
+            "sensor.integration_time": 2
+          },
+          "candidate_preview": [
+            {
+              "sensor.analog_gain": 1.0,
+              "sensor.integration_time": 0.001
+            },
+            {
+              "sensor.analog_gain": 2.0,
+              "sensor.integration_time": 0.001
+            },
+            {
+              "sensor.analog_gain": 4.0,
+              "sensor.integration_time": 0.001
+            },
+            {
+              "sensor.analog_gain": 1.0,
+              "sensor.integration_time": 0.004
+            },
+            {
+              "sensor.analog_gain": 2.0,
+              "sensor.integration_time": 0.004
+            }
+          ],
+          "case_count": 6,
+          "full_grid_count": 6,
+          "implicit_default_budget": false,
+          "max_cases": 6,
+          "method": "grid",
+          "ok": true,
+          "parameter_space_validation": {
+            "axes": {
+              "sensor.analog_gain": {
+                "assignment": "scenario.sensor -> sensor_set(...)",
+                "issues": [],
+                "readiness_tier": "validated",
+                "status": "registered",
+                "value_count": 3,
+                "value_issues": [],
+                "value_warnings": [],
+                "values": [
+                  1.0,
+                  2.0,
+                  4.0
+                ]
+              },
+              "sensor.integration_time": {
+                "assignment": "scenario.sensor -> sensor_set(...)",
+                "issues": [],
+                "readiness_tier": "validated",
+                "status": "registered",
+                "value_count": 2,
+                "value_issues": [],
+                "value_warnings": [],
+                "values": [
+                  0.001,
+                  0.004
+                ]
+              }
+            },
+            "axis_count": 2,
+            "issue_count": 0,
+            "issues": [],
+            "ok": true,
+            "schema_version": "camerae2e_parameter_space_validation_v1",
+            "warning_count": 0,
+            "warnings": []
+          },
+          "schema_version": "camerae2e_parameter_candidate_plan_v1",
+          "seed": 2036,
+          "truncated": false,
+          "warnings": []
+        },
         "case_count": 6,
         "feasible_count": 6,
+        "method": "deterministic_grid",
         "parameter_space_validation": {
           "axes": {
             "sensor.analog_gain": {
@@ -419,6 +500,8 @@
             "optics.focal_length",
             "optics.fnumber",
             "sensor.pixel_size",
+            "sensor.binning_factor",
+            "sensor.ocl_vignetting",
             "sensor.integration_time",
             "sensor.analog_gain"
           ],
@@ -445,6 +528,9 @@
           "physics_proxy": [
             "fdtd.mode",
             "fdtd.crosstalk_strength",
+            "fdtd.ocl_shift_um",
+            "fdtd.cra_x_deg",
+            "fdtd.cra_z_deg",
             "tcad.collection_mode"
           ],
           "raw_factory": [
@@ -465,23 +551,31 @@
             "sensor.pixel_fill_factor",
             "sensor.n_samples_per_pixel"
           ],
+          "sensor_ocl": [
+            "sensor.ocl_vignetting",
+            "sensor.ocl_fnumber",
+            "sensor.ocl_focal_length_um",
+            "sensor.ocl_refractive_index"
+          ],
           "sensor_readout": [
             "sensor.integration_time",
             "sensor.analog_gain",
             "sensor.pixel_read_noise_v",
             "sensor.pixel_voltage_swing",
-            "sensor.binning_method"
+            "sensor.binning_method",
+            "sensor.binning_factor"
           ],
           "sensor_spectral": [
             "sensor.cfa_pattern"
           ]
         },
-        "registered_configure_count": 24,
+        "registered_configure_count": 32,
+        "search_method": "grid",
         "seed": 2036
       },
       "name": "parameter_optimization",
       "status": "pass",
-      "summary": "Camera parameter optimization runs a deterministic FACA objective grid.",
+      "summary": "Camera parameter optimization runs FACA objective search with validated, budget-aware candidate planning.",
       "tier": "validated"
     },
     {
@@ -722,7 +816,7 @@
       "tier": "calibration_required"
     }
   ],
-  "generated_at": "2026-07-05T06:09:05.162810+00:00",
+  "generated_at": "2026-07-05T06:27:48.392619+00:00",
   "goal": "Research-grade E2E optimization platform plus RAW data factory for perception training.",
   "ok": true,
   "output_dir": "/Users/seongcheoljeong/Documents/CameraE2E/reports/camerae2e_goal",

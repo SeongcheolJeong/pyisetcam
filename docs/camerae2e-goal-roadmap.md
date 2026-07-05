@@ -82,6 +82,7 @@ Optimization:
 - `camerae2e_optimize_parameters(...)`
 - `camerae2e_optimize_camera_parameters(...)`
 - `camerae2e_parameter_space_catalog(...)`
+- `camerae2e_parameter_candidate_plan(...)`
 - `camerae2e_optimization_config_catalog(...)`
 - `camerae2e_parameter_space_validate(...)`
 - `camerae2e_optimization_report(...)`
@@ -90,13 +91,16 @@ Optimization:
 The first optimizer is deterministic grid search over dot-path camera
 parameters such as `sensor.integration_time`, `sensor.analog_gain`,
 `sensor.pixel_size`, `sensor.pixel_fill_factor`, `sensor.cfa_pattern`,
-`sensor.binning_method`, `sensor.pixel_read_noise_v`, `optics.fnumber`,
+`sensor.binning_method`, `sensor.binning_factor`, `sensor.ocl_vignetting`,
+`sensor.ocl_fnumber`, `sensor.ocl_focal_length_um`,
+`sensor.ocl_refractive_index`, `sensor.pixel_read_noise_v`, `optics.fnumber`,
 `optics.focal_length`, `optics.si_psf_radius_um`, `fdtd.crosstalk_strength`,
+`fdtd.ocl_shift_um`, `fdtd.cra_x_deg`, `fdtd.cra_z_deg`,
 `ip.demosaic_method`, and HW ISP control-delay parameters.
 `camerae2e_parameter_space_catalog(...)` exposes validated preset search spaces
 such as `exposure`, `raw_factory`, `sensor_geometry`, `sensor_spectral`,
-`sensor_readout`, `optics_psf`, `raytrace_psf`, `physics_proxy`, `adas_camera`,
-`isp`, and `hw_isp_control`.
+`sensor_readout`, `sensor_ocl`, `optics_psf`, `raytrace_psf`,
+`physics_proxy`, `adas_camera`, `isp`, and `hw_isp_control`.
 `camerae2e_optimization_config_catalog(...)` lists every registered configure
 axis, custom dot-path assignment rule, and supported FACA objective metric path.
 `camerae2e_parameter_space_validate(...)` classifies a caller parameter space as
@@ -104,10 +108,19 @@ axis, custom dot-path assignment rule, and supported FACA objective metric path.
 sweep is launched. It also validates high-value axis values: positive exposure,
 gain, pixel size, f-number, focal length, PSF radius, odd
 `sensor.n_samples_per_pixel`, CFA matrix shape/integer constraints, supported
-binning/demosaic/mode tokens, nonnegative FDTD crosstalk strength, and HW ISP
-delay integer constraints. This prevents false optimization runs where an axis
+binning/demosaic/OCL/mode tokens, supported 1/off or 2x legacy
+`sensor.binning_factor`, nonnegative FDTD crosstalk strength, finite FDTD CRA/OCL
+selectors, and HW ISP delay integer constraints. This prevents false optimization runs where an axis
 is syntactically accepted but does not affect the camera pipeline or fails deep
 inside sensor/optics computation.
+`camerae2e_parameter_candidate_plan(...)` turns the validated space into a
+reproducible candidate list before running FACA. The default `grid` method keeps
+the previous Cartesian behavior. Passing `max_cases` turns it into a budgeted
+grid by sampling evenly across the Cartesian index range. `method="random"` and
+`method="latin_hypercube"` sample discrete axis values with a fixed seed and
+default to a bounded budget when `max_cases` is omitted. The optimizer accepts
+the same `method` and `max_cases` arguments and records the resulting
+candidate-plan summary in optimization reports.
 `camerae2e_optimize_camera_parameters(...)` runs those presets directly while
 still allowing caller overrides. The optimizer maximizes objective paths from
 the FACA report, supports hard metric constraints, reports the feasible Pareto
@@ -118,24 +131,29 @@ camera parameters applied. This is the reproducible baseline for later
 Bayesian/evolutionary optimizers.
 
 Important boundary: `sensor.n_samples_per_pixel` is sub-pixel integration
-sampling, not readout binning. `sensor.binning_method` currently routes to the
-legacy binning wrapper and remains a `proxy` until charge-domain,
-readout-domain, and ISP-domain binning are separated. `optics.si_psf_radius_um`
-is a synthetic shift-invariant pillbox PSF radius for blur sensitivity sweeps;
-it must not be interpreted as a RayOptics geometric PSF radius or
-diffraction/wave-optics sign-off. FDTD/OCL axes such as
-`fdtd.crosstalk_strength` only affect the pipeline when an FDTD LUT is attached
-in the base scenario.
+sampling, not readout binning. `sensor.binning_method` and
+`sensor.binning_factor` currently route to the legacy 2x binning wrapper and
+remain `proxy` until charge-domain, readout-domain, and ISP-domain binning are
+separated. `sensor.ocl_vignetting`/microlens axes use the current
+etendue/vignetting model; OCL offset/height/process-stack optimization should
+not be registered as validated until fixed-offset etendue or FDTD/TCAD-backed
+OCL LUTs are attached. `optics.si_psf_radius_um` is a synthetic
+shift-invariant pillbox PSF radius for blur sensitivity sweeps; it must not be
+interpreted as a RayOptics geometric PSF radius or diffraction/wave-optics
+sign-off. FDTD/OCL axes such as `fdtd.crosstalk_strength`,
+`fdtd.ocl_shift_um`, and FDTD CRA selectors only affect the pipeline when an
+FDTD LUT is attached in the base scenario.
 
 Optimization configure priority:
 
 | Group | High-value axes | Current handling |
 |---|---|---|
-| Exposure/noise/readout | `sensor.integration_time`, `sensor.analog_gain`, `sensor.pixel_read_noise_v`, `sensor.pixel_dark_voltage`, `sensor.pixel_voltage_swing`, `sensor.pixel_conversion_gain`, `sensor.noise_flag` | registered validated axes |
-| Sensor geometry/sampling | `sensor.pixel_size`, `sensor.pixel_fill_factor`, `sensor.n_samples_per_pixel`, `sensor.binning_method`, sensor resolution/FOV custom paths | pixel/sampling validated; binning proxy |
+| Exposure/noise/readout | `sensor.integration_time`, `sensor.analog_gain`, `sensor.pixel_read_noise_v`, `sensor.pixel_dark_voltage`, `sensor.pixel_voltage_swing`, `sensor.pixel_conversion_gain`, `sensor.noise_flag`, `sensor.binning_method`, `sensor.binning_factor` | registered validated/proxy axes; binning is legacy 2x proxy |
+| Sensor geometry/sampling | `sensor.pixel_size`, `sensor.pixel_fill_factor`, `sensor.n_samples_per_pixel`, sensor resolution/FOV custom paths | pixel/sampling validated; FOV/size custom paths require lineage checks |
 | CFA/spectral | `sensor.cfa_pattern`, `sensor.filter_names`, `sensor.filter_spectra`, IR/QE custom paths | CFA registered; spectra/name changes require consistency checks |
+| OCL/microlens | `sensor.ocl_vignetting`, `sensor.ocl_fnumber`, `sensor.ocl_focal_length_um`, `sensor.ocl_refractive_index`; future `ocl_offset/height/stack` via FDTD/TCAD LUT | etendue/vignetting proxy; refractive index calibration-required |
 | Optics/PSF | `optics.focal_length`, `optics.fnumber`, `optics.si_psf_radius_um`, `optics.psf_angle_step`, `optics.rt_compute_spacing`, distortion/relative-illumination custom paths | focal/f-number validated; PSF radius/RayOptics sampling proxy |
-| FDTD/TCAD/OCL | `fdtd.mode`, `fdtd.crosstalk_strength`, CRA/field options, `tcad.collection_mode` | guarded by attached LUT/DB; proxy or calibration-required |
+| FDTD/TCAD/OCL | `fdtd.mode`, `fdtd.crosstalk_strength`, `fdtd.ocl_shift_um`, `fdtd.cra_x_deg`, `fdtd.cra_z_deg`, `tcad.collection_mode` | guarded by attached LUT/DB; proxy or calibration-required |
 | ISP/control | `ip.demosaic_method`, black level/tone/gamma/custom IP paths, HW ISP AE/AWB delay and latency axes | demosaic validated; HW ISP proxy |
 | Perception/data | selected camera-spec scenario, RAW split/export, label preservation, YOLO view, robustness metrics | validated factory outputs; no automatic label synthesis |
 
