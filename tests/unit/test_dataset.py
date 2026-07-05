@@ -15,6 +15,8 @@ from pyisetcam import (
     camerae2e_dataset_validate,
     camerae2e_kitti_yolo_labels,
     camerae2e_optimize_parameters,
+    image_sensor_db_optimize_camera_parameters,
+    image_sensor_db_records,
 )
 
 
@@ -138,6 +140,37 @@ def test_camerae2e_dataset_export_from_optimization_uses_pareto_scenarios(
         for item in manifest["records"][0]["parameter_lineage"]
     )
     assert validation["ok"] is True
+
+
+def test_camerae2e_dataset_export_preserves_sensor_db_optimization_source(
+    tmp_path: Path,
+) -> None:
+    first = image_sensor_db_records(limit=1)[0]
+    result = image_sensor_db_optimize_camera_parameters(
+        first["sensor_id"],
+        strategy="analytic_only",
+        base_scenario={"scene": {"type": "uniform ee", "args": [8]}},
+        preset="exposure",
+        parameter_space={"sensor.integration_time": [0.001, 0.004]},
+        objective={"metric": "metrics.color.rgb_mean", "direction": "maximize"},
+        max_cases=2,
+        seed=37,
+        top_k=1,
+    )
+    manifest = camerae2e_dataset_export_from_optimization(
+        tmp_path,
+        result,
+        selection="best",
+        include_rgb=False,
+    )
+
+    source = manifest["source_optimization"]["source_image_sensor_db"]
+    assert source["sensor_id"] == first["sensor_id"]
+    assert source["strategy"] == "analytic_only"
+    assert (
+        manifest["records"][0]["scenario"]["image_sensor_db"]["sensor_id"]
+        == first["sensor_id"]
+    )
 
 
 def test_camerae2e_adas_kitti_demo_exports_raw_and_yolo_labels(tmp_path: Path) -> None:

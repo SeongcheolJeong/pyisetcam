@@ -46,6 +46,7 @@ DB/LUT registry:
 - `camerae2e_calibration_evidence_validate(...)`
 - `camerae2e_readiness_promotion_plan(...)`
 - `image_sensor_db_config(...)`
+- `image_sensor_db_optimize_camera_parameters(...)`
 
 `camerae2e_goal_gate(...)` is the top-level research-platform evidence gate.
 It regenerates a machine-readable pass/warn/fail matrix over registry,

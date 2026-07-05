@@ -21,7 +21,11 @@ from .dataset import (
     camerae2e_dataset_validate,
 )
 from .db_catalog import camerae2e_db_manifest, camerae2e_db_validate
-from .image_sensor_db import image_sensor_db_config, image_sensor_db_records
+from .image_sensor_db import (
+    image_sensor_db_config,
+    image_sensor_db_optimize_camera_parameters,
+    image_sensor_db_records,
+)
 from .optimization import (
     camerae2e_optimization_config_catalog,
     camerae2e_optimize_camera_parameters,
@@ -242,6 +246,17 @@ def _sensor_db_config_policy(*, seed: int) -> dict[str, Any]:
     }
     result = camerae2e_run_scenario(scenario, seed=seed, include_arrays=False)
     report = camerae2e_faca_report(result)
+    optimization = image_sensor_db_optimize_camera_parameters(
+        sensor_id,
+        strategy="analytic_only",
+        base_scenario={"scene": {"type": "uniform ee", "args": [8]}},
+        preset="exposure",
+        parameter_space={"sensor.integration_time": [0.001, 0.004]},
+        objective={"metric": "metrics.color.rgb_mean", "direction": "maximize"},
+        max_cases=2,
+        seed=seed + 1,
+        top_k=1,
+    )
     policy = dict(hybrid.get("policy", {}))
     tiers = dict(policy.get("component_tiers", {}))
     passed = (
@@ -251,6 +266,9 @@ def _sensor_db_config_policy(*, seed: int) -> dict[str, Any]:
         and "fdtd" not in analytic.get("scenario", {})
         and tiers.get("sensor_db_metadata") == "proxy"
         and bool(report.get("parameter_lineage"))
+        and optimization.get("source_image_sensor_db", {}).get("sensor_id") == sensor_id
+        and optimization.get("best_case", {}).get("parameters", {}).get("sensor.integration_time")
+        == 0.004
     )
     return {
         "status": "pass" if passed else "fail",
@@ -268,6 +286,11 @@ def _sensor_db_config_policy(*, seed: int) -> dict[str, Any]:
             "hybrid_has_tcad": "tcad" in hybrid.get("scenario", {}),
             "analytic_sensor": analytic.get("sensor", {}),
             "parameter_lineage_count": len(report.get("parameter_lineage", [])),
+            "optimization_method": optimization.get("method"),
+            "optimization_best_parameters": optimization.get("best_case", {}).get(
+                "parameters", {}
+            ),
+            "optimization_source": optimization.get("source_image_sensor_db", {}),
             "truth_boundary": policy.get("truth_boundary"),
         },
     }

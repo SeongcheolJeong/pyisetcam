@@ -66,11 +66,22 @@ Main entries:
 Image-sensor selector APIs:
 
 ```python
-from pyisetcam import image_sensor_db_records, image_sensor_db_parameters, image_sensor_db_config
+from pyisetcam import (
+    image_sensor_db_records,
+    image_sensor_db_parameters,
+    image_sensor_db_config,
+    image_sensor_db_optimize_camera_parameters,
+)
 
 records = image_sensor_db_records("sony", limit=10)
 params = image_sensor_db_parameters(records[0]["sensor_id"])
 config = image_sensor_db_config(records[0]["sensor_id"], strategy="hybrid")
+optimization = image_sensor_db_optimize_camera_parameters(
+    records[0]["sensor_id"],
+    strategy="analytic_only",
+    preset="exposure",
+    parameter_space={"sensor.integration_time": [0.001, 0.004]},
+)
 ```
 
 The selector parameters include:
@@ -89,6 +100,9 @@ and analytic proxy defaults should fill only metadata-derived axes. Use
 `strategy="analytic_only"` for broad free-configuration optimization without
 attaching the external FDTD/TCAD paths. Use `strategy="lut_only"` when the DB/LUT
 side should be inspected without analytic OCL group fallback.
+`image_sensor_db_optimize_camera_parameters(...)` runs the standard FACA
+optimizer from that selected sensor DB record and adds `source_image_sensor_db`
+lineage so downstream RAW exports can keep the sensor provenance.
 
 Parameter use:
 

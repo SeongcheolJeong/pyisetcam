@@ -24,7 +24,7 @@ code { word-break: break-all; }
 <p class="lead">Research-grade E2E optimization platform plus RAW data factory for perception training.</p>
 <p>OK: <strong>True</strong>; strict:
 <strong>False</strong>; generated:
-<code>2026-07-05T07:13:39.627455+00:00</code></p>
+<code>2026-07-05T07:20:19.748166+00:00</code></p>
 <p>Artifacts: <code>/Users/seongcheoljeong/Documents/CameraE2E/outputs/camerae2e-goal-gate-smoke</code></p>
 <h2>Requirements</h2>
 <table>
@@ -238,6 +238,50 @@ code { word-break: break-all; }
   &quot;hybrid_has_fdtd&quot;: true,
   &quot;hybrid_has_tcad&quot;: true,
   &quot;hybrid_strategy&quot;: &quot;hybrid&quot;,
+  &quot;optimization_best_parameters&quot;: {
+    &quot;sensor.analog_gain&quot;: 4.0,
+    &quot;sensor.integration_time&quot;: 0.004
+  },
+  &quot;optimization_method&quot;: &quot;budgeted_grid&quot;,
+  &quot;optimization_source&quot;: {
+    &quot;code&quot;: &quot;DEF-2310-801&quot;,
+    &quot;device_name&quot;: &quot;Mira050-1QM1WB_FT_SE&quot;,
+    &quot;manufacturer&quot;: &quot;ams OSRAM&quot;,
+    &quot;policy&quot;: {
+      &quot;analytic_role&quot;: &quot;Analytic proxy axes support broad free-configuration sweeps and should be calibrated or validated against DB/LUT/FDTD/TCAD evidence before stronger claims are made.&quot;,
+      &quot;component_tiers&quot;: {
+        &quot;analytic_sensor_proxy&quot;: &quot;proxy&quot;,
+        &quot;fdtd_lut&quot;: &quot;missing&quot;,
+        &quot;sensor_db_metadata&quot;: &quot;proxy&quot;,
+        &quot;tcad_collection&quot;: &quot;missing&quot;
+      },
+      &quot;db_lut_role&quot;: &quot;DB/LUT artifacts override or calibrate proxy defaults when attached.&quot;,
+      &quot;schema_version&quot;: &quot;camerae2e_sensor_db_policy_v1&quot;,
+      &quot;truth_boundary&quot;: &quot;Sensor DB records are metadata-derived unless measured stack, sensor-specific FDTD LUT, TCAD process deck, QE/noise data, and lineage evidence are attached.&quot;
+    },
+    &quot;readiness_tier&quot;: &quot;proxy&quot;,
+    &quot;record_summary&quot;: {
+      &quot;cfa_pattern&quot;: null,
+      &quot;code&quot;: &quot;DEF-2310-801&quot;,
+      &quot;device_name&quot;: &quot;Mira050-1QM1WB_FT_SE&quot;,
+      &quot;dti_type&quot;: &quot;partial_depth_back_dti&quot;,
+      &quot;has_dti&quot;: true,
+      &quot;has_hdr&quot;: null,
+      &quot;has_lofic&quot;: null,
+      &quot;has_pdaf&quot;: null,
+      &quot;illumination&quot;: &quot;back_illuminated&quot;,
+      &quot;manufacturer&quot;: &quot;ams OSRAM&quot;,
+      &quot;microlens_type&quot;: &quot;gapless_ocl&quot;,
+      &quot;pixel_architecture&quot;: &quot;standalone&quot;,
+      &quot;pixel_pitch_um&quot;: 2.79,
+      &quot;sensor_id&quot;: &quot;def_2310_801_ams_osram_mira050_1qm1wb_ft_se&quot;,
+      &quot;stack_config_path&quot;: &quot;/Users/seongcheoljeong/FDTD/sensor_db/generated_stack_configs/def_2310_801_ams_osram_mira050_1qm1wb_ft_se.json&quot;,
+      &quot;tcad_profile_path&quot;: &quot;/Users/seongcheoljeong/FDTD/sensor_db/generated_tcad_profiles/def_2310_801_ams_osram_mira050_1qm1wb_ft_se/profile.json&quot;
+    },
+    &quot;schema_version&quot;: &quot;camerae2e_optimization_source_image_sensor_db_v1&quot;,
+    &quot;sensor_id&quot;: &quot;def_2310_801_ams_osram_mira050_1qm1wb_ft_se&quot;,
+    &quot;strategy&quot;: &quot;analytic_only&quot;
+  },
   &quot;parameter_lineage_count&quot;: 4,
   &quot;sensor_id&quot;: &quot;def_2310_801_ams_osram_mira050_1qm1wb_ft_se&quot;,
   &quot;truth_boundary&quot;: &quot;Sensor DB records are metadata-derived unless measured stack, sensor-specific FDTD LUT, TCAD process deck, QE/noise data, and lineage evidence are attached.&quot;

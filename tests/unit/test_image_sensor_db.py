@@ -7,6 +7,7 @@ from pyisetcam import (
     camerae2e_run_scenario,
     image_sensor_db_config,
     image_sensor_db_get,
+    image_sensor_db_optimize_camera_parameters,
     image_sensor_db_parameters,
     image_sensor_db_records,
     image_sensor_db_summary,
@@ -98,6 +99,28 @@ def test_image_sensor_db_config_maps_quad_bayer_to_shared_ocl_proxy() -> None:
     assert config["sensor"]["ocl_group_shape"] == "2x2"
     assert config["sensor"]["ocl_group_equalization"] == 1.0
     assert config["policy"]["analytic_role"].startswith("Analytic proxy axes")
+
+
+def test_image_sensor_db_optimize_camera_parameters_preserves_source_lineage() -> None:
+    first = image_sensor_db_records(limit=1)[0]
+    result = image_sensor_db_optimize_camera_parameters(
+        first["sensor_id"],
+        strategy="analytic_only",
+        base_scenario={"scene": {"type": "uniform ee", "args": [8]}},
+        preset="exposure",
+        parameter_space={"sensor.integration_time": [0.001, 0.004]},
+        objective={"metric": "metrics.color.rgb_mean", "direction": "maximize"},
+        max_cases=2,
+        seed=17,
+        top_k=1,
+    )
+
+    source = result["source_image_sensor_db"]
+    assert source["schema_version"] == "camerae2e_optimization_source_image_sensor_db_v1"
+    assert source["sensor_id"] == first["sensor_id"]
+    assert source["strategy"] == "analytic_only"
+    assert result["best_case"]["parameters"]["sensor.integration_time"] == 0.004
+    assert result["selected_scenarios"][0]["image_sensor_db"]["sensor_id"] == first["sensor_id"]
 
 
 def test_image_sensor_db_summary_has_counts() -> None:

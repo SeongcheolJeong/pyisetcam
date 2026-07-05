@@ -231,6 +231,10 @@ def camerae2e_dataset_export_from_optimization(
         "selected_case_count": len(selected_cases),
         "selected_cases": [_optimization_case_summary(case) for case in selected_cases],
     }
+    if optimization_result.get("source_image_sensor_db") is not None:
+        manifest["source_optimization"]["source_image_sensor_db"] = _jsonable(
+            optimization_result.get("source_image_sensor_db")
+        )
     manifest_path = Path(manifest["dataset_root"]) / "manifest.json"
     manifest_path.write_text(
         json.dumps(_jsonable(manifest), indent=2, sort_keys=True), encoding="utf-8"

@@ -241,6 +241,7 @@ from .image_sensor_db import (
     image_sensor_db_config,
     image_sensor_db_get,
     image_sensor_db_load,
+    image_sensor_db_optimize_camera_parameters,
     image_sensor_db_parameters,
     image_sensor_db_records,
     image_sensor_db_root,
@@ -1209,6 +1210,7 @@ __all__ = [
     "image_sensor_db_config",
     "image_sensor_db_get",
     "image_sensor_db_load",
+    "image_sensor_db_optimize_camera_parameters",
     "image_sensor_db_parameters",
     "image_sensor_db_records",
     "image_sensor_db_root",
@@ -1217,6 +1219,7 @@ __all__ = [
     "imageSensorDBConfig",
     "imageSensorDBGet",
     "imageSensorDBLoad",
+    "imageSensorDBOptimizeCameraParameters",
     "imageSensorDBParameters",
     "imageSensorDBRecords",
     "imageSensorDBRoot",
@@ -3851,6 +3854,7 @@ imageSensorDBRoot = image_sensor_db_root
 imageSensorDBCatalogPath = image_sensor_db_catalog_path
 imageSensorDBConfig = image_sensor_db_config
 imageSensorDBLoad = image_sensor_db_load
+imageSensorDBOptimizeCameraParameters = image_sensor_db_optimize_camera_parameters
 imageSensorDBRecords = image_sensor_db_records
 imageSensorDBGet = image_sensor_db_get
 imageSensorDBParameters = image_sensor_db_parameters

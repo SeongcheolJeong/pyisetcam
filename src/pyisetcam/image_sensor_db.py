@@ -234,6 +234,65 @@ def image_sensor_db_config(
     }
 
 
+def image_sensor_db_optimize_camera_parameters(
+    sensor_id_or_code: str,
+    *,
+    strategy: str = "analytic_only",
+    base_scenario: Mapping[str, Any] | None = None,
+    preset: str = "raw_factory",
+    parameter_space: Mapping[str, Any] | None = None,
+    objective: Any | None = None,
+    method: str = "grid",
+    max_cases: int | None = None,
+    constraints: Any | None = None,
+    scene: Any | None = None,
+    camera: Any | None = None,
+    asset_store: Any | None = None,
+    seed: int = 0,
+    top_k: int = 5,
+    include_arrays: bool = False,
+    root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Optimize camera parameters from an image-sensor DB selection.
+
+    This is the direct bridge from sensor DB selection to the FACA optimizer.
+    The selected DB record is preserved in ``source_image_sensor_db`` and in the
+    selected scenario dictionaries so RAW dataset exports keep provenance.
+    """
+
+    from .optimization import camerae2e_optimize_camera_parameters
+
+    config = image_sensor_db_config(sensor_id_or_code, strategy=strategy, root=root)
+    scenario = _merge_scenario_dicts(config["scenario"], base_scenario or {})
+    result = camerae2e_optimize_camera_parameters(
+        scenario,
+        preset=preset,
+        parameter_space=parameter_space,
+        objective=objective,
+        method=method,
+        max_cases=max_cases,
+        constraints=constraints,
+        scene=scene,
+        camera=camera,
+        asset_store=asset_store,
+        seed=seed,
+        top_k=top_k,
+        include_arrays=include_arrays,
+    )
+    result["source_image_sensor_db"] = {
+        "schema_version": "camerae2e_optimization_source_image_sensor_db_v1",
+        "sensor_id": config["sensor_id"],
+        "code": config["code"],
+        "manufacturer": config["manufacturer"],
+        "device_name": config["device_name"],
+        "strategy": config["strategy"],
+        "readiness_tier": config["readiness_tier"],
+        "policy": config["policy"],
+        "record_summary": config["record_summary"],
+    }
+    return result
+
+
 def image_sensor_db_summary(root: str | Path | None = None) -> dict[str, Any]:
     """Return compact image-sensor DB summary facts."""
 
@@ -276,6 +335,28 @@ def _normalize_config_strategy(strategy: str) -> str:
     if normalized not in aliases:
         raise ValueError("strategy must be one of: hybrid, lut_only, analytic_only.")
     return aliases[normalized]
+
+
+def _merge_scenario_dicts(
+    base: Mapping[str, Any], override: Mapping[str, Any]
+) -> dict[str, Any]:
+    merged = _deep_copy_dict(base)
+    for key, value in override.items():
+        if (
+            key in merged
+            and isinstance(merged[key], Mapping)
+            and isinstance(value, Mapping)
+        ):
+            nested = _deep_copy_dict(merged[key])
+            nested.update(_deep_copy_dict(value))
+            merged[key] = nested
+        else:
+            merged[key] = _jsonable_value(value)
+    return merged
+
+
+def _deep_copy_dict(value: Mapping[str, Any]) -> dict[str, Any]:
+    return {str(key): _jsonable_value(item) for key, item in value.items()}
 
 
 def _analytic_sensor_config_from_record(
@@ -429,4 +510,5 @@ imageSensorDBRecords = image_sensor_db_records  # noqa: N816
 imageSensorDBGet = image_sensor_db_get  # noqa: N816
 imageSensorDBParameters = image_sensor_db_parameters  # noqa: N816
 imageSensorDBConfig = image_sensor_db_config  # noqa: N816
+imageSensorDBOptimizeCameraParameters = image_sensor_db_optimize_camera_parameters  # noqa: N816
 imageSensorDBSummary = image_sensor_db_summary  # noqa: N816
