@@ -383,6 +383,8 @@
               "readiness_tier": "validated",
               "status": "registered",
               "value_count": 3,
+              "value_issues": [],
+              "value_warnings": [],
               "values": [
                 1.0,
                 2.0,
@@ -395,6 +397,8 @@
               "readiness_tier": "validated",
               "status": "registered",
               "value_count": 2,
+              "value_issues": [],
+              "value_warnings": [],
               "values": [
                 0.001,
                 0.004
@@ -718,7 +722,7 @@
       "tier": "calibration_required"
     }
   ],
-  "generated_at": "2026-07-05T06:00:30.548546+00:00",
+  "generated_at": "2026-07-05T06:09:05.162810+00:00",
   "goal": "Research-grade E2E optimization platform plus RAW data factory for perception training.",
   "ok": true,
   "output_dir": "/Users/seongcheoljeong/Documents/CameraE2E/reports/camerae2e_goal",

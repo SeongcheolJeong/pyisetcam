@@ -101,12 +101,12 @@ def test_camerae2e_parameter_space_validate_reports_ineffective_axes() -> None:
     validation = camerae2e_parameter_space_validate(
         {
             "sensor.not_a_real_parameter": [1],
-            "fdtd.mode": ["proxy"],
-            "tcad.collection_mode": ["proxy"],
+            "fdtd.mode": ["qe"],
+            "tcad.collection_mode": ["collection"],
         }
     )
     fdtd_ready = camerae2e_parameter_space_validate(
-        {"fdtd.mode": ["proxy"]},
+        {"fdtd.mode": ["qe"]},
         base_scenario={"fdtd": {"lut": "unit_lut.json"}},
     )
 
@@ -117,6 +117,61 @@ def test_camerae2e_parameter_space_validate_reports_ineffective_axes() -> None:
         "inactive_tcad_axis",
     }
     assert fdtd_ready["ok"] is True
+
+
+def test_camerae2e_parameter_space_validate_reports_invalid_values() -> None:
+    validation = camerae2e_parameter_space_validate(
+        {
+            "sensor.pixel_size": [0.0],
+            "sensor.pixel_fill_factor": [1.5],
+            "sensor.n_samples_per_pixel": [2],
+            "sensor.cfa_pattern": [[[1.2, 2], [2, 3]]],
+            "sensor.binning_method": ["unsupported"],
+            "optics.si_psf_radius_um": [-1.0],
+        }
+    )
+
+    assert validation["ok"] is False
+    issue_kinds = {issue["kind"] for issue in validation["issues"]}
+    assert {
+        "invalid_pixel_size",
+        "invalid_fill_factor",
+        "unsupported_samples_per_pixel",
+        "invalid_cfa_pattern",
+        "unsupported_enum_value",
+        "invalid_positive_value",
+    } <= issue_kinds
+    assert validation["axes"]["sensor.n_samples_per_pixel"]["value_issues"][0][
+        "kind"
+    ] == "unsupported_samples_per_pixel"
+
+
+def test_camerae2e_parameter_space_validate_reports_value_warnings() -> None:
+    validation = camerae2e_parameter_space_validate(
+        {
+            "sensor.cfa_pattern": [[[1, 4], [2, 3]]],
+            "fdtd.crosstalk_strength": [1.5],
+        },
+        base_scenario={"fdtd": {"lut": "unit_lut.json"}},
+    )
+
+    assert validation["ok"] is True
+    assert {warning["kind"] for warning in validation["warnings"]} == {
+        "cfa_filter_dependency",
+        "extrapolating_crosstalk_strength",
+    }
+
+
+def test_camerae2e_optimize_parameters_rejects_invalid_values_before_run() -> None:
+    try:
+        camerae2e_optimize_parameters(
+            {"scene": {"type": "uniform ee", "args": [8]}},
+            {"sensor.n_samples_per_pixel": [2]},
+        )
+    except ValueError as exc:
+        assert "positive odd integer" in str(exc)
+    else:
+        raise AssertionError("Expected invalid value to fail before optimization.")
 
 
 def test_camerae2e_scenario_applies_extended_configure_axes() -> None:

@@ -595,7 +595,10 @@ def camerae2e_parameter_space_validate(
     axis_payload: dict[str, dict[str, Any]] = {}
     for path, values in axes.items():
         axis_issues = _parameter_axis_issues(path, base_scenario)
+        value_issues, value_warnings = _parameter_value_findings(path, values)
         issues.extend(axis_issues)
+        issues.extend(value_issues)
+        warnings.extend(value_warnings)
         classification = _parameter_axis_classification(path)
         if classification["status"] == "custom_passthrough":
             warnings.append(
@@ -612,7 +615,9 @@ def camerae2e_parameter_space_validate(
             "values": _jsonable(values),
             "value_count": len(values),
             **classification,
-            "issues": axis_issues,
+            "issues": axis_issues + value_issues,
+            "value_issues": value_issues,
+            "value_warnings": value_warnings,
         }
     return {
         "schema_version": "camerae2e_parameter_space_validation_v1",
@@ -727,8 +732,10 @@ def _normalize_parameter_space(
 def _validate_parameter_axis_names(
     axes: Mapping[str, Any], base_scenario: Mapping[str, Any] | None
 ) -> None:
-    for key in axes:
+    for key, values in axes.items():
         issues = _parameter_axis_issues(str(key), base_scenario)
+        value_issues, _ = _parameter_value_findings(str(key), values)
+        issues.extend(value_issues)
         if issues:
             raise ValueError(str(issues[0]["message"]))
 
@@ -774,6 +781,325 @@ def _parameter_axis_issues(
             }
         ]
     return []
+
+
+def _parameter_value_findings(
+    path: str, values: Iterable[Any]
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    issues: list[dict[str, Any]] = []
+    warnings: list[dict[str, Any]] = []
+    key = _canonical_parameter_path(path)
+
+    positive_scalar_axes = {
+        "sensor.integration_time",
+        "sensor.analog_gain",
+        "sensor.pixel_read_noise_v",
+        "sensor.pixel_dark_voltage",
+        "sensor.pixel_voltage_swing",
+        "sensor.pixel_conversion_gain",
+        "optics.fnumber",
+        "optics.focal_length",
+        "optics.si_psf_radius_um",
+        "optics.psf_angle_step",
+        "optics.rt_compute_spacing",
+        "hw_isp.global_latency_factor",
+    }
+    nonnegative_scalar_axes = {"fdtd.crosstalk_strength"}
+    nonnegative_integer_axes = {
+        "hw_isp.ae_apply_delay_frames",
+        "hw_isp.awb_apply_delay_frames",
+    }
+
+    for index, value in enumerate(values):
+        if key in positive_scalar_axes:
+            issues.extend(
+                _validate_numeric_value(
+                    path,
+                    index,
+                    value,
+                    positive=True,
+                    kind="invalid_positive_value",
+                )
+            )
+        elif key in nonnegative_scalar_axes:
+            issues.extend(
+                _validate_numeric_value(
+                    path,
+                    index,
+                    value,
+                    nonnegative=True,
+                    kind="invalid_nonnegative_value",
+                )
+            )
+            number = _scalar_float(value)
+            if number is not None and number > 1.0:
+                warnings.append(
+                    _value_finding(
+                        path,
+                        index,
+                        "extrapolating_crosstalk_strength",
+                        "FDTD crosstalk_strength > 1 extrapolates beyond the LUT kernel.",
+                    )
+                )
+        elif key in nonnegative_integer_axes:
+            issues.extend(
+                _validate_integer_value(
+                    path,
+                    index,
+                    value,
+                    nonnegative=True,
+                    kind="invalid_nonnegative_integer",
+                )
+            )
+        elif key == "sensor.pixel_size":
+            issues.extend(_validate_pixel_size(path, index, value))
+        elif key == "sensor.pixel_fill_factor":
+            issues.extend(_validate_fill_factor(path, index, value))
+        elif key == "sensor.n_samples_per_pixel":
+            issues.extend(_validate_n_samples_per_pixel(path, index, value))
+        elif key == "sensor.cfa_pattern":
+            cfa_issues, cfa_warnings = _validate_cfa_pattern(path, index, value)
+            issues.extend(cfa_issues)
+            warnings.extend(cfa_warnings)
+        elif key == "sensor.binning_method":
+            issues.extend(_validate_enum_value(path, index, value, _BINNING_METHODS))
+        elif key == "sensor.noise_flag":
+            issues.extend(
+                _validate_integer_value(
+                    path,
+                    index,
+                    value,
+                    kind="invalid_integer_value",
+                )
+            )
+        elif key == "fdtd.mode":
+            issues.extend(_validate_mode_tokens(path, index, value, {"qe", "field", "crosstalk"}))
+        elif key == "tcad.collection_mode":
+            issues.extend(_validate_mode_tokens(path, index, value, {"collection"}))
+        elif key == "ip.demosaic_method":
+            issues.extend(
+                _validate_enum_value(
+                    path,
+                    index,
+                    value,
+                    {"bilinear", "nearestneighbor", "nearest neighbor", "laplacian"},
+                )
+            )
+    return issues, warnings
+
+
+_BINNING_METHODS = {
+    "off",
+    "none",
+    "disabled",
+    "kodak2008",
+    "addadjacentblocks",
+    "averageadjacentdigitalblocks",
+}
+
+
+def _canonical_parameter_path(path: str) -> str:
+    value = str(path).strip()
+    if "." not in value:
+        return value.lower().replace(" ", "_")
+    prefix, suffix = value.split(".", 1)
+    return f"{prefix.lower()}.{suffix.strip().lower().replace(' ', '_')}"
+
+
+def _validate_numeric_value(
+    path: str,
+    index: int,
+    value: Any,
+    *,
+    positive: bool = False,
+    nonnegative: bool = False,
+    kind: str,
+) -> list[dict[str, Any]]:
+    number = _scalar_float(value)
+    if number is None:
+        return [
+            _value_finding(
+                path,
+                index,
+                kind,
+                f"{path!r} values must be finite numeric scalars.",
+            )
+        ]
+    if positive and number <= 0.0:
+        return [
+            _value_finding(path, index, kind, f"{path!r} values must be > 0.")
+        ]
+    if nonnegative and number < 0.0:
+        return [
+            _value_finding(path, index, kind, f"{path!r} values must be >= 0.")
+        ]
+    return []
+
+
+def _validate_integer_value(
+    path: str,
+    index: int,
+    value: Any,
+    *,
+    nonnegative: bool = False,
+    kind: str,
+) -> list[dict[str, Any]]:
+    number = _scalar_float(value)
+    if number is None or not float(number).is_integer():
+        return [
+            _value_finding(path, index, kind, f"{path!r} values must be integer scalars.")
+        ]
+    if nonnegative and number < 0:
+        return [
+            _value_finding(path, index, kind, f"{path!r} values must be >= 0.")
+        ]
+    return []
+
+
+def _validate_pixel_size(path: str, index: int, value: Any) -> list[dict[str, Any]]:
+    array = _numeric_array(value)
+    if array is None or array.size not in {1, 2} or not np.all(array > 0.0):
+        return [
+            _value_finding(
+                path,
+                index,
+                "invalid_pixel_size",
+                f"{path!r} values must be positive scalar or two-element pixel sizes in meters.",
+            )
+        ]
+    return []
+
+
+def _validate_fill_factor(path: str, index: int, value: Any) -> list[dict[str, Any]]:
+    number = _scalar_float(value)
+    if number is None or not (0.0 < number <= 1.0):
+        return [
+            _value_finding(
+                path,
+                index,
+                "invalid_fill_factor",
+                f"{path!r} values must be in the interval (0, 1].",
+            )
+        ]
+    return []
+
+
+def _validate_n_samples_per_pixel(
+    path: str, index: int, value: Any
+) -> list[dict[str, Any]]:
+    issues = _validate_integer_value(
+        path,
+        index,
+        value,
+        nonnegative=True,
+        kind="invalid_samples_per_pixel",
+    )
+    if issues:
+        return issues
+    number = int(_scalar_float(value) or 0)
+    if number <= 0 or number % 2 == 0:
+        return [
+            _value_finding(
+                path,
+                index,
+                "unsupported_samples_per_pixel",
+                "sensor.n_samples_per_pixel must be a positive odd integer.",
+            )
+        ]
+    return []
+
+
+def _validate_cfa_pattern(
+    path: str, index: int, value: Any
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    array = _numeric_array(value)
+    if (
+        array is None
+        or array.ndim != 2
+        or array.size == 0
+        or not np.all(np.isclose(array, np.rint(array)))
+        or np.any(array < 1)
+    ):
+        return [
+            _value_finding(
+                path,
+                index,
+                "invalid_cfa_pattern",
+                f"{path!r} values must be a non-empty 2-D positive integer matrix.",
+            )
+        ], []
+    warnings = []
+    if int(np.max(array)) > 3:
+        warnings.append(
+            _value_finding(
+                path,
+                index,
+                "cfa_filter_dependency",
+                "CFA pattern references filter index > 3; attach matching filter spectra/names.",
+            )
+        )
+    return [], warnings
+
+
+def _validate_enum_value(
+    path: str, index: int, value: Any, allowed: set[str]
+) -> list[dict[str, Any]]:
+    key = str(value).strip().lower()
+    if key.replace(" ", "") not in {item.replace(" ", "") for item in allowed}:
+        return [
+            _value_finding(
+                path,
+                index,
+                "unsupported_enum_value",
+                f"{path!r} value {value!r} is not supported.",
+            )
+        ]
+    return []
+
+
+def _validate_mode_tokens(
+    path: str, index: int, value: Any, allowed_tokens: set[str]
+) -> list[dict[str, Any]]:
+    raw = str(value).strip().lower()
+    if raw in {"", "off", "none", "disabled", "false", "0", "all", "*"}:
+        return []
+    tokens = {part.strip() for part in raw.replace(",", "+").split("+") if part.strip()}
+    if not tokens <= allowed_tokens:
+        return [
+            _value_finding(
+                path,
+                index,
+                "unsupported_mode_tokens",
+                f"{path!r} contains unsupported mode token(s): {sorted(tokens - allowed_tokens)}.",
+            )
+        ]
+    return []
+
+
+def _scalar_float(value: Any) -> float | None:
+    array = _numeric_array(value)
+    if array is None or array.size != 1:
+        return None
+    return float(array.reshape(-1)[0])
+
+
+def _numeric_array(value: Any) -> np.ndarray | None:
+    try:
+        array = np.asarray(value, dtype=float)
+    except (TypeError, ValueError):
+        return None
+    if not np.all(np.isfinite(array)):
+        return None
+    return array
+
+
+def _value_finding(path: str, index: int, kind: str, message: str) -> dict[str, Any]:
+    return {
+        "path": str(path),
+        "value_index": int(index),
+        "kind": str(kind),
+        "message": str(message),
+    }
 
 
 def _parameter_axis_classification(path: str) -> dict[str, Any]:

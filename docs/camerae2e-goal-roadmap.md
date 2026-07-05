@@ -101,8 +101,13 @@ such as `exposure`, `raw_factory`, `sensor_geometry`, `sensor_spectral`,
 axis, custom dot-path assignment rule, and supported FACA objective metric path.
 `camerae2e_parameter_space_validate(...)` classifies a caller parameter space as
 `registered`, `assignable`, `custom_passthrough`, or blocked before any expensive
-sweep is launched. This prevents false optimization runs where an axis is
-syntactically accepted but does not affect the camera pipeline.
+sweep is launched. It also validates high-value axis values: positive exposure,
+gain, pixel size, f-number, focal length, PSF radius, odd
+`sensor.n_samples_per_pixel`, CFA matrix shape/integer constraints, supported
+binning/demosaic/mode tokens, nonnegative FDTD crosstalk strength, and HW ISP
+delay integer constraints. This prevents false optimization runs where an axis
+is syntactically accepted but does not affect the camera pipeline or fails deep
+inside sensor/optics computation.
 `camerae2e_optimize_camera_parameters(...)` runs those presets directly while
 still allowing caller overrides. The optimizer maximizes objective paths from
 the FACA report, supports hard metric constraints, reports the feasible Pareto
