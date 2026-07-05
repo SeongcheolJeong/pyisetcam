@@ -64,6 +64,7 @@ optimizers.
 RAW data factory:
 
 - `camerae2e_dataset_export(...)`
+- `camerae2e_dataset_export_from_optimization(...)`
 - `camerae2e_dataset_validate(...)`
 
 ## External Pipeline Policy

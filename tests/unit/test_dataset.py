@@ -5,7 +5,12 @@ from pathlib import Path
 
 import numpy as np
 
-from pyisetcam import camerae2e_dataset_export, camerae2e_dataset_validate
+from pyisetcam import (
+    camerae2e_dataset_export,
+    camerae2e_dataset_export_from_optimization,
+    camerae2e_dataset_validate,
+    camerae2e_optimize_parameters,
+)
 
 
 def test_camerae2e_dataset_export_writes_manifest_raw_preview_and_labels(tmp_path: Path) -> None:
@@ -92,3 +97,34 @@ def test_camerae2e_dataset_validate_detects_tampered_raw(tmp_path: Path) -> None
 
     assert validation["ok"] is False
     assert any(issue["kind"] == "raw_sha256" for issue in validation["issues"])
+
+
+def test_camerae2e_dataset_export_from_optimization_uses_pareto_scenarios(
+    tmp_path: Path,
+) -> None:
+    result = camerae2e_optimize_parameters(
+        {
+            "name": "dataset_from_optimizer",
+            "scene": {"type": "uniform ee", "args": [8]},
+            "sensor": {"noise_flag": 0},
+        },
+        {"sensor.integration_time": [0.001, 0.004]},
+        [
+            {"metric": "metrics.color.rgb_mean", "direction": "maximize"},
+            {"metric": "metrics.artifact.raw_std", "direction": "minimize"},
+        ],
+        seed=31,
+    )
+    manifest = camerae2e_dataset_export_from_optimization(
+        tmp_path,
+        result,
+        selection="pareto",
+        include_rgb=False,
+    )
+    validation = camerae2e_dataset_validate(manifest)
+
+    assert manifest["case_count"] == result["pareto_case_count"] == 2
+    assert manifest["source_optimization"]["selection"] == "pareto"
+    assert manifest["source_optimization"]["selected_case_count"] == 2
+    assert {record["split"] for record in manifest["records"]} == {"pareto"}
+    assert validation["ok"] is True

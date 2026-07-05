@@ -162,6 +162,67 @@ def camerae2e_dataset_export(
     return manifest
 
 
+def camerae2e_dataset_export_from_optimization(
+    output_dir: str | Path,
+    optimization_result: Mapping[str, Any],
+    *,
+    selection: str = "pareto",
+    max_cases: int | None = None,
+    scene: Scene | str | Mapping[str, Any] | None = None,
+    camera: Camera | None = None,
+    asset_store: AssetStore | None = None,
+    seed: int | None = None,
+    labels: Mapping[str, Any] | Iterable[Mapping[str, Any]] | None = None,
+    include_rgb: bool = True,
+    include_tiff: bool = False,
+    split: Mapping[str, float] | Iterable[str] | str | None = None,
+) -> dict[str, Any]:
+    """Export RAW data from selected optimization cases.
+
+    This bridges the E2E optimizer and RAW data factory: best/top/Pareto
+    camera-parameter candidates can be rendered into training-ready RAW
+    artifacts without manually copying scenario dictionaries.
+    """
+
+    selected_cases = _optimization_cases(optimization_result, selection=selection)
+    if max_cases is not None:
+        selected_cases = selected_cases[: max(int(max_cases), 0)]
+    scenarios = [
+        _scenario_from_optimization_case(case, index)
+        for index, case in enumerate(selected_cases)
+    ]
+    effective_seed = int(seed if seed is not None else optimization_result.get("seed", 0))
+    effective_split = split if split is not None else str(selection)
+    manifest = camerae2e_dataset_export(
+        output_dir,
+        scenarios,
+        scene=scene,
+        camera=camera,
+        asset_store=asset_store,
+        seed=effective_seed,
+        labels=labels,
+        include_rgb=include_rgb,
+        include_tiff=include_tiff,
+        split=effective_split,
+    )
+    manifest["source_optimization"] = {
+        "schema_version": "camerae2e_dataset_source_optimization_v1",
+        "selection": str(selection),
+        "source_schema_version": optimization_result.get("schema_version"),
+        "source_seed": optimization_result.get("seed"),
+        "method": optimization_result.get("method"),
+        "objective": _jsonable(optimization_result.get("objective", {})),
+        "constraints": _jsonable(optimization_result.get("constraints", [])),
+        "selected_case_count": len(selected_cases),
+        "selected_cases": [_optimization_case_summary(case) for case in selected_cases],
+    }
+    manifest_path = Path(manifest["dataset_root"]) / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(_jsonable(manifest), indent=2, sort_keys=True), encoding="utf-8"
+    )
+    return manifest
+
+
 def camerae2e_dataset_validate(
     dataset: str | Path | Mapping[str, Any], *, strict: bool = False
 ) -> dict[str, Any]:
@@ -229,6 +290,55 @@ def camerae2e_dataset_validate(
     }
 
 
+def _optimization_cases(
+    optimization_result: Mapping[str, Any], *, selection: str
+) -> list[Mapping[str, Any]]:
+    key = str(selection).strip().lower()
+    if key == "best":
+        best = optimization_result.get("best_case")
+        return [] if best is None else [dict(best)]
+    if key == "top":
+        return [dict(item) for item in optimization_result.get("top_cases", [])]
+    if key == "pareto":
+        return [dict(item) for item in optimization_result.get("pareto_front", [])]
+    if key == "selected":
+        return [
+            {"case_index": index, "scenario": scenario}
+            for index, scenario in enumerate(optimization_result.get("selected_scenarios", []))
+        ]
+    if key == "all":
+        return [
+            dict(item)
+            for item in optimization_result.get("cases", [])
+            if item.get("feasible", True)
+        ]
+    raise ValueError("selection must be one of: best, top, pareto, selected, all.")
+
+
+def _scenario_from_optimization_case(case: Mapping[str, Any], index: int) -> dict[str, Any]:
+    scenario = _deep_dict(dict(case.get("scenario", {})))
+    if not scenario:
+        scenario = {"parameters": dict(case.get("parameters", {}))}
+    base_name = str(scenario.get("name", "camerae2e_optimized_dataset_case"))
+    case_index = int(case.get("case_index", index))
+    scenario["name"] = f"{base_name}_opt{case_index:04d}"
+    scenario.setdefault("optimization_case", _optimization_case_summary(case))
+    return scenario
+
+
+def _optimization_case_summary(case: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "case_index": case.get("case_index"),
+        "seed": case.get("seed"),
+        "parameters": _jsonable(case.get("parameters", {})),
+        "score": case.get("score"),
+        "feasible": case.get("feasible", True),
+        "objective_values": _jsonable(case.get("objective_values", {})),
+        "objective_utilities": _jsonable(case.get("objective_utilities", {})),
+        "constraint_results": _jsonable(case.get("constraint_results", [])),
+    }
+
+
 def _normalize_labels(
     labels: Mapping[str, Any] | Iterable[Mapping[str, Any]] | None, count: int
 ) -> list[dict[str, Any]]:
@@ -241,6 +351,13 @@ def _normalize_labels(
     if len(values) != count:
         raise ValueError("labels must contain one item per scenario when provided as an iterable.")
     return values
+
+
+def _deep_dict(value: Mapping[str, Any]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, item in value.items():
+        result[str(key)] = _deep_dict(item) if isinstance(item, Mapping) else item
+    return result
 
 
 def _normalize_splits(
@@ -457,4 +574,5 @@ def _jsonable(value: Any) -> Any:
 
 
 cameraE2EDatasetExport = camerae2e_dataset_export  # noqa: N816
+cameraE2EDatasetExportFromOptimization = camerae2e_dataset_export_from_optimization  # noqa: N816
 cameraE2EDatasetValidate = camerae2e_dataset_validate  # noqa: N816

@@ -1399,7 +1399,7 @@
     },
     {
       "area": "RAW Data Factory",
-      "implemented": "Dataset manifest, metadata JSONL, deterministic RAW NPZ, split, checksum, RGB preview, caller-provided labels.",
+      "implemented": "Dataset manifest, metadata JSONL, deterministic RAW NPZ, optimization-case export, split, checksum, RGB preview, caller-provided labels.",
       "remaining": "DNG writer and automatic label synthesis are intentionally outside v1.",
       "tier": "validated"
     },
@@ -1416,7 +1416,7 @@
       "tier": "calibration_required"
     }
   ],
-  "generated_at": "2026-07-05T04:18:01.751210+00:00",
+  "generated_at": "2026-07-05T04:29:56.017826+00:00",
   "goal": "Research-grade E2E optimization platform plus RAW data factory for perception training.",
   "physics_pipeline_plan": {
     "actions": [
