@@ -18,6 +18,7 @@ dependencies = [
   "scikit-image",
   "matplotlib",
   "imageio",
+  "imagecodecs",
   "tifffile",
   "h5py",
   "pooch",
@@ -57,6 +58,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 pyisetcam = [
+  "data/camerae2e_registry_seed.json",
   "data/hwisp/*.json",
   "data/hwisp/README.md",
   "data/lens_patents/*.json",

@@ -13,6 +13,8 @@
 - [MATLAB To Python Mapping](docs/migration.md)
 - [HW ISP Simulation](docs/hw-isp-simulation.md)
 - [FDTD/TCAD-Informed Sensor Block](docs/fdtd-sensor.md)
+- [CameraE2E Technical Overview](docs/camerae2e-technical-overview.md)
+- [CameraE2E Goal Roadmap](docs/camerae2e-goal-roadmap.md)
 - [Perception Metrics](docs/perception.md)
 - [Task Perception](docs/task-perception.md)
 

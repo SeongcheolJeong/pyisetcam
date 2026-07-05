@@ -8147,16 +8147,22 @@ def test_sensor_set_etendue_scales_noiseless_response(asset_store) -> None:
     assert np.allclose(sensor_get(attenuated, "sensoretendue"), 0.5)
 
 
-def test_sensor_compute_rejects_unsupported_vignetting_modes(asset_store) -> None:
+def test_sensor_compute_applies_legacy_vignetting_modes(asset_store) -> None:
     scene = scene_create(asset_store=asset_store)
     oi = oi_compute(oi_create(), scene, crop=True)
-    sensor = sensor_create(asset_store=asset_store)
-    sensor = sensor_set(sensor, "integration time", 1.0)
-    sensor = sensor_set(sensor, "noise flag", 0)
-    sensor = sensor_set(sensor, "vignetting", 1)
+    baseline = sensor_create(asset_store=asset_store)
+    baseline = sensor_set(baseline, "integration time", 1.0)
+    baseline = sensor_set(baseline, "noise flag", 0)
+    vignetted = sensor_set(baseline.clone(), "vignetting", 1)
 
-    with pytest.raises(NotImplementedError):
-        sensor_compute(sensor, oi, seed=0)
+    baseline = sensor_compute(baseline, oi, seed=0)
+    vignetted = sensor_compute(vignetted, oi, seed=0)
+    etendue = sensor_get(vignetted, "sensoretendue")
+
+    assert sensor_get(vignetted, "vignettingname") == "bare"
+    assert np.asarray(etendue).shape == tuple(sensor_get(vignetted, "size"))
+    assert np.all(np.asarray(etendue) <= 1.0)
+    assert np.sum(vignetted.data["volts"]) < np.sum(baseline.data["volts"])
 
 
 def test_sensor_get_fov_uses_scene_distance_when_provided(asset_store) -> None:

@@ -24,6 +24,7 @@ DEFAULT_CAMERA_E2E_MANIFEST_NAME = "camerae2e_manifest.json"
 DEFAULT_LENS_DATA_ROOT_ENV = "PYISETCAM_LENS_DB_ROOT"
 DEFAULT_LENS_DB_ENV = "PYISETCAM_LENS_PATENT_DB"
 DEFAULT_LENS_PSF_DIR_ENV = "PYISETCAM_LENS_PATENT_PSF_DIR"
+DEFAULT_CAMERA_DB_ROOT_ENV = "PYISETCAM_CAMERA_DB_ROOT"
 
 
 def lens_patent_default_data_dir() -> Path:
@@ -428,8 +429,13 @@ def _candidate_lens_data_dirs() -> list[Path]:
     env_root = os.environ.get(DEFAULT_LENS_DATA_ROOT_ENV)
     if env_root:
         candidates.extend(_normalize_lens_data_root(Path(env_root).expanduser()))
+    camera_db_root = os.environ.get(DEFAULT_CAMERA_DB_ROOT_ENV)
+    if camera_db_root:
+        candidates.extend(_normalize_camera_db_lens_root(Path(camera_db_root).expanduser()))
 
     home = Path.home()
+    for root in (_in_repo_camera_db_root(), _sibling_camera_db_root()):
+        candidates.extend(_normalize_camera_db_lens_root(root))
     candidates.extend(
         [
             home / "RayOptics" / "CameraE2E_Lens_DB_v9_20260627" / "data" / "lens_patents",
@@ -455,6 +461,23 @@ def _normalize_lens_data_root(root: Path) -> list[Path]:
         root / "CameraE2E_Lens_DB_v9_20260627" / "data" / "lens_patents",
         root / "Lens_DB_portable_v9_20260623" / "data" / "lens_patents",
     ]
+
+
+def _normalize_camera_db_lens_root(root: Path) -> list[Path]:
+    return [
+        root / "lens_db" / "CameraE2E_Lens_DB_v9_20260627" / "data" / "lens_patents",
+        root / "lens_db" / "CameraE2E_Lens_DB_v9_20260627",
+        root / "lens_db",
+        *_normalize_lens_data_root(root),
+    ]
+
+
+def _in_repo_camera_db_root() -> Path:
+    return Path(__file__).resolve().parents[2] / "camerae2e_db"
+
+
+def _sibling_camera_db_root() -> Path:
+    return Path(__file__).resolve().parents[2].parent / "CameraE2E-DB"
 
 
 def _find_default_db(data_dir: Path) -> Path | None:

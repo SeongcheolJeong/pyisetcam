@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -363,6 +364,49 @@ def _sensor_filter_color_letters(sensor: Sensor) -> str:
 
 def _sensor_cfa_pattern(sensor: Sensor) -> np.ndarray:
     return np.asarray(sensor.fields["pattern"], dtype=int)
+
+
+def _sensor_cfa_preset_pattern(value: Any) -> np.ndarray:
+    normalized = param_format(str(value)).replace("_", "")
+    presets = {
+        "bayer": np.array([[1, 2], [2, 3]], dtype=int),
+        "bayerrgb": np.array([[1, 2], [2, 3]], dtype=int),
+        "bayerrggb": np.array([[1, 2], [2, 3]], dtype=int),
+        "rggb": np.array([[1, 2], [2, 3]], dtype=int),
+        "bayergrbg": np.array([[2, 1], [3, 2]], dtype=int),
+        "grbg": np.array([[2, 1], [3, 2]], dtype=int),
+        "bayerbggr": np.array([[3, 2], [2, 1]], dtype=int),
+        "bggr": np.array([[3, 2], [2, 1]], dtype=int),
+        "bayergbrg": np.array([[2, 3], [1, 2]], dtype=int),
+        "gbrg": np.array([[2, 3], [1, 2]], dtype=int),
+        "quadbayer": np.array(
+            [[1, 1, 2, 2], [1, 1, 2, 2], [2, 2, 3, 3], [2, 2, 3, 3]],
+            dtype=int,
+        ),
+        "quadbayerrgb": np.array(
+            [[1, 1, 2, 2], [1, 1, 2, 2], [2, 2, 3, 3], [2, 2, 3, 3]],
+            dtype=int,
+        ),
+        "quadbayerrggb": np.array(
+            [[1, 1, 2, 2], [1, 1, 2, 2], [2, 2, 3, 3], [2, 2, 3, 3]],
+            dtype=int,
+        ),
+        "quadbayerbggr": np.array(
+            [[3, 3, 2, 2], [3, 3, 2, 2], [2, 2, 1, 1], [2, 2, 1, 1]],
+            dtype=int,
+        ),
+        "quadbayergrbg": np.array(
+            [[2, 2, 1, 1], [2, 2, 1, 1], [3, 3, 2, 2], [3, 3, 2, 2]],
+            dtype=int,
+        ),
+        "quadbayergbrg": np.array(
+            [[2, 2, 3, 3], [2, 2, 3, 3], [1, 1, 2, 2], [1, 1, 2, 2]],
+            dtype=int,
+        ),
+    }
+    if normalized not in presets:
+        raise ValueError(f"Unsupported CFA preset: {value!r}.")
+    return presets[normalized].copy()
 
 
 def _sensor_spectrum_struct(sensor: Sensor) -> dict[str, Any]:
@@ -933,6 +977,158 @@ def _copy_metadata_value(value: Any) -> Any:
     if isinstance(value, list):
         return list(value)
     return value
+
+
+def _sensor_ocl_group_proxy_default() -> dict[str, Any]:
+    return {
+        "schema_version": "camerae2e_ocl_group_proxy_v1",
+        "mode": "off",
+        "shape": (1, 1),
+        "equalization": 0.0,
+        "readiness_tier": "proxy",
+        "truth_boundary": (
+            "Analytic shared-OCL aperture proxy. It equalizes spatial sampling "
+            "within an OCL group per spectral/current plane before CFA selection; "
+            "it is not an FDTD-calibrated OCL/DTI process-stack model."
+        ),
+    }
+
+
+def _sensor_ocl_group_proxy(sensor: Sensor) -> dict[str, Any]:
+    stored = sensor.fields.get("ocl_group_proxy")
+    if not isinstance(stored, dict):
+        return _sensor_ocl_group_proxy_default()
+    proxy = dict(stored)
+    proxy.setdefault("schema_version", "camerae2e_ocl_group_proxy_v1")
+    proxy["shape"] = _sensor_ocl_group_shape_from_value(proxy.get("shape", (1, 1)))
+    proxy["equalization"] = _sensor_ocl_group_equalization_from_value(
+        proxy.get("equalization", 0.0)
+    )
+    normalized_mode = param_format(str(proxy.get("mode", "uniform")))
+    if proxy["shape"] == (1, 1) or proxy["equalization"] <= 0.0:
+        normalized_mode = "off"
+    if normalized_mode not in {"off", "uniform"}:
+        raise ValueError("OCL group proxy mode currently supports 'off' or 'uniform'.")
+    proxy["mode"] = normalized_mode
+    proxy.setdefault("readiness_tier", "proxy")
+    proxy.setdefault(
+        "truth_boundary",
+        (
+            "Analytic shared-OCL aperture proxy. It equalizes spatial sampling "
+            "within an OCL group per spectral/current plane before CFA selection; "
+            "it is not an FDTD-calibrated OCL/DTI process-stack model."
+        ),
+    )
+    return proxy
+
+
+def _sensor_ocl_group_proxy_from_value(value: Any) -> dict[str, Any]:
+    if value is None:
+        return _sensor_ocl_group_proxy_default()
+    if isinstance(value, Mapping):
+        shape_value = (
+            value.get("shape")
+            if "shape" in value
+            else value.get("group_shape", value.get("ocl_group_shape", (1, 1)))
+        )
+        equalization_value = (
+            value.get("equalization")
+            if "equalization" in value
+            else value.get("equalization_strength", value.get("strength", None))
+        )
+        shape = _sensor_ocl_group_shape_from_value(shape_value)
+        equalization = (
+            0.0
+            if equalization_value is None and shape == (1, 1)
+            else 1.0
+            if equalization_value is None
+            else _sensor_ocl_group_equalization_from_value(equalization_value)
+        )
+        mode = param_format(str(value.get("mode", "uniform" if equalization > 0.0 else "off")))
+    else:
+        shape = _sensor_ocl_group_shape_from_value(value)
+        equalization = 0.0 if shape == (1, 1) else 1.0
+        mode = "uniform" if equalization > 0.0 else "off"
+    if mode not in {"off", "uniform"}:
+        raise ValueError("OCL group proxy mode currently supports 'off' or 'uniform'.")
+    return {
+        "schema_version": "camerae2e_ocl_group_proxy_v1",
+        "mode": mode,
+        "shape": shape,
+        "equalization": float(equalization),
+        "readiness_tier": "proxy",
+        "truth_boundary": (
+            "Analytic shared-OCL aperture proxy. It equalizes spatial sampling "
+            "within an OCL group per spectral/current plane before CFA selection; "
+            "it is not an FDTD-calibrated OCL/DTI process-stack model."
+        ),
+    }
+
+
+def _sensor_ocl_group_shape_from_value(value: Any) -> tuple[int, int]:
+    if value is None:
+        return (1, 1)
+    if isinstance(value, str):
+        normalized = param_format(value)
+        if normalized in {"", "off", "none", "disabled", "false", "1", "1x1"}:
+            return (1, 1)
+        if normalized in {"quad", "quadbayer", "2", "2x2"}:
+            return (2, 2)
+        if "x" in normalized:
+            parts = normalized.split("x", 1)
+            if len(parts) == 2 and all(part.isdigit() for part in parts):
+                return (int(parts[0]), int(parts[1]))
+    array = np.asarray(value, dtype=float).reshape(-1)
+    if array.size == 1:
+        rows = cols = int(np.rint(float(array[0])))
+    elif array.size >= 2:
+        rows = int(np.rint(float(array[0])))
+        cols = int(np.rint(float(array[1])))
+    else:
+        rows = cols = 1
+    if rows <= 0 or cols <= 0:
+        raise ValueError("OCL group shape must contain positive integer dimensions.")
+    return rows, cols
+
+
+def _sensor_ocl_group_equalization_from_value(value: Any) -> float:
+    equalization = float(np.asarray(value, dtype=float).reshape(-1)[0])
+    if not np.isfinite(equalization) or not (0.0 <= equalization <= 1.0):
+        raise ValueError("OCL group equalization must be a finite value in [0, 1].")
+    return equalization
+
+
+def _sensor_apply_ocl_group_proxy(
+    sensor: Sensor, values: np.ndarray, *, sample_scale: int = 1
+) -> np.ndarray:
+    proxy = _sensor_ocl_group_proxy(sensor)
+    if proxy["mode"] == "off":
+        return np.asarray(values)
+    equalization = float(proxy["equalization"])
+    if equalization <= 0.0:
+        return np.asarray(values)
+    group_rows, group_cols = proxy["shape"]
+    scale = max(int(sample_scale), 1)
+    block_rows = max(int(group_rows) * scale, 1)
+    block_cols = max(int(group_cols) * scale, 1)
+    if block_rows <= 1 and block_cols <= 1:
+        return np.asarray(values)
+
+    source = np.asarray(values, dtype=float)
+    if source.ndim < 2:
+        return source
+    result = source.copy()
+    rows, cols = source.shape[:2]
+    for row0 in range(0, rows, block_rows):
+        row1 = min(row0 + block_rows, rows)
+        for col0 in range(0, cols, block_cols):
+            col1 = min(col0 + block_cols, cols)
+            block = source[row0:row1, col0:col1, ...]
+            block_mean = np.mean(block, axis=(0, 1), keepdims=True)
+            result[row0:row1, col0:col1, ...] = (
+                (1.0 - equalization) * block + equalization * block_mean
+            )
+    return result
 
 
 def _spectrum_struct_from_value(value: Any) -> dict[str, Any]:
@@ -4275,6 +4471,8 @@ def sensor_compute_noise_free(
     working = sensor_set(working, "analog offset", 0.0)
     working.fields["pixel"] = dict(working.fields["pixel"])
     working.fields["pixel"]["voltage_swing"] = 1.0e6
+    if _sensor_compute_method_is_binning(working.fields.get("sensor_compute_method")):
+        working.fields["sensor_compute_method"] = None
 
     computed = sensor_compute(working, oi, seed=seed, session=session)
     computed.fields["pixel"] = dict(computed.fields["pixel"])
@@ -4508,11 +4706,16 @@ def bin_sensor_compute(
 
     del show_wait_bar
     method = b_method or "kodak2008"
-    integration_time = np.asarray(sensor_get(sensor, "integration time"), dtype=float).reshape(-1)
+    current = sensor_clear_data(sensor)
+    integration_time = np.asarray(sensor_get(current, "integration time"), dtype=float).reshape(-1)
     if integration_time.size != 1:
         raise ValueError("Pixel binning only runs with a single integration time.")
+    if bool(sensor_get(current, "auto exposure")) or float(integration_time[0]) <= 0.0:
+        exposure_sensor = current.clone()
+        exposure_sensor.fields["sensor_compute_method"] = None
+        exposure_time = _auto_exposure_default(exposure_sensor, optical_image)
+        current = sensor_set(current, "integration time", exposure_time)
 
-    current = sensor_clear_data(sensor)
     dv_stage, volt_image, dsnu, prnu = bin_sensor_compute_image(
         optical_image,
         current,
@@ -4548,7 +4751,21 @@ def bin_sensor_compute(
     quant_sensor = bin_pixel_post(quant_sensor, method)
 
     result = current.clone()
-    result.fields["sensor_compute_method"] = {"name": "binning", "method": method}
+    result_vignetting = result.fields.get("vignetting", 0)
+    normalized_vignetting = (
+        param_format(result_vignetting)
+        if isinstance(result_vignetting, str)
+        else result_vignetting
+    )
+    if normalized_vignetting not in {0, "skip", "off", "none", "disabled", "false", "", None}:
+        result.fields["etendue"] = _sensor_etendue(result).copy()
+    method_payload = {"name": "binning", "method": method}
+    original_method = current.fields.get("sensor_compute_method")
+    if isinstance(original_method, dict):
+        for key in ("factor", "domain", "stage"):
+            if key in original_method:
+                method_payload[key] = _copy_metadata_value(original_method[key])
+    result.fields["sensor_compute_method"] = method_payload
     result.data["volts"] = np.asarray(dv_linear, dtype=float).copy()
     result.data["dv"] = np.asarray(sensor_get(quant_sensor, "dv"), dtype=float).copy()
     if dsnu is not None:
@@ -5379,6 +5596,12 @@ def sensor_get(sensor: Sensor, parameter: str, *args: Any) -> Any:
         return _sensor_cfa_pattern(sensor).copy()
     if key == "cfaname":
         return _sensor_cfa_name(sensor)
+    if key in {"oclgroupproxy", "oclgroup", "sharedoclaperture"}:
+        return _sensor_ocl_group_proxy(sensor)
+    if key in {"oclgroupshape", "sharedoclshape"}:
+        return _sensor_ocl_group_proxy(sensor)["shape"]
+    if key in {"oclgroupequalization", "oclsharingequalization"}:
+        return float(_sensor_ocl_group_proxy(sensor)["equalization"])
     if key == "diffusionmtf":
         value = sensor.fields.get("diffusion_mtf")
         return None if value is None else copy.deepcopy(value)
@@ -5878,6 +6101,8 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any, *args: Any) -> Sensor
     if key in {"cfapattern", "pattern"}:
         sensor.fields["pattern"] = np.asarray(value, dtype=int)
         return sensor
+    if key in {"cfapreset", "cfapatternpreset", "cfatype", "cfalayout"}:
+        return sensor_set(sensor, "pattern and size", _sensor_cfa_preset_pattern(value))
     if key in {"patternandsize", "patternsize", "cfapatternandsize"}:
         pattern = np.asarray(value, dtype=int)
         sensor.fields["pattern"] = pattern
@@ -5923,6 +6148,34 @@ def sensor_set(sensor: Sensor, parameter: str, value: Any, *args: Any) -> Sensor
         return sensor
     if key in {"sensorcompute", "sensorcomputemethod"}:
         sensor.fields["sensor_compute_method"] = _copy_metadata_value(value)
+        return sensor
+    if key in {"oclgroupproxy", "oclgroup", "sharedoclaperture"}:
+        sensor.fields["ocl_group_proxy"] = _sensor_ocl_group_proxy_from_value(value)
+        _sensor_clear_data(sensor)
+        return sensor
+    if key in {"oclgroupshape", "sharedoclshape"}:
+        proxy = _sensor_ocl_group_proxy(sensor)
+        proxy["shape"] = _sensor_ocl_group_shape_from_value(value)
+        if "equalization" not in proxy or float(proxy["equalization"]) <= 0.0:
+            proxy["equalization"] = 0.0 if tuple(proxy["shape"]) == (1, 1) else 1.0
+        proxy["mode"] = (
+            "off"
+            if tuple(proxy["shape"]) == (1, 1) or float(proxy["equalization"]) <= 0.0
+            else "uniform"
+        )
+        sensor.fields["ocl_group_proxy"] = proxy
+        _sensor_clear_data(sensor)
+        return sensor
+    if key in {"oclgroupequalization", "oclsharingequalization"}:
+        proxy = _sensor_ocl_group_proxy(sensor)
+        proxy["equalization"] = _sensor_ocl_group_equalization_from_value(value)
+        proxy["mode"] = (
+            "off"
+            if tuple(proxy["shape"]) == (1, 1) or float(proxy["equalization"]) <= 0.0
+            else "uniform"
+        )
+        sensor.fields["ocl_group_proxy"] = proxy
+        _sensor_clear_data(sensor)
         return sensor
     if key in {"fdtdsensor", "fdtdlut", "fdtdopticalresponse", "fdtdopticalresponselut"}:
         sensor.fields["fdtd_sensor"] = None if value is None else fdtd_sensor_config(value)
@@ -6879,10 +7132,18 @@ def _sensor_etendue(sensor: Sensor) -> np.ndarray:
 
     vignetting = sensor.fields.get("vignetting", 0)
     normalized = param_format(vignetting) if isinstance(vignetting, str) else vignetting
-    if normalized in {0, "skip", "", None}:
+    if normalized in {0, "skip", "off", "none", "disabled", "false", "", None}:
         etendue = np.ones(sensor.fields["size"], dtype=float)
         sensor.fields["etendue"] = etendue
         return etendue
+
+    if normalized in {1, 2, 3, "bare", "nomicrolens", "centered", "optimal", "optimized"}:
+        updated = sensor_vignetting(sensor, vignetting)
+        etendue = np.asarray(updated.fields.get("etendue"), dtype=float)
+        if etendue.shape == tuple(sensor.fields["size"]):
+            sensor.fields["etendue"] = etendue.copy()
+            sensor.fields["ml"] = _copy_metadata_value(updated.fields.get("ml"))
+            return etendue
 
     raise UnsupportedOptionError("sensorCompute", f"vignetting {vignetting}")
 
@@ -7048,6 +7309,9 @@ def _spatial_integrate_current_density(scdi: np.ndarray, oi: OpticalImage, senso
     for channel_index in range(scdi.shape[2]):
         plane = convolve2d(np.asarray(scdi[:, :, channel_index], dtype=float), kernel, mode="same")
         sampled = _interp2_linear_constant_zero(plane, source_rows, source_cols, target_rows, target_cols)
+        sampled = _sensor_apply_ocl_group_proxy(
+            sensor, sampled, sample_scale=n_samples_per_pixel
+        )
         mask = interpolated_cfa == (channel_index + 1)
         flat_scdi = flat_scdi + (mask * sampled)
 
@@ -7081,6 +7345,7 @@ def signal_current(oi: OpticalImage, sensor: Sensor) -> np.ndarray:
     filter_spectra = _sensor_qe_on_wave(working, wave)
     electron_rate_density = np.tensordot(cube * delta_nm, filter_spectra, axes=([2], [0]))
     electron_rate = _regrid_electron_rate_density(electron_rate_density, oi, working) * pixel_area
+    electron_rate = _sensor_apply_ocl_group_proxy(working, electron_rate)
     electron_rate = _sensor_apply_physics_response(working, electron_rate)
     return np.asarray(electron_rate * _ELEMENTARY_CHARGE_C, dtype=float)
 
@@ -7475,6 +7740,19 @@ def auto_exposure(
     raise UnsupportedOptionError("autoExposure", str(ae_method))
 
 
+def _sensor_compute_method_is_binning(value: Any) -> bool:
+    if isinstance(value, dict):
+        return param_format(str(value.get("name", ""))) == "binning"
+    return param_format(str(value)) == "binning"
+
+
+def _sensor_compute_binning_method(value: Any) -> str | None:
+    if isinstance(value, dict):
+        method = value.get("method", value.get("b_method", value.get("bMethod")))
+        return None if method is None else str(method)
+    return None
+
+
 def sensor_compute(
     sensor: Sensor | list[Sensor] | tuple[Sensor, ...],
     oi: OpticalImage,
@@ -7500,6 +7778,14 @@ def sensor_compute(
 
     del show_bar
     computed = sensor.clone()
+    compute_method = computed.fields.get("sensor_compute_method")
+    if _sensor_compute_method_is_binning(compute_method):
+        return bin_sensor_compute(
+            computed,
+            oi,
+            _sensor_compute_binning_method(compute_method),
+            seed=seed,
+        )
     cube = np.asarray(oi.data["photons"], dtype=float)
     wave = np.asarray(oi.fields["wave"], dtype=float)
     pixel = computed.fields["pixel"]
@@ -7572,6 +7858,7 @@ def sensor_compute(
         filter_spectra = _sensor_qe_on_wave(computed, wave)
         electron_rate_density = np.tensordot(cube * delta_nm, filter_spectra, axes=([2], [0]))
         electron_rate = _regrid_electron_rate_density(electron_rate_density, oi, computed) * pixel_area
+        electron_rate = _sensor_apply_ocl_group_proxy(computed, electron_rate)
         electron_rate = _sensor_apply_physics_response(computed, electron_rate)
 
         def _base_volts(current_integration_time: float) -> tuple[np.ndarray, np.ndarray]:

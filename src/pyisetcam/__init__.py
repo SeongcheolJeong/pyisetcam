@@ -8,13 +8,22 @@ from .assets import (
     ie_read_color_filter,
     ie_read_spectra,
 )
+from .calibration import (
+    camerae2e_calibration_evidence_manifest,
+    camerae2e_calibration_evidence_requirements,
+    camerae2e_calibration_evidence_validate,
+    camerae2e_readiness_promotion_plan,
+)
 from .db_catalog import (
     CameraE2EDBEntry,
     camerae2e_db_catalog,
     camerae2e_db_get,
+    camerae2e_db_lineage,
+    camerae2e_db_manifest,
     camerae2e_db_parameters,
     camerae2e_db_search,
     camerae2e_db_summary,
+    camerae2e_db_validate,
 )
 from .camera import (
     CameraFullReferenceResult,
@@ -71,6 +80,16 @@ from .color import (
     y_to_lstar,
 )
 from .description import HeadlessDescriptionHandle, sensor_description
+from .dataset import (
+    camerae2e_adas_camera_spec,
+    camerae2e_dataset_export_camera_spec_variants,
+    camerae2e_dataset_export,
+    camerae2e_dataset_export_adas_kitti_demo,
+    camerae2e_dataset_export_from_optimization,
+    camerae2e_dataset_export_perception_index,
+    camerae2e_dataset_validate,
+    camerae2e_kitti_yolo_labels,
+)
 from .display import (
     display_compute,
     display_convert,
@@ -116,6 +135,25 @@ from .fileio import (
     vc_save_object,
     vc_save_multispectral_image,
 )
+from .optimization import (
+    camerae2e_optimization_config_catalog,
+    camerae2e_optimization_escalation_plan,
+    camerae2e_optimization_report,
+    camerae2e_optimize_camera_parameters,
+    camerae2e_optimize_parameters,
+    camerae2e_pareto_front,
+    camerae2e_parameter_candidate_plan,
+    camerae2e_parameter_space_catalog,
+    camerae2e_parameter_space_validate,
+)
+from .goal_pipeline import camerae2e_goal_gate
+from .physics_pipeline import camerae2e_physics_pipeline_plan
+from .physics_simulation import (
+    camerae2e_physics_simulation_commands,
+    camerae2e_physics_simulation_manifest,
+    camerae2e_physics_simulation_validate,
+)
+from .ppt_gap_audit import camerae2e_ppt_gap_audit
 from .fdtd_sensor import (
     FDTDSensorLUT,
     fdtd_sensor_apply_optical_response,
@@ -207,8 +245,10 @@ from .hwisp_db import (
 )
 from .image_sensor_db import (
     image_sensor_db_catalog_path,
+    image_sensor_db_config,
     image_sensor_db_get,
     image_sensor_db_load,
+    image_sensor_db_optimize_camera_parameters,
     image_sensor_db_parameters,
     image_sensor_db_records,
     image_sensor_db_root,
@@ -647,6 +687,11 @@ from .session import (
     vc_set_figure_handles,
     vc_select_figure,
 )
+from .system_faca import (
+    camerae2e_faca_report,
+    camerae2e_run_scenario,
+    camerae2e_run_sweep,
+)
 from .task_perception import (
     TaskBoundingBox,
     TaskClassificationResult,
@@ -1050,15 +1095,80 @@ __all__ = [
     "DEFAULT_UPSTREAM_TARBALL_SHA256",
     "DEFAULT_WAVE",
     "camerae2e_db_catalog",
+    "camerae2e_calibration_evidence_manifest",
+    "camerae2e_calibration_evidence_requirements",
+    "camerae2e_calibration_evidence_validate",
     "camerae2e_db_get",
+    "camerae2e_db_lineage",
+    "camerae2e_db_manifest",
     "camerae2e_db_parameters",
     "camerae2e_db_search",
     "camerae2e_db_summary",
+    "camerae2e_db_validate",
+    "camerae2e_adas_camera_spec",
+    "camerae2e_dataset_export",
+    "camerae2e_dataset_export_adas_kitti_demo",
+    "camerae2e_dataset_export_camera_spec_variants",
+    "camerae2e_dataset_export_from_optimization",
+    "camerae2e_dataset_export_perception_index",
+    "camerae2e_dataset_validate",
+    "camerae2e_faca_report",
+    "camerae2e_goal_gate",
+    "camerae2e_kitti_yolo_labels",
+    "camerae2e_optimization_config_catalog",
+    "camerae2e_optimization_escalation_plan",
+    "camerae2e_optimization_report",
+    "camerae2e_optimize_camera_parameters",
+    "camerae2e_optimize_parameters",
+    "camerae2e_pareto_front",
+    "camerae2e_parameter_candidate_plan",
+    "camerae2e_parameter_space_catalog",
+    "camerae2e_parameter_space_validate",
+    "camerae2e_physics_pipeline_plan",
+    "camerae2e_physics_simulation_commands",
+    "camerae2e_physics_simulation_manifest",
+    "camerae2e_physics_simulation_validate",
+    "camerae2e_ppt_gap_audit",
+    "camerae2e_readiness_promotion_plan",
+    "camerae2e_run_scenario",
+    "camerae2e_run_sweep",
     "cameraE2EDBCatalog",
     "cameraE2EDBGet",
+    "cameraE2EDBLineage",
+    "cameraE2EDBManifest",
     "cameraE2EDBParameters",
     "cameraE2EDBSearch",
     "cameraE2EDBSummary",
+    "cameraE2EDBValidate",
+    "cameraE2EADASCameraSpec",
+    "cameraE2ECalibrationEvidenceManifest",
+    "cameraE2ECalibrationEvidenceRequirements",
+    "cameraE2ECalibrationEvidenceValidate",
+    "cameraE2EDatasetExport",
+    "cameraE2EDatasetExportADASKITTIDemo",
+    "cameraE2EDatasetExportCameraSpecVariants",
+    "cameraE2EDatasetExportFromOptimization",
+    "cameraE2EDatasetExportPerceptionIndex",
+    "cameraE2EDatasetValidate",
+    "cameraE2EFACAReport",
+    "cameraE2EGoalGate",
+    "cameraE2EKITTIYOLOLabels",
+    "cameraE2EOptimizationConfigCatalog",
+    "cameraE2EOptimizationEscalationPlan",
+    "cameraE2EOptimizationReport",
+    "cameraE2EOptimizeCameraParameters",
+    "cameraE2EOptimizeParameters",
+    "cameraE2EParetoFront",
+    "cameraE2EParameterSpaceCatalog",
+    "cameraE2EParameterSpaceValidate",
+    "cameraE2EPhysicsPipelinePlan",
+    "cameraE2EPhysicsSimulationCommands",
+    "cameraE2EPhysicsSimulationManifest",
+    "cameraE2EPhysicsSimulationValidate",
+    "cameraE2EPPTGapAudit",
+    "cameraE2EReadinessPromotionPlan",
+    "cameraE2ERunScenario",
+    "cameraE2ERunSweep",
     "Display",
     "FloydSteinberg",
     "HalfToneImage",
@@ -1114,15 +1224,19 @@ __all__ = [
     "camera_vsnr",
     "camera_vsnr_sl",
     "image_sensor_db_catalog_path",
+    "image_sensor_db_config",
     "image_sensor_db_get",
     "image_sensor_db_load",
+    "image_sensor_db_optimize_camera_parameters",
     "image_sensor_db_parameters",
     "image_sensor_db_records",
     "image_sensor_db_root",
     "image_sensor_db_summary",
     "imageSensorDBCatalogPath",
+    "imageSensorDBConfig",
     "imageSensorDBGet",
     "imageSensorDBLoad",
+    "imageSensorDBOptimizeCameraParameters",
     "imageSensorDBParameters",
     "imageSensorDBRecords",
     "imageSensorDBRoot",
@@ -3724,10 +3838,45 @@ cameraE2EDBSearch = camerae2e_db_search
 cameraE2EDBGet = camerae2e_db_get
 cameraE2EDBParameters = camerae2e_db_parameters
 cameraE2EDBSummary = camerae2e_db_summary
+cameraE2EDBManifest = camerae2e_db_manifest
+cameraE2EDBValidate = camerae2e_db_validate
+cameraE2EDBLineage = camerae2e_db_lineage
+cameraE2ERunScenario = camerae2e_run_scenario
+cameraE2ERunSweep = camerae2e_run_sweep
+cameraE2EFACAReport = camerae2e_faca_report
+cameraE2EGoalGate = camerae2e_goal_gate
+cameraE2EADASCameraSpec = camerae2e_adas_camera_spec
+cameraE2EDatasetExport = camerae2e_dataset_export
+cameraE2EDatasetExportADASKITTIDemo = camerae2e_dataset_export_adas_kitti_demo
+cameraE2EDatasetExportCameraSpecVariants = camerae2e_dataset_export_camera_spec_variants
+cameraE2EDatasetExportFromOptimization = camerae2e_dataset_export_from_optimization
+cameraE2EDatasetExportPerceptionIndex = camerae2e_dataset_export_perception_index
+cameraE2EDatasetValidate = camerae2e_dataset_validate
+cameraE2EKITTIYOLOLabels = camerae2e_kitti_yolo_labels
+cameraE2EOptimizeCameraParameters = camerae2e_optimize_camera_parameters
+cameraE2EOptimizeParameters = camerae2e_optimize_parameters
+cameraE2EOptimizationEscalationPlan = camerae2e_optimization_escalation_plan
+cameraE2EOptimizationReport = camerae2e_optimization_report
+cameraE2EParetoFront = camerae2e_pareto_front
+cameraE2EParameterCandidatePlan = camerae2e_parameter_candidate_plan
+cameraE2EParameterSpaceCatalog = camerae2e_parameter_space_catalog
+cameraE2EOptimizationConfigCatalog = camerae2e_optimization_config_catalog
+cameraE2EParameterSpaceValidate = camerae2e_parameter_space_validate
+cameraE2EPhysicsPipelinePlan = camerae2e_physics_pipeline_plan
+cameraE2EPhysicsSimulationCommands = camerae2e_physics_simulation_commands
+cameraE2EPhysicsSimulationManifest = camerae2e_physics_simulation_manifest
+cameraE2EPhysicsSimulationValidate = camerae2e_physics_simulation_validate
+cameraE2EPPTGapAudit = camerae2e_ppt_gap_audit
+cameraE2ECalibrationEvidenceRequirements = camerae2e_calibration_evidence_requirements
+cameraE2ECalibrationEvidenceManifest = camerae2e_calibration_evidence_manifest
+cameraE2ECalibrationEvidenceValidate = camerae2e_calibration_evidence_validate
+cameraE2EReadinessPromotionPlan = camerae2e_readiness_promotion_plan
 
 imageSensorDBRoot = image_sensor_db_root
 imageSensorDBCatalogPath = image_sensor_db_catalog_path
+imageSensorDBConfig = image_sensor_db_config
 imageSensorDBLoad = image_sensor_db_load
+imageSensorDBOptimizeCameraParameters = image_sensor_db_optimize_camera_parameters
 imageSensorDBRecords = image_sensor_db_records
 imageSensorDBGet = image_sensor_db_get
 imageSensorDBParameters = image_sensor_db_parameters
