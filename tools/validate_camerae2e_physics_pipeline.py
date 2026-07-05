@@ -8,7 +8,12 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from pyisetcam import camerae2e_db_get, camerae2e_db_lineage, camerae2e_db_validate
+from pyisetcam import (
+    camerae2e_db_get,
+    camerae2e_db_lineage,
+    camerae2e_db_validate,
+    camerae2e_physics_pipeline_plan,
+)
 
 
 def main() -> None:
@@ -60,6 +65,7 @@ def validate_physics_pipeline(*, strict: bool = False) -> dict[str, Any]:
         "blocking": sorted(set(blocking)),
         "manifest_validation": validation,
         "checks": checks,
+        "plan": camerae2e_physics_pipeline_plan(strict=strict),
         "lineage": {
             name: camerae2e_db_lineage(name)
             for name in ("fdtd_sensor_lut_active", "tcad_sensor_db_active", "lens_patents_active")

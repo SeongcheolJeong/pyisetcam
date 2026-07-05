@@ -120,6 +120,11 @@ from .fileio import (
     vc_save_object,
     vc_save_multispectral_image,
 )
+from .optimization import (
+    camerae2e_optimization_report,
+    camerae2e_optimize_parameters,
+)
+from .physics_pipeline import camerae2e_physics_pipeline_plan
 from .fdtd_sensor import (
     FDTDSensorLUT,
     fdtd_sensor_apply_optical_response,
@@ -1060,14 +1065,34 @@ __all__ = [
     "DEFAULT_WAVE",
     "camerae2e_db_catalog",
     "camerae2e_db_get",
+    "camerae2e_db_lineage",
+    "camerae2e_db_manifest",
     "camerae2e_db_parameters",
     "camerae2e_db_search",
     "camerae2e_db_summary",
+    "camerae2e_db_validate",
+    "camerae2e_dataset_export",
+    "camerae2e_faca_report",
+    "camerae2e_optimization_report",
+    "camerae2e_optimize_parameters",
+    "camerae2e_physics_pipeline_plan",
+    "camerae2e_run_scenario",
+    "camerae2e_run_sweep",
     "cameraE2EDBCatalog",
     "cameraE2EDBGet",
+    "cameraE2EDBLineage",
+    "cameraE2EDBManifest",
     "cameraE2EDBParameters",
     "cameraE2EDBSearch",
     "cameraE2EDBSummary",
+    "cameraE2EDBValidate",
+    "cameraE2EDatasetExport",
+    "cameraE2EFACAReport",
+    "cameraE2EOptimizationReport",
+    "cameraE2EOptimizeParameters",
+    "cameraE2EPhysicsPipelinePlan",
+    "cameraE2ERunScenario",
+    "cameraE2ERunSweep",
     "Display",
     "FloydSteinberg",
     "HalfToneImage",
@@ -3733,6 +3758,16 @@ cameraE2EDBSearch = camerae2e_db_search
 cameraE2EDBGet = camerae2e_db_get
 cameraE2EDBParameters = camerae2e_db_parameters
 cameraE2EDBSummary = camerae2e_db_summary
+cameraE2EDBManifest = camerae2e_db_manifest
+cameraE2EDBValidate = camerae2e_db_validate
+cameraE2EDBLineage = camerae2e_db_lineage
+cameraE2ERunScenario = camerae2e_run_scenario
+cameraE2ERunSweep = camerae2e_run_sweep
+cameraE2EFACAReport = camerae2e_faca_report
+cameraE2EDatasetExport = camerae2e_dataset_export
+cameraE2EOptimizeParameters = camerae2e_optimize_parameters
+cameraE2EOptimizationReport = camerae2e_optimization_report
+cameraE2EPhysicsPipelinePlan = camerae2e_physics_pipeline_plan
 
 imageSensorDBRoot = image_sensor_db_root
 imageSensorDBCatalogPath = image_sensor_db_catalog_path

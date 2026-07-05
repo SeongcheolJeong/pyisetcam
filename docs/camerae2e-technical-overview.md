@@ -2,7 +2,7 @@
 
 이 문서는 `CameraE2E` 저장소의 현재 구현 범위와 실무적으로 가능한 일을 구조적으로 설명한다. 코드 기준의 이름은 대부분 `pyisetcam` 패키지의 공개 API를 따른다. 다이어그램은 `imagegen`으로 만든 개념도이므로 이미지 안의 작은 텍스트나 함수명은 일부 오탈자가 있을 수 있다. 정확한 구현명과 판단 기준은 본문을 기준으로 본다.
 
-중요한 전제: 코드와 문서에서 `FACA`라는 독립 모듈명은 발견되지 않았다. 따라서 여기서는 사용자가 말한 `시스템 FACA`를 `Field / Angle / Color / Artifact / Control`을 함께 보는 시스템 수준 trade-off 분석으로 해석한다. 이 해석이 의도와 다르면 용어 정의를 먼저 고정해야 한다.
+중요한 전제: 현재 `system_faca.py`는 `FACA`를 `Field / Angle / Color / Artifact / Control`을 함께 보는 시스템 수준 trade-off 분석으로 구현한다. 이것은 제품 sign-off가 아니라 scene, optics, sensor, ISP, perception을 한 흐름에서 비교하기 위한 research-grade 분석 계층이다.
 
 ![CameraE2E end-to-end stack](assets/camerae2e-overview/e2e-stack.png)
 
@@ -321,7 +321,7 @@ camerae2e_db_summary(...)
 
 ### 8.1 시스템 FACA 또는 E2E trade-off 분석
 
-앞서 말했듯 `FACA`는 명시적 코드 모듈명이 아니다. 하지만 시스템 수준 분석은 가능하다. 여기서 FACA를 `Field / Angle / Color / Artifact / Control`로 해석하면 다음 질문을 다룰 수 있다.
+`system_faca.py`는 FACA를 `Field / Angle / Color / Artifact / Control`로 정의하고, scenario/sweep 실행 결과를 stage별 image/raw 요약, scalar metric, artifact lineage, random seed와 함께 기록한다. 이 계층으로 다음 질문을 다룰 수 있다.
 
 - Field: center/edge/corner에서 PSF, MTF, distortion, vignetting이 어떻게 변하는가?
 - Angle: CRA, OCL shift, field response, FDTD LUT가 raw와 sRGB에 어떤 영향을 주는가?
@@ -538,12 +538,14 @@ CameraE2E를 좋은 solution으로 쓰려면 다음 경계를 지켜야 한다.
 
 ## 11. 구현 업데이트: registry, FACA, RAW data factory
 
-PPT에서 설명한 활용 범위를 코드에서 직접 추적하기 위해 세 가지 public API가 추가되었다.
+PPT에서 설명한 활용 범위를 코드에서 직접 추적하기 위해 public API가 추가되었다.
 
 | 영역 | API | 역할 |
 |---|---|---|
 | DB/LUT registry | `camerae2e_db_manifest()`, `camerae2e_db_validate(...)`, `camerae2e_db_lineage(...)` | asset provenance, readiness tier, dependency, stale artifact를 한 manifest에서 추적 |
+| Physics pipeline plan | `camerae2e_physics_pipeline_plan(...)` | FDTD/TCAD/RayOptics/HW ISP asset의 stale/missing/proxy 상태를 refresh/calibration action list로 변환 |
 | System FACA | `camerae2e_run_scenario(...)`, `camerae2e_run_sweep(...)`, `camerae2e_faca_report(...)` | Field / Angle / Color / Artifact / Control 관점의 E2E scenario와 sweep 결과 수집 |
+| Parameter optimization | `camerae2e_optimize_parameters(...)`, `camerae2e_optimization_report(...)` | `sensor.integration_time`, `sensor.analog_gain`, `optics.fnumber`, `ip.demosaic_method` 같은 dot-path camera parameter를 FACA metric objective/constraint로 자동 grid search |
 | RAW data factory | `camerae2e_dataset_export(...)` | perception 학습용 RAW NPZ, RGB preview, labels JSON, metadata JSONL, manifest export |
 
 새 readiness tier는 `missing`, `available`, `proxy`, `validated`, `calibration_required`, `calibrated`로 통일한다. 이 tier는 기능의 존재 여부가 아니라 claim의 강도를 나타낸다. 예를 들어 RayOptics PSF가 실행 가능해도 diffraction/wave-optics sign-off는 아니므로 `proxy`에 머문다. TCAD framework가 로드되어도 measured process/optical/electrical calibration이 없으면 `calibration_required`에 머문다.

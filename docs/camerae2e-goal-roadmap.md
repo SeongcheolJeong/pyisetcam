@@ -26,6 +26,7 @@
 | TCAD / DEVSIM | `calibration_required` | generation-map ingestion, split-PD current proxy, accuracy gate | active FDTD/TCAD lineage closure, carrier calibration, dark/noise/lag/full-well |
 | HW ISP | `proxy` | rolling shutter, stage latency, queue, DMA, delayed AE/AWB | board/vendor trace calibration, AF/HDR/TNR detail |
 | Metrics | `validated` | MTF, ISO12233, Delta E, SCIELAB, VSNR, SQRI | product-specific weighting and pass/fail gates |
+| Optimization | `validated` | dot-path camera parameter grid search, FACA objective scoring, hard constraints | Bayesian/evolutionary search, Pareto reporting, hardware-in-loop calibration |
 | Perception | `available` | task adapters, detection/segmentation/classification/pose/tracking metrics, robustness sweep | training loop, dataset-specific model calibration |
 | RAW data factory | `validated` | manifest, metadata JSONL, RAW NPZ, RGB preview, labels JSON | DNG writer, automatic label synthesis |
 | DB/LUT registry | `validated` / `calibration_required` | manifest, readiness tier, provenance, dependency lineage, stale detection | measured evidence ingestion and calibrated promotion |
@@ -38,12 +39,24 @@ DB/LUT registry:
 - `camerae2e_db_manifest()`
 - `camerae2e_db_validate(strict=False)`
 - `camerae2e_db_lineage(name)`
+- `camerae2e_physics_pipeline_plan(strict=False)`
 
 System FACA:
 
 - `camerae2e_run_scenario(...)`
 - `camerae2e_run_sweep(...)`
 - `camerae2e_faca_report(...)`
+
+Optimization:
+
+- `camerae2e_optimize_parameters(...)`
+- `camerae2e_optimization_report(...)`
+
+The first optimizer is deterministic grid search over dot-path camera
+parameters such as `sensor.integration_time`, `sensor.analog_gain`,
+`optics.fnumber`, and `ip.demosaic_method`. It maximizes objective paths from
+the FACA report and supports hard metric constraints. This is the reproducible
+baseline for later Bayesian/evolutionary optimizers.
 
 RAW data factory:
 
@@ -77,3 +90,8 @@ Validate external physics pipeline lineage with:
 ```bash
 python tools/validate_camerae2e_physics_pipeline.py
 ```
+
+The validation payload includes a `plan` section with refresh/calibration
+actions, and the registry report command also writes:
+
+- `reports/camerae2e_goal/physics_pipeline_plan.json`

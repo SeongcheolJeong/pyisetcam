@@ -10,7 +10,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from pyisetcam import camerae2e_db_manifest, camerae2e_db_validate
+from pyisetcam import (
+    camerae2e_db_manifest,
+    camerae2e_db_validate,
+    camerae2e_physics_pipeline_plan,
+)
 
 
 def main() -> None:
@@ -25,6 +29,7 @@ def render_report(output_dir: Path) -> dict[str, Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     manifest = camerae2e_db_manifest()
     validation = camerae2e_db_validate()
+    physics_plan = camerae2e_physics_pipeline_plan()
     readiness = {
         "schema_version": "camerae2e_goal_readiness_v1",
         "generated_at": datetime.now(UTC).isoformat(),
@@ -40,16 +45,21 @@ def render_report(output_dir: Path) -> dict[str, Path]:
         "capability_matrix": _capability_matrix(manifest, validation),
         "asset_manifest": manifest,
         "validation": validation,
+        "physics_pipeline_plan": physics_plan,
     }
     readiness_json = output_dir / "readiness.json"
     readiness_html = output_dir / "readiness.html"
     registry_json = output_dir / "asset_registry.json"
     registry_html = output_dir / "asset_registry.html"
+    physics_plan_json = output_dir / "physics_pipeline_plan.json"
     readiness_json.write_text(
         json.dumps(_jsonable(readiness), indent=2, sort_keys=True), encoding="utf-8"
     )
     registry_json.write_text(
         json.dumps(_jsonable(manifest), indent=2, sort_keys=True), encoding="utf-8"
+    )
+    physics_plan_json.write_text(
+        json.dumps(_jsonable(physics_plan), indent=2, sort_keys=True), encoding="utf-8"
     )
     readiness_html.write_text(_render_readiness_html(readiness), encoding="utf-8")
     registry_html.write_text(_render_registry_html(manifest, validation), encoding="utf-8")
@@ -58,6 +68,7 @@ def render_report(output_dir: Path) -> dict[str, Path]:
         "readiness_html": readiness_html,
         "asset_registry_json": registry_json,
         "asset_registry_html": registry_html,
+        "physics_pipeline_plan_json": physics_plan_json,
     }
 
 
@@ -134,6 +145,18 @@ def _capability_matrix(
             "tier": "validated",
             "implemented": "MTF, ISO12233, Delta E, SCIELAB, VSNR, SQRI, comparison metrics.",
             "remaining": "Product-specific metric weighting and pass/fail thresholds.",
+        },
+        {
+            "area": "Optimization",
+            "tier": "validated",
+            "implemented": (
+                "Deterministic grid search over dot-path camera parameters using "
+                "FACA metric objectives and constraints."
+            ),
+            "remaining": (
+                "Bayesian/evolutionary search, Pareto-front reporting, and "
+                "closed-loop hardware calibration."
+            ),
         },
         {
             "area": "Perception",

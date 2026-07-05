@@ -15,6 +15,7 @@ from pyisetcam import (
     camerae2e_db_search,
     camerae2e_db_summary,
     camerae2e_db_validate,
+    camerae2e_physics_pipeline_plan,
 )
 
 
@@ -101,6 +102,14 @@ def test_camerae2e_db_validate_promotes_active_fdtd_tcad_run_mismatch_to_stale_d
     assert tcad["readiness_tier"] == "calibration_required"
     assert "active artifact mismatch" in tcad["stale_reason"]
     assert validation["stale_dependency_count"] >= 1
+
+    plan = camerae2e_physics_pipeline_plan()
+    tcad_action = next(
+        action for action in plan["actions"] if action["entry"] == "tcad_sensor_db_active"
+    )
+    assert tcad_action["kind"] == "stale_dependency"
+    assert tcad_action["action"] == "refresh_downstream_from_current_dependency"
+    assert plan["active_runs"]["lineage_match"] is False
 
 
 def _write_minimal_fdtd_lut(run_dir: Path) -> Path:

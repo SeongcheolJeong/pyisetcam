@@ -10,7 +10,7 @@ from typing import Any
 import numpy as np
 
 from .assets import AssetStore
-from .camera import camera_compute, camera_create, camera_get
+from .camera import camera_compute, camera_create, camera_get, camera_set
 from .db_catalog import camerae2e_db_lineage, camerae2e_db_summary, camerae2e_db_validate
 from .fdtd_sensor import sensor_attach_fdtd_lut
 from .hwisp import HWIspConfig, hw_isp_config, hw_isp_simulate_sequence
@@ -181,6 +181,14 @@ def _resolve_camera(source: Camera | Mapping[str, Any] | None, store: AssetStore
 
 def _apply_physics_and_sensor_overrides(camera: Camera, config: Mapping[str, Any]) -> Camera:
     updated = camera.clone()
+    parameter_overrides = {}
+    for bucket_name in ("parameters", "camera_parameters"):
+        bucket = config.get(bucket_name)
+        if isinstance(bucket, Mapping):
+            parameter_overrides.update(dict(bucket))
+    for key, value in parameter_overrides.items():
+        updated = camera_set(updated, _camera_parameter_name(key), value)
+
     sensor = camera_get(updated, "sensor").clone()
     sensor_overrides = (
         dict(config.get("sensor", {})) if isinstance(config.get("sensor"), Mapping) else {}
@@ -208,6 +216,14 @@ def _apply_physics_and_sensor_overrides(camera: Camera, config: Mapping[str, Any
 
     updated.fields["sensor"] = sensor
     return updated
+
+
+def _camera_parameter_name(key: Any) -> str:
+    value = str(key).strip().replace("_", " ")
+    if "." in value:
+        prefix, remainder = value.split(".", 1)
+        return f"{prefix} {remainder.replace('.', ' ')}"
+    return value
 
 
 def _resolve_hw_config(raw: Any) -> HWIspConfig:
