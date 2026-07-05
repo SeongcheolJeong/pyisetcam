@@ -26,7 +26,7 @@
 | TCAD / DEVSIM | `calibration_required` | generation-map ingestion, split-PD current proxy, accuracy gate | active FDTD/TCAD lineage closure, carrier calibration, dark/noise/lag/full-well |
 | HW ISP | `proxy` | rolling shutter, stage latency, queue, DMA, delayed AE/AWB | board/vendor trace calibration, AF/HDR/TNR detail |
 | Metrics | `validated` | MTF, ISO12233, Delta E, SCIELAB, VSNR, SQRI | product-specific weighting and pass/fail gates |
-| Optimization | `validated` | dot-path camera parameter grid search, FACA objective scoring, hard constraints | Bayesian/evolutionary search, Pareto reporting, hardware-in-loop calibration |
+| Optimization | `validated` | dot-path camera parameter grid search, FACA objective scoring, hard constraints, Pareto front, selected scenarios | Bayesian/evolutionary search, hardware-in-loop calibration |
 | Perception | `available` | task adapters, detection/segmentation/classification/pose/tracking metrics, robustness sweep | training loop, dataset-specific model calibration |
 | RAW data factory | `validated` | manifest, metadata JSONL, deterministic RAW NPZ, split, checksum, labels JSON, validation | DNG writer, automatic label synthesis |
 | DB/LUT registry | `validated` / `calibration_required` | manifest, readiness tier, provenance, dependency lineage, stale detection | measured evidence ingestion and calibrated promotion |
@@ -51,12 +51,15 @@ Optimization:
 
 - `camerae2e_optimize_parameters(...)`
 - `camerae2e_optimization_report(...)`
+- `camerae2e_pareto_front(...)`
 
 The first optimizer is deterministic grid search over dot-path camera
 parameters such as `sensor.integration_time`, `sensor.analog_gain`,
 `optics.fnumber`, and `ip.demosaic_method`. It maximizes objective paths from
-the FACA report and supports hard metric constraints. This is the reproducible
-baseline for later Bayesian/evolutionary optimizers.
+the FACA report, supports hard metric constraints, reports the feasible Pareto
+front, and emits selected scenario configs that can be passed into the RAW data
+factory. This is the reproducible baseline for later Bayesian/evolutionary
+optimizers.
 
 RAW data factory:
 

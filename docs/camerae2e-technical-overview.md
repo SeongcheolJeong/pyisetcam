@@ -545,7 +545,7 @@ PPT에서 설명한 활용 범위를 코드에서 직접 추적하기 위해 pub
 | DB/LUT registry | `camerae2e_db_manifest()`, `camerae2e_db_validate(...)`, `camerae2e_db_lineage(...)` | asset provenance, readiness tier, dependency, stale artifact를 한 manifest에서 추적 |
 | Physics pipeline plan | `camerae2e_physics_pipeline_plan(...)` | FDTD/TCAD/RayOptics/HW ISP asset의 stale/missing/proxy 상태를 refresh/calibration action list로 변환 |
 | System FACA | `camerae2e_run_scenario(...)`, `camerae2e_run_sweep(...)`, `camerae2e_faca_report(...)` | Field / Angle / Color / Artifact / Control 관점의 E2E scenario와 sweep 결과 수집 |
-| Parameter optimization | `camerae2e_optimize_parameters(...)`, `camerae2e_optimization_report(...)` | `sensor.integration_time`, `sensor.analog_gain`, `optics.fnumber`, `ip.demosaic_method` 같은 dot-path camera parameter를 FACA metric objective/constraint로 자동 grid search |
+| Parameter optimization | `camerae2e_optimize_parameters(...)`, `camerae2e_pareto_front(...)`, `camerae2e_optimization_report(...)` | `sensor.integration_time`, `sensor.analog_gain`, `optics.fnumber`, `ip.demosaic_method` 같은 dot-path camera parameter를 FACA metric objective/constraint로 자동 grid search하고 Pareto front와 RAW factory용 selected scenario를 산출 |
 | RAW data factory | `camerae2e_dataset_export(...)`, `camerae2e_dataset_validate(...)` | perception 학습용 deterministic RAW NPZ, split, checksum, RGB preview, labels JSON, metadata JSONL, manifest export/validation |
 
 새 readiness tier는 `missing`, `available`, `proxy`, `validated`, `calibration_required`, `calibrated`로 통일한다. 이 tier는 기능의 존재 여부가 아니라 claim의 강도를 나타낸다. 예를 들어 RayOptics PSF가 실행 가능해도 diffraction/wave-optics sign-off는 아니므로 `proxy`에 머문다. TCAD framework가 로드되어도 measured process/optical/electrical calibration이 없으면 `calibration_required`에 머문다.

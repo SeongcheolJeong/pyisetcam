@@ -66,7 +66,9 @@ def camerae2e_optimize_parameters(
                 include_arrays=include_arrays,
             )
         )
-        objective_values, score = _score_report(report, objective_specs, objective)
+        objective_values, objective_utilities, score = _score_report(
+            report, objective_specs, objective
+        )
         constraint_results = [_evaluate_constraint(report, item) for item in constraint_specs]
         feasible = all(item["pass"] for item in constraint_results)
         if not feasible:
@@ -79,7 +81,9 @@ def camerae2e_optimize_parameters(
                 "score": float(score),
                 "feasible": bool(feasible),
                 "objective_values": _jsonable(objective_values),
+                "objective_utilities": _jsonable(objective_utilities),
                 "constraint_results": _jsonable(constraint_results),
+                "scenario": _jsonable(report.get("scenario", {})),
                 "report": report,
             }
         )
@@ -90,6 +94,7 @@ def camerae2e_optimize_parameters(
         reverse=True,
     )
     feasible_cases = [item for item in ranked if item["feasible"]]
+    pareto = _pareto_cases(feasible_cases)
     best = feasible_cases[0] if feasible_cases else None
     return {
         "schema_version": "camerae2e_parameter_optimization_v1",
@@ -100,10 +105,24 @@ def camerae2e_optimize_parameters(
         "constraints": _jsonable(constraint_specs),
         "case_count": len(cases),
         "feasible_count": len(feasible_cases),
+        "pareto_case_count": len(pareto),
         "best_case": _strip_case_report(best),
         "top_cases": [_strip_case_report(item) for item in feasible_cases[: max(int(top_k), 0)]],
+        "pareto_front": [_strip_case_report(item) for item in pareto],
+        "selected_scenarios": [
+            _jsonable(item.get("scenario", {}))
+            for item in feasible_cases[: max(int(top_k), 0)]
+        ],
         "cases": cases,
     }
+
+
+def camerae2e_pareto_front(result: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Return compact non-dominated feasible cases from an optimization result."""
+
+    if "pareto_front" in result:
+        return _jsonable(result["pareto_front"])
+    return [_strip_case_report(item) for item in _pareto_cases(list(result.get("cases", [])))]
 
 
 def camerae2e_optimization_report(result: Mapping[str, Any]) -> dict[str, Any]:
@@ -116,10 +135,13 @@ def camerae2e_optimization_report(result: Mapping[str, Any]) -> dict[str, Any]:
         "seed": result.get("seed"),
         "case_count": result.get("case_count", 0),
         "feasible_count": result.get("feasible_count", 0),
+        "pareto_case_count": result.get("pareto_case_count", 0),
         "objective": _jsonable(result.get("objective", {})),
         "constraints": _jsonable(result.get("constraints", [])),
         "best_case": _jsonable(best),
         "top_cases": _jsonable(result.get("top_cases", [])),
+        "pareto_front": _jsonable(result.get("pareto_front", [])),
+        "selected_scenarios": _jsonable(result.get("selected_scenarios", [])),
     }
 
 
@@ -174,11 +196,12 @@ def _score_report(
     report: Mapping[str, Any],
     objective_specs: list[dict[str, Any]],
     objective: ObjectiveSpec | ObjectiveCallable | None,
-) -> tuple[dict[str, Any], float]:
+) -> tuple[dict[str, Any], dict[str, float], float]:
     if callable(objective):
         score = float(objective(report))
-        return {"<callable>": score}, score
+        return {"<callable>": score}, {"<callable>": score}, score
     values = {}
+    utilities = {}
     score = 0.0
     for spec in objective_specs:
         metric = str(spec.get("metric", spec.get("path", "")))
@@ -195,8 +218,9 @@ def _score_report(
         else:
             raise ValueError(f"Unsupported objective direction: {direction}")
         values[metric] = value
+        utilities[metric] = float(component)
         score += weight * component
-    return values, float(score)
+    return values, utilities, float(score)
 
 
 def _evaluate_constraint(report: Mapping[str, Any], spec: Mapping[str, Any]) -> dict[str, Any]:
@@ -256,8 +280,55 @@ def _strip_case_report(case: Mapping[str, Any] | None) -> dict[str, Any] | None:
         "score": case.get("score"),
         "feasible": case.get("feasible"),
         "objective_values": _jsonable(case.get("objective_values", {})),
+        "objective_utilities": _jsonable(case.get("objective_utilities", {})),
         "constraint_results": _jsonable(case.get("constraint_results", [])),
+        "scenario": _jsonable(case.get("scenario", {})),
     }
+
+
+def _pareto_cases(cases: list[Mapping[str, Any]]) -> list[Mapping[str, Any]]:
+    feasible = [case for case in cases if case.get("feasible", True)]
+    frontier = []
+    for candidate in feasible:
+        if not _objective_vector(candidate):
+            continue
+        dominated = False
+        for other in feasible:
+            if other is candidate:
+                continue
+            if _dominates(other, candidate):
+                dominated = True
+                break
+        if not dominated:
+            frontier.append(candidate)
+    return sorted(
+        frontier,
+        key=lambda item: (float(item.get("score", -math.inf)), -int(item.get("case_index", 0))),
+        reverse=True,
+    )
+
+
+def _dominates(left: Mapping[str, Any], right: Mapping[str, Any]) -> bool:
+    left_vector = _objective_vector(left)
+    right_vector = _objective_vector(right)
+    if set(left_vector) != set(right_vector) or not left_vector:
+        return False
+    at_least_equal = all(left_vector[key] >= right_vector[key] for key in left_vector)
+    strictly_better = any(left_vector[key] > right_vector[key] for key in left_vector)
+    return bool(at_least_equal and strictly_better)
+
+
+def _objective_vector(case: Mapping[str, Any]) -> dict[str, float]:
+    values = dict(case.get("objective_utilities", {}))
+    vector: dict[str, float] = {}
+    for key, value in values.items():
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(number):
+            vector[str(key)] = number
+    return vector
 
 
 def _objective_description(
@@ -288,4 +359,5 @@ def _jsonable(value: Any) -> Any:
 
 
 cameraE2EOptimizeParameters = camerae2e_optimize_parameters  # noqa: N816
+cameraE2EParetoFront = camerae2e_pareto_front  # noqa: N816
 cameraE2EOptimizationReport = camerae2e_optimization_report  # noqa: N816

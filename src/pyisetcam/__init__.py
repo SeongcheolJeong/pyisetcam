@@ -123,6 +123,7 @@ from .fileio import (
 from .optimization import (
     camerae2e_optimization_report,
     camerae2e_optimize_parameters,
+    camerae2e_pareto_front,
 )
 from .physics_pipeline import camerae2e_physics_pipeline_plan
 from .fdtd_sensor import (
@@ -1076,6 +1077,7 @@ __all__ = [
     "camerae2e_faca_report",
     "camerae2e_optimization_report",
     "camerae2e_optimize_parameters",
+    "camerae2e_pareto_front",
     "camerae2e_physics_pipeline_plan",
     "camerae2e_run_scenario",
     "camerae2e_run_sweep",
@@ -1092,6 +1094,7 @@ __all__ = [
     "cameraE2EFACAReport",
     "cameraE2EOptimizationReport",
     "cameraE2EOptimizeParameters",
+    "cameraE2EParetoFront",
     "cameraE2EPhysicsPipelinePlan",
     "cameraE2ERunScenario",
     "cameraE2ERunSweep",
@@ -3770,6 +3773,7 @@ cameraE2EDatasetExport = camerae2e_dataset_export
 cameraE2EDatasetValidate = camerae2e_dataset_validate
 cameraE2EOptimizeParameters = camerae2e_optimize_parameters
 cameraE2EOptimizationReport = camerae2e_optimization_report
+cameraE2EParetoFront = camerae2e_pareto_front
 cameraE2EPhysicsPipelinePlan = camerae2e_physics_pipeline_plan
 
 imageSensorDBRoot = image_sensor_db_root

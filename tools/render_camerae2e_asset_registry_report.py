@@ -151,11 +151,10 @@ def _capability_matrix(
             "tier": "validated",
             "implemented": (
                 "Deterministic grid search over dot-path camera parameters using "
-                "FACA metric objectives and constraints."
+                "FACA metric objectives, constraints, Pareto front, and selected scenarios."
             ),
             "remaining": (
-                "Bayesian/evolutionary search, Pareto-front reporting, and "
-                "closed-loop hardware calibration."
+                "Bayesian/evolutionary search and closed-loop hardware calibration."
             ),
         },
         {
