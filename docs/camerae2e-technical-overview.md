@@ -610,7 +610,12 @@ history. Refresh the monorepo source copy and DB package with:
 python3 tools/import_camerae2e_simulation_workspaces.py
 python3 tools/package_camerae2e_db_repository.py --target ../CameraE2E-DB --clean
 python3 tools/package_camerae2e_db_repository.py --target camerae2e_db --clean
+python3 tools/publish_camerae2e_db_repository.py --target ../CameraE2E-DB
 ```
+
+The publish helper assumes the GitHub repo already exists. It validates the
+standalone DB manifest, enforces a clean DB repo worktree, checks the remote,
+and then runs `git push -u origin main`.
 
 전체 research-platform evidence gate는 다음 명령으로 실행한다.
 

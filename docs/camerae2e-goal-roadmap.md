@@ -87,8 +87,22 @@ Final Lens/Sensor DB repository:
 - `/Users/seongcheoljeong/Documents/CameraE2E-DB` is the standalone DB repo.
 - `tools/package_camerae2e_db_repository.py` regenerates both from the curated
   final artifacts.
+- `tools/publish_camerae2e_db_repository.py` validates and pushes the standalone
+  repo after `SeongcheolJeong/CameraE2E-DB` has been created on GitHub.
 - Runtime discovery accepts `PYISETCAM_CAMERA_DB_ROOT`; older scripts can set
   `PYISETCAM_LENS_DB_ROOT` and `PYISETCAM_FDTD_ROOT` explicitly.
+
+Standalone DB GitHub publish command:
+
+```bash
+python3 tools/publish_camerae2e_db_repository.py \
+  --target /Users/seongcheoljeong/Documents/CameraE2E-DB
+```
+
+If that command reports `Repository not found`, create an empty GitHub repo
+named `SeongcheolJeong/CameraE2E-DB` first. The helper intentionally does not
+create repositories because repository creation requires authenticated GitHub
+account state that is outside the local CameraE2E codebase.
 
 System FACA:
 
